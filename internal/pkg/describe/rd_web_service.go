@@ -152,12 +152,12 @@ type Tracing struct {
 	Vendor string `json:"vendor"`
 }
 
-func (o *Observability) isEmpty() bool {
+func (o Observability) isEmpty() bool {
 	return o.Tracing.isEmpty()
 }
 
 func (t *Tracing) isEmpty() bool {
-	return t.Vendor == ""
+	return t == nil || t.Vendor == ""
 }
 
 // rdWebSvcDesc contains serialized parameters for a web service.

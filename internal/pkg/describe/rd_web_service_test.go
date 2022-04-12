@@ -222,7 +222,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 						},
 						Observability: apprunner.ObservabilityConfiguration{
 							TraceConfiguration: &apprunner.TraceConfiguration{
-								Vendor: aws.String("SOME_VENDOR"),
+								Vendor: aws.String("mockVendor"),
 							},
 						},
 					}, nil),
@@ -297,7 +297,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 					{
 						Environment: "test",
 						Tracing: &Tracing{
-							Vendor: "MockVendor",
+							Vendor: "mockVendor",
 						},
 					},
 					{
