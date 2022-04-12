@@ -343,12 +343,6 @@ func TestPipelineStage_Init(t *testing.T) {
 	t.Run("number of expected deployments match", func(t *testing.T) {
 		require.Equal(t, 2, len(stg.Deployments()))
 	})
-	t.Run("stage test commands match manifest input", func(t *testing.T) {
-		require.ElementsMatch(t, []string{"make test", `echo "made test"`}, stg.TestCommands())
-	})
-	t.Run("stage test commands order should come after deployments", func(t *testing.T) {
-		require.Equal(t, 3, stg.TestCommandsOrder())
-	})
 	t.Run("manual approval button", func(t *testing.T) {
 		require.NotNil(t, stg.Approval(), "should require approval action for stages when the manifest requires it")
 
@@ -357,18 +351,52 @@ func TestPipelineStage_Init(t *testing.T) {
 	})
 }
 
+type mockAction struct {
+	order int
+}
+
+func (ma mockAction) RunOrder() int {
+	return ma.order
+}
+
+func TestAction_RunOrder(t *testing.T) {
+	testCases := map[string]struct {
+		previous []orderedRunner
+		wanted   int
+	}{
+		"should return 1 when there are no previous actions": {
+			wanted: 1,
+		},
+		"should return the max of previous actions + 1": {
+			previous: []orderedRunner{
+				mockAction{order: 8},
+				mockAction{order: 7},
+				mockAction{order: 9},
+				mockAction{order: 8},
+			},
+			wanted: 10,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			action := action{
+				prevActions: tc.previous,
+			}
+
+			// THEN
+			require.Equal(t, tc.wanted, action.RunOrder())
+		})
+	}
+}
+
 func TestManualApprovalAction_Name(t *testing.T) {
 	action := ManualApprovalAction{
 		name: "test",
 	}
 
 	require.Equal(t, "ApprovePromotionTo-test", action.Name())
-}
-
-func TestManualApprovalAction_RunOrder(t *testing.T) {
-	action := ManualApprovalAction{}
-
-	require.Equal(t, 1, action.RunOrder(), "approval actions should always run first in the stage")
 }
 
 func TestWorkloadDeployAction_Name(t *testing.T) {
@@ -388,34 +416,6 @@ func TestWorkloadDeployAction_StackName(t *testing.T) {
 	}
 
 	require.Equal(t, "phonetool-test-frontend", action.StackName())
-}
-
-func TestWorkloadDeployAction_RunOrder(t *testing.T) {
-	testCases := map[string]struct {
-		in     WorkloadDeployAction
-		wanted int
-	}{
-		"action has a preceding manual approval": {
-			in: WorkloadDeployAction{
-				action: action{
-					prevActions: []orderedRunner{&ManualApprovalAction{}},
-				},
-				name: "frontend",
-			},
-			wanted: 2,
-		},
-		"action does not require a manual approval": {
-			in: WorkloadDeployAction{
-				name: "frontend",
-			},
-			wanted: 1,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, tc.in.RunOrder())
-		})
-	}
 }
 
 func TestWorkloadDeployAction_TemplatePath(t *testing.T) {
@@ -456,6 +456,10 @@ func TestWorkloadDeployAction_TemplateConfigPath(t *testing.T) {
 			require.Equal(t, tc.wanted, tc.in.TemplateConfigPath())
 		})
 	}
+}
+
+func TestTestCommandsAction_Name(t *testing.T) {
+	require.Equal(t, "TestCommands", (&TestCommandsAction{}).Name())
 }
 
 func TestParseRepo(t *testing.T) {

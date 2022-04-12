@@ -520,20 +520,24 @@ func (stg *PipelineStage) EnvManagerRoleARN() string {
 	return stg.envManagerRoleARN
 }
 
-// TestCommands returns commands to run in CodeBuild once deployments finish.
-func (stg *PipelineStage) TestCommands() []string {
-	return stg.testCommands
-}
-
-// TestCommandsOrder returns the order in which the TestCommands action should run in the stage.
-func (stg *PipelineStage) TestCommandsOrder() int {
-	order := 0
-	for _, deployment := range stg.Deployments() {
-		if cur := deployment.RunOrder(); cur > order {
-			order = cur
-		}
+// Test returns a test for the stage.
+// If the stage does not have any test commands, then returns nil.
+func (stg *PipelineStage) Test() *TestCommandsAction {
+	if len(stg.testCommands) == 0 {
+		return nil
 	}
-	return order + 1
+
+	var prevActions []orderedRunner
+	for _, deployment := range stg.Deployments() {
+		prevActions = append(prevActions, &deployment)
+	}
+
+	return &TestCommandsAction{
+		action: action{
+			prevActions: prevActions,
+		},
+		commands: stg.testCommands,
+	}
 }
 
 // Deployments returns a list of deploy actions for the pipeline.

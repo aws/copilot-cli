@@ -265,7 +265,7 @@ Resources:
       Roles:
         - !Ref PipelineRole
 {{- range $index, $stage := .Stages}}
-  {{- if $stage.TestCommands}}
+  {{- if $stage.Test}}
   BuildTestCommands{{logicalIDSafe $stage.Name}}:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -288,7 +288,7 @@ Resources:
                   docker: 18
             build:
               commands:
-              {{- range $index, $command := $stage.TestCommands}}
+              {{- range $index, $command := $stage.Test.Commands}}
                 - {{$command}}
               {{- end}}
   {{- end}}
@@ -424,8 +424,8 @@ Resources:
               RunOrder: {{$deployment.RunOrder}}
               RoleArn: {{$stage.EnvManagerRoleARN}}
             {{- end}}
-            {{- if $stage.TestCommands }}
-            - Name: TestCommands
+            {{- if $stage.Test }}
+            - Name: {{$stage.Test.Name}}
               ActionTypeId:
                 Category: Test
                 Owner: AWS
@@ -433,7 +433,7 @@ Resources:
                 Provider: CodeBuild
               Configuration:
                 ProjectName: !Ref BuildTestCommands{{logicalIDSafe $stage.Name}}
-              RunOrder: {{$stage.TestCommandsOrder}}
+              RunOrder: {{$stage.Test.RunOrder}}
               InputArtifacts:
                 - Name: SCCheckoutArtifact
             {{- end}}
