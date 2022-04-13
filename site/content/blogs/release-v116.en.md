@@ -173,7 +173,7 @@ You can learn more about SNS filters in [Copilot's documentation](../docs/manife
 
 ## What’s next?
 
-Download the new Copilot CLI version by following the link below and leave your feedback on [GitHub](https://github.com/aws/copilot-cli/) or our [Community Chat](https://github.com/aws/copilot-cli):
+Download the new Copilot CLI version by following the link below and leave your feedback on [GitHub](https://github.com/aws/copilot-cli/) or our [Community Chat](https://gitter.im/aws/copilot-cli):
 
 * Download [the latest CLI version](../docs/getting-started/install.en.md)
 * Try our [Getting Started Guide](../docs/getting-started/first-app-tutorial.en.md)
