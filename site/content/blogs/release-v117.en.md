@@ -19,7 +19,7 @@ Copilot v1.17 brings a brand-new feature and several improvements:
   on:
     schedule: "none"
   ```
-* **Increased visibility for progress trackers:** Now progress trackers are showing more information, such as the creation of HTTP Listener rules. ([#3430](https://github.com/aws/copilot-cli/pull/3430) & [#3432](https://github.com/aws/copilot-cli/pull/3432)).
+* **Increased visibility for progress trackers:** Now progress trackers are showing more information, such as the creation of HTTP listener rules. ([#3430](https://github.com/aws/copilot-cli/pull/3430) & [#3432](https://github.com/aws/copilot-cli/pull/3432)).
 * **Bug fix:** Remove color formatting of suggested pipeline names ([#3437](https://github.com/aws/copilot-cli/pull/3437)).
 
 There is no breaking change in this release.
