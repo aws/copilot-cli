@@ -53,6 +53,7 @@ var (
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	nlbValidProtocols                        = []string{TCP, tls}
 	TracingValidVendors                      = []string{awsXRAY}
+	ecsRollingUpdateStrategies               = []string{ecsDefaultRollingUpdateStrategy, ecsRecreateRollingUpdateStrategy}
 
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
@@ -62,6 +63,9 @@ var (
 // Validate returns nil if LoadBalancedWebService is configured correctly.
 func (l LoadBalancedWebService) Validate() error {
 	var err error
+	if err = l.DeployConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "deployment": %w`, err)
+	}
 	if err = l.LoadBalancedWebServiceConfig.Validate(); err != nil {
 		return err
 	}
@@ -91,6 +95,20 @@ func (l LoadBalancedWebService) Validate() error {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
+}
+
+func (d DeploymentConfiguration) Validate() error {
+	if d.isEmpty() {
+		return nil
+	}
+	for _, validStrategy := range ecsRollingUpdateStrategies {
+		if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid rolling deployment strategy %s, must be one of %s",
+		aws.StringValue(d.Rolling),
+		english.WordSeries(ecsRollingUpdateStrategies, "or"))
 }
 
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
@@ -160,6 +178,9 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 // Validate returns nil if BackendService is configured correctly.
 func (b BackendService) Validate() error {
 	var err error
+	if err = b.DeployConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "deployment": %w`, err)
+	}
 	if err = b.BackendServiceConfig.Validate(); err != nil {
 		return err
 	}
@@ -262,6 +283,9 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 // Validate returns nil if WorkerService is configured correctly.
 func (w WorkerService) Validate() error {
 	var err error
+	if err = w.DeployConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "deployment": %w`, err)
+	}
 	if err = w.WorkerServiceConfig.Validate(); err != nil {
 		return err
 	}
