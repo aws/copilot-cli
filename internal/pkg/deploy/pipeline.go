@@ -506,6 +506,7 @@ func (stg *PipelineStage) Approval() *ManualApprovalAction {
 	}
 }
 
+// Region returns the AWS region name, such as "us-west-2", where the deployments will occur.
 func (stg *PipelineStage) Region() string {
 	return stg.associatedEnvironment.Region
 }
