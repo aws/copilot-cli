@@ -64,6 +64,12 @@ Alternatively, you can specify a cron schedule if you'd like to trigger the job 
 * `"* * * * *"` based on the standard [cron format](https://en.wikipedia.org/wiki/Cron#Overview).
 * `"cron({fields})"` based on CloudWatch's [cron expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) with six fields.
 
+Finally, you can disable the job from triggering by setting the `schedule` field to `none` for example:
+```yaml
+on:
+  schedule: "none"
+```
+
 <div class="separator"></div>
 
 {% include 'image-config.en.md' %}
