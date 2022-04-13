@@ -193,7 +193,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
-	deployConfig := getDeployConfig(aws.StringValue(s.manifest.DeployConfig.Rolling))
 
 	nlbConfig, err := s.convertNetworkLoadBalancer()
 	if err != nil {
@@ -231,7 +230,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Platform:                       convertPlatform(s.manifest.Platform),
 		HTTPVersion:                    convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
 		NLB:                            nlbConfig.settings,
-		DeploymentConfiguration:        deployConfig,
+		DeploymentConfiguration:        convertDeploymentConfig(s.manifest.DeployConfig),
 		AppDNSName:                     nlbConfig.appDNSName,
 		AppDNSDelegationRole:           nlbConfig.appDNSDelegationRole,
 		NLBCertValidatorFunctionLambda: nlbConfig.certValidatorLambda,

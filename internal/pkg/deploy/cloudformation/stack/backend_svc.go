@@ -107,7 +107,6 @@ func (s *BackendService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
-	deployConfig := getDeployConfig(aws.StringValue(s.manifest.DeployConfig.Rolling))
 
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
@@ -135,7 +134,7 @@ func (s *BackendService) Template() (string, error) {
 		EnvControllerLambda:      envControllerLambda.String(),
 		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                  convertNetworkConfig(s.manifest.Network),
-		DeploymentConfiguration:  deployConfig,
+		DeploymentConfiguration:  convertDeploymentConfig(s.manifest.DeployConfig),
 		EntryPoint:               entrypoint,
 		Command:                  command,
 		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),

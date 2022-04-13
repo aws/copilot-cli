@@ -234,7 +234,7 @@ Outputs:
 					},
 					DeploymentConfiguration: template.DeploymentConfigurationOpts{
 						MinHealthyPercent: 100,
-						MaxHealthyPercent: 200,
+						MaxPercent:        200,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
@@ -278,7 +278,7 @@ Outputs:
 					},
 					DeploymentConfiguration: template.DeploymentConfigurationOpts{
 						MinHealthyPercent: 100,
-						MaxHealthyPercent: 200,
+						MaxPercent:        200,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},

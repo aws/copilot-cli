@@ -218,7 +218,7 @@ Outputs:
 					},
 					DeploymentConfiguration: template.DeploymentConfigurationOpts{
 						MinHealthyPercent: 0,
-						MaxHealthyPercent: 100,
+						MaxPercent:        100,
 					},
 					EntryPoint: []string{"enter", "from"},
 					Command:    []string{"here"},

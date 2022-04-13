@@ -341,10 +341,10 @@ type ObservabilityOpts struct {
 	Tracing string // The name of the vendor used for tracing.
 }
 
-// DeploymentConfiguraitonOpts holds values for MinHealthyPercent and MaxHealthyPercent.
+// DeploymentConfiguraitonOpts holds values for MinHealthyPercent and MaxPercent.
 type DeploymentConfigurationOpts struct {
-	MinHealthyPercent int // MinHealthyPercent parameter represents an upper limit on the number of tasks in a service
-	MaxHealthyPercent int // MaxHealthyPercent represents a lower limit on the number of tasks in a service
+	MinHealthyPercent int // MinHealthyPercent represents the lower limit on the number of tasks that should be running for a service during a deployment or when a container instance is draining.
+	MaxPercent        int // MaxPercent represents the upper limit on the number of tasks that should be running for a service during a deployment or when a container instance is draining.
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.

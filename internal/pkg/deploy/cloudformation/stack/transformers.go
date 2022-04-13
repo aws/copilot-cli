@@ -43,6 +43,14 @@ const (
 	capacityProviderFargate     = "FARGATE"
 )
 
+// MinimumHealthyPercent and MaximumPercent configurations as per deployment strategy
+const (
+	minHealthyPercentRecreate = 0
+	maxPercentRecreate        = 100
+	minHealthyPercentDefault  = 100
+	maxPercentDefault         = 200
+)
+
 var (
 	taskDefOverrideRulePrefixes = []string{"Resources", "TaskDefinition", "Properties"}
 )
@@ -609,14 +617,14 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
-func getDeployConfig(deployStrategyName string) template.DeploymentConfigurationOpts {
+func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
 	var deployConfigs template.DeploymentConfigurationOpts
-	if deployStrategyName == "recreate" {
-		deployConfigs.MinHealthyPercent = 0
-		deployConfigs.MaxHealthyPercent = 100
+	if strings.EqualFold(aws.StringValue(deploymentConfig.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
+		deployConfigs.MinHealthyPercent = minHealthyPercentRecreate
+		deployConfigs.MaxPercent = maxPercentRecreate
 	} else {
-		deployConfigs.MinHealthyPercent = 100
-		deployConfigs.MaxHealthyPercent = 200
+		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
+		deployConfigs.MaxPercent = maxPercentDefault
 	}
 	return deployConfigs
 }

@@ -190,7 +190,7 @@ Outputs:
 				}
 				svc.manifest.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
 				svc.manifest.DeployConfig = manifest.DeploymentConfiguration{
-					Rolling: aws.String("incorrect value"),
+					Rolling: aws.String("default"),
 				}
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
@@ -222,7 +222,7 @@ Outputs:
 					},
 					DeploymentConfiguration: template.DeploymentConfigurationOpts{
 						MinHealthyPercent: 100,
-						MaxHealthyPercent: 200,
+						MaxPercent:        200,
 					},
 					EntryPoint: []string{"enter", "from"},
 					Command:    []string{"here"},

@@ -15,7 +15,7 @@ DeploymentConfiguration:
     Enable: true
     Rollback: true
   MinimumHealthyPercent: {{ .DeploymentConfiguration.MinHealthyPercent }}
-  MaximumPercent: {{ .DeploymentConfiguration.MaxHealthyPercent }}
+  MaximumPercent: {{ .DeploymentConfiguration.MaxPercent }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
 EnableExecuteCommand: true
