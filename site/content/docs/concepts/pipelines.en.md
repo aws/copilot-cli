@@ -131,18 +131,30 @@ This parses your `manifest.yml`, creates a CodePipeline __in the same account an
 
 ![Your completed CodePipeline](https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png)
 
-!!! info 
+!!! info
     If you have selected a GitHub or Bitbucket repository, Copilot will help you connect to your source code with [CodeStar Connections](https://docs.aws.amazon.com/dtconsole/latest/userguide/welcome-connections.html). You will need to install the AWS authentication app on your third-party account and update the connection status. Copilot and the AWS Management Console will guide you through these steps.
+
+### Step 6: Manage Copilot Version for Your Pipeline (optional)
+
+After creating your pipeline, you can manage the version of Copilot binary used by your pipeline by updating the `buildspec.yml` as following:
+
+```yaml
+...
+      # Download the copilot linux binary.
+      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.16.0
+      - mv ./copilot-linux-v1.16.0 ./copilot-linux
+...
+```
 
 ## Adding Tests
 
-Of course, one of the most important parts of a pipeline is the automated testing. To add tests, such as integration or end-to-end tests, that run after a deployment stage, include those commands in the `test_commands` section. If all the tests succeed, your change is promoted to the next stage. 
+Of course, one of the most important parts of a pipeline is the automated testing. To add tests, such as integration or end-to-end tests, that run after a deployment stage, include those commands in the `test_commands` section. If all the tests succeed, your change is promoted to the next stage.
 
-Adding `test_commands` generates a CodeBuild project with the [aws/codebuild/amazonlinux2-x86_64-standard:3.0](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html) image - so most commands from Amazon Linux 2 (including `make`) are available for use. 
+Adding `test_commands` generates a CodeBuild project with the [aws/codebuild/amazonlinux2-x86_64-standard:3.0](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html) image - so most commands from Amazon Linux 2 (including `make`) are available for use.
 
 Are your tests configured to run inside a Docker container? Copilot's test commands CodeBuild project supports Docker, so `docker build` commands are available as well.
 
-In the example below, the pipeline will run the `make test` command (in your source code directory) and only promote the change to the prod stage if that command exits successfully. 
+In the example below, the pipeline will run the `make test` command (in your source code directory) and only promote the change to the prod stage if that command exits successfully.
 
 ```yaml
 name: demo-api-frontend-main
@@ -157,7 +169,7 @@ stages:
     -
       name: test
       # A change will only deploy to the production stage if the
-      # make test and echo commands exit successfully. 
+      # make test and echo commands exit successfully.
       test_commands:
         - make test
         - echo "woo! Tests passed"
