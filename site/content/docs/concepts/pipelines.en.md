@@ -136,7 +136,7 @@ This parses your `manifest.yml`, creates a CodePipeline __in the same account an
 
 ### Step 6: Manage Copilot Version for Your Pipeline (optional)
 
-After creating your pipeline, you can manage the version of Copilot binary used by your pipeline by updating the `buildspec.yml` as following:
+After creating your pipeline, you can manage the version of Copilot used by your pipeline by updating the `buildspec.yml` as following:
 
 ```yaml
 ...
