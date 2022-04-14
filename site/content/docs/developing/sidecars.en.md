@@ -74,15 +74,15 @@ sidecars:
         path: '/etc/mount1'
 ```
 
-Below is an example of running the [AWS Distro for OpenTelemetry](https://aws-otel.github.io/) sidecar with a custom configuration.  The example
-custom configuration will not only collect X-Ray trace data, but also ships ECS metrics to a third party.  The example will require an SSM secret and additional IAM permissions.
+Below is an example of running the [AWS Distro for OpenTelemetry](https://aws-otel.github.io/) sidecar with a custom configuration. The example
+custom configuration will not only collect X-Ray trace data, but also ship ECS metrics to a third party. The example will require an SSM secret and additional IAM permissions.
 
-To use the OpenTelemetry sidecar, first, create a valid [configuration file](https://opentelemetry.io/docs/collector/configuration/).  Next, check the size of the configuration file.  A standard parameter is [limited to 4KB](https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_PutParameter.html#systemsmanager-PutParameter-request-Value).
+To use the OpenTelemetry sidecar, first, create a valid [configuration file](https://opentelemetry.io/docs/collector/configuration/). Next, check the size of the configuration file.  A standard parameter is [limited to 4KB](https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_PutParameter.html#systemsmanager-PutParameter-request-Value).
 If the configuration file is larger than 4K, an advanced SSM parameter must be used.
 
-If an advanced parameter is required, it will need to be created and tagged manually.  If the configuration fits within a standard parameter, create an SSM secret using the [`secret init`](../commands/secret-init.en.md).  The YAML document below can be used as-is with New Relic after updating the API key written as "YOUR-API-KEY-HERE".
+If an advanced parameter is required, it will need to be created and tagged manually.  If the configuration fits within a standard parameter, create an SSM secret using the [`secret init`](../commands/secret-init.en.md). The YAML document below can be used as-is with New Relic after updating the API key written as "YOUR-API-KEY-HERE".
 
-In the example YAML, the inclusion of empty keys is deliberate.  The sidecar will use the collector defaults for those keys.
+In the example YAML, the inclusion of empty keys is deliberate. The sidecar will use the collector defaults for those keys.
 
 
 ```yaml
@@ -113,7 +113,7 @@ service:
       exporters: [otlp]
 ```
 
-Writing X-Ray traces needs additional IAM permissions as shown below.  Include this in addons according to the [published documentation](../developing/additional-aws-resources.en.md)
+Writing X-Ray traces needs additional IAM permissions as shown below. Include this in addons according to the [published documentation](../developing/additional-aws-resources.en.md)
 
 ``` yaml
 Resources:
