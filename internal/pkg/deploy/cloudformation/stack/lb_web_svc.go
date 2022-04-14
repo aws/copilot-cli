@@ -230,6 +230,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Platform:                       convertPlatform(s.manifest.Platform),
 		HTTPVersion:                    convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
 		NLB:                            nlbConfig.settings,
+		DeploymentConfiguration:        convertDeploymentConfig(s.manifest.DeployConfig),
 		AppDNSName:                     nlbConfig.appDNSName,
 		AppDNSDelegationRole:           nlbConfig.appDNSDelegationRole,
 		NLBCertValidatorFunctionLambda: nlbConfig.certValidatorLambda,

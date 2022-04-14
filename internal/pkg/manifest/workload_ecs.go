@@ -36,8 +36,8 @@ const (
 	MinWindowsTaskMemory = 2048
 
 	// deployment strategies
-	ecsDefaultRollingUpdateStrategy  = "default"
-	ecsRecreateRollingUpdateStrategy = "recreate"
+	ECSDefaultRollingUpdateStrategy  = "default"
+	ECSRecreateRollingUpdateStrategy = "recreate"
 )
 
 // Platform related settings.
