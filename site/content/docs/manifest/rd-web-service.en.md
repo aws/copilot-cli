@@ -157,6 +157,14 @@ for isolated workloads. See our [custom environment resources](../developing/cus
 
 <div class="separator"></div>
 
+<a id="observability" href="#observability" class="field">`observability`</a> <span class="type">Map</span>      
+The `observability` section lets you configure ways to measure your service's current state. Currently, only tracing configuration is supported.
+
+<span class="parent-field">observability.</span><a id="observability-tracing" href="#observability-tracing" class="field">`tracing`</a> <span class="type">String</span>    
+The vendor to use for tracing. Currently, only `awsxray` is supported.
+
+<div class="separator"></div>
+
 <a id="command" href="#command" class="field">`command`</a> <span class="type">String</span>  
 Optional. Override the default command in the image.
 
