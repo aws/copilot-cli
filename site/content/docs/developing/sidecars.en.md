@@ -74,17 +74,46 @@ sidecars:
         path: '/etc/mount1'
 ```
 
-Below is an example of running the [AWS X-Ray daemon](https://docs.aws.amazon.com/xray/latest/devguide/xray-daemon-ecs.html) as a sidecar.
-X-Ray accepts trace data over UDP on port 2000.
+Below is an example of running the [AWS Distro for OpenTelemetry](https://aws-otel.github.io/) sidecar with a custom configuration.  The example
+custom configuration will not only collect X-Ray trace data, but also ships ECS metrics to a third party.  The example will require an SSM secret and additional IAM permissions.
+
+To use the OpenTelemetry sidecar, first, create a valid [configuration file](https://opentelemetry.io/docs/collector/configuration/).  Next, check the size of the configuration file.  A standard parameter is [limited to 4KB](https://docs.aws.amazon.com/systems-manager/latest/APIReference/API_PutParameter.html#systemsmanager-PutParameter-request-Value).
+If the configuration file is larger than 4K, an advanced SSM parameter must be used.
+
+If an advanced parameter is required, it will need to be created and tagged manually.  If the configuration fits within a standard parameter, create an SSM secret using the [`secret init`](../commands/secret-init.en.md).  The YAML document below can be used as-is with New Relic after updating the API key written as "YOUR-API-KEY-HERE".
+
+In the example YAML, the inclusion of empty keys is deliberate.  The sidecar will use the collector defaults for those keys.
+
 
 ```yaml
-sidecars:
-  xray_sidecar:
-    image: 'public.ecr.aws/xray/aws-xray-daemon:3.x'
-    port: 2000/udp
+receivers:
+  awsxray:
+    transport: udp
+  awsecscontainermetrics:
+
+processors:
+  batch:
+
+exporters:
+  awsxray:
+    region: us-west-2
+  otlp:
+    endpoint: otlp.nr-data.net:4317
+    headers: 
+      api-key: YOUR-API-KEY-HERE
+
+service:
+  pipelines:
+    traces:
+      receivers: [awsxray]
+      processors: [batch]
+      exporters: [awsxray]
+    metrics:
+      receivers: [awsecscontainermetrics]
+      exporters: [otlp]
 ```
 
-The X-Ray sidecar needs additional IAM permissions as shown below.  Include this in addons according to the [published documentation](../developing/additional-aws-resources.en.md)
+Writing X-Ray traces needs additional IAM permissions as shown below.  Include this in addons according to the [published documentation](../developing/additional-aws-resources.en.md)
 
 ``` yaml
 Resources:
@@ -109,47 +138,6 @@ Outputs:
     Description: "The ARN of the ManagedPolicy to attach to the task role."
     Value: !Ref XrayWritePolicy
 ```
-
-An alternative to the X-Ray daemon sidecar is the [AWS Distro for OpenTelemetry](https://aws-otel.github.io/).  This sidecar not only collects
-X-Ray trace data, but can also ship ECS metrics to third-parties such as DataDog or New Relic.
-
-To use the OpenTelemetry sidecar, first, create a valid configuration file and store it in an SSM parameter.  A standard parameter is limited to 4KB.
-If the configuration file is larger than 4K, an advanced SSM parameter may be used.  The example below shows an OpenTelemetry configuration that accepts X-Ray traces and
-ECS metrics.
-
-```yaml
-receivers:
-  awsxray:
-    transport: udp
-  awsecscontainermetrics:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-
-processors:
-  batch:
-
-exporters:
-  awsxray:
-    region: us-west-2
-  otlp:
-    endpoint: otlp.nr-data.net:4317
-    headers: 
-      api-key: YOUR-API-KEY-HERE
-
-service:
-  pipelines:
-    traces:
-      receivers: [awsxray,otlp]
-      processors: [batch]
-      exporters: [awsxray]
-    metrics:
-      receivers: [awsecscontainermetrics]
-      exporters: [otlp]
-```
-
-Create an SSM secret using the [copilot CLI](../commands/secret-init.en.md).  If an advanced parameter was required, it will need to be created and tagged manually.
 
 The configuration for the OpenTelemetry collector will be passed into the sidecar as an environment variable.
 
