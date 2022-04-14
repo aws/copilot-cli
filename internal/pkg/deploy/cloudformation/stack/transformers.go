@@ -43,7 +43,7 @@ const (
 	capacityProviderFargate     = "FARGATE"
 )
 
-// MinimumHealthyPercent and MaximumPercent configurations as per deployment strategy
+// MinimumHealthyPercent and MaximumPercent configurations as per deployment strategy.
 const (
 	minHealthyPercentRecreate = 0
 	maxPercentRecreate        = 100
