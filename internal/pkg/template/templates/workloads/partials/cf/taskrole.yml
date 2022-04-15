@@ -119,6 +119,5 @@ TaskRole:
                 - 'xray:GetSamplingRules'
                 - 'xray:GetSamplingTargets'
                 - 'xray:GetSamplingStatisticSummaries'
-                - 'ssm:GetParameters'
               Resource: "*"
       {{- end}}
