@@ -908,21 +908,21 @@ func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcS
 	if err := d.validateNLBWSRuntime(); err != nil {
 		return nil, err
 	}
-	var cidrBlocks []string
+	var opts []stack.LoadBalancedWebServiceOption
 	if !d.lbMft.NLBConfig.IsEmpty() {
-		cidrBlocks, err = d.publicCIDRBlocksGetter.PublicCIDRBlocks()
+		cidrBlocks, err := d.publicCIDRBlocksGetter.PublicCIDRBlocks()
 		if err != nil {
 			return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
 		}
+		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
-	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceOpts{
-		App:                    d.app,
-		Env:                    d.env,
-		Manifest:               d.lbMft,
-		RuntimeConfig:          *rc,
-		RootUserARN:            in.RootUserARN,
-		PublicSubnetCIDRBlocks: cidrBlocks,
-	})
+	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfigs{
+		App:           d.app,
+		Env:           d.env,
+		Manifest:      d.lbMft,
+		RuntimeConfig: *rc,
+		RootUserARN:   in.RootUserARN,
+	}, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
@@ -968,7 +968,7 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 	}
 	appInfo := deploy.AppInformation{
 		Name:                d.app.Name,
-		DNSName:             d.app.Domain,
+		Domain:              d.app.Domain,
 		AccountPrincipalARN: in.RootUserARN,
 	}
 	if d.rdwsMft.Alias == nil {
@@ -1214,7 +1214,7 @@ func (d *lbSvcDeployer) validateALBWSRuntime() error {
 		}
 		return nil
 	}
-	if d.app.DNSDelegated() {
+	if d.app.Domain != "" {
 		if err := validateAppVersionForAlias(d.app.Name, d.appVersionGetter); err != nil {
 			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 			return err
@@ -1232,7 +1232,7 @@ func (d *lbSvcDeployer) validateNLBWSRuntime() error {
 	if d.env.HasImportedCerts() {
 		return fmt.Errorf("cannot specify nlb.alias when env %s imports one or more certificates", d.env.Name)
 	}
-	if !d.app.DNSDelegated() {
+	if d.app.Domain == "" {
 		log.Errorf(ecsNLBAliasUsedWithoutDomainFriendlyText)
 		return fmt.Errorf("cannot specify nlb.alias when application is not associated with a domain")
 	}

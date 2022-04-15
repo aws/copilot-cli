@@ -60,62 +60,75 @@ type LoadBalancedWebService struct {
 	parser loadBalancedWebSvcReadParser
 }
 
-// LoadBalancedWebServiceOpts contains fields to configure LoadBalancedWebService.
-type LoadBalancedWebServiceOpts struct {
-	App                    *config.Application
-	Env                    *config.Environment
-	Manifest               *manifest.LoadBalancedWebService
-	RuntimeConfig          RuntimeConfig
-	RootUserARN            string
-	PublicSubnetCIDRBlocks []string
+// LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
+type LoadBalancedWebServiceOption func(s *LoadBalancedWebService)
+
+// WithNLB enables Network Load Balancer in a LoadBalancedWebService.
+func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
+	return func(s *LoadBalancedWebService) {
+		s.publicSubnetCIDRBlocks = cidrBlocks
+	}
+}
+
+// LoadBalancedWebServiceConfigs contains fields to configure LoadBalancedWebService.
+type LoadBalancedWebServiceConfigs struct {
+	App           *config.Application
+	Env           *config.Environment
+	Manifest      *manifest.LoadBalancedWebService
+	RuntimeConfig RuntimeConfig
+	RootUserARN   string
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
-func NewLoadBalancedWebService(opts LoadBalancedWebServiceOpts) (*LoadBalancedWebService, error) {
+func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfigs,
+	opts ...LoadBalancedWebServiceOption) (*LoadBalancedWebService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(opts.Manifest.Name))
+	addons, err := addon.New(aws.StringValue(conf.Manifest.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
 	var dnsDelegationEnabled, httpsEnabled bool
 	var appInfo deploy.AppInformation
 
-	if opts.App.DNSDelegated() {
+	if conf.App.Domain != "" {
 		dnsDelegationEnabled = true
 		appInfo = deploy.AppInformation{
-			Name:                opts.App.Name,
-			DNSName:             opts.App.Domain,
-			AccountPrincipalARN: opts.RootUserARN,
+			Name:                conf.App.Name,
+			Domain:              conf.App.Domain,
+			AccountPrincipalARN: conf.RootUserARN,
 		}
 		httpsEnabled = true
 	} else {
-		if opts.Env.HasImportedCerts() {
+		if conf.Env.HasImportedCerts() {
 			httpsEnabled = true
 		}
 	}
-	return &LoadBalancedWebService{
+	s := &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(opts.Manifest.Name),
-				env:    opts.Env.Name,
-				app:    opts.App.Name,
-				rc:     opts.RuntimeConfig,
-				image:  opts.Manifest.ImageConfig.Image,
+				name:   aws.StringValue(conf.Manifest.Name),
+				env:    conf.Env.Name,
+				app:    conf.App.Name,
+				rc:     conf.RuntimeConfig,
+				image:  conf.Manifest.ImageConfig.Image,
 				parser: parser,
 				addons: addons,
 			},
-			logRetention:        opts.Manifest.Logging.Retention,
-			tc:                  opts.Manifest.TaskConfig,
+			logRetention:        conf.Manifest.Logging.Retention,
+			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest:               opts.Manifest,
-		httpsEnabled:           httpsEnabled,
-		appInfo:                appInfo,
-		dnsDelegationEnabled:   dnsDelegationEnabled,
-		publicSubnetCIDRBlocks: opts.PublicSubnetCIDRBlocks,
+		manifest:             conf.Manifest,
+		httpsEnabled:         httpsEnabled,
+		appInfo:              appInfo,
+		dnsDelegationEnabled: dnsDelegationEnabled,
 
 		parser: parser,
-	}, nil
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s, nil
 }
 
 // Template returns the CloudFormation template for the service parametrized for the environment.

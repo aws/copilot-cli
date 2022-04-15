@@ -767,14 +767,13 @@ func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys ma
 	return
 }
 
-func convertAppInformation(app deploy.AppInformation) (delegationRole *string, dnsName *string) {
+func convertAppInformation(app deploy.AppInformation) (delegationRole *string, domain *string) {
 	role := app.DNSDelegationRole()
 	if role != "" {
 		delegationRole = &role
 	}
-	dns := app.DNSName
-	if dns != "" {
-		dnsName = &dns
+	if app.Domain != "" {
+		domain = &app.Domain
 	}
 	return
 }

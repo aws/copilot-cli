@@ -115,7 +115,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 // Parameters returns the parameters to be passed into a environment CloudFormation template.
 func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	httpsListener := "false"
-	if len(e.in.ImportCertARNs) != 0 || e.in.App.DNSDelegationRole() != "" {
+	if len(e.in.ImportCertARNs) != 0 || e.in.App.Domain != "" {
 		httpsListener = "true"
 	}
 	return []*cloudformation.Parameter{
@@ -133,7 +133,7 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(envParamAppDNSKey),
-			ParameterValue: aws.String(e.in.App.DNSName),
+			ParameterValue: aws.String(e.in.App.Domain),
 		},
 		{
 			ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),

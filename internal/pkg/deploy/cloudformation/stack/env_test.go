@@ -75,7 +75,7 @@ func TestEnv_Template(t *testing.T) {
 func TestEnv_Parameters(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
 	deploymentInputWithDNS := mockDeployEnvironmentInput()
-	deploymentInputWithDNS.App.DNSName = "ecs.aws"
+	deploymentInputWithDNS.App.Domain = "ecs.aws"
 	testCases := map[string]struct {
 		input *deploy.CreateEnvironmentInput
 		want  []*cloudformation.Parameter
@@ -130,7 +130,7 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
-					ParameterValue: aws.String(deploymentInputWithDNS.App.DNSName),
+					ParameterValue: aws.String(deploymentInputWithDNS.App.Domain),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),

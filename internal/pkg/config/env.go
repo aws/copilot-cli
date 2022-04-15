@@ -39,16 +39,9 @@ type CustomizeEnv struct {
 	ImportCertARNs []string   `json:"importCertARNs,omitempty"`
 }
 
-// CustomizeEnvP returns a pointer to the CustomizeEnv value passed in.
-func CustomizeEnvP(input CustomizeEnv) *CustomizeEnv {
-	if input.ImportVPC == nil && input.VPCConfig == nil && len(input.ImportCertARNs) == 0 {
-		return nil
-	}
-	return &CustomizeEnv{
-		ImportVPC:      input.ImportVPC,
-		VPCConfig:      input.VPCConfig,
-		ImportCertARNs: input.ImportCertARNs,
-	}
+// IsEmpty returns if CustomizeEnv is an empty struct.
+func (c CustomizeEnv) IsEmpty() bool {
+	return c.ImportVPC == nil && c.VPCConfig == nil && len(c.ImportCertARNs) == 0
 }
 
 // ImportVPC holds the fields to import VPC resources.

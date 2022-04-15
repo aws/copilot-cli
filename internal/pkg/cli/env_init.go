@@ -262,7 +262,7 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
-	if app.DNSDelegated() {
+	if app.Domain != "" {
 		if err := o.delegateDNSFromApp(app, envCaller.Account); err != nil {
 			return fmt.Errorf("granting DNS permissions: %w", err)
 		}
@@ -320,10 +320,13 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
 	env.Prod = o.isProduction
-	env.CustomConfig = config.CustomizeEnvP(config.CustomizeEnv{
+	customizedEnv := config.CustomizeEnv{
 		ImportVPC: o.importVPCConfig(),
 		VPCConfig: o.adjustVPCConfig(),
-	})
+	}
+	if !customizedEnv.IsEmpty() {
+		env.CustomConfig = &customizedEnv
+	}
 	env.Telemetry = o.telemetry.toConfig()
 
 	// 6. Store the environment in SSM.
@@ -692,7 +695,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 		Name: o.name,
 		App: deploy.AppInformation{
 			Name:                o.appName,
-			DNSName:             app.Domain,
+			Domain:              app.Domain,
 			AccountPrincipalARN: caller.RootUserARN,
 		},
 		Prod:                 o.isProduction,
