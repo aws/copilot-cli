@@ -40,7 +40,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 	v, ok := mft.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
 
-	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfigs{
+	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App: &config.Application{Name: appName},
 		Env: &config.Environment{
 			Name: envName,

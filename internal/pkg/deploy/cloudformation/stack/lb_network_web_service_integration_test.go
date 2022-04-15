@@ -83,7 +83,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 
-		serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfigs{
+		serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 			App:      &config.Application{Name: appName, Domain: "example.com"},
 			Env:      &config.Environment{Name: tc.envName},
 			Manifest: v,

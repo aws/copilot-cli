@@ -44,7 +44,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 	require.True(t, ok)
 
 	svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", envName, appName)
-	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfigs{
+	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App:      &config.Application{Name: appName},
 		Env:      &config.Environment{Name: envName},
 		Manifest: v,

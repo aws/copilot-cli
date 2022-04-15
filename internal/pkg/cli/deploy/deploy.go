@@ -916,7 +916,7 @@ func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcS
 		}
 		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
-	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfigs{
+	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App:           d.app,
 		Env:           d.env,
 		Manifest:      d.lbMft,

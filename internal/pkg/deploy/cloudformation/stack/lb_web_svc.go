@@ -66,8 +66,8 @@ func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 	}
 }
 
-// LoadBalancedWebServiceConfigs contains fields to configure LoadBalancedWebService.
-type LoadBalancedWebServiceConfigs struct {
+// LoadBalancedWebServiceConfig contains fields to configure LoadBalancedWebService.
+type LoadBalancedWebServiceConfig struct {
 	App           *config.Application
 	Env           *config.Environment
 	Manifest      *manifest.LoadBalancedWebService
@@ -76,7 +76,7 @@ type LoadBalancedWebServiceConfigs struct {
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
-func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfigs,
+func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	opts ...LoadBalancedWebServiceOption) (*LoadBalancedWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(conf.Manifest.Name))
