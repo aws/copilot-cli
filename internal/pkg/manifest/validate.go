@@ -53,7 +53,7 @@ var (
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	nlbValidProtocols                        = []string{TCP, tls}
 	TracingValidVendors                      = []string{awsXRAY}
-	ecsRollingUpdateStrategies               = []string{ecsDefaultRollingUpdateStrategy, ecsRecreateRollingUpdateStrategy}
+	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
 
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
