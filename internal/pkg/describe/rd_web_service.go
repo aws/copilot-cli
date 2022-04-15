@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"text/tabwriter"
 
@@ -65,7 +66,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
-	var observabilities []observability
+	var observabilities []observabilityInEnv
 	var routes []*WebServiceRoute
 	var configs []*ServiceConfig
 	var envVars envVars
@@ -97,7 +98,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 				Value:       v.Value,
 			})
 		}
-		observabilities = append(observabilities, observability{
+		observabilities = append(observabilities, observabilityInEnv{
 			Environment: env,
 			Tracing:     formatTracingConfiguration(service.Observability.TraceConfiguration),
 		})
@@ -143,7 +144,9 @@ func formatTracingConfiguration(configuration *apprunner.TraceConfiguration) *tr
 	}
 }
 
-type observability struct {
+type observabilityPerEnv []observabilityInEnv
+
+type observabilityInEnv struct {
 	Environment string   `json:"environment"`
 	Tracing     *tracing `json:"tracing,omitempty"`
 }
@@ -152,7 +155,7 @@ type tracing struct {
 	Vendor string `json:"vendor"`
 }
 
-func (o observability) isEmpty() bool {
+func (o observabilityInEnv) isEmpty() bool {
 	return o.Tracing.isEmpty()
 }
 
@@ -169,7 +172,7 @@ type rdWebSvcDesc struct {
 	Routes                  []*WebServiceRoute      `json:"routes"`
 	Variables               envVars                 `json:"variables"`
 	Resources               deployedSvcResources    `json:"resources,omitempty"`
-	Observability           []observability         `json:"observability,omitempty"`
+	Observability           observabilityPerEnv     `json:"observability,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -198,16 +201,7 @@ func (w *rdWebSvcDesc) HumanString() string {
 	if w.hasObservabilityConfiguration() {
 		fmt.Fprint(writer, color.Bold.Sprint("\nObservability\n\n"))
 		writer.Flush()
-		headers := []string{"Environment", "tracing"}
-		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
-		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
-		for _, config := range w.Observability {
-			tracingVendor := "None"
-			if config.Tracing != nil && config.Tracing.Vendor != "" {
-				tracingVendor = config.Tracing.Vendor
-			}
-			fmt.Fprintf(writer, "  %s\t%s\n", config.Environment, tracingVendor)
-		}
+		w.Observability.humanString(writer)
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
@@ -239,4 +233,17 @@ func (w *rdWebSvcDesc) hasObservabilityConfiguration() bool {
 		}
 	}
 	return false
+}
+
+func (obs observabilityPerEnv) humanString(w io.Writer) {
+	headers := []string{"Environment", "tracing"}
+	var rows [][]string
+	for _, ob := range obs {
+		tracingVendor := "None"
+		if ob.Tracing != nil && ob.Tracing.Vendor != "" {
+			tracingVendor = ob.Tracing.Vendor
+		}
+		rows = append(rows, []string{ob.Environment, tracingVendor})
+	}
+	printTable(w, headers, rows)
 }

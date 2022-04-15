@@ -293,7 +293,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 						Value:       "prod",
 					},
 				},
-				Observability: []observability{
+				Observability: []observabilityInEnv{
 					{
 						Environment: "test",
 						Tracing: &tracing{
@@ -515,7 +515,7 @@ Resources
 					Value:       "prod",
 				},
 			},
-			Observability: []observability{
+			Observability: []observabilityInEnv{
 				{
 					Environment: "test",
 					Tracing: &tracing{
