@@ -27,13 +27,16 @@ type Service struct {
 	Observability        ObservabilityConfiguration
 }
 
+// EnvironmentVariable contains the name and value of an environment variable.
 type EnvironmentVariable struct {
 	Name  string
 	Value string
 }
 
+// ObservabilityConfiguration contains observability related configuration. Currently only tracing configuration is available.
 type ObservabilityConfiguration struct {
 	TraceConfiguration *TraceConfiguration
 }
 
+// TraceConfiguration wraps AppRunner TraceConfiguration.
 type TraceConfiguration apprunner.TraceConfiguration

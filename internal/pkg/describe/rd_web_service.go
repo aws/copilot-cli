@@ -65,7 +65,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
-	var observabilities []Observability
+	var observabilities []observability
 	var routes []*WebServiceRoute
 	var configs []*ServiceConfig
 	var envVars envVars
@@ -97,7 +97,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 				Value:       v.Value,
 			})
 		}
-		observabilities = append(observabilities, Observability{
+		observabilities = append(observabilities, observability{
 			Environment: env,
 			Tracing:     formatTracingConfiguration(service.Observability.TraceConfiguration),
 		})
@@ -134,29 +134,29 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}, nil
 }
 
-func formatTracingConfiguration(configuration *apprunner.TraceConfiguration) *Tracing {
+func formatTracingConfiguration(configuration *apprunner.TraceConfiguration) *tracing {
 	if configuration == nil {
 		return nil
 	}
-	return &Tracing{
+	return &tracing{
 		Vendor: aws.StringValue(configuration.Vendor),
 	}
 }
 
-type Observability struct {
+type observability struct {
 	Environment string   `json:"environment"`
-	Tracing     *Tracing `json:"tracing,omitempty"`
+	Tracing     *tracing `json:"tracing,omitempty"`
 }
 
-type Tracing struct {
+type tracing struct {
 	Vendor string `json:"vendor"`
 }
 
-func (o Observability) isEmpty() bool {
+func (o observability) isEmpty() bool {
 	return o.Tracing.isEmpty()
 }
 
-func (t *Tracing) isEmpty() bool {
+func (t *tracing) isEmpty() bool {
 	return t == nil || t.Vendor == ""
 }
 
@@ -169,7 +169,7 @@ type rdWebSvcDesc struct {
 	Routes                  []*WebServiceRoute      `json:"routes"`
 	Variables               envVars                 `json:"variables"`
 	Resources               deployedSvcResources    `json:"resources,omitempty"`
-	Observability           []Observability         `json:"observability,omitempty"`
+	Observability           []observability         `json:"observability,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -198,7 +198,7 @@ func (w *rdWebSvcDesc) HumanString() string {
 	if w.hasObservabilityConfiguration() {
 		fmt.Fprint(writer, color.Bold.Sprint("\nObservability\n\n"))
 		writer.Flush()
-		headers := []string{"Environment", "Tracing"}
+		headers := []string{"Environment", "tracing"}
 		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 		for _, config := range w.Observability {

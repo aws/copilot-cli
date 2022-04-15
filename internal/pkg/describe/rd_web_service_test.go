@@ -293,10 +293,10 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 						Value:       "prod",
 					},
 				},
-				Observability: []Observability{
+				Observability: []observability{
 					{
 						Environment: "test",
-						Tracing: &Tracing{
+						Tracing: &tracing{
 							Vendor: "mockVendor",
 						},
 					},
@@ -447,7 +447,7 @@ Configurations
 
 Observability
 
-  Environment  Tracing
+  Environment  tracing
   -----------  -------
   test         mockVendor
   prod         None
@@ -515,10 +515,10 @@ Resources
 					Value:       "prod",
 				},
 			},
-			Observability: []Observability{
+			Observability: []observability{
 				{
 					Environment: "test",
-					Tracing: &Tracing{
+					Tracing: &tracing{
 						Vendor: "mockVendor",
 					},
 				},
