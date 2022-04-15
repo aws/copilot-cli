@@ -99,6 +99,9 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfigs,
 		httpsEnabled = true
 		dnsDelegationEnabled = false
 	}
+	if conf.Manifest.RoutingRule.Disabled() {
+		httpsEnabled = false
+	}
 	s := &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
