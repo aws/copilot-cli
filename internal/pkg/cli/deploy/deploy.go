@@ -66,8 +66,10 @@ var (
 		color.HighlightCode("http.alias"),
 		color.HighlightCode("copilot app init --domain example.com"))
 	ecsALBAliasUsedWithoutDomainFriendlyText = fmt.Sprintf(`To use %s, your application must be:
-* Associated with a domain: %s
-* Or, using imported certificates to your environment: %s
+* Associated with a domain:
+  %s
+* Or, using imported certificates to your environment:
+  %s
 `,
 		color.HighlightCode("http.alias"),
 		color.HighlightCode("copilot app init --domain example.com"),
@@ -913,7 +915,7 @@ func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcS
 			return nil, fmt.Errorf("get public CIDR blocks information from the VPC of environment %s: %w", d.env.Name, err)
 		}
 	}
-	conf, err := stack.NewLoadBalancedWebService(stack.NewLoadBalancedWebServiceOpts{
+	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceOpts{
 		App:                    d.app,
 		Env:                    d.env,
 		Manifest:               d.lbMft,

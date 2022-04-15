@@ -60,8 +60,8 @@ type LoadBalancedWebService struct {
 	parser loadBalancedWebSvcReadParser
 }
 
-// NewLoadBalancedWebServiceOpts contains fields to configure LoadBalancedWebService.
-type NewLoadBalancedWebServiceOpts struct {
+// LoadBalancedWebServiceOpts contains fields to configure LoadBalancedWebService.
+type LoadBalancedWebServiceOpts struct {
 	App                    *config.Application
 	Env                    *config.Environment
 	Manifest               *manifest.LoadBalancedWebService
@@ -71,7 +71,7 @@ type NewLoadBalancedWebServiceOpts struct {
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
-func NewLoadBalancedWebService(opts NewLoadBalancedWebServiceOpts) (*LoadBalancedWebService, error) {
+func NewLoadBalancedWebService(opts LoadBalancedWebServiceOpts) (*LoadBalancedWebService, error) {
 	parser := template.New()
 	addons, err := addon.New(aws.StringValue(opts.Manifest.Name))
 	if err != nil {
