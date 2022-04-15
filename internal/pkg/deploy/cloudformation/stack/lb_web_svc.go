@@ -47,12 +47,8 @@ type loadBalancedWebSvcReadParser interface {
 // LoadBalancedWebService represents the configuration needed to create a CloudFormation stack from a load balanced web service manifest.
 type LoadBalancedWebService struct {
 	*ecsWkld
-	manifest     *manifest.LoadBalancedWebService
-	httpsEnabled bool
-	// dnsDelegationEnabled is true if the application is associated with a domain. When an ALB is enabled,
-	// `httpsEnabled` has the same value with `dnsDelegationEnabled`, because we enabled https
-	// automatically the app is associated with a domain. When an ALB is disabled, `httpsEnabled`
-	// should always be false; hence they could have different values at this time.
+	manifest               *manifest.LoadBalancedWebService
+	httpsEnabled           bool
 	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
@@ -98,10 +94,10 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfigs,
 			AccountPrincipalARN: conf.RootUserARN,
 		}
 		httpsEnabled = true
-	} else {
-		if conf.Env.HasImportedCerts() {
-			httpsEnabled = true
-		}
+	}
+	if conf.Env.HasImportedCerts() {
+		httpsEnabled = true
+		dnsDelegationEnabled = false
 	}
 	s := &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
@@ -293,7 +289,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(s.dnsDelegated())),
+			ParameterValue: aws.String(strconv.FormatBool(s.dnsDelegationEnabled)),
 		},
 		{
 			ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
@@ -342,10 +338,6 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 		}...)
 	}
 	return wkldParams, nil
-}
-
-func (s *LoadBalancedWebService) dnsDelegated() bool {
-	return s.dnsDelegationEnabled || s.httpsEnabled
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized
