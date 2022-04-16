@@ -568,7 +568,7 @@ type orderedRunner interface {
 
 // action represents a generic CodePipeline action.
 type action struct {
-	prevActions []orderedRunner
+	prevActions []orderedRunner // The last actions to be executed immediately before this action.
 }
 
 // RunOrder returns the order in which the action should run. A higher numbers means the action is run later.
