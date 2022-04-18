@@ -241,12 +241,14 @@ func (o *deployPipelineOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	var build deploy.Build
+	build.Init(pipeline.Build, filepath.Dir(relPath))
 	deployPipelineInput := &deploy.CreatePipelineInput{
 		AppName:         o.appName,
 		Name:            pipeline.Name,
 		IsLegacy:        isLegacy,
 		Source:          source,
-		Build:           deploy.PipelineBuildFromManifest(pipeline.Build, filepath.Dir(relPath)),
+		Build:           &build,
 		Stages:          stages,
 		ArtifactBuckets: artifactBuckets,
 		AdditionalTags:  o.app.Tags,
@@ -329,19 +331,10 @@ func (o *deployPipelineOpts) convertStages(manifestStages []manifest.PipelineSta
 			return nil, fmt.Errorf("get environment %s in application %s: %w", stage.Name, o.appName, err)
 		}
 
-		pipelineStage := deploy.PipelineStage{
-			LocalWorkloads: workloads,
-			AssociatedEnvironment: &deploy.AssociatedEnvironment{
-				Name:      stage.Name,
-				Region:    env.Region,
-				AccountID: env.AccountID,
-			},
-			RequiresApproval: stage.RequiresApproval,
-			TestCommands:     stage.TestCommands,
-		}
-		stages = append(stages, pipelineStage)
+		var stg deploy.PipelineStage
+		stg.Init(env, &stage, workloads)
+		stages = append(stages, stg)
 	}
-
 	return stages, nil
 }
 

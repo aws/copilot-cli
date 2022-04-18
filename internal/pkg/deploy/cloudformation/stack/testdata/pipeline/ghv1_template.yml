@@ -279,8 +279,6 @@ Resources:
                 Version: 1
                 Provider: CloudFormation
               Configuration:
-                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: phonetool-test-api
                 ActionMode: CREATE_UPDATE
                 StackName: phonetool-test-api
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
@@ -292,7 +290,7 @@ Resources:
                 RoleArn: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              RunOrder: 2
+              RunOrder: 1
               # The ARN of the environment manager IAM role (in the env
               # account) that performs the declared action. This is assumed
               # through the roleArn for the pipeline.
@@ -305,6 +303,6 @@ Resources:
                 Provider: CodeBuild
               Configuration:
                 ProjectName: !Ref BuildTestCommandstest
-              RunOrder: 3
+              RunOrder: 2
               InputArtifacts:
                 - Name: SCCheckoutArtifact
