@@ -47,6 +47,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
 					"templates/workloads/partials/cf/eventrule.yml":                       []byte("eventrule"),
 					"templates/workloads/partials/cf/state-machine.yml":                   []byte("state-machine"),
 					"templates/workloads/partials/cf/efs-access-point.yml":                []byte("efs-access-point"),
+					"templates/workloads/partials/cf/https-listener.yml":                  []byte("https-listener"),
+					"templates/workloads/partials/cf/http-listener.yml":                   []byte("http-listener"),
 					"templates/workloads/partials/cf/env-controller.yml":                  []byte("env-controller"),
 					"templates/workloads/partials/cf/mount-points.yml":                    []byte("mount-points"),
 					"templates/workloads/partials/cf/volumes.yml":                         []byte("volumes"),
@@ -77,6 +79,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
   state-machine
   state-machine-definition
   efs-access-point
+  https-listener
+  http-listener
   env-controller
   mount-points
   volumes

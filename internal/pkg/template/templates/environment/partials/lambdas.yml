@@ -12,19 +12,6 @@ CertificateValidationFunction:
     Role: !GetAtt 'CustomResourceRole.Arn'
     Runtime: nodejs12.x
 
-DNSDelegationFunction:
-  Type: AWS::Lambda::Function
-  Condition: DelegateDNS
-  Properties:
-    Code:
-      S3Bucket: {{.ScriptBucketName}}
-      S3Key: {{.DNSDelegationLambda}}
-    Handler: "index.domainDelegationHandler"
-    Timeout: 600
-    MemorySize: 512
-    Role: !GetAtt 'CustomResourceRole.Arn'
-    Runtime: nodejs12.x
-
 CustomDomainFunction:
   Condition: HasAliases
   Type: AWS::Lambda::Function
@@ -37,3 +24,16 @@ CustomDomainFunction:
     MemorySize: 512
     Role: !GetAtt 'CustomResourceRole.Arn'
     Runtime: nodejs12.x 
+
+DNSDelegationFunction:
+  Type: AWS::Lambda::Function
+  Condition: DelegateDNS
+  Properties:
+    Code:
+      S3Bucket: {{.ScriptBucketName}}
+      S3Key: {{.DNSDelegationLambda}}
+    Handler: "index.domainDelegationHandler"
+    Timeout: 600
+    MemorySize: 512
+    Role: !GetAtt 'CustomResourceRole.Arn'
+    Runtime: nodejs12.x

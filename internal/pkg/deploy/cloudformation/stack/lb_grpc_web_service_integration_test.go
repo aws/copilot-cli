@@ -16,6 +16,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
@@ -58,12 +59,21 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 		require.True(t, ok)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
-
-		serializer, err := stack.NewLoadBalancedWebService(v, tc.envName, appName, stack.RuntimeConfig{
-			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
-			AccountID:                "123456789123",
-			Region:                   "us-west-2",
-		}, stack.WithHTTPS())
+		serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
+			App: &config.Application{Name: appName},
+			Env: &config.Environment{
+				Name: tc.envName,
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: []string{"mockCertARN"},
+				},
+			},
+			Manifest: v,
+			RuntimeConfig: stack.RuntimeConfig{
+				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
+				AccountID:                "123456789123",
+				Region:                   "us-west-2",
+			},
+		})
 
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
