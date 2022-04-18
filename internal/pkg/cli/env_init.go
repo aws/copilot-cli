@@ -262,7 +262,7 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
-	if app.RequiresDNSDelegation() {
+	if app.Domain != "" {
 		if err := o.delegateDNSFromApp(app, envCaller.Account); err != nil {
 			return fmt.Errorf("granting DNS permissions: %w", err)
 		}
@@ -320,7 +320,13 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
 	env.Prod = o.isProduction
-	env.CustomConfig = config.NewCustomizeEnv(o.importVPCConfig(), o.adjustVPCConfig())
+	customizedEnv := config.CustomizeEnv{
+		ImportVPC: o.importVPCConfig(),
+		VPCConfig: o.adjustVPCConfig(),
+	}
+	if !customizedEnv.IsEmpty() {
+		env.CustomConfig = &customizedEnv
+	}
 	env.Telemetry = o.telemetry.toConfig()
 
 	// 6. Store the environment in SSM.
@@ -689,7 +695,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 		Name: o.name,
 		App: deploy.AppInformation{
 			Name:                o.appName,
-			DNSName:             app.Domain,
+			Domain:              app.Domain,
 			AccountPrincipalARN: caller.RootUserARN,
 		},
 		Prod:                 o.isProduction,
@@ -811,7 +817,7 @@ func buildEnvInitCmd() *cobra.Command {
   Creates a prod-iad environment using your "prod-admin" AWS profile and enables container insights.
   /code $ copilot env init --name prod-iad --profile prod-admin --container-insights
 
-  Creates an environment with imported VPC resources.
+  Creates an environment with imported resources.
   /code $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
   /code --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
   /code --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f

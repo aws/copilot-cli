@@ -642,6 +642,43 @@ func (mr *MockfileReaderMockRecorder) ReadFile(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockfileReader)(nil).ReadFile), arg0)
 }
 
+// MockaliasCertValidator is a mock of aliasCertValidator interface.
+type MockaliasCertValidator struct {
+	ctrl     *gomock.Controller
+	recorder *MockaliasCertValidatorMockRecorder
+}
+
+// MockaliasCertValidatorMockRecorder is the mock recorder for MockaliasCertValidator.
+type MockaliasCertValidatorMockRecorder struct {
+	mock *MockaliasCertValidator
+}
+
+// NewMockaliasCertValidator creates a new mock instance.
+func NewMockaliasCertValidator(ctrl *gomock.Controller) *MockaliasCertValidator {
+	mock := &MockaliasCertValidator{ctrl: ctrl}
+	mock.recorder = &MockaliasCertValidatorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockaliasCertValidator) EXPECT() *MockaliasCertValidatorMockRecorder {
+	return m.recorder
+}
+
+// ValidateCertAliases mocks base method.
+func (m *MockaliasCertValidator) ValidateCertAliases(aliases, certs []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateCertAliases", aliases, certs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateCertAliases indicates an expected call of ValidateCertAliases.
+func (mr *MockaliasCertValidatorMockRecorder) ValidateCertAliases(aliases, certs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateCertAliases", reflect.TypeOf((*MockaliasCertValidator)(nil).ValidateCertAliases), aliases, certs)
+}
+
 // MocktimeoutError is a mock of timeoutError interface.
 type MocktimeoutError struct {
 	ctrl     *gomock.Controller

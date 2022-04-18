@@ -41,9 +41,10 @@ type EnvOpts struct {
 	ArtifactBucketARN         string
 	ArtifactBucketKeyARN      string
 
-	ImportVPC *config.ImportVPC
-	VPCConfig *config.AdjustVPC
-	Telemetry *config.Telemetry
+	ImportVPC      *config.ImportVPC
+	VPCConfig      *config.AdjustVPC
+	ImportCertARNs []string
+	Telemetry      *config.Telemetry
 
 	LatestVersion string
 }
