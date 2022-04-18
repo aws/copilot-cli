@@ -10,7 +10,7 @@
     "TaskCount": "1",
     "LogRetention": "30",
     "ContainerPort": "5000",
-    "DNSDelegated": "true",
+    "DNSDelegated": "false",
     "TargetContainer": "my-svc",
     "TargetPort": "5000",
     "EnvFileARN": "",

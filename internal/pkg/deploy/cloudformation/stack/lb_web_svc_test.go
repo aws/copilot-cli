@@ -459,7 +459,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
-					ParameterValue: aws.String("true"),
+					ParameterValue: aws.String("false"),
 				},
 			}...),
 		},
@@ -544,7 +544,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
-					ParameterValue: aws.String("true"),
+					ParameterValue: aws.String("false"),
 				},
 			}...),
 		},

@@ -10,7 +10,7 @@
     "TaskCount": "3",
     "LogRetention": "1",
     "ContainerPort": "4000",
-    "DNSDelegated": "true",
+    "DNSDelegated": "false",
     "TargetContainer": "fe",
     "TargetPort": "4000",
     "EnvFileARN": "",

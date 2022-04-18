@@ -10,7 +10,7 @@
     "TaskCount": "2",
     "LogRetention": "30",
     "ContainerPort": "50051",
-    "DNSDelegated": "true",
+    "DNSDelegated": "false",
     "TargetContainer": "gRPC",
     "TargetPort": "50051",
     "EnvFileARN": "",
