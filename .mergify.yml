@@ -8,7 +8,6 @@ queue_rules:
       - status-success=integ-test
       - status-success=staticcheck
       - status-success=license
-      - status-success=Semantic Pull Request
 
 pull_request_rules:
   - name: Merge for developers
@@ -24,7 +23,6 @@ pull_request_rules:
       - status-success=integ-test
       - status-success=staticcheck
       - status-success=license
-      - status-success=Semantic Pull Request
       - -label~=(WIP|do-not-merge)
       - -title~=(WIP|wip)
       - -merged
@@ -50,7 +48,6 @@ pull_request_rules:
       - status-success=integ-test
       - status-success=staticcheck
       - status-success=license
-      - status-success=Semantic Pull Request
       - author=dependabot[bot]
       - -title~=(WIP|wip)
       - -label~=(WIP|do-not-merge)
