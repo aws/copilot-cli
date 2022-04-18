@@ -78,6 +78,8 @@ var (
 		"state-machine",
 		"state-machine-definition.json",
 		"efs-access-point",
+		"https-listener",
+		"http-listener",
 		"env-controller",
 		"mount-points",
 		"volumes",
@@ -456,6 +458,7 @@ type WorkloadOpts struct {
 	Variables                map[string]string
 	Secrets                  map[string]Secret
 	Aliases                  []string
+	HTTPSListener            bool
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	AddonsExtraParams        string                   // Additional user defined Parameters for the addons stack.

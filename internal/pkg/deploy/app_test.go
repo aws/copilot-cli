@@ -18,21 +18,21 @@ func TestAppInformation_DNSDelegationRole(t *testing.T) {
 			want: "",
 			in: &AppInformation{
 				AccountPrincipalARN: "",
-				DNSName:             "ecs.aws",
+				Domain:              "ecs.aws",
 			},
 		},
 		"without DNS": {
 			want: "",
 			in: &AppInformation{
 				AccountPrincipalARN: "",
-				DNSName:             "ecs.aws",
+				Domain:              "ecs.aws",
 			},
 		},
 		"with invalid tools principal": {
 			want: "",
 			in: &AppInformation{
 				AccountPrincipalARN: "0000000",
-				DNSName:             "ecs.aws",
+				Domain:              "ecs.aws",
 			},
 		},
 		"with dns and tools principal": {
@@ -40,7 +40,7 @@ func TestAppInformation_DNSDelegationRole(t *testing.T) {
 
 			in: &AppInformation{
 				AccountPrincipalARN: "arn:aws:iam::0000000:root",
-				DNSName:             "ecs.aws",
+				Domain:              "ecs.aws",
 			},
 		},
 	}

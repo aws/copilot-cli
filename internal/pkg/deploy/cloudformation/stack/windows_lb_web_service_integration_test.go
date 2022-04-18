@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
@@ -43,10 +44,15 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 	require.True(t, ok)
 
 	svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", envName, appName)
-	serializer, err := stack.NewLoadBalancedWebService(v, envName, appName, stack.RuntimeConfig{
-		ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
-		AccountID:                "123456789123",
-		Region:                   "us-west-2",
+	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
+		App:      &config.Application{Name: appName},
+		Env:      &config.Environment{Name: envName},
+		Manifest: v,
+		RuntimeConfig: stack.RuntimeConfig{
+			AccountID:                "123456789123",
+			Region:                   "us-west-2",
+			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
+		},
 	})
 
 	tpl, err := serializer.Template()

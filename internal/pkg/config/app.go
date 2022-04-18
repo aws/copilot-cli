@@ -22,11 +22,6 @@ type Application struct {
 	Tags               map[string]string `json:"tags,omitempty"`     // Labels to apply to resources created within the app.
 }
 
-// RequiresDNSDelegation returns true if we have to set up DNS Delegation resources
-func (a *Application) RequiresDNSDelegation() bool {
-	return a.Domain != ""
-}
-
 // CreateApplication instantiates a new application, validates its uniqueness and stores it in SSM.
 func (s *Store) CreateApplication(application *Application) error {
 	applicationPath := fmt.Sprintf(fmtApplicationPath, application.Name)

@@ -352,7 +352,6 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Certificates:
         - CertificateArn: !Ref NLBCertValidatorAction
       SslPolicy: ELBSecurityPolicy-TLS13-1-2-2021-06
-
   NLBTargetGroup:
     Metadata:
       'aws:copilot:description': 'A target group to connect the network load balancer to your service'

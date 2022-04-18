@@ -55,11 +55,6 @@ Parameters:
 {{- end}}
 Conditions:
 {{- if .ALBEnabled}}
-  HTTPLoadBalancer:
-    !Not
-      - !Condition HTTPSLoadBalancer
-  HTTPSLoadBalancer:
-    !Equals [!Ref HTTPSEnabled, true]
   IsDefaultRootPath:
     !Equals [!Ref RulePath, "/"]
 {{- end}}
@@ -143,10 +138,15 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
     {{- if .ALBEnabled}}
-     - WaitUntilListenerRuleIsCreated
+    {{- if .HTTPSListener}}
+      - HTTPListenerRuleWithDomain
+      - HTTPSListenerRule
+    {{- else}}
+      - HTTPListenerRule
+    {{- end}}
     {{- end}}
     {{- if .NLB}}
-     - NLBListener
+      - NLBListener
     {{- end}}
     Properties:
 {{include "service-base-properties" . | indent 6}}
@@ -204,30 +204,6 @@ Resources:
       VpcId:
         Fn::ImportValue:
           !Sub "${AppName}-${EnvName}-VpcId"
-{{if not .Aliases}}
-  LoadBalancerDNSAlias:
-    Metadata:
-      'aws:copilot:description': 'The default alias record for the application load balancer'
-    Type: AWS::Route53::RecordSetGroup
-    Condition: HTTPSLoadBalancer
-    Properties:
-      HostedZoneId:
-        Fn::ImportValue:
-          !Sub "${AppName}-${EnvName}-HostedZone"
-      Comment: !Sub "Default application load balancer alias for service ${WorkloadName}"
-      RecordSets:
-      - Name:
-          !Join
-            - '.'
-            - - !Ref WorkloadName
-              - Fn::ImportValue:
-                  !Sub "${AppName}-${EnvName}-SubDomain"
-              - ""
-        Type: A
-        AliasTarget:
-          HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
-          DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-{{end}}
   RulePriorityFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -297,177 +273,11 @@ Resources:
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 
-  HTTPSRulePriorityAction:
-    Metadata:
-      'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
-    Condition: HTTPSLoadBalancer
-    Type: Custom::RulePriorityFunction
-    Properties:
-      ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
-
-  HTTPListenerRuleWithDomain:
-    Metadata:
-      'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Condition: HTTPSLoadBalancer
-    Properties:
-      Actions:
-        - Type: redirect
-          RedirectConfig:
-            Protocol: HTTPS
-            Port: 443
-            Host: "#{host}"
-            Path: "/#{path}"
-            Query: "#{query}"
-            StatusCode: HTTP_301
-      Conditions:
-{{- if .Aliases }}
-        - Field: 'host-header'
-          HostHeaderConfig:
-            Values: {{ fmtSlice .Aliases }}
-{{- else }}
-        - Field: 'host-header'
-          HostHeaderConfig:
-            Values:
-              - Fn::Join:
-                - '.'
-                - - !Ref WorkloadName
-                  - Fn::ImportValue:
-                      !Sub "${AppName}-${EnvName}-SubDomain"
+{{- if .HTTPSListener}}
+{{include "https-listener" . | indent 2}}
+{{- else}}
+{{include "http-listener" . | indent 2}}
 {{- end}}
-        - Field: 'path-pattern'
-          PathPatternConfig:
-            Values:
-              !If
-                - IsDefaultRootPath
-                -
-                  - "/*"
-                -
-                  - !Sub "/${RulePath}"
-                  - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
-
-  HTTPSListenerRule:
-    Metadata:
-      'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Condition: HTTPSLoadBalancer
-    Properties:
-      Actions:
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
-      Conditions:
-{{- if .AllowedSourceIps}}
-        - Field: 'source-ip'
-          SourceIpConfig:
-            Values:
-{{- range $sourceIP := .AllowedSourceIps}}
-            - {{$sourceIP}}
-{{- end}}
-{{- end}}
-{{- if .Aliases }}
-        - Field: 'host-header'
-          HostHeaderConfig:
-            Values: {{ fmtSlice .Aliases }}
-{{- else }}
-        - Field: 'host-header'
-          HostHeaderConfig:
-            Values:
-              - Fn::Join:
-                - '.'
-                - - !Ref WorkloadName
-                  - Fn::ImportValue:
-                      !Sub "${AppName}-${EnvName}-SubDomain"
-{{- end}}
-        - Field: 'path-pattern'
-          PathPatternConfig:
-            Values:
-              !If
-                - IsDefaultRootPath
-                -
-                  - "/*"
-                -
-                  - !Sub "/${RulePath}"
-                  - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
-      Priority: !GetAtt HTTPSRulePriorityAction.Priority
-
-  HTTPRulePriorityAction:
-    Metadata:
-      'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
-    Condition: HTTPLoadBalancer
-    Type: Custom::RulePriorityFunction
-    Properties:
-      ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-
-  HTTPListenerRule:
-    Metadata:
-      'aws:copilot:description': 'A HTTP listener rule for forwarding HTTP traffic'
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Condition: HTTPLoadBalancer
-    Properties:
-      Actions:
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
-      Conditions:
-      {{- if .AllowedSourceIps}}
-        - Field: 'source-ip'
-          SourceIpConfig:
-            Values:
-            {{- range $sourceIP := .AllowedSourceIps}}
-            - {{$sourceIP}}
-            {{- end}}
-      {{- end}}
-        - Field: 'path-pattern'
-          PathPatternConfig:
-            Values:
-              !If
-                - IsDefaultRootPath
-                -
-                  - "/*"
-                -
-                  - !Sub "/${RulePath}"
-                  - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority: 
-        !If
-          - IsDefaultRootPath
-          - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-          - !GetAtt HTTPRulePriorityAction.Priority
-
-  # Force a conditional dependency from the ECS service on the listener rules.
-  # Our service depends on our HTTP/S listener to be set up before it can
-  # be created. But, since our environment is either HTTPS or not, we
-  # have a conditional dependency (we have to wait for the HTTPS listener
-  # to be created or the HTTP listener to be created). In order to have a
-  # conditional dependency, we use the WaitHandle resource as a way to force
-  # a single dependency. The Ref in the WaitCondition implicitly creates a conditional
-  # dependency - if the condition is satisfied (HTTPLoadBalancer) - the ref resolves
-  # the HTTPWaitHandle, which depends on the HTTPListenerRule.
-
-  HTTPSWaitHandle:
-    Condition: HTTPSLoadBalancer
-    DependsOn: HTTPSListenerRule
-    Type: AWS::CloudFormation::WaitConditionHandle
-
-  HTTPWaitHandle:
-    Condition: HTTPLoadBalancer
-    DependsOn: HTTPListenerRule
-    Type: AWS::CloudFormation::WaitConditionHandle
-
-  # We don't actually need to wait for the condition to
-  # be completed, that's why we set a count of 0. The timeout
-  # is a required field, but useless, so we set it to one.
-  WaitUntilListenerRuleIsCreated:
-    Type: AWS::CloudFormation::WaitCondition
-    Properties:
-      Handle: !If [HTTPLoadBalancer, !Ref HTTPWaitHandle, !Ref HTTPSWaitHandle]
-      Timeout: "1"
-      Count: 0
-
 {{- end}} {{/*end if .ALBEnabled */}}
 {{- if .NLB}}
 {{include "nlb" . | indent 2}}
