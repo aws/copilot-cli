@@ -40,12 +40,11 @@ func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, err
 		if _, ok := describer.envSvcDescribers[env]; ok {
 			return nil
 		}
-		d, err := NewAppRunnerServiceDescriber(NewServiceConfig{
+		d, err := newAppRunnerServiceDescriber(NewServiceConfig{
 			App:         opt.App,
-			Env:         env,
 			Svc:         opt.Svc,
 			ConfigStore: opt.ConfigStore,
-		})
+		}, env)
 		if err != nil {
 			return err
 		}
@@ -53,6 +52,15 @@ func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, err
 		return nil
 	}
 	return describer, nil
+}
+
+// ServiceARN retrieves the ARN of the app runner service.
+func (d *RDWebServiceDescriber) ServiceARN(env string) (string, error) {
+	err := d.initClients(env)
+	if err != nil {
+		return "", err
+	}
+	return d.envSvcDescribers[env].ServiceARN()
 }
 
 // Describe returns info for a request-driven web service.

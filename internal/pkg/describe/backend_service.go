@@ -7,8 +7,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"text/tabwriter"
+
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
@@ -49,12 +50,11 @@ func NewBackendServiceDescriber(opt NewServiceConfig) (*BackendServiceDescriber,
 		if _, ok := describer.ecsServiceDescribers[env]; ok {
 			return nil
 		}
-		d, err := NewECSServiceDescriber(NewServiceConfig{
+		d, err := newECSServiceDescriber(NewServiceConfig{
 			App:         opt.App,
-			Env:         env,
 			Svc:         opt.Svc,
 			ConfigStore: opt.ConfigStore,
-		})
+		}, env)
 		if err != nil {
 			return err
 		}

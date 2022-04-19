@@ -196,7 +196,7 @@ func TestResumeSvcOpts_Execute(t *testing.T) {
 			envName: testEnvName,
 			svcName: testSvcName,
 			setupMocks: func(m *resumeSvcMocks) {
-				m.apprunnerDescriber.EXPECT().ServiceARN().Return(testSvcARN, nil)
+				m.apprunnerDescriber.EXPECT().ServiceARN(testEnvName).Return(testSvcARN, nil)
 				gomock.InOrder(
 					m.spinner.EXPECT().Start("Resuming service phonetool in environment test."),
 					m.serviceResumer.EXPECT().ResumeService(testSvcARN).Return(nil),
@@ -210,7 +210,7 @@ func TestResumeSvcOpts_Execute(t *testing.T) {
 			envName: testEnvName,
 			svcName: testSvcName,
 			setupMocks: func(m *resumeSvcMocks) {
-				m.apprunnerDescriber.EXPECT().ServiceARN().Return("", mockError)
+				m.apprunnerDescriber.EXPECT().ServiceARN(testEnvName).Return("", mockError)
 			},
 			wantedError: mockError,
 		},
@@ -219,7 +219,7 @@ func TestResumeSvcOpts_Execute(t *testing.T) {
 			envName: testEnvName,
 			svcName: testSvcName,
 			setupMocks: func(m *resumeSvcMocks) {
-				m.apprunnerDescriber.EXPECT().ServiceARN().Return(testSvcARN, nil)
+				m.apprunnerDescriber.EXPECT().ServiceARN(testEnvName).Return(testSvcARN, nil)
 				gomock.InOrder(
 					m.spinner.EXPECT().Start("Resuming service phonetool in environment test."),
 					m.serviceResumer.EXPECT().ResumeService(testSvcARN).Return(mockError),

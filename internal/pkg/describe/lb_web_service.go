@@ -69,12 +69,11 @@ func NewLBWebServiceDescriber(opt NewServiceConfig) (*LBWebServiceDescriber, err
 		if _, ok := describer.ecsServiceDescribers[env]; ok {
 			return nil
 		}
-		svcDescr, err := NewECSServiceDescriber(NewServiceConfig{
+		svcDescr, err := newECSServiceDescriber(NewServiceConfig{
 			App:         opt.App,
-			Env:         env,
 			Svc:         opt.Svc,
 			ConfigStore: opt.ConfigStore,
-		})
+		}, env)
 		if err != nil {
 			return err
 		}
