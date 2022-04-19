@@ -63,6 +63,7 @@ type LoadBalancedWebServiceConfig struct {
 	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides"`
 	NLBConfig        NetworkLoadBalancerConfiguration `yaml:"nlb"`
 	DeployConfig     DeploymentConfiguration          `yaml:"deployment"`
+	Observability    Observability                    `yaml:"observability"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
@@ -176,11 +177,6 @@ func (s *LoadBalancedWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 // EnvFile returns the location of the env file against the ws root directory.
 func (s *LoadBalancedWebService) EnvFile() string {
 	return aws.StringValue(s.TaskConfig.EnvFile)
-}
-
-// HasAliases returns true if the Load-Balanced Web Service uses aliases, either for ALB or NLB.
-func (s *LoadBalancedWebService) HasAliases() bool {
-	return !s.RoutingRule.Alias.IsEmpty() || !s.NLBConfig.Aliases.IsEmpty()
 }
 
 // ApplyEnv returns the service manifest with environment overrides.

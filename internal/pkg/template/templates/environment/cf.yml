@@ -28,6 +28,9 @@ Parameters:
   Aliases:
     Type: String
     Default: ""
+  CreateHTTPSListener:
+    Type: String
+    AllowedValues: [true, false]
   ServiceDiscoveryEndpoint:
     Type: String
     Default: {{.AppName}}.local
@@ -37,8 +40,8 @@ Conditions:
   DelegateDNS:
     !Not [!Equals [ !Ref AppDNSName, "" ]]
   ExportHTTPSListener: !And
-    - !Condition DelegateDNS
     - !Condition CreateALB
+    - !Equals [!Ref CreateHTTPSListener, true]
   CreateEFS:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
@@ -189,17 +192,31 @@ Resources:
     Metadata:
       'aws:copilot:description': 'A load balancer listener to route HTTPS traffic'
     Type: AWS::ElasticLoadBalancingV2::Listener
-    DependsOn: HTTPSCert
     Condition: ExportHTTPSListener
     Properties:
       Certificates:
+{{- if .ImportCertARNs}}
+        - CertificateArn: {{index .ImportCertARNs 0}}
+{{- else }}
         - CertificateArn: !Ref HTTPSCert
+{{- end }}
       DefaultActions:
         - TargetGroupArn: !Ref DefaultHTTPTargetGroup
           Type: forward
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
+{{- range $ind, $arn := .ImportCertARNs}}
+{{- if gt $ind 0}}
+  HTTPSImportCertificate{{inc $ind}}:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Condition: ExportHTTPSListener
+    Properties:
+      ListenerArn: !Ref HTTPSListener
+      Certificates:
+        - CertificateArn: {{$arn}}
+{{- end}}
+{{- end}}
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
@@ -285,6 +302,7 @@ Resources:
 {{- end}}
 {{include "cfn-execution-role" . | indent 2}}
 {{include "environment-manager-role" . | indent 2}}
+{{- if not .ImportCertARNs}}
 {{include "custom-resources-role" . | indent 2}}
   EnvironmentHostedZone:
     Metadata:
@@ -297,6 +315,7 @@ Resources:
       Name: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
 {{include "lambdas" . | indent 2}}
 {{include "custom-resources" . | indent 2}}
+{{- end}}
 Outputs:
   VpcId:
 {{- if .ImportVPC}}
@@ -392,6 +411,7 @@ Outputs:
     Description: The role to be assumed by the Cloudformation service when it deploys application infrastructure.
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
+{{- if not .ImportCertARNs}}
   EnvironmentHostedZone:
     Condition: DelegateDNS
     Value: !Ref EnvironmentHostedZone
@@ -404,8 +424,8 @@ Outputs:
     Description: The domain name of this environment.
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
+{{- end}}
   EnabledFeatures:
-    # We don't need to include Aliases because updating it always results in the CustomDomain action to update.
     Value: !Sub '${ALBWorkloads},${EFSWorkloads},${NATWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:

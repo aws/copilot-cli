@@ -7,6 +7,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -196,7 +198,7 @@ func TestPipelineSourceFromManifest(t *testing.T) {
 	}
 }
 
-func TestPipelineBuildFromManifest(t *testing.T) {
+func TestPipelineBuild_Init(t *testing.T) {
 	const (
 		defaultImage   = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 		defaultEnvType = "LINUX_CONTAINER"
@@ -205,13 +207,13 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 	testCases := map[string]struct {
 		mfBuild       *manifest.Build
 		mfDirPath     string
-		expectedBuild *Build
+		expectedBuild Build
 	}{
 		"set default image and env type if not specified in manifest; override default if buildspec path in manifest": {
 			mfBuild: &manifest.Build{
 				Buildspec: "some/path",
 			},
-			expectedBuild: &Build{
+			expectedBuild: Build{
 				Image:           defaultImage,
 				EnvironmentType: defaultEnvType,
 				BuildspecPath:   "some/path",
@@ -222,7 +224,7 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 				Image:     "aws/codebuild/standard:3.0",
 				Buildspec: "some/path",
 			},
-			expectedBuild: &Build{
+			expectedBuild: Build{
 				Image:           "aws/codebuild/standard:3.0",
 				EnvironmentType: defaultEnvType,
 				BuildspecPath:   "some/path",
@@ -233,7 +235,7 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 				Image:     "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
 				Buildspec: "some/path",
 			},
-			expectedBuild: &Build{
+			expectedBuild: Build{
 				Image:           "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
 				EnvironmentType: "ARM_CONTAINER",
 				BuildspecPath:   "some/path",
@@ -241,7 +243,7 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 		},
 		"by default convert legacy manifest path to buildspec path": {
 			mfDirPath: "copilot/",
-			expectedBuild: &Build{
+			expectedBuild: Build{
 				Image:           defaultImage,
 				EnvironmentType: defaultEnvType,
 				BuildspecPath:   "copilot/buildspec.yml",
@@ -249,7 +251,7 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 		},
 		"by default convert non-legacy manifest path to buildspec path": {
 			mfDirPath: "copilot/pipelines/my-pipeline/",
-			expectedBuild: &Build{
+			expectedBuild: Build{
 				Image:           defaultImage,
 				EnvironmentType: defaultEnvType,
 				BuildspecPath:   "copilot/pipelines/my-pipeline/buildspec.yml",
@@ -258,7 +260,8 @@ func TestPipelineBuildFromManifest(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			build := PipelineBuildFromManifest(tc.mfBuild, tc.mfDirPath)
+			var build Build
+			build.Init(tc.mfBuild, tc.mfDirPath)
 			require.Equal(t, tc.expectedBuild, build, "mismatched build")
 		})
 	}
@@ -308,6 +311,155 @@ func TestParseOwnerAndRepo(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPipelineStage_Init(t *testing.T) {
+	var stg PipelineStage
+	stg.Init(&config.Environment{
+		Name:             "test",
+		App:              "badgoose",
+		Region:           "us-west-2",
+		AccountID:        "123456789012",
+		ManagerRoleARN:   "arn:aws:iam::123456789012:role/badgoose-test-EnvManagerRole",
+		ExecutionRoleARN: "arn:aws:iam::123456789012:role/badgoose-test-CFNExecutionRole",
+	}, &manifest.PipelineStage{
+		Name:             "test",
+		RequiresApproval: true,
+		TestCommands:     []string{"make test", "echo \"made test\""},
+	}, []string{"frontend", "backend"})
+
+	t.Run("stage name matches the environment's name", func(t *testing.T) {
+		require.Equal(t, "test", stg.Name())
+	})
+	t.Run("stage region matches the environment's region", func(t *testing.T) {
+		require.Equal(t, "us-west-2", stg.Region())
+	})
+	t.Run("stage env manager role ARN matches the environment's config", func(t *testing.T) {
+		require.Equal(t, "arn:aws:iam::123456789012:role/badgoose-test-EnvManagerRole", stg.EnvManagerRoleARN())
+	})
+	t.Run("stage exec role ARN matches the environment's config", func(t *testing.T) {
+		require.Equal(t, "arn:aws:iam::123456789012:role/badgoose-test-CFNExecutionRole", stg.ExecRoleARN())
+	})
+	t.Run("number of expected deployments match", func(t *testing.T) {
+		require.Equal(t, 2, len(stg.Deployments()))
+	})
+	t.Run("manual approval button", func(t *testing.T) {
+		require.NotNil(t, stg.Approval(), "should require approval action for stages when the manifest requires it")
+
+		stg := PipelineStage{}
+		require.Nil(t, stg.Approval(), "should return nil by default")
+	})
+}
+
+type mockAction struct {
+	order int
+}
+
+func (ma mockAction) RunOrder() int {
+	return ma.order
+}
+
+func TestAction_RunOrder(t *testing.T) {
+	testCases := map[string]struct {
+		previous []orderedRunner
+		wanted   int
+	}{
+		"should return 1 when there are no previous actions": {
+			wanted: 1,
+		},
+		"should return the max of previous actions + 1": {
+			previous: []orderedRunner{
+				mockAction{order: 8},
+				mockAction{order: 7},
+				mockAction{order: 9},
+				mockAction{order: 8},
+			},
+			wanted: 10,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			action := action{
+				prevActions: tc.previous,
+			}
+
+			// THEN
+			require.Equal(t, tc.wanted, action.RunOrder())
+		})
+	}
+}
+
+func TestManualApprovalAction_Name(t *testing.T) {
+	action := ManualApprovalAction{
+		name: "test",
+	}
+
+	require.Equal(t, "ApprovePromotionTo-test", action.Name())
+}
+
+func TestWorkloadDeployAction_Name(t *testing.T) {
+	action := WorkloadDeployAction{
+		name:    "frontend",
+		envName: "test",
+	}
+
+	require.Equal(t, "CreateOrUpdate-frontend-test", action.Name())
+}
+
+func TestWorkloadDeployAction_StackName(t *testing.T) {
+	action := WorkloadDeployAction{
+		name:    "frontend",
+		envName: "test",
+		appName: "phonetool",
+	}
+
+	require.Equal(t, "phonetool-test-frontend", action.StackName())
+}
+
+func TestWorkloadDeployAction_TemplatePath(t *testing.T) {
+	testCases := map[string]struct {
+		in     WorkloadDeployAction
+		wanted string
+	}{
+		"default location for workload templates": {
+			in: WorkloadDeployAction{
+				name:    "frontend",
+				envName: "test",
+			},
+			wanted: "infrastructure/frontend-test.stack.yml",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.TemplatePath())
+		})
+	}
+}
+
+func TestWorkloadDeployAction_TemplateConfigPath(t *testing.T) {
+	testCases := map[string]struct {
+		in     WorkloadDeployAction
+		wanted string
+	}{
+		"default location for workload template configs": {
+			in: WorkloadDeployAction{
+				name:    "frontend",
+				envName: "test",
+			},
+			wanted: "infrastructure/frontend-test.params.json",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.TemplateConfigPath())
+		})
+	}
+}
+
+func TestTestCommandsAction_Name(t *testing.T) {
+	require.Equal(t, "TestCommands", (&TestCommandsAction{}).Name())
 }
 
 func TestParseRepo(t *testing.T) {

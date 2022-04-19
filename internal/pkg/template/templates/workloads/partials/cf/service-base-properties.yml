@@ -14,8 +14,8 @@ DeploymentConfiguration:
   DeploymentCircuitBreaker:
     Enable: true
     Rollback: true
-  MinimumHealthyPercent: 100
-  MaximumPercent: 200
+  MinimumHealthyPercent: {{ .DeploymentConfiguration.MinHealthyPercent }}
+  MaximumPercent: {{ .DeploymentConfiguration.MaxPercent }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
 EnableExecuteCommand: true

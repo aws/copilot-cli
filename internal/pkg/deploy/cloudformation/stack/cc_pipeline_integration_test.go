@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -21,6 +23,21 @@ import (
 
 // TestCC_Pipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
 func TestCC_Pipeline_Template(t *testing.T) {
+	var build deploy.Build
+	build.Init(nil, "copilot/pipelines/phonetool-pipeline/")
+
+	var stage deploy.PipelineStage
+	stage.Init(&config.Environment{
+		App:              "phonetool",
+		Name:             "staging-test",
+		Region:           "us-west-2",
+		AccountID:        "1111",
+		ExecutionRoleARN: "arn:aws:iam::1111:role/phonetool-staging-test-CFNExecutionRole",
+		ManagerRoleARN:   "arn:aws:iam::1111:role/phonetool-staging-test-EnvManagerRole",
+	}, &manifest.PipelineStage{
+		Name:         "staging-test",
+		TestCommands: []string{`echo "test"`},
+	}, []string{"api"})
 	ps := stack.NewPipelineStackConfig(&deploy.CreatePipelineInput{
 		AppName: "phonetool",
 		Name:    "phonetool-pipeline",
@@ -30,19 +47,8 @@ func TestCC_Pipeline_Template(t *testing.T) {
 			Branch:               "main",
 			OutputArtifactFormat: "CODEBUILD_CLONE_REF",
 		},
-		Build: deploy.PipelineBuildFromManifest(nil, "copilot/pipelines/phonetool-pipeline/"),
-		Stages: []deploy.PipelineStage{
-			{
-				AssociatedEnvironment: &deploy.AssociatedEnvironment{
-					Name:      "staging-test",
-					Region:    "us-west-2",
-					AccountID: "1111",
-				},
-				LocalWorkloads:   []string{"api"},
-				RequiresApproval: false,
-				TestCommands:     []string{`echo "test"`},
-			},
-		},
+		Build:  &build,
+		Stages: []deploy.PipelineStage{stage},
 		ArtifactBuckets: []deploy.ArtifactBucket{
 			{
 				BucketName: "fancy-bucket",

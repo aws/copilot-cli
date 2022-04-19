@@ -27,21 +27,21 @@ type Environment struct {
 	Telemetry        *Telemetry    `json:"telemetry,omitempty"`    // Optional environment telemetry features.
 }
 
-// CustomizeEnv represents the custom environment config.
-type CustomizeEnv struct {
-	ImportVPC *ImportVPC `json:"importVPC,omitempty"`
-	VPCConfig *AdjustVPC `json:"adjustVPC,omitempty"`
+// HasImportedCerts return if the environment has imported certs.
+func (e *Environment) HasImportedCerts() bool {
+	return e.CustomConfig != nil && len(e.CustomConfig.ImportCertARNs) != 0
 }
 
-// NewCustomizeEnv returns a new CustomizeEnv struct.
-func NewCustomizeEnv(importVPC *ImportVPC, adjustVPC *AdjustVPC) *CustomizeEnv {
-	if importVPC == nil && adjustVPC == nil {
-		return nil
-	}
-	return &CustomizeEnv{
-		ImportVPC: importVPC,
-		VPCConfig: adjustVPC,
-	}
+// CustomizeEnv represents the custom environment config.
+type CustomizeEnv struct {
+	ImportVPC      *ImportVPC `json:"importVPC,omitempty"`
+	VPCConfig      *AdjustVPC `json:"adjustVPC,omitempty"`
+	ImportCertARNs []string   `json:"importCertARNs,omitempty"`
+}
+
+// IsEmpty returns if CustomizeEnv is an empty struct.
+func (c CustomizeEnv) IsEmpty() bool {
+	return c.ImportVPC == nil && c.VPCConfig == nil && len(c.ImportCertARNs) == 0
 }
 
 // ImportVPC holds the fields to import VPC resources.
