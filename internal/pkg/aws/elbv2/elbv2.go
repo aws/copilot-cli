@@ -62,7 +62,6 @@ func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
 			for _, value := range condition.HostHeaderConfig.Values {
 				hostHeaderSet[aws.StringValue(value)] = true
 			}
-			// Each rule can optionally include up to one of each of the conditions.
 			break
 		}
 	}
