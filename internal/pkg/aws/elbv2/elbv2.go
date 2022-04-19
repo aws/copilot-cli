@@ -44,7 +44,6 @@ func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
 		return nil, fmt.Errorf("get listener rule for %s: %w", ruleARN, err)
 	}
 	if len(resp.Rules) == 0 {
-		// Ideally this should never happen.
 		return nil, fmt.Errorf("cannot find listener rule %s", ruleARN)
 	}
 	rule := resp.Rules[0]
@@ -56,7 +55,7 @@ func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
 			}
 			if condition.HostHeaderConfig == nil {
 				// Ideally this should never happen.
-				continue
+				break
 			}
 			for _, value := range condition.HostHeaderConfig.Values {
 				hostHeaderSet[aws.StringValue(value)] = true
@@ -69,7 +68,7 @@ func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
 	for hostHeader := range hostHeaderSet {
 		hostHeaders = append(hostHeaders, hostHeader)
 	}
-	sort.SliceStable(hostHeaders, func(i, j int) bool { return hostHeaders[i] < hostHeaders[j] })
+	sort.Slice(hostHeaders, func(i, j int) bool { return hostHeaders[i] < hostHeaders[j] })
 	return hostHeaders, nil
 }
 
