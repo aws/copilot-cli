@@ -62,6 +62,7 @@ func New(s *session.Session) *S3 {
 }
 
 // ZipAndUpload zips all files and uploads the zipped file to an S3 bucket under the specified key.
+// The bucket owner, in addition to the object owner, is granted full control.
 func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
@@ -78,12 +79,13 @@ func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, err
 	if err := w.Close(); err != nil {
 		return "", err
 	}
-	return s.upload(bucket, key, buf)
+	return s.upload(bucket, key, buf, withACLBucketOwnerFullControl())
 }
 
 // Upload uploads a file to an S3 bucket under the specified key.
+// The bucket owner, in addition to the object owner, is granted full control.
 func (s *S3) Upload(bucket, key string, data io.Reader) (string, error) {
-	return s.upload(bucket, key, data)
+	return s.upload(bucket, key, data, withACLBucketOwnerFullControl())
 }
 
 // MkdirTimestamp prefixes the key with the current timestamp "manual/<timestamp>/key".
@@ -191,12 +193,24 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 	return true, nil
 }
 
-func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
-	resp, err := s.s3Manager.Upload(&s3manager.UploadInput{
+type uploadInputOption func(in *s3manager.UploadInput)
+
+func withACLBucketOwnerFullControl() func(in *s3manager.UploadInput)  {
+	return func(in *s3manager.UploadInput) {
+		in.ACL = aws.String(s3.ObjectCannedACLBucketOwnerFullControl)
+	}
+}
+
+func (s *S3) upload(bucket, key string, buf io.Reader, opts ...uploadInputOption) (string, error) {
+	in := &s3manager.UploadInput{
 		Body:   buf,
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
-	})
+	}
+	for _, opt := range opts {
+		opt(in)
+	}
+	resp, err := s.s3Manager.Upload(in)
 	if err != nil {
 		return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)
 	}
