@@ -50,11 +50,13 @@ func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
 	hostHeaderSet := make(map[string]bool)
 	for _, condition := range rule.Conditions {
 		if aws.StringValue(condition.Field) == "host-header" {
+			// Values is a legacy field that allowed specifying only a single host name.
+			// The alternative is to use HostHeaderConfig for multiple values.
+			// Only one of these fields should be set, but we collect from both to be safe.
 			for _, value := range condition.Values {
 				hostHeaderSet[aws.StringValue(value)] = true
 			}
 			if condition.HostHeaderConfig == nil {
-				// Ideally this should never happen.
 				break
 			}
 			for _, value := range condition.HostHeaderConfig.Values {
