@@ -11,12 +11,10 @@ import (
 	"fmt"
 	"io"
 	"path"
-	"strconv"
 	"strings"
-	"time"
-
+	
 	"github.com/aws/aws-sdk-go/aws/awserr"
-
+	
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -25,6 +23,7 @@ import (
 
 const (
 	artifactDirName = "manual"
+	addonDirName 	= "addons"
 	notFound        = "NotFound"
 )
 
@@ -88,15 +87,14 @@ func (s *S3) Upload(bucket, key string, data io.Reader) (string, error) {
 	return s.upload(bucket, key, data, withACLBucketOwnerFullControl())
 }
 
-// MkdirTimestamp prefixes the key with the current timestamp "manual/<timestamp>/key".
-func MkdirTimestamp(key string) string {
-	id := time.Now().Unix()
-	return path.Join(artifactDirName, strconv.FormatInt(id, 10), key)
-}
-
 // MkdirSHA prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
 func MkdirSHA256(key string, content []byte) string {
 	return path.Join(artifactDirName, fmt.Sprintf("%x", sha256.Sum256(content)), key)
+}
+
+// AddonsArtifactPath prefixes the key with the addons artifact path.
+func AddonsArtifactPath(key string) string {
+	return path.Join(artifactDirName, addonDirName, key)
 }
 
 // EmptyBucket deletes all objects within the bucket.
