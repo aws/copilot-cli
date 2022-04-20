@@ -18,20 +18,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var mockCreateEnvInput = deploy.CreateEnvironmentInput{
-	App: deploy.AppInformation{
-		Name: "phonetool",
-	},
-	Name:    "test",
-	Version: "v1.0.0",
-	CustomResourcesURLs: map[string]string{
-		template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
-		template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
-		template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
-	},
-}
-
 func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
+	mockCreateEnvInput := deploy.CreateEnvironmentInput{
+		App: deploy.AppInformation{
+			Name:   "phonetool",
+			Domain: "phonetool.com",
+		},
+		Name:    "test",
+		Version: "v1.0.0",
+		CustomResourcesURLs: map[string]string{
+			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
+			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
+			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
+		},
+	}
 	testCases := map[string]struct {
 		in           *deploy.CreateEnvironmentInput
 		mockDeployer func(t *testing.T, ctrl *gomock.Controller) *CloudFormation
@@ -55,6 +55,46 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 						{
 							ParameterKey:     aws.String("ALBWorkloads"),
 							UsePreviousValue: aws.Bool(true),
+						},
+						{
+							ParameterKey:   aws.String("AppName"),
+							ParameterValue: aws.String("phonetool"),
+						},
+						{
+							ParameterKey:   aws.String("EnvironmentName"),
+							ParameterValue: aws.String("test"),
+						},
+						{
+							ParameterKey:   aws.String("ToolsAccountPrincipalARN"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("AppDNSName"),
+							ParameterValue: aws.String("phonetool.com"),
+						},
+						{
+							ParameterKey:   aws.String("AppDNSDelegationRole"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("NATWorkloads"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("EFSWorkloads"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("Aliases"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("ServiceDiscoveryEndpoint"),
+							ParameterValue: aws.String("test.phonetool.local"),
+						},
+						{
+							ParameterKey:   aws.String("CreateHTTPSListener"),
+							ParameterValue: aws.String("true"),
 						},
 					})
 				})
@@ -146,6 +186,18 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 }
 
 func TestCloudFormation_UpgradeLegacyEnvironment(t *testing.T) {
+	mockCreateEnvInput := deploy.CreateEnvironmentInput{
+		App: deploy.AppInformation{
+			Name: "phonetool",
+		},
+		Name:    "test",
+		Version: "v1.0.0",
+		CustomResourcesURLs: map[string]string{
+			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
+			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
+			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
+		},
+	}
 	testCases := map[string]struct {
 		in            *deploy.CreateEnvironmentInput
 		lbWebServices []string
@@ -179,6 +231,42 @@ func TestCloudFormation_UpgradeLegacyEnvironment(t *testing.T) {
 						{
 							ParameterKey:     aws.String("EnvironmentName"),
 							UsePreviousValue: aws.Bool(true),
+						},
+						{
+							ParameterKey:   aws.String("AppName"),
+							ParameterValue: aws.String("phonetool"),
+						},
+						{
+							ParameterKey:   aws.String("ToolsAccountPrincipalARN"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("AppDNSName"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("AppDNSDelegationRole"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("NATWorkloads"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("EFSWorkloads"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("Aliases"),
+							ParameterValue: aws.String(""),
+						},
+						{
+							ParameterKey:   aws.String("ServiceDiscoveryEndpoint"),
+							ParameterValue: aws.String("test.phonetool.local"),
+						},
+						{
+							ParameterKey:   aws.String("CreateHTTPSListener"),
+							ParameterValue: aws.String("false"),
 						},
 					})
 				})

@@ -104,11 +104,27 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterValue: aws.String(""),
 				},
 				{
+					ParameterKey:   aws.String(EnvParamAliasesKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamNATWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
 					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
 					ParameterValue: aws.String("env.project.local"),
 				},
 				{
-					ParameterKey:   aws.String(createHTTPSListener),
+					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
 				},
 			},
@@ -141,8 +157,24 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterValue: aws.String("env.project.local"),
 				},
 				{
-					ParameterKey:   aws.String(createHTTPSListener),
+					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
 					ParameterValue: aws.String("true"),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamAliasesKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamNATWorkloadsKey),
+					ParameterValue: aws.String(""),
 				},
 			},
 		},
