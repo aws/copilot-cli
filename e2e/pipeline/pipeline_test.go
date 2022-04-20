@@ -246,7 +246,7 @@ var _ = Describe("pipeline flow", func() {
 	})
 
 	Context("when creating the main pipeline stack", func() {
-		It("checks out the main git branch", func(){
+		It("checks out the main git branch", func() {
 			cmd := exec.Command("git", "checkout", "-b", "main")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
@@ -390,17 +390,17 @@ var _ = Describe("pipeline flow", func() {
 			}
 			// Check that the addons stack was created.
 			Eventually(func() error {
-			for _, variable := range out.Variables {
-				if variable.Name == "E2EPIPELINEADDON_NAME" {
-					return nil
+				for _, variable := range out.Variables {
+					if variable.Name == "E2EPIPELINEADDON_NAME" {
+						return nil
+					}
 				}
-			}
-			return fmt.Errorf("addons variable %s not found", "E2EPIPELINEADDON_NAME")
+				return fmt.Errorf("addons variable %s not found", "E2EPIPELINEADDON_NAME")
 			})
 		})
 	})
 	Context("when creating the qa pipeline stack", func() {
-		It("checks out the qa git branch", func(){
+		It("checks out the qa git branch", func() {
 			cmd := exec.Command("git", "checkout", "-b", "qa")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
