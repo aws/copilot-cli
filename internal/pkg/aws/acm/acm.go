@@ -44,7 +44,7 @@ func (a *ACM) ValidateCertAliases(aliases []string, certs []string) error {
 	validAliases := make(map[string]bool)
 	ctx, cancelWait := context.WithTimeout(context.Background(), waitForFindValidAliasesTimeout)
 	defer cancelWait()
-	g, _ := errgroup.WithContext(ctx)
+	g, ctx := errgroup.WithContext(ctx)
 	var mux sync.Mutex
 	for i := range certs {
 		cert := certs[i]
