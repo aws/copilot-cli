@@ -31,7 +31,6 @@ Parameters:
   CreateHTTPSListener:
     Type: String
     AllowedValues: [true, false]
-    Default: "false"
   ServiceDiscoveryEndpoint:
     Type: String
     Default: {{.AppName}}.local
