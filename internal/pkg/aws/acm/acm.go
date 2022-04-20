@@ -5,13 +5,21 @@
 package acm
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/acm"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+)
+
+const (
+	waitForFindValidAliasesTimeout = 10 * time.Second
 )
 
 type api interface {
@@ -33,15 +41,27 @@ func New(s *session.Session) *ACM {
 // ValidateCertAliases validates if aliases are all valid against the provided ACM certificates.
 func (a *ACM) ValidateCertAliases(aliases []string, certs []string) error {
 	validAliases := make(map[string]bool)
-	// TODO: Parallelize `findValidAliasesAgainstCert` if needed.
-	for _, cert := range certs {
-		validCertAliases, err := a.findValidAliasesAgainstCert(aliases, cert)
-		if err != nil {
-			return err
-		}
-		for _, alias := range validCertAliases {
-			validAliases[alias] = true
-		}
+	ctx, cancelWait := context.WithTimeout(context.Background(), waitForFindValidAliasesTimeout)
+	defer cancelWait()
+	g, _ := errgroup.WithContext(ctx)
+	var mux sync.Mutex
+	for i := range certs {
+		cert := certs[i]
+		g.Go(func() error {
+			validCertAliases, err := a.findValidAliasesAgainstCert(aliases, cert)
+			if err != nil {
+				return err
+			}
+			mux.Lock()
+			defer mux.Unlock()
+			for _, alias := range validCertAliases {
+				validAliases[alias] = true
+			}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 	for _, alias := range aliases {
 		if !validAliases[alias] {
