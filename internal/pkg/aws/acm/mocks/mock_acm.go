@@ -7,6 +7,8 @@ package mocks
 import (
 	reflect "reflect"
 
+	aws "github.com/aws/aws-sdk-go/aws"
+	request "github.com/aws/aws-sdk-go/aws/request"
 	acm "github.com/aws/aws-sdk-go/service/acm"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -34,17 +36,22 @@ func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
-// DescribeCertificate mocks base method.
-func (m *Mockapi) DescribeCertificate(input *acm.DescribeCertificateInput) (*acm.DescribeCertificateOutput, error) {
+// DescribeCertificateWithContext mocks base method.
+func (m *Mockapi) DescribeCertificateWithContext(ctx aws.Context, input *acm.DescribeCertificateInput, opts ...request.Option) (*acm.DescribeCertificateOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeCertificate", input)
+	varargs := []interface{}{ctx, input}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeCertificateWithContext", varargs...)
 	ret0, _ := ret[0].(*acm.DescribeCertificateOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// DescribeCertificate indicates an expected call of DescribeCertificate.
-func (mr *MockapiMockRecorder) DescribeCertificate(input interface{}) *gomock.Call {
+// DescribeCertificateWithContext indicates an expected call of DescribeCertificateWithContext.
+func (mr *MockapiMockRecorder) DescribeCertificateWithContext(ctx, input interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCertificate", reflect.TypeOf((*Mockapi)(nil).DescribeCertificate), input)
+	varargs := append([]interface{}{ctx, input}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeCertificateWithContext", reflect.TypeOf((*Mockapi)(nil).DescribeCertificateWithContext), varargs...)
 }

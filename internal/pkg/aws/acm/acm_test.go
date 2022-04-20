@@ -35,7 +35,7 @@ func TestACM_ValidateCertAliases(t *testing.T) {
 			inAliases: []string{"copilot.com"},
 			inCerts:   []string{"mockCertARN"},
 			setupMocks: func(m acmMocks) {
-				m.client.EXPECT().DescribeCertificate(&acm.DescribeCertificateInput{
+				m.client.EXPECT().DescribeCertificateWithContext(gomock.Any(), &acm.DescribeCertificateInput{
 					CertificateArn: aws.String("mockCertARN"),
 				}).Return(nil, mockError)
 			},
@@ -46,7 +46,7 @@ func TestACM_ValidateCertAliases(t *testing.T) {
 			inAliases: []string{"v1.copilot.com", "myapp.v1.copilot.com"},
 			inCerts:   []string{"mockCertARN"},
 			setupMocks: func(m acmMocks) {
-				m.client.EXPECT().DescribeCertificate(&acm.DescribeCertificateInput{
+				m.client.EXPECT().DescribeCertificateWithContext(gomock.Any(), &acm.DescribeCertificateInput{
 					CertificateArn: aws.String("mockCertARN"),
 				}).Return(&acm.DescribeCertificateOutput{
 					Certificate: &acm.CertificateDetail{
@@ -62,7 +62,7 @@ func TestACM_ValidateCertAliases(t *testing.T) {
 			inAliases: []string{"v1.copilot.com", "example.com"},
 			inCerts:   []string{"mockCertARN1", "mockCertARN2"},
 			setupMocks: func(m acmMocks) {
-				m.client.EXPECT().DescribeCertificate(&acm.DescribeCertificateInput{
+				m.client.EXPECT().DescribeCertificateWithContext(gomock.Any(), &acm.DescribeCertificateInput{
 					CertificateArn: aws.String("mockCertARN1"),
 				}).Return(&acm.DescribeCertificateOutput{
 					Certificate: &acm.CertificateDetail{
@@ -70,7 +70,7 @@ func TestACM_ValidateCertAliases(t *testing.T) {
 						SubjectAlternativeNames: aws.StringSlice([]string{"*.copilot.com"}),
 					},
 				}, nil)
-				m.client.EXPECT().DescribeCertificate(&acm.DescribeCertificateInput{
+				m.client.EXPECT().DescribeCertificateWithContext(gomock.Any(), &acm.DescribeCertificateInput{
 					CertificateArn: aws.String("mockCertARN2"),
 				}).Return(&acm.DescribeCertificateOutput{
 					Certificate: &acm.CertificateDetail{

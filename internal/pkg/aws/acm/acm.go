@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/acm"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
@@ -23,7 +24,7 @@ const (
 )
 
 type api interface {
-	DescribeCertificate(input *acm.DescribeCertificateInput) (*acm.DescribeCertificateOutput, error)
+	DescribeCertificateWithContext(ctx aws.Context, input *acm.DescribeCertificateInput, opts ...request.Option) (*acm.DescribeCertificateOutput, error)
 }
 
 // ACM wraps an AWS Certificate Manager client.
@@ -48,7 +49,7 @@ func (a *ACM) ValidateCertAliases(aliases []string, certs []string) error {
 	for i := range certs {
 		cert := certs[i]
 		g.Go(func() error {
-			validCertAliases, err := a.findValidAliasesAgainstCert(aliases, cert)
+			validCertAliases, err := a.findValidAliasesAgainstCert(ctx, aliases, cert)
 			if err != nil {
 				return err
 			}
@@ -71,8 +72,8 @@ func (a *ACM) ValidateCertAliases(aliases []string, certs []string) error {
 	return nil
 }
 
-func (a *ACM) findValidAliasesAgainstCert(aliases []string, cert string) ([]string, error) {
-	resp, err := a.client.DescribeCertificate(&acm.DescribeCertificateInput{
+func (a *ACM) findValidAliasesAgainstCert(ctx context.Context, aliases []string, cert string) ([]string, error) {
+	resp, err := a.client.DescribeCertificateWithContext(ctx, &acm.DescribeCertificateInput{
 		CertificateArn: aws.String(cert),
 	})
 	if err != nil {
