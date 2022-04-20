@@ -4,8 +4,6 @@
 // Package graph provides functionality for directed graphs.
 package graph
 
-import "golang.org/x/exp/constraints"
-
 // nodeStatus denotes the visiting status of a node when running DFS in a graph.
 type nodeStatus int
 
@@ -16,20 +14,20 @@ const (
 )
 
 // Graph represents a directed graph.
-type Graph[V constraints.Ordered] struct {
+type Graph[V comparable] struct {
 	nodes map[V]neighbors[V]
 }
 
 // Edge represents one edge of a directed graph.
-type Edge[V constraints.Ordered] struct {
+type Edge[V comparable] struct {
 	From V
 	To   V
 }
 
-type neighbors[V constraints.Ordered] map[V]bool
+type neighbors[V comparable] map[V]bool
 
 // New initiates a new Graph.
-func New[V constraints.Ordered]() *Graph[V] {
+func New[V comparable]() *Graph[V] {
 	return &Graph[V]{
 		nodes: make(map[V]neighbors[V]),
 	}
