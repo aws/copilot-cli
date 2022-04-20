@@ -24,6 +24,7 @@ import (
 const (
 	artifactDirName = "manual"
 	addonDirName 	= "addons"
+	templateDirName = "templates"
 	notFound        = "NotFound"
 )
 
@@ -95,6 +96,11 @@ func MkdirSHA256(key string, content []byte) string {
 // AddonsArtifactPath prefixes the key with the addons artifact path.
 func AddonsArtifactPath(key string) string {
 	return path.Join(artifactDirName, addonDirName, key)
+}
+
+// TemplateArtifactPath prefixes the key with the template artifact path.
+func TemplateArtifactPath(key string) string {
+	return path.Join(artifactDirName, templateDirName, key)
 }
 
 // EmptyBucket deletes all objects within the bucket.
