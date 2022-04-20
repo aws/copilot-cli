@@ -74,7 +74,6 @@ var _ = Describe("pipeline flow", func() {
 				AppName: appName,
 				EnvName: "test",
 				Profile: "e2etestenv",
-				Region: "",
 				Prod:    false,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -92,7 +91,7 @@ var _ = Describe("pipeline flow", func() {
 			_, err := copilot.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: "qa",
-				Profile: "e2eqaenv",
+				Profile: "e2etestenv",
 				Prod:    false,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -111,6 +110,8 @@ var _ = Describe("pipeline flow", func() {
 			Expect(envs["test"]).NotTo(BeNil())
 			Expect(envs["prod"]).NotTo(BeNil())
 			Expect(envs["qa"]).NotTo(BeNil())
+			Expect(envs["test"].Region).NotTo(Equal(envs["prod"].Region))
+			Expect(envs["test"].Account).NotTo(Equal(envs["prod"].Account))
 		})
 	})
 
@@ -127,7 +128,12 @@ var _ = Describe("pipeline flow", func() {
 		It("should generate a manifest file", func() {
 			Expect(filepath.Join(repoName, "copilot", "frontend", "manifest.yml")).Should(BeAnExistingFile())
 		})
-		It("adds an addons file", func(){}) // TODO
+		It("copies a template to an addons file", func() {
+			cmd := exec.Command("cp", "s3template.yml", filepath.Join(repoName, "copilot", "frontend", "addons", "e2e-pipeline-addon.yml"))
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			Expect(cmd.Run()).NotTo(HaveOccurred())
+		})
 		It("should list the service", func() {
 			out, err := copilot.SvcList(appName)
 			Expect(err).NotTo(HaveOccurred())
@@ -136,7 +142,7 @@ var _ = Describe("pipeline flow", func() {
 		})
 	})
 
-	Context("when creating the test pipeline manifest", func() {
+	Context("when creating the main pipeline manifest", func() {
 		It("should initialize the pipeline", func() {
 			_, err := copilot.PipelineInit(client.PipelineInitInput{
 				Name:         mainPipelineName,
@@ -146,12 +152,10 @@ var _ = Describe("pipeline flow", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
-
 		It("should generate pipeline artifacts", func() {
 			Expect(filepath.Join(repoName, "copilot", "pipelines", mainPipelineName, "manifest.yml")).Should(BeAnExistingFile())
 			Expect(filepath.Join(repoName, "copilot", "pipelines", mainPipelineName, "buildspec.yml")).Should(BeAnExistingFile())
 		})
-
 		It("should push repo changes upstream", func() {
 			cmd := exec.Command("git", "config", "user.email", "e2etest@amazon.com")
 			cmd.Stdout = os.Stdout
@@ -186,8 +190,8 @@ var _ = Describe("pipeline flow", func() {
 	})
 
 	Context("when creating the qa pipeline manifest", func() {
-		It("checks out a 'qa' git branch", func(){
-			cmd = exec.Command("git", "checkout", "-b", "qa")
+		It("checks out a 'qa' git branch", func() {
+			cmd := exec.Command("git", "checkout", "-b", "qa")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Dir = repoName
@@ -241,9 +245,9 @@ var _ = Describe("pipeline flow", func() {
 		})
 	})
 
-	Context("when creating the test pipeline stack", func() {
+	Context("when creating the main pipeline stack", func() {
 		It("checks out the main git branch", func(){
-			cmd = exec.Command("git", "checkout", "-b", "main")
+			cmd := exec.Command("git", "checkout", "-b", "main")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Dir = repoName
@@ -256,7 +260,7 @@ var _ = Describe("pipeline flow", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should show pipeline details once the stack is created", func() {
+		It("should show main pipeline details once the stack is created", func() {
 			type stage struct {
 				Name     string
 				Category string
@@ -282,15 +286,15 @@ var _ = Describe("pipeline flow", func() {
 
 			Eventually(func() error {
 				out, err := copilot.PipelineShow(client.PipelineShowInput{
-					Name: testPipelineName,
+					Name: mainPipelineName,
 				})
 				switch {
 				case err != nil:
 					return err
 				case out.Name == "":
 					return fmt.Errorf("pipeline name is empty: %v", out)
-				case out.Name != testPipelineName:
-					return fmt.Errorf("expected pipeline name %q, got %q", testPipelineName, out.Name)
+				case out.Name != mainPipelineName:
+					return fmt.Errorf("expected pipeline name %q, got %q", mainPipelineName, out.Name)
 				case len(out.Stages) != len(wantedStages):
 					return fmt.Errorf("pipeline stages do not match: %v", out.Stages)
 				}
@@ -303,10 +307,7 @@ var _ = Describe("pipeline flow", func() {
 						return fmt.Errorf("stage category %s at index %d does not match", actualStage.Category, idx)
 					}
 				}
-				// Check that the addons stack was created
-				for idx, variable := range out.Variables {
 
-				}
 				return nil
 			}, "600s", "10s").Should(BeNil())
 		})
@@ -335,7 +336,7 @@ var _ = Describe("pipeline flow", func() {
 				},
 				{
 					Name:         "DeployTo-prod",
-					ActionName:   "CreateOrUpdate-frontend-test",
+					ActionName:   "CreateOrUpdate-frontend-prod",
 					ActionStatus: "Succeeded",
 				},
 			}
@@ -369,8 +370,8 @@ var _ = Describe("pipeline flow", func() {
 		})
 	})
 
-	Context("services should be queryable post-release", func() {
-		It("services should include a valid URL", func() {
+	Context("main pipeline service should be queryable post-release", func() {
+		It("service should include a valid URL", func() {
 			out, err := copilot.SvcShow(&client.SvcShowRequest{
 				AppName: appName,
 				Name:    "frontend",
@@ -387,11 +388,20 @@ var _ = Describe("pipeline flow", func() {
 					return resp.StatusCode, fetchErr
 				}, "30s", "1s").Should(Equal(200))
 			}
+			// Check that the addons stack was created.
+			Eventually(func() error {
+			for _, variable := range out.Variables {
+				if variable.Name == "E2EPIPELINEADDON_NAME" {
+					return nil
+				}
+			}
+			return fmt.Errorf("addons variable %s not found", "E2EPIPELINEADDON_NAME")
+			})
 		})
 	})
-	Context("when creating the prod pipeline stack", func() {
+	Context("when creating the qa pipeline stack", func() {
 		It("checks out the qa git branch", func(){
-			cmd = exec.Command("git", "checkout", "-b", "qa")
+			cmd := exec.Command("git", "checkout", "-b", "qa")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Dir = repoName
@@ -404,7 +414,7 @@ var _ = Describe("pipeline flow", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should show pipeline details once the stack is created", func() {
+		It("should show qa pipeline details once the stack is created", func() {
 			type stage struct {
 				Name     string
 				Category string
@@ -433,8 +443,8 @@ var _ = Describe("pipeline flow", func() {
 					return err
 				case out.Name == "":
 					return fmt.Errorf("pipeline name is empty: %v", out)
-				case out.Name != prodPipelineName:
-					return fmt.Errorf("expected pipeline name %q, got %q", prodPipelineName, out.Name)
+				case out.Name != qaPipelineName:
+					return fmt.Errorf("expected pipeline name %q, got %q", qaPipelineName, out.Name)
 				case len(out.Stages) != len(wantedStages):
 					return fmt.Errorf("pipeline stages do not match: %v", out.Stages)
 				}
@@ -451,7 +461,7 @@ var _ = Describe("pipeline flow", func() {
 			}, "600s", "10s").Should(BeNil())
 		})
 
-		It("should deploy the service to the prod environment", func() {
+		It("should deploy the service to the qa environment", func() {
 			type state struct {
 				Name         string
 				ActionName   string
@@ -477,7 +487,7 @@ var _ = Describe("pipeline flow", func() {
 
 			Eventually(func() error {
 				out, err := copilot.PipelineStatus(client.PipelineStatusInput{
-					Name: prodPipelineName,
+					Name: qaPipelineName,
 				})
 				if err != nil {
 					return err
@@ -502,7 +512,35 @@ var _ = Describe("pipeline flow", func() {
 				return nil
 			}, "1200s", "15s").Should(BeNil())
 		})
-		It("should deploy the addons nested stack"(){})
 	})
 
+	Context("qa pipeline service should be queryable post-release", func() {
+		It("service should include a valid URL", func() {
+			out, err := copilot.SvcShow(&client.SvcShowRequest{
+				AppName: appName,
+				Name:    "frontend",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			routes := make(map[string]string)
+			for _, route := range out.Routes {
+				routes[route.Environment] = route.URL
+			}
+			for _, env := range []string{"qa"} {
+				Eventually(func() (int, error) {
+					resp, fetchErr := http.Get(routes[env])
+					return resp.StatusCode, fetchErr
+				}, "30s", "1s").Should(Equal(200))
+			}
+			// Check that the addons stack was created.
+			Eventually(func() error {
+				for _, variable := range out.Variables {
+					if variable.Name == "E2EPIPELINEADDON_NAME" {
+						return nil
+					}
+				}
+				return fmt.Errorf("addons variable %s not found", "E2EPIPELINEADDON_NAME")
+			})
+		})
+	})
 })
