@@ -34,6 +34,7 @@ type BackendServiceConfig struct {
 	PublishConfig    PublishConfig             `yaml:"publish"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
 	DeployConfig     DeploymentConfiguration   `yaml:"deployment"`
+	Observability    Observability             `yaml:"observability"`
 }
 
 // BackendServiceProps represents the configuration needed to create a backend service.
