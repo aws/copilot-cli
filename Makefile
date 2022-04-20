@@ -86,7 +86,7 @@ package-custom-resources-clean:
 
 .PHONY: run-unit-test
 run-unit-test:
-	go test -race -count=1 -coverprofile=${COVERAGE} ${PACKAGES}
+	go test -coverprofile=${COVERAGE} ${PACKAGES}
 
 .PHONY: generate-coverage
 generate-coverage: test
