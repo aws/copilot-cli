@@ -321,16 +321,11 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &WorkerServiceDescriber{
-				app:             testApp,
-				svc:             testSvc,
-				enableResources: tc.shouldOutputResources,
-				store:           mockStore,
-				initClients:     func(string) error { return nil },
-				svcStackDescriber: map[string]ecsDescriber{
-					"test":    mockSvcDescriber,
-					"prod":    mockSvcDescriber,
-					"mockEnv": mockSvcDescriber,
-				},
+				app:              testApp,
+				svc:              testSvc,
+				enableResources:  tc.shouldOutputResources,
+				store:            mockStore,
+				initECSDescriber: func(s string) (ecsDescriber, error) { return mockSvcDescriber, nil },
 			}
 
 			// WHEN

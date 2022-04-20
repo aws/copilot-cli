@@ -137,10 +137,9 @@ func (d *serviceStackDescriber) ServiceStackResources() ([]*stack.Resource, erro
 		waitConditionHandle:  true,
 	}
 	for _, svcResource := range svcResources {
-		if ignoredResources[svcResource.Type] {
-			continue
+		if !ignoredResources[svcResource.Type] {
+			resources = append(resources, svcResource)
 		}
-		resources = append(resources, svcResource)
 	}
 
 	return resources, nil

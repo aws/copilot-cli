@@ -21,9 +21,9 @@ type RDWebServiceDescriber struct {
 	svc             string
 	enableResources bool
 
-	store            DeployedEnvServicesLister
-	initClients      func(string) error
-	envSvcDescribers map[string]apprunnerDescriber
+	store                  DeployedEnvServicesLister
+	initAppRunnerDescriber func(string) (apprunnerDescriber, error)
+	envSvcDescribers       map[string]apprunnerDescriber
 }
 
 // NewRDWebServiceDescriber instantiates a request-driven service describer.
@@ -36,9 +36,9 @@ func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, err
 
 		envSvcDescribers: make(map[string]apprunnerDescriber),
 	}
-	describer.initClients = func(env string) error {
-		if _, ok := describer.envSvcDescribers[env]; ok {
-			return nil
+	describer.initAppRunnerDescriber = func(env string) (apprunnerDescriber, error) {
+		if describer, ok := describer.envSvcDescribers[env]; ok {
+			return describer, nil
 		}
 		d, err := newAppRunnerServiceDescriber(NewServiceConfig{
 			App:         opt.App,
@@ -46,21 +46,21 @@ func NewRDWebServiceDescriber(opt NewServiceConfig) (*RDWebServiceDescriber, err
 			ConfigStore: opt.ConfigStore,
 		}, env)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		describer.envSvcDescribers[env] = d
-		return nil
+		return d, nil
 	}
 	return describer, nil
 }
 
 // ServiceARN retrieves the ARN of the app runner service.
 func (d *RDWebServiceDescriber) ServiceARN(env string) (string, error) {
-	err := d.initClients(env)
+	describer, err := d.initAppRunnerDescriber(env)
 	if err != nil {
 		return "", err
 	}
-	return d.envSvcDescribers[env].ServiceARN()
+	return describer.ServiceARN()
 }
 
 // Describe returns info for a request-driven web service.
@@ -75,11 +75,11 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var envVars envVars
 	resources := make(map[string][]*stack.Resource)
 	for _, env := range environments {
-		err := d.initClients(env)
+		describer, err := d.initAppRunnerDescriber(env)
 		if err != nil {
 			return nil, err
 		}
-		service, err := d.envSvcDescribers[env].Service()
+		service, err := describer.Service()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service configuration: %w", err)
 		}
@@ -104,7 +104,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		}
 
 		if d.enableResources {
-			stackResources, err := d.envSvcDescribers[env].ServiceStackResources()
+			stackResources, err := describer.ServiceStackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}
