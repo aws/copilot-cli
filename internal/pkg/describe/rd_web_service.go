@@ -146,17 +146,39 @@ func formatTracingConfiguration(configuration *apprunner.TraceConfiguration) *tr
 
 type observabilityPerEnv []observabilityInEnv
 
+func (obs observabilityPerEnv) hasObservabilityConfiguration() bool {
+	for _, envObservabilityConfig := range obs {
+		if !envObservabilityConfig.isEmpty() {
+			return true
+		}
+	}
+	return false
+}
+
+func (obs observabilityPerEnv) humanString(w io.Writer) {
+	headers := []string{"Environment", "Tracing"}
+	var rows [][]string
+	for _, ob := range obs {
+		tracingVendor := "None"
+		if ob.Tracing != nil && ob.Tracing.Vendor != "" {
+			tracingVendor = ob.Tracing.Vendor
+		}
+		rows = append(rows, []string{ob.Environment, tracingVendor})
+	}
+	printTable(w, headers, rows)
+}
+
 type observabilityInEnv struct {
 	Environment string   `json:"environment"`
 	Tracing     *tracing `json:"tracing,omitempty"`
 }
 
-type tracing struct {
-	Vendor string `json:"vendor"`
-}
-
 func (o observabilityInEnv) isEmpty() bool {
 	return o.Tracing.isEmpty()
+}
+
+type tracing struct {
+	Vendor string `json:"vendor"`
 }
 
 func (t *tracing) isEmpty() bool {
@@ -198,7 +220,7 @@ func (w *rdWebSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.AppRunnerConfigurations.humanString(writer)
-	if w.hasObservabilityConfiguration() {
+	if w.Observability.hasObservabilityConfiguration() {
 		fmt.Fprint(writer, color.Bold.Sprint("\nObservability\n\n"))
 		writer.Flush()
 		w.Observability.humanString(writer)
@@ -224,26 +246,4 @@ func (w *rdWebSvcDesc) HumanString() string {
 	}
 	writer.Flush()
 	return b.String()
-}
-
-func (w *rdWebSvcDesc) hasObservabilityConfiguration() bool {
-	for _, envObservabilityConfig := range w.Observability {
-		if !envObservabilityConfig.isEmpty() {
-			return true
-		}
-	}
-	return false
-}
-
-func (obs observabilityPerEnv) humanString(w io.Writer) {
-	headers := []string{"Environment", "Tracing"}
-	var rows [][]string
-	for _, ob := range obs {
-		tracingVendor := "None"
-		if ob.Tracing != nil && ob.Tracing.Vendor != "" {
-			tracingVendor = ob.Tracing.Vendor
-		}
-		rows = append(rows, []string{ob.Environment, tracingVendor})
-	}
-	printTable(w, headers, rows)
 }
