@@ -857,7 +857,7 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateTo
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
 	reader := strings.NewReader(tmpl)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, template.AddonsArtifactPath(d.name, tmpl), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, template.AddonsArtifactPathWithSHA256(d.name, tmpl), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.resources.S3Bucket, err)
 	}
