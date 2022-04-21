@@ -6,34 +6,32 @@ package deploy
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
-	
+
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	
+
 	"github.com/aws/aws-sdk-go/service/ssm"
-	
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/acm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	
+
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/afero"
 	"golang.org/x/mod/semver"
-	
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	awsapprunner "github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -859,8 +857,7 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateTo
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
 	reader := strings.NewReader(tmpl)
-	artifactName := path.Join(d.name, fmt.Sprintf("%x.yml", sha256.Sum256([]byte(tmpl))))
-	url, err := in.uploader.Upload(d.resources.S3Bucket, template.AddonsArtifactPath(artifactName), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, template.AddonsArtifactPath(d.name, tmpl), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.resources.S3Bucket, err)
 	}

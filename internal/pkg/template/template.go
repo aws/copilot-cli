@@ -100,14 +100,16 @@ func New() *Template {
 	}
 }
 
-// AddonsArtifactPath prefixes the key with the addons artifact path.
-func AddonsArtifactPath(key string) string {
-	return path.Join(artifactDirName, s3ArtifactAddonDirName, key)
+// AddonsArtifactPath computes the sha as the file name with YAML suffix, prefixes it with the key and the addons artifact path.
+// Example: manual/addons/key/sha.yml.
+func AddonsArtifactPath(key string, content string) string {
+	return path.Join(artifactDirName, s3ArtifactAddonDirName, key, fmt.Sprintf("%x.yml", sha256.Sum256([]byte(content))))
 }
 
-// TemplateArtifactPath prefixes the key with the template artifact path.
-func TemplateArtifactPath(key string) string {
-	return path.Join(artifactDirName, templateDirName, key)
+// TemplateArtifactPath computes the sha as the file name with YAML suffix, prefixes it with the key and the templates artifact path.
+// Example: manual/templates/key/sha.yml.
+func TemplateArtifactPath(key string, content string) string {
+	return path.Join(artifactDirName, templateDirName, key, fmt.Sprintf("%x.yml", sha256.Sum256([]byte(content))))
 }
 
 // MkdirSHA prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
