@@ -790,7 +790,7 @@ type uploadArtifactsToS3Output struct {
 }
 
 func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (uploadArtifactsToS3Output, error) {
-	envFileARN, err := d.pushEnvFilesToS3Bucket(&pushEnvFilesToS3BucketInput{
+	envFileARN, err := d.pushEnvFileToS3Bucket(&pushEnvFilesToS3BucketInput{
 		fs:       in.fs,
 		uploader: in.uploader,
 	})
@@ -815,7 +815,7 @@ type pushEnvFilesToS3BucketInput struct {
 	uploader uploader
 }
 
-func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInput) (string, error) {
+func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput) (string, error) {
 	path := envFile(d.mft)
 	if path == "" {
 		return "", nil

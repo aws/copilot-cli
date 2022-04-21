@@ -32,7 +32,7 @@ func CFNTemplateWithSHA256(key string, content []byte) string {
 }
 
 // EnvFilesWithSHA256 returns the path to store an env file artifact.
-// Example: manual/env-files/key/sha.
+// Example: manual/env-files/key/sha.env.
 func EnvFilesWithSHA256(key string, content []byte) string {
-	return path.Join(s3ArtifactDirName, s3ArtifactEnvFilesDirName, key, fmt.Sprintf("%x", sha256.Sum256(content)))
+	return path.Join(s3ArtifactDirName, s3ArtifactEnvFilesDirName, key, fmt.Sprintf("%x.env", sha256.Sum256(content)))
 }
