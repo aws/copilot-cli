@@ -1002,13 +1002,30 @@ func TestPipelineManifest_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		Pipeline Pipeline
 
-		wantedError error
+		wantedError          error
+		wantedErrorMsgPrefix string
 	}{
 		"error if name exceeds 100 characters": {
 			Pipeline: Pipeline{
 				Name: "12345678902234567890323456789042345678905234567890623456789072345678908234567890923456789010234567890",
 			},
 			wantedError: errors.New("pipeline name '12345678902234567890323456789042345678905234567890623456789072345678908234567890923456789010234567890' must be shorter than 100 characters"),
+		},
+		"should validate pipeline stages": {
+			Pipeline: Pipeline{
+				Name: "release",
+				Stages: []PipelineStage{
+					{
+						Name: "test",
+						Deployments: map[string]*Deployment{
+							"frontend": {
+								DependsOn: []string{"backend"},
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "deployments" for pipeline stage test:`,
 		},
 	}
 	for name, tc := range testCases {
@@ -1017,8 +1034,49 @@ func TestPipelineManifest_Validate(t *testing.T) {
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
+			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func TestDeployments_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     Deployments
+		wanted error
+	}{
+		"should return nil on empty deployments": {},
+		"should return an error when a dependency does not exist": {
+			in: map[string]*Deployment{
+				"frontend": {
+					DependsOn: []string{"backend"},
+				},
+			},
+			wanted: errors.New("dependency deployment named 'backend' of 'frontend' does not exist"),
+		},
+		"should return nil when all dependencies are present": {
+			in: map[string]*Deployment{
+				"frontend": {
+					DependsOn: []string{"backend"},
+				},
+				"backend": nil,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual := tc.in.Validate()
+
+			if tc.wanted == nil {
+				require.NoError(t, actual)
 			} else {
-				require.NoError(t, gotErr)
+				require.EqualError(t, actual, tc.wanted.Error())
 			}
 		})
 	}
