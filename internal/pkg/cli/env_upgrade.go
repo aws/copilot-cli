@@ -284,7 +284,7 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 	if err := upgrader.UpgradeEnvironment(&deploy.CreateEnvironmentInput{
 		Version: toVersion,
 		App: deploy.AppInformation{
-			Name:   conf.App,
+			Name:   app.Name,
 			Domain: app.Domain,
 		},
 		Name:                 conf.Name,
@@ -316,7 +316,7 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, co
 		if err := upgrader.UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
 			Version: toVersion,
 			App: deploy.AppInformation{
-				Name:   conf.App,
+				Name:   app.Name,
 				Domain: app.Domain,
 			},
 			Name:                 conf.Name,
