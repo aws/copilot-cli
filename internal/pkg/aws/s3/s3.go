@@ -7,10 +7,8 @@ package s3
 import (
 	"archive/zip"
 	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"io"
-	"path"
 	"strings"
 	
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -21,12 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-const (
-	artifactDirName = "manual"
-	addonDirName 	= "addons"
-	templateDirName = "templates"
-	notFound        = "NotFound"
-)
+const notFound = "NotFound"
 
 type s3ManagerAPI interface {
 	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
@@ -88,21 +81,6 @@ func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, err
 // The bucket owner, in addition to the object owner, is granted full control.
 func (s *S3) Upload(bucket, key string, data io.Reader) (string, error) {
 	return s.upload(bucket, key, data)
-}
-
-// MkdirSHA prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
-func MkdirSHA256(key string, content []byte) string {
-	return path.Join(artifactDirName, fmt.Sprintf("%x", sha256.Sum256(content)), key)
-}
-
-// AddonsArtifactPath prefixes the key with the addons artifact path.
-func AddonsArtifactPath(key string) string {
-	return path.Join(artifactDirName, addonDirName, key)
-}
-
-// TemplateArtifactPath prefixes the key with the template artifact path.
-func TemplateArtifactPath(key string) string {
-	return path.Join(artifactDirName, templateDirName, key)
 }
 
 // EmptyBucket deletes all objects within the bucket.

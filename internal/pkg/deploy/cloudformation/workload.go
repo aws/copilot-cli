@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"path"
 	"strings"
-
+	
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
@@ -34,13 +34,13 @@ func (cf CloudFormation) DeployService(out progress.FileWriter, conf StackConfig
 }
 
 func (cf CloudFormation) pushWorkloadTemplateToS3Bucket(bucket string, config StackConfiguration) (string, error) {
-	template, err := config.Template()
+	tmpl, err := config.Template()
 	if err != nil {
 		return "", fmt.Errorf("generate template: %w", err)
 	}
-	reader := strings.NewReader(template)
-	artifactName := path.Join(config.StackName(), fmt.Sprintf("%x.yml", sha256.Sum256([]byte(template))))
-	url, err := cf.s3Client.Upload(bucket, s3.TemplateArtifactPath(artifactName), reader)
+	reader := strings.NewReader(tmpl)
+	artifactName := path.Join(config.StackName(), fmt.Sprintf("%x.yml", sha256.Sum256([]byte(tmpl))))
+	url, err := cf.s3Client.Upload(bucket, template.TemplateArtifactPath(artifactName), reader)
 	if err != nil {
 		return "", fmt.Errorf("upload workload template to S3 bucket %s: %w", bucket, err)
 	}

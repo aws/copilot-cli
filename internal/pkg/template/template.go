@@ -6,6 +6,7 @@ package template
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -32,6 +33,10 @@ const (
 	customResourceRootPath         = "custom-resources"
 	customResourceZippedScriptName = "index.js"
 	scriptDirName                  = "scripts"
+
+	artifactDirName        = "manual"
+	templateDirName        = "templates"
+	s3ArtifactAddonDirName = "addons"
 )
 
 // Groups of files that belong to the same stack.
@@ -93,6 +98,21 @@ func New() *Template {
 	return &Template{
 		fs: templateFS,
 	}
+}
+
+// AddonsArtifactPath prefixes the key with the addons artifact path.
+func AddonsArtifactPath(key string) string {
+	return path.Join(artifactDirName, s3ArtifactAddonDirName, key)
+}
+
+// TemplateArtifactPath prefixes the key with the template artifact path.
+func TemplateArtifactPath(key string) string {
+	return path.Join(artifactDirName, templateDirName, key)
+}
+
+// MkdirSHA prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
+func MkdirSHA256(key string, content []byte) string {
+	return path.Join(artifactDirName, fmt.Sprintf("%x", sha256.Sum256(content)), key)
 }
 
 // Read returns the contents of the template under "/templates/{path}".
@@ -169,7 +189,7 @@ func (t *Template) uploadFileToCompress(upload s3.CompressAndUploadFunc, file fi
 	// Suffix with a SHA256 checksum of the fileToCompress so that
 	// only new content gets a new URL. Otherwise, if two fileToCompresss have the
 	// same content then the URL generated will be identical.
-	url, err := upload(s3.MkdirSHA256(file.name, contents), nameBinaries...)
+	url, err := upload(MkdirSHA256(file.name, contents), nameBinaries...)
 	if err != nil {
 		return "", fmt.Errorf("upload %s: %w", file.name, err)
 	}

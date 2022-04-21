@@ -826,7 +826,7 @@ func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInpu
 		return "", fmt.Errorf("read env file %s: %w", path, err)
 	}
 	reader := bytes.NewReader(content)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, s3.MkdirSHA256(path, content), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, template.MkdirSHA256(path, content), reader)
 	if err != nil {
 		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
 	}
@@ -849,7 +849,7 @@ type pushAddonsTemplateToS3BucketInput struct {
 }
 
 func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateToS3BucketInput) (string, error) {
-	template, err := in.templater.Template()
+	tmpl, err := in.templater.Template()
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
 		if errors.As(err, &notFoundErr) {
@@ -858,9 +858,9 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateTo
 		}
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
-	reader := strings.NewReader(template)
-	artifactName := path.Join(d.name, fmt.Sprintf("%x.yml", sha256.Sum256([]byte(template))))
-	url, err := in.uploader.Upload(d.resources.S3Bucket, s3.AddonsArtifactPath(artifactName), reader)
+	reader := strings.NewReader(tmpl)
+	artifactName := path.Join(d.name, fmt.Sprintf("%x.yml", sha256.Sum256([]byte(tmpl))))
+	url, err := in.uploader.Upload(d.resources.S3Bucket, template.AddonsArtifactPath(artifactName), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.resources.S3Bucket, err)
 	}
