@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package artifactpath holds functions to generate the S3 object path for artifacts.
 package artifactpath
 
