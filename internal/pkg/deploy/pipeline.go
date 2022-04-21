@@ -485,7 +485,7 @@ func (stg *PipelineStage) Init(env *config.Environment, mftStage *manifest.Pipel
 		AccountID: env.AccountID,
 	}
 	deployments := mftStage.Deployments
-	if len(mftStage.Deployments) == 0 {
+	if len(deployments) == 0 {
 		// Transform local workloads into the manifest.Deployments format if the manifest doesn't have any deployment config.
 		deployments = make(manifest.Deployments)
 		for _, workload := range workloads {
