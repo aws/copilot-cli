@@ -297,16 +297,10 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &LBWebServiceDescriber{
-				app:         testApp,
-				svc:         testSvc,
-				initClients: func(string) error { return nil },
-
-				ecsServiceDescribers: map[string]ecsDescriber{
-					"test": mockSvcDescriber,
-				},
-				envDescriber: map[string]envDescriber{
-					"test": mockEnvDescriber,
-				},
+				app:                      testApp,
+				svc:                      testSvc,
+				initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mockSvcDescriber, nil },
+				initEnvDescribers:        func(s string) (envDescriber, error) { return mockEnvDescriber, nil },
 			}
 
 			// WHEN
@@ -334,11 +328,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		}, nil)
 
 		d := &BackendServiceDescriber{
-			initClients: func(string) error { return nil },
-
-			ecsServiceDescribers: map[string]ecsDescriber{
-				"test": m,
-			},
+			initECSServiceDescribers: func(s string) (ecsDescriber, error) { return m, nil },
 		}
 
 		// WHEN
@@ -360,15 +350,9 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		mockEnvStack.EXPECT().ServiceDiscoveryEndpoint().Return("test.app.local", nil)
 
 		d := &BackendServiceDescriber{
-			svc:         "hello",
-			initClients: func(string) error { return nil },
-
-			ecsServiceDescribers: map[string]ecsDescriber{
-				"test": mockSvcStack,
-			},
-			envStackDescriber: map[string]envDescriber{
-				"test": mockEnvStack,
-			},
+			svc:                      "hello",
+			initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mockSvcStack, nil },
+			initEnvDescribers:        func(s string) (envDescriber, error) { return mockEnvStack, nil },
 		}
 
 		// WHEN
@@ -427,13 +411,9 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &RDWebServiceDescriber{
-				app:         testApp,
-				svc:         testSvc,
-				initClients: func(string) error { return nil },
-
-				envSvcDescribers: map[string]apprunnerDescriber{
-					"test": mockSvcDescriber,
-				},
+				app:                    testApp,
+				svc:                    testSvc,
+				initAppRunnerDescriber: func(string) (apprunnerDescriber, error) { return mockSvcDescriber, nil },
 			}
 
 			// WHEN

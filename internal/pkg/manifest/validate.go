@@ -1410,19 +1410,19 @@ func validateNoCircularDependencies(deps map[string]containerDependency) error {
 	if len(cycle) == 1 {
 		return fmt.Errorf("container %s cannot depend on itself", cycle[0])
 	}
-	// Stablize unit tests.
+	// Stabilize unit tests.
 	sort.SliceStable(cycle, func(i, j int) bool { return cycle[i] < cycle[j] })
 	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
 }
 
-func buildDependencyGraph(deps map[string]containerDependency) (*graph.Graph, error) {
-	dependencyGraph := graph.New()
+func buildDependencyGraph(deps map[string]containerDependency) (*graph.Graph[string], error) {
+	dependencyGraph := graph.New[string]()
 	for name, containerDep := range deps {
 		for dep := range containerDep.dependsOn {
 			if _, ok := deps[dep]; !ok {
 				return nil, fmt.Errorf("container %s does not exist", dep)
 			}
-			dependencyGraph.Add(graph.Edge{
+			dependencyGraph.Add(graph.Edge[string]{
 				From: name,
 				To:   dep,
 			})

@@ -7,7 +7,6 @@ package mocks
 import (
 	reflect "reflect"
 
-	apprunner "github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	cloudwatch "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	cloudwatchlogs "github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -234,44 +233,6 @@ func (m *MockserviceDescriber) DescribeService(app, env, svc string) (*ecs0.Serv
 func (mr *MockserviceDescriberMockRecorder) DescribeService(app, env, svc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockserviceDescriber)(nil).DescribeService), app, env, svc)
-}
-
-// MockappRunnerServiceDescriber is a mock of appRunnerServiceDescriber interface.
-type MockappRunnerServiceDescriber struct {
-	ctrl     *gomock.Controller
-	recorder *MockappRunnerServiceDescriberMockRecorder
-}
-
-// MockappRunnerServiceDescriberMockRecorder is the mock recorder for MockappRunnerServiceDescriber.
-type MockappRunnerServiceDescriberMockRecorder struct {
-	mock *MockappRunnerServiceDescriber
-}
-
-// NewMockappRunnerServiceDescriber creates a new mock instance.
-func NewMockappRunnerServiceDescriber(ctrl *gomock.Controller) *MockappRunnerServiceDescriber {
-	mock := &MockappRunnerServiceDescriber{ctrl: ctrl}
-	mock.recorder = &MockappRunnerServiceDescriberMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockappRunnerServiceDescriber) EXPECT() *MockappRunnerServiceDescriberMockRecorder {
-	return m.recorder
-}
-
-// Service mocks base method.
-func (m *MockappRunnerServiceDescriber) Service() (*apprunner.Service, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Service")
-	ret0, _ := ret[0].(*apprunner.Service)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Service indicates an expected call of Service.
-func (mr *MockappRunnerServiceDescriberMockRecorder) Service() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockappRunnerServiceDescriber)(nil).Service))
 }
 
 // MockautoscalingAlarmNamesGetter is a mock of autoscalingAlarmNamesGetter interface.

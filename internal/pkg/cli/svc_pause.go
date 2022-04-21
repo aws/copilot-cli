@@ -94,16 +94,15 @@ func newSvcPauseOpts(vars svcPauseVars) (*svcPauseOpts, error) {
 			return err
 		}
 		opts.client = apprunner.New(sess)
-		d, err := describe.NewAppRunnerServiceDescriber(describe.NewServiceConfig{
+		d, err := describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
 			App:         opts.appName,
-			Env:         opts.envName,
 			Svc:         opts.svcName,
 			ConfigStore: opts.store,
 		})
 		if err != nil {
 			return err
 		}
-		opts.svcARN, err = d.ServiceARN()
+		opts.svcARN, err = d.ServiceARN(opts.envName)
 		if err != nil {
 			return fmt.Errorf("retrieve ServiceARN for %s: %w", opts.svcName, err)
 		}
