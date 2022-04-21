@@ -5880,18 +5880,18 @@ func (m *MockapprunnerServiceDescriber) EXPECT() *MockapprunnerServiceDescriberM
 }
 
 // ServiceARN mocks base method.
-func (m *MockapprunnerServiceDescriber) ServiceARN() (string, error) {
+func (m *MockapprunnerServiceDescriber) ServiceARN(env string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceARN")
+	ret := m.ctrl.Call(m, "ServiceARN", env)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ServiceARN indicates an expected call of ServiceARN.
-func (mr *MockapprunnerServiceDescriberMockRecorder) ServiceARN() *gomock.Call {
+func (mr *MockapprunnerServiceDescriberMockRecorder) ServiceARN(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceARN", reflect.TypeOf((*MockapprunnerServiceDescriber)(nil).ServiceARN))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceARN", reflect.TypeOf((*MockapprunnerServiceDescriber)(nil).ServiceARN), env)
 }
 
 // MockecsCommandExecutor is a mock of ecsCommandExecutor interface.

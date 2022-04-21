@@ -444,20 +444,12 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &LBWebServiceDescriber{
-				app:             testApp,
-				svc:             testSvc,
-				enableResources: tc.shouldOutputResources,
-				store:           mockStore,
-				initClients:     func(string) error { return nil },
-
-				ecsServiceDescribers: map[string]ecsDescriber{
-					"test": mockSvcStackDescriber,
-					"prod": mockSvcStackDescriber,
-				},
-				envDescriber: map[string]envDescriber{
-					"test": mockEnvDescriber,
-					"prod": mockEnvDescriber,
-				},
+				app:                      testApp,
+				svc:                      testSvc,
+				enableResources:          tc.shouldOutputResources,
+				store:                    mockStore,
+				initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mockSvcStackDescriber, nil },
+				initEnvDescribers:        func(s string) (envDescriber, error) { return mockEnvDescriber, nil },
 			}
 
 			// WHEN

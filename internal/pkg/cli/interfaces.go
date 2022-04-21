@@ -550,7 +550,7 @@ type serviceDescriber interface {
 }
 
 type apprunnerServiceDescriber interface {
-	ServiceARN() (string, error)
+	ServiceARN(env string) (string, error)
 }
 
 type ecsCommandExecutor interface {
