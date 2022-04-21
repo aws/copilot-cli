@@ -29,8 +29,8 @@ func TestGraph_Add(t *testing.T) {
 		})
 
 		// THEN
-		require.Equal(t, graph.nodes["A"], neighbors[string]{"B": true, "C": true})
-		require.Equal(t, graph.nodes["B"], neighbors[string]{"A": true})
+		require.Equal(t, graph.vertices["A"], neighbors[string]{"B": true, "C": true})
+		require.Equal(t, graph.vertices["B"], neighbors[string]{"A": true})
 	})
 }
 
@@ -43,7 +43,7 @@ func TestGraph_IsAcyclic(t *testing.T) {
 	}{
 		"small non acyclic graph": {
 			graph: Graph[string]{
-				nodes: map[string]neighbors[string]{
+				vertices: map[string]neighbors[string]{
 					"A": {"B": true, "C": true},
 					"B": {"A": true},
 				},
@@ -54,7 +54,7 @@ func TestGraph_IsAcyclic(t *testing.T) {
 		},
 		"non acyclic": {
 			graph: Graph[string]{
-				nodes: map[string]neighbors[string]{
+				vertices: map[string]neighbors[string]{
 					"K": {"F": true},
 					"A": {"B": true, "C": true},
 					"B": {"D": true, "E": true},
@@ -69,7 +69,7 @@ func TestGraph_IsAcyclic(t *testing.T) {
 		},
 		"acyclic": {
 			graph: Graph[string]{
-				nodes: map[string]neighbors[string]{
+				vertices: map[string]neighbors[string]{
 					"A": {"B": true, "C": true},
 					"B": {"D": true},
 					"E": {"G": true},
