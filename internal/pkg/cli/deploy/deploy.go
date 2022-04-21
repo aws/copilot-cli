@@ -825,7 +825,7 @@ func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput
 		return "", fmt.Errorf("read env file %s: %w", path, err)
 	}
 	reader := bytes.NewReader(content)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.EnvFilesWithSHA256(path, content), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.EnvFiles(path, content), reader)
 	if err != nil {
 		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
 	}
@@ -858,7 +858,7 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateTo
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
 	reader := strings.NewReader(tmpl)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.AddonsWithSHA256(d.name, []byte(tmpl)), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.Addons(d.name, []byte(tmpl)), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.resources.S3Bucket, err)
 	}

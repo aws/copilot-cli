@@ -22,20 +22,20 @@ func MkdirSHA256(key string, content []byte) string {
 	return path.Join(s3ArtifactDirName, fmt.Sprintf("%x", sha256.Sum256(content)), key)
 }
 
-// Addons returns the path to store addon artifact files.
+// Addons returns the path to store addon artifact files with sha256 of the content.
 // Example: manual/addons/key/sha.yml.
-func AddonsWithSHA256(key string, content []byte) string {
+func Addons(key string, content []byte) string {
 	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, key, fmt.Sprintf("%x.yml", sha256.Sum256(content)))
 }
 
-// CFNTemplate returns the path to store cloudformation templates.
+// CFNTemplate returns the path to store cloudformation templates with sha256 of the content.
 // Example: manual/templates/key/sha.yml.
-func CFNTemplateWithSHA256(key string, content []byte) string {
+func CFNTemplate(key string, content []byte) string {
 	return path.Join(s3ArtifactDirName, s3TemplateDirName, key, fmt.Sprintf("%x.yml", sha256.Sum256(content)))
 }
 
-// EnvFilesWithSHA256 returns the path to store an env file artifact.
+// EnvFiles returns the path to store an env file artifact with sha256 of the content..
 // Example: manual/env-files/key/sha.env.
-func EnvFilesWithSHA256(key string, content []byte) string {
+func EnvFiles(key string, content []byte) string {
 	return path.Join(s3ArtifactDirName, s3ArtifactEnvFilesDirName, key, fmt.Sprintf("%x.env", sha256.Sum256(content)))
 }
