@@ -111,16 +111,9 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		}
 	}
 
-	isObservabilitiesEmpty := true
-	for _, oc := range observabilities {
-		if !oc.isEmpty() {
-			isObservabilitiesEmpty = false
-		}
-	}
-	if isObservabilitiesEmpty {
+	if !observabilityPerEnv(observabilities).hasObservabilityConfiguration() {
 		observabilities = nil
 	}
-
 	return &rdWebSvcDesc{
 		Service:                 d.svc,
 		Type:                    manifest.RequestDrivenWebServiceType,
