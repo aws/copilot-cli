@@ -74,7 +74,6 @@ var _ = Describe("pipeline flow", func() {
 				AppName: appName,
 				EnvName: "test",
 				Profile: "e2etestenv",
-				Prod:    false,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -83,7 +82,6 @@ var _ = Describe("pipeline flow", func() {
 				AppName: appName,
 				EnvName: "prod",
 				Profile: "e2eprodenv",
-				Prod:    false,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -92,7 +90,6 @@ var _ = Describe("pipeline flow", func() {
 				AppName: appName,
 				EnvName: "qa",
 				Profile: "e2etestenv",
-				Prod:    false,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
