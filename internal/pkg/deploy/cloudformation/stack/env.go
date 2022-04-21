@@ -29,22 +29,25 @@ type EnvStackConfig struct {
 }
 
 const (
-	// Mandatory parameter keys.
+	// Parameter keys.
 	envParamAppNameKey               = "AppName"
 	envParamEnvNameKey               = "EnvironmentName"
 	envParamToolsAccountPrincipalKey = "ToolsAccountPrincipalARN"
 	envParamAppDNSKey                = "AppDNSName"
 	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
 	EnvParamAliasesKey               = "Aliases"
+	EnvParamALBWorkloadsKey          = "ALBWorkloads"
+	envParamEFSWorkloadsKey          = "EFSWorkloads"
+	envParamNATWorkloadsKey          = "NATWorkloads"
+	envParamCreateHTTPSListenerKey   = "CreateHTTPSListener"
+	EnvParamServiceDiscoveryEndpoint = "ServiceDiscoveryEndpoint"
 
 	// Output keys.
-	EnvOutputVPCID                   = "VpcId"
-	EnvOutputPublicSubnets           = "PublicSubnets"
-	EnvOutputPrivateSubnets          = "PrivateSubnets"
-	envOutputCFNExecutionRoleARN     = "CFNExecutionRoleARN"
-	envOutputManagerRoleKey          = "EnvironmentManagerRoleARN"
-	EnvParamServiceDiscoveryEndpoint = "ServiceDiscoveryEndpoint"
-	createHTTPSListener              = "CreateHTTPSListener"
+	EnvOutputVPCID               = "VpcId"
+	EnvOutputPublicSubnets       = "PublicSubnets"
+	EnvOutputPrivateSubnets      = "PrivateSubnets"
+	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
+	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
 
 	// Default parameter values
 	DefaultVPCCIDR            = "10.0.0.0/16"
@@ -144,8 +147,24 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterValue: aws.String(fmt.Sprintf(fmtServiceDiscoveryEndpoint, e.in.Name, e.in.App.Name)),
 		},
 		{
-			ParameterKey:   aws.String(createHTTPSListener),
+			ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
 			ParameterValue: aws.String(httpsListener),
+		},
+		{
+			ParameterKey:   aws.String(EnvParamAliasesKey),
+			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(envParamEFSWorkloadsKey),
+			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(envParamNATWorkloadsKey),
+			ParameterValue: aws.String(""),
 		},
 	}, nil
 }
