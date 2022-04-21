@@ -12,38 +12,38 @@ import (
 func TestGraph_Add(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		// GIVEN
-		graph := New()
+		graph := New[string]()
 
 		// WHEN
-		graph.Add(Edge{
+		graph.Add(Edge[string]{
 			From: "A",
 			To:   "B",
 		})
-		graph.Add(Edge{
+		graph.Add(Edge[string]{
 			From: "B",
 			To:   "A",
 		})
-		graph.Add(Edge{
+		graph.Add(Edge[string]{
 			From: "A",
 			To:   "C",
 		})
 
 		// THEN
-		require.Equal(t, graph.nodes["A"], neighbors{"B": true, "C": true})
-		require.Equal(t, graph.nodes["B"], neighbors{"A": true})
+		require.Equal(t, graph.nodes["A"], neighbors[string]{"B": true, "C": true})
+		require.Equal(t, graph.nodes["B"], neighbors[string]{"A": true})
 	})
 }
 
 func TestGraph_IsAcyclic(t *testing.T) {
 	testCases := map[string]struct {
-		graph Graph
+		graph Graph[string]
 
 		isAcyclic bool
 		cycle     []string
 	}{
 		"small non acyclic graph": {
-			graph: Graph{
-				nodes: map[string]neighbors{
+			graph: Graph[string]{
+				nodes: map[string]neighbors[string]{
 					"A": {"B": true, "C": true},
 					"B": {"A": true},
 				},
@@ -53,8 +53,8 @@ func TestGraph_IsAcyclic(t *testing.T) {
 			cycle:     []string{"A", "B"},
 		},
 		"non acyclic": {
-			graph: Graph{
-				nodes: map[string]neighbors{
+			graph: Graph[string]{
+				nodes: map[string]neighbors[string]{
 					"K": {"F": true},
 					"A": {"B": true, "C": true},
 					"B": {"D": true, "E": true},
@@ -68,8 +68,8 @@ func TestGraph_IsAcyclic(t *testing.T) {
 			cycle:     []string{"A", "G", "E", "B"},
 		},
 		"acyclic": {
-			graph: Graph{
-				nodes: map[string]neighbors{
+			graph: Graph[string]{
+				nodes: map[string]neighbors[string]{
 					"A": {"B": true, "C": true},
 					"B": {"D": true},
 					"E": {"G": true},
