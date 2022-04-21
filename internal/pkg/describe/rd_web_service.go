@@ -7,9 +7,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/aws-sdk-go/aws"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -70,6 +74,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
+	var observabilities []observabilityInEnv
 	var routes []*WebServiceRoute
 	var configs []*ServiceConfig
 	var envVars envVars
@@ -94,7 +99,6 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			CPU:         service.CPU,
 			Memory:      service.Memory,
 		})
-
 		for _, v := range service.EnvironmentVariables {
 			envVars = append(envVars, &envVar{
 				Environment: env,
@@ -102,7 +106,10 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 				Value:       v.Value,
 			})
 		}
-
+		observabilities = append(observabilities, observabilityInEnv{
+			Environment: env,
+			Tracing:     formatTracingConfiguration(service.Observability.TraceConfiguration),
+		})
 		if d.enableResources {
 			stackResources, err := describer.ServiceStackResources()
 			if err != nil {
@@ -112,6 +119,9 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		}
 	}
 
+	if !observabilityPerEnv(observabilities).hasObservabilityConfiguration() {
+		observabilities = nil
+	}
 	return &rdWebSvcDesc{
 		Service:                 d.svc,
 		Type:                    manifest.RequestDrivenWebServiceType,
@@ -120,9 +130,60 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Routes:                  routes,
 		Variables:               envVars,
 		Resources:               resources,
+		Observability:           observabilities,
 
 		environments: environments,
 	}, nil
+}
+
+func formatTracingConfiguration(configuration *apprunner.TraceConfiguration) *tracing {
+	if configuration == nil {
+		return nil
+	}
+	return &tracing{
+		Vendor: aws.StringValue(configuration.Vendor),
+	}
+}
+
+type observabilityPerEnv []observabilityInEnv
+
+func (obs observabilityPerEnv) hasObservabilityConfiguration() bool {
+	for _, envObservabilityConfig := range obs {
+		if !envObservabilityConfig.isEmpty() {
+			return true
+		}
+	}
+	return false
+}
+
+func (obs observabilityPerEnv) humanString(w io.Writer) {
+	headers := []string{"Environment", "Tracing"}
+	var rows [][]string
+	for _, ob := range obs {
+		tracingVendor := "None"
+		if ob.Tracing != nil && ob.Tracing.Vendor != "" {
+			tracingVendor = ob.Tracing.Vendor
+		}
+		rows = append(rows, []string{ob.Environment, tracingVendor})
+	}
+	printTable(w, headers, rows)
+}
+
+type observabilityInEnv struct {
+	Environment string   `json:"environment"`
+	Tracing     *tracing `json:"tracing,omitempty"`
+}
+
+func (o observabilityInEnv) isEmpty() bool {
+	return o.Tracing.isEmpty()
+}
+
+type tracing struct {
+	Vendor string `json:"vendor"`
+}
+
+func (t *tracing) isEmpty() bool {
+	return t == nil || t.Vendor == ""
 }
 
 // rdWebSvcDesc contains serialized parameters for a web service.
@@ -134,6 +195,7 @@ type rdWebSvcDesc struct {
 	Routes                  []*WebServiceRoute      `json:"routes"`
 	Variables               envVars                 `json:"variables"`
 	Resources               deployedSvcResources    `json:"resources,omitempty"`
+	Observability           observabilityPerEnv     `json:"observability,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -159,6 +221,11 @@ func (w *rdWebSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.AppRunnerConfigurations.humanString(writer)
+	if w.Observability.hasObservabilityConfiguration() {
+		fmt.Fprint(writer, color.Bold.Sprint("\nObservability\n\n"))
+		writer.Flush()
+		w.Observability.humanString(writer)
+	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
 	headers := []string{"Environment", "URL"}
