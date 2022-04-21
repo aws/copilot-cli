@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -145,6 +146,9 @@ func (s *WorkerService) Template() (string, error) {
 		Subscribe:                      subscribe,
 		Publish:                        publishers,
 		Platform:                       convertPlatform(s.manifest.Platform),
+		Observability: template.ObservabilityOpts{
+			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
+		},
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)
