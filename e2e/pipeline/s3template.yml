@@ -27,7 +27,6 @@ Resources:
     Metadata:
       'aws:copilot:description': 'A bucket policy to deny unencrypted access to the bucket and its contents'
     Type: AWS::S3::BucketPolicy
-    DeletionPolicy: Retain
     Properties:
       PolicyDocument:
         Version: 2012-10-17
