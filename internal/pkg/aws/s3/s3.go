@@ -62,6 +62,7 @@ func New(s *session.Session) *S3 {
 }
 
 // ZipAndUpload zips all files and uploads the zipped file to an S3 bucket under the specified key.
+// Per s3's recommendation https://docs.aws.amazon.com/AmazonS3/latest/userguide/about-object-ownership.html:
 // The bucket owner, in addition to the object owner, is granted full control.
 func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, error) {
 	buf := new(bytes.Buffer)
@@ -79,13 +80,14 @@ func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, err
 	if err := w.Close(); err != nil {
 		return "", err
 	}
-	return s.upload(bucket, key, buf, withACLBucketOwnerFullControl())
+	return s.upload(bucket, key, buf)
 }
 
 // Upload uploads a file to an S3 bucket under the specified key.
+// Per s3's recommendation https://docs.aws.amazon.com/AmazonS3/latest/userguide/about-object-ownership.html:
 // The bucket owner, in addition to the object owner, is granted full control.
 func (s *S3) Upload(bucket, key string, data io.Reader) (string, error) {
-	return s.upload(bucket, key, data, withACLBucketOwnerFullControl())
+	return s.upload(bucket, key, data)
 }
 
 // MkdirSHA prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
@@ -197,22 +199,12 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 	return true, nil
 }
 
-type uploadInputOption func(in *s3manager.UploadInput)
-
-func withACLBucketOwnerFullControl() func(in *s3manager.UploadInput)  {
-	return func(in *s3manager.UploadInput) {
-		in.ACL = aws.String(s3.ObjectCannedACLBucketOwnerFullControl)
-	}
-}
-
-func (s *S3) upload(bucket, key string, buf io.Reader, opts ...uploadInputOption) (string, error) {
+func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
 	in := &s3manager.UploadInput{
 		Body:   buf,
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
-	}
-	for _, opt := range opts {
-		opt(in)
+		ACL: aws.String(s3.ObjectCannedACLBucketOwnerFullControl),
 	}
 	resp, err := s.s3Manager.Upload(in)
 	if err != nil {
