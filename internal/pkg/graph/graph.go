@@ -14,53 +14,53 @@ const (
 )
 
 // Graph represents a directed graph.
-type Graph struct {
-	nodes map[string]neighbors
+type Graph[V comparable] struct {
+	nodes map[V]neighbors[V]
 }
 
 // Edge represents one edge of a directed graph.
-type Edge struct {
-	From string
-	To   string
+type Edge[V comparable] struct {
+	From V
+	To   V
 }
 
-type neighbors map[string]bool
+type neighbors[V comparable] map[V]bool
 
 // New initiates a new Graph.
-func New() *Graph {
-	return &Graph{
-		nodes: make(map[string]neighbors),
+func New[V comparable]() *Graph[V] {
+	return &Graph[V]{
+		nodes: make(map[V]neighbors[V]),
 	}
 }
 
 // Add adds a connection between two Nodes.
-func (g *Graph) Add(edge Edge) {
+func (g *Graph[V]) Add(edge Edge[V]) {
 	fromNode, toNode := edge.From, edge.To
 	// Add origin node if doesn't exist.
 	if _, ok := g.nodes[fromNode]; !ok {
-		g.nodes[fromNode] = make(neighbors)
+		g.nodes[fromNode] = make(neighbors[V])
 	}
 	// Add edge.
 	g.nodes[fromNode][toNode] = true
 }
 
-type findCycleTempVars struct {
-	status     map[string]nodeStatus
-	nodeParent map[string]string
-	cycleStart string
-	cycleEnd   string
+type findCycleTempVars[V comparable] struct {
+	status     map[V]nodeStatus
+	nodeParent map[V]V
+	cycleStart V
+	cycleEnd   V
 }
 
 // IsAcyclic checks if the graph is acyclic. If not, return the first detected cycle.
-func (g *Graph) IsAcyclic() ([]string, bool) {
-	var cycle []string
-	status := make(map[string]nodeStatus)
+func (g *Graph[V]) IsAcyclic() ([]V, bool) {
+	var cycle []V
+	status := make(map[V]nodeStatus)
 	for node := range g.nodes {
 		status[node] = unvisited
 	}
-	temp := findCycleTempVars{
+	temp := findCycleTempVars[V]{
 		status:     status,
-		nodeParent: make(map[string]string),
+		nodeParent: make(map[V]V),
 	}
 	// We will run a series of DFS in the graph. Initially all vertices are marked unvisited.
 	// From each unvisited node, start the DFS, mark it visiting while entering and mark it visited on exit.
@@ -78,7 +78,7 @@ func (g *Graph) IsAcyclic() ([]string, bool) {
 	return nil, true
 }
 
-func (g *Graph) hasCycles(temp *findCycleTempVars, currNode string) bool {
+func (g *Graph[V]) hasCycles(temp *findCycleTempVars[V], currNode V) bool {
 	temp.status[currNode] = visiting
 	for node := range g.nodes[currNode] {
 		if temp.status[node] == unvisited {
