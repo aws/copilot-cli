@@ -232,6 +232,10 @@ Outputs:
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
+					DeploymentConfiguration: template.DeploymentConfigurationOpts{
+						MinHealthyPercent: 100,
+						MaxPercent:        200,
+					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
 					ALBEnabled: true,
@@ -271,6 +275,10 @@ Outputs:
 					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
+					},
+					DeploymentConfiguration: template.DeploymentConfigurationOpts{
+						MinHealthyPercent: 100,
+						MaxPercent:        200,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
@@ -451,7 +459,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
-					ParameterValue: aws.String("true"),
+					ParameterValue: aws.String("false"),
 				},
 			}...),
 		},
@@ -536,7 +544,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
-					ParameterValue: aws.String("true"),
+					ParameterValue: aws.String("false"),
 				},
 			}...),
 		},

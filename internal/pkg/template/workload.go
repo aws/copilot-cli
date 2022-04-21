@@ -78,6 +78,8 @@ var (
 		"state-machine",
 		"state-machine-definition.json",
 		"efs-access-point",
+		"https-listener",
+		"http-listener",
 		"env-controller",
 		"mount-points",
 		"volumes",
@@ -341,6 +343,14 @@ type ObservabilityOpts struct {
 	Tracing string // The name of the vendor used for tracing.
 }
 
+// DeploymentConfiguraitonOpts holds values for MinHealthyPercent and MaxPercent.
+type DeploymentConfigurationOpts struct {
+	// The lower limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
+	MinHealthyPercent int
+	// The upper limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
+	MaxPercent int
+}
+
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
 type ExecuteCommandOpts struct{}
 
@@ -448,6 +458,7 @@ type WorkloadOpts struct {
 	Variables                map[string]string
 	Secrets                  map[string]Secret
 	Aliases                  []string
+	HTTPSListener            bool
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	AddonsExtraParams        string                   // Additional user defined Parameters for the addons stack.
@@ -471,12 +482,13 @@ type WorkloadOpts struct {
 	ALBEnabled               bool
 
 	// Additional options for service templates.
-	WorkloadType        string
-	HealthCheck         *ContainerHealthCheck
-	HTTPHealthCheck     HTTPHealthCheckOpts
-	DeregistrationDelay *int64
-	AllowedSourceIps    []string
-	NLB                 *NetworkLoadBalancer
+	WorkloadType            string
+	HealthCheck             *ContainerHealthCheck
+	HTTPHealthCheck         HTTPHealthCheckOpts
+	DeregistrationDelay     *int64
+	AllowedSourceIps        []string
+	NLB                     *NetworkLoadBalancer
+	DeploymentConfiguration DeploymentConfigurationOpts
 
 	// Lambda functions.
 	RulePriorityLambda             string

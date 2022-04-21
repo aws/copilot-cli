@@ -43,6 +43,14 @@ const (
 	capacityProviderFargate     = "FARGATE"
 )
 
+// MinimumHealthyPercent and MaximumPercent configurations as per deployment strategy.
+const (
+	minHealthyPercentRecreate = 0
+	maxPercentRecreate        = 100
+	minHealthyPercentDefault  = 100
+	maxPercentDefault         = 200
+)
+
 var (
 	taskDefOverrideRulePrefixes = []string{"Resources", "TaskDefinition", "Properties"}
 )
@@ -609,6 +617,18 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
+func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+	var deployConfigs template.DeploymentConfigurationOpts
+	if strings.EqualFold(aws.StringValue(deploymentConfig.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
+		deployConfigs.MinHealthyPercent = minHealthyPercentRecreate
+		deployConfigs.MaxPercent = maxPercentRecreate
+	} else {
+		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
+		deployConfigs.MaxPercent = maxPercentDefault
+	}
+	return deployConfigs
+}
+
 func convertCommand(command manifest.CommandOverride) ([]string, error) {
 	out, err := command.ToStringSlice()
 	if err != nil {
@@ -747,14 +767,13 @@ func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys ma
 	return
 }
 
-func convertAppInformation(app deploy.AppInformation) (delegationRole *string, dnsName *string) {
+func convertAppInformation(app deploy.AppInformation) (delegationRole *string, domain *string) {
 	role := app.DNSDelegationRole()
 	if role != "" {
 		delegationRole = &role
 	}
-	dns := app.DNSName
-	if dns != "" {
-		dnsName = &dns
+	if app.Domain != "" {
+		domain = &app.Domain
 	}
 	return
 }

@@ -47,6 +47,8 @@ type WorkerServiceConfig struct {
 	PublishConfig    PublishConfig             `yaml:"publish"`
 	Network          NetworkConfig             `yaml:"network"`
 	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
+	DeployConfig     DeploymentConfiguration   `yaml:"deployment"`
+	Observability    Observability             `yaml:"observability"`
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.

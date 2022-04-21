@@ -6,6 +6,7 @@ package stack
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -107,6 +108,7 @@ func (s *BackendService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
+
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -133,6 +135,7 @@ func (s *BackendService) Template() (string, error) {
 		EnvControllerLambda:      envControllerLambda.String(),
 		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                  convertNetworkConfig(s.manifest.Network),
+		DeploymentConfiguration:  convertDeploymentConfig(s.manifest.DeployConfig),
 		EntryPoint:               entrypoint,
 		Command:                  command,
 		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
@@ -140,6 +143,9 @@ func (s *BackendService) Template() (string, error) {
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
 		Platform:                 convertPlatform(s.manifest.Platform),
+		Observability: template.ObservabilityOpts{
+			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
+		},
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

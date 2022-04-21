@@ -34,6 +34,10 @@ const (
 	// Minimum CPU and mem values required for Windows-based tasks.
 	MinWindowsTaskCPU    = 1024
 	MinWindowsTaskMemory = 2048
+
+	// deployment strategies
+	ECSDefaultRollingUpdateStrategy  = "default"
+	ECSRecreateRollingUpdateStrategy = "recreate"
 )
 
 // Platform related settings.
@@ -72,6 +76,15 @@ type ImageWithHealthcheck struct {
 type ImageWithPortAndHealthcheck struct {
 	ImageWithPort `yaml:",inline"`
 	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
+}
+
+// DeploymentConfiguration represents the deployment strategies for a service.
+type DeploymentConfiguration struct {
+	Rolling *string `yaml:"rolling"`
+}
+
+func (d *DeploymentConfiguration) isEmpty() bool {
+	return d == nil || d.Rolling == nil
 }
 
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.

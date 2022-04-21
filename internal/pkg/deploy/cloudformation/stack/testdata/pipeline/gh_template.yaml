@@ -293,6 +293,13 @@ Resources:
                 - Name: BuildOutput
         - Name: DeployTo-test
           Actions:
+            - Name: ApprovePromotionTo-test
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Version: 1
+                Provider: Manual
+              RunOrder: 1
             - Name: CreateOrUpdate-api-test
               Region: us-west-2
               ActionTypeId:
@@ -301,23 +308,33 @@ Resources:
                 Version: 1
                 Provider: CloudFormation
               Configuration:
-                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: phonetool-test-api
                 ActionMode: CREATE_UPDATE
                 StackName: phonetool-test-api
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
                 TemplatePath: BuildOutput::infrastructure/api-test.stack.yml
                 TemplateConfiguration: BuildOutput::infrastructure/api-test.params.json
-                # The ARN of the IAM role (in the env account) that
-                # AWS CloudFormation assumes when it operates on resources
-                # in a stack in an environment account.
                 RoleArn: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 2
-              # The ARN of the environment manager IAM role (in the env
-              # account) that performs the declared action. This is assumed
-              # through the roleArn for the pipeline.
+              RoleArn: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+            - Name: CreateOrUpdate-frontend-test
+              Region: us-west-2
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ActionMode: CREATE_UPDATE
+                StackName: phonetool-test-frontend
+                Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
+                TemplatePath: BuildOutput::infrastructure/frontend-test.stack.yml
+                TemplateConfiguration: BuildOutput::infrastructure/frontend-test.params.json
+                RoleArn: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
+              InputArtifacts:
+                - Name: BuildOutput
+              RunOrder: 2
               RoleArn: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
             - Name: TestCommands
               ActionTypeId:

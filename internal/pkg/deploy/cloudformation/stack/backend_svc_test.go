@@ -187,6 +187,9 @@ Outputs:
 					StringSlice: []string{"here"},
 				}
 				svc.manifest.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
+				svc.manifest.DeployConfig = manifest.DeploymentConfiguration{
+					Rolling: aws.String("recreate"),
+				}
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
@@ -212,6 +215,10 @@ Outputs:
 						AssignPublicIP: template.DisablePublicIP,
 						SubnetsType:    template.PrivateSubnetsPlacement,
 						SecurityGroups: []string{"sg-1234"},
+					},
+					DeploymentConfiguration: template.DeploymentConfigurationOpts{
+						MinHealthyPercent: 0,
+						MaxPercent:        100,
 					},
 					EntryPoint: []string{"enter", "from"},
 					Command:    []string{"here"},

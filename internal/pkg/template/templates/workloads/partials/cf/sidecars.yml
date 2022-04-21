@@ -26,6 +26,16 @@
       awslogs-group: !Ref LogGroup
       awslogs-stream-prefix: copilot
 {{- end}}
+{{- if eq .Observability.Tracing "AWSXRAY"}}
+- Name: aws-otel-collector
+  Image: public.ecr.aws/aws-observability/aws-otel-collector:latest
+  LogConfiguration:
+    LogDriver: awslogs
+    Options:
+      awslogs-region: !Ref AWS::Region
+      awslogs-group: !Ref LogGroup
+      awslogs-stream-prefix: copilot
+{{- end}}
 {{- range $sidecar := .Sidecars}}
 - Name: {{$sidecar.Name}}
   Image: {{$sidecar.Image}}
