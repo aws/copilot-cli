@@ -236,7 +236,7 @@ func (w *rdWebSvcDesc) hasObservabilityConfiguration() bool {
 }
 
 func (obs observabilityPerEnv) humanString(w io.Writer) {
-	headers := []string{"Environment", "tracing"}
+	headers := []string{"Environment", "Tracing"}
 	var rows [][]string
 	for _, ob := range obs {
 		tracingVendor := "None"

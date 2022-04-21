@@ -447,7 +447,7 @@ Configurations
 
 Observability
 
-  Environment  tracing
+  Environment  Tracing
   -----------  -------
   test         mockVendor
   prod         None
