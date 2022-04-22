@@ -543,8 +543,8 @@ func (stg *PipelineStage) Test() (*TestCommandsAction, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, action := range deployActions {
-		prevActions = append(prevActions, &action)
+	for i := range deployActions {
+		prevActions = append(prevActions, &deployActions[i])
 	}
 
 	return &TestCommandsAction{

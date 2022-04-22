@@ -1032,16 +1032,15 @@ func TestPipelineManifest_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.Pipeline.Validate()
 
-			if tc.wantedError != nil {
+			switch {
+			case tc.wantedError != nil:
 				require.EqualError(t, gotErr, tc.wantedError.Error())
-				return
-			}
-			if tc.wantedErrorMsgPrefix != "" {
+			case tc.wantedErrorMsgPrefix != "":
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
-				return
+			default:
+				require.NoError(t, gotErr)
 			}
-			require.NoError(t, gotErr)
 		})
 	}
 }
