@@ -40,11 +40,12 @@ func New[V comparable](vertices ...V) *Graph[V] {
 // Add adds a connection between two vertices.
 func (g *Graph[V]) Add(edge Edge[V]) {
 	from, to := edge.From, edge.To
-	// Add origin vertex if doesn't exist.
 	if _, ok := g.vertices[from]; !ok {
 		g.vertices[from] = make(neighbors[V])
 	}
-	// Add edge.
+	if _, ok := g.vertices[to]; !ok {
+		g.vertices[to] = make(neighbors[V])
+	}
 	g.vertices[from][to] = true
 }
 
@@ -82,6 +83,28 @@ func (g *Graph[V]) IsAcyclic() ([]V, bool) {
 	return nil, true
 }
 
+// Roots return a slice of vertices with no incoming edges.
+func (g *Graph[V]) Roots() []V {
+	hasIncomingEdge := make(map[V]bool)
+	for vtx := range g.vertices {
+		hasIncomingEdge[vtx] = false
+	}
+
+	for from := range g.vertices {
+		for to := range g.vertices[from] {
+			hasIncomingEdge[to] = true
+		}
+	}
+
+	var roots []V
+	for vtx, yes := range hasIncomingEdge {
+		if !yes {
+			roots = append(roots, vtx)
+		}
+	}
+	return roots
+}
+
 func (g *Graph[V]) hasCycles(temp *findCycleTempVars[V], currVertex V) bool {
 	temp.status[currVertex] = visiting
 	for vertex := range g.vertices[currVertex] {
@@ -100,21 +123,67 @@ func (g *Graph[V]) hasCycles(temp *findCycleTempVars[V], currVertex V) bool {
 	return false
 }
 
-// TopologicalSorter ranks vertices in a graph using topological sort.
-type TopologicalSorter[V comparable] struct {
-	ranks map[V]int
+// LevelOrder ranks vertices in a breadth-first search manner.
+type LevelOrder[V comparable] struct {
+	marked map[V]bool
+	ranks  map[V]int
 }
 
 // Rank returns the order of the vertex. The smallest order starts at 0.
-// If the vertex does not exist in the graph, then returns an error.
-func (s *TopologicalSorter[V]) Rank(vtx V) (int, error) {
-	// TODO(efekarakus): Implement me.
-	return 0, nil
+// The second boolean return value is used to indicate whether the vertex exists in the graph.
+func (bfs *LevelOrder[V]) Rank(vtx V) (int, bool) {
+	r, ok := bfs.ranks[vtx]
+	return r, ok
 }
 
-// TopologicalSort determines whether the directed graph is acyclic, and if so then finds a topological order.
+func (bfs *LevelOrder[V]) traverse(g *Graph[V], root V) {
+	queue := []V{root}
+	bfs.marked[root] = true
+	bfs.ranks[root] = 0
+	for {
+		if len(queue) == 0 {
+			return
+		}
+		var vtx V
+		vtx, queue = queue[0], queue[1:]
+		for neighbor := range g.vertices[vtx] {
+			if bfs.marked[neighbor] {
+				continue
+			}
+			bfs.marked[neighbor] = true
+			if rank := bfs.ranks[vtx] + 1; rank > bfs.ranks[neighbor] { // Is the new rank higher than a previous traversal?
+				bfs.ranks[neighbor] = rank
+			}
+			queue = append(queue, neighbor)
+		}
+	}
+}
+
+// LevelOrderTraversal determines whether the directed graph is acyclic, and if so then
+// finds a level-order, or breadth-first search, ranking of the vertices.
 // If the digraph contains a cycle, then an error is returned.
-func TopologicalSort[V comparable](digraph *Graph[V]) (*TopologicalSorter[V], error) {
-	// TODO(efekarakus): Implement me.
-	return nil, nil
+//
+// An example graph and their ranks is shown below to illustrate:
+// .
+//├── a          rank: 0
+//│   ├── c      rank: 1
+//│   │   └── f  rank: 2
+//│   └── d      rank: 1
+//└── b          rank: 0
+//    └── e      rank: 1
+func LevelOrderTraversal[V comparable](digraph *Graph[V]) (*LevelOrder[V], error) {
+	if vertices, isAcyclic := digraph.IsAcyclic(); !isAcyclic {
+		return nil, &errCycle[V]{
+			vertices,
+		}
+	}
+
+	bfs := &LevelOrder[V]{
+		ranks: make(map[V]int),
+	}
+	for _, root := range digraph.Roots() {
+		bfs.marked = make(map[V]bool) // Reset all markings before each run.
+		bfs.traverse(digraph, root)
+	}
+	return bfs, nil
 }

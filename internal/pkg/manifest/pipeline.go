@@ -184,10 +184,10 @@ type Build struct {
 
 // PipelineStage represents a stage in the pipeline manifest
 type PipelineStage struct {
-	Name             string   `yaml:"name"`
-	RequiresApproval bool     `yaml:"requires_approval,omitempty"`
-	TestCommands     []string `yaml:"test_commands,omitempty"`
-	Deployments      Deployments
+	Name             string      `yaml:"name"`
+	RequiresApproval bool        `yaml:"requires_approval,omitempty"`
+	TestCommands     []string    `yaml:"test_commands,omitempty"`
+	Deployments      Deployments `yaml:"deployments,omitempty"`
 }
 
 // Deployments represent a directed graph of cloudformation deployments.
