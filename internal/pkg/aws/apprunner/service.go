@@ -4,7 +4,11 @@
 // Package apprunner provides a client to make API requests to AppRunner Service.
 package apprunner
 
-import "time"
+import (
+	"time"
+
+	"github.com/aws/aws-sdk-go/service/apprunner"
+)
 
 // Service wraps up AppRunner Service struct.
 type Service struct {
@@ -20,9 +24,19 @@ type Service struct {
 	ImageID              string
 	Port                 string
 	EnvironmentVariables []*EnvironmentVariable
+	Observability        ObservabilityConfiguration
 }
 
+// EnvironmentVariable contains the name and value of an environment variable.
 type EnvironmentVariable struct {
 	Name  string
 	Value string
 }
+
+// ObservabilityConfiguration contains observability related configuration. Currently only tracing configuration is available.
+type ObservabilityConfiguration struct {
+	TraceConfiguration *TraceConfiguration
+}
+
+// TraceConfiguration wraps AppRunner TraceConfiguration.
+type TraceConfiguration apprunner.TraceConfiguration

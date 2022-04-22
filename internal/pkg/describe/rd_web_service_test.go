@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
@@ -202,6 +203,124 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 				environments: []string{"test", "prod"},
 			},
 		},
+		"success with observability": {
+			shouldOutputResources: true,
+			setupMocks: func(m apprunnerSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv}, nil),
+					m.ecsSvcDescriber.EXPECT().Service().Return(&apprunner.Service{
+						ServiceARN: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc",
+						ServiceURL: "6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+						CPU:        "1024",
+						Memory:     "2048",
+						Port:       "80",
+						EnvironmentVariables: []*apprunner.EnvironmentVariable{
+							{
+								Name:  "COPILOT_ENVIRONMENT_NAME",
+								Value: "test",
+							},
+						},
+						Observability: apprunner.ObservabilityConfiguration{
+							TraceConfiguration: &apprunner.TraceConfiguration{
+								Vendor: aws.String("mockVendor"),
+							},
+						},
+					}, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+						{
+							Type:       "AWS::AppRunner::Service",
+							PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc",
+						},
+					}, nil),
+					m.ecsSvcDescriber.EXPECT().Service().Return(&apprunner.Service{
+						ServiceARN: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc",
+						ServiceURL: "tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com",
+						CPU:        "2048",
+						Memory:     "3072",
+						Port:       "80",
+						EnvironmentVariables: []*apprunner.EnvironmentVariable{
+							{
+								Name:  "COPILOT_ENVIRONMENT_NAME",
+								Value: "prod",
+							},
+						},
+					}, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+						{
+							Type:       "AWS::AppRunner::Service",
+							PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc",
+						},
+					}, nil),
+				)
+			},
+			wantedSvcDesc: &rdWebSvcDesc{
+				Service: testSvc,
+				Type:    "Request-Driven Web Service",
+				App:     testApp,
+				AppRunnerConfigurations: []*ServiceConfig{
+					{
+						CPU:         "1024",
+						Environment: "test",
+						Memory:      "2048",
+						Port:        "80",
+					},
+					{
+						CPU:         "2048",
+						Environment: "prod",
+						Memory:      "3072",
+						Port:        "80",
+					},
+				},
+				Routes: []*WebServiceRoute{
+					{
+						Environment: "test",
+						URL:         "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+					},
+					{
+						Environment: "prod",
+						URL:         "https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com",
+					},
+				},
+				Variables: []*envVar{
+					{
+						Environment: "test",
+						Name:        "COPILOT_ENVIRONMENT_NAME",
+						Value:       "test",
+					},
+					{
+						Environment: "prod",
+						Name:        "COPILOT_ENVIRONMENT_NAME",
+						Value:       "prod",
+					},
+				},
+				Observability: []observabilityInEnv{
+					{
+						Environment: "test",
+						Tracing: &tracing{
+							Vendor: "mockVendor",
+						},
+					},
+					{
+						Environment: "prod",
+					},
+				},
+				Resources: map[string][]*stack.Resource{
+					"test": {
+						{
+							Type:       "AWS::AppRunner::Service",
+							PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc",
+						},
+					},
+					"prod": {
+						{
+							Type:       "AWS::AppRunner::Service",
+							PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc",
+						},
+					},
+				},
+				environments: []string{"test", "prod"},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -219,16 +338,11 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &RDWebServiceDescriber{
-				app:             testApp,
-				svc:             testSvc,
-				enableResources: tc.shouldOutputResources,
-				store:           mockStore,
-				initClients:     func(string) error { return nil },
-
-				envSvcDescribers: map[string]apprunnerDescriber{
-					"test": mockSvcDescriber,
-					"prod": mockSvcDescriber,
-				},
+				app:                    testApp,
+				svc:                    testSvc,
+				enableResources:        tc.shouldOutputResources,
+				store:                  mockStore,
+				initAppRunnerDescriber: func(string) (apprunnerDescriber, error) { return mockSvcDescriber, nil },
 			}
 
 			// WHEN
@@ -287,6 +401,124 @@ func TestRDWebServiceDesc_String(t *testing.T) {
 					Environment: "prod",
 					Name:        "COPILOT_ENVIRONMENT_NAME",
 					Value:       "prod",
+				},
+			},
+			Resources: map[string][]*stack.Resource{
+				"test": {
+					{
+						Type:       "AWS::AppRunner::Service",
+						PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc",
+					},
+				},
+				"prod": {
+					{
+						Type:       "AWS::AppRunner::Service",
+						PhysicalID: "arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc",
+					},
+				},
+			},
+			environments: []string{"test", "prod"},
+		}
+		human := svcDesc.HumanString()
+		json, _ := svcDesc.JSONString()
+
+		require.Equal(t, wantedHumanString, human)
+		require.Equal(t, wantedJSONString, json)
+	})
+
+	t.Run("correct output including resources with observability", func(t *testing.T) {
+		wantedHumanString := `About
+
+  Application  testapp
+  Name         testsvc
+  Type         Request-Driven Web Service
+
+Configurations
+
+  Environment  CPU (vCPU)  Memory (MiB)  Port
+  -----------  ----------  ------------  ----
+  test         1           2048          80
+  prod         2           3072            "
+
+Observability
+
+  Environment  Tracing
+  -----------  -------
+  test         mockVendor
+  prod         None
+
+Routes
+
+  Environment  URL
+  -----------  ---
+  test         https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com
+  prod         https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com
+
+Variables
+
+  Name                      Environment  Value
+  ----                      -----------  -----
+  COPILOT_ENVIRONMENT_NAME  prod         prod
+    "                       test         test
+
+Resources
+
+  test
+    AWS::AppRunner::Service  arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc
+
+  prod
+    AWS::AppRunner::Service  arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc
+`
+		wantedJSONString := "{\"service\":\"testsvc\",\"type\":\"Request-Driven Web Service\",\"application\":\"testapp\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"1024\",\"memory\":\"2048\"},{\"environment\":\"prod\",\"port\":\"80\",\"cpu\":\"2048\",\"memory\":\"3072\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com\"},{\"environment\":\"prod\",\"url\":\"https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc\"}],\"test\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc\"}]},\"observability\":[{\"environment\":\"test\",\"tracing\":{\"vendor\":\"mockVendor\"}},{\"environment\":\"prod\"}]}\n"
+		svcDesc := &rdWebSvcDesc{
+			Service: "testsvc",
+			Type:    "Request-Driven Web Service",
+			App:     "testapp",
+			AppRunnerConfigurations: []*ServiceConfig{
+				{
+					CPU:         "1024",
+					Environment: "test",
+					Memory:      "2048",
+					Port:        "80",
+				},
+				{
+					CPU:         "2048",
+					Environment: "prod",
+					Memory:      "3072",
+					Port:        "80",
+				},
+			},
+			Routes: []*WebServiceRoute{
+				{
+					Environment: "test",
+					URL:         "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+				},
+				{
+					Environment: "prod",
+					URL:         "https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com",
+				},
+			},
+			Variables: []*envVar{
+				{
+					Environment: "test",
+					Name:        "COPILOT_ENVIRONMENT_NAME",
+					Value:       "test",
+				},
+				{
+					Environment: "prod",
+					Name:        "COPILOT_ENVIRONMENT_NAME",
+					Value:       "prod",
+				},
+			},
+			Observability: []observabilityInEnv{
+				{
+					Environment: "test",
+					Tracing: &tracing{
+						Vendor: "mockVendor",
+					},
+				},
+				{
+					Environment: "prod",
 				},
 			},
 			Resources: map[string][]*stack.Resource{
