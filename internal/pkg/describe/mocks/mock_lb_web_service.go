@@ -77,3 +77,41 @@ func (mr *MockenvDescriberMockRecorder) ServiceDiscoveryEndpoint() *gomock.Call 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceDiscoveryEndpoint", reflect.TypeOf((*MockenvDescriber)(nil).ServiceDiscoveryEndpoint))
 }
+
+// MocklbDescriber is a mock of lbDescriber interface.
+type MocklbDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MocklbDescriberMockRecorder
+}
+
+// MocklbDescriberMockRecorder is the mock recorder for MocklbDescriber.
+type MocklbDescriberMockRecorder struct {
+	mock *MocklbDescriber
+}
+
+// NewMocklbDescriber creates a new mock instance.
+func NewMocklbDescriber(ctrl *gomock.Controller) *MocklbDescriber {
+	mock := &MocklbDescriber{ctrl: ctrl}
+	mock.recorder = &MocklbDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocklbDescriber) EXPECT() *MocklbDescriberMockRecorder {
+	return m.recorder
+}
+
+// ListenerRuleHostHeaders mocks base method.
+func (m *MocklbDescriber) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListenerRuleHostHeaders", ruleARN)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListenerRuleHostHeaders indicates an expected call of ListenerRuleHostHeaders.
+func (mr *MocklbDescriberMockRecorder) ListenerRuleHostHeaders(ruleARN interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListenerRuleHostHeaders", reflect.TypeOf((*MocklbDescriber)(nil).ListenerRuleHostHeaders), ruleARN)
+}

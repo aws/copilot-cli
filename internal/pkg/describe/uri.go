@@ -4,7 +4,6 @@
 package describe
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -94,40 +93,46 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 }
 
 func (d *LBWebServiceDescriber) albURI(envName string, svcDescr ecsDescriber, envDescr envDescriber) (albURI, error) {
-	envParams, err := envDescr.Params()
-	if err != nil {
-		return albURI{}, fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
-	}
-	envOutputs, err := envDescr.Outputs()
-	if err != nil {
-		return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
-	}
 	svcParams, err := svcDescr.Params()
 	if err != nil {
 		return albURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
-	uri := albURI{
-		DNSNames: []string{envOutputs[envOutputPublicLoadBalancerDNSName]},
-		Path:     svcParams[stack.LBWebServiceRulePathParamKey],
-	}
+	path := svcParams[stack.LBWebServiceRulePathParamKey]
 	isHTTPS, ok := svcParams[svcParamHTTPSEnabled]
-	if ok && isHTTPS == "true" {
-		dnsName := fmt.Sprintf("%s.%s", d.svc, envOutputs[envOutputSubdomain])
-		uri.DNSNames = []string{dnsName}
-		uri.HTTPS = true
-	}
-	aliases := envParams[stack.EnvParamAliasesKey]
-	if aliases != "" {
-		value := make(map[string][]string)
-		if err := json.Unmarshal([]byte(aliases), &value); err != nil {
-			return albURI{}, err
+	if !ok || isHTTPS != "true" {
+		envOutputs, err := envDescr.Outputs()
+		if err != nil {
+			return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
 		}
-		if value[d.svc] != nil {
-			uri.DNSNames = value[d.svc]
+		return albURI{
+			DNSNames: []string{envOutputs[envOutputPublicLoadBalancerDNSName]},
+			Path:     path,
+		}, nil
+	}
+	svcResources, err := svcDescr.ServiceStackResources()
+	if err != nil {
+		return albURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
+	}
+	var httpsRuleARN string
+	for _, resource := range svcResources {
+		if resource.LogicalID == svcStackResourceHTTPSListenerRuleLogicalID &&
+			resource.Type == svcStackResourceHTTPSListenerRuleResourceType {
+			httpsRuleARN = resource.PhysicalID
 		}
 	}
-	d.svcParams = svcParams
-	return uri, nil
+	lbDescr, err := d.initLBDescriber(envName)
+	if err != nil {
+		return albURI{}, nil
+	}
+	dnsNames, err := lbDescr.ListenerRuleHostHeaders(httpsRuleARN)
+	if err != nil {
+		return albURI{}, fmt.Errorf("get host headers for listener rule %s: %w", httpsRuleARN, err)
+	}
+	return albURI{
+		HTTPS:    true,
+		DNSNames: dnsNames,
+		Path:     path,
+	}, nil
 }
 
 func (d *LBWebServiceDescriber) nlbURI(envName string, svcDescr ecsDescriber, envDescr envDescriber) (nlbURI, error) {

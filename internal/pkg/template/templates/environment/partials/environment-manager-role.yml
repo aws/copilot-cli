@@ -19,6 +19,17 @@ EnvironmentManagerRole:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
+{{- if .ImportCertARNs}}
+        - Sid: ACM
+          Effect: Allow
+          Action: [
+            acm:DescribeCertificate
+          ]
+          Resource:
+{{- range $arn := .ImportCertARNs}}
+          - "{{$arn}}"
+{{- end}}
+{{- end}}
         - Sid: CloudwatchLogs
           Effect: Allow
           Action: [

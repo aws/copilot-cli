@@ -84,6 +84,11 @@ type serviceStackDescriber struct {
 
 	cfn  stackDescriber
 	sess *session.Session
+
+	// Cache variables.
+	params         map[string]string
+	outputs        map[string]string
+	stackResources []*stack.Resource
 }
 
 // newServiceStackDescriber instantiates the core elements of a new service.
@@ -108,24 +113,35 @@ func newServiceStackDescriber(opt NewServiceConfig, env string) (*serviceStackDe
 
 // Params returns the parameters of the service stack.
 func (d *serviceStackDescriber) Params() (map[string]string, error) {
+	if d.params != nil {
+		return d.params, nil
+	}
 	descr, err := d.cfn.Describe()
 	if err != nil {
 		return nil, err
 	}
+	d.params = descr.Parameters
 	return descr.Parameters, nil
 }
 
 // Params returns the outputs of the service stack.
 func (d *serviceStackDescriber) Outputs() (map[string]string, error) {
+	if d.outputs != nil {
+		return d.outputs, nil
+	}
 	descr, err := d.cfn.Describe()
 	if err != nil {
 		return nil, err
 	}
+	d.outputs = descr.Outputs
 	return descr.Outputs, nil
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.
 func (d *serviceStackDescriber) ServiceStackResources() ([]*stack.Resource, error) {
+	if len(d.stackResources) != 0 {
+		return d.stackResources, nil
+	}
 	svcResources, err := d.cfn.Resources()
 	if err != nil {
 		return nil, err
@@ -141,7 +157,7 @@ func (d *serviceStackDescriber) ServiceStackResources() ([]*stack.Resource, erro
 			resources = append(resources, svcResource)
 		}
 	}
-
+	d.stackResources = resources
 	return resources, nil
 }
 
