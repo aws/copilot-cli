@@ -51,6 +51,20 @@ jobs:
       - name: Run tests
         run: make test
 
+  test-race:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: make test-race
+
   integ-test:
     runs-on: ubuntu-latest
     steps:
