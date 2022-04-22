@@ -88,6 +88,10 @@ package-custom-resources-clean:
 run-unit-test:
 	go test -coverprofile=${COVERAGE} ${PACKAGES}
 
+.PHONY: test-race
+test-race:
+	go test -race -count=1 ${PACKAGES}
+
 .PHONY: generate-coverage
 generate-coverage: test
 	go tool cover -html=${COVERAGE}
