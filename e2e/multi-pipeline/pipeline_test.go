@@ -145,6 +145,13 @@ var _ = Describe("pipeline flow", func() {
 	})
 
 	Context("when creating the test pipeline manifest", func() {
+		It("creates a 'test' git branch", func() {
+			cmd := exec.Command("git", "checkout", "-b", "test")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Dir = repoName
+			Expect(cmd.Run()).NotTo(HaveOccurred())
+		})
 		It("should initialize the pipeline", func() {
 			_, err := copilot.PipelineInit(client.PipelineInitInput{
 				Name:         testPipelineName,
@@ -180,7 +187,7 @@ var _ = Describe("pipeline flow", func() {
 	})
 
 	Context("when creating the prod pipeline manifest", func() {
-		It("checks out a 'prod' git branch", func() {
+		It("creates a 'prod' git branch", func() {
 			cmd := exec.Command("git", "checkout", "-b", "prod")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
@@ -225,7 +232,7 @@ var _ = Describe("pipeline flow", func() {
 
 	Context("when creating the test pipeline stack", func() {
 		It("checks out the test git branch", func() {
-			cmd := exec.Command("git", "checkout", "-b", "test")
+			cmd := exec.Command("git", "checkout", "test")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Dir = repoName
@@ -370,7 +377,7 @@ var _ = Describe("pipeline flow", func() {
 	})
 	Context("when creating the prod pipeline stack", func() {
 		It("checks out the prod git branch", func() {
-			cmd := exec.Command("git", "checkout", "-b", "prod")
+			cmd := exec.Command("git", "checkout", "prod")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Dir = repoName
