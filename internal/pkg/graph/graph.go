@@ -83,7 +83,7 @@ func (g *Graph[V]) IsAcyclic() ([]V, bool) {
 	return nil, true
 }
 
-// Roots return a slice of vertices with no incoming edges.
+// Roots returns a slice of vertices with no incoming edges.
 func (g *Graph[V]) Roots() []V {
 	hasIncomingEdge := make(map[V]bool)
 	for vtx := range g.vertices {
@@ -125,8 +125,7 @@ func (g *Graph[V]) hasCycles(temp *findCycleTempVars[V], currVertex V) bool {
 
 // LevelOrder ranks vertices in a breadth-first search manner.
 type LevelOrder[V comparable] struct {
-	marked map[V]bool
-	ranks  map[V]int
+	ranks map[V]int
 }
 
 // Rank returns the order of the vertex. The smallest order starts at 0.
@@ -137,19 +136,19 @@ func (bfs *LevelOrder[V]) Rank(vtx V) (int, bool) {
 }
 
 func (bfs *LevelOrder[V]) traverse(g *Graph[V], root V) {
-	bfs.marked = make(map[V]bool) // Reset all markings before each run.
+	marked := make(map[V]bool)
 
 	queue := []V{root}
-	bfs.marked[root] = true
+	marked[root] = true
 	bfs.ranks[root] = 0
 	for len(queue) > 0 {
 		var vtx V
 		vtx, queue = queue[0], queue[1:]
 		for neighbor := range g.vertices[vtx] {
-			if bfs.marked[neighbor] {
+			if marked[neighbor] {
 				continue
 			}
-			bfs.marked[neighbor] = true
+			marked[neighbor] = true
 			if rank := bfs.ranks[vtx] + 1; rank > bfs.ranks[neighbor] { // Is the new rank higher than a previous traversal?
 				bfs.ranks[neighbor] = rank
 			}

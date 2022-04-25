@@ -143,30 +143,35 @@ func TestLevelOrderTraversal(t *testing.T) {
 		wantedErrPrefix string
 	}{
 		"should return an error when a cycle is detected": {
-			graph: &Graph[string]{
-				vertices: map[string]neighbors[string]{
-					"frontend": map[string]bool{
-						"backend": true,
-					},
-					"backend": map[string]bool{
-						"frontend": true,
-					},
-				},
-			},
+			// frontend <-> backend
+			graph: func() *Graph[string] {
+				g := New("frontend", "backend")
+				g.Add(Edge[string]{
+					From: "frontend",
+					To:   "backend",
+				})
+				g.Add(Edge[string]{
+					From: "backend",
+					To:   "frontend",
+				})
+				return g
+			}(),
 			wantedErrPrefix: "graph contains a cycle: ", // the cycle can appear in any order as map traversals are not deterministic, so only check the prefix.
 		},
 		"should return the ranks for a graph that looks like a bus": {
-			graph: &Graph[string]{
-				vertices: map[string]neighbors[string]{
-					"api": nil,
-					"lb": map[string]bool{
-						"api": true,
-					},
-					"vpc": map[string]bool{
-						"lb": true,
-					},
-				},
-			},
+			// vpc -> lb -> api
+			graph: func() *Graph[string] {
+				g := New[string]()
+				g.Add(Edge[string]{
+					From: "vpc",
+					To:   "lb",
+				})
+				g.Add(Edge[string]{
+					From: "lb",
+					To:   "api",
+				})
+				return g
+			}(),
 
 			wantedRanks: map[string]int{
 				"api": 2,
@@ -175,24 +180,33 @@ func TestLevelOrderTraversal(t *testing.T) {
 			},
 		},
 		"should return the ranks for a graph that looks like a tree": {
-			graph: &Graph[string]{
-				vertices: map[string]neighbors[string]{
-					"api":      nil,
-					"frontend": nil,
-					"backend":  nil,
-					"s3": map[string]bool{
-						"api":      true,
-						"frontend": true,
-					},
-					"rds": map[string]bool{
-						"backend": true,
-					},
-					"vpc": map[string]bool{
-						"rds": true,
-						"s3":  true,
-					},
-				},
-			},
+			graph: func() *Graph[string] {
+				// vpc -> rds -> backend
+				//     -> s3  -> api
+				//            -> frontend
+				g := New[string]()
+				g.Add(Edge[string]{
+					From: "vpc",
+					To:   "rds",
+				})
+				g.Add(Edge[string]{
+					From: "vpc",
+					To:   "s3",
+				})
+				g.Add(Edge[string]{
+					From: "rds",
+					To:   "backend",
+				})
+				g.Add(Edge[string]{
+					From: "s3",
+					To:   "api",
+				})
+				g.Add(Edge[string]{
+					From: "s3",
+					To:   "frontend",
+				})
+				return g
+			}(),
 
 			wantedRanks: map[string]int{
 				"api":      2,
@@ -204,20 +218,24 @@ func TestLevelOrderTraversal(t *testing.T) {
 			},
 		},
 		"should return the ranks for a graph with multiple root nodes": {
-			graph: &Graph[string]{
-				vertices: map[string]neighbors[string]{
-					"frontend": nil,
-					"orders": map[string]bool{
-						"frontend": true,
-					},
-					"warehouse": map[string]bool{
-						"orders": true,
-					},
-					"payments": map[string]bool{
-						"frontend": true,
-					},
-				},
-			},
+			graph: func() *Graph[string] {
+				// warehouse -> orders   -> frontend
+				//              payments ->
+				g := New[string]()
+				g.Add(Edge[string]{
+					From: "payments",
+					To:   "frontend",
+				})
+				g.Add(Edge[string]{
+					From: "warehouse",
+					To:   "orders",
+				})
+				g.Add(Edge[string]{
+					From: "orders",
+					To:   "frontend",
+				})
+				return g
+			}(),
 
 			wantedRanks: map[string]int{
 				"frontend":  2,
