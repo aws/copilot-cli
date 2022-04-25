@@ -341,7 +341,9 @@ func TestPipelineStage_Init(t *testing.T) {
 		require.Equal(t, "arn:aws:iam::123456789012:role/badgoose-test-CFNExecutionRole", stg.ExecRoleARN())
 	})
 	t.Run("number of expected deployments match", func(t *testing.T) {
-		require.Equal(t, 2, len(stg.Deployments()))
+		deployments, err := stg.Deployments()
+		require.NoError(t, err)
+		require.Equal(t, 2, len(deployments))
 	})
 	t.Run("manual approval button", func(t *testing.T) {
 		require.NotNil(t, stg.Approval(), "should require approval action for stages when the manifest requires it")
@@ -399,8 +401,8 @@ func TestManualApprovalAction_Name(t *testing.T) {
 	require.Equal(t, "ApprovePromotionTo-test", action.Name())
 }
 
-func TestWorkloadDeployAction_Name(t *testing.T) {
-	action := WorkloadDeployAction{
+func TestDeployAction_Name(t *testing.T) {
+	action := DeployAction{
 		name:    "frontend",
 		envName: "test",
 	}
@@ -408,27 +410,55 @@ func TestWorkloadDeployAction_Name(t *testing.T) {
 	require.Equal(t, "CreateOrUpdate-frontend-test", action.Name())
 }
 
-func TestWorkloadDeployAction_StackName(t *testing.T) {
-	action := WorkloadDeployAction{
-		name:    "frontend",
-		envName: "test",
-		appName: "phonetool",
+func TestDeployAction_StackName(t *testing.T) {
+	testCases := map[string]struct {
+		in     DeployAction
+		wanted string
+	}{
+		"should default to app-env-name when user does not override the stack name": {
+			in: DeployAction{
+				name:    "frontend",
+				envName: "test",
+				appName: "phonetool",
+			},
+			wanted: "phonetool-test-frontend",
+		},
+		"should use custom user override stack name when present": {
+			in: DeployAction{
+				override: &manifest.Deployment{
+					StackName: "other-stack",
+				},
+			},
+			wanted: "other-stack",
+		},
 	}
 
-	require.Equal(t, "phonetool-test-frontend", action.StackName())
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.StackName())
+		})
+	}
 }
 
-func TestWorkloadDeployAction_TemplatePath(t *testing.T) {
+func TestDeployAction_TemplatePath(t *testing.T) {
 	testCases := map[string]struct {
-		in     WorkloadDeployAction
+		in     DeployAction
 		wanted string
 	}{
 		"default location for workload templates": {
-			in: WorkloadDeployAction{
+			in: DeployAction{
 				name:    "frontend",
 				envName: "test",
 			},
 			wanted: "infrastructure/frontend-test.stack.yml",
+		},
+		"should use custom override template path when present": {
+			in: DeployAction{
+				override: &manifest.Deployment{
+					TemplatePath: "infrastructure/custom.yml",
+				},
+			},
+			wanted: "infrastructure/custom.yml",
 		},
 	}
 	for name, tc := range testCases {
@@ -438,17 +468,25 @@ func TestWorkloadDeployAction_TemplatePath(t *testing.T) {
 	}
 }
 
-func TestWorkloadDeployAction_TemplateConfigPath(t *testing.T) {
+func TestDeployAction_TemplateConfigPath(t *testing.T) {
 	testCases := map[string]struct {
-		in     WorkloadDeployAction
+		in     DeployAction
 		wanted string
 	}{
 		"default location for workload template configs": {
-			in: WorkloadDeployAction{
+			in: DeployAction{
 				name:    "frontend",
 				envName: "test",
 			},
 			wanted: "infrastructure/frontend-test.params.json",
+		},
+		"should use custom override template config path when present": {
+			in: DeployAction{
+				override: &manifest.Deployment{
+					TemplateConfig: "infrastructure/custom.params.json",
+				},
+			},
+			wanted: "infrastructure/custom.params.json",
 		},
 	}
 	for name, tc := range testCases {
@@ -456,6 +494,32 @@ func TestWorkloadDeployAction_TemplateConfigPath(t *testing.T) {
 			require.Equal(t, tc.wanted, tc.in.TemplateConfigPath())
 		})
 	}
+}
+
+type mockRanker struct {
+	rank int
+	err  error
+}
+
+func (m mockRanker) Rank(name string) (int, error) {
+	return m.rank, m.err
+}
+
+func TestDeployAction_RunOrder(t *testing.T) {
+	// GIVEN
+	ranker := mockRanker{rank: 2}
+	past := []orderedRunner{
+		mockAction{
+			order: 3,
+		},
+	}
+	in := DeployAction{
+		action: action{prevActions: past},
+		ranker: ranker,
+	}
+
+	// THEN
+	require.Equal(t, 6, in.RunOrder(), "should be past actions + 1 + rank")
 }
 
 func TestTestCommandsAction_Name(t *testing.T) {

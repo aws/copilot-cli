@@ -6,6 +6,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/fatih/structs"
 	"gopkg.in/yaml.v3"
@@ -186,6 +187,18 @@ type PipelineStage struct {
 	Name             string   `yaml:"name"`
 	RequiresApproval bool     `yaml:"requires_approval,omitempty"`
 	TestCommands     []string `yaml:"test_commands,omitempty"`
+	Deployments      Deployments
+}
+
+// Deployments represent a directed graph of cloudformation deployments.
+type Deployments map[string]*Deployment
+
+// Deployment is a cloudformation stack deployment configuration.
+type Deployment struct {
+	StackName      string   `yaml:"stack_name"`
+	TemplatePath   string   `yaml:"template_path"`
+	TemplateConfig string   `yaml:"template_config"`
+	DependsOn      []string `yaml:"depends_on"`
 }
 
 // NewPipeline returns a pipeline manifest object.
