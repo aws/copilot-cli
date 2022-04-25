@@ -26,6 +26,20 @@ var _ = Describe("pipeline flow", func() {
 			repoURL = url
 		})
 
+		It("sets git config", func() {
+			cmd := exec.Command("git", "config", "user.email", "e2etest@amazon.com")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Dir = repoName
+			Expect(cmd.Run()).NotTo(HaveOccurred())
+
+			cmd = exec.Command("git", "config", "user.name", "e2etest")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Dir = repoName
+			Expect(cmd.Run()).NotTo(HaveOccurred())
+		})
+
 		It("clones the repository", func() {
 			endpoint := strings.TrimPrefix(repoURL, "https://")
 			url := fmt.Sprintf("https://%s:%s@%s", url.PathEscape(codeCommitCreds.UserName), url.PathEscape(codeCommitCreds.Password), endpoint)
@@ -145,19 +159,7 @@ var _ = Describe("pipeline flow", func() {
 			Expect(filepath.Join(repoName, "copilot", "pipelines", testPipelineName, "buildspec.yml")).Should(BeAnExistingFile())
 		})
 		It("should push repo changes upstream", func() {
-			cmd := exec.Command("git", "config", "user.email", "e2etest@amazon.com")
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.Dir = repoName
-			Expect(cmd.Run()).NotTo(HaveOccurred())
-
-			cmd = exec.Command("git", "config", "user.name", "e2etest")
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.Dir = repoName
-			Expect(cmd.Run()).NotTo(HaveOccurred())
-
-			cmd = exec.Command("git", "add", ".")
+			cmd := exec.Command("git", "add", ".")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Dir = repoName
@@ -201,19 +203,7 @@ var _ = Describe("pipeline flow", func() {
 		})
 
 		It("should push repo changes upstream", func() {
-			cmd := exec.Command("git", "config", "user.email", "e2etest@amazon.com")
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.Dir = repoName
-			Expect(cmd.Run()).NotTo(HaveOccurred())
-
-			cmd = exec.Command("git", "config", "user.name", "e2etest")
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.Dir = repoName
-			Expect(cmd.Run()).NotTo(HaveOccurred())
-
-			cmd = exec.Command("git", "add", ".")
+			cmd := exec.Command("git", "add", ".")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Dir = repoName

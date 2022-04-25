@@ -22,7 +22,7 @@ var (
 
 // Application identifiers.
 var (
-	appName          = fmt.Sprintf("e2e-pipeline-%d", time.Now().Unix())
+	appName          = fmt.Sprintf("e2e-multipipeline-%d", time.Now().Unix())
 	testPipelineName = "my-pipeline-test"
 	prodPipelineName = "my-pipeline-prod"
 )
