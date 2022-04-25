@@ -230,7 +230,7 @@ func TestLevelOrderTraversal(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			topo, err := LevelOrderTraversal(tc.graph)
+			bfs, err := LevelOrderTraversal(tc.graph)
 
 			if tc.wantedErrPrefix != "" {
 				require.Error(t, err)
@@ -239,7 +239,7 @@ func TestLevelOrderTraversal(t *testing.T) {
 				require.NoError(t, err)
 
 				for vtx, wantedRank := range tc.wantedRanks {
-					rank, _ := topo.Rank(vtx)
+					rank, _ := bfs.Rank(vtx)
 					require.Equal(t, wantedRank, rank, "expected rank for vertex %s does not match", vtx)
 				}
 			}
