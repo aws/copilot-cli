@@ -20,7 +20,7 @@ EnvironmentManagerRole:
         Version: '2012-10-17'
         Statement:
 {{- if .ImportCertARNs}}
-        - Sid: ACM
+        - Sid: ImportedCertificates
           Effect: Allow
           Action: [
             acm:DescribeCertificate
