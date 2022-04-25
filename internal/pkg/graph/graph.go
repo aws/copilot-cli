@@ -137,13 +137,12 @@ func (bfs *LevelOrder[V]) Rank(vtx V) (int, bool) {
 }
 
 func (bfs *LevelOrder[V]) traverse(g *Graph[V], root V) {
+	bfs.marked = make(map[V]bool) // Reset all markings before each run.
+
 	queue := []V{root}
 	bfs.marked[root] = true
 	bfs.ranks[root] = 0
-	for {
-		if len(queue) == 0 {
-			return
-		}
+	for len(queue) > 0 {
 		var vtx V
 		vtx, queue = queue[0], queue[1:]
 		for neighbor := range g.vertices[vtx] {
@@ -182,7 +181,6 @@ func LevelOrderTraversal[V comparable](digraph *Graph[V]) (*LevelOrder[V], error
 		ranks: make(map[V]int),
 	}
 	for _, root := range digraph.Roots() {
-		bfs.marked = make(map[V]bool) // Reset all markings before each run.
 		bfs.traverse(digraph, root)
 	}
 	return bfs, nil
