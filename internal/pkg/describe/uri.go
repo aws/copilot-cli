@@ -98,8 +98,8 @@ func (d *LBWebServiceDescriber) albURI(envName string, svcDescr ecsDescriber, en
 		return albURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
 	path := svcParams[stack.LBWebServiceRulePathParamKey]
-	isHTTPS, ok := svcParams[svcParamHTTPSEnabled]
-	if !ok || isHTTPS != "true" {
+	isHTTPS, _ := svcParams[svcParamHTTPSEnabled]
+	if isHTTPS != "true" {
 		envOutputs, err := envDescr.Outputs()
 		if err != nil {
 			return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
