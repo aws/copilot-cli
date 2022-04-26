@@ -19,25 +19,11 @@ import (
 )
 
 var _ = Describe("pipeline flow", func() {
-	Context("setup CodeCommit repository", func() {
+	Context("set up CodeCommit repository", func() {
 		It("creates the codecommit repository", func() {
 			url, err := aws.CreateCodeCommitRepo(repoName)
 			Expect(err).NotTo(HaveOccurred())
 			repoURL = url
-		})
-
-		It("sets git config", func() {
-			cmd := exec.Command("git", "config", "user.email", "e2etest@amazon.com")
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.Dir = repoName
-			Expect(cmd.Run()).NotTo(HaveOccurred())
-
-			cmd = exec.Command("git", "config", "user.name", "e2etest")
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.Dir = repoName
-			Expect(cmd.Run()).NotTo(HaveOccurred())
 		})
 
 		It("clones the repository", func() {
@@ -56,6 +42,20 @@ var _ = Describe("pipeline flow", func() {
 			cmd := exec.Command("cp", "-r", "frontend", repoName)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
+			Expect(cmd.Run()).NotTo(HaveOccurred())
+		})
+
+		It("sets git config", func() {
+			cmd := exec.Command("git", "config", "user.email", "e2etest@amazon.com")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Dir = repoName
+			Expect(cmd.Run()).NotTo(HaveOccurred())
+
+			cmd = exec.Command("git", "config", "user.name", "e2etest")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Dir = repoName
 			Expect(cmd.Run()).NotTo(HaveOccurred())
 		})
 	})
