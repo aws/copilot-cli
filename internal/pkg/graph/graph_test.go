@@ -244,6 +244,25 @@ func TestLevelOrderTraversal(t *testing.T) {
 				"payments":  0,
 			},
 		},
+		"should find the longest path to a node": {
+			graph: func() *Graph[string] {
+				// a -> b -> c -> d -> f
+				// a           -> e -> f
+				g := New[string]()
+				for _, edge := range []Edge[string]{{"a", "b"}, {"b", "c"}, {"c", "d"}, {"d", "f"}, {"a", "e"}, {"e", "f"}} {
+					g.Add(edge)
+				}
+				return g
+			}(),
+			wantedRanks: map[string]int{
+				"a": 0,
+				"b": 1,
+				"e": 1,
+				"c": 2,
+				"d": 3,
+				"f": 4,
+			},
+		},
 	}
 
 	for name, tc := range testCases {
