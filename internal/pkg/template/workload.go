@@ -459,6 +459,7 @@ type WorkloadOpts struct {
 	Secrets                  map[string]Secret
 	Aliases                  []string
 	HTTPSListener            bool
+	UseImportedCerts         bool
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	AddonsExtraParams        string                   // Additional user defined Parameters for the addons stack.

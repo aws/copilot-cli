@@ -17,6 +17,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
@@ -29,15 +32,21 @@ const (
 	envOutputSubdomain                 = "EnvironmentSubdomain"
 	svcParamHTTPSEnabled               = "HTTPSEnabled"
 
-	svcStackResourceALBTargetGroupLogicalID = "TargetGroup"
-	svcStackResourceNLBTargetGroupLogicalID = "NLBTargetGroup"
-	svcOutputPublicNLBDNSName               = "PublicNetworkLoadBalancerDNSName"
+	svcStackResourceALBTargetGroupLogicalID       = "TargetGroup"
+	svcStackResourceNLBTargetGroupLogicalID       = "NLBTargetGroup"
+	svcStackResourceHTTPSListenerRuleLogicalID    = "HTTPSListenerRule"
+	svcStackResourceHTTPSListenerRuleResourceType = "AWS::ElasticLoadBalancingV2::ListenerRule"
+	svcOutputPublicNLBDNSName                     = "PublicNetworkLoadBalancerDNSName"
 )
 
 type envDescriber interface {
 	ServiceDiscoveryEndpoint() (string, error)
 	Params() (map[string]string, error)
 	Outputs() (map[string]string, error)
+}
+
+type lbDescriber interface {
+	ListenerRuleHostHeaders(ruleARN string) ([]string, error)
 }
 
 // LBWebServiceDescriber retrieves information about a load balanced web service.
@@ -49,11 +58,9 @@ type LBWebServiceDescriber struct {
 	store                    DeployedEnvServicesLister
 	initECSServiceDescribers func(string) (ecsDescriber, error)
 	initEnvDescribers        func(string) (envDescriber, error)
+	initLBDescriber          func(string) (lbDescriber, error)
 	ecsServiceDescribers     map[string]ecsDescriber
 	envDescriber             map[string]envDescriber
-
-	// cache only last svc paramerters
-	svcParams map[string]string
 }
 
 // NewLBWebServiceDescriber instantiates a load balanced service describer.
@@ -65,6 +72,17 @@ func NewLBWebServiceDescriber(opt NewServiceConfig) (*LBWebServiceDescriber, err
 		store:                opt.DeployStore,
 		ecsServiceDescribers: make(map[string]ecsDescriber),
 		envDescriber:         make(map[string]envDescriber),
+	}
+	describer.initLBDescriber = func(envName string) (lbDescriber, error) {
+		env, err := opt.ConfigStore.GetEnvironment(opt.App, envName)
+		if err != nil {
+			return nil, fmt.Errorf("get environment %s: %w", envName, err)
+		}
+		sess, err := sessions.ImmutableProvider().FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return nil, err
+		}
+		return elbv2.New(sess), nil
 	}
 	describer.initECSServiceDescribers = func(env string) (ecsDescriber, error) {
 		if describer, ok := describer.ecsServiceDescribers[env]; ok {
@@ -132,15 +150,19 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
 		}
+		svcParams, err := svcDescr.Params()
+		if err != nil {
+			return nil, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
+		}
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
-				Port:        d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
-				CPU:         d.svcParams[cfnstack.WorkloadTaskCPUParamKey],
-				Memory:      d.svcParams[cfnstack.WorkloadTaskMemoryParamKey],
+				Port:        svcParams[cfnstack.LBWebServiceContainerPortParamKey],
+				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
+				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
 				Platform:    dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture),
 			},
-			Tasks: d.svcParams[cfnstack.WorkloadTaskCountParamKey],
+			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
 		envDescr, err := d.initEnvDescribers(env)
 		if err != nil {
@@ -152,7 +174,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
 			Service:  d.svc,
-			Port:     d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
+			Port:     svcParams[cfnstack.LBWebServiceContainerPortParamKey],
 			Endpoint: endpoint,
 		}, env)
 		envVars = append(envVars, flattenContainerEnvVars(env, webSvcEnvVars)...)

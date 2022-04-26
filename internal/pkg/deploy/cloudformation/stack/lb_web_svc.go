@@ -50,6 +50,7 @@ type LoadBalancedWebService struct {
 	*ecsWkld
 	manifest               *manifest.LoadBalancedWebService
 	httpsEnabled           bool
+	certImported           bool
 	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
@@ -119,6 +120,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest:             conf.Manifest,
+		certImported:         conf.Env.HasImportedCerts(),
 		httpsEnabled:         httpsEnabled,
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,
@@ -212,6 +214,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Secrets:                        convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:                        aliases,
 		HTTPSListener:                  s.httpsEnabled,
+		UseImportedCerts:               s.certImported,
 		NestedStack:                    addonsOutputs,
 		AddonsExtraParams:              addonsParams,
 		Sidecars:                       sidecars,
