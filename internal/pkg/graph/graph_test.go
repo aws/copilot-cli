@@ -16,6 +16,8 @@ func TestGraph_Add(t *testing.T) {
 		graph := New[string]()
 
 		// WHEN
+		// A <-> B
+		//    -> C
 		graph.Add(Edge[string]{
 			From: "A",
 			To:   "B",
@@ -30,9 +32,93 @@ func TestGraph_Add(t *testing.T) {
 		})
 
 		// THEN
-		require.Equal(t, graph.vertices["A"], neighbors[string]{"B": true, "C": true})
-		require.Equal(t, graph.vertices["B"], neighbors[string]{"A": true})
+		require.ElementsMatch(t, []string{"B", "C"}, graph.Neighbors("A"))
+		require.ElementsMatch(t, []string{"A"}, graph.Neighbors("B"))
 	})
+}
+
+func TestGraph_InDegree(t *testing.T) {
+	testCases := map[string]struct {
+		graph *Graph[rune]
+
+		wanted map[rune]int
+	}{
+		"should return 0 for nodes that don't exist in the graph": {
+			graph: New[rune](),
+
+			wanted: map[rune]int{
+				'a': 0,
+			},
+		},
+		"should return number of incoming edges for complex graph": {
+			graph: func() *Graph[rune] {
+				g := New[rune]()
+				g.Add(Edge[rune]{'a', 'b'})
+				g.Add(Edge[rune]{'b', 'a'})
+				g.Add(Edge[rune]{'a', 'c'})
+				g.Add(Edge[rune]{'b', 'c'})
+				g.Add(Edge[rune]{'d', 'e'})
+				return g
+			}(),
+			wanted: map[rune]int{
+				'a': 1,
+				'b': 1,
+				'c': 2,
+				'd': 0,
+				'e': 1,
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			for vtx, wanted := range tc.wanted {
+				require.Equal(t, wanted, tc.graph.InDegree(vtx), "indegree for vertex %v does not match", vtx)
+			}
+		})
+	}
+}
+
+func TestGraph_Remove(t *testing.T) {
+	testCases := map[string]struct {
+		graph *Graph[rune]
+
+		wantedNeighbors map[rune][]rune
+		wantedIndegrees map[rune]int
+	}{
+		"edge deletion should be idempotent": {
+			graph: func() *Graph[rune] {
+				g := New[rune]()
+				g.Add(Edge[rune]{'a', 'b'})
+				g.Add(Edge[rune]{'z', 'b'})
+				g.Remove(Edge[rune]{'a', 'b'})
+				g.Remove(Edge[rune]{'a', 'b'}) // Remove a second time.
+				return g
+			}(),
+
+			wantedNeighbors: map[rune][]rune{
+				'a': nil,
+				'b': nil,
+				'z': {'b'},
+			},
+			wantedIndegrees: map[rune]int{
+				'a': 0,
+				'z': 0,
+				'b': 1,
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			for vtx, wanted := range tc.wantedNeighbors {
+				require.ElementsMatch(t, wanted, tc.graph.Neighbors(vtx), "neighbors for vertex %v do not match", vtx)
+			}
+			for vtx, wanted := range tc.wantedIndegrees {
+				require.Equal(t, wanted, tc.graph.InDegree(vtx), "indegree for vertex %v does not match")
+			}
+		})
+	}
 }
 
 func TestGraph_IsAcyclic(t *testing.T) {

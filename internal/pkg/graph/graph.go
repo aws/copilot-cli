@@ -15,7 +15,8 @@ const (
 
 // Graph represents a directed graph.
 type Graph[V comparable] struct {
-	vertices map[V]neighbors[V]
+	vertices  map[V]neighbors[V] // Adjacency list for each vertex.
+	indegrees map[V]int          // Number of incoming edges for each vertex.
 }
 
 // Edge represents one edge of a directed graph.
@@ -33,8 +34,24 @@ func New[V comparable](vertices ...V) *Graph[V] {
 		m[vertex] = make(neighbors[V])
 	}
 	return &Graph[V]{
-		vertices: m,
+		vertices:  m,
+		indegrees: make(map[V]int),
 	}
+}
+
+// Neighbors returns the list of connected vertices from vtx.
+func (g *Graph[V]) Neighbors(vtx V) []V {
+	neighbors, ok := g.vertices[vtx]
+	if !ok {
+		return nil
+	}
+	arr := make([]V, len(neighbors))
+	i := 0
+	for neighbor := range neighbors {
+		arr[i] = neighbor
+		i += 1
+	}
+	return arr
 }
 
 // Add adds a connection between two vertices.
@@ -47,6 +64,21 @@ func (g *Graph[V]) Add(edge Edge[V]) {
 		g.vertices[to] = make(neighbors[V])
 	}
 	g.vertices[from][to] = true
+	g.indegrees[to] += 1
+}
+
+// InDegree returns the number of incoming edges to vtx.
+func (g *Graph[V]) InDegree(vtx V) int {
+	return g.indegrees[vtx]
+}
+
+// Remove deletes a connection between two vertices.
+func (g *Graph[V]) Remove(edge Edge[V]) {
+	if _, ok := g.vertices[edge.From][edge.To]; !ok {
+		return
+	}
+	delete(g.vertices[edge.From], edge.To)
+	g.indegrees[edge.To] -= 1
 }
 
 type findCycleTempVars[V comparable] struct {
