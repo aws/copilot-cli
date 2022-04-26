@@ -16,7 +16,7 @@ const (
 // Graph represents a directed graph.
 type Graph[V comparable] struct {
 	vertices  map[V]neighbors[V] // Adjacency list for each vertex.
-	indegrees map[V]int          // Number of incoming edges for each vertex.
+	inDegrees map[V]int          // Number of incoming edges for each vertex.
 }
 
 // Edge represents one edge of a directed graph.
@@ -29,13 +29,15 @@ type neighbors[V comparable] map[V]bool
 
 // New initiates a new Graph.
 func New[V comparable](vertices ...V) *Graph[V] {
-	m := make(map[V]neighbors[V])
+	adj := make(map[V]neighbors[V])
+	inDegrees := make(map[V]int)
 	for _, vertex := range vertices {
-		m[vertex] = make(neighbors[V])
+		adj[vertex] = make(neighbors[V])
+		inDegrees[vertex] = 0
 	}
 	return &Graph[V]{
-		vertices:  m,
-		indegrees: make(map[V]int),
+		vertices:  adj,
+		inDegrees: inDegrees,
 	}
 }
 
@@ -63,13 +65,20 @@ func (g *Graph[V]) Add(edge Edge[V]) {
 	if _, ok := g.vertices[to]; !ok {
 		g.vertices[to] = make(neighbors[V])
 	}
+	if _, ok := g.inDegrees[from]; !ok {
+		g.inDegrees[from] = 0
+	}
+	if _, ok := g.inDegrees[to]; !ok {
+		g.inDegrees[to] = 0
+	}
+
 	g.vertices[from][to] = true
-	g.indegrees[to] += 1
+	g.inDegrees[to] += 1
 }
 
 // InDegree returns the number of incoming edges to vtx.
 func (g *Graph[V]) InDegree(vtx V) int {
-	return g.indegrees[vtx]
+	return g.inDegrees[vtx]
 }
 
 // Remove deletes a connection between two vertices.
@@ -78,7 +87,7 @@ func (g *Graph[V]) Remove(edge Edge[V]) {
 		return
 	}
 	delete(g.vertices[edge.From], edge.To)
-	g.indegrees[edge.To] -= 1
+	g.inDegrees[edge.To] -= 1
 }
 
 type findCycleTempVars[V comparable] struct {
@@ -117,20 +126,9 @@ func (g *Graph[V]) IsAcyclic() ([]V, bool) {
 
 // Roots returns a slice of vertices with no incoming edges.
 func (g *Graph[V]) Roots() []V {
-	hasIncomingEdge := make(map[V]bool)
-	for vtx := range g.vertices {
-		hasIncomingEdge[vtx] = false
-	}
-
-	for from := range g.vertices {
-		for to := range g.vertices[from] {
-			hasIncomingEdge[to] = true
-		}
-	}
-
 	var roots []V
-	for vtx, yes := range hasIncomingEdge {
-		if !yes {
+	for vtx, degree := range g.inDegrees {
+		if degree == 0 {
 			roots = append(roots, vtx)
 		}
 	}
