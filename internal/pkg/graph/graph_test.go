@@ -221,7 +221,7 @@ func TestGraph_Roots(t *testing.T) {
 	}
 }
 
-func TestLevelOrderTraversal(t *testing.T) {
+func TestTopologicalOrder(t *testing.T) {
 	testCases := map[string]struct {
 		graph *Graph[string]
 
@@ -353,7 +353,7 @@ func TestLevelOrderTraversal(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			bfs, err := LevelOrderTraversal(tc.graph)
+			topo, err := TopologicalOrder(tc.graph)
 
 			if tc.wantedErrPrefix != "" {
 				require.Error(t, err)
@@ -362,7 +362,7 @@ func TestLevelOrderTraversal(t *testing.T) {
 				require.NoError(t, err)
 
 				for vtx, wantedRank := range tc.wantedRanks {
-					rank, _ := bfs.Rank(vtx)
+					rank, _ := topo.Rank(vtx)
 					require.Equal(t, wantedRank, rank, "expected rank for vertex %s does not match", vtx)
 				}
 			}

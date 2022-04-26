@@ -155,42 +155,45 @@ func (g *Graph[V]) hasCycles(temp *findCycleTempVars[V], currVertex V) bool {
 	return false
 }
 
-// LevelOrder ranks vertices in a breadth-first search manner.
-type LevelOrder[V comparable] struct {
+// TopologicalSorter ranks vertices using Kahn's algorithm: https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm
+// However, if two vertices can be scheduled in parallel then the same rank is returned.
+type TopologicalSorter[V comparable] struct {
 	ranks map[V]int
 }
 
 // Rank returns the order of the vertex. The smallest order starts at 0.
 // The second boolean return value is used to indicate whether the vertex exists in the graph.
-func (bfs *LevelOrder[V]) Rank(vtx V) (int, bool) {
-	r, ok := bfs.ranks[vtx]
+func (alg *TopologicalSorter[V]) Rank(vtx V) (int, bool) {
+	r, ok := alg.ranks[vtx]
 	return r, ok
 }
 
-func (bfs *LevelOrder[V]) traverse(g *Graph[V], root V) {
-	marked := make(map[V]bool)
-
-	queue := []V{root}
-	marked[root] = true
-	bfs.ranks[root] = 0
-	for len(queue) > 0 {
+func (alg *TopologicalSorter[V]) traverse(g *Graph[V]) {
+	roots := g.Roots()
+	for _, root := range roots {
+		alg.ranks[root] = 0 // Explicitly set to 0 so that `_, ok := alg.ranks[vtx]` returns true instead of false.
+	}
+	for len(roots) > 0 {
 		var vtx V
-		vtx, queue = queue[0], queue[1:]
-		for neighbor := range g.vertices[vtx] {
-			if marked[neighbor] {
-				continue
+		vtx, roots = roots[0], roots[1:]
+		for _, neighbor := range g.Neighbors(vtx) {
+			if new, old := alg.ranks[vtx]+1, alg.ranks[neighbor]; new > old {
+				alg.ranks[neighbor] = new
 			}
-			marked[neighbor] = true
-			if rank := bfs.ranks[vtx] + 1; rank > bfs.ranks[neighbor] { // Is the new rank higher than a previous traversal?
-				bfs.ranks[neighbor] = rank
+			g.Remove(Edge[V]{vtx, neighbor})
+			if g.InDegree(neighbor) == 0 {
+				roots = append(roots, neighbor)
 			}
-			queue = append(queue, neighbor)
 		}
 	}
 }
 
-// LevelOrderTraversal determines whether the directed graph is acyclic, and if so then
-// finds a level-order, or breadth-first search, ranking of the vertices.
+// TopologicalOrder determines whether the directed graph is acyclic, and if so then
+// finds a topological-order, or a linear order, of the vertices.
+// Note that this function will modify the original graph.
+//
+// If there is an edge from vertex V to U, then V must happen before U and results in rank of V < rank of U.
+// When there are ties (two vertices can be scheduled in parallel), the vertices are given the same rank.
 // If the digraph contains a cycle, then an error is returned.
 //
 // An example graph and their ranks is shown below to illustrate:
@@ -201,18 +204,16 @@ func (bfs *LevelOrder[V]) traverse(g *Graph[V], root V) {
 //│   └── d      rank: 1
 //└── b          rank: 0
 //    └── e      rank: 1
-func LevelOrderTraversal[V comparable](digraph *Graph[V]) (*LevelOrder[V], error) {
+func TopologicalOrder[V comparable](digraph *Graph[V]) (*TopologicalSorter[V], error) {
 	if vertices, isAcyclic := digraph.IsAcyclic(); !isAcyclic {
 		return nil, &errCycle[V]{
 			vertices,
 		}
 	}
 
-	bfs := &LevelOrder[V]{
+	topo := &TopologicalSorter[V]{
 		ranks: make(map[V]int),
 	}
-	for _, root := range digraph.Roots() {
-		bfs.traverse(digraph, root)
-	}
-	return bfs, nil
+	topo.traverse(digraph)
+	return topo, nil
 }

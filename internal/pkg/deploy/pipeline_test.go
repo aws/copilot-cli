@@ -375,7 +375,7 @@ func TestPipelineStage_Deployments(t *testing.T) {
 
 				return &stg
 			}(),
-			wantedErr: errors.New("find a level order ranking for deployments: graph contains a cycle: api"),
+			wantedErr: errors.New("find an ordering for deployments: graph contains a cycle: api"),
 		},
 		"should return the expected run orders": {
 			stg: func() *PipelineStage {

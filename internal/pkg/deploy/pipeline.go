@@ -562,9 +562,9 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 		prevActions = append(prevActions, approval)
 	}
 
-	bfs, err := graph.LevelOrderTraversal(stg.buildDeploymentsGraph())
+	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph())
 	if err != nil {
-		return nil, fmt.Errorf("find a level order ranking for deployments: %v", err)
+		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
 	}
 
 	var actions []DeployAction
@@ -577,7 +577,7 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 			envName:  stg.associatedEnvironment.Name,
 			appName:  stg.AppName,
 			override: conf,
-			ranker:   bfs,
+			ranker:   topo,
 		})
 	}
 	return actions, nil
