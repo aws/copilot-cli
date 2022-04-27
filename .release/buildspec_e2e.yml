@@ -129,7 +129,7 @@ batch:
         variables:
           TEST_SUITE: multi-pipeline
           APP_REGION: ap-northeast-3
-          TESTENV_REGION: ap-northeast-3
+          TESTENV_REGION: ap-northeast-1
           PRODENV_REGION: ap-southeast-1
     - identifier: worker
       env:
