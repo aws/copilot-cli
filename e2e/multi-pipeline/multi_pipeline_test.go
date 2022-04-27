@@ -130,7 +130,13 @@ var _ = Describe("pipeline flow", func() {
 		It("should generate a manifest file", func() {
 			Expect(filepath.Join(repoName, "copilot", "frontend", "manifest.yml")).Should(BeAnExistingFile())
 		})
-		It("copies a template to an addons file", func() {
+		It("creates a new addons dir", func() {
+			cmd := exec.Command("mkdir", filepath.Join(repoName, "copilot", "frontend", "addons"))
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			Expect(cmd.Run()).NotTo(HaveOccurred())
+		})
+		It("copies a template to the addons file", func() {
 			cmd := exec.Command("cp", "s3template.yml", filepath.Join(repoName, "copilot", "frontend", "addons", "e2e-pipeline-addon.yml"))
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
@@ -178,7 +184,7 @@ var _ = Describe("pipeline flow", func() {
 			cmd.Dir = repoName
 			Expect(cmd.Run()).NotTo(HaveOccurred())
 
-			cmd = exec.Command("git", "push")
+			cmd = exec.Command("git", "push", "--set-upstream", "origin", "test")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Dir = repoName
@@ -222,7 +228,7 @@ var _ = Describe("pipeline flow", func() {
 			cmd.Dir = repoName
 			Expect(cmd.Run()).NotTo(HaveOccurred())
 
-			cmd = exec.Command("git", "push")
+			cmd = exec.Command("git", "push", "--set-upstream", "origin", "prod")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			cmd.Dir = repoName
