@@ -562,9 +562,9 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 		prevActions = append(prevActions, approval)
 	}
 
-	topo, err := graph.TopologicalSort(stg.buildDeploymentsGraph())
+	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph())
 	if err != nil {
-		return nil, fmt.Errorf("topological sort deployments: %v", err)
+		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
 	}
 
 	var actions []DeployAction
@@ -636,7 +636,7 @@ func (a *ManualApprovalAction) Name() string {
 }
 
 type ranker interface {
-	Rank(name string) (int, error)
+	Rank(name string) (int, bool)
 }
 
 // DeployAction represents a CodePipeline action of category "Deploy" for a cloudformation stack.
@@ -658,7 +658,7 @@ func (a *DeployAction) Name() string {
 
 // StackName returns the name of the workload stack to create or update.
 func (a *DeployAction) StackName() string {
-	if a.override != nil {
+	if a.override != nil && a.override.StackName != "" {
 		return a.override.StackName
 	}
 	return fmt.Sprintf("%s-%s-%s", a.appName, a.envName, a.name)
@@ -666,7 +666,7 @@ func (a *DeployAction) StackName() string {
 
 // TemplatePath returns the path of the CloudFormation template file generated during the build phase.
 func (a *DeployAction) TemplatePath() string {
-	if a.override != nil {
+	if a.override != nil && a.override.TemplatePath != "" {
 		return a.override.TemplatePath
 	}
 
@@ -676,7 +676,7 @@ func (a *DeployAction) TemplatePath() string {
 
 // TemplateConfigPath returns the path of the CloudFormation template config file generated during the build phase.
 func (a *DeployAction) TemplateConfigPath() string {
-	if a.override != nil {
+	if a.override != nil && a.override.TemplateConfig != "" {
 		return a.override.TemplateConfig
 	}
 
