@@ -131,7 +131,7 @@ var _ = Describe("pipeline flow", func() {
 			Expect(filepath.Join(repoName, "copilot", "frontend", "manifest.yml")).Should(BeAnExistingFile())
 		})
 		It("creates a new addons dir", func() {
-			cmd := exec.Command("mkdir", filepath.Join(repoName, "copilot", "frontend", "addons"))
+			cmd := exec.Command("mkdir", "-p", filepath.Join(repoName, "copilot", "frontend", "addons"))
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			Expect(cmd.Run()).NotTo(HaveOccurred())
