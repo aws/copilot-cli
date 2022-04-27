@@ -353,6 +353,78 @@ func TestPipelineStage_Init(t *testing.T) {
 	})
 }
 
+func TestPipelineStage_Deployments(t *testing.T) {
+	testCases := map[string]struct {
+		stg *PipelineStage
+
+		wantedRunOrder map[string]int
+		wantedErr      error
+	}{
+		"should return an error when the deployments contain a cycle": {
+			stg: func() *PipelineStage {
+				// Create a pipeline with a self-depending deployment.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name: "test",
+					Deployments: map[string]*manifest.Deployment{
+						"api": {
+							DependsOn: []string{"api"},
+						},
+					},
+				}, nil)
+
+				return &stg
+			}(),
+			wantedErr: errors.New("find an ordering for deployments: graph contains a cycle: api"),
+		},
+		"should return the expected run orders": {
+			stg: func() *PipelineStage {
+				// Create a pipeline with a manual approval and 4 deployments.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name:             "test",
+					RequiresApproval: true,
+					Deployments: map[string]*manifest.Deployment{
+						"frontend": {
+							DependsOn: []string{"orders", "payments"},
+						},
+						"orders": {
+							DependsOn: []string{"warehouse"},
+						},
+						"payments":  nil,
+						"warehouse": nil,
+					},
+				}, nil)
+
+				return &stg
+			}(),
+			wantedRunOrder: map[string]int{
+				"CreateOrUpdate-frontend-test":  4,
+				"CreateOrUpdate-orders-test":    3,
+				"CreateOrUpdate-payments-test":  2,
+				"CreateOrUpdate-warehouse-test": 2,
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			deployments, err := tc.stg.Deployments()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				for _, deployment := range deployments {
+					wanted, ok := tc.wantedRunOrder[deployment.Name()]
+					require.True(t, ok, "expected deployment named %s to be created", deployment.Name())
+					require.Equal(t, wanted, deployment.RunOrder(), "order for deployment %s does not match", deployment.Name())
+				}
+			}
+		})
+	}
+}
+
 type mockAction struct {
 	order int
 }
@@ -498,11 +570,11 @@ func TestDeployAction_TemplateConfigPath(t *testing.T) {
 
 type mockRanker struct {
 	rank int
-	err  error
+	ok   bool
 }
 
-func (m mockRanker) Rank(name string) (int, error) {
-	return m.rank, m.err
+func (m mockRanker) Rank(name string) (int, bool) {
+	return m.rank, m.ok
 }
 
 func TestDeployAction_RunOrder(t *testing.T) {
