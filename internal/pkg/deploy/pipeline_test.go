@@ -357,8 +357,9 @@ func TestPipelineStage_Deployments(t *testing.T) {
 	testCases := map[string]struct {
 		stg *PipelineStage
 
-		wantedRunOrder map[string]int
-		wantedErr      error
+		wantedRunOrder      map[string]int
+		wantedTemplateOrder []string
+		wantedErr           error
 	}{
 		"should return an error when the deployments contain a cycle": {
 			stg: func() *PipelineStage {
@@ -405,6 +406,24 @@ func TestPipelineStage_Deployments(t *testing.T) {
 				"CreateOrUpdate-warehouse-test": 2,
 			},
 		},
+		"deployments should be alphabetically sorted so that integration tests are deterministic": {
+			stg: func() *PipelineStage {
+				// Create a pipeline with all local workloads deployed in parallel.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name: "test",
+				}, []string{"b", "a", "d", "c"})
+
+				return &stg
+			}(),
+			wantedRunOrder: map[string]int{
+				"CreateOrUpdate-a-test": 1,
+				"CreateOrUpdate-b-test": 1,
+				"CreateOrUpdate-c-test": 1,
+				"CreateOrUpdate-d-test": 1,
+			},
+			wantedTemplateOrder: []string{"CreateOrUpdate-a-test", "CreateOrUpdate-b-test", "CreateOrUpdate-c-test", "CreateOrUpdate-d-test"},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -419,6 +438,9 @@ func TestPipelineStage_Deployments(t *testing.T) {
 					wanted, ok := tc.wantedRunOrder[deployment.Name()]
 					require.True(t, ok, "expected deployment named %s to be created", deployment.Name())
 					require.Equal(t, wanted, deployment.RunOrder(), "order for deployment %s does not match", deployment.Name())
+				}
+				for i, wanted := range tc.wantedTemplateOrder {
+					require.Equal(t, wanted, deployments[i].Name(), "deployment name at index %d do not match", i)
 				}
 			}
 		})
