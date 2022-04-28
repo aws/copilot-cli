@@ -1,15 +1,15 @@
-# AWS Copilot v1.18: Certificates import, ordering deployments in a pipeline and more
+# AWS Copilot v1.18: Certificate import, ordering deployments in a pipeline, and more
 
 The AWS Copilot core team is announcing the Copilot v1.18 release.
-Special thanks to [@corey-cole](https://github.com/corey-cole) who contributed for this release. Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has almost 280 people online and over 2.2k stars on [GitHub](http://github.com/aws/copilot-cli/).
+Special thanks to [@corey-cole](https://github.com/corey-cole) who contributed to this release. Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has almost 280 people online and over 2.2k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.18 brings several new features and improvements:
 
-* **Certificates import:** You can now run `copilot env init --import-cert-arns` to import validated ACM certificates to your environment for the load balancer listener. [See detailed section](./#certificates-import).
-* **Ordering deployments in a pipeline:** When use pipeline to deploy, now you are able to specify dependencies between their workload deployments, making it possible to deploy your services in order. [See detailed section](./#ordering-deployments-in-a-pipeline).
-* **More options for deployment configuration** You can now specify deployment strategy to be "recreate" so new tasks won't get spun up until old tasks stop. [See detailed section](./#more-options-for-deployment-configuration).
-* **Load balanced web service, Worker Service, and Backend Service observability** To support collecting and shipping traces to AWS X-Ray from ECS Tasks, we are introducing a manifest option that will add the [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) as a sidecar container. [See detailed section](./#load-balanced-web-service-worker-service-and-backend-service-observability).
+* **Certificate import:** You can now run `copilot env init --import-cert-arns` to import validated ACM certificates to your environment's load balancer listener. [See detailed section](./#certificate-import).
+* **Ordering deployments in a pipeline:** When using pipelines to deploy, you are now able to specify dependencies between workloads so that they are deployed in order. [See detailed section](./#ordering-deployments-in-a-pipeline).
+* **"recreate" strategy for faster deployments** You can now specify "recreate" deployment strategy so that ECS will stop old tasks in your service before starting new ones. [See detailed section](./#recreate-strategy-for-faster-deployments).
+* **Tracing for Load Balanced Web Service, Worker Service, and Backend Service** To collect and ship traces to AWS X-Ray from ECS tasks, we are introducing "observability.tracing" configuration in manifest to add a [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) as a sidecar container. [See detailed section](./#tracing-for-load-balanced-web-service-worker-service-and-backend-service).
 
 ## What’s AWS Copilot?
 
@@ -21,16 +21,16 @@ enabling you to focus on developing your application, instead of writing deploym
 
 See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
-## Certificates Import
+## Certificate import
 _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 
 ## Ordering Deployments in a Pipeline
 _Contributed by [Efe Karakus](https://github.com/efekarakus/)_
 
-## More Options for Deployment Configuration
+## "recreate" Strategy for Faster Deployments
 _Contributed by [Parag Bhingre](https://github.com/paragbhingre/)_
 
-## Load Balanced Web Service, Worker Service, and Backend Service Observability
+## Tracing for Load Balanced Web Service, Worker Service, and Backend Service
 _Contributed by [Danny Randall](https://github.com/dannyrandall/)_
 
 ## What’s next?
@@ -39,4 +39,4 @@ Download the new Copilot CLI version by following the link below and leave your 
 
 * Download [the latest CLI version](../docs/getting-started/install.en.md)
 * Try our [Getting Started Guide](../docs/getting-started/first-app-tutorial.en.md)
-* Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.16.0)
+* Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.18.0)
