@@ -34,11 +34,13 @@ func TestEnv_Template(t *testing.T) {
 					DNSCertValidatorLambda: "mockkey1",
 					DNSDelegationLambda:    "mockkey2",
 					CustomDomainLambda:     "mockkey4",
-					ImportVPC:              nil,
-					VPCConfig: template.ManagedVPC{
-						CIDR:               DefaultVPCCIDR,
-						PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
-						PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
+					VPCConfig: template.VPCConfig{
+						Imported: nil,
+						Managed: template.ManagedVPC{
+							CIDR:               DefaultVPCCIDR,
+							PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
+							PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
+						},
 					},
 					LatestVersion: deploy.LatestEnvTemplateVersion,
 				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)

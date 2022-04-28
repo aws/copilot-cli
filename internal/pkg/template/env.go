@@ -39,12 +39,16 @@ type EnvOpts struct {
 	ArtifactBucketARN         string
 	ArtifactBucketKeyARN      string
 
-	ImportVPC      *ImportVPC
-	VPCConfig      ManagedVPC
+	VPCConfig      VPCConfig
 	ImportCertARNs []string
 	Telemetry      *Telemetry
 
 	LatestVersion string
+}
+
+type VPCConfig struct {
+	Imported *ImportVPC
+	Managed  ManagedVPC
 }
 
 // ImportVPC holds the fields to import VPC resources.

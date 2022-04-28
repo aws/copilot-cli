@@ -93,9 +93,8 @@ func (e *EnvStackConfig) Template() (string, error) {
 		ArtifactBucketARN:      e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
 
-		ImportVPC:      e.ImportVPC(),
 		ImportCertARNs: e.in.ImportCertARNs,
-		VPCConfig:      e.ManagedVPCConfig(),
+		VPCConfig:      e.vpcConfig(),
 		Telemetry:      e.TelemetryConfig(),
 
 		Version:       e.in.Version,
@@ -109,7 +108,14 @@ func (e *EnvStackConfig) Template() (string, error) {
 	return content.String(), nil
 }
 
-func (e *EnvStackConfig) ImportVPC() *template.ImportVPC {
+func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
+	return template.VPCConfig{
+		Imported: e.importVPC(),
+		Managed:  e.ManagedVPCConfig(),
+	}
+}
+
+func (e *EnvStackConfig) importVPC() *template.ImportVPC {
 	if e.in.ImportVPCConfig == nil {
 		return nil
 	}
