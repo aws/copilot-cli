@@ -22,7 +22,6 @@ import (
 // Environment stack's parameters that need to updated while moving the legacy template to a newer version.
 const (
 	includeLoadBalancerParamKey = "IncludePublicLoadBalancer"
-	albWorkloadsParamKey        = "ALBWorkloads"
 )
 
 // DeployAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
@@ -117,7 +116,7 @@ func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentIn
 			// "IncludePublicLoadBalancer" has been deprecated in favor of "ALBWorkloads".
 			// We need to populate this parameter so that the env ALB is not deleted.
 			return &awscfn.Parameter{
-				ParameterKey:   aws.String(albWorkloadsParamKey),
+				ParameterKey:   aws.String(stack.EnvParamALBWorkloadsKey),
 				ParameterValue: aws.String(strings.Join(lbWebServices, ",")),
 			}
 		}
@@ -147,12 +146,27 @@ func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, t
 			continue
 		}
 
-		// Keep the parameters and tags of the stack.
-		var params []*awscfn.Parameter
+		// Remove params that only exist in old template; use previous values for params that
+		// exist in both old and new template; use new values for params that only exist in new template.
+		paramSet := make(map[string]*awscfn.Parameter)
+		for _, param := range s.Parameters {
+			paramSet[aws.StringValue(param.ParameterKey)] = param
+		}
 		for _, param := range descr.Parameters {
-			params = append(params, transformParam(param))
+			param = transformParam(param)
+			paramKey := aws.StringValue(param.ParameterKey)
+			if _, ok := paramSet[paramKey]; !ok {
+				continue
+			}
+			paramSet[paramKey] = param
+		}
+		var params []*awscfn.Parameter
+		for _, param := range paramSet {
+			params = append(params, param)
 		}
 		s.Parameters = params
+
+		// Keep the tags of the stack.
 		s.Tags = descr.Tags
 
 		// Apply a service role if provided.

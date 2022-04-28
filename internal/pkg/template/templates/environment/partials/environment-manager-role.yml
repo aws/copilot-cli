@@ -19,6 +19,17 @@ EnvironmentManagerRole:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
+{{- if .ImportCertARNs}}
+        - Sid: ImportedCertificates
+          Effect: Allow
+          Action: [
+            acm:DescribeCertificate
+          ]
+          Resource:
+{{- range $arn := .ImportCertARNs}}
+          - "{{$arn}}"
+{{- end}}
+{{- end}}
         - Sid: CloudwatchLogs
           Effect: Allow
           Action: [
@@ -236,7 +247,8 @@ EnvironmentManagerRole:
             "apprunner:ListServices",
             "apprunner:PauseService",
             "apprunner:ResumeService",
-            "apprunner:StartDeployment"
+            "apprunner:StartDeployment",
+            "apprunner:DescribeObservabilityConfiguration"
           ]
           Resource: "*"
         - Sid: Tags

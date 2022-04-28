@@ -341,7 +341,9 @@ func TestPipelineStage_Init(t *testing.T) {
 		require.Equal(t, "arn:aws:iam::123456789012:role/badgoose-test-CFNExecutionRole", stg.ExecRoleARN())
 	})
 	t.Run("number of expected deployments match", func(t *testing.T) {
-		require.Equal(t, 2, len(stg.Deployments()))
+		deployments, err := stg.Deployments()
+		require.NoError(t, err)
+		require.Equal(t, 2, len(deployments))
 	})
 	t.Run("manual approval button", func(t *testing.T) {
 		require.NotNil(t, stg.Approval(), "should require approval action for stages when the manifest requires it")
@@ -349,6 +351,100 @@ func TestPipelineStage_Init(t *testing.T) {
 		stg := PipelineStage{}
 		require.Nil(t, stg.Approval(), "should return nil by default")
 	})
+}
+
+func TestPipelineStage_Deployments(t *testing.T) {
+	testCases := map[string]struct {
+		stg *PipelineStage
+
+		wantedRunOrder      map[string]int
+		wantedTemplateOrder []string
+		wantedErr           error
+	}{
+		"should return an error when the deployments contain a cycle": {
+			stg: func() *PipelineStage {
+				// Create a pipeline with a self-depending deployment.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name: "test",
+					Deployments: map[string]*manifest.Deployment{
+						"api": {
+							DependsOn: []string{"api"},
+						},
+					},
+				}, nil)
+
+				return &stg
+			}(),
+			wantedErr: errors.New("find an ordering for deployments: graph contains a cycle: api"),
+		},
+		"should return the expected run orders": {
+			stg: func() *PipelineStage {
+				// Create a pipeline with a manual approval and 4 deployments.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name:             "test",
+					RequiresApproval: true,
+					Deployments: map[string]*manifest.Deployment{
+						"frontend": {
+							DependsOn: []string{"orders", "payments"},
+						},
+						"orders": {
+							DependsOn: []string{"warehouse"},
+						},
+						"payments":  nil,
+						"warehouse": nil,
+					},
+				}, nil)
+
+				return &stg
+			}(),
+			wantedRunOrder: map[string]int{
+				"CreateOrUpdate-frontend-test":  4,
+				"CreateOrUpdate-orders-test":    3,
+				"CreateOrUpdate-payments-test":  2,
+				"CreateOrUpdate-warehouse-test": 2,
+			},
+		},
+		"deployments should be alphabetically sorted so that integration tests are deterministic": {
+			stg: func() *PipelineStage {
+				// Create a pipeline with all local workloads deployed in parallel.
+				var stg PipelineStage
+				stg.Init(&config.Environment{Name: "test"}, &manifest.PipelineStage{
+					Name: "test",
+				}, []string{"b", "a", "d", "c"})
+
+				return &stg
+			}(),
+			wantedRunOrder: map[string]int{
+				"CreateOrUpdate-a-test": 1,
+				"CreateOrUpdate-b-test": 1,
+				"CreateOrUpdate-c-test": 1,
+				"CreateOrUpdate-d-test": 1,
+			},
+			wantedTemplateOrder: []string{"CreateOrUpdate-a-test", "CreateOrUpdate-b-test", "CreateOrUpdate-c-test", "CreateOrUpdate-d-test"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			deployments, err := tc.stg.Deployments()
+
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				for _, deployment := range deployments {
+					wanted, ok := tc.wantedRunOrder[deployment.Name()]
+					require.True(t, ok, "expected deployment named %s to be created", deployment.Name())
+					require.Equal(t, wanted, deployment.RunOrder(), "order for deployment %s does not match", deployment.Name())
+				}
+				for i, wanted := range tc.wantedTemplateOrder {
+					require.Equal(t, wanted, deployments[i].Name(), "deployment name at index %d do not match", i)
+				}
+			}
+		})
+	}
 }
 
 type mockAction struct {
@@ -399,8 +495,8 @@ func TestManualApprovalAction_Name(t *testing.T) {
 	require.Equal(t, "ApprovePromotionTo-test", action.Name())
 }
 
-func TestWorkloadDeployAction_Name(t *testing.T) {
-	action := WorkloadDeployAction{
+func TestDeployAction_Name(t *testing.T) {
+	action := DeployAction{
 		name:    "frontend",
 		envName: "test",
 	}
@@ -408,27 +504,55 @@ func TestWorkloadDeployAction_Name(t *testing.T) {
 	require.Equal(t, "CreateOrUpdate-frontend-test", action.Name())
 }
 
-func TestWorkloadDeployAction_StackName(t *testing.T) {
-	action := WorkloadDeployAction{
-		name:    "frontend",
-		envName: "test",
-		appName: "phonetool",
+func TestDeployAction_StackName(t *testing.T) {
+	testCases := map[string]struct {
+		in     DeployAction
+		wanted string
+	}{
+		"should default to app-env-name when user does not override the stack name": {
+			in: DeployAction{
+				name:    "frontend",
+				envName: "test",
+				appName: "phonetool",
+			},
+			wanted: "phonetool-test-frontend",
+		},
+		"should use custom user override stack name when present": {
+			in: DeployAction{
+				override: &manifest.Deployment{
+					StackName: "other-stack",
+				},
+			},
+			wanted: "other-stack",
+		},
 	}
 
-	require.Equal(t, "phonetool-test-frontend", action.StackName())
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.StackName())
+		})
+	}
 }
 
-func TestWorkloadDeployAction_TemplatePath(t *testing.T) {
+func TestDeployAction_TemplatePath(t *testing.T) {
 	testCases := map[string]struct {
-		in     WorkloadDeployAction
+		in     DeployAction
 		wanted string
 	}{
 		"default location for workload templates": {
-			in: WorkloadDeployAction{
+			in: DeployAction{
 				name:    "frontend",
 				envName: "test",
 			},
 			wanted: "infrastructure/frontend-test.stack.yml",
+		},
+		"should use custom override template path when present": {
+			in: DeployAction{
+				override: &manifest.Deployment{
+					TemplatePath: "infrastructure/custom.yml",
+				},
+			},
+			wanted: "infrastructure/custom.yml",
 		},
 	}
 	for name, tc := range testCases {
@@ -438,17 +562,25 @@ func TestWorkloadDeployAction_TemplatePath(t *testing.T) {
 	}
 }
 
-func TestWorkloadDeployAction_TemplateConfigPath(t *testing.T) {
+func TestDeployAction_TemplateConfigPath(t *testing.T) {
 	testCases := map[string]struct {
-		in     WorkloadDeployAction
+		in     DeployAction
 		wanted string
 	}{
 		"default location for workload template configs": {
-			in: WorkloadDeployAction{
+			in: DeployAction{
 				name:    "frontend",
 				envName: "test",
 			},
 			wanted: "infrastructure/frontend-test.params.json",
+		},
+		"should use custom override template config path when present": {
+			in: DeployAction{
+				override: &manifest.Deployment{
+					TemplateConfig: "infrastructure/custom.params.json",
+				},
+			},
+			wanted: "infrastructure/custom.params.json",
 		},
 	}
 	for name, tc := range testCases {
@@ -456,6 +588,32 @@ func TestWorkloadDeployAction_TemplateConfigPath(t *testing.T) {
 			require.Equal(t, tc.wanted, tc.in.TemplateConfigPath())
 		})
 	}
+}
+
+type mockRanker struct {
+	rank int
+	ok   bool
+}
+
+func (m mockRanker) Rank(name string) (int, bool) {
+	return m.rank, m.ok
+}
+
+func TestDeployAction_RunOrder(t *testing.T) {
+	// GIVEN
+	ranker := mockRanker{rank: 2}
+	past := []orderedRunner{
+		mockAction{
+			order: 3,
+		},
+	}
+	in := DeployAction{
+		action: action{prevActions: past},
+		ranker: ranker,
+	}
+
+	// THEN
+	require.Equal(t, 6, in.RunOrder(), "should be past actions + 1 + rank")
 }
 
 func TestTestCommandsAction_Name(t *testing.T) {

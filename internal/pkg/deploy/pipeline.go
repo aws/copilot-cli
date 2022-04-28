@@ -11,7 +11,10 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/graph"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 
@@ -466,12 +469,11 @@ type associatedEnvironment struct {
 // test commands, if the user has opted to add any.
 type PipelineStage struct {
 	*associatedEnvironment
-	localWorkloads   []string
-	requiresApproval bool
-	testCommands     []string
-
+	requiresApproval  bool
+	testCommands      []string
 	execRoleARN       string
 	envManagerRoleARN string
+	deployments       manifest.Deployments
 }
 
 // Init populates the fields in PipelineStage against a target environment,
@@ -483,7 +485,16 @@ func (stg *PipelineStage) Init(env *config.Environment, mftStage *manifest.Pipel
 		Region:    env.Region,
 		AccountID: env.AccountID,
 	}
-	stg.localWorkloads = workloads
+	deployments := mftStage.Deployments
+	if len(deployments) == 0 {
+		// Transform local workloads into the manifest.Deployments format if the manifest doesn't have any deployment config.
+		deployments = make(manifest.Deployments)
+		for _, workload := range workloads {
+			deployments[workload] = nil
+		}
+	}
+
+	stg.deployments = deployments
 	stg.requiresApproval = mftStage.RequiresApproval
 	stg.testCommands = mftStage.TestCommands
 	stg.execRoleARN = env.ExecutionRoleARN
@@ -523,14 +534,18 @@ func (stg *PipelineStage) EnvManagerRoleARN() string {
 
 // Test returns a test for the stage.
 // If the stage does not have any test commands, then returns nil.
-func (stg *PipelineStage) Test() *TestCommandsAction {
+func (stg *PipelineStage) Test() (*TestCommandsAction, error) {
 	if len(stg.testCommands) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	var prevActions []orderedRunner
-	for _, deployment := range stg.Deployments() {
-		prevActions = append(prevActions, &deployment)
+	deployActions, err := stg.Deployments()
+	if err != nil {
+		return nil, err
+	}
+	for i := range deployActions {
+		prevActions = append(prevActions, &deployActions[i])
 	}
 
 	return &TestCommandsAction{
@@ -538,28 +553,59 @@ func (stg *PipelineStage) Test() *TestCommandsAction {
 			prevActions: prevActions,
 		},
 		commands: stg.testCommands,
-	}
+	}, nil
 }
 
 // Deployments returns a list of deploy actions for the pipeline.
-func (stg *PipelineStage) Deployments() []WorkloadDeployAction {
+func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 	var prevActions []orderedRunner
 	if approval := stg.Approval(); approval != nil {
 		prevActions = append(prevActions, approval)
 	}
 
-	var actions []WorkloadDeployAction
-	for _, workload := range stg.localWorkloads {
-		actions = append(actions, WorkloadDeployAction{
+	topo, err := graph.TopologicalOrder(stg.buildDeploymentsGraph())
+	if err != nil {
+		return nil, fmt.Errorf("find an ordering for deployments: %v", err)
+	}
+
+	var actions []DeployAction
+	for name, conf := range stg.deployments {
+		actions = append(actions, DeployAction{
 			action: action{
 				prevActions: prevActions,
 			},
-			name:    workload,
-			envName: stg.associatedEnvironment.Name,
-			appName: stg.AppName,
+			name:     name,
+			envName:  stg.associatedEnvironment.Name,
+			appName:  stg.AppName,
+			override: conf,
+			ranker:   topo,
 		})
 	}
-	return actions
+
+	sort.Slice(actions, func(i, j int) bool {
+		return actions[i].Name() < actions[j].Name()
+	})
+	return actions, nil
+}
+
+func (stg *PipelineStage) buildDeploymentsGraph() *graph.Graph[string] {
+	var names []string
+	for name, _ := range stg.deployments {
+		names = append(names, name)
+	}
+	digraph := graph.New(names...)
+	for name, conf := range stg.deployments {
+		if conf == nil {
+			continue
+		}
+		for _, dependency := range conf.DependsOn {
+			digraph.Add(graph.Edge[string]{
+				From: dependency, // Dependency must be completed before name.
+				To:   name,
+			})
+		}
+	}
+	return digraph
 }
 
 type orderedRunner interface {
@@ -594,35 +640,59 @@ func (a *ManualApprovalAction) Name() string {
 	return fmt.Sprintf("ApprovePromotionTo-%s", a.name)
 }
 
-// WorkloadDeployAction represents a CodePipeline action of category "Deploy" for a workload stack.
-type WorkloadDeployAction struct {
+type ranker interface {
+	Rank(name string) (int, bool)
+}
+
+// DeployAction represents a CodePipeline action of category "Deploy" for a cloudformation stack.
+type DeployAction struct {
 	action
 
-	name    string // workload name.
-	envName string
-	appName string
+	name     string
+	envName  string
+	appName  string
+	override *manifest.Deployment // User defined settings over Copilot's defaults.
+
+	ranker ranker // Interface to rank this deployment action against others in the same stage.
 }
 
 // Name returns the name of the CodePipeline deploy action for a workload.
-func (a *WorkloadDeployAction) Name() string {
+func (a *DeployAction) Name() string {
 	return fmt.Sprintf("CreateOrUpdate-%s-%s", a.name, a.envName)
 }
 
 // StackName returns the name of the workload stack to create or update.
-func (a *WorkloadDeployAction) StackName() string {
+func (a *DeployAction) StackName() string {
+	if a.override != nil && a.override.StackName != "" {
+		return a.override.StackName
+	}
 	return fmt.Sprintf("%s-%s-%s", a.appName, a.envName, a.name)
 }
 
 // TemplatePath returns the path of the CloudFormation template file generated during the build phase.
-func (a *WorkloadDeployAction) TemplatePath() string {
+func (a *DeployAction) TemplatePath() string {
+	if a.override != nil && a.override.TemplatePath != "" {
+		return a.override.TemplatePath
+	}
+
 	// Use path.Join instead of filepath to join with "/" instead of OS-specific file separators.
 	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateNameFormat, a.name, a.envName))
 }
 
 // TemplateConfigPath returns the path of the CloudFormation template config file generated during the build phase.
-func (a *WorkloadDeployAction) TemplateConfigPath() string {
+func (a *DeployAction) TemplateConfigPath() string {
+	if a.override != nil && a.override.TemplateConfig != "" {
+		return a.override.TemplateConfig
+	}
+
 	// Use path.Join instead of filepath to join with "/" instead of OS-specific file separators.
 	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat, a.name, a.envName))
+}
+
+// RunOrder returns the order in which the action should run.
+func (a *DeployAction) RunOrder() int {
+	rank, _ := a.ranker.Rank(a.name) // The deployment is guaranteed to be in the ranker.
+	return a.action.RunOrder() /* baseline */ + rank
 }
 
 // TestCommandsAction represents a CodePipeline action of category "Test" to validate deployments.
