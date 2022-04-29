@@ -1,18 +1,18 @@
-# AWS Copilot v1.16: Multiple pipelines, SNS subscription filters and more.
+# AWS Copilot v1.16: Multiple pipelines, SNS subscription filters and more
 
-The AWS Copilot core team is excited to announce the Copilot v1.16 release. 
-We welcome 7 new community developers who contributed to this release: [@codekitchen](https://github.com/codekitchen), 
-[@shingos](https://github.com/shingos), [@csantos](https://github.com/csantos), [@rfma23](https://github.com/rfma23), 
-[@g-grass](https://github.com/g-grass), [@isleys](https://github.com/isleys), 
-[@kangere](https://github.com/kangere). Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 270 people online, 
-who help each other daily and we recently passed a milestone of over 2.1k stars on [GitHub](http://github.com/aws/copilot-cli/). 
+The AWS Copilot core team is excited to announce the Copilot v1.16 release.
+We welcome 7 new community developers who contributed to this release: [@codekitchen](https://github.com/codekitchen),
+[@shingos](https://github.com/shingos), [@csantos](https://github.com/csantos), [@rfma23](https://github.com/rfma23),
+[@g-grass](https://github.com/g-grass), [@isleys](https://github.com/isleys),
+[@kangere](https://github.com/kangere). Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 270 people online,
+who help each other daily and we recently passed a milestone of over 2.1k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.16 brings with it several new features and improvements:
 
-* **Multiple pipelines:** You can now run `copilot pipeline init` to create multiple CodePipelines that track separate 
+* **Multiple pipelines:** You can now run `copilot pipeline init` to create multiple CodePipelines that track separate
 branches in your repository. [See detailed section](./#create-multiple-pipelines-per-branch).
-* **SNS subscription filter policies:** Worker services can now filter SNS messages for each subscribed topic 
+* **SNS subscription filter policies:** Worker services can now filter SNS messages for each subscribed topic
 using the `filter_policy` field. [See detailed section](./#define-messages-filter-policy-in-publishsubscribe-service-architecture).
 * **Lots of other improvements:**
     * Add a `--no-rollback` flag to the `deploy` commands to disable automatic stack rollback in case of a deployment failure ([#3341](https://github.com/aws/copilot-cli/pull/3341)). The new flag is useful for troubleshooting infrastructure change failures. For example, if a deployment fails CloudFormation will delete the logs that happened during the failure because it rolls back the stack. This flag will help preserve the logs to troubleshoot the issue, then you can rollback and update your manifest again.
@@ -26,9 +26,9 @@ using the `filter_policy` field. [See detailed section](./#define-messages-filte
 ## What’s AWS Copilot?
 
 The AWS Copilot CLI is a tool for developers to build, release, and operate production ready containerized applications on AWS.  
-From getting started, pushing to staging, and releasing to production, Copilot can help manage the entire lifecycle of your application development. 
-At the foundation of Copilot is AWS CloudFormation, which enables you to provision infrastructure as code in a single operation. 
-Copilot provides pre-defined CloudFormation templates and user-friendly workflows for different types of micro services creation and operation, 
+From getting started, pushing to staging, and releasing to production, Copilot can help manage the entire lifecycle of your application development.
+At the foundation of Copilot is AWS CloudFormation, which enables you to provision infrastructure as code in a single operation.
+Copilot provides pre-defined CloudFormation templates and user-friendly workflows for different types of micro services creation and operation,
 enabling you to focus on developing your application, instead of writing deployment scripts.
 
 See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
@@ -36,8 +36,8 @@ See the section [Overview](../docs/concepts/overview.en.md) for a more detailed 
 ## Create Multiple Pipelines per Branch
 _Contributed by [Efe Karakus](https://github.com/efekarakus/), [Janice Huang](https://github.com/huanjani/)_
 
-Having an automated release process is one of the most important parts of software delivery, so AWS Copilot wants to make setting up that process as easy as possible. 
-Instead of running `copilot deploy` manually for all the environments in your application, 
+Having an automated release process is one of the most important parts of software delivery, so AWS Copilot wants to make setting up that process as easy as possible.
+Instead of running `copilot deploy` manually for all the environments in your application,
 you can run just a few `copilot pipeline` commands to setup a continuous delivery pipeline that automatically releases to the environments whenever you `git push`.
 
 The generated CodePipeline has the following basic structure:
@@ -68,8 +68,8 @@ source:
 stages:
     - name: test
     - name: prod
-    # requires_approval: true 
-    # test_commands: [echo 'running tests', make test] 
+    # requires_approval: true
+    # test_commands: [echo 'running tests', make test]
 ```
 
 This model works well for users that want every commit to the “main” branch to be released across their environments.
@@ -108,13 +108,13 @@ You can learn more about pipelines in [Copilot's docs](../docs/concepts/pipeline
 ## Define messages filter policy in Publish/Subscribe service architecture
 _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 
-A common need in microservices architecture is to have an easy way to implement the robust publish/subscribe logic for passing messages between services. 
-AWS Copilot leverages a combination of Amazon SNS and Amazon SQS services to make it easy. 
-With AWS Copilot, you can configure single or multiple services to publish messages to named SNS topics and create worker services to receive and process those messages. 
-AWS Copilot configures and auto-provisions required pub/sub infrastructure, including SNS topics, SQS queues, and required policies. 
+A common need in microservices architecture is to have an easy way to implement the robust publish/subscribe logic for passing messages between services.
+AWS Copilot leverages a combination of Amazon SNS and Amazon SQS services to make it easy.
+With AWS Copilot, you can configure single or multiple services to publish messages to named SNS topics and create worker services to receive and process those messages.
+AWS Copilot configures and auto-provisions required pub/sub infrastructure, including SNS topics, SQS queues, and required policies.
 You can read more about [Publish/Subscribe architecture in AWS Copilot documentation](../docs/developing/publish-subscribe.en.md).
 
-By default, an Amazon SNS topic subscriber receives every message published to the topic. 
+By default, an Amazon SNS topic subscriber receives every message published to the topic.
 To receive a subset of the messages, a subscriber must assign a filter policy to the topic subscription. For example, you might have a service that publishes orders to a topic:
 
 ```yaml
@@ -141,7 +141,7 @@ subscribe:
       tries: 5
 ```
 
-AWS Copilot will create a subscription and provision all required infrastructure, so you can focus on writing your code. 
+AWS Copilot will create a subscription and provision all required infrastructure, so you can focus on writing your code.
 However, let’s say you need to create a new worker that only processes messages of canceled orders with price value of more than $100.
 
 Starting with the Copilot v1.16 release, you don’t need to filter out those messages in your code; you can simply define a SNS subscription filter policy:
@@ -168,7 +168,7 @@ subscribe:
               - 100
 ```
 
-With this filter policy in place, Amazon SNS will filter all messages by matching those attributes. 
+With this filter policy in place, Amazon SNS will filter all messages by matching those attributes.
 You can learn more about SNS filters in [Copilot's documentation](../docs/manifest/worker-service.en.md#topic-filter-policy).
 
 ## What’s next?
@@ -178,4 +178,3 @@ Download the new Copilot CLI version by following the link below and leave your 
 * Download [the latest CLI version](../docs/getting-started/install.en.md)
 * Try our [Getting Started Guide](../docs/getting-started/first-app-tutorial.en.md)
 * Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.16.0)
-
