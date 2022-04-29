@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -70,11 +71,6 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 
 // Template returns the environment CloudFormation template.
 func (e *EnvStackConfig) Template() (string, error) {
-	vpcConf := &config.AdjustVPC{
-		CIDR:               DefaultVPCCIDR,
-		PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
-		PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
-	}
 	bucket, dnsCertValidator, err := s3.ParseURL(e.in.CustomResourcesURLs[template.DNSCertValidatorFileName])
 	if err != nil {
 		return "", err
@@ -88,10 +84,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 		return "", err
 	}
 
-	if e.in.AdjustVPCConfig != nil {
-		vpcConf = e.in.AdjustVPCConfig
-	}
-
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:                e.in.App.Name,
 		DNSCertValidatorLambda: dnsCertValidator,
@@ -100,12 +92,13 @@ func (e *EnvStackConfig) Template() (string, error) {
 		ScriptBucketName:       bucket,
 		ArtifactBucketARN:      e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
-		ImportVPC:              e.in.ImportVPCConfig,
-		ImportCertARNs:         e.in.ImportCertARNs,
-		VPCConfig:              vpcConf,
-		Version:                e.in.Version,
-		Telemetry:              e.in.Telemetry,
-		LatestVersion:          deploy.LatestEnvTemplateVersion,
+
+		ImportCertARNs: e.in.ImportCertARNs,
+		VPCConfig:      e.vpcConfig(),
+		Telemetry:      e.telemetryConfig(),
+
+		Version:       e.in.Version,
+		LatestVersion: deploy.LatestEnvTemplateVersion,
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": template.IncFunc,
 	}))
@@ -113,6 +106,49 @@ func (e *EnvStackConfig) Template() (string, error) {
 		return "", err
 	}
 	return content.String(), nil
+}
+
+func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
+	return template.VPCConfig{
+		Imported: e.importedVPC(),
+		Managed:  e.managedVPC(),
+	}
+}
+
+func (e *EnvStackConfig) importedVPC() *template.ImportVPC {
+	if e.in.ImportVPCConfig == nil {
+		return nil
+	}
+	return &template.ImportVPC{
+		ID:               e.in.ImportVPCConfig.ID,
+		PublicSubnetIDs:  e.in.ImportVPCConfig.PublicSubnetIDs,
+		PrivateSubnetIDs: e.in.ImportVPCConfig.PrivateSubnetIDs,
+	}
+}
+
+func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
+	if e.in.AdjustVPCConfig != nil {
+		return template.ManagedVPC{
+			CIDR:               e.in.AdjustVPCConfig.CIDR,
+			AZs:                e.in.AdjustVPCConfig.AZs,
+			PublicSubnetCIDRs:  e.in.AdjustVPCConfig.PublicSubnetCIDRs,
+			PrivateSubnetCIDRs: e.in.AdjustVPCConfig.PrivateSubnetCIDRs,
+		}
+	}
+	return template.ManagedVPC{
+		CIDR:               DefaultVPCCIDR,
+		PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
+		PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
+	}
+}
+
+func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
+	if e.in.Telemetry == nil {
+		return nil
+	}
+	return &template.Telemetry{
+		EnableContainerInsights: e.in.Telemetry.EnableContainerInsights,
+	}
 }
 
 // Parameters returns the parameters to be passed into a environment CloudFormation template.
@@ -171,7 +207,7 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
-func (s *EnvStackConfig) SerializedParameters() (string, error) {
+func (e *EnvStackConfig) SerializedParameters() (string, error) {
 	// No-op for now.
 	return "", nil
 }
