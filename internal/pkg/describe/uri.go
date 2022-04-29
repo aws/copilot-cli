@@ -4,7 +4,6 @@
 package describe
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -48,16 +47,19 @@ func NewReachableService(app, svc string, store ConfigStoreSvc) (ReachableServic
 
 // URI returns the LBWebServiceURI to identify this service uniquely given an environment name.
 func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
-	err := d.initClients(envName)
+	svcDescr, err := d.initECSServiceDescribers(envName)
 	if err != nil {
 		return "", err
 	}
-
+	envDescr, err := d.initEnvDescribers(envName)
+	if err != nil {
+		return "", err
+	}
 	var (
 		albEnabled bool
 		nlbEnabled bool
 	)
-	resources, err := d.ecsServiceDescribers[envName].ServiceStackResources()
+	resources, err := svcDescr.ServiceStackResources()
 	if err != nil {
 		return "", fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
@@ -72,7 +74,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 
 	var uri LBWebServiceURI
 	if albEnabled {
-		albURI, err := d.albURI(envName)
+		albURI, err := d.albURI(envName, svcDescr, envDescr)
 		if err != nil {
 			return "", err
 		}
@@ -80,7 +82,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 	}
 
 	if nlbEnabled {
-		nlbURI, err := d.nlbURI(envName)
+		nlbURI, err := d.nlbURI(envName, svcDescr, envDescr)
 		if err != nil {
 			return "", err
 		}
@@ -90,45 +92,51 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 	return uri.String(), nil
 }
 
-func (d *LBWebServiceDescriber) albURI(envName string) (albURI, error) {
-	envParams, err := d.envDescriber[envName].Params()
-	if err != nil {
-		return albURI{}, fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
-	}
-	envOutputs, err := d.envDescriber[envName].Outputs()
-	if err != nil {
-		return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
-	}
-	svcParams, err := d.ecsServiceDescribers[envName].Params()
+func (d *LBWebServiceDescriber) albURI(envName string, svcDescr ecsDescriber, envDescr envDescriber) (albURI, error) {
+	svcParams, err := svcDescr.Params()
 	if err != nil {
 		return albURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
-	uri := albURI{
-		DNSNames: []string{envOutputs[envOutputPublicLoadBalancerDNSName]},
-		Path:     svcParams[stack.LBWebServiceRulePathParamKey],
-	}
-	isHTTPS, ok := svcParams[svcParamHTTPSEnabled]
-	if ok && isHTTPS == "true" {
-		dnsName := fmt.Sprintf("%s.%s", d.svc, envOutputs[envOutputSubdomain])
-		uri.DNSNames = []string{dnsName}
-		uri.HTTPS = true
-	}
-	aliases := envParams[stack.EnvParamAliasesKey]
-	if aliases != "" {
-		value := make(map[string][]string)
-		if err := json.Unmarshal([]byte(aliases), &value); err != nil {
-			return albURI{}, err
+	path := svcParams[stack.LBWebServiceRulePathParamKey]
+	isHTTPS, _ := svcParams[svcParamHTTPSEnabled]
+	if isHTTPS != "true" {
+		envOutputs, err := envDescr.Outputs()
+		if err != nil {
+			return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
 		}
-		if value[d.svc] != nil {
-			uri.DNSNames = value[d.svc]
+		return albURI{
+			DNSNames: []string{envOutputs[envOutputPublicLoadBalancerDNSName]},
+			Path:     path,
+		}, nil
+	}
+	svcResources, err := svcDescr.ServiceStackResources()
+	if err != nil {
+		return albURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
+	}
+	var httpsRuleARN string
+	for _, resource := range svcResources {
+		if resource.LogicalID == svcStackResourceHTTPSListenerRuleLogicalID &&
+			resource.Type == svcStackResourceHTTPSListenerRuleResourceType {
+			httpsRuleARN = resource.PhysicalID
 		}
 	}
-	d.svcParams = svcParams
-	return uri, nil
+	lbDescr, err := d.initLBDescriber(envName)
+	if err != nil {
+		return albURI{}, nil
+	}
+	dnsNames, err := lbDescr.ListenerRuleHostHeaders(httpsRuleARN)
+	if err != nil {
+		return albURI{}, fmt.Errorf("get host headers for listener rule %s: %w", httpsRuleARN, err)
+	}
+	return albURI{
+		HTTPS:    true,
+		DNSNames: dnsNames,
+		Path:     path,
+	}, nil
 }
 
-func (d *LBWebServiceDescriber) nlbURI(envName string) (nlbURI, error) {
-	svcParams, err := d.ecsServiceDescribers[envName].Params()
+func (d *LBWebServiceDescriber) nlbURI(envName string, svcDescr ecsDescriber, envDescr envDescriber) (nlbURI, error) {
+	svcParams, err := svcDescr.Params()
 	if err != nil {
 		return nlbURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
@@ -141,7 +149,7 @@ func (d *LBWebServiceDescriber) nlbURI(envName string) (nlbURI, error) {
 	}
 	dnsDelegated, ok := svcParams[stack.LBWebServiceDNSDelegatedParamKey]
 	if !ok || dnsDelegated != "true" {
-		svcOutputs, err := d.ecsServiceDescribers[envName].Outputs()
+		svcOutputs, err := svcDescr.Outputs()
 		if err != nil {
 			return nlbURI{}, fmt.Errorf("get stack outputs for service %s: %w", d.svc, err)
 		}
@@ -154,7 +162,7 @@ func (d *LBWebServiceDescriber) nlbURI(envName string) (nlbURI, error) {
 		uri.DNSNames = strings.Split(aliases, ",")
 		return uri, nil
 	}
-	envOutputs, err := d.envDescriber[envName].Outputs()
+	envOutputs, err := envDescr.Outputs()
 	if err != nil {
 		return nlbURI{}, fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
 	}
@@ -165,10 +173,11 @@ func (d *LBWebServiceDescriber) nlbURI(envName string) (nlbURI, error) {
 // URI returns the service discovery namespace and is used to make
 // BackendServiceDescriber have the same signature as WebServiceDescriber.
 func (d *BackendServiceDescriber) URI(envName string) (string, error) {
-	if err := d.initClients(envName); err != nil {
+	svcDescr, err := d.initECSServiceDescribers(envName)
+	if err != nil {
 		return "", err
 	}
-	svcStackParams, err := d.ecsServiceDescribers[envName].Params()
+	svcStackParams, err := svcDescr.Params()
 	if err != nil {
 		return "", fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
@@ -176,7 +185,11 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if port == stack.NoExposedContainerPort {
 		return BlankServiceDiscoveryURI, nil
 	}
-	endpoint, err := d.envStackDescriber[envName].ServiceDiscoveryEndpoint()
+	envDescr, err := d.initEnvDescribers(envName)
+	if err != nil {
+		return "", err
+	}
+	endpoint, err := envDescr.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return "nil", fmt.Errorf("retrieve service discovery endpoint for environment %s: %w", envName, err)
 	}
@@ -190,12 +203,12 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 
 // URI returns the WebServiceURI to identify this service uniquely given an environment name.
 func (d *RDWebServiceDescriber) URI(envName string) (string, error) {
-	err := d.initClients(envName)
+	describer, err := d.initAppRunnerDescriber(envName)
 	if err != nil {
 		return "", err
 	}
 
-	serviceURL, err := d.envSvcDescribers[envName].ServiceURL()
+	serviceURL, err := describer.ServiceURL()
 	if err != nil {
 		return "", fmt.Errorf("get outputs for service %s: %w", d.svc, err)
 	}

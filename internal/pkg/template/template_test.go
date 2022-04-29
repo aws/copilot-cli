@@ -335,7 +335,7 @@ func TestTemplate_Parse(t *testing.T) {
 				"templates/fake/manifest.yml": []byte(`{{.Name}}`),
 			},
 
-			wantedErr: fmt.Errorf("execute template %s with data %v", "/fake/manifest.yml", struct{}{}),
+			wantedErr: fmt.Errorf("execute template %s", "/fake/manifest.yml"),
 		},
 		"valid template": {
 			inPath: "/fake/manifest.yml",

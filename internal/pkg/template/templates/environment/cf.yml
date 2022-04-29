@@ -10,30 +10,23 @@ Parameters:
     Type: String
   ALBWorkloads:
     Type: String
-    Default: ""
   EFSWorkloads:
     Type: String
-    Default: ""
   NATWorkloads:
     Type: String
-    Default: ""
   ToolsAccountPrincipalARN:
     Type: String
   AppDNSName:
     Type: String
-    Default: ""
   AppDNSDelegationRole:
     Type: String
-    Default: ""
   Aliases:
     Type: String
-    Default: ""
   CreateHTTPSListener:
     Type: String
     AllowedValues: [true, false]
   ServiceDiscoveryEndpoint:
     Type: String
-    Default: {{.AppName}}.local
 Conditions:
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]

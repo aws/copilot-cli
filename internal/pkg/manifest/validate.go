@@ -437,6 +437,31 @@ func (p Pipeline) Validate() error {
 	if len(p.Name) > 100 {
 		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, p.Name)
 	}
+	for _, stg := range p.Stages {
+		if err := stg.Deployments.Validate(); err != nil {
+			return fmt.Errorf(`validate "deployments" for pipeline stage %s: %w`, stg.Name, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if deployments are configured correctly.
+func (d Deployments) Validate() error {
+	names := make(map[string]bool)
+	for name, _ := range d {
+		names[name] = true
+	}
+
+	for name, conf := range d {
+		if conf == nil {
+			continue
+		}
+		for _, dependency := range conf.DependsOn {
+			if _, ok := names[dependency]; !ok {
+				return fmt.Errorf("dependency deployment named '%s' of '%s' does not exist", dependency, name)
+			}
+		}
+	}
 	return nil
 }
 
@@ -1410,19 +1435,19 @@ func validateNoCircularDependencies(deps map[string]containerDependency) error {
 	if len(cycle) == 1 {
 		return fmt.Errorf("container %s cannot depend on itself", cycle[0])
 	}
-	// Stablize unit tests.
+	// Stabilize unit tests.
 	sort.SliceStable(cycle, func(i, j int) bool { return cycle[i] < cycle[j] })
 	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
 }
 
-func buildDependencyGraph(deps map[string]containerDependency) (*graph.Graph, error) {
-	dependencyGraph := graph.New()
+func buildDependencyGraph(deps map[string]containerDependency) (*graph.Graph[string], error) {
+	dependencyGraph := graph.New[string]()
 	for name, containerDep := range deps {
 		for dep := range containerDep.dependsOn {
 			if _, ok := deps[dep]; !ok {
 				return nil, fmt.Errorf("container %s does not exist", dep)
 			}
-			dependencyGraph.Add(graph.Edge{
+			dependencyGraph.Add(graph.Edge[string]{
 				From: name,
 				To:   dep,
 			})

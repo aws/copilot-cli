@@ -113,9 +113,8 @@ func newAppRunnerServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, erro
 	if opts.TaskIDs != nil {
 		return nil, fmt.Errorf("cannot use --tasks for App Runner service logs")
 	}
-	serviceDescriber, err := describe.NewAppRunnerServiceDescriber(describe.NewServiceConfig{
+	serviceDescriber, err := describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
 		App: opts.App,
-		Env: opts.Env,
 		Svc: opts.Svc,
 
 		ConfigStore: opts.ConfigStore,
@@ -123,7 +122,7 @@ func newAppRunnerServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, erro
 	if err != nil {
 		return nil, err
 	}
-	serviceArn, err := serviceDescriber.ServiceARN()
+	serviceArn, err := serviceDescriber.ServiceARN(opts.Env)
 	if err != nil {
 		return nil, err
 	}
