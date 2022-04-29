@@ -19,8 +19,10 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/acm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -28,6 +30,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/spf13/afero"
+	"golang.org/x/mod/semver"
+
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	awsapprunner "github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -51,8 +56,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/afero"
-	"golang.org/x/mod/semver"
 )
 
 const (
@@ -157,7 +160,7 @@ type workloadDeployer struct {
 	mft           interface{}
 	workspacePath string
 
-	// dependencies
+	// Dependencies.
 	fs                 fileReader
 	s3Client           uploader
 	templater          templater
@@ -166,7 +169,7 @@ type workloadDeployer struct {
 	endpointGetter     endpointGetter
 	spinner            spinner
 
-	// cached varibles
+	// Cached variables.
 	defaultSess              *session.Session
 	defaultSessWithEnvRegion *session.Session
 	envSess                  *session.Session
@@ -787,7 +790,7 @@ type uploadArtifactsToS3Output struct {
 }
 
 func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (uploadArtifactsToS3Output, error) {
-	envFileARN, err := d.pushEnvFilesToS3Bucket(&pushEnvFilesToS3BucketInput{
+	envFileARN, err := d.pushEnvFileToS3Bucket(&pushEnvFilesToS3BucketInput{
 		fs:       in.fs,
 		uploader: in.uploader,
 	})
@@ -812,7 +815,7 @@ type pushEnvFilesToS3BucketInput struct {
 	uploader uploader
 }
 
-func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInput) (string, error) {
+func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput) (string, error) {
 	path := envFile(d.mft)
 	if path == "" {
 		return "", nil
@@ -822,7 +825,7 @@ func (d *workloadDeployer) pushEnvFilesToS3Bucket(in *pushEnvFilesToS3BucketInpu
 		return "", fmt.Errorf("read env file %s: %w", path, err)
 	}
 	reader := bytes.NewReader(content)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, s3.MkdirSHA256(path, content), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.EnvFiles(path, content), reader)
 	if err != nil {
 		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
 	}
@@ -845,7 +848,7 @@ type pushAddonsTemplateToS3BucketInput struct {
 }
 
 func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateToS3BucketInput) (string, error) {
-	template, err := in.templater.Template()
+	tmpl, err := in.templater.Template()
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
 		if errors.As(err, &notFoundErr) {
@@ -854,8 +857,8 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateTo
 		}
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
-	reader := strings.NewReader(template)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, fmt.Sprintf(deploy.AddonsCfnTemplateNameFormat, d.name), reader)
+	reader := strings.NewReader(tmpl)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.Addons(d.name, []byte(tmpl)), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.resources.S3Bucket, err)
 	}
