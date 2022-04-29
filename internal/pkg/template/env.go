@@ -47,7 +47,7 @@ type EnvOpts struct {
 }
 
 type VPCConfig struct {
-	Imported *ImportVPC
+	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
 	Managed  ManagedVPC
 }
 
