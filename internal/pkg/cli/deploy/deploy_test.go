@@ -85,7 +85,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	mockResources := &stack.AppRegionalResources{
 		S3Bucket: mockS3Bucket,
 	}
-	mockEnvFilePath := fmt.Sprintf("%s/%s/%s", "manual", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", mockEnvFile)
+	mockEnvFilePath := fmt.Sprintf("%s/%s/%s/%s.env", "manual", "env-files", mockEnvFile, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+	mockAddonPath := fmt.Sprintf("%s/%s/%s/%s.yml", "manual", "addons", mockName, "1307990e6ba5ca145eb35e99182a9bec46531bc54ddf656a602c780fa0240dee")
 	mockError := errors.New("some error")
 	tests := map[string]struct {
 		inEnvFile       string
@@ -172,7 +173,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
 				m.mockTemplater.EXPECT().Template().Return("some data", nil)
-				m.mockUploader.EXPECT().Upload(mockS3Bucket, "mockWkld.addons.stack.yml", gomock.Any()).
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockAddonPath, gomock.Any()).
 					Return(mockAddonsS3URL, nil)
 			},
 
@@ -183,7 +184,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			inRegion: "us-west-2",
 			mock: func(m *deployMocks) {
 				m.mockTemplater.EXPECT().Template().Return("some data", nil)
-				m.mockUploader.EXPECT().Upload(mockS3Bucket, "mockWkld.addons.stack.yml", gomock.Any()).
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockAddonPath, gomock.Any()).
 					Return("", mockError)
 			},
 

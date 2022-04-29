@@ -4,16 +4,14 @@
 package cloudformation
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
-
-const fmtWorkloadCFNTemplateName = "manual/templates/%s/%x.yml"
 
 // DeployService deploys a service stack and renders progress updates to out until the deployment is done.
 // If the service stack doesn't exist, then it creates the stack.
@@ -34,12 +32,12 @@ func (cf CloudFormation) DeployService(out progress.FileWriter, conf StackConfig
 }
 
 func (cf CloudFormation) pushWorkloadTemplateToS3Bucket(bucket string, config StackConfiguration) (string, error) {
-	template, err := config.Template()
+	tmpl, err := config.Template()
 	if err != nil {
 		return "", fmt.Errorf("generate template: %w", err)
 	}
-	reader := strings.NewReader(template)
-	url, err := cf.s3Client.Upload(bucket, fmt.Sprintf(fmtWorkloadCFNTemplateName, config.StackName(), sha256.Sum256([]byte(template))), reader)
+	reader := strings.NewReader(tmpl)
+	url, err := cf.s3Client.Upload(bucket, artifactpath.CFNTemplate(config.StackName(), []byte(tmpl)), reader)
 	if err != nil {
 		return "", fmt.Errorf("upload workload template to S3 bucket %s: %w", bucket, err)
 	}

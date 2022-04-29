@@ -15,6 +15,7 @@ import (
 	"text/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 )
 
 //go:embed templates
@@ -166,10 +167,10 @@ func (t *Template) uploadFileToCompress(upload s3.CompressAndUploadFunc, file fi
 		contents = append(contents, uploadable.content...)
 		nameBinaries = append(nameBinaries, uploadable)
 	}
-	// Suffix with a SHA256 checksum of the fileToCompress so that
-	// only new content gets a new URL. Otherwise, if two fileToCompresss have the
+	// Prefix with a SHA256 checksum of the fileToCompress so that
+	// only new content gets a new URL. Otherwise, if two fileToCompress have the
 	// same content then the URL generated will be identical.
-	url, err := upload(s3.MkdirSHA256(file.name, contents), nameBinaries...)
+	url, err := upload(artifactpath.MkdirSHA256(file.name, contents), nameBinaries...)
 	if err != nil {
 		return "", fmt.Errorf("upload %s: %w", file.name, err)
 	}
