@@ -898,7 +898,6 @@ func (s *Select) Application(msg, help string, additionalOpts ...string) (string
 		return "", err
 	}
 
-	appNames = append(appNames, additionalOpts...)
 	if len(appNames) == 0 {
 		log.Infof("Couldn't find any applications in this region and account. Try initializing one with %s\n",
 			color.HighlightCode("copilot app init"))
@@ -910,6 +909,7 @@ func (s *Select) Application(msg, help string, additionalOpts ...string) (string
 		return appNames[0], nil
 	}
 
+	appNames = append(appNames, additionalOpts...)
 	app, err := s.prompt.SelectOne(msg, help, appNames, prompt.WithFinalMessage(appNameFinalMessage))
 	if err != nil {
 		return "", fmt.Errorf("select application: %w", err)
