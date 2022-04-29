@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/graph"
@@ -580,6 +581,10 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 			ranker:   topo,
 		})
 	}
+
+	sort.Slice(actions, func(i, j int) bool {
+		return actions[i].Name() < actions[j].Name()
+	})
 	return actions, nil
 }
 
