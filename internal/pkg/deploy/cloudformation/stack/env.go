@@ -95,7 +95,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 
 		ImportCertARNs: e.in.ImportCertARNs,
 		VPCConfig:      e.vpcConfig(),
-		Telemetry:      e.TelemetryConfig(),
+		Telemetry:      e.telemetryConfig(),
 
 		Version:       e.in.Version,
 		LatestVersion: deploy.LatestEnvTemplateVersion,
@@ -110,12 +110,12 @@ func (e *EnvStackConfig) Template() (string, error) {
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
 	return template.VPCConfig{
-		Imported: e.importVPC(),
-		Managed:  e.ManagedVPCConfig(),
+		Imported: e.importedVPC(),
+		Managed:  e.managedVPC(),
 	}
 }
 
-func (e *EnvStackConfig) importVPC() *template.ImportVPC {
+func (e *EnvStackConfig) importedVPC() *template.ImportVPC {
 	if e.in.ImportVPCConfig == nil {
 		return nil
 	}
@@ -126,7 +126,7 @@ func (e *EnvStackConfig) importVPC() *template.ImportVPC {
 	}
 }
 
-func (e *EnvStackConfig) ManagedVPCConfig() template.ManagedVPC {
+func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
 	if e.in.AdjustVPCConfig != nil {
 		return template.ManagedVPC{
 			CIDR:               e.in.AdjustVPCConfig.CIDR,
@@ -142,7 +142,7 @@ func (e *EnvStackConfig) ManagedVPCConfig() template.ManagedVPC {
 	}
 }
 
-func (e *EnvStackConfig) TelemetryConfig() *template.Telemetry {
+func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
 	if e.in.Telemetry == nil {
 		return nil
 	}
