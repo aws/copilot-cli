@@ -58,6 +58,7 @@ func TestS3_ZipAndUpload(t *testing.T) {
 					}
 					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
 					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
+					require.Equal(t, s3.ObjectCannedACLBucketOwnerFullControl, aws.StringValue(in.ACL))
 				}).Return(&s3manager.UploadOutput{
 					Location: "mockURL",
 				}, nil)
@@ -116,6 +117,7 @@ func TestS3_Upload(t *testing.T) {
 					require.Equal(t, "bar", string(b))
 					require.Equal(t, "mockBucket", aws.StringValue(in.Bucket))
 					require.Equal(t, "mockFileName", aws.StringValue(in.Key))
+					require.Equal(t, s3.ObjectCannedACLBucketOwnerFullControl, aws.StringValue(in.ACL))
 				}).Return(&s3manager.UploadOutput{
 					Location: "mockURL",
 				}, nil)

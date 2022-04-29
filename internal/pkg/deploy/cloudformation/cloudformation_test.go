@@ -347,7 +347,7 @@ func testDeployWorkload_RenderNewlyCreatedStackWithAddons(t *testing.T, stackNam
 	defer ctrl.Finish()
 	m := mocks.NewMockcfnClient(ctrl)
 	mS3Client := mocks.NewMocks3Client(ctrl)
-	mS3Client.EXPECT().Upload("mockBucket", gomock.Any(), gomock.Any()).Return("mockURL", nil)
+	mS3Client.EXPECT().Upload("mockBucket", "manual/templates/myapp-myenv-mysvc/5cde0f1298f41f7d1c8b907a36992a7a513225a2615bd6e307bf1a9149b06b40.yml", gomock.Any()).Return("mockURL", nil)
 
 	// Mocks for the parent stack.
 	m.EXPECT().Create(gomock.Any()).Return("1234", nil)
