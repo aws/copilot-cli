@@ -281,7 +281,7 @@ Cannot be specified with any other flags.`
 	vpcIDFlagDescription           = "Optional. Use an existing VPC ID."
 	publicSubnetsFlagDescription   = "Optional. Use existing public subnet IDs."
 	privateSubnetsFlagDescription  = "Optional. Use existing private subnet IDs."
-	certsFlagDescription           = "Optional. Use existing ACM certificates."
+	certsFlagDescription           = "Optional. Apply existing ACM certificates to the internet-facing load balancer."
 	overrideVPCCIDRFlagDescription = `Optional. Global CIDR to use for VPC.
 (default 10.0.0.0/16)`
 	overrideAZsFlagDescription = `Optional. Availability Zone names.
