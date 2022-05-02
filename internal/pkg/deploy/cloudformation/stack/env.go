@@ -109,12 +109,18 @@ func (e *EnvStackConfig) Template() (string, error) {
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
 	return template.VPCConfig{
-		Imported: e.importedVPC(),
+		Imported: e.importVPC(),
 		Managed:  e.managedVPC(),
 	}
 }
 
-func (e *EnvStackConfig) importedVPC() *template.ImportVPC {
+func (e *EnvStackConfig) importVPC() *template.ImportVPC {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		return e.in.Mft.Network.VPC.ImportedVPC()
+	}
+
+	// Fallthrough to SSM config.
 	if e.in.ImportVPCConfig == nil {
 		return nil
 	}
@@ -131,6 +137,14 @@ func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
 		PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
 		PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
 	}
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		if v := e.in.Mft.Network.VPC.ManagedVPC(); v != nil {
+			return *v
+		}
+		return defaultManagedVPC
+	}
+
 	// Fallthrough to SSM config.
 	if e.in.AdjustVPCConfig == nil {
 		return defaultManagedVPC

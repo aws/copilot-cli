@@ -5,6 +5,9 @@
 package manifest
 
 import (
+	"sort"
+
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -28,6 +31,57 @@ type environmentVPCConfig struct {
 	ID      *string              `yaml:"id"`
 	CIDR    *IPNet               `yaml:"cidr"`
 	Subnets subnetsConfiguration `yaml:"subnets"`
+}
+
+func (v environmentVPCConfig) imported() bool {
+	return aws.StringValue(v.ID) != ""
+}
+
+func (v environmentVPCConfig) ImportedVPC() *template.ImportVPC {
+	if !v.imported() {
+		return nil
+	}
+	var publicSubnetIDs, privateSubnetIDs []string
+	for _, subnet := range v.Subnets.Public {
+		publicSubnetIDs = append(publicSubnetIDs, aws.StringValue(subnet.SubnetID))
+	}
+	for _, subnet := range v.Subnets.Private {
+		privateSubnetIDs = append(privateSubnetIDs, aws.StringValue(subnet.SubnetID))
+	}
+	return &template.ImportVPC{
+		ID:               aws.StringValue(v.ID),
+		PublicSubnetIDs:  publicSubnetIDs,
+		PrivateSubnetIDs: privateSubnetIDs,
+	}
+}
+
+func (v environmentVPCConfig) ManagedVPC() *template.ManagedVPC {
+	// NOTE: In a managed VPC, #pub = #priv = #az.
+	// Either the VPC isn't configured, or everything need to be explicitly configured.
+	if aws.StringValue((*string)(v.CIDR)) == "" {
+		return nil
+	}
+	publicSubnetCIDRs := make([]string, len(v.Subnets.Public))
+	privateSubnetCIDRs := make([]string, len(v.Subnets.Public))
+	azs := make([]string, len(v.Subnets.Public))
+
+	sort.Slice(v.Subnets.Public, func(i, j int) bool {
+		return aws.StringValue(v.Subnets.Public[i].AZ) < aws.StringValue(v.Subnets.Public[j].AZ)
+	})
+	sort.Slice(v.Subnets.Private, func(i, j int) bool {
+		return aws.StringValue(v.Subnets.Private[i].AZ) < aws.StringValue(v.Subnets.Private[j].AZ)
+	})
+	for idx, subnet := range v.Subnets.Public {
+		publicSubnetCIDRs[idx] = aws.StringValue((*string)(subnet.CIDR))
+		privateSubnetCIDRs[idx] = aws.StringValue((*string)(v.Subnets.Private[idx].CIDR))
+		azs[idx] = aws.StringValue(subnet.AZ)
+	}
+	return &template.ManagedVPC{
+		CIDR:               aws.StringValue((*string)(v.CIDR)),
+		AZs:                azs,
+		PublicSubnetCIDRs:  publicSubnetCIDRs,
+		PrivateSubnetCIDRs: privateSubnetCIDRs,
+	}
 }
 
 type subnetsConfiguration struct {
