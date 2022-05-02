@@ -126,7 +126,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New(`validate "subnets": all subnets must be imported (with "id" field), not configured (with "cidr" or "az" fields), if vpc is imported`),
+			wantedErr: errors.New(`validate "subnets": public[0] must include "id" field if the vpc is imported`),
 		},
 		"error if importing vpc while no subnet is imported": {
 			in: environmentVPCConfig{
@@ -220,7 +220,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New(`validate "subnets": all subnets must be configured (with "cidr" or "az" fields), not imported (with the "id" field), if vpc is configured`),
+			wantedErr: errors.New(`validate "subnets": public[1] must include "cidr" and "az" fields if the vpc is configured`),
 		},
 		"error if configuring vpc while azs do not match between private and public subnets": {
 			in: environmentVPCConfig{

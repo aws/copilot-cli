@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestEnv_UnmarshalYaml(t *testing.T) {
+func TestEnvironment_UnmarshalYaml(t *testing.T) {
 	var (
 		mockVPCCIDR            = IPNet("10.0.0.0/16")
 		mockPublicSubnet1CIDR  = IPNet("10.0.0.0/24")
@@ -91,7 +91,7 @@ network:
 	}
 }
 
-func TestEnv_ImportedVPC(t *testing.T) {
+func TestEnvironmentVPCConfig_ImportedVPC(t *testing.T) {
 	testCases := map[string]struct {
 		inVPCConfig environmentVPCConfig
 		wanted      *template.ImportVPC
@@ -172,7 +172,7 @@ func TestEnv_ImportedVPC(t *testing.T) {
 	}
 }
 
-func TestEnv_ManagedVPC(t *testing.T) {
+func TestEnvironmentVPCConfig_ManagedVPC(t *testing.T) {
 	var (
 		mockVPCCIDR            = IPNet("10.0.0.0/16")
 		mockPublicSubnet1CIDR  = IPNet("10.0.0.0/24")

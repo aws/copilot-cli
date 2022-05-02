@@ -47,14 +47,14 @@ func (v environmentVPCConfig) Validate() error {
 }
 
 func (v environmentVPCConfig) validateImportedVPC() error {
-	for _, subnet := range v.Subnets.Public {
+	for idx, subnet := range v.Subnets.Public {
 		if aws.StringValue(subnet.SubnetID) == "" {
-			return errors.New(`validate "subnets": all subnets must be imported (with "id" field), not configured (with "cidr" or "az" fields), if vpc is imported`)
+			return fmt.Errorf(`validate "subnets": public[%d] must include "id" field if the vpc is imported`, idx)
 		}
 	}
-	for _, subnet := range v.Subnets.Private {
+	for idx, subnet := range v.Subnets.Private {
 		if aws.StringValue(subnet.SubnetID) == "" {
-			return errors.New(`validate "subnets": all subnets must be imported as well if vpc is imported`)
+			return fmt.Errorf(`validate "subnets": private[%d] must include "id" field if the vpc is imported`, idx)
 		}
 	}
 	if len(v.Subnets.Private)+len(v.Subnets.Public) <= 0 {
@@ -77,16 +77,16 @@ func (v environmentVPCConfig) validateManagedVPC() error {
 		privateCIDRs = make(map[string]struct{})
 	)
 	var exists = struct{}{}
-	for _, subnet := range v.Subnets.Public {
+	for idx, subnet := range v.Subnets.Public {
 		if aws.StringValue((*string)(subnet.CIDR)) == "" || aws.StringValue(subnet.AZ) == "" {
-			return errors.New(`validate "subnets": all subnets must be configured (with "cidr" or "az" fields), not imported (with the "id" field), if vpc is configured`)
+			return fmt.Errorf(`validate "subnets": public[%d] must include "cidr" and "az" fields if the vpc is configured`, idx)
 		}
 		publicCIDRs[aws.StringValue((*string)(subnet.CIDR))] = exists
 		publicAZs[aws.StringValue(subnet.AZ)] = exists
 	}
-	for _, subnet := range v.Subnets.Private {
+	for idx, subnet := range v.Subnets.Private {
 		if aws.StringValue((*string)(subnet.CIDR)) == "" || aws.StringValue(subnet.AZ) == "" {
-			return errors.New(`validate "subnets": all subnets must be configured as well if vpc is configured`)
+			return fmt.Errorf(`validate "subnets": private[%d] must include "cidr" and "az" fields if the vpc is configured`, idx)
 		}
 		privateCIDRs[aws.StringValue((*string)(subnet.CIDR))] = exists
 		privateAZs[aws.StringValue(subnet.AZ)] = exists

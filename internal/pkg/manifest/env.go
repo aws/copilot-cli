@@ -11,7 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
-// Environment holds the configuration to build an environment.
+// Environment is the manifest configuration for an environment.
 type Environment struct {
 	Workload          `yaml:",inline"`
 	environmentConfig `yaml:",inline"`
