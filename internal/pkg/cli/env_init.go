@@ -295,9 +295,9 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	urls, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+	urls, err := o.uploader.UploadEnvironmentCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
 		return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
-	}))
+	})
 	if err != nil {
 		return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 	}
