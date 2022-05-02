@@ -37,6 +37,10 @@ func (v environmentVPCConfig) imported() bool {
 	return aws.StringValue(v.ID) != ""
 }
 
+func (v environmentVPCConfig) managedVPCCustomized() bool {
+	return aws.StringValue((*string)(v.CIDR)) != ""
+}
+
 func (v environmentVPCConfig) ImportedVPC() *template.ImportVPC {
 	if !v.imported() {
 		return nil
@@ -58,7 +62,7 @@ func (v environmentVPCConfig) ImportedVPC() *template.ImportVPC {
 func (v environmentVPCConfig) ManagedVPC() *template.ManagedVPC {
 	// NOTE: In a managed VPC, #pub = #priv = #az.
 	// Either the VPC isn't configured, or everything need to be explicitly configured.
-	if aws.StringValue((*string)(v.CIDR)) == "" {
+	if !v.managedVPCCustomized() {
 		return nil
 	}
 	publicSubnetCIDRs := make([]string, len(v.Subnets.Public))
