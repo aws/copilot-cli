@@ -31,12 +31,17 @@ func (cf CloudFormation) DeployService(out progress.FileWriter, conf StackConfig
 	return cf.renderStackChanges(cf.newRenderWorkloadInput(out, stack))
 }
 
-func (cf CloudFormation) uploadStackTemplateToS3(bucket string, config StackConfiguration) (string, error) {
-	tmpl, err := config.Template()
+type uploadableStack interface {
+	StackName() string
+	Template() (string, error)
+}
+
+func (cf CloudFormation) uploadStackTemplateToS3(bucket string, stack uploadableStack) (string, error) {
+	tmpl, err := stack.Template()
 	if err != nil {
 		return "", fmt.Errorf("generate template: %w", err)
 	}
-	url, err := cf.s3Client.Upload(bucket, artifactpath.CFNTemplate(config.StackName(), []byte(tmpl)), strings.NewReader(tmpl))
+	url, err := cf.s3Client.Upload(bucket, artifactpath.CFNTemplate(stack.StackName(), []byte(tmpl)), strings.NewReader(tmpl))
 	if err != nil {
 		return "", err
 	}

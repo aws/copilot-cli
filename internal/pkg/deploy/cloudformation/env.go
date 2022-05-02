@@ -139,7 +139,16 @@ func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentIn
 }
 
 func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, transformParam func(param *awscfn.Parameter) *awscfn.Parameter) error {
-	s, err := toStack(stack.NewEnvStackConfig(in))
+	bucketARN, err := arn.Parse(in.ArtifactBucketARN)
+	if err != nil {
+		return err
+	}
+	stackConfig := stack.NewEnvStackConfig(in)
+	url, err := cf.uploadStackTemplateToS3(bucketARN.Resource, stackConfig)
+	if err != nil {
+		return err
+	}
+	s, err := toStackFromS3(stackConfig, url)
 	if err != nil {
 		return err
 	}
