@@ -22,7 +22,68 @@ enabling you to focus on developing your application, instead of writing deploym
 See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## Certificate import
+
 _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
+
+Developers that have domains not managed by Route 53 or want to use HTTPS for Copilot applications without any domain specified can now use a new `--import-cert-arns` flag to import any validated certificates when they create an environment, so as to use any domain/SAN specified in their imported certificates for their services deployed to the environment:
+
+```
+$ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
+```
+
+For example, the certificate has `example.com` as its domain and `*.example.com` as a subject alternative name (SAN):
+
+```
+$ aws acm describe-certificate --certificate-arn arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
+
+{
+  "Certificate": {
+    "CertificateArn": "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012",
+    "DomainName": "example.com",
+    "SubjectAlternativeNames": [
+      "*.example.com"
+    ],
+    "DomainValidationOptions": [
+      {
+        "DomainName": "example.com",
+        "ValidationDomain": "example.com",
+        "ValidationStatus": "SUCCESS",
+        "ResourceRecord": {
+          "Name": "_45c8aa9ac85568e905a6c3852e62ebc6.example.com.",
+          "Type": "CNAME",
+          "Value": "_f8be688050b7d23184863690b3d4baa8.xrchbtpdjs.acm-validations.aws."
+        },
+        "ValidationMethod": "DNS"
+      }
+    ],
+    ...
+}
+```
+
+Then, aliases that are valid against any of the imported certificates can be specified in the Load Balanced Web Service manifest to deploy the services to the environment:
+
+```yaml
+name: frontend
+type: Load Balanced Web Service
+
+http:
+  path: 'frontend'
+  alias: v1.example.com
+```
+
+After the deployment, the last step to make the alias work is to add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted. For example, if your alias domain is hosted in Route 53:
+
+```json
+{
+  "Name": "example.com.",
+  "Type": "A",
+  "AliasTarget": {
+    "HostedZoneId": "Z1H1FL3HABSF5",
+    "DNSName": "demo-publi-1d328e3bqag4r-1914228528.us-west-2.elb.amazonaws.com.",
+    "EvaluateTargetHealth": true
+  }
+}
+```
 
 ## Ordering Deployments in a Pipeline
 _Contributed by [Efe Karakus](https://github.com/efekarakus/)_
