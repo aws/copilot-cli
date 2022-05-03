@@ -69,6 +69,9 @@ func (v environmentVPCConfig) ManagedVPC() *template.ManagedVPC {
 	privateSubnetCIDRs := make([]string, len(v.Subnets.Public))
 	azs := make([]string, len(v.Subnets.Public))
 
+	// NOTE: sort based on `az`s to preserve the mappings between azs and public subnets, private subnets.
+	// For example, if we have two subnets defined: public-subnet-1 ~ us-east-1a, and private-subnet-1 ~ us-east-1a.
+	// We want to make sure that public-subnet-1, us-east-1a and private-subnet-1 are all at index 0 of in perspective lists.
 	sort.Slice(v.Subnets.Public, func(i, j int) bool {
 		return aws.StringValue(v.Subnets.Public[i].AZ) < aws.StringValue(v.Subnets.Public[j].AZ)
 	})
