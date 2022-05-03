@@ -57,13 +57,12 @@ func (v environmentVPCConfig) validateImportedVPC() error {
 			return fmt.Errorf(`validate "subnets": private[%d] must include "id" field if the vpc is imported`, idx)
 		}
 	}
-	if len(v.Subnets.Private)+len(v.Subnets.Public) <= 0 {
+	switch {
+	case len(v.Subnets.Private)+len(v.Subnets.Public) <= 0:
 		return errors.New(`validate "subnets": VPC must have subnets in order to proceed with environment creation`)
-	}
-	if len(v.Subnets.Public) == 1 {
+	case len(v.Subnets.Public) == 1:
 		return errors.New(`validate "subnets": validate "public": at least two public subnets must be imported to enable Load Balancing`)
-	}
-	if len(v.Subnets.Private) == 1 {
+	case len(v.Subnets.Private) == 1:
 		return errors.New(`validate "subnets": validate "private": at least two private subnets must be imported`)
 	}
 	return nil
