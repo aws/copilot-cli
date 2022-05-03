@@ -192,7 +192,7 @@ func TestEnvironmentVPCConfig_ManagedVPC(t *testing.T) {
 				ID: aws.String("vpc-1234"),
 			},
 		},
-		"with custom configuration to managed vpc should output azs and subnets with the correct order": {
+		"ensure custom configuration is sorted by AZ": {
 			inVPCConfig: environmentVPCConfig{
 				CIDR: &mockVPCCIDR,
 				Subnets: subnetsConfiguration{

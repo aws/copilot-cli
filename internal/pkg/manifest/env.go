@@ -41,6 +41,7 @@ func (v environmentVPCConfig) managedVPCCustomized() bool {
 	return aws.StringValue((*string)(v.CIDR)) != ""
 }
 
+// ImportedVPC returns configurations that import VPC resources if there is any.
 func (v environmentVPCConfig) ImportedVPC() *template.ImportVPC {
 	if !v.imported() {
 		return nil
@@ -59,6 +60,7 @@ func (v environmentVPCConfig) ImportedVPC() *template.ImportVPC {
 	}
 }
 
+// ManagedVPC returns configurations that configure VPC resources if there is any.
 func (v environmentVPCConfig) ManagedVPC() *template.ManagedVPC {
 	// NOTE: In a managed VPC, #pub = #priv = #az.
 	// Either the VPC isn't configured, or everything need to be explicitly configured.
