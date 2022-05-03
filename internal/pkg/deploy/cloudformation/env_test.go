@@ -24,8 +24,9 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 			Name:   "phonetool",
 			Domain: "phonetool.com",
 		},
-		Name:    "test",
-		Version: "v1.0.0",
+		Name:              "test",
+		Version:           "v1.0.0",
+		ArtifactBucketARN: "arn:aws:s3:::mockbucket",
 		CustomResourcesURLs: map[string]string{
 			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
 			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
@@ -98,9 +99,12 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 						},
 					})
 				})
+				s3 := mocks.NewMocks3Client(ctrl)
+				s3.EXPECT().Upload("mockbucket", "manual/templates/phonetool-test/6806328b58e482e354cfd1879fecc310113fcf1b95c6bdf058c486f440087847.yml", gomock.Any()).Return("url", nil)
 
 				return &CloudFormation{
 					cfnClient: m,
+					s3Client:  s3,
 				}
 			},
 		},
@@ -108,8 +112,10 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 			in: &mockCreateEnvInput,
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
+				s3 := mocks.NewMocks3Client(ctrl)
 
 				gomock.InOrder(
+					s3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return("", nil),
 					m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil).AnyTimes(),
 					m.EXPECT().UpdateAndWait(gomock.Any()).Return(&cloudformation.ErrStackUpdateInProgress{
 						Name: "phonetool-test",
@@ -123,6 +129,7 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 				)
 				return &CloudFormation{
 					cfnClient: m,
+					s3Client:  s3,
 				}
 			},
 		},
@@ -130,10 +137,13 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 			in: &mockCreateEnvInput,
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
+				s3 := mocks.NewMocks3Client(ctrl)
+				s3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return("", nil)
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil)
 				m.EXPECT().UpdateAndWait(gomock.Any()).Return(fmt.Errorf("update and wait: %w", &cloudformation.ErrChangeSetEmpty{}))
 				return &CloudFormation{
 					cfnClient: m,
+					s3Client:  s3,
 				}
 			},
 		},
@@ -141,11 +151,14 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 			in: &mockCreateEnvInput,
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
+				s3 := mocks.NewMocks3Client(ctrl)
+				s3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return("", nil)
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil).Times(2)
 				m.EXPECT().UpdateAndWait(gomock.Any()).Return(fmt.Errorf("update and wait: %w", &cloudformation.ErrChangeSetNotExecutable{}))
 				m.EXPECT().UpdateAndWait(gomock.Any()).Return(nil)
 				return &CloudFormation{
 					cfnClient: m,
+					s3Client:  s3,
 				}
 			},
 		},
@@ -153,15 +166,31 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 			in: &mockCreateEnvInput,
 			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
 				m := mocks.NewMockcfnClient(ctrl)
+				s3 := mocks.NewMocks3Client(ctrl)
+				s3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return("", nil)
 				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{}, nil)
 				m.EXPECT().UpdateAndWait(gomock.Any()).Return(errors.New("some error"))
 
 				return &CloudFormation{
 					cfnClient: m,
+					s3Client:  s3,
 				}
 			},
 
 			wantedErr: errors.New("update and wait for stack phonetool-test: some error"),
+		},
+		"return error when failed to upload template to s3": {
+			in: &mockCreateEnvInput,
+			mockDeployer: func(t *testing.T, ctrl *gomock.Controller) *CloudFormation {
+				s3 := mocks.NewMocks3Client(ctrl)
+				s3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return("", errors.New("some error"))
+
+				return &CloudFormation{
+					s3Client: s3,
+				}
+			},
+
+			wantedErr: errors.New("some error"),
 		},
 	}
 
@@ -190,8 +219,9 @@ func TestCloudFormation_UpgradeLegacyEnvironment(t *testing.T) {
 		App: deploy.AppInformation{
 			Name: "phonetool",
 		},
-		Name:    "test",
-		Version: "v1.0.0",
+		Name:              "test",
+		Version:           "v1.0.0",
+		ArtifactBucketARN: "arn:aws:s3:::mockbucket",
 		CustomResourcesURLs: map[string]string{
 			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
 			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
@@ -271,8 +301,12 @@ func TestCloudFormation_UpgradeLegacyEnvironment(t *testing.T) {
 					})
 				})
 
+				s3 := mocks.NewMocks3Client(ctrl)
+				s3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return("", nil)
+
 				return &CloudFormation{
 					cfnClient: m,
+					s3Client:  s3,
 				}
 			},
 		},

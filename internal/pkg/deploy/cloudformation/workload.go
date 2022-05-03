@@ -4,22 +4,20 @@
 package cloudformation
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
-
-const fmtWorkloadCFNTemplateName = "manual/templates/%s/%x.yml"
 
 // DeployService deploys a service stack and renders progress updates to out until the deployment is done.
 // If the service stack doesn't exist, then it creates the stack.
 // If the service stack already exists, it updates the stack.
 func (cf CloudFormation) DeployService(out progress.FileWriter, conf StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
-	templateURL, err := cf.pushWorkloadTemplateToS3Bucket(bucketName, conf)
+	templateURL, err := cf.uploadStackTemplateToS3(bucketName, conf)
 	if err != nil {
 		return err
 	}
@@ -33,15 +31,19 @@ func (cf CloudFormation) DeployService(out progress.FileWriter, conf StackConfig
 	return cf.renderStackChanges(cf.newRenderWorkloadInput(out, stack))
 }
 
-func (cf CloudFormation) pushWorkloadTemplateToS3Bucket(bucket string, config StackConfiguration) (string, error) {
-	template, err := config.Template()
+type uploadableStack interface {
+	StackName() string
+	Template() (string, error)
+}
+
+func (cf CloudFormation) uploadStackTemplateToS3(bucket string, stack uploadableStack) (string, error) {
+	tmpl, err := stack.Template()
 	if err != nil {
 		return "", fmt.Errorf("generate template: %w", err)
 	}
-	reader := strings.NewReader(template)
-	url, err := cf.s3Client.Upload(bucket, fmt.Sprintf(fmtWorkloadCFNTemplateName, config.StackName(), sha256.Sum256([]byte(template))), reader)
+	url, err := cf.s3Client.Upload(bucket, artifactpath.CFNTemplate(stack.StackName(), []byte(tmpl)), strings.NewReader(tmpl))
 	if err != nil {
-		return "", fmt.Errorf("upload workload template to S3 bucket %s: %w", bucket, err)
+		return "", err
 	}
 	return url, nil
 }

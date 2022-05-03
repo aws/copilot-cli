@@ -42,9 +42,9 @@ Conditions:
   HasAliases:
     !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
-{{- if not .ImportVPC}}
-{{include "vpc-resources" .VPCConfig | indent 2}}
-{{include "nat-gateways" .VPCConfig | indent 2}}
+{{- if not .VPCConfig.Imported}}
+{{include "vpc-resources" .VPCConfig.Managed | indent 2}}
+{{include "nat-gateways" .VPCConfig.Managed | indent 2}}
 {{- end}}
   # Creates a service discovery namespace with the form provided in the parameter.
   # For new environments after 1.5.0, this is "env.app.local". For upgraded environments from
@@ -55,8 +55,8 @@ Resources:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
       Name: !Ref ServiceDiscoveryEndpoint
-{{- if .ImportVPC}}
-      Vpc: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+      Vpc: {{.VPCConfig.Imported.ID}}
 {{- else}}
       Vpc: !Ref VPC
 {{- end}}
@@ -96,8 +96,8 @@ Resources:
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
-{{- if .ImportVPC}}
-      VpcId: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
@@ -111,8 +111,8 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
-{{- if .ImportVPC}}
-      VpcId: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
@@ -142,10 +142,10 @@ Resources:
     Properties:
       Scheme: internet-facing
       SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
-{{- if .ImportVPC}}
-      Subnets: [ {{range $id := .ImportVPC.PublicSubnetIDs}}{{$id}}, {{end}} ]
+{{- if .VPCConfig.Imported}}
+      Subnets: [ {{range $id := .VPCConfig.Imported.PublicSubnetIDs}}{{$id}}, {{end}} ]
 {{- else}}
-      Subnets: [ {{range $ind, $cidr := .VPCConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}} ]
+      Subnets: [ {{range $ind, $cidr := .VPCConfig.Managed.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}} ]
 {{- end}}
       Type: application
   # Assign a dummy target group that with no real services as targets, so that we can create
@@ -164,8 +164,8 @@ Resources:
         - Key: deregistration_delay.timeout_seconds
           Value: 60                  # Default is 300.
       TargetType: ip
-{{- if .ImportVPC}}
-      VpcId: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
@@ -254,8 +254,8 @@ Resources:
     Condition: CreateEFS
     Properties:
       GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EFSSecurityGroup]]
-{{- if .ImportVPC}}
-      VpcId: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
@@ -270,8 +270,8 @@ Resources:
       GroupId: !Ref EFSSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-{{- if .ImportVPC}}
-{{- range $ind, $id := .ImportVPC.PrivateSubnetIDs}}
+{{- if .VPCConfig.Imported}}
+{{- range $ind, $id := .VPCConfig.Imported.PrivateSubnetIDs}}
   MountTarget{{inc $ind}}:
     Type: AWS::EFS::MountTarget
     Condition: CreateEFS
@@ -282,7 +282,7 @@ Resources:
         - !Ref EFSSecurityGroup
 {{- end}}
 {{- else}}
-{{- range $ind, $cidr := .VPCConfig.PrivateSubnetCIDRs}}
+{{- range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}
   MountTarget{{inc $ind}}:
     Type: AWS::EFS::MountTarget
     Condition: CreateEFS
@@ -311,42 +311,42 @@ Resources:
 {{- end}}
 Outputs:
   VpcId:
-{{- if .ImportVPC}}
-    Value: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+    Value: {{.VPCConfig.Imported.ID}}
 {{- else}}
     Value: !Ref VPC
 {{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-VpcId
-{{- if not .ImportVPC}}
+{{- if not .VPCConfig.Imported}}
   PublicSubnets:
-    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}] ]
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.Managed.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
-{{- else if ne (len .ImportVPC.PublicSubnetIDs) 0}}
+{{- else if ne (len .VPCConfig.Imported.PublicSubnetIDs) 0}}
   PublicSubnets:
-    Value: !Join [ ',', [ {{range $id := .ImportVPC.PublicSubnetIDs}}{{$id}}, {{end}}] ]
+    Value: !Join [ ',', [ {{range $id := .VPCConfig.Imported.PublicSubnetIDs}}{{$id}}, {{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
 {{- end}}
-{{- if not .ImportVPC}}
+{{- if not .VPCConfig.Imported}}
   PrivateSubnets:
-    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}}] ]
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
-{{- else if ne (len .ImportVPC.PrivateSubnetIDs) 0}}
+{{- else if ne (len .VPCConfig.Imported.PrivateSubnetIDs) 0}}
   PrivateSubnets:
-    Value: !Join [ ',', [ {{range $id := .ImportVPC.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
+    Value: !Join [ ',', [ {{range $id := .VPCConfig.Imported.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
 {{- end}}
-{{- if not .ImportVPC}}
+{{- if not .VPCConfig.Imported}}
   InternetGatewayID:
     Value: !Ref InternetGateway
     Export:
       Name: !Sub ${AWS::StackName}-InternetGatewayID
 {{- end}}
-{{- if not .ImportVPC}}
+{{- if not .VPCConfig.Imported}}
   PublicRouteTableID:
     Value: !Ref PublicRouteTable
     Export:

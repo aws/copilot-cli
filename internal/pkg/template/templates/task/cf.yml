@@ -62,7 +62,7 @@ Resources:
           Secrets:{{range $name, $valueFrom := .SSMParamSecrets}}
           - Name: {{$name}}
             ValueFrom: {{$valueFrom}}{{end}}
-          {{range $name, $valueFrom := .SecretsManagerSecrets}}
+          {{- range $name, $valueFrom := .SecretsManagerSecrets}}
           - Name: {{$name}}
             ValueFrom: {{$valueFrom}}{{end}}
           {{- end}}
