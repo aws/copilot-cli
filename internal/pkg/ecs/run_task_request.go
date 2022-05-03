@@ -271,7 +271,7 @@ func fmtStringMapToString(m map[string]string) string {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		output = append(output, fmt.Sprintf("%s=%v", k, m[k]))
+		output = append(output, fmt.Sprintf(`%s="%v"`, k, m[k]))
 	}
 	return strings.Join(output, ",")
 }
