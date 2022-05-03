@@ -90,8 +90,9 @@ After the deployment, add the DNS of the Application Load Balancer (ALB) created
 
 Now, your service has HTTPS enabled using your own certificates and can be accessed via `https://v1.example.com`!
 
-## Ordering Deployments in a Pipeline
+## Controlling Order of Deployments in a Pipeline
 _Contributed by [Efe Karakus](https://github.com/efekarakus/)_
+
 
 ## "recreate" Strategy for Faster Deployments
 _Contributed by [Parag Bhingre](https://github.com/paragbhingre/)_

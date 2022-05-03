@@ -86,7 +86,64 @@ Ordered list of environments that your pipeline will deploy to.
 The name of an environment to deploy your services to.
 
 <span class="parent-field">stages.</span><a id="stages-approval" href="#stages-approval" class="field">`requires_approval`</a> <span class="type">Boolean</span>  
-Indicates whether to add a manual approval step before the deployment.
+Optional. Indicates whether to add a manual approval step before the deployment. Defaults to `false`.
+
+<span class="parent-field">stages.</span><a id="stages-deployments" href="#stages-deployments" class="field">`deployments`</a> <span class="type">Map</span>  
+Optional. Control which CloudFormation stacks are going to be deployed and their order.  
+The `deployments` dependencies are specified in a map of the form:
+```yaml
+stages:
+- name: test
+  deployments:
+    <service or job name>:
+    <other service or job name>:
+      depends_on: [<name>, ...]
+```
+
+For example, if your git repository has the following layout:
+```
+copilot
+├── api
+│   └── manifest.yml
+└── frontend
+    └── manifest.yml
+```
+
+And you'd like to control the order of your deployments, such that `api` is deployed before `frontend`, then you can configure your stage as follows:
+```yaml
+stages:
+- name: test
+  deployments:
+    api:
+    frontend:
+      depends_on:
+      - api
+```
+You can also limit which microservices to release part of your pipeline. In the following manifest, we're specifying to deploy only `api` and not `frontend`:
+```yaml
+stages:
+  - name: test
+    deployments:
+      api:
+```
+
+Finally, if `deployments` isn't specified, by default Copilot will deploy all your services and job in the git repository in parallel.
+
+<span class="parent-field">stages.deployments.</span><a id="stages-deployments-name" href="#stages-deployments-name" class="field">`<name>`</a> <span class="type">Map</span>  
+Name of the job or service to deploy.  
+
+<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-dependson" href="#stages-deployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span>    
+Optional. Name of other job or services that should be deployed prior to deploying this microservice. Defaults to no dependencies.  
+
+<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-stackname" href="#stages-deployments-stackname" class="field">`stack_name`</a> <span class="type">String</span>  
+Optional. Name of the stack to create or update. Defaults to `<app name>-<stage name>-<deployment name>`.
+For example, if your application is called `demo`, stage name is `test`, and your service name is `frontend` then the stack name will be `demo-test-frontend`.  
+
+<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-templatepath" href="#stages-deployments-templatepath" class="field">`template_path`</a> <span class="type">String</span>  
+Optional. Path to the CloudFormation template generated during the `build` phase. Defaults to `infrastructure/<deployment name>-<stage name>.yml`.
+
+<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-templateconfig" href="#stages-deployments-templatepath" class="field">`template_config`</a> <span class="type">String</span>  
+Optional. Path to the CloudFormation template configuration generated during the `build` phase. Defaults to `infrastructure/<deployment name>-<stage name>.params.json`.
 
 <span class="parent-field">stages.</span><a id="stages-test-cmds" href="#stages-test-cmds" class="field">`test_commands`</a> <span class="type">Array of Strings</span>  
-Commands to run integration or end-to-end tests after deployment.
+Optional. Commands to run integration or end-to-end tests after deployment. Defaults to no post-deployments validations.
