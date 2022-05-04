@@ -115,9 +115,9 @@ After you have instrumented your service and deployed it using Copilot, you're r
 Depending on how you've instrumented your service, you will likely need to send a few requests to it before traces will appear in the AWS console.
 
 First, open the CloudWatch console, and click on `X-Ray traces/Service map` in the menu. Here you can see a visual map of services interacting:
-![X-Ray Service Map](https://user-images.githubusercontent.com/10566468/166560753-f0911f85-a88c-4af8-b008-9aa7e9c25e2f.png)
+![X-Ray Service Map](https://user-images.githubusercontent.com/10566468/166842664-da44756f-7a4b-4e5d-9981-42927b0deb65.png)
 
 Next, you can view details of a specific trace by clicking on `X-Ray traces/Traces` in the menu and selecting a trace from the list.
 
 In this example, you can see a service, `js-copilot-observability`, running some internal Express.js middleware, and then using the [AWS SDK for Javascript](https://aws.amazon.com/sdk-for-javascript/) to call `s3:listBuckets`:
-![X-Ray Trace Details](https://user-images.githubusercontent.com/10566468/166560878-fb40a67e-3e78-48db-908a-b5ec3ef95fd8.png)
+![X-Ray Trace Details](https://user-images.githubusercontent.com/10566468/166842693-65558de5-5a6b-4777-b687-812406580fb6.png)
