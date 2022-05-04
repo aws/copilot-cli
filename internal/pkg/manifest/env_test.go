@@ -260,3 +260,28 @@ func TestEnvironmentVPCConfig_ManagedVPC(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvironmentObservability_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentObservability
+		wanted bool
+	}{
+		"empty": {
+			in:     environmentObservability{},
+			wanted: true,
+		},
+		"not empty": {
+			in: environmentObservability{
+				ContainerInsights: aws.Bool(false),
+			},
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}

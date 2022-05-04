@@ -109,6 +109,7 @@ type environmentObservability struct {
 	ContainerInsights *bool `yaml:"container_insights"`
 }
 
+// IsEmpty returns true if there is no configuration to the environment's observability.
 func (o environmentObservability) IsEmpty() bool {
 	return o.ContainerInsights == nil
 }
