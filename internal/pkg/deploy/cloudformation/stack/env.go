@@ -5,7 +5,6 @@ package stack
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -50,14 +49,14 @@ const (
 	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
 	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
 
-	// Default parameter values
-	DefaultVPCCIDR            = "10.0.0.0/16"
-	DefaultPublicSubnetCIDRs  = "10.0.0.0/24,10.0.1.0/24"
-	DefaultPrivateSubnetCIDRs = "10.0.2.0/24,10.0.3.0/24"
+	// Default parameter values.
+	DefaultVPCCIDR = "10.0.0.0/16"
 )
 
 var (
 	fmtServiceDiscoveryEndpoint = "%s.%s.local"
+	DefaultPublicSubnetCIDRs    = []string{"10.0.0.0/24", "10.0.1.0/24"}
+	DefaultPrivateSubnetCIDRs   = []string{"10.0.2.0/24", "10.0.3.0/24"}
 )
 
 // NewEnvStackConfig sets up a struct which can provide values to CloudFormation for
@@ -110,12 +109,18 @@ func (e *EnvStackConfig) Template() (string, error) {
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
 	return template.VPCConfig{
-		Imported: e.importedVPC(),
+		Imported: e.importVPC(),
 		Managed:  e.managedVPC(),
 	}
 }
 
-func (e *EnvStackConfig) importedVPC() *template.ImportVPC {
+func (e *EnvStackConfig) importVPC() *template.ImportVPC {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		return e.in.Mft.Network.VPC.ImportedVPC()
+	}
+
+	// Fallthrough to SSM config.
 	if e.in.ImportVPCConfig == nil {
 		return nil
 	}
@@ -127,18 +132,28 @@ func (e *EnvStackConfig) importedVPC() *template.ImportVPC {
 }
 
 func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
-	if e.in.AdjustVPCConfig != nil {
-		return template.ManagedVPC{
-			CIDR:               e.in.AdjustVPCConfig.CIDR,
-			AZs:                e.in.AdjustVPCConfig.AZs,
-			PublicSubnetCIDRs:  e.in.AdjustVPCConfig.PublicSubnetCIDRs,
-			PrivateSubnetCIDRs: e.in.AdjustVPCConfig.PrivateSubnetCIDRs,
+	defaultManagedVPC := template.ManagedVPC{
+		CIDR:               DefaultVPCCIDR,
+		PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
+		PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
+	}
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		if v := e.in.Mft.Network.VPC.ManagedVPC(); v != nil {
+			return *v
 		}
+		return defaultManagedVPC
+	}
+
+	// Fallthrough to SSM config.
+	if e.in.AdjustVPCConfig == nil {
+		return defaultManagedVPC
 	}
 	return template.ManagedVPC{
-		CIDR:               DefaultVPCCIDR,
-		PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
-		PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
+		CIDR:               e.in.AdjustVPCConfig.CIDR,
+		AZs:                e.in.AdjustVPCConfig.AZs,
+		PublicSubnetCIDRs:  e.in.AdjustVPCConfig.PublicSubnetCIDRs,
+		PrivateSubnetCIDRs: e.in.AdjustVPCConfig.PrivateSubnetCIDRs,
 	}
 }
 

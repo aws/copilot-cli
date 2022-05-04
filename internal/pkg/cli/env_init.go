@@ -295,9 +295,9 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	urls, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+	urls, err := o.uploader.UploadEnvironmentCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
 		return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
-	}))
+	})
 	if err != nil {
 		return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 	}
@@ -591,7 +591,7 @@ func (o *initEnvOpts) askAdjustResources() error {
 		publicCIDR, err := o.prompt.Get(
 			envInitPublicCIDRPrompt, envInitPublicCIDRPromptHelp,
 			validatePublicSubnetsCIDR(len(o.adjustVPC.AZs)),
-			prompt.WithDefaultInput(stack.DefaultPublicSubnetCIDRs), prompt.WithFinalMessage("Public subnets CIDR:"))
+			prompt.WithDefaultInput(strings.Join(stack.DefaultPublicSubnetCIDRs, ",")), prompt.WithFinalMessage("Public subnets CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get public subnet CIDRs: %w", err)
 		}
@@ -601,7 +601,7 @@ func (o *initEnvOpts) askAdjustResources() error {
 		privateCIDR, err := o.prompt.Get(
 			envInitPrivateCIDRPrompt, envInitPrivateCIDRPromptHelp,
 			validatePrivateSubnetsCIDR(len(o.adjustVPC.AZs)),
-			prompt.WithDefaultInput(stack.DefaultPrivateSubnetCIDRs), prompt.WithFinalMessage("Private subnets CIDR:"))
+			prompt.WithDefaultInput(strings.Join(stack.DefaultPrivateSubnetCIDRs, ",")), prompt.WithFinalMessage("Private subnets CIDR:"))
 		if err != nil {
 			return fmt.Errorf("get private subnet CIDRs: %w", err)
 		}

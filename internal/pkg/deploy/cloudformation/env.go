@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
+
 	"github.com/aws/aws-sdk-go/aws"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -26,20 +28,29 @@ const (
 
 // DeployAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
 func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
-	s, err := toStack(stack.NewEnvStackConfig(env))
+	bucketARN, err := arn.Parse(env.ArtifactBucketARN)
+	if err != nil {
+		return err
+	}
+	stackConfig := stack.NewEnvStackConfig(env)
+	url, err := cf.uploadStackTemplateToS3(bucketARN.Resource, stackConfig)
+	if err != nil {
+		return err
+	}
+	cfnStack, err := toStackFromS3(stackConfig, url)
 	if err != nil {
 		return err
 	}
 	spinner := progress.NewSpinner(out)
 	return cf.renderStackChanges(&renderStackChangesInput{
 		w:                out,
-		stackName:        s.Name,
-		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s environment.", s.Name),
+		stackName:        cfnStack.Name,
+		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s environment.", cfnStack.Name),
 		createChangeSet: func() (changeSetID string, err error) {
-			label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", s.Name)
+			label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", cfnStack.Name)
 			spinner.Start(label)
 			defer stopSpinner(spinner, err, label)
-			changeSetID, err = cf.cfnClient.Create(s)
+			changeSetID, err = cf.cfnClient.Create(cfnStack)
 			if err != nil {
 				return "", err
 			}
@@ -128,7 +139,16 @@ func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentIn
 }
 
 func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, transformParam func(param *awscfn.Parameter) *awscfn.Parameter) error {
-	s, err := toStack(stack.NewEnvStackConfig(in))
+	bucketARN, err := arn.Parse(in.ArtifactBucketARN)
+	if err != nil {
+		return err
+	}
+	stackConfig := stack.NewEnvStackConfig(in)
+	url, err := cf.uploadStackTemplateToS3(bucketARN.Resource, stackConfig)
+	if err != nil {
+		return err
+	}
+	s, err := toStackFromS3(stackConfig, url)
 	if err != nil {
 		return err
 	}
