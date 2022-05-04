@@ -21,17 +21,17 @@ enabling you to focus on developing your application, instead of writing deploym
 
 See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
-## Certificate import
+## Certificate Import
 
 _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 
-Developers that have domains managed outside of Route 53 or who want to use HTTPS for Copilot applications without any domain specified can now use a new `--import-cert-arns` flag to import any validated certificates when they create an environment.
+If you have domains managed outside of Route 53, or want to enable HTTPS without having domain associated with your application, you can now use the new `--import-cert-arns` flag to import any validated certificates when creating your environments.
 
 ```
-$ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
+$ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012 --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/87654321-4321-4321-4321-210987654321
 ```
 
-For example, the certificate has `example.com` as its domain and `*.example.com` as a subject alternative name (SAN):
+For example, one of the certificates has `example.com` as its domain and `*.example.com` as a subject alternative name (SAN):
 
 ```
 $ aws acm describe-certificate --certificate-arn arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
@@ -60,7 +60,7 @@ $ aws acm describe-certificate --certificate-arn arn:aws:acm:us-east-1:123456789
 }
 ```
 
-Then, aliases that are valid against any of the imported certificates can be specified in a [Load Balanced Web Service manifest](../manifest/lb-web-service.en.md) to deploy a service to the environment:
+Then, you can specify aliases that are valid against any of the imported certificates in a [Load Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md):
 
 ```yaml
 name: frontend
