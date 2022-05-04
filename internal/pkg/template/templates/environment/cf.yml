@@ -69,7 +69,7 @@ Resources:
       Configuration:
         ExecuteCommandConfiguration:
           Logging: DEFAULT
-{{- if .Telemetry }}
+{{- if and .Telemetry .Telemetry.EnableContainerInsights}}
       ClusterSettings:
         - Name: containerInsights
           {{- if .Telemetry.EnableContainerInsights}}

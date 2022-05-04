@@ -68,7 +68,7 @@ type ManagedVPC struct {
 
 // Telemetry represents optional observability and monitoring configuration.
 type Telemetry struct {
-	EnableContainerInsights bool
+	EnableContainerInsights *bool
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.
