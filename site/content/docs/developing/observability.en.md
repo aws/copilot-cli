@@ -72,12 +72,13 @@ module.exports = (serviceName) => {
 'use strict';
 const tracer = require('./tracer')('copilot-observability');
 const app = require("express")();
+const port = 8080;
 
 app.get("/", (req, res) => {
 	res.send("Hello World");
 });
 
-app.listen(8080, () => {
+app.listen(port, () => {
 	console.log(`Listening for requests on http://localhost:${port}`);
 });
 ```
