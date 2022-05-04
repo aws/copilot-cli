@@ -60,7 +60,7 @@ $ aws acm describe-certificate --certificate-arn arn:aws:acm:us-east-1:123456789
 }
 ```
 
-Then, you can specify aliases that are valid against any of the imported certificates in a [Load Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md):
+Then, you need to specify aliases that are valid against any of the imported certificates in a [Load Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md):
 
 ```yaml
 name: frontend
@@ -71,7 +71,10 @@ http:
   alias: v1.example.com
 ```
 
-After the deployment, the last step to make the alias work is to add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted. For example, if your alias domain is hosted in Route 53:
+!!!attention
+    Specifying `http.alias` in service manifests is required for deploying services to an environment with imported certificates.
+
+After the deployment, add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted. For example, if your alias domain is hosted in Route 53:
 
 ```json
 {
@@ -84,6 +87,8 @@ After the deployment, the last step to make the alias work is to add the DNS of 
   }
 }
 ```
+
+Now, your service has HTTPS enabled using your own certificates and can be accessed via https://example.com!
 
 ## Ordering Deployments in a Pipeline
 _Contributed by [Efe Karakus](https://github.com/efekarakus/)_
