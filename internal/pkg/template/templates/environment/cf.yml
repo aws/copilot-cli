@@ -275,7 +275,7 @@ Resources:
       TargetType: ip
 {{- if .VPCConfig.Imported}}
       VpcId: {{.VPCConfig.Imported.ID}}
-{{- else}
+{{- else}}
       VpcId: !Ref VPC
 {{- end}}
   InternalALBHTTPListener:
@@ -490,11 +490,6 @@ Outputs:
     Value: !Ref InternalALBHTTPListener
     Export:
       Name: !Sub ${AWS::StackName}-InternalALBHTTPListenerArn
-  DefaultInternalALBHTTPTargetGroupArn:
-    Condition: CreateInternalALB
-    Value: !Ref DefaultInternalALBHTTPTargetGroup
-    Export:
-      Name: !Sub ${AWS::StackName}-DefaultInternalALBHTTPTargetGroup
   ClusterId:
     Value: !Ref Cluster
     Export:
