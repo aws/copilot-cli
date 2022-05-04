@@ -25,7 +25,7 @@ See the section [Overview](../docs/concepts/overview.en.md) for a more detailed 
 
 _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 
-If you have domains managed outside of Route 53, or want to enable HTTPS without having domain associated with your application, you can now use the new `--import-cert-arns` flag to import any validated certificates when creating your environments.
+If you have domains managed outside of Route 53, or want to enable HTTPS without having a domain associated with your application, you can now use the new `--import-cert-arns` flag to import any validated certificates when creating your environments.
 
 ```
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012 --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/87654321-4321-4321-4321-210987654321
