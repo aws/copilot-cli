@@ -16,6 +16,7 @@ var (
 	minAZs = 2
 )
 
+// Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
 	if err := e.Network.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
@@ -26,6 +27,7 @@ func (e Environment) Validate() error {
 	return nil
 }
 
+// Validate returns nil if environmentNetworkConfig is configured correctly.
 func (n environmentNetworkConfig) Validate() error {
 	if err := n.VPC.Validate(); err != nil {
 		return fmt.Errorf(`validate "vpc": %w`, err)
@@ -33,6 +35,7 @@ func (n environmentNetworkConfig) Validate() error {
 	return nil
 }
 
+// Validate returns nil if environmentVPCConfig is configured correctly.
 func (v environmentVPCConfig) Validate() error {
 	if v.imported() && v.managedVPCCustomized() {
 		return errors.New(`cannot import VPC resources (with "id" fields) and customize VPC resources (with "cidr" and "az" fields) at the same time`)
@@ -114,6 +117,7 @@ func (v environmentVPCConfig) validateManagedVPC() error {
 	return nil
 }
 
+// Validate returns nil if subnetsConfiguration is configured correctly.
 func (cs subnetsConfiguration) Validate() error {
 	for idx, subnet := range cs.Public {
 		if err := subnet.Validate(); err != nil {
@@ -128,6 +132,7 @@ func (cs subnetsConfiguration) Validate() error {
 	return nil
 }
 
+// Validate returns nil if subnetConfiguration is configured correctly.
 func (c subnetConfiguration) Validate() error {
 	if c.SubnetID != nil && c.CIDR != nil {
 		return &errFieldMutualExclusive{
@@ -146,6 +151,7 @@ func (c subnetConfiguration) Validate() error {
 	return nil
 }
 
+// Validate returns nil if environmentObservability is configured correctly.
 func (o environmentObservability) Validate() error {
 	return nil
 }
