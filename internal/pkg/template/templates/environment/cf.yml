@@ -123,7 +123,7 @@ Resources:
           ToPort: 80
 {{- if .VPCConfig.Imported}}
       VpcId: {{.VPCConfig.Imported.ID}}
-{{ - else}}
+{{- else}}
       VpcId: !Ref VPC
 {{- end}}
       Tags:
@@ -189,9 +189,9 @@ Resources:
     Properties:
       Scheme: internal
       SecurityGroups: [ !GetAtt InternalLoadBalancerSecurityGroup.GroupId ]
-{{ - if .VPCConfig.Imported}}
+{{- if .VPCConfig.Imported}}
       Subnets: [ {{range $id := .VPCConfig.Imported.PrivateSubnetIDs}}{{$id}}, {{end}} ]
-{{ - else }
+{{- else}}
       Subnets: [ {{range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}} ]
 {{- end}}
       Type: application
@@ -237,9 +237,9 @@ Resources:
       Certificates:
 {{- if .ImportCertARNs}}
         - CertificateArn: {{index .ImportCertARNs 0}}
-{{- else }}
+{{- else}}
         - CertificateArn: !Ref HTTPSCert
-{{- end }}
+{{- end}}
       DefaultActions:
         - TargetGroupArn: !Ref DefaultHTTPTargetGroup
           Type: forward
@@ -275,9 +275,9 @@ Resources:
       TargetType: ip
 {{- if .VPCConfig.Imported}}
       VpcId: {{.VPCConfig.Imported.ID}}
-{{- else }}
+{{- else}
       VpcId: !Ref VPC
-{{- end }}
+{{- end}}
   InternalALBHTTPListener:
     Metadata:
       'aws:copilot:description': 'An internal load balancer listener to route HTTP traffic'
