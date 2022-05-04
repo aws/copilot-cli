@@ -89,15 +89,15 @@ The name of an environment to deploy your services to.
 Optional. Indicates whether to add a manual approval step before the deployment. Defaults to `false`.
 
 <span class="parent-field">stages.</span><a id="stages-deployments" href="#stages-deployments" class="field">`deployments`</a> <span class="type">Map</span>  
-Optional. Control which CloudFormation stacks are going to be deployed and their order.  
+Optional. Control which CloudFormation stacks to deploy and their order.  
 The `deployments` dependencies are specified in a map of the form:
 ```yaml
 stages:
-- name: test
-  deployments:
-    <service or job name>:
-    <other service or job name>:
-      depends_on: [<name>, ...]
+  - name: test
+    deployments:
+      <service or job name>:
+      <other service or job name>:
+        depends_on: [<name>, ...]
 ```
 
 For example, if your git repository has the following layout:
@@ -112,12 +112,12 @@ copilot
 And you'd like to control the order of your deployments, such that `api` is deployed before `frontend`, then you can configure your stage as follows:
 ```yaml
 stages:
-- name: test
-  deployments:
-    api:
-    frontend:
-      depends_on:
-      - api
+  - name: test
+    deployments:
+      api:
+      frontend:
+        depends_on:
+          - api
 ```
 You can also limit which microservices to release part of your pipeline. In the following manifest, we're specifying to deploy only `api` and not `frontend`:
 ```yaml
@@ -146,4 +146,4 @@ Optional. Path to the CloudFormation template generated during the `build` phase
 Optional. Path to the CloudFormation template configuration generated during the `build` phase. Defaults to `infrastructure/<deployment name>-<stage name>.params.json`.
 
 <span class="parent-field">stages.</span><a id="stages-test-cmds" href="#stages-test-cmds" class="field">`test_commands`</a> <span class="type">Array of Strings</span>  
-Optional. Commands to run integration or end-to-end tests after deployment. Defaults to no post-deployments validations.
+Optional. Commands to run integration or end-to-end tests after deployment. Defaults to no post-deployment validations.

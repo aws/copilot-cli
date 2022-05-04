@@ -8,6 +8,7 @@ Copilot v1.18 brings several new features and improvements:
 
 * **Certificate import:** You can now run `copilot env init --import-cert-arns` to import validated ACM certificates to your environment's load balancer listener. [See detailed section](./#certificate-import).
 * **Ordering deployments in a pipeline:** You can now control the order in which services or jobs get deployed in a continuous delivery pipeline. [See detailed section](./#controlling-order-of-deployments-in-a-pipeline).
+* **Additional pipeline improvements:** Besides deployment orders, you can now limit which services or jobs to deploy in your pipeline or deploy custom cloudformation stacks in a pipeline. [See detailed section](./#additional-pipeline-improvements).
 * **"recreate" strategy for faster deployments:** You can now specify "recreate" deployment strategy so that ECS will stop old tasks in your service before starting new ones. [See detailed section](./#recreate-strategy-for-faster-deployments).
 * **Tracing for Load Balanced Web, Worker, and Backend Service:** To collect and ship traces to AWS X-Ray from ECS tasks, we are introducing `observability.tracing` configuration in the manifest to add a [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) sidecar container. [See detailed section](./#tracing-for-load-balanced-web-service-worker-service-and-backend-service).
 
@@ -149,6 +150,7 @@ before the downstream services are ready to accept them. Copilot figures out in 
 
 ![Rendered ordered pipeline](../assets/images/pipeline-ordered.png)
 
+### Additional pipeline improvements
 There are a few other enhancements that come with the new `deployments` field:
 
 1. It is now possible for monorepos to configure which services or jobs to deploy in a pipeline. For example, I can limit 
@@ -166,17 +168,18 @@ There are a few other enhancements that come with the new `deployments` field:
         ├── cognito.params.json
         └── cognito.yml
    ```
-   Then I can leverage the new `stack_name`, `template_path` and `template_config` fields under deployments to specify deploying the cognito cloudformation stack in my pipeline:
+   Then I can leverage the new [`stack_name`](../docs/manifest/pipeline.en.md#stages-deployments-stackname), [`template_path`](../docs/manifest/pipeline.en.md#stages-deployments-templatepath) and [`template_config`](../docs/manifest/pipeline.en.md#stages-deployments-templateconfig) fields under deployments to specify deploying the cognito cloudformation stack in my pipeline:
    ```yaml
    deployments:
      cognito:
        stack_name: myapp-test-cognito
-       template_path: infrastructure/templates/cognito.yml
-       template_config: infrastructure/templates/cognito.params.json
+       template_path: infrastructure/cognito.yml
+       template_config: infrastructure/cognito.params.json
      api:
    ```
    The final step would be modifying the copilot generated buildspec to copy the files under `copilot/templates`
-   to `infrastructure` with `cp -r copilot/templates infrastructure/templates/`
+   to `infrastructure/` with `cp -r copilot/templates infrastructure/` so that the `template_path` and `template_config`
+   fields point to existing files.
 
 
 ## "recreate" Strategy for Faster Deployments
