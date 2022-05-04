@@ -18,6 +18,14 @@ var (
 
 // Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
+	if err := e.EnvironmentConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if EnvironmentConfig is configured correctly.
+func (e EnvironmentConfig) Validate() error {
 	if err := e.Network.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
