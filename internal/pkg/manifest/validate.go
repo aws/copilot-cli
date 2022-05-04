@@ -63,9 +63,6 @@ var (
 // Validate returns nil if LoadBalancedWebService is configured correctly.
 func (l LoadBalancedWebService) Validate() error {
 	var err error
-	if err = l.DeployConfig.Validate(); err != nil {
-		return fmt.Errorf(`validate "deployment": %w`, err)
-	}
 	if err = l.LoadBalancedWebServiceConfig.Validate(); err != nil {
 		return err
 	}
@@ -171,6 +168,9 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 	}
 	if err = l.NLBConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "nlb": %w`, err)
+	}
+	if err = l.DeployConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "deployment": %w`, err)
 	}
 	return nil
 }
