@@ -7,7 +7,7 @@ observability:
   tracing: awsxray
 ```
 
-For [Request-Driven Web Services](../concepts/services.en.md#request-driven-web-service), Copilot will enable Observability in App Runner.
+For [Request-Driven Web Services](../concepts/services.en.md#request-driven-web-service), Copilot will enable App Runner's baked-in [tracing configuration](https://docs.aws.amazon.com/apprunner/latest/dg/monitor-xray.html).
 
 For [Load-Balanced Web Services](../concepts/services.en.md#load-balanced-web-service), [Backend Services](../concepts/services.en.md#backend-service), and [Worker Services](../concepts/services.en.md#worker-service), Copilot will deploy the [AWS OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) as a [sidecar](./sidecars.en.md).
 
