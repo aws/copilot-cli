@@ -6,6 +6,8 @@ package template
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 const (
@@ -69,6 +71,11 @@ type ManagedVPC struct {
 // Telemetry represents optional observability and monitoring configuration.
 type Telemetry struct {
 	EnableContainerInsights *bool
+}
+
+// ContainerInsightsEnabled returns whether the container insights should be enabled.
+func (t *Telemetry) ContainerInsightsEnabled() bool {
+	return aws.BoolValue(t.EnableContainerInsights)
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.

@@ -86,9 +86,6 @@ func ToSnakeCaseFunc(s string) string {
 // IncFunc increments an integer value and returns the result.
 func IncFunc(i int) int { return i + 1 }
 
-// BoolValue dereference a boolean pointer.
-func BoolValue(p *bool) bool { return aws.BoolValue(p) }
-
 // FmtSliceFunc renders a string representation of a go string slice, surrounded by brackets
 // and joined by commas.
 func FmtSliceFunc(elems []string) string {
