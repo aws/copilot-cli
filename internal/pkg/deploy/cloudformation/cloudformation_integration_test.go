@@ -432,13 +432,13 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 			require.NoError(t, err)
 		}()
 
-		urls, err := uploader.UploadEnvironmentCustomResources(awss3.CompressAndUploadFunc(func(key string, objects ...awss3.NamedBinary) (string, error) {
+		urls, err := uploader.UploadEnvironmentCustomResources(func(key string, objects ...awss3.NamedBinary) (string, error) {
 			return s3Client.ZipAndUpload(bucketName, key, objects...)
-		}))
+		})
 		require.NoError(t, err)
 		environmentToDeploy.CustomResourcesURLs = urls
 		environmentToDeploy.ArtifactBucketKeyARN = "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
-		environmentToDeploy.ArtifactBucketARN = "arn:aws:s3:::fakebucket/key"
+		environmentToDeploy.ArtifactBucketARN = fmt.Sprintf("arn:aws:s3:::%s", bucketName)
 
 		// Deploy the environment and wait for it to be complete
 		require.NoError(t, deployer.DeployAndRenderEnvironment(os.Stderr, &environmentToDeploy))
