@@ -49,7 +49,7 @@ network:
 					Name: aws.String("test"),
 					Type: aws.String("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							CIDR: &mockVPCCIDR,
@@ -92,7 +92,7 @@ observability:
 					Name: aws.String("prod"),
 					Type: aws.String("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Observability: environmentObservability{
 						ContainerInsights: aws.Bool(true),
 					},

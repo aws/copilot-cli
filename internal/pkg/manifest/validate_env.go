@@ -20,6 +20,9 @@ func (e Environment) Validate() error {
 	if err := e.Network.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
+	if err := e.Observability.Validate(); err != nil {
+		return fmt.Errorf(`validate "observability": %w`, err)
+	}
 	return nil
 }
 

@@ -14,12 +14,12 @@ import (
 // Environment is the manifest configuration for an environment.
 type Environment struct {
 	Workload          `yaml:",inline"`
-	environmentConfig `yaml:",inline"`
+	EnvironmentConfig `yaml:",inline"`
 
 	parser template.Parser
 }
 
-type environmentConfig struct {
+type EnvironmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network"`
 	Observability environmentObservability `yaml:"observability"`
 }
