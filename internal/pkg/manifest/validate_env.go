@@ -163,3 +163,16 @@ func (c subnetConfiguration) Validate() error {
 func (o environmentObservability) Validate() error {
 	return nil
 }
+
+// Validate returns nil if environmentHTTPConfig is configured correctly.
+func (o environmentHTTPConfig) Validate() error {
+	if err := o.Internet.Validate(); err != nil {
+		return fmt.Errorf(`validate "internet": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if internetHTTPConfig is configured correctly.
+func (o internetHTTPConfig) Validate() error {
+	return nil
+}

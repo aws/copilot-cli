@@ -23,6 +23,7 @@ type Environment struct {
 type EnvironmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network"`
 	Observability environmentObservability `yaml:"observability"`
+	HTTPConfig    environmentHTTPConfig    `yaml:"http"`
 }
 
 type environmentNetworkConfig struct {
@@ -113,4 +114,12 @@ type environmentObservability struct {
 // IsEmpty returns true if there is no configuration to the environment's observability.
 func (o environmentObservability) IsEmpty() bool {
 	return o.ContainerInsights == nil
+}
+
+type environmentHTTPConfig struct {
+	Internet internetHTTPConfig `yaml:"internet"`
+}
+
+type internetHTTPConfig struct {
+	Certificates []string `yaml:"certificates"`
 }
