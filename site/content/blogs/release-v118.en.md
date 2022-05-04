@@ -21,14 +21,26 @@ enabling you to focus on developing your application, instead of writing deploym
 
 See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
-## Certificate import
+## Certificate Import
 _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 
 ## Ordering Deployments in a Pipeline
 _Contributed by [Efe Karakus](https://github.com/efekarakus/)_
 
-## "recreate" Strategy for Faster Deployments
+## "recreate" Strategy for Faster Redeployments
 _Contributed by [Parag Bhingre](https://github.com/paragbhingre/)_
+
+!!!alert
+    Please do not set "recreate" for any services that are in production stage because of the deployment downtime.
+
+In order to support faster redeployments in developing stage, users can specify "recreate" as the deployment strategy in the service manifest:
+
+```yaml
+deployment:
+  rolling: recreate
+```
+
+Under the hood, Copilot sets [minimumHealthyPercent and maximumPercent](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_DeploymentConfiguration.html) as `0` and `100` respectively (by default we set them as `100` and `200`), so that old tasks are stopped before spinning up any new tasks.
 
 ## Tracing for Load Balanced Web Service, Worker Service, and Backend Service
 _Contributed by [Danny Randall](https://github.com/dannyrandall/)_
