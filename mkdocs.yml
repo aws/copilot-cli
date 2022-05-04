@@ -146,6 +146,7 @@ nav:
         - task run: docs/commands/task-run.en.md
         - version: docs/commands/version.en.md
   - Blogs:
+      - Release v1.18: blogs/release-v118.en.md
       - Release v1.17: blogs/release-v117.en.md
       - Release v1.16: blogs/release-v116.en.md
   - Community:

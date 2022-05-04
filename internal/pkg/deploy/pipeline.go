@@ -101,7 +101,7 @@ func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) {
 	}
 	b.Image = image
 	b.EnvironmentType = environmentType
-	b.BuildspecPath = path
+	b.BuildspecPath = filepath.ToSlash(path) // Buildspec path must be with '/' because CloudFormation expects forward-slash separated file path.
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store
