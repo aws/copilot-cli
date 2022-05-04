@@ -1,19 +1,19 @@
 # Domain
 
-!!!attention
-    Today, a Route 53 domain name can only be associated when running `copilot app init`.  
-    If you'd like to update your application with a domain ([#3045](https://github.com/aws/copilot-cli/issues/3045)),
-    you'll need to run `copilot app delete` to remove the old one before creating a new one with `--domain` to associate a new domain.
-
 ## Load Balanced Web Service
 In Copilot, there are two ways to use custom domains for your Load Balanced Web Service:
 
 1. Use `--domain` when creating an application to associate a Route 53 domain in the same account.
 2. Use `--import-cert-arns` to bring your validated ACM certificates when creating an environment.
 
+!!!attention
+    Today, a Route 53 domain name can only be associated when running `copilot app init`.  
+    If you'd like to update your application with a domain ([#3045](https://github.com/aws/copilot-cli/issues/3045)),
+    you'll need to run `copilot app delete` to remove the old one before creating a new one with `--domain` to associate a new domain.
+
 ### Use app-associated root domain
 
-As mentioned in the [Application Guide](../concepts/applications.en.md#additional-app-configurations), you can configure the domain name of your app when running `copilot app init`.
+As mentioned in the [Application Guide](../concepts/applications.en.md#additional-app-configurations), you can configure the domain name of your app when running `copilot app init --domain`.
 
 **Default domain name for your service**
 
@@ -35,7 +35,7 @@ For example, `https://kudo.test.coolapp.example.aws` or `kudo-nlb.test.coolapp.e
 
 **Customized domain alias**
 
-If you don't like the default domain name Copilot assigns to your service, setting an [alias](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html) for your service is also very easy. You can add it directly to your [manifest's](../manifest/overview.en.md) `alias` section.
+If you don't like the default domain name Copilot assigns to your service, you can set a custom [alias](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html) for your service by editing your [manifest's](../manifest/lb-web-service.en.md#http-alias) `alias` section.
 The following snippet sets an alias to your service.
 
 ``` yaml
@@ -75,7 +75,7 @@ Under the hood, Copilot
 <iframe width="560" height="315" src="https://www.youtube.com/embed/Oyr-n59mVjI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 ### Use domain in your existing validated certificates
-If you want to use alias for your existing domain (not the one when you create the application), you could specify `--import-cert-arns` flag when creating the environment to import validated ACM certificates that include the alias. For example:
+If you own a domain outside of Route53 or for compliance reasons want to use an `alias` from your existing ACM certificates, you can specify the `--import-cert-arns` flag when creating the environment to import validated ACM certificates that include the alias. For example:
 
 ```
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012

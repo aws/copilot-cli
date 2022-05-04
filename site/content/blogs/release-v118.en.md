@@ -33,32 +33,31 @@ $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certifi
 
 For example, one of the certificates has `example.com` as its domain and `*.example.com` as a subject alternative name (SAN):
 
-```
-$ aws acm describe-certificate --certificate-arn arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
-
-{
-  "Certificate": {
-    "CertificateArn": "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012",
-    "DomainName": "example.com",
-    "SubjectAlternativeNames": [
-      "*.example.com"
-    ],
-    "DomainValidationOptions": [
-      {
+???+ example "Sample certificate"
+    ```json
+    {
+      "Certificate": {
+        "CertificateArn": "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012",
         "DomainName": "example.com",
-        "ValidationDomain": "example.com",
-        "ValidationStatus": "SUCCESS",
-        "ResourceRecord": {
-          "Name": "_45c8aa9ac85568e905a6c3852e62ebc6.example.com.",
-          "Type": "CNAME",
-          "Value": "_f8be688050b7d23184863690b3d4baa8.xrchbtpdjs.acm-validations.aws."
-        },
-        "ValidationMethod": "DNS"
-      }
-    ],
-    ...
-}
-```
+        "SubjectAlternativeNames": [
+          "*.example.com"
+        ],
+        "DomainValidationOptions": [
+          {
+            "DomainName": "example.com",
+            "ValidationDomain": "example.com",
+            "ValidationStatus": "SUCCESS",
+            "ResourceRecord": {
+              "Name": "_45c8aa9ac85568e905a6c3852e62ebc6.example.com.",
+              "Type": "CNAME",
+              "Value": "_f8be688050b7d23184863690b3d4baa8.xrchbtpdjs.acm-validations.aws."
+            },
+            "ValidationMethod": "DNS"
+          }
+        ],
+        ...
+    }
+    ```
 
 Then, you need to specify aliases that are valid against any of the imported certificates in a [Load Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md):
 
@@ -76,19 +75,20 @@ http:
 
 After the deployment, add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted. For example, if your alias domain is hosted in Route 53:
 
-```json
-{
-  "Name": "example.com.",
-  "Type": "A",
-  "AliasTarget": {
-    "HostedZoneId": "Z1H1FL3HABSF5",
-    "DNSName": "demo-publi-1d328e3bqag4r-1914228528.us-west-2.elb.amazonaws.com.",
-    "EvaluateTargetHealth": true
-  }
-}
-```
+???+ example "Sample Route 53 A Record"
+    ```json
+    {
+      "Name": "v1.example.com.",
+      "Type": "A",
+      "AliasTarget": {
+        "HostedZoneId": "Z1H1FL3HABSF5",
+        "DNSName": "demo-publi-1d328e3bqag4r-1914228528.us-west-2.elb.amazonaws.com.",
+        "EvaluateTargetHealth": true
+      }
+    }
+    ```
 
-Now, your service has HTTPS enabled using your own certificates and can be accessed via https://example.com!
+Now, your service has HTTPS enabled using your own certificates and can be accessed via `https://v1.example.com`!
 
 ## Ordering Deployments in a Pipeline
 _Contributed by [Efe Karakus](https://github.com/efekarakus/)_
