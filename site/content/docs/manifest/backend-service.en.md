@@ -25,9 +25,6 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
         count: 1
         exec: true
 
-        deployment:
-          rolling: "recreate"
-
         storage:
           volumes:
             myEFSVolume:
@@ -54,6 +51,8 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
         # You can override any of the values defined above by environment.
         environments:
           test:
+            deployment:
+              rolling: "recreate"
             count:
               spot: 2
           production:
