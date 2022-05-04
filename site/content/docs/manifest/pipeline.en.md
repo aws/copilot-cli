@@ -136,7 +136,7 @@ Name of the job or service to deploy.
 Optional. Name of other job or services that should be deployed prior to deploying this microservice. Defaults to no dependencies.  
 
 <span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-stackname" href="#stages-deployments-stackname" class="field">`stack_name`</a> <span class="type">String</span>  
-Optional. Name of the stack to create or update. Defaults to `<app name>-<stage name>-<deployment name>`.
+Optional. Name of the stack to create or update. Defaults to `<app name>-<stage name>-<deployment name>`.  
 For example, if your application is called `demo`, stage name is `test`, and your service name is `frontend` then the stack name will be `demo-test-frontend`.  
 
 <span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-templatepath" href="#stages-deployments-templatepath" class="field">`template_path`</a> <span class="type">String</span>  
