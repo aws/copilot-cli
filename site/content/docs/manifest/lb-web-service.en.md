@@ -43,9 +43,6 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
           response_time: 2s
         exec: true
 
-        deployment:
-          rolling: "recreate"
-
         variables:
           LOG_LEVEL: info
         env_file: log.env

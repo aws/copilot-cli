@@ -30,9 +30,6 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
         count: 1
         exec: true
 
-        deployment:
-          rolling: "recreate"
-
         variables:
           LOG_LEVEL: info
         env_file: log.env
