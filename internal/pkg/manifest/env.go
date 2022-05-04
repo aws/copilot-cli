@@ -19,6 +19,7 @@ type Environment struct {
 	parser template.Parser
 }
 
+// EnvironmentConfig holds the configuration for an environment.
 type EnvironmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network"`
 	Observability environmentObservability `yaml:"observability"`
