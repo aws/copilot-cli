@@ -44,7 +44,7 @@ Then, you can include the X-Ray trace ID in your logs like so:
 console.log("[%s] A useful log message", getXRayTraceId(span));
 ```
 
-## Viewing Traces in AWS X-Ray Console
+## Viewing Traces in CloudWatch
 After you have instrumented your service and deployed it using Copilot, you're ready to view traces from your service!
 Depending on how you've instrumented your service, you will likely need to send a few requests to it before traces will appear in the AWS console.
 
