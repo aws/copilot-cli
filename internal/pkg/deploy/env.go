@@ -7,6 +7,7 @@ package deploy
 
 import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
 const (
@@ -32,6 +33,7 @@ type CreateEnvironmentInput struct {
 	AdjustVPCConfig      *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
 	ImportCertARNs       []string          // Optional configuration if users want to import certificates.
 	Telemetry            *config.Telemetry // Optional observability and monitoring configuration.
+	Mft                  *manifest.Environment
 
 	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
 }

@@ -6,7 +6,6 @@ package stack
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -38,8 +37,8 @@ func TestEnv_Template(t *testing.T) {
 						Imported: nil,
 						Managed: template.ManagedVPC{
 							CIDR:               DefaultVPCCIDR,
-							PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
-							PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
+							PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
+							PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
 						},
 					},
 					LatestVersion: deploy.LatestEnvTemplateVersion,
