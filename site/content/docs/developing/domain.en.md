@@ -57,7 +57,7 @@ If you want to use alias for your existing domain (not the one when you create t
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
-And then after deploying the service to that environment, add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted.
+After deploying a service to that environment, add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted.
 
 ### What happens under the hood?
 Under the hood, Copilot

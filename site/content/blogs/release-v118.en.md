@@ -25,7 +25,7 @@ See the section [Overview](../docs/concepts/overview.en.md) for a more detailed 
 
 _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 
-Developers that have domains not managed by Route 53 or want to use HTTPS for Copilot applications without any domain specified can now use a new `--import-cert-arns` flag to import any validated certificates when they create an environment, so as to use any domain/SAN specified in their imported certificates for their services deployed to the environment:
+Developers that have domains managed outside of Route 53 or who want to use HTTPS for Copilot applications without any domain specified can now use a new `--import-cert-arns` flag to import any validated certificates when they create an environment.
 
 ```
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
@@ -60,7 +60,7 @@ $ aws acm describe-certificate --certificate-arn arn:aws:acm:us-east-1:123456789
 }
 ```
 
-Then, aliases that are valid against any of the imported certificates can be specified in the Load Balanced Web Service manifest to deploy the services to the environment:
+Then, aliases that are valid against any of the imported certificates can be specified in a [Load Balanced Web Service manifest](../manifest/lb-web-service.en.md) to deploy a service to the environment:
 
 ```yaml
 name: frontend
