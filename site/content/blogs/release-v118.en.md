@@ -21,8 +21,74 @@ enabling you to focus on developing your application, instead of writing deploym
 
 See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
-## Certificate import
+## Certificate Import
+
 _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
+
+If you have domains managed outside of Route 53, or want to enable HTTPS without having a domain associated with your application, you can now use the new `--import-cert-arns` flag to import any validated certificates when creating your environments.
+
+```
+$ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012 --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/87654321-4321-4321-4321-210987654321
+```
+
+For example, one of the certificates has `example.com` as its domain and `*.example.com` as a subject alternative name (SAN):
+
+???+ example "Sample certificate"
+    ```json
+    {
+      "Certificate": {
+        "CertificateArn": "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012",
+        "DomainName": "example.com",
+        "SubjectAlternativeNames": [
+          "*.example.com"
+        ],
+        "DomainValidationOptions": [
+          {
+            "DomainName": "example.com",
+            "ValidationDomain": "example.com",
+            "ValidationStatus": "SUCCESS",
+            "ResourceRecord": {
+              "Name": "_45c8aa9ac85568e905a6c3852e62ebc6.example.com.",
+              "Type": "CNAME",
+              "Value": "_f8be688050b7d23184863690b3d4baa8.xrchbtpdjs.acm-validations.aws."
+            },
+            "ValidationMethod": "DNS"
+          }
+        ],
+        ...
+    }
+    ```
+
+Then, you need to specify aliases that are valid against any of the imported certificates in a [Load Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md):
+
+```yaml
+name: frontend
+type: Load Balanced Web Service
+
+http:
+  path: 'frontend'
+  alias: v1.example.com
+```
+
+!!!attention
+    Specifying `http.alias` in service manifests is required for deploying services to an environment with imported certificates.
+
+After the deployment, add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted. For example, if your alias domain is hosted in Route 53:
+
+???+ example "Sample Route 53 A Record"
+    ```json
+    {
+      "Name": "v1.example.com.",
+      "Type": "A",
+      "AliasTarget": {
+        "HostedZoneId": "Z1H1FL3HABSF5",
+        "DNSName": "demo-publi-1d328e3bqag4r-1914228528.us-west-2.elb.amazonaws.com.",
+        "EvaluateTargetHealth": true
+      }
+    }
+    ```
+
+Now, your service has HTTPS enabled using your own certificates and can be accessed via `https://v1.example.com`!
 
 ## Ordering Deployments in a Pipeline
 _Contributed by [Efe Karakus](https://github.com/efekarakus/)_
