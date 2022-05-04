@@ -142,3 +142,7 @@ func (c subnetConfiguration) Validate() error {
 	}
 	return nil
 }
+
+func (o environmentObservability) Validate() error {
+	return nil
+}

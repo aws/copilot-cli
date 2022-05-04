@@ -80,6 +80,25 @@ network:
 				},
 			},
 		},
+		"unmarshal with observability": {
+			inContent: `name: prod
+type: Environment
+
+observability:
+    container_insights: true
+`,
+			wantedStruct: Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				environmentConfig: environmentConfig{
+					Observability: environmentObservability{
+						ContainerInsights: aws.Bool(true),
+					},
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

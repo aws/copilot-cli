@@ -20,7 +20,8 @@ type Environment struct {
 }
 
 type environmentConfig struct {
-	Network environmentNetworkConfig `yaml:"network"`
+	Network       environmentNetworkConfig `yaml:"network"`
+	Observability environmentObservability `yaml:"observability"`
 }
 
 type environmentNetworkConfig struct {
@@ -102,4 +103,12 @@ type subnetConfiguration struct {
 	SubnetID *string `yaml:"id"`
 	CIDR     *IPNet  `yaml:"cidr"`
 	AZ       *string `yaml:"az"`
+}
+
+type environmentObservability struct {
+	ContainerInsights *bool `yaml:"container_insights"`
+}
+
+func (o environmentObservability) IsEmpty() bool {
+	return o.ContainerInsights == nil
 }
