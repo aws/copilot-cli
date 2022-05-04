@@ -99,7 +99,8 @@ func (e *EnvStackConfig) Template() (string, error) {
 		Version:       e.in.Version,
 		LatestVersion: deploy.LatestEnvTemplateVersion,
 	}, template.WithFuncs(map[string]interface{}{
-		"inc": template.IncFunc,
+		"inc":       template.IncFunc,
+		"boolValue": template.BoolValue,
 	}))
 	if err != nil {
 		return "", err

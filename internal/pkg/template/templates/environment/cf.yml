@@ -72,7 +72,7 @@ Resources:
 {{- if and .Telemetry .Telemetry.EnableContainerInsights}}
       ClusterSettings:
         - Name: containerInsights
-          {{- if .Telemetry.EnableContainerInsights}}
+          {{- if boolValue .Telemetry.EnableContainerInsights}}
           Value: enabled
           {{- else}}
           Value: disabled
