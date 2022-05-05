@@ -6,9 +6,9 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
         # Your service name will be used in naming your resources like log groups, ECS services, etc.
         name: api
         type: Backend Service
-    
+
         # Your service is reachable at "http://api.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:8080" but is not public.
-    
+
         # Configuration for your containers and service.
         image:
           build: ./api/Dockerfile
@@ -19,12 +19,12 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
             retries: 2
             timeout: 5s
             start_period: 0s
-    
+
         cpu: 256
         memory: 512
         count: 1
         exec: true
-    
+
         storage:
           volumes:
             myEFSVolume:
@@ -36,21 +36,23 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
                 auth:
                   iam: true
                   access_point_id: fsap-12345678
-    
+
         network:
           vpc:
             placement: 'private'
             security_groups: ['sg-05d7cd12cceeb9a6e']
-    
+
         variables:
           LOG_LEVEL: info
         env_file: log.env
         secrets:
           GITHUB_TOKEN: GITHUB_TOKEN
-    
+
         # You can override any of the values defined above by environment.
         environments:
           test:
+            deployment:
+              rolling: "recreate"
             count:
               spot: 2
           production:
@@ -139,6 +141,8 @@ Scale up or down based on the average memory your service should maintain.
 
 {% include 'exec.en.md' %}
 
+{% include 'deployment.en.md' %}
+
 {% include 'entrypoint.en.md' %}
 
 {% include 'command.en.md' %}
@@ -154,6 +158,8 @@ Scale up or down based on the average memory your service should maintain.
 {% include 'publish.en.md' %}
 
 {% include 'logging.en.md' %}
+
+{% include 'observability.en.md' %}
 
 {% include 'taskdef-overrides.en.md' %}
 

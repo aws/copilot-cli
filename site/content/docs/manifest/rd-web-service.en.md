@@ -155,13 +155,7 @@ If you use a Copilot-generated VPC, Copilot will automatically add NAT Gateways 
 Alternatively, when running `copilot env init`, you can import an existing VPC with NAT Gateways, or one with VPC endpoints 
 for isolated workloads. See our [custom environment resources](../developing/custom-environment-resources.en.md) page for more.
 
-<div class="separator"></div>
-
-<a id="observability" href="#observability" class="field">`observability`</a> <span class="type">Map</span>      
-The `observability` section lets you configure ways to measure your service's current state. Currently, only tracing configuration is supported.
-
-<span class="parent-field">observability.</span><a id="observability-tracing" href="#observability-tracing" class="field">`tracing`</a> <span class="type">String</span>    
-The vendor to use for tracing. Currently, only `awsxray` is supported.
+{% include 'observability.en.md' %}
 
 <div class="separator"></div>
 

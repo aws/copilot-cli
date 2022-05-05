@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 )
 
 var (
@@ -16,13 +17,26 @@ var (
 	minAZs = 2
 )
 
+// Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
-	if err := e.Network.Validate(); err != nil {
+	if err := e.EnvironmentConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	return nil
 }
 
+// Validate returns nil if EnvironmentConfig is configured correctly.
+func (e EnvironmentConfig) Validate() error {
+	if err := e.Network.Validate(); err != nil {
+		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	if err := e.Observability.Validate(); err != nil {
+		return fmt.Errorf(`validate "observability": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if environmentNetworkConfig is configured correctly.
 func (n environmentNetworkConfig) Validate() error {
 	if err := n.VPC.Validate(); err != nil {
 		return fmt.Errorf(`validate "vpc": %w`, err)
@@ -30,6 +44,7 @@ func (n environmentNetworkConfig) Validate() error {
 	return nil
 }
 
+// Validate returns nil if environmentVPCConfig is configured correctly.
 func (v environmentVPCConfig) Validate() error {
 	if v.imported() && v.managedVPCCustomized() {
 		return errors.New(`cannot import VPC resources (with "id" fields) and customize VPC resources (with "cidr" and "az" fields) at the same time`)
@@ -111,6 +126,7 @@ func (v environmentVPCConfig) validateManagedVPC() error {
 	return nil
 }
 
+// Validate returns nil if subnetsConfiguration is configured correctly.
 func (cs subnetsConfiguration) Validate() error {
 	for idx, subnet := range cs.Public {
 		if err := subnet.Validate(); err != nil {
@@ -125,6 +141,7 @@ func (cs subnetsConfiguration) Validate() error {
 	return nil
 }
 
+// Validate returns nil if subnetConfiguration is configured correctly.
 func (c subnetConfiguration) Validate() error {
 	if c.SubnetID != nil && c.CIDR != nil {
 		return &errFieldMutualExclusive{
@@ -138,6 +155,29 @@ func (c subnetConfiguration) Validate() error {
 			firstField:  "id",
 			secondField: "az",
 			mustExist:   false,
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if environmentObservability is configured correctly.
+func (o environmentObservability) Validate() error {
+	return nil
+}
+
+// Validate returns nil if environmentHTTPConfig is configured correctly.
+func (o environmentHTTPConfig) Validate() error {
+	if err := o.Public.Validate(); err != nil {
+		return fmt.Errorf(`validate "public": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if publicHTTPConfig is configured correctly.
+func (o publicHTTPConfig) Validate() error {
+	for idx, certARN := range o.Certificates {
+		if _, err := arn.Parse(certARN); err != nil {
+			return fmt.Errorf(`validate "certificates[%d]": %w`, idx, err)
 		}
 	}
 	return nil
