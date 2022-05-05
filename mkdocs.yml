@@ -168,6 +168,7 @@ theme:
 
 markdown_extensions:
   - admonition
+  - meta
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed
