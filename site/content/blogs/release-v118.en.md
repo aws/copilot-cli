@@ -193,13 +193,13 @@ Under the hood, Copilot sets [minimumHealthyPercent and maximumPercent](https://
 _Contributed by [Danny Randall](https://github.com/dannyrandall/)_
 
 In [v1.17](./release-v117.en.md#send-your-request-driven-web-services-traces-to-aws-x-ray), Copilot launched support for sending traces from your Request-Driven Web Services to [AWS X-Ray](https://aws.amazon.com/xray/).
-Now, you can easily export traces from your Load Balanced Web, Worker, and Backend services to X-Ray by modifying your service's manifest:
+Now, you can easily export traces from your Load Balanced Web, Worker, and Backend services to X-Ray by configuring `observability` in your service's manifest:
 ```yaml
 observability:
   tracing: awsxray
 ```
 
-For these services, Copilot will deploy an [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) sidecar container to collect traces from your service and export them to X-Ray.
+For these service types, Copilot will deploy an [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) sidecar container to collect traces from your service and export them to X-Ray.
 After [instrumenting your service](../docs/developing/observability.en.md#instrumenting-your-service) to send traces, you can view the end-to-end journey of requests through your services to aid in debugging and monitoring performance of your application.
 
 ![X-Ray Service Map Example](https://user-images.githubusercontent.com/10566468/166986340-e3b7c0e2-c84d-4671-bf37-ba95bdb1d6b2.png)
