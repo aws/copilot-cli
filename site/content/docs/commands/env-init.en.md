@@ -24,6 +24,7 @@ Common Flags
       --region string                  Optional. An AWS region where the environment will be created.
 
 Import Existing Resources Flags
+      --import-cert-arns strings         Optional. Apply existing ACM certificates to the internet-facing load balancer.
       --import-private-subnets strings   Optional. Use existing private subnet IDs.
       --import-public-subnets strings    Optional. Use existing public subnet IDs.
       --import-vpc-id string             Optional. Use an existing VPC ID.
@@ -33,7 +34,7 @@ Configure Default Resources Flags
                                          (default 2 random AZs)
       --override-private-cidrs strings   Optional. CIDR to use for private subnets.
                                          (default 10.0.2.0/24,10.0.3.0/24)
-      --override-public-cidrs strings    Optional. CIDR to use for public subnets. 
+      --override-public-cidrs strings    Optional. CIDR to use for public subnets.
                                          (default 10.0.0.0/24,10.0.1.0/24)
       --override-vpc-cidr ipNet          Optional. Global CIDR to use for VPC.
                                          (default 10.0.0.0/16)
@@ -50,14 +51,15 @@ $ copilot env init --name test --profile default --default-config
 
 Creates a prod-iad environment using your "prod-admin" AWS profile and enables CloudWatch Container Insights.
 ```bash
-$ copilot env init --name prod-iad --profile prod-admin --container-insights 
+$ copilot env init --name prod-iad --profile prod-admin --container-insights
 ```
 
 Creates an environment with imported VPC resources.
 ```bash
 $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
   --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
-  --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
+  --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f \
+  --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
 Creates an environment with overridden CIDRs and AZs.
