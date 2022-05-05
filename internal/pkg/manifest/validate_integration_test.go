@@ -42,6 +42,7 @@ type validator interface {
 
 // Test_ValidateAudit ensures that every manifest struct implements "Validate()" method.
 func Test_ValidateAudit(t *testing.T) {
+	// Audit workload manifests.
 	testCases := map[string]struct {
 		mft manifest.WorkloadManifest
 	}{
@@ -67,6 +68,12 @@ func Test_ValidateAudit(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+
+	// Audit environment manifest.
+	t.Run("environment manifest", func(t *testing.T) {
+		err := isValid(reflect.ValueOf(&manifest.Environment{}).Type())
+		require.NoError(t, err)
+	})
 }
 
 func isValid(typ reflect.Type) error {
