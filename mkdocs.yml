@@ -4,7 +4,7 @@ site_url: 'https://aws.github.io/copilot-cli/'
 repo_name: 'aws/copilot-cli'
 repo_url: 'https://github.com/aws/copilot-cli'
 edit_uri: 'edit/mainline/site/content'
-copyright: 'Copyright &copy; 2021 Amazon'
+copyright: 'Copyright &copy; 2022 Amazon'
 docs_dir: 'site/content'
 site_dir: 'docs'
 extra_css:
@@ -169,6 +169,7 @@ theme:
 
 markdown_extensions:
   - admonition
+  - meta
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed

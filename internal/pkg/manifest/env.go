@@ -14,13 +14,15 @@ import (
 // Environment is the manifest configuration for an environment.
 type Environment struct {
 	Workload          `yaml:",inline"`
-	environmentConfig `yaml:",inline"`
+	EnvironmentConfig `yaml:",inline"`
 
 	parser template.Parser
 }
 
-type environmentConfig struct {
-	Network environmentNetworkConfig `yaml:"network"`
+// EnvironmentConfig holds the configuration for an environment.
+type EnvironmentConfig struct {
+	Network       environmentNetworkConfig `yaml:"network"`
+	Observability environmentObservability `yaml:"observability"`
 }
 
 type environmentNetworkConfig struct {
@@ -102,4 +104,13 @@ type subnetConfiguration struct {
 	SubnetID *string `yaml:"id"`
 	CIDR     *IPNet  `yaml:"cidr"`
 	AZ       *string `yaml:"az"`
+}
+
+type environmentObservability struct {
+	ContainerInsights *bool `yaml:"container_insights"`
+}
+
+// IsEmpty returns true if there is no configuration to the environment's observability.
+func (o environmentObservability) IsEmpty() bool {
+	return o.ContainerInsights == nil
 }
