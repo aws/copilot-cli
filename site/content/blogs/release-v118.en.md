@@ -18,7 +18,7 @@ Copilot v1.18 brings several new features and improvements:
 * **Certificate import:** You can now run `copilot env init --import-cert-arns` to import validated ACM certificates to your environment's load balancer listener. [See detailed section](./#certificate-import).
 * **Ordering deployments in a pipeline:** You can now control the order in which services or jobs get deployed in a continuous delivery pipeline. [See detailed section](./#controlling-order-of-deployments-in-a-pipeline).
 * **Additional pipeline improvements:** Besides deployment orders, you can now limit which services or jobs to deploy in your pipeline or deploy custom cloudformation stacks in a pipeline. [See detailed section](./#additional-pipeline-improvements).
-* **"recreate" strategy for faster deployments:** You can now specify "recreate" deployment strategy so that ECS will stop old tasks in your service before starting new ones. [See detailed section](./#recreate-strategy-for-faster-deployments).
+* **"recreate" strategy for faster redeployments:** You can now specify "recreate" deployment strategy so that ECS will stop old tasks in your service before starting new ones. [See detailed section](./#recreate-strategy-for-faster-redeployments).
 * **Tracing for Load Balanced Web, Worker, and Backend Service:** To collect and ship traces to AWS X-Ray from ECS tasks, we are introducing `observability.tracing` configuration in the manifest to add an [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) sidecar container. [See detailed section](./#tracing-for-load-balanced-web-service-worker-service-and-backend-service).
 
 ## What’s AWS Copilot?
@@ -174,7 +174,7 @@ There are a few other enhancements that come with the new `deployments` field:
    to `infrastructure/` with `cp -r copilot/templates infrastructure/` so that the `template_path` and `template_config`
    fields point to existing files.
 
-## "recreate" Strategy for Faster Deployments
+## "recreate" Strategy for Faster Redeployments
 _Contributed by [Parag Bhingre](https://github.com/paragbhingre/)_
 
 !!!alert
