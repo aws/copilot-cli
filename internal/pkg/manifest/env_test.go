@@ -104,7 +104,7 @@ observability:
 type: Environment
 
 http:
-    internet:
+    public:
         certificates:
             - cert-1
             - cert-2
