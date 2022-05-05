@@ -168,7 +168,7 @@ func (o environmentObservability) Validate() error {
 // Validate returns nil if environmentHTTPConfig is configured correctly.
 func (o environmentHTTPConfig) Validate() error {
 	if err := o.Public.Validate(); err != nil {
-		return fmt.Errorf(`validate "internet": %w`, err)
+		return fmt.Errorf(`validate "public": %w`, err)
 	}
 	return nil
 }
