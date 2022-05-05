@@ -512,3 +512,37 @@ func TestSubnetConfiguration_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in                   environmentHTTPConfig
+		wantedErrorMsgPrefix string
+	}{
+		"malformed certificates": {
+			in: environmentHTTPConfig{
+				Public: publicHTTPConfig{
+					Certificates: []string{"arn:aws:weird-little-arn"},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "certificates[0]": `,
+		},
+		"success": {
+			in: environmentHTTPConfig{
+				Public: publicHTTPConfig{
+					Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.in.Validate()
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}

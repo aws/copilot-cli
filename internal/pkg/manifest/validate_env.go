@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 )
 
 var (
@@ -161,5 +162,23 @@ func (c subnetConfiguration) Validate() error {
 
 // Validate returns nil if environmentObservability is configured correctly.
 func (o environmentObservability) Validate() error {
+	return nil
+}
+
+// Validate returns nil if environmentHTTPConfig is configured correctly.
+func (o environmentHTTPConfig) Validate() error {
+	if err := o.Public.Validate(); err != nil {
+		return fmt.Errorf(`validate "public": %w`, err)
+	}
+	return nil
+}
+
+// Validate returns nil if publicHTTPConfig is configured correctly.
+func (o publicHTTPConfig) Validate() error {
+	for idx, certARN := range o.Certificates {
+		if _, err := arn.Parse(certARN); err != nil {
+			return fmt.Errorf(`validate "certificates[%d]": %w`, idx, err)
+		}
+	}
 	return nil
 }

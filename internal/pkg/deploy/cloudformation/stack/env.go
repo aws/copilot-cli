@@ -176,6 +176,15 @@ func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
 	}
 }
 
+func (e *EnvStackConfig) importCertARNs() []string {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		return e.in.Mft.HTTPConfig.Public.Certificates
+	}
+	// Fallthrough to SSM config.
+	return e.in.ImportCertARNs
+}
+
 // Parameters returns the parameters to be passed into a environment CloudFormation template.
 func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	httpsListener := "false"
