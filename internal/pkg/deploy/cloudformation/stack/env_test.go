@@ -113,6 +113,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterValue: aws.String(""),
 				},
 				{
+					ParameterKey:   aws.String(EnvParamInternalALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
 					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
@@ -167,6 +171,10 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamInternalALBWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
 				{

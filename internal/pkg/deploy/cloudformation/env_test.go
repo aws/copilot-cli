@@ -58,6 +58,10 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 							UsePreviousValue: aws.Bool(true),
 						},
 						{
+							ParameterKey:   aws.String("InternalALBWorkloads"),
+							ParameterValue: aws.String(""),
+						},
+						{
 							ParameterKey:   aws.String("AppName"),
 							ParameterValue: aws.String("phonetool"),
 						},
@@ -257,6 +261,10 @@ func TestCloudFormation_UpgradeLegacyEnvironment(t *testing.T) {
 						{
 							ParameterKey:   aws.String("ALBWorkloads"),
 							ParameterValue: aws.String("frontend,admin"),
+						},
+						{
+							ParameterKey:   aws.String("InternalALBWorkloads"),
+							ParameterValue: aws.String(""),
 						},
 						{
 							ParameterKey:     aws.String("EnvironmentName"),
