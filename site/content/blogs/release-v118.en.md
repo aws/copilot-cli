@@ -174,7 +174,7 @@ There are a few other enhancements that come with the new `deployments` field:
    to `infrastructure/` with `cp -r copilot/templates infrastructure/` so that the `template_path` and `template_config`
    fields point to existing files.
 
-## "recreate" Strategy for Faster Redeployments
+## "recreate" Strategy for Faster Deployments
 _Contributed by [Parag Bhingre](https://github.com/paragbhingre/)_
 
 !!!alert
