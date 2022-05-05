@@ -6,7 +6,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         # Your service name will be used in naming your resources like log groups, ECS services, etc.
         name: frontend
         type: Load Balanced Web Service
-    
+
         # Distribute traffic to your service.
         http:
           path: '/'
@@ -22,17 +22,17 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
           stickiness: false
           allowed_source_ips: ["10.24.34.0/23"]
           alias: example.com
-    
+
         nlb:
           port: 443/tls
-    
+
         # Configuration for your containers and service.
         image:
           build:
             dockerfile: ./frontend/Dockerfile
             context: ./frontend
           port: 80
-    
+
         cpu: 256
         memory: 512
         count:
@@ -42,13 +42,13 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
           requests: 10000
           response_time: 2s
         exec: true
-    
+
         variables:
           LOG_LEVEL: info
         env_file: log.env
         secrets:
           GITHUB_TOKEN: GITHUB_TOKEN
-    
+
         # You can override any of the values defined above by environment.
         environments:
           test:
@@ -157,6 +157,8 @@ Scale up or down based on the request count handled per tasks.
 Scale up or down based on the service average response time.
 
 {% include 'exec.en.md' %}
+
+{% include 'deployment.en.md' %}
 
 {% include 'entrypoint.en.md' %}
 
