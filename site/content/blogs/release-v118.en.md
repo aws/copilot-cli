@@ -19,7 +19,7 @@ Copilot v1.18 brings several new features and improvements:
 * **Ordering deployments in a pipeline:** You can now control the order in which services or jobs get deployed in a continuous delivery pipeline. [See detailed section](./#controlling-order-of-deployments-in-a-pipeline).
 * **Additional pipeline improvements:** Besides deployment orders, you can now limit which services or jobs to deploy in your pipeline or deploy custom cloudformation stacks in a pipeline. [See detailed section](./#additional-pipeline-improvements).
 * **"recreate" strategy for faster deployments:** You can now specify "recreate" deployment strategy so that ECS will stop old tasks in your service before starting new ones. [See detailed section](./#recreate-strategy-for-faster-deployments).
-* **Tracing for Load Balanced Web, Worker, and Backend Service:** To collect and ship traces to AWS X-Ray from ECS tasks, we are introducing `observability.tracing` configuration in the manifest to add a [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) sidecar container. [See detailed section](./#tracing-for-load-balanced-web-service-worker-service-and-backend-service).
+* **Tracing for Load Balanced Web, Worker, and Backend Service:** To collect and ship traces to AWS X-Ray from ECS tasks, we are introducing `observability.tracing` configuration in the manifest to add an [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) sidecar container. [See detailed section](./#tracing-for-load-balanced-web-service-worker-service-and-backend-service).
 
 ## What’s AWS Copilot?
 
@@ -196,6 +196,20 @@ _Contributed by [Parag Bhingre](https://github.com/paragbhingre/)_
 
 ## Tracing for Load Balanced Web Service, Worker Service, and Backend Service
 _Contributed by [Danny Randall](https://github.com/dannyrandall/)_
+
+In [v1.17](./release-v117.en.md#send-your-request-driven-web-services-traces-to-aws-x-ray), Copilot launched support for sending traces from your Request-Driven Web Services to [AWS X-Ray](https://aws.amazon.com/xray/).
+Now, you can easily export traces from your Load Balanced Web, Worker, and Backend services to X-Ray by modifying your service's manifest:
+```yaml
+observability:
+  tracing: awsxray
+```
+
+For these services, Copilot will deploy an [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) sidecar container to collect traces from your service and export them to X-Ray.
+After [instrumenting your service](../docs/developing/observability.en.md#instrumenting-your-service) to send traces, you can view the end-to-end journey of requests through your services to aid in debugging and monitoring performance of your application.
+
+![X-Ray Service Map Example](https://user-images.githubusercontent.com/10566468/166986340-e3b7c0e2-c84d-4671-bf37-ba95bdb1d6b2.png)
+
+Read our documentation on [Observability](../docs/developing/observability.en.md) to learn more about tracing and get started!
 
 ## What’s next?
 
