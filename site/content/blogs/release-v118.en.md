@@ -1,3 +1,12 @@
+---
+title: 'AWS Copilot v1.18: Certificate import, ordering deployments in a pipeline, and more!'
+twitter_title: 'AWS Copilot v1.18'
+image: 'https://user-images.githubusercontent.com/879348/166855730-541cb7d5-82e0-4255-afcc-646058cfc626.png'
+image_alt: 'Controlling order of deployments in a Copilot pipeline'
+image_width: '1337'
+image_height: '316'
+---
+
 # AWS Copilot v1.18: Certificate import, ordering deployments in a pipeline, and more
 
 The AWS Copilot core team is announcing the Copilot v1.18 release.

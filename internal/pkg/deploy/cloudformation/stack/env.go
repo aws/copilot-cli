@@ -158,11 +158,21 @@ func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
 }
 
 func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		if e.in.Mft.Observability.IsEmpty() {
+			return nil
+		}
+		return &template.Telemetry{
+			EnableContainerInsights: e.in.Mft.Observability.ContainerInsights,
+		}
+	}
+	// Fallthrough to SSM config.
 	if e.in.Telemetry == nil {
 		return nil
 	}
 	return &template.Telemetry{
-		EnableContainerInsights: e.in.Telemetry.EnableContainerInsights,
+		EnableContainerInsights: aws.Bool(e.in.Telemetry.EnableContainerInsights),
 	}
 }
 

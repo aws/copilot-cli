@@ -159,6 +159,8 @@ Scale up or down based on the average memory your service should maintain.
 
 {% include 'logging.en.md' %}
 
+{% include 'observability.en.md' %}
+
 {% include 'taskdef-overrides.en.md' %}
 
 {% include 'environments.en.md' %}

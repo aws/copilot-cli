@@ -49,7 +49,7 @@ network:
 					Name: aws.String("test"),
 					Type: aws.String("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							CIDR: &mockVPCCIDR,
@@ -76,6 +76,25 @@ network:
 								},
 							},
 						},
+					},
+				},
+			},
+		},
+		"unmarshal with observability": {
+			inContent: `name: prod
+type: Environment
+
+observability:
+    container_insights: true
+`,
+			wantedStruct: Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					Observability: environmentObservability{
+						ContainerInsights: aws.Bool(true),
 					},
 				},
 			},
@@ -237,6 +256,31 @@ func TestEnvironmentVPCConfig_ManagedVPC(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got := tc.inVPCConfig.ManagedVPC()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentObservability_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentObservability
+		wanted bool
+	}{
+		"empty": {
+			in:     environmentObservability{},
+			wanted: true,
+		},
+		"not empty": {
+			in: environmentObservability{
+				ContainerInsights: aws.Bool(false),
+			},
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
 			require.Equal(t, tc.wanted, got)
 		})
 	}

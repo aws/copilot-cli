@@ -236,6 +236,8 @@ The average amount of time it takes to process an SQS message. For example, `"25
 
 {% include 'logging.en.md' %}
 
+{% include 'observability.en.md' %}
+
 {% include 'taskdef-overrides.en.md' %}
 
 {% include 'environments.en.md' %}

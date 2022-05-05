@@ -176,6 +176,8 @@ Scale up or down based on the service average response time.
 
 {% include 'logging.en.md' %}
 
+{% include 'observability.en.md' %}
+
 {% include 'taskdef-overrides.en.md' %}
 
 {% include 'environments.en.md' %}
