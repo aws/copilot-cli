@@ -117,9 +117,9 @@ func (o environmentObservability) IsEmpty() bool {
 }
 
 type environmentHTTPConfig struct {
-	Internet internetHTTPConfig `yaml:"public"`
+	Public publicHTTPConfig `yaml:"public"`
 }
 
-type internetHTTPConfig struct {
+type publicHTTPConfig struct {
 	Certificates []string `yaml:"certificates"`
 }

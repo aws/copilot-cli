@@ -116,7 +116,7 @@ http:
 				},
 				EnvironmentConfig: EnvironmentConfig{
 					HTTPConfig: environmentHTTPConfig{
-						Internet: internetHTTPConfig{
+						Public: publicHTTPConfig{
 							Certificates: []string{"cert-1", "cert-2"},
 						},
 					},
