@@ -6,10 +6,10 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
         # Your service name will be used in naming your resources like log groups, ECS services, etc.
         name: orders-worker
         type: Worker Service
-    
+
         image:
           build: ./orders/Dockerfile
-    
+
         subscribe:
           topics:
             - name: events
@@ -24,17 +24,18 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
             timeout: 30s
             dead_letter:
               tries: 10
-    
+
         cpu: 256
         memory: 512
         count: 1
-    
+        exec: true
+
         variables:
           LOG_LEVEL: info
         env_file: log.env
         secrets:
           GITHUB_TOKEN: GITHUB_TOKEN
-    
+
         # You can override any of the values defined above by environment.
         environments:
           production:
@@ -103,11 +104,11 @@ Required. The service this SNS topic is exposed by. Together with the topic name
 <span class="parent-field">topic.</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
 Optional. Specify a SNS subscription filter policy to evaluate incoming message attributes against the policy.  
 The filter policy can be specified in JSON, for example:
-```json 
+```json
 filter_policy: {"store":["example_corp"],"event":[{"anything-but":"order_cancelled"}],"customer_interests":["rugby","football","baseball"],"price_usd":[{"numeric":[">=",100]}]}
 ```
 or alternatively as a map in YAML:
-```yaml 
+```yaml
 filter_policy:
   store:
     - example_corp
@@ -217,6 +218,8 @@ The average amount of time it takes to process an SQS message. For example, `"25
 
 {% include 'exec.en.md' %}
 
+{% include 'deployment.en.md' %}
+
 {% include 'entrypoint.en.md' %}
 
 {% include 'command.en.md' %}
@@ -232,6 +235,8 @@ The average amount of time it takes to process an SQS message. For example, `"25
 {% include 'publish.en.md' %}
 
 {% include 'logging.en.md' %}
+
+{% include 'observability.en.md' %}
 
 {% include 'taskdef-overrides.en.md' %}
 
