@@ -6,6 +6,7 @@ package cloudformation
 import (
 	"errors"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -100,8 +101,10 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 					})
 				})
 				s3 := mocks.NewMocks3Client(ctrl)
-				s3.EXPECT().Upload("mockbucket", "manual/templates/phonetool-test/6806328b58e482e354cfd1879fecc310113fcf1b95c6bdf058c486f440087847.yml", gomock.Any()).Return("url", nil)
-
+				s3.EXPECT().Upload("mockbucket", gomock.Any(), gomock.Any()).DoAndReturn(func(bucket, key string, data io.Reader) (string, error) {
+					require.Contains(t, key, "manual/templates/phonetool-test/")
+					return "url", nil
+				})
 				return &CloudFormation{
 					cfnClient: m,
 					s3Client:  s3,
