@@ -2,6 +2,10 @@ name: ci
 
 on:
   pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
 
 jobs:
   build:
@@ -114,3 +118,20 @@ jobs:
 
       - name: Run license check
         run: ./scripts/license.sh .
+
+  conventional-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: validate
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // See https://gist.github.com/marcojahn/482410b728c31b221b70ea6d2c433f0c#file-conventional-commit-regex-md
+            const regex = /^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test){1}(\([\w\-\.]+\))?(!)?: ([\w ])+([\s\S]*)/g;
+
+            const pr = context.payload.pull_request;
+            const title = pr.title;
+
+            if (title.match(regex) == null) {
+              throw `PR title "${title}"" does not match conventional commits from https://www.conventionalcommits.org/en/v1.0.0/`
+            }
