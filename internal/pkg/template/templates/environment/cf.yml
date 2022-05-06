@@ -128,7 +128,7 @@ Resources:
 {{- end}}
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-ilb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-internal-lb'
   # Only accept requests coming from the public ALB, internal ALB, or other containers in the same security group.
   EnvironmentSecurityGroup:
     Metadata:
@@ -470,26 +470,6 @@ Outputs:
     Value: !Ref DefaultHTTPTargetGroup
     Export:
       Name: !Sub ${AWS::StackName}-DefaultHTTPTargetGroup
-  InternalLoadBalancerDNSName:
-    Condition: CreateInternalALB
-    Value: !GetAtt InternalLoadBalancer.DNSName
-    Export:
-      Name: !Sub ${AWS::StackName}-InternalLoadBalancerDNS
-  InternalLoadBalancerFullName:
-    Condition: CreateInternalALB
-    Value: !GetAtt InternalLoadBalancer.LoadBalancerFullName
-    Export:
-      Name: !Sub ${AWS::StackName}-InternalLoadBalancerFullName
-  InternalLoadBalancerHostedZone:
-    Condition: CreateInternalALB
-    Value: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
-    Export:
-      Name: !Sub ${AWS::StackName}-CanonicalHostedZoneID
-  InternalALBHTTPListenerArn:
-    Condition: CreateInternalALB
-    Value: !Ref InternalALBHTTPListener
-    Export:
-      Name: !Sub ${AWS::StackName}-InternalALBHTTPListenerArn
   ClusterId:
     Value: !Ref Cluster
     Export:
