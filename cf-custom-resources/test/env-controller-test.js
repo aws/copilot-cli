@@ -335,6 +335,10 @@ describe("Env Controller Handler", () => {
               ParameterValue: "",
             },
             {
+              ParameterKey: "InternalALBWorkloads",
+              ParameterValue: "",
+            },
+            {
               ParameterKey: "Aliases",
               ParameterValue: "",
             },

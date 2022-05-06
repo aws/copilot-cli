@@ -37,6 +37,7 @@ const (
 	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
 	EnvParamAliasesKey               = "Aliases"
 	EnvParamALBWorkloadsKey          = "ALBWorkloads"
+	envParamInternalALBWorkloadsKey  = "InternalALBWorkloads"
 	envParamEFSWorkloadsKey          = "EFSWorkloads"
 	envParamNATWorkloadsKey          = "NATWorkloads"
 	envParamCreateHTTPSListenerKey   = "CreateHTTPSListener"
@@ -166,7 +167,7 @@ func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
 	}
 }
 
-// Parameters returns the parameters to be passed into a environment CloudFormation template.
+// Parameters returns the parameters to be passed into an environment CloudFormation template.
 func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	httpsListener := "false"
 	if len(e.in.ImportCertARNs) != 0 || e.in.App.Domain != "" {
@@ -207,6 +208,10 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
 			ParameterValue: aws.String(""),
 		},
 		{
