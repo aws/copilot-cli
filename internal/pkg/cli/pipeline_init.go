@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -673,7 +674,7 @@ func (o *initPipelineOpts) createBuildspec() error {
 	}{
 		BinaryS3BucketPath: binaryS3BucketPath,
 		Version:            version.Version,
-		ManifestPath:       o.manifestPath,
+		ManifestPath:       filepath.ToSlash(o.manifestPath), // The manifest path must be rendered in the buildspec with '/' instead of os-specific separator.
 		ArtifactBuckets:    artifactBuckets,
 	})
 	if err != nil {

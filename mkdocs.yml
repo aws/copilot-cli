@@ -4,7 +4,7 @@ site_url: 'https://aws.github.io/copilot-cli/'
 repo_name: 'aws/copilot-cli'
 repo_url: 'https://github.com/aws/copilot-cli'
 edit_uri: 'edit/mainline/site/content'
-copyright: 'Copyright &copy; 2021 Amazon'
+copyright: 'Copyright &copy; 2022 Amazon'
 docs_dir: 'site/content'
 site_dir: 'docs'
 extra_css:
@@ -51,6 +51,7 @@ nav:
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Domain: docs/developing/domain.en.md
       - Manifest Environment Variables: docs/developing/manifest-env-var.en.md
+      - Observability: docs/developing/observability.en.md
       - Publish/Subscribe: docs/developing/publish-subscribe.en.md
       - Secrets: docs/developing/secrets.en.md
       - Service Discovery: docs/developing/service-discovery.en.md
@@ -145,6 +146,7 @@ nav:
         - task run: docs/commands/task-run.en.md
         - version: docs/commands/version.en.md
   - Blogs:
+      - Release v1.18: blogs/release-v118.en.md
       - Release v1.17: blogs/release-v117.en.md
       - Release v1.16: blogs/release-v116.en.md
   - Community:
@@ -167,6 +169,7 @@ theme:
 
 markdown_extensions:
   - admonition
+  - meta
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.tabbed

@@ -311,11 +311,10 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					Name: aws.String("mockName"),
 				},
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					TaskConfig: TaskConfig{
-						Count: Count{
-							AdvancedCount: AdvancedCount{
-								ResponseTime: durationp(10 * time.Second),
-							},
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
 						},
 					},
 					DeployConfig: DeploymentConfiguration{
