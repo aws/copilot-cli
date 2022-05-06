@@ -110,7 +110,7 @@ Resources:
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
   InternalLoadBalancerSecurityGroup:
     Metadata:
-      'aws:copilot:description': 'A private security group for your internal load balancer allowing HTTP traffic'
+      'aws:copilot:description': 'A security group for your internal load balancer allowing HTTP traffic from within the VPC'
     Condition: CreateInternalALB
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -183,7 +183,7 @@ Resources:
       Type: application
   InternalLoadBalancer:
     Metadata:
-      'aws:copilot:description': 'An internal Application Load Balancer to distribute private traffic to your services'
+      'aws:copilot:description': 'An internal Application Load Balancer to distribute private traffic from within the VPC to your services'
     Condition: CreateInternalALB
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
