@@ -219,6 +219,7 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 
 // convertHTTPHealthCheck converts the ALB health check configuration into a format parsable by the templates pkg.
 func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPHealthCheckOpts {
+	// TODO check if hc == nil?
 	opts := template.HTTPHealthCheckOpts{
 		HealthCheckPath:    manifest.DefaultHealthCheckPath,
 		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,

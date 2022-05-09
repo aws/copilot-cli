@@ -62,8 +62,7 @@ func NewBackendService(mft *manifest.BackendService, env, app string, rc Runtime
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: mft,
-
-		parser: parser,
+		parser:   parser,
 	}, nil
 }
 
@@ -117,18 +116,39 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// TODO aliases?
+	// var aliases []string
+
+	var deregistrationDelay *int64 = aws.Int64(60)
+	if s.manifest.RoutingRule.DeregistrationDelay != nil {
+		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
+	}
+
+	var allowedSourceIPs []string
+	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
+		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
+	}
+
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
-		Variables:                s.manifest.BackendServiceConfig.Variables,
-		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
-		NestedStack:              addonsOutputs,
-		AddonsExtraParams:        addonsParams,
-		Sidecars:                 sidecars,
-		Autoscaling:              autoscaling,
-		CapacityProviders:        capacityProviders,
-		DesiredCountOnSpot:       desiredCountOnSpot,
-		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:             manifest.BackendServiceType,
-		HealthCheck:              convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
+		Variables: s.manifest.BackendServiceConfig.Variables,
+		Secrets:   convertSecrets(s.manifest.BackendServiceConfig.Secrets),
+		// TODO aliases
+		// TODO HTTPSListener
+		// TODO UseImportedCerts
+		NestedStack:         addonsOutputs,
+		AddonsExtraParams:   addonsParams,
+		Sidecars:            sidecars,
+		Autoscaling:         autoscaling,
+		CapacityProviders:   capacityProviders,
+		DesiredCountOnSpot:  desiredCountOnSpot,
+		ExecuteCommand:      convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:        manifest.BackendServiceType,
+		HealthCheck:         convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
+		HTTPHealthCheck:     convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
+		DeregistrationDelay: deregistrationDelay,
+		AllowedSourceIps:    allowedSourceIPs,
+		// TODO rulePriorityLambda ?
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
 		DesiredCountLambda:       desiredCountLambda.String(),
@@ -143,6 +163,9 @@ func (s *BackendService) Template() (string, error) {
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
 		Platform:                 convertPlatform(s.manifest.Platform),
+		// TODO HTTPVersion
+		// ignore nlb fields (5)
+		ALBEnabled: s.manifest.BackendServiceConfig.RoutingRule.UnsetOrDisabled(), // TODO is this correct?
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
@@ -167,6 +190,7 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
 		containerPort = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
 	}
+	// TODO params for http stuff
 	return append(svcParams, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),

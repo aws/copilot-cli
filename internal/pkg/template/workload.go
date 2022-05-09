@@ -90,6 +90,7 @@ var (
 		"subscribe",
 		"nlb",
 		"vpc-connector",
+		"alb",
 	}
 
 	// Operating systems to determine Fargate platform versions.
