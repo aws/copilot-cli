@@ -49,18 +49,3 @@ func (mr *MockappResourcesGetterMockRecorder) GetAppResourcesByRegion(app, regio
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppResourcesByRegion", reflect.TypeOf((*MockappResourcesGetter)(nil).GetAppResourcesByRegion), app, region)
 }
-
-// GetRegionalAppResources mocks base method.
-func (m *MockappResourcesGetter) GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRegionalAppResources", app)
-	ret0, _ := ret[0].([]*stack.AppRegionalResources)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetRegionalAppResources indicates an expected call of GetRegionalAppResources.
-func (mr *MockappResourcesGetterMockRecorder) GetRegionalAppResources(app interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*MockappResourcesGetter)(nil).GetRegionalAppResources), app)
-}

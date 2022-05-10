@@ -14,7 +14,6 @@ import (
 
 type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
-	GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error)
 }
 
 type envDeployer struct {
