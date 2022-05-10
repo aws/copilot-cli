@@ -42,7 +42,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 			setUpMocks: func(m *uploadArtifactsMock) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{}, nil)
 			},
-			wantedError: fmt.Errorf("cannot find the S3 artifact bucket in %s region", mockEnvRegion),
+			wantedError: fmt.Errorf("cannot find the S3 artifact bucket in region %s", mockEnvRegion),
 		},
 		"fail to upload artifacts": {
 			setUpMocks: func(m *uploadArtifactsMock) {
@@ -100,8 +100,4 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestEnvDeployer_DeployEnvironment(t *testing.T) {
-
 }

@@ -42,7 +42,7 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 		return nil, err
 	}
 	if resources.S3Bucket == "" {
-		return nil, fmt.Errorf("cannot find the S3 artifact bucket in %s region", envRegion)
+		return nil, fmt.Errorf("cannot find the S3 artifact bucket in region %s", envRegion)
 	}
 
 	urls, err := d.uploader.UploadEnvironmentCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
