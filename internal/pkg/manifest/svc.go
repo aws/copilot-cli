@@ -274,6 +274,7 @@ func IsTypeAService(t string) bool {
 // See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
 type HTTPHealthCheckArgs struct {
 	Path               *string        `yaml:"path"`
+	Port               *int           `yaml:"port"`
 	SuccessCodes       *string        `yaml:"success_codes"`
 	HealthyThreshold   *int64         `yaml:"healthy_threshold"`
 	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
@@ -283,7 +284,7 @@ type HTTPHealthCheckArgs struct {
 }
 
 func (h *HTTPHealthCheckArgs) isEmpty() bool {
-	return h.Path == nil && h.SuccessCodes == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil &&
+	return h.Path == nil && h.Port == nil && h.SuccessCodes == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil &&
 		h.Interval == nil && h.Timeout == nil && h.GracePeriod == nil
 }
 
