@@ -10,7 +10,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 type appResourcesGetter interface {
@@ -43,7 +42,6 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 		return nil, err
 	}
 	if resources.S3Bucket == "" {
-		log.Errorf("Cannot find the S3 artifact bucket in %s region created by app %s. The S3 bucket is necessary for many future operations. For example, when you need addons to your services.", envRegion, d.app.Name)
 		return nil, fmt.Errorf("cannot find the S3 artifact bucket in %s region", envRegion)
 	}
 
