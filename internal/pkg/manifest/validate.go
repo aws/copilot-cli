@@ -71,7 +71,7 @@ func (l LoadBalancedWebService) Validate() error {
 	}
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
-		targetContainer:   l.RoutingRule.TargetContainerValue(),
+		targetContainer:   l.RoutingRule.GetTargetContainer(),
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
 		return fmt.Errorf("validate HTTP load balancer target: %w", err)

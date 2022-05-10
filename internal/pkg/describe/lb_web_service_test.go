@@ -39,14 +39,14 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 		cfnstack.WorkloadTaskCountParamKey:         "1",
 		cfnstack.WorkloadTaskCPUParamKey:           "256",
 		cfnstack.WorkloadTaskMemoryParamKey:        "512",
-		cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
+		cfnstack.WorkloadRulePathParamKey:          testSvcPath,
 	}
 	mockProdParams := map[string]string{
 		cfnstack.LBWebServiceContainerPortParamKey: "5000",
 		cfnstack.WorkloadTaskCountParamKey:         "2",
 		cfnstack.WorkloadTaskCPUParamKey:           "512",
 		cfnstack.WorkloadTaskMemoryParamKey:        "1024",
-		cfnstack.LBWebServiceRulePathParamKey:      prodSvcPath,
+		cfnstack.WorkloadRulePathParamKey:          prodSvcPath,
 	}
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {

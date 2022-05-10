@@ -46,6 +46,9 @@ const (
 const (
 	WorkloadTargetContainerParamKey = "TargetContainer"
 	WorkloadTargetPortParamKey      = "TargetPort"
+	WorkloadHTTPSParamKey           = "HTTPSEnabled"
+	WorkloadRulePathParamKey        = "RulePath"
+	WorkloadStickinessParamKey      = "Stickiness"
 )
 
 // Parameter logical IDs for workloads on App Runner.

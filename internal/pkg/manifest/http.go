@@ -20,11 +20,6 @@ func (r *RoutingRuleConfigOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
 
-// EmptyOrDisabled returns true if the routing rule configuration is not configured or explicitly disabled.
-func (r *RoutingRuleConfigOrBool) EmptyOrDisabled() bool {
-	return r.Disabled() || r.isEmpty()
-}
-
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
 func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
@@ -49,6 +44,34 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+// RoutingRuleConfiguration holds the path to route requests to the service.
+type RoutingRuleConfiguration struct {
+	Path                *string                 `yaml:"path"`
+	ProtocolVersion     *string                 `yaml:"version"`
+	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
+	Stickiness          *bool                   `yaml:"stickiness"`
+	Alias               Alias                   `yaml:"alias"`
+	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
+	// TargetContainer is the container load balancer routes traffic to.
+	TargetContainer          *string `yaml:"target_container"`
+	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
+}
+
+// GetTargetContainer returns the correct target container value, if set.
+// Use this function instead of getting r.TargetContainer or TargetContainerCamelCase directly.
+func (r *RoutingRuleConfiguration) GetTargetContainer() *string {
+	if r.TargetContainer != nil {
+		return r.TargetContainer
+	}
+	return r.TargetContainerCamelCase
+}
+
+func (r *RoutingRuleConfiguration) isEmpty() bool {
+	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() &&
+		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil
+}
+
 // IPNet represents an IP network string. For example: 10.1.0.0/16
 type IPNet string
 
@@ -65,10 +88,6 @@ func (e *Alias) IsEmpty() bool {
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (e *Alias) UnmarshalYAML(value *yaml.Node) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), value); err != nil {
-		return errUnmarshalAlias
-	}
-	return nil
 	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), value); err != nil {
 		return errUnmarshalAlias
 	}
@@ -90,32 +109,4 @@ func (e *Alias) ToString() string {
 		return aws.StringValue(e.String)
 	}
 	return strings.Join(e.StringSlice, ",")
-}
-
-// RoutingRuleConfiguration holds the path to route requests to the service.
-type RoutingRuleConfiguration struct {
-	Path                *string                 `yaml:"path"`
-	ProtocolVersion     *string                 `yaml:"version"`
-	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
-	Stickiness          *bool                   `yaml:"stickiness"`
-	Alias               Alias                   `yaml:"alias"`
-	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
-	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string `yaml:"target_container"`
-	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
-	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
-}
-
-// TargetContainer returns the name of the target container, if explicitly set.
-func (r *RoutingRuleConfiguration) TargetContainerValue() *string {
-	if r.TargetContainer != nil {
-		return r.TargetContainer
-	}
-
-	return r.TargetContainerCamelCase
-}
-
-func (r *RoutingRuleConfiguration) isEmpty() bool {
-	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() &&
-		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil
 }

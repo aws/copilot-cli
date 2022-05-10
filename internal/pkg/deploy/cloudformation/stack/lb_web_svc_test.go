@@ -434,7 +434,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("true"),
 				},
 				{
@@ -450,11 +450,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("2"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -478,11 +478,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -498,7 +498,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("2"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -519,11 +519,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("true"),
 				},
 				{
@@ -539,7 +539,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -555,11 +555,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -575,7 +575,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("true"),
 				},
 				{
@@ -596,11 +596,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -616,7 +616,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -639,11 +639,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -659,7 +659,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -676,11 +676,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -696,7 +696,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -724,11 +724,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -744,7 +744,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{

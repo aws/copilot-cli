@@ -64,7 +64,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: testSvcPath,
+						stack.WorkloadRulePathParamKey: testSvcPath,
 					}, nil),
 					m.envDescriber.EXPECT().Outputs().Return(nil, mockErr),
 				)
@@ -80,8 +80,8 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: testSvcPath,
-						stack.LBWebServiceHTTPSParamKey:    "true",
+						stack.WorkloadRulePathParamKey: testSvcPath,
+						stack.WorkloadHTTPSParamKey:    "true",
 					}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
@@ -106,8 +106,8 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: testSvcPath,
-						stack.LBWebServiceHTTPSParamKey:    "true",
+						stack.WorkloadRulePathParamKey: testSvcPath,
+						stack.WorkloadHTTPSParamKey:    "true",
 					}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
@@ -132,7 +132,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: "mySvc",
+						stack.WorkloadRulePathParamKey: "mySvc",
 					}, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
@@ -250,8 +250,8 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						stack.LBWebServiceRulePathParamKey: testSvcPath,
-						stack.LBWebServiceHTTPSParamKey:    "true",
+						stack.WorkloadRulePathParamKey: testSvcPath,
+						stack.WorkloadHTTPSParamKey:    "true",
 					}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
