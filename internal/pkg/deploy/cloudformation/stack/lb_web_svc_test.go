@@ -386,7 +386,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
-			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
+			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
 			ParameterValue: aws.String("80"),
 		},
 		{
@@ -438,11 +438,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("true"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -486,11 +486,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -527,11 +527,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("true"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("xray"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("5000"),
 				},
 				{
@@ -563,11 +563,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -604,11 +604,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -647,11 +647,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -684,11 +684,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -732,11 +732,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -769,11 +769,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{

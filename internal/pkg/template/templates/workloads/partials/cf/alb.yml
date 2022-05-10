@@ -47,7 +47,6 @@ RulePriorityFunction:
     Role: !GetAtt 'CustomResourceRole.Arn'
     Runtime: nodejs12.x
 
-# TODO: this should probably not all be in the alb partial
 CustomResourceRole:
   Metadata:
     'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'

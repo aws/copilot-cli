@@ -319,7 +319,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		defer ctrl.Finish()
 		m := mocks.NewMockecsDescriber(ctrl)
 		m.EXPECT().Params().Return(map[string]string{
-			stack.LBWebServiceContainerPortParamKey: stack.NoExposedContainerPort, // No port is set for the backend service.
+			stack.WorkloadContainerPortParamKey: stack.NoExposedContainerPort, // No port is set for the backend service.
 		}, nil)
 
 		d := &BackendServiceDescriber{
@@ -339,7 +339,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		defer ctrl.Finish()
 		mockSvcStack := mocks.NewMockecsDescriber(ctrl)
 		mockSvcStack.EXPECT().Params().Return(map[string]string{
-			stack.LBWebServiceContainerPortParamKey: "8080",
+			stack.WorkloadContainerPortParamKey: "8080",
 		}, nil)
 		mockEnvStack := mocks.NewMockenvDescriber(ctrl)
 		mockEnvStack.EXPECT().ServiceDiscoveryEndpoint().Return("test.app.local", nil)
