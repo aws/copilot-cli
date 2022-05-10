@@ -1,8 +1,7 @@
 name: Publish docs via GitHub Pages
 on:
-  push:
-    tags:       
-      - v*
+  release:
+    types: [published]
   # Allow the workflow to be triggered also manually.
   workflow_dispatch:
 
