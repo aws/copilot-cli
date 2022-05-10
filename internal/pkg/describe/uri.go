@@ -181,7 +181,7 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
-	port := svcStackParams[stack.LBWebServiceContainerPortParamKey]
+	port := svcStackParams[stack.WorkloadContainerPortParamKey]
 	if port == stack.NoExposedContainerPort {
 		return BlankServiceDiscoveryURI, nil
 	}
