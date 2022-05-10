@@ -6,7 +6,6 @@
 package stack_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -76,7 +75,6 @@ observability:
 			envStack := stack.NewEnvStackConfig(tc.input)
 			actual, err := envStack.Template()
 			require.NoError(t, err, "serialize template")
-			fmt.Println(actual)
 			actualObj := make(map[any]any)
 			require.NoError(t, yaml.Unmarshal([]byte(actual), actualObj))
 
