@@ -21,18 +21,19 @@ type Environment struct {
 
 // EnvironmentConfig holds the configuration for an environment.
 type EnvironmentConfig struct {
-	Network       environmentNetworkConfig `yaml:"network"`
-	Observability environmentObservability `yaml:"observability"`
+	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
+	Observability environmentObservability `yaml:"observability,omitempty,flow"`
+	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty,flow"`
 }
 
 type environmentNetworkConfig struct {
-	VPC environmentVPCConfig `yaml:"vpc"`
+	VPC environmentVPCConfig `yaml:"vpc,omitempty"`
 }
 
 type environmentVPCConfig struct {
 	ID      *string              `yaml:"id"`
 	CIDR    *IPNet               `yaml:"cidr"`
-	Subnets subnetsConfiguration `yaml:"subnets"`
+	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
 }
 
 func (v environmentVPCConfig) imported() bool {
@@ -96,8 +97,8 @@ func (v environmentVPCConfig) ManagedVPC() *template.ManagedVPC {
 }
 
 type subnetsConfiguration struct {
-	Public  []subnetConfiguration `yaml:"public"`
-	Private []subnetConfiguration `yaml:"private"`
+	Public  []subnetConfiguration `yaml:"public,omitempty"`
+	Private []subnetConfiguration `yaml:"private,omitempty"`
 }
 
 type subnetConfiguration struct {
@@ -107,10 +108,18 @@ type subnetConfiguration struct {
 }
 
 type environmentObservability struct {
-	ContainerInsights *bool `yaml:"container_insights"`
+	ContainerInsights *bool `yaml:"container_insights,omitempty"`
 }
 
 // IsEmpty returns true if there is no configuration to the environment's observability.
 func (o environmentObservability) IsEmpty() bool {
 	return o.ContainerInsights == nil
+}
+
+type environmentHTTPConfig struct {
+	Public publicHTTPConfig `yaml:"public,omitempty"`
+}
+
+type publicHTTPConfig struct {
+	Certificates []string `yaml:"certificates,omitempty"`
 }

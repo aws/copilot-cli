@@ -99,6 +99,30 @@ observability:
 				},
 			},
 		},
+		"unmarshal with http": {
+			inContent: `name: prod
+type: Environment
+
+http:
+    public:
+        certificates:
+            - cert-1
+            - cert-2
+`,
+			wantedStruct: Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: environmentHTTPConfig{
+						Public: publicHTTPConfig{
+							Certificates: []string{"cert-1", "cert-2"},
+						},
+					},
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

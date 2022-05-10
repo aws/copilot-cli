@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -82,6 +83,14 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	var mft string
+	if e.in.Mft != nil {
+		out, err := yaml.Marshal(e.in.Mft)
+		if err != nil {
+			return "", fmt.Errorf("marshal environment manifest to embed in template: %v", err)
+		}
+		mft = string(out)
+	}
 
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:                e.in.App.Name,
@@ -92,12 +101,13 @@ func (e *EnvStackConfig) Template() (string, error) {
 		ArtifactBucketARN:      e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
 
-		ImportCertARNs: e.in.ImportCertARNs,
+		ImportCertARNs: e.importCertARNs(),
 		VPCConfig:      e.vpcConfig(),
 		Telemetry:      e.telemetryConfig(),
 
 		Version:       e.in.Version,
 		LatestVersion: deploy.LatestEnvTemplateVersion,
+		Manifest:      mft,
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": template.IncFunc,
 	}))
@@ -174,6 +184,15 @@ func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
 	return &template.Telemetry{
 		EnableContainerInsights: aws.Bool(e.in.Telemetry.EnableContainerInsights),
 	}
+}
+
+func (e *EnvStackConfig) importCertARNs() []string {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		return e.in.Mft.HTTPConfig.Public.Certificates
+	}
+	// Fallthrough to SSM config.
+	return e.in.ImportCertARNs
 }
 
 // Parameters returns the parameters to be passed into a environment CloudFormation template.
