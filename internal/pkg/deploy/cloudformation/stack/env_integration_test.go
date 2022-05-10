@@ -77,6 +77,8 @@ observability:
 			require.NoError(t, err, "serialize template")
 			actualObj := make(map[any]any)
 			require.NoError(t, yaml.Unmarshal([]byte(actual), actualObj))
+			actualMetadata := actualObj["Metadata"].(map[string]any) // We remove the Version from the expected template, as the latest env version always changes.
+			delete(actualMetadata, "Version")
 
 			// THEN
 			require.Equal(t, wantedObj, actualObj)

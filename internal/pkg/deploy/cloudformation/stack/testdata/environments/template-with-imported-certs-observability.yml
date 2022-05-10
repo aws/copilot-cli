@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: MIT-0
 Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
-  Version: v1.9.0
   Manifest: |
     name: test
     type: Environment
