@@ -62,7 +62,7 @@ type RoutingRuleConfiguration struct {
 }
 
 // GetTargetContainer returns the correct target container value, if set.
-// Use this function instead of getting r.TargetContainer or TargetContainerCamelCase directly.
+// Use this function instead of getting r.TargetContainer or r.TargetContainerCamelCase directly.
 func (r *RoutingRuleConfiguration) GetTargetContainer() *string {
 	if r.TargetContainer != nil {
 		return r.TargetContainer
