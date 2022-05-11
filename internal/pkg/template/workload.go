@@ -91,6 +91,7 @@ var (
 		"nlb",
 		"vpc-connector",
 		"alb",
+		"custom-resource-role",
 	}
 
 	// Operating systems to determine Fargate platform versions.
