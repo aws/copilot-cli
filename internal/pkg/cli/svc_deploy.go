@@ -392,6 +392,7 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 		return nil, fmt.Errorf("get uri for environment %s: %w", o.envName, err)
 	}
 
+	// TODO fix this to include internal ALB
 	network := "over the internet."
 	if o.svcType == manifest.BackendServiceType {
 		network = "with service discovery."
