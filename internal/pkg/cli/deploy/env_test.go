@@ -109,10 +109,11 @@ type deployEnvironmentMock struct {
 
 func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 	const (
-		mockManagerRoleARN = "mockManagerRoleARN"
-		mockEnvRegion      = "us-west-2"
-		mockAppName        = "mockApp"
-		mockEnvName        = "mockEnv"
+		mockManagerRoleARN      = "mockManagerRoleARN"
+		mockCFNExecutionRoleARN = "mockCFNExecutionRoleARN"
+		mockEnvRegion           = "us-west-2"
+		mockAppName             = "mockApp"
+		mockEnvName             = "mockEnv"
 	)
 	mockApp := &config.Application{
 		Name: mockAppName,
@@ -133,7 +134,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
-				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
 			wantedError: errors.New("some error"),
 		},
@@ -142,7 +143,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
-				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 	}
