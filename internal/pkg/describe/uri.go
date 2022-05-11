@@ -97,7 +97,7 @@ func (d *LBWebServiceDescriber) albURI(envName string, svcDescr ecsDescriber, en
 	if err != nil {
 		return albURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
-	path := svcParams[stack.LBWebServiceRulePathParamKey]
+	path := svcParams[stack.WorkloadRulePathParamKey]
 	isHTTPS, _ := svcParams[svcParamHTTPSEnabled]
 	if isHTTPS != "true" {
 		envOutputs, err := envDescr.Outputs()
@@ -181,7 +181,7 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
-	port := svcStackParams[stack.LBWebServiceContainerPortParamKey]
+	port := svcStackParams[stack.WorkloadContainerPortParamKey]
 	if port == stack.NoExposedContainerPort {
 		return BlankServiceDiscoveryURI, nil
 	}

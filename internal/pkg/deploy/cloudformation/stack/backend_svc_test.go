@@ -337,7 +337,7 @@ func TestBackendService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("mockLocation"),
 		},
 		{
-			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
+			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
 			ParameterValue: aws.String("8080"),
 		},
 		{
