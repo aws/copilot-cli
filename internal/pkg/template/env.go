@@ -46,6 +46,7 @@ type EnvOpts struct {
 	Telemetry      *Telemetry
 
 	LatestVersion string
+	Manifest      string // Serialized manifest used to render the environment template.
 }
 
 type VPCConfig struct {

@@ -230,6 +230,9 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	} else if hc.HealthCheckPath != nil {
 		opts.HealthCheckPath = *hc.HealthCheckPath
 	}
+	if hc.HealthCheckArgs.Port != nil {
+		opts.Port = strconv.Itoa(aws.IntValue(hc.HealthCheckArgs.Port))
+	}
 	if hc.HealthCheckArgs.SuccessCodes != nil {
 		opts.SuccessCodes = *hc.HealthCheckArgs.SuccessCodes
 	}
