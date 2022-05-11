@@ -322,7 +322,7 @@ type bucketEmptier interface {
 
 // Interfaces for deploying resources through CloudFormation. Facilitates mocking.
 type environmentDeployer interface {
-	DeployAndRenderEnvironment(out termprogress.FileWriter, env *deploy.CreateEnvironmentInput) error
+	CreateAndRenderEnvironment(out termprogress.FileWriter, env *deploy.CreateEnvironmentInput) error
 	DeleteEnvironment(appName, envName, cfnExecRoleARN string) error
 	GetEnvironment(appName, envName string) (*config.Environment, error)
 	EnvironmentTemplate(appName, envName string) (string, error)

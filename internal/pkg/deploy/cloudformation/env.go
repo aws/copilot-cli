@@ -26,8 +26,8 @@ const (
 	includeLoadBalancerParamKey = "IncludePublicLoadBalancer"
 )
 
-// DeployAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
-func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
+// CreateAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
+func (cf CloudFormation) CreateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
 	cfnStack, err := cf.environmentStack(env)
 	if err != nil {
 		return err
