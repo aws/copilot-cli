@@ -5,22 +5,38 @@ package deploy
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
 type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
 }
 
+type deployEnvironmentInput struct {
+	rootUserARN         string
+	isProduction        bool
+	customResourcesURLs map[string]string
+}
+
+type environmentDeployer interface {
+	UpdateAndRenderEnvironment(out termprogress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error
+}
+
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
 
-	mft manifest.Environment
+	mft *manifest.Environment
 
 	appCFN appResourcesGetter
 
@@ -28,20 +44,18 @@ type envDeployer struct {
 	uploader customResourcesUploader
 	s3       uploader
 
+	// Dependencies to deploy an environment.
+	envDeployer environmentDeployer
+
 	// Cached variables.
 	appRegionalResources *stack.AppRegionalResources
 }
 
 // UploadArtifacts uploads the deployment artifacts for the environment.
 func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
-	envRegion := d.env.Region
-
 	resources, err := d.getAppRegionalResources()
 	if err != nil {
 		return nil, err
-	}
-	if resources.S3Bucket == "" {
-		return nil, fmt.Errorf("cannot find the S3 artifact bucket in region %s", envRegion)
 	}
 
 	urls, err := d.uploader.UploadEnvironmentCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
@@ -53,6 +67,34 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 	return urls, nil
 }
 
+// DeployEnvironment deploys an environment using CloudFormation.
+func (d *envDeployer) DeployEnvironment(in *deployEnvironmentInput) error {
+	resources, err := d.getAppRegionalResources()
+	if err != nil {
+		return err
+	}
+	partition, err := partitions.Region(d.env.Region).Partition()
+	if err != nil {
+		return err
+	}
+	deployEnvInput := &deploy.CreateEnvironmentInput{
+		Name: d.env.Name,
+		App: deploy.AppInformation{
+			Name:                d.app.Name,
+			Domain:              d.app.Domain,
+			AccountPrincipalARN: in.rootUserARN,
+		},
+		Prod:                 in.isProduction,
+		AdditionalTags:       d.app.Tags,
+		CustomResourcesURLs:  in.customResourcesURLs,
+		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
+		ArtifactBucketKeyARN: resources.KMSKeyARN,
+		Mft:                  d.mft,
+		Version:              deploy.LatestEnvTemplateVersion,
+	}
+	return d.envDeployer.UpdateAndRenderEnvironment(os.Stderr, deployEnvInput, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
+}
+
 func (d *envDeployer) getAppRegionalResources() (*stack.AppRegionalResources, error) {
 	if d.appRegionalResources != nil {
 		return d.appRegionalResources, nil
@@ -60,6 +102,9 @@ func (d *envDeployer) getAppRegionalResources() (*stack.AppRegionalResources, er
 	resources, err := d.appCFN.GetAppResourcesByRegion(d.app, d.env.Region)
 	if err != nil {
 		return nil, fmt.Errorf("get app resources in region %s: %w", d.env.Region, err)
+	}
+	if resources.S3Bucket == "" {
+		return nil, fmt.Errorf("cannot find the S3 artifact bucket in region %s", d.env.Region)
 	}
 	return resources, nil
 }
