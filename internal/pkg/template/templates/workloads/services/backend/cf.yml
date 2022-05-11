@@ -59,7 +59,6 @@ Resources:
 {{- if .Autoscaling }}
 {{include "autoscaling" . | indent 2}}
 {{- end }}
-{{include "custom-resource-role" . | indent 2}}
   Service:
     DependsOn:
     - EnvControllerAction

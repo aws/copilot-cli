@@ -47,8 +47,33 @@ RulePriorityFunction:
     Handler: "index.nextAvailableRulePriorityHandler"
     Timeout: 600
     MemorySize: 512
-    Role: !GetAtt 'CustomResourceRole.Arn'
+    Role: !GetAtt 'RulePriorityFunctionRole.Arn'
     Runtime: nodejs12.x
+
+RulePriorityFunctionRole:
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Path: /
+    ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Policies:
+      - PolicyName: "DNSandACMAccess"
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - elasticloadbalancing:DescribeRules
+              Resource: "*"
 
 {{- if .HTTPSListener}}
 {{include "https-listener" .}}
