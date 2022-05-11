@@ -28,35 +28,72 @@ const (
 
 // DeployAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
 func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
-	bucketARN, err := arn.Parse(env.ArtifactBucketARN)
+	cfnStack, err := cf.environmentStack(env)
 	if err != nil {
 		return err
+	}
+	in := newRenderEnvironmentInput(out, cfnStack)
+	in.createChangeSet = func() (changeSetID string, err error) {
+		spinner := progress.NewSpinner(out)
+		label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", cfnStack.Name)
+		spinner.Start(label)
+		defer stopSpinner(spinner, err, label)
+		changeSetID, err = cf.cfnClient.Create(cfnStack)
+		if err != nil {
+			return "", err
+		}
+		return changeSetID, nil
+	}
+	return cf.renderStackChanges(in)
+}
+
+// UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
+func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
+	cfnStack, err := cf.environmentStack(env)
+	if err != nil {
+		return err
+	}
+	for _, opt := range opts {
+		opt(cfnStack)
+	}
+	in := newRenderEnvironmentInput(out, cfnStack)
+	in.createChangeSet = func() (changeSetID string, err error) {
+		spinner := progress.NewSpinner(out)
+		label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", cfnStack.Name)
+		spinner.Start(label)
+		defer stopSpinner(spinner, err, label)
+		changeSetID, err = cf.cfnClient.Update(cfnStack)
+		if err != nil {
+			return "", err
+		}
+		return changeSetID, nil
+	}
+	return cf.renderStackChanges(in)
+}
+
+func (cf CloudFormation) environmentStack(env *deploy.CreateEnvironmentInput) (*cloudformation.Stack, error) {
+	bucketARN, err := arn.Parse(env.ArtifactBucketARN)
+	if err != nil {
+		return nil, err
 	}
 	stackConfig := stack.NewEnvStackConfig(env)
 	url, err := cf.uploadStackTemplateToS3(bucketARN.Resource, stackConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	cfnStack, err := toStackFromS3(stackConfig, url)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	spinner := progress.NewSpinner(out)
-	return cf.renderStackChanges(&renderStackChangesInput{
+	return cfnStack, nil
+}
+
+func newRenderEnvironmentInput(out progress.FileWriter, cfnStack *cloudformation.Stack) *renderStackChangesInput {
+	return &renderStackChangesInput{
 		w:                out,
 		stackName:        cfnStack.Name,
 		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s environment.", cfnStack.Name),
-		createChangeSet: func() (changeSetID string, err error) {
-			label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", cfnStack.Name)
-			spinner.Start(label)
-			defer stopSpinner(spinner, err, label)
-			changeSetID, err = cf.cfnClient.Create(cfnStack)
-			if err != nil {
-				return "", err
-			}
-			return changeSetID, nil
-		},
-	})
+	}
 }
 
 // DeleteEnvironment deletes the CloudFormation stack of an environment.
