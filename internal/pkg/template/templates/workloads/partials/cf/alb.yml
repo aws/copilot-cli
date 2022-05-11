@@ -5,7 +5,7 @@ TargetGroup:
   Properties:
     HealthCheckPath: {{.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
     {{- if .HTTPHealthCheck.Port}}
-      HealthCheckPort: {{.HTTPHealthCheck.Port}} # Default is 'traffic-port'.
+    HealthCheckPort: {{.HTTPHealthCheck.Port}} # Default is 'traffic-port'.
     {{- end}}
     {{- if .HTTPHealthCheck.SuccessCodes}}
     Matcher:
