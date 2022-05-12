@@ -80,7 +80,7 @@ Resources:
 {{include "alb" . | indent 2}}
 {{end}}
 
-{{- if or .ALBEnabled .Autoscaling}}
+  {{- if or .ALBEnabled .Autoscaling}}
   CustomResourceRole:
     Metadata:
       'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'
@@ -139,6 +139,7 @@ Resources:
                 - "tag:GetResources"
               Resource: "*"
       {{- end}}
+  {{- end}}
 
   Service:
     Metadata:
