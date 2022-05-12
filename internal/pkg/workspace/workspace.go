@@ -290,14 +290,21 @@ func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, 
 }
 
 // ReadEnvironmentManifest returns the contents of the environment's manifest under copilot/environments/{name}/manifest.yml.
-func (ws *Workspace) ReadEnvironmentManifest(mftDirName string) (environmentManifest, error) {
+func (ws *Workspace) ReadEnvironmentManifest(mftDirName string) (EnvironmentManifest, error) {
 	raw, err := ws.read(environmentsDirName, mftDirName, manifestFileName)
 	if err != nil {
 		return nil, err
 	}
-	mft := environmentManifest(raw)
+	mft := EnvironmentManifest(raw)
 	if err := ws.manifestNameMatchWithDir(mft, mftDirName); err != nil {
 		return nil, err
+	}
+	typ, err := retrieveTypeFromManifest(mft)
+	if err != nil {
+		return nil, err
+	}
+	if typ != manifest.EnvironmentManifestType {
+		return nil, fmt.Errorf(`manifest %s has type of "%s", not "%s"`, mftDirName, typ, manifest.EnvironmentManifestType)
 	}
 	return mft, nil
 }
@@ -598,23 +605,6 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 	return dockerfiles, nil
 }
 
-// WorkloadManifest represents raw local workload manifest.
-type WorkloadManifest []byte
-
-type environmentManifest []byte
-
-type namedManifest interface {
-	name() (string, error)
-}
-
-func (w WorkloadManifest) name() (string, error) {
-	return retrieveNameFromManifest(w)
-}
-
-func (e environmentManifest) name() (string, error) {
-	return retrieveNameFromManifest(e)
-}
-
 func (ws *Workspace) manifestNameMatchWithDir(mft namedManifest, mftDirName string) error {
 	mftName, err := mft.name()
 	if err != nil {
@@ -626,15 +616,27 @@ func (ws *Workspace) manifestNameMatchWithDir(mft namedManifest, mftDirName stri
 	return nil
 }
 
+// WorkloadManifest represents raw local workload manifest.
+type WorkloadManifest []byte
+
+func (w WorkloadManifest) name() (string, error) {
+	return retrieveNameFromManifest(w)
+}
+
 // WorkloadType returns the workload type of the manifest.
 func (w WorkloadManifest) WorkloadType() (string, error) {
-	wl := struct {
-		Type string `yaml:"type"`
-	}{}
-	if err := yaml.Unmarshal(w, &wl); err != nil {
-		return "", fmt.Errorf(`unmarshal manifest file to retrieve "type": %w`, err)
-	}
-	return wl.Type, nil
+	return retrieveTypeFromManifest(w)
+}
+
+// EnvironmentManifest represents raw local environment manifest.
+type EnvironmentManifest []byte
+
+func (e EnvironmentManifest) name() (string, error) {
+	return retrieveNameFromManifest(e)
+}
+
+type namedManifest interface {
+	name() (string, error)
 }
 
 func retrieveNameFromManifest(in []byte) (string, error) {
@@ -645,4 +647,14 @@ func retrieveNameFromManifest(in []byte) (string, error) {
 		return "", fmt.Errorf(`unmarshal manifest file to retrieve "name": %w`, err)
 	}
 	return wl.Name, nil
+}
+
+func retrieveTypeFromManifest(in []byte) (string, error) {
+	wl := struct {
+		Type string `yaml:"type"`
+	}{}
+	if err := yaml.Unmarshal(in, &wl); err != nil {
+		return "", fmt.Errorf(`unmarshal manifest file to retrieve "type": %w`, err)
+	}
+	return wl.Type, nil
 }

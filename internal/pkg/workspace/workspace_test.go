@@ -967,7 +967,7 @@ func TestWorkspace_ReadEnvironmentManifest(t *testing.T) {
 		elems  []string
 		mockFS func() afero.Fs
 
-		wantedData      environmentManifest
+		wantedData      EnvironmentManifest
 		wantedErr       error
 		wantedErrPrefix string
 	}{
@@ -999,6 +999,19 @@ func TestWorkspace_ReadEnvironmentManifest(t *testing.T) {
 				return fs
 			},
 			wantedErr: errors.New(`name of the manifest "not-test" and directory "test" do not match`),
+		},
+		"type from manifest is not environment": {
+			mockFS: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/environments/test", 0755)
+				f, _ := fs.Create("/copilot/environments/test/manifest.yml")
+				defer f.Close()
+				f.Write([]byte(`name: test
+type: Load Balanced
+flavor: vanilla`))
+				return fs
+			},
+			wantedErr: errors.New(`manifest test has type of "Load Balanced", not "Environment"`),
 		},
 		"read existing file": {
 			mockFS: func() afero.Fs {
