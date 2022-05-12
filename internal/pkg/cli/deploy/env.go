@@ -14,7 +14,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
@@ -22,10 +25,12 @@ type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
 }
 
-type deployEnvironmentInput struct {
-	rootUserARN         string
-	isProduction        bool
-	customResourcesURLs map[string]string
+// DeployEnvironmentInput contains information used to deploy the environment.
+type DeployEnvironmentInput struct {
+	RootUserARN         string
+	IsProduction        bool
+	CustomResourcesURLs map[string]string
+	Manifest            *manifest.Environment
 }
 
 type environmentDeployer interface {
@@ -35,8 +40,6 @@ type environmentDeployer interface {
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
-
-	mft *manifest.Environment
 
 	appCFN appResourcesGetter
 
@@ -68,7 +71,7 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 }
 
 // DeployEnvironment deploys an environment using CloudFormation.
-func (d *envDeployer) DeployEnvironment(in *deployEnvironmentInput) error {
+func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	resources, err := d.getAppRegionalResources()
 	if err != nil {
 		return err
@@ -82,14 +85,14 @@ func (d *envDeployer) DeployEnvironment(in *deployEnvironmentInput) error {
 		App: deploy.AppInformation{
 			Name:                d.app.Name,
 			Domain:              d.app.Domain,
-			AccountPrincipalARN: in.rootUserARN,
+			AccountPrincipalARN: in.RootUserARN,
 		},
-		Prod:                 in.isProduction,
+		Prod:                 in.IsProduction,
 		AdditionalTags:       d.app.Tags,
-		CustomResourcesURLs:  in.customResourcesURLs,
+		CustomResourcesURLs:  in.CustomResourcesURLs,
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
-		Mft:                  d.mft,
+		Mft:                  in.Manifest,
 		Version:              deploy.LatestEnvTemplateVersion,
 	}
 	return d.envDeployer.UpdateAndRenderEnvironment(os.Stderr, deployEnvInput, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
