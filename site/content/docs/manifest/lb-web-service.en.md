@@ -12,7 +12,6 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
           path: '/'
           healthcheck:
             path: '/_healthcheck'
-            port: 8080
             success_codes: '200,301'
             healthy_threshold: 3
             unhealthy_threshold: 2
