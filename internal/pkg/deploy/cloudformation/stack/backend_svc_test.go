@@ -52,9 +52,19 @@ func TestBackendService_Template(t *testing.T) {
 		wantedTemplate   string
 		wantedErr        error
 	}{
+		"unavailable rule priority lambda template": {
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(nil, errors.New("some error"))
+				svc.parser = m
+			},
+			wantedTemplate: "",
+			wantedErr:      fmt.Errorf("read rule priority lambda: some error"),
+		},
 		"unavailable desired count lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(nil, errors.New("some error"))
 				svc.parser = m
 			},
@@ -64,6 +74,7 @@ func TestBackendService_Template(t *testing.T) {
 		"unavailable env controller lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(nil, errors.New("some error"))
 				svc.parser = m
@@ -74,6 +85,7 @@ func TestBackendService_Template(t *testing.T) {
 		"unexpected addons parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
@@ -84,6 +96,7 @@ func TestBackendService_Template(t *testing.T) {
 		"unexpected addons parameter parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
@@ -103,6 +116,7 @@ func TestBackendService_Template(t *testing.T) {
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
@@ -131,6 +145,7 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
@@ -152,6 +167,7 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
@@ -199,6 +215,7 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(template.WorkloadOpts{
@@ -210,6 +227,12 @@ Outputs:
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
+					HTTPHealthCheck: template.HTTPHealthCheckOpts{
+						HealthCheckPath: manifest.DefaultHealthCheckPath,
+						GracePeriod:     aws.Int64(manifest.DefaultHealthCheckGracePeriod),
+					},
+					DeregistrationDelay: aws.Int64(60), // defaults to 60
+					RulePriorityLambda:  "something",
 					DesiredCountLambda:  "something",
 					EnvControllerLambda: "something",
 					ExecuteCommand:      &template.ExecuteCommandOpts{},
@@ -228,6 +251,116 @@ Outputs:
 					},
 					EntryPoint: []string{"enter", "from"},
 					Command:    []string{"here"},
+				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				svc.parser = m
+				svc.addons = mockAddons{
+					tpl: `
+Resources:
+  MyTable:
+    Type: AWS::DynamoDB::Table
+Outputs:
+  MyTable:
+    Value: !Ref MyTable`,
+					params: "",
+				}
+			},
+			wantedTemplate: "template",
+		},
+		"render template with internal alb": {
+			setUpManifest: func(svc *BackendService) {
+				svc.manifest = manifest.NewBackendService(manifest.BackendServiceProps{
+					WorkloadProps: manifest.WorkloadProps{
+						Name:       testServiceName,
+						Dockerfile: testDockerfile,
+					},
+					Port: 8080,
+					HealthCheck: manifest.ContainerHealthCheck{
+						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+						Interval:    &testInterval,
+						Retries:     &testRetries,
+						Timeout:     &testTimeout,
+						StartPeriod: &testStartPeriod,
+					},
+				})
+				svc.manifest.EntryPoint = manifest.EntryPointOverride{
+					String:      nil,
+					StringSlice: []string{"enter", "from"},
+				}
+				svc.manifest.Command = manifest.CommandOverride{
+					String:      nil,
+					StringSlice: []string{"here"},
+				}
+				svc.manifest.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
+				svc.manifest.DeployConfig = manifest.DeploymentConfiguration{
+					Rolling: aws.String("recreate"),
+				}
+				svc.manifest.RoutingRule = manifest.RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+						Path: aws.String("/albPath"),
+						HealthCheck: manifest.HealthCheckArgsOrString{
+							HealthCheckArgs: manifest.HTTPHealthCheckArgs{
+								Path:               aws.String("/healthz"),
+								Port:               aws.Int(4200),
+								SuccessCodes:       aws.String("418"),
+								HealthyThreshold:   aws.Int64(64),
+								UnhealthyThreshold: aws.Int64(63),
+								Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
+								Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
+								GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
+							},
+						},
+						Stickiness:          aws.Bool(true),
+						DeregistrationDelay: (*time.Duration)(aws.Int64(int64(59 * time.Second))),
+						AllowedSourceIps:    []manifest.IPNet{"10.0.1.0/24"},
+					},
+				}
+			},
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
+				m := mocks.NewMockbackendSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().ParseBackendService(template.WorkloadOpts{
+					WorkloadType: manifest.BackendServiceType,
+					HealthCheck: &template.ContainerHealthCheck{
+						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+						Interval:    aws.Int64(5),
+						Retries:     aws.Int64(3),
+						StartPeriod: aws.Int64(0),
+						Timeout:     aws.Int64(10),
+					},
+					HTTPHealthCheck: template.HTTPHealthCheckOpts{
+						HealthCheckPath:    "/healthz",
+						Port:               "4200",
+						SuccessCodes:       "418",
+						HealthyThreshold:   aws.Int64(64),
+						UnhealthyThreshold: aws.Int64(63),
+						Timeout:            aws.Int64(62),
+						Interval:           aws.Int64(61),
+						GracePeriod:        aws.Int64(60),
+					},
+					DeregistrationDelay: aws.Int64(59),
+					AllowedSourceIps:    []string{"10.0.1.0/24"},
+					RulePriorityLambda:  "something",
+					DesiredCountLambda:  "something",
+					EnvControllerLambda: "something",
+					ExecuteCommand:      &template.ExecuteCommandOpts{},
+					NestedStack: &template.WorkloadNestedStackOpts{
+						StackName:       addon.StackName,
+						VariableOutputs: []string{"MyTable"},
+					},
+					Network: template.NetworkOpts{
+						AssignPublicIP: template.DisablePublicIP,
+						SubnetsType:    template.PrivateSubnetsPlacement,
+						SecurityGroups: []string{"sg-1234"},
+					},
+					DeploymentConfiguration: template.DeploymentConfigurationOpts{
+						MinHealthyPercent: 0,
+						MaxPercent:        100,
+					},
+					EntryPoint: []string{"enter", "from"},
+					Command:    []string{"here"},
+					ALBEnabled: true,
 				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
 				svc.parser = m
 				svc.addons = mockAddons{

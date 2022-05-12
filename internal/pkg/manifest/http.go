@@ -24,7 +24,6 @@ func (r *RoutingRuleConfigOrBool) Disabled() bool {
 }
 
 // EmptyOrDisabled returns true if the routing rule configuration is not configured or is explicitly disabled.
-// TODO test
 func (r *RoutingRuleConfigOrBool) EmptyOrDisabled() bool {
 	return r.Disabled() || r.isEmpty()
 }
