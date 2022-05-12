@@ -66,7 +66,7 @@ type envUpgradeOpts struct {
 	// These functions are overridden in tests to provide mocks.
 	newEnvVersionGetter func(app, env string) (versionGetter, error)
 	newTemplateUpgrader func(conf *config.Environment) (envTemplateUpgrader, error)
-	newS3               func(region string) (uploader, error)
+	newS3               func(conf *config.Environment) (uploader, error)
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
@@ -105,14 +105,14 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 		newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
 			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
 			if err != nil {
-				return nil, fmt.Errorf("create session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
+				return nil, fmt.Errorf("create template session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return cloudformation.New(sess), nil
 		},
-		newS3: func(region string) (uploader, error) {
-			sess, err := sessProvider.DefaultWithRegion(region)
+		newS3: func(conf *config.Environment) (uploader, error) {
+			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
 			if err != nil {
-				return nil, fmt.Errorf("create session with region %s: %v", region, err)
+				return nil, fmt.Errorf("create s3 session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return s3.New(sess), nil
 		},
@@ -174,13 +174,13 @@ func (o *envUpgradeOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("get app resources: %w", err)
 		}
-		s3Client, err := o.newS3(env.Region)
+		s3Client, err := o.newS3(env)
 		if err != nil {
 			return err
 		}
-		urls, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+		urls, err := o.uploader.UploadEnvironmentCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
 			return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
-		}))
+		})
 		if err != nil {
 			return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 		}

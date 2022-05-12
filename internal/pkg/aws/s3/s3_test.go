@@ -109,7 +109,7 @@ func TestS3_Upload(t *testing.T) {
 			},
 			wantError: fmt.Errorf("upload mockFileName to bucket mockBucket: some error"),
 		},
-		"should upload to the s3 bucket": {
+		"should upload to the s3 bucket with bucket owner ACL by default": {
 			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
 				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
 					b, err := ioutil.ReadAll(in.Body)
@@ -121,6 +121,22 @@ func TestS3_Upload(t *testing.T) {
 				}).Return(&s3manager.UploadOutput{
 					Location: "mockURL",
 				}, nil)
+			},
+			wantedURL: "mockURL",
+		},
+		"on AccessDenied error from S3, should fallback to uploading to s3 bucket without any explicit ACLs": {
+			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
+				gomock.InOrder(
+					m.EXPECT().Upload(gomock.Any()).Return(nil, awserr.New(errCodeAccessDenied, "not allowed", nil)),
+					m.EXPECT().Upload(gomock.Any()).DoAndReturn(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
+						require.Equal(t, "mockBucket", aws.StringValue(in.Bucket))
+						require.Equal(t, "mockFileName", aws.StringValue(in.Key))
+						require.Nil(t, in.ACL)
+						return &s3manager.UploadOutput{
+							Location: "mockURL",
+						}, nil
+					}),
+				)
 			},
 			wantedURL: "mockURL",
 		},
@@ -141,10 +157,10 @@ func TestS3_Upload(t *testing.T) {
 
 			gotURL, gotErr := service.Upload("mockBucket", "mockFileName", bytes.NewBuffer([]byte("bar")))
 
-			if gotErr != nil {
+			if tc.wantError != nil {
 				require.EqualError(t, gotErr, tc.wantError.Error())
 			} else {
-				require.Equal(t, gotErr, nil)
+				require.NoError(t, gotErr)
 				require.Equal(t, gotURL, tc.wantedURL)
 			}
 		})
@@ -334,7 +350,7 @@ func TestS3_EmptyBucket(t *testing.T) {
 			mockS3Client: func(m *mocks.Mocks3API) {
 				m.EXPECT().HeadBucket(&s3.HeadBucketInput{
 					Bucket: aws.String("mockBucket"),
-				}).Return(nil, awserr.New(notFound, "message", nil))
+				}).Return(nil, awserr.New(errCodeNotFound, "message", nil))
 			},
 
 			wantErr: nil,

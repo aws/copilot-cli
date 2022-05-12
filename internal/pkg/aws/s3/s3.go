@@ -10,16 +10,20 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-const notFound = "NotFound"
+// S3 error codes.
+const (
+	errCodeNotFound     = "NotFound"
+	errCodeAccessDenied = "AccessDenied"
+)
 
 type s3ManagerAPI interface {
 	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
@@ -168,7 +172,7 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 	}
 	_, err := s.s3Client.HeadBucket(input)
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == notFound {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == errCodeNotFound {
 			return false, nil
 		}
 		return false, err
@@ -178,15 +182,36 @@ func (s *S3) isBucketExists(bucket string) (bool, error) {
 }
 
 func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
-	in := &s3manager.UploadInput{
+	resp, err := s.s3Manager.Upload(&s3manager.UploadInput{
 		Body:   buf,
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
-		ACL: aws.String(s3.ObjectCannedACLBucketOwnerFullControl),
-	}
-	resp, err := s.s3Manager.Upload(in)
+		ACL:    aws.String(s3.ObjectCannedACLBucketOwnerFullControl),
+	})
 	if err != nil {
-		return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)
+		aerr, ok := err.(awserr.Error)
+		switch {
+		case ok && aerr.Code() == errCodeAccessDenied:
+			// See #3556. Although the client tries to grant the object ownership to the bucket, this operation can fail
+			// if the role assumed by the client, such as the EnvManagerRole, doesn't have the PutObjectAcl permission.
+			// In that scenario, fallback to the default behavior of the session's account owning the object.
+			return s.uploadWithoutACL(bucket, key, buf)
+		default:
+			return "", fmt.Errorf("upload %s to bucket %s: %w", key, bucket, err)
+		}
+
+	}
+	return resp.Location, nil
+}
+
+func (s *S3) uploadWithoutACL(bucket, key string, buf io.Reader) (string, error) {
+	resp, err := s.s3Manager.Upload(&s3manager.UploadInput{
+		Body:   buf,
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return "", fmt.Errorf("upload %s to bucket %s without bucket owner full control: %w", key, bucket, err)
 	}
 	return resp.Location, nil
 }
