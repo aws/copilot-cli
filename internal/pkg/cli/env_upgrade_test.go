@@ -201,16 +201,58 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 		given     func(ctrl *gomock.Controller) *envUpgradeOpts
 		wantedErr error
 	}{
+		"should return an error if the environment template version cannot upload artifacts": {
+			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
+				mockStore := mocks.NewMockstore(ctrl)
+				mockStore.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
+					{
+						Name:   "test",
+						App:    "phonetool",
+						Region: "us-west-2",
+					},
+				}, nil)
+				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
+				mockAppCFN := mocks.NewMockappResourcesGetter(ctrl)
+				mockAppCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
+					Return(&stack.AppRegionalResources{
+						S3Bucket: "mockBucket",
+					}, nil)
+
+				mockEnvDeployer := mocks.NewMockenvironmentDeployer(ctrl)
+				mockEnvDeployer.EXPECT().EnvironmentTemplate("phonetool", gomock.Any()).Return(`
+Metadata:
+  Version: v1.7.0
+`, nil)
+
+				return &envUpgradeOpts{
+					envUpgradeVars: envUpgradeVars{
+						appName: "phonetool",
+						all:     true,
+					},
+					store:  mockStore,
+					appCFN: mockAppCFN,
+					newEnvDeployer: func(_ *config.Environment) (environmentDeployer, error) {
+						return mockEnvDeployer, nil
+					},
+					newS3: func(_ *config.Environment) (uploader, error) {
+						return mocks.NewMockuploader(ctrl), nil
+					},
+				}
+			},
+			wantedErr: errors.New("cannot upload artifacts"),
+		},
 		"should skip upgrading if the environment version is already at least latest": {
 			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
 				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
 					{
 						Name:   "test",
+						App:    "phonetool",
 						Region: "us-west-2",
 					},
 					{
 						Name:   "prod",
+						App:    "phonetool",
 						Region: "us-east-1",
 					},
 				}, nil)
@@ -224,6 +266,13 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
 					}, nil)
+
+				mockEnvDeployer := mocks.NewMockenvironmentDeployer(ctrl)
+				mockEnvDeployer.EXPECT().EnvironmentTemplate("phonetool", gomock.Any()).Return(`
+Metadata:
+  Version: v1.9.0
+`, nil).Times(2)
+
 				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil).Times(2)
 				mockEnvTpl := mocks.NewMockversionGetter(ctrl)
@@ -240,6 +289,9 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
+					newEnvDeployer: func(_ *config.Environment) (environmentDeployer, error) {
+						return mockEnvDeployer, nil
+					},
 					newS3: func(_ *config.Environment) (uploader, error) {
 						return mocks.NewMockuploader(ctrl), nil
 					},
@@ -278,6 +330,12 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						S3Bucket:  "mockBucket",
 						KMSKeyARN: "mockKMS",
 					}, nil)
+				mockEnvDeployer := mocks.NewMockenvironmentDeployer(ctrl)
+				mockEnvDeployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
+Metadata:
+  Version: v1.9.0
+`, nil)
+
 				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
 
@@ -315,6 +373,9 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
+					newEnvDeployer: func(_ *config.Environment) (environmentDeployer, error) {
+						return mockEnvDeployer, nil
+					},
 					newS3: func(_ *config.Environment) (uploader, error) {
 						return mocks.NewMockuploader(ctrl), nil
 					},
@@ -357,6 +418,13 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						S3Bucket:  "mockBucket",
 						KMSKeyARN: "mockKMS",
 					}, nil)
+
+				mockEnvDeployer := mocks.NewMockenvironmentDeployer(ctrl)
+				mockEnvDeployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
+Metadata:
+  Version: v1.9.0
+`, nil)
+
 				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
 
@@ -393,6 +461,9 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
+					newEnvDeployer: func(_ *config.Environment) (environmentDeployer, error) {
+						return mockEnvDeployer, nil
+					},
 					newS3: func(_ *config.Environment) (uploader, error) {
 						return mocks.NewMockuploader(ctrl), nil
 					},
@@ -428,6 +499,12 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
 					}, nil)
+				mockEnvDeployer := mocks.NewMockenvironmentDeployer(ctrl)
+				mockEnvDeployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
+Metadata:
+  Version: v1.9.0
+`, nil)
+
 				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 
@@ -464,6 +541,9 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
+					newEnvDeployer: func(_ *config.Environment) (environmentDeployer, error) {
+						return mockEnvDeployer, nil
+					},
 					newS3: func(_ *config.Environment) (uploader, error) {
 						return mocks.NewMockuploader(ctrl), nil
 					},
@@ -494,6 +574,13 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
 					}, nil)
+
+				mockEnvDeployer := mocks.NewMockenvironmentDeployer(ctrl)
+				mockEnvDeployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
+Metadata:
+  Version: v1.9.0
+`, nil)
+
 				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 
@@ -520,6 +607,9 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 					},
 					uploader: mockUploader,
 					appCFN:   mockAppCFN,
+					newEnvDeployer: func(_ *config.Environment) (environmentDeployer, error) {
+						return mockEnvDeployer, nil
+					},
 					newS3: func(_ *config.Environment) (uploader, error) {
 						return mocks.NewMockuploader(ctrl), nil
 					},
