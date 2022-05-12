@@ -101,7 +101,7 @@ Resources:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
       {{- if .ALBEnabled}}
-        - PolicyName: "DNSandACMAccess"
+        - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
