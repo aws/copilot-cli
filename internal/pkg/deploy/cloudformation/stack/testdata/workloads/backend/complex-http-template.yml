@@ -304,7 +304,7 @@ Resources:
           ],
           !Ref "AWS::NoValue",
         ]
-      HealthCheckGracePeriodSeconds: 60
+      HealthCheckGracePeriodSeconds: 45
       LoadBalancers:
         - ContainerName: !Ref TargetContainer
           ContainerPort: !Ref TargetPort
@@ -314,12 +314,19 @@ Resources:
       "aws:copilot:description": "A target group to connect the load balancer to your service"
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      HealthCheckPath: / # Default is '/'.
+      HealthCheckPath: /healthz # Default is '/'.
+      HealthCheckPort: 7000
+      Matcher:
+        HttpCode: 200,301
+      HealthyThresholdCount: 3
+      UnhealthyThresholdCount: 2
+      HealthCheckIntervalSeconds: 15
+      HealthCheckTimeoutSeconds: 10
       Port: !Ref ContainerPort
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: 60 # ECS Default is 300; Copilot default is 60.
+          Value: 5 # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
           Value: !Ref Stickiness
       TargetType: ip
@@ -378,6 +385,10 @@ Resources:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
       Conditions:
+        - Field: "source-ip"
+          SourceIpConfig:
+            Values:
+              - 10.24.34.0/23
         - Field: "path-pattern"
           PathPatternConfig:
             Values: !If
