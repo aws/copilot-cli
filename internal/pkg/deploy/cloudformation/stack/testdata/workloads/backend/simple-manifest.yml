@@ -1,4 +1,4 @@
-name: simple-backend-service
+name: simple-backend
 type: Backend Service
 image:
   build: Dockerfile

@@ -28,7 +28,7 @@ func TestBackendService_Template_Integ(t *testing.T) {
 		appName        = "my-app"
 		envName        = "my-env"
 		manifestSuffix = "-manifest.yml"
-		templateSuffix = "-stack.yml"
+		templateSuffix = "-template.yml"
 		paramsSuffix   = "-params.json"
 	)
 
