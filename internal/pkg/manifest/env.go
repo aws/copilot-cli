@@ -5,10 +5,12 @@
 package manifest
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"gopkg.in/yaml.v3"
 )
 
 // Environment is the manifest configuration for an environment.
@@ -34,6 +36,16 @@ type environmentVPCConfig struct {
 	ID      *string              `yaml:"id"`
 	CIDR    *IPNet               `yaml:"cidr"`
 	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
+}
+
+// UnmarshalEnvironment deserializes the YAML input stream into an environment manifest object.
+// If an error occurs during deserialization, then returns the error.
+func UnmarshalEnvironment(in []byte) (*Environment, error) {
+	var m Environment
+	if err := yaml.Unmarshal(in, &m); err != nil {
+		return nil, fmt.Errorf("unmarshal environment manifest: %w", err)
+	}
+	return &m, nil
 }
 
 func (v environmentVPCConfig) imported() bool {
