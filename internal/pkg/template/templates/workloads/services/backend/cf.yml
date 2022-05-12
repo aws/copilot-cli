@@ -163,10 +163,6 @@ Resources:
           TargetGroupArn: !Ref TargetGroup
       {{- end}}
 
-{{- if .ALBEnabled}}
-{{include "alb" . | indent 2}}
-{{- end}}
-
 {{include "efs-access-point" . | indent 2}}
 
 {{include "addons" . | indent 2}}

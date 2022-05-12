@@ -1,0 +1,24 @@
+{
+	"Parameters": {
+		"AppName": "my-app",
+		"EnvName": "my-env",
+		"WorkloadName": "simple-http",
+		"ContainerImage": "",
+		"AddonsTemplateURL": "",
+		"TaskCPU": "512",
+		"TaskMemory": "1024",
+		"TaskCount": "1",
+		"LogRetention": "30",
+		"ContainerPort": "8080",
+		"EnvFileARN": "",
+		"TargetContainer": "simple-http",
+		"TargetPort": "8080",
+		"RulePath": "simple-http-path",
+		"Stickiness": "false"
+	},
+	"Tags": {
+		"copilot-application": "my-app",
+		"copilot-environment": "my-env",
+		"copilot-service": "simple-http"
+	}
+}
