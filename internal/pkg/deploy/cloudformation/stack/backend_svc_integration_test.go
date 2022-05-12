@@ -7,6 +7,7 @@ package stack
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
@@ -24,10 +25,8 @@ import (
 
 func TestBackendService_Template_Integ(t *testing.T) {
 	const (
-		appName = "my-app"
-		envName = "my-env"
-		// accountID = "123456789123"
-		// region    = "us-west-2"
+		appName        = "my-app"
+		envName        = "my-env"
 		manifestSuffix = "-manifest.yml"
 		templateSuffix = "-stack.yml"
 		paramsSuffix   = "-params.json"
@@ -59,6 +58,8 @@ func TestBackendService_Template_Integ(t *testing.T) {
 			require.NoError(t, err)
 			tmplBytes, err := ioutil.ReadFile(pathPrefix + templateSuffix)
 			require.NoError(t, err)
+			paramsBytes, err := ioutil.ReadFile(pathPrefix + paramsSuffix)
+			require.NoError(t, err)
 
 			mft, err := manifest.UnmarshalWorkload([]byte(manifestBytes))
 			require.NoError(t, err)
@@ -67,23 +68,22 @@ func TestBackendService_Template_Integ(t *testing.T) {
 			serializer, err := NewBackendService(mft.(*manifest.BackendService), envName, appName,
 				RuntimeConfig{
 					ServiceDiscoveryEndpoint: fmt.Sprintf("%s.%s.local", envName, appName),
-					// AccountID:                accountID,
-					// Region:                   region,
 				})
 			require.NoError(t, err)
 
-			// mock parser, but use real parser for parsing backend service
+			// mock parser for lambda functions
 			realParser := serializer.parser
 			mockParser := mocks.NewMockbackendSvcReadParser(ctrl)
-			mockParser.EXPECT().Read(albRulePriorityGeneratorPath).Return(newTemplateContent("albRulePriorityGenerator"), nil)
-			mockParser.EXPECT().Read(desiredCountGeneratorPath).Return(newTemplateContent("desiredCountGenerator"), nil)
-			mockParser.EXPECT().Read(envControllerPath).Return(newTemplateContent("envController"), nil)
+			mockParser.EXPECT().Read(albRulePriorityGeneratorPath).Return(templateContent("albRulePriorityGenerator"), nil)
+			mockParser.EXPECT().Read(desiredCountGeneratorPath).Return(templateContent("desiredCountGenerator"), nil)
+			mockParser.EXPECT().Read(envControllerPath).Return(templateContent("envController"), nil)
 			mockParser.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(data template.WorkloadOpts) (*template.Content, error) {
+				// pass call to real parser
 				return realParser.ParseBackendService(data)
 			})
 			serializer.parser = mockParser
 
-			// generate cf template
+			// validate generated template
 			tmpl, err := serializer.Template()
 			require.NoError(t, err)
 			var actualTmpl map[any]any
@@ -93,11 +93,22 @@ func TestBackendService_Template_Integ(t *testing.T) {
 			require.NoError(t, yaml.Unmarshal(tmplBytes, &expectedTmpl))
 
 			require.Equal(t, expectedTmpl, actualTmpl)
+
+			// validate generated params
+			params, err := serializer.SerializedParameters()
+			require.NoError(t, err)
+			var actualParams map[string]any
+			require.NoError(t, json.Unmarshal([]byte(params), &actualParams))
+
+			var expectedParams map[string]any
+			require.NoError(t, json.Unmarshal(paramsBytes, &expectedParams))
+
+			require.Equal(t, expectedParams, actualParams)
 		})
 	}
 }
 
-func newTemplateContent(str string) *template.Content {
+func templateContent(str string) *template.Content {
 	return &template.Content{
 		Buffer: bytes.NewBuffer([]byte(str)),
 	}
