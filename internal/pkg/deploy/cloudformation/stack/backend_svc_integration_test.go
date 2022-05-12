@@ -1,5 +1,3 @@
-//gox:build integration || localintegration
-
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -23,7 +21,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestBackendService_Template_Integ(t *testing.T) {
+func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 	const (
 		appName        = "my-app"
 		envName        = "my-env"
