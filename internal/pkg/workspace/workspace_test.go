@@ -967,7 +967,7 @@ func TestWorkspace_ReadEnvironmentManifest(t *testing.T) {
 		elems  []string
 		mockFS func() afero.Fs
 
-		wantedData      WorkloadManifest
+		wantedData      environmentManifest
 		wantedErr       error
 		wantedErrPrefix string
 	}{

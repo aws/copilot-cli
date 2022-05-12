@@ -290,12 +290,12 @@ func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, 
 }
 
 // ReadEnvironmentManifest returns the contents of the environment's manifest under copilot/environments/{name}/manifest.yml.
-func (ws *Workspace) ReadEnvironmentManifest(mftDirName string) (WorkloadManifest, error) {
+func (ws *Workspace) ReadEnvironmentManifest(mftDirName string) (environmentManifest, error) {
 	raw, err := ws.read(environmentsDirName, mftDirName, manifestFileName)
 	if err != nil {
 		return nil, err
 	}
-	mft := WorkloadManifest(raw)
+	mft := environmentManifest(raw)
 	if err := ws.manifestNameMatchWithDir(mft, mftDirName); err != nil {
 		return nil, err
 	}
@@ -601,18 +601,22 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 // WorkloadManifest represents raw local workload manifest.
 type WorkloadManifest []byte
 
-func (w WorkloadManifest) workloadName() (string, error) {
-	wl := struct {
-		Name string `yaml:"name"`
-	}{}
-	if err := yaml.Unmarshal(w, &wl); err != nil {
-		return "", fmt.Errorf(`unmarshal manifest file to retrieve "name": %w`, err)
-	}
-	return wl.Name, nil
+type environmentManifest []byte
+
+type namedManifest interface {
+	name() (string, error)
 }
 
-func (ws *Workspace) manifestNameMatchWithDir(mft WorkloadManifest, mftDirName string) error {
-	mftName, err := mft.workloadName()
+func (w WorkloadManifest) name() (string, error) {
+	return retrieveNameFromManifest(w)
+}
+
+func (e environmentManifest) name() (string, error) {
+	return retrieveNameFromManifest(e)
+}
+
+func (ws *Workspace) manifestNameMatchWithDir(mft namedManifest, mftDirName string) error {
+	mftName, err := mft.name()
 	if err != nil {
 		return err
 	}
@@ -631,4 +635,14 @@ func (w WorkloadManifest) WorkloadType() (string, error) {
 		return "", fmt.Errorf(`unmarshal manifest file to retrieve "type": %w`, err)
 	}
 	return wl.Type, nil
+}
+
+func retrieveNameFromManifest(in []byte) (string, error) {
+	wl := struct {
+		Name string `yaml:"name"`
+	}{}
+	if err := yaml.Unmarshal(in, &wl); err != nil {
+		return "", fmt.Errorf(`unmarshal manifest file to retrieve "name": %w`, err)
+	}
+	return wl.Name, nil
 }
