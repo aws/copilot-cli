@@ -71,10 +71,16 @@ Resources:
 {{include "executionrole" . | indent 2}}
 {{include "taskrole" . | indent 2}}
 {{include "servicediscovery" . | indent 2}}
-{{- if .Autoscaling }}
+
+{{- if .Autoscaling}}
 {{include "autoscaling" . | indent 2}}
-# TODO autoscaling.requests (?)
-# TODO: get ride of custom resource role?
+{{- end}}
+
+{{- if .ALBEnabled}}
+{{include "alb" . | indent 2}}
+{{end}}
+
+{{- if or .ALBEnabled .Autoscaling}}
   CustomResourceRole:
     Metadata:
       'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'
@@ -91,7 +97,20 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
+      {{- if .ALBEnabled}}
+        - PolicyName: "DNSandACMAccess"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - elasticloadbalancing:DescribeRules
+              Resource: "*"
+      {{- end}}
+      {{- if .Autoscaling }}
         - PolicyName: "DelegateDesiredCountAccess"
           PolicyDocument:
             Version: '2012-10-17'
@@ -119,9 +138,8 @@ Resources:
               Action:
                 - "tag:GetResources"
               Resource: "*"
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-{{- end }}
+      {{- end}}
+
   Service:
     Metadata:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
