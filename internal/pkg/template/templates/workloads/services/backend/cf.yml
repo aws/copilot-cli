@@ -157,6 +157,7 @@ Resources:
       {{- "\n"}}{{ include "service-base-properties" . | indent 6 }}
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref ContainerPort}], !Ref "AWS::NoValue"]
       {{- if .ALBEnabled}}
+      HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
       LoadBalancers:
         - ContainerName: !Ref TargetContainer
           ContainerPort: !Ref TargetPort

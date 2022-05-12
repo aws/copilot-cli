@@ -48,6 +48,7 @@ func TestBackendService_Template_Integ(t *testing.T) {
 		return nil
 	})
 
+	// run tests
 	for name, pathPrefix := range tests {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
@@ -92,7 +93,7 @@ func TestBackendService_Template_Integ(t *testing.T) {
 			var expectedTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal(tmplBytes, &expectedTmpl))
 
-			require.Equal(t, expectedTmpl, actualTmpl)
+			require.Equal(t, expectedTmpl, actualTmpl, "template mismatch")
 
 			// validate generated params
 			params, err := serializer.SerializedParameters()
@@ -103,7 +104,7 @@ func TestBackendService_Template_Integ(t *testing.T) {
 			var expectedParams map[string]any
 			require.NoError(t, json.Unmarshal(paramsBytes, &expectedParams))
 
-			require.Equal(t, expectedParams, actualParams)
+			require.Equal(t, expectedParams, actualParams, "param mismatch")
 		})
 	}
 }
