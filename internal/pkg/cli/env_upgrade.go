@@ -6,7 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -233,33 +234,36 @@ func (o *envUpgradeOpts) ensureManagerRoleIsAllowedToUpload(env *config.Environm
 	if err != nil {
 		return err
 	}
-	if o.isManagerRoleAllowedToUpload(body, bucketName) {
+	ok, err := o.isManagerRoleAllowedToUpload(body)
+	if err != nil {
+		return err
+	}
+	if ok {
 		return nil
 	}
 	// TODO(efekarakus): if the role isn't allowed to upload, modify the template to add the permission and call cfn.UpdateEnvironmentTemplate
-	return nil
+	// TODO(efekarakus): remove this error.
+	return errors.New("cannot upload artifacts")
 }
 
-func (o *envUpgradeOpts) isManagerRoleAllowedToUpload(template, bucketName string) bool {
-	wantedPolicyStatementID := "PutObjectsToArtifactBucket"
-	if !strings.Contains(template, wantedPolicyStatementID) {
-		return false
+func (o *envUpgradeOpts) isManagerRoleAllowedToUpload(body string) (bool, error) {
+	type Template struct {
+		Metadata struct {
+			Version string `yaml:"Version"`
+		} `yaml:"Metadata"`
 	}
-	remainingTemplate := template[strings.Index(template, wantedPolicyStatementID):]
-	if !strings.Contains(remainingTemplate, "s3:PutObject") {
-		return false
+	var tpl Template
+	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
+		return false, fmt.Errorf("unmarshal environment template to detect Metadata.Version: %v", err)
 	}
-	if !strings.Contains(remainingTemplate, "s3:PutObjectAcl") {
-		return false
+	if !semver.IsValid(tpl.Metadata.Version) { // The template doesn't contain a version.
+		return false, nil
 	}
-	bucketARN := s3.FormatARN(endpoints.AwsPartitionID, bucketName)
-	if !strings.Contains(remainingTemplate, bucketARN) {
-		return false
+	if semver.Compare(tpl.Metadata.Version, "v1.9.0") < 0 {
+		// The permissions to grant the EnvManagerRole to upload artifacts was granted with template v1.9.0.
+		return false, nil
 	}
-	if !strings.Contains(remainingTemplate, fmt.Sprintf("%s/*", bucketARN)) {
-		return false
-	}
-	return true
+	return true, nil
 }
 
 func (o *envUpgradeOpts) upgrade(env *config.Environment, app *config.Application,
