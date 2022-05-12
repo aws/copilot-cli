@@ -319,14 +319,12 @@ func (o *envUpgradeOpts) grantManagerRolePermissionToUpload(cfn environmentDeplo
 	var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 	o.prog.Start("Update the environment's manager role with permission to upload artifacts to S3")
 	err := cfn.UpdateEnvironmentTemplate(app, env, updatedBody, execRole)
-	switch {
-	case err != nil && !errors.As(err, &errEmptyChangeSet):
+	if err != nil && !errors.As(err, &errEmptyChangeSet) {
 		o.prog.Stop(log.Serrorln("Unable to update the environment's manager role with upload artifacts permission"))
 		return fmt.Errorf("update environment template with PutObject permissions: %v", err)
-	default:
-		o.prog.Stop(log.Ssuccessln("Updated the environment's manager role with permissions to upload artifacts to S3"))
-		return nil
 	}
+	o.prog.Stop(log.Ssuccessln("Updated the environment's manager role with permissions to upload artifacts to S3"))
+	return nil
 }
 
 func (o *envUpgradeOpts) upgrade(env *config.Environment, app *config.Application,

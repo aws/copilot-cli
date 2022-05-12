@@ -204,7 +204,7 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 		given     func(ctrl *gomock.Controller) *envUpgradeOpts
 		wantedErr error
 	}{
-		"should return an error if the environment template cannot be updated to grand upload artifacts permissions": {
+		"should return an error if the environment template cannot be updated to grant upload artifacts permissions": {
 			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
 				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
