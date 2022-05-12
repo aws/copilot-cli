@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -64,9 +66,10 @@ type envUpgradeOpts struct {
 
 	// Constructors for clients that can be initialized only at runtime.
 	// These functions are overridden in tests to provide mocks.
+	newEnvDeployer      func(conf *config.Environment) (environmentDeployer, error)
 	newEnvVersionGetter func(app, env string) (versionGetter, error)
 	newTemplateUpgrader func(conf *config.Environment) (envTemplateUpgrader, error)
-	newS3               func(region string) (uploader, error)
+	newS3               func(conf *config.Environment) (uploader, error)
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
@@ -91,6 +94,13 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 		uploader: template.New(),
 		appCFN:   cloudformation.New(defaultSession),
 
+		newEnvDeployer: func(conf *config.Environment) (environmentDeployer, error) {
+			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
+			if err != nil {
+				return nil, fmt.Errorf("create environment stack deployer session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
+			}
+			return cloudformation.New(sess), nil
+		},
 		newEnvVersionGetter: func(app, env string) (versionGetter, error) {
 			d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 				App:         app,
@@ -105,14 +115,14 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 		newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
 			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
 			if err != nil {
-				return nil, fmt.Errorf("create session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
+				return nil, fmt.Errorf("create template session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return cloudformation.New(sess), nil
 		},
-		newS3: func(region string) (uploader, error) {
-			sess, err := sessProvider.DefaultWithRegion(region)
+		newS3: func(conf *config.Environment) (uploader, error) {
+			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
 			if err != nil {
-				return nil, fmt.Errorf("create session with region %s: %v", region, err)
+				return nil, fmt.Errorf("create s3 session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return s3.New(sess), nil
 		},
@@ -174,13 +184,16 @@ func (o *envUpgradeOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("get app resources: %w", err)
 		}
-		s3Client, err := o.newS3(env.Region)
+		if err := o.ensureManagerRoleIsAllowedToUpload(env, resources.S3Bucket); err != nil {
+			return err
+		}
+		s3Client, err := o.newS3(env)
 		if err != nil {
 			return err
 		}
-		urls, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+		urls, err := o.uploader.UploadEnvironmentCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
 			return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
-		}))
+		})
 		if err != nil {
 			return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 		}
@@ -210,6 +223,47 @@ func (o *envUpgradeOpts) listEnvsToUpgrade() ([]*config.Environment, error) {
 		return nil, fmt.Errorf("list environments in app %s: %w", o.appName, err)
 	}
 	return envs, nil
+}
+
+func (o *envUpgradeOpts) ensureManagerRoleIsAllowedToUpload(env *config.Environment, bucketName string) error {
+	cfn, err := o.newEnvDeployer(env)
+	if err != nil {
+		return err
+	}
+	body, err := cfn.EnvironmentTemplate(env.App, env.Name)
+	if err != nil {
+		return err
+	}
+	ok, err := o.isManagerRoleAllowedToUpload(body)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+	// TODO(efekarakus): if the role isn't allowed to upload, modify the template to add the permission and call cfn.UpdateEnvironmentTemplate
+	// TODO(efekarakus): remove this error.
+	return errors.New("cannot upload artifacts")
+}
+
+func (o *envUpgradeOpts) isManagerRoleAllowedToUpload(body string) (bool, error) {
+	type Template struct {
+		Metadata struct {
+			Version string `yaml:"Version"`
+		} `yaml:"Metadata"`
+	}
+	var tpl Template
+	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
+		return false, fmt.Errorf("unmarshal environment template to detect Metadata.Version: %v", err)
+	}
+	if !semver.IsValid(tpl.Metadata.Version) { // The template doesn't contain a version.
+		return false, nil
+	}
+	if semver.Compare(tpl.Metadata.Version, "v1.9.0") < 0 {
+		// The permissions to grant the EnvManagerRole to upload artifacts was granted with template v1.9.0.
+		return false, nil
+	}
+	return true, nil
 }
 
 func (o *envUpgradeOpts) upgrade(env *config.Environment, app *config.Application,
