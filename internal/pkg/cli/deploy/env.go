@@ -14,23 +14,12 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
 type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
-}
-
-// DeployEnvironmentInput contains information used to deploy the environment.
-type DeployEnvironmentInput struct {
-	RootUserARN         string
-	IsProduction        bool
-	CustomResourcesURLs map[string]string
-	Manifest            *manifest.Environment
 }
 
 type environmentDeployer interface {
@@ -68,6 +57,14 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 	}
 	return urls, nil
+}
+
+// DeployEnvironmentInput contains information used to deploy the environment.
+type DeployEnvironmentInput struct {
+	RootUserARN         string
+	IsProduction        bool
+	CustomResourcesURLs map[string]string
+	Manifest            *manifest.Environment
 }
 
 // DeployEnvironment deploys an environment using CloudFormation.
