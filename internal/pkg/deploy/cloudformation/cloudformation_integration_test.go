@@ -440,7 +440,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		environmentToDeploy.ArtifactBucketARN = fmt.Sprintf("arn:aws:s3:::%s", bucketName)
 
 		// Deploy the environment and wait for it to be complete
-		require.NoError(t, deployer.DeployAndRenderEnvironment(os.Stderr, &environmentToDeploy))
+		require.NoError(t, deployer.CreateAndRenderEnvironment(os.Stderr, &environmentToDeploy))
 
 		// Ensure that the new stack exists
 		output, err = cfClient.DescribeStacks(&awsCF.DescribeStacksInput{

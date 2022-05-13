@@ -715,7 +715,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
 		return err
 	}
-	if err := o.envDeployer.DeployAndRenderEnvironment(os.Stderr, deployEnvInput); err != nil {
+	if err := o.envDeployer.CreateAndRenderEnvironment(os.Stderr, deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.

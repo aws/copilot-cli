@@ -980,7 +980,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
-				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(errors.New("some deploy error"))
+				m.EXPECT().CreateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(errors.New("some deploy error"))
 			},
 			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
 				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
@@ -1016,7 +1016,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().CreateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					App:       "phonetool",
 					Name:      "test",
@@ -1067,7 +1067,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().CreateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
@@ -1115,7 +1115,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), &deploy.CreateEnvironmentInput{
+				m.EXPECT().CreateAndRenderEnvironment(gomock.Any(), &deploy.CreateEnvironmentInput{
 					Name: "test",
 					App: deploy.AppInformation{
 						Name:                "phonetool",
@@ -1196,7 +1196,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			expectDeployer: func(m *mocks.Mockdeployer) {
 				m.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
-				m.EXPECT().DeployAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
+				m.EXPECT().CreateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
 				m.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "4567",
 					Region:    "us-west-2",
