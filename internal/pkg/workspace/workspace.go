@@ -611,7 +611,7 @@ func (ws *Workspace) manifestNameMatchWithDir(mft namedManifest, mftDirName stri
 		return err
 	}
 	if mftName != mftDirName {
-		return fmt.Errorf(`name of the manifest "%s" and directory "%s" do not match`, mftName, mftDirName)
+		return fmt.Errorf("name of the manifest %q and directory %q do not match", mftName, mftDirName)
 	}
 	return nil
 }
