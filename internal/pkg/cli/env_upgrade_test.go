@@ -5,7 +5,10 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -201,14 +204,15 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 		given     func(ctrl *gomock.Controller) *envUpgradeOpts
 		wantedErr error
 	}{
-		"should return an error if the environment template version cannot upload artifacts": {
+		"should return an error if the environment template cannot be updated to grant upload artifacts permissions": {
 			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
 				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
 					{
-						Name:   "test",
-						App:    "phonetool",
-						Region: "us-west-2",
+						Name:             "test",
+						App:              "phonetool",
+						Region:           "us-west-2",
+						ExecutionRoleARN: "execRoleARN",
 					},
 				}, nil)
 				mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -218,18 +222,50 @@ func TestEnvUpgradeOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 
+				mockProg := mocks.NewMockprogress(ctrl)
+				mockProg.EXPECT().Start(gomock.Any())
+				mockProg.EXPECT().Stop(gomock.Any())
+
 				mockEnvDeployer := mocks.NewMockenvironmentDeployer(ctrl)
-				mockEnvDeployer.EXPECT().EnvironmentTemplate("phonetool", gomock.Any()).Return(`
+				mockEnvDeployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
 Metadata:
   Version: v1.7.0
+Resources:
+  EnvironmentManagerRole:
+    Properties:
+      Policies:
+        - PolicyDocument:
+            Statement:
+            - Sid: CloudwatchLogs 
+  OtherResource:
 `, nil)
-
+				mockEnvDeployer.EXPECT().UpdateEnvironmentTemplate("phonetool", "test", `
+Metadata:
+  Version: v1.7.0
+Resources:
+  EnvironmentManagerRole:
+    Properties:
+      Policies:
+        - PolicyDocument:
+            Statement:
+            - Sid: PatchPutObjectsToArtifactBucket
+              Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:PutObjectAcl
+              Resource:
+                - arn:aws:s3:::mockBucket
+                - arn:aws:s3:::mockBucket/*
+            - Sid: CloudwatchLogs 
+  OtherResource:
+`, "execRoleARN").Return(errors.New("some unexpected error"))
 				return &envUpgradeOpts{
 					envUpgradeVars: envUpgradeVars{
 						appName: "phonetool",
 						all:     true,
 					},
 					store:  mockStore,
+					prog:   mockProg,
 					appCFN: mockAppCFN,
 					newEnvDeployer: func(_ *config.Environment) (environmentDeployer, error) {
 						return mockEnvDeployer, nil
@@ -239,7 +275,7 @@ Metadata:
 					},
 				}
 			},
-			wantedErr: errors.New("cannot upload artifacts"),
+			wantedErr: errors.New("update environment template with PutObject permissions: some unexpected error"),
 		},
 		"should skip upgrading if the environment version is already at least latest": {
 			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
@@ -298,14 +334,14 @@ Metadata:
 				}
 			},
 		},
-		"should upgrade non-legacy environments with UpgradeEnvironment call": {
+		"should upgrade non-legacy environments and ignore ErrChangeSet if the environment template already has permissions to upload artifacts": {
 			given: func(ctrl *gomock.Controller) *envUpgradeOpts {
 				mockEnvTpl := mocks.NewMockversionGetter(ctrl)
 				mockEnvTpl.EXPECT().Version().Return("v0.1.0", nil) // Legacy versions are v0.0.0
 
 				mockProg := mocks.NewMockprogress(ctrl)
-				mockProg.EXPECT().Start(gomock.Any())
-				mockProg.EXPECT().Stop(gomock.Any())
+				mockProg.EXPECT().Start(gomock.Any()).AnyTimes()
+				mockProg.EXPECT().Stop(gomock.Any()).AnyTimes()
 
 				mockStore := mocks.NewMockstore(ctrl)
 				mockStore.EXPECT().GetEnvironment("phonetool", "test").
@@ -333,8 +369,23 @@ Metadata:
 				mockEnvDeployer := mocks.NewMockenvironmentDeployer(ctrl)
 				mockEnvDeployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
 Metadata:
-  Version: v1.9.0
+  Version: v1.1.0
+Resources:
+  EnvironmentManagerRole:
+    Properties:
+      Policies:
+        - PolicyDocument:
+            Statement:
+            - Sid: PatchPutObjectsToArtifactBucket
+              Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:PutObjectAcl
+              Resource:
+                - arn:aws:s3:::mockBucket
+                - arn:aws:s3:::mockBucket/*
 `, nil)
+				mockEnvDeployer.EXPECT().UpdateEnvironmentTemplate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("wrapped err: %w", &cloudformation.ErrChangeSetEmpty{}))
 
 				mockUploader := mocks.NewMockcustomResourcesUploader(ctrl)
 				mockUploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
