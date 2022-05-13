@@ -42,6 +42,15 @@ const (
 	WorkloadEnvFileARNParamKey   = "EnvFileARN"
 )
 
+// Parameter logical IDs for workloads on ECS with a Load Balancer.
+const (
+	WorkloadTargetContainerParamKey = "TargetContainer"
+	WorkloadTargetPortParamKey      = "TargetPort"
+	WorkloadHTTPSParamKey           = "HTTPSEnabled"
+	WorkloadRulePathParamKey        = "RulePath"
+	WorkloadStickinessParamKey      = "Stickiness"
+)
+
 // Parameter logical IDs for workloads on App Runner.
 const (
 	RDWkldImageRepositoryType                   = "ImageRepositoryType"

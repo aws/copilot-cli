@@ -16,11 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
-// Parameter logical IDs for a backend service.
-const (
-	BackendServiceContainerPortParamKey = "ContainerPort"
-)
-
 const (
 	// NoExposedContainerPort indicates no port should be exposed for the service container.
 	NoExposedContainerPort = "-1"
@@ -169,7 +164,7 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	}
 	return append(svcParams, []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
+			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
 			ParameterValue: aws.String(containerPort),
 		},
 		{

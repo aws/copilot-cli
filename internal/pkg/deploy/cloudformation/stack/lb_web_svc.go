@@ -20,24 +20,18 @@ import (
 
 // Template rendering configuration.
 const (
-	lbWebSvcRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
-	desiredCountGeneratorPath         = "custom-resources/desired-count-delegation.js"
-	envControllerPath                 = "custom-resources/env-controller.js"
-	nlbCertValidatorPath              = "custom-resources/nlb-cert-validator.js"
-	nlbCustomDomainPath               = "custom-resources/nlb-custom-domain.js"
+	albRulePriorityGeneratorPath = "custom-resources/alb-rule-priority-generator.js"
+	desiredCountGeneratorPath    = "custom-resources/desired-count-delegation.js"
+	envControllerPath            = "custom-resources/env-controller.js"
+	nlbCertValidatorPath         = "custom-resources/nlb-cert-validator.js"
+	nlbCustomDomainPath          = "custom-resources/nlb-custom-domain.js"
 )
 
 // Parameter logical IDs for a load balanced web service.
 const (
-	LBWebServiceHTTPSParamKey           = "HTTPSEnabled"
-	LBWebServiceContainerPortParamKey   = "ContainerPort"
-	LBWebServiceRulePathParamKey        = "RulePath"
-	LBWebServiceTargetContainerParamKey = "TargetContainer"
-	LBWebServiceTargetPortParamKey      = "TargetPort"
-	LBWebServiceStickinessParamKey      = "Stickiness"
-	LBWebServiceDNSDelegatedParamKey    = "DNSDelegated"
-	LBWebServiceNLBAliasesParamKey      = "NLBAliases"
-	LBWebServiceNLBPortParamKey         = "NLBPort"
+	LBWebServiceDNSDelegatedParamKey = "DNSDelegated"
+	LBWebServiceNLBAliasesParamKey   = "NLBAliases"
+	LBWebServiceNLBPortParamKey      = "NLBPort"
 )
 
 type loadBalancedWebSvcReadParser interface {
@@ -135,7 +129,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
 func (s *LoadBalancedWebService) Template() (string, error) {
-	rulePriorityLambda, err := s.parser.Read(lbWebSvcRulePriorityGeneratorPath)
+	rulePriorityLambda, err := s.parser.Read(albRulePriorityGeneratorPath)
 	if err != nil {
 		return "", fmt.Errorf("read rule priority lambda: %w", err)
 	}
@@ -264,20 +258,16 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 }
 
 func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
-	containerName := s.name
-	containerPort := strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.ImageConfig.Port)), 10)
 	// Route load balancer traffic to main container by default.
-	targetContainer = aws.String(containerName)
-	targetPort = aws.String(containerPort)
-	if s.manifest.RoutingRule.TargetContainer != nil {
-		targetContainer = s.manifest.RoutingRule.TargetContainer
-	}
-	if s.manifest.RoutingRule.TargetContainerCamelCase != nil {
-		targetContainer = s.manifest.RoutingRule.TargetContainerCamelCase
-	}
-	if aws.StringValue(targetContainer) != containerName {
+	targetContainer = aws.String(s.name)
+	targetPort = aws.String(s.containerPort())
+
+	rrTarget := s.manifest.RoutingRule.GetTargetContainer()
+	if rrTarget != nil && *rrTarget != *targetContainer {
+		targetContainer = rrTarget
 		targetPort = s.manifest.Sidecars[aws.StringValue(targetContainer)].Port
 	}
+
 	return
 }
 
@@ -294,7 +284,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	targetContainer, targetPort := s.httpLoadBalancerTarget()
 	wkldParams = append(wkldParams, []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
+			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
 			ParameterValue: aws.String(s.containerPort()),
 		},
 		{
@@ -302,11 +292,11 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			ParameterValue: aws.String(strconv.FormatBool(s.dnsDelegationEnabled)),
 		},
 		{
-			ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 			ParameterValue: targetContainer,
 		},
 		{
-			ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 			ParameterValue: targetPort,
 		},
 		{
@@ -318,15 +308,15 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 	if !s.manifest.RoutingRule.Disabled() {
 		wkldParams = append(wkldParams, []*cloudformation.Parameter{
 			{
-				ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+				ParameterKey:   aws.String(WorkloadRulePathParamKey),
 				ParameterValue: s.manifest.RoutingRule.Path,
 			},
 			{
-				ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+				ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 				ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 			},
 			{
-				ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+				ParameterKey:   aws.String(WorkloadStickinessParamKey),
 				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
 			},
 		}...)
