@@ -101,3 +101,86 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 		})
 	}
 }
+
+type deployEnvironmentMock struct {
+	appCFN      *mocks.MockappResourcesGetter
+	envDeployer *mocks.MockenvironmentDeployer
+}
+
+func TestEnvDeployer_DeployEnvironment(t *testing.T) {
+	const (
+		mockManagerRoleARN      = "mockManagerRoleARN"
+		mockCFNExecutionRoleARN = "mockCFNExecutionRoleARN"
+		mockEnvRegion           = "us-west-2"
+		mockAppName             = "mockApp"
+		mockEnvName             = "mockEnv"
+	)
+	mockApp := &config.Application{
+		Name: mockAppName,
+	}
+	testCases := map[string]struct {
+		setUpMocks  func(m *deployEnvironmentMock)
+		wantedError error
+	}{
+		"fail to get app resources by region": {
+			setUpMocks: func(m *deployEnvironmentMock) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).
+					Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("get app resources in region %s: some error", mockEnvRegion),
+		},
+		"fail to deploy environment": {
+			setUpMocks: func(m *deployEnvironmentMock) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+			},
+			wantedError: errors.New("some error"),
+		},
+		"successful environment deployment": {
+			setUpMocks: func(m *deployEnvironmentMock) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := &deployEnvironmentMock{
+				appCFN:      mocks.NewMockappResourcesGetter(ctrl),
+				envDeployer: mocks.NewMockenvironmentDeployer(ctrl),
+			}
+			tc.setUpMocks(m)
+			d := envDeployer{
+				app: mockApp,
+				env: &config.Environment{
+					Name:           mockEnvName,
+					ManagerRoleARN: mockManagerRoleARN,
+					Region:         mockEnvRegion,
+				},
+				appCFN:      m.appCFN,
+				envDeployer: m.envDeployer,
+			}
+
+			mockIn := &deployEnvironmentInput{
+				rootUserARN:  "mockRootUserARN",
+				isProduction: false,
+				customResourcesURLs: map[string]string{
+					"mockResource": "mockURL",
+				},
+			}
+			gotErr := d.DeployEnvironment(mockIn)
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}

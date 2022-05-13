@@ -7,8 +7,11 @@ package mocks
 import (
 	reflect "reflect"
 
+	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
+	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -48,4 +51,46 @@ func (m *MockappResourcesGetter) GetAppResourcesByRegion(app *config.Application
 func (mr *MockappResourcesGetterMockRecorder) GetAppResourcesByRegion(app, region interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppResourcesByRegion", reflect.TypeOf((*MockappResourcesGetter)(nil).GetAppResourcesByRegion), app, region)
+}
+
+// MockenvironmentDeployer is a mock of environmentDeployer interface.
+type MockenvironmentDeployer struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvironmentDeployerMockRecorder
+}
+
+// MockenvironmentDeployerMockRecorder is the mock recorder for MockenvironmentDeployer.
+type MockenvironmentDeployerMockRecorder struct {
+	mock *MockenvironmentDeployer
+}
+
+// NewMockenvironmentDeployer creates a new mock instance.
+func NewMockenvironmentDeployer(ctrl *gomock.Controller) *MockenvironmentDeployer {
+	mock := &MockenvironmentDeployer{ctrl: ctrl}
+	mock.recorder = &MockenvironmentDeployerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder {
+	return m.recorder
+}
+
+// UpdateAndRenderEnvironment mocks base method.
+func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{out, env}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateAndRenderEnvironment", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAndRenderEnvironment indicates an expected call of UpdateAndRenderEnvironment.
+func (mr *MockenvironmentDeployerMockRecorder) UpdateAndRenderEnvironment(out, env interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{out, env}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).UpdateAndRenderEnvironment), varargs...)
 }

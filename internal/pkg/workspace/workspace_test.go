@@ -878,6 +878,181 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 	}
 }
 
+func TestWorkspace_ReadWorkloadManifest(t *testing.T) {
+	const (
+		mockCopilotDir   = "/copilot"
+		mockWorkloadName = "webhook"
+	)
+	testCases := map[string]struct {
+		elems  []string
+		mockFS func() afero.Fs
+
+		wantedData      WorkloadManifest
+		wantedErr       error
+		wantedErrPrefix string
+	}{
+		"return error if directory does not exist": {
+			mockFS: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+			wantedErr: fmt.Errorf("file /copilot/webhook/manifest.yml does not exists"),
+		},
+		"fail to read name from manifest": {
+			mockFS: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/webhook/", 0755)
+				f, _ := fs.Create("/copilot/webhook/manifest.yml")
+				defer f.Close()
+				f.Write([]byte(`hello`))
+				return fs
+			},
+			wantedErrPrefix: `unmarshal manifest file to retrieve "name"`,
+		},
+		"name from manifest does not match with dir": {
+			mockFS: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/webhook/", 0755)
+				f, _ := fs.Create("/copilot/webhook/manifest.yml")
+				defer f.Close()
+				f.Write([]byte(`name: not-webhook`))
+				return fs
+			},
+			wantedErr: errors.New(`name of the manifest "not-webhook" and directory "webhook" do not match`),
+		},
+		"read existing file": {
+			mockFS: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/webhook/", 0755)
+				f, _ := fs.Create("/copilot/webhook/manifest.yml")
+				defer f.Close()
+				f.Write([]byte(`name: webhook
+type: Load Balanced Web Service
+flavor: vanilla`))
+				return fs
+			},
+
+			wantedData: []byte(`name: webhook
+type: Load Balanced Web Service
+flavor: vanilla`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				copilotDir: mockCopilotDir,
+				fsUtils: &afero.Afero{
+					Fs: tc.mockFS(),
+				},
+			}
+			data, err := ws.ReadWorkloadManifest(mockWorkloadName)
+			if tc.wantedErr == nil && tc.wantedErrPrefix == "" {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedData, data)
+			}
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+			if tc.wantedErrPrefix != "" {
+				require.ErrorContains(t, err, tc.wantedErrPrefix)
+			}
+		})
+	}
+}
+
+func TestWorkspace_ReadEnvironmentManifest(t *testing.T) {
+	const mockEnvironmentName = "test"
+
+	testCases := map[string]struct {
+		elems  []string
+		mockFS func() afero.Fs
+
+		wantedData      EnvironmentManifest
+		wantedErr       error
+		wantedErrPrefix string
+	}{
+		"return error if directory does not exist": {
+			mockFS: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+			wantedErr: errors.New("file /copilot/environments/test/manifest.yml does not exists"),
+		},
+		"fail to read name from manifest": {
+			mockFS: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/environments/test/", 0755)
+				f, _ := fs.Create("/copilot/environments/test/manifest.yml")
+				defer f.Close()
+				f.Write([]byte(`hello`))
+				return fs
+			},
+			wantedErrPrefix: `unmarshal manifest file to retrieve "name"`,
+		},
+		"name from manifest does not match with dir": {
+			mockFS: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/environments/test", 0755)
+				f, _ := fs.Create("/copilot/environments/test/manifest.yml")
+				defer f.Close()
+				f.Write([]byte(`name: not-test`))
+				return fs
+			},
+			wantedErr: errors.New(`name of the manifest "not-test" and directory "test" do not match`),
+		},
+		"type from manifest is not environment": {
+			mockFS: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/environments/test", 0755)
+				f, _ := fs.Create("/copilot/environments/test/manifest.yml")
+				defer f.Close()
+				f.Write([]byte(`name: test
+type: Load Balanced
+flavor: vanilla`))
+				return fs
+			},
+			wantedErr: errors.New(`manifest test has type of "Load Balanced", not "Environment"`),
+		},
+		"read existing file": {
+			mockFS: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/environments/test/", 0755)
+				f, _ := fs.Create("/copilot/environments/test/manifest.yml")
+				defer f.Close()
+				f.Write([]byte(`name: test
+type: Environment
+flavor: vanilla`))
+				return fs
+			},
+
+			wantedData: []byte(`name: test
+type: Environment
+flavor: vanilla`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				copilotDir: "/copilot",
+				fsUtils: &afero.Afero{
+					Fs: tc.mockFS(),
+				},
+			}
+			data, err := ws.ReadEnvironmentManifest(mockEnvironmentName)
+			if tc.wantedErr == nil && tc.wantedErrPrefix == "" {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedData, data)
+			}
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+			if tc.wantedErrPrefix != "" {
+				require.ErrorContains(t, err, tc.wantedErrPrefix)
+			}
+		})
+	}
+}
+
 func TestWorkspace_ReadPipelineManifest(t *testing.T) {
 	copilotDir := "/copilot"
 	testCases := map[string]struct {
