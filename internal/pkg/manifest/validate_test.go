@@ -208,8 +208,18 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
-						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
+								},
+							},
+						},
+						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
@@ -325,6 +335,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `validate "deployment"`,
 		},
 	}
+
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.lbConfig.Validate()
@@ -457,8 +468,18 @@ func TestBackendService_Validate(t *testing.T) {
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
-						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
+								},
+							},
+						},
+						},
 					},
 				},
 			},
@@ -768,8 +789,18 @@ func TestWorkerService_Validate(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
-						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
+								},
+							},
+						},
+						},
 					},
 				},
 			},
@@ -971,8 +1002,18 @@ func TestScheduledJob_Validate(t *testing.T) {
 						Schedule: aws.String("mockSchedule"),
 					},
 					TaskConfig: TaskConfig{
-						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
+								},
+							},
+						},
+						},
 					},
 				},
 			},
@@ -2684,12 +2725,6 @@ func TestValidateWindows(t *testing.T) {
 		in          validateWindowsOpts
 		wantedError error
 	}{
-		"should return an error if efs specified": {
-			in: validateWindowsOpts{
-				execEnabled: true,
-			},
-			wantedError: fmt.Errorf(`'exec' is not supported when deploying a Windows container`),
-		},
 		"error if efs specified": {
 			in: validateWindowsOpts{
 				efsVolumes: map[string]*Volume{
@@ -2705,10 +2740,8 @@ func TestValidateWindows(t *testing.T) {
 			},
 			wantedError: errors.New(`'EFS' is not supported when deploying a Windows container`),
 		},
-		"should return nil if neither efs nor exec specified": {
-			in: validateWindowsOpts{
-				execEnabled: false,
-			},
+		"should return nil efs not specified": {
+			in:          validateWindowsOpts{},
 			wantedError: nil,
 		},
 	}

@@ -6,6 +6,9 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -13,6 +16,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -64,6 +68,7 @@ type envUpgradeOpts struct {
 
 	// Constructors for clients that can be initialized only at runtime.
 	// These functions are overridden in tests to provide mocks.
+	newEnvDeployer      func(conf *config.Environment) (environmentDeployer, error)
 	newEnvVersionGetter func(app, env string) (versionGetter, error)
 	newTemplateUpgrader func(conf *config.Environment) (envTemplateUpgrader, error)
 	newS3               func(conf *config.Environment) (uploader, error)
@@ -91,6 +96,13 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 		uploader: template.New(),
 		appCFN:   cloudformation.New(defaultSession),
 
+		newEnvDeployer: func(conf *config.Environment) (environmentDeployer, error) {
+			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
+			if err != nil {
+				return nil, fmt.Errorf("create environment stack deployer session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
+			}
+			return cloudformation.New(sess), nil
+		},
 		newEnvVersionGetter: func(app, env string) (versionGetter, error) {
 			d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 				App:         app,
@@ -174,6 +186,9 @@ func (o *envUpgradeOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("get app resources: %w", err)
 		}
+		if err := o.ensureManagerRoleIsAllowedToUpload(env, resources.S3Bucket); err != nil {
+			return err
+		}
 		s3Client, err := o.newS3(env)
 		if err != nil {
 			return err
@@ -210,6 +225,106 @@ func (o *envUpgradeOpts) listEnvsToUpgrade() ([]*config.Environment, error) {
 		return nil, fmt.Errorf("list environments in app %s: %w", o.appName, err)
 	}
 	return envs, nil
+}
+
+func (o *envUpgradeOpts) ensureManagerRoleIsAllowedToUpload(env *config.Environment, bucketName string) error {
+	cfn, err := o.newEnvDeployer(env)
+	if err != nil {
+		return err
+	}
+	body, err := cfn.EnvironmentTemplate(env.App, env.Name)
+	if err != nil {
+		return err
+	}
+	ok, err := o.isManagerRoleAllowedToUpload(body)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+	return o.grantManagerRolePermissionToUpload(cfn, env.App, env.Name, env.ExecutionRoleARN, body, s3.FormatARN(endpoints.AwsPartitionID, bucketName))
+}
+
+func (o *envUpgradeOpts) isManagerRoleAllowedToUpload(body string) (bool, error) {
+	type Template struct {
+		Metadata struct {
+			Version string `yaml:"Version"`
+		} `yaml:"Metadata"`
+	}
+	var tpl Template
+	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
+		return false, fmt.Errorf("unmarshal environment template to detect Metadata.Version: %v", err)
+	}
+	if !semver.IsValid(tpl.Metadata.Version) { // The template doesn't contain a version.
+		return false, nil
+	}
+	if semver.Compare(tpl.Metadata.Version, "v1.9.0") < 0 {
+		// The permissions to grant the EnvManagerRole to upload artifacts was granted with template v1.9.0.
+		return false, nil
+	}
+	return true, nil
+}
+
+func (o *envUpgradeOpts) grantManagerRolePermissionToUpload(cfn environmentDeployer, app, env, execRole, body, bucketARN string) error {
+	// Detect which line number the EnvironmentManagerRole's PolicyDocument Statement is at.
+	// We will add additional permissions after that line.
+	type Template struct {
+		Resources struct {
+			ManagerRole struct {
+				Properties struct {
+					Policies []struct {
+						Document struct {
+							Statements yaml.Node `yaml:"Statement"`
+						} `yaml:"PolicyDocument"`
+					} `yaml:"Policies"`
+				} `yaml:"Properties"`
+			} `yaml:"EnvironmentManagerRole"`
+		} `yaml:"Resources"`
+	}
+
+	var tpl Template
+	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
+		return fmt.Errorf("unmarshal environment template to find EnvironmentManagerRole policy statement: %v", err)
+	}
+	if len(tpl.Resources.ManagerRole.Properties.Policies) == 0 {
+		return errors.New("unable to find policies for the EnvironmentManagerRole")
+	}
+	// lines and columns are 1-indexed, so we have to substract one from each.
+	statementLineIndex := tpl.Resources.ManagerRole.Properties.Policies[0].Document.Statements.Line - 1
+	numSpaces := tpl.Resources.ManagerRole.Properties.Policies[0].Document.Statements.Column - 1
+	pad := strings.Repeat(" ", numSpaces)
+
+	// Create the additional permissions needed with the appropriate indentation.
+	permissions := fmt.Sprintf(`- Sid: PatchPutObjectsToArtifactBucket
+  Effect: Allow
+  Action:
+    - s3:PutObject
+    - s3:PutObjectAcl
+  Resource:
+    - %s
+    - %s/*`, bucketARN, bucketARN)
+	permissions = pad + strings.Replace(permissions, "\n", "\n"+pad, -1)
+
+	// Add the new permissions to the body.
+	lines := strings.Split(body, "\n")
+	linesBefore := lines[:statementLineIndex]
+	linesAfter := lines[statementLineIndex:]
+	updatedLines := append(linesBefore, append(strings.Split(permissions, "\n"), linesAfter...)...)
+	updatedBody := strings.Join(updatedLines, "\n")
+
+	// Update the Environment template with the new content.
+	// CloudFormation is the only entity that's allowed to update the EnvManagerRole so we have to go through this route.
+	// See #3556.
+	var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
+	o.prog.Start("Update the environment's manager role with permission to upload artifacts to S3")
+	err := cfn.UpdateEnvironmentTemplate(app, env, updatedBody, execRole)
+	if err != nil && !errors.As(err, &errEmptyChangeSet) {
+		o.prog.Stop(log.Serrorln("Unable to update the environment's manager role with upload artifacts permission"))
+		return fmt.Errorf("update environment template with PutObject permissions: %v", err)
+	}
+	o.prog.Stop(log.Ssuccessln("Updated the environment's manager role with permissions to upload artifacts to S3"))
+	return nil
 }
 
 func (o *envUpgradeOpts) upgrade(env *config.Environment, app *config.Application,
