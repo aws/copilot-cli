@@ -87,10 +87,8 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 	}
 
 	platformVersion := "LATEST"
-	enableExec := true
 	if IsValidWindowsOS(r.OS) {
 		platformVersion = "1.0.0"
-		enableExec = false
 	}
 
 	ecsTasks, err := r.Starter.RunTask(ecs.RunTaskInput{
@@ -101,7 +99,6 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		TaskFamilyName:  taskFamilyName(r.GroupName),
 		StartedBy:       startedBy,
 		PlatformVersion: platformVersion,
-		EnableExec:      enableExec,
 	})
 	if err != nil {
 		return nil, &errRunTask{
