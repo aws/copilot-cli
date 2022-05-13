@@ -30,6 +30,17 @@ Parameters:
   LogRetention:
     Type: Number
     Default: 30
+  {{- if .ALBEnabled}}
+  TargetContainer:
+    Type: String
+  TargetPort:
+    Type: Number
+  RulePath:
+    Type: String
+  Stickiness:
+    Type: String
+    Default: false
+  {{- end}}
 Conditions:
   HasAddons:
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
@@ -37,6 +48,10 @@ Conditions:
     !Not [!Equals [!Ref EnvFileARN, ""]]
   ExposePort:
     !Not [!Equals [!Ref ContainerPort, -1]]
+  {{- if .ALBEnabled}}
+  IsDefaultRootPath:
+    !Equals [!Ref RulePath, "/"]
+  {{- end}}
 Resources:
 {{include "loggroup" . | indent 2}}
 
@@ -56,8 +71,16 @@ Resources:
 {{include "executionrole" . | indent 2}}
 {{include "taskrole" . | indent 2}}
 {{include "servicediscovery" . | indent 2}}
-{{- if .Autoscaling }}
+
+{{- if .Autoscaling}}
 {{include "autoscaling" . | indent 2}}
+{{- end}}
+
+{{- if .ALBEnabled}}
+{{include "alb" . | indent 2}}
+{{end}}
+
+  {{- if or .ALBEnabled .Autoscaling}}
   CustomResourceRole:
     Metadata:
       'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'
@@ -74,7 +97,20 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
+      {{- if .ALBEnabled}}
+        - PolicyName: "RulePriorityGeneratorAccess"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+                - elasticloadbalancing:DescribeRules
+              Resource: "*"
+      {{- end}}
+      {{- if .Autoscaling }}
         - PolicyName: "DelegateDesiredCountAccess"
           PolicyDocument:
             Version: '2012-10-17'
@@ -102,18 +138,31 @@ Resources:
               Action:
                 - "tag:GetResources"
               Resource: "*"
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-{{- end }}
+      {{- end}}
+  {{- end}}
+
   Service:
-    DependsOn:
-    - EnvControllerAction
     Metadata:
       'aws:copilot:description': 'An ECS service to run and maintain your tasks in the environment cluster'
     Type: AWS::ECS::Service
+    DependsOn:
+      - EnvControllerAction
+      {{- if and .ALBEnabled .HTTPSListener}}
+      - HTTPListenerRuleWithDomain
+      - HTTPSListenerRule
+      {{ else if .ALBEnabled}}
+      - HTTPListenerRule
+      {{- end}}
     Properties:
-{{include "service-base-properties" . | indent 6}}
+      {{- "\n"}}{{ include "service-base-properties" . | indent 6 }}
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref ContainerPort}], !Ref "AWS::NoValue"]
+      {{- if .ALBEnabled}}
+      HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}
+      LoadBalancers:
+        - ContainerName: !Ref TargetContainer
+          ContainerPort: !Ref TargetPort
+          TargetGroupArn: !Ref TargetGroup
+      {{- end}}
 
 {{include "efs-access-point" . | indent 2}}
 
