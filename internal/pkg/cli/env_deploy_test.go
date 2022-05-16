@@ -17,6 +17,102 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type deployEnvAskMocks struct {
+	sel   *mocks.MockwsEnvironmentSelector
+	store *mocks.Mockstore
+}
+
+func TestDeployEnvOpts_Ask(t *testing.T) {
+	testCases := map[string]struct {
+		inAppName  string
+		inName     string
+		setUpMocks func(m *deployEnvAskMocks)
+
+		wantedEnvName string
+		wantedError   error
+	}{
+		"fail to retrieve app from store when validating app": {
+			inAppName: "mockApp",
+			inName:    "mockEnv",
+			setUpMocks: func(m *deployEnvAskMocks) {
+				m.store.EXPECT().GetApplication("mockApp").Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("get application mockApp: some error"),
+		},
+		"error if no app in workspace": {
+			inName: "mockEnv",
+			setUpMocks: func(m *deployEnvAskMocks) {
+				m.store.EXPECT().GetApplication("mockApp").Times(0)
+			},
+			wantedError: errNoAppInWorkspace,
+		},
+		"fail to retrieve env from store when validating env": {
+			inAppName: "mockApp",
+			inName:    "mockEnv",
+			setUpMocks: func(m *deployEnvAskMocks) {
+				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
+				m.store.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("get environment mockEnv: some error"),
+		},
+		"fail to ask for an env from workspace": {
+			inAppName: "mockApp",
+			setUpMocks: func(m *deployEnvAskMocks) {
+				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
+				m.store.EXPECT().GetEnvironment("mockApp", "mockEnv").AnyTimes()
+				m.sel.EXPECT().WSEnvironment(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("select environment: some error"),
+		},
+		"validate env instead of asking if it is passed in as a flag": {
+			inAppName: "mockApp",
+			inName:    "mockEnv",
+			setUpMocks: func(m *deployEnvAskMocks) {
+				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
+				m.store.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{}, nil)
+				m.sel.EXPECT().WSEnvironment(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedEnvName: "mockEnv",
+		},
+		"ask for env": {
+			inAppName: "mockApp",
+			setUpMocks: func(m *deployEnvAskMocks) {
+				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().WSEnvironment(gomock.Any(), gomock.Any()).Return("mockEnv", nil)
+			},
+			wantedEnvName: "mockEnv",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &deployEnvAskMocks{
+				sel:   mocks.NewMockwsEnvironmentSelector(ctrl),
+				store: mocks.NewMockstore(ctrl),
+			}
+			tc.setUpMocks(m)
+			opts := deployEnvOpts{
+				deployEnvVars: deployEnvVars{
+					appName: tc.inAppName,
+					name:    tc.inName,
+				},
+				sel:   m.sel,
+				store: m.store,
+			}
+			gotErr := opts.Ask()
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, opts.name, tc.wantedEnvName)
+			}
+		})
+	}
+}
+
 type deployEnvExecuteMocks struct {
 	ws           *mocks.MockwsEnvironmentReader
 	deployer     *mocks.MockenvDeployer

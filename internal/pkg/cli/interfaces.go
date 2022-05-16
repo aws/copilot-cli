@@ -490,6 +490,10 @@ type wsPipelineSelector interface {
 	WsPipeline(prompt, help string) (*workspace.PipelineManifest, error)
 }
 
+type wsEnvironmentSelector interface {
+	WSEnvironment(msg, help string) (wl string, err error)
+}
+
 type codePipelineSelector interface {
 	appSelector
 	DeployedPipeline(prompt, help, app string) (deploy.Pipeline, error)
