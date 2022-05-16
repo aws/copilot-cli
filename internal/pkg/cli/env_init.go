@@ -202,7 +202,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			Profile: cfg,
 			Prompt:  prompter,
 		},
-		selApp:   selector.NewSelect(prompt.New(), store),
+		selApp:   selector.NewAppEnvSelect(prompt.New(), store),
 		uploader: template.New(),
 		appCFN:   deploycfn.New(defaultSession),
 		newS3: func(region string) (uploader, error) {

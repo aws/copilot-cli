@@ -121,7 +121,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				listWkldVars: listWkldVars{
 					appName: appName,
 				},
-				sel: selector.NewSelect(prompt.New(), store),
+				sel: selector.NewAppEnvSelect(prompt.New(), store),
 				list: &list.SvcListWriter{
 					Ws:    ws,
 					Store: store,
@@ -137,7 +137,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				listWkldVars: listWkldVars{
 					appName: appName,
 				},
-				sel: selector.NewSelect(prompt.New(), store),
+				sel: selector.NewAppEnvSelect(prompt.New(), store),
 				list: &list.JobListWriter{
 					Ws:    ws,
 					Store: store,
