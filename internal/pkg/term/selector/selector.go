@@ -706,8 +706,8 @@ func (s *WorkspaceSelector) Workload(msg, help string) (wl string, err error) {
 	return selectedWlName, nil
 }
 
-// EnvironmentsInWorkspace fetches all environments belong to the app in the workspace and prompts the user to select one.
-func (s *WorkspaceSelect) EnvironmentsInWorkspace(msg, help string) (wl string, err error) {
+// WSEnvironment fetches all environments belong to the app in the workspace and prompts the user to select one.
+func (s *WorkspaceSelect) WSEnvironment(msg, help string) (wl string, err error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)

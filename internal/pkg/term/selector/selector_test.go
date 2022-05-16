@@ -1279,7 +1279,7 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 				},
 				ws: m.ws,
 			}
-			got, err := sel.EnvironmentsInWorkspace("Select an environment", "Help text")
+			got, err := sel.WSEnvironment("Select an environment", "Help text")
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
