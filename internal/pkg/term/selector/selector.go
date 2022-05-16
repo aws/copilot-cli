@@ -89,8 +89,8 @@ var presetSchedules = []prompt.Option{
 	{Value: yearly, Hint: "At midnight, Jan 1st UTC"},
 }
 
-// Prompter wraps the methods to ask for inputs from the terminal.
-type Prompter interface {
+// prompter wraps the methods to ask for inputs from the terminal.
+type prompter interface {
 	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOption(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (value string, err error)
@@ -98,50 +98,46 @@ type Prompter interface {
 	Confirm(message, help string, promptOpts ...prompt.PromptConfig) (bool, error)
 }
 
-// AppEnvLister wraps methods to list apps and envs in config store.
-type AppEnvLister interface {
+type appEnvLister interface {
 	ListEnvironments(appName string) ([]*config.Environment, error)
 	ListApplications() ([]*config.Application, error)
 }
 
-// ConfigWorkloadLister wraps the method to list workloads in config store.
-type ConfigWorkloadLister interface {
+type configWorkloadLister interface {
 	ListServices(appName string) ([]*config.Workload, error)
 	ListJobs(appName string) ([]*config.Workload, error)
 	ListWorkloads(appName string) ([]*config.Workload, error)
 }
 
-// ConfigLister wraps config store listing methods.
-type ConfigLister interface {
-	AppEnvLister
-	ConfigWorkloadLister
+type configLister interface {
+	appEnvLister
+	configWorkloadLister
 }
 
-type WsWorkloadLister interface {
+type wsWorkloadLister interface {
 	ListServices() ([]string, error)
 	ListJobs() ([]string, error)
 	ListWorkloads() ([]string, error)
 }
 
-// WsPipelinesLister is a pipeline lister.
-type WsPipelinesLister interface {
+type wsPipelinesLister interface {
 	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
-// CodePipelineLister is a pipeline lister for deployed pipelines.
-type CodePipelineLister interface {
+// codePipelineLister lists deployed pipelines.
+type codePipelineLister interface {
 	ListDeployedPipelines(appName string) ([]deploy.Pipeline, error)
 }
 
-// WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
-type WorkspaceRetriever interface {
-	WsWorkloadLister
+// workspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
+type workspaceRetriever interface {
+	wsWorkloadLister
 	Summary() (*workspace.Summary, error)
 	ListDockerfiles() ([]string, error)
 }
 
-// DeployStoreClient wraps methods of deploy store.
-type DeployStoreClient interface {
+// deployedWorkloadsRetriever retrieves information about deployed services or jobs.
+type deployedWorkloadsRetriever interface {
 	ListDeployedServices(appName string, envName string) ([]string, error)
 	ListDeployedJobs(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
@@ -149,47 +145,47 @@ type DeployStoreClient interface {
 	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
-// TaskStackDescriber wraps cloudformation client methods to describe task stacks
-type TaskStackDescriber interface {
+// taskStackDescriber wraps cloudformation client methods to describe task stacks
+type taskStackDescriber interface {
 	ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error)
 	ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error)
 }
 
-// TaskLister wraps methods of listing tasks.
-type TaskLister interface {
+// taskLister wraps methods of listing tasks.
+type taskLister interface {
 	ListActiveAppEnvTasks(opts ecs.ListActiveAppEnvTasksOpts) ([]*awsecs.Task, error)
 	ListActiveDefaultClusterTasks(filter ecs.ListTasksFilter) ([]*awsecs.Task, error)
 }
 
 // AppEnvSelect prompts users to select the name of an application or environment.
 type AppEnvSelect struct {
-	prompt       Prompter
-	appEnvLister AppEnvLister
+	prompt       prompter
+	appEnvLister appEnvLister
 }
 
 // ConfigSelect is an application and environment selector, but can also choose a service from the config store.
 type ConfigSelect struct {
 	*AppEnvSelect
-	workloadLister ConfigWorkloadLister
+	workloadLister configWorkloadLister
 }
 
 // WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
 type WorkspaceSelect struct {
 	*ConfigSelect
-	ws      WorkspaceRetriever
+	ws      workspaceRetriever
 	appName string
 }
 
 // WsPipelineSelect is a workspace pipeline selector.
 type WsPipelineSelect struct {
-	prompt Prompter
-	ws     WsPipelinesLister
+	prompt prompter
+	ws     wsPipelinesLister
 }
 
 // CodePipelineSelect is a selector for deployed pipelines.
 type CodePipelineSelect struct {
-	prompt         Prompter
-	pipelineLister CodePipelineLister
+	prompt         prompter
+	pipelineLister codePipelineLister
 }
 
 // AppPipelineSelect is a selector for deployed pipelines and apps.
@@ -201,7 +197,7 @@ type AppPipelineSelect struct {
 // DeploySelect is a service and environment selector from the deploy store.
 type DeploySelect struct {
 	*ConfigSelect
-	deployStoreSvc DeployStoreClient
+	deployStoreSvc deployedWorkloadsRetriever
 	svc            string
 	env            string
 	filters        []DeployedServiceFilter
@@ -210,13 +206,14 @@ type DeploySelect struct {
 // CFTaskSelect is a selector based on CF methods to get deployed one off tasks.
 type CFTaskSelect struct {
 	*AppEnvSelect
-	cfStore        TaskStackDescriber
+	cfStore        taskStackDescriber
 	app            string
 	env            string
 	defaultCluster bool
 }
 
-func NewCFTaskSelect(prompt Prompter, store ConfigLister, cf TaskStackDescriber) *CFTaskSelect {
+// NewCFTaskSelect constructs a CFTaskSelect.
+func NewCFTaskSelect(prompt prompter, store configLister, cf taskStackDescriber) *CFTaskSelect {
 	return &CFTaskSelect{
 		AppEnvSelect: NewAppEnvSelect(prompt, store),
 		cfStore:      cf,
@@ -243,8 +240,8 @@ func TaskWithDefaultCluster() GetDeployedTaskOpts {
 
 // TaskSelect is a Copilot running task selector.
 type TaskSelect struct {
-	prompt         Prompter
-	lister         TaskLister
+	prompt         prompter
+	lister         taskLister
 	app            string
 	env            string
 	defaultCluster bool
@@ -253,7 +250,7 @@ type TaskSelect struct {
 }
 
 // NewAppEnvSelect returns a selector that chooses applications or environments.
-func NewAppEnvSelect(prompt Prompter, store AppEnvLister) *AppEnvSelect {
+func NewAppEnvSelect(prompt prompter, store appEnvLister) *AppEnvSelect {
 	return &AppEnvSelect{
 		prompt:       prompt,
 		appEnvLister: store,
@@ -261,7 +258,7 @@ func NewAppEnvSelect(prompt Prompter, store AppEnvLister) *AppEnvSelect {
 }
 
 // NewConfigSelect returns a new selector that chooses applications, environments, or services from the config store.
-func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
+func NewConfigSelect(prompt prompter, store configLister) *ConfigSelect {
 	return &ConfigSelect{
 		AppEnvSelect:   NewAppEnvSelect(prompt, store),
 		workloadLister: store,
@@ -270,7 +267,7 @@ func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
 
 // NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriever) *WorkspaceSelect {
+func NewWorkspaceSelect(prompt prompter, store configLister, ws workspaceRetriever) *WorkspaceSelect {
 	return &WorkspaceSelect{
 		ConfigSelect: NewConfigSelect(prompt, store),
 		ws:           ws,
@@ -278,7 +275,7 @@ func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriev
 }
 
 // NewWsPipelineSelect returns a new selector with pipelines from the local workspace.
-func NewWsPipelineSelect(prompt Prompter, ws WsPipelinesLister) *WsPipelineSelect {
+func NewWsPipelineSelect(prompt prompter, ws wsPipelinesLister) *WsPipelineSelect {
 	return &WsPipelineSelect{
 		prompt: prompt,
 		ws:     ws,
@@ -286,7 +283,7 @@ func NewWsPipelineSelect(prompt Prompter, ws WsPipelinesLister) *WsPipelineSelec
 }
 
 // NewAppPipelineSelect returns new selectors with deployed pipelines and apps.
-func NewAppPipelineSelect(prompt Prompter, store ConfigLister, lister CodePipelineLister) *AppPipelineSelect {
+func NewAppPipelineSelect(prompt prompter, store configLister, lister codePipelineLister) *AppPipelineSelect {
 	return &AppPipelineSelect{
 		AppEnvSelect: NewAppEnvSelect(prompt, store),
 		CodePipelineSelect: &CodePipelineSelect{
@@ -297,7 +294,7 @@ func NewAppPipelineSelect(prompt Prompter, store ConfigLister, lister CodePipeli
 }
 
 // NewDeploySelect returns a new selector that chooses services and environments from the deploy store.
-func NewDeploySelect(prompt Prompter, configStore ConfigLister, deployStore DeployStoreClient) *DeploySelect {
+func NewDeploySelect(prompt prompter, configStore configLister, deployStore deployedWorkloadsRetriever) *DeploySelect {
 	return &DeploySelect{
 		ConfigSelect:   NewConfigSelect(prompt, configStore),
 		deployStoreSvc: deployStore,
@@ -305,7 +302,7 @@ func NewDeploySelect(prompt Prompter, configStore ConfigLister, deployStore Depl
 }
 
 // NewTaskSelect returns a new selector that chooses a running task.
-func NewTaskSelect(prompt Prompter, lister TaskLister) *TaskSelect {
+func NewTaskSelect(prompt prompter, lister taskLister) *TaskSelect {
 	return &TaskSelect{
 		prompt: prompt,
 		lister: lister,
@@ -431,7 +428,6 @@ func WithFilter(filter DeployedServiceFilter) GetDeployedServiceOpts {
 
 // WithServiceTypesFilter sets up a ServiceType filter for DeploySelect
 func WithServiceTypesFilter(svcTypes []string) GetDeployedServiceOpts {
-
 	return WithFilter(func(svc *DeployedService) (bool, error) {
 		for _, svcType := range svcTypes {
 			if svc.SvcType == svcType {
