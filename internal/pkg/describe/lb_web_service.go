@@ -157,7 +157,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
-				Port:        svcParams[cfnstack.LBWebServiceContainerPortParamKey],
+				Port:        svcParams[cfnstack.WorkloadContainerPortParamKey],
 				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
 				Platform:    dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture),
@@ -174,7 +174,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
 			Service:  d.svc,
-			Port:     svcParams[cfnstack.LBWebServiceContainerPortParamKey],
+			Port:     svcParams[cfnstack.WorkloadContainerPortParamKey],
 			Endpoint: endpoint,
 		}, env)
 		envVars = append(envVars, flattenContainerEnvVars(env, webSvcEnvVars)...)

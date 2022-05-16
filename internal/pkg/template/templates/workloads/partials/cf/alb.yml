@@ -1,0 +1,57 @@
+TargetGroup:
+  Metadata:
+    'aws:copilot:description': 'A target group to connect the load balancer to your service'
+  Type: AWS::ElasticLoadBalancingV2::TargetGroup
+  Properties:
+    HealthCheckPath: {{.HTTPHealthCheck.HealthCheckPath}} # Default is '/'.
+    {{- if .HTTPHealthCheck.Port}}
+    HealthCheckPort: {{.HTTPHealthCheck.Port}} # Default is 'traffic-port'.
+    {{- end}}
+    {{- if .HTTPHealthCheck.SuccessCodes}}
+    Matcher:
+      HttpCode: {{.HTTPHealthCheck.SuccessCodes}}
+    {{- end}}
+    {{- if .HTTPHealthCheck.HealthyThreshold}}
+    HealthyThresholdCount: {{.HTTPHealthCheck.HealthyThreshold}}
+    {{- end}}
+    {{- if .HTTPHealthCheck.UnhealthyThreshold}}
+    UnhealthyThresholdCount: {{.HTTPHealthCheck.UnhealthyThreshold}}
+    {{- end}}
+    {{- if .HTTPHealthCheck.Interval}}
+    HealthCheckIntervalSeconds: {{.HTTPHealthCheck.Interval}}
+    {{- end}}
+    {{- if .HTTPHealthCheck.Timeout}}
+    HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
+    {{- end}}
+    Port: !Ref ContainerPort
+    Protocol: HTTP
+    {{- if .HTTPVersion}}
+    ProtocolVersion: {{.HTTPVersion}}
+    {{- end}}
+    TargetGroupAttributes:
+      - Key: deregistration_delay.timeout_seconds
+        Value: {{.DeregistrationDelay}}  # ECS Default is 300; Copilot default is 60.
+      - Key: stickiness.enabled
+        Value: !Ref Stickiness
+    TargetType: ip
+    VpcId:
+      Fn::ImportValue:
+        !Sub "${AppName}-${EnvName}-VpcId"
+
+RulePriorityFunction:
+  Type: AWS::Lambda::Function
+  Properties:
+    Code:
+      ZipFile: |
+        {{.RulePriorityLambda}}
+    Handler: "index.nextAvailableRulePriorityHandler"
+    Timeout: 600
+    MemorySize: 512
+    Role: !GetAtt 'CustomResourceRole.Arn'
+    Runtime: nodejs12.x
+
+{{- if .HTTPSListener}}
+{{include "https-listener" .}}
+{{- else}}
+{{include "http-listener" .}}
+{{- end}}

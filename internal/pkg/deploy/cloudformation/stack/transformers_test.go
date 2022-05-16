@@ -555,6 +555,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 	duration60Seconds := 60 * time.Second
 	testCases := map[string]struct {
 		inputPath               *string
+		inputPort               *int
 		inputSuccessCodes       *string
 		inputHealthyThreshold   *int64
 		inputUnhealthyThreshold *int64
@@ -653,8 +654,19 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				GracePeriod:     aws.Int64(60),
 			},
 		},
+		"just Port": {
+			inputPath: nil,
+			inputPort: aws.Int(8000),
+
+			wantedOpts: template.HTTPHealthCheckOpts{
+				HealthCheckPath: "/",
+				Port:            "8000",
+				GracePeriod:     aws.Int64(60),
+			},
+		},
 		"all values changed in manifest": {
 			inputPath:               aws.String("/road/to/nowhere"),
+			inputPort:               aws.Int(8080),
 			inputSuccessCodes:       aws.String("200-299"),
 			inputHealthyThreshold:   aws.Int64(3),
 			inputUnhealthyThreshold: aws.Int64(3),
@@ -664,6 +676,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/road/to/nowhere",
+				Port:               "8080",
 				SuccessCodes:       "200-299",
 				HealthyThreshold:   aws.Int64(3),
 				UnhealthyThreshold: aws.Int64(3),
@@ -680,6 +693,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				HealthCheckPath: tc.inputPath,
 				HealthCheckArgs: manifest.HTTPHealthCheckArgs{
 					Path:               tc.inputPath,
+					Port:               tc.inputPort,
 					SuccessCodes:       tc.inputSuccessCodes,
 					HealthyThreshold:   tc.inputHealthyThreshold,
 					UnhealthyThreshold: tc.inputUnhealthyThreshold,

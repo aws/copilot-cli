@@ -71,7 +71,7 @@ func (l LoadBalancedWebService) Validate() error {
 	}
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
-		targetContainer:   l.RoutingRule.targetContainer(),
+		targetContainer:   l.RoutingRule.GetTargetContainer(),
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
 		return fmt.Errorf("validate HTTP load balancer target: %w", err)
@@ -152,8 +152,7 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 	}
 	if l.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
-			execEnabled: aws.BoolValue(l.ExecuteCommand.Enable),
-			efsVolumes:  l.Storage.Volumes,
+			efsVolumes: l.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -231,8 +230,7 @@ func (b BackendServiceConfig) Validate() error {
 	}
 	if b.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
-			execEnabled: aws.BoolValue(b.ExecuteCommand.Enable),
-			efsVolumes:  b.Storage.Volumes,
+			efsVolumes: b.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -339,8 +337,7 @@ func (w WorkerServiceConfig) Validate() error {
 	}
 	if w.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
-			execEnabled: aws.BoolValue(w.ExecuteCommand.Enable),
-			efsVolumes:  w.Storage.Volumes,
+			efsVolumes: w.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -415,8 +412,7 @@ func (s ScheduledJobConfig) Validate() error {
 	}
 	if s.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
-			execEnabled: aws.BoolValue(s.ExecuteCommand.Enable),
-			efsVolumes:  s.Storage.Volumes,
+			efsVolumes: s.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -1352,8 +1348,7 @@ type validateTargetContainerOpts struct {
 }
 
 type validateWindowsOpts struct {
-	execEnabled bool
-	efsVolumes  map[string]*Volume
+	efsVolumes map[string]*Volume
 }
 
 type validateARMOpts struct {
@@ -1498,9 +1493,6 @@ func isValidSubSvcName(name string) bool {
 }
 
 func validateWindows(opts validateWindowsOpts) error {
-	if opts.execEnabled {
-		return errors.New(`'exec' is not supported when deploying a Windows container`)
-	}
 	for _, volume := range opts.efsVolumes {
 		if !volume.EmptyVolume() {
 			return errors.New(`'EFS' is not supported when deploying a Windows container`)

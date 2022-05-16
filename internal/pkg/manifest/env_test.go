@@ -10,10 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
-func TestEnvironment_UnmarshalYaml(t *testing.T) {
+func Test_UnmarshalEnvironment(t *testing.T) {
 	var (
 		mockVPCCIDR            = IPNet("10.0.0.0/16")
 		mockPublicSubnet1CIDR  = IPNet("10.0.0.0/24")
@@ -22,8 +21,9 @@ func TestEnvironment_UnmarshalYaml(t *testing.T) {
 		mockPrivateSubnet2CIDR = IPNet("10.0.4.0/24")
 	)
 	testCases := map[string]struct {
-		inContent    string
-		wantedStruct Environment
+		inContent       string
+		wantedStruct    *Environment
+		wantedErrPrefix string
 	}{
 		"unmarshal with managed VPC": {
 			inContent: `name: test
@@ -44,7 +44,7 @@ network:
                 - cidr: '10.0.4.0/24'   
                   az: 'us-east-2b'  
 `,
-			wantedStruct: Environment{
+			wantedStruct: &Environment{
 				Workload: Workload{
 					Name: aws.String("test"),
 					Type: aws.String("Environment"),
@@ -87,7 +87,7 @@ type: Environment
 observability:
     container_insights: true
 `,
-			wantedStruct: Environment{
+			wantedStruct: &Environment{
 				Workload: Workload{
 					Name: aws.String("prod"),
 					Type: aws.String("Environment"),
@@ -109,7 +109,7 @@ http:
             - cert-1
             - cert-2
 `,
-			wantedStruct: Environment{
+			wantedStruct: &Environment{
 				Workload: Workload{
 					Name: aws.String("prod"),
 					Type: aws.String("Environment"),
@@ -123,13 +123,20 @@ http:
 				},
 			},
 		},
+		"fail to unmarshal": {
+			inContent:       `watermelon in easter hay`,
+			wantedErrPrefix: "unmarshal environment manifest: ",
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var env Environment
-			err := yaml.Unmarshal([]byte(tc.inContent), &env)
-			require.NoError(t, err)
-			require.Equal(t, tc.wantedStruct, env)
+			got, gotErr := UnmarshalEnvironment([]byte(tc.inContent))
+			if tc.wantedErrPrefix != "" {
+				require.ErrorContains(t, gotErr, tc.wantedErrPrefix)
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, tc.wantedStruct, got)
+			}
 		})
 	}
 }

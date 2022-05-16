@@ -109,6 +109,7 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 					require.Contains(t, key, "manual/templates/phonetool-test/")
 					return "url", nil
 				})
+        
 				return &CloudFormation{
 					cfnClient: m,
 					s3Client:  s3,

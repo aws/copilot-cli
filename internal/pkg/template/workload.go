@@ -90,6 +90,7 @@ var (
 		"subscribe",
 		"nlb",
 		"vpc-connector",
+		"alb",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -200,6 +201,7 @@ type LogConfigOpts struct {
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
 	HealthCheckPath     string
+	Port                string
 	SuccessCodes        string
 	HealthyThreshold    *int64
 	UnhealthyThreshold  *int64

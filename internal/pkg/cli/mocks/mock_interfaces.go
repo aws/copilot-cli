@@ -3218,6 +3218,20 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 	return m.recorder
 }
 
+// CreateAndRenderEnvironment mocks base method.
+func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(out progress.FileWriter, env *deploy0.CreateEnvironmentInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", out, env)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateAndRenderEnvironment indicates an expected call of CreateAndRenderEnvironment.
+func (mr *MockenvironmentDeployerMockRecorder) CreateAndRenderEnvironment(out, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).CreateAndRenderEnvironment), out, env)
+}
+
 // DeleteEnvironment mocks base method.
 func (m *MockenvironmentDeployer) DeleteEnvironment(appName, envName, cfnExecRoleARN string) error {
 	m.ctrl.T.Helper()
@@ -3230,20 +3244,6 @@ func (m *MockenvironmentDeployer) DeleteEnvironment(appName, envName, cfnExecRol
 func (mr *MockenvironmentDeployerMockRecorder) DeleteEnvironment(appName, envName, cfnExecRoleARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeleteEnvironment), appName, envName, cfnExecRoleARN)
-}
-
-// DeployAndRenderEnvironment mocks base method.
-func (m *MockenvironmentDeployer) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy0.CreateEnvironmentInput) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployAndRenderEnvironment", out, env)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeployAndRenderEnvironment indicates an expected call of DeployAndRenderEnvironment.
-func (mr *MockenvironmentDeployerMockRecorder) DeployAndRenderEnvironment(out, env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployAndRenderEnvironment), out, env)
 }
 
 // EnvironmentTemplate mocks base method.
@@ -3971,6 +3971,20 @@ func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddServiceToApp", reflect.TypeOf((*Mockdeployer)(nil).AddServiceToApp), app, svcName)
 }
 
+// CreateAndRenderEnvironment mocks base method.
+func (m *Mockdeployer) CreateAndRenderEnvironment(out progress.FileWriter, env *deploy0.CreateEnvironmentInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", out, env)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateAndRenderEnvironment indicates an expected call of CreateAndRenderEnvironment.
+func (mr *MockdeployerMockRecorder) CreateAndRenderEnvironment(out, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).CreateAndRenderEnvironment), out, env)
+}
+
 // CreatePipeline mocks base method.
 func (m *Mockdeployer) CreatePipeline(env *deploy0.CreatePipelineInput, bucketName string) error {
 	m.ctrl.T.Helper()
@@ -4039,20 +4053,6 @@ func (m *Mockdeployer) DeletePipeline(pipeline deploy0.Pipeline) error {
 func (mr *MockdeployerMockRecorder) DeletePipeline(pipeline interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePipeline", reflect.TypeOf((*Mockdeployer)(nil).DeletePipeline), pipeline)
-}
-
-// DeployAndRenderEnvironment mocks base method.
-func (m *Mockdeployer) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy0.CreateEnvironmentInput) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeployAndRenderEnvironment", out, env)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeployAndRenderEnvironment indicates an expected call of DeployAndRenderEnvironment.
-func (mr *MockdeployerMockRecorder) DeployAndRenderEnvironment(out, env interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).DeployAndRenderEnvironment), out, env)
 }
 
 // DeployApp mocks base method.

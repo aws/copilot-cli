@@ -59,6 +59,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 					"templates/workloads/partials/cf/subscribe.yml":                       []byte("subscribe"),
 					"templates/workloads/partials/cf/nlb.yml":                             []byte("nlb"),
 					"templates/workloads/partials/cf/vpc-connector.yml":                   []byte("vpc-connector"),
+					"templates/workloads/partials/cf/alb.yml":                             []byte("alb"),
 				}
 			},
 			wantedContent: `  loggroup
@@ -91,6 +92,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   subscribe
   nlb
   vpc-connector
+  alb
 `,
 		},
 	}
