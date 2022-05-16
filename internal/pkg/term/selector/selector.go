@@ -120,6 +120,10 @@ type wsWorkloadLister interface {
 	ListWorkloads() ([]string, error)
 }
 
+type wsEnvironmentsLister interface {
+	ListEnvironments() ([]string, error)
+}
+
 type wsPipelinesLister interface {
 	ListPipelines() ([]workspace.PipelineManifest, error)
 }
@@ -132,6 +136,7 @@ type codePipelineLister interface {
 // workspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
 type workspaceRetriever interface {
 	wsWorkloadLister
+	wsEnvironmentsLister
 	Summary() (*workspace.Summary, error)
 	ListDockerfiles() ([]string, error)
 }
@@ -699,6 +704,51 @@ func (s *WorkspaceSelector) Workload(msg, help string) (wl string, err error) {
 		return "", fmt.Errorf("select workload: %w", err)
 	}
 	return selectedWlName, nil
+}
+
+// EnvironmentsInWorkspace fetches all environments belong to the app in the workspace and prompts the user to select one.
+func (s *WorkspaceSelect) EnvironmentsInWorkspace(msg, help string) (wl string, err error) {
+	summary, err := s.ws.Summary()
+	if err != nil {
+		return "", fmt.Errorf("read workspace summary: %w", err)
+	}
+	wsEnvNames, err := s.ws.ListEnvironments()
+	if err != nil {
+		return "", fmt.Errorf("retrieve environments from workspace: %w", err)
+	}
+	envs, err := s.appEnvLister.ListEnvironments(summary.Application)
+	if err != nil {
+		return "", fmt.Errorf("retrieve environments from store: %w", err)
+	}
+	filteredEnvNames := filterEnvsByName(envs, wsEnvNames)
+	if len(filteredEnvNames) == 0 {
+		return "", errors.New("no environments found")
+	}
+	if len(filteredEnvNames) == 1 {
+		log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(filteredEnvNames[0]))
+		return filteredEnvNames[0], nil
+	}
+	selectedEnvName, err := s.prompt.SelectOne(msg, help, filteredEnvNames, prompt.WithFinalMessage(workloadFinalMsg))
+	if err != nil {
+		return "", fmt.Errorf("select environment: %w", err)
+	}
+	return selectedEnvName, nil
+}
+
+func filterEnvsByName(envs []*config.Environment, wantedNames []string) []string {
+	// TODO: refactor this and `filterWlsByName`  when generic supports using common struct fields: https://github.com/golang/go/issues/48522
+	isWanted := make(map[string]bool)
+	for _, name := range wantedNames {
+		isWanted[name] = true
+	}
+	var filtered []string
+	for _, wl := range envs {
+		if _, ok := isWanted[wl.Name]; !ok {
+			continue
+		}
+		filtered = append(filtered, wl.Name)
+	}
+	return filtered
 }
 
 func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {

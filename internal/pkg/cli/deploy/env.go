@@ -30,12 +30,11 @@ type envDeployer struct {
 	app *config.Application
 	env *config.Environment
 
+	// Dependencies.
 	appCFN appResourcesGetter
-
 	// Dependencies to upload artifacts.
 	uploader customResourcesUploader
 	s3       uploader
-
 	// Dependencies to deploy an environment.
 	envDeployer environmentDeployer
 

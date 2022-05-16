@@ -92,7 +92,11 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
 					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
+<<<<<<< HEAD
 					sel:             selector.NewWorkspaceSelector(o.prompt, o.store, o.ws),
+=======
+					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, ws),
+>>>>>>> 9f61589d... select worspace environment
 					prompt:          o.prompt,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessProvider,
