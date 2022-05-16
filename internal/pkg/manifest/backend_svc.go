@@ -40,6 +40,7 @@ type BackendServiceConfig struct {
 
 // BackendServiceProps represents the configuration needed to create a backend service.
 type BackendServiceProps struct {
+	// TODO HTTPVersion? Where do props come from?
 	WorkloadProps
 	Port        uint16
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.

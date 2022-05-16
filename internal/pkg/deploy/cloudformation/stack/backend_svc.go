@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -29,36 +30,53 @@ type backendSvcReadParser interface {
 // BackendService represents the configuration needed to create a CloudFormation stack from a backend service manifest.
 type BackendService struct {
 	*ecsWkld
-	manifest *manifest.BackendService
+	manifest     *manifest.BackendService
+	httpsEnabled bool
+	certImported bool
 
 	parser backendSvcReadParser
 }
 
+type BackendServiceConfig struct {
+	App           *config.Application
+	Env           *config.Environment
+	Manifest      *manifest.BackendService
+	RuntimeConfig RuntimeConfig
+}
+
 // NewBackendService creates a new BackendService stack from a manifest file.
-func NewBackendService(mft *manifest.BackendService, env, app string, rc RuntimeConfig) (*BackendService, error) {
-	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name))
+func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
+	addons, err := addon.New(aws.StringValue(conf.Manifest.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	return &BackendService{
+
+	parser := template.New()
+	b := &BackendService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(mft.Name),
-				env:    env,
-				app:    app,
-				rc:     rc,
-				image:  mft.ImageConfig.Image,
+				name:   aws.StringValue(conf.Manifest.Name),
+				env:    conf.Env.Name,
+				app:    conf.App.Name,
+				rc:     conf.RuntimeConfig,
+				image:  conf.Manifest.ImageConfig.Image,
 				parser: parser,
 				addons: addons,
 			},
-			logRetention:        mft.Logging.Retention,
-			tc:                  mft.TaskConfig,
+			logRetention:        conf.Manifest.Logging.Retention,
+			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest: mft,
+		manifest: conf.Manifest,
 		parser:   parser,
-	}, nil
+	}
+
+	if conf.Env.HasImportedCerts() {
+		b.certImported = true
+		b.httpsEnabled = true
+	}
+
+	return b, nil
 }
 
 // Template returns the CloudFormation template for the backend service.
@@ -116,6 +134,13 @@ func (s *BackendService) Template() (string, error) {
 		return "", err
 	}
 
+	var aliases []string
+	if s.httpsEnabled {
+		if aliases, err = convertAlias(s.manifest.RoutingRule.Alias); err != nil {
+			return "", err
+		}
+	}
+
 	var deregistrationDelay *int64 = aws.Int64(60)
 	if s.manifest.RoutingRule.DeregistrationDelay != nil {
 		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
@@ -129,6 +154,9 @@ func (s *BackendService) Template() (string, error) {
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:                s.manifest.BackendServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
+		Aliases:                  aliases,
+		HTTPSListener:            s.httpsEnabled,
+		UseImportedCerts:         s.certImported,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
@@ -231,6 +259,10 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 			{
 				ParameterKey:   aws.String(WorkloadStickinessParamKey),
 				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
+			},
+			{
+				ParameterKey:   aws.String(WorkloadHTTPSParamKey),
+				ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 			},
 		}...)
 	}

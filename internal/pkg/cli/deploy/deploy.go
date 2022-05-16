@@ -942,7 +942,13 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewBackendService(d.backendMft, d.env.Name, d.app.Name, *rc)
+	// TODO d.validateALBWSRuntime() ?
+	conf, err := stack.NewBackendService(stack.BackendServiceConfig{
+		App:           d.app,
+		Env:           d.env,
+		Manifest:      d.backendMft,
+		RuntimeConfig: *rc,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
