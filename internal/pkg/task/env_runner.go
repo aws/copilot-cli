@@ -99,6 +99,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		TaskFamilyName:  taskFamilyName(r.GroupName),
 		StartedBy:       startedBy,
 		PlatformVersion: platformVersion,
+		EnableExec:      true,
 	})
 	if err != nil {
 		return nil, &errRunTask{
