@@ -450,7 +450,7 @@ type: Load Balanced Web Service`))
 	}
 }
 
-func TestWorkspace_ListWorkspaces(t *testing.T) {
+func TestWorkspace_ListWorkloads(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string
 		fs         func() afero.Fs
