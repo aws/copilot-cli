@@ -105,12 +105,12 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			return nil, err
 		}
 		port := blankContainerPort
-		if svcParams[cfnstack.LBWebServiceContainerPortParamKey] != cfnstack.NoExposedContainerPort {
+		if svcParams[cfnstack.WorkloadContainerPortParamKey] != cfnstack.NoExposedContainerPort {
 			endpoint, err := envDescr.ServiceDiscoveryEndpoint()
 			if err != nil {
 				return nil, err
 			}
-			port = svcParams[cfnstack.LBWebServiceContainerPortParamKey]
+			port = svcParams[cfnstack.WorkloadContainerPortParamKey]
 			services = appendServiceDiscovery(services, serviceDiscovery{
 				Service:  d.svc,
 				Port:     port,

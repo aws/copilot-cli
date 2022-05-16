@@ -9,6 +9,9 @@
 //  │   ├── .workspace                 (workspace summary)
 //  │   ├── my-service
 //  │   │   └── manifest.yml           (service manifest)
+//  |   |   environments
+//  |   |   └── test
+//  │   │       └── manifest.yml       (environment manifest for the environment test)
 //  │   ├── buildspec.yml              (legacy buildspec for the pipeline's build stage)
 //  │   ├── pipeline.yml               (legacy pipeline manifest)
 //  │   ├── pipelines
@@ -42,6 +45,7 @@ const (
 
 	addonsDirName             = "addons"
 	pipelinesDirName          = "pipelines"
+	environmentsDirName       = "environments"
 	maximumParentDirsToSearch = 5
 	legacyPipelineFileName    = "pipeline.yml"
 	manifestFileName          = "manifest.yml"
@@ -279,12 +283,28 @@ func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, 
 		return nil, err
 	}
 	mft := WorkloadManifest(raw)
-	mftName, err := mft.workloadName()
+	if err := ws.manifestNameMatchWithDir(mft, mftDirName); err != nil {
+		return nil, err
+	}
+	return mft, nil
+}
+
+// ReadEnvironmentManifest returns the contents of the environment's manifest under copilot/environments/{name}/manifest.yml.
+func (ws *Workspace) ReadEnvironmentManifest(mftDirName string) (EnvironmentManifest, error) {
+	raw, err := ws.read(environmentsDirName, mftDirName, manifestFileName)
 	if err != nil {
 		return nil, err
 	}
-	if mftName != mftDirName {
-		return nil, fmt.Errorf(`name of the manifest "%s" and directory "%s" do not match`, mftName, mftDirName)
+	mft := EnvironmentManifest(raw)
+	if err := ws.manifestNameMatchWithDir(mft, mftDirName); err != nil {
+		return nil, err
+	}
+	typ, err := retrieveTypeFromManifest(mft)
+	if err != nil {
+		return nil, err
+	}
+	if typ != manifest.EnvironmentManifestType {
+		return nil, fmt.Errorf(`manifest %s has type of "%s", not "%s"`, mftDirName, typ, manifest.EnvironmentManifestType)
 	}
 	return mft, nil
 }
@@ -585,25 +605,55 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 	return dockerfiles, nil
 }
 
+func (ws *Workspace) manifestNameMatchWithDir(mft namedManifest, mftDirName string) error {
+	mftName, err := mft.name()
+	if err != nil {
+		return err
+	}
+	if mftName != mftDirName {
+		return fmt.Errorf("name of the manifest %q and directory %q do not match", mftName, mftDirName)
+	}
+	return nil
+}
+
 // WorkloadManifest represents raw local workload manifest.
 type WorkloadManifest []byte
 
-func (w WorkloadManifest) workloadName() (string, error) {
+func (w WorkloadManifest) name() (string, error) {
+	return retrieveNameFromManifest(w)
+}
+
+// WorkloadType returns the workload type of the manifest.
+func (w WorkloadManifest) WorkloadType() (string, error) {
+	return retrieveTypeFromManifest(w)
+}
+
+// EnvironmentManifest represents raw local environment manifest.
+type EnvironmentManifest []byte
+
+func (e EnvironmentManifest) name() (string, error) {
+	return retrieveNameFromManifest(e)
+}
+
+type namedManifest interface {
+	name() (string, error)
+}
+
+func retrieveNameFromManifest(in []byte) (string, error) {
 	wl := struct {
 		Name string `yaml:"name"`
 	}{}
-	if err := yaml.Unmarshal(w, &wl); err != nil {
+	if err := yaml.Unmarshal(in, &wl); err != nil {
 		return "", fmt.Errorf(`unmarshal manifest file to retrieve "name": %w`, err)
 	}
 	return wl.Name, nil
 }
 
-// WorkloadType returns the workload type of the manifest.
-func (w WorkloadManifest) WorkloadType() (string, error) {
+func retrieveTypeFromManifest(in []byte) (string, error) {
 	wl := struct {
 		Type string `yaml:"type"`
 	}{}
-	if err := yaml.Unmarshal(w, &wl); err != nil {
+	if err := yaml.Unmarshal(in, &wl); err != nil {
 		return "", fmt.Errorf(`unmarshal manifest file to retrieve "type": %w`, err)
 	}
 	return wl.Type, nil

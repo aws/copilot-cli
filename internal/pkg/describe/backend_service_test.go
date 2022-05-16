@@ -56,10 +56,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
+						cfnstack.WorkloadContainerPortParamKey: "80",
+						cfnstack.WorkloadTaskCountParamKey:     "1",
+						cfnstack.WorkloadTaskMemoryParamKey:    "512",
+						cfnstack.WorkloadTaskCPUParamKey:       "256",
 					}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("", errors.New("some error")),
 				)
@@ -71,10 +71,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "5000",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.WorkloadContainerPortParamKey: "5000",
+						cfnstack.WorkloadTaskCountParamKey:     "1",
+						cfnstack.WorkloadTaskCPUParamKey:       "256",
+						cfnstack.WorkloadTaskMemoryParamKey:    "512",
 					}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(nil, errors.New("some error")),
@@ -87,10 +87,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
+						cfnstack.WorkloadContainerPortParamKey: "80",
+						cfnstack.WorkloadTaskCountParamKey:     "1",
+						cfnstack.WorkloadTaskMemoryParamKey:    "512",
+						cfnstack.WorkloadTaskCPUParamKey:       "256",
 					}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
@@ -108,10 +108,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.WorkloadContainerPortParamKey: "80",
+						cfnstack.WorkloadTaskCountParamKey:     "1",
+						cfnstack.WorkloadTaskCPUParamKey:       "256",
+						cfnstack.WorkloadTaskMemoryParamKey:    "512",
 					}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
@@ -137,10 +137,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
 
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "5000",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.WorkloadContainerPortParamKey: "5000",
+						cfnstack.WorkloadTaskCountParamKey:     "1",
+						cfnstack.WorkloadTaskCPUParamKey:       "256",
+						cfnstack.WorkloadTaskMemoryParamKey:    "512",
 					}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
@@ -162,10 +162,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "5000",
-						cfnstack.WorkloadTaskCountParamKey:         "2",
-						cfnstack.WorkloadTaskCPUParamKey:           "512",
-						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
+						cfnstack.WorkloadContainerPortParamKey: "5000",
+						cfnstack.WorkloadTaskCountParamKey:     "2",
+						cfnstack.WorkloadTaskCPUParamKey:       "512",
+						cfnstack.WorkloadTaskMemoryParamKey:    "1024",
 					}, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
@@ -187,10 +187,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "-1",
-						cfnstack.WorkloadTaskCountParamKey:         "2",
-						cfnstack.WorkloadTaskCPUParamKey:           "512",
-						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
+						cfnstack.WorkloadContainerPortParamKey: "-1",
+						cfnstack.WorkloadTaskCountParamKey:     "2",
+						cfnstack.WorkloadTaskCPUParamKey:       "512",
+						cfnstack.WorkloadTaskMemoryParamKey:    "1024",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
