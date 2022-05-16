@@ -69,7 +69,7 @@ func newAppUpgradeOpts(vars appUpgradeVars) (*appUpgradeOpts, error) {
 		identity:       identity.New(sess),
 		prog:           termprogress.NewSpinner(log.DiagnosticWriter),
 		route53:        route53.New(sess),
-		sel:            selector.NewAppEnvSelect(prompt.New(), store),
+		sel:            selector.NewAppEnvSelector(prompt.New(), store),
 		versionGetter:  d,
 		upgrader:       cloudformation.New(sess),
 	}, nil

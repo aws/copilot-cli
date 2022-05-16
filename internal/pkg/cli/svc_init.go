@@ -149,7 +149,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	}
 	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
 	prompter := prompt.New()
-	sel := selector.NewWorkspaceSelect(prompter, store, ws)
+	sel := selector.NewWorkspaceSelector(prompter, store, ws)
 	deployStore, err := deploy.NewStore(sessProvider, store)
 	if err != nil {
 		return nil, err
@@ -219,9 +219,9 @@ func (o *initSvcOpts) Validate() error {
 
 // Ask prompts for and validates any required flags.
 func (o *initSvcOpts) Ask() error {
-         // NOTE: we optimize the case where `name` is given as a flag while `wkldType` is not.
-         // In this case, we can try reading the manifest, and set `wkldType` to the value found in the manifest 
-         // without having to validate it. We can then short circuit the rest of the prompts for an optimal UX.
+	// NOTE: we optimize the case where `name` is given as a flag while `wkldType` is not.
+	// In this case, we can try reading the manifest, and set `wkldType` to the value found in the manifest
+	// without having to validate it. We can then short circuit the rest of the prompts for an optimal UX.
 	if o.name != "" && o.wkldType == "" {
 		// Best effort to validate the service name without type.
 		if err := o.validateSvc(); err != nil {

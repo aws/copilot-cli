@@ -114,14 +114,14 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 		store:              store,
 		prog:               termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:             prompter,
-		sel:                selector.NewWsPipelineSelect(prompter, ws),
+		sel:                selector.NewWsPipelineSelector(prompter, ws),
 		codestar:           cs.New(defaultSession),
 		newSvcListCmd: func(w io.Writer, appName string) cmd {
 			return &listSvcOpts{
 				listWkldVars: listWkldVars{
 					appName: appName,
 				},
-				sel: selector.NewAppEnvSelect(prompt.New(), store),
+				sel: selector.NewAppEnvSelector(prompt.New(), store),
 				list: &list.SvcListWriter{
 					Ws:    ws,
 					Store: store,
@@ -137,7 +137,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 				listWkldVars: listWkldVars{
 					appName: appName,
 				},
-				sel: selector.NewAppEnvSelect(prompt.New(), store),
+				sel: selector.NewAppEnvSelector(prompt.New(), store),
 				list: &list.JobListWriter{
 					Ws:    ws,
 					Store: store,

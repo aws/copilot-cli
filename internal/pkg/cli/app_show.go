@@ -68,7 +68,7 @@ func newShowAppOpts(vars showAppVars) (*showAppOpts, error) {
 		showAppVars:    vars,
 		store:          store,
 		w:              log.OutputWriter,
-		sel:            selector.NewAppEnvSelect(prompt.New(), store),
+		sel:            selector.NewAppEnvSelector(prompt.New(), store),
 		deployStore:    deployStore,
 		codepipeline:   codepipeline.New(defaultSession),
 		pipelineLister: deploy.NewPipelineStore(rg.New(defaultSession)),

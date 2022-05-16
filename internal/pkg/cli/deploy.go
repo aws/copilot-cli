@@ -61,7 +61,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 	return &deployOpts{
 		deployWkldVars: vars,
 		store:          store,
-		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:            selector.NewWorkspaceSelector(prompter, store, ws),
 		ws:             ws,
 		prompt:         prompter,
 
@@ -75,7 +75,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					ws:              o.ws,
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
-					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
+					sel:             selector.NewWorkspaceSelector(o.prompt, o.store, o.ws),
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessProvider,
 				}
@@ -92,7 +92,7 @@ func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
 					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
-					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
+					sel:             selector.NewWorkspaceSelector(o.prompt, o.store, o.ws),
 					prompt:          o.prompt,
 					cmd:             exec.NewCmd(),
 					sessProvider:    sessProvider,

@@ -85,7 +85,7 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 		envUpgradeVars: vars,
 
 		store: store,
-		sel:   selector.NewAppEnvSelect(prompt.New(), store),
+		sel:   selector.NewAppEnvSelector(prompt.New(), store),
 		legacyEnvTemplater: stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 			Version: deploy.LegacyEnvTemplateVersion,
 			App: deploy.AppInformation{

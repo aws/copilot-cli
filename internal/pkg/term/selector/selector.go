@@ -215,7 +215,7 @@ type CFTaskSelector struct {
 // NewCFTaskSelect constructs a CFTaskSelector.
 func NewCFTaskSelect(prompt prompter, store configLister, cf taskStackDescriber) *CFTaskSelector {
 	return &CFTaskSelector{
-		AppEnvSelector: NewAppEnvSelect(prompt, store),
+		AppEnvSelector: NewAppEnvSelector(prompt, store),
 		cfStore:        cf,
 	}
 }
@@ -223,7 +223,7 @@ func NewCFTaskSelect(prompt prompter, store configLister, cf taskStackDescriber)
 // GetDeployedTaskOpts sets up optional parameters for GetDeployedTaskOpts function.
 type GetDeployedTaskOpts func(*CFTaskSelector)
 
-// TaskWithAppEnv sets up the env name for TaskSelect.
+// TaskWithAppEnv sets up the env name for TaskSelector.
 func TaskWithAppEnv(app, env string) GetDeployedTaskOpts {
 	return func(in *CFTaskSelector) {
 		in.app = app
@@ -238,8 +238,8 @@ func TaskWithDefaultCluster() GetDeployedTaskOpts {
 	}
 }
 
-// TaskSelect is a Copilot running task selector.
-type TaskSelect struct {
+// TaskSelector is a Copilot running task selector.
+type TaskSelector struct {
 	prompt         prompter
 	lister         taskLister
 	app            string
@@ -249,43 +249,43 @@ type TaskSelect struct {
 	taskID         string
 }
 
-// NewAppEnvSelect returns a selector that chooses applications or environments.
-func NewAppEnvSelect(prompt prompter, store appEnvLister) *AppEnvSelector {
+// NewAppEnvSelector returns a selector that chooses applications or environments.
+func NewAppEnvSelector(prompt prompter, store appEnvLister) *AppEnvSelector {
 	return &AppEnvSelector{
 		prompt:       prompt,
 		appEnvLister: store,
 	}
 }
 
-// NewConfigSelect returns a new selector that chooses applications, environments, or services from the config store.
-func NewConfigSelect(prompt prompter, store configLister) *ConfigSelector {
+// NewConfigSelector returns a new selector that chooses applications, environments, or services from the config store.
+func NewConfigSelector(prompt prompter, store configLister) *ConfigSelector {
 	return &ConfigSelector{
-		AppEnvSelector: NewAppEnvSelect(prompt, store),
+		AppEnvSelector: NewAppEnvSelector(prompt, store),
 		workloadLister: store,
 	}
 }
 
-// NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
+// NewWorkspaceSelector returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelect(prompt prompter, store configLister, ws workspaceRetriever) *WorkspaceSelector {
+func NewWorkspaceSelector(prompt prompter, store configLister, ws workspaceRetriever) *WorkspaceSelector {
 	return &WorkspaceSelector{
-		ConfigSelector: NewConfigSelect(prompt, store),
+		ConfigSelector: NewConfigSelector(prompt, store),
 		ws:             ws,
 	}
 }
 
-// NewWsPipelineSelect returns a new selector with pipelines from the local workspace.
-func NewWsPipelineSelect(prompt prompter, ws wsPipelinesLister) *WsPipelineSelector {
+// NewWsPipelineSelector returns a new selector with pipelines from the local workspace.
+func NewWsPipelineSelector(prompt prompter, ws wsPipelinesLister) *WsPipelineSelector {
 	return &WsPipelineSelector{
 		prompt: prompt,
 		ws:     ws,
 	}
 }
 
-// NewAppPipelineSelect returns new selectors with deployed pipelines and apps.
-func NewAppPipelineSelect(prompt prompter, store configLister, lister codePipelineLister) *AppPipelineSelector {
+// NewAppPipelineSelector returns new selectors with deployed pipelines and apps.
+func NewAppPipelineSelector(prompt prompter, store configLister, lister codePipelineLister) *AppPipelineSelector {
 	return &AppPipelineSelector{
-		AppEnvSelector: NewAppEnvSelect(prompt, store),
+		AppEnvSelector: NewAppEnvSelector(prompt, store),
 		CodePipelineSelector: &CodePipelineSelector{
 			prompt:         prompt,
 			pipelineLister: lister,
@@ -296,56 +296,56 @@ func NewAppPipelineSelect(prompt prompter, store configLister, lister codePipeli
 // NewDeploySelect returns a new selector that chooses services and environments from the deploy store.
 func NewDeploySelect(prompt prompter, configStore configLister, deployStore deployedWorkloadsRetriever) *DeploySelector {
 	return &DeploySelector{
-		ConfigSelector: NewConfigSelect(prompt, configStore),
+		ConfigSelector: NewConfigSelector(prompt, configStore),
 		deployStoreSvc: deployStore,
 	}
 }
 
-// NewTaskSelect returns a new selector that chooses a running task.
-func NewTaskSelect(prompt prompter, lister taskLister) *TaskSelect {
-	return &TaskSelect{
+// NewTaskSelector returns a new selector that chooses a running task.
+func NewTaskSelector(prompt prompter, lister taskLister) *TaskSelector {
+	return &TaskSelector{
 		prompt: prompt,
 		lister: lister,
 	}
 }
 
 // TaskOpts sets up optional parameters for Task function.
-type TaskOpts func(*TaskSelect)
+type TaskOpts func(*TaskSelector)
 
-// WithAppEnv sets up the app name and env name for TaskSelect.
+// WithAppEnv sets up the app name and env name for TaskSelector.
 func WithAppEnv(app, env string) TaskOpts {
-	return func(in *TaskSelect) {
+	return func(in *TaskSelector) {
 		in.app = app
 		in.env = env
 	}
 }
 
-// WithDefault uses default cluster for TaskSelect.
+// WithDefault uses default cluster for TaskSelector.
 func WithDefault() TaskOpts {
-	return func(in *TaskSelect) {
+	return func(in *TaskSelector) {
 		in.defaultCluster = true
 	}
 }
 
-// WithTaskGroup sets up the task group name for TaskSelect.
+// WithTaskGroup sets up the task group name for TaskSelector.
 func WithTaskGroup(taskGroup string) TaskOpts {
-	return func(in *TaskSelect) {
+	return func(in *TaskSelector) {
 		if taskGroup != "" {
 			in.taskGroup = fmt.Sprintf(fmtCopilotTaskGroup, taskGroup)
 		}
 	}
 }
 
-// WithTaskID sets up the task ID for TaskSelect.
+// WithTaskID sets up the task ID for TaskSelector.
 func WithTaskID(id string) TaskOpts {
-	return func(in *TaskSelect) {
+	return func(in *TaskSelector) {
 		in.taskID = id
 	}
 }
 
 // RunningTask has the user select a running task. Callers can provide either app and env names,
 // or use default cluster.
-func (s *TaskSelect) RunningTask(msg, help string, opts ...TaskOpts) (*awsecs.Task, error) {
+func (s *TaskSelector) RunningTask(msg, help string, opts ...TaskOpts) (*awsecs.Task, error) {
 	var tasks []*awsecs.Task
 	var err error
 	for _, opt := range opts {

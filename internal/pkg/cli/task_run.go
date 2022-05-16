@@ -184,7 +184,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
 		store:                 store,
 		prompt:                prompter,
-		sel:                   selector.NewAppEnvSelect(prompter, store),
+		sel:                   selector.NewAppEnvSelector(prompter, store),
 		spinner:               termprogress.NewSpinner(log.DiagnosticWriter),
 		provider:              sessProvider,
 		secretsManagerSecrets: make(map[string]string),

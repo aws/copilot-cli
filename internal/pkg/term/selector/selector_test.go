@@ -2570,7 +2570,7 @@ func TestTaskSelect_Task(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := TaskSelect{
+			sel := TaskSelector{
 				lister: mocktaskLister,
 				prompt: mockprompt,
 			}
