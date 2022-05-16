@@ -122,6 +122,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
@@ -166,6 +167,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
@@ -198,6 +200,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{
 					&taskWithENI,
 					&taskWithNoENI,
@@ -240,6 +243,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
@@ -275,6 +279,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "1.0.0",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 
