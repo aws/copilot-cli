@@ -276,6 +276,31 @@ func (ws *Workspace) listWorkloads(match func(string) bool) ([]string, error) {
 	return names, nil
 }
 
+// ListEnvironments returns the name of the environments in the workspace.
+func (ws *Workspace) ListEnvironments() ([]string, error) {
+	copilotPath, err := ws.copilotDirPath()
+	if err != nil {
+		return nil, err
+	}
+	envPath := filepath.Join(copilotPath, environmentsDirName)
+	files, err := ws.fsUtils.ReadDir(envPath)
+	if err != nil {
+		return nil, fmt.Errorf("read directory %s: %w", envPath, err)
+	}
+	var names []string
+	for _, f := range files {
+		if !f.IsDir() {
+			continue
+		}
+		if exists, _ := ws.fsUtils.Exists(filepath.Join(copilotPath, environmentsDirName, f.Name(), manifestFileName)); !exists {
+			// Swallow the error because we don't want to include any environments that we don't have permissions to read.
+			continue
+		}
+		names = append(names, f.Name())
+	}
+	return names, nil
+}
+
 // ReadWorkloadManifest returns the contents of the workload's manifest under copilot/{name}/manifest.yml.
 func (ws *Workspace) ReadWorkloadManifest(mftDirName string) (WorkloadManifest, error) {
 	raw, err := ws.read(mftDirName, manifestFileName)

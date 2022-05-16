@@ -512,6 +512,72 @@ type: Scheduled Job`))
 	}
 }
 
+func TestWorkspace_ListEnvironments(t *testing.T) {
+	testCases := map[string]struct {
+		copilotDir string
+		fs         func() afero.Fs
+
+		wantedNames []string
+		wantedErr   error
+	}{
+		"environments directory does not exist": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir("/copilot", 0755)
+				return fs
+			},
+			wantedErr: errors.New("read directory /copilot/environments: open /copilot/environments: file does not exist"),
+		},
+		"retrieve only env directories with manifest files": {
+			copilotDir: "/copilot",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.Mkdir("/copilot", 0755)
+
+				// Environments.
+				fs.Mkdir("/copilot/environments/test", 0755)
+				fs.Create("/copilot/environments/test/manifest.yml")
+
+				fs.Mkdir("/copilot/environments/dev", 0755)
+				fs.Create("/copilot/environments/dev/manifest.yml")
+
+				// Missing manifest.yml.
+				fs.Mkdir("/copilot/environments/prod", 0755)
+
+				// Legacy pipeline files.
+				fs.Create("/copilot/buildspec.yml")
+				fs.Create("/copilot/pipeline.yml")
+
+				// Services.
+				fs.Mkdir("/copilot/frontend", 0755)
+				fs.Create("/copilot/frontend/manifest.yml")
+				return fs
+			},
+
+			wantedNames: []string{"test", "dev"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				copilotDir: tc.copilotDir,
+				fsUtils: &afero.Afero{
+					Fs: tc.fs(),
+				},
+			}
+
+			names, err := ws.ListEnvironments()
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.ElementsMatch(t, tc.wantedNames, names)
+			}
+		})
+	}
+}
+
 func TestWorkspace_ListPipelines(t *testing.T) {
 	testCases := map[string]struct {
 		copilotDir string
