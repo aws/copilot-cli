@@ -61,7 +61,6 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 // DeployEnvironmentInput contains information used to deploy the environment.
 type DeployEnvironmentInput struct {
 	RootUserARN         string
-	IsProduction        bool
 	CustomResourcesURLs map[string]string
 	Manifest            *manifest.Environment
 }
@@ -83,7 +82,6 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 			Domain:              d.app.Domain,
 			AccountPrincipalARN: in.RootUserARN,
 		},
-		Prod:                 in.IsProduction,
 		AdditionalTags:       d.app.Tags,
 		CustomResourcesURLs:  in.CustomResourcesURLs,
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
