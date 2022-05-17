@@ -22,10 +22,18 @@ $ copilot deploy
       --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service or job.
+      --no-rollback bool               Optional. Disable automatic stack
+                                       rollback in case of deployment failure.
+                                       We do not recommend using this flag for a
+                                       production environment.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
       --tag string                     Optional. The container image tag.
 ```
+
+!!!info
+`--no-rollback` フラグは、サービスのダウンタイムを招く可能性があるため、本番環境にデプロイする場合は ***お勧めしません*** 。
+自動スタックロールバックが無効になっている場合に、デプロイに失敗すると、手動でスタックを開始する必要があります。次のデプロイの前に AWS コンソールまたは AWS CLI を利用してスタックのスタックロールバックを手動で開始する必要があります。
 
 ## 実行例
 

@@ -2,34 +2,34 @@
 
 ???+ note "レポートを作成する cron ジョブのサンプル Manifest"
 
-```yaml
-# Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
-name: report-generator
-type: Scheduled Job
+    ```yaml
+        # Service 名はロググループや ECS タスクなどのリソースの命名に利用されます。
+        name: report-generator
+        type: Scheduled Job
+    
+        on:
+          schedule: "@daily"
+        cpu: 256
+        memory: 512
+        retries: 3
+        timeout: 1h
+    
+        image:
+          # Service で利用する Dockerfileへのパス.
+          build: ./Dockerfile
+    
+        variables:
+          LOG_LEVEL: info
+        env_file: log.env
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
 
-on:
-  schedule: "@daily"
-cpu: 256
-memory: 512
-retries: 3
-timeout: 1h
-
-image:
-  # Path to your service's Dockerfile.
-  build: ./Dockerfile
-
-variables:
-  LOG_LEVEL: info
-env_file: log.env
-secrets:
-  GITHUB_TOKEN: GITHUB_TOKEN
-
-# You can override any of the values defined above by environment.
-environments:
-  prod:
-    cpu: 2048               # Larger CPU value for prod environment
-    memory: 4096
-```
+        # 上記すべての値は Environment ごとにオーバーライド可能です。
+        environments:
+          prod:
+            cpu: 2048               # prod Enviroment では 大きな CPU 値。
+            memory: 4096
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Job 名。

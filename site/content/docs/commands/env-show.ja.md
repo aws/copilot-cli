@@ -15,6 +15,7 @@ $ copilot env show [flags]
 
 ## フラグ
 ```bash
+-a, --app string    Name of the application.
 -h, --help          help for show
     --json          Optional. Outputs in JSON format.
 -n, --name string   Name of the environment.
