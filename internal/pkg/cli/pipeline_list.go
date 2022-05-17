@@ -80,7 +80,7 @@ func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
 		listPipelineVars: vars,
 		pipelineLister:   deploy.NewPipelineStore(rg.New(defaultSession)),
 		prompt:           prompter,
-		sel:              selector.NewConfigSelect(prompter, store),
+		sel:              selector.NewConfigSelector(prompter, store),
 		store:            store,
 		w:                os.Stdout,
 		workspace:        ws,

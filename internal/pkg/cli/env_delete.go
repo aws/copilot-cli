@@ -91,7 +91,7 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 
 		store:  store,
 		prog:   termprogress.NewSpinner(log.DiagnosticWriter),
-		sel:    selector.NewConfigSelect(prompter, store),
+		sel:    selector.NewConfigSelector(prompter, store),
 		prompt: prompter,
 
 		initRuntimeClients: func(o *deleteEnvOpts) error {
