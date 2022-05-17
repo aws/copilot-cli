@@ -86,7 +86,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:  prompter,
 		sess:    sessProvider,
-		sel:     selector.NewConfigSelect(prompter, store),
+		sel:     selector.NewConfigSelector(prompter, store),
 		appCFN:  cloudformation.New(defaultSession),
 		getSvcCFN: func(session *awssession.Session) wlDeleter {
 			return cloudformation.New(session)
