@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -549,10 +550,18 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, mft.Validate())
 
-			serializer, err := NewBackendService(mft.(*manifest.BackendService), envName, appName,
-				RuntimeConfig{
+			serializer, err := NewBackendService(BackendServiceConfig{
+				App: &config.Application{
+					Name: appName,
+				},
+				Env: &config.Environment{
+					Name: envName,
+				},
+				Manifest: mft.(*manifest.BackendService),
+				RuntimeConfig: RuntimeConfig{
 					ServiceDiscoveryEndpoint: fmt.Sprintf("%s.%s.local", envName, appName),
-				})
+				},
+			})
 			require.NoError(t, err)
 
 			// mock parser for lambda functions
