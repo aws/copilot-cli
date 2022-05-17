@@ -65,7 +65,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		showSvcVars: vars,
 		store:       ssmStore,
 		w:           log.OutputWriter,
-		sel:         selector.NewConfigSelect(prompt.New(), ssmStore),
+		sel:         selector.NewConfigSelector(prompt.New(), ssmStore),
 	}
 	opts.initDescriber = func() error {
 		var d describer

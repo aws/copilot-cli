@@ -111,7 +111,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
           PortMappings:
             - ContainerPort: !Ref ContainerPort
         - Name: firelens_log_router
-          Image: public.ecr.aws/aws-observability/aws-for-fluent-bit:latest
+          Image: public.ecr.aws/aws-observability/aws-for-fluent-bit:stable
           Environment:
             - Name: COPILOT_APPLICATION_NAME
               Value: !Sub '${AppName}'

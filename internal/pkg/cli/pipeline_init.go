@@ -155,7 +155,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		cfnClient:        cloudformation.New(defaultSession),
 		store:            ssmStore,
 		prompt:           prompter,
-		sel:              selector.NewSelect(prompter, ssmStore),
+		sel:              selector.NewAppEnvSelector(prompter, ssmStore),
 		runner:           exec.NewCmd(),
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		wsAppName:        wsAppName,

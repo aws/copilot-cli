@@ -16,7 +16,7 @@ import (
 // Defaults for Firelens configuration.
 const (
 	firelensContainerName = "firelens_log_router"
-	defaultFluentbitImage = "public.ecr.aws/aws-observability/aws-for-fluent-bit:latest"
+	defaultFluentbitImage = "public.ecr.aws/aws-observability/aws-for-fluent-bit:stable"
 )
 
 // Platform related settings.

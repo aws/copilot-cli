@@ -90,7 +90,7 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:   prompter,
 		provider: sessProvider,
-		sel:      selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:      selector.NewWorkspaceSelector(prompter, store, ws),
 		newTaskSel: func(session *session.Session) cfTaskSelector {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
