@@ -76,7 +76,6 @@ func (o *deployEnvOpts) Execute() error {
 	}
 	if err := o.deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
 		RootUserARN:         caller.RootUserARN,
-		IsProduction:        o.isProduction,
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
 	}); err != nil {
