@@ -315,6 +315,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Role: !GetAtt 'DynamicDesiredCountFunctionRole.Arn'
       Runtime: nodejs12.x
   DynamicDesiredCountFunctionRole:
+    Metadata:
+      'aws:copilot:description': "An IAM Role for DynamicDesiredCountFunction"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -533,6 +535,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Runtime: nodejs12.x
   RulePriorityFunctionRole:
     Type: AWS::IAM::Role
+    Metadata:
+      'aws:copilot:description': "An IAM Role for RulePriorityFunction"
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
