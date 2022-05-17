@@ -7,6 +7,7 @@ package stepfunctions
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sfn"
@@ -64,6 +65,56 @@ func TestStepFunctions_StateMachineDefinition(t *testing.T) {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else {
 				require.Equal(t, tc.wantedDefinition, out)
+			}
+		})
+	}
+}
+
+func TestStepFunctions_Execute(t *testing.T) {
+	testCases := map[string]struct {
+		inStateMachineARN string
+
+		mockStepFunctionsClient func(m *mocks.Mockapi)
+
+		wantedError error
+	}{
+
+		"fail to execute state machine": {
+			inStateMachineARN: "forca barca",
+			mockStepFunctionsClient: func(m *mocks.Mockapi) {
+				m.EXPECT().StartExecution(&sfn.StartExecutionInput{
+					StateMachineArn: aws.String("forca barca"),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("execute state machine: some error"),
+		},
+		"success": {
+			inStateMachineARN: "forca barca",
+			mockStepFunctionsClient: func(m *mocks.Mockapi) {
+				m.EXPECT().StartExecution(&sfn.StartExecutionInput{
+					StateMachineArn: aws.String("forca barca"),
+				}).Return(&sfn.StartExecutionOutput{
+					ExecutionArn: aws.String("forca barca"),
+					StartDate:    func() *time.Time { t := time.Now(); return &t }(),
+				}, nil)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockStepFunctionsClient := mocks.NewMockapi(ctrl)
+			tc.mockStepFunctionsClient(mockStepFunctionsClient)
+			sfn := StepFunctions{
+				client: mockStepFunctionsClient,
+			}
+
+			err := sfn.Execute(tc.inStateMachineARN)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
 			}
 		})
 	}
