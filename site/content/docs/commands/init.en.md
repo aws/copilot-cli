@@ -4,7 +4,7 @@ $ copilot init
 ```
 
 ## What does it do? 
-`copilot init` is your starting point if you want to deploy your container app on Amazon ECS. Run it within a directory with your Dockerfile, and `init` will ask you questions about your application so we can get it up and running quickly. 
+`copilot init` is your starting point if you want to deploy your container app on AWS App Runner or Amazon ECS on AWS Fargate. Run it within a directory with your Dockerfile, and `init` will ask you questions about your application so we can get it up and running quickly.
 
 After you answer all the questions, `copilot init` will set up an ECR repository for you and ask you if you'd like to deploy. If you opt to deploy, it'll create a new `test` environment (complete with a networking stack and roles), build your Dockerfile, push it to Amazon ECR, and deploy your service or job. 
 

@@ -169,6 +169,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return(nil, errors.New("error running task"))
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -194,6 +195,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -222,6 +224,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -251,6 +254,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "1.0.0",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,
@@ -278,6 +282,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "LATEST",
+					EnableExec:      true,
 				}).Return([]*ecs.Task{
 					&taskWithENI,
 					&taskWithNoENI,
