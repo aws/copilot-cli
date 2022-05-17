@@ -5,11 +5,12 @@ package prompt
 
 import (
 	"fmt"
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"regexp"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 // Configuration while spacing text with a tabwriter.

@@ -59,7 +59,7 @@ func newListSvcOpts(vars listWkldVars) (*listSvcOpts, error) {
 		listWkldVars: vars,
 
 		list: svcLister,
-		sel:  selector.NewSelect(prompt.New(), store),
+		sel:  selector.NewAppEnvSelector(prompt.New(), store),
 	}, nil
 }
 

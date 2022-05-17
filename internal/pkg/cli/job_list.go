@@ -59,7 +59,7 @@ func newListJobOpts(vars listWkldVars) (*listJobOpts, error) {
 		listWkldVars: vars,
 
 		list: jobLister,
-		sel:  selector.NewSelect(prompt.New(), store),
+		sel:  selector.NewAppEnvSelector(prompt.New(), store),
 	}, nil
 }
 

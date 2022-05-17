@@ -99,7 +99,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		deployedPipelineLister: pipelineLister,
 		ws:                     ws,
 		store:                  ssmStore,
-		sel:                    selector.NewAppPipelineSelect(prompter, ssmStore, pipelineLister),
+		sel:                    selector.NewAppPipelineSelector(prompter, ssmStore, pipelineLister),
 	}
 
 	return opts, nil
