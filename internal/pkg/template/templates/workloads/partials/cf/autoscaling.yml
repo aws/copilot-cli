@@ -28,7 +28,7 @@ DynamicDesiredCountFunction:
 
 DynamicDesiredCountFunctionRole:
   Metadata:
-    'aws:copilot:description': "An IAM Role for DynamicDesiredCountFunction"
+    'aws:copilot:description': "An IAM Role for describing number of running tasks in your ECS service"
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

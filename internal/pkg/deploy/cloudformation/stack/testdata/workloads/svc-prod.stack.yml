@@ -316,7 +316,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Runtime: nodejs12.x
   DynamicDesiredCountFunctionRole:
     Metadata:
-      'aws:copilot:description': "An IAM Role for DynamicDesiredCountFunction"
+      'aws:copilot:description': "An IAM Role for describing number of running tasks in your ECS service"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -536,7 +536,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
   RulePriorityFunctionRole:
     Type: AWS::IAM::Role
     Metadata:
-      'aws:copilot:description': "An IAM Role for RulePriorityFunction"
+      'aws:copilot:description': "An IAM Role to describe load balancer rules for assigning a priority"
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
