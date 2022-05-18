@@ -5,7 +5,6 @@ http:
   path: https-path-alias-path
   alias: example.com
 
-# TODO nginx container for this one
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
   build: Dockerfile
