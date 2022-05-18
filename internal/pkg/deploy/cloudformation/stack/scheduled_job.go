@@ -252,7 +252,7 @@ func (j *ScheduledJob) awsSchedule() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("parse preset schedule: %w", err)
 		}
-	case schedule == "none": 
+	case schedule == "none":
 		scheduleExpression = schedule // Keep expression as "none" when the job is disabled.
 	default:
 		scheduleExpression, err = toAWSCron(schedule)
