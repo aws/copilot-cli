@@ -52,7 +52,7 @@ func newListEnvOpts(vars listEnvVars) (*listEnvOpts, error) {
 	return &listEnvOpts{
 		listEnvVars: vars,
 		store:       store,
-		sel:         selector.NewConfigSelect(prompter, store),
+		sel:         selector.NewConfigSelector(prompter, store),
 		prompt:      prompter,
 		w:           os.Stdout,
 	}, nil

@@ -202,7 +202,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			Profile: cfg,
 			Prompt:  prompter,
 		},
-		selApp:   selector.NewSelect(prompt.New(), store),
+		selApp:   selector.NewAppEnvSelector(prompt.New(), store),
 		uploader: template.New(),
 		appCFN:   deploycfn.New(defaultSession),
 		newS3: func(region string) (uploader, error) {
@@ -715,7 +715,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
 		return err
 	}
-	if err := o.envDeployer.DeployAndRenderEnvironment(os.Stderr, deployEnvInput); err != nil {
+	if err := o.envDeployer.CreateAndRenderEnvironment(os.Stderr, deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.

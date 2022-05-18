@@ -254,7 +254,7 @@ func TestEnvRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "1.0.0",
-					EnableExec:      false,
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 			mockEnvironmentDescriber: mockEnvironmentDescriberValid,

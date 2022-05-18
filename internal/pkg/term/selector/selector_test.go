@@ -108,10 +108,13 @@ func TestDeploySelect_Topics(t *testing.T) {
 
 			tc.setupMocks(mocks)
 
-			sel := DeploySelect{
-				Select: &Select{
-					config: mockconfigSvc,
-					prompt: mockprompt,
+			sel := DeploySelector{
+				ConfigSelector: &ConfigSelector{
+					AppEnvSelector: &AppEnvSelector{
+						appEnvLister: mockconfigSvc,
+						prompt:       mockprompt,
+					},
+					workloadLister: mockconfigSvc,
 				},
 				deployStoreSvc: mockdeploySvc,
 			}
@@ -463,10 +466,13 @@ func TestDeploySelect_Service(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := DeploySelect{
-				Select: &Select{
-					config: mockconfigSvc,
-					prompt: mockprompt,
+			sel := DeploySelector{
+				ConfigSelector: &ConfigSelector{
+					AppEnvSelector: &AppEnvSelector{
+						appEnvLister: mockconfigSvc,
+						prompt:       mockprompt,
+					},
+					workloadLister: mockconfigSvc,
 				},
 				deployStoreSvc: mockdeploySvc,
 			}
@@ -752,10 +758,13 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := WorkspaceSelect{
-				Select: &Select{
-					prompt: mockprompt,
-					config: mockconfigLister,
+			sel := WorkspaceSelector{
+				ConfigSelector: &ConfigSelector{
+					AppEnvSelector: &AppEnvSelector{
+						prompt:       mockprompt,
+						appEnvLister: mockconfigLister,
+					},
+					workloadLister: mockconfigLister,
 				},
 				ws: mockwsRetriever,
 			}
@@ -1047,10 +1056,13 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := WorkspaceSelect{
-				Select: &Select{
-					prompt: mockprompt,
-					config: mockconfigLister,
+			sel := WorkspaceSelector{
+				ConfigSelector: &ConfigSelector{
+					AppEnvSelector: &AppEnvSelector{
+						prompt:       mockprompt,
+						appEnvLister: mockconfigLister,
+					},
+					workloadLister: mockconfigLister,
 				},
 				ws: mockwsRetriever,
 			}
@@ -1183,8 +1195,8 @@ func TestConfigSelect_Service(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := ConfigSelect{
-				Select: &Select{
+			sel := ConfigSelector{
+				AppEnvSelector: &AppEnvSelector{
 					prompt: mockprompt,
 				},
 				workloadLister: mockconfigLister,
@@ -1314,8 +1326,8 @@ func TestConfigSelect_Job(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := ConfigSelect{
-				Select: &Select{
+			sel := ConfigSelector{
+				AppEnvSelector: &AppEnvSelector{
 					prompt: mockprompt,
 				},
 				workloadLister: mockconfigLister,
@@ -1482,9 +1494,9 @@ func TestSelect_Environment(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := Select{
-				prompt: mockprompt,
-				config: mockenvLister,
+			sel := AppEnvSelector{
+				prompt:       mockprompt,
+				appEnvLister: mockenvLister,
 			}
 
 			got, err := sel.Environment("Select an environment", "Help text", appName, tc.inAdditionalOpts...)
@@ -1689,9 +1701,9 @@ func TestSelect_Environments(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := Select{
-				prompt: mockprompt,
-				config: mockenvLister,
+			sel := AppEnvSelector{
+				prompt:       mockprompt,
+				appEnvLister: mockenvLister,
 			}
 
 			got, err := sel.Environments("Select an environment", "Help text", appName, func(order int) prompt.PromptConfig {
@@ -1814,9 +1826,9 @@ func TestSelect_Application(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := Select{
-				prompt: mockprompt,
-				config: mockappLister,
+			sel := AppEnvSelector{
+				prompt:       mockprompt,
+				appEnvLister: mockappLister,
 			}
 
 			got, err := sel.Application("Select an app", "Help text")
@@ -1938,10 +1950,13 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			tc.mockPrompt(p)
 			tc.mockWs(cfg)
 
-			sel := WorkspaceSelect{
-				Select: &Select{
-					prompt: p,
-					config: s,
+			sel := WorkspaceSelector{
+				ConfigSelector: &ConfigSelector{
+					AppEnvSelector: &AppEnvSelector{
+						prompt:       p,
+						appEnvLister: s,
+					},
+					workloadLister: s,
 				},
 				ws:      cfg,
 				appName: "app-name",
@@ -2075,10 +2090,13 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			s := mocks.NewMockConfigLister(ctrl)
 			cfg := mocks.NewMockWorkspaceRetriever(ctrl)
 			tc.mockPrompt(p)
-			sel := WorkspaceSelect{
-				Select: &Select{
-					prompt: p,
-					config: s,
+			sel := WorkspaceSelector{
+				ConfigSelector: &ConfigSelector{
+					AppEnvSelector: &AppEnvSelector{
+						prompt:       p,
+						appEnvLister: s,
+					},
+					workloadLister: s,
 				},
 				ws:      cfg,
 				appName: "app-name",
@@ -2187,7 +2205,7 @@ func TestWorkspaceSelect_WsPipeline(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := WsPipelineSelect{
+			sel := WsPipelineSelector{
 				prompt: mockprompt,
 				ws:     mockWsPipelinesLister,
 			}
@@ -2276,7 +2294,7 @@ func TestCodePipelineSelect_DeployedPipeline(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := CodePipelineSelect{
+			sel := CodePipelineSelector{
 				prompt:         mockPrompt,
 				pipelineLister: mockCodePipelinesLister,
 			}
@@ -2401,10 +2419,10 @@ func TestSelect_CFTask(t *testing.T) {
 			tc.mockCF(cf)
 			tc.mockStore(s)
 
-			sel := CFTaskSelect{
-				Select: &Select{
-					prompt: p,
-					config: s,
+			sel := CFTaskSelector{
+				AppEnvSelector: &AppEnvSelector{
+					prompt:       p,
+					appEnvLister: s,
 				},
 				cfStore: cf,
 			}
@@ -2552,7 +2570,7 @@ func TestTaskSelect_Task(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := TaskSelect{
+			sel := TaskSelector{
 				lister: mocktaskLister,
 				prompt: mockprompt,
 			}
