@@ -283,6 +283,10 @@ type wsWlDirReader interface {
 	Summary() (*workspace.Summary, error)
 }
 
+type wsEnvironmentReader interface {
+	ReadEnvironmentManifest(mftDirName string) (workspace.EnvironmentManifest, error)
+}
+
 type wsPipelineReader interface {
 	wsPipelineGetter
 	Rel(path string) (string, error)
@@ -629,4 +633,9 @@ type workloadTemplateGenerator interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
+}
+
+type envDeployer interface {
+	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
+	UploadArtifacts() (map[string]string, error)
 }

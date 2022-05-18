@@ -149,7 +149,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	}
 	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
 	prompter := prompt.New()
-	sel := selector.NewWorkspaceSelect(prompter, store, ws)
+	sel := selector.NewWorkspaceSelector(prompter, store, ws)
 	deployStore, err := deploy.NewStore(sessProvider, store)
 	if err != nil {
 		return nil, err
