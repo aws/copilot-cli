@@ -410,7 +410,7 @@ Resources:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
       EnvStack: !Sub "${AppName}-${EnvName}"
-      Parameters: []
+      Parameters: ["InternalALBWorkloads"]
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:

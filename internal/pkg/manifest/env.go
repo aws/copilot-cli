@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// EnvironmentManifestType identifies that the type of a manifest is environment manifest.
+// EnvironmentManifestType identifies that the type of manifest is environment manifest.
 const EnvironmentManifestType = "Environment"
 
 // Environment is the manifest configuration for an environment.

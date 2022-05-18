@@ -8,9 +8,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -109,11 +112,10 @@ type deployEnvironmentMock struct {
 
 func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 	const (
-		mockManagerRoleARN      = "mockManagerRoleARN"
-		mockCFNExecutionRoleARN = "mockCFNExecutionRoleARN"
-		mockEnvRegion           = "us-west-2"
-		mockAppName             = "mockApp"
-		mockEnvName             = "mockEnv"
+		mockManagerRoleARN = "mockManagerRoleARN"
+		mockEnvRegion      = "us-west-2"
+		mockAppName        = "mockApp"
+		mockEnvName        = "mockEnv"
 	)
 	mockApp := &config.Application{
 		Name: mockAppName,
@@ -143,7 +145,16 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
-				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ progress.FileWriter, in *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
+						require.Equal(t, mockEnvName, in.Name)
+						require.Equal(t, mockAppName, in.App.Name)
+						require.Equal(t, map[string]string{
+							"mockResource": "mockURL",
+						}, in.CustomResourcesURLs)
+						require.Equal(t, deploy.LatestEnvTemplateVersion, in.Version)
+						return nil
+					})
 			},
 		},
 	}
@@ -167,11 +178,10 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				appCFN:      m.appCFN,
 				envDeployer: m.envDeployer,
 			}
-
-			mockIn := &deployEnvironmentInput{
-				rootUserARN:  "mockRootUserARN",
-				isProduction: false,
-				customResourcesURLs: map[string]string{
+			mockIn := &DeployEnvironmentInput{
+				RootUserARN:  "mockRootUserARN",
+				IsProduction: false,
+				CustomResourcesURLs: map[string]string{
 					"mockResource": "mockURL",
 				},
 			}

@@ -7,12 +7,12 @@ package deploy
 import (
 	"fmt"
 	"sort"
-	
+
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
-	
+
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	
+
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 )
