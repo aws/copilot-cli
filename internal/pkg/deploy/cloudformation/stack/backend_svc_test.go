@@ -8,10 +8,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -509,41 +507,53 @@ func TestBackendService_Parameters(t *testing.T) {
 
 func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 	const (
-		appName        = "my-app"
-		envName        = "my-env"
-		manifestSuffix = "-manifest.yml"
-		templateSuffix = "-template.yml"
-		paramsSuffix   = "-params.json"
+		appName = "my-app"
+		envName = "my-env"
 	)
 
-	// discover test cases
-	tests := make(map[string]string) // name -> path prefix
-	dir := filepath.Join("testdata", "workloads", "backend")
-	filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
+	testDir := filepath.Join("testdata", "workloads", "backend")
 
-		if strings.HasSuffix(info.Name(), manifestSuffix) {
-			name := strings.TrimSuffix(info.Name(), manifestSuffix)
-			tests[name] = strings.TrimSuffix(path, manifestSuffix)
-		}
-
-		return nil
-	})
+	tests := map[string]struct {
+		ManifestPath        string
+		TemplatePath        string
+		ParamsPath          string
+		EnvImportedCertARNs []string
+	}{
+		"simple": {
+			ManifestPath: filepath.Join(testDir, "simple-manifest.yml"),
+			TemplatePath: filepath.Join(testDir, "simple-template.yml"),
+			ParamsPath:   filepath.Join(testDir, "simple-params.json"),
+		},
+		"http only path configured": {
+			ManifestPath: filepath.Join(testDir, "http-only-path-manifest.yml"),
+			TemplatePath: filepath.Join(testDir, "http-only-path-template.yml"),
+			ParamsPath:   filepath.Join(testDir, "http-only-path-params.json"),
+		},
+		"http full config": {
+			ManifestPath: filepath.Join(testDir, "http-full-config-manifest.yml"),
+			TemplatePath: filepath.Join(testDir, "http-full-config-template.yml"),
+			ParamsPath:   filepath.Join(testDir, "http-full-config-params.json"),
+		},
+		"https path and alias configured": {
+			ManifestPath:        filepath.Join(testDir, "https-path-alias-manifest.yml"),
+			TemplatePath:        filepath.Join(testDir, "https-path-alias-template.yml"),
+			ParamsPath:          filepath.Join(testDir, "https-path-alias-params.json"),
+			EnvImportedCertARNs: []string{"exampleComCertARN"},
+		},
+	}
 
 	// run tests
-	for name, pathPrefix := range tests {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
 			// parse files
-			manifestBytes, err := ioutil.ReadFile(pathPrefix + manifestSuffix)
+			manifestBytes, err := ioutil.ReadFile(tc.ManifestPath)
 			require.NoError(t, err)
-			tmplBytes, err := ioutil.ReadFile(pathPrefix + templateSuffix)
+			tmplBytes, err := ioutil.ReadFile(tc.TemplatePath)
 			require.NoError(t, err)
-			paramsBytes, err := ioutil.ReadFile(pathPrefix + paramsSuffix)
+			paramsBytes, err := ioutil.ReadFile(tc.ParamsPath)
 			require.NoError(t, err)
 
 			mft, err := manifest.UnmarshalWorkload([]byte(manifestBytes))
@@ -556,6 +566,9 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 				},
 				Env: &config.Environment{
 					Name: envName,
+					CustomConfig: &config.CustomizeEnv{
+						ImportCertARNs: tc.EnvImportedCertARNs,
+					},
 				},
 				Manifest: mft.(*manifest.BackendService),
 				RuntimeConfig: RuntimeConfig{
