@@ -11,7 +11,7 @@ import (
 	"github.com/fatih/color"
 )
 
-// Wrapper writers around standard error and standard output that work on windows.
+// Decorated io.Writers around standard error and standard output that work on Windows.
 var (
 	DiagnosticWriter = color.Error
 	OutputWriter     = color.Output
