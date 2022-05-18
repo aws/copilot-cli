@@ -33,6 +33,7 @@ type BackendService struct {
 	manifest     *manifest.BackendService
 	httpsEnabled bool
 	certImported bool
+	albEnabled   bool
 
 	parser backendSvcReadParser
 }
@@ -67,13 +68,14 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest: conf.Manifest,
-		parser:   parser,
+		manifest:   conf.Manifest,
+		parser:     parser,
+		albEnabled: !conf.Manifest.RoutingRule.EmptyOrDisabled(),
 	}
 
 	if conf.Env.HasImportedCerts() {
 		b.certImported = true
-		b.httpsEnabled = true
+		b.httpsEnabled = b.albEnabled
 	}
 
 	return b, nil
@@ -185,7 +187,7 @@ func (s *BackendService) Template() (string, error) {
 		Publish:                  publishers,
 		Platform:                 convertPlatform(s.manifest.Platform),
 		HTTPVersion:              convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
-		ALBEnabled:               !s.manifest.BackendServiceConfig.RoutingRule.EmptyOrDisabled(),
+		ALBEnabled:               s.albEnabled,
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
