@@ -271,7 +271,8 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
       - EnvControllerAction
-      - HTTPListenerRule
+      - HTTPListenerRuleWithDomain
+      - HTTPSListenerRule
     Properties:
       PlatformVersion: LATEST
       Cluster:
@@ -307,7 +308,7 @@ Resources:
           ],
           !Ref "AWS::NoValue",
         ]
-      HealthCheckGracePeriodSeconds: 45
+      HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
         - ContainerName: !Ref TargetContainer
           ContainerPort: !Ref TargetPort
@@ -317,19 +318,12 @@ Resources:
       "aws:copilot:description": "A target group to connect the load balancer to your service"
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      HealthCheckPath: /healthz # Default is '/'.
-      HealthCheckPort: 7000
-      Matcher:
-        HttpCode: 200,301
-      HealthyThresholdCount: 3
-      UnhealthyThresholdCount: 2
-      HealthCheckIntervalSeconds: 15
-      HealthCheckTimeoutSeconds: 10
+      HealthCheckPath: / # Default is '/'.
       Port: !Ref ContainerPort
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
-          Value: 5 # ECS Default is 300; Copilot default is 60.
+          Value: 60 # ECS Default is 300; Copilot default is 60.
         - Key: stickiness.enabled
           Value: !Ref Stickiness
       TargetType: ip
@@ -348,7 +342,7 @@ Resources:
       Runtime: nodejs12.x
   RulePriorityFunctionRole:
     Metadata:
-      'aws:copilot:description': "An IAM Role to describe load balancer rules for assigning a priority"
+      "aws:copilot:description": "An IAM Role to describe load balancer rules for assigning a priority"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -372,26 +366,31 @@ Resources:
                 Action:
                   - elasticloadbalancing:DescribeRules
                 Resource: "*"
-  HTTPRulePriorityAction:
+  HTTPSRulePriorityAction:
     Metadata:
-      "aws:copilot:description": "A custom resource assigning priority for HTTP listener rules"
+      "aws:copilot:description": "A custom resource assigning priority for HTTPS listener rules"
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-  HTTPListenerRule:
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+  HTTPListenerRuleWithDomain:
     Metadata:
-      "aws:copilot:description": "A HTTP listener rule for forwarding HTTP traffic"
+      "aws:copilot:description": "An HTTP listener rule that redirects HTTP to HTTPS"
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
-        - TargetGroupArn: !Ref TargetGroup
-          Type: forward
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: 443
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: HTTP_301
       Conditions:
-        - Field: "source-ip"
-          SourceIpConfig:
-            Values:
-              - 10.24.34.0/23
+        - Field: "host-header"
+          HostHeaderConfig:
+            Values: [example.com]
         - Field: "path-pattern"
           PathPatternConfig:
             Values: !If
@@ -400,10 +399,28 @@ Resources:
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority: !If
-        - IsDefaultRootPath
-        - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-        - !GetAtt HTTPRulePriorityAction.Priority
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
+  HTTPSListenerRule:
+    Metadata:
+      "aws:copilot:description": "An HTTPS listener rule for forwarding HTTPS traffic to your tasks"
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      Conditions:
+        - Field: "host-header"
+          HostHeaderConfig:
+            Values: [example.com]
+        - Field: "path-pattern"
+          PathPatternConfig:
+            Values: !If
+              - IsDefaultRootPath
+              - - "/*"
+              - - !Sub "/${RulePath}"
+                - !Sub "/${RulePath}/*"
+      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority
   AddonsStack:
     Metadata:
       "aws:copilot:description": "An Addons CloudFormation Stack for your additional AWS resources"
