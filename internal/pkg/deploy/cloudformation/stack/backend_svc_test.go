@@ -313,6 +313,7 @@ Outputs:
 						AllowedSourceIps:    []manifest.IPNet{"10.0.1.0/24"},
 					},
 				}
+				svc.albEnabled = true
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
