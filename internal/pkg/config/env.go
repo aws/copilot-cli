@@ -40,7 +40,10 @@ type CustomizeEnv struct {
 }
 
 // IsEmpty returns if CustomizeEnv is an empty struct.
-func (c CustomizeEnv) IsEmpty() bool {
+func (c *CustomizeEnv) IsEmpty() bool {
+	if c == nil {
+		return true
+	}
 	return c.ImportVPC == nil && c.VPCConfig == nil && len(c.ImportCertARNs) == 0
 }
 
