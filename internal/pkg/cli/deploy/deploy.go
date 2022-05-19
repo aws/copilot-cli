@@ -1253,7 +1253,6 @@ func (d *lbSvcDeployer) validateALBWSRuntime() error {
 		}
 		return validateLBSvcAlias(d.lbMft.RoutingRule.Alias, d.app, d.env.Name)
 	}
-
 	log.Errorf(ecsALBAliasUsedWithoutDomainFriendlyText)
 	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)
 }
