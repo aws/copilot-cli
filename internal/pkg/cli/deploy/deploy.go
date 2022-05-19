@@ -327,7 +327,6 @@ func NewLBDeployer(in *WorkloadDeployerInput) (*lbSvcDeployer, error) {
 type backendSvcDeployer struct {
 	*svcDeployer
 	backendMft         *manifest.BackendService
-	appVersionGetter   versionGetter
 	aliasCertValidator aliasCertValidator
 }
 
@@ -342,10 +341,6 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 	if err != nil {
 		return nil, err
 	}
-	versionGetter, err := describe.NewAppDescriber(in.App.Name)
-	if err != nil {
-		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
-	}
 	bsMft, ok := in.Mft.(*manifest.BackendService)
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifest.BackendServiceType)
@@ -353,7 +348,6 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 	return &backendSvcDeployer{
 		svcDeployer:        svcDeployer,
 		backendMft:         bsMft,
-		appVersionGetter:   versionGetter,
 		aliasCertValidator: acm.New(svcDeployer.envSess),
 	}, nil
 }
@@ -913,14 +907,7 @@ func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcS
 	if err != nil {
 		return nil, err
 	}
-	if err := validateALBRuntime(&validateALBRuntimeInput{
-		ServiceName:        d.name,
-		RoutingRule:        d.lbMft.RoutingRule,
-		App:                d.app,
-		Env:                d.env,
-		AppVersionGetter:   d.appVersionGetter,
-		AliasCertValidator: d.aliasCertValidator,
-	}); err != nil {
+	if err := d.validateALBWSRuntime(); err != nil {
 		return nil, err
 	}
 	if err := d.validateNLBWSRuntime(); err != nil {
@@ -958,14 +945,7 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		return nil, err
 	}
 
-	if err := validateALBRuntime(&validateALBRuntimeInput{
-		ServiceName:        d.name,
-		RoutingRule:        d.backendMft.RoutingRule,
-		App:                d.app,
-		Env:                d.env,
-		AppVersionGetter:   d.appVersionGetter,
-		AliasCertValidator: d.aliasCertValidator,
-	}); err != nil {
+	if err := d.validateALBRuntime(); err != nil {
 		return nil, err
 	}
 
@@ -1229,47 +1209,53 @@ func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) 
 	return nil
 }
 
-type validateALBRuntimeInput struct {
-	ServiceName        string
-	RoutingRule        manifest.RoutingRuleConfigOrBool
-	App                *config.Application
-	Env                *config.Environment
-	AppVersionGetter   versionGetter
-	AliasCertValidator aliasCertValidator
+func (d *backendSvcDeployer) validateALBRuntime() error {
+	if d.backendMft.RoutingRule.EmptyOrDisabled() || d.backendMft.RoutingRule.Alias.IsEmpty() || !d.env.HasImportedCerts() {
+		return nil
+	}
+
+	aliases, err := d.backendMft.RoutingRule.Alias.ToStringSlice()
+	if err != nil {
+		return fmt.Errorf("convert aliases to string slice: %w", err)
+	}
+
+	if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.env.CustomConfig.ImportCertARNs); err != nil {
+		return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
+	}
+
+	return nil
 }
 
-func validateALBRuntime(in *validateALBRuntimeInput) error {
-	if in.RoutingRule.Alias.IsEmpty() {
-		if in.Env.HasImportedCerts() {
+func (d *lbSvcDeployer) validateALBWSRuntime() error {
+	if d.lbMft.RoutingRule.Alias.IsEmpty() {
+		if d.env.HasImportedCerts() {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
-				name:    in.ServiceName,
-				envName: in.Env.Name,
+				name:    d.name,
+				envName: d.env.Name,
 			}
 		}
 		return nil
 	}
-
-	if in.Env.HasImportedCerts() {
-		aliases, err := in.RoutingRule.Alias.ToStringSlice()
+	if d.env.HasImportedCerts() {
+		aliases, err := d.lbMft.RoutingRule.Alias.ToStringSlice()
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
-		if err := in.AliasCertValidator.ValidateCertAliases(aliases, in.Env.CustomConfig.ImportCertARNs); err != nil {
-			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", in.Env.Name, err)
+		if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.env.CustomConfig.ImportCertARNs); err != nil {
+			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
 		}
 		return nil
 	}
-
-	if in.App.Domain != "" {
-		if err := validateAppVersionForAlias(in.App.Name, in.AppVersionGetter); err != nil {
-			logAppVersionOutdatedError(in.ServiceName)
+	if d.app.Domain != "" {
+		if err := validateAppVersionForAlias(d.app.Name, d.appVersionGetter); err != nil {
+			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 			return err
 		}
-		return validateLBSvcAlias(in.RoutingRule.Alias, in.App, in.Env.Name)
+		return validateLBSvcAlias(d.lbMft.RoutingRule.Alias, d.app, d.env.Name)
 	}
 
 	log.Errorf(ecsALBAliasUsedWithoutDomainFriendlyText)
-	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", in.Env.Name)
+	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)
 }
 
 func (d *lbSvcDeployer) validateNLBWSRuntime() error {
