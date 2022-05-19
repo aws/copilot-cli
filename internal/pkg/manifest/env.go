@@ -1,12 +1,13 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package manifest provides functionality to create Manifest files.
 package manifest
 
 import (
 	"fmt"
 	"sort"
+
+	"github.com/aws/copilot-cli/internal/pkg/config"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -22,6 +23,11 @@ type Environment struct {
 	EnvironmentConfig `yaml:",inline"`
 
 	parser template.Parser
+}
+
+// FromEnvConfig transforms an environment configuration into a manifest.
+func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment {
+	return &Environment{}
 }
 
 // EnvironmentConfig holds the configuration for an environment.
