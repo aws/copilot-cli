@@ -301,9 +301,10 @@ func (cf CloudFormation) RemoveJobFromApp(app *config.Application, jobName strin
 
 func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName string) error {
 	appConfig := stack.NewAppStackConfig(&deploy.CreateAppInput{
-		Name:      app.Name,
-		AccountID: app.AccountID,
-		Version:   deploy.LatestAppTemplateVersion,
+		Name:           app.Name,
+		AccountID:      app.AccountID,
+		AdditionalTags: app.Tags,
+		Version:        deploy.LatestAppTemplateVersion,
 	})
 	previouslyDeployedConfig, err := cf.getLastDeployedAppConfig(appConfig)
 	if err != nil {
