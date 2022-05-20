@@ -33,6 +33,9 @@ func (e EnvironmentConfig) Validate() error {
 	if err := e.Observability.Validate(); err != nil {
 		return fmt.Errorf(`validate "observability": %w`, err)
 	}
+	if err := e.HTTPConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "http config": %w`, err)
+	}
 	return nil
 }
 
@@ -180,7 +183,7 @@ func (o environmentHTTPConfig) Validate() error {
 func (o publicHTTPConfig) Validate() error {
 	for idx, certARN := range o.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
-			return fmt.Errorf(`validate "certificates[%d]": %w`, idx, err)
+			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
 	return nil
@@ -190,7 +193,7 @@ func (o publicHTTPConfig) Validate() error {
 func (o privateHTTPConfig) Validate() error {
 	for idx, certARN := range o.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
-			return fmt.Errorf(`validate "certificates[%d]": %w`, idx, err)
+			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
 	return nil
