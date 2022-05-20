@@ -15,9 +15,9 @@ $ copilot pipeline status [flags]
 ```
 
 ## 実行例
-Pipeline "pipeline-myapp-myrepo" の状態を表示します。
+Pipeline "my-repo-my-branch" の状態を表示します。
 ```bash
-$ copilot pipeline status -n pipeline-myapp-myrepo
+$ copilot pipeline status -n my-repo-my-branch
 ```
 
 ## 出力例
