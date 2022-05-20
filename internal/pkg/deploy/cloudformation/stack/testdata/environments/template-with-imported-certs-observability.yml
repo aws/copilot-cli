@@ -321,14 +321,6 @@ Resources:
       GroupId: !Ref EnvironmentSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref InternalLoadBalancerSecurityGroup
-  InternalALBIngressFromEnvironmentSecurityGroup:
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateInternalALB
-    Properties:
-      Description: Ingress from the env security group
-      GroupId: !Ref InternalLoadBalancerSecurityGroup
-      IpProtocol: -1
-      SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
   EnvironmentSecurityGroupIngressFromSelf:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
