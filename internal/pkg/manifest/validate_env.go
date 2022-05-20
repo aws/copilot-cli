@@ -170,11 +170,24 @@ func (o environmentHTTPConfig) Validate() error {
 	if err := o.Public.Validate(); err != nil {
 		return fmt.Errorf(`validate "public": %w`, err)
 	}
+	if err := o.Private.Validate(); err != nil {
+		return fmt.Errorf(`validate "private": %w`, err)
+	}
 	return nil
 }
 
 // Validate returns nil if publicHTTPConfig is configured correctly.
 func (o publicHTTPConfig) Validate() error {
+	for idx, certARN := range o.Certificates {
+		if _, err := arn.Parse(certARN); err != nil {
+			return fmt.Errorf(`validate "certificates[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if privateHTTPConfig is configured correctly.
+func (o privateHTTPConfig) Validate() error {
 	for idx, certARN := range o.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`validate "certificates[%d]": %w`, idx, err)

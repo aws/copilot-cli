@@ -518,7 +518,7 @@ func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
 		in                   environmentHTTPConfig
 		wantedErrorMsgPrefix string
 	}{
-		"malformed certificates": {
+		"malformed public certificate": {
 			in: environmentHTTPConfig{
 				Public: publicHTTPConfig{
 					Certificates: []string{"arn:aws:weird-little-arn"},
@@ -526,9 +526,24 @@ func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "certificates[0]": `,
 		},
-		"success": {
+		"malformed private certificate": {
+			in: environmentHTTPConfig{
+				Private: privateHTTPConfig{
+					Certificates: []string{"arn:aws:weird-little-arn"},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "certificates[0]": `,
+		},
+		"success with public cert": {
 			in: environmentHTTPConfig{
 				Public: publicHTTPConfig{
+					Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
+				},
+			},
+		},
+		"success with private cert": {
+			in: environmentHTTPConfig{
+				Private: privateHTTPConfig{
 					Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
 				},
 			},
