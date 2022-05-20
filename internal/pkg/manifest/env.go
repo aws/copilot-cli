@@ -132,9 +132,15 @@ func (o environmentObservability) IsEmpty() bool {
 }
 
 type environmentHTTPConfig struct {
-	Public publicHTTPConfig `yaml:"public,omitempty"`
+	Public  publicHTTPConfig  `yaml:"public,omitempty"`
+	Private privateHTTPConfig `yaml:"private,omitempty"`
 }
 
 type publicHTTPConfig struct {
+	Certificates []string `yaml:"certificates,omitempty"`
+}
+
+type privateHTTPConfig struct {
+	Subnets      []string `yaml:"subnets,omitempty"`
 	Certificates []string `yaml:"certificates,omitempty"`
 }

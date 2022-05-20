@@ -307,7 +307,7 @@ func (s *Store) IsServiceDeployed(appName string, envName string, svcName string
 	return s.isWorkloadDeployed(appName, envName, svcName)
 }
 
-// IsJobDeployed returnds whether a job is deployed in an environment or not by checking for a state machine.
+// IsJobDeployed returns whether a job is deployed in an environment or not by checking for a state machine.
 func (s *Store) IsJobDeployed(appName, envName, jobName string) (bool, error) {
 	return s.isWorkloadDeployed(appName, envName, jobName)
 }

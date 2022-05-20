@@ -102,9 +102,10 @@ func (e *EnvStackConfig) Template() (string, error) {
 		ArtifactBucketARN:      e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
 
-		ImportCertARNs: e.importCertARNs(),
-		VPCConfig:      e.vpcConfig(),
-		Telemetry:      e.telemetryConfig(),
+		ImportCertARNs:     e.importCertARNs(),
+		VPCConfig:          e.vpcConfig(),
+		InternalALBSubnets: e.internalALBSubnets(),
+		Telemetry:          e.telemetryConfig(),
 
 		Version:       e.in.Version,
 		LatestVersion: deploy.LatestEnvTemplateVersion,
@@ -194,6 +195,15 @@ func (e *EnvStackConfig) importCertARNs() []string {
 	}
 	// Fallthrough to SSM config.
 	return e.in.ImportCertARNs
+}
+
+func (e *EnvStackConfig) internalALBSubnets() []string {
+	// If a manifest is present, it is the only place we look.
+	if e.in.Mft != nil {
+		return e.in.Mft.HTTPConfig.Private.Subnets
+	}
+	// Fallthrough to SSM config.
+	return e.in.InternalALBSubnets
 }
 
 // Parameters returns the parameters to be passed into an environment CloudFormation template.
