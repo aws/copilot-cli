@@ -151,7 +151,9 @@ environments:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: placementP(PublicSubnetPlacement),
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PublicSubnetPlacement),
+								},
 							},
 						},
 						TaskDefOverrides: []OverrideRule{
@@ -270,7 +272,9 @@ secrets:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: placementP(PublicSubnetPlacement),
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PublicSubnetPlacement),
+								},
 							},
 						},
 					},
@@ -333,7 +337,9 @@ subscribe:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: placementP(PublicSubnetPlacement),
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PublicSubnetPlacement),
+								},
 							},
 						},
 						Subscribe: SubscribeConfig{

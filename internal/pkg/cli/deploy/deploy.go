@@ -326,7 +326,8 @@ func NewLBDeployer(in *WorkloadDeployerInput) (*lbSvcDeployer, error) {
 
 type backendSvcDeployer struct {
 	*svcDeployer
-	backendMft *manifest.BackendService
+	backendMft         *manifest.BackendService
+	aliasCertValidator aliasCertValidator
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -345,8 +346,9 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 		return nil, fmt.Errorf("manifest is not of type %s", manifest.BackendServiceType)
 	}
 	return &backendSvcDeployer{
-		svcDeployer: svcDeployer,
-		backendMft:  bsMft,
+		svcDeployer:        svcDeployer,
+		backendMft:         bsMft,
+		aliasCertValidator: acm.New(svcDeployer.envSess),
 	}, nil
 }
 
@@ -942,7 +944,17 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewBackendService(d.backendMft, d.env.Name, d.app.Name, *rc)
+
+	if err := d.validateALBRuntime(); err != nil {
+		return nil, err
+	}
+
+	conf, err := stack.NewBackendService(stack.BackendServiceConfig{
+		App:           d.app,
+		Env:           d.env,
+		Manifest:      d.backendMft,
+		RuntimeConfig: *rc,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
@@ -1194,6 +1206,23 @@ func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) 
 	if diff < 0 {
 		return fmt.Errorf(`alias is not compatible with application versions below %s`, deploy.AliasLeastAppTemplateVersion)
 	}
+	return nil
+}
+
+func (d *backendSvcDeployer) validateALBRuntime() error {
+	if d.backendMft.RoutingRule.EmptyOrDisabled() || d.backendMft.RoutingRule.Alias.IsEmpty() || !d.env.HasImportedCerts() {
+		return nil
+	}
+
+	aliases, err := d.backendMft.RoutingRule.Alias.ToStringSlice()
+	if err != nil {
+		return fmt.Errorf("convert aliases to string slice: %w", err)
+	}
+
+	if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.env.CustomConfig.ImportCertARNs); err != nil {
+		return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
+	}
+
 	return nil
 }
 

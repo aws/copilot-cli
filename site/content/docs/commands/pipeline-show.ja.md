@@ -16,9 +16,9 @@ $ copilot pipeline show [flags]
 ```
 
 ## 実行例
-Application "myapp" の Pipeline に関する情報を表示します。
+Pipeline "myapp-mybranch" に関する情報をリソース情報を含めて表示します。
 ```bash
-$ copilot pipeline show --app myapp --resources
+$ copilot pipeline show --name myrepo-mybranch --resources
 ```
 
 ## 出力例
