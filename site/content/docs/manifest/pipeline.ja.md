@@ -2,31 +2,30 @@
 
 ???+ note "GitHub のリポジトリからトリガーされる Pipeline のサンプル Manifest"
 
-```yaml
-name: pipeline-sample-app-frontend
-version: 1
-
-source:
-  provider: GitHub
-  properties:
-    branch: main
-    repository: https://github.com/<user>/sample-app-frontend
-    # オプション。既存の CodeStar Connection の接続名を指定します。
-    connection_name: a-connection
-
-build:
-  image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
-
-stages:
-    - 
-      name: test
-      test_commands:
-        - make test
-        - echo "woo! Tests passed"
-    - 
-      name: prod
-      requires_approval: true
-```
+    ```yaml
+        name: frontend
+    
+        source:
+          provider: GitHub
+          properties:
+            branch: main
+            repository: https://github.com/<user>/frontend
+            # オプション。既存の CodeStar Connection の接続名を指定します。
+            connection_name: a-connection
+    
+        build:
+          image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+    
+        stages:
+            -
+              name: test
+              test_commands:
+                - make test
+                - echo "woo! Tests passed"
+            -
+              name: prod
+              requires_approval: true
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Pipeline 名。
@@ -75,6 +74,9 @@ CodeBuild プロジェクトに関する設定。
 
 <span class="parent-field">build.</span><a id="build-image" href="#build-image" class="field">`image`</a> <span class="type">String</span>  
 CodeBuild のビルドプロジェクトで利用する Docker イメージの URI。`aws/codebuild/amazonlinux2-x86_64-standard:3.0` がデフォルトで利用されます。
+
+<span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>
+任意項目。ビルドプロジェクトで利用する buildspec ファイルを指定する URI です。デフォルトでは、Copilot  が buildspec ファイルを作成します。作成したファイルは、 `copilot/pipelines/[your pipeline name]/buildspec.yml` に配置されています。
 
 <div class="separator"></div>
 

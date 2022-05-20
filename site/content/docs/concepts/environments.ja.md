@@ -30,9 +30,9 @@ $ copilot env init
 
 ### VPC やネットワークリソース
 
-各 Environment はそれぞれがマルチ AZ 構成の VPC を持ちます。VPC は Environment のネットワーク上の境界であり、VPC 内に入ってくるあるいは出ていくトラフィックを許可する、またはブロックするものとして機能します。Copilot は VPC を２つのアベイラビリティゾーンにまたがって作成するため、可用性とコストのバランス確保に役立ちます。各 AZ にはパブリックとプライベートのサブネットが１つずつ作成されます。
+各 Environment はそれぞれがマルチ AZ 構成の VPC を持ちます。VPC は Environment のネットワーク上の境界であり、VPC 内に入ってくるあるいは出ていくトラフィックを許可する、またはブロックするものとして機能します。Copilot は VPC を２つのアベイラビリティゾーンにまたがって作成します。[AWS best practices](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-best-practices.html)に従い、各 AZ はパブリックとプライベートサブネットがあります。 デフォルトでは、Service はパブリックサブネットで起動します。ただし、セキュリティのために、Environment 内の他のサービスからのアクセスのみに制限されています。ECS タスクはパブリックサブネットに配置され、NAT ゲートウエイを必要としないインターネットへのアクセスを許可することでコストを管理するのに役立ちます。
 
-Service はパブリックサブネットで実行されますが、ロードバランサーを経由したトラフィックのみを受け取ることができます。
+ワークロードサブネットの配置はマニフェスト内の[`network.vpc.placement`](../manifest/lb-web-service.ja.md#network-vpc-placement)フィールドで変更できます。
 
 ### ロードバランサーと DNS
 

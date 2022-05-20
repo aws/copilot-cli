@@ -2,42 +2,41 @@
 
 ???+ note "frontend Service のサンプル Manifest"
 
-```yaml
-    # Service 名はロググループや App Runner サービスなどのリソースの命名に利用されます。
-    name: frontend
-    type: Request-Driven Web Service
-
-    http:
-      healthcheck:
-        path: '/_healthcheck'
-        healthy_threshold: 3
-        unhealthy_threshold: 5
-        interval: 10s
-        timeout: 5s
-      alias: web.example.com
-
-    # コンテナと Service の構成
-    image:
-      build: ./frontend/Dockerfile
-      port: 80
-    cpu: 1024
-    memory: 2048
-
-    network:
-      vpc:
-        placement: 'private'
+    ```yaml
+        # Service 名はロググループや App Runner サービスなどのリソースの命名に利用されます。
+        name: frontend
+        type: Request-Driven Web Service
     
-    variables:
-      LOG_LEVEL: info
-    
-    tags:
-      owner: frontend-team
+        http:
+          healthcheck:
+            path: '/_healthcheck'
+            healthy_threshold: 3
+            unhealthy_threshold: 5
+            interval: 10s
+            timeout: 5s
+          alias: web.example.com
 
-    environments:
-      test:
+        # コンテナと Service の構成
+        image:
+          build: ./frontend/Dockerfile
+          port: 80
+        cpu: 1024
+        memory: 2048
+    
+        network:
+          vpc:
+            placement: 'private'
+    
         variables:
-          LOG_LEVEL: debug
-```
+          LOG_LEVEL: info
+        
+        tags:
+          owner: frontend-team
+    
+        environments:
+          test:
+            LOG_LEVEL: debug
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。
