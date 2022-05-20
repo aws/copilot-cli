@@ -316,41 +316,6 @@ func TestRequestDrivenWebService_Port(t *testing.T) {
 	require.Equal(t, uint16(80), actual)
 }
 
-func TestPRequestDrivenWebServicePlacementArgOrString_UnmarshalYAML(t *testing.T) {
-	testCases := map[string]struct {
-		inContent []byte
-
-		wantedStruct RequestDrivenWebServicePlacementArgOrString
-		wantedError  error
-	}{
-		"returns error if both string and args specified": {
-			inContent: []byte(`placement: private
-  subnets: ["id1", "id2"]`),
-
-			wantedError: errors.New("yaml: line 2: mapping values are not allowed in this context"),
-		},
-		"error if unmarshalable": {
-			inContent: []byte(`placement:
-  ohess: linus
-  archie: leg64`),
-			wantedError: errUnmarshalPlacementOpts,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			v := rdwsVpcConfig{}
-			err := yaml.Unmarshal(tc.inContent, &v)
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedStruct.PlacementString, v.Placement.PlacementString)
-				require.Equal(t, tc.wantedStruct.PlacementArgs.Subnets, v.Placement.PlacementArgs.Subnets)
-			}
-		})
-	}
-}
-
 func TestRequestDrivenWebService_ContainerPlatform(t *testing.T) {
 	t.Run("should return platform string with values found in args", func(t *testing.T) {
 		// GIVEN

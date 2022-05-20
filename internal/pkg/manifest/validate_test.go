@@ -611,8 +611,8 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 					},
 					Network: RequestDrivenWebServiceNetworkConfig{
 						VPC: rdwsVpcConfig{
-							Placement: RequestDrivenWebServicePlacementArgOrString{
-								PlacementString: (*RequestDrivenWebServicePlacementString)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
 							},
 						},
 					},
@@ -2139,8 +2139,8 @@ func TestRequestDrivenWebServiceNetworkConfig_Validate(t *testing.T) {
 		"error if fail to validate vpc": {
 			config: RequestDrivenWebServiceNetworkConfig{
 				VPC: rdwsVpcConfig{
-					Placement: RequestDrivenWebServicePlacementArgOrString{
-						PlacementString: (*RequestDrivenWebServicePlacementString)(aws.String("")),
+					Placement: PlacementArgOrString{
+						PlacementString: (*PlacementString)(aws.String("")),
 					},
 				},
 			},
@@ -2168,8 +2168,8 @@ func TestRdwsVpcConfig_Validate(t *testing.T) {
 	}{
 		"error if fail to validate placement": {
 			config: rdwsVpcConfig{
-				Placement: RequestDrivenWebServicePlacementArgOrString{
-					PlacementString: (*RequestDrivenWebServicePlacementString)(aws.String("")),
+				Placement: PlacementArgOrString{
+					PlacementString: (*PlacementString)(aws.String("")),
 				},
 			},
 			wantedErrorPrefix: `validate "placement": `,
@@ -2230,29 +2230,6 @@ func TestPlacementString_Validate(t *testing.T) {
 		"should return an error if placement is invalid": {
 			in:     &mockInvalidPlacement,
 			wanted: errors.New(`"placement" external must be one of public, private`),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
-
-			if tc.wanted != nil {
-				require.EqualError(t, err, tc.wanted.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestRequestDrivenWebServicePlacementString_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		in     *RequestDrivenWebServicePlacementString
-		wanted error
-	}{
-		"should return an error if placement is public": {
-			in:     (*RequestDrivenWebServicePlacementString)(aws.String("public")),
-			wanted: errors.New(`placement "public" is not supported for Request-Driven Web Service`),
 		},
 	}
 	for name, tc := range testCases {

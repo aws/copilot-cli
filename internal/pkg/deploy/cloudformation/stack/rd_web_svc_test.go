@@ -225,8 +225,8 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 	}{
 		"should throw an error if env controller cannot be parsed": {
 			inManifest: func(mft manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
-				mft.Network.VPC.Placement = manifest.RequestDrivenWebServicePlacementArgOrString{
-					PlacementString: (*manifest.RequestDrivenWebServicePlacementString)(&testPrivatePlacement),
+				mft.Network.VPC.Placement = manifest.PlacementArgOrString{
+					PlacementString: &testPrivatePlacement,
 				}
 				return mft
 			},
@@ -249,8 +249,8 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 		"should be able to parse custom resource URLs when alias is enabled": {
 			inManifest: func(mft manifest.RequestDrivenWebService) manifest.RequestDrivenWebService {
 				mft.Alias = aws.String("convex.domain.com")
-				mft.Network.VPC.Placement = manifest.RequestDrivenWebServicePlacementArgOrString{
-					PlacementString: (*manifest.RequestDrivenWebServicePlacementString)(&testPrivatePlacement),
+				mft.Network.VPC.Placement = manifest.PlacementArgOrString{
+					PlacementString: &testPrivatePlacement,
 				}
 				return mft
 			},

@@ -585,6 +585,7 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 		return opts
 	}
 	if placement.PlacementString == nil {
+		opts.AssignPublicIP = template.DisablePublicIP
 		opts.SubnetIDs = placement.PlacementArgs.Subnets
 		return opts
 	}
