@@ -34,7 +34,7 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 	http.loadLBConfig(cfg.CustomConfig)
 
 	var obs environmentObservability
-	obs.loadConfig(cfg.Telemetry)
+	obs.loadObsConfig(cfg.Telemetry)
 
 	return &Environment{
 		Workload: Workload{
@@ -83,18 +83,17 @@ func (cfg *environmentVPCConfig) loadVPCConfig(env *config.CustomizeEnv) {
 
 func (cfg *environmentVPCConfig) loadAdjustedVPCConfig(vpc *config.AdjustVPC) {
 	cfg.CIDR = ipNetP(vpc.CIDR)
-	hasCustomAZNames := len(vpc.AZs) > 0
 	cfg.Subnets.Public = make([]subnetConfiguration, len(vpc.PublicSubnetCIDRs))
 	cfg.Subnets.Private = make([]subnetConfiguration, len(vpc.PrivateSubnetCIDRs))
 	for i, cidr := range vpc.PublicSubnetCIDRs {
 		cfg.Subnets.Public[i].CIDR = ipNetP(cidr)
-		if hasCustomAZNames {
+		if len(vpc.AZs) > i {
 			cfg.Subnets.Public[i].AZ = stringP(vpc.AZs[i])
 		}
 	}
 	for i, cidr := range vpc.PrivateSubnetCIDRs {
 		cfg.Subnets.Private[i].CIDR = ipNetP(cidr)
-		if hasCustomAZNames {
+		if len(vpc.AZs) > i {
 			cfg.Subnets.Private[i].AZ = stringP(vpc.AZs[i])
 		}
 	}
@@ -202,7 +201,7 @@ func (o *environmentObservability) IsEmpty() bool {
 	return o == nil || o.ContainerInsights == nil
 }
 
-func (o *environmentObservability) loadConfig(tele *config.Telemetry) {
+func (o *environmentObservability) loadObsConfig(tele *config.Telemetry) {
 	if tele == nil {
 		return
 	}
