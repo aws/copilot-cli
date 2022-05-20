@@ -31,6 +31,9 @@ Parameters:
   CreateHTTPSListener:
     Type: String
     AllowedValues: [true, false]
+  CreateInternalHTTPSListener:
+    Type: String
+    AllowedValues: [true, false]
   ServiceDiscoveryEndpoint:
     Type: String
 Conditions:
@@ -45,7 +48,7 @@ Conditions:
     - !Equals [!Ref CreateHTTPSListener, true]
   ExportInternalHTTPSListener: !And
     - !Condition CreateInternalALB
-    - !Equals [!Ref CreateHTTPSListener, true]
+    - !Equals [!Ref CreateInternalHTTPSListener, true]
   CreateEFS:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
