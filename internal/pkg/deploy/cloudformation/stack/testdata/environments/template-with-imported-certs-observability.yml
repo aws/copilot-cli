@@ -434,9 +434,9 @@ Resources:
       Certificates:
         - CertificateArn: cert-1
       DefaultActions:
-        - TargetGroupArn: !Ref DefaultHTTPTargetGroup
+        - TargetGroupArn: !Ref DefaultInternalHTTPTargetGroup
           Type: forward
-      LoadBalancerArn: !Ref PublicLoadBalancer
+      LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 443
       Protocol: HTTPS
   InternalHTTPSImportCertificate2:
