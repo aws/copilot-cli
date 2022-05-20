@@ -50,3 +50,9 @@ environments:
     command: crazy diamond
     variables:
       LOG_LEVEL: debug        # Log level for the "test" environment.
+  prod:
+    network:
+      vpc:
+        placement:
+          subnets: ["mockSubnetARN1", "mockSubnetARN2"]
+    
