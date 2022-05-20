@@ -326,7 +326,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
     Condition: ExportInternalHTTPSListener
     Properties:
-      ListenerArn: !Ref HTTPSListener
+      ListenerArn: !Ref InternalHTTPSListener
       Certificates:
         - CertificateArn: {{$arn}}
 {{- end}}

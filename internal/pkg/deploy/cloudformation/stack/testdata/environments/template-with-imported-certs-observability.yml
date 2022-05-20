@@ -428,7 +428,7 @@ Resources:
     Condition: CreateInternalALB
     Properties:
       DefaultActions:
-        - TargetGroupArn: !Ref DefaultInternalALBHTTPTargetGroup
+        - TargetGroupArn: !Ref DefaultInternalHTTPTargetGroup
           Type: forward
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 80
@@ -907,6 +907,21 @@ Outputs:
     Value: !Ref DefaultHTTPTargetGroup
     Export:
       Name: !Sub ${AWS::StackName}-DefaultHTTPTargetGroup
+  InternalLoadBalancerDNSName:
+    Condition: CreateInternalALB
+    Value: !GetAtt InternalLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalLoadBalancerDNS
+    InternalHTTPListenerArn:
+      Condition: CreateInternalALB
+      Value: !Ref InternalHTTPListener
+      Export:
+        Name: !Sub ${AWS::StackName}-InternalHTTPListenerArn
+    InternalHTTPSListenerArn:
+      Condition: ExportInternalHTTPSListener
+      Value: !Ref InternalHTTPSListener
+      Export:
+        Name: !Sub ${AWS::StackName}-InternalHTTPSListenerArn
   ClusterId:
     Value: !Ref Cluster
     Export:
