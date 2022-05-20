@@ -904,16 +904,16 @@ Outputs:
     Value: !GetAtt InternalLoadBalancer.DNSName
     Export:
       Name: !Sub ${AWS::StackName}-InternalLoadBalancerDNS
-    InternalHTTPListenerArn:
-      Condition: CreateInternalALB
-      Value: !Ref InternalHTTPListener
-      Export:
-        Name: !Sub ${AWS::StackName}-InternalHTTPListenerArn
-    InternalHTTPSListenerArn:
-      Condition: ExportInternalHTTPSListener
-      Value: !Ref InternalHTTPSListener
-      Export:
-        Name: !Sub ${AWS::StackName}-InternalHTTPSListenerArn
+  InternalHTTPListenerArn:
+    Condition: CreateInternalALB
+    Value: !Ref InternalHTTPListener
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalHTTPListenerArn
+  InternalHTTPSListenerArn:
+    Condition: ExportInternalHTTPSListener
+    Value: !Ref InternalHTTPSListener
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalHTTPSListenerArn
   ClusterId:
     Value: !Ref Cluster
     Export:
