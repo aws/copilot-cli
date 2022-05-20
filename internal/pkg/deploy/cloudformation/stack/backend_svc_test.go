@@ -402,8 +402,10 @@ Outputs:
 
 			if tc.setUpManifest != nil {
 				tc.setUpManifest(conf)
-				privatePlacement := manifest.Placement(manifest.PrivateSubnetPlacement)
-				conf.manifest.Network.VPC.Placement = &privatePlacement
+				privatePlacement := manifest.PlacementString(manifest.PrivateSubnetPlacement)
+				conf.manifest.Network.VPC.Placement = manifest.PlacementArgOrString{
+					PlacementString: &privatePlacement,
+				}
 				conf.manifest.Network.VPC.SecurityGroups = []string{"sg-1234"}
 			}
 

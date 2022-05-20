@@ -420,6 +420,7 @@ type DeadLetterQueue struct {
 type NetworkOpts struct {
 	AssignPublicIP string
 	SubnetsType    string
+	SubnetIDs      []string
 	SecurityGroups []string
 }
 

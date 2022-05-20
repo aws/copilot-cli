@@ -580,10 +580,15 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 		SubnetsType:    template.PublicSubnetsPlacement,
 		SecurityGroups: network.VPC.SecurityGroups,
 	}
-	if network.VPC.Placement == nil {
+	placement := network.VPC.Placement
+	if placement.IsEmpty() {
 		return opts
 	}
-	if *network.VPC.Placement != manifest.PublicSubnetPlacement {
+	if placement.PlacementString == nil {
+		opts.SubnetIDs = placement.PlacementArgs.Subnets
+		return opts
+	}
+	if *placement.PlacementString != manifest.PublicSubnetPlacement {
 		opts.AssignPublicIP = template.DisablePublicIP
 		opts.SubnetsType = template.PrivateSubnetsPlacement
 	}
@@ -595,10 +600,15 @@ func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkCon
 	if network.IsEmpty() {
 		return opts
 	}
-	if network.VPC.Placement == nil {
+	placement := network.VPC.Placement
+	if placement.IsEmpty() {
 		return opts
 	}
-	if string(*network.VPC.Placement) == string(manifest.PrivateSubnetPlacement) {
+	if placement.PlacementString == nil {
+		opts.SubnetIDs = placement.PlacementArgs.Subnets
+		return opts
+	}
+	if string(*placement.PlacementString) != string(manifest.PublicSubnetPlacement) {
 		opts.SubnetsType = template.PrivateSubnetsPlacement
 	}
 	return opts

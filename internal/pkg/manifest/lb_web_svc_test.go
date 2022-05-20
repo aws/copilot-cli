@@ -72,7 +72,9 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: placementP(PublicSubnetPlacement),
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 						},
 					},
 				},
@@ -146,7 +148,9 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: placementP(PublicSubnetPlacement),
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 						},
 					},
 				},
@@ -454,7 +458,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      placementP(PublicSubnetPlacement),
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 							SecurityGroups: []string{"sg-123"},
 						},
 					},
@@ -615,7 +621,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      placementP(PublicSubnetPlacement),
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
@@ -686,7 +694,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      placementP(PublicSubnetPlacement),
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
@@ -710,7 +720,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      placementP(PublicSubnetPlacement),
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},

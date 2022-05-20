@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -60,15 +61,48 @@ func (c *RequestDrivenWebServiceNetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
 }
 
-// RequestDrivenWebServicePlacement represents where to place tasks for a Request-Driven Web Service.
-type RequestDrivenWebServicePlacement Placement
+// RequestDrivenWebServicePlacement represents what types of subnets to place tasks.
+type RequestDrivenWebServicePlacementString PlacementString
+
+// RequestDrivenWebServicePlacementArgOrString represents where to place tasks for a Request-Driven Web Service.
+type RequestDrivenWebServicePlacementArgOrString struct {
+	PlacementString *RequestDrivenWebServicePlacementString
+	PlacementArgs
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (p *RequestDrivenWebServicePlacementArgOrString) IsEmpty() bool {
+	return p.PlacementString == nil && p.PlacementArgs.isEmpty()
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the PlacementArgOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (p *RequestDrivenWebServicePlacementArgOrString) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&p.PlacementArgs); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+	if !p.PlacementArgs.isEmpty() {
+		p.PlacementString = nil
+		return nil
+	}
+	if err := value.Decode(&p.PlacementString); err != nil {
+		return errUnmarshalPlacementOpts
+	}
+	return nil
+}
 
 type rdwsVpcConfig struct {
-	Placement *RequestDrivenWebServicePlacement `yaml:"placement"`
+	Placement RequestDrivenWebServicePlacementArgOrString `yaml:"placement"`
 }
 
 func (c *rdwsVpcConfig) isEmpty() bool {
-	return c.Placement == nil
+	return c.Placement.IsEmpty()
 }
 
 // RequestDrivenWebServiceHttpConfig represents options for configuring http.

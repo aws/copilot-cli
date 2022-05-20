@@ -83,7 +83,9 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
@@ -404,7 +406,9 @@ func TestBackendService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -607,7 +611,9 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 					},
 					Network: RequestDrivenWebServiceNetworkConfig{
 						VPC: rdwsVpcConfig{
-							Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
+							Placement: RequestDrivenWebServicePlacementArgOrString{
+								PlacementString: (*RequestDrivenWebServicePlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -710,7 +716,9 @@ func TestWorkerService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -914,7 +922,9 @@ func TestScheduledJob_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -2099,7 +2109,9 @@ func TestNetworkConfig_Validate(t *testing.T) {
 		"error if fail to validate vpc": {
 			config: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: (*Placement)(aws.String("")),
+					Placement: PlacementArgOrString{
+						PlacementString: (*PlacementString)(aws.String("")),
+					},
 				},
 			},
 			wantedErrorPrefix: `validate "vpc": `,
@@ -2127,7 +2139,9 @@ func TestRequestDrivenWebServiceNetworkConfig_Validate(t *testing.T) {
 		"error if fail to validate vpc": {
 			config: RequestDrivenWebServiceNetworkConfig{
 				VPC: rdwsVpcConfig{
-					Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
+					Placement: RequestDrivenWebServicePlacementArgOrString{
+						PlacementString: (*RequestDrivenWebServicePlacementString)(aws.String("")),
+					},
 				},
 			},
 			wantedErrorPrefix: `validate "vpc": `,
@@ -2154,7 +2168,9 @@ func TestRdwsVpcConfig_Validate(t *testing.T) {
 	}{
 		"error if fail to validate placement": {
 			config: rdwsVpcConfig{
-				Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
+				Placement: RequestDrivenWebServicePlacementArgOrString{
+					PlacementString: (*RequestDrivenWebServicePlacementString)(aws.String("")),
+				},
 			},
 			wantedErrorPrefix: `validate "placement": `,
 		},
@@ -2180,7 +2196,9 @@ func TestVpcConfig_Validate(t *testing.T) {
 	}{
 		"error if fail to validate placement": {
 			config: vpcConfig{
-				Placement: (*Placement)(aws.String("")),
+				Placement: PlacementArgOrString{
+					PlacementString: (*PlacementString)(aws.String("")),
+				},
 			},
 			wantedErrorPrefix: `validate "placement": `,
 		},
@@ -2198,11 +2216,11 @@ func TestVpcConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestPlacement_Validate(t *testing.T) {
-	mockEmptyPlacement := Placement("")
-	mockInvalidPlacement := Placement("external")
+func TestPlacementString_Validate(t *testing.T) {
+	mockEmptyPlacement := PlacementString("")
+	mockInvalidPlacement := PlacementString("external")
 	testCases := map[string]struct {
-		in     *Placement
+		in     *PlacementString
 		wanted error
 	}{
 		"should return an error if placement is empty": {
@@ -2227,13 +2245,13 @@ func TestPlacement_Validate(t *testing.T) {
 	}
 }
 
-func TestRequestDrivenWebServicePlacement_Validate(t *testing.T) {
+func TestRequestDrivenWebServicePlacementString_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		in     *RequestDrivenWebServicePlacement
+		in     *RequestDrivenWebServicePlacementString
 		wanted error
 	}{
 		"should return an error if placement is public": {
-			in:     (*RequestDrivenWebServicePlacement)(aws.String("public")),
+			in:     (*RequestDrivenWebServicePlacementString)(aws.String("public")),
 			wanted: errors.New(`placement "public" is not supported for Request-Driven Web Service`),
 		},
 	}
