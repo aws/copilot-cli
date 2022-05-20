@@ -126,7 +126,7 @@ filter_policy:
       - ">="
       - 100
 ```
-さらにフィルターポリシーの書き方に関するさらに詳しい情報については、[SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html)を確認してください。
+フィルターポリシーの書き方に関するさらに詳しい情報については、[SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html)を確認してください。
 
 
 <span class="parent-field">topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>
