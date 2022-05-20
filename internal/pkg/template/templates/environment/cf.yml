@@ -311,8 +311,6 @@ Resources:
       Certificates:
 {{- if .ImportCertARNs}}
         - CertificateArn: {{index .ImportCertARNs 0}}
-{{- else}}
-        - CertificateArn: !Ref HTTPSCert
 {{- end}}
       DefaultActions:
         - TargetGroupArn: !Ref DefaultHTTPTargetGroup
