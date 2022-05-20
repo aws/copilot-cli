@@ -63,7 +63,7 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 		showEnvVars: vars,
 		store:       store,
 		w:           log.OutputWriter,
-		sel:         selector.NewConfigSelect(prompt.New(), store),
+		sel:         selector.NewConfigSelector(prompt.New(), store),
 	}
 	opts.initEnvDescriber = func() error {
 		d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{

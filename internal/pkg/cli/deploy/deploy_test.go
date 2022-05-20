@@ -1103,3 +1103,144 @@ func Test_validateTopicsExist(t *testing.T) {
 		})
 	}
 }
+
+func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
+	const (
+		mockAppName = "mock-app"
+		mockEnvName = "mock-env"
+	)
+
+	tests := map[string]struct {
+		App        *config.Application
+		Env        *config.Environment
+		Manifest   *manifest.BackendService
+		setupMocks func(m *deployMocks)
+
+		expectedErr string
+	}{
+		"success if alb not configured": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+			},
+			Manifest: &manifest.BackendService{},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+			},
+		},
+		"success if alias configured, no env certs": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+			},
+			Manifest: &manifest.BackendService{
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					RoutingRule: manifest.RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+							Alias: manifest.Alias{
+								String: aws.String("go.dev"),
+							},
+						},
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+			},
+		},
+		"failure if cert validation fails": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: []string{"mockCertARN"},
+				},
+			},
+			Manifest: &manifest.BackendService{
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					RoutingRule: manifest.RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+							Alias: manifest.Alias{
+								String: aws.String("go.dev"),
+							},
+						},
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"go.dev"}, []string{"mockCertARN"}).Return(errors.New("some error"))
+			},
+			expectedErr: "validate aliases against the imported certificate for env mock-env: some error",
+		},
+		"success if cert validation succeeds": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: []string{"mockCertARN"},
+				},
+			},
+			Manifest: &manifest.BackendService{
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					RoutingRule: manifest.RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+							Alias: manifest.Alias{
+								String: aws.String("go.dev"),
+							},
+						},
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"go.dev"}, []string{"mockCertARN"}).Return(nil)
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := &deployMocks{
+				mockEndpointGetter: mocks.NewMockendpointGetter(ctrl),
+				mockValidator:      mocks.NewMockaliasCertValidator(ctrl),
+			}
+			if tc.setupMocks != nil {
+				tc.setupMocks(m)
+			}
+
+			deployer := &backendSvcDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: &workloadDeployer{
+						app:            tc.App,
+						env:            tc.Env,
+						endpointGetter: m.mockEndpointGetter,
+					},
+					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
+						return nil
+					},
+				},
+				backendMft:         tc.Manifest,
+				aliasCertValidator: m.mockValidator,
+			}
+
+			_, err := deployer.stackConfiguration(&StackRuntimeConfiguration{})
+			if tc.expectedErr != "" {
+				require.EqualError(t, err, tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

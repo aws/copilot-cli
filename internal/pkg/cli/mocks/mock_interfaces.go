@@ -2761,6 +2761,44 @@ func (mr *MockwsWlDirReaderMockRecorder) Summary() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Summary", reflect.TypeOf((*MockwsWlDirReader)(nil).Summary))
 }
 
+// MockwsEnvironmentReader is a mock of wsEnvironmentReader interface.
+type MockwsEnvironmentReader struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsEnvironmentReaderMockRecorder
+}
+
+// MockwsEnvironmentReaderMockRecorder is the mock recorder for MockwsEnvironmentReader.
+type MockwsEnvironmentReaderMockRecorder struct {
+	mock *MockwsEnvironmentReader
+}
+
+// NewMockwsEnvironmentReader creates a new mock instance.
+func NewMockwsEnvironmentReader(ctrl *gomock.Controller) *MockwsEnvironmentReader {
+	mock := &MockwsEnvironmentReader{ctrl: ctrl}
+	mock.recorder = &MockwsEnvironmentReaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsEnvironmentReader) EXPECT() *MockwsEnvironmentReaderMockRecorder {
+	return m.recorder
+}
+
+// ReadEnvironmentManifest mocks base method.
+func (m *MockwsEnvironmentReader) ReadEnvironmentManifest(mftDirName string) (workspace.EnvironmentManifest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadEnvironmentManifest", mftDirName)
+	ret0, _ := ret[0].(workspace.EnvironmentManifest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadEnvironmentManifest indicates an expected call of ReadEnvironmentManifest.
+func (mr *MockwsEnvironmentReaderMockRecorder) ReadEnvironmentManifest(mftDirName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadEnvironmentManifest", reflect.TypeOf((*MockwsEnvironmentReader)(nil).ReadEnvironmentManifest), mftDirName)
+}
+
 // MockwsPipelineReader is a mock of wsPipelineReader interface.
 type MockwsPipelineReader struct {
 	ctrl     *gomock.Controller
@@ -6667,4 +6705,56 @@ func (m *MockworkloadTemplateGenerator) UploadArtifacts() (*deploy.UploadArtifac
 func (mr *MockworkloadTemplateGeneratorMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).UploadArtifacts))
+}
+
+// MockenvDeployer is a mock of envDeployer interface.
+type MockenvDeployer struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvDeployerMockRecorder
+}
+
+// MockenvDeployerMockRecorder is the mock recorder for MockenvDeployer.
+type MockenvDeployerMockRecorder struct {
+	mock *MockenvDeployer
+}
+
+// NewMockenvDeployer creates a new mock instance.
+func NewMockenvDeployer(ctrl *gomock.Controller) *MockenvDeployer {
+	mock := &MockenvDeployer{ctrl: ctrl}
+	mock.recorder = &MockenvDeployerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockenvDeployer) EXPECT() *MockenvDeployerMockRecorder {
+	return m.recorder
+}
+
+// DeployEnvironment mocks base method.
+func (m *MockenvDeployer) DeployEnvironment(in *deploy.DeployEnvironmentInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployEnvironment", in)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeployEnvironment indicates an expected call of DeployEnvironment.
+func (mr *MockenvDeployerMockRecorder) DeployEnvironment(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployEnvironment", reflect.TypeOf((*MockenvDeployer)(nil).DeployEnvironment), in)
+}
+
+// UploadArtifacts mocks base method.
+func (m *MockenvDeployer) UploadArtifacts() (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadArtifacts")
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadArtifacts indicates an expected call of UploadArtifacts.
+func (mr *MockenvDeployerMockRecorder) UploadArtifacts() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockenvDeployer)(nil).UploadArtifacts))
 }

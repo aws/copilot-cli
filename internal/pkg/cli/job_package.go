@@ -70,7 +70,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 		ws:             ws,
 		store:          store,
 		runner:         exec.NewCmd(),
-		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:            selector.NewWorkspaceSelector(prompter, store, ws),
 		prompt:         prompter,
 	}
 

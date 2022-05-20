@@ -97,7 +97,7 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 		secretPutters:  make(map[string]secretPutter),
 
 		prompter: prompter,
-		selector: selector.NewSelect(prompter, store),
+		selector: selector.NewAppEnvSelector(prompter, store),
 	}
 
 	opts.configureClientsForEnv = func(envName string) error {
