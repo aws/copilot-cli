@@ -609,7 +609,7 @@ func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkCon
 		opts.SubnetIDs = placement.PlacementArgs.Subnets
 		return opts
 	}
-	if string(*placement.PlacementString) != string(manifest.PublicSubnetPlacement) {
+	if *placement.PlacementString != manifest.PublicSubnetPlacement {
 		opts.SubnetsType = template.PrivateSubnetsPlacement
 	}
 	return opts
