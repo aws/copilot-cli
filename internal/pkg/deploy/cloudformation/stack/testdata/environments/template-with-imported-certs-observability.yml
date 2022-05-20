@@ -42,6 +42,9 @@ Conditions:
   ExportHTTPSListener: !And
     - !Condition CreateALB
     - !Equals [!Ref CreateHTTPSListener, true]
+  ExportInternalHTTPSListener: !And
+    - !Condition CreateInternalALB
+    - !Equals [ !Ref CreateHTTPSListener, true]
   CreateEFS:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateInternalALB:
@@ -276,6 +279,17 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the internal load balancer
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 443
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
       VpcId: !Ref VPC
       Tags:
         - Key: Name
@@ -332,16 +346,6 @@ Resources:
       SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
       Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2,  ]
       Type: application
-  InternalLoadBalancer:
-    Metadata:
-      'aws:copilot:description': 'An internal Application Load Balancer to distribute private traffic from within the VPC to your services'
-    Condition: CreateInternalALB
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Scheme: internal
-      SecurityGroups: [ !GetAtt InternalLoadBalancerSecurityGroup.GroupId ]
-      Subnets: [ !Ref PrivateSubnet1, !Ref PrivateSubnet2,  ]
-      Type: application
   # Assign a dummy target group that with no real services as targets, so that we can create
   # the listeners for the services.
   DefaultHTTPTargetGroup:
@@ -392,7 +396,17 @@ Resources:
       ListenerArn: !Ref HTTPSListener
       Certificates:
         - CertificateArn: cert-2
-  DefaultInternalALBHTTPTargetGroup:
+  InternalLoadBalancer:
+    Metadata:
+      'aws:copilot:description': 'An internal Application Load Balancer to distribute private traffic from within the VPC to your services'
+    Condition: CreateInternalALB
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internal
+      SecurityGroups: [ !GetAtt InternalLoadBalancerSecurityGroup.GroupId ]
+      Subnets: [ !Ref PrivateSubnet1, !Ref PrivateSubnet2, ]
+      Type: application
+  DefaultInternalHTTPTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Condition: CreateInternalALB
     Properties:
@@ -407,7 +421,7 @@ Resources:
           Value: 60                  # Default is 300.
       TargetType: ip
       VpcId: !Ref VPC
-  InternalALBHTTPListener:
+  InternalHTTPListener:
     Metadata:
       'aws:copilot:description': 'An internal load balancer listener to route HTTP traffic'
     Type: AWS::ElasticLoadBalancingV2::Listener
@@ -419,6 +433,27 @@ Resources:
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 80
       Protocol: HTTP
+  InternalHTTPSListener:
+    Metadata:
+      'aws:copilot:description': 'An internal load balancer listener to route HTTPS traffic'
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: ExportInternalHTTPSListener
+    Properties:
+      Certificates:
+        - CertificateArn: cert-1
+      DefaultActions:
+        - TargetGroupArn: !Ref DefaultHTTPTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+  InternalHTTPSImportCertificate2:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Condition: ExportInternalHTTPSListener
+    Properties:
+      ListenerArn: !Ref InternalHTTPSListener
+      Certificates:
+        - CertificateArn: cert-2
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
