@@ -132,6 +132,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
+				},
 			},
 		},
 		"with DNS": {
@@ -184,6 +188,10 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamNATWorkloadsKey),
 					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
 				},
 			},
 		},
