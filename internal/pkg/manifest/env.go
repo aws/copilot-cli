@@ -69,28 +69,32 @@ type environmentVPCConfig struct {
 	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
 }
 
-func (cfg *environmentVPCConfig) loadVPCConfig(vpc *config.CustomizeEnv) {
-	if vpc.IsEmpty() {
+func (cfg *environmentVPCConfig) loadVPCConfig(env *config.CustomizeEnv) {
+	if env.IsEmpty() {
 		return
 	}
-	if adjusted := vpc.VPCConfig; adjusted != nil {
+	if adjusted := env.VPCConfig; adjusted != nil {
 		cfg.loadAdjustedVPCConfig(adjusted)
 	}
-	if imported := vpc.ImportVPC; imported != nil {
+	if imported := env.ImportVPC; imported != nil {
 		cfg.loadImportedVPCConfig(imported)
 	}
 }
 
 func (cfg *environmentVPCConfig) loadAdjustedVPCConfig(vpc *config.AdjustVPC) {
 	cfg.CIDR = ipNetP(vpc.CIDR)
+	hasCustomAZNames := len(vpc.AZs) > 0
 	cfg.Subnets.Public = make([]subnetConfiguration, len(vpc.PublicSubnetCIDRs))
 	cfg.Subnets.Private = make([]subnetConfiguration, len(vpc.PrivateSubnetCIDRs))
-	hasCustomAZNames := len(vpc.AZs) > 0
-	for i := range vpc.PublicSubnetCIDRs {
-		cfg.Subnets.Public[i].CIDR = ipNetP(vpc.PublicSubnetCIDRs[i])
-		cfg.Subnets.Private[i].CIDR = ipNetP(vpc.PrivateSubnetCIDRs[i])
+	for i, cidr := range vpc.PublicSubnetCIDRs {
+		cfg.Subnets.Public[i].CIDR = ipNetP(cidr)
 		if hasCustomAZNames {
 			cfg.Subnets.Public[i].AZ = stringP(vpc.AZs[i])
+		}
+	}
+	for i, cidr := range vpc.PrivateSubnetCIDRs {
+		cfg.Subnets.Private[i].CIDR = ipNetP(cidr)
+		if hasCustomAZNames {
 			cfg.Subnets.Private[i].AZ = stringP(vpc.AZs[i])
 		}
 	}
@@ -102,7 +106,7 @@ func (cfg *environmentVPCConfig) loadImportedVPCConfig(vpc *config.ImportVPC) {
 	for i, subnet := range vpc.PublicSubnetIDs {
 		cfg.Subnets.Public[i].SubnetID = stringP(subnet)
 	}
-	cfg.Subnets.Private = make([]subnetConfiguration, len(vpc.PublicSubnetIDs))
+	cfg.Subnets.Private = make([]subnetConfiguration, len(vpc.PrivateSubnetIDs))
 	for i, subnet := range vpc.PrivateSubnetIDs {
 		cfg.Subnets.Private[i].SubnetID = stringP(subnet)
 	}
