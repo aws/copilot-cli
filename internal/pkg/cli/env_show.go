@@ -34,6 +34,7 @@ type showEnvVars struct {
 	name                  string
 	shouldOutputJSON      bool
 	shouldOutputResources bool
+	shouldOutputManifest  bool
 }
 
 type showEnvOpts struct {
@@ -82,28 +83,23 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 	return opts, nil
 }
 
-// Validate returns an error if the values provided by the user are invalid.
+// Validate returns an error if any optional flags are invalid.
 func (o *showEnvOpts) Validate() error {
-	if o.appName == "" {
-		return nil
+	if o.shouldOutputManifest && o.shouldOutputResources {
+		return fmt.Errorf("--%s and --%s cannot be specified together", manifestFlag, resourcesFlag)
 	}
-	if _, err := o.store.GetApplication(o.appName); err != nil {
-		return err
-	}
-	if o.name != "" {
-		if _, err := o.store.GetEnvironment(o.appName, o.name); err != nil {
-			return err
-		}
+	if o.shouldOutputManifest && o.shouldOutputJSON {
+		return fmt.Errorf("--%s and --%s cannot be specified together", manifestFlag, jsonFlag)
 	}
 	return nil
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask validates required fields that users passed in, otherwise it prompts for them.
 func (o *showEnvOpts) Ask() error {
-	if err := o.askApp(); err != nil {
+	if err := o.validateOrAskApp(); err != nil {
 		return err
 	}
-	return o.askEnvName()
+	return o.validateOrAskEnv()
 }
 
 // Execute shows the environments through the prompt.
@@ -128,9 +124,9 @@ func (o *showEnvOpts) Execute() error {
 	return nil
 }
 
-func (o *showEnvOpts) askApp() error {
+func (o *showEnvOpts) validateOrAskApp() error {
 	if o.appName != "" {
-		return nil
+		return o.validateApp()
 	}
 	app, err := o.sel.Application(envShowAppNamePrompt, envShowAppNameHelpPrompt)
 	if err != nil {
@@ -140,17 +136,31 @@ func (o *showEnvOpts) askApp() error {
 	return nil
 }
 
-func (o *showEnvOpts) askEnvName() error {
-	//return if env name is set by flag
+func (o *showEnvOpts) validateApp() error {
+	_, err := o.store.GetApplication(o.appName)
+	if err != nil {
+		return fmt.Errorf("validate application name '%s': %v", o.appName, err)
+	}
+	return nil
+}
+
+func (o *showEnvOpts) validateOrAskEnv() error {
 	if o.name != "" {
-		return nil
+		return o.validateEnv()
 	}
 	env, err := o.sel.Environment(fmt.Sprintf(envShowNamePrompt, color.HighlightUserInput(o.appName)), envShowHelpPrompt, o.appName)
 	if err != nil {
 		return fmt.Errorf("select environment for application %s: %w", o.appName, err)
 	}
 	o.name = env
+	return nil
+}
 
+func (o *showEnvOpts) validateEnv() error {
+	_, err := o.store.GetEnvironment(o.appName, o.name)
+	if err != nil {
+		return fmt.Errorf("validate environment name '%s' in application '%s': %v", o.name, o.appName, err)
+	}
 	return nil
 }
 
@@ -177,5 +187,7 @@ func buildEnvShowCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, envResourcesFlagDescription)
+	cmd.Flags().BoolVar(&vars.shouldOutputManifest, manifestFlag, false, manifestFlagDescription)
+	_ = cmd.Flags().MarkHidden(manifestFlag)
 	return cmd
 }

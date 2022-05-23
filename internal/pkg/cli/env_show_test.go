@@ -28,80 +28,32 @@ type showEnvMocks struct {
 
 func TestEnvShow_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inputApp         string
-		inputEnvironment string
-		setupMocks       func(mocks showEnvMocks)
+		inVars showEnvVars
 
 		wantedError error
 	}{
-		"skip validation is app flag is not set": {
-			inputEnvironment: "my-env",
-
-			setupMocks: func(m showEnvMocks) {},
-		},
-		"valid app name and environment name": {
-			inputApp:         "my-app",
-			inputEnvironment: "my-env",
-
-			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name: "my-env",
-					}, nil),
-				)
+		"should error when --manifest and --json are used together": {
+			inVars: showEnvVars{
+				shouldOutputManifest: true,
+				shouldOutputJSON:     true,
 			},
-
-			wantedError: nil,
+			wantedError: errors.New("--manifest and --json cannot be specified together"),
 		},
-		"invalid app name": {
-			inputApp:         "my-app",
-			inputEnvironment: "my-env",
-
-			setupMocks: func(m showEnvMocks) {
-				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
+		"should error when --manifest and --resources are used together": {
+			inVars: showEnvVars{
+				shouldOutputManifest:  true,
+				shouldOutputResources: true,
 			},
-
-			wantedError: fmt.Errorf("some error"),
+			wantedError: errors.New("--manifest and --resources cannot be specified together"),
 		},
-		"invalid environment name": {
-			inputApp:         "my-app",
-			inputEnvironment: "my-env",
-
-			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-						Name: "my-app",
-					}, nil),
-					m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(nil, errors.New("some error")),
-				)
-			},
-
-			wantedError: fmt.Errorf("some error"),
-		},
+		"should not error by default": {},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockStoreReader := mocks.NewMockstore(ctrl)
-
-			mocks := showEnvMocks{
-				storeSvc: mockStoreReader,
-			}
-
-			tc.setupMocks(mocks)
 
 			showEnvs := &showEnvOpts{
-				showEnvVars: showEnvVars{
-					name:    tc.inputEnvironment,
-					appName: tc.inputApp,
-				},
-				store: mockStoreReader,
+				showEnvVars: tc.inVars,
 			}
 
 			// WHEN
@@ -129,14 +81,35 @@ func TestEnvShow_Ask(t *testing.T) {
 		wantedEnv   string
 		wantedError error
 	}{
-		"with all flags": {
+		"ensure resources are registered in SSM if users passes flags": {
 			inputApp: "my-app",
 			inputEnv: "my-env",
 
-			setupMocks: func(mocks showEnvMocks) {},
+			setupMocks: func(m showEnvMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, nil)
+				m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(nil, nil)
+			},
 
 			wantedApp: "my-app",
 			wantedEnv: "my-env",
+		},
+		"should wrap error if validation of app name fails": {
+			inputApp: "my-app",
+
+			setupMocks: func(m showEnvMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, mockErr)
+			},
+			wantedError: errors.New("validate application name 'my-app': some error"),
+		},
+		"should wrap error if validation of env name fails": {
+			inputApp: "my-app",
+			inputEnv: "my-env",
+
+			setupMocks: func(m showEnvMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, nil)
+				m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(nil, mockErr)
+			},
+			wantedError: errors.New("validate environment name 'my-env' in application 'my-app': some error"),
 		},
 		"returns error when fail to select app": {
 			inputApp: "",
@@ -153,6 +126,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			inputEnv: "",
 
 			setupMocks: func(m showEnvMocks) {
+				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, nil)
 				m.sel.EXPECT().Environment(fmt.Sprintf(envShowNamePrompt, color.HighlightUserInput("my-app")), envShowHelpPrompt, "my-app").Return("", mockErr)
 			},
 
@@ -180,9 +154,11 @@ func TestEnvShow_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockSelector := mocks.NewMockconfigSelector(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
 
 			mocks := showEnvMocks{
-				sel: mockSelector,
+				sel:      mockSelector,
+				storeSvc: mockStore,
 			}
 
 			tc.setupMocks(mocks)
@@ -192,7 +168,8 @@ func TestEnvShow_Ask(t *testing.T) {
 					name:    tc.inputEnv,
 					appName: tc.inputApp,
 				},
-				sel: mockSelector,
+				sel:   mockSelector,
+				store: mockStore,
 			}
 			// WHEN
 			err := showEnvs.Ask()
