@@ -282,17 +282,6 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the internal load balancer
-      SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow from anyone on port 80
-          FromPort: 80
-          IpProtocol: tcp
-          ToPort: 80
-        - CidrIp: 0.0.0.0/0
-          Description: Allow from anyone on port 443
-          FromPort: 443
-          IpProtocol: tcp
-          ToPort: 443
       VpcId: !Ref VPC
       Tags:
         - Key: Name
@@ -329,6 +318,14 @@ Resources:
     Properties:
       Description: Ingress from other containers in the same security group
       GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+  InternalALBIngressFromEnvironmentSecurityGroup:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateInternalALB
+    Properties:
+      Description: Ingress from the env security group
+      GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
   PublicLoadBalancer:
@@ -917,6 +914,11 @@ Outputs:
     Value: !Ref InternalHTTPSListener
     Export:
       Name: !Sub ${AWS::StackName}-InternalHTTPSListenerArn
+  InternalLoadBalancerSecurityGroup:
+    Condition: CreateInternalALB
+    Value: !Ref InternalLoadBalancerSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalLoadBalancerSecurityGroup
   ClusterId:
     Value: !Ref Cluster
     Export:
