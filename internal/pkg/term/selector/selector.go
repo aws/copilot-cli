@@ -174,9 +174,16 @@ type ConfigSelector struct {
 	workloadLister configWorkloadLister
 }
 
-// LocalWorkloadSelector is an application and environment selector, but can also choose a service or an environment from the workspace.
+// LocalWorkloadSelector is an application and environment selector, but can also choose a service from the workspace.
 type LocalWorkloadSelector struct {
 	*ConfigSelector
+	ws      workspaceRetriever
+	appName string
+}
+
+// LocalEnvironmentSelector is an application and environment selector, but can also choose an environment from the workspace.
+type LocalEnvironmentSelector struct {
+	*AppEnvSelector
 	ws      workspaceRetriever
 	appName string
 }
@@ -721,7 +728,7 @@ func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error
 }
 
 // LocalEnvironment fetches all environments belong to the app in the workspace and prompts the user to select one.
-func (s *LocalWorkloadSelector) LocalEnvironment(msg, help string) (wl string, err error) {
+func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (wl string, err error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)

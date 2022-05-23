@@ -1270,12 +1270,10 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 			}
 			tc.setupMocks(m)
 
-			sel := LocalWorkloadSelector{
-				ConfigSelector: &ConfigSelector{
-					AppEnvSelector: &AppEnvSelector{
-						prompt:       m.prompt,
-						appEnvLister: m.configLister,
-					},
+			sel := LocalEnvironmentSelector{
+				AppEnvSelector: &AppEnvSelector{
+					prompt:       m.prompt,
+					appEnvLister: m.configLister,
 				},
 				ws: m.ws,
 			}
