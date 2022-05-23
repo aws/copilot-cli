@@ -68,7 +68,7 @@ type Summary struct {
 type Workspace struct {
 	workingDir string
 	copilotDir string
-	fsUtils    *afero.Afero
+	fs         *afero.Afero
 	logger     func(format string, args ...interface{})
 }
 
@@ -84,7 +84,7 @@ func New() (*Workspace, error) {
 	}
 	ws := Workspace{
 		workingDir: workingDir,
-		fsUtils:    fsUtils,
+		fs:         fsUtils,
 		logger:     logger,
 	}
 
@@ -129,9 +129,9 @@ func (ws *Workspace) Summary() (*Summary, error) {
 	if err != nil {
 		return nil, err
 	}
-	summaryFileExists, _ := ws.fsUtils.Exists(summaryPath) // If an err occurs, return no applications.
+	summaryFileExists, _ := ws.fs.Exists(summaryPath) // If an err occurs, return no applications.
 	if summaryFileExists {
-		value, err := ws.fsUtils.ReadFile(summaryPath)
+		value, err := ws.fs.ReadFile(summaryPath)
 		if err != nil {
 			return nil, err
 		}
@@ -214,7 +214,7 @@ func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
 		return nil, err
 	}
 
-	exists, err := ws.fsUtils.Exists(pipelinesDir)
+	exists, err := ws.fs.Exists(pipelinesDir)
 	switch {
 	case err != nil:
 		return nil, fmt.Errorf("check if pipelines directory exists at %q: %w", pipelinesDir, err)
@@ -223,7 +223,7 @@ func (ws *Workspace) ListPipelines() ([]PipelineManifest, error) {
 		return manifests, nil
 	}
 
-	files, err := ws.fsUtils.ReadDir(pipelinesDir)
+	files, err := ws.fs.ReadDir(pipelinesDir)
 	if err != nil {
 		return nil, fmt.Errorf("read directory %q: %w", pipelinesDir, err)
 	}
@@ -248,7 +248,7 @@ func (ws *Workspace) listWorkloads(match func(string) bool) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	files, err := ws.fsUtils.ReadDir(copilotPath)
+	files, err := ws.fs.ReadDir(copilotPath)
 	if err != nil {
 		return nil, fmt.Errorf("read directory %s: %w", copilotPath, err)
 	}
@@ -257,7 +257,7 @@ func (ws *Workspace) listWorkloads(match func(string) bool) ([]string, error) {
 		if !f.IsDir() {
 			continue
 		}
-		if exists, _ := ws.fsUtils.Exists(filepath.Join(copilotPath, f.Name(), manifestFileName)); !exists {
+		if exists, _ := ws.fs.Exists(filepath.Join(copilotPath, f.Name(), manifestFileName)); !exists {
 			// Swallow the error because we don't want to include any services that we don't have permissions to read.
 			continue
 		}
@@ -283,7 +283,7 @@ func (ws *Workspace) ListEnvironments() ([]string, error) {
 		return nil, err
 	}
 	envPath := filepath.Join(copilotPath, environmentsDirName)
-	files, err := ws.fsUtils.ReadDir(envPath)
+	files, err := ws.fs.ReadDir(envPath)
 	if err != nil {
 		return nil, fmt.Errorf("read directory %s: %w", envPath, err)
 	}
@@ -292,7 +292,7 @@ func (ws *Workspace) ListEnvironments() ([]string, error) {
 		if !f.IsDir() {
 			continue
 		}
-		if exists, _ := ws.fsUtils.Exists(filepath.Join(copilotPath, environmentsDirName, f.Name(), manifestFileName)); !exists {
+		if exists, _ := ws.fs.Exists(filepath.Join(copilotPath, environmentsDirName, f.Name(), manifestFileName)); !exists {
 			// Swallow the error because we don't want to include any environments that we don't have permissions to read.
 			continue
 		}
@@ -336,14 +336,14 @@ func (ws *Workspace) ReadEnvironmentManifest(mftDirName string) (EnvironmentMani
 
 // ReadPipelineManifest returns the contents of the pipeline manifest under the given path.
 func (ws *Workspace) ReadPipelineManifest(path string) (*manifest.Pipeline, error) {
-	manifestExists, err := ws.fsUtils.Exists(path)
+	manifestExists, err := ws.fs.Exists(path)
 	if err != nil {
 		return nil, err
 	}
 	if !manifestExists {
 		return nil, ErrNoPipelineInWorkspace
 	}
-	data, err := ws.fsUtils.ReadFile(path)
+	data, err := ws.fs.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read pipeline manifest: %w", err)
 	}
@@ -395,7 +395,7 @@ func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler, n
 // DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
 // This will be called during app delete, we do not want to delete any other generated files.
 func (ws *Workspace) DeleteWorkspaceFile() error {
-	return ws.fsUtils.Remove(filepath.Join(CopilotDirName, SummaryFileName))
+	return ws.fs.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
 
 // ReadAddonsDir returns a list of file names under a service's "addons/" directory.
@@ -406,7 +406,7 @@ func (ws *Workspace) ReadAddonsDir(svcName string) ([]string, error) {
 	}
 
 	var names []string
-	files, err := ws.fsUtils.ReadDir(filepath.Join(copilotPath, svcName, addonsDirName))
+	files, err := ws.fs.ReadDir(filepath.Join(copilotPath, svcName, addonsDirName))
 	if err != nil {
 		return nil, err
 	}
@@ -467,7 +467,7 @@ func (ws *Workspace) writeSummary(appName string) error {
 	if err != nil {
 		return err
 	}
-	return ws.fsUtils.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
+	return ws.fs.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
 }
 
 func (ws *Workspace) pipelinesDirPath() (string, error) {
@@ -493,7 +493,7 @@ func (ws *Workspace) createCopilotDir() error {
 	if existingWorkspace != "" {
 		return nil
 	}
-	return ws.fsUtils.Mkdir(CopilotDirName, 0755)
+	return ws.fs.Mkdir(CopilotDirName, 0755)
 }
 
 // Path returns the absolute path to the workspace.
@@ -528,7 +528,7 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 	searchingDir := ws.workingDir
 	for try := 0; try < maximumParentDirsToSearch; try++ {
 		currentDirectoryPath := filepath.Join(searchingDir, CopilotDirName)
-		inCurrentDirPath, err := ws.fsUtils.DirExists(currentDirectoryPath)
+		inCurrentDirPath, err := ws.fs.DirExists(currentDirectoryPath)
 		if err != nil {
 			return "", err
 		}
@@ -554,17 +554,17 @@ func (ws *Workspace) write(data []byte, elem ...string) (string, error) {
 	pathElems := append([]string{copilotPath}, elem...)
 	filename := filepath.Join(pathElems...)
 
-	if err := ws.fsUtils.MkdirAll(filepath.Dir(filename), 0755 /* -rwxr-xr-x */); err != nil {
+	if err := ws.fs.MkdirAll(filepath.Dir(filename), 0755 /* -rwxr-xr-x */); err != nil {
 		return "", fmt.Errorf("create directories for file %s: %w", filename, err)
 	}
-	exist, err := ws.fsUtils.Exists(filename)
+	exist, err := ws.fs.Exists(filename)
 	if err != nil {
 		return "", fmt.Errorf("check if manifest file %s exists: %w", filename, err)
 	}
 	if exist {
 		return "", &ErrFileExists{FileName: filename}
 	}
-	if err := ws.fsUtils.WriteFile(filename, data, 0644 /* -rw-r--r-- */); err != nil {
+	if err := ws.fs.WriteFile(filename, data, 0644 /* -rw-r--r-- */); err != nil {
 		return "", fmt.Errorf("write manifest file: %w", err)
 	}
 	return filename, nil
@@ -578,21 +578,21 @@ func (ws *Workspace) read(elem ...string) ([]byte, error) {
 	}
 	pathElems := append([]string{copilotPath}, elem...)
 	filename := filepath.Join(pathElems...)
-	exist, err := ws.fsUtils.Exists(filename)
+	exist, err := ws.fs.Exists(filename)
 	if err != nil {
 		return nil, fmt.Errorf("check if manifest file %s exists: %w", filename, err)
 	}
 	if !exist {
 		return nil, &ErrFileNotExists{FileName: filename}
 	}
-	return ws.fsUtils.ReadFile(filename)
+	return ws.fs.ReadFile(filename)
 }
 
 // ListDockerfiles returns the list of Dockerfiles within the current
 // working directory and a sub-directory level below. If an error occurs while
 // reading directories, or no Dockerfiles found returns the error.
 func (ws *Workspace) ListDockerfiles() ([]string, error) {
-	wdFiles, err := ws.fsUtils.ReadDir(ws.workingDir)
+	wdFiles, err := ws.fs.ReadDir(ws.workingDir)
 	if err != nil {
 		return nil, fmt.Errorf("read directory: %w", err)
 	}
@@ -609,7 +609,7 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 		}
 
 		// Add sub-directories containing a Dockerfile one level below current directory.
-		subFiles, err := ws.fsUtils.ReadDir(wdFile.Name())
+		subFiles, err := ws.fs.ReadDir(wdFile.Name())
 		if err != nil {
 			// swallow errors for unreadable directories
 			continue

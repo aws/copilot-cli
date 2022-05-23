@@ -95,7 +95,7 @@ func TestWorkspace_Path(t *testing.T) {
 
 			ws := Workspace{
 				workingDir: tc.workingDir,
-				fsUtils:    &afero.Afero{Fs: fs},
+				fs:         &afero.Afero{Fs: fs},
 				copilotDir: tc.presetManifestDir,
 			}
 			workspacePath, err := ws.Path()
@@ -149,7 +149,7 @@ func TestWorkspace_Summary(t *testing.T) {
 
 			ws := Workspace{
 				workingDir: tc.workingDir,
-				fsUtils:    &afero.Afero{Fs: fs},
+				fs:         &afero.Afero{Fs: fs},
 			}
 			summary, err := ws.Summary()
 			if tc.expectedError == nil {
@@ -225,7 +225,7 @@ func TestWorkspace_Create(t *testing.T) {
 
 			ws := Workspace{
 				workingDir: tc.workingDir,
-				fsUtils:    &afero.Afero{Fs: fs},
+				fs:         &afero.Afero{Fs: fs},
 			}
 			err := ws.Create(tc.appName)
 			if tc.expectedError == nil {
@@ -341,7 +341,7 @@ type: Load Balanced Web Service`))
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
 				copilotDir: tc.copilotDir,
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
 			}
@@ -435,7 +435,7 @@ type: Load Balanced Web Service`))
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
 				copilotDir: tc.copilotDir,
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
 			}
@@ -497,7 +497,7 @@ type: Scheduled Job`))
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
 				copilotDir: tc.copilotDir,
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
 			}
@@ -563,7 +563,7 @@ func TestWorkspace_ListEnvironments(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
 				copilotDir: tc.copilotDir,
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
 			}
@@ -775,7 +775,7 @@ version: 1
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
 				copilotDir: tc.copilotDir,
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
 				logger: logCollector,
@@ -870,7 +870,7 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 			// GIVEN
 			ws := &Workspace{
 				copilotDir: tc.copilotDirPath,
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
 			}
@@ -925,7 +925,7 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 			ws := &Workspace{
 				workingDir: "/",
 				copilotDir: "/copilot",
-				fsUtils:    utils,
+				fs:         utils,
 			}
 
 			// WHEN
@@ -1007,7 +1007,7 @@ flavor: vanilla`),
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
 				copilotDir: mockCopilotDir,
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: tc.mockFS(),
 				},
 			}
@@ -1100,7 +1100,7 @@ flavor: vanilla`),
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
 				copilotDir: "/copilot",
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: tc.mockFS(),
 				},
 			}
@@ -1170,7 +1170,7 @@ version: 0
 			fs := tc.fs()
 			ws := &Workspace{
 				copilotDir: copilotDir,
-				fsUtils:    &afero.Afero{Fs: fs},
+				fs:         &afero.Afero{Fs: fs},
 			}
 
 			// WHEN
@@ -1209,12 +1209,12 @@ func TestWorkspace_DeleteWorkspaceFile(t *testing.T) {
 			fs := tc.fs()
 			ws := &Workspace{
 				copilotDir: tc.copilotDir,
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: fs,
 				},
 			}
-			ws.fsUtils.MkdirAll("copilot", 0755)
-			ws.fsUtils.Create(tc.copilotDir + "/" + ".workspace")
+			ws.fs.MkdirAll("copilot", 0755)
+			ws.fs.Create(tc.copilotDir + "/" + ".workspace")
 
 			// WHEN
 			err := ws.DeleteWorkspaceFile()
@@ -1294,7 +1294,7 @@ func TestWorkspace_ListDockerfiles(t *testing.T) {
 			ws := &Workspace{
 				workingDir: "/",
 				copilotDir: "copilot",
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: fs,
 				},
 			}
@@ -1352,7 +1352,7 @@ func TestWorkspace_read(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
 				copilotDir: tc.copilotDir,
-				fsUtils: &afero.Afero{
+				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
 			}
@@ -1402,7 +1402,7 @@ func TestWorkspace_write(t *testing.T) {
 			ws := &Workspace{
 				workingDir: "/",
 				copilotDir: "/copilot",
-				fsUtils:    utils,
+				fs:         utils,
 			}
 
 			// WHEN
