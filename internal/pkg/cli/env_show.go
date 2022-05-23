@@ -107,20 +107,23 @@ func (o *showEnvOpts) Execute() error {
 	if err := o.initEnvDescriber(); err != nil {
 		return err
 	}
+	if o.shouldOutputManifest {
+		return o.writeManifest()
+	}
+
 	env, err := o.describer.Describe()
 	if err != nil {
 		return fmt.Errorf("describe environment %s: %w", o.name, err)
 	}
+	content := env.HumanString()
 	if o.shouldOutputJSON {
 		data, err := env.JSONString()
 		if err != nil {
 			return err
 		}
-		fmt.Fprint(o.w, data)
-	} else {
-		fmt.Fprint(o.w, env.HumanString())
+		content = data
 	}
-
+	fmt.Fprint(o.w, content)
 	return nil
 }
 
@@ -161,6 +164,15 @@ func (o *showEnvOpts) validateEnv() error {
 	if err != nil {
 		return fmt.Errorf("validate environment name '%s' in application '%s': %v", o.name, o.appName, err)
 	}
+	return nil
+}
+
+func (o *showEnvOpts) writeManifest() error {
+	out, err := o.describer.Manifest()
+	if err != nil {
+		return fmt.Errorf("fetch manifest for environment %s: %v", o.name, err)
+	}
+	fmt.Fprintln(o.w, string(out))
 	return nil
 }
 

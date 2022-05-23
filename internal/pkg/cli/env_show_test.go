@@ -187,63 +187,57 @@ func TestEnvShow_Ask(t *testing.T) {
 
 func TestEnvShow_Execute(t *testing.T) {
 	mockError := errors.New("some error")
-	testEnv := &config.Environment{
-		App:              "testApp",
-		Name:             "testEnv",
-		Region:           "us-west-2",
-		AccountID:        "123456789012",
-		Prod:             false,
-		RegistryURL:      "",
-		ExecutionRoleARN: "",
-		ManagerRoleARN:   "",
-	}
-	testSvc1 := &config.Workload{
-		App:  "testApp",
-		Name: "testSvc1",
-		Type: "load-balanced",
-	}
-	testSvc2 := &config.Workload{
-		App:  "testApp",
-		Name: "testSvc2",
-		Type: "load-balanced",
-	}
-	testSvc3 := &config.Workload{
-		App:  "testApp",
-		Name: "testSvc3",
-		Type: "load-balanced",
-	}
-	testJob1 := &config.Workload{
-		App:  "testApp",
-		Name: "testJob1",
-		Type: "Scheduled Job",
-	}
-	testJob2 := &config.Workload{
-		App:  "testApp",
-		Name: "testJob2",
-		Type: "Scheduled Job",
-	}
-	var wantedResources = []*stack.Resource{
-		{
-			Type:       "AWS::IAM::Role",
-			PhysicalID: "testApp-testEnv-CFNExecutionRole",
-		},
-		{
-			Type:       "testApp-testEnv-Cluster",
-			PhysicalID: "AWS::ECS::Cluster-jI63pYBWU6BZ",
-		},
-	}
-	mockTags := map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv", "key1": "value1", "key2": "value2"}
 	mockEnvDescription := describe.EnvDescription{
-		Environment: testEnv,
-		Services:    []*config.Workload{testSvc1, testSvc2, testSvc3},
-		Jobs:        []*config.Workload{testJob1, testJob2},
-		Tags:        mockTags,
-		Resources:   wantedResources,
+		Environment: &config.Environment{
+			App:              "testApp",
+			Name:             "testEnv",
+			Region:           "us-west-2",
+			AccountID:        "123456789012",
+			Prod:             false,
+			RegistryURL:      "",
+			ExecutionRoleARN: "",
+			ManagerRoleARN:   "",
+		},
+		Services: []*config.Workload{
+			{
+				App:  "testApp",
+				Name: "testSvc1",
+				Type: "load-balanced",
+			}, {
+				App:  "testApp",
+				Name: "testSvc2",
+				Type: "load-balanced",
+			}, {
+				App:  "testApp",
+				Name: "testSvc3",
+				Type: "load-balanced",
+			}},
+		Jobs: []*config.Workload{{
+			App:  "testApp",
+			Name: "testJob1",
+			Type: "Scheduled Job",
+		}, {
+			App:  "testApp",
+			Name: "testJob2",
+			Type: "Scheduled Job",
+		}},
+		Tags: map[string]string{"copilot-application": "testApp", "copilot-environment": "testEnv", "key1": "value1", "key2": "value2"},
+		Resources: []*stack.Resource{
+			{
+				Type:       "AWS::IAM::Role",
+				PhysicalID: "testApp-testEnv-CFNExecutionRole",
+			},
+			{
+				Type:       "testApp-testEnv-Cluster",
+				PhysicalID: "AWS::ECS::Cluster-jI63pYBWU6BZ",
+			},
+		},
 	}
 
 	testCases := map[string]struct {
-		inputEnv         string
-		shouldOutputJSON bool
+		inputEnv             string
+		shouldOutputJSON     bool
+		shouldOutputManifest bool
 
 		setupMocks func(mocks showEnvMocks)
 
@@ -253,9 +247,7 @@ func TestEnvShow_Execute(t *testing.T) {
 		"return error if fail to describe the env": {
 			inputEnv: "testEnv",
 			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					m.describer.EXPECT().Describe().Return(nil, mockError),
-				)
+				m.describer.EXPECT().Describe().Return(nil, mockError)
 			},
 
 			wantedError: fmt.Errorf("describe environment testEnv: some error"),
@@ -264,19 +256,15 @@ func TestEnvShow_Execute(t *testing.T) {
 			inputEnv:         "testEnv",
 			shouldOutputJSON: true,
 			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					m.describer.EXPECT().Describe().Return(&mockEnvDescription, mockError),
-				)
+				m.describer.EXPECT().Describe().Return(&mockEnvDescription, mockError)
 			},
 
 			wantedError: fmt.Errorf("describe environment testEnv: some error"),
 		},
-		"success in human format": {
+		"should print human format": {
 			inputEnv: "testEnv",
 			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					m.describer.EXPECT().Describe().Return(&mockEnvDescription, nil),
-				)
+				m.describer.EXPECT().Describe().Return(&mockEnvDescription, nil)
 			},
 
 			wantedContent: `About
@@ -311,16 +299,23 @@ Resources
   testApp-testEnv-Cluster  AWS::ECS::Cluster-jI63pYBWU6BZ
 `,
 		},
-		"success in JSON format": {
+		"should print JSON format": {
 			inputEnv:         "testEnv",
 			shouldOutputJSON: true,
 			setupMocks: func(m showEnvMocks) {
-				gomock.InOrder(
-					m.describer.EXPECT().Describe().Return(&mockEnvDescription, nil),
-				)
+				m.describer.EXPECT().Describe().Return(&mockEnvDescription, nil)
 			},
 
 			wantedContent: "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"jobs\":[{\"app\":\"testApp\",\"name\":\"testJob1\",\"type\":\"Scheduled Job\"},{\"app\":\"testApp\",\"name\":\"testJob2\",\"type\":\"Scheduled Job\"}],\"tags\":{\"copilot-application\":\"testApp\",\"copilot-environment\":\"testEnv\",\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}],\"environmentVPC\":{\"id\":\"\",\"publicSubnetIDs\":null,\"privateSubnetIDs\":null}}\n",
+		},
+		"should print manifest file": {
+			inputEnv:             "testEnv",
+			shouldOutputManifest: true,
+			setupMocks: func(m showEnvMocks) {
+				m.describer.EXPECT().Manifest().Return([]byte("hello"), nil)
+			},
+
+			wantedContent: "hello\n",
 		},
 	}
 
@@ -341,8 +336,9 @@ Resources
 
 			showEnvs := &showEnvOpts{
 				showEnvVars: showEnvVars{
-					name:             tc.inputEnv,
-					shouldOutputJSON: tc.shouldOutputJSON,
+					name:                 tc.inputEnv,
+					shouldOutputJSON:     tc.shouldOutputJSON,
+					shouldOutputManifest: tc.shouldOutputManifest,
 				},
 				store:            mockStoreReader,
 				describer:        mockEnvDescriber,
