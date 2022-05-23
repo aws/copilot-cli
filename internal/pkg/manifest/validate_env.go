@@ -173,7 +173,7 @@ func (cfg environmentHTTPConfig) Validate() error {
 	if err := cfg.Public.Validate(); err != nil {
 		return fmt.Errorf(`validate "public": %w`, err)
 	}
-	if err := o.Private.Validate(); err != nil {
+	if err := cfg.Private.Validate(); err != nil {
 		return fmt.Errorf(`validate "private": %w`, err)
 	}
 	return nil
