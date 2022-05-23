@@ -35,7 +35,7 @@ import (
 
 const (
 	wkldInitImagePromptHelp = `The name of an existing Docker image. Images in the Docker Hub registry are available by default.
-WorkspaceSelector repositories are specified with either repository-url/image:tag or repository-url/image@digest`
+Other repositories are specified with either repository-url/image:tag or repository-url/image@digest`
 	wkldInitAppRunnerImagePromptHelp = `The name of an existing Docker image. App Runner supports images hosted in ECR or ECR Public registries.`
 )
 

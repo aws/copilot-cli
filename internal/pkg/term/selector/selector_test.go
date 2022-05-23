@@ -2164,9 +2164,8 @@ func TestOther_Dockerfile(t *testing.T) {
 			tc.mockWs(cfg)
 
 			sel := WorkspaceSelector{
-				prompt:  p,
-				ws:      cfg,
-				appName: "app-name",
+				prompt: p,
+				ws:     cfg,
 			}
 
 			mockPromptText := "prompt"
@@ -2297,9 +2296,8 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			cfg := mocks.NewMockworkspaceRetriever(ctrl)
 			tc.mockPrompt(p)
 			sel := WorkspaceSelector{
-				prompt:  p,
-				ws:      cfg,
-				appName: "app-name",
+				prompt: p,
+				ws:     cfg,
 			}
 
 			var mockValidator prompt.ValidatorFunc = func(interface{}) error { return nil }
