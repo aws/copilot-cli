@@ -272,6 +272,12 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 	if err = r.Network.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
+	// TODO: remove this constraint when AppRunner services in public subnets can get internet outbound traffic.
+	if r.Network.VPC.Placement.PlacementString != nil &&
+		*r.Network.VPC.Placement.PlacementString != PrivateSubnetPlacement {
+		return fmt.Errorf(`placement "%s" is not supported for %s`,
+			string(*r.Network.VPC.Placement.PlacementString), RequestDrivenWebServiceType)
+	}
 	if err = r.Observability.Validate(); err != nil {
 		return fmt.Errorf(`validate "observability": %w`, err)
 	}

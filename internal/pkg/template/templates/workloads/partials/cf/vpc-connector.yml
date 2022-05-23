@@ -24,7 +24,9 @@ EnvironmentSecurityGroupIngressFromServiceSecurityGroup:
 
 VpcConnector:
   Type: AWS::AppRunner::VpcConnector
+{{- if ne .EnvControllerLambda ""}}
   DependsOn: EnvControllerAction # Ensure NAT gateways are created before connecting to a VPC.
+{{- end}}
   Metadata:
     'aws:copilot:description': 'A VPC connector to link your service to subnets in your environment'
   Properties:
