@@ -42,20 +42,19 @@ type deployEnvOpts struct {
 	unmarshalManifest func(in []byte) (*manifest.Environment, error)
 }
 
-// Validate returns an error for any invalid optional flags.
+// Validate is a no-op for this command.
 func (o *deployEnvOpts) Validate() error {
 	return nil
 }
 
 // Ask prompts for and validates any required flags.
 func (o *deployEnvOpts) Ask() error {
-	if o.appName != "" {
-		if _, err := o.cachedTargetApp(); err != nil {
-			return err
-		}
-	} else {
+	if o.appName == "" {
 		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
 		return errNoAppInWorkspace
+	}
+	if _, err := o.cachedTargetApp(); err != nil {
+		return err
 	}
 	return o.validateOrAskEnvName()
 }
@@ -128,7 +127,7 @@ func (o *deployEnvOpts) cachedTargetEnv() (*config.Environment, error) {
 	if o.targetEnv == nil {
 		env, err := o.store.GetEnvironment(o.appName, o.name)
 		if err != nil {
-			return nil, fmt.Errorf("get environment %s: %w", o.name, err)
+			return nil, fmt.Errorf("get environment %s in application %s: %w", o.name, o.appName, err)
 		}
 		o.targetEnv = env
 	}

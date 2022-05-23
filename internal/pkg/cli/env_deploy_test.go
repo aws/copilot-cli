@@ -53,7 +53,7 @@ func TestDeployEnvOpts_Ask(t *testing.T) {
 				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
 				m.store.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(nil, errors.New("some error"))
 			},
-			wantedError: errors.New("get environment mockEnv: some error"),
+			wantedError: errors.New("get environment mockEnv in application mockApp: some error"),
 		},
 		"fail to ask for an env from workspace": {
 			inAppName: "mockApp",
