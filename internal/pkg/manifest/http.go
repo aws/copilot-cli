@@ -83,6 +83,14 @@ func (r *RoutingRuleConfiguration) isEmpty() bool {
 // IPNet represents an IP network string. For example: 10.1.0.0/16
 type IPNet string
 
+func ipNetP(s string) *IPNet {
+	if s == "" {
+		return nil
+	}
+	ip := IPNet(s)
+	return &ip
+}
+
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
 // can either be of type string or type slice of string.
 type Alias stringSliceOrString

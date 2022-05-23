@@ -48,45 +48,45 @@ func (n environmentNetworkConfig) Validate() error {
 }
 
 // Validate returns nil if environmentVPCConfig is configured correctly.
-func (v environmentVPCConfig) Validate() error {
-	if v.imported() && v.managedVPCCustomized() {
+func (cfg environmentVPCConfig) Validate() error {
+	if cfg.imported() && cfg.managedVPCCustomized() {
 		return errors.New(`cannot import VPC resources (with "id" fields) and customize VPC resources (with "cidr" and "az" fields) at the same time`)
 	}
-	if err := v.Subnets.Validate(); err != nil {
+	if err := cfg.Subnets.Validate(); err != nil {
 		return fmt.Errorf(`validate "subnets": %w`, err)
 	}
-	if v.imported() {
-		return v.validateImportedVPC()
+	if cfg.imported() {
+		return cfg.validateImportedVPC()
 	}
-	if v.managedVPCCustomized() {
-		return v.validateManagedVPC()
+	if cfg.managedVPCCustomized() {
+		return cfg.validateManagedVPC()
 	}
 	return nil
 }
 
-func (v environmentVPCConfig) validateImportedVPC() error {
-	for idx, subnet := range v.Subnets.Public {
+func (cfg environmentVPCConfig) validateImportedVPC() error {
+	for idx, subnet := range cfg.Subnets.Public {
 		if aws.StringValue(subnet.SubnetID) == "" {
 			return fmt.Errorf(`validate "subnets": public[%d] must include "id" field if the vpc is imported`, idx)
 		}
 	}
-	for idx, subnet := range v.Subnets.Private {
+	for idx, subnet := range cfg.Subnets.Private {
 		if aws.StringValue(subnet.SubnetID) == "" {
 			return fmt.Errorf(`validate "subnets": private[%d] must include "id" field if the vpc is imported`, idx)
 		}
 	}
 	switch {
-	case len(v.Subnets.Private)+len(v.Subnets.Public) <= 0:
+	case len(cfg.Subnets.Private)+len(cfg.Subnets.Public) <= 0:
 		return errors.New(`validate "subnets": VPC must have subnets in order to proceed with environment creation`)
-	case len(v.Subnets.Public) == 1:
+	case len(cfg.Subnets.Public) == 1:
 		return errors.New(`validate "subnets": validate "public": at least two public subnets must be imported to enable Load Balancing`)
-	case len(v.Subnets.Private) == 1:
+	case len(cfg.Subnets.Private) == 1:
 		return errors.New(`validate "subnets": validate "private": at least two private subnets must be imported`)
 	}
 	return nil
 }
 
-func (v environmentVPCConfig) validateManagedVPC() error {
+func (cfg environmentVPCConfig) validateManagedVPC() error {
 	var (
 		publicAZs    = make(map[string]struct{})
 		privateAZs   = make(map[string]struct{})
@@ -94,14 +94,14 @@ func (v environmentVPCConfig) validateManagedVPC() error {
 		privateCIDRs = make(map[string]struct{})
 	)
 	var exists = struct{}{}
-	for idx, subnet := range v.Subnets.Public {
+	for idx, subnet := range cfg.Subnets.Public {
 		if aws.StringValue((*string)(subnet.CIDR)) == "" || aws.StringValue(subnet.AZ) == "" {
 			return fmt.Errorf(`validate "subnets": public[%d] must include "cidr" and "az" fields if the vpc is configured`, idx)
 		}
 		publicCIDRs[aws.StringValue((*string)(subnet.CIDR))] = exists
 		publicAZs[aws.StringValue(subnet.AZ)] = exists
 	}
-	for idx, subnet := range v.Subnets.Private {
+	for idx, subnet := range cfg.Subnets.Private {
 		if aws.StringValue((*string)(subnet.CIDR)) == "" || aws.StringValue(subnet.AZ) == "" {
 			return fmt.Errorf(`validate "subnets": private[%d] must include "cidr" and "az" fields if the vpc is configured`, idx)
 		}
@@ -169,8 +169,8 @@ func (o environmentObservability) Validate() error {
 }
 
 // Validate returns nil if environmentHTTPConfig is configured correctly.
-func (o environmentHTTPConfig) Validate() error {
-	if err := o.Public.Validate(); err != nil {
+func (cfg environmentHTTPConfig) Validate() error {
+	if err := cfg.Public.Validate(); err != nil {
 		return fmt.Errorf(`validate "public": %w`, err)
 	}
 	if err := o.Private.Validate(); err != nil {
