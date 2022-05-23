@@ -20,6 +20,7 @@ var defaultTransformers = []mergo.Transformers{
 	buildArgsOrStringTransformer{},
 	stringSliceOrStringTransformer{},
 	platformArgsOrStringTransformer{},
+	placementArgOrStringTransformer{},
 	healthCheckArgsOrStringTransformer{},
 	countTransformer{},
 	advancedCountTransformer{},
@@ -141,6 +142,32 @@ func (t platformArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst,
 
 		if !srcStruct.PlatformArgs.isEmpty() {
 			dstStruct.PlatformString = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type placementArgOrStringTransformer struct{}
+
+// Transformer returns custom merge logic for placementArgOrString's fields.
+func (t placementArgOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(PlacementArgOrString{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(PlacementArgOrString), src.Interface().(PlacementArgOrString)
+
+		if srcStruct.PlacementString != nil {
+			dstStruct.PlacementArgs = PlacementArgs{}
+		}
+
+		if !srcStruct.PlacementArgs.isEmpty() {
+			dstStruct.PlacementString = nil
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

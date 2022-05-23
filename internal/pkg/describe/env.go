@@ -19,6 +19,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
@@ -131,6 +133,32 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 	return d.description, nil
 }
 
+// Manifest returns the contents of the manifest used to deploy an environment stack.
+func (d *EnvDescriber) Manifest() ([]byte, error) {
+	tpl, err := d.cfn.StackMetadata()
+	if err != nil {
+		return nil, err
+	}
+
+	metadata := struct {
+		Manifest string `yaml:"Manifest"`
+	}{}
+	if err := yaml.Unmarshal([]byte(tpl), &metadata); err != nil {
+		return nil, fmt.Errorf("unmarshal Metadata.Manifest in environment stack: %v", err)
+	}
+
+	if metadata.Manifest != "" {
+		return []byte(strings.TrimSpace(metadata.Manifest)), nil
+	}
+	// Otherwise, the Manifest wasn't written into the CloudFormation template, we'll convert the config in SSM.
+	mft := manifest.FromEnvConfig(d.env, template.New())
+	out, err := yaml.Marshal(mft)
+	if err != nil {
+		return nil, fmt.Errorf("marshal manifest generated from SSM: %v", err)
+	}
+	return []byte(strings.TrimSpace(string(out))), nil
+}
+
 // Params returns the parameters of the environment stack.
 func (d *EnvDescriber) Params() (map[string]string, error) {
 	descr, err := d.cfn.Describe()
@@ -140,7 +168,7 @@ func (d *EnvDescriber) Params() (map[string]string, error) {
 	return descr.Parameters, nil
 }
 
-// Params returns the outputs of the environment stack.
+// Outputs returns the outputs of the environment stack.
 func (d *EnvDescriber) Outputs() (map[string]string, error) {
 	descr, err := d.cfn.Describe()
 	if err != nil {

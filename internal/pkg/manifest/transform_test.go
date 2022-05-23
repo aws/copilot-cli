@@ -395,6 +395,65 @@ func TestPlatformArgsOrStringTransformer_Transformer(t *testing.T) {
 	}
 }
 
+func TestPlacementArgsOrStringTransformer_Transformer(t *testing.T) {
+	mockPlacementStr := PlacementString("mockString")
+	testCases := map[string]struct {
+		original func(p *PlacementArgOrString)
+		override func(p *PlacementArgOrString)
+		wanted   func(p *PlacementArgOrString)
+	}{
+		"string set to empty if args is not nil": {
+			original: func(p *PlacementArgOrString) {
+				p.PlacementString = &mockPlacementStr
+			},
+			override: func(p *PlacementArgOrString) {
+				p.PlacementArgs = PlacementArgs{
+					Subnets: []string{"id1"},
+				}
+			},
+			wanted: func(p *PlacementArgOrString) {
+				p.PlacementArgs = PlacementArgs{
+					Subnets: []string{"id1"},
+				}
+			},
+		},
+		"args set to empty if string is not nil": {
+			original: func(p *PlacementArgOrString) {
+				p.PlacementArgs = PlacementArgs{
+					Subnets: []string{"id1"},
+				}
+			},
+			override: func(p *PlacementArgOrString) {
+				p.PlacementString = &mockPlacementStr
+			},
+			wanted: func(p *PlacementArgOrString) {
+				p.PlacementString = &mockPlacementStr
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted PlacementArgOrString
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(placementArgOrStringTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}
+
 func TestHealthCheckArgsOrStringTransformer_Transformer(t *testing.T) {
 	testCases := map[string]struct {
 		original func(h *HealthCheckArgsOrString)

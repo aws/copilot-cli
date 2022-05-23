@@ -1,7 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package manifest provides functionality to create Manifest files.
 package manifest
 
 import (
@@ -24,8 +23,8 @@ const (
 
 const (
 	// AWS VPC subnet placement options.
-	PublicSubnetPlacement  = Placement("public")
-	PrivateSubnetPlacement = Placement("private")
+	PublicSubnetPlacement  = PlacementString("public")
+	PrivateSubnetPlacement = PlacementString("private")
 )
 
 // All placement options.
@@ -35,10 +34,11 @@ var subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSub
 var (
 	ErrAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
 
-	errUnmarshalBuildOpts    = errors.New("unable to unmarshal build field into string or compose-style map")
-	errUnmarshalPlatformOpts = errors.New("unable to unmarshal platform field into string or compose-style map")
-	errUnmarshalCountOpts    = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
-	errUnmarshalRangeOpts    = errors.New(`unable to unmarshal "range" field`)
+	errUnmarshalBuildOpts     = errors.New("unable to unmarshal build field into string or compose-style map")
+	errUnmarshalPlatformOpts  = errors.New("unable to unmarshal platform field into string or compose-style map")
+	errUnmarshalPlacementOpts = errors.New("unable to unmarshal placement field into string or compose-style map")
+	errUnmarshalCountOpts     = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalRangeOpts     = errors.New(`unable to unmarshal "range" field`)
 
 	errUnmarshalExec       = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
 	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
@@ -380,17 +380,60 @@ func (c *NetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
 }
 
-// Placement represents where to place tasks (public or private subnets).
-type Placement string
+// PlacementArgOrString represents where to place tasks.
+type PlacementArgOrString struct {
+	*PlacementString
+	PlacementArgs
+}
+
+// IsEmpty returns empty if the struct has all zero members.
+func (p *PlacementArgOrString) IsEmpty() bool {
+	return p.PlacementString == nil && p.PlacementArgs.isEmpty()
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the PlacementArgOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (p *PlacementArgOrString) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&p.PlacementArgs); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+	if !p.PlacementArgs.isEmpty() {
+		// Unmarshaled successfully to p.PlacementArgs, unset p.PlacementString, and return.
+		p.PlacementString = nil
+		return nil
+	}
+	if err := value.Decode(&p.PlacementString); err != nil {
+		return errUnmarshalPlacementOpts
+	}
+	return nil
+}
+
+// PlacementArgs represents what subnets to place tasks.
+type PlacementArgs struct {
+	Subnets []string `yaml:"subnets"`
+}
+
+func (p *PlacementArgs) isEmpty() bool {
+	return p.Subnets == nil || len(p.Subnets) == 0
+}
+
+// PlacementString represents what types of subnets (public or private subnets) to place tasks.
+type PlacementString string
 
 // vpcConfig represents the security groups and subnets attached to a task.
 type vpcConfig struct {
-	*Placement     `yaml:"placement"`
-	SecurityGroups []string `yaml:"security_groups"`
+	Placement      PlacementArgOrString `yaml:"placement"`
+	SecurityGroups []string             `yaml:"security_groups"`
 }
 
 func (c *vpcConfig) isEmpty() bool {
-	return c.Placement == nil && c.SecurityGroups == nil
+	return c.Placement.IsEmpty() && c.SecurityGroups == nil
 }
 
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which
@@ -544,7 +587,7 @@ func uint16P(n uint16) *uint16 {
 	return &n
 }
 
-func placementP(p Placement) *Placement {
+func placementStringP(p PlacementString) *PlacementString {
 	if p == "" {
 		return nil
 	}

@@ -418,9 +418,11 @@ type DeadLetterQueue struct {
 
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
-	AssignPublicIP string
-	SubnetsType    string
 	SecurityGroups []string
+	AssignPublicIP string
+	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
+	SubnetsType string
+	SubnetIDs   []string
 }
 
 // RuntimePlatformOpts holds configuration needed for Platform configuration.
@@ -628,6 +630,11 @@ func envControllerParameters(o WorkloadOpts) []string {
 			parameters = append(parameters, "ALBWorkloads,")
 		}
 		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
+	}
+	if o.WorkloadType == "Backend Service" {
+		if o.ALBEnabled {
+			parameters = append(parameters, "InternalALBWorkloads,")
+		}
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
 		parameters = append(parameters, "NATWorkloads,")

@@ -1136,10 +1136,8 @@ func (v rdwsVpcConfig) Validate() error {
 	if v.isEmpty() {
 		return nil
 	}
-	if v.Placement != nil {
-		if err := v.Placement.Validate(); err != nil {
-			return fmt.Errorf(`validate "placement": %w`, err)
-		}
+	if err := v.Placement.Validate(); err != nil {
+		return fmt.Errorf(`validate "placement": %w`, err)
 	}
 	return nil
 }
@@ -1149,27 +1147,30 @@ func (v vpcConfig) Validate() error {
 	if v.isEmpty() {
 		return nil
 	}
-	if v.Placement != nil {
-		if err := v.Placement.Validate(); err != nil {
-			return fmt.Errorf(`validate "placement": %w`, err)
-		}
+	if err := v.Placement.Validate(); err != nil {
+		return fmt.Errorf(`validate "placement": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if RequestDrivenWebServicePlacement is configured correctly.
-func (p RequestDrivenWebServicePlacement) Validate() error {
-	if err := (Placement)(p).Validate(); err != nil {
-		return err
-	}
-	if string(p) == string(PrivateSubnetPlacement) {
+// Validate returns nil if PlacementArgOrString is configured correctly.
+func (p PlacementArgOrString) Validate() error {
+	if p.IsEmpty() {
 		return nil
 	}
-	return fmt.Errorf(`placement "%s" is not supported for %s`, string(p), RequestDrivenWebServiceType)
+	if p.PlacementString != nil {
+		return p.PlacementString.Validate()
+	}
+	return p.PlacementArgs.Validate()
 }
 
-// Validate returns nil if Placement is configured correctly.
-func (p Placement) Validate() error {
+// Validate is a no-op for PlacementArgs.
+func (p PlacementArgs) Validate() error {
+	return nil
+}
+
+// Validate returns nil if PlacementString is configured correctly.
+func (p PlacementString) Validate() error {
 	if string(p) == "" {
 		return fmt.Errorf(`"placement" cannot be empty`)
 	}
