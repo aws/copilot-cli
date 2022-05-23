@@ -257,7 +257,6 @@ func TestToEnv(t *testing.T) {
 			expectedEnv: config.Environment{
 				Name:             mockDeployInput.Name,
 				App:              mockDeployInput.App.Name,
-				Prod:             mockDeployInput.Prod,
 				AccountID:        "902697171733",
 				Region:           "eu-west-3",
 				ManagerRoleARN:   "arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole",
@@ -306,7 +305,6 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 			Name:                "project",
 			AccountPrincipalARN: "arn:aws:iam::000000000:root",
 		},
-		Prod: true,
 		CustomResourcesURLs: map[string]string{
 			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
 			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",

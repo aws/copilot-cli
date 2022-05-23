@@ -320,7 +320,6 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
-	env.Prod = o.isProduction
 	customizedEnv := config.CustomizeEnv{
 		ImportVPC:      o.importVPCConfig(),
 		VPCConfig:      o.adjustVPCConfig(),
@@ -700,7 +699,6 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 			Domain:              app.Domain,
 			AccountPrincipalARN: caller.RootUserARN,
 		},
-		Prod:                 o.isProduction,
 		AdditionalTags:       app.Tags,
 		CustomResourcesURLs:  customResourcesURLs,
 		ArtifactBucketARN:    artifactBucketARN,

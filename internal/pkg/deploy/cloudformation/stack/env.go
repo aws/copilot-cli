@@ -290,7 +290,6 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.Environment
 	return &config.Environment{
 		Name:             e.in.Name,
 		App:              e.in.App.Name,
-		Prod:             e.in.Prod,
 		Region:           stackARN.Region,
 		AccountID:        stackARN.AccountID,
 		ManagerRoleARN:   stackOutputs[envOutputManagerRoleKey],
