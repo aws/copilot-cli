@@ -5248,9 +5248,9 @@ func (m *MockwsEnvironmentSelector) EXPECT() *MockwsEnvironmentSelectorMockRecor
 }
 
 // WSEnvironment mocks base method.
-func (m *MockwsEnvironmentSelector) WSEnvironment(msg, help string) (string, error) {
+func (m *MockwsEnvironmentSelector) LocalEnvironment(msg, help string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WSEnvironment", msg, help)
+	ret := m.ctrl.Call(m, "LocalEnvironment", msg, help)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -5259,7 +5259,7 @@ func (m *MockwsEnvironmentSelector) WSEnvironment(msg, help string) (string, err
 // WSEnvironment indicates an expected call of WSEnvironment.
 func (mr *MockwsEnvironmentSelectorMockRecorder) WSEnvironment(msg, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WSEnvironment", reflect.TypeOf((*MockwsEnvironmentSelector)(nil).WSEnvironment), msg, help)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalEnvironment", reflect.TypeOf((*MockwsEnvironmentSelector)(nil).LocalEnvironment), msg, help)
 }
 
 // MockcodePipelineSelector is a mock of codePipelineSelector interface.

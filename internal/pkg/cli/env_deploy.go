@@ -115,7 +115,7 @@ func (o *deployEnvOpts) validateOrAskEnvName() error {
 		}
 		return nil
 	}
-	name, err := o.sel.WSEnvironment("Select an environment in your workspace", "")
+	name, err := o.sel.LocalEnvironment("Select an environment in your workspace", "")
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}

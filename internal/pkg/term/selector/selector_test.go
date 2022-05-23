@@ -759,7 +759,7 @@ func TestWorkspaceSelect_Service(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := WorkspaceSelector{
+			sel := LocalWorkloadSelector{
 				ConfigSelector: &ConfigSelector{
 					AppEnvSelector: &AppEnvSelector{
 						prompt:       mockprompt,
@@ -1057,7 +1057,7 @@ func TestWorkspaceSelect_Job(t *testing.T) {
 			}
 			tc.setupMocks(mocks)
 
-			sel := WorkspaceSelector{
+			sel := LocalWorkloadSelector{
 				ConfigSelector: &ConfigSelector{
 					AppEnvSelector: &AppEnvSelector{
 						prompt:       mockprompt,
@@ -1270,7 +1270,7 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 			}
 			tc.setupMocks(m)
 
-			sel := WorkspaceSelector{
+			sel := LocalWorkloadSelector{
 				ConfigSelector: &ConfigSelector{
 					AppEnvSelector: &AppEnvSelector{
 						prompt:       m.prompt,
@@ -1279,7 +1279,7 @@ func TestWorkspaceSelect_EnvironmentsInWorkspace(t *testing.T) {
 				},
 				ws: m.ws,
 			}
-			got, err := sel.WSEnvironment("Select an environment", "Help text")
+			got, err := sel.LocalEnvironment("Select an environment", "Help text")
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
@@ -2055,7 +2055,7 @@ func TestSelect_Application(t *testing.T) {
 	}
 }
 
-func TestWorkspaceSelect_Dockerfile(t *testing.T) {
+func TestOther_Dockerfile(t *testing.T) {
 	dockerfiles := []string{
 		"./Dockerfile",
 		"backend/Dockerfile",
@@ -2159,19 +2159,12 @@ func TestWorkspaceSelect_Dockerfile(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			p := mocks.NewMockprompter(ctrl)
-			s := mocks.NewMockconfigLister(ctrl)
 			cfg := mocks.NewMockworkspaceRetriever(ctrl)
 			tc.mockPrompt(p)
 			tc.mockWs(cfg)
 
 			sel := WorkspaceSelector{
-				ConfigSelector: &ConfigSelector{
-					AppEnvSelector: &AppEnvSelector{
-						prompt:       p,
-						appEnvLister: s,
-					},
-					workloadLister: s,
-				},
+				prompt:  p,
 				ws:      cfg,
 				appName: "app-name",
 			}
@@ -2301,17 +2294,10 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			p := mocks.NewMockprompter(ctrl)
-			s := mocks.NewMockconfigLister(ctrl)
 			cfg := mocks.NewMockworkspaceRetriever(ctrl)
 			tc.mockPrompt(p)
 			sel := WorkspaceSelector{
-				ConfigSelector: &ConfigSelector{
-					AppEnvSelector: &AppEnvSelector{
-						prompt:       p,
-						appEnvLister: s,
-					},
-					workloadLister: s,
-				},
+				prompt:  p,
 				ws:      cfg,
 				appName: "app-name",
 			}

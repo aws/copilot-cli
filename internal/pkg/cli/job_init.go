@@ -59,13 +59,14 @@ type initJobOpts struct {
 	initJobVars
 
 	// Interfaces to interact with dependencies.
-	fs           afero.Fs
-	store        store
-	init         jobInitializer
-	prompt       prompter
-	sel          initJobSelector
-	dockerEngine dockerEngine
-	mftReader    manifestReader
+	fs            afero.Fs
+	store         store
+	init          jobInitializer
+	prompt        prompter
+	sel           initJobSelector
+	dockerfileSel dockerfileSelector
+	dockerEngine  dockerEngine
+	mftReader     manifestReader
 
 	// Outputs stored on successful actions.
 	manifestPath string
@@ -102,7 +103,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	}
 
 	prompter := prompt.New()
-	sel := selector.NewWorkspaceSelector(prompter, store, ws)
+	sel := selector.NewWorkspaceSelector(prompter, ws)
 
 	return &initJobOpts{
 		initJobVars: vars,

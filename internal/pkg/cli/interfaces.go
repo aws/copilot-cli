@@ -491,7 +491,7 @@ type wsPipelineSelector interface {
 }
 
 type wsEnvironmentSelector interface {
-	WSEnvironment(msg, help string) (wl string, err error)
+	LocalEnvironment(msg, help string) (wl string, err error)
 }
 
 type codePipelineSelector interface {

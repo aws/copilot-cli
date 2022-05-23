@@ -174,11 +174,17 @@ type ConfigSelector struct {
 	workloadLister configWorkloadLister
 }
 
-// WorkspaceSelector  is an application and environment selector, but can also choose a service from the workspace.
-type WorkspaceSelector struct {
+// LocalWorkloadSelector is an application and environment selector, but can also choose a service or an environment from the workspace.
+type LocalWorkloadSelector struct {
 	*ConfigSelector
 	ws      workspaceRetriever
 	appName string
+}
+
+// WorkspaceSelector selects from local workspace.
+type WorkspaceSelector struct {
+	prompt prompter
+	ws     workspaceRetriever
 }
 
 // WsPipelineSelector is a workspace pipeline selector.
@@ -270,12 +276,20 @@ func NewConfigSelector(prompt prompter, store configLister) *ConfigSelector {
 	}
 }
 
-// NewWorkspaceSelector returns a new selector that chooses applications and environments from the config store, but
+// NewLocalWorkloadSelector returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelector(prompt prompter, store configLister, ws workspaceRetriever) *WorkspaceSelector {
-	return &WorkspaceSelector{
+func NewLocalWorkloadSelector(prompt prompter, store configLister, ws workspaceRetriever) *LocalWorkloadSelector {
+	return &LocalWorkloadSelector{
 		ConfigSelector: NewConfigSelector(prompt, store),
 		ws:             ws,
+	}
+}
+
+// NewWorkspaceSelector returns a new selector that prompts for local information.
+func NewWorkspaceSelector(prompt prompter, ws workspaceRetriever) *WorkspaceSelector {
+	return &WorkspaceSelector{
+		prompt: prompt,
+		ws:     ws,
 	}
 }
 
@@ -618,7 +632,7 @@ func (s *DeploySelector) filterServices(inServices []*DeployedService) ([]*Deplo
 }
 
 // Service fetches all services in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelector) Service(msg, help string) (string, error) {
+func (s *LocalWorkloadSelector) Service(msg, help string) (string, error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)
@@ -648,7 +662,7 @@ func (s *WorkspaceSelector) Service(msg, help string) (string, error) {
 }
 
 // Job fetches all jobs in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelector) Job(msg, help string) (string, error) {
+func (s *LocalWorkloadSelector) Job(msg, help string) (string, error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)
@@ -678,7 +692,7 @@ func (s *WorkspaceSelector) Job(msg, help string) (string, error) {
 }
 
 // Workload fetches all jobs and services in an app and prompts the user to select one.
-func (s *WorkspaceSelector) Workload(msg, help string) (wl string, err error) {
+func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)
@@ -706,8 +720,8 @@ func (s *WorkspaceSelector) Workload(msg, help string) (wl string, err error) {
 	return selectedWlName, nil
 }
 
-// WSEnvironment fetches all environments belong to the app in the workspace and prompts the user to select one.
-func (s *WorkspaceSelector) WSEnvironment(msg, help string) (wl string, err error) {
+// LocalEnvironment fetches all environments belong to the app in the workspace and prompts the user to select one.
+func (s *LocalWorkloadSelector) LocalEnvironment(msg, help string) (wl string, err error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)
@@ -1132,7 +1146,7 @@ func (s *ConfigSelector) retrieveJobs(app string) ([]string, error) {
 	return jobNames, nil
 }
 
-func (s *WorkspaceSelector) retrieveWorkspaceServices() ([]string, error) {
+func (s *LocalWorkloadSelector) retrieveWorkspaceServices() ([]string, error) {
 	localServiceNames, err := s.ws.ListServices()
 	if err != nil {
 		return nil, err
@@ -1140,7 +1154,7 @@ func (s *WorkspaceSelector) retrieveWorkspaceServices() ([]string, error) {
 	return localServiceNames, nil
 }
 
-func (s *WorkspaceSelector) retrieveWorkspaceJobs() ([]string, error) {
+func (s *LocalWorkloadSelector) retrieveWorkspaceJobs() ([]string, error) {
 	localJobNames, err := s.ws.ListJobs()
 	if err != nil {
 		return nil, err
@@ -1148,7 +1162,7 @@ func (s *WorkspaceSelector) retrieveWorkspaceJobs() ([]string, error) {
 	return localJobNames, nil
 }
 
-func (s *WorkspaceSelector) retrieveWorkspaceWorkloads() ([]string, error) {
+func (s *LocalWorkloadSelector) retrieveWorkspaceWorkloads() ([]string, error) {
 	localWlNames, err := s.ws.ListWorkloads()
 	if err != nil {
 		return nil, err
