@@ -220,11 +220,13 @@ func (cfg *environmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	if len(env.InternalALBSubnets) != 0 {
 		cfg.Private.Subnets = env.InternalALBSubnets
 	}
-	if len(env.VPCConfig.PublicSubnetCIDRs) == 0 {
-		cfg.Private.Certificates = env.ImportCertARNs
-		return
+	if env.ImportVPC != nil {
+		if len(env.ImportVPC.PublicSubnetIDs) == 0 {
+			cfg.Private.Certificates = env.ImportCertARNs
+			return
+		}
+		cfg.Public.Certificates = env.ImportCertARNs
 	}
-	cfg.Public.Certificates = env.ImportCertARNs
 }
 
 type publicHTTPConfig struct {
