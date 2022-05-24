@@ -130,7 +130,7 @@ func (t *Template) UploadRequestDrivenWebServiceCustomResources(upload s3.Compre
 	return t.uploadCustomResources(upload, rdWkldCustomResourceFiles)
 }
 
-// UploadLoadBalancedWebServiceNLBCustomResources uploads the network load-balanced web service custom resource scripts.
+// UploadNetworkLoadBalancedWebServiceCustomResources uploads the network load-balanced web service custom resource scripts.
 func (t *Template) UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
 	return t.uploadCustomResources(upload, nlbWkldCustomResourceFiles)
 }

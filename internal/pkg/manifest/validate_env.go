@@ -33,6 +33,9 @@ func (e EnvironmentConfig) Validate() error {
 	if err := e.Observability.Validate(); err != nil {
 		return fmt.Errorf(`validate "observability": %w`, err)
 	}
+	if err := e.HTTPConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "http config": %w`, err)
+	}
 	return nil
 }
 
@@ -170,6 +173,9 @@ func (cfg environmentHTTPConfig) Validate() error {
 	if err := cfg.Public.Validate(); err != nil {
 		return fmt.Errorf(`validate "public": %w`, err)
 	}
+	if err := cfg.Private.Validate(); err != nil {
+		return fmt.Errorf(`validate "private": %w`, err)
+	}
 	return nil
 }
 
@@ -177,7 +183,17 @@ func (cfg environmentHTTPConfig) Validate() error {
 func (o publicHTTPConfig) Validate() error {
 	for idx, certARN := range o.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
-			return fmt.Errorf(`validate "certificates[%d]": %w`, idx, err)
+			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if privateHTTPConfig is configured correctly.
+func (o privateHTTPConfig) Validate() error {
+	for idx, certARN := range o.Certificates {
+		if _, err := arn.Parse(certARN); err != nil {
+			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
 	return nil

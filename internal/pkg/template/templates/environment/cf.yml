@@ -263,7 +263,9 @@ Resources:
     Properties:
       Scheme: internal
       SecurityGroups: [ !GetAtt InternalLoadBalancerSecurityGroup.GroupId ]
-{{- if .VPCConfig.Imported}}
+{{- if .CustomInternalALBSubnets}}
+      Subnets: [ {{range $subnet := .CustomInternalALBSubnets}}{{$subnet}}, {{end}} ]
+{{- else if .VPCConfig.Imported}}
       Subnets: [ {{range $id := .VPCConfig.Imported.PrivateSubnetIDs}}{{$id}}, {{end}} ]
 {{- else}}
       Subnets: [ {{range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}} ]
