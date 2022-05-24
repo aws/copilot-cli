@@ -34,7 +34,7 @@ func TestEnv_Template(t *testing.T) {
 					DNSDelegationLambda:    "mockkey2",
 					CustomDomainLambda:     "mockkey4",
 					VPCConfig: template.VPCConfig{
-						Imported: nil,
+						Imported: &template.ImportVPC{},
 						Managed: template.ManagedVPC{
 							CIDR:               DefaultVPCCIDR,
 							PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
