@@ -102,7 +102,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	}
 
 	prompter := prompt.New()
-	sel := selector.NewWorkspaceSelector(prompter, store, ws)
+	sel := selector.NewWorkspaceSelector(prompter, ws)
 
 	return &initJobOpts{
 		initJobVars: vars,

@@ -274,6 +274,77 @@ func TestEnvDescriber_Describe(t *testing.T) {
 	}
 }
 
+func TestEnvDescriber_Manifest(t *testing.T) {
+	testCases := map[string]struct {
+		given func(ctrl *gomock.Controller) *EnvDescriber
+
+		wantedManifest []byte
+		wantedErr      error
+	}{
+		"should return an error when the template Metadata cannot be retrieved": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return("", errors.New("some error"))
+				return &EnvDescriber{
+					cfn: m,
+				}
+			},
+			wantedErr: errors.New("some error"),
+		},
+		"should unmarshal from SSM when the stack template does not have any Metadata.Manifest": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return(`
+Metadata:
+  Version: 1.9.0
+`, nil)
+				return &EnvDescriber{
+					env: &config.Environment{
+						Name: "test",
+					},
+					cfn: m,
+				}
+			},
+			wantedManifest: []byte(`name: test
+type: Environment`),
+		},
+		"should prioritize stack template's Metadata over SSM": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return(`{"Version":"1.9.0","Manifest":"\nname: prod\ntype: Environment"}`, nil)
+				return &EnvDescriber{
+					env: &config.Environment{
+						Name: "test",
+					},
+					cfn: m,
+				}
+			},
+			wantedManifest: []byte(`name: prod
+type: Environment`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			describer := tc.given(ctrl)
+
+			// WHEN
+			mft, err := describer.Manifest()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, string(tc.wantedManifest), string(mft), "expected manifests to match")
+			}
+		})
+	}
+}
+
 func TestEnvDescriber_Version(t *testing.T) {
 	testCases := map[string]struct {
 		given func(ctrl *gomock.Controller) *EnvDescriber
