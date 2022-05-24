@@ -217,6 +217,13 @@ func (cfg *environmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	if env.IsEmpty() {
 		return
 	}
+	if len(env.InternalALBSubnets) != 0 {
+		cfg.Private.Subnets = env.InternalALBSubnets
+	}
+	if len(env.VPCConfig.PublicSubnetCIDRs) == 0 {
+		cfg.Private.Certificates = env.ImportCertARNs
+		return
+	}
 	cfg.Public.Certificates = env.ImportCertARNs
 }
 
