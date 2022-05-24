@@ -22,7 +22,7 @@ CodePipeline のような自動化されたリリースツールは、あなた�
 Copilot はいくつかのコマンドで CodePipeline をセットアップします。作業を始める前に、まずは最終的に作成される Pipeline の構成を見ていきましょう。Pipeline は次に挙げる基本的な構造を持っています。
 
 1. __Source Stage__ - 設定した GitHub、Bitbucket、あるいは CodeCommit リポジトリにプッシュすると、Pipeline の実行が開始されます。
-2. __Build Stage__ - リポジトリからコードがダウンロードされると、Service 用のコンテナイメージがビルドされ、すべての Environment の Amazon ECR リポジトリにプッシュされます。加えて、[Addon](../developing/additional-aws-resources.ja.md) テンプレートや、 Lambda 関数 zip ファイル、[環境変数ファイル]((../developing/environment-variables.ja.md))などのすべての入力ファイルが S3 にアップロードされます。
+2. __Build Stage__ - リポジトリからコードがダウンロードされると、Service 用のコンテナイメージがビルドされ、すべての Environment の Amazon ECR リポジトリにプッシュされます。加えて、[Addon](../developing/additional-aws-resources.ja.md) テンプレートや、 Lambda 関数 zip ファイル、[環境変数ファイル](../developing/environment-variables.ja.md)などのすべての入力ファイルが S3 にアップロードされます。
 
 ソースコードがリポジトリホストから pull された後に、 Service のコンテナイメージがビルドされ、 各環境の ECR リポジトリにパブリッシュされます。加えて、Addon テンプレート、Lambda 関数 zip ファイル、環境変数ファイルなどのすべての入力ファイルが S3　にアップロードされます。
 
@@ -140,7 +140,7 @@ build:
 ![処理が完了した CodePipeline の様子](https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png)
 
 <!-- textlint-disable ja-technical-writing/no-exclamation-question-mark -->
-!!! info 
+!!! info
 <!-- textlint-enable ja-technical-writing/no-exclamation-question-mark -->
     もしあなたが GitHub あるいは Bitbucket リポジトリを利用する場合、Copilot は [CodeStar Connections](https://docs.aws.amazon.com/ja_jp/dtconsole/latest/userguide/welcome-connections.html) を利用してリポジトリとの接続を作成する手助けをします。この過程で GitHub や Bitbucket のアカウントに AWS がアクセスするための認証アプリケーションをインストールする必要があります (e.g. GitHub の場合、"AWS Connector for GitHub")。Copilot と AWS マネジメントコンソールのガイダンスにしたがってこのステップを進めてください。
 
