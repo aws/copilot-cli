@@ -102,10 +102,10 @@ func (e *EnvStackConfig) Template() (string, error) {
 		ArtifactBucketARN:      e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
 
-		ImportCertARNs:     e.importCertARNs(),
-		VPCConfig:          e.vpcConfig(),
-		InternalALBSubnets: e.internalALBSubnets(),
-		Telemetry:          e.telemetryConfig(),
+		ImportCertARNs:           e.importCertARNs(),
+		VPCConfig:                e.vpcConfig(),
+		CustomInternalALBSubnets: e.internalALBSubnets(),
+		Telemetry:                e.telemetryConfig(),
 
 		Version:       e.in.Version,
 		LatestVersion: deploy.LatestEnvTemplateVersion,
