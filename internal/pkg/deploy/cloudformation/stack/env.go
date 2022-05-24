@@ -191,8 +191,10 @@ func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
 
 func (e *EnvStackConfig) importCertARNs() []string {
 	// If a manifest is present, it is the only place we look at.
+	// Look under both public and private.
 	if e.in.Mft != nil {
-		return e.in.Mft.HTTPConfig.Public.Certificates
+		allCerts := append(e.in.Mft.HTTPConfig.Public.Certificates, e.in.Mft.HTTPConfig.Private.Certificates...)
+		return allCerts
 	}
 	// Fallthrough to SSM config.
 	return e.in.ImportCertARNs

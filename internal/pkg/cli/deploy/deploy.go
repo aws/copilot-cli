@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/dustin/go-humanize/english"
 	"io"
 	"os"
 	"path/filepath"
@@ -949,6 +950,10 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		return nil, err
 	}
 
+	if err := d.validateInternalALBSubnets(); err != nil {
+		return nil, err
+	}
+
 	conf, err := stack.NewBackendService(stack.BackendServiceConfig{
 		App:           d.app,
 		Env:           d.env,
@@ -1224,6 +1229,31 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 	}
 
 	return nil
+}
+
+func (d backendSvcDeployer) validateInternalALBSubnets() error {
+	if !d.env.HasInternalALBSubnets() {
+		return nil
+	}
+	for _, placementSubnet := range d.env.CustomConfig.InternalALBSubnets {
+		for _, importedSubnet := range d.env.CustomConfig.ImportVPC.PrivateSubnetIDs {
+			if placementSubnet == importedSubnet {
+				return nil
+			}
+		}
+		for _, importedSubnet := range d.env.CustomConfig.ImportVPC.PublicSubnetIDs {
+			if placementSubnet == importedSubnet {
+				log.Warningln(`You are placing an internal ALB on a public subnet. Your load balancer 
+will receive a public DNS name.`)
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("%s %s %s designated for ALB placement, but %s imported",
+		english.PluralWord(len(d.env.CustomConfig.InternalALBSubnets), "subnet", "subnets"),
+		d.env.CustomConfig.InternalALBSubnets,
+		english.PluralWord(len(d.env.CustomConfig.InternalALBSubnets), "was", "were"),
+		english.PluralWord(len(d.env.CustomConfig.InternalALBSubnets), "it was not", "they were not all"))
 }
 
 func (d *lbSvcDeployer) validateALBWSRuntime() error {

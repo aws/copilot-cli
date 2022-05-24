@@ -141,10 +141,11 @@ type initEnvVars struct {
 	isProduction  bool   // True means retain resources even after deletion.
 	defaultConfig bool   // True means using default environment configuration.
 
-	importVPC   importVPCVars // Existing VPC resources to use instead of creating new ones.
-	adjustVPC   adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
-	telemetry   telemetryVars // Configure observability and monitoring settings.
-	importCerts []string      // Addtional existing ACM certificates to use.
+	importVPC          importVPCVars // Existing VPC resources to use instead of creating new ones.
+	adjustVPC          adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
+	telemetry          telemetryVars // Configure observability and monitoring settings.
+	importCerts        []string      // Addtional existing ACM certificates to use.
+	internalALBSubnets []string      // Private subnets to be used for internal ALB placement.
 
 	tempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the profile.
 	region    string        // The region to create the environment in.
@@ -321,9 +322,10 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
 	customizedEnv := config.CustomizeEnv{
-		ImportVPC:      o.importVPCConfig(),
-		VPCConfig:      o.adjustVPCConfig(),
-		ImportCertARNs: o.importCerts,
+		ImportVPC:          o.importVPCConfig(),
+		VPCConfig:          o.adjustVPCConfig(),
+		ImportCertARNs:     o.importCerts,
+		InternalALBSubnets: o.internalALBSubnets,
 	}
 	if !customizedEnv.IsEmpty() {
 		env.CustomConfig = &customizedEnv
@@ -852,6 +854,7 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringSliceVar(&vars.importVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importCerts, certsFlag, nil, certsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.internalALBSubnets, internalALBSubnetsFlag, nil, internalALBSubnetsFlagDescription)
 	cmd.Flags().IPNetVar(&vars.adjustVPC.CIDR, overrideVPCCIDRFlag, net.IPNet{}, overrideVPCCIDRFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.adjustVPC.AZs, overrideAZsFlag, nil, overrideAZsFlagDescription)
 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
@@ -874,6 +877,7 @@ func buildEnvInitCmd() *cobra.Command {
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(certsFlag))
+	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(internalALBSubnetsFlag))
 	resourcesConfigFlags := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
 	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideVPCCIDRFlag))
 	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideAZsFlag))
