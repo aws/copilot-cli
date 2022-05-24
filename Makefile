@@ -199,3 +199,4 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/apprunner/apprunner.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_run_task_request.go -source=./internal/pkg/ecs/run_task_request.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/runner/job/mocks/mock_job_runner.go -source=./internal/pkg/runner/job/job_runner.go
