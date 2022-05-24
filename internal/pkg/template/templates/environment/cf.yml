@@ -310,8 +310,8 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Condition: ExportInternalHTTPSListener
     Properties:
-      Certificates:
 {{- if .ImportCertARNs}}
+      Certificates:
         - CertificateArn: {{index .ImportCertARNs 0}}
 {{- end}}
       DefaultActions:
