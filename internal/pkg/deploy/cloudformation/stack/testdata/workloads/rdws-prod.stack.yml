@@ -226,8 +226,8 @@ Resources:
       'aws:copilot:description': 'A VPC connector to link your service to subnets in your environment'
     Properties:
       Subnets:
-        - mockSubnetARN1
-        - mockSubnetARN2
+        - mockSubnetID1
+        - mockSubnetID2
       SecurityGroups:
       - !Ref ServiceSecurityGroup
       Tags:

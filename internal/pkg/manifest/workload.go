@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/google/shlex"
 
@@ -30,11 +29,7 @@ const (
 
 // All placement options.
 var (
-	subnetPlacements           = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
-	SubnetPlacementForTemplate = map[PlacementString]string{
-		PrivateSubnetPlacement: template.PrivateSubnetsPlacement,
-		PublicSubnetPlacement:  template.PublicSubnetsPlacement,
-	}
+	subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
 )
 
 // Error definitions.

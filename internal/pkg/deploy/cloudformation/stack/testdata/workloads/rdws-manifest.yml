@@ -54,5 +54,5 @@ environments:
     network:
       vpc:
         placement:
-          subnets: ["mockSubnetARN1", "mockSubnetARN2"]
+          subnets: ["mockSubnetID1", "mockSubnetID2"]
     

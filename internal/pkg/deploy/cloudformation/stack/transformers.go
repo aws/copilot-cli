@@ -53,6 +53,10 @@ const (
 
 var (
 	taskDefOverrideRulePrefixes = []string{"Resources", "TaskDefinition", "Properties"}
+	subnetPlacementForTemplate  = map[manifest.PlacementString]string{
+		manifest.PrivateSubnetPlacement: template.PrivateSubnetsPlacement,
+		manifest.PublicSubnetPlacement:  template.PublicSubnetsPlacement,
+	}
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -592,7 +596,7 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 	if *placement.PlacementString == manifest.PrivateSubnetPlacement {
 		opts.AssignPublicIP = template.DisablePublicIP
 	}
-	opts.SubnetsType = manifest.SubnetPlacementForTemplate[*placement.PlacementString]
+	opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
 	return opts
 }
 
@@ -609,7 +613,7 @@ func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkCon
 		opts.SubnetIDs = placement.PlacementArgs.Subnets
 		return opts
 	}
-	opts.SubnetsType = manifest.SubnetPlacementForTemplate[*placement.PlacementString]
+	opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
 	return opts
 }
 
