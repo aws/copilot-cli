@@ -154,6 +154,7 @@ func (s *BackendService) Template() (string, error) {
 	}
 
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
+		ServiceType:              manifest.BackendServiceType,
 		Variables:                s.manifest.BackendServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
 		Aliases:                  aliases,
@@ -191,6 +192,7 @@ func (s *BackendService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
+		HostedZoneID: s.manifest.RoutingRule.HostedZoneID,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
