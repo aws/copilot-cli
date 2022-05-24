@@ -179,8 +179,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				envDeployer: m.envDeployer,
 			}
 			mockIn := &DeployEnvironmentInput{
-				RootUserARN:  "mockRootUserARN",
-				IsProduction: false,
+				RootUserARN: "mockRootUserARN",
 				CustomResourcesURLs: map[string]string{
 					"mockResource": "mockURL",
 				},

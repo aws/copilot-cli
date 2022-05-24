@@ -199,7 +199,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		fs:     &afero.Afero{Fs: afero.NewOsFs()},
 		store:  store,
 		ws:     ws,
-		sel:    selector.NewWorkspaceSelector(prompter, store, ws),
+		sel:    selector.NewLocalWorkloadSelector(prompter, store, ws),
 		prompt: prompter,
 	}, nil
 }

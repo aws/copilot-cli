@@ -149,7 +149,6 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	}
 	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
 	prompter := prompt.New()
-	sel := selector.NewWorkspaceSelector(prompter, store, ws)
 	deployStore, err := deploy.NewStore(sessProvider, store)
 	if err != nil {
 		return nil, err
@@ -168,7 +167,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		fs:           &afero.Afero{Fs: afero.NewOsFs()},
 		init:         initSvc,
 		prompt:       prompter,
-		sel:          sel,
+		sel:          selector.NewWorkspaceSelector(prompter, ws),
 		topicSel:     snsSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
