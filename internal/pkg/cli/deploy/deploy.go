@@ -907,6 +907,10 @@ func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcS
 	if err != nil {
 		return nil, err
 	}
+
+	if d.lbMft.RoutingRule.HostedZoneID != nil {
+		return nil, fmt.Errorf("hosted_zone_id is not supported for Load Balanced Web Services")
+	}
 	if err := d.validateALBWSRuntime(); err != nil {
 		return nil, err
 	}
@@ -1210,8 +1214,13 @@ func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) 
 }
 
 func (d *backendSvcDeployer) validateALBRuntime() error {
-	if d.backendMft.RoutingRule.EmptyOrDisabled() || d.backendMft.RoutingRule.Alias.IsEmpty() || !d.env.HasImportedCerts() {
+	switch {
+	case d.backendMft.RoutingRule.EmptyOrDisabled():
 		return nil
+	case !d.backendMft.RoutingRule.Alias.IsEmpty() && !d.env.HasImportedCerts():
+		return fmt.Errorf(`setting "alias" requires an environment with imported certs`)
+	case d.backendMft.RoutingRule.HostedZoneID != nil && d.backendMft.RoutingRule.Alias.IsEmpty():
+		return fmt.Errorf(`setting "hosted_zone_id" requires "alias"`)
 	}
 
 	aliases, err := d.backendMft.RoutingRule.Alias.ToStringSlice()

@@ -1130,7 +1130,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 			},
 		},
-		"success if alias configured, no env certs": {
+		"failure if alias configured, no env certs": {
 			App: &config.Application{
 				Name: mockAppName,
 			},
@@ -1151,6 +1151,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			setupMocks: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 			},
+			expectedErr: `setting "alias" requires an environment with imported certs`,
 		},
 		"failure if cert validation fails": {
 			App: &config.Application{
@@ -1193,6 +1194,54 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				BackendServiceConfig: manifest.BackendServiceConfig{
 					RoutingRule: manifest.RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+							Alias: manifest.Alias{
+								String: aws.String("go.dev"),
+							},
+						},
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"go.dev"}, []string{"mockCertARN"}).Return(nil)
+			},
+		},
+		"failure if hosted zone is set without alias": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+			},
+			Manifest: &manifest.BackendService{
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					RoutingRule: manifest.RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+							HostedZoneID: aws.String("ABCD1234"),
+						},
+					},
+				},
+			},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+			},
+			expectedErr: `setting "hosted_zone_id" requires "alias"`,
+		},
+		"success if hosted zone is set": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: []string{"mockCertARN"},
+				},
+			},
+			Manifest: &manifest.BackendService{
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					RoutingRule: manifest.RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
+							HostedZoneID: aws.String("ABCD1234"),
 							Alias: manifest.Alias{
 								String: aws.String("go.dev"),
 							},
