@@ -4429,6 +4429,21 @@ func (mr *MockenvDescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvDescriber)(nil).Describe))
 }
 
+// Manifest mocks base method.
+func (m *MockenvDescriber) Manifest() ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Manifest")
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Manifest indicates an expected call of Manifest.
+func (mr *MockenvDescriberMockRecorder) Manifest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockenvDescriber)(nil).Manifest))
+}
+
 // PublicCIDRBlocks mocks base method.
 func (m *MockenvDescriber) PublicCIDRBlocks() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -5222,6 +5237,44 @@ func (m *MockwsPipelineSelector) WsPipeline(prompt, help string) (*workspace.Pip
 func (mr *MockwsPipelineSelectorMockRecorder) WsPipeline(prompt, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WsPipeline", reflect.TypeOf((*MockwsPipelineSelector)(nil).WsPipeline), prompt, help)
+}
+
+// MockwsEnvironmentSelector is a mock of wsEnvironmentSelector interface.
+type MockwsEnvironmentSelector struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsEnvironmentSelectorMockRecorder
+}
+
+// MockwsEnvironmentSelectorMockRecorder is the mock recorder for MockwsEnvironmentSelector.
+type MockwsEnvironmentSelectorMockRecorder struct {
+	mock *MockwsEnvironmentSelector
+}
+
+// NewMockwsEnvironmentSelector creates a new mock instance.
+func NewMockwsEnvironmentSelector(ctrl *gomock.Controller) *MockwsEnvironmentSelector {
+	mock := &MockwsEnvironmentSelector{ctrl: ctrl}
+	mock.recorder = &MockwsEnvironmentSelectorMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsEnvironmentSelector) EXPECT() *MockwsEnvironmentSelectorMockRecorder {
+	return m.recorder
+}
+
+// LocalEnvironment mocks base method.
+func (m *MockwsEnvironmentSelector) LocalEnvironment(msg, help string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LocalEnvironment", msg, help)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LocalEnvironment indicates an expected call of LocalEnvironment.
+func (mr *MockwsEnvironmentSelectorMockRecorder) LocalEnvironment(msg, help interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalEnvironment", reflect.TypeOf((*MockwsEnvironmentSelector)(nil).LocalEnvironment), msg, help)
 }
 
 // MockcodePipelineSelector is a mock of codePipelineSelector interface.

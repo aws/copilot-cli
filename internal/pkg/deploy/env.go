@@ -24,7 +24,6 @@ type CreateEnvironmentInput struct {
 
 	App                  AppInformation    // Information about the application that the environment belongs to, include app name, DNS name, the principal ARN of the account.
 	Name                 string            // Name of the environment, must be unique within an application.
-	Prod                 bool              // Whether or not this environment is a production environment.
 	AdditionalTags       map[string]string // AdditionalTags are labels applied to resources under the application.
 	ArtifactBucketARN    string            // ARN of the regional application bucket.
 	ArtifactBucketKeyARN string            // ARN of the KMS key used to encrypt the contents in the regional application bucket.
@@ -32,6 +31,7 @@ type CreateEnvironmentInput struct {
 	ImportVPCConfig      *config.ImportVPC // Optional configuration if users have an existing VPC.
 	AdjustVPCConfig      *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
 	ImportCertARNs       []string          // Optional configuration if users want to import certificates.
+	InternalALBSubnets   []string          // Optional configuration if users want to specify internal ALB placement.
 	Telemetry            *config.Telemetry // Optional observability and monitoring configuration.
 	Mft                  *manifest.Environment
 

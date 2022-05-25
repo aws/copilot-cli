@@ -41,9 +41,10 @@ type EnvOpts struct {
 	ArtifactBucketARN         string
 	ArtifactBucketKeyARN      string
 
-	VPCConfig      VPCConfig
-	ImportCertARNs []string
-	Telemetry      *Telemetry
+	VPCConfig                VPCConfig
+	ImportCertARNs           []string
+	CustomInternalALBSubnets []string
+	Telemetry                *Telemetry
 
 	LatestVersion string
 	Manifest      string // Serialized manifest used to render the environment template.

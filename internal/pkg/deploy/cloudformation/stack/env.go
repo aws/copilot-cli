@@ -31,18 +31,19 @@ type EnvStackConfig struct {
 
 const (
 	// Parameter keys.
-	envParamAppNameKey               = "AppName"
-	envParamEnvNameKey               = "EnvironmentName"
-	envParamToolsAccountPrincipalKey = "ToolsAccountPrincipalARN"
-	envParamAppDNSKey                = "AppDNSName"
-	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
-	EnvParamAliasesKey               = "Aliases"
-	EnvParamALBWorkloadsKey          = "ALBWorkloads"
-	envParamInternalALBWorkloadsKey  = "InternalALBWorkloads"
-	envParamEFSWorkloadsKey          = "EFSWorkloads"
-	envParamNATWorkloadsKey          = "NATWorkloads"
-	envParamCreateHTTPSListenerKey   = "CreateHTTPSListener"
-	EnvParamServiceDiscoveryEndpoint = "ServiceDiscoveryEndpoint"
+	envParamAppNameKey                     = "AppName"
+	envParamEnvNameKey                     = "EnvironmentName"
+	envParamToolsAccountPrincipalKey       = "ToolsAccountPrincipalARN"
+	envParamAppDNSKey                      = "AppDNSName"
+	envParamAppDNSDelegationRoleKey        = "AppDNSDelegationRole"
+	EnvParamAliasesKey                     = "Aliases"
+	EnvParamALBWorkloadsKey                = "ALBWorkloads"
+	envParamInternalALBWorkloadsKey        = "InternalALBWorkloads"
+	envParamEFSWorkloadsKey                = "EFSWorkloads"
+	envParamNATWorkloadsKey                = "NATWorkloads"
+	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
+	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
+	EnvParamServiceDiscoveryEndpoint       = "ServiceDiscoveryEndpoint"
 
 	// Output keys.
 	EnvOutputVPCID               = "VpcId"
@@ -102,9 +103,10 @@ func (e *EnvStackConfig) Template() (string, error) {
 		ArtifactBucketARN:      e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
 
-		ImportCertARNs: e.importCertARNs(),
-		VPCConfig:      e.vpcConfig(),
-		Telemetry:      e.telemetryConfig(),
+		ImportCertARNs:           e.importCertARNs(),
+		VPCConfig:                e.vpcConfig(),
+		CustomInternalALBSubnets: e.internalALBSubnets(),
+		Telemetry:                e.telemetryConfig(),
 
 		Version:       e.in.Version,
 		LatestVersion: deploy.LatestEnvTemplateVersion,
@@ -196,12 +198,26 @@ func (e *EnvStackConfig) importCertARNs() []string {
 	return e.in.ImportCertARNs
 }
 
+func (e *EnvStackConfig) internalALBSubnets() []string {
+	// If a manifest is present, it is the only place we look.
+	if e.in.Mft != nil {
+		return e.in.Mft.HTTPConfig.Private.Subnets
+	}
+	// Fallthrough to SSM config.
+	return e.in.InternalALBSubnets
+}
+
 // Parameters returns the parameters to be passed into an environment CloudFormation template.
 func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	httpsListener := "false"
 	if len(e.in.ImportCertARNs) != 0 || e.in.App.Domain != "" {
 		httpsListener = "true"
 	}
+	internalHTTPSListener := "false"
+	if len(e.in.ImportCertARNs) != 0 && len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
+		internalHTTPSListener = "true"
+	}
+
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(envParamAppNameKey),
@@ -230,6 +246,10 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
 			ParameterValue: aws.String(httpsListener),
+		},
+		{
+			ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
+			ParameterValue: aws.String(internalHTTPSListener),
 		},
 		{
 			ParameterKey:   aws.String(EnvParamAliasesKey),
@@ -290,7 +310,6 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.Environment
 	return &config.Environment{
 		Name:             e.in.Name,
 		App:              e.in.App.Name,
-		Prod:             e.in.Prod,
 		Region:           stackARN.Region,
 		AccountID:        stackARN.AccountID,
 		ManagerRoleARN:   stackOutputs[envOutputManagerRoleKey],

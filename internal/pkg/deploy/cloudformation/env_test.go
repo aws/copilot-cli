@@ -102,6 +102,10 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 							ParameterKey:   aws.String("CreateHTTPSListener"),
 							ParameterValue: aws.String("true"),
 						},
+						{
+							ParameterKey:   aws.String("CreateInternalHTTPSListener"),
+							ParameterValue: aws.String("false"),
+						},
 					})
 				})
 				s3 := mocks.NewMocks3Client(ctrl)
@@ -307,6 +311,10 @@ func TestCloudFormation_UpgradeLegacyEnvironment(t *testing.T) {
 						},
 						{
 							ParameterKey:   aws.String("CreateHTTPSListener"),
+							ParameterValue: aws.String("false"),
+						},
+						{
+							ParameterKey:   aws.String("CreateInternalHTTPSListener"),
 							ParameterValue: aws.String("false"),
 						},
 					})

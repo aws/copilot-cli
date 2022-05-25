@@ -417,6 +417,7 @@ type statusDescriber interface {
 type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 	PublicCIDRBlocks() ([]string, error)
+	Manifest() ([]byte, error)
 }
 
 type versionGetter interface {
@@ -488,6 +489,10 @@ type pipelineEnvSelector interface {
 
 type wsPipelineSelector interface {
 	WsPipeline(prompt, help string) (*workspace.PipelineManifest, error)
+}
+
+type wsEnvironmentSelector interface {
+	LocalEnvironment(msg, help string) (wl string, err error)
 }
 
 type codePipelineSelector interface {

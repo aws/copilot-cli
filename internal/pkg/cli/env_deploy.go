@@ -9,6 +9,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
 type deployEnvVars struct {
@@ -21,7 +23,10 @@ type deployEnvOpts struct {
 	deployEnvVars
 
 	// Dependencies.
-	store *config.Store
+	store store
+
+	// Dependencies to ask.
+	sel wsEnvironmentSelector
 
 	// Dependencies to execute.
 	ws           wsEnvironmentReader
@@ -35,6 +40,23 @@ type deployEnvOpts struct {
 
 	// Functions to facilitate testing.
 	unmarshalManifest func(in []byte) (*manifest.Environment, error)
+}
+
+// Validate is a no-op for this command.
+func (o *deployEnvOpts) Validate() error {
+	return nil
+}
+
+// Ask prompts for and validates any required flags.
+func (o *deployEnvOpts) Ask() error {
+	if o.appName == "" {
+		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
+		return errNoAppInWorkspace
+	}
+	if _, err := o.cachedTargetApp(); err != nil {
+		return err
+	}
+	return o.validateOrAskEnvName()
 }
 
 // Execute deploys an environment given a manifest.
@@ -53,7 +75,6 @@ func (o *deployEnvOpts) Execute() error {
 	}
 	if err := o.deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
 		RootUserARN:         caller.RootUserARN,
-		IsProduction:        o.isProduction,
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
 	}); err != nil {
@@ -85,13 +106,41 @@ func (o *deployEnvOpts) environmentManifest() (*manifest.Environment, error) {
 	return mft, nil
 }
 
+func (o *deployEnvOpts) validateOrAskEnvName() error {
+	if o.name != "" {
+		if _, err := o.cachedTargetEnv(); err != nil {
+			log.Errorf("It seems like environment %s is not added in application %s yet. Have you run %s?\n",
+				o.name, o.appName, color.HighlightCode("copilot env init"))
+			return err
+		}
+		return nil
+	}
+	name, err := o.sel.LocalEnvironment("Select an environment in your workspace", "")
+	if err != nil {
+		return fmt.Errorf("select environment: %w", err)
+	}
+	o.name = name
+	return nil
+}
+
 func (o *deployEnvOpts) cachedTargetEnv() (*config.Environment, error) {
 	if o.targetEnv == nil {
 		env, err := o.store.GetEnvironment(o.appName, o.name)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get environment %s in application %s: %w", o.name, o.appName, err)
 		}
 		o.targetEnv = env
 	}
 	return o.targetEnv, nil
+}
+
+func (o *deployEnvOpts) cachedTargetApp() (*config.Application, error) {
+	if o.targetApp == nil {
+		app, err := o.store.GetApplication(o.appName)
+		if err != nil {
+			return nil, fmt.Errorf("get application %s: %w", o.appName, err)
+		}
+		o.targetApp = app
+	}
+	return o.targetApp, nil
 }

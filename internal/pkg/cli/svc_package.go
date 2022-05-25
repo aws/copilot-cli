@@ -106,7 +106,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		unmarshal:        manifest.UnmarshalWorkload,
 		runner:           exec.NewCmd(),
-		sel:              selector.NewWorkspaceSelector(prompter, store, ws),
+		sel:              selector.NewLocalWorkloadSelector(prompter, store, ws),
 		stackWriter:      os.Stdout,
 		paramsWriter:     ioutil.Discard,
 		addonsWriter:     ioutil.Discard,
