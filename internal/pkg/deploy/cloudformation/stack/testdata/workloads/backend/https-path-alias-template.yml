@@ -372,7 +372,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
   HTTPListenerRuleWithDomain:
     Metadata:
       "aws:copilot:description": "An HTTP listener rule that redirects HTTP to HTTPS"
@@ -398,7 +398,7 @@ Resources:
               - - "/*"
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
   HTTPSListenerRule:
     Metadata:
@@ -419,7 +419,7 @@ Resources:
               - - "/*"
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
       Priority: !GetAtt HTTPSRulePriorityAction.Priority
   AddonsStack:
     Metadata:
