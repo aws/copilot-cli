@@ -20,7 +20,7 @@ LoadBalancerDNSAlias:
       AliasTarget:
         HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
         DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-{{- else if and .Aliases .HostedZoneID}}
+{{- else if .HostedZoneID}}
 LoadBalancerDNSAlias:
   Metadata:
     'aws:copilot:description': 'Alias records for the application load balancer'
