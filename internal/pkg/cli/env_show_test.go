@@ -99,7 +99,7 @@ func TestEnvShow_Ask(t *testing.T) {
 			setupMocks: func(m showEnvMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, mockErr)
 			},
-			wantedError: errors.New("validate application name 'my-app': some error"),
+			wantedError: errors.New(`validate application name "my-app": some error`),
 		},
 		"should wrap error if validation of env name fails": {
 			inputApp: "my-app",
@@ -109,7 +109,7 @@ func TestEnvShow_Ask(t *testing.T) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(nil, nil)
 				m.storeSvc.EXPECT().GetEnvironment("my-app", "my-env").Return(nil, mockErr)
 			},
-			wantedError: errors.New("validate environment name 'my-env' in application 'my-app': some error"),
+			wantedError: errors.New(`validate environment name "my-env" in application "my-app": some error`),
 		},
 		"returns error when fail to select app": {
 			inputApp: "",
