@@ -1151,7 +1151,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			setupMocks: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 			},
-			expectedErr: `setting "alias" requires an environment with imported certs`,
+			expectedErr: `cannot specify "alias" in an environment without imported certs`,
 		},
 		"failure if cert validation fails": {
 			App: &config.Application{
@@ -1205,27 +1205,6 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"go.dev"}, []string{"mockCertARN"}).Return(nil)
 			},
-		},
-		"failure if hosted zone is set without alias": {
-			App: &config.Application{
-				Name: mockAppName,
-			},
-			Env: &config.Environment{
-				Name: mockEnvName,
-			},
-			Manifest: &manifest.BackendService{
-				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-							HostedZone: aws.String("ABCD1234"),
-						},
-					},
-				},
-			},
-			setupMocks: func(m *deployMocks) {
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
-			},
-			expectedErr: `setting "hosted_zone" requires "alias"`,
 		},
 		"success if hosted zone is set": {
 			App: &config.Application{
