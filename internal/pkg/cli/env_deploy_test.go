@@ -60,7 +60,7 @@ func TestDeployEnvOpts_Ask(t *testing.T) {
 			setUpMocks: func(m *deployEnvAskMocks) {
 				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
 				m.store.EXPECT().GetEnvironment("mockApp", "mockEnv").AnyTimes()
-				m.sel.EXPECT().WSEnvironment(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+				m.sel.EXPECT().LocalEnvironment(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedError: errors.New("select environment: some error"),
 		},
@@ -70,7 +70,7 @@ func TestDeployEnvOpts_Ask(t *testing.T) {
 			setUpMocks: func(m *deployEnvAskMocks) {
 				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
 				m.store.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{}, nil)
-				m.sel.EXPECT().WSEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().LocalEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedEnvName: "mockEnv",
 		},
@@ -79,7 +79,7 @@ func TestDeployEnvOpts_Ask(t *testing.T) {
 			setUpMocks: func(m *deployEnvAskMocks) {
 				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
-				m.sel.EXPECT().WSEnvironment(gomock.Any(), gomock.Any()).Return("mockEnv", nil)
+				m.sel.EXPECT().LocalEnvironment(gomock.Any(), gomock.Any()).Return("mockEnv", nil)
 			},
 			wantedEnvName: "mockEnv",
 		},
