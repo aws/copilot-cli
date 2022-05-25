@@ -1217,7 +1217,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				BackendServiceConfig: manifest.BackendServiceConfig{
 					RoutingRule: manifest.RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-							HostedZoneID: aws.String("ABCD1234"),
+							HostedZone: aws.String("ABCD1234"),
 						},
 					},
 				},
@@ -1225,7 +1225,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			setupMocks: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 			},
-			expectedErr: `setting "hosted_zone_id" requires "alias"`,
+			expectedErr: `setting "hosted_zone" requires "alias"`,
 		},
 		"success if hosted zone is set": {
 			App: &config.Application{
@@ -1241,7 +1241,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				BackendServiceConfig: manifest.BackendServiceConfig{
 					RoutingRule: manifest.RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-							HostedZoneID: aws.String("ABCD1234"),
+							HostedZone: aws.String("ABCD1234"),
 							Alias: manifest.Alias{
 								String: aws.String("go.dev"),
 							},

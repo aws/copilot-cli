@@ -64,7 +64,7 @@ type RoutingRuleConfiguration struct {
 	TargetContainer          *string `yaml:"target_container"`
 	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
 	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
-	HostedZoneID             *string `yaml:"hosted_zone_id"`
+	HostedZone               *string `yaml:"hosted_zone"`
 }
 
 // GetTargetContainer returns the correct target container value, if set.
@@ -79,7 +79,7 @@ func (r *RoutingRuleConfiguration) GetTargetContainer() *string {
 func (r *RoutingRuleConfiguration) isEmpty() bool {
 	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() &&
 		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil &&
-		r.HostedZoneID == nil
+		r.HostedZone == nil
 }
 
 // IPNet represents an IP network string. For example: 10.1.0.0/16
