@@ -274,8 +274,8 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 	}
 	if r.Network.VPC.Placement.PlacementString != nil &&
 		*r.Network.VPC.Placement.PlacementString != PrivateSubnetPlacement {
-		return fmt.Errorf(`placement "%s" is not supported for %s`,
-			string(*r.Network.VPC.Placement.PlacementString), RequestDrivenWebServiceType)
+		return fmt.Errorf(`placement %q is not supported for %s`,
+			*r.Network.VPC.Placement.PlacementString, RequestDrivenWebServiceType)
 	}
 	if err = r.Observability.Validate(); err != nil {
 		return fmt.Errorf(`validate "observability": %w`, err)
