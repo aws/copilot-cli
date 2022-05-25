@@ -209,7 +209,8 @@ func (o *environmentObservability) loadObsConfig(tele *config.Telemetry) {
 }
 
 type environmentHTTPConfig struct {
-	Public publicHTTPConfig `yaml:"public,omitempty"`
+	Public  publicHTTPConfig  `yaml:"public,omitempty"`
+	Private privateHTTPConfig `yaml:"private,omitempty"`
 }
 
 func (cfg *environmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
@@ -220,5 +221,10 @@ func (cfg *environmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 }
 
 type publicHTTPConfig struct {
+	Certificates []string `yaml:"certificates,omitempty"`
+}
+
+type privateHTTPConfig struct {
+	Subnets      []string `yaml:"subnets,omitempty"`
 	Certificates []string `yaml:"certificates,omitempty"`
 }
