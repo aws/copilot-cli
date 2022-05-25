@@ -22,7 +22,7 @@ network:
 ```
 
 <span class="parent-field">network.vpc.placement.</span><a id="network-vpc-placement-subnets" href="#network-vpc-placement-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>  
-A list of IDs for subnets where Copilot launches ECS tasks.
+A list of subnet IDs where Copilot launches ECS tasks.
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
 Additional security group IDs associated with your tasks. Copilot always includes a security group so containers within your environment
