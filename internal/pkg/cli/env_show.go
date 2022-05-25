@@ -140,8 +140,7 @@ func (o *showEnvOpts) validateOrAskApp() error {
 }
 
 func (o *showEnvOpts) validateApp() error {
-	_, err := o.store.GetApplication(o.appName)
-	if err != nil {
+	if _, err := o.store.GetApplication(o.appName); err != nil {
 		return fmt.Errorf("validate application name '%s': %v", o.appName, err)
 	}
 	return nil
@@ -160,8 +159,7 @@ func (o *showEnvOpts) validateOrAskEnv() error {
 }
 
 func (o *showEnvOpts) validateEnv() error {
-	_, err := o.store.GetEnvironment(o.appName, o.name)
-	if err != nil {
+	if _, err := o.store.GetEnvironment(o.appName, o.name); err != nil {
 		return fmt.Errorf("validate environment name '%s' in application '%s': %v", o.name, o.appName, err)
 	}
 	return nil
