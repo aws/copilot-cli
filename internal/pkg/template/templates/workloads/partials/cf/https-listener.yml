@@ -33,13 +33,8 @@ LoadBalancerDNSAlias:
       - Name: {{$alias}}
         Type: A
         AliasTarget:
-          {{- if eq .ServiceType "Backend Service"}}
           HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
           DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
-          {{- else }}
-          HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
-          DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-          {{- end}}
     {{- end}}
 {{- end}}
 
