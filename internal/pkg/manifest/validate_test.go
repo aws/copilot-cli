@@ -1272,6 +1272,13 @@ func TestRoutingRule_Validate(t *testing.T) {
 				ProtocolVersion: aws.String("gRPC"),
 			},
 		},
+		"error if hosted zone set without alias": {
+			RoutingRule: RoutingRuleConfiguration{
+				Path:       stringP("/"),
+				HostedZone: aws.String("ABCD1234"),
+			},
+			wantedErrorMsgPrefix: `"alias" must be specified if "hosted_zone" is specified`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

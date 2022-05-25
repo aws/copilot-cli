@@ -206,6 +206,9 @@ func (b BackendServiceConfig) Validate() error {
 	if err = b.ImageOverride.Validate(); err != nil {
 		return err
 	}
+	if err = b.RoutingRule.Validate(); err != nil {
+		return fmt.Errorf(`validate "http": %w`, err)
+	}
 	if err = b.TaskConfig.Validate(); err != nil {
 		return err
 	}
@@ -648,6 +651,12 @@ func (r RoutingRuleConfiguration) Validate() error {
 	if r.Path == nil {
 		return &errFieldMustBeSpecified{
 			missingField: "path",
+		}
+	}
+	if r.HostedZone != nil && r.Alias.IsEmpty() {
+		return &errFieldMustBeSpecified{
+			missingField:      "alias",
+			conditionalFields: []string{"hosted_zone"},
 		}
 	}
 	return nil
