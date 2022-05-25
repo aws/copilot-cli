@@ -10,6 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
@@ -52,16 +55,19 @@ type svcExecOpts struct {
 	newCommandExecutor func(*session.Session) ecsCommandExecutor
 	ssmPluginManager   ssmPluginManager
 	prompter           prompter
+	sessProvider       *sessions.Provider
 	// Override in unit test
 	randInt func(int) int
 }
 
 func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
-	ssmStore, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc exec"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
+		return nil, err
 	}
-	deployStore, err := deploy.NewStore(ssmStore)
+	ssmStore := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
+	deployStore, err := deploy.NewStore(sessProvider, ssmStore)
 	if err != nil {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
@@ -81,35 +87,21 @@ func newSvcExecOpts(vars execVars) (*svcExecOpts, error) {
 		},
 		ssmPluginManager: exec.NewSSMPluginCommand(nil),
 		prompter:         prompt.New(),
+		sessProvider:     sessProvider,
 	}, nil
 }
 
-// Validate returns an error if the values provided by the user are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *svcExecOpts) Validate() error {
-	if o.appName != "" {
-		if _, err := o.store.GetApplication(o.appName); err != nil {
-			return err
-		}
-		if o.envName != "" {
-			if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
-				return err
-			}
-		}
-		if o.name != "" {
-			if _, err := o.store.GetService(o.appName, o.name); err != nil {
-				return err
-			}
-		}
-	}
 	return validateSSMBinary(o.prompter, o.ssmPluginManager, o.skipConfirmation)
 }
 
-// Ask asks for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *svcExecOpts) Ask() error {
-	if err := o.askApp(); err != nil {
+	if err := o.validateOrAskApp(); err != nil {
 		return err
 	}
-	if err := o.askSvcEnvName(); err != nil {
+	if err := o.validateAndAskSvcEnvName(); err != nil {
 		return err
 	}
 	return nil
@@ -154,9 +146,10 @@ func (o *svcExecOpts) Execute() error {
 	return nil
 }
 
-func (o *svcExecOpts) askApp() error {
+func (o *svcExecOpts) validateOrAskApp() error {
 	if o.appName != "" {
-		return nil
+		_, err := o.store.GetApplication(o.appName)
+		return err
 	}
 	app, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
@@ -166,7 +159,21 @@ func (o *svcExecOpts) askApp() error {
 	return nil
 }
 
-func (o *svcExecOpts) askSvcEnvName() error {
+func (o *svcExecOpts) validateAndAskSvcEnvName() error {
+	if o.envName != "" {
+		if _, err := o.store.GetEnvironment(o.appName, o.envName); err != nil {
+			return err
+		}
+	}
+
+	if o.name != "" {
+		if _, err := o.store.GetService(o.appName, o.name); err != nil {
+			return err
+		}
+	}
+
+	// Note: we let prompter handle the case when there is only option for user to choose from.
+	// This is naturally the case when `o.envName != "" && o.name != ""`.
 	deployedService, err := o.sel.DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.name))
 	if err != nil {
 		return fmt.Errorf("select deployed service for application %s: %w", o.appName, err)
@@ -181,7 +188,7 @@ func (o *svcExecOpts) envSession() (*session.Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", o.envName, err)
 	}
-	return sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	return o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 }
 
 func (o *svcExecOpts) selectTask(tasks []*awsecs.Task) (string, error) {

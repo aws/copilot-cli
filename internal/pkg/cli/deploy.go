@@ -6,10 +6,11 @@ package cli
 import (
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 
 	"github.com/aws/copilot-cli/cmd/copilot/template"
@@ -22,7 +23,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -47,64 +47,59 @@ type deployOpts struct {
 }
 
 func newDeployOpts(vars deployWkldVars) (*deployOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("deploy"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
-	}
-	deployStore, err := deploy.NewStore(store)
-	if err != nil {
-		return nil, fmt.Errorf("new deploy store: %w", err)
 	}
 	prompter := prompt.New()
 	return &deployOpts{
 		deployWkldVars: vars,
 		store:          store,
-		sel:            selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:            selector.NewLocalWorkloadSelector(prompter, store, ws),
 		ws:             ws,
 		prompt:         prompter,
 
 		setupDeployCmd: func(o *deployOpts, workloadType string) {
 			switch {
-			case contains(workloadType, manifest.JobTypes):
-				o.deployWkld = &deployJobOpts{
+			case contains(workloadType, manifest.JobTypes()):
+				opts := &deployJobOpts{
 					deployWkldVars: o.deployWkldVars,
 
 					store:           o.store,
 					ws:              o.ws,
-					fs:              &afero.Afero{Fs: afero.NewOsFs()},
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
-					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
-					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
-					prompt:          o.prompt,
+					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws),
 					cmd:             exec.NewCmd(),
-					sessProvider:    sessions.NewProvider(),
+					sessProvider:    sessProvider,
 				}
-			case contains(workloadType, manifest.ServiceTypes):
+				opts.newJobDeployer = func() (workloadDeployer, error) {
+					return newJobDeployer(opts)
+				}
+				o.deployWkld = opts
+			case contains(workloadType, manifest.ServiceTypes()):
 				opts := &deploySvcOpts{
 					deployWkldVars: o.deployWkldVars,
 
 					store:           o.store,
 					ws:              o.ws,
-					fs:              &afero.Afero{Fs: afero.NewOsFs()},
 					newInterpolator: newManifestInterpolator,
 					unmarshal:       manifest.UnmarshalWorkload,
 					spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
-					sel:             selector.NewWorkspaceSelect(o.prompt, o.store, o.ws),
+					sel:             selector.NewLocalWorkloadSelector(o.prompt, o.store, ws),
 					prompt:          o.prompt,
-					now:             time.Now,
 					cmd:             exec.NewCmd(),
-					sessProvider:    sessions.NewProvider(),
-					newAppVersionGetter: func(appName string) (versionGetter, error) {
-						return describe.NewAppDescriber(appName)
-					},
-					snsTopicGetter: deployStore,
+					sessProvider:    sessProvider,
 				}
-				opts.uploadOpts = newUploadCustomResourcesOpts(opts)
+				opts.newSvcDeployer = func() (workloadDeployer, error) {
+					return newSvcDeployer(opts)
+				}
 				o.deployWkld = opts
 			}
 		},
@@ -195,6 +190,7 @@ func BuildDeployCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
+	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{

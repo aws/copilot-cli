@@ -20,7 +20,7 @@ var RootUsage = fmt.Sprintf("{{h1 \"Commands\"}}{{ $cmds := .Commands }}{{$group
     {{if eq $i 0}}{{rpad $cmd.Name $cmd.NamePadding}} {{$line}}
     {{- else}}{{rpad "" $cmd.NamePadding}} {{$line}}
 {{- end}}{{end}}{{if and (gt (len $lines) 1) (ne (inc $j) (len $groupCmds))}}
-{{end}}{{end}}
+{{- end}}{{end}}
 {{end}}{{if .HasAvailableLocalFlags}}
 {{h1 "Flags"}}
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}

@@ -54,6 +54,21 @@ func (mr *MockStackConfigurationMockRecorder) Parameters() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*MockStackConfiguration)(nil).Parameters))
 }
 
+// SerializedParameters mocks base method.
+func (m *MockStackConfiguration) SerializedParameters() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SerializedParameters")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SerializedParameters indicates an expected call of SerializedParameters.
+func (mr *MockStackConfigurationMockRecorder) SerializedParameters() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SerializedParameters", reflect.TypeOf((*MockStackConfiguration)(nil).SerializedParameters))
+}
+
 // StackName mocks base method.
 func (m *MockStackConfiguration) StackName() string {
 	m.ctrl.T.Helper()
@@ -332,6 +347,21 @@ func (m *MockcfnClient) Outputs(stack *cloudformation0.Stack) (map[string]string
 func (mr *MockcfnClientMockRecorder) Outputs(stack interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Outputs", reflect.TypeOf((*MockcfnClient)(nil).Outputs), stack)
+}
+
+// StackResources mocks base method.
+func (m *MockcfnClient) StackResources(name string) ([]*cloudformation0.StackResource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StackResources", name)
+	ret0, _ := ret[0].([]*cloudformation0.StackResource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StackResources indicates an expected call of StackResources.
+func (mr *MockcfnClientMockRecorder) StackResources(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StackResources", reflect.TypeOf((*MockcfnClient)(nil).StackResources), name)
 }
 
 // TemplateBody mocks base method.

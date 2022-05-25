@@ -354,6 +354,41 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 	}
 }
 
+func TestPlacementArgOrString_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct PlacementArgOrString
+		wantedError  error
+	}{
+		"returns error if both string and args specified": {
+			inContent: []byte(`placement: private
+  subnets: ["id1", "id2"]`),
+
+			wantedError: errors.New("yaml: line 2: mapping values are not allowed in this context"),
+		},
+		"error if unmarshalable": {
+			inContent: []byte(`placement:
+  ohess: linus
+  archie: leg64`),
+			wantedError: errUnmarshalPlacementOpts,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			v := vpcConfig{}
+			err := yaml.Unmarshal(tc.inContent, &v)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedStruct.PlacementString, v.Placement.PlacementString)
+				require.Equal(t, tc.wantedStruct.PlacementArgs.Subnets, v.Placement.PlacementArgs.Subnets)
+			}
+		})
+	}
+}
+
 func TestPlatformArgsOrString_OS(t *testing.T) {
 	linux := PlatformString("linux/amd64")
 	testCases := map[string]struct {
@@ -480,72 +515,6 @@ func TestRedirectPlatform(t *testing.T) {
 	}
 }
 
-func TestExec_UnmarshalYAML(t *testing.T) {
-	testCases := map[string]struct {
-		inContent []byte
-
-		wantedStruct ExecuteCommand
-		wantedError  error
-	}{
-		"use default with empty value": {
-			inContent: []byte(`exec:
-count: 1`),
-
-			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(false),
-			},
-		},
-		"use default without any input": {
-			inContent: []byte(`count: 1`),
-
-			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(false),
-			},
-		},
-		"simple enable": {
-			inContent: []byte(`exec: true`),
-
-			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(true),
-			},
-		},
-		"with config": {
-			inContent: []byte(`exec:
-  enable: true`),
-			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(false),
-				Config: ExecuteCommandConfig{
-					Enable: aws.Bool(true),
-				},
-			},
-		},
-		"Error if unmarshalable": {
-			inContent: []byte(`exec:
-  badfield: OH NOES
-  otherbadfield: DOUBLE BAD`),
-			wantedError: errUnmarshalExec,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			b := TaskConfig{
-				ExecuteCommand: ExecuteCommand{
-					Enable: aws.Bool(false),
-				},
-			}
-			err := yaml.Unmarshal(tc.inContent, &b)
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				// check memberwise dereferenced pointer equality
-				require.Equal(t, tc.wantedStruct.Enable, b.ExecuteCommand.Enable)
-				require.Equal(t, tc.wantedStruct.Config, b.ExecuteCommand.Config)
-			}
-		})
-	}
-}
-
 func TestBuildConfig(t *testing.T) {
 	mockWsRoot := "/root/dir"
 	testCases := map[string]struct {
@@ -652,91 +621,6 @@ func TestBuildConfig(t *testing.T) {
 	}
 }
 
-func TestLogging_IsEmpty(t *testing.T) {
-	testCases := map[string]struct {
-		in     Logging
-		wanted bool
-	}{
-		"empty logging": {
-			in:     Logging{},
-			wanted: true,
-		},
-		"non empty logging": {
-			in: Logging{
-				SecretOptions: map[string]string{
-					"secret1": "value1",
-				},
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			got := tc.in.IsEmpty()
-
-			// THEN
-			require.Equal(t, tc.wanted, got)
-		})
-	}
-}
-
-func TestLogging_LogImage(t *testing.T) {
-	testCases := map[string]struct {
-		inputImage  *string
-		wantedImage *string
-	}{
-		"Image specified": {
-			inputImage:  aws.String("nginx:why-on-earth"),
-			wantedImage: aws.String("nginx:why-on-earth"),
-		},
-		"no image specified": {
-			inputImage:  nil,
-			wantedImage: aws.String(defaultFluentbitImage),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			l := Logging{
-				Image: tc.inputImage,
-			}
-			got := l.LogImage()
-
-			require.Equal(t, tc.wantedImage, got)
-		})
-	}
-}
-
-func TestLogging_GetEnableMetadata(t *testing.T) {
-	testCases := map[string]struct {
-		enable *bool
-		wanted *string
-	}{
-		"specified true": {
-			enable: aws.Bool(true),
-			wanted: aws.String("true"),
-		},
-		"specified false": {
-			enable: aws.Bool(false),
-			wanted: aws.String("false"),
-		},
-		"not specified": {
-			enable: nil,
-			wanted: aws.String("true"),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			l := Logging{
-				EnableMetadata: tc.enable,
-			}
-			got := l.GetEnableMetadata()
-
-			require.Equal(t, tc.wanted, got)
-		})
-	}
-}
-
 func TestNetworkConfig_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
 		in     NetworkConfig
@@ -778,9 +662,7 @@ network:
   vpc:
 `,
 			wantedConfig: &NetworkConfig{
-				VPC: vpcConfig{
-					Placement: &PublicSubnetPlacement,
-				},
+				VPC: vpcConfig{},
 			},
 		},
 		"unmarshals successfully for public placement with security groups": {
@@ -794,7 +676,9 @@ network:
 `,
 			wantedConfig: &NetworkConfig{
 				VPC: vpcConfig{
-					Placement:      &PublicSubnetPlacement,
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PublicSubnetPlacement),
+					},
 					SecurityGroups: []string{"sg-1234", "sg-4567"},
 				},
 			},

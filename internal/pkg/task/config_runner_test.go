@@ -254,7 +254,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				},
 			},
 		},
-		"successfully kick off task with platform version and disabled exec for windows": {
+		"successfully kick off task with platform version for windows": {
 			count:     1,
 			groupName: "my-task",
 
@@ -279,7 +279,7 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 					TaskFamilyName:  taskFamilyName("my-task"),
 					StartedBy:       startedBy,
 					PlatformVersion: "1.0.0",
-					EnableExec:      false,
+					EnableExec:      true,
 				}).Return([]*ecs.Task{&taskWithENI}, nil)
 			},
 

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
@@ -54,9 +55,9 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		},
 	}
 	mockLimit := aws.Int64(100)
-	mockDefaultLimit := aws.Int64(10)
 	var mockNilLimit *int64
 	mockStartTime := aws.Int64(123456789)
+	mockCurrentTimestamp := time.Date(2020, 11, 23, 0, 0, 0, 0, time.UTC) // Copilot GA date :).
 	testCases := map[string]struct {
 		follow     bool
 		limit      *int64
@@ -118,7 +119,9 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
 							require.Equal(t, param.LogStreams, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
-							require.Equal(t, param.Limit, mockDefaultLimit)
+							var val *int64 = nil // Explicitly mark that nil is of type *int64 otherwise require.Equal returns an error.
+							require.Equal(t, param.Limit, val)
+							require.Equal(t, param.StartTime, aws.Int64(mockCurrentTimestamp.UnixMilli()))
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events:              logEvents,
@@ -136,6 +139,26 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 404 -
+`,
+		},
+		"success with no filtering": {
+			taskIDs: []string{"mockTaskID1"},
+			setupMocks: func(m serviceLogsMocks) {
+				gomock.InOrder(
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.LogStreams, []string{"mockLogStreamPrefix/mockTaskID1"})
+							require.Equal(t, param.Limit, aws.Int64(10))
+						}).
+						Return(&cloudwatchlogs.LogEventsOutput{
+							Events: logEvents,
+						}, nil),
+				)
+			},
+
+			wantedContent: `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
 `,
 		},
 	}
@@ -159,6 +182,9 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 				logStreamNamePrefix: mockLogStreamPrefix,
 				eventsGetter:        mocklogGetter,
 				w:                   b,
+				now: func() time.Time {
+					return mockCurrentTimestamp
+				},
 			}
 
 			// WHEN

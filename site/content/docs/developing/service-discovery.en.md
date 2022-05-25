@@ -4,10 +4,7 @@ Service Discovery is a way of letting services discover and connect with each ot
 
 ## How do I use Service Discovery?
 
-Service Discovery is enabled for all services set up using the Copilot CLI. We'll show you how to use it by using an example. Imagine we have an app called `kudos` and two services: `api` and `front-end`. 
-
-!!! Attention
-    Service Discovery is not supported for Request-Driven Web Services.
+Service Discovery is enabled for all services set up using the Copilot CLI. We'll show you how to use it by using an example. Imagine we have an app called `kudos` and two services: `api` and `front-end`.
 
 In this example we'll imagine our `front-end` service is deployed in the `test` environment, has a public endpoint and wants to call our `api` service using its service discovery endpoint. 
 

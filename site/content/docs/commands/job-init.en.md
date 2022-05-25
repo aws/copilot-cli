@@ -7,7 +7,7 @@ $ copilot job init
 
 `copilot job init` creates a new [job](../concepts/jobs.en.md) to run your code for you. 
 
-After running this command, the CLI creates sub-directory with your app name in your local `copilot` directory where you'll find a [manifest file](../manifest/overview.en.md). Feel free to update your manifest file to change the default configs for your job. The CLI also sets up an ECR repository with a policy for all [environments](../concepts/environments.en.md) to be able to pull from it. Then, your job gets registered to AWS System Manager Parameter Store so that the CLI can keep track of your it.
+After running this command, the CLI creates sub-directory with your app name in your local `copilot` directory where you'll find a [manifest file](../manifest/overview.en.md). Feel free to update your manifest file to change the default configs for your job. The CLI also sets up an ECR repository with a policy for all [environments](../concepts/environments.en.md) to be able to pull from it. Then, your job gets registered to AWS System Manager Parameter Store so that the CLI can keep track of it for you.
 
 After that, if you already have an environment set up, you can run `copilot job deploy` to deploy your job in that environment.
 

@@ -156,7 +156,7 @@ Resources:
             Value: !Ref AWS::Partition
       Source:
         Type: CODEPIPELINE
-        BuildSpec: copilot/buildspec.yml
+        BuildSpec: {{.Build.BuildspecPath}}
       TimeoutInMinutes: 60
   PipelineRole:
     Type: AWS::IAM::Role
@@ -265,7 +265,7 @@ Resources:
       Roles:
         - !Ref PipelineRole
 {{- range $index, $stage := .Stages}}
-  {{- if $stage.TestCommands}}
+  {{- if $stage.Test}}
   BuildTestCommands{{logicalIDSafe $stage.Name}}:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -288,7 +288,7 @@ Resources:
                   docker: 18
             build:
               commands:
-              {{- range $index, $command := $stage.TestCommands}}
+              {{- range $index, $command := $stage.Test.Commands}}
                 - {{$command}}
               {{- end}}
   {{- end}}
@@ -308,7 +308,9 @@ Resources:
               Id: {{.KeyArn}}
               Type: KMS{{end}}
       RoleArn: !GetAtt PipelineRole.Arn
+      {{- if .IsLegacy }}
       Name: !Ref AWS::StackName
+      {{- end }}
       Stages:
         {{- if eq .Source.ProviderName "GitHubV1"}}
         - Name: Source
@@ -389,17 +391,21 @@ Resources:
               - Name: SCCheckoutArtifact
             OutputArtifacts:
               - Name: BuildOutput
-        {{- $length := len .Stages}}{{if gt $length 0}}{{range $stage := .Stages}}{{$numWorkloads := len $stage.LocalWorkloads}}{{if gt $numWorkloads 0}}
+        {{- range $stage := .Stages}}
+        {{- $numDeployments := len $stage.Deployments}}{{- if gt $numDeployments 0}}
         - Name: DeployTo-{{$stage.Name}}
-          Actions:{{if $stage.RequiresApproval }}
-            - Name: ApprovePromotionTo-{{$stage.Name}}
+          Actions:
+            {{- if $stage.Approval }}
+            - Name: {{$stage.Approval.Name}}
               ActionTypeId:
                 Category: Approval
                 Owner: AWS
                 Version: 1
                 Provider: Manual
-              RunOrder: 1{{end}}{{range $workload := $stage.LocalWorkloads}}
-            - Name: CreateOrUpdate-{{$workload}}-{{$stage.Name}}
+              RunOrder: {{$stage.Approval.RunOrder}}
+            {{- end}}
+            {{- range $deployment := $stage.Deployments}}
+            - Name: {{$deployment.Name}}
               Region: {{$stage.Region}}
               ActionTypeId:
                 Category: Deploy
@@ -407,25 +413,19 @@ Resources:
                 Version: 1
                 Provider: CloudFormation
               Configuration:
-                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-action-reference.html
-                ChangeSetName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
                 ActionMode: CREATE_UPDATE
-                StackName: {{$.AppName}}-{{$stage.Name}}-{{$workload}}
+                StackName: {{$deployment.StackName}}
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
-                TemplatePath: BuildOutput::infrastructure/{{$stage.WorkloadTemplatePath $workload}}
-                TemplateConfiguration: BuildOutput::infrastructure/{{$stage.WorkloadTemplateConfigurationPath $workload}}
-                # The ARN of the IAM role (in the env account) that
-                # AWS CloudFormation assumes when it operates on resources
-                # in a stack in an environment account.
-                RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-CFNExecutionRole
+                TemplatePath: BuildOutput::{{$deployment.TemplatePath}}
+                TemplateConfiguration: BuildOutput::{{$deployment.TemplateConfigPath}}
+                RoleArn: {{$stage.ExecRoleARN}}
               InputArtifacts:
                 - Name: BuildOutput
-              RunOrder: 2
-              # The ARN of the environment manager IAM role (in the env
-              # account) that performs the declared action. This is assumed
-              # through the roleArn for the pipeline.
-              RoleArn: arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}{{if $stage.TestCommands}}
-            - Name: TestCommands
+              RunOrder: {{$deployment.RunOrder}}
+              RoleArn: {{$stage.EnvManagerRoleARN}}
+            {{- end}}
+            {{- if $stage.Test }}
+            - Name: {{$stage.Test.Name}}
               ActionTypeId:
                 Category: Test
                 Owner: AWS
@@ -433,9 +433,12 @@ Resources:
                 Provider: CodeBuild
               Configuration:
                 ProjectName: !Ref BuildTestCommands{{logicalIDSafe $stage.Name}}
-              RunOrder: 3
+              RunOrder: {{$stage.Test.RunOrder}}
               InputArtifacts:
-                - Name: SCCheckoutArtifact{{end}}{{end}}{{end}}{{end}}
+                - Name: SCCheckoutArtifact
+            {{- end}}
+        {{- end}} {{/* if gt $numDeployments 0 */}}
+        {{- end}} {{/* range $stage := .Stages */}}
 {{- if isCodeStarConnection .Source}}
 Outputs:
   PipelineConnectionARN:

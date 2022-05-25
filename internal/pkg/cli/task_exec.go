@@ -6,6 +6,9 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/cmd/copilot/template"
@@ -55,10 +58,13 @@ type taskExecOpts struct {
 }
 
 func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
-	ssmStore, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("task exec"))
+	defaultSess, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %w", err)
+		return nil, fmt.Errorf("default session: %v", err)
 	}
+
+	ssmStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
 	return &taskExecOpts{
 		taskExecVars:     vars,
@@ -66,13 +72,13 @@ func newTaskExecOpts(vars taskExecVars) (*taskExecOpts, error) {
 		ssmPluginManager: exec.NewSSMPluginCommand(nil),
 		prompter:         prompter,
 		newTaskSel: func(sess *session.Session) runningTaskSelector {
-			return selector.NewTaskSelect(prompter, ecs.New(sess))
+			return selector.NewTaskSelector(prompter, ecs.New(sess))
 		},
-		configSel: selector.NewConfigSelect(prompter, ssmStore),
+		configSel: selector.NewConfigSelector(prompter, ssmStore),
 		newCommandExecutor: func(s *session.Session) ecsCommandExecutor {
 			return awsecs.New(s)
 		},
-		provider: sessions.NewProvider(),
+		provider: sessProvider,
 	}, nil
 }
 

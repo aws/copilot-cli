@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/aas"
-	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -43,10 +42,6 @@ type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
 
-type appRunnerServiceDescriber interface {
-	Service() (*apprunner.Service, error)
-}
-
 type autoscalingAlarmNamesGetter interface {
 	ECSServiceAlarmNames(cluster, service string) ([]string, error)
 }
@@ -68,7 +63,7 @@ type appRunnerStatusDescriber struct {
 	env string
 	svc string
 
-	svcDescriber appRunnerServiceDescriber
+	svcDescriber apprunnerDescriber
 	eventsGetter logGetter
 }
 
@@ -86,7 +81,7 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ecsStatusDescriber, er
 	if err != nil {
 		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
 	}
-	sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	sess, err := sessions.ImmutableProvider().FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
 		return nil, fmt.Errorf("session for role %s and region %s: %w", env.ManagerRoleARN, env.Region, err)
 	}
@@ -104,13 +99,12 @@ func NewECSStatusDescriber(opt *NewServiceStatusConfig) (*ecsStatusDescriber, er
 
 // NewAppRunnerStatusDescriber instantiates a new appRunnerStatusDescriber struct.
 func NewAppRunnerStatusDescriber(opt *NewServiceStatusConfig) (*appRunnerStatusDescriber, error) {
-	ecsSvcDescriber, err := NewAppRunnerServiceDescriber(NewServiceConfig{
+	ecsSvcDescriber, err := newAppRunnerServiceDescriber(NewServiceConfig{
 		App: opt.App,
-		Env: opt.Env,
 		Svc: opt.Svc,
 
 		ConfigStore: opt.ConfigStore,
-	})
+	}, opt.Env)
 	if err != nil {
 		return nil, err
 	}

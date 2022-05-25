@@ -32,6 +32,22 @@ type RequestDrivenWebServiceConfig struct {
 	Tags                              map[string]string                    `yaml:"tags"`
 	PublishConfig                     PublishConfig                        `yaml:"publish"`
 	Network                           RequestDrivenWebServiceNetworkConfig `yaml:"network"`
+	Observability                     Observability                        `yaml:"observability"`
+}
+
+// Observability holds configuration for observability to the service.
+type Observability struct {
+	Tracing *string `yaml:"tracing"`
+}
+
+func (o *Observability) isEmpty() bool {
+	return o.Tracing == nil
+}
+
+// ImageWithPort represents a container image with an exposed port.
+type ImageWithPort struct {
+	Image Image   `yaml:",inline"`
+	Port  *uint16 `yaml:"port"`
 }
 
 // RequestDrivenWebServiceNetworkConfig represents options for network connection to AWS resources for a Request-Driven Web Service.
@@ -44,15 +60,12 @@ func (c *RequestDrivenWebServiceNetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
 }
 
-// RequestDrivenWebServicePlacement represents where to place tasks for a Request-Driven Web Service.
-type RequestDrivenWebServicePlacement Placement
-
 type rdwsVpcConfig struct {
-	Placement *RequestDrivenWebServicePlacement `yaml:"placement"`
+	Placement PlacementArgOrString `yaml:"placement"`
 }
 
 func (c *rdwsVpcConfig) isEmpty() bool {
-	return c.Placement == nil
+	return c.Placement.IsEmpty()
 }
 
 // RequestDrivenWebServiceHttpConfig represents options for configuring http.

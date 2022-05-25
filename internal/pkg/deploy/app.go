@@ -36,13 +36,13 @@ const (
 // AppInformation holds information about the application that need to be propagated to the env stacks and workload stacks.
 type AppInformation struct {
 	AccountPrincipalARN string
-	DNSName             string
+	Domain              string
 	Name                string
 }
 
 // DNSDelegationRole returns the ARN of the app's DNS delegation role.
 func (a *AppInformation) DNSDelegationRole() string {
-	if a.AccountPrincipalARN == "" || a.DNSName == "" {
+	if a.AccountPrincipalARN == "" || a.Domain == "" {
 		return ""
 	}
 

@@ -4,7 +4,7 @@ TaskRole:
   Type: AWS::IAM::Role
   Properties:{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{if gt (len .NestedStack.PolicyOutputs) 0}}
     ManagedPolicyArns:{{range $managedPolicy := .NestedStack.PolicyOutputs}}
-    - Fn::GetAtt: [{{$stackName}}, Outputs.{{$managedPolicy}}]{{end}}{{end}}{{end}}
+      - Fn::GetAtt: [{{$stackName}}, Outputs.{{$managedPolicy}}]{{end}}{{end}}{{end}}
     AssumeRolePolicyDocument:
       Statement:
         - Effect: Allow
@@ -102,5 +102,22 @@ TaskRole:
                 - !Ref {{logicalIDSafe $topic.Name}}SNSTopic
               {{- end}}
       {{- end}}{{- end}}
-
-
+      {{- if eq .Observability.Tracing "AWSXRAY"}}
+      - PolicyName: 'AWSDistroOpenTelemetryPolicy' 
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action:
+                - 'logs:PutLogEvents'
+                - 'logs:CreateLogGroup'
+                - 'logs:CreateLogStream'
+                - 'logs:DescribeLogStreams'
+                - 'logs:DescribeLogGroups'
+                - 'xray:PutTraceSegments'
+                - 'xray:PutTelemetryRecords'
+                - 'xray:GetSamplingRules'
+                - 'xray:GetSamplingTargets'
+                - 'xray:GetSamplingStatisticSummaries'
+              Resource: "*"
+      {{- end}}

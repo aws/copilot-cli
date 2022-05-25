@@ -3,6 +3,10 @@
 Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
   Version: {{ .LatestVersion }}
+{{- if .Manifest }}
+  Manifest: |
+{{indent 4 .Manifest}}
+{{- end}}
 Parameters:
   AppName:
     Type: String
@@ -10,35 +14,41 @@ Parameters:
     Type: String
   ALBWorkloads:
     Type: String
-    Default: ""
+  InternalALBWorkloads:
+    Type: String
   EFSWorkloads:
     Type: String
-    Default: ""
   NATWorkloads:
     Type: String
-    Default: ""
   ToolsAccountPrincipalARN:
     Type: String
   AppDNSName:
     Type: String
-    Default: ""
   AppDNSDelegationRole:
     Type: String
-    Default: ""
   Aliases:
     Type: String
-    Default: ""
+  CreateHTTPSListener:
+    Type: String
+    AllowedValues: [true, false]
+  CreateInternalHTTPSListener:
+    Type: String
+    AllowedValues: [true, false]
   ServiceDiscoveryEndpoint:
     Type: String
-    Default: {{.AppName}}.local
 Conditions:
   CreateALB:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
+  CreateInternalALB:
+    !Not [!Equals [ !Ref InternalALBWorkloads, "" ]]
   DelegateDNS:
     !Not [!Equals [ !Ref AppDNSName, "" ]]
   ExportHTTPSListener: !And
-    - !Condition DelegateDNS
     - !Condition CreateALB
+    - !Equals [!Ref CreateHTTPSListener, true]
+  ExportInternalHTTPSListener: !And
+    - !Condition CreateInternalALB
+    - !Equals [!Ref CreateInternalHTTPSListener, true]
   CreateEFS:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
@@ -46,19 +56,21 @@ Conditions:
   HasAliases:
     !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
-{{- if not .ImportVPC}}
-{{include "vpc-resources" .VPCConfig | indent 2}}
-{{include "nat-gateways" .VPCConfig | indent 2}}
+{{- if not .VPCConfig.Imported}}
+{{include "vpc-resources" .VPCConfig.Managed | indent 2}}
+{{include "nat-gateways" .VPCConfig.Managed | indent 2}}
 {{- end}}
   # Creates a service discovery namespace with the form provided in the parameter.
   # For new environments after 1.5.0, this is "env.app.local". For upgraded environments from
   # before 1.5.0, this is app.local.
   ServiceDiscoveryNamespace:
+    Metadata:
+      'aws:copilot:description': 'A private DNS namespace for discovering services within the environment'
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
       Name: !Ref ServiceDiscoveryEndpoint
-{{- if .ImportVPC}}
-      Vpc: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+      Vpc: {{.VPCConfig.Imported.ID}}
 {{- else}}
       Vpc: !Ref VPC
 {{- end}}
@@ -71,6 +83,15 @@ Resources:
       Configuration:
         ExecuteCommandConfiguration:
           Logging: DEFAULT
+{{- if and .Telemetry .Telemetry.EnableContainerInsights}}
+      ClusterSettings:
+        - Name: containerInsights
+          {{- if .Telemetry.ContainerInsightsEnabled}}
+          Value: enabled
+          {{- else}}
+          Value: disabled
+          {{- end}}
+{{- end}}
   PublicLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTP and HTTPS traffic'
@@ -89,23 +110,38 @@ Resources:
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
-{{- if .ImportVPC}}
-      VpcId: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
-  # Only accept requests coming from the public ALB or other containers in the same security group.
+  InternalLoadBalancerSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your internal load balancer allowing HTTP traffic from within the VPC'
+    Condition: CreateInternalALB
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the internal load balancer
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
+{{- else}}
+      VpcId: !Ref VPC
+{{- end}}
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-internal-lb'
+  # Only accept requests coming from the public ALB, internal ALB, or other containers in the same security group.
   EnvironmentSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group to allow your containers to talk to each other'
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EnvironmentSecurityGroup]]
-{{- if .ImportVPC}}
-      VpcId: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
@@ -120,11 +156,27 @@ Resources:
       GroupId: !Ref EnvironmentSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref PublicLoadBalancerSecurityGroup
+  EnvironmentSecurityGroupIngressFromInternalALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateInternalALB
+    Properties:
+      Description: Ingress from the internal ALB
+      GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref InternalLoadBalancerSecurityGroup
   EnvironmentSecurityGroupIngressFromSelf:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       Description: Ingress from other containers in the same security group
       GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+  InternalALBIngressFromEnvironmentSecurityGroup:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateInternalALB
+    Properties:
+      Description: Ingress from the env security group
+      GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
   PublicLoadBalancer:
@@ -135,10 +187,10 @@ Resources:
     Properties:
       Scheme: internet-facing
       SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
-{{- if .ImportVPC}}
-      Subnets: [ {{range $id := .ImportVPC.PublicSubnetIDs}}{{$id}}, {{end}} ]
+{{- if .VPCConfig.Imported}}
+      Subnets: [ {{range $id := .VPCConfig.Imported.PublicSubnetIDs}}{{$id}}, {{end}} ]
 {{- else}}
-      Subnets: [ {{range $ind, $cidr := .VPCConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}} ]
+      Subnets: [ {{range $ind, $cidr := .VPCConfig.Managed.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}} ]
 {{- end}}
       Type: application
   # Assign a dummy target group that with no real services as targets, so that we can create
@@ -157,12 +209,14 @@ Resources:
         - Key: deregistration_delay.timeout_seconds
           Value: 60                  # Default is 300.
       TargetType: ip
-{{- if .ImportVPC}}
-      VpcId: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
   HTTPListener:
+    Metadata:
+      'aws:copilot:description': 'A load balancer listener to route HTTP traffic'
     Type: AWS::ElasticLoadBalancingV2::Listener
     Condition: CreateALB
     Properties:
@@ -173,25 +227,117 @@ Resources:
       Port: 80
       Protocol: HTTP
   HTTPSListener:
+    Metadata:
+      'aws:copilot:description': 'A load balancer listener to route HTTPS traffic'
     Type: AWS::ElasticLoadBalancingV2::Listener
-    DependsOn: HTTPSCert
     Condition: ExportHTTPSListener
     Properties:
       Certificates:
+{{- if .ImportCertARNs}}
+        - CertificateArn: {{index .ImportCertARNs 0}}
+{{- else}}
         - CertificateArn: !Ref HTTPSCert
+{{- end}}
       DefaultActions:
         - TargetGroupArn: !Ref DefaultHTTPTargetGroup
           Type: forward
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
+{{- range $ind, $arn := .ImportCertARNs}}
+{{- if gt $ind 0}}
+  HTTPSImportCertificate{{inc $ind}}:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Condition: ExportHTTPSListener
+    Properties:
+      ListenerArn: !Ref HTTPSListener
+      Certificates:
+        - CertificateArn: {{$arn}}
+{{- end}}
+{{- end}}
+  InternalLoadBalancer:
+    Metadata:
+      'aws:copilot:description': 'An internal Application Load Balancer to distribute private traffic from within the VPC to your services'
+    Condition: CreateInternalALB
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internal
+      SecurityGroups: [ !GetAtt InternalLoadBalancerSecurityGroup.GroupId ]
+{{- if .CustomInternalALBSubnets}}
+      Subnets: [ {{range $subnet := .CustomInternalALBSubnets}}{{$subnet}}, {{end}} ]
+{{- else if .VPCConfig.Imported}}
+      Subnets: [ {{range $id := .VPCConfig.Imported.PrivateSubnetIDs}}{{$id}}, {{end}} ]
+{{- else}}
+      Subnets: [ {{range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}} ]
+{{- end}}
+      Type: application
+  # Assign a dummy target group that with no real services as targets, so that we can create
+  # the listeners for the services.
+  DefaultInternalHTTPTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: CreateInternalALB
+    Properties:
+      #  Check if your application is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
+      HealthCheckIntervalSeconds: 10 # Default is 30.
+      HealthyThresholdCount: 2       # Default is 5.
+      HealthCheckTimeoutSeconds: 5
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60                  # Default is 300.
+      TargetType: ip
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
+{{- else}}
+      VpcId: !Ref VPC
+{{- end}}
+  InternalHTTPListener:
+    Metadata:
+      'aws:copilot:description': 'An internal load balancer listener to route HTTP traffic'
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: CreateInternalALB
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref DefaultInternalHTTPTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref InternalLoadBalancer
+      Port: 80
+      Protocol: HTTP
+  InternalHTTPSListener:
+    Metadata:
+      'aws:copilot:description': 'An internal load balancer listener to route HTTPS traffic'
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: ExportInternalHTTPSListener
+    Properties:
+{{- if .ImportCertARNs}}
+      Certificates:
+        - CertificateArn: {{index .ImportCertARNs 0}}
+{{- end}}
+      DefaultActions:
+        - TargetGroupArn: !Ref DefaultInternalHTTPTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref InternalLoadBalancer
+      Port: 443
+      Protocol: HTTPS
+{{- range $ind, $arn := .ImportCertARNs}}
+{{- if gt $ind 0}}
+  InternalHTTPSImportCertificate{{inc $ind}}:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Condition: ExportInternalHTTPSListener
+    Properties:
+      ListenerArn: !Ref InternalHTTPSListener
+      Certificates:
+        - CertificateArn: {{$arn}}
+{{- end}}
+{{- end}}
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
     Metadata:
       'aws:copilot:description': 'An EFS filesystem for persistent task storage'
     Properties:
-      BackupPolicy: 
+      BackupPolicy:
         Status: ENABLED
       Encrypted: true
       FileSystemPolicy:
@@ -206,7 +352,7 @@ Resources:
               - elasticfilesystem:ClientWrite
               - elasticfilesystem:ClientMount
             Condition:
-              Bool: 
+              Bool:
                 'elasticfilesystem:AccessedViaMountTarget': true
               StringEquals:
                 'iam:ResourceTag/copilot-application': !Sub '${AppName}'
@@ -218,7 +364,7 @@ Resources:
             Condition:
               Bool:
                 'aws:SecureTransport': false
-      LifecyclePolicies: 
+      LifecyclePolicies:
         - TransitionToIA: AFTER_30_DAYS
       PerformanceMode: generalPurpose
       ThroughputMode: bursting
@@ -229,8 +375,8 @@ Resources:
     Condition: CreateEFS
     Properties:
       GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, EFSSecurityGroup]]
-{{- if .ImportVPC}}
-      VpcId: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}
       VpcId: !Ref VPC
 {{- end}}
@@ -245,8 +391,8 @@ Resources:
       GroupId: !Ref EFSSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-{{- if .ImportVPC}}
-{{- range $ind, $id := .ImportVPC.PrivateSubnetIDs}}
+{{- if .VPCConfig.Imported}}
+{{- range $ind, $id := .VPCConfig.Imported.PrivateSubnetIDs}}
   MountTarget{{inc $ind}}:
     Type: AWS::EFS::MountTarget
     Condition: CreateEFS
@@ -257,7 +403,7 @@ Resources:
         - !Ref EFSSecurityGroup
 {{- end}}
 {{- else}}
-{{- range $ind, $cidr := .VPCConfig.PrivateSubnetCIDRs}}
+{{- range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}
   MountTarget{{inc $ind}}:
     Type: AWS::EFS::MountTarget
     Condition: CreateEFS
@@ -270,8 +416,11 @@ Resources:
 {{- end}}
 {{include "cfn-execution-role" . | indent 2}}
 {{include "environment-manager-role" . | indent 2}}
+{{- if not .ImportCertARNs}}
 {{include "custom-resources-role" . | indent 2}}
   EnvironmentHostedZone:
+    Metadata:
+      'aws:copilot:description': "A Route 53 Hosted Zone for the environment's subdomain"
     Type: "AWS::Route53::HostedZone"
     Condition: DelegateDNS
     Properties:
@@ -280,44 +429,45 @@ Resources:
       Name: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
 {{include "lambdas" . | indent 2}}
 {{include "custom-resources" . | indent 2}}
+{{- end}}
 Outputs:
   VpcId:
-{{- if .ImportVPC}}
-    Value: {{.ImportVPC.ID}}
+{{- if .VPCConfig.Imported}}
+    Value: {{.VPCConfig.Imported.ID}}
 {{- else}}
     Value: !Ref VPC
 {{- end}}
     Export:
       Name: !Sub ${AWS::StackName}-VpcId
-{{- if not .ImportVPC}}
+{{- if not .VPCConfig.Imported}}
   PublicSubnets:
-    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}] ]
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.Managed.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
-{{- else if ne (len .ImportVPC.PublicSubnetIDs) 0}}
+{{- else if ne (len .VPCConfig.Imported.PublicSubnetIDs) 0}}
   PublicSubnets:
-    Value: !Join [ ',', [ {{range $id := .ImportVPC.PublicSubnetIDs}}{{$id}}, {{end}}] ]
+    Value: !Join [ ',', [ {{range $id := .VPCConfig.Imported.PublicSubnetIDs}}{{$id}}, {{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PublicSubnets
 {{- end}}
-{{- if not .ImportVPC}}
+{{- if not .VPCConfig.Imported}}
   PrivateSubnets:
-    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}}] ]
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
-{{- else if ne (len .ImportVPC.PrivateSubnetIDs) 0}}
+{{- else if ne (len .VPCConfig.Imported.PrivateSubnetIDs) 0}}
   PrivateSubnets:
-    Value: !Join [ ',', [ {{range $id := .ImportVPC.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
+    Value: !Join [ ',', [ {{range $id := .VPCConfig.Imported.PrivateSubnetIDs}}{{$id}}, {{end}}] ]
     Export:
       Name: !Sub ${AWS::StackName}-PrivateSubnets
 {{- end}}
-{{- if not .ImportVPC}}
+{{- if not .VPCConfig.Imported}}
   InternetGatewayID:
     Value: !Ref InternetGateway
     Export:
       Name: !Sub ${AWS::StackName}-InternetGatewayID
 {{- end}}
-{{- if not .ImportVPC}}
+{{- if not .VPCConfig.Imported}}
   PublicRouteTableID:
     Value: !Ref PublicRouteTable
     Export:
@@ -361,6 +511,26 @@ Outputs:
     Value: !Ref DefaultHTTPTargetGroup
     Export:
       Name: !Sub ${AWS::StackName}-DefaultHTTPTargetGroup
+  InternalLoadBalancerDNSName:
+    Condition: CreateInternalALB
+    Value: !GetAtt InternalLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalLoadBalancerDNS
+  InternalHTTPListenerArn:
+    Condition: CreateInternalALB
+    Value: !Ref InternalHTTPListener
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalHTTPListenerArn
+  InternalHTTPSListenerArn:
+    Condition: ExportInternalHTTPSListener
+    Value: !Ref InternalHTTPSListener
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalHTTPSListenerArn
+  InternalLoadBalancerSecurityGroup:
+    Condition: CreateInternalALB
+    Value: !Ref InternalLoadBalancerSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalLoadBalancerSecurityGroup
   ClusterId:
     Value: !Ref Cluster
     Export:
@@ -375,6 +545,7 @@ Outputs:
     Description: The role to be assumed by the Cloudformation service when it deploys application infrastructure.
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
+{{- if not .ImportCertARNs}}
   EnvironmentHostedZone:
     Condition: DelegateDNS
     Value: !Ref EnvironmentHostedZone
@@ -387,9 +558,9 @@ Outputs:
     Description: The domain name of this environment.
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
+{{- end}}
   EnabledFeatures:
-    # We don't need to include Aliases because updating it always results in the CustomDomain action to update.
-    Value: !Sub '${ALBWorkloads},${EFSWorkloads},${NATWorkloads}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS

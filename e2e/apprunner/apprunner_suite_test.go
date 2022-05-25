@@ -16,7 +16,8 @@ import (
 var cli *client.CLI
 var appName string
 
-const svcName = "front-end"
+const feSvcName = "front-end"
+const beSvcName = "back-end"
 const envName = "test"
 
 /**
@@ -38,14 +39,9 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	_, err := cli.SvcDelete(svcName)
+	_, err := cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred())
-
-	_, err = cli.EnvDelete(envName)
-	Expect(err).NotTo(HaveOccurred())
-
-	_, err = cli.AppDelete()
-	Expect(err).NotTo(HaveOccurred())
+	_ = client.NewAWS().DeleteAllDBClusterSnapshots()
 })
 
 func BeforeAll(fn func()) {

@@ -137,7 +137,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		"unavailable rule priority lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(nil, errors.New("some error"))
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
 			wantedTemplate: "",
@@ -146,7 +146,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		"unavailable desired count lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(nil, errors.New("some error"))
 				c.parser = m
 			},
@@ -156,7 +156,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		"unavailable env controller lambda template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(nil, errors.New("some error"))
 				c.parser = m
@@ -167,7 +167,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		"unexpected addons template parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockAddons{tplErr: errors.New("some error")}
@@ -179,7 +179,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		"unexpected addons parameter parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockAddons{paramsErr: errors.New("some error")}
@@ -191,7 +191,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
@@ -214,7 +214,7 @@ Outputs:
 		"render template without addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
@@ -232,6 +232,10 @@ Outputs:
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
 					},
+					DeploymentConfiguration: template.DeploymentConfigurationOpts{
+						MinHealthyPercent: 100,
+						MaxPercent:        200,
+					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
 					ALBEnabled: true,
@@ -247,7 +251,7 @@ Outputs:
 		"render template with addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Read(lbWebSvcRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
@@ -271,6 +275,10 @@ Outputs:
 					Network: template.NetworkOpts{
 						AssignPublicIP: template.EnablePublicIP,
 						SubnetsType:    template.PublicSubnetsPlacement,
+					},
+					DeploymentConfiguration: template.DeploymentConfigurationOpts{
+						MinHealthyPercent: 100,
+						MaxPercent:        200,
 					},
 					EntryPoint: []string{"/bin/echo", "hello"},
 					Command:    []string{"world"},
@@ -378,7 +386,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c"),
 		},
 		{
-			ParameterKey:   aws.String(LBWebServiceContainerPortParamKey),
+			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
 			ParameterValue: aws.String("80"),
 		},
 		{
@@ -426,15 +434,15 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("true"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -442,16 +450,16 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("2"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
-					ParameterValue: aws.String("true"),
+					ParameterValue: aws.String("false"),
 				},
 			}...),
 		},
@@ -470,19 +478,19 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -490,7 +498,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("2"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -511,19 +519,19 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("true"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("xray"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("5000"),
 				},
 				{
@@ -531,12 +539,12 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
 					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
-					ParameterValue: aws.String("true"),
+					ParameterValue: aws.String("false"),
 				},
 			}...),
 		},
@@ -547,19 +555,19 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -567,7 +575,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("true"),
 				},
 				{
@@ -588,19 +596,19 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -608,7 +616,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -631,19 +639,19 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -651,7 +659,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -668,19 +676,19 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -688,7 +696,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -716,19 +724,19 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceRulePathParamKey),
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceHTTPSParamKey),
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{
@@ -736,7 +744,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					ParameterValue: aws.String("1"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceStickinessParamKey),
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
 					ParameterValue: aws.String("false"),
 				},
 				{
@@ -761,11 +769,11 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			},
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetContainerParamKey),
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
 					ParameterValue: aws.String("frontend"),
 				},
 				{
-					ParameterKey:   aws.String(LBWebServiceTargetPortParamKey),
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 					ParameterValue: aws.String("80"),
 				},
 				{

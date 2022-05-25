@@ -6,7 +6,6 @@ package stack
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -34,11 +33,13 @@ func TestEnv_Template(t *testing.T) {
 					DNSCertValidatorLambda: "mockkey1",
 					DNSDelegationLambda:    "mockkey2",
 					CustomDomainLambda:     "mockkey4",
-					ImportVPC:              nil,
-					VPCConfig: &config.AdjustVPC{
-						CIDR:               DefaultVPCCIDR,
-						PrivateSubnetCIDRs: strings.Split(DefaultPrivateSubnetCIDRs, ","),
-						PublicSubnetCIDRs:  strings.Split(DefaultPublicSubnetCIDRs, ","),
+					VPCConfig: template.VPCConfig{
+						Imported: &template.ImportVPC{},
+						Managed: template.ManagedVPC{
+							CIDR:               DefaultVPCCIDR,
+							PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
+							PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
+						},
 					},
 					LatestVersion: deploy.LatestEnvTemplateVersion,
 				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
@@ -75,7 +76,9 @@ func TestEnv_Template(t *testing.T) {
 func TestEnv_Parameters(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
 	deploymentInputWithDNS := mockDeployEnvironmentInput()
-	deploymentInputWithDNS.App.DNSName = "ecs.aws"
+	deploymentInputWithDNS.App.Domain = "ecs.aws"
+	deploymentInputWithPrivateDNS := mockDeployEnvironmentInput()
+	deploymentInputWithPrivateDNS.ImportCertARNs = []string{"arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"}
 	testCases := map[string]struct {
 		input *deploy.CreateEnvironmentInput
 		want  []*cloudformation.Parameter
@@ -104,8 +107,36 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterValue: aws.String(""),
 				},
 				{
+					ParameterKey:   aws.String(EnvParamAliasesKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamNATWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
 					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
 					ParameterValue: aws.String("env.project.local"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
 				},
 			},
 		},
@@ -126,7 +157,7 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSKey),
-					ParameterValue: aws.String(deploymentInputWithDNS.App.DNSName),
+					ParameterValue: aws.String(deploymentInputWithDNS.App.Domain),
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
@@ -135,6 +166,91 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
 					ParameterValue: aws.String("env.project.local"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
+					ParameterValue: aws.String("true"),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamAliasesKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamNATWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
+				},
+			},
+		},
+		"with private DNS": {
+			input: deploymentInputWithPrivateDNS,
+			want: []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(envParamAppNameKey),
+					ParameterValue: aws.String(deploymentInput.App.Name),
+				},
+				{
+					ParameterKey:   aws.String(envParamEnvNameKey),
+					ParameterValue: aws.String(deploymentInput.Name),
+				},
+				{
+					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppDNSKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamAliasesKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamNATWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
+					ParameterValue: aws.String("env.project.local"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
+					ParameterValue: aws.String("true"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
+					ParameterValue: aws.String("true"),
 				},
 			},
 		},
@@ -208,7 +324,6 @@ func TestToEnv(t *testing.T) {
 			expectedEnv: config.Environment{
 				Name:             mockDeployInput.Name,
 				App:              mockDeployInput.App.Name,
-				Prod:             mockDeployInput.Prod,
 				AccountID:        "902697171733",
 				Region:           "eu-west-3",
 				ManagerRoleARN:   "arn:aws:iam::902697171733:role/phonetool-test-EnvManagerRole",
@@ -257,11 +372,11 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 			Name:                "project",
 			AccountPrincipalARN: "arn:aws:iam::000000000:root",
 		},
-		Prod: true,
 		CustomResourcesURLs: map[string]string{
 			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
 			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
 			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
+		ImportVPCConfig: &config.ImportVPC{},
 	}
 }

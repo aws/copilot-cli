@@ -23,12 +23,14 @@ import (
 
 // App contains serialized parameters for an application.
 type App struct {
-	Name      string                   `json:"name"`
-	Version   string                   `json:"version"`
-	URI       string                   `json:"uri"`
-	Envs      []*config.Environment    `json:"environments"`
-	Services  []*config.Workload       `json:"services"`
-	Pipelines []*codepipeline.Pipeline `json:"pipelines"`
+	Name               string                   `json:"name"`
+	Version            string                   `json:"version"`
+	URI                string                   `json:"uri"`
+	Envs               []*config.Environment    `json:"environments"`
+	Services           []*config.Workload       `json:"services"`
+	Jobs               []*config.Workload       `json:"jobs"`
+	Pipelines          []*codepipeline.Pipeline `json:"pipelines"`
+	WkldDeployedtoEnvs map[string][]string      `json:"-"`
 }
 
 // JSONString returns the stringified App struct with json format.
@@ -61,14 +63,26 @@ func (a *App) HumanString() string {
 	for _, env := range a.Envs {
 		fmt.Fprintf(writer, "  %s\t%s\t%s\n", env.Name, env.AccountID, env.Region)
 	}
-	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nWorkloads\n\n"))
 	writer.Flush()
-	headers = []string{"Name", "Type"}
+	headers = []string{"Name", "Type", "Environments"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, svc := range a.Services {
-		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
+		envs := "-"
+		if len(a.WkldDeployedtoEnvs[svc.Name]) > 0 {
+			envs = strings.Join(a.WkldDeployedtoEnvs[svc.Name], ", ")
+		}
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", svc.Name, svc.Type, envs)
 	}
+	for _, job := range a.Jobs {
+		envs := "-"
+		if len(a.WkldDeployedtoEnvs[job.Name]) > 0 {
+			envs = strings.Join(a.WkldDeployedtoEnvs[job.Name], ", ")
+		}
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", job.Name, job.Type, envs)
+	}
+	writer.Flush()
 	fmt.Fprint(writer, color.Bold.Sprint("\nPipelines\n\n"))
 	writer.Flush()
 	headers = []string{"Name"}
@@ -90,7 +104,7 @@ type AppDescriber struct {
 
 // NewAppDescriber instantiates an application describer.
 func NewAppDescriber(appName string) (*AppDescriber, error) {
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider().Default()
 	if err != nil {
 		return nil, fmt.Errorf("assume default role for app %s: %w", appName, err)
 	}

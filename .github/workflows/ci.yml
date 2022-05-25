@@ -2,6 +2,10 @@ name: ci
 
 on:
   pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
 
 jobs:
   build:
@@ -13,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: 1.18
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -38,7 +42,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: 1.18
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -51,13 +55,27 @@ jobs:
       - name: Run tests
         run: make test
 
+  test-race:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: make test-race
+
   integ-test:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: 1.18
 
       - name: Set up Node
         uses: actions/setup-node@v1
@@ -76,15 +94,15 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: 1.18
 
       - name: Check out code
         uses: actions/checkout@v2
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.34.1
+          version: v1.45.2
           args: --timeout 5m0s
 
   license:
@@ -93,10 +111,27 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: 1.18
 
       - name: Check out code
         uses: actions/checkout@v2
 
       - name: Run license check
         run: ./scripts/license.sh .
+
+  conventional-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: validate
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // See https://gist.github.com/marcojahn/482410b728c31b221b70ea6d2c433f0c#file-conventional-commit-regex-md
+            const regex = /^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test){1}(\([\w\-\.]+\))?(!)?: ([\w ])+([\s\S]*)/g;
+
+            const pr = context.payload.pull_request;
+            const title = pr.title;
+
+            if (title.match(regex) == null) {
+              throw `PR title "${title}"" does not match conventional commits from https://www.conventionalcommits.org/en/v1.0.0/`
+            }

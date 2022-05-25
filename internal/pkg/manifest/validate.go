@@ -33,13 +33,13 @@ const (
 )
 
 const (
-	TCPUDP = "TCP_UDP"
-	tcp    = "TCP"
-	udp    = "UDP"
-	tls    = "TLS"
-)
+	// Protocols.
+	TCP = "TCP"
+	tls = "TLS"
 
-var validProtocols = []string{TCPUDP, tcp, udp, tls}
+	// Tracing vendors.
+	awsXRAY = "awsxray"
+)
 
 var (
 	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
@@ -51,6 +51,9 @@ var (
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
+	nlbValidProtocols                        = []string{TCP, tls}
+	TracingValidVendors                      = []string{awsXRAY}
+	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
 
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
@@ -68,7 +71,7 @@ func (l LoadBalancedWebService) Validate() error {
 	}
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
-		targetContainer:   l.RoutingRule.targetContainer(),
+		targetContainer:   l.RoutingRule.GetTargetContainer(),
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
 		return fmt.Errorf("validate HTTP load balancer target: %w", err)
@@ -89,6 +92,20 @@ func (l LoadBalancedWebService) Validate() error {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
 	return nil
+}
+
+func (d DeploymentConfiguration) Validate() error {
+	if d.isEmpty() {
+		return nil
+	}
+	for _, validStrategy := range ecsRollingUpdateStrategies {
+		if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid rolling deployment strategy %s, must be one of %s",
+		aws.StringValue(d.Rolling),
+		english.WordSeries(ecsRollingUpdateStrategies, "or"))
 }
 
 // Validate returns nil if LoadBalancedWebServiceConfig is configured correctly.
@@ -135,8 +152,7 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 	}
 	if l.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
-			execEnabled: aws.BoolValue(l.ExecuteCommand.Enable),
-			efsVolumes:  l.Storage.Volumes,
+			efsVolumes: l.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -152,12 +168,18 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 	if err = l.NLBConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "nlb": %w`, err)
 	}
+	if err = l.DeployConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "deployment": %w`, err)
+	}
 	return nil
 }
 
 // Validate returns nil if BackendService is configured correctly.
 func (b BackendService) Validate() error {
 	var err error
+	if err = b.DeployConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "deployment": %w`, err)
+	}
 	if err = b.BackendServiceConfig.Validate(); err != nil {
 		return err
 	}
@@ -208,8 +230,7 @@ func (b BackendServiceConfig) Validate() error {
 	}
 	if b.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
-			execEnabled: aws.BoolValue(b.ExecuteCommand.Enable),
-			efsVolumes:  b.Storage.Volumes,
+			efsVolumes: b.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -251,12 +272,18 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 	if err = r.Network.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
+	if err = r.Observability.Validate(); err != nil {
+		return fmt.Errorf(`validate "observability": %w`, err)
+	}
 	return nil
 }
 
 // Validate returns nil if WorkerService is configured correctly.
 func (w WorkerService) Validate() error {
 	var err error
+	if err = w.DeployConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "deployment": %w`, err)
+	}
 	if err = w.WorkerServiceConfig.Validate(); err != nil {
 		return err
 	}
@@ -310,8 +337,7 @@ func (w WorkerServiceConfig) Validate() error {
 	}
 	if w.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
-			execEnabled: aws.BoolValue(w.ExecuteCommand.Enable),
-			efsVolumes:  w.Storage.Volumes,
+			efsVolumes: w.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -386,8 +412,7 @@ func (s ScheduledJobConfig) Validate() error {
 	}
 	if s.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
-			execEnabled: aws.BoolValue(s.ExecuteCommand.Enable),
-			efsVolumes:  s.Storage.Volumes,
+			efsVolumes: s.Storage.Volumes,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -398,6 +423,39 @@ func (s ScheduledJobConfig) Validate() error {
 			SpotFrom: s.Count.AdvancedCount.Range.RangeConfig.SpotFrom,
 		}); err != nil {
 			return fmt.Errorf("validate ARM: %w", err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if the pipeline manifest is configured correctly.
+func (p Pipeline) Validate() error {
+	if len(p.Name) > 100 {
+		return fmt.Errorf(`pipeline name '%s' must be shorter than 100 characters`, p.Name)
+	}
+	for _, stg := range p.Stages {
+		if err := stg.Deployments.Validate(); err != nil {
+			return fmt.Errorf(`validate "deployments" for pipeline stage %s: %w`, stg.Name, err)
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if deployments are configured correctly.
+func (d Deployments) Validate() error {
+	names := make(map[string]bool)
+	for name, _ := range d {
+		names[name] = true
+	}
+
+	for name, conf := range d {
+		if conf == nil {
+			continue
+		}
+		for _, dependency := range conf.DependsOn {
+			if _, ok := names[dependency]; !ok {
+				return fmt.Errorf("dependency deployment named '%s' of '%s' does not exist", dependency, name)
+			}
 		}
 	}
 	return nil
@@ -549,6 +607,19 @@ func (CommandOverride) Validate() error {
 	return nil
 }
 
+// Validate returns nil if RoutingRuleConfigOrBool is configured correctly.
+func (r RoutingRuleConfigOrBool) Validate() error {
+	if aws.BoolValue(r.Enabled) {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
+		}
+	}
+	if r.Enabled != nil {
+		return nil
+	}
+	return r.RoutingRuleConfiguration.Validate()
+}
+
 // Validate returns nil if RoutingRuleConfiguration is configured correctly.
 func (r RoutingRuleConfiguration) Validate() error {
 	var err error
@@ -572,6 +643,11 @@ func (r RoutingRuleConfiguration) Validate() error {
 	if r.ProtocolVersion != nil {
 		if !contains(strings.ToUpper(*r.ProtocolVersion), httpProtocolVersions) {
 			return fmt.Errorf(`"version" field value '%s' must be one of %s`, *r.ProtocolVersion, english.WordSeries(httpProtocolVersions, "or"))
+		}
+	}
+	if r.Path == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "path",
 		}
 	}
 	return nil
@@ -646,14 +722,14 @@ func validateNLBPort(port *string) error {
 	}
 	protocolVal := aws.StringValue(protocol)
 	var isValidProtocol bool
-	for _, valid := range validProtocols {
+	for _, valid := range nlbValidProtocols {
 		if strings.EqualFold(protocolVal, valid) {
 			isValidProtocol = true
 			break
 		}
 	}
 	if !isValidProtocol {
-		return fmt.Errorf(`unrecognized protocol %s`, protocolVal)
+		return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(nlbValidProtocols, "and"))
 	}
 	return nil
 }
@@ -723,12 +799,12 @@ func (p PlatformString) Validate() error {
 	if len(args) != 2 {
 		return fmt.Errorf("platform '%s' must be in the format [OS]/[Arch]", string(p))
 	}
-	for _, validPlatform := range ValidShortPlatforms {
+	for _, validPlatform := range validShortPlatforms {
 		if strings.ToLower(string(p)) == validPlatform {
 			return nil
 		}
 	}
-	return fmt.Errorf("platform '%s' is invalid; %s: %s", p, english.PluralWord(len(ValidShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(ValidShortPlatforms, "and"))
+	return fmt.Errorf("platform '%s' is invalid; %s: %s", p, english.PluralWord(len(validShortPlatforms), "the valid platform is", "valid platforms are"), english.WordSeries(validShortPlatforms, "and"))
 }
 
 // Validate returns nil if Count is configured correctly.
@@ -1060,10 +1136,8 @@ func (v rdwsVpcConfig) Validate() error {
 	if v.isEmpty() {
 		return nil
 	}
-	if v.Placement != nil {
-		if err := v.Placement.Validate(); err != nil {
-			return fmt.Errorf(`validate "placement": %w`, err)
-		}
+	if err := v.Placement.Validate(); err != nil {
+		return fmt.Errorf(`validate "placement": %w`, err)
 	}
 	return nil
 }
@@ -1073,27 +1147,30 @@ func (v vpcConfig) Validate() error {
 	if v.isEmpty() {
 		return nil
 	}
-	if v.Placement != nil {
-		if err := v.Placement.Validate(); err != nil {
-			return fmt.Errorf(`validate "placement": %w`, err)
-		}
+	if err := v.Placement.Validate(); err != nil {
+		return fmt.Errorf(`validate "placement": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if RequestDrivenWebServicePlacement is configured correctly.
-func (p RequestDrivenWebServicePlacement) Validate() error {
-	if err := (Placement)(p).Validate(); err != nil {
-		return err
-	}
-	if string(p) == string(PrivateSubnetPlacement) {
+// Validate returns nil if PlacementArgOrString is configured correctly.
+func (p PlacementArgOrString) Validate() error {
+	if p.IsEmpty() {
 		return nil
 	}
-	return fmt.Errorf(`placement "%s" is not supported for %s`, string(p), RequestDrivenWebServiceType)
+	if p.PlacementString != nil {
+		return p.PlacementString.Validate()
+	}
+	return p.PlacementArgs.Validate()
 }
 
-// Validate returns nil if Placement is configured correctly.
-func (p Placement) Validate() error {
+// Validate is a no-op for PlacementArgs.
+func (p PlacementArgs) Validate() error {
+	return nil
+}
+
+// Validate returns nil if PlacementString is configured correctly.
+func (p PlacementString) Validate() error {
 	if string(p) == "" {
 		return fmt.Errorf(`"placement" cannot be empty`)
 	}
@@ -1126,6 +1203,22 @@ func (r AppRunnerInstanceConfig) Validate() error {
 // Validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
 func (r RequestDrivenWebServiceHttpConfig) Validate() error {
 	return r.HealthCheckConfiguration.Validate()
+}
+
+// Validate returns nil if Observability is configured correctly.
+func (o Observability) Validate() error {
+	if o.isEmpty() {
+		return nil
+	}
+	for _, validVendor := range TracingValidVendors {
+		if strings.EqualFold(aws.StringValue(o.Tracing), validVendor) {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid tracing vendor %s: %s %s",
+		aws.StringValue(o.Tracing),
+		english.PluralWord(len(TracingValidVendors), "the valid vendor is", "valid vendors are"),
+		english.WordSeries(TracingValidVendors, "and"))
 }
 
 // Validate returns nil if JobTriggerConfig is configured correctly.
@@ -1232,6 +1325,11 @@ func (r OverrideRule) Validate() error {
 	return nil
 }
 
+// Validate is a no-op for Secrets.
+func (s Secret) Validate() error {
+	return nil
+}
+
 type validateDependenciesOpts struct {
 	mainContainerName string
 	sidecarConfig     map[string]*SidecarConfig
@@ -1251,8 +1349,7 @@ type validateTargetContainerOpts struct {
 }
 
 type validateWindowsOpts struct {
-	execEnabled bool
-	efsVolumes  map[string]*Volume
+	efsVolumes map[string]*Volume
 }
 
 type validateARMOpts struct {
@@ -1334,19 +1431,19 @@ func validateNoCircularDependencies(deps map[string]containerDependency) error {
 	if len(cycle) == 1 {
 		return fmt.Errorf("container %s cannot depend on itself", cycle[0])
 	}
-	// Stablize unit tests.
+	// Stabilize unit tests.
 	sort.SliceStable(cycle, func(i, j int) bool { return cycle[i] < cycle[j] })
 	return fmt.Errorf("circular container dependency chain includes the following containers: %s", cycle)
 }
 
-func buildDependencyGraph(deps map[string]containerDependency) (*graph.Graph, error) {
-	dependencyGraph := graph.New()
+func buildDependencyGraph(deps map[string]containerDependency) (*graph.Graph[string], error) {
+	dependencyGraph := graph.New[string]()
 	for name, containerDep := range deps {
 		for dep := range containerDep.dependsOn {
 			if _, ok := deps[dep]; !ok {
 				return nil, fmt.Errorf("container %s does not exist", dep)
 			}
-			dependencyGraph.Add(graph.Edge{
+			dependencyGraph.Add(graph.Edge[string]{
 				From: name,
 				To:   dep,
 			})
@@ -1397,9 +1494,6 @@ func isValidSubSvcName(name string) bool {
 }
 
 func validateWindows(opts validateWindowsOpts) error {
-	if opts.execEnabled {
-		return errors.New(`'exec' is not supported when deploying a Windows container`)
-	}
 	for _, volume := range opts.efsVolumes {
 		if !volume.EmptyVolume() {
 			return errors.New(`'EFS' is not supported when deploying a Windows container`)

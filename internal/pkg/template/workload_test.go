@@ -47,6 +47,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
 					"templates/workloads/partials/cf/eventrule.yml":                       []byte("eventrule"),
 					"templates/workloads/partials/cf/state-machine.yml":                   []byte("state-machine"),
 					"templates/workloads/partials/cf/efs-access-point.yml":                []byte("efs-access-point"),
+					"templates/workloads/partials/cf/https-listener.yml":                  []byte("https-listener"),
+					"templates/workloads/partials/cf/http-listener.yml":                   []byte("http-listener"),
 					"templates/workloads/partials/cf/env-controller.yml":                  []byte("env-controller"),
 					"templates/workloads/partials/cf/mount-points.yml":                    []byte("mount-points"),
 					"templates/workloads/partials/cf/volumes.yml":                         []byte("volumes"),
@@ -57,6 +59,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 					"templates/workloads/partials/cf/subscribe.yml":                       []byte("subscribe"),
 					"templates/workloads/partials/cf/nlb.yml":                             []byte("nlb"),
 					"templates/workloads/partials/cf/vpc-connector.yml":                   []byte("vpc-connector"),
+					"templates/workloads/partials/cf/alb.yml":                             []byte("alb"),
 				}
 			},
 			wantedContent: `  loggroup
@@ -77,6 +80,8 @@ func TestTemplate_ParseSvc(t *testing.T) {
   state-machine
   state-machine-definition
   efs-access-point
+  https-listener
+  http-listener
   env-controller
   mount-points
   volumes
@@ -87,6 +92,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   subscribe
   nlb
   vpc-connector
+  alb
 `,
 		},
 	}
@@ -122,14 +128,14 @@ func TestHasSecrets(t *testing.T) {
 		},
 		"no secrets": {
 			in: WorkloadOpts{
-				Secrets: map[string]string{},
+				Secrets: map[string]Secret{},
 			},
 			wanted: false,
 		},
 		"service has secrets": {
 			in: WorkloadOpts{
-				Secrets: map[string]string{
-					"hello": "world",
+				Secrets: map[string]Secret{
+					"hello": SecretFromSSMOrARN("world"),
 				},
 			},
 			wanted: true,
@@ -289,4 +295,24 @@ func TestRuntimePlatformOpts_IsDefault(t *testing.T) {
 			require.Equal(t, tc.wanted, tc.in.IsDefault())
 		})
 	}
+}
+
+func TestSsmOrSecretARN_RequiresSub(t *testing.T) {
+	require.False(t, ssmOrSecretARN{}.RequiresSub(), "SSM Parameter Store or secret ARNs do not require !Sub")
+}
+
+func TestSsmOrSecretARN_ValueFrom(t *testing.T) {
+	require.Equal(t, "/github/token", SecretFromSSMOrARN("/github/token").ValueFrom())
+}
+
+func TestSecretsManagerName_RequiresSub(t *testing.T) {
+	require.True(t, secretsManagerName{}.RequiresSub(), "secrets referring to a SecretsManager name need to be expanded to a full ARN")
+}
+
+func TestSecretsManagerName_Service(t *testing.T) {
+	require.Equal(t, "secretsmanager", secretsManagerName{}.Service())
+}
+
+func TestSecretsManagerName_ValueFrom(t *testing.T) {
+	require.Equal(t, "secret:aes128-1a2b3c", SecretFromSecretsManager("aes128-1a2b3c").ValueFrom())
 }

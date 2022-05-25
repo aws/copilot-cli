@@ -6,18 +6,15 @@ package stack
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
-)
-
-// Parameter logical IDs for a backend service.
-const (
-	BackendServiceContainerPortParamKey = "ContainerPort"
 )
 
 const (
@@ -33,41 +30,63 @@ type backendSvcReadParser interface {
 // BackendService represents the configuration needed to create a CloudFormation stack from a backend service manifest.
 type BackendService struct {
 	*ecsWkld
-	manifest *manifest.BackendService
+	manifest     *manifest.BackendService
+	httpsEnabled bool
+	certImported bool
+	albEnabled   bool
 
 	parser backendSvcReadParser
 }
 
+type BackendServiceConfig struct {
+	App           *config.Application
+	Env           *config.Environment
+	Manifest      *manifest.BackendService
+	RuntimeConfig RuntimeConfig
+}
+
 // NewBackendService creates a new BackendService stack from a manifest file.
-func NewBackendService(mft *manifest.BackendService, env, app string, rc RuntimeConfig) (*BackendService, error) {
-	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name))
+func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
+	addons, err := addon.New(aws.StringValue(conf.Manifest.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
-	return &BackendService{
+
+	parser := template.New()
+	b := &BackendService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(mft.Name),
-				env:    env,
-				app:    app,
-				rc:     rc,
-				image:  mft.ImageConfig.Image,
+				name:   aws.StringValue(conf.Manifest.Name),
+				env:    conf.Env.Name,
+				app:    conf.App.Name,
+				rc:     conf.RuntimeConfig,
+				image:  conf.Manifest.ImageConfig.Image,
 				parser: parser,
 				addons: addons,
 			},
-			logRetention:        mft.Logging.Retention,
-			tc:                  mft.TaskConfig,
+			logRetention:        conf.Manifest.Logging.Retention,
+			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest: mft,
+		manifest:   conf.Manifest,
+		parser:     parser,
+		albEnabled: !conf.Manifest.RoutingRule.EmptyOrDisabled(),
+	}
 
-		parser: parser,
-	}, nil
+	if conf.Env.HasImportedCerts() {
+		b.certImported = true
+		b.httpsEnabled = b.albEnabled
+	}
+
+	return b, nil
 }
 
 // Template returns the CloudFormation template for the backend service.
 func (s *BackendService) Template() (string, error) {
+	rulePriorityLambda, err := s.parser.Read(albRulePriorityGeneratorPath)
+	if err != nil {
+		return "", fmt.Errorf("read rule priority lambda: %w", err)
+	}
 	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
 	if err != nil {
 		return "", fmt.Errorf("read desired count lambda: %w", err)
@@ -107,6 +126,7 @@ func (s *BackendService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
+
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -115,9 +135,30 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	var aliases []string
+	if s.httpsEnabled {
+		if aliases, err = convertAlias(s.manifest.RoutingRule.Alias); err != nil {
+			return "", err
+		}
+	}
+
+	var deregistrationDelay *int64 = aws.Int64(60)
+	if s.manifest.RoutingRule.DeregistrationDelay != nil {
+		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
+	}
+
+	var allowedSourceIPs []string
+	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
+		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
+	}
+
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		Variables:                s.manifest.BackendServiceConfig.Variables,
-		Secrets:                  s.manifest.BackendServiceConfig.Secrets,
+		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
+		Aliases:                  aliases,
+		HTTPSListener:            s.httpsEnabled,
+		UseImportedCerts:         s.certImported,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
@@ -127,12 +168,17 @@ func (s *BackendService) Template() (string, error) {
 		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:             manifest.BackendServiceType,
 		HealthCheck:              convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
+		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
+		DeregistrationDelay:      deregistrationDelay,
+		AllowedSourceIps:         allowedSourceIPs,
+		RulePriorityLambda:       rulePriorityLambda.String(),
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
 		DesiredCountLambda:       desiredCountLambda.String(),
 		EnvControllerLambda:      envControllerLambda.String(),
 		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                  convertNetworkConfig(s.manifest.Network),
+		DeploymentConfiguration:  convertDeploymentConfig(s.manifest.DeployConfig),
 		EntryPoint:               entrypoint,
 		Command:                  command,
 		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
@@ -140,6 +186,11 @@ func (s *BackendService) Template() (string, error) {
 		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
 		Platform:                 convertPlatform(s.manifest.Platform),
+		HTTPVersion:              convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
+		ALBEnabled:               s.albEnabled,
+		Observability: template.ObservabilityOpts{
+			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
+		},
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -151,26 +202,74 @@ func (s *BackendService) Template() (string, error) {
 	return string(overridenTpl), nil
 }
 
+func (s *BackendService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
+	// Route load balancer traffic to main container by default.
+	targetContainer = aws.String(s.name)
+	targetPort = aws.String(s.containerPort())
+
+	rrTarget := s.manifest.RoutingRule.GetTargetContainer()
+	if rrTarget != nil && *rrTarget != *targetContainer {
+		targetContainer = rrTarget
+		targetPort = s.manifest.Sidecars[aws.StringValue(targetContainer)].Port
+	}
+
+	return
+}
+
+func (s *BackendService) containerPort() string {
+	port := NoExposedContainerPort
+	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
+		port = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
+	}
+
+	return port
+}
+
 // Parameters returns the list of CloudFormation parameters used by the template.
 func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
-	svcParams, err := s.ecsWkld.Parameters()
+	params, err := s.ecsWkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
-	containerPort := NoExposedContainerPort
-	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
-		containerPort = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
-	}
-	return append(svcParams, []*cloudformation.Parameter{
+
+	targetContainer, targetPort := s.httpLoadBalancerTarget()
+	params = append(params, []*cloudformation.Parameter{
 		{
-			ParameterKey:   aws.String(BackendServiceContainerPortParamKey),
-			ParameterValue: aws.String(containerPort),
+			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
+			ParameterValue: aws.String(s.containerPort()),
 		},
 		{
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(s.rc.EnvFileARN),
 		},
-	}...), nil
+	}...)
+
+	if !s.manifest.RoutingRule.EmptyOrDisabled() {
+		params = append(params, []*cloudformation.Parameter{
+			{
+				ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
+				ParameterValue: targetContainer,
+			},
+			{
+				ParameterKey:   aws.String(WorkloadTargetPortParamKey),
+				ParameterValue: targetPort,
+			},
+			{
+				ParameterKey:   aws.String(WorkloadRulePathParamKey),
+				ParameterValue: s.manifest.RoutingRule.Path,
+			},
+			{
+				ParameterKey:   aws.String(WorkloadStickinessParamKey),
+				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
+			},
+			{
+				ParameterKey:   aws.String(WorkloadHTTPSParamKey),
+				ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
+			},
+		}...)
+	}
+
+	return params, nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized

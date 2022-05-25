@@ -19,10 +19,10 @@ const (
 	jobWorkloadType = "job"
 )
 
-// Workload represents a deployable long running service or task.
+// Workload represents a deployable long-running service or task.
 type Workload struct {
 	App  string `json:"app"`  // Name of the app this workload belongs to.
-	Name string `json:"name"` // Name of the workload, which must be unique within a app.
+	Name string `json:"name"` // Name of the workload, which must be unique within an app.
 	Type string `json:"type"` // Type of the workload (ex: Load Balanced Web Service, etc)
 }
 
@@ -55,7 +55,7 @@ func (s *Store) createWorkload(wkld *Workload) error {
 		return fmt.Errorf("serialize data: %w", err)
 	}
 
-	_, err = s.ssmClient.PutParameter(&ssm.PutParameterInput{
+	_, err = s.ssm.PutParameter(&ssm.PutParameterInput{
 		Name:        aws.String(wkldPath),
 		Description: aws.String(fmt.Sprintf("Copilot %s %s", wkld.Type, wkld.Name)),
 		Type:        aws.String(ssm.ParameterTypeString),
@@ -147,7 +147,7 @@ func (s *Store) GetWorkload(appName, name string) (*Workload, error) {
 
 func (s *Store) getWorkloadParam(appName, name string) ([]byte, error) {
 	wlPath := fmt.Sprintf(fmtWkldParamPath, appName, name)
-	wlParam, err := s.ssmClient.GetParameter(&ssm.GetParameterInput{
+	wlParam, err := s.ssm.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(wlPath),
 	})
 	if err != nil {
@@ -248,7 +248,7 @@ func (s *Store) DeleteJob(appName, jobName string) error {
 
 func (s *Store) deleteWorkload(appName, wkldName string) error {
 	paramName := fmt.Sprintf(fmtWkldParamPath, appName, wkldName)
-	_, err := s.ssmClient.DeleteParameter(&ssm.DeleteParameterInput{
+	_, err := s.ssm.DeleteParameter(&ssm.DeleteParameterInput{
 		Name: aws.String(paramName),
 	})
 

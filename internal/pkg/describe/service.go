@@ -5,10 +5,11 @@ package describe
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"io"
 	"net/url"
 	"sort"
+
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -35,12 +36,14 @@ type ConfigStoreSvc interface {
 	ListEnvironments(appName string) ([]*config.Environment, error)
 	ListServices(appName string) ([]*config.Workload, error)
 	GetWorkload(appName string, name string) (*config.Workload, error)
+	ListJobs(appName string) ([]*config.Workload, error)
 }
 
 // DeployedEnvServicesLister wraps methods of deploy store.
 type DeployedEnvServicesLister interface {
 	ListEnvironmentsDeployedTo(appName string, svcName string) ([]string, error)
 	ListDeployedServices(appName string, envName string) ([]string, error)
+	ListDeployedJobs(appName string, envName string) ([]string, error)
 }
 
 type ecsClient interface {
@@ -81,94 +84,64 @@ type serviceStackDescriber struct {
 
 	cfn  stackDescriber
 	sess *session.Session
+
+	// Cache variables.
+	params         map[string]string
+	outputs        map[string]string
+	stackResources []*stack.Resource
 }
 
-// ECSServiceDescriber retrieves information about a non-App Runner service.
-type ECSServiceDescriber struct {
-	*serviceStackDescriber
-	ecsClient ecsClient
-}
-
-// AppRunnerServiceDescriber retrieves information about an App Runner service.
-type AppRunnerServiceDescriber struct {
-	*serviceStackDescriber
-	apprunnerClient apprunnerClient
-}
-
-// NewServiceConfig contains fields that initiates ServiceDescriber struct.
-type NewServiceConfig struct {
-	App         string
-	Env         string
-	Svc         string
-	ConfigStore ConfigStoreSvc
-
-	EnableResources bool
-	DeployStore     DeployedEnvServicesLister
-}
-
-// NewECSServiceDescriber instantiates a new non-App Runner service.
-func NewECSServiceDescriber(opt NewServiceConfig) (*ECSServiceDescriber, error) {
-	stackDescriber, err := newServiceStackDescriber(opt)
+// newServiceStackDescriber instantiates the core elements of a new service.
+func newServiceStackDescriber(opt NewServiceConfig, env string) (*serviceStackDescriber, error) {
+	environment, err := opt.ConfigStore.GetEnvironment(opt.App, env)
+	if err != nil {
+		return nil, fmt.Errorf("get environment %s: %w", env, err)
+	}
+	sess, err := sessions.ImmutableProvider().FromRole(environment.ManagerRoleARN, environment.Region)
 	if err != nil {
 		return nil, err
 	}
-	return &ECSServiceDescriber{
-		serviceStackDescriber: stackDescriber,
-		ecsClient:             ecs.New(stackDescriber.sess),
-	}, nil
-}
+	return &serviceStackDescriber{
+		app:     opt.App,
+		service: opt.Svc,
+		env:     env,
 
-// NewAppRunnerServiceDescriber instantiates a new App Runner service.
-func NewAppRunnerServiceDescriber(opt NewServiceConfig) (*AppRunnerServiceDescriber, error) {
-	stackDescriber, err := newServiceStackDescriber(opt)
-	if err != nil {
-		return nil, err
-	}
-
-	return &AppRunnerServiceDescriber{
-		serviceStackDescriber: stackDescriber,
-		apprunnerClient:       apprunner.New(stackDescriber.sess),
+		cfn:  stack.NewStackDescriber(cfnstack.NameForService(opt.App, env, opt.Svc), sess),
+		sess: sess,
 	}, nil
 }
 
 // Params returns the parameters of the service stack.
 func (d *serviceStackDescriber) Params() (map[string]string, error) {
+	if d.params != nil {
+		return d.params, nil
+	}
 	descr, err := d.cfn.Describe()
 	if err != nil {
 		return nil, err
 	}
+	d.params = descr.Parameters
 	return descr.Parameters, nil
 }
 
 // Params returns the outputs of the service stack.
 func (d *serviceStackDescriber) Outputs() (map[string]string, error) {
+	if d.outputs != nil {
+		return d.outputs, nil
+	}
 	descr, err := d.cfn.Describe()
 	if err != nil {
 		return nil, err
 	}
+	d.outputs = descr.Outputs
 	return descr.Outputs, nil
-}
-
-// EnvVars returns the environment variables of the task definition.
-func (d *ECSServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
-	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
-	if err != nil {
-		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
-	}
-	return taskDefinition.EnvironmentVariables(), nil
-}
-
-// Secrets returns the secrets of the task definition.
-func (d *ECSServiceDescriber) Secrets() ([]*awsecs.ContainerSecret, error) {
-	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
-	if err != nil {
-		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
-	}
-	return taskDefinition.Secrets(), nil
 }
 
 // ServiceStackResources returns the filtered service stack resources created by CloudFormation.
 func (d *serviceStackDescriber) ServiceStackResources() ([]*stack.Resource, error) {
+	if len(d.stackResources) != 0 {
+		return d.stackResources, nil
+	}
 	svcResources, err := d.cfn.Resources()
 	if err != nil {
 		return nil, err
@@ -180,17 +153,77 @@ func (d *serviceStackDescriber) ServiceStackResources() ([]*stack.Resource, erro
 		waitConditionHandle:  true,
 	}
 	for _, svcResource := range svcResources {
-		if ignoredResources[svcResource.Type] {
-			continue
+		if !ignoredResources[svcResource.Type] {
+			resources = append(resources, svcResource)
 		}
-		resources = append(resources, svcResource)
 	}
-
+	d.stackResources = resources
 	return resources, nil
 }
 
+type ecsServiceDescriber struct {
+	*serviceStackDescriber
+	ecsClient ecsClient
+}
+
+type appRunnerServiceDescriber struct {
+	*serviceStackDescriber
+	apprunnerClient apprunnerClient
+}
+
+// NewServiceConfig contains fields that initiates service describer struct.
+type NewServiceConfig struct {
+	App         string
+	Svc         string
+	ConfigStore ConfigStoreSvc
+
+	EnableResources bool
+	DeployStore     DeployedEnvServicesLister
+}
+
+func newECSServiceDescriber(opt NewServiceConfig, env string) (*ecsServiceDescriber, error) {
+	stackDescriber, err := newServiceStackDescriber(opt, env)
+	if err != nil {
+		return nil, err
+	}
+	return &ecsServiceDescriber{
+		serviceStackDescriber: stackDescriber,
+		ecsClient:             ecs.New(stackDescriber.sess),
+	}, nil
+}
+
+func newAppRunnerServiceDescriber(opt NewServiceConfig, env string) (*appRunnerServiceDescriber, error) {
+	stackDescriber, err := newServiceStackDescriber(opt, env)
+	if err != nil {
+		return nil, err
+	}
+
+	return &appRunnerServiceDescriber{
+		serviceStackDescriber: stackDescriber,
+		apprunnerClient:       apprunner.New(stackDescriber.sess),
+	}, nil
+}
+
+// EnvVars returns the environment variables of the task definition.
+func (d *ecsServiceDescriber) EnvVars() ([]*awsecs.ContainerEnvVar, error) {
+	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
+	if err != nil {
+		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
+	}
+	return taskDefinition.EnvironmentVariables(), nil
+}
+
+// Secrets returns the secrets of the task definition.
+func (d *ecsServiceDescriber) Secrets() ([]*awsecs.ContainerSecret, error) {
+	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
+	if err != nil {
+		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
+	}
+	return taskDefinition.Secrets(), nil
+}
+
 // Platform returns the platform of the task definition.
-func (d *ECSServiceDescriber) Platform() (*awsecs.ContainerPlatform, error) {
+func (d *ecsServiceDescriber) Platform() (*awsecs.ContainerPlatform, error) {
 	taskDefinition, err := d.ecsClient.TaskDefinition(d.app, d.env, d.service)
 	if err != nil {
 		return nil, fmt.Errorf("describe task definition for service %s: %w", d.service, err)
@@ -206,7 +239,7 @@ func (d *ECSServiceDescriber) Platform() (*awsecs.ContainerPlatform, error) {
 }
 
 // ServiceARN retrieves the ARN of the app runner service.
-func (d *AppRunnerServiceDescriber) ServiceARN() (string, error) {
+func (d *appRunnerServiceDescriber) ServiceARN() (string, error) {
 	serviceStackResources, err := d.ServiceStackResources()
 	if err != nil {
 		return "", err
@@ -223,7 +256,7 @@ func (d *AppRunnerServiceDescriber) ServiceARN() (string, error) {
 }
 
 // Service retrieves an app runner service.
-func (d *AppRunnerServiceDescriber) Service() (*apprunner.Service, error) {
+func (d *appRunnerServiceDescriber) Service() (*apprunner.Service, error) {
 	serviceARN, err := d.ServiceARN()
 	if err != nil {
 		return nil, err
@@ -237,10 +270,10 @@ func (d *AppRunnerServiceDescriber) Service() (*apprunner.Service, error) {
 }
 
 // ServiceURL retrieves the app runner service URL.
-func (d *AppRunnerServiceDescriber) ServiceURL() (string, error) {
+func (d *appRunnerServiceDescriber) ServiceURL() (string, error) {
 	service, err := d.Service()
 	if err != nil {
-		return "", fmt.Errorf("retrieve service URI: %w", err)
+		return "", err
 	}
 
 	return formatAppRunnerUrl(service.ServiceURL), nil
@@ -254,26 +287,6 @@ func formatAppRunnerUrl(serviceURL string) string {
 	}
 
 	return svcUrl.String()
-}
-
-// newServiceStackDescriber instantiates the core elements of a new service.
-func newServiceStackDescriber(opt NewServiceConfig) (*serviceStackDescriber, error) {
-	environment, err := opt.ConfigStore.GetEnvironment(opt.App, opt.Env)
-	if err != nil {
-		return nil, fmt.Errorf("get environment %s: %w", opt.Env, err)
-	}
-	sess, err := sessions.NewProvider().FromRole(environment.ManagerRoleARN, environment.Region)
-	if err != nil {
-		return nil, err
-	}
-	return &serviceStackDescriber{
-		app:     opt.App,
-		service: opt.Svc,
-		env:     opt.Env,
-
-		cfn:  stack.NewStackDescriber(cfnstack.NameForService(opt.App, opt.Env, opt.Svc), sess),
-		sess: sess,
-	}, nil
 }
 
 // ServiceConfig contains serialized configuration parameters for a service.

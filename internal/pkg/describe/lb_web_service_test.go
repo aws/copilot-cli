@@ -20,6 +20,7 @@ type lbWebSvcDescriberMocks struct {
 	storeSvc     *mocks.MockDeployedEnvServicesLister
 	ecsDescriber *mocks.MockecsDescriber
 	envDescriber *mocks.MockenvDescriber
+	lbDescriber  *mocks.MocklbDescriber
 }
 
 func TestLBWebServiceDescriber_Describe(t *testing.T) {
@@ -33,6 +34,20 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 		prodEnvLBDNSName = "abc.us-west-1.elb.amazonaws.com"
 		prodSvcPath      = "*"
 	)
+	mockParams := map[string]string{
+		cfnstack.WorkloadContainerPortParamKey: "80",
+		cfnstack.WorkloadTaskCountParamKey:     "1",
+		cfnstack.WorkloadTaskCPUParamKey:       "256",
+		cfnstack.WorkloadTaskMemoryParamKey:    "512",
+		cfnstack.WorkloadRulePathParamKey:      testSvcPath,
+	}
+	mockProdParams := map[string]string{
+		cfnstack.WorkloadContainerPortParamKey: "5000",
+		cfnstack.WorkloadTaskCountParamKey:     "2",
+		cfnstack.WorkloadTaskCPUParamKey:       "512",
+		cfnstack.WorkloadTaskMemoryParamKey:    "1024",
+		cfnstack.WorkloadRulePathParamKey:      prodSvcPath,
+	}
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {
 		shouldOutputResources bool
@@ -59,12 +74,12 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
 					}, nil),
-					m.envDescriber.EXPECT().Params().Return(nil, mockErr),
+					m.ecsDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("retrieve service URI: get stack parameters for environment test: some error"),
+			wantedError: fmt.Errorf("retrieve service URI: get stack parameters for service jobs: some error"),
 		},
-		"return error if fail to retrieve service discovery endpoint": {
+		"return error if fail to retrieve service params": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
@@ -73,16 +88,9 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
 					}, nil),
-					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-					}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
-						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -95,6 +103,36 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							Value:     "prod",
 						},
 					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(nil, mockErr),
+				)
+			},
+			wantedError: fmt.Errorf("get stack parameters for service jobs: some error"),
+		},
+		"return error if fail to retrieve service discovery endpoint": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+					}, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+						{
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     "prod",
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("", errors.New("some error")),
 				)
 			},
@@ -109,16 +147,9 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
 					}, nil),
-					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-					}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "5000",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
-						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(nil, errors.New("some error")),
 				)
@@ -134,16 +165,9 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
 					}, nil),
-					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-					}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
-						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -163,16 +187,9 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
 					}, nil),
-					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-					}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
-						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -185,6 +202,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							Value:     "prod",
 						},
 					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Secrets().Return(nil, mockErr),
 				)
@@ -201,16 +219,9 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
 					}, nil),
-					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-					}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
-						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -223,6 +234,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							Value:     "test",
 						},
 					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
@@ -251,16 +263,9 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
 					}, nil),
-					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-					}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "5000",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
-						cfnstack.LBWebServiceRulePathParamKey:      testSvcPath,
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -273,6 +278,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							Value:     testEnv,
 						},
 					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
@@ -286,16 +292,9 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							LogicalID: svcStackResourceALBTargetGroupLogicalID,
 						},
 					}, nil),
-					m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockProdParams, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
-					}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "5000",
-						cfnstack.WorkloadTaskCountParamKey:         "2",
-						cfnstack.WorkloadTaskCPUParamKey:           "512",
-						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
-						cfnstack.LBWebServiceRulePathParamKey:      prodSvcPath,
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -308,6 +307,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							Value:     prodEnv,
 						},
 					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockProdParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
@@ -341,7 +341,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 							Environment: "test",
 							Memory:      "512",
 							Platform:    "LINUX/X86_64",
-							Port:        "5000",
+							Port:        "80",
 						},
 						Tasks: "1",
 					},
@@ -369,7 +369,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 				ServiceDiscovery: []*ServiceDiscovery{
 					{
 						Environment: []string{"test"},
-						Namespace:   "jobs.test.phonetool.local:5000",
+						Namespace:   "jobs.test.phonetool.local:80",
 					},
 					{
 						Environment: []string{"prod"},
@@ -444,20 +444,12 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &LBWebServiceDescriber{
-				app:             testApp,
-				svc:             testSvc,
-				enableResources: tc.shouldOutputResources,
-				store:           mockStore,
-				initClients:     func(string) error { return nil },
-
-				ecsServiceDescribers: map[string]ecsDescriber{
-					"test": mockSvcStackDescriber,
-					"prod": mockSvcStackDescriber,
-				},
-				envDescriber: map[string]envDescriber{
-					"test": mockEnvDescriber,
-					"prod": mockEnvDescriber,
-				},
+				app:                      testApp,
+				svc:                      testSvc,
+				enableResources:          tc.shouldOutputResources,
+				store:                    mockStore,
+				initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mockSvcStackDescriber, nil },
+				initEnvDescribers:        func(s string) (envDescriber, error) { return mockEnvDescriber, nil },
 			}
 
 			// WHEN

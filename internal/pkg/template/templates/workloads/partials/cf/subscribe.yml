@@ -148,6 +148,9 @@ QueuePolicy:
   Properties:
     TopicArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{$topic.Name}}']]
     Protocol: 'sqs'
+    {{- if $topic.FilterPolicy}}
+    FilterPolicy: {{$topic.FilterPolicy}}
+    {{- end}}
     {{- if $topic.Queue}}
     Endpoint: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
     {{- else}}

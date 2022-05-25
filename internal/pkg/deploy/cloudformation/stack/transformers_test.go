@@ -19,6 +19,7 @@ import (
 func Test_convertSidecar(t *testing.T) {
 	mockImage := aws.String("mockImage")
 	mockMap := map[string]string{"foo": "bar"}
+	mockSecrets := map[string]template.Secret{"foo": template.SecretFromSSMOrARN("")}
 	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {
 		inPort            *string
@@ -46,7 +47,7 @@ func Test_convertSidecar(t *testing.T) {
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(true),
 			},
@@ -61,7 +62,7 @@ func Test_convertSidecar(t *testing.T) {
 				Protocol:   aws.String("udp"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(true),
 			},
@@ -78,7 +79,7 @@ func Test_convertSidecar(t *testing.T) {
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(true),
 				DependsOn: map[string]string{
@@ -98,7 +99,7 @@ func Test_convertSidecar(t *testing.T) {
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				DockerLabels: map[string]string{
@@ -111,7 +112,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				EntryPoint: nil,
@@ -127,7 +128,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				EntryPoint: []string{"bin"},
@@ -143,7 +144,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				EntryPoint: []string{"bin", "arg"},
@@ -159,7 +160,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				EntryPoint: nil,
@@ -175,7 +176,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				EntryPoint: nil,
@@ -191,7 +192,7 @@ func Test_convertSidecar(t *testing.T) {
 				Name:       aws.String("foo"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
-				Secrets:    mockMap,
+				Secrets:    mockSecrets,
 				Variables:  mockMap,
 				Essential:  aws.Bool(false),
 				HealthCheck: &template.ContainerHealthCheck{
@@ -210,7 +211,7 @@ func Test_convertSidecar(t *testing.T) {
 				"foo": {
 					CredsParam:    mockCredsParam,
 					Image:         mockImage,
-					Secrets:       mockMap,
+					Secrets:       map[string]manifest.Secret{"foo": {}},
 					Variables:     mockMap,
 					Essential:     aws.Bool(tc.inEssential),
 					Port:          tc.inPort,
@@ -383,6 +384,17 @@ func Test_convertCapacityProviders(t *testing.T) {
 			},
 			expected: nil,
 		},
+		"returns nil if no spot config specified with min max": {
+			input: manifest.AdvancedCount{
+				Range: manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min: aws.Int(1),
+						Max: aws.Int(10),
+					},
+				},
+			},
+			expected: nil,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -543,6 +555,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 	duration60Seconds := 60 * time.Second
 	testCases := map[string]struct {
 		inputPath               *string
+		inputPort               *int
 		inputSuccessCodes       *string
 		inputHealthyThreshold   *int64
 		inputUnhealthyThreshold *int64
@@ -641,8 +654,19 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				GracePeriod:     aws.Int64(60),
 			},
 		},
+		"just Port": {
+			inputPath: nil,
+			inputPort: aws.Int(8000),
+
+			wantedOpts: template.HTTPHealthCheckOpts{
+				HealthCheckPath: "/",
+				Port:            "8000",
+				GracePeriod:     aws.Int64(60),
+			},
+		},
 		"all values changed in manifest": {
 			inputPath:               aws.String("/road/to/nowhere"),
+			inputPort:               aws.Int(8080),
 			inputSuccessCodes:       aws.String("200-299"),
 			inputHealthyThreshold:   aws.Int64(3),
 			inputUnhealthyThreshold: aws.Int64(3),
@@ -652,6 +676,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/road/to/nowhere",
+				Port:               "8080",
 				SuccessCodes:       "200-299",
 				HealthyThreshold:   aws.Int64(3),
 				UnhealthyThreshold: aws.Int64(3),
@@ -668,6 +693,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				HealthCheckPath: tc.inputPath,
 				HealthCheckArgs: manifest.HTTPHealthCheckArgs{
 					Path:               tc.inputPath,
+					Port:               tc.inputPort,
 					SuccessCodes:       tc.inputSuccessCodes,
 					HealthyThreshold:   tc.inputHealthyThreshold,
 					UnhealthyThreshold: tc.inputUnhealthyThreshold,
@@ -1307,12 +1333,10 @@ func Test_convertPublish(t *testing.T) {
 }
 
 func Test_convertSubscribe(t *testing.T) {
-	accountId := "123456789123"
-	region := "us-west-2"
-	app := "app"
-	env := "env"
-	svc := "svc"
 	duration111Seconds := 111 * time.Second
+	mockStruct := map[string]interface{}{
+		"store": []string{"example_corp"},
+	}
 	testCases := map[string]struct {
 		inSubscribe manifest.SubscribeConfig
 
@@ -1365,6 +1389,7 @@ func Test_convertSubscribe(t *testing.T) {
 						Queue: manifest.SQSQueueOrBool{
 							Enabled: aws.Bool(true),
 						},
+						FilterPolicy: mockStruct,
 					},
 				},
 				Queue: manifest.SQSQueue{},
@@ -1372,9 +1397,10 @@ func Test_convertSubscribe(t *testing.T) {
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue:   &template.SQSQueue{},
+						Name:         aws.String("name"),
+						Service:      aws.String("svc"),
+						Queue:        &template.SQSQueue{},
+						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
 				Queue: nil,
@@ -1383,7 +1409,7 @@ func Test_convertSubscribe(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, err := convertSubscribe(tc.inSubscribe, accountId, region, app, env, svc)
+			got, err := convertSubscribe(tc.inSubscribe)
 			require.Equal(t, tc.wanted, got)
 			require.NoError(t, err)
 		})

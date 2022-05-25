@@ -43,7 +43,7 @@ var (
 	fmtRateScheduleExpression = "rate(%d %s)" // rate({duration} {units})
 	fmtCronScheduleExpression = "cron(%s)"
 
-	awsScheduleRegexp = regexp.MustCompile(`(?:rate|cron)\(.*\)`) // Validates that an expression is of the form rate(xyz) or cron(abc)
+	awsScheduleRegexp = regexp.MustCompile(`((?:rate|cron)\(.*\)|none)`) // Validates that an expression is of the form rate(xyz) or cron(abc) or value 'none'
 )
 
 const (
@@ -158,7 +158,7 @@ func (j *ScheduledJob) Template() (string, error) {
 
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		Variables:                j.manifest.Variables,
-		Secrets:                  j.manifest.Secrets,
+		Secrets:                  convertSecrets(j.manifest.Secrets),
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
@@ -252,6 +252,8 @@ func (j *ScheduledJob) awsSchedule() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("parse preset schedule: %w", err)
 		}
+	case schedule == "none":
+		scheduleExpression = schedule // Keep expression as "none" when the job is disabled.
 	default:
 		scheduleExpression, err = toAWSCron(schedule)
 		if err != nil {

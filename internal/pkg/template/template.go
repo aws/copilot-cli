@@ -15,6 +15,7 @@ import (
 	"text/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 )
 
 //go:embed templates
@@ -114,7 +115,7 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 	}
 	buf := new(bytes.Buffer)
 	if err := tpl.Execute(buf, data); err != nil {
-		return nil, fmt.Errorf("execute template %s with data %v: %w", path, data, err)
+		return nil, fmt.Errorf("execute template %s: %w", path, err)
 	}
 	return &Content{buf}, nil
 }
@@ -129,7 +130,7 @@ func (t *Template) UploadRequestDrivenWebServiceCustomResources(upload s3.Compre
 	return t.uploadCustomResources(upload, rdWkldCustomResourceFiles)
 }
 
-// UploadLoadBalancedWebServiceNLBCustomResources uploads the network load-balanced web service custom resource scripts.
+// UploadNetworkLoadBalancedWebServiceCustomResources uploads the network load-balanced web service custom resource scripts.
 func (t *Template) UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
 	return t.uploadCustomResources(upload, nlbWkldCustomResourceFiles)
 }
@@ -166,10 +167,10 @@ func (t *Template) uploadFileToCompress(upload s3.CompressAndUploadFunc, file fi
 		contents = append(contents, uploadable.content...)
 		nameBinaries = append(nameBinaries, uploadable)
 	}
-	// Suffix with a SHA256 checksum of the fileToCompress so that
-	// only new content gets a new URL. Otherwise, if two fileToCompresss have the
+	// Prefix with a SHA256 checksum of the fileToCompress so that
+	// only new content gets a new URL. Otherwise, if two fileToCompress have the
 	// same content then the URL generated will be identical.
-	url, err := upload(s3.MkdirSHA256(file.name, contents), nameBinaries...)
+	url, err := upload(artifactpath.MkdirSHA256(file.name, contents), nameBinaries...)
 	if err != nil {
 		return "", fmt.Errorf("upload %s: %w", file.name, err)
 	}

@@ -214,6 +214,29 @@ type PackageInput struct {
 	Tag     string
 }
 
+// PipelineInitInput contains the parameters for calling copilot pipeline init.
+type PipelineInitInput struct {
+	Name         string
+	URL          string
+	GitBranch    string
+	Environments []string
+}
+
+// PipelineDeployInput contains the parameters for calling copilot pipeline deploy.
+type PipelineDeployInput struct {
+	Name string
+}
+
+// PipelineShowInput contains the parameters for calling copilot pipeline show.
+type PipelineShowInput struct {
+	Name string
+}
+
+// PipelineStatusInput contains the parameters for calling copilot pipeline status.
+type PipelineStatusInput struct {
+	Name string
+}
+
 // NewCLI returns a wrapper around CLI.
 func NewCLI() (*CLI, error) {
 	// These tests should be run in a dockerfile so that
@@ -646,47 +669,86 @@ func (cli *CLI) AppShow(appName string) (*AppShowOutput, error) {
 	return toAppShowOutput(output)
 }
 
-// PipelineInit runs "copilot pipeline init".
-func (cli *CLI) PipelineInit(app, url, branch string, envs []string) (string, error) {
-	return cli.exec(
-		exec.Command(cli.path, "pipeline", "init",
-			"-a", app,
-			"-u", url,
-			"-b", branch,
-			"-e", strings.Join(envs, ",")))
-}
-
-// PipelineDeploy runs "copilot pipeline deploy".
-func (cli *CLI) PipelineDeploy(app string) (string, error) {
-	return cli.exec(exec.Command(cli.path, "pipeline", "deploy", "-a", app, "--yes"))
-}
-
-// PipelineShow runs "copilot pipeline show --json"
-func (cli *CLI) PipelineShow(app string) (*PipelineShowOutput, error) {
-	text, err := cli.exec(
-		exec.Command(cli.path, "pipeline", "show", "-a", app, "--json"))
-	if err != nil {
-		return nil, err
+// PipelineInit runs:
+//	copilot pipeline init
+//	--name $n
+//	--url $t
+//	--git-branch $b
+//	--environments $e[0],$e[1],...
+func (cli *CLI) PipelineInit(opts PipelineInitInput) (string, error) {
+	args := []string{
+		"pipeline",
+		"init",
+		"--name", opts.Name,
+		"--url", opts.URL,
+		"--git-branch", opts.GitBranch,
+		"--environments", strings.Join(opts.Environments, ","),
 	}
+
+	return cli.exec(exec.Command(cli.path, args...))
+}
+
+// PipelineDeploy runs:
+//	copilot pipeline deploy
+//	--name $n
+//	--yes
+func (cli *CLI) PipelineDeploy(opts PipelineDeployInput) (string, error) {
+	args := []string{
+		"pipeline",
+		"deploy",
+		"--name", opts.Name,
+		"--yes",
+	}
+
+	return cli.exec(exec.Command(cli.path, args...))
+}
+
+// PipelineShow runs:
+//	copilot pipeline show
+//	--name $n
+//	--json
+func (cli *CLI) PipelineShow(opts PipelineShowInput) (PipelineShowOutput, error) {
+	args := []string{
+		"pipeline",
+		"show",
+		"--name", opts.Name,
+		"--json",
+	}
+
+	text, err := cli.exec(exec.Command(cli.path, args...))
+	if err != nil {
+		return PipelineShowOutput{}, err
+	}
+
 	var out PipelineShowOutput
 	if err := json.Unmarshal([]byte(text), &out); err != nil {
-		return nil, err
+		return PipelineShowOutput{}, err
 	}
-	return &out, nil
+	return out, nil
 }
 
-// PipelineStatus runs "copilot pipeline status --json"
-func (cli *CLI) PipelineStatus(app string) (*PipelineStatusOutput, error) {
-	text, err := cli.exec(
-		exec.Command(cli.path, "pipeline", "status", "-a", app, "--json"))
-	if err != nil {
-		return nil, err
+// PipelineStatus runs:
+//	copilot pipeline show
+//	--name $n
+//	--json
+func (cli *CLI) PipelineStatus(opts PipelineStatusInput) (PipelineStatusOutput, error) {
+	args := []string{
+		"pipeline",
+		"status",
+		"--name", opts.Name,
+		"--json",
 	}
+
+	text, err := cli.exec(exec.Command(cli.path, args...))
+	if err != nil {
+		return PipelineStatusOutput{}, err
+	}
+
 	var out PipelineStatusOutput
 	if err := json.Unmarshal([]byte(text), &out); err != nil {
-		return nil, err
+		return PipelineStatusOutput{}, err
 	}
-	return &out, nil
+	return out, nil
 }
 
 /*AppList runs:

@@ -82,6 +82,21 @@ func (mr *MockConfigStoreSvcMockRecorder) ListEnvironments(appName interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListEnvironments), appName)
 }
 
+// ListJobs mocks base method.
+func (m *MockConfigStoreSvc) ListJobs(appName string) ([]*config.Workload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListJobs", appName)
+	ret0, _ := ret[0].([]*config.Workload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListJobs indicates an expected call of ListJobs.
+func (mr *MockConfigStoreSvcMockRecorder) ListJobs(appName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListJobs", reflect.TypeOf((*MockConfigStoreSvc)(nil).ListJobs), appName)
+}
+
 // ListServices mocks base method.
 func (m *MockConfigStoreSvc) ListServices(appName string) ([]*config.Workload, error) {
 	m.ctrl.T.Helper()
@@ -118,6 +133,21 @@ func NewMockDeployedEnvServicesLister(ctrl *gomock.Controller) *MockDeployedEnvS
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDeployedEnvServicesLister) EXPECT() *MockDeployedEnvServicesListerMockRecorder {
 	return m.recorder
+}
+
+// ListDeployedJobs mocks base method.
+func (m *MockDeployedEnvServicesLister) ListDeployedJobs(appName, envName string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDeployedJobs", appName, envName)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDeployedJobs indicates an expected call of ListDeployedJobs.
+func (mr *MockDeployedEnvServicesListerMockRecorder) ListDeployedJobs(appName, envName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDeployedJobs", reflect.TypeOf((*MockDeployedEnvServicesLister)(nil).ListDeployedJobs), appName, envName)
 }
 
 // ListDeployedServices mocks base method.

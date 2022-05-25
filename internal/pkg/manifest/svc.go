@@ -1,7 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-// Package manifest provides functionality to create Manifest files.
 package manifest
 
 import (
@@ -27,12 +26,14 @@ const (
 	WorkerServiceType = "Worker Service"
 )
 
-// ServiceTypes are the supported service manifest types.
-var ServiceTypes = []string{
-	RequestDrivenWebServiceType,
-	LoadBalancedWebServiceType,
-	BackendServiceType,
-	WorkerServiceType,
+// ServiceTypes returns the list of supported service manifest types.
+func ServiceTypes() []string {
+	return []string{
+		RequestDrivenWebServiceType,
+		LoadBalancedWebServiceType,
+		BackendServiceType,
+		WorkerServiceType,
+	}
 }
 
 // Range contains either a Range or a range configuration for Autoscaling ranges.
@@ -133,13 +134,6 @@ func (c *Count) UnmarshalYAML(value *yaml.Node) error {
 			break
 		default:
 			return err
-		}
-	}
-
-	if c.AdvancedCount.Spot != nil && (c.AdvancedCount.hasAutoscaling()) {
-		return &errFieldMutualExclusive{
-			firstField:  "spot",
-			secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
 		}
 	}
 
@@ -263,13 +257,9 @@ func (qs *QueueScaling) AcceptableBacklogPerTask() (int, error) {
 	return int(v), nil
 }
 
-// ServiceDockerfileBuildRequired returns if the service container image should be built from local Dockerfile.
-func ServiceDockerfileBuildRequired(svc interface{}) (bool, error) {
-	return dockerfileBuildRequired("service", svc)
-}
-
+// IsTypeAService returns if manifest type is service.
 func IsTypeAService(t string) bool {
-	for _, serviceType := range ServiceTypes {
+	for _, serviceType := range ServiceTypes() {
 		if t == serviceType {
 			return true
 		}
@@ -283,6 +273,7 @@ func IsTypeAService(t string) bool {
 // See https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html.
 type HTTPHealthCheckArgs struct {
 	Path               *string        `yaml:"path"`
+	Port               *int           `yaml:"port"`
 	SuccessCodes       *string        `yaml:"success_codes"`
 	HealthyThreshold   *int64         `yaml:"healthy_threshold"`
 	UnhealthyThreshold *int64         `yaml:"unhealthy_threshold"`
@@ -292,7 +283,7 @@ type HTTPHealthCheckArgs struct {
 }
 
 func (h *HTTPHealthCheckArgs) isEmpty() bool {
-	return h.Path == nil && h.SuccessCodes == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil &&
+	return h.Path == nil && h.Port == nil && h.SuccessCodes == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil &&
 		h.Interval == nil && h.Timeout == nil && h.GracePeriod == nil
 }
 
@@ -359,7 +350,8 @@ func (h *NLBHealthCheckArgs) isEmpty() bool {
 	return h.Port == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil && h.Timeout == nil && h.Interval == nil
 }
 
-// Parse port-protocol string into individual port and protocol strings. Valid examples: 2000/udp, or 2000.
+// ParsePortMapping parses port-protocol string into individual port and protocol strings.
+// Valid examples: 2000/udp, or 2000.
 func ParsePortMapping(s *string) (port *string, protocol *string, err error) {
 	if s == nil {
 		return nil, nil, nil

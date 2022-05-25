@@ -22,7 +22,8 @@ var (
 
 // Application identifiers.
 var (
-	appName = fmt.Sprintf("e2e-pipeline-%d", time.Now().Unix())
+	appName      = fmt.Sprintf("e2e-pipeline-%d", time.Now().Unix())
+	pipelineName = "my-pipeline"
 )
 
 // CodeCommit credentials.

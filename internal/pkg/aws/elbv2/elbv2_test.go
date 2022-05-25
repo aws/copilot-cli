@@ -5,6 +5,7 @@ package elbv2
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -136,6 +137,83 @@ func TestELBV2_TargetsHealth(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedOut, got)
+			}
+		})
+	}
+}
+
+func TestELBV2_ListenerRuleHostHeaders(t *testing.T) {
+	mockARN := "mockListenerRuleARN"
+	testCases := map[string]struct {
+		setUpMock func(m *mocks.Mockapi)
+
+		wanted      []string
+		wantedError error
+	}{
+		"fail to describe rules": {
+			setUpMock: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
+					RuleArns: aws.StringSlice([]string{mockARN}),
+				}).Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("get listener rule for mockListenerRuleARN: some error"),
+		},
+		"cannot find listener rule": {
+			setUpMock: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
+					RuleArns: aws.StringSlice([]string{mockARN}),
+				}).Return(&elbv2.DescribeRulesOutput{}, nil)
+			},
+			wantedError: fmt.Errorf("cannot find listener rule mockListenerRuleARN"),
+		},
+		"success": {
+			setUpMock: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
+					RuleArns: aws.StringSlice([]string{mockARN}),
+				}).Return(&elbv2.DescribeRulesOutput{
+					Rules: []*elbv2.Rule{
+						{
+							Conditions: []*elbv2.RuleCondition{
+								{
+									Field:  aws.String("path-pattern"),
+									Values: []*string{aws.String("/*")},
+								},
+								{
+									Field:  aws.String("host-header"),
+									Values: aws.StringSlice([]string{"copilot.com", "archer.com"}),
+									HostHeaderConfig: &elbv2.HostHeaderConditionConfig{
+										Values: aws.StringSlice([]string{"copilot.com", "archer.com"}),
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			wanted: []string{"archer.com", "copilot.com"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAPI := mocks.NewMockapi(ctrl)
+			tc.setUpMock(mockAPI)
+
+			elbv2Client := ELBV2{
+				client: mockAPI,
+			}
+
+			got, err := elbv2Client.ListenerRuleHostHeaders(mockARN)
+
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, got)
 			}
 		})
 	}

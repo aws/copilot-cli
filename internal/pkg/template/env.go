@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 const (
@@ -41,10 +41,43 @@ type EnvOpts struct {
 	ArtifactBucketARN         string
 	ArtifactBucketKeyARN      string
 
-	ImportVPC *config.ImportVPC
-	VPCConfig *config.AdjustVPC
+	VPCConfig                VPCConfig
+	ImportCertARNs           []string
+	CustomInternalALBSubnets []string
+	Telemetry                *Telemetry
 
 	LatestVersion string
+	Manifest      string // Serialized manifest used to render the environment template.
+}
+
+type VPCConfig struct {
+	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
+	Managed  ManagedVPC
+}
+
+// ImportVPC holds the fields to import VPC resources.
+type ImportVPC struct {
+	ID               string
+	PublicSubnetIDs  []string
+	PrivateSubnetIDs []string
+}
+
+// ManagedVPC holds the fields to configure a managed VPC.
+type ManagedVPC struct {
+	CIDR               string
+	AZs                []string
+	PublicSubnetCIDRs  []string
+	PrivateSubnetCIDRs []string
+}
+
+// Telemetry represents optional observability and monitoring configuration.
+type Telemetry struct {
+	EnableContainerInsights *bool
+}
+
+// ContainerInsightsEnabled returns whether the container insights should be enabled.
+func (t *Telemetry) ContainerInsightsEnabled() bool {
+	return aws.BoolValue(t.EnableContainerInsights)
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.

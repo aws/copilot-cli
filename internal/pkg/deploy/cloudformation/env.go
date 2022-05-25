@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
+
 	"github.com/aws/aws-sdk-go/aws"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -22,31 +24,76 @@ import (
 // Environment stack's parameters that need to updated while moving the legacy template to a newer version.
 const (
 	includeLoadBalancerParamKey = "IncludePublicLoadBalancer"
-	albWorkloadsParamKey        = "ALBWorkloads"
 )
 
-// DeployAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
-func (cf CloudFormation) DeployAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
-	s, err := toStack(stack.NewEnvStackConfig(env))
+// CreateAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
+func (cf CloudFormation) CreateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
+	cfnStack, err := cf.environmentStack(env)
 	if err != nil {
 		return err
 	}
-	spinner := progress.NewSpinner(out)
-	return cf.renderStackChanges(&renderStackChangesInput{
+	in := newRenderEnvironmentInput(out, cfnStack)
+	in.createChangeSet = func() (changeSetID string, err error) {
+		spinner := progress.NewSpinner(out)
+		label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", cfnStack.Name)
+		spinner.Start(label)
+		defer stopSpinner(spinner, err, label)
+		changeSetID, err = cf.cfnClient.Create(cfnStack)
+		if err != nil {
+			return "", err
+		}
+		return changeSetID, nil
+	}
+	return cf.renderStackChanges(in)
+}
+
+// UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
+func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
+	cfnStack, err := cf.environmentStack(env)
+	if err != nil {
+		return err
+	}
+	for _, opt := range opts {
+		opt(cfnStack)
+	}
+	in := newRenderEnvironmentInput(out, cfnStack)
+	in.createChangeSet = func() (changeSetID string, err error) {
+		spinner := progress.NewSpinner(out)
+		label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", cfnStack.Name)
+		spinner.Start(label)
+		defer stopSpinner(spinner, err, label)
+		changeSetID, err = cf.cfnClient.Update(cfnStack)
+		if err != nil {
+			return "", err
+		}
+		return changeSetID, nil
+	}
+	return cf.renderStackChanges(in)
+}
+
+func (cf CloudFormation) environmentStack(env *deploy.CreateEnvironmentInput) (*cloudformation.Stack, error) {
+	bucketARN, err := arn.Parse(env.ArtifactBucketARN)
+	if err != nil {
+		return nil, err
+	}
+	stackConfig := stack.NewEnvStackConfig(env)
+	url, err := cf.uploadStackTemplateToS3(bucketARN.Resource, stackConfig)
+	if err != nil {
+		return nil, err
+	}
+	cfnStack, err := toStackFromS3(stackConfig, url)
+	if err != nil {
+		return nil, err
+	}
+	return cfnStack, nil
+}
+
+func newRenderEnvironmentInput(out progress.FileWriter, cfnStack *cloudformation.Stack) *renderStackChangesInput {
+	return &renderStackChangesInput{
 		w:                out,
-		stackName:        s.Name,
-		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s environment.", s.Name),
-		createChangeSet: func() (changeSetID string, err error) {
-			label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", s.Name)
-			spinner.Start(label)
-			defer stopSpinner(spinner, err, label)
-			changeSetID, err = cf.cfnClient.Create(s)
-			if err != nil {
-				return "", err
-			}
-			return changeSetID, nil
-		},
-	})
+		stackName:        cfnStack.Name,
+		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s environment.", cfnStack.Name),
+	}
 }
 
 // DeleteEnvironment deletes the CloudFormation stack of an environment.
@@ -117,7 +164,7 @@ func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentIn
 			// "IncludePublicLoadBalancer" has been deprecated in favor of "ALBWorkloads".
 			// We need to populate this parameter so that the env ALB is not deleted.
 			return &awscfn.Parameter{
-				ParameterKey:   aws.String(albWorkloadsParamKey),
+				ParameterKey:   aws.String(stack.EnvParamALBWorkloadsKey),
 				ParameterValue: aws.String(strings.Join(lbWebServices, ",")),
 			}
 		}
@@ -129,7 +176,16 @@ func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentIn
 }
 
 func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, transformParam func(param *awscfn.Parameter) *awscfn.Parameter) error {
-	s, err := toStack(stack.NewEnvStackConfig(in))
+	bucketARN, err := arn.Parse(in.ArtifactBucketARN)
+	if err != nil {
+		return err
+	}
+	stackConfig := stack.NewEnvStackConfig(in)
+	url, err := cf.uploadStackTemplateToS3(bucketARN.Resource, stackConfig)
+	if err != nil {
+		return err
+	}
+	s, err := toStackFromS3(stackConfig, url)
 	if err != nil {
 		return err
 	}
@@ -147,12 +203,27 @@ func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, t
 			continue
 		}
 
-		// Keep the parameters and tags of the stack.
-		var params []*awscfn.Parameter
+		// Remove params that only exist in old template; use previous values for params that
+		// exist in both old and new template; use new values for params that only exist in new template.
+		paramSet := make(map[string]*awscfn.Parameter)
+		for _, param := range s.Parameters {
+			paramSet[aws.StringValue(param.ParameterKey)] = param
+		}
 		for _, param := range descr.Parameters {
-			params = append(params, transformParam(param))
+			param = transformParam(param)
+			paramKey := aws.StringValue(param.ParameterKey)
+			if _, ok := paramSet[paramKey]; !ok {
+				continue
+			}
+			paramSet[paramKey] = param
+		}
+		var params []*awscfn.Parameter
+		for _, param := range paramSet {
+			params = append(params, param)
 		}
 		s.Parameters = params
+
+		// Keep the tags of the stack.
 		s.Tags = descr.Tags
 
 		// Apply a service role if provided.

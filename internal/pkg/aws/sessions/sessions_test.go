@@ -162,7 +162,7 @@ func TestProvider_FromProfile(t *testing.T) {
 		require.NoError(t, err)
 
 		// When
-		sess, err := NewProvider().FromProfile("walk-like-an-egyptian")
+		sess, err := ImmutableProvider().FromProfile("walk-like-an-egyptian")
 
 		// THEN
 		require.NotNil(t, err)
@@ -183,7 +183,7 @@ func TestProvider_FromProfile(t *testing.T) {
 		require.NoError(t, err)
 
 		// WHEN
-		sess, err := NewProvider().FromProfile("walk-like-an-egyptian")
+		sess, err := ImmutableProvider().FromProfile("walk-like-an-egyptian")
 
 		// THEN
 		require.NoError(t, err)

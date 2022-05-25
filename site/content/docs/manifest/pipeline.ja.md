@@ -2,31 +2,30 @@
 
 ???+ note "GitHub のリポジトリからトリガーされる Pipeline のサンプル Manifest"
 
-```yaml
-name: pipeline-sample-app-frontend
-version: 1
-
-source:
-  provider: GitHub
-  properties:
-    branch: main
-    repository: https://github.com/<user>/sample-app-frontend
-    # オプション。既存の CodeStar Connection の接続名を指定します。
-    connection_name: a-connection
-
-build:
-  image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
-
-stages:
-    - 
-      name: test
-      test_commands:
-        - make test
-        - echo "woo! Tests passed"
-    - 
-      name: prod
-      requires_approval: true
-```
+    ```yaml
+        name: frontend
+    
+        source:
+          provider: GitHub
+          properties:
+            branch: main
+            repository: https://github.com/<user>/frontend
+            # オプション。既存の CodeStar Connection の接続名を指定します。
+            connection_name: a-connection
+    
+        build:
+          image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+    
+        stages:
+            -
+              name: test
+              test_commands:
+                - make test
+                - echo "woo! Tests passed"
+            -
+              name: prod
+              requires_approval: true
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Pipeline 名。
@@ -54,7 +53,7 @@ Pipeline をトリガーするための GitHub アクセストークンを保持
     Copilot v1.4.0 から GitHub リポジトリをソースにする場合のアクセストークンは不要になりました。代わりに Copilot は [AWS CodeStar の GitHub への接続](https://docs.aws.amazon.com/ja_jp/codepipeline/latest/userguide/update-github-action-connections.html)を使って Pipeline をトリガーします。
 
 <span class="parent-field">source.properties.</span><a id="source-properties-branch" href="#source-properties-branch" class="field">`branch`</a> <span class="type">String</span>  
-Pipeline をトリガーするリポジトリのブランチ名。 GitHub と CodeCommit の場合デフォルトは `main` で Bitbucket の場合デフォルトは `master` です。
+Pipeline をトリガーするリポジトリのブランチ名。 Copilot は、このフィールドに現在のローカルブランチを自動的に入力します。
 
 <span class="parent-field">source.properties.</span><a id="source-properties-repository" href="#source-properties-repository" class="field">`repository`</a> <span class="type">String</span>  
 リポジトリの URL 。
@@ -75,6 +74,9 @@ CodeBuild プロジェクトに関する設定。
 
 <span class="parent-field">build.</span><a id="build-image" href="#build-image" class="field">`image`</a> <span class="type">String</span>  
 CodeBuild のビルドプロジェクトで利用する Docker イメージの URI。`aws/codebuild/amazonlinux2-x86_64-standard:3.0` がデフォルトで利用されます。
+
+<span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>
+任意項目。ビルドプロジェクトで利用する buildspec ファイルを指定する URI です。デフォルトでは、Copilot  が buildspec ファイルを作成します。作成したファイルは、 `copilot/pipelines/[your pipeline name]/buildspec.yml` に配置されています。
 
 <div class="separator"></div>
 

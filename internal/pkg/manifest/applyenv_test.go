@@ -651,49 +651,49 @@ func TestApplyEnv_MapToString(t *testing.T) {
 	}{
 		"map upserted": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Secrets = map[string]string{
-					"secret1": "the secret sauce is mole",
-					"secret2": "the secret agent is johnny rivers",
+				svc.TaskConfig.Variables = map[string]string{
+					"var1": "the secret sauce is mole",
+					"var2": "the secret agent is johnny rivers",
 				}
-				svc.Environments["test"].TaskConfig.Secrets = map[string]string{
-					"secret1": "the secret sauce is blue cheese which has mold in it",
-					"secret3": "the secret route is through egypt",
+				svc.Environments["test"].TaskConfig.Variables = map[string]string{
+					"var1": "the secret sauce is blue cheese which has mold in it",
+					"var3": "the secret route is through egypt",
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Secrets = map[string]string{
-					"secret1": "the secret sauce is blue cheese which has mold in it", // Overridden.
-					"secret2": "the secret agent is johnny rivers",                    // Kept.
-					"secret3": "the secret route is through egypt",                    // Appended
+				svc.TaskConfig.Variables = map[string]string{
+					"var1": "the secret sauce is blue cheese which has mold in it", // Overridden.
+					"var2": "the secret agent is johnny rivers",                    // Kept.
+					"var3": "the secret route is through egypt",                    // Appended
 				}
 			},
 		},
 		"map not overridden by zero map": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Secrets = map[string]string{
-					"secret1": "the secret sauce is mole",
-					"secret2": "the secret agent man is johnny rivers",
+				svc.TaskConfig.Variables = map[string]string{
+					"var1": "the secret sauce is mole",
+					"var2": "the secret agent man is johnny rivers",
 				}
-				svc.Environments["test"].TaskConfig.Secrets = map[string]string{}
+				svc.Environments["test"].TaskConfig.Variables = map[string]string{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Secrets = map[string]string{
-					"secret1": "the secret sauce is mole",
-					"secret2": "the secret agent man is johnny rivers",
+				svc.TaskConfig.Variables = map[string]string{
+					"var1": "the secret sauce is mole",
+					"var2": "the secret agent man is johnny rivers",
 				}
 			},
 		},
 		"map not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Secrets = map[string]string{
-					"secret1": "the secret sauce is mole",
-					"secret2": "the secret agent man is johnny rivers",
+				svc.TaskConfig.Variables = map[string]string{
+					"var1": "the secret sauce is mole",
+					"var2": "the secret agent man is johnny rivers",
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Secrets = map[string]string{
-					"secret1": "the secret sauce is mole",
-					"secret2": "the secret agent man is johnny rivers",
+				svc.TaskConfig.Variables = map[string]string{
+					"var1": "the secret sauce is mole",
+					"var2": "the secret agent man is johnny rivers",
 				}
 			},
 		},

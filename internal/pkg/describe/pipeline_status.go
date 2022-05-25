@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
@@ -19,38 +20,42 @@ type pipelineStateGetter interface {
 	GetPipelineState(pipelineName string) (*codepipeline.PipelineState, error)
 }
 
-// PipelineStatusDescriber retrieves status of a pipeline.
+// PipelineStatusDescriber retrieves status of a deployed pipeline.
 type PipelineStatusDescriber struct {
-	pipelineName string
-	pipelineSvc  pipelineStateGetter
+	pipeline    deploy.Pipeline
+	pipelineSvc pipelineStateGetter
 }
 
 // PipelineStatus contains the status for a pipeline.
 type PipelineStatus struct {
+	Name string `json:"name"`
 	codepipeline.PipelineState
 }
 
 // NewPipelineStatusDescriber instantiates a new PipelineStatus struct.
-func NewPipelineStatusDescriber(pipelineName string) (*PipelineStatusDescriber, error) {
-	sess, err := sessions.NewProvider().Default()
+func NewPipelineStatusDescriber(pipeline deploy.Pipeline) (*PipelineStatusDescriber, error) {
+	sess, err := sessions.ImmutableProvider().Default()
 	if err != nil {
 		return nil, err
 	}
 
 	pipelineSvc := codepipeline.New(sess)
 	return &PipelineStatusDescriber{
-		pipelineName: pipelineName,
-		pipelineSvc:  pipelineSvc,
+		pipeline:    pipeline,
+		pipelineSvc: pipelineSvc,
 	}, nil
 }
 
 // Describe returns status of a pipeline.
 func (d *PipelineStatusDescriber) Describe() (HumanJSONStringer, error) {
-	ps, err := d.pipelineSvc.GetPipelineState(d.pipelineName)
+	ps, err := d.pipelineSvc.GetPipelineState(d.pipeline.ResourceName)
 	if err != nil {
 		return nil, fmt.Errorf("get pipeline status: %w", err)
 	}
-	pipelineStatus := &PipelineStatus{*ps}
+	pipelineStatus := &PipelineStatus{
+		Name:          d.pipeline.Name,
+		PipelineState: *ps,
+	}
 	return pipelineStatus, nil
 }
 

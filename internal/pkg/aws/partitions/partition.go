@@ -5,7 +5,6 @@ package partitions
 
 import (
 	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
@@ -18,4 +17,18 @@ func (r Region) Partition() (endpoints.Partition, error) {
 		return endpoints.Partition{}, fmt.Errorf("find the partition for region %s", string(r))
 	}
 	return partition, nil
+}
+
+// IsAvailableInRegion returns true if the service ID is available in the given region.
+func IsAvailableInRegion(sID string, region string) (bool, error) {
+	partition, err := Region(region).Partition()
+	if err != nil {
+		return false, err
+	}
+	regions, partitionOrServiceExists := endpoints.RegionsForService(endpoints.DefaultPartitions(), partition.ID(), sID)
+	if !partitionOrServiceExists {
+		return false, nil
+	}
+	_, existInRegion := regions[region]
+	return existInRegion, nil
 }

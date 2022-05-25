@@ -8,11 +8,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/spf13/afero"
@@ -126,6 +124,11 @@ func TestValidateSvcName(t *testing.T) {
 			svcType: manifest.LoadBalancedWebServiceType,
 			wanted:  errValueBadFormat,
 		},
+		"is not a reserved name": {
+			val:     "pipelines",
+			svcType: manifest.LoadBalancedWebServiceType,
+			wanted:  errValueReserved,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -145,6 +148,63 @@ func TestValidateEnvironmentName(t *testing.T) {
 			got := validateEnvironmentName(tc.input)
 
 			require.True(t, errors.Is(got, tc.want))
+		})
+	}
+}
+
+func TestValidatePipelineName(t *testing.T) {
+	testCases := map[string]struct {
+		val     interface{}
+		appName string
+
+		wanted            error
+		wantedErrorSuffix string
+	}{
+		"string as input": {
+			val:    "hello",
+			wanted: nil,
+		},
+		"number as input": {
+			val:    1234,
+			wanted: errValueNotAString,
+		},
+		"string with invalid characters": {
+			val:    "myPipe!",
+			wanted: errValueBadFormat,
+		},
+		"longer than 128 characters": {
+			val:               strings.Repeat("s", 129),
+			wantedErrorSuffix: fmt.Sprintf(fmtErrPipelineNameTooLong, 118),
+		},
+		"longer than 128 characters with pipeline-[app]": {
+			val:               strings.Repeat("x", 114),
+			appName:           "myApp",
+			wantedErrorSuffix: fmt.Sprintf(fmtErrPipelineNameTooLong, 113),
+		},
+		"does not start with letter": {
+			val:    "123chicken",
+			wanted: errValueBadFormat,
+		},
+		"starts with a dash": {
+			val:    "-beta",
+			wanted: errValueBadFormat,
+		},
+		"contains upper-case letters": {
+			val:    "badGoose",
+			wanted: errValueBadFormat,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validatePipelineName(tc.val, tc.appName)
+
+			if tc.wantedErrorSuffix != "" {
+				require.True(t, strings.HasSuffix(got.Error(), tc.wantedErrorSuffix), "got %v instead of %v", got, tc.wantedErrorSuffix)
+				return
+			}
+
+			require.True(t, errors.Is(got, tc.wanted), "got %v instead of %v", got, tc.wanted)
 		})
 	}
 }
@@ -888,58 +948,29 @@ func Test_validateSubscribe(t *testing.T) {
 	}
 }
 
-func Test_validateTopicsExist(t *testing.T) {
-	mockApp := "app"
-	mockEnv := "env"
-	mockAllowedTopics := []string{
-		"arn:aws:sqs:us-west-2:123456789012:app-env-database-events",
-		"arn:aws:sqs:us-west-2:123456789012:app-env-database-orders",
-		"arn:aws:sqs:us-west-2:123456789012:app-env-api-events",
-	}
-	duration10Hours := 10 * time.Hour
-	testGoodTopics := []manifest.TopicSubscription{
-		{
-			Name:    aws.String("events"),
-			Service: aws.String("database"),
-		},
-		{
-			Name:    aws.String("orders"),
-			Service: aws.String("database"),
-			Queue: manifest.SQSQueueOrBool{
-				Advanced: manifest.SQSQueue{
-					Retention: &duration10Hours,
-				},
-			},
-		},
-	}
+func TestValidateJobName(t *testing.T) {
 	testCases := map[string]struct {
-		inTopics    []manifest.TopicSubscription
-		inTopicARNs []string
-
-		wantErr string
+		val    interface{}
+		wanted error
 	}{
-		"empty subscriptions": {
-			inTopics:    nil,
-			inTopicARNs: mockAllowedTopics,
+		"string as input": {
+			val:    "hello",
+			wanted: nil,
 		},
-		"topics are valid": {
-			inTopics:    testGoodTopics,
-			inTopicARNs: mockAllowedTopics,
+		"number as input": {
+			val:    1234,
+			wanted: errValueNotAString,
 		},
-		"topic is invalid": {
-			inTopics:    testGoodTopics,
-			inTopicARNs: []string{},
-			wantErr:     "SNS topic app-env-database-events does not exist in environment env",
+		"is not a reserved name": {
+			val:    "pipelines",
+			wanted: errValueReserved,
 		},
 	}
+
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateTopicsExist(tc.inTopics, tc.inTopicARNs, mockApp, mockEnv)
-			if tc.wantErr != "" {
-				require.EqualError(t, err, tc.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
+			got := validateJobName(tc.val)
+			require.True(t, errors.Is(got, tc.wanted), "got %v instead of %v", got, tc.wanted)
 		})
 	}
 }

@@ -1,4 +1,6 @@
 DynamicDesiredCountAction:
+  Metadata:
+    'aws:copilot:description': "A custom resource returning the ECS service's running task count"
   Type: Custom::DynamicDesiredCountFunction
   Properties:
     ServiceToken: !GetAtt DynamicDesiredCountFunction.Arn
@@ -21,10 +23,58 @@ DynamicDesiredCountFunction:
     Handler: "index.handler"
     Timeout: 600
     MemorySize: 512
-    Role: !GetAtt 'CustomResourceRole.Arn'
+    Role: !GetAtt 'DynamicDesiredCountFunctionRole.Arn'
     Runtime: nodejs12.x
 
+DynamicDesiredCountFunctionRole:
+  Metadata:
+    'aws:copilot:description': "An IAM Role for describing number of running tasks in your ECS service"
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Path: /
+    ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Policies:
+      - PolicyName: "DelegateDesiredCountAccess"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: ECS
+              Effect: Allow
+              Action:
+                - ecs:DescribeServices
+              Resource: "*"
+              Condition: 
+                ArnEquals: 
+                  'ecs:cluster':
+                    Fn::Sub:
+                      - arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterName}
+                      - ClusterName:
+                          Fn::ImportValue:
+                            !Sub '${AppName}-${EnvName}-ClusterId'
+            - Sid: ResourceGroups
+              Effect: Allow
+              Action:
+                - resource-groups:GetResources
+              Resource: "*"
+            - Sid: Tags
+              Effect: Allow
+              Action:
+                - "tag:GetResources"
+              Resource: "*"
+
 AutoScalingRole:
+  Metadata:
+    'aws:copilot:description': 'An IAM role for container auto scaling'
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
@@ -126,6 +176,8 @@ BacklogPerTaskCalculatorFunction:
             {{- end }}
 
 BacklogPerTaskCalculatorRole:
+  Metadata:
+    'aws:copilot:description': 'An IAM role for BacklogPerTaskCalculatorFunction'
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

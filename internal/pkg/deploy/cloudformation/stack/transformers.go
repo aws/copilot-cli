@@ -4,6 +4,7 @@
 package stack
 
 import (
+	"encoding/json"
 	"fmt"
 	"hash/crc32"
 	"strconv"
@@ -17,7 +18,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -34,13 +34,21 @@ const (
 	defaultIAM             = disabled
 	defaultReadOnly        = true
 	defaultWritePermission = false
-	defaultNLBProtocol     = manifest.TCPUDP
+	defaultNLBProtocol     = manifest.TCP
 )
 
 // Supported capacityproviders for Fargate services
 const (
 	capacityProviderFargateSpot = "FARGATE_SPOT"
 	capacityProviderFargate     = "FARGATE"
+)
+
+// MinimumHealthyPercent and MaximumPercent configurations as per deployment strategy.
+const (
+	minHealthyPercentRecreate = 0
+	maxPercentRecreate        = 100
+	minHealthyPercentDefault  = 100
+	maxPercentDefault         = 200
 )
 
 var (
@@ -74,7 +82,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			Port:       port,
 			Protocol:   protocol,
 			CredsParam: config.CredsParam,
-			Secrets:    config.Secrets,
+			Secrets:    convertSecrets(config.Secrets),
 			Variables:  config.Variables,
 			Storage: template.SidecarStorageOpts{
 				MountPoints: mp,
@@ -134,11 +142,7 @@ func convertAdvancedCount(a manifest.AdvancedCount) (*template.AdvancedCount, er
 // convertCapacityProviders transforms the manifest fields into a format
 // parsable by the templates pkg.
 func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProviderStrategy {
-	if a.IsEmpty() {
-		return nil
-	}
-	// return if autoscaling range specified without spot scaling
-	if !a.Range.IsEmpty() && a.Range.Value != nil {
+	if a.Spot == nil && a.Range.RangeConfig.SpotFrom == nil {
 		return nil
 	}
 	var cps []*template.CapacityProviderStrategy
@@ -147,27 +151,25 @@ func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProv
 		Weight:           aws.Int(1),
 		CapacityProvider: capacityProviderFargateSpot,
 	})
+	rc := a.Range.RangeConfig
 	// Return if only spot is specifed as count
-	if a.Range.IsEmpty() {
+	if rc.SpotFrom == nil {
 		return cps
 	}
 	// Scaling with spot
-	rc := a.Range.RangeConfig
-	if !rc.IsEmpty() {
-		spotFrom := aws.IntValue(rc.SpotFrom)
-		min := aws.IntValue(rc.Min)
-		// If spotFrom value is not equal to the autoscaling min, then
-		// the base value on the Fargate Capacity provider must be set
-		// to one less than spotFrom
-		if spotFrom > min {
-			base := spotFrom - 1
-			fgCapacity := &template.CapacityProviderStrategy{
-				Base:             aws.Int(base),
-				Weight:           aws.Int(0),
-				CapacityProvider: capacityProviderFargate,
-			}
-			cps = append(cps, fgCapacity)
+	spotFrom := aws.IntValue(rc.SpotFrom)
+	min := aws.IntValue(rc.Min)
+	// If spotFrom value is not equal to the autoscaling min, then
+	// the base value on the Fargate Capacity provider must be set
+	// to one less than spotFrom
+	if spotFrom > min {
+		base := spotFrom - 1
+		fgCapacity := &template.CapacityProviderStrategy{
+			Base:             aws.Int(base),
+			Weight:           aws.Int(0),
+			CapacityProvider: capacityProviderFargate,
 		}
+		cps = append(cps, fgCapacity)
 	}
 	return cps
 }
@@ -227,6 +229,9 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
 	} else if hc.HealthCheckPath != nil {
 		opts.HealthCheckPath = *hc.HealthCheckPath
+	}
+	if hc.HealthCheckArgs.Port != nil {
+		opts.Port = strconv.Itoa(aws.IntValue(hc.HealthCheckArgs.Port))
 	}
 	if hc.HealthCheckArgs.SuccessCodes != nil {
 		opts.SuccessCodes = *hc.HealthCheckArgs.SuccessCodes
@@ -312,13 +317,14 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		settings: &template.NetworkLoadBalancer{
 			PublicSubnetCIDRs: s.publicSubnetCIDRBlocks,
 			Listener: template.NetworkLoadBalancerListener{
+				Port:            aws.StringValue(port),
 				Protocol:        strings.ToUpper(aws.StringValue(protocol)),
 				TargetContainer: targetContainer,
 				TargetPort:      targetPort,
 				SSLPolicy:       nlbConfig.SSLPolicy,
 				Aliases:         aliases,
 				HealthCheck:     hc,
-				Stickiness:       nlbConfig.Stickiness,
+				Stickiness:      nlbConfig.Stickiness,
 			},
 			MainContainerPort: s.containerPort(),
 		},
@@ -359,9 +365,9 @@ func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
 		ConfigFile:     lc.ConfigFile,
 		EnableMetadata: lc.GetEnableMetadata(),
 		Destination:    lc.Destination,
-		SecretOptions:  lc.SecretOptions,
+		SecretOptions:  convertSecrets(lc.SecretOptions),
 		Variables:      lc.Variables,
-		Secrets:        lc.Secrets,
+		Secrets:        convertSecrets(lc.Secrets),
 	}
 }
 
@@ -574,10 +580,16 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 		SubnetsType:    template.PublicSubnetsPlacement,
 		SecurityGroups: network.VPC.SecurityGroups,
 	}
-	if network.VPC.Placement == nil {
+	placement := network.VPC.Placement
+	if placement.IsEmpty() {
 		return opts
 	}
-	if *network.VPC.Placement != manifest.PublicSubnetPlacement {
+	if placement.PlacementString == nil {
+		opts.AssignPublicIP = template.DisablePublicIP
+		opts.SubnetIDs = placement.PlacementArgs.Subnets
+		return opts
+	}
+	if *placement.PlacementString != manifest.PublicSubnetPlacement {
 		opts.AssignPublicIP = template.DisablePublicIP
 		opts.SubnetsType = template.PrivateSubnetsPlacement
 	}
@@ -589,10 +601,15 @@ func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkCon
 	if network.IsEmpty() {
 		return opts
 	}
-	if network.VPC.Placement == nil {
+	placement := network.VPC.Placement
+	if placement.IsEmpty() {
 		return opts
 	}
-	if string(*network.VPC.Placement) == string(manifest.PrivateSubnetPlacement) {
+	if placement.PlacementString == nil {
+		opts.SubnetIDs = placement.PlacementArgs.Subnets
+		return opts
+	}
+	if *placement.PlacementString != manifest.PublicSubnetPlacement {
 		opts.SubnetsType = template.PrivateSubnetsPlacement
 	}
 	return opts
@@ -612,6 +629,18 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 		return nil, fmt.Errorf(`convert "entrypoint" to string slice: %w`, err)
 	}
 	return out, nil
+}
+
+func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+	var deployConfigs template.DeploymentConfigurationOpts
+	if strings.EqualFold(aws.StringValue(deploymentConfig.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
+		deployConfigs.MinHealthyPercent = minHealthyPercentRecreate
+		deployConfigs.MaxPercent = maxPercentRecreate
+	} else {
+		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
+		deployConfigs.MaxPercent = maxPercentDefault
+	}
+	return deployConfigs
 }
 
 func convertCommand(command manifest.CommandOverride) ([]string, error) {
@@ -647,36 +676,53 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	return &publishers, nil
 }
 
-func convertSubscribe(s manifest.SubscribeConfig, accountID, region, app, env, svc string) (*template.SubscribeOpts, error) {
+func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, error) {
 	if s.Topics == nil {
 		return nil, nil
 	}
-	sqsEndpoint, err := endpoints.DefaultResolver().EndpointFor(endpoints.SqsServiceID, region)
-	if err != nil {
-		return nil, err
-	}
 	var subscriptions template.SubscribeOpts
 	for _, sb := range s.Topics {
-		ts := convertTopicSubscription(sb, sqsEndpoint.URL, accountID, app, env, svc)
+		ts, err := convertTopicSubscription(sb)
+		if err != nil {
+			return nil, err
+		}
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
 	subscriptions.Queue = convertQueue(s.Queue)
 	return &subscriptions, nil
 }
 
-func convertTopicSubscription(t manifest.TopicSubscription, url, accountID, app, env, svc string) *template.TopicSubscription {
+func convertTopicSubscription(t manifest.TopicSubscription) (
+	*template.TopicSubscription, error) {
+	filterPolicy, err := convertFilterPolicy(t.FilterPolicy)
+	if err != nil {
+		return nil, err
+	}
 	if aws.BoolValue(t.Queue.Enabled) {
 		return &template.TopicSubscription{
-			Name:    t.Name,
-			Service: t.Service,
-			Queue:   &template.SQSQueue{},
-		}
+			Name:         t.Name,
+			Service:      t.Service,
+			Queue:        &template.SQSQueue{},
+			FilterPolicy: filterPolicy,
+		}, nil
 	}
 	return &template.TopicSubscription{
-		Name:    t.Name,
-		Service: t.Service,
-		Queue:   convertQueue(t.Queue.Advanced),
+		Name:         t.Name,
+		Service:      t.Service,
+		Queue:        convertQueue(t.Queue.Advanced),
+		FilterPolicy: filterPolicy,
+	}, nil
+}
+
+func convertFilterPolicy(filterPolicy map[string]interface{}) (*string, error) {
+	if len(filterPolicy) == 0 {
+		return nil, nil
 	}
+	bytes, err := json.Marshal(filterPolicy)
+	if err != nil {
+		return nil, fmt.Errorf(`convert "filter_policy" to a JSON string: %w`, err)
+	}
+	return aws.String(string(bytes)), nil
 }
 
 func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
@@ -735,14 +781,13 @@ func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys ma
 	return
 }
 
-func convertAppInformation(app deploy.AppInformation) (delegationRole *string, dnsName *string) {
+func convertAppInformation(app deploy.AppInformation) (delegationRole *string, domain *string) {
 	role := app.DNSDelegationRole()
 	if role != "" {
 		delegationRole = &role
 	}
-	dns := app.DNSName
-	if dns != "" {
-		dnsName = &dns
+	if app.Domain != "" {
+		domain = &app.Domain
 	}
 	return
 }
@@ -776,4 +821,19 @@ func convertHTTPVersion(protocolVersion *string) *string {
 	}
 	pv := strings.ToUpper(*protocolVersion)
 	return &pv
+}
+
+func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secret {
+	if len(secrets) == 0 {
+		return nil
+	}
+	m := make(map[string]template.Secret)
+	for name, mftSecret := range secrets {
+		var tplSecret template.Secret = template.SecretFromSSMOrARN(mftSecret.Value())
+		if mftSecret.IsSecretsManagerName() {
+			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
+		}
+		m[name] = tplSecret
+	}
+	return m
 }

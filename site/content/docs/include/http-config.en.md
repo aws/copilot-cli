@@ -1,7 +1,10 @@
 <div class="separator"></div>
 
-<a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
-The http section contains parameters related to integrating your service with an Application Load Balancer.
+<a id="http" href="#http" class="field">`http`</a> <span class="type">Boolean or Map</span>  
+The http section contains parameters related to integrating your service with an Application Load Balancer. 
+
+To disable the Application Load Balancer, specify `http: false`. Note that for a Load-Balanced Web Service,
+at least one of Application Load Balancer or Network Load Balancer must be enabled.
 
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 Requests to this path will be forwarded to your service. Each Load Balanced Web Service should listen on a unique path.
@@ -17,6 +20,7 @@ You can also specify healthcheck as a map:
 http:
   healthcheck:
     path: '/'
+    port: 8080
     success_codes: '200'
     healthy_threshold: 3
     unhealthy_threshold: 2
@@ -27,6 +31,9 @@ http:
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-path" href="#http-healthcheck-path" class="field">`path`</a> <span class="type">String</span>  
 The destination that the health check requests are sent to.
+
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-port" href="#http-healthcheck-port" class="field">`port`</a> <span class="type">Integer</span>
+The port that the health check requests are sent to. The default is [`image.port`](./#image-port), or the port exposed by [`http.target_container`](./#http-target-container), if set.
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-success-codes" href="#http-healthcheck-success-codes" class="field">`success_codes`</a> <span class="type">String</span>  
 The HTTP status codes that healthy targets must use when responding to an HTTP health check. You can specify values between 200 and 499. You can specify multiple values (for example, "200,202") or a range of values (for example, "200-299"). The default is 200.

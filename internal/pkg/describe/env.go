@@ -19,6 +19,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
@@ -34,6 +36,7 @@ type vpcSubnetLister interface {
 type EnvDescription struct {
 	Environment    *config.Environment `json:"environment"`
 	Services       []*config.Workload  `json:"services"`
+	Jobs           []*config.Workload  `json:"jobs"`
 	Tags           map[string]string   `json:"tags,omitempty"`
 	Resources      []*stack.Resource   `json:"resources,omitempty"`
 	EnvironmentVPC EnvironmentVPC      `json:"environmentVPC"`
@@ -76,7 +79,7 @@ func NewEnvDescriber(opt NewEnvDescriberConfig) (*EnvDescriber, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get environment: %w", err)
 	}
-	sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+	sess, err := sessions.ImmutableProvider().FromRole(env.ManagerRoleARN, env.Region)
 	if err != nil {
 		return nil, fmt.Errorf("assume role for environment %s: %w", env.ManagerRoleARN, err)
 	}
@@ -102,6 +105,11 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 		return nil, err
 	}
 
+	jobs, err := d.filterDeployedJobs()
+	if err != nil {
+		return nil, err
+	}
+
 	tags, environmentVPC, err := d.loadStackInfo()
 	if err != nil {
 		return nil, err
@@ -117,11 +125,38 @@ func (d *EnvDescriber) Describe() (*EnvDescription, error) {
 	d.description = &EnvDescription{
 		Environment:    d.env,
 		Services:       svcs,
+		Jobs:           jobs,
 		Tags:           tags,
 		Resources:      stackResources,
 		EnvironmentVPC: environmentVPC,
 	}
 	return d.description, nil
+}
+
+// Manifest returns the contents of the manifest used to deploy an environment stack.
+func (d *EnvDescriber) Manifest() ([]byte, error) {
+	tpl, err := d.cfn.StackMetadata()
+	if err != nil {
+		return nil, err
+	}
+
+	metadata := struct {
+		Manifest string `yaml:"Manifest"`
+	}{}
+	if err := yaml.Unmarshal([]byte(tpl), &metadata); err != nil {
+		return nil, fmt.Errorf("unmarshal Metadata.Manifest in environment stack: %v", err)
+	}
+
+	if metadata.Manifest != "" {
+		return []byte(strings.TrimSpace(metadata.Manifest)), nil
+	}
+	// Otherwise, the Manifest wasn't written into the CloudFormation template, we'll convert the config in SSM.
+	mft := manifest.FromEnvConfig(d.env, template.New())
+	out, err := yaml.Marshal(mft)
+	if err != nil {
+		return nil, fmt.Errorf("marshal manifest generated from SSM: %v", err)
+	}
+	return []byte(strings.TrimSpace(string(out))), nil
 }
 
 // Params returns the parameters of the environment stack.
@@ -133,7 +168,7 @@ func (d *EnvDescriber) Params() (map[string]string, error) {
 	return descr.Parameters, nil
 }
 
-// Params returns the outputs of the environment stack.
+// Outputs returns the outputs of the environment stack.
 func (d *EnvDescriber) Outputs() (map[string]string, error) {
 	descr, err := d.cfn.Describe()
 	if err != nil {
@@ -246,6 +281,27 @@ func (d *EnvDescriber) filterDeployedSvcs() ([]*config.Workload, error) {
 	return deployedSvcs, nil
 }
 
+// filterDeployedJobs lists the jobs that are deployed on the given app and environment
+func (d *EnvDescriber) filterDeployedJobs() ([]*config.Workload, error) {
+	allJobs, err := d.configStore.ListJobs(d.app)
+	if err != nil {
+		return nil, fmt.Errorf("list jobs for app %s: %w", d.app, err)
+	}
+	jobs := make(map[string]*config.Workload)
+	for _, job := range allJobs {
+		jobs[job.Name] = job
+	}
+	deployedJobNames, err := d.deployStore.ListDeployedJobs(d.app, d.env.Name)
+	if err != nil {
+		return nil, fmt.Errorf("list deployed jobs in env %s: %w", d.env.Name, err)
+	}
+	var deployedJobs []*config.Workload
+	for _, deployedJobName := range deployedJobNames {
+		deployedJobs = append(deployedJobs, jobs[deployedJobName])
+	}
+	return deployedJobs, nil
+}
+
 // JSONString returns the stringified EnvDescription struct with json format.
 func (e *EnvDescription) JSONString() (string, error) {
 	b, err := json.Marshal(e)
@@ -265,13 +321,16 @@ func (e *EnvDescription) HumanString() string {
 	fmt.Fprintf(writer, "  %s\t%t\n", "Production", e.Environment.Prod)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Region", e.Environment.Region)
 	fmt.Fprintf(writer, "  %s\t%s\n", "Account ID", e.Environment.AccountID)
-	fmt.Fprint(writer, color.Bold.Sprint("\nServices\n\n"))
+	fmt.Fprint(writer, color.Bold.Sprint("\nWorkloads\n\n"))
 	writer.Flush()
 	headers := []string{"Name", "Type"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, svc := range e.Services {
 		fmt.Fprintf(writer, "  %s\t%s\n", svc.Name, svc.Type)
+	}
+	for _, job := range e.Jobs {
+		fmt.Fprintf(writer, "  %s\t%s\n", job.Name, job.Type)
 	}
 	writer.Flush()
 	if len(e.Tags) != 0 {

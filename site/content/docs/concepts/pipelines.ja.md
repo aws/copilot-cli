@@ -5,7 +5,7 @@
 
 !!! Attention
     AWS CodePipeline は OS ファミリーが Windows の Service をサポートしていません。
-    CodePipeline は、Build Stage で Linux ベースの AWS CodeBuild を使用しているため、現時点では Copilot Pipeline で Windows コンテナをビルドすることができません。
+    CodePipeline は、Build Stage で Linux ベースの AWS CodeBuild を使用しているため、現時点では Copilot Pipeline で Windows コンテナをビルドできません。
 
 <!-- textlint-disable ja-technical-writing/no-exclamation-question-mark -->
 ## Why?
@@ -22,7 +22,10 @@ CodePipeline のような自動化されたリリースツールは、あなた�
 Copilot はいくつかのコマンドで CodePipeline をセットアップします。作業を始める前に、まずは最終的に作成される Pipeline の構成を見ていきましょう。Pipeline は次に挙げる基本的な構造を持っています。
 
 1. __Source Stage__ - 設定した GitHub、Bitbucket、あるいは CodeCommit リポジトリにプッシュすると、Pipeline の実行が開始されます。
-2. __Build Stage__ - リポジトリからコードがダウンロードされると、Service 用のコンテナイメージがビルドされ、すべての Environment の Amazon ECR リポジトリにプッシュされます。
+2. __Build Stage__ - リポジトリからコードがダウンロードされると、Service 用のコンテナイメージがビルドされ、すべての Environment の Amazon ECR リポジトリにプッシュされます。加えて、[Addon](../developing/additional-aws-resources.ja.md) テンプレートや、 Lambda 関数 zip ファイル、[環境変数ファイル]((../developing/environment-variables.ja.md))などのすべての入力ファイルが S3 にアップロードされます。
+
+ソースコードがリポジトリホストから pull された後に、 Service のコンテナイメージがビルドされ、 各環境の ECR リポジトリにパブリッシュされます。加えて、Addon テンプレート、Lambda 関数 zip ファイル、環境変数ファイルなどのすべての入力ファイルが S3　にアップロードされます。
+
 3. __Deploy Stages__ - ビルドが終わると、一部あるいはすべての Environment にデプロイできます。オプションとしてデプロイ完了後のテスト実行やデプロイ実行に手動承認を挟むことが可能です。
 
 Copilot を使って CodePipeline のセットアップを済ませたら、あとは GitHub、Bitbucket、あるいは CodeCommit リポジトリにプッシュするだけです。あとは CodePipeline がデプロイまでのプロセスを実行してくれます。
@@ -40,37 +43,43 @@ Pipeline の作成に必要な手順は３つです。
 
 ```bash
 $ copilot pipeline init
-$ git add copilot/pipeline.yml copilot/buildspec.yml copilot/.workspace && git commit -m "Adding pipeline artifacts" && git push
+$ git add copilot/ && git commit -m "Adding pipeline artifacts" && git push
 $ copilot pipeline deploy
 ```
+!!! Note
+    パイプラインが Environment にデプロイできるように、`pipeline deploy` を実行する間に、少なくとも 1 つのワークロード( Service または Job ) を開始しておく必要があります。
 
-✨ Application アカウントに新しい Pipeline が作成されたはずです！何が起きているのか、もう少し深く知りたいですよね？読み進めましょう！
+✨ __Application アカウント__ に新しい Pipeline が作成されたはずです！何が起きているのか、もう少し深く知りたいですよね？読み進めましょう！
 
 ## ステップ・バイ・ステップで見る Pipeline のセットアップ
 
 ### ステップ1: Pipeline の設定
 
-Pipeline の設定はワークスペースのレベルで作成されます。もしワークスペース内にある Service が１つの場合、Pipeline はその Service についてのみ実行されます。もしワークスペース内に複数の Service がある場合、Pipeline はそれら全てをビルドします。Pipeline のセットアップを始めるには、Service (あるいは Service 群)があるワークスペースのディレクトリに `cd` コマンドなどで入り、次のコマンドを実行します。
+Pipeline の設定はワークスペースのレベルで作成されます。もしワークスペース内にある Service が１つの場合、Pipeline はその Service についてのみ実行されます。もしワークスペース内に複数の Service がある場合、Pipeline はそれら全てをビルドします。Pipeline のセットアップを始めるには、Service (あるいは Service 群)がある Application のワークスペースのディレクトリに `cd` コマンドなどで入り、次のコマンドを実行します。
 
  `copilot pipeline init`
 
-このコマンドの実行ではまだクラウド上の Pipeline は作成しませんが、Pipeline 作成に必要ないくつかのファイルをローカル環境に作成します。
+このコマンドの実行ではまだクラウド上の Pipeline は作成しませんが、Pipeline 作成に必要ないくつかのファイルを  `copilot/pipelines` 以下に作成します。
+
+* __Pipeline name__: パイプラインの名前を `[repository name]-[branch name]` とすることをお勧めします。( 尋ねられた場合、 デフォルト名を受け入れるには 'Enter' ボタンを入力します)。これにより複数のパイプラインを作成した場合に、ブランチごとのパイプラインワークフローに従う場合にうまく機能でします。
 
 * __Release order__: デプロイ先の Environment (複数可)を尋ねられます - どの Environment からデプロイを実施したいか、その順番にあわせて Environment を選択しましょう。(複数の Environment に対して同時にデプロイを実行することはありません)。最初に _test_ Environment へデプロイし、その後 _prod_ Environment へデプロイする、といった設定がよくある順番でしょう。
 
 * __Tracking repository__: デプロイ先の Environment を選択すると、次にどの Git リポジトリを CodePipeline からトラックしたいかを尋ねられます。ここで選ぶリポジトリへのプッシュが、CodePipeline の Pipeline をトリガーするリポジトリとなります。(設定したい対象のリポジトリがここでリストに表示されない場合、 `--url` フラグで明示的に Git リポジトリの URL を渡すこともできます。)
 
+* __Tracking branch__: リポジトリを選択すると、 Copilot は現在のローカルブランチをパイプラインを利用するブランチとして指定します。これはステップ 2 で変更できます。
+
 ### ステップ2: Pipeline 用 Manifest ファイルの更新 (オプション)
 
-Service がシンプルな Manifest ファイルを持つのと同様に、Pipeline にも Manifest があります。`pipeline init` コマンドの実行が完了すると、`copilot/` ディレクトリ内に `pipeline.yml` と `buildspec.yml` という２つのファイルが作成されます。`pipeline.yml` の中は次のような感じになっているはずです (<!-- textlint-disable ja-technical-writing/no-doubled-conjunction -->ここでは "api-frontend" という Service が "test" と "prod" の２つの Environment にデプロイされるものと仮定しましょう<!-- textlint-enable ja-technical-writing/no-doubled-conjunction -->)
+Service はシンプルな Manifest ファイルを持ちます。同様に、Pipeline にも Manifest があります。`pipeline init` コマンドを実行すると、`copilot/pipelines/[your pipeline name]` ディレクトリ内に `manifest.yml` と `buildspec.yml` という２つのファイルが作成されます。`manifest.yml` の中は次のような感じになっているはずです。 (ここでは "api-frontend" という Service が "test" と "prod" の２つの Environment にデプロイされるものと仮定しましょう)
 
 ```yaml
-# Pipeline 名 "pipeline-ecs-kudos-kohidave-demo-api-frontend" の Manifest
+# Pipeline 名 "demo-api-frontend-main" の Manifest
 # この YAML ファイルは Pipeline を定義します。追跡するソースリポジトリと、Environment のデプロイ順序を指定します
 # 詳細はこちら: https://aws.github.io/copilot-cli/ja/docs/manifest/pipeline/
 
 # Pipeline 名
-name: pipeline-ecs-kudos-kohidave-demo-api-frontend
+name: demo-api-frontend-main
 
 # このテンプレートで利用されているスキーマバージョン
 version: 1
@@ -98,21 +107,27 @@ stages:
       name: prod
       # requires_approval: true
 ```
-`pipeline.yml` で利用可能な全ての設定項目については [Pipeline Manifest](../manifest/pipeline.ja.md) をご覧ください。
+`manifest.yml` で利用可能な全ての設定項目については [Pipeline Manifest](../manifest/pipeline.ja.md) をご覧ください。
 
-このファイルには大きく３つのパーツがあります。最初の `name` フィールドは CodePipeline に作成されるパイプラインの名称です。そして `source` セクションは Pipeline がトラックするソースリポジトリとそのブランチといった詳細を定義し、最後の `stages` セクションでは、どの Environment に対してこの Pipeline でデプロイを行いたいか定義します。この設定ファイルはいつでも変更可能ですが、変更後は Git リポジトリへのコミットとプッシュ、その後 `copilot pipeline deploy` コマンドを実行する必要があります。
+このファイルには大きく３つのパーツがあります。最初の `name` フィールドは Pipeline に作成されるパイプラインの名称です。そして `source` セクションは Pipeline がトラックするソースリポジトリとそのブランチといった詳細を定義し、最後の `stages` セクションでは、どの Environment に対してこの Pipeline でデプロイを行いたいか定義します。この設定ファイルはいつでも変更可能ですが、変更後は Git リポジトリへのコミットとプッシュ、その後 `copilot pipeline deploy` コマンドを実行する必要があります。
 
 よくあるケースとしては、新たなデプロイ先の Environment を増やしたいときや、Pipeline がトラックするブランチを変更したい際にこのファイルを更新することになるでしょう。あるいはもしすでに CodeStar Connections に接続済みのリポジトリがあり、Copilot で新たに作成するのではなく既存のものを利用したい場合には、その接続名を記述することになります。また、Pipeline Manifest はデプロイの手動承認を設定したり、デプロイ後に自動テストを実行したりしたい場合の設定を記述する場所でもあります。(本ページ下部の "テストの追加" もご覧ください)
 
 ### ステップ3: Buildspec ファイルの更新 (オプション)
 
-`pipeline init` コマンドでは、`pipeline.yml` と一緒に `buildspec.yml` も `copilot/` ディレクトリ内に作成されます。この `buldspec.yml` にはビルドとコンテナイメージのプッシュに関する指示が記述されています。もし `docker build` と一緒にユニットテストやスタイルチェックのような追加のコマンドを実行したい場合は、buildspec の `build` フェーズにそれらのコマンドを追加してください。
+`pipeline init` コマンドでは、`manifest.yml` と一緒に `buildspec.yml` も `copilot/pipelines/[your pipeline name]` ディレクトリ内に作成されます。この `buldspec.yml` にはビルドとコンテナイメージのプッシュに関する指示が記述されています。もし `docker build` と一緒にユニットテストやスタイルチェックのような追加のコマンドを実行したい場合は、buildspec の `build` フェーズにそれらのコマンドを追加してください。
 
 実際にこの buildspec が実行される際には、後方互換性の観点から `pipeline init` コマンドの実行に利用したバージョンの Copilot バイナリがダウンロードされ、利用されます。
 
+あるいは、CodeBuild で実行するために独自の buildspec を設定できます。[`manifest.yml` file](../manifest/pipeline.ja.md)で、場所を指定します。
+```yaml
+build:
+  buildspec:
+```
+
 ### ステップ4: リポジトリに生成されたファイルをプッシュする
 
-`pipeline.yml`、`buildspec.yml`、そして `.workspace` ファイルが作成されたので、これらをリポジトリに追加しましょう。`copilot/` ディレクトリ以下に含まれたこれらのファイルが、Pipeline が `build` ステージを正しく実行するために必要となります。
+`manifest.yml`、`buildspec.yml`、そして `.workspace` ファイルが作成されたので、これらをリポジトリに追加しましょう。`copilot/` ディレクトリ以下に含まれたこれらのファイルが、Pipeline が `build` ステージを正しく実行するために必要となります。
 
 ### ステップ5: Pipeline の作成
 
@@ -120,7 +135,7 @@ stages:
 
 `copilot pipeline deploy`
 
-このコマンドはあなたの `pipeline.yml` を解析し、Application と同じアカウントとリージョンの CodePipeline に Pipeline を作成し、Pipeline を実行します。AWS マネジメントコンソールにログイン、あるいは `copilot pipeline status` コマンドで Pipeline の実行状況を確認できます。
+このコマンドはあなたの `manifest.yml` を解析し、__Application と同じアカウントとリージョン__ の CodePipeline に Pipeline を作成し、Pipeline を実行します。AWS マネジメントコンソールにログイン、あるいは `copilot pipeline status` コマンドで Pipeline の実行状況を確認できます。
 
 ![処理が完了した CodePipeline の様子](https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png)
 
@@ -140,7 +155,7 @@ stages:
 以下の例では、Pipeline は `make test` コマンドをソースコードディレクトリにて実行し、コマンドが正常に終了した場合のみ prod ステージに進みます。
 
 ```yaml
-name: pipeline-ecs-kudos-kohidave-demo-api-frontend
+name: demo-api-frontend-main
 version: 1
 source:
   provider: GitHub

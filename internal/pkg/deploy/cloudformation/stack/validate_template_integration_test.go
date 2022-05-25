@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/stretchr/testify/require"
@@ -27,17 +28,22 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
-	serializer, err := stack.NewLoadBalancedWebService(v, envName, appName, stack.RuntimeConfig{
-		Image: &stack.ECRImage{
-			RepoURL:  imageURL,
-			ImageTag: imageTag,
+	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
+		App:      &config.Application{Name: appName},
+		Env:      &config.Environment{Name: envName},
+		Manifest: v,
+		RuntimeConfig: stack.RuntimeConfig{
+			Image: &stack.ECRImage{
+				RepoURL:  imageURL,
+				ImageTag: imageTag,
+			},
+			ServiceDiscoveryEndpoint: "test.app.local",
 		},
-		ServiceDiscoveryEndpoint: "test.app.local",
 	})
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
 	require.NoError(t, err)
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider().Default()
 	require.NoError(t, err)
 	cfn := cloudformation.New(sess)
 
@@ -64,7 +70,7 @@ func TestScheduledJob_Validate(t *testing.T) {
 	tpl, err := serializer.Template()
 	require.NoError(t, err, "template should render")
 
-	sess, err := sessions.NewProvider().Default()
+	sess, err := sessions.ImmutableProvider().Default()
 	require.NoError(t, err)
 	cfn := cloudformation.New(sess)
 

@@ -8,9 +8,9 @@
     Value: {{$value | printf "%q"}}{{end}}{{end}}
 {{- if .LogConfig.Secrets}}
   Secrets:
-  {{- range $name, $valueFrom := .LogConfig.Secrets}}
+  {{- range $name, $secret := .LogConfig.Secrets}}
   - Name: {{$name}}
-    ValueFrom: {{$valueFrom}}
+    ValueFrom: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
   {{- end}}
 {{- end}}
   FirelensConfiguration:
@@ -19,6 +19,18 @@
       enable-ecs-log-metadata: {{.LogConfig.EnableMetadata}}{{if .LogConfig.ConfigFile}}
       config-file-type: file
       config-file-value: {{.LogConfig.ConfigFile}}{{end}}
+  LogConfiguration:
+    LogDriver: awslogs
+    Options:
+      awslogs-region: !Ref AWS::Region
+      awslogs-group: !Ref LogGroup
+      awslogs-stream-prefix: copilot
+{{- end}}
+{{- if eq .Observability.Tracing "AWSXRAY"}}
+- Name: aws-otel-collector
+  Image: public.ecr.aws/aws-observability/aws-otel-collector:v0.17.0
+  Command:
+    - --config=/etc/ecs/ecs-xray.yaml
   LogConfiguration:
     LogDriver: awslogs
     Options:
@@ -54,9 +66,9 @@
 {{include "envvars-container" . | indent 2}}
 {{- if $sidecar.Secrets}}
   Secrets:
-  {{- range $name, $valueFrom := $sidecar.Secrets}}
+  {{- range $name, $secret := $sidecar.Secrets}}
   - Name: {{$name}}
-    ValueFrom: {{$valueFrom}}
+    ValueFrom: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
   {{- end}}
 {{- end}}
   LogConfiguration:

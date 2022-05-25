@@ -17,6 +17,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
@@ -29,9 +32,11 @@ const (
 	envOutputSubdomain                 = "EnvironmentSubdomain"
 	svcParamHTTPSEnabled               = "HTTPSEnabled"
 
-	svcStackResourceALBTargetGroupLogicalID = "TargetGroup"
-	svcStackResourceNLBTargetGroupLogicalID = "NLBTargetGroup"
-	svcOutputPublicNLBDNSName               = "PublicNetworkLoadBalancerDNSName"
+	svcStackResourceALBTargetGroupLogicalID       = "TargetGroup"
+	svcStackResourceNLBTargetGroupLogicalID       = "NLBTargetGroup"
+	svcStackResourceHTTPSListenerRuleLogicalID    = "HTTPSListenerRule"
+	svcStackResourceHTTPSListenerRuleResourceType = "AWS::ElasticLoadBalancingV2::ListenerRule"
+	svcOutputPublicNLBDNSName                     = "PublicNetworkLoadBalancerDNSName"
 )
 
 type envDescriber interface {
@@ -40,19 +45,22 @@ type envDescriber interface {
 	Outputs() (map[string]string, error)
 }
 
+type lbDescriber interface {
+	ListenerRuleHostHeaders(ruleARN string) ([]string, error)
+}
+
 // LBWebServiceDescriber retrieves information about a load balanced web service.
 type LBWebServiceDescriber struct {
 	app             string
 	svc             string
 	enableResources bool
 
-	store                DeployedEnvServicesLister
-	initClients          func(string) error
-	ecsServiceDescribers map[string]ecsDescriber
-	envDescriber         map[string]envDescriber
-
-	// cache only last svc paramerters
-	svcParams map[string]string
+	store                    DeployedEnvServicesLister
+	initECSServiceDescribers func(string) (ecsDescriber, error)
+	initEnvDescribers        func(string) (envDescriber, error)
+	initLBDescriber          func(string) (lbDescriber, error)
+	ecsServiceDescribers     map[string]ecsDescriber
+	envDescriber             map[string]envDescriber
 }
 
 // NewLBWebServiceDescriber instantiates a load balanced service describer.
@@ -65,30 +73,46 @@ func NewLBWebServiceDescriber(opt NewServiceConfig) (*LBWebServiceDescriber, err
 		ecsServiceDescribers: make(map[string]ecsDescriber),
 		envDescriber:         make(map[string]envDescriber),
 	}
-	describer.initClients = func(env string) error {
-		if _, ok := describer.ecsServiceDescribers[env]; ok {
-			return nil
+	describer.initLBDescriber = func(envName string) (lbDescriber, error) {
+		env, err := opt.ConfigStore.GetEnvironment(opt.App, envName)
+		if err != nil {
+			return nil, fmt.Errorf("get environment %s: %w", envName, err)
 		}
-		svcDescr, err := NewECSServiceDescriber(NewServiceConfig{
+		sess, err := sessions.ImmutableProvider().FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return nil, err
+		}
+		return elbv2.New(sess), nil
+	}
+	describer.initECSServiceDescribers = func(env string) (ecsDescriber, error) {
+		if describer, ok := describer.ecsServiceDescribers[env]; ok {
+			return describer, nil
+		}
+		svcDescr, err := newECSServiceDescriber(NewServiceConfig{
 			App:         opt.App,
-			Env:         env,
 			Svc:         opt.Svc,
 			ConfigStore: opt.ConfigStore,
-		})
+		}, env)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		describer.ecsServiceDescribers[env] = svcDescr
+		return svcDescr, nil
+	}
+	describer.initEnvDescribers = func(env string) (envDescriber, error) {
+		if describer, ok := describer.envDescriber[env]; ok {
+			return describer, nil
+		}
 		envDescr, err := NewEnvDescriber(NewEnvDescriberConfig{
 			App:         opt.App,
 			Env:         env,
 			ConfigStore: opt.ConfigStore,
 		})
 		if err != nil {
-			return err
+			return nil, err
 		}
 		describer.envDescriber[env] = envDescr
-		return nil
+		return envDescr, nil
 	}
 	return describer, nil
 }
@@ -106,7 +130,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
-		err := d.initClients(env)
+		svcDescr, err := d.initECSServiceDescribers(env)
 		if err != nil {
 			return nil, err
 		}
@@ -118,35 +142,43 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Environment: env,
 			URL:         webServiceURI,
 		})
-		containerPlatform, err := d.ecsServiceDescribers[env].Platform()
+		containerPlatform, err := svcDescr.Platform()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve platform: %w", err)
 		}
-		webSvcEnvVars, err := d.ecsServiceDescribers[env].EnvVars()
+		webSvcEnvVars, err := svcDescr.EnvVars()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve environment variables: %w", err)
+		}
+		svcParams, err := svcDescr.Params()
+		if err != nil {
+			return nil, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 		}
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
-				Port:        d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
-				CPU:         d.svcParams[cfnstack.WorkloadTaskCPUParamKey],
-				Memory:      d.svcParams[cfnstack.WorkloadTaskMemoryParamKey],
+				Port:        svcParams[cfnstack.WorkloadContainerPortParamKey],
+				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
+				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
 				Platform:    dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture),
 			},
-			Tasks: d.svcParams[cfnstack.WorkloadTaskCountParamKey],
+			Tasks: svcParams[cfnstack.WorkloadTaskCountParamKey],
 		})
-		endpoint, err := d.envDescriber[env].ServiceDiscoveryEndpoint()
+		envDescr, err := d.initEnvDescribers(env)
+		if err != nil {
+			return nil, err
+		}
+		endpoint, err := envDescr.ServiceDiscoveryEndpoint()
 		if err != nil {
 			return nil, err
 		}
 		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
 			Service:  d.svc,
-			Port:     d.svcParams[cfnstack.LBWebServiceContainerPortParamKey],
+			Port:     svcParams[cfnstack.WorkloadContainerPortParamKey],
 			Endpoint: endpoint,
 		}, env)
 		envVars = append(envVars, flattenContainerEnvVars(env, webSvcEnvVars)...)
-		webSvcSecrets, err := d.ecsServiceDescribers[env].Secrets()
+		webSvcSecrets, err := svcDescr.Secrets()
 		if err != nil {
 			return nil, fmt.Errorf("retrieve secrets: %w", err)
 		}
@@ -155,11 +187,11 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	resources := make(map[string][]*stack.Resource)
 	if d.enableResources {
 		for _, env := range environments {
-			err := d.initClients(env)
+			svcDescr, err := d.initECSServiceDescribers(env)
 			if err != nil {
 				return nil, err
 			}
-			stackResources, err := d.ecsServiceDescribers[env].ServiceStackResources()
+			stackResources, err := svcDescr.ServiceStackResources()
 			if err != nil {
 				return nil, fmt.Errorf("retrieve service resources: %w", err)
 			}

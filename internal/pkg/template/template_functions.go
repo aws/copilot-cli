@@ -10,6 +10,11 @@ import (
 	"strconv"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
+	"github.com/aws/aws-sdk-go/aws/arn"
+
 	"github.com/aws/aws-sdk-go/aws"
 )
 
@@ -23,6 +28,16 @@ const (
 // not permitted in ecs-cli generated resource names).
 func ReplaceDashesFunc(logicalID string) string {
 	return strings.ReplaceAll(logicalID, "-", dashReplacement)
+}
+
+// IsArnFunc takes a string value and determines if it's an ARN or not.
+func IsARNFunc(value string) bool {
+	return arn.IsARN(value)
+}
+
+// TrimSlashPrefix takes a string value and removes slash prefix from the string if present.
+func TrimSlashPrefix(value string) string {
+	return strings.TrimPrefix(value, "/")
 }
 
 // DashReplacedLogicalIDToOriginal takes a "sanitized" logical ID
@@ -155,7 +170,7 @@ func generateQueueURIJSON(ts []*TopicSubscription) string {
 		}
 		svc := StripNonAlphaNumFunc(aws.StringValue(sub.Service))
 		topicName := StripNonAlphaNumFunc(aws.StringValue(sub.Name))
-		subName := fmt.Sprintf("%s%sEventsQueue", svc, strings.Title(topicName))
+		subName := fmt.Sprintf("%s%sEventsQueue", svc, cases.Title(language.English).String(topicName))
 
 		urlMap[subName] = fmt.Sprintf("${%s%sURL}", svc, topicName)
 	}

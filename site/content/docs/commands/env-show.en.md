@@ -15,6 +15,7 @@ You can optionally pass in a `--resources` flag which will include the AWS resou
 
 ## What are the flags?
 ```bash
+-a, --app string    Name of the application.
 -h, --help          help for show
     --json          Optional. Outputs in JSON format.
 -n, --name string   Name of the environment.

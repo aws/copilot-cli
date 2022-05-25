@@ -24,7 +24,6 @@ const (
 	pipelineName = "wingspipeline"
 
 	toolsAccountID = "012345678910"
-	envAccountID   = "109876543210"
 	defaultBranch  = "main"
 )
 
@@ -38,29 +37,79 @@ func TestPipelineParameters(t *testing.T) {
 }
 
 func TestPipelineTags(t *testing.T) {
-	pipeline := NewPipelineStackConfig(
-		mockCreatePipelineInput(),
-	)
-
-	expectedTags := []*cloudformation.Tag{
-		{
-			Key:   aws.String(deploy.AppTagKey),
-			Value: aws.String(projectName),
+	testCases := map[string]struct {
+		in         *deploy.CreatePipelineInput
+		wantedTags []*cloudformation.Tag
+	}{
+		"pipeline with legacy naming": {
+			in: &deploy.CreatePipelineInput{
+				AppName:  projectName,
+				Name:     pipelineName,
+				IsLegacy: true,
+			},
+			wantedTags: []*cloudformation.Tag{
+				{
+					Key:   aws.String(deploy.AppTagKey),
+					Value: aws.String(projectName),
+				},
+			},
 		},
-		{
-			Key:   aws.String("owner"),
-			Value: aws.String("boss"),
+		"pipeline with namespaced naming and additional tags": {
+			in: mockCreatePipelineInput(),
+			wantedTags: []*cloudformation.Tag{
+				{
+					Key:   aws.String(deploy.AppTagKey),
+					Value: aws.String(projectName),
+				},
+				{
+					Key:   aws.String(deploy.PipelineTagKey),
+					Value: aws.String(pipelineName),
+				},
+				{
+					Key:   aws.String("owner"),
+					Value: aws.String("boss"),
+				},
+			},
 		},
 	}
-	require.ElementsMatch(t, expectedTags, pipeline.Tags())
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			pipeline := NewPipelineStackConfig(
+				tc.in,
+			)
+			require.ElementsMatch(t, tc.wantedTags, pipeline.Tags())
+		})
+	}
 }
 
 func TestPipelineStackName(t *testing.T) {
-	pipeline := NewPipelineStackConfig(
-		mockCreatePipelineInput(),
-	)
+	testCases := map[string]struct {
+		in              *deploy.CreatePipelineInput
+		wantedStackName string
+	}{
+		"pipeline with legacy naming": {
+			in: &deploy.CreatePipelineInput{
+				AppName:  projectName,
+				Name:     pipelineName,
+				IsLegacy: true,
+			},
+			wantedStackName: pipelineName,
+		},
+		"pipeline with namespaced naming and additional tags": {
+			in:              mockCreatePipelineInput(),
+			wantedStackName: fmt.Sprintf("pipeline-%s-%s", projectName, pipelineName),
+		},
+	}
 
-	require.Equal(t, pipelineName, pipeline.StackName(), "unexpected StackName")
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			pipeline := NewPipelineStackConfig(
+				tc.in,
+			)
+			require.Equal(t, tc.wantedStackName, pipeline.StackName(), "unexpected StackName")
+		})
+	}
 }
 
 func TestPipelineStackConfig_Template(t *testing.T) {
@@ -113,14 +162,6 @@ func TestPipelineStackConfig_Template(t *testing.T) {
 	}
 }
 
-func mockAssociatedEnv(envName, region string) *deploy.AssociatedEnvironment {
-	return &deploy.AssociatedEnvironment{
-		Name:      envName,
-		Region:    region,
-		AccountID: envAccountID,
-	}
-}
-
 func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 	return &deploy.CreatePipelineInput{
 		AppName: projectName,
@@ -129,17 +170,7 @@ func mockCreatePipelineInput() *deploy.CreatePipelineInput {
 			RepositoryURL: "hencrice/amazon-ecs-cli-v2",
 			Branch:        defaultBranch,
 		},
-		Stages: []deploy.PipelineStage{
-			{
-				AssociatedEnvironment: mockAssociatedEnv("test-chicken", "us-west-2"),
-				LocalWorkloads:        []string{"frontend", "backend"},
-				TestCommands:          []string{"echo 'bok bok bok'", "make test"},
-			},
-			{
-				AssociatedEnvironment: mockAssociatedEnv("prod-can-fly", "us-east-1"),
-				LocalWorkloads:        []string{"frontend", "backend"},
-			},
-		},
+		Stages: []deploy.PipelineStage{},
 		ArtifactBuckets: []deploy.ArtifactBucket{
 			{
 				BucketName: "chicken-us-east-1",

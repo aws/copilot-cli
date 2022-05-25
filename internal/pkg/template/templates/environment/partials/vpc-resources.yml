@@ -12,6 +12,8 @@ VPC:
         Value: !Sub 'copilot-${AppName}-${EnvironmentName}'
 
 PublicRouteTable:
+  Metadata:
+    'aws:copilot:description': "A custom route table that directs network traffic for the public subnets"
   Type: AWS::EC2::RouteTable
   Properties:
     VpcId: !Ref VPC

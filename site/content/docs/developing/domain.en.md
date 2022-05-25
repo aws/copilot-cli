@@ -1,34 +1,42 @@
 # Domain
 
-!!!attention
-    Today, a Route 53 domain name can be associated only when running `copilot app init`.  
-    If you'd like to update your application with a domain ([#3045](https://github.com/aws/copilot-cli/issues/3045)), 
-    you'll need to initialize a duplicate app with `--domain` and then run `copilot app delete` to 
-    remove the old one.
-
 ## Load Balanced Web Service
-As mentioned in the [Application Guide](../concepts/applications.en.md#additional-app-configurations), you can configure the domain name of your app when running `copilot app init`. After deploying your [Load Balanced Web Services](../concepts/services.en.md#load-balanced-web-service), you should be able to access them publicly via
+In Copilot, there are two ways to use custom domains for your Load Balanced Web Service:
+
+1. Use `--domain` when creating an application to associate a Route 53 domain in the same account.
+2. Use `--import-cert-arns` to bring your validated ACM certificates when creating an environment.
+
+!!!attention
+    Today, a Route 53 domain name can only be associated when running `copilot app init`.  
+    If you'd like to update your application with a domain ([#3045](https://github.com/aws/copilot-cli/issues/3045)),
+    you'll need to run `copilot app delete` to remove the old one before creating a new one with `--domain` to associate a new domain.
+
+### Use app-associated root domain
+
+As mentioned in the [Application Guide](../concepts/applications.en.md#additional-app-configurations), you can configure the domain name of your app when running `copilot app init --domain`.
+
+**Default domain name for your service**
+
+After deploying your [Load Balanced Web Services](../concepts/services.en.md#load-balanced-web-service), by default you can access them publicly via
 
 ```
 ${SvcName}.${EnvName}.${AppName}.${DomainName}
 ```
 
-For example:
+if you are using an Application Load Balancer, or
 
 ```
-https://kudo.test.coolapp.example.aws
+${SvcName}-nlb.${EnvName}.${AppName}.${DomainName}
 ```
 
-Currently, you can only use aliases under the domain you specified when creating the application. Since we [delegate responsibility for the subdomain to Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain), the alias you specify must be in either one of these three hosted zone:
+if you are using a Network Load Balancer.
 
-- root: `${DomainName}`
-- app: `${AppName}.${DomainName}`
-- env: `${EnvName}.${AppName}.${DomainName}`
+For example, `https://kudo.test.coolapp.example.aws` or `kudo-nlb.test.coolapp.example.aws:443`.
 
-We'll make this feature more powerful in the future by allowing you to import certificates and use any aliases!
+**Customized domain alias**
 
-## How do I configure an alias for my service?
-If you don't like the default domain name Copilot assigns to your service, setting an [alias](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html) for your service is also very easy. You can add it directly to your [manifest's](../manifest/overview.en.md) `alias` section. The following snippet will set an alias to your service.
+If you don't like the default domain name Copilot assigns to your service, you can set a custom [alias](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html) for your service by editing your [manifest's](../manifest/lb-web-service.en.md#http-alias) `alias` section.
+The following snippet sets an alias to your service.
 
 ``` yaml
 # in copilot/{service name}/manifest.yml
@@ -37,21 +45,48 @@ http:
   alias: example.aws
 ```
 
-## What happens under the hood?
+Similarly, if your service is using a Network Load Balancer, you can specify:
+```yaml
+nlb:
+  port: 443/tls
+  alias: example-v1.aws
+```
+
+However, since we [delegate responsibility for the subdomain to Route 53](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/CreatingNewSubdomain.html#UpdateDNSParentDomain), the alias you specify must be in one of these three hosted zones:
+
+- root: `${DomainName}`
+- app: `${AppName}.${DomainName}`
+- env: `${EnvName}.${AppName}.${DomainName}`
+
+**What happens under the hood?**
+
 Under the hood, Copilot
 
 * creates a hosted zone in your app account for the new app subdomain `${AppName}.${DomainName}`
 * creates another hosted zone in your env account for the new env subdomain `${EnvName}.${AppName}.${DomainName}`
 * creates and validates an ACM certificate for the env subdomain
-* associates the certificate with your HTTPS listener and redirects HTTP traffic to HTTPS
+* associates the certificate with:
+    - Your HTTPS listener and redirects HTTP traffic to HTTPS, if the alias is used for the Application Load Balancer (`http.alias`)
+    - Your network load balancer's TLS listener, if the alias is for `nlb.alias` and TLS termination is enabled.
 * creates an optional A record for your alias
 
-## What does it look like?
+**What does it look like?**
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/Oyr-n59mVjI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
+### Use domain in your existing validated certificates
+If you own a domain outside of Route53 or for compliance reasons want to use an `alias` from your existing ACM certificates, you can specify the `--import-cert-arns` flag when creating the environment to import validated ACM certificates that include the alias. For example:
+
+```
+$ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
+```
+
+After deploying a service to that environment, add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted.
+
+We also have [an example](../../blogs/release-v118.en.md#certificate-import) in our blog posts.
+
 ## Request-Driven Web Service
-You can also add a [custom domain](https://docs.aws.amazon.com/apprunner/latest/dg/manage-custom-domains.html) for your request-driven web service. 
+You can also add a [custom domain](https://docs.aws.amazon.com/apprunner/latest/dg/manage-custom-domains.html) for your request-driven web service.
 Similar to Load Balanced Web Service, you can do so by modifying the [`alias`](../manifest/rd-web-service.en.md#http-alias) field in your manifest:
 ```yaml
 # in copilot/{service name}/manifest.yml
@@ -63,8 +98,8 @@ http:
 Likewise, your application should have been associated with the domain (e.g. `example.aws`) in order for your Request-Driven Web Service to use it.
 
 !!!info
-    For now, we support only 1-level subdomain such as `web.example.aws`. 
-    
+    For now, we support only 1-level subdomain such as `web.example.aws`.
+
     Environment-level domains (e.g. `web.${envName}.${appName}.example.aws`), application-level domains (e.g. `web.${appName}.example.aws`),
     or root domains (i.e. `example.aws`) are not supported yet. This also means that your subdomain shouldn't collide with your application name.
 

@@ -9,11 +9,17 @@ import (
 	"sort"
 	"strings"
 
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/dustin/go-humanize/english"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
+	awsssm "github.com/aws/aws-sdk-go/service/ssm"
 
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -74,11 +80,13 @@ type secretInitOpts struct {
 }
 
 func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
-	store, err := config.NewStore()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("secret init"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
-		return nil, fmt.Errorf("new config store: %w", err)
+		return nil, err
 	}
 
+	store := config.NewSSMStore(identity.New(defaultSession), awsssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	opts := secretInitOpts{
 		secretInitVars: vars,
@@ -89,7 +97,7 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 		secretPutters:  make(map[string]secretPutter),
 
 		prompter: prompter,
-		selector: selector.NewSelect(prompter, store),
+		selector: selector.NewAppEnvSelector(prompter, store),
 	}
 
 	opts.configureClientsForEnv = func(envName string) error {
@@ -106,7 +114,7 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 		if err != nil {
 			return err
 		}
-		sess, err := sessions.NewProvider().FromRole(env.ManagerRoleARN, env.Region)
+		sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return fmt.Errorf("create session from environment manager role %s in region %s: %w", env.ManagerRoleARN, env.Region, err)
 		}
@@ -374,7 +382,7 @@ func (o *secretInitOpts) askForSecretValues() error {
 	}
 
 	if len(envs) == 0 {
-		log.Errorf("Secrets environment-level resources. Please run %s before running %s.\n",
+		log.Errorf("Secrets are environment-level resources. Please run %s before running %s.\n",
 			color.HighlightCode("copilot env init"),
 			color.HighlightCode("copilot secret init"))
 		return fmt.Errorf("no environment is found in app %s", o.appName)
@@ -385,7 +393,7 @@ func (o *secretInitOpts) askForSecretValues() error {
 		value, err := o.prompter.GetSecret(
 			fmt.Sprintf(fmtSecretInitSecretValuePrompt, color.HighlightUserInput(o.name), env.Name),
 			fmt.Sprintf(fmtSecretInitSecretValuePromptHelp, color.HighlightUserInput(o.name), env.Name),
-			prompt.WithFinalMessage(fmt.Sprintf("%s secret value:", strings.Title(env.Name))),
+			prompt.WithFinalMessage(fmt.Sprintf("%s secret value:", cases.Title(language.English).String(env.Name))),
 		)
 		if err != nil {
 			return fmt.Errorf("get secret value for %s in environment %s: %w", color.HighlightUserInput(o.name), env.Name, err)

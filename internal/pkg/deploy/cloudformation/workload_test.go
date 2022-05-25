@@ -41,6 +41,10 @@ func (m *mockStackConfig) Parameters() ([]*sdkcloudformation.Parameter, error) {
 	return params, nil
 }
 
+func (m *mockStackConfig) SerializedParameters() (string, error) {
+	return "", nil
+}
+
 func (m *mockStackConfig) Tags() []*sdkcloudformation.Tag {
 	var tags []*sdkcloudformation.Tag
 	for k, v := range m.tags {

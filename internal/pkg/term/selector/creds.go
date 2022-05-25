@@ -33,7 +33,7 @@ type SessionProvider interface {
 
 // CredsSelect prompts users for credentials.
 type CredsSelect struct {
-	Prompt  Prompter
+	Prompt  prompter
 	Profile Names
 	Session SessionProvider
 }

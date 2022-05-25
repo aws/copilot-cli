@@ -56,10 +56,10 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.WorkloadContainerPortParamKey: "-",
+						cfnstack.WorkloadTaskCountParamKey:     "1",
+						cfnstack.WorkloadTaskCPUParamKey:       "256",
+						cfnstack.WorkloadTaskMemoryParamKey:    "512",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(nil, errors.New("some error")),
 				)
@@ -71,10 +71,10 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
+						cfnstack.WorkloadContainerPortParamKey: "-",
+						cfnstack.WorkloadTaskCountParamKey:     "1",
+						cfnstack.WorkloadTaskMemoryParamKey:    "512",
+						cfnstack.WorkloadTaskCPUParamKey:       "256",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -91,10 +91,10 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.WorkloadContainerPortParamKey: "-",
+						cfnstack.WorkloadTaskCountParamKey:     "1",
+						cfnstack.WorkloadTaskCPUParamKey:       "256",
+						cfnstack.WorkloadTaskMemoryParamKey:    "512",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -119,10 +119,10 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
 
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:         "1",
-						cfnstack.WorkloadTaskCPUParamKey:           "256",
-						cfnstack.WorkloadTaskMemoryParamKey:        "512",
+						cfnstack.WorkloadContainerPortParamKey: "-",
+						cfnstack.WorkloadTaskCountParamKey:     "1",
+						cfnstack.WorkloadTaskCPUParamKey:       "256",
+						cfnstack.WorkloadTaskMemoryParamKey:    "512",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -143,10 +143,10 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:         "2",
-						cfnstack.WorkloadTaskCPUParamKey:           "512",
-						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
+						cfnstack.WorkloadContainerPortParamKey: "-",
+						cfnstack.WorkloadTaskCountParamKey:     "2",
+						cfnstack.WorkloadTaskCPUParamKey:       "512",
+						cfnstack.WorkloadTaskMemoryParamKey:    "1024",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -167,10 +167,10 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.LBWebServiceContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:         "2",
-						cfnstack.WorkloadTaskCPUParamKey:           "512",
-						cfnstack.WorkloadTaskMemoryParamKey:        "1024",
+						cfnstack.WorkloadContainerPortParamKey: "-",
+						cfnstack.WorkloadTaskCountParamKey:     "2",
+						cfnstack.WorkloadTaskCPUParamKey:       "512",
+						cfnstack.WorkloadTaskMemoryParamKey:    "1024",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -321,16 +321,11 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			d := &WorkerServiceDescriber{
-				app:             testApp,
-				svc:             testSvc,
-				enableResources: tc.shouldOutputResources,
-				store:           mockStore,
-				initClients:     func(string) error { return nil },
-				svcStackDescriber: map[string]ecsDescriber{
-					"test":    mockSvcDescriber,
-					"prod":    mockSvcDescriber,
-					"mockEnv": mockSvcDescriber,
-				},
+				app:              testApp,
+				svc:              testSvc,
+				enableResources:  tc.shouldOutputResources,
+				store:            mockStore,
+				initECSDescriber: func(s string) (ecsDescriber, error) { return mockSvcDescriber, nil },
 			}
 
 			// WHEN

@@ -6,8 +6,15 @@ package log
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/fatih/color"
+)
+
+// Decorated io.Writers around standard error and standard output that work on Windows.
+var (
+	DiagnosticWriter = color.Error
+	OutputWriter     = color.Output
 )
 
 // Colored string formatting functions.
@@ -15,13 +22,7 @@ var (
 	successSprintf = color.HiGreenString
 	errorSprintf   = color.HiRedString
 	warningSprintf = color.YellowString
-	debugSprintf   = color.WhiteString
-)
-
-// Wrapper writers around standard error and standard output that work on windows.
-var (
-	DiagnosticWriter = color.Error
-	OutputWriter     = color.Output
+	debugSprintf   = color.New(color.Faint).Sprintf
 )
 
 // Log message prefixes.
@@ -31,20 +32,17 @@ const (
 
 // Success prefixes the message with a green "✔ Success!", and writes to standard error.
 func Success(args ...interface{}) {
-	msg := fmt.Sprintf("%s %s", successSprintf(successPrefix), fmt.Sprint(args...))
-	fmt.Fprint(DiagnosticWriter, msg)
+	success(DiagnosticWriter, args...)
 }
 
 // Successln prefixes the message with a green "✔ Success!", and writes to standard error with a new line.
 func Successln(args ...interface{}) {
-	msg := fmt.Sprintf("%s %s", successSprintf(successPrefix), fmt.Sprint(args...))
-	fmt.Fprintln(DiagnosticWriter, msg)
+	successln(DiagnosticWriter, args...)
 }
 
 // Successf formats according to the specifier, prefixes the message with a green "✔ Success!", and writes to standard error.
 func Successf(format string, args ...interface{}) {
-	wrappedFormat := fmt.Sprintf("%s %s", successSprintf(successPrefix), format)
-	fmt.Fprintf(DiagnosticWriter, wrappedFormat, args...)
+	successf(DiagnosticWriter, format, args...)
 }
 
 // Ssuccess prefixes the message with a green "✔ Success!", and returns it.
@@ -66,20 +64,17 @@ func Ssuccessf(format string, args ...interface{}) string {
 
 // Error prefixes the message with a red "✘ Error!", and writes to standard error.
 func Error(args ...interface{}) {
-	msg := fmt.Sprintf("%s %s", errorSprintf(errorPrefix), fmt.Sprint(args...))
-	fmt.Fprint(DiagnosticWriter, msg)
+	err(DiagnosticWriter, args...)
 }
 
 // Errorln prefixes the message with a red "✘ Error!", and writes to standard error with a new line.
 func Errorln(args ...interface{}) {
-	msg := fmt.Sprintf("%s %s", errorSprintf(errorPrefix), fmt.Sprint(args...))
-	fmt.Fprintln(DiagnosticWriter, msg)
+	errln(DiagnosticWriter, args...)
 }
 
 // Errorf formats according to the specifier, prefixes the message with a red "✘ Error!", and writes to standard error.
 func Errorf(format string, args ...interface{}) {
-	wrappedFormat := fmt.Sprintf("%s %s", errorSprintf(errorPrefix), format)
-	fmt.Fprintf(DiagnosticWriter, wrappedFormat, args...)
+	errf(DiagnosticWriter, format, args...)
 }
 
 // Serror prefixes the message with a red "✘ Error!", and returns it.
@@ -101,48 +96,114 @@ func Serrorf(format string, args ...interface{}) string {
 
 // Warning prefixes the message with a "Note:", colors the *entire* message in yellow, writes to standard error.
 func Warning(args ...interface{}) {
-	msg := fmt.Sprint(args...)
-	fmt.Fprint(DiagnosticWriter, warningSprintf(fmt.Sprintf("%s %s", warningPrefix, msg)))
+	warning(DiagnosticWriter, args...)
 }
 
 // Warningln prefixes the message with a "Note:", colors the *entire* message in yellow, writes to standard error with a new line.
 func Warningln(args ...interface{}) {
-	msg := fmt.Sprint(args...)
-	fmt.Fprintln(DiagnosticWriter, warningSprintf(fmt.Sprintf("%s %s", warningPrefix, msg)))
+	warningln(DiagnosticWriter, args...)
 }
 
 // Warningf formats according to the specifier, prefixes the message with a "Note:", colors the *entire* message in yellow, and writes to standard error.
 func Warningf(format string, args ...interface{}) {
-	wrappedFormat := fmt.Sprintf("%s %s", warningPrefix, format)
-	fmt.Fprint(DiagnosticWriter, warningSprintf(wrappedFormat, args...))
+	warningf(DiagnosticWriter, format, args...)
 }
 
 // Info writes the message to standard error with the default color.
 func Info(args ...interface{}) {
-	fmt.Fprint(DiagnosticWriter, args...)
+	info(DiagnosticWriter, args...)
 }
 
 // Infoln writes the message to standard error with the default color and new line.
 func Infoln(args ...interface{}) {
-	fmt.Fprintln(DiagnosticWriter, args...)
+	infoln(DiagnosticWriter, args...)
 }
 
 // Infof formats according to the specifier, and writes to standard error with the default color.
 func Infof(format string, args ...interface{}) {
-	fmt.Fprintf(DiagnosticWriter, format, args...)
+	infof(DiagnosticWriter, format, args...)
 }
 
 // Debug writes the message to standard error in grey.
 func Debug(args ...interface{}) {
-	fmt.Fprint(DiagnosticWriter, debugSprintf(fmt.Sprint(args...)))
+	debug(DiagnosticWriter, args...)
 }
 
 // Debugln writes the message to standard error in grey and with a new line.
 func Debugln(args ...interface{}) {
-	fmt.Fprintln(DiagnosticWriter, debugSprintf(fmt.Sprint(args...)))
+	debugln(DiagnosticWriter, args...)
 }
 
 // Debugf formats according to the specifier, colors the message in grey, and writes to standard error.
 func Debugf(format string, args ...interface{}) {
-	fmt.Fprint(DiagnosticWriter, debugSprintf(format, args...))
+	debugf(DiagnosticWriter, format, args...)
+}
+
+func success(w io.Writer, args ...interface{}) {
+	msg := fmt.Sprintf("%s %s", successSprintf(successPrefix), fmt.Sprint(args...))
+	fmt.Fprint(w, msg)
+}
+
+func successln(w io.Writer, args ...interface{}) {
+	msg := fmt.Sprintf("%s %s", successSprintf(successPrefix), fmt.Sprint(args...))
+	fmt.Fprintln(w, msg)
+}
+
+func successf(w io.Writer, format string, args ...interface{}) {
+	wrappedFormat := fmt.Sprintf("%s %s", successSprintf(successPrefix), format)
+	fmt.Fprintf(w, wrappedFormat, args...)
+}
+
+func err(w io.Writer, args ...interface{}) {
+	msg := fmt.Sprintf("%s %s", errorSprintf(errorPrefix), fmt.Sprint(args...))
+	fmt.Fprint(w, msg)
+}
+
+func errln(w io.Writer, args ...interface{}) {
+	msg := fmt.Sprintf("%s %s", errorSprintf(errorPrefix), fmt.Sprint(args...))
+	fmt.Fprintln(w, msg)
+}
+
+func errf(w io.Writer, format string, args ...interface{}) {
+	wrappedFormat := fmt.Sprintf("%s %s", errorSprintf(errorPrefix), format)
+	fmt.Fprintf(w, wrappedFormat, args...)
+}
+
+func warning(w io.Writer, args ...interface{}) {
+	msg := fmt.Sprint(args...)
+	fmt.Fprint(w, warningSprintf(fmt.Sprintf("%s %s", warningPrefix, msg)))
+}
+
+func warningln(w io.Writer, args ...interface{}) {
+	msg := fmt.Sprint(args...)
+	fmt.Fprintln(w, warningSprintf(fmt.Sprintf("%s %s", warningPrefix, msg)))
+}
+
+func warningf(w io.Writer, format string, args ...interface{}) {
+	wrappedFormat := fmt.Sprintf("%s %s", warningPrefix, format)
+	fmt.Fprint(w, warningSprintf(wrappedFormat, args...))
+}
+
+func info(w io.Writer, args ...interface{}) {
+	fmt.Fprint(w, args...)
+}
+
+func infoln(w io.Writer, args ...interface{}) {
+	fmt.Fprintln(w, args...)
+}
+
+func infof(w io.Writer, format string, args ...interface{}) {
+	fmt.Fprintf(w, format, args...)
+}
+
+func debug(w io.Writer, args ...interface{}) {
+	fmt.Fprint(w, debugSprintf(fmt.Sprint(args...)))
+}
+
+func debugln(w io.Writer, args ...interface{}) {
+	fmt.Fprintln(w, debugSprintf(fmt.Sprint(args...)))
+}
+
+func debugf(w io.Writer, format string, args ...interface{}) {
+	fmt.Fprint(w, debugSprintf(format, args...))
 }

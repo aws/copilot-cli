@@ -122,7 +122,7 @@ func TestStore_ListEnvironments(t *testing.T) {
 			// GIVEN
 			lastPageInPaginatedResp = false
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                       t,
 					mockGetParametersByPath: tc.mockGetParametersByPath,
 				},
@@ -202,7 +202,7 @@ func TestStore_GetEnvironment(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                t,
 					mockGetParameter: tc.mockGetParameter,
 				},
@@ -306,7 +306,7 @@ func TestStore_CreateEnvironment(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                t,
 					mockPutParameter: tc.mockPutParameter,
 					mockGetParameter: tc.mockGetParameter,
@@ -368,7 +368,7 @@ func TestStore_DeleteEnvironment(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			store := &Store{
-				ssmClient: &mockSSM{
+				ssm: &mockSSM{
 					t:                   t,
 					mockDeleteParameter: tc.mockDeleteParam,
 				},

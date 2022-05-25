@@ -157,6 +157,13 @@ func (c *AppStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	}, nil
 }
 
+// SerializedParameters returns the CloudFormation stack's parameters serialized
+// to a YAML document annotated with comments for readability to users.
+func (s *AppStackConfig) SerializedParameters() (string, error) {
+	// No-op for now.
+	return "", nil
+}
+
 // Tags returns the tags that should be applied to the Application CloudFormation stack.
 func (c *AppStackConfig) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(c.AdditionalTags, map[string]string{

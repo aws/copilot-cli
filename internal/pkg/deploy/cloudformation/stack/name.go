@@ -8,8 +8,13 @@ import (
 	"strings"
 )
 
-// taskStackPrefix is used elsewhere to list CF stacks
-const taskStackPrefix = "task-"
+const (
+	// taskStackPrefix is used elsewhere to list CF stacks
+	taskStackPrefix = "task-"
+
+	// After v1.16, pipeline stack names are namespaced with a prefix of "pipeline-${appName}-".
+	fmtPipelineNamespaced = "pipeline-%s-%s"
+)
 
 // TaskStackName holds the name of a Copilot one-off task stack.
 type TaskStackName string
@@ -49,4 +54,14 @@ func NameForAppStack(app string) string {
 // NameForAppStackSet returns the stackset name for an app.
 func NameForAppStackSet(app string) string {
 	return fmt.Sprintf("%s-infrastructure", app)
+}
+
+// NameForPipeline returns the stack name for a pipeline, depending on whether it has been deployed using the legacy scheme.
+// Note that it doesn't cut name to length of 128 like service stack name. It expects CloudFormation to error out
+// when the name is to long.
+func NameForPipeline(app string, pipeline string, isLegacy bool) string {
+	if isLegacy {
+		return pipeline
+	}
+	return fmt.Sprintf(fmtPipelineNamespaced, app, pipeline)
 }

@@ -34,6 +34,21 @@ func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 	return m.recorder
 }
 
+// DescribeRules mocks base method.
+func (m *Mockapi) DescribeRules(input *elbv2.DescribeRulesInput) (*elbv2.DescribeRulesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeRules", input)
+	ret0, _ := ret[0].(*elbv2.DescribeRulesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeRules indicates an expected call of DescribeRules.
+func (mr *MockapiMockRecorder) DescribeRules(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRules", reflect.TypeOf((*Mockapi)(nil).DescribeRules), input)
+}
+
 // DescribeTargetHealth mocks base method.
 func (m *Mockapi) DescribeTargetHealth(input *elbv2.DescribeTargetHealthInput) (*elbv2.DescribeTargetHealthOutput, error) {
 	m.ctrl.T.Helper()

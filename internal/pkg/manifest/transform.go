@@ -20,6 +20,7 @@ var defaultTransformers = []mergo.Transformers{
 	buildArgsOrStringTransformer{},
 	stringSliceOrStringTransformer{},
 	platformArgsOrStringTransformer{},
+	placementArgOrStringTransformer{},
 	healthCheckArgsOrStringTransformer{},
 	countTransformer{},
 	advancedCountTransformer{},
@@ -28,6 +29,7 @@ var defaultTransformers = []mergo.Transformers{
 	efsVolumeConfigurationTransformer{},
 	sqsQueueOrBoolTransformer{},
 	routingRuleConfigOrBoolTransformer{},
+	secretTransformer{},
 }
 
 // See a complete list of `reflect.Kind` here: https://pkg.go.dev/reflect#Kind.
@@ -140,6 +142,32 @@ func (t platformArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst,
 
 		if !srcStruct.PlatformArgs.isEmpty() {
 			dstStruct.PlatformString = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type placementArgOrStringTransformer struct{}
+
+// Transformer returns custom merge logic for placementArgOrString's fields.
+func (t placementArgOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(PlacementArgOrString{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(PlacementArgOrString), src.Interface().(PlacementArgOrString)
+
+		if srcStruct.PlacementString != nil {
+			dstStruct.PlacementArgs = PlacementArgs{}
+		}
+
+		if !srcStruct.PlacementArgs.isEmpty() {
+			dstStruct.PlacementString = nil
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.
@@ -343,6 +371,31 @@ func (t routingRuleConfigOrBoolTransformer) Transformer(typ reflect.Type) func(d
 
 		if srcStruct.Enabled != nil {
 			dstStruct.RoutingRuleConfiguration = RoutingRuleConfiguration{}
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type secretTransformer struct{}
+
+// Transformer returns custom merge logic for Secret's fields.
+func (t secretTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Secret{}) {
+		return nil
+	}
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(Secret), src.Interface().(Secret)
+
+		if !srcStruct.fromSecretsManager.IsEmpty() {
+			dstStruct.from = nil
+		}
+
+		if srcStruct.from != nil {
+			dstStruct.fromSecretsManager = secretsManagerSecret{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

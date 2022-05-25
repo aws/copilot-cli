@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/google/uuid"
@@ -47,7 +49,6 @@ const (
 	OSWindowsServerCore = "WINDOWS_SERVER_2019_CORE"
 
 	ArchX86   = "X86_64"
-	ArchARM   = "ARM"
 	ArchARM64 = "ARM64"
 )
 
@@ -77,6 +78,8 @@ var (
 		"state-machine",
 		"state-machine-definition.json",
 		"efs-access-point",
+		"https-listener",
+		"http-listener",
 		"env-controller",
 		"mount-points",
 		"volumes",
@@ -87,6 +90,7 @@ var (
 		"subscribe",
 		"nlb",
 		"vpc-connector",
+		"alb",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -114,7 +118,7 @@ type SidecarOpts struct {
 	Protocol     *string
 	CredsParam   *string
 	Variables    map[string]string
-	Secrets      map[string]string
+	Secrets      map[string]Secret
 	Storage      SidecarStorageOpts
 	DockerLabels map[string]string
 	DependsOn    map[string]string
@@ -188,15 +192,16 @@ type LogConfigOpts struct {
 	Image          *string
 	Destination    map[string]string
 	EnableMetadata *string
-	SecretOptions  map[string]string
+	SecretOptions  map[string]Secret
 	ConfigFile     *string
 	Variables      map[string]string
-	Secrets        map[string]string
+	Secrets        map[string]Secret
 }
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
 	HealthCheckPath     string
+	Port                string
 	SuccessCodes        string
 	HealthyThreshold    *int64
 	UnhealthyThreshold  *int64
@@ -206,20 +211,81 @@ type HTTPHealthCheckOpts struct {
 	GracePeriod         *int64
 }
 
+// A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
+type Secret interface {
+	RequiresSub() bool
+	ValueFrom() string
+}
+
+// ssmOrSecretARN is a Secret stored that can be referred by an SSM Parameter Name or a secret ARN.
+type ssmOrSecretARN struct {
+	value string
+}
+
+// RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
+func (s ssmOrSecretARN) RequiresSub() bool {
+	return false
+}
+
+// ValueFrom returns the valueFrom field for the secret.
+func (s ssmOrSecretARN) ValueFrom() string {
+	return s.value
+}
+
+// SecretFromSSMOrARN returns a Secret that refers to an SSM parameter or a secret ARN.
+func SecretFromSSMOrARN(value string) ssmOrSecretARN {
+	return ssmOrSecretARN{
+		value: value,
+	}
+}
+
+// secretsManagerName is a Secret that can be referred by a SecretsManager secret name.
+type secretsManagerName struct {
+	value string
+}
+
+// RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
+func (s secretsManagerName) RequiresSub() bool {
+	return true
+}
+
+// ValueFrom returns the resource ID of the SecretsManager secret for populating the ARN.
+func (s secretsManagerName) ValueFrom() string {
+	return fmt.Sprintf("secret:%s", s.value)
+}
+
+// Service returns the name of the SecretsManager service for populating the ARN.
+func (s secretsManagerName) Service() string {
+	return secretsmanager.ServiceName
+}
+
+// SecretFromSecretsManager returns a Secret that refers to SecretsManager secret name.
+func SecretFromSecretsManager(value string) secretsManagerName {
+	return secretsManagerName{
+		value: value,
+	}
+}
+
 // NetworkLoadBalancerListener holds configuration that's need for a Network Load Balancer listener.
 type NetworkLoadBalancerListener struct {
-	Protocol        string
+	// The port and protocol that the Network Load Balancer listens to.
+	Port     string
+	Protocol string
+
+	// The target container and port to which the traffic is routed to from the Network Load Balancer.
 	TargetContainer string
 	TargetPort      string
-	SSLPolicy       *string
-	Aliases         []string
-	Stickiness       *bool
-	HealthCheck     NLBHealthCheck
+
+	SSLPolicy *string // The SSL policy applied when using TLS protocol.
+
+	Aliases     []string
+	Stickiness  *bool
+	HealthCheck NLBHealthCheck
 }
 
 // NLBHealthCheck holds configuration for Network Load Balancer health check.
 type NLBHealthCheck struct {
-	Port               string
+	Port               string // The port to which health check requests made from Network Load Balancer are routed to.
 	HealthyThreshold   *int64
 	UnhealthyThreshold *int64
 	Timeout            *int64
@@ -274,6 +340,19 @@ type AutoscalingQueueDelayOpts struct {
 	AcceptableBacklogPerTask int
 }
 
+// ObservabilityOpts holds configurations for observability.
+type ObservabilityOpts struct {
+	Tracing string // The name of the vendor used for tracing.
+}
+
+// DeploymentConfiguraitonOpts holds values for MinHealthyPercent and MaxPercent.
+type DeploymentConfigurationOpts struct {
+	// The lower limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
+	MinHealthyPercent int
+	// The upper limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
+	MaxPercent int
+}
+
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
 type ExecuteCommandOpts struct{}
 
@@ -318,9 +397,10 @@ func (s *SubscribeOpts) HasTopicQueues() bool {
 
 // TopicSubscription holds information needed to render a SNS Topic Subscription in a container definition.
 type TopicSubscription struct {
-	Name    *string
-	Service *string
-	Queue   *SQSQueue
+	Name         *string
+	Service      *string
+	FilterPolicy *string
+	Queue        *SQSQueue
 }
 
 // SQSQueue holds information needed to render a SQS Queue in a container definition.
@@ -338,9 +418,11 @@ type DeadLetterQueue struct {
 
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
-	AssignPublicIP string
-	SubnetsType    string
 	SecurityGroups []string
+	AssignPublicIP string
+	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
+	SubnetsType string
+	SubnetIDs   []string
 }
 
 // RuntimePlatformOpts holds configuration needed for Platform configuration.
@@ -378,8 +460,10 @@ func (p RuntimePlatformOpts) isEmpty() bool {
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
 	Variables                map[string]string
-	Secrets                  map[string]string
+	Secrets                  map[string]Secret
 	Aliases                  []string
+	HTTPSListener            bool
+	UseImportedCerts         bool
 	Tags                     map[string]string        // Used by App Runner workloads to tag App Runner service resources
 	NestedStack              *WorkloadNestedStackOpts // Outputs from nested stacks such as the addons stack.
 	AddonsExtraParams        string                   // Additional user defined Parameters for the addons stack.
@@ -403,12 +487,13 @@ type WorkloadOpts struct {
 	ALBEnabled               bool
 
 	// Additional options for service templates.
-	WorkloadType        string
-	HealthCheck         *ContainerHealthCheck
-	HTTPHealthCheck     HTTPHealthCheckOpts
-	DeregistrationDelay *int64
-	AllowedSourceIps    []string
-	NLB                 *NetworkLoadBalancer
+	WorkloadType            string
+	HealthCheck             *ContainerHealthCheck
+	HTTPHealthCheck         HTTPHealthCheckOpts
+	DeregistrationDelay     *int64
+	AllowedSourceIps        []string
+	NLB                     *NetworkLoadBalancer
+	DeploymentConfiguration DeploymentConfigurationOpts
 
 	// Lambda functions.
 	RulePriorityLambda             string
@@ -426,6 +511,8 @@ type WorkloadOpts struct {
 	// Additional options for request driven web service templates.
 	StartCommand      *string
 	EnableHealthCheck bool
+	Observability     ObservabilityOpts
+
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
 	ScriptBucketName     *string
@@ -543,6 +630,11 @@ func envControllerParameters(o WorkloadOpts) []string {
 			parameters = append(parameters, "ALBWorkloads,")
 		}
 		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
+	}
+	if o.WorkloadType == "Backend Service" {
+		if o.ALBEnabled {
+			parameters = append(parameters, "InternalALBWorkloads,")
+		}
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
 		parameters = append(parameters, "NATWorkloads,")

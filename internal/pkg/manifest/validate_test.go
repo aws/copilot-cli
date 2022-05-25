@@ -68,6 +68,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 							},
 						},
 					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "sidecars[foo]": `,
@@ -78,7 +83,14 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
 						},
 					},
 				},
@@ -94,6 +106,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 							{},
 						},
 					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "publish": `,
@@ -107,6 +124,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 							Path: "Family",
 						},
 					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "taskdef_overrides[0]": `,
@@ -115,6 +137,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			lbConfig: LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
 				},
 			},
 			wantedError: fmt.Errorf(`"name" must be specified`),
@@ -126,6 +153,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:            stringP("/"),
 							TargetContainer: aws.String("foo"),
 						},
 					},
@@ -140,6 +168,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:            stringP("/"),
 							TargetContainer: aws.String("mockName"),
 						},
 					},
@@ -166,6 +195,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 							Essential: aws.Bool(false),
 						},
 					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate container dependencies: `,
@@ -176,8 +210,23 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
-						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
+								},
+							},
+						},
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
 					},
 				},
 			},
@@ -197,6 +246,11 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 								Spot:         aws.Int(123),
 								workloadType: LoadBalancedWebServiceType,
 							},
+						},
+					},
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
 						},
 					},
 				},
@@ -263,7 +317,27 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			},
 			wantedError: errors.New(`scaling based on "nlb" requests or response time is not supported`),
 		},
+		"error if fail to validate deployment": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+						},
+					},
+					DeployConfig: DeploymentConfiguration{
+						Rolling: aws.String("mockName"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "deployment"`,
+		},
 	}
+
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.lbConfig.Validate()
@@ -332,7 +406,9 @@ func TestBackendService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -396,8 +472,18 @@ func TestBackendService_Validate(t *testing.T) {
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
-						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
+								},
+							},
+						},
+						},
 					},
 				},
 			},
@@ -422,6 +508,29 @@ func TestBackendService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate ARM: `,
+		},
+		"error if fail to validate deployment": {
+			config: BackendService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot:         aws.Int(123),
+								workloadType: BackendServiceType,
+							},
+						},
+					},
+					DeployConfig: DeploymentConfiguration{
+						Rolling: aws.String("mockName"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
 	}
 	for name, tc := range testCases {
@@ -502,12 +611,33 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 					},
 					Network: RequestDrivenWebServiceNetworkConfig{
 						VPC: rdwsVpcConfig{
-							Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "network": `,
+		},
+		"error if fail to validate observability": {
+			config: RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: stringP("mockLocation"),
+						},
+						Port: uint16P(80),
+					},
+					Observability: Observability{
+						Tracing: aws.String("unknown-vendor"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "observability": `,
 		},
 		"error if name is not set": {
 			config: RequestDrivenWebService{
@@ -586,7 +716,9 @@ func TestWorkerService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -665,8 +797,18 @@ func TestWorkerService_Validate(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
-						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
+								},
+							},
+						},
+						},
 					},
 				},
 			},
@@ -691,6 +833,29 @@ func TestWorkerService_Validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate ARM: `,
+		},
+		"error if fail to validate deployment": {
+			config: WorkerService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/arm64"))},
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								Spot:         aws.Int(123),
+								workloadType: WorkerServiceType,
+							},
+						},
+					},
+					DeployConfig: DeploymentConfiguration{
+						Rolling: aws.String("mockName"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
 	}
 	for name, tc := range testCases {
@@ -757,7 +922,9 @@ func TestScheduledJob_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -845,8 +1012,18 @@ func TestScheduledJob_Validate(t *testing.T) {
 						Schedule: aws.String("mockSchedule"),
 					},
 					TaskConfig: TaskConfig{
-						Platform:       PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						ExecuteCommand: ExecuteCommand{Enable: aws.Bool(true)},
+						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
+								},
+							},
+						},
+						},
 					},
 				},
 			},
@@ -867,6 +1044,89 @@ func TestScheduledJob_Validate(t *testing.T) {
 				return
 			}
 			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func TestPipelineManifest_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		Pipeline Pipeline
+
+		wantedError          error
+		wantedErrorMsgPrefix string
+	}{
+		"error if name exceeds 100 characters": {
+			Pipeline: Pipeline{
+				Name: "12345678902234567890323456789042345678905234567890623456789072345678908234567890923456789010234567890",
+			},
+			wantedError: errors.New("pipeline name '12345678902234567890323456789042345678905234567890623456789072345678908234567890923456789010234567890' must be shorter than 100 characters"),
+		},
+		"should validate pipeline stages": {
+			Pipeline: Pipeline{
+				Name: "release",
+				Stages: []PipelineStage{
+					{
+						Name: "test",
+						Deployments: map[string]*Deployment{
+							"frontend": {
+								DependsOn: []string{"backend"},
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "deployments" for pipeline stage test:`,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.Pipeline.Validate()
+
+			switch {
+			case tc.wantedError != nil:
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			case tc.wantedErrorMsgPrefix != "":
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+			default:
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestDeployments_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     Deployments
+		wanted error
+	}{
+		"should return nil on empty deployments": {},
+		"should return an error when a dependency does not exist": {
+			in: map[string]*Deployment{
+				"frontend": {
+					DependsOn: []string{"backend"},
+				},
+			},
+			wanted: errors.New("dependency deployment named 'backend' of 'frontend' does not exist"),
+		},
+		"should return nil when all dependencies are present": {
+			in: map[string]*Deployment{
+				"frontend": {
+					DependsOn: []string{"backend"},
+				},
+				"backend": nil,
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			actual := tc.in.Validate()
+
+			if tc.wanted == nil {
+				require.NoError(t, actual)
+			} else {
+				require.EqualError(t, actual, tc.wanted.Error())
+			}
 		})
 	}
 }
@@ -1002,8 +1262,13 @@ func TestRoutingRule_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
 		},
+		"error if path is missing": {
+			RoutingRule:          RoutingRuleConfiguration{},
+			wantedErrorMsgPrefix: `"path" must be specified`,
+		},
 		"should not error if protocol version is not uppercase": {
 			RoutingRule: RoutingRuleConfiguration{
+				Path:            stringP("/"),
 				ProtocolVersion: aws.String("gRPC"),
 			},
 		},
@@ -1055,32 +1320,34 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 				Port: aws.String("443"),
 			},
 		},
-		"error if protocol is not recognized": {
+		"fail if protocol is not recognized": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/tps"),
 			},
 			wantedErrorMsgPrefix: `validate "nlb": `,
-			wantedError:          fmt.Errorf(`validate "port": unrecognized protocol tps`),
+			wantedError:          fmt.Errorf(`validate "port": invalid protocol tps; valid protocols include TCP and TLS`),
 		},
 		"success if tcp": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/tcp"),
 			},
 		},
-		"success if udp": {
+		"error if udp": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("161/udp"),
 			},
+			wantedError: fmt.Errorf(`validate "port": invalid protocol udp; valid protocols include TCP and TLS`),
 		},
 		"success if tls": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/tls"),
 			},
 		},
-		"success if tcp_udp": {
+		"error if tcp_udp": {
 			nlb: NetworkLoadBalancerConfiguration{
 				Port: aws.String("443/TCP_udp"),
 			},
+			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
 	}
 
@@ -1842,7 +2109,9 @@ func TestNetworkConfig_Validate(t *testing.T) {
 		"error if fail to validate vpc": {
 			config: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: (*Placement)(aws.String("")),
+					Placement: PlacementArgOrString{
+						PlacementString: (*PlacementString)(aws.String("")),
+					},
 				},
 			},
 			wantedErrorPrefix: `validate "vpc": `,
@@ -1870,7 +2139,9 @@ func TestRequestDrivenWebServiceNetworkConfig_Validate(t *testing.T) {
 		"error if fail to validate vpc": {
 			config: RequestDrivenWebServiceNetworkConfig{
 				VPC: rdwsVpcConfig{
-					Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
+					Placement: PlacementArgOrString{
+						PlacementString: (*PlacementString)(aws.String("")),
+					},
 				},
 			},
 			wantedErrorPrefix: `validate "vpc": `,
@@ -1897,7 +2168,9 @@ func TestRdwsVpcConfig_Validate(t *testing.T) {
 	}{
 		"error if fail to validate placement": {
 			config: rdwsVpcConfig{
-				Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
+				Placement: PlacementArgOrString{
+					PlacementString: (*PlacementString)(aws.String("")),
+				},
 			},
 			wantedErrorPrefix: `validate "placement": `,
 		},
@@ -1923,7 +2196,9 @@ func TestVpcConfig_Validate(t *testing.T) {
 	}{
 		"error if fail to validate placement": {
 			config: vpcConfig{
-				Placement: (*Placement)(aws.String("")),
+				Placement: PlacementArgOrString{
+					PlacementString: (*PlacementString)(aws.String("")),
+				},
 			},
 			wantedErrorPrefix: `validate "placement": `,
 		},
@@ -1941,11 +2216,11 @@ func TestVpcConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestPlacement_Validate(t *testing.T) {
-	mockEmptyPlacement := Placement("")
-	mockInvalidPlacement := Placement("external")
+func TestPlacementString_Validate(t *testing.T) {
+	mockEmptyPlacement := PlacementString("")
+	mockInvalidPlacement := PlacementString("external")
 	testCases := map[string]struct {
-		in     *Placement
+		in     *PlacementString
 		wanted error
 	}{
 		"should return an error if placement is empty": {
@@ -1955,29 +2230,6 @@ func TestPlacement_Validate(t *testing.T) {
 		"should return an error if placement is invalid": {
 			in:     &mockInvalidPlacement,
 			wanted: errors.New(`"placement" external must be one of public, private`),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
-
-			if tc.wanted != nil {
-				require.EqualError(t, err, tc.wanted.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestRequestDrivenWebServicePlacement_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		in     *RequestDrivenWebServicePlacement
-		wanted error
-	}{
-		"should return an error if placement is public": {
-			in:     (*RequestDrivenWebServicePlacement)(aws.String("public")),
-			wanted: errors.New(`placement "public" is not supported for Request-Driven Web Service`),
 		},
 	}
 	for name, tc := range testCases {
@@ -2056,6 +2308,40 @@ func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
 			} else if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestObservability_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		config            Observability
+		wantedErrorPrefix string
+	}{
+		"error if tracing has invalid vendor": {
+			config: Observability{
+				Tracing: aws.String("unknown-vendor"),
+			},
+			wantedErrorPrefix: `invalid tracing vendor unknown-vendor: `,
+		},
+		"ok if tracing is aws-xray": {
+			config: Observability{
+				Tracing: aws.String("awsxray"),
+			},
+		},
+		"ok if observability is empty": {
+			config: Observability{},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.config.Validate()
+
+			if tc.wantedErrorPrefix != "" {
+				require.NotNil(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
 			} else {
 				require.NoError(t, gotErr)
 			}
@@ -2434,12 +2720,6 @@ func TestValidateWindows(t *testing.T) {
 		in          validateWindowsOpts
 		wantedError error
 	}{
-		"should return an error if efs specified": {
-			in: validateWindowsOpts{
-				execEnabled: true,
-			},
-			wantedError: fmt.Errorf(`'exec' is not supported when deploying a Windows container`),
-		},
 		"error if efs specified": {
 			in: validateWindowsOpts{
 				efsVolumes: map[string]*Volume{
@@ -2455,10 +2735,8 @@ func TestValidateWindows(t *testing.T) {
 			},
 			wantedError: errors.New(`'EFS' is not supported when deploying a Windows container`),
 		},
-		"should return nil if neither efs nor exec specified": {
-			in: validateWindowsOpts{
-				execEnabled: false,
-			},
+		"should return nil efs not specified": {
+			in:          validateWindowsOpts{},
 			wantedError: nil,
 		},
 	}
@@ -2507,6 +2785,45 @@ func TestValidateARM(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDeploymentConfiguration_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		deployConfig DeploymentConfiguration
+		wanted       string
+	}{
+		"error if deploy config has invalid rolling strategy": {
+			deployConfig: DeploymentConfiguration{
+				Rolling: aws.String("unknown"),
+			},
+			wanted: `invalid rolling deployment strategy unknown, must be one of default or recreate`,
+		},
+		"ok if deployment strategy is recreate": {
+			deployConfig: DeploymentConfiguration{
+				Rolling: aws.String("recreate"),
+			},
+		},
+		"ok if deployment strategy is default": {
+			deployConfig: DeploymentConfiguration{
+				Rolling: aws.String("default"),
+			},
+		},
+		"ok if deployment is empty": {
+			deployConfig: DeploymentConfiguration{},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.deployConfig.Validate()
+
+			if tc.wanted != "" {
+				require.NotNil(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wanted)
+			} else {
+				require.NoError(t, gotErr)
 			}
 		})
 	}

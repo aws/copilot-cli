@@ -126,8 +126,8 @@ environments:
 							Variables: map[string]string{
 								"LOG_LEVEL": "WARN",
 							},
-							Secrets: map[string]string{
-								"DB_PASSWORD": "MYSQL_DB_PASSWORD",
+							Secrets: map[string]Secret{
+								"DB_PASSWORD": {from: aws.String("MYSQL_DB_PASSWORD")},
 							},
 						},
 						Sidecars: map[string]*SidecarConfig{
@@ -145,13 +145,15 @@ environments:
 							},
 							EnableMetadata: aws.Bool(false),
 							ConfigFile:     aws.String("/extra.conf"),
-							SecretOptions: map[string]string{
-								"LOG_TOKEN": "LOG_TOKEN",
+							SecretOptions: map[string]Secret{
+								"LOG_TOKEN": {from: aws.String("LOG_TOKEN")},
 							},
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: &PublicSubnetPlacement,
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PublicSubnetPlacement),
+								},
 							},
 						},
 						TaskDefOverrides: []OverrideRule{
@@ -264,13 +266,15 @@ secrets:
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(false),
 							},
-							Secrets: map[string]string{
-								"API_TOKEN": "SUBS_API_TOKEN",
+							Secrets: map[string]Secret{
+								"API_TOKEN": {from: aws.String("SUBS_API_TOKEN")},
 							},
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: &PublicSubnetPlacement,
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PublicSubnetPlacement),
+								},
 							},
 						},
 					},
@@ -333,7 +337,9 @@ subscribe:
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								Placement: &PublicSubnetPlacement,
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PublicSubnetPlacement),
+								},
 							},
 						},
 						Subscribe: SubscribeConfig{
@@ -473,17 +479,6 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		},
-
-		"Error if mutually exclusive fields are specified": {
-			inContent: []byte(`count:
-  spot: 1
-  cpu_percentage: 30
-`),
-			wantedError: &errFieldMutualExclusive{
-				firstField:  "spot",
-				secondField: "range/cpu_percentage/memory_percentage/requests/response_time/queue_delay",
-			},
-		},
 		"Error if unmarshalable": {
 			inContent: []byte(`count: badNumber
 `),
@@ -606,12 +601,12 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 		"invalid type": {
 			svc: struct{}{},
 
-			wantedErr: fmt.Errorf("service does not have required methods BuildRequired()"),
+			wantedErr: fmt.Errorf("manifest does not have required methods BuildRequired()"),
 		},
 		"fail to check": {
 			svc: &LoadBalancedWebService{},
 
-			wantedErr: fmt.Errorf("check if service requires building from local Dockerfile: either \"image.build\" or \"image.location\" needs to be specified in the manifest"),
+			wantedErr: fmt.Errorf("check if manifest requires building from local Dockerfile: either \"image.build\" or \"image.location\" needs to be specified in the manifest"),
 		},
 		"success with false": {
 			svc: &LoadBalancedWebService{
@@ -646,7 +641,7 @@ func Test_ServiceDockerfileBuildRequired(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 
-			got, err := ServiceDockerfileBuildRequired(tc.svc)
+			got, err := DockerfileBuildRequired(tc.svc)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

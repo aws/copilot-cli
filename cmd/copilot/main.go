@@ -84,7 +84,6 @@ func buildRootCmd() *cobra.Command {
 	cmd.AddCommand(cli.BuildPipelineCmd())
 	cmd.AddCommand(cli.BuildDeployCmd())
 
-	// "Debug" command group.
 	cmd.SetUsageTemplate(template.RootUsage)
 	return cmd
 }

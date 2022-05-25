@@ -6,9 +6,17 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -60,25 +68,24 @@ type envUpgradeOpts struct {
 
 	// Constructors for clients that can be initialized only at runtime.
 	// These functions are overridden in tests to provide mocks.
+	newEnvDeployer      func(conf *config.Environment) (environmentDeployer, error)
 	newEnvVersionGetter func(app, env string) (versionGetter, error)
 	newTemplateUpgrader func(conf *config.Environment) (envTemplateUpgrader, error)
-	newS3               func(region string) (uploader, error)
+	newS3               func(conf *config.Environment) (uploader, error)
 }
 
 func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("connect to config store: %v", err)
-	}
-	defaultSession, err := sessions.NewProvider().Default()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("env upgrade"))
+	defaultSession, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	return &envUpgradeOpts{
 		envUpgradeVars: vars,
 
 		store: store,
-		sel:   selector.NewSelect(prompt.New(), store),
+		sel:   selector.NewAppEnvSelector(prompt.New(), store),
 		legacyEnvTemplater: stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
 			Version: deploy.LegacyEnvTemplateVersion,
 			App: deploy.AppInformation{
@@ -89,6 +96,13 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 		uploader: template.New(),
 		appCFN:   cloudformation.New(defaultSession),
 
+		newEnvDeployer: func(conf *config.Environment) (environmentDeployer, error) {
+			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
+			if err != nil {
+				return nil, fmt.Errorf("create environment stack deployer session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
+			}
+			return cloudformation.New(sess), nil
+		},
 		newEnvVersionGetter: func(app, env string) (versionGetter, error) {
 			d, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 				App:         app,
@@ -101,16 +115,16 @@ func newEnvUpgradeOpts(vars envUpgradeVars) (*envUpgradeOpts, error) {
 			return d, nil
 		},
 		newTemplateUpgrader: func(conf *config.Environment) (envTemplateUpgrader, error) {
-			sess, err := sessions.NewProvider().FromRole(conf.ManagerRoleARN, conf.Region)
+			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
 			if err != nil {
-				return nil, fmt.Errorf("create session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
+				return nil, fmt.Errorf("create template session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return cloudformation.New(sess), nil
 		},
-		newS3: func(region string) (uploader, error) {
-			sess, err := sessions.NewProvider().DefaultWithRegion(region)
+		newS3: func(conf *config.Environment) (uploader, error) {
+			sess, err := sessProvider.FromRole(conf.ManagerRoleARN, conf.Region)
 			if err != nil {
-				return nil, fmt.Errorf("create session with region %s: %v", region, err)
+				return nil, fmt.Errorf("create s3 session from role %s and region %s: %v", conf.ManagerRoleARN, conf.Region, err)
 			}
 			return s3.New(sess), nil
 		},
@@ -172,17 +186,20 @@ func (o *envUpgradeOpts) Execute() error {
 		if err != nil {
 			return fmt.Errorf("get app resources: %w", err)
 		}
-		s3Client, err := o.newS3(env.Region)
+		if err := o.ensureManagerRoleIsAllowedToUpload(env, resources.S3Bucket); err != nil {
+			return err
+		}
+		s3Client, err := o.newS3(env)
 		if err != nil {
 			return err
 		}
-		urls, err := o.uploader.UploadEnvironmentCustomResources(s3.CompressAndUploadFunc(func(key string, objects ...s3.NamedBinary) (string, error) {
+		urls, err := o.uploader.UploadEnvironmentCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
 			return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
-		}))
+		})
 		if err != nil {
 			return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
 		}
-		if err := o.upgrade(env, s3.FormatARN(endpoints.AwsPartitionID, resources.S3Bucket), resources.KMSKeyARN, urls); err != nil {
+		if err := o.upgrade(env, app, s3.FormatARN(endpoints.AwsPartitionID, resources.S3Bucket), resources.KMSKeyARN, urls); err != nil {
 			return err
 		}
 	}
@@ -210,7 +227,107 @@ func (o *envUpgradeOpts) listEnvsToUpgrade() ([]*config.Environment, error) {
 	return envs, nil
 }
 
-func (o *envUpgradeOpts) upgrade(env *config.Environment,
+func (o *envUpgradeOpts) ensureManagerRoleIsAllowedToUpload(env *config.Environment, bucketName string) error {
+	cfn, err := o.newEnvDeployer(env)
+	if err != nil {
+		return err
+	}
+	body, err := cfn.EnvironmentTemplate(env.App, env.Name)
+	if err != nil {
+		return err
+	}
+	ok, err := o.isManagerRoleAllowedToUpload(body)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+	return o.grantManagerRolePermissionToUpload(cfn, env.App, env.Name, env.ExecutionRoleARN, body, s3.FormatARN(endpoints.AwsPartitionID, bucketName))
+}
+
+func (o *envUpgradeOpts) isManagerRoleAllowedToUpload(body string) (bool, error) {
+	type Template struct {
+		Metadata struct {
+			Version string `yaml:"Version"`
+		} `yaml:"Metadata"`
+	}
+	var tpl Template
+	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
+		return false, fmt.Errorf("unmarshal environment template to detect Metadata.Version: %v", err)
+	}
+	if !semver.IsValid(tpl.Metadata.Version) { // The template doesn't contain a version.
+		return false, nil
+	}
+	if semver.Compare(tpl.Metadata.Version, "v1.9.0") < 0 {
+		// The permissions to grant the EnvManagerRole to upload artifacts was granted with template v1.9.0.
+		return false, nil
+	}
+	return true, nil
+}
+
+func (o *envUpgradeOpts) grantManagerRolePermissionToUpload(cfn environmentDeployer, app, env, execRole, body, bucketARN string) error {
+	// Detect which line number the EnvironmentManagerRole's PolicyDocument Statement is at.
+	// We will add additional permissions after that line.
+	type Template struct {
+		Resources struct {
+			ManagerRole struct {
+				Properties struct {
+					Policies []struct {
+						Document struct {
+							Statements yaml.Node `yaml:"Statement"`
+						} `yaml:"PolicyDocument"`
+					} `yaml:"Policies"`
+				} `yaml:"Properties"`
+			} `yaml:"EnvironmentManagerRole"`
+		} `yaml:"Resources"`
+	}
+
+	var tpl Template
+	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
+		return fmt.Errorf("unmarshal environment template to find EnvironmentManagerRole policy statement: %v", err)
+	}
+	if len(tpl.Resources.ManagerRole.Properties.Policies) == 0 {
+		return errors.New("unable to find policies for the EnvironmentManagerRole")
+	}
+	// lines and columns are 1-indexed, so we have to substract one from each.
+	statementLineIndex := tpl.Resources.ManagerRole.Properties.Policies[0].Document.Statements.Line - 1
+	numSpaces := tpl.Resources.ManagerRole.Properties.Policies[0].Document.Statements.Column - 1
+	pad := strings.Repeat(" ", numSpaces)
+
+	// Create the additional permissions needed with the appropriate indentation.
+	permissions := fmt.Sprintf(`- Sid: PatchPutObjectsToArtifactBucket
+  Effect: Allow
+  Action:
+    - s3:PutObject
+    - s3:PutObjectAcl
+  Resource:
+    - %s
+    - %s/*`, bucketARN, bucketARN)
+	permissions = pad + strings.Replace(permissions, "\n", "\n"+pad, -1)
+
+	// Add the new permissions to the body.
+	lines := strings.Split(body, "\n")
+	linesBefore := lines[:statementLineIndex]
+	linesAfter := lines[statementLineIndex:]
+	updatedLines := append(linesBefore, append(strings.Split(permissions, "\n"), linesAfter...)...)
+	updatedBody := strings.Join(updatedLines, "\n")
+
+	// Update the Environment template with the new content.
+	// CloudFormation is the only entity that's allowed to update the EnvManagerRole so we have to go through this route.
+	// See #3556.
+	var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
+	o.prog.Start("Update the environment's manager role with permission to upload artifacts to S3")
+	err := cfn.UpdateEnvironmentTemplate(app, env, updatedBody, execRole)
+	if err != nil && !errors.As(err, &errEmptyChangeSet) {
+		o.prog.Stop(log.Serrorln("Unable to update the environment's manager role with upload artifacts permission"))
+		return fmt.Errorf("update environment template with PutObject permissions: %v", err)
+	}
+	o.prog.Stop(log.Ssuccessln("Updated the environment's manager role with permissions to upload artifacts to S3"))
+	return nil
+}
+
+func (o *envUpgradeOpts) upgrade(env *config.Environment, app *config.Application,
 	artifactBucketARN, artifactBucketKeyARN string, customResourcesURLs map[string]string) (err error) {
 	version, err := o.envVersion(env.Name)
 	if err != nil {
@@ -233,9 +350,9 @@ func (o *envUpgradeOpts) upgrade(env *config.Environment,
 		return err
 	}
 	if version == deploy.LegacyEnvTemplateVersion {
-		return o.upgradeLegacyEnvironment(upgrader, env, artifactBucketARN, artifactBucketKeyARN, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
+		return o.upgradeLegacyEnvironment(upgrader, env, app, artifactBucketARN, artifactBucketKeyARN, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
 	}
-	return o.upgradeEnvironment(upgrader, env, artifactBucketARN, artifactBucketKeyARN, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
+	return o.upgradeEnvironment(upgrader, env, app, artifactBucketARN, artifactBucketKeyARN, customResourcesURLs, version, deploy.LatestEnvTemplateVersion)
 }
 
 func (o *envUpgradeOpts) envVersion(name string) (string, error) {
@@ -269,20 +386,23 @@ Are you using the latest version of AWS Copilot?`, env, deploy.LatestEnvTemplate
 	return false
 }
 
-func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.Environment,
+func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.Environment, app *config.Application,
 	artifactBucketARN, artifactBucketKeyARN string,
 	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	var importedVPC *config.ImportVPC
 	var adjustedVPC *config.AdjustVPC
+	var importCertARNs []string
 	if conf.CustomConfig != nil {
 		importedVPC = conf.CustomConfig.ImportVPC
 		adjustedVPC = conf.CustomConfig.VPCConfig
+		importCertARNs = conf.CustomConfig.ImportCertARNs
 	}
 
 	if err := upgrader.UpgradeEnvironment(&deploy.CreateEnvironmentInput{
 		Version: toVersion,
 		App: deploy.AppInformation{
-			Name: conf.App,
+			Name:   app.Name,
+			Domain: app.Domain,
 		},
 		Name:                 conf.Name,
 		ArtifactBucketKeyARN: artifactBucketKeyARN,
@@ -290,14 +410,16 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 		CustomResourcesURLs:  customResourcesURLs,
 		ImportVPCConfig:      importedVPC,
 		AdjustVPCConfig:      adjustedVPC,
+		ImportCertARNs:       importCertARNs,
 		CFNServiceRoleARN:    conf.ExecutionRoleARN,
+		Telemetry:            conf.Telemetry,
 	}); err != nil {
 		return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 	}
 	return nil
 }
 
-func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, conf *config.Environment,
+func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, conf *config.Environment, app *config.Application,
 	artifactBucketARN, artifactBucketKeyARN string,
 	customResourcesURLs map[string]string, fromVersion, toVersion string) error {
 	isDefaultEnv, err := o.isDefaultLegacyTemplate(upgrader, conf.App, conf.Name)
@@ -312,13 +434,15 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironment(upgrader legacyEnvUpgrader, co
 		if err := upgrader.UpgradeLegacyEnvironment(&deploy.CreateEnvironmentInput{
 			Version: toVersion,
 			App: deploy.AppInformation{
-				Name: conf.App,
+				Name:   app.Name,
+				Domain: app.Domain,
 			},
 			Name:                 conf.Name,
 			ArtifactBucketKeyARN: artifactBucketKeyARN,
 			ArtifactBucketARN:    artifactBucketARN,
 			CustomResourcesURLs:  customResourcesURLs,
 			CFNServiceRoleARN:    conf.ExecutionRoleARN,
+			Telemetry:            conf.Telemetry,
 		}, albWorkloads...); err != nil {
 			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 		}
@@ -365,6 +489,7 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironmentWithVPCOverrides(upgrader legac
 			Name:              conf.Name,
 			ImportVPCConfig:   conf.CustomConfig.ImportVPC,
 			AdjustVPCConfig:   conf.CustomConfig.VPCConfig,
+			ImportCertARNs:    conf.CustomConfig.ImportCertARNs,
 			CFNServiceRoleARN: conf.ExecutionRoleARN,
 		}, albWorkloads...); err != nil {
 			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)

@@ -11,7 +11,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline/mocks"
-	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/golang/mock/gomock"
 
 	"github.com/aws/aws-sdk-go/service/codepipeline"
@@ -253,83 +252,6 @@ func TestCodePipeline_GetPipeline(t *testing.T) {
 			// THEN
 			require.Equal(t, tc.expectedError, err)
 			require.Equal(t, tc.expectedOut, actualOut)
-		})
-	}
-}
-
-func TestCodePipeline_ListPipelinesForProject(t *testing.T) {
-	mockProjectName := "dinder"
-	mockPipelineName := "pipeline-dinder-badgoose-repo"
-	mockError := errors.New("mockError")
-	mockOutput := []*rg.Resource{
-		{ARN: "arn:aws:codepipeline:us-west-2:1234567890:" + mockPipelineName},
-	}
-	testTags := map[string]string{
-		"copilot-application": mockProjectName,
-	}
-	badArn := "badArn"
-
-	tests := map[string]struct {
-		inProjectName string
-		callMocks     func(m codepipelineMocks)
-		expectedOut   []string
-
-		expectedError error
-	}{
-		"happy path": {
-			inProjectName: mockProjectName,
-			callMocks: func(m codepipelineMocks) {
-				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return(mockOutput, nil)
-			},
-			expectedOut:   []string{mockPipelineName},
-			expectedError: nil,
-		},
-		"should return error from resourcegroups client": {
-			inProjectName: mockProjectName,
-			callMocks: func(m codepipelineMocks) {
-				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return(nil, mockError)
-			},
-			expectedOut:   nil,
-			expectedError: mockError,
-		},
-		"should return error for bad arns": {
-			inProjectName: mockProjectName,
-			callMocks: func(m codepipelineMocks) {
-				m.rg.EXPECT().GetResourcesByTags(pipelineResourceType, testTags).Return([]*rg.Resource{{ARN: badArn}}, nil)
-			},
-			expectedOut:   nil,
-			expectedError: fmt.Errorf("parse pipeline ARN: %s", badArn),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockClient := mocks.NewMockapi(ctrl)
-			mockrgClient := mocks.NewMockresourceGetter(ctrl)
-			mocks := codepipelineMocks{
-				cp: mockClient,
-				rg: mockrgClient,
-			}
-			tc.callMocks(mocks)
-
-			cp := CodePipeline{
-				client:   mockClient,
-				rgClient: mockrgClient,
-			}
-
-			// WHEN
-			actualOut, actualErr := cp.ListPipelineNamesByTags(testTags)
-
-			// THEN
-			if actualErr != nil {
-				require.EqualError(t, tc.expectedError, actualErr.Error())
-			} else {
-				require.Equal(t, tc.expectedOut, actualOut)
-			}
 		})
 	}
 }

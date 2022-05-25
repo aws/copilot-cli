@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -31,6 +30,7 @@ var (
 	errValueTooLong         = errors.New("value must not exceed 255 characters")
 	errValueBadFormat       = errors.New("value must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 	errValueNotAString      = errors.New("value must be a string")
+	errValueReserved        = errors.New("value is reserved")
 	errValueNotAStringSlice = errors.New("value must be a string slice")
 	errValueNotAValidPath   = errors.New("value must be a valid path")
 	errValueNotAnIPNet      = errors.New("value must be a valid IP address range (example: 10.0.0.0/16)")
@@ -70,8 +70,6 @@ var (
 	errMissingPublishTopicField = errors.New("field `publish.topics[].name` cannot be empty")
 	errInvalidPubSubTopicName   = errors.New("topic names can only contain letters, numbers, underscores, and hyphens")
 	errSubscribeBadFormat       = errors.New("value must be of the form <serviceName>:<topicName>")
-
-	fmtErrTopicSubscriptionNotAllowed = "SNS topic %s does not exist in environment %s"
 )
 
 const fmtErrValueBadSize = "value must be between %d and %d characters in length"
@@ -80,6 +78,12 @@ const fmtErrValueBadSize = "value must be between %d and %d characters in length
 var (
 	errAppRunnerSvcNameTooLong    = errors.New("value must not exceed 40 characters")
 	errAppRunnerImageNotSupported = errors.New("value must be an ECR or ECR Public image URI")
+)
+
+// Pipelines
+const (
+	maxPipelineStackNameLen   = 128
+	fmtErrPipelineNameTooLong = "value must not exceed %d characters"
 )
 
 var (
@@ -156,9 +160,15 @@ var (
 	regexpMatchSubscription = regexp.MustCompile(`^(\S+):(\S+)`)     // Validates that an expression contains the format serviceName:topicName
 )
 
-var resourceNameFormat = "%s-%s-%s-%s" // Format for copilot resource names of form app-env-svc-name
-
 const regexpFindAllMatches = -1
+
+// reservedWorkloadNames is a constant map of reserved workload names that users are not allowed to name their workloads
+func reservedWorkloadNames() map[string]bool {
+	return map[string]bool{
+		"pipelines":    true, // reserved to avoid directory conflict with copilot pipelines
+		"environments": true, // reserved to avoid directory conflict with copilot environments
+	}
+}
 
 func validateAppName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
@@ -178,11 +188,25 @@ func validateSvcName(val interface{}, svcType string) error {
 	if err != nil {
 		return fmt.Errorf("service name %v is invalid: %w", val, err)
 	}
+	if err := validateNotReservedWorkloadName(val); err != nil {
+		return fmt.Errorf("service name %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
+func validateNotReservedWorkloadName(val interface{}) error {
+	name, ok := val.(string)
+	switch {
+	case !ok:
+		return errValueNotAString
+	case reservedWorkloadNames()[name]:
+		return errValueReserved
+	}
+
 	return nil
 }
 
 func validateSvcPort(val interface{}) error {
-
 	if err := basicPortValidation(val); err != nil {
 		return fmt.Errorf("port %v is invalid: %w", val, err)
 	}
@@ -194,7 +218,7 @@ func validateSvcType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	return validateWorkloadType(svcType, manifest.ServiceTypes, service)
+	return validateWorkloadType(svcType, manifest.ServiceTypes(), service)
 }
 
 func validateWorkloadType(wkldType string, validTypes []string, errFlavor string) error {
@@ -212,12 +236,37 @@ func validateJobType(val interface{}) error {
 	if !ok {
 		return errValueNotAString
 	}
-	return validateWorkloadType(jobType, manifest.JobTypes, "job")
+	return validateWorkloadType(jobType, manifest.JobTypes(), job)
 }
 
 func validateJobName(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
 		return fmt.Errorf("job name %v is invalid: %w", val, err)
+	}
+	if err := validateNotReservedWorkloadName(val); err != nil {
+		return fmt.Errorf("service name %v is invalid: %w", val, err)
+	}
+	return nil
+}
+
+func validatePipelineName(val interface{}, appName string) error {
+	// compute the longest name a user can name their pipeline for this app
+	// since we prefix their name with 'pipeline-[app]-'. the limit is required
+	// because it's the name we give the cfn stack for the pipeline.
+	maxNameLen := maxPipelineStackNameLen - len(fmt.Sprintf(fmtPipelineStackName, appName, ""))
+	errFmt := "pipeline name %v is invalid: %w"
+
+	if err := basicNameValidation(val); err != nil {
+		return fmt.Errorf(errFmt, val, err)
+	}
+
+	name, ok := val.(string)
+	switch {
+	case !ok:
+		return fmt.Errorf(errFmt, val, errValueNotAString)
+	case len(name) > maxNameLen:
+		err := fmt.Errorf(fmtErrPipelineNameTooLong, maxNameLen)
+		return fmt.Errorf(errFmt, val, err)
 	}
 	return nil
 }
@@ -737,25 +786,6 @@ func validatePubSubName(name string) error {
 		return errInvalidPubSubTopicName
 	}
 
-	return nil
-}
-
-func validateTopicsExist(subscriptions []manifest.TopicSubscription, topicARNs []string, app, env string) error {
-	validTopicResources := make([]string, 0, len(topicARNs))
-	for _, topic := range topicARNs {
-		parsedTopic, err := arn.Parse(topic)
-		if err != nil {
-			continue
-		}
-		validTopicResources = append(validTopicResources, parsedTopic.Resource)
-	}
-
-	for _, ts := range subscriptions {
-		topicName := fmt.Sprintf(resourceNameFormat, app, env, aws.StringValue(ts.Service), aws.StringValue(ts.Name))
-		if !contains(topicName, validTopicResources) {
-			return fmt.Errorf(fmtErrTopicSubscriptionNotAllowed, topicName, env)
-		}
-	}
 	return nil
 }
 

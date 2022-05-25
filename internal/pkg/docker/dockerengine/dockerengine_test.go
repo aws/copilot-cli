@@ -38,6 +38,7 @@ func TestDockerCommand_Build(t *testing.T) {
 		args       map[string]string
 		target     string
 		cacheFrom  []string
+		envVars    map[string]string
 		setupMocks func(controller *gomock.Controller)
 
 		wantedError error
@@ -66,6 +67,22 @@ func TestDockerCommand_Build(t *testing.T) {
 					"-t", mockURI,
 					"-t", "mockURI:tag1", "mockPath/to",
 					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
+			},
+		},
+		"should display quiet progress updates when in a CI environment": {
+			path:    mockPath,
+			context: "",
+			envVars: map[string]string{
+				"CI": "true",
+			},
+			setupMocks: func(controller *gomock.Controller) {
+				mockCmd = NewMockCmd(controller)
+
+				mockCmd.EXPECT().Run("docker", []string{"build",
+					"-t", mockURI,
+					"--progress", "plain",
+					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).
+					Return(nil)
 			},
 		},
 		"context differs from path": {
@@ -145,7 +162,13 @@ func TestDockerCommand_Build(t *testing.T) {
 			controller := gomock.NewController(t)
 			tc.setupMocks(controller)
 			s := CmdClient{
-				runner:  mockCmd,
+				runner: mockCmd,
+				lookupEnv: func(key string) (string, bool) {
+					if val, ok := tc.envVars[key]; ok {
+						return val, true
+					}
+					return "", false
+				},
 				runtime: dockerBinary,
 			}
 			buildInput := BuildArguments{
@@ -217,6 +240,9 @@ func TestDockerCommand_Login(t *testing.T) {
 }
 
 func TestDockerCommand_Push(t *testing.T) {
+	emptyLookupEnv := func(key string) (string, bool) {
+		return "", false
+	}
 	t.Run("pushes an image with multiple tags and returns its digest", func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
@@ -233,10 +259,40 @@ func TestDockerCommand_Push(t *testing.T) {
 
 		// WHEN
 		cmd := CmdClient{
-			runner:  m,
+			runner:    m,
+			lookupEnv: emptyLookupEnv,
 			runtime: dockerBinary,
 		}
 		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "g123bfc")
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, "sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807", digest)
+	})
+	t.Run("should display quiet progress updates when in a CI environment", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		m := NewMockCmd(ctrl)
+		m.EXPECT().Run("docker", []string{"push", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "--quiet"}).Return(nil)
+		m.EXPECT().Run("docker", []string{"inspect", "--format", "'{{json (index .RepoDigests 0)}}'", "aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app"}, gomock.Any()).
+			Do(func(_ string, _ []string, opt exec.CmdOption) {
+				cmd := &osexec.Cmd{}
+				opt(cmd)
+				_, _ = cmd.Stdout.Write([]byte("\"aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app@sha256:f1d4ae3f7261a72e98c6ebefe9985cf10a0ea5bd762585a43e0700ed99863807\"\n"))
+			}).Return(nil)
+
+		// WHEN
+		cmd := CmdClient{
+			runner: m,
+			lookupEnv: func(key string) (string, bool) {
+				if key == "CI" {
+					return "true", true
+				}
+				return "", false
+			},
+		}
+		digest, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app")
 
 		// THEN
 		require.NoError(t, err)
@@ -251,8 +307,9 @@ func TestDockerCommand_Push(t *testing.T) {
 
 		// WHEN
 		cmd := CmdClient{
-			runner:  m,
 			runtime: dockerBinary,
+			runner:    m,
+			lookupEnv: emptyLookupEnv,
 		}
 		_, err := cmd.Push("uri")
 
@@ -269,8 +326,9 @@ func TestDockerCommand_Push(t *testing.T) {
 
 		// WHEN
 		cmd := CmdClient{
-			runner:  m,
 			runtime: dockerBinary,
+			runner:    m,
+			lookupEnv: emptyLookupEnv,
 		}
 		_, err := cmd.Push("uri")
 
@@ -293,8 +351,9 @@ func TestDockerCommand_Push(t *testing.T) {
 
 		// WHEN
 		cmd := CmdClient{
-			runner:  m,
 			runtime: dockerBinary,
+			runner:    m,
+			lookupEnv: emptyLookupEnv,
 		}
 		_, err := cmd.Push("aws_account_id.dkr.ecr.region.amazonaws.com/my-web-app", "g123bfc")
 

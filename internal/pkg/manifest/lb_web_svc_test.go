@@ -72,7 +72,9 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: &PublicSubnetPlacement,
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 						},
 					},
 				},
@@ -146,7 +148,9 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement: &PublicSubnetPlacement,
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 						},
 					},
 				},
@@ -418,9 +422,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"LOG_LEVEL":      "DEBUG",
 							"DDB_TABLE_NAME": "awards",
 						},
-						Secrets: map[string]string{
-							"GITHUB_TOKEN": "1111",
-							"TWILIO_TOKEN": "1111",
+						Secrets: map[string]Secret{
+							"GITHUB_TOKEN": {from: aws.String("1111")},
+							"TWILIO_TOKEN": {from: aws.String("1111")},
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
@@ -454,7 +458,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      &PublicSubnetPlacement,
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 							SecurityGroups: []string{"sg-123"},
 						},
 					},
@@ -516,8 +522,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 						Logging: Logging{
-							SecretOptions: map[string]string{
-								"FOO": "BAR",
+							SecretOptions: map[string]Secret{
+								"FOO": {from: aws.String("BAR")},
 							},
 						},
 						Network: NetworkConfig{
@@ -567,9 +573,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							"LOG_LEVEL":      "DEBUG",
 							"DDB_TABLE_NAME": "awards-prod",
 						},
-						Secrets: map[string]string{
-							"GITHUB_TOKEN": "1111",
-							"TWILIO_TOKEN": "1111",
+						Secrets: map[string]Secret{
+							"GITHUB_TOKEN": {from: aws.String("1111")},
+							"TWILIO_TOKEN": {from: aws.String("1111")},
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
@@ -609,13 +615,15 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Logging: Logging{
 						ConfigFile: aws.String("mockConfigFile"),
-						SecretOptions: map[string]string{
-							"FOO": "BAR",
+						SecretOptions: map[string]Secret{
+							"FOO": {from: aws.String("BAR")},
 						},
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      &PublicSubnetPlacement,
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
@@ -686,7 +694,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      &PublicSubnetPlacement,
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
@@ -710,7 +720,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					},
 					Network: NetworkConfig{
 						VPC: vpcConfig{
-							Placement:      &PublicSubnetPlacement,
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
 							SecurityGroups: []string{"sg-456", "sg-789"},
 						},
 					},
@@ -1400,138 +1412,6 @@ func TestLoadBalancedWebService_BuildRequired(t *testing.T) {
 	}
 }
 
-func TestLoadBalancedWebService_HasAliases(t *testing.T) {
-	testCases := map[string]struct {
-		config LoadBalancedWebServiceConfig
-		want   bool
-	}{
-		"use http aliases": {
-			config: LoadBalancedWebServiceConfig{
-				RoutingRule: RoutingRuleConfigOrBool{
-					RoutingRuleConfiguration: RoutingRuleConfiguration{
-						Alias: Alias{
-							String: aws.String("mockAlias"),
-						},
-					},
-				},
-			},
-			want: true,
-		},
-		"use nlb aliases": {
-			config: LoadBalancedWebServiceConfig{
-				NLBConfig: NetworkLoadBalancerConfiguration{
-					Aliases: Alias{
-						StringSlice: []string{"mockAlias", "mockAnotherAlias"},
-					},
-				},
-			},
-			want: true,
-		},
-		"both http and nlb use aliases": {
-			config: LoadBalancedWebServiceConfig{
-				RoutingRule: RoutingRuleConfigOrBool{
-					RoutingRuleConfiguration: RoutingRuleConfiguration{
-						Alias: Alias{
-							StringSlice: []string{"mockAlias", "mockAnotherAlias"},
-						},
-					},
-				},
-				NLBConfig: NetworkLoadBalancerConfiguration{
-					Aliases: Alias{
-						String: aws.String("mockAlias"),
-					},
-				},
-			},
-			want: true,
-		},
-		"not using aliases": {
-			config: LoadBalancedWebServiceConfig{},
-			want:   false,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			manifest := &LoadBalancedWebService{
-				LoadBalancedWebServiceConfig: tc.config,
-			}
-
-			// WHEN
-			got := manifest.HasAliases()
-
-			// THEN
-			require.Equal(t, tc.want, got)
-		})
-	}
-}
-
-func TestAlias_IsEmpty(t *testing.T) {
-	testCases := map[string]struct {
-		in     Alias
-		wanted bool
-	}{
-		"empty alias": {
-			in:     Alias{},
-			wanted: true,
-		},
-		"non empty alias": {
-			in: Alias{
-				String: aws.String("alias test"),
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			got := tc.in.IsEmpty()
-
-			// THEN
-			require.Equal(t, tc.wanted, got)
-		})
-	}
-}
-
-func TestRoutingRuleConfigOrBool_Disabled(t *testing.T) {
-	testCases := map[string]struct {
-		in     RoutingRuleConfigOrBool
-		wanted bool
-	}{
-		"disabled": {
-			in: RoutingRuleConfigOrBool{
-				Enabled: aws.Bool(false),
-			},
-			wanted: true,
-		},
-		"enabled implicitly": {
-			in: RoutingRuleConfigOrBool{},
-		},
-		"enabled explicitly": {
-			in: RoutingRuleConfigOrBool{
-				Enabled: aws.Bool(true),
-			},
-		},
-		"enabled explicitly by advanced configuration": {
-			in: RoutingRuleConfigOrBool{
-				RoutingRuleConfiguration: RoutingRuleConfiguration{
-					Path: aws.String("mockPath"),
-				},
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			got := tc.in.Disabled()
-
-			// THEN
-			require.Equal(t, tc.wanted, got)
-		})
-	}
-}
-
 func TestNetworkLoadBalancerConfiguration_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
 		in     NetworkLoadBalancerConfiguration
@@ -1552,35 +1432,6 @@ func TestNetworkLoadBalancerConfiguration_IsEmpty(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
 			got := tc.in.IsEmpty()
-
-			// THEN
-			require.Equal(t, tc.wanted, got)
-		})
-	}
-}
-
-func TestAlias_ToString(t *testing.T) {
-	testCases := map[string]struct {
-		inAlias Alias
-		wanted  string
-	}{
-		"alias using string": {
-			inAlias: Alias{
-				String: stringP("example.com"),
-			},
-			wanted: "example.com",
-		},
-		"alias using string slice": {
-			inAlias: Alias{
-				StringSlice: []string{"example.com", "v1.example.com"},
-			},
-			wanted: "example.com,v1.example.com",
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			got := tc.inAlias.ToString()
 
 			// THEN
 			require.Equal(t, tc.wanted, got)

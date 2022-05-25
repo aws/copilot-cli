@@ -120,6 +120,17 @@ batch:
           APP_REGION: eu-west-1
           TESTENV_REGION: eu-west-1
           PRODENV_REGION: eu-central-1
+    - identifier: multi_pipeline
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+        compute-type: BUILD_GENERAL1_LARGE
+        image: aws/codebuild/standard:5.0
+        variables:
+          TEST_SUITE: multi-pipeline
+          APP_REGION: ap-northeast-1
+          TESTENV_REGION: ap-northeast-1
+          PRODENV_REGION: ap-southeast-1
     - identifier: worker
       env:
         privileged-mode: true
@@ -136,8 +147,8 @@ phases:
       nodejs: 12
     commands:
       - 'cd $HOME/.goenv && git pull --ff-only && cd -'
-      - 'goenv install 1.17.1'
-      - 'goenv global 1.17.1'
+      - 'goenv install 1.18.0'
+      - 'goenv global 1.18.0'
   pre_build:
     commands:
        - printenv DOCKERHUB_TOKEN | docker login --username ${DOCKERHUB_USERNAME} --password-stdin

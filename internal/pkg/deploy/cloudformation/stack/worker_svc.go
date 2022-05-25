@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -100,6 +101,7 @@ func (s *WorkerService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
+
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -108,7 +110,7 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	subscribe, err := convertSubscribe(s.manifest.Subscribe, s.rc.AccountID, s.rc.Region, s.app, s.env, s.name)
+	subscribe, err := convertSubscribe(s.manifest.Subscribe)
 	if err != nil {
 		return "", err
 	}
@@ -118,7 +120,7 @@ func (s *WorkerService) Template() (string, error) {
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
 		Variables:                      s.manifest.WorkerServiceConfig.Variables,
-		Secrets:                        s.manifest.WorkerServiceConfig.Secrets,
+		Secrets:                        convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
 		NestedStack:                    addonsOutputs,
 		AddonsExtraParams:              addonsParams,
 		Sidecars:                       sidecars,
@@ -135,6 +137,7 @@ func (s *WorkerService) Template() (string, error) {
 		BacklogPerTaskCalculatorLambda: backlogPerTaskLambda.String(),
 		Storage:                        convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                        convertNetworkConfig(s.manifest.Network),
+		DeploymentConfiguration:        convertDeploymentConfig(s.manifest.DeployConfig),
 		EntryPoint:                     entrypoint,
 		Command:                        command,
 		DependsOn:                      convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
@@ -143,6 +146,9 @@ func (s *WorkerService) Template() (string, error) {
 		Subscribe:                      subscribe,
 		Publish:                        publishers,
 		Platform:                       convertPlatform(s.manifest.Platform),
+		Observability: template.ObservabilityOpts{
+			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
+		},
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)

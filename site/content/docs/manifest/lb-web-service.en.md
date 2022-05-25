@@ -3,62 +3,66 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
 ???+ note "Sample manifest for a frontend service"
 
     ```yaml
-    # Your service name will be used in naming your resources like log groups, ECS services, etc.
-    name: frontend
-    type: Load Balanced Web Service
+        # Your service name will be used in naming your resources like log groups, ECS services, etc.
+        name: frontend
+        type: Load Balanced Web Service
 
-    # Distribute traffic to your service.
-    http:
-      path: '/'
-      healthcheck:
-        path: '/_healthcheck'
-        success_codes: '200,301'
-        healthy_threshold: 3
-        unhealthy_threshold: 2
-        interval: 15s
-        timeout: 10s
-        grace_period: 45s
-      deregistration_delay: 5s
-      stickiness: false
-      allowed_source_ips: ["10.24.34.0/23"]
-      alias: example.com
+        # Distribute traffic to your service.
+        http:
+          path: '/'
+          healthcheck:
+            path: '/_healthcheck'
+            port: 8080
+            success_codes: '200,301'
+            healthy_threshold: 3
+            unhealthy_threshold: 2
+            interval: 15s
+            timeout: 10s
+            grace_period: 45s
+          deregistration_delay: 5s
+          stickiness: false
+          allowed_source_ips: ["10.24.34.0/23"]
+          alias: example.com
 
-    # Configuration for your containers and service.
-    image:
-      build:
-        dockerfile: ./frontend/Dockerfile
-        context: ./frontend
-      port: 80
+        nlb:
+          port: 443/tls
 
-    cpu: 256
-    memory: 512
-    count:
-      range: 1-10
-      cpu_percentage: 70
-      memory_percentage: 80
-      requests: 10000
-      response_time: 2s
-    exec: true
+        # Configuration for your containers and service.
+        image:
+          build:
+            dockerfile: ./frontend/Dockerfile
+            context: ./frontend
+          port: 80
 
-    variables:
-      LOG_LEVEL: info
-    env_file: log.env
-    secrets:
-      GITHUB_TOKEN: GITHUB_TOKEN
-
-    # You can override any of the values defined above by environment.
-    environments:
-      test:
+        cpu: 256
+        memory: 512
         count:
-          range:
-            min: 1
-            max: 10
-            spot_from: 2
-      staging:
-        count:
-          spot: 2
-      production:
-        count: 2
+          range: 1-10
+          cpu_percentage: 70
+          memory_percentage: 80
+          requests: 10000
+          response_time: 2s
+        exec: true
+
+        variables:
+          LOG_LEVEL: info
+        env_file: log.env
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
+
+        # You can override any of the values defined above by environment.
+        environments:
+          test:
+            count:
+              range:
+                min: 1
+                max: 10
+                spot_from: 2
+          staging:
+            count:
+              spot: 2
+          production:
+            count: 2
     ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
@@ -70,6 +74,8 @@ The name of your service.
 The architecture type for your service. A [Load Balanced Web Service](../concepts/services.en.md#load-balanced-web-service) is an internet-facing service that's behind a load balancer, orchestrated by Amazon ECS on AWS Fargate.
 
 {% include 'http-config.en.md' %}
+
+{% include 'nlb.en.md' %}
 
 {% include 'image-config-with-port.en.md' %}
 
@@ -153,6 +159,8 @@ Scale up or down based on the service average response time.
 
 {% include 'exec.en.md' %}
 
+{% include 'deployment.en.md' %}
+
 {% include 'entrypoint.en.md' %}
 
 {% include 'command.en.md' %}
@@ -168,6 +176,8 @@ Scale up or down based on the service average response time.
 {% include 'publish.en.md' %}
 
 {% include 'logging.en.md' %}
+
+{% include 'observability.en.md' %}
 
 {% include 'taskdef-overrides.en.md' %}
 

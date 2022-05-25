@@ -2,61 +2,68 @@
 
 ???+ note "frontend Service のサンプル Manifest"
 
-```yaml
-# Service 名はロググループや ECS サービスなどのリソースの命名に利用されます。
-name: frontend
-type: Load Balanced Web Service
+    ```yaml
+        # Service 名はロググループや ECS サービスなどのリソースの命名に利用されます。
+        name: frontend
+        type: Load Balanced Web Service
 
-# Serviceのトラフィックを分散します。
-http:
-  path: '/'
-  healthcheck:
-    path: '/_healthcheck'
-    healthy_threshold: 3
-    unhealthy_threshold: 2
-    interval: 15s
-    timeout: 10s
-    grace_period: 45s
-  deregistration_delay: 5s
-  stickiness: false
-  allowed_source_ips: ["10.24.34.0/23"]
+        # Serviceのトラフィックを分散します。
+        http:
+          path: '/'
+          healthcheck:
+            path: '/_healthcheck'
+            port: 8080
+            success_codes: '200,301'
+            healthy_threshold: 3
+            unhealthy_threshold: 2
+            interval: 15s
+            timeout: 10s
+            grace_period: 45s
+          deregistration_delay: 5s
+          stickiness: false
+          allowed_source_ips: ["10.24.34.0/23"]
+          alias: example.com
 
-# コンテナと Service の構成
-image:
-  build:
-    dockerfile: ./frontend/Dockerfile
-    context: ./frontend
-  port: 80
+        nlb:
+          port: 443/tls
 
-cpu: 256
-memory: 512
-count:
-  range: 1-10
-  cpu_percentage: 70
-  memory_percentage: 80
-  requests: 10000
-  response_time: 2s
-exec: true
+        # コンテナと Service の構成
+        image:
+          build:
+            dockerfile: ./frontend/Dockerfile
+            context: ./frontend
+          port: 80
 
-variables:
-  LOG_LEVEL: info
-secrets:
-  GITHUB_TOKEN: GITHUB_TOKEN
+        cpu: 256
+        memory: 512
+        count:
+          range: 1-10
+          cpu_percentage: 70
+          memory_percentage: 80
+          requests: 10000
+          response_time: 2s
+        exec: true
 
-# 上記すべての値は Environment ごとにオーバーライド可能です。
-environments:
-  test:
-    count:
-      range:
-        min: 1
-        max: 10
-        spot_from: 2
-  staging:
-    count:
-      spot: 2
-  production:
-    count: 2
-```
+        variables:
+          LOG_LEVEL: info
+        env_file: log.env
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
+
+        # 上記すべての値は Environment ごとにオーバーライド可能です。
+        environments:
+          test:
+            count:
+              range:
+                min: 1
+                max: 10
+                spot_from: 2
+          staging:
+            count:
+              spot: 2
+          production:
+            count: 2
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。
@@ -67,6 +74,8 @@ Service の名前。
 Service のアーキテクチャタイプ。 [Load Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service) は、ロードバランサー及び AWS Fargate 上の Amazon ECS によって構成される、インターネットに公開するための Service です。
 
 {% include 'http-config.ja.md' %}
+
+{% include 'nlb.ja.md' %}
 
 {% include 'image-config-with-port.ja.md' %}
 
@@ -92,6 +101,8 @@ Service は、希望するタスク数を 5 に設定し、Service 内に 5 つ�
 count:
   spot: 5
 ```
+!!! info
+    ARM アーキテクチャで動作するコンテナでは、Fargate Spot はサポートされていません。
 
 <div class="separator"></div>
 

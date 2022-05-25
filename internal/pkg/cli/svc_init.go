@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
@@ -39,6 +42,7 @@ Other repositories are specified with either repository-url/image:tag or reposit
 const (
 	defaultSvcPortString = "80"
 	service              = "service"
+	job                  = "job"
 )
 
 var (
@@ -121,6 +125,10 @@ type initSvcOpts struct {
 	platform     *manifest.PlatformString
 	topics       []manifest.TopicSubscription
 
+	// For workspace validation.
+	wsAppName         string
+	wsPendingCreation bool
+
 	// Cache variables
 	df dockerfileParser
 
@@ -129,24 +137,19 @@ type initSvcOpts struct {
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
-	store, err := config.NewStore()
-	if err != nil {
-		return nil, fmt.Errorf("couldn't connect to config store: %w", err)
-	}
-
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 
-	p := sessions.NewProvider()
-	sess, err := p.Default()
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc init"))
+	sess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
 	}
+	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
 	prompter := prompt.New()
-	sel := selector.NewWorkspaceSelect(prompter, store, ws)
-	deployStore, err := deploy.NewStore(store)
+	deployStore, err := deploy.NewStore(sessProvider, store)
 	if err != nil {
 		return nil, err
 	}
@@ -158,17 +161,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
 	}
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	opts := &initSvcOpts{
-		initSvcVars:     vars,
-		store:           store,
-		fs:              fs,
-		init:            initSvc,
-		prompt:          prompter,
-		sel:             sel,
-		topicSel:        snsSel,
-		mftReader:       ws,
+		initSvcVars:  vars,
+		store:        store,
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		init:         initSvc,
+		prompt:       prompter,
+		sel:          selector.NewWorkspaceSelector(prompter, ws),
+		topicSel:     snsSel,
+		mftReader:    ws,
 		containerEngine: dockerengine.New(exec.NewCmd()),
+		wsAppName:    tryReadingAppName(),
 	}
 	opts.dockerfile = func(path string) dockerfileParser {
 		if opts.df != nil {
@@ -180,23 +183,14 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	return opts, nil
 }
 
-// Validate returns an error if the flag values passed by the user are invalid.
+// Validate returns an error for any invalid optional flags.
 func (o *initSvcOpts) Validate() error {
-	if o.appName == "" {
-		return errNoAppInWorkspace
-	}
-	if o.wkldType != "" {
-		if err := validateSvcType(o.wkldType); err != nil {
+	// If this app is pending creation, we'll skip validation.
+	if !o.wsPendingCreation {
+		if err := validateWorkspaceApp(o.wsAppName, o.appName, o.store); err != nil {
 			return err
 		}
-	}
-	if o.name != "" {
-		if err := validateSvcName(o.name, o.wkldType); err != nil {
-			return err
-		}
-		if err := o.validateDuplicateSvc(); err != nil {
-			return err
-		}
+		o.appName = o.wsAppName
 	}
 	if o.dockerfilePath != "" && o.image != "" {
 		return fmt.Errorf("--%s and --%s cannot be specified together", dockerFileFlag, imageFlag)
@@ -222,36 +216,53 @@ func (o *initSvcOpts) Validate() error {
 	return nil
 }
 
-// Ask prompts for fields that are required but not passed in.
+// Ask prompts for and validates any required flags.
 func (o *initSvcOpts) Ask() error {
-	if err := o.askSvcName(); err != nil {
-		return err
-	}
-	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
-	if err == nil {
-		svcType, err := localMft.WorkloadType()
-		if err != nil {
-			return fmt.Errorf(`read "type" field for service %s from local manifest: %w`, o.name, err)
+	// NOTE: we optimize the case where `name` is given as a flag while `wkldType` is not.
+	// In this case, we can try reading the manifest, and set `wkldType` to the value found in the manifest
+	// without having to validate it. We can then short circuit the rest of the prompts for an optimal UX.
+	if o.name != "" && o.wkldType == "" {
+		// Best effort to validate the service name without type.
+		if err := o.validateSvc(); err != nil {
+			return err
 		}
-		o.wkldType = svcType
-		log.Infof("Manifest file for service %s already exists. Skipping configuration.\n", o.name)
-		return nil
+		shouldSkipAsking, err := o.shouldSkipAsking()
+		if err != nil {
+			return err
+		}
+		if shouldSkipAsking {
+			return nil
+		}
 	}
-	var (
-		errNotFound          *workspace.ErrFileNotExists
-		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
-	)
-	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
-		return fmt.Errorf("read manifest file for service %s: %w", o.name, err)
+	if o.wkldType != "" {
+		if err := validateSvcType(o.wkldType); err != nil {
+			return err
+		}
+	} else {
+		if err := o.askSvcType(); err != nil {
+			return err
+		}
 	}
-	if err := o.askSvcType(); err != nil {
+	if o.name == "" {
+		if err := o.askSvcName(); err != nil {
+			return err
+		}
+	}
+	if err := o.validateSvc(); err != nil {
 		return err
 	}
-	dfSelected, err := o.askDockerfile()
+	shouldSkipAsking, err := o.shouldSkipAsking()
 	if err != nil {
 		return err
 	}
-	if !dfSelected {
+	if shouldSkipAsking {
+		return nil
+	}
+	err = o.askDockerfile()
+	if err != nil {
+		return err
+	}
+	if o.dockerfilePath == "" {
 		if err := o.askImage(); err != nil {
 			return err
 		}
@@ -333,6 +344,13 @@ func (o *initSvcOpts) askSvcType() error {
 	return nil
 }
 
+func (o *initSvcOpts) validateSvc() error {
+	if err := validateSvcName(o.name, o.wkldType); err != nil {
+		return err
+	}
+	return o.validateDuplicateSvc()
+}
+
 func (o *initSvcOpts) validateDuplicateSvc() error {
 	_, err := o.store.GetService(o.appName, o.name)
 	if err == nil {
@@ -355,9 +373,6 @@ If you'd prefer a new default manifest, please manually delete the existing one.
 }
 
 func (o *initSvcOpts) askSvcName() error {
-	if o.name != "" {
-		return nil
-	}
 	name, err := o.prompt.Get(
 		fmt.Sprintf(fmtWkldInitNamePrompt, color.Emphasize("name"), "service"),
 		fmt.Sprintf(fmtWkldInitNameHelpPrompt, service, o.appName),
@@ -369,7 +384,7 @@ func (o *initSvcOpts) askSvcName() error {
 		return fmt.Errorf("get service name: %w", err)
 	}
 	o.name = name
-	return o.validateDuplicateSvc()
+	return nil
 }
 
 func (o *initSvcOpts) askImage() error {
@@ -397,23 +412,50 @@ func (o *initSvcOpts) askImage() error {
 	return nil
 }
 
-// isDfSelected indicates if any Dockerfile is in use.
-func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
-	if o.dockerfilePath != "" || o.image != "" {
-		return true, nil
+func (o *initSvcOpts) shouldSkipAsking() (bool, error) {
+	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
+	if err != nil {
+		var (
+			errNotFound          *workspace.ErrFileNotExists
+			errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
+		)
+		if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
+			return false, fmt.Errorf("read manifest file for service %s: %w", o.name, err)
+		}
+		return false, nil
 	}
-	if err = o.containerEngine.CheckEngineRunning(); err != nil {
+	svcType, err := localMft.WorkloadType()
+	if err != nil {
+		return false, fmt.Errorf(`read "type" field for service %s from local manifest: %w`, o.name, err)
+	}
+	if o.wkldType != "" {
+		if o.wkldType != svcType {
+			return false, fmt.Errorf("manifest file for service %s exists with a different type %s", o.name, svcType)
+		}
+	} else {
+		o.wkldType = svcType
+	}
+	log.Infof("Manifest file for service %s already exists. Skipping configuration.\n", o.name)
+	return true, nil
+}
+
+// isDfSelected indicates if any Dockerfile is in use.
+func (o *initSvcOpts) askDockerfile() error {
+	if o.dockerfilePath != "" || o.image != "" {
+		return nil
+	}
+	if err := o.containerEngine.CheckEngineRunning(); err != nil {
 		var errDaemon *dockerengine.ErrDockerDaemonNotResponsive
 		var errCommand *dockerengine.ErrContainerCommandNotFound
 		switch {
 		case errors.As(err, &errCommand):
 			log.Infof("%v command is not found; Copilot won't build from a Dockerfile.\n", o.containerEngine.GetRuntime())
-			return false, nil
+			return nil
 		case errors.As(err, &errDaemon):
 			log.Info("Docker daemon is not responsive; Copilot won't build from a Dockerfile.\n")
-			return false, nil
+			return nil
 		default:
-			return false, fmt.Errorf("check if docker engine is running: %w", err)
+			return fmt.Errorf("check if docker engine is running: %w", err)
 		}
 	}
 	df, err := o.sel.Dockerfile(
@@ -426,13 +468,13 @@ func (o *initSvcOpts) askDockerfile() (isDfSelected bool, err error) {
 		},
 	)
 	if err != nil {
-		return false, fmt.Errorf("select Dockerfile: %w", err)
+		return fmt.Errorf("select Dockerfile: %w", err)
 	}
 	if df == selector.DockerfilePromptUseImage {
-		return false, nil
+		return nil
 	}
 	o.dockerfilePath = df
-	return true, nil
+	return nil
 }
 
 func (o *initSvcOpts) askSvcPort() (err error) {
@@ -554,6 +596,21 @@ func (o *initSvcOpts) askSvcPublishers() (err error) {
 	return nil
 }
 
+func validateWorkspaceApp(wsApp, inputApp string, store store) error {
+	if wsApp == "" {
+		// NOTE: This command is required to be executed under a workspace. We don't prompt for it.
+		return errNoAppInWorkspace
+	}
+	// This command must be run within the app's workspace.
+	if inputApp != "" && inputApp != wsApp {
+		return fmt.Errorf("cannot specify app %s because the workspace is already registered with app %s", inputApp, wsApp)
+	}
+	if _, err := store.GetApplication(wsApp); err != nil {
+		return fmt.Errorf("get application %s configuration: %w", wsApp, err)
+	}
+	return nil
+}
+
 // parseSerializedSubscription parses the service and topic name out of keys specified in the form "service:topicName"
 func parseSerializedSubscription(input string) (manifest.TopicSubscription, error) {
 	attrs := regexpMatchSubscription.FindStringSubmatch(input)
@@ -585,7 +642,7 @@ func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error
 
 func svcTypePromptOpts() []prompt.Option {
 	var options []prompt.Option
-	for _, svcType := range manifest.ServiceTypes {
+	for _, svcType := range manifest.ServiceTypes() {
 		options = append(options, prompt.Option{
 			Value: svcType,
 			Hint:  serviceTypeHints[svcType],
@@ -629,7 +686,7 @@ This command is also run as part of "copilot init".`,
 			return nil
 		}),
 	}
-	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, "", appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.wkldType, svcTypeFlag, typeFlagShort, "", svcTypeFlagDescription)
 	cmd.Flags().StringVarP(&vars.dockerfilePath, dockerFileFlag, dockerFileFlagShort, "", dockerFileFlagDescription)

@@ -3,32 +3,32 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
 ???+ note "Sample manifest for a report generator cronjob"
 
     ```yaml
-    # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
-    name: report-generator
-    type: Scheduled Job
-
-    on:
-      schedule: "@daily"
-    cpu: 256
-    memory: 512
-    retries: 3
-    timeout: 1h
-
-    image:
-      # Path to your service's Dockerfile.
-      build: ./Dockerfile
-
-    variables:
-      LOG_LEVEL: info
-    env_file: log.env
-    secrets:
-      GITHUB_TOKEN: GITHUB_TOKEN
-
-    # You can override any of the values defined above by environment.
-    environments:
-      prod:
-        cpu: 2048               # Larger CPU value for prod environment
-        memory: 4096
+        # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
+        name: report-generator
+        type: Scheduled Job
+    
+        on:
+          schedule: "@daily"
+        cpu: 256
+        memory: 512
+        retries: 3
+        timeout: 1h
+    
+        image:
+          # Path to your service's Dockerfile.
+          build: ./Dockerfile
+    
+        variables:
+          LOG_LEVEL: info
+        env_file: log.env
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
+    
+        # You can override any of the values defined above by environment.
+        environments:
+          prod:
+            cpu: 2048               # Larger CPU value for prod environment
+            memory: 4096
     ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
@@ -63,6 +63,12 @@ Alternatively, you can specify a cron schedule if you'd like to trigger the job 
 
 * `"* * * * *"` based on the standard [cron format](https://en.wikipedia.org/wiki/Cron#Overview).
 * `"cron({fields})"` based on CloudWatch's [cron expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) with six fields.
+
+Finally, you can disable the job from triggering by setting the `schedule` field to `none` for example:
+```yaml
+on:
+  schedule: "none"
+```
 
 <div class="separator"></div>
 
@@ -103,7 +109,7 @@ Amount of memory in MiB used by the task. See the [Amazon ECS docs](https://docs
 
 <div class="separator"></div>
 
-<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>
+<a id="platform" href="#platform" class="field">`platform`</a> <span class="type">String</span>  
 Operating system and architecture (formatted as `[os]/[arch]`) to pass with `docker build --platform`. For example, `linux/arm64` or `windows/x86_64`. The default is `linux/x86_64`.
 
 Override the generated string to build with a different valid `osfamily` or `architecture`. For example, Windows users might change the string
@@ -203,7 +209,7 @@ Optional. Defaults to `""`. The ID of the EFS access point to connect to. If usi
 The logging section contains log configuration parameters for your container's [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) log driver (see examples [here](../developing/sidecars.en.md#sidecar-patterns)).
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
-Optional. The Fluent Bit image to use. Defaults to `public.ecr.aws/aws-observability/aws-for-fluent-bit:latest`.
+Optional. The Fluent Bit image to use. Defaults to `public.ecr.aws/aws-observability/aws-for-fluent-bit:stable`.
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
 Optional. The configuration options to send to the FireLens log driver.

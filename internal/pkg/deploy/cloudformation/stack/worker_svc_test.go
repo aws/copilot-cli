@@ -189,6 +189,9 @@ Outputs:
 					StringSlice: []string{"here"},
 				}
 				svc.manifest.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
+				svc.manifest.DeployConfig = manifest.DeploymentConfiguration{
+					Rolling: aws.String("default"),
+				}
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
@@ -216,6 +219,10 @@ Outputs:
 						AssignPublicIP: template.DisablePublicIP,
 						SubnetsType:    template.PrivateSubnetsPlacement,
 						SecurityGroups: []string{"sg-1234"},
+					},
+					DeploymentConfiguration: template.DeploymentConfigurationOpts{
+						MinHealthyPercent: 100,
+						MaxPercent:        200,
 					},
 					EntryPoint: []string{"enter", "from"},
 					Command:    []string{"here"},
@@ -261,7 +268,9 @@ Outputs:
 
 			if tc.setUpManifest != nil {
 				tc.setUpManifest(conf)
-				conf.manifest.Network.VPC.Placement = &manifest.PrivateSubnetPlacement
+				conf.manifest.Network.VPC.Placement = manifest.PlacementArgOrString{
+					PlacementString: &testPrivatePlacement,
+				}
 				conf.manifest.Network.VPC.SecurityGroups = []string{"sg-1234"}
 			}
 
