@@ -32,9 +32,14 @@ LoadBalancerDNSAlias:
     {{- range $alias := .Aliases}}
       - Name: {{$alias}}
         Type: A
-        AliasTarget: # TODO pick the right target based on workload type (private load balancer hosted zone)
+        AliasTarget:
+          {{- if eq .ServiceType "Backend Service"}}
+          HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
+          DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
+          {{- else }}
           HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
           DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+          {{- end}}
     {{- end}}
 {{- end}}
 
