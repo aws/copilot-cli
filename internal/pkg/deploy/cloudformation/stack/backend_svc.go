@@ -154,7 +154,6 @@ func (s *BackendService) Template() (string, error) {
 	}
 
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
-		ServiceType:              manifest.BackendServiceType,
 		Variables:                s.manifest.BackendServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
 		Aliases:                  aliases,

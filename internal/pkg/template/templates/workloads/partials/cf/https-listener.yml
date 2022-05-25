@@ -20,7 +20,7 @@ LoadBalancerDNSAlias:
       AliasTarget:
         HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
         DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-{{- else if and .Aliases .HostedZoneID (eq .ServiceType "Backend Service")}}
+{{- else if and .Aliases .HostedZoneID (eq .WorkloadType "Backend Service")}}
 LoadBalancerDNSAlias:
   Metadata:
     'aws:copilot:description': 'Alias records for the application load balancer'
@@ -44,7 +44,7 @@ HTTPSRulePriorityAction:
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
-    {{- if eq .ServiceType "Backend Service"}}
+    {{- if eq .WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
@@ -89,7 +89,7 @@ HTTPListenerRuleWithDomain:
               -
                 - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
-    {{- if eq .ServiceType "Backend Service"}}
+    {{- if eq .WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
@@ -137,7 +137,7 @@ HTTPSListenerRule:
               -
                 - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
-    {{- if eq .ServiceType "Backend Service"}}
+    {{- if eq .WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
