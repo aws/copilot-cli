@@ -33,7 +33,11 @@ HTTPListenerRule:
               -
                 - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
+    {{- if eq .ServiceType "Backend Service"}}
+    ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
+    {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+    {{- end}}
     Priority: 
       !If
         - IsDefaultRootPath

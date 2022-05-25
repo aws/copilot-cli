@@ -44,7 +44,11 @@ HTTPSRulePriorityAction:
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
+    {{- if eq .ServiceType "Backend Service"}}
+    ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
+    {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+    {{- end}}
 
 HTTPListenerRuleWithDomain:
   Metadata:
@@ -85,7 +89,11 @@ HTTPListenerRuleWithDomain:
               -
                 - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
+    {{- if eq .ServiceType "Backend Service"}}
+    ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
+    {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+    {{- end}}
     Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
 
 HTTPSListenerRule:
@@ -129,5 +137,9 @@ HTTPSListenerRule:
               -
                 - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
+    {{- if eq .ServiceType "Backend Service"}}
+    ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
+    {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+    {{- end}}
     Priority: !GetAtt HTTPSRulePriorityAction.Priority
