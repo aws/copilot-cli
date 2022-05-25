@@ -263,6 +263,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
 				mockBucket, mockCustomDomainLambda := "mockbucket", "mockURL1"
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
+					WorkloadType:        manifest.RequestDrivenWebServiceType,
 					Variables:           c.manifest.Variables,
 					Tags:                c.manifest.Tags,
 					EnableHealthCheck:   true,
@@ -286,6 +287,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
+					WorkloadType:             manifest.RequestDrivenWebServiceType,
 					Variables:                c.manifest.Variables,
 					Tags:                     c.manifest.Tags,
 					ServiceDiscoveryEndpoint: mockSD,
@@ -322,6 +324,7 @@ Outputs:
     Value: hello`,
 				}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
+					WorkloadType:             manifest.RequestDrivenWebServiceType,
 					Variables:                c.manifest.Variables,
 					Tags:                     c.manifest.Tags,
 					ServiceDiscoveryEndpoint: mockSD,
@@ -342,6 +345,7 @@ Outputs:
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
 				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
+					WorkloadType:             manifest.RequestDrivenWebServiceType,
 					Variables:                c.manifest.Variables,
 					Tags:                     c.manifest.Tags,
 					ServiceDiscoveryEndpoint: mockSD,

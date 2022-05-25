@@ -127,13 +127,13 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 	content, err := s.parser.ParseRequestDrivenWebService(template.WorkloadOpts{
-		Variables:         s.manifest.Variables,
-		StartCommand:      s.manifest.StartCommand,
-		Tags:              s.manifest.Tags,
-		NestedStack:       addonsOutputs,
-		AddonsExtraParams: addonsParams,
-		EnableHealthCheck: !s.healthCheckConfig.IsEmpty(),
-
+		Variables:            s.manifest.Variables,
+		StartCommand:         s.manifest.StartCommand,
+		Tags:                 s.manifest.Tags,
+		NestedStack:          addonsOutputs,
+		AddonsExtraParams:    addonsParams,
+		EnableHealthCheck:    !s.healthCheckConfig.IsEmpty(),
+		WorkloadType:         manifest.RequestDrivenWebServiceType,
 		Alias:                s.manifest.Alias,
 		ScriptBucketName:     bucket,
 		EnvControllerLambda:  envControllerLambda,
