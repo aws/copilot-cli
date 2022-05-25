@@ -532,6 +532,19 @@ func TestBackendService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
+		"error if fail to validate http": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							ProtocolVersion: aws.String("GRPC"),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "http": `,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

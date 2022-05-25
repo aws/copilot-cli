@@ -206,8 +206,10 @@ func (b BackendServiceConfig) Validate() error {
 	if err = b.ImageOverride.Validate(); err != nil {
 		return err
 	}
-	if err = b.RoutingRule.Validate(); err != nil {
-		return fmt.Errorf(`validate "http": %w`, err)
+	if !b.RoutingRule.EmptyOrDisabled() {
+		if err = b.RoutingRule.Validate(); err != nil {
+			return fmt.Errorf(`validate "http": %w`, err)
+		}
 	}
 	if err = b.TaskConfig.Validate(); err != nil {
 		return err
