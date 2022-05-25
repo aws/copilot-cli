@@ -4429,6 +4429,21 @@ func (mr *MockenvDescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvDescriber)(nil).Describe))
 }
 
+// Manifest mocks base method.
+func (m *MockenvDescriber) Manifest() ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Manifest")
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Manifest indicates an expected call of Manifest.
+func (mr *MockenvDescriberMockRecorder) Manifest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockenvDescriber)(nil).Manifest))
+}
+
 // PublicCIDRBlocks mocks base method.
 func (m *MockenvDescriber) PublicCIDRBlocks() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -5247,7 +5262,7 @@ func (m *MockwsEnvironmentSelector) EXPECT() *MockwsEnvironmentSelectorMockRecor
 	return m.recorder
 }
 
-// WSEnvironment mocks base method.
+// LocalEnvironment mocks base method.
 func (m *MockwsEnvironmentSelector) LocalEnvironment(msg, help string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LocalEnvironment", msg, help)
@@ -5256,8 +5271,8 @@ func (m *MockwsEnvironmentSelector) LocalEnvironment(msg, help string) (string, 
 	return ret0, ret1
 }
 
-// WSEnvironment indicates an expected call of WSEnvironment.
-func (mr *MockwsEnvironmentSelectorMockRecorder) WSEnvironment(msg, help interface{}) *gomock.Call {
+// LocalEnvironment indicates an expected call of LocalEnvironment.
+func (mr *MockwsEnvironmentSelectorMockRecorder) LocalEnvironment(msg, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalEnvironment", reflect.TypeOf((*MockwsEnvironmentSelector)(nil).LocalEnvironment), msg, help)
 }
