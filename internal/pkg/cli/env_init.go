@@ -321,6 +321,7 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
+	env.Prod = o.isProduction
 	customizedEnv := config.CustomizeEnv{
 		ImportVPC:          o.importVPCConfig(),
 		VPCConfig:          o.adjustVPCConfig(),
