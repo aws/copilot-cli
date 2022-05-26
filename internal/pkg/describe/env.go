@@ -177,6 +177,21 @@ func (d *EnvDescriber) Outputs() (map[string]string, error) {
 	return descr.Outputs, nil
 }
 
+// AvailableFeatures returns the available features of the environment stack.
+func (d *EnvDescriber) AvailableFeatures() ([]string, error) {
+	params, err := d.Params()
+	if err != nil {
+		return nil, err
+	}
+	var availableFeatures []string
+	for _, f := range deploy.LatestAvailableFeatures {
+		if _, ok := params[f]; ok {
+			availableFeatures = append(availableFeatures, f)
+		}
+	}
+	return availableFeatures, nil
+}
+
 // Version returns the CloudFormation template version associated with
 // the environment by reading the Metadata.Version field from the template.
 //

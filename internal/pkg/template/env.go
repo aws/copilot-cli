@@ -15,6 +15,14 @@ const (
 	fmtEnvCFSubTemplatePath = "environment/partials/%s.yml"
 )
 
+// Latest available feature names.
+const (
+	ALBFeatureName         = "ALBWorkloads"
+	EFSFeatureName         = "EFSWorkloads"
+	NATFeatureName         = "NATWorkloads"
+	InternalALBFeatureName = "InternalALBWorkloads"
+)
+
 var (
 	// Template names under "environment/partials/".
 	envCFSubTemplateNames = []string{

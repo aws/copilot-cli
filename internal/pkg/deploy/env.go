@@ -8,6 +8,7 @@ package deploy
 import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 const (
@@ -16,6 +17,9 @@ const (
 	// LatestEnvTemplateVersion is the latest version number available for environment templates.
 	LatestEnvTemplateVersion = "v1.10.0"
 )
+
+// LatestAvailableFeatures is a list of latest available feature names.
+var LatestAvailableFeatures = []string{template.ALBFeatureName, template.EFSFeatureName, template.NATFeatureName, template.InternalALBFeatureName}
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
