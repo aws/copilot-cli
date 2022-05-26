@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -236,6 +237,95 @@ func TestBackendSvc_MarshalBinary(t *testing.T) {
 
 			// THEN
 			require.Equal(t, string(wantedBytes), string(tpl))
+		})
+	}
+}
+
+func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
+	testCases := map[string]struct {
+		mft    func(svc *BackendService)
+		wanted []string
+	}{
+		"no feature required by default": {
+			mft: func(svc *BackendService) {},
+		},
+		"internal alb feature required": {
+			mft: func(svc *BackendService) {
+				svc.RoutingRule = RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: RoutingRuleConfiguration{
+						Path: aws.String("/mock_path"),
+					},
+				}
+			},
+			wanted: []string{template.InternalALBFeatureName},
+		},
+		"internal alb feature not required as it is explicitly disabled": {
+			mft: func(svc *BackendService) {
+				svc.RoutingRule = RoutingRuleConfigOrBool{
+					Enabled: aws.Bool(false),
+				}
+			},
+		},
+		"nat feature required": {
+			mft: func(svc *BackendService) {
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
+						Placement: PlacementArgOrString{
+							PlacementString: placementStringP(PrivateSubnetPlacement),
+						},
+					},
+				}
+			},
+			wanted: []string{template.NATFeatureName},
+		},
+		"efs feature required by enabling managed volume": {
+			mft: func(svc *BackendService) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mock-managed-volume-1": {
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+						"mock-imported-volume": {
+							EFS: EFSConfigOrBool{
+								Advanced: EFSVolumeConfiguration{
+									FileSystemID: aws.String("mock-id"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wanted: []string{template.EFSFeatureName},
+		},
+		"efs feature not required because storage is imported": {
+			mft: func(svc *BackendService) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mock-imported-volume": {
+							EFS: EFSConfigOrBool{
+								Advanced: EFSVolumeConfiguration{
+									FileSystemID: aws.String("mock-id"),
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			inSvc := BackendService{
+				Workload: Workload{
+					Name: aws.String("mock-svc"),
+					Type: aws.String(BackendServiceType),
+				},
+			}
+			tc.mft(&inSvc)
+			got := inSvc.RequiredEnvironmentFeatures()
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

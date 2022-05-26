@@ -78,6 +78,21 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
+// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
+func (s *BackendService) RequiredEnvironmentFeatures() []string {
+	var features []string
+	if !s.RoutingRule.isEmpty() && !s.RoutingRule.Disabled() {
+		features = append(features, template.InternalALBFeatureName)
+	}
+	if aws.StringValue((*string)(s.Network.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
+		features = append(features, template.NATFeatureName)
+	}
+	if efsFeatureRequired(s.Storage) {
+		features = append(features, template.EFSFeatureName)
+	}
+	return features
+}
+
 // Port returns the exposed the exposed port in the manifest.
 // If the backend service is not meant to be reachable, then ok is set to false.
 func (s *BackendService) Port() (port uint16, ok bool) {
