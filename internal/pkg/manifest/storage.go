@@ -175,3 +175,13 @@ type AuthorizationConfig struct {
 func (a *AuthorizationConfig) IsEmpty() bool {
 	return a.IAM == nil && a.AccessPointID == nil
 }
+
+func efsFeatureRequired(s Storage) bool {
+	for _, v := range s.Volumes {
+		if v.EmptyVolume() || !v.EFS.UseManagedFS() {
+			continue
+		}
+		return true
+	}
+	return false
+}

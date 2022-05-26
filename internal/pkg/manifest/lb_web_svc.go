@@ -153,6 +153,21 @@ func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
+// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
+func (s *LoadBalancedWebService) RequiredEnvironmentFeatures() []string {
+	var features []string
+	if !s.RoutingRule.Disabled() {
+		features = append(features, template.ALBFeatureName)
+	}
+	if aws.StringValue((*string)(s.Network.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
+		features = append(features, template.NATFeatureName)
+	}
+	if efsFeatureRequired(s.Storage) {
+		features = append(features, template.EFSFeatureName)
+	}
+	return features
+}
+
 // Port returns the exposed port in the manifest.
 // A LoadBalancedWebService always has a port exposed therefore the boolean is always true.
 func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
