@@ -28,6 +28,10 @@ func (r *RoutingRuleConfigOrBool) EmptyOrDisabled() bool {
 	return r.Disabled() || r.isEmpty()
 }
 
+func (r *RoutingRuleConfigOrBool) isEmpty() bool {
+	return r.Enabled == nil && r.RoutingRuleConfiguration.isEmpty()
+}
+
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
 func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
