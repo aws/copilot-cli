@@ -217,6 +217,18 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &s, nil
 }
 
+// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
+func (s *WorkerService) RequiredEnvironmentFeatures() []string {
+	var features []string
+	if aws.StringValue((*string)(s.Network.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
+		features = append(features, template.NATFeatureName)
+	}
+	if efsFeatureRequired(s.Storage) {
+		features = append(features, template.EFSFeatureName)
+	}
+	return features
+}
+
 // newDefaultWorkerService returns a Worker service with minimal task sizes and a single replica.
 func newDefaultWorkerService() *WorkerService {
 	return &WorkerService{
