@@ -1211,9 +1211,14 @@ func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) 
 
 func (d *backendSvcDeployer) validateALBRuntime() error {
 	switch {
-	case d.backendMft.RoutingRule.EmptyOrDisabled():
+	case d.backendMft.RoutingRule.Alias.IsEmpty() && d.env.HasImportedCerts():
+		return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
+			name:    d.name,
+			envName: d.env.Name,
+		}
+	case d.backendMft.RoutingRule.Alias.IsEmpty():
 		return nil
-	case !d.backendMft.RoutingRule.Alias.IsEmpty() && !d.env.HasImportedCerts():
+	case !d.env.HasImportedCerts():
 		return fmt.Errorf(`cannot specify "alias" in an environment without imported certs`)
 	}
 

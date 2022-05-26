@@ -1108,6 +1108,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 	const (
 		mockAppName = "mock-app"
 		mockEnvName = "mock-env"
+		mockSvcName = "mock-svc"
 	)
 
 	tests := map[string]struct {
@@ -1206,7 +1207,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"go.dev"}, []string{"mockCertARN"}).Return(nil)
 			},
 		},
-		"success if hosted zone is set": {
+		"failure if env has imported certs but no alias set": {
 			App: &config.Application{
 				Name: mockAppName,
 			},
@@ -1216,22 +1217,11 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 					ImportCertARNs: []string{"mockCertARN"},
 				},
 			},
-			Manifest: &manifest.BackendService{
-				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-							HostedZone: aws.String("ABCD1234"),
-							Alias: manifest.Alias{
-								String: aws.String("go.dev"),
-							},
-						},
-					},
-				},
-			},
+			Manifest: &manifest.BackendService{},
 			setupMocks: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
-				m.mockValidator.EXPECT().ValidateCertAliases([]string{"go.dev"}, []string{"mockCertARN"}).Return(nil)
 			},
+			expectedErr: `cannot deploy service mock-svc without http.alias to environment mock-env with certificate imported`,
 		},
 	}
 
@@ -1251,6 +1241,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			deployer := &backendSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
+						name:           mockSvcName,
 						app:            tc.App,
 						env:            tc.Env,
 						endpointGetter: m.mockEndpointGetter,
