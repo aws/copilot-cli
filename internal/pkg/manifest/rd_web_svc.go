@@ -160,6 +160,14 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 	return &s, nil
 }
 
+// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
+func (s *RequestDrivenWebService) RequiredEnvironmentFeatures() []string {
+	if aws.StringValue((*string)(s.Network.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
+		return []string{template.NATFeatureName}
+	}
+	return nil
+}
+
 // newDefaultRequestDrivenWebService returns an empty RequestDrivenWebService with only the default values set.
 func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
 	return &RequestDrivenWebService{
