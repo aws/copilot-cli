@@ -473,6 +473,13 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-PublicRouteTableID
 {{- end}}
+{{- if not .VPCConfig.Imported}}
+  PrivateRouteTableIDs:
+    Condition: CreateNATGateways
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}!Ref PrivateRouteTable{{inc $ind}}, {{end}}] ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateRouteTableIDs
+{{- end}}
   ServiceDiscoveryNamespaceID:
     Value: !GetAtt ServiceDiscoveryNamespace.Id
     Export:
@@ -565,6 +572,6 @@ Outputs:
   ManagedFileSystemID:
     Condition: CreateEFS
     Value: !Ref FileSystem
-    Description: The ID of the Copilot-managed EFS filesystem. 
+    Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
