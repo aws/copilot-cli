@@ -5,8 +5,14 @@
 package customresource
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
+	"io"
 	"path"
+	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -15,7 +21,7 @@ import (
 // Directory under which all custom resources are minified and packaged.
 const customResourcesDir = "custom-resources"
 
-// All custom resources will be copied under this path.
+// All custom resource scripts will be copied under this path in the zip file.
 const handlerFileName = "index.js"
 
 // Function names.
@@ -64,6 +70,25 @@ func (cr CustomResource) Files() []s3.NamedBinary {
 	return files
 }
 
+func (cr CustomResource) zip() (io.Reader, error) {
+	buf := new(bytes.Buffer)
+	w := zip.NewWriter(buf)
+	for _, file := range cr.files {
+		f, err := w.Create(file.Name())
+		if err != nil {
+			return nil, fmt.Errorf("create zip file %q for custom resource %q: %v", file.Name(), cr.FunctionName(), err)
+		}
+		_, err = f.Write(file.Content())
+		if err != nil {
+			return nil, fmt.Errorf("write zip file %q for custom resource %q: %v", file.Name(), cr.FunctionName(), err)
+		}
+	}
+	if err := w.Close(); err != nil {
+		return nil, fmt.Errorf("close zip file for custom resource %q: %v", cr.FunctionName(), err)
+	}
+	return buf, nil
+}
+
 // file implements the s3.NamedBinary interface.
 type file struct {
 	name    string
@@ -81,14 +106,42 @@ func (f *file) Content() []byte {
 }
 
 // RDWS returns the custom resources for a request-driven web service.
-func RDWS(templateFS template.Reader) ([]CustomResource, error) {
-	var crs []CustomResource
-	pathForFn := map[string]string{
+func RDWS(fs template.Reader) ([]CustomResource, error) {
+	return buildCustomResources(fs, map[string]string{
 		envControllerFnName: envControllerFilePath,
 		customDomainFnName:  customDomainAppRunnerFilePath,
+	})
+}
+
+// UploadFunc is the function signature to upload contents under a key within a S3 bucket.
+type UploadFunc func(key string, contents io.Reader) (url string, err error)
+
+// Upload zips all the Files for each CustomResource and uploads the zip files individually to S3.
+// Returns a map of the CustomResource FunctionName to the S3 URL where the zip file is stored.
+func Upload(upload UploadFunc, crs []CustomResource) (map[string]string, error) {
+	urls := make(map[string]string)
+	for _, cr := range crs {
+		zipFile, err := cr.zip()
+		if err != nil {
+			return nil, err
+		}
+		out, err := io.ReadAll(zipFile)
+		if err != nil {
+			return nil, fmt.Errorf("read content of zip file for custom resource %q: %v", cr.FunctionName(), err)
+		}
+		url, err := upload(artifactpath.CustomResource(strings.ToLower(cr.FunctionName()), out), zipFile)
+		if err != nil {
+			return nil, fmt.Errorf("upload custom resource %q: %w", cr.FunctionName(), err)
+		}
+		urls[cr.FunctionName()] = url
 	}
+	return urls, nil
+}
+
+func buildCustomResources(fs template.Reader, pathForFn map[string]string) ([]CustomResource, error) {
+	var crs []CustomResource
 	for fn, path := range pathForFn {
-		content, err := templateFS.Read(path)
+		content, err := fs.Read(path)
 		if err != nil {
 			return nil, fmt.Errorf("read custom resource %s at path %s: %v", fn, path, err)
 		}
