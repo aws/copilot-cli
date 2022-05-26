@@ -21,6 +21,14 @@ const (
 // LatestAvailableFeatures is a list of latest available feature names.
 var LatestAvailableFeatures = []string{template.ALBFeatureName, template.EFSFeatureName, template.NATFeatureName, template.InternalALBFeatureName}
 
+// LeastVersionForFeature maps each feature to the least environment template version it requires.
+var LeastVersionForFeature = map[string]string{
+	template.ALBFeatureName:         "v1.0.0",
+	template.EFSFeatureName:         "v1.3.0",
+	template.NATFeatureName:         "v1.3.0",
+	template.InternalALBFeatureName: "v1.10.0",
+}
+
 // CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
 	// The version of the environment template to create the stack. If empty, creates the legacy stack.

@@ -419,6 +419,11 @@ type envDescriber interface {
 	PublicCIDRBlocks() ([]string, error)
 }
 
+type versionFeatureGetter interface {
+	versionGetter
+	AvailableFeatures() ([]string, error)
+}
+
 type versionGetter interface {
 	Version() (string, error)
 }

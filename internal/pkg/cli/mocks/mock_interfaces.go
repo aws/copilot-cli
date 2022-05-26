@@ -4444,6 +4444,59 @@ func (mr *MockenvDescriberMockRecorder) PublicCIDRBlocks() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicCIDRBlocks", reflect.TypeOf((*MockenvDescriber)(nil).PublicCIDRBlocks))
 }
 
+// MockversionFeatureGetter is a mock of versionFeatureGetter interface.
+type MockversionFeatureGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockversionFeatureGetterMockRecorder
+}
+
+// MockversionFeatureGetterMockRecorder is the mock recorder for MockversionFeatureGetter.
+type MockversionFeatureGetterMockRecorder struct {
+	mock *MockversionFeatureGetter
+}
+
+// NewMockversionFeatureGetter creates a new mock instance.
+func NewMockversionFeatureGetter(ctrl *gomock.Controller) *MockversionFeatureGetter {
+	mock := &MockversionFeatureGetter{ctrl: ctrl}
+	mock.recorder = &MockversionFeatureGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockversionFeatureGetter) EXPECT() *MockversionFeatureGetterMockRecorder {
+	return m.recorder
+}
+
+// AvailableFeatures mocks base method.
+func (m *MockversionFeatureGetter) AvailableFeatures() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AvailableFeatures")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AvailableFeatures indicates an expected call of AvailableFeatures.
+func (mr *MockversionFeatureGetterMockRecorder) AvailableFeatures() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AvailableFeatures", reflect.TypeOf((*MockversionFeatureGetter)(nil).AvailableFeatures))
+}
+
+// Version mocks base method.
+func (m *MockversionFeatureGetter) Version() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Version")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Version indicates an expected call of Version.
+func (mr *MockversionFeatureGetterMockRecorder) Version() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionFeatureGetter)(nil).Version))
+}
+
 // MockversionGetter is a mock of versionGetter interface.
 type MockversionGetter struct {
 	ctrl     *gomock.Controller

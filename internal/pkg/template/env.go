@@ -23,6 +23,14 @@ const (
 	InternalALBFeatureName = "InternalALBWorkloads"
 )
 
+// FriendlyFeatureName maps each feature name to a user-friendly feature name.
+var FriendlyFeatureName = map[string]string{
+	ALBFeatureName:         "ALB",
+	EFSFeatureName:         "EFS",
+	NATFeatureName:         "NAT Gateway",
+	InternalALBFeatureName: "Internal ALB",
+}
+
 var (
 	// Template names under "environment/partials/".
 	envCFSubTemplateNames = []string{
