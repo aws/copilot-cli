@@ -4,6 +4,7 @@
 package customresource
 
 import (
+	"archive/zip"
 	"bytes"
 	"errors"
 	"fmt"
@@ -50,15 +51,26 @@ func TestRDWS(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, fakeFS.matchCount, 2, "expected path calls do not match")
 
+	// ensure custom resource names match.
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
 		actualFnNames[i] = cr.FunctionName()
 	}
 	require.ElementsMatch(t, []string{"CustomDomainFunction", "EnvControllerFunction"}, actualFnNames, "function names must match")
 
+	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
-		require.Equal(t, "index.js", cr.Files()[0].Name())
+		zipFile, err := cr.Zip()
+		require.NoError(t, err, "zipping the contents should not err")
+
+		buf := new(bytes.Buffer)
+		size, err := buf.ReadFrom(zipFile)
+		require.NoError(t, err)
+		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
+		require.NoError(t, err)
+
+		_, err = r.Open("index.js")
+		require.NoError(t, err, "an index.js file must be present in all custom resources")
 	}
 }
 
@@ -99,9 +111,19 @@ func TestLBWS(t *testing.T) {
 		[]string{"DynamicDesiredCountFunction", "EnvControllerFunction", "RulePriorityFunction", "NLBCustomDomainFunction", "NLBCertValidatorFunction"},
 		actualFnNames, "function names must match")
 
+	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
-		require.Equal(t, "index.js", cr.Files()[0].Name())
+		zipFile, err := cr.Zip()
+		require.NoError(t, err, "zipping the contents should not err")
+
+		buf := new(bytes.Buffer)
+		size, err := buf.ReadFrom(zipFile)
+		require.NoError(t, err)
+		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
+		require.NoError(t, err)
+
+		_, err = r.Open("index.js")
+		require.NoError(t, err, "an index.js file must be present in all custom resources")
 	}
 }
 
@@ -136,9 +158,19 @@ func TestWorker(t *testing.T) {
 		[]string{"DynamicDesiredCountFunction", "BacklogPerTaskCalculatorFunction", "EnvControllerFunction"},
 		actualFnNames, "function names must match")
 
+	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
-		require.Equal(t, "index.js", cr.Files()[0].Name())
+		zipFile, err := cr.Zip()
+		require.NoError(t, err, "zipping the contents should not err")
+
+		buf := new(bytes.Buffer)
+		size, err := buf.ReadFrom(zipFile)
+		require.NoError(t, err)
+		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
+		require.NoError(t, err)
+
+		_, err = r.Open("index.js")
+		require.NoError(t, err, "an index.js file must be present in all custom resources")
 	}
 }
 
@@ -173,9 +205,19 @@ func TestBackend(t *testing.T) {
 		[]string{"DynamicDesiredCountFunction", "RulePriorityFunction", "EnvControllerFunction"},
 		actualFnNames, "function names must match")
 
+	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
-		require.Equal(t, "index.js", cr.Files()[0].Name())
+		zipFile, err := cr.Zip()
+		require.NoError(t, err, "zipping the contents should not err")
+
+		buf := new(bytes.Buffer)
+		size, err := buf.ReadFrom(zipFile)
+		require.NoError(t, err)
+		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
+		require.NoError(t, err)
+
+		_, err = r.Open("index.js")
+		require.NoError(t, err, "an index.js file must be present in all custom resources")
 	}
 }
 
@@ -204,9 +246,19 @@ func TestScheduledJob(t *testing.T) {
 		[]string{"EnvControllerFunction"},
 		actualFnNames, "function names must match")
 
+	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
-		require.Equal(t, "index.js", cr.Files()[0].Name())
+		zipFile, err := cr.Zip()
+		require.NoError(t, err, "zipping the contents should not err")
+
+		buf := new(bytes.Buffer)
+		size, err := buf.ReadFrom(zipFile)
+		require.NoError(t, err)
+		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
+		require.NoError(t, err)
+
+		_, err = r.Open("index.js")
+		require.NoError(t, err, "an index.js file must be present in all custom resources")
 	}
 }
 
@@ -241,9 +293,19 @@ func TestEnv(t *testing.T) {
 		[]string{"CertificateValidationFunction", "CustomDomainFunction", "DNSDelegationFunction"},
 		actualFnNames, "function names must match")
 
+	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
-		require.Equal(t, "index.js", cr.Files()[0].Name())
+		zipFile, err := cr.Zip()
+		require.NoError(t, err, "zipping the contents should not err")
+
+		buf := new(bytes.Buffer)
+		size, err := buf.ReadFrom(zipFile)
+		require.NoError(t, err)
+		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
+		require.NoError(t, err)
+
+		_, err = r.Open("index.js")
+		require.NoError(t, err, "an index.js file must be present in all custom resources")
 	}
 }
 

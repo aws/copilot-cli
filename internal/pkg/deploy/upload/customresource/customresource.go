@@ -14,7 +14,6 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -62,16 +61,8 @@ func (cr CustomResource) FunctionName() string {
 	return cr.name
 }
 
-// Files returns the collection of files that need to be zipped together to form the deployment package for the function.
-func (cr CustomResource) Files() []s3.NamedBinary {
-	files := make([]s3.NamedBinary, len(cr.files))
-	for i := range cr.files {
-		files[i] = &cr.files[i]
-	}
-	return files
-}
-
-func (cr CustomResource) zip() (io.Reader, error) {
+// Zip creates a zip archive from all the files in the custom resource and returns a reader for its content.
+func (cr CustomResource) Zip() (io.Reader, error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
 	for _, file := range cr.files {
@@ -167,7 +158,7 @@ type UploadFunc func(key string, contents io.Reader) (url string, err error)
 func Upload(upload UploadFunc, crs []CustomResource) (map[string]string, error) {
 	urls := make(map[string]string)
 	for _, cr := range crs {
-		zipFile, err := cr.zip()
+		zipFile, err := cr.Zip()
 		if err != nil {
 			return nil, err
 		}
