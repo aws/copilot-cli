@@ -861,6 +861,11 @@ Outputs:
     Value: !Ref PublicRouteTable
     Export:
       Name: !Sub ${AWS::StackName}-PublicRouteTableID
+  PrivateRouteTableIDs:
+    Condition: CreateNATGateways
+    Value: !Join [ ',', [ !Ref PrivateRouteTable1, !Ref PrivateRouteTable2, ] ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateRouteTableIDs
   ServiceDiscoveryNamespaceID:
     Value: !GetAtt ServiceDiscoveryNamespace.Id
     Export:
