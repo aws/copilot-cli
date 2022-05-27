@@ -174,19 +174,19 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inDefault:            true,
 			inInternalALBSubnets: []string{"mockSubnet", "anotherMockSubnet"},
 
-			wantedErrMsg: errDefaultConfigWithSubnetPlacement.Error(),
+			wantedErrMsg: errInternalALBPlacementWithManagedVPC.Error(),
 		},
 		"cannot specify internal ALB subnet placement with adjusted VPC resources": {
 			inPublicCIDRs:        []string{"mockCIDR"},
 			inInternalALBSubnets: []string{"mockSubnet", "anotherMockSubnet"},
 
-			wantedErrMsg: errDefaultConfigWithSubnetPlacement.Error(),
+			wantedErrMsg: errInternalALBPlacementWithManagedVPC.Error(),
 		},
 		"invalid specification of internal ALB subnet placement": {
 			inPrivateIDs:         []string{"mockID", "mockSubnet", "anotherMockSubnet"},
 			inInternalALBSubnets: []string{"mockSubnet", "notMockSubnet"},
 
-			wantedErrMsg: "subnets [mockSubnet notMockSubnet] were designated for ALB placement, but they were not all imported",
+			wantedErrMsg: "subnets 'mockSubnet, notMockSubnet' were designated for ALB placement, but they were not all imported",
 		},
 		"valid specification of internal ALB subnet placement": {
 			inPrivateIDs:         []string{"mockID", "mockSubnet", "anotherMockSubnet"},
@@ -672,7 +672,7 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
 			},
 
-			wantedError: errors.New("subnets [nonexistentSubnet anotherNonexistentSubnet] were designated for ALB placement, but they were not all imported"),
+			wantedError: errors.New("subnets 'nonexistentSubnet, anotherNonexistentSubnet' were designated for ALB placement, but they were not all imported"),
 		},
 		"error if no subnets selected": {
 			inAppName: mockApp,

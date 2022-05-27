@@ -798,7 +798,7 @@ func (o *initEnvOpts) validateInternalALBSubnets() error {
 		}
 	}
 	if len(isImported) != len(o.internalALBSubnets) {
-		return fmt.Errorf("%s %s %s designated for ALB placement, but %s imported",
+		return fmt.Errorf("%s '%s' %s designated for ALB placement, but %s imported",
 			english.PluralWord(len(o.internalALBSubnets), "subnet", "subnets"),
 			strings.Join(o.internalALBSubnets, ", "),
 			english.PluralWord(len(o.internalALBSubnets), "was", "were"),
