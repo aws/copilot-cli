@@ -57,12 +57,12 @@ type CustomResource struct {
 }
 
 // FunctionName is the name of the Lambda function.
-func (cr CustomResource) FunctionName() string {
+func (cr *CustomResource) FunctionName() string {
 	return cr.name
 }
 
 // Zip creates a zip archive from all the files in the custom resource and returns a reader for its content.
-func (cr CustomResource) Zip() (io.Reader, error) {
+func (cr *CustomResource) Zip() (io.Reader, error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
 	for _, file := range cr.files {
@@ -87,7 +87,7 @@ type file struct {
 }
 
 // RDWS returns the custom resources for a request-driven web service.
-func RDWS(fs template.Reader) ([]CustomResource, error) {
+func RDWS(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
 		envControllerFnName: envControllerFilePath,
 		customDomainFnName:  customDomainAppRunnerFilePath,
@@ -95,7 +95,7 @@ func RDWS(fs template.Reader) ([]CustomResource, error) {
 }
 
 // LBWS returns the custom resources for a load-balanced web service.
-func LBWS(fs template.Reader) ([]CustomResource, error) {
+func LBWS(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
 		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
 		envControllerFnName:       envControllerFilePath,
@@ -106,7 +106,7 @@ func LBWS(fs template.Reader) ([]CustomResource, error) {
 }
 
 // Worker returns the custom resources for a worker service.
-func Worker(fs template.Reader) ([]CustomResource, error) {
+func Worker(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
 		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
 		backlogPerTaskFnName:      backlogPerTaskCalculatorFilePath,
@@ -115,7 +115,7 @@ func Worker(fs template.Reader) ([]CustomResource, error) {
 }
 
 // Backend returns the custom resources for a backend service.
-func Backend(fs template.Reader) ([]CustomResource, error) {
+func Backend(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
 		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
 		rulePriorityFnName:        albRulePriorityGeneratorFilePath,
@@ -124,14 +124,14 @@ func Backend(fs template.Reader) ([]CustomResource, error) {
 }
 
 // ScheduledJob returns the custom resources for a scheduled job.
-func ScheduledJob(fs template.Reader) ([]CustomResource, error) {
+func ScheduledJob(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
 		envControllerFnName: envControllerFilePath,
 	})
 }
 
 // Env returns the custom resources for an environment.
-func Env(fs template.Reader) ([]CustomResource, error) {
+func Env(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
 		certValidationFnName: dnsCertValidationFilePath,
 		customDomainFnName:   customDomainFilePath,
@@ -144,7 +144,7 @@ type UploadFunc func(key string, contents io.Reader) (url string, err error)
 
 // Upload zips all the Files for each CustomResource and uploads the zip files individually to S3.
 // Returns a map of the CustomResource FunctionName to the S3 URL where the zip file is stored.
-func Upload(upload UploadFunc, crs []CustomResource) (map[string]string, error) {
+func Upload(upload UploadFunc, crs []*CustomResource) (map[string]string, error) {
 	urls := make(map[string]string)
 	for _, cr := range crs {
 		zipFile, err := cr.Zip()
@@ -164,14 +164,15 @@ func Upload(upload UploadFunc, crs []CustomResource) (map[string]string, error) 
 	return urls, nil
 }
 
-func buildCustomResources(fs template.Reader, pathForFn map[string]string) ([]CustomResource, error) {
-	var crs []CustomResource
+func buildCustomResources(fs template.Reader, pathForFn map[string]string) ([]*CustomResource, error) {
+	var idx int
+	crs := make([]*CustomResource, len(pathForFn))
 	for fn, path := range pathForFn {
 		content, err := fs.Read(path)
 		if err != nil {
 			return nil, fmt.Errorf("read custom resource %s at path %s: %v", fn, path, err)
 		}
-		crs = append(crs, CustomResource{
+		crs[idx] = &CustomResource{
 			name: fn,
 			files: []file{
 				{
@@ -179,7 +180,8 @@ func buildCustomResources(fs template.Reader, pathForFn map[string]string) ([]Cu
 					content: content.Bytes(),
 				},
 			},
-		})
+		}
+		idx += 1
 	}
 	return crs, nil
 }

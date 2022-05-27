@@ -330,7 +330,7 @@ func (f *fakeS3) UploadFunc() func(string, io.Reader) (string, error) {
 func TestUpload(t *testing.T) {
 	testCases := map[string]struct {
 		s3  *fakeS3
-		crs []CustomResource
+		crs []*CustomResource
 
 		wantedURLs map[string]string
 		wantedErr  error
@@ -339,7 +339,7 @@ func TestUpload(t *testing.T) {
 			s3: &fakeS3{
 				err: errors.New("some err"),
 			},
-			crs: []CustomResource{
+			crs: []*CustomResource{
 				{
 					name: "fn1",
 				},
@@ -353,7 +353,7 @@ func TestUpload(t *testing.T) {
 					"manual/scripts/custom-resources/func2/18ef4a5e530a7a52d95d5426e41a4fc0c2bcd1b1febaf19cd05b324d07ef5547.zip": "url2",
 				},
 			},
-			crs: []CustomResource{
+			crs: []*CustomResource{
 				{
 					name: "Func1",
 					files: []file{
