@@ -66,13 +66,13 @@ func (cr CustomResource) Zip() (io.Reader, error) {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
 	for _, file := range cr.files {
-		f, err := w.Create(file.Name())
+		f, err := w.Create(file.name)
 		if err != nil {
-			return nil, fmt.Errorf("create zip file %q for custom resource %q: %v", file.Name(), cr.FunctionName(), err)
+			return nil, fmt.Errorf("create zip file %q for custom resource %q: %v", file.name, cr.FunctionName(), err)
 		}
-		_, err = f.Write(file.Content())
+		_, err = f.Write(file.content)
 		if err != nil {
-			return nil, fmt.Errorf("write zip file %q for custom resource %q: %v", file.Name(), cr.FunctionName(), err)
+			return nil, fmt.Errorf("write zip file %q for custom resource %q: %v", file.name, cr.FunctionName(), err)
 		}
 	}
 	if err := w.Close(); err != nil {
@@ -81,20 +81,9 @@ func (cr CustomResource) Zip() (io.Reader, error) {
 	return buf, nil
 }
 
-// file implements the s3.NamedBinary interface.
 type file struct {
 	name    string
 	content []byte
-}
-
-// Name returns the name of the file. The name can be a relative path.
-func (f *file) Name() string {
-	return f.name
-}
-
-// Content is the data in the file.
-func (f *file) Content() []byte {
-	return f.content
 }
 
 // RDWS returns the custom resources for a request-driven web service.
