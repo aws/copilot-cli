@@ -372,6 +372,34 @@ func workloadManifest(in *workloadManifestInput) (interface{}, error) {
 	return envMft, nil
 }
 
+func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName string, env versionFeatureGetter) error {
+	availableFeatures, err := env.AvailableFeatures()
+	if err != nil {
+		return fmt.Errorf("get available features of the environment %s stack: %w", envName, err)
+	}
+	exists := struct{}{}
+	available := make(map[string]struct{})
+	for _, f := range availableFeatures {
+		available[f] = exists
+	}
+
+	features := mft.RequiredEnvironmentFeatures()
+	for _, f := range features {
+		if _, ok := available[f]; !ok {
+			logMsg := fmt.Sprintf(`Your manifest configuration requires your environment %q to have the feature %q available. 
+The least environment version that supports the feature is %s.`, envName, template.FriendlyFeatureName[f], deploy.LeastVersionForFeature[f])
+			currVersion, err := env.Version()
+			if err == nil {
+				logMsg += fmt.Sprintf(" Your environment is on %s.\n", currVersion)
+			}
+			logMsg += fmt.Sprintf(`Please upgrade your environment by running %s.`, color.HighlightCode(fmt.Sprintf("copilot env upgrade --name %s", envName)))
+			log.Errorln(logMsg)
+			return fmt.Errorf("environment %q is not on the versions that support the feature %q", envName, template.FriendlyFeatureName[f])
+		}
+	}
+	return nil
+}
+
 func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	type reachable interface {
 		Port() (uint16, bool)
@@ -421,33 +449,6 @@ func (o *deploySvcOpts) publishRecommendedActions() []string {
 			o.name,
 			color.HighlightCode("const {<topicName>} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS)")),
 	}
-}
-
-func (o *deploySvcOpts) checkEnvironmentCompatibility(in manifest.WorkloadManifest) error {
-	availableFeatures, err := o.envFeaturesDescriber.AvailableFeatures()
-	if err != nil {
-		return fmt.Errorf("get available features of the environment %s stack: %w", o.envName, err)
-	}
-	exists := struct{}{}
-	available := make(map[string]struct{})
-	for _, f := range availableFeatures {
-		available[f] = exists
-	}
-	features := in.RequiredEnvironmentFeatures()
-	for _, f := range features {
-		if _, ok := available[f]; !ok {
-			logMsg := fmt.Sprintf(`Your manifest configuration requires your environment %q to have the feature %q available. 
-The least environment version that supports the feature is %s.`, o.envName, template.FriendlyFeatureName[f], deploy.LeastVersionForFeature[f])
-			currVersion, err := o.envFeaturesDescriber.Version()
-			if err == nil {
-				logMsg += fmt.Sprintf(" Your environment is on %s.\n", currVersion)
-			}
-			logMsg += fmt.Sprintf(`Please upgrade your environment by running %s.`, color.HighlightCode(fmt.Sprintf("copilot env upgrade --name %s", o.envName)))
-			log.Errorf(logMsg)
-			return fmt.Errorf("environment %q is not on the versions that support the feature %q", o.envName, template.FriendlyFeatureName[f])
-		}
-	}
-	return nil
 }
 
 func (o *deploySvcOpts) getTargetApp() (*config.Application, error) {

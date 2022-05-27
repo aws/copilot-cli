@@ -245,7 +245,7 @@ type checkEnvironmentCompatibilityMocks struct {
 	requiredEnvironmentFeaturesFunc func() []string
 }
 
-func TestSvcDeployOpts_checkEnvironmentCompatibility(t *testing.T) {
+func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 	testCases := map[string]struct {
 		setupMock    func(m *checkEnvironmentCompatibilityMocks)
 		mockManifest *mockWorkloadMft
@@ -289,20 +289,12 @@ func TestSvcDeployOpts_checkEnvironmentCompatibility(t *testing.T) {
 				versionFeatureGetter: mocks.NewMockversionFeatureGetter(ctrl),
 			}
 			tc.setupMock(m)
-			opts := deploySvcOpts{
-				deployWkldVars: deployWkldVars{
-					appName: "mockApp",
-					name:    "mockSvc",
-					envName: "mockEnv",
-				},
-				envFeaturesDescriber: m.versionFeatureGetter,
-			}
 			mockManifest := &mockWorkloadMft{
 				mockRequiredEnvironmentFeatures: m.requiredEnvironmentFeaturesFunc,
 			}
 
 			// WHEN
-			err := opts.checkEnvironmentCompatibility(mockManifest)
+			err := isManifestCompatibleWithEnvironment(mockManifest, "mockEnv", m.versionFeatureGetter)
 
 			// THEN
 			if tc.wantedError == nil {
