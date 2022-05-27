@@ -45,9 +45,10 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 		inAppName string
 		inDefault bool
 
-		inVPCID      string
-		inPublicIDs  []string
-		inPrivateIDs []string
+		inVPCID              string
+		inPublicIDs          []string
+		inPrivateIDs         []string
+		inInternalALBSubnets []string
 
 		inVPCCIDR     net.IPNet
 		inAZs         []string
@@ -169,6 +170,28 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inPublicIDs:  []string{"mockID", "anotherMockID", "yetAnotherMockID"},
 			inPrivateIDs: []string{"mockID", "anotherMockID"},
 		},
+		"cannot specify internal ALB subnet placement with default config": {
+			inDefault:            true,
+			inInternalALBSubnets: []string{"mockSubnet", "anotherMockSubnet"},
+
+			wantedErrMsg: errDefaultConfigWithSubnetPlacement.Error(),
+		},
+		"cannot specify internal ALB subnet placement with adjusted VPC resources": {
+			inPublicCIDRs:        []string{"mockCIDR"},
+			inInternalALBSubnets: []string{"mockSubnet", "anotherMockSubnet"},
+
+			wantedErrMsg: errDefaultConfigWithSubnetPlacement.Error(),
+		},
+		"invalid specification of internal ALB subnet placement": {
+			inPrivateIDs:         []string{"mockID", "mockSubnet", "anotherMockSubnet"},
+			inInternalALBSubnets: []string{"mockSubnet", "notMockSubnet"},
+
+			wantedErrMsg: "subnets [mockSubnet notMockSubnet] were designated for ALB placement, but they were not all imported",
+		},
+		"valid specification of internal ALB subnet placement": {
+			inPrivateIDs:         []string{"mockID", "mockSubnet", "anotherMockSubnet"},
+			inInternalALBSubnets: []string{"mockSubnet", "anotherMockSubnet"},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -185,8 +208,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			// GIVEN
 			opts := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					name:          tc.inEnvName,
-					defaultConfig: tc.inDefault,
+					name:               tc.inEnvName,
+					defaultConfig:      tc.inDefault,
+					internalALBSubnets: tc.inInternalALBSubnets,
 					adjustVPC: adjustVPCVars{
 						AZs:               tc.inAZs,
 						PublicSubnetCIDRs: tc.inPublicCIDRs,
@@ -250,14 +274,15 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inAppName       string
-		inEnv           string
-		inProfile       string
-		inTempCreds     tempCredsVars
-		inRegion        string
-		inDefault       bool
-		inImportVPCVars importVPCVars
-		inAdjustVPCVars adjustVPCVars
+		inAppName            string
+		inEnv                string
+		inProfile            string
+		inTempCreds          tempCredsVars
+		inRegion             string
+		inDefault            bool
+		inImportVPCVars      importVPCVars
+		inAdjustVPCVars      adjustVPCVars
+		inInternalALBSubnets []string
 
 		setupMocks func(mocks initEnvMocks)
 
@@ -630,6 +655,25 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
 			},
 		},
+		"after prompting for missing imported VPC resources, validate if internalALBSubnets set": {
+			inAppName: mockApp,
+			inEnv:     mockEnv,
+			inProfile: mockProfile,
+			inImportVPCVars: importVPCVars{
+				ID: "mockVPC",
+			},
+			inInternalALBSubnets: []string{"nonexistentSubnet", "anotherNonexistentSubnet"},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
+					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
+					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
+			},
+
+			wantedError: errors.New("subnets [nonexistentSubnet anotherNonexistentSubnet] were designated for ALB placement, but they were not all imported"),
+		},
 		"error if no subnets selected": {
 			inAppName: mockApp,
 			inEnv:     mockEnv,
@@ -646,6 +690,21 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 					Return(nil, nil)
 			},
 			wantedError: fmt.Errorf("VPC must have subnets in order to proceed with environment creation"),
+		},
+		"only prompt for imported resources if internalALBSubnets set": {
+			inAppName:            mockApp,
+			inEnv:                mockEnv,
+			inProfile:            mockProfile,
+			inInternalALBSubnets: []string{"mockPrivateSubnet", "anotherMockPrivateSubnet"},
+			setupMocks: func(m initEnvMocks) {
+				m.sessProvider.EXPECT().FromProfile(gomock.Any()).Return(mockSession, nil)
+				m.selVPC.EXPECT().VPC(envInitVPCSelectPrompt, "").Return("mockVPC", nil)
+				m.ec2Client.EXPECT().HasDNSSupport("mockVPC").Return(true, nil)
+				m.selVPC.EXPECT().Subnets(mockPublicSubnetInput).
+					Return([]string{"mockPublicSubnet", "anotherMockPublicSubnet"}, nil)
+				m.selVPC.EXPECT().Subnets(mockPrivateSubnetInput).
+					Return([]string{"mockPrivateSubnet", "anotherMockPrivateSubnet"}, nil)
+			},
 		},
 		"fail to get VPC CIDR": {
 			inAppName: mockApp,
@@ -809,14 +868,15 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 			// GIVEN
 			addEnv := &initEnvOpts{
 				initEnvVars: initEnvVars{
-					appName:       tc.inAppName,
-					name:          tc.inEnv,
-					profile:       tc.inProfile,
-					tempCreds:     tc.inTempCreds,
-					region:        tc.inRegion,
-					defaultConfig: tc.inDefault,
-					adjustVPC:     tc.inAdjustVPCVars,
-					importVPC:     tc.inImportVPCVars,
+					appName:            tc.inAppName,
+					name:               tc.inEnv,
+					profile:            tc.inProfile,
+					tempCreds:          tc.inTempCreds,
+					region:             tc.inRegion,
+					defaultConfig:      tc.inDefault,
+					adjustVPC:          tc.inAdjustVPCVars,
+					importVPC:          tc.inImportVPCVars,
+					internalALBSubnets: tc.inInternalALBSubnets,
 				},
 				sessProvider: mocks.sessProvider,
 				selVPC:       mocks.selVPC,

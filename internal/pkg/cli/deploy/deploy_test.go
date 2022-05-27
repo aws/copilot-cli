@@ -1211,64 +1211,6 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"go.dev"}, []string{"mockCertARN"}).Return(nil)
 			},
 		},
-		"errors if internal ALB subnet not imported": {
-			App: &config.Application{
-				Name: mockAppName,
-			},
-			Env: &config.Environment{
-				Name: mockEnvName,
-				CustomConfig: &config.CustomizeEnv{
-					ImportVPC: &config.ImportVPC{
-						PublicSubnetIDs:  nil,
-						PrivateSubnetIDs: nil,
-					},
-					InternalALBSubnets: []string{"nonexistent-subnet"},
-				},
-			},
-			Manifest: &manifest.BackendService{},
-			setupMocks: func(m *deployMocks) {
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
-			},
-			expectedErr: "subnet [nonexistent-subnet] was designated for ALB placement, but it was not imported",
-		},
-		"begrudgingly allows placement of internal ALB on public subnet": {
-			App: &config.Application{
-				Name: mockAppName,
-			},
-			Env: &config.Environment{
-				Name: mockEnvName,
-				CustomConfig: &config.CustomizeEnv{
-					ImportVPC: &config.ImportVPC{
-						PublicSubnetIDs:  []string{"public-subnet"},
-						PrivateSubnetIDs: nil,
-					},
-					InternalALBSubnets: []string{"public-subnet"},
-				},
-			},
-			Manifest: &manifest.BackendService{},
-			setupMocks: func(m *deployMocks) {
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
-			},
-		},
-		"success case with internal ALB subnet placement": {
-			App: &config.Application{
-				Name: mockAppName,
-			},
-			Env: &config.Environment{
-				Name: mockEnvName,
-				CustomConfig: &config.CustomizeEnv{
-					ImportVPC: &config.ImportVPC{
-						PublicSubnetIDs:  nil,
-						PrivateSubnetIDs: []string{"private-subnet"},
-					},
-					InternalALBSubnets: []string{"private-subnet"},
-				},
-			},
-			Manifest: &manifest.BackendService{},
-			setupMocks: func(m *deployMocks) {
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
-			},
-		},
 	}
 
 	for name, tc := range tests {

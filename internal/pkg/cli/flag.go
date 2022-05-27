@@ -283,8 +283,9 @@ Cannot be specified with any other flags.`
 	publicSubnetsFlagDescription      = "Optional. Use existing public subnet IDs."
 	privateSubnetsFlagDescription     = "Optional. Use existing private subnet IDs."
 	certsFlagDescription              = "Optional. Apply existing ACM certificates to the internet-facing load balancer."
-	internalALBSubnetsFlagDescription = "Optional. Specify subnet placement for an internal load balancer."
-	overrideVPCCIDRFlagDescription    = `Optional. Global CIDR to use for VPC.
+	internalALBSubnetsFlagDescription = `Optional. Specify subnet placement for an internal load balancer.
+Cannot be specified with --default-config or any of the --override flags.`
+	overrideVPCCIDRFlagDescription = `Optional. Global CIDR to use for VPC.
 (default 10.0.0.0/16)`
 	overrideAZsFlagDescription = `Optional. Availability Zone names.
 (default 2 random AZs)`
