@@ -19,7 +19,7 @@ EnvironmentManagerRole:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-{{- if or (.PublicImportedCertARNs .PrivateImportedCertARNs)}}
+{{- if or .PublicImportedCertARNs .PrivateImportedCertARNs}}
         - Sid: ImportedCertificates
           Effect: Allow
           Action: [
