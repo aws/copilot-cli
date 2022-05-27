@@ -62,6 +62,191 @@ func TestRDWS(t *testing.T) {
 	}
 }
 
+func TestLBWS(t *testing.T) {
+	// GIVEN
+	fakeFS := &fakeTemplateReader{
+		files: map[string]*template.Content{
+			"custom-resources/desired-count-delegation.js": {
+				Buffer: bytes.NewBufferString("custom domain app runner"),
+			},
+			"custom-resources/env-controller.js": {
+				Buffer: bytes.NewBufferString("env controller"),
+			},
+			"custom-resources/alb-rule-priority-generator.js": {
+				Buffer: bytes.NewBufferString("rule priority"),
+			},
+			"custom-resources/nlb-custom-domain.js": {
+				Buffer: bytes.NewBufferString("nlb custom domain"),
+			},
+			"custom-resources/nlb-cert-validator.js": {
+				Buffer: bytes.NewBufferString("nlb cert"),
+			},
+		},
+	}
+
+	// WHEN
+	crs, err := LBWS(fakeFS)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, fakeFS.matchCount, 5, "expected path calls do not match")
+
+	actualFnNames := make([]string, len(crs))
+	for i, cr := range crs {
+		actualFnNames[i] = cr.FunctionName()
+	}
+	require.ElementsMatch(t,
+		[]string{"DynamicDesiredCountFunction", "EnvControllerFunction", "RulePriorityFunction", "NLBCustomDomainFunction", "NLBCertValidatorFunction"},
+		actualFnNames, "function names must match")
+
+	for _, cr := range crs {
+		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
+		require.Equal(t, "index.js", cr.Files()[0].Name())
+	}
+}
+
+func TestWorker(t *testing.T) {
+	// GIVEN
+	fakeFS := &fakeTemplateReader{
+		files: map[string]*template.Content{
+			"custom-resources/desired-count-delegation.js": {
+				Buffer: bytes.NewBufferString("custom domain app runner"),
+			},
+			"custom-resources/backlog-per-task-calculator.js": {
+				Buffer: bytes.NewBufferString("backlog calc"),
+			},
+			"custom-resources/env-controller.js": {
+				Buffer: bytes.NewBufferString("env controller"),
+			},
+		},
+	}
+
+	// WHEN
+	crs, err := Worker(fakeFS)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, fakeFS.matchCount, 3, "expected path calls do not match")
+
+	actualFnNames := make([]string, len(crs))
+	for i, cr := range crs {
+		actualFnNames[i] = cr.FunctionName()
+	}
+	require.ElementsMatch(t,
+		[]string{"DynamicDesiredCountFunction", "BacklogPerTaskCalculatorFunction", "EnvControllerFunction"},
+		actualFnNames, "function names must match")
+
+	for _, cr := range crs {
+		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
+		require.Equal(t, "index.js", cr.Files()[0].Name())
+	}
+}
+
+func TestBackend(t *testing.T) {
+	// GIVEN
+	fakeFS := &fakeTemplateReader{
+		files: map[string]*template.Content{
+			"custom-resources/desired-count-delegation.js": {
+				Buffer: bytes.NewBufferString("custom domain app runner"),
+			},
+			"custom-resources/alb-rule-priority-generator.js": {
+				Buffer: bytes.NewBufferString("rule priority"),
+			},
+			"custom-resources/env-controller.js": {
+				Buffer: bytes.NewBufferString("env controller"),
+			},
+		},
+	}
+
+	// WHEN
+	crs, err := Backend(fakeFS)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, fakeFS.matchCount, 3, "expected path calls do not match")
+
+	actualFnNames := make([]string, len(crs))
+	for i, cr := range crs {
+		actualFnNames[i] = cr.FunctionName()
+	}
+	require.ElementsMatch(t,
+		[]string{"DynamicDesiredCountFunction", "RulePriorityFunction", "EnvControllerFunction"},
+		actualFnNames, "function names must match")
+
+	for _, cr := range crs {
+		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
+		require.Equal(t, "index.js", cr.Files()[0].Name())
+	}
+}
+
+func TestScheduledJob(t *testing.T) {
+	// GIVEN
+	fakeFS := &fakeTemplateReader{
+		files: map[string]*template.Content{
+			"custom-resources/env-controller.js": {
+				Buffer: bytes.NewBufferString("env controller"),
+			},
+		},
+	}
+
+	// WHEN
+	crs, err := ScheduledJob(fakeFS)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, fakeFS.matchCount, 1, "expected path calls do not match")
+
+	actualFnNames := make([]string, len(crs))
+	for i, cr := range crs {
+		actualFnNames[i] = cr.FunctionName()
+	}
+	require.ElementsMatch(t,
+		[]string{"EnvControllerFunction"},
+		actualFnNames, "function names must match")
+
+	for _, cr := range crs {
+		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
+		require.Equal(t, "index.js", cr.Files()[0].Name())
+	}
+}
+
+func TestEnv(t *testing.T) {
+	// GIVEN
+	fakeFS := &fakeTemplateReader{
+		files: map[string]*template.Content{
+			"custom-resources/dns-cert-validator.js": {
+				Buffer: bytes.NewBufferString("cert validator"),
+			},
+			"custom-resources/custom-domain.js": {
+				Buffer: bytes.NewBufferString("custom domain"),
+			},
+			"custom-resources/dns-delegation.js": {
+				Buffer: bytes.NewBufferString("dns delegation"),
+			},
+		},
+	}
+
+	// WHEN
+	crs, err := Env(fakeFS)
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, fakeFS.matchCount, 3, "expected path calls do not match")
+
+	actualFnNames := make([]string, len(crs))
+	for i, cr := range crs {
+		actualFnNames[i] = cr.FunctionName()
+	}
+	require.ElementsMatch(t,
+		[]string{"CertificateValidationFunction", "CustomDomainFunction", "DNSDelegationFunction"},
+		actualFnNames, "function names must match")
+
+	for _, cr := range crs {
+		require.Equal(t, 1, len(cr.Files()), "expected only a single index.js file to be zipped for the custom resource")
+		require.Equal(t, "index.js", cr.Files()[0].Name())
+	}
+}
+
 type fakeS3 struct {
 	objects map[string]string
 	err     error

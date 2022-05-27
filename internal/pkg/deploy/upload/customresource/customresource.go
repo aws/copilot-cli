@@ -44,6 +44,7 @@ var (
 	customDomainFilePath             = path.Join(customResourcesDir, "custom-domain.js")
 	customDomainAppRunnerFilePath    = path.Join(customResourcesDir, "custom-domain-app-runner.js")
 	desiredCountDelegationFilePath   = path.Join(customResourcesDir, "desired-count-delegation.js")
+	dnsCertValidationFilePath        = path.Join(customResourcesDir, "dns-cert-validator.js")
 	dnsDelegationFilePath            = path.Join(customResourcesDir, "dns-delegation.js")
 	envControllerFilePath            = path.Join(customResourcesDir, "env-controller.js")
 	nlbCertValidatorFilePath         = path.Join(customResourcesDir, "nlb-cert-validator.js")
@@ -110,6 +111,51 @@ func RDWS(fs template.Reader) ([]CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
 		envControllerFnName: envControllerFilePath,
 		customDomainFnName:  customDomainAppRunnerFilePath,
+	})
+}
+
+// LBWS returns the custom resources for a load-balanced web service.
+func LBWS(fs template.Reader) ([]CustomResource, error) {
+	return buildCustomResources(fs, map[string]string{
+		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
+		envControllerFnName:       envControllerFilePath,
+		rulePriorityFnName:        albRulePriorityGeneratorFilePath,
+		nlbCustomDomainFnName:     nlbCustomDomainFilePath,
+		nlbCertValidatorFnName:    nlbCertValidatorFilePath,
+	})
+}
+
+// Worker returns the custom resources for a worker service.
+func Worker(fs template.Reader) ([]CustomResource, error) {
+	return buildCustomResources(fs, map[string]string{
+		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
+		backlogPerTaskFnName:      backlogPerTaskCalculatorFilePath,
+		envControllerFnName:       envControllerFilePath,
+	})
+}
+
+// Backend returns the custom resources for a backend service.
+func Backend(fs template.Reader) ([]CustomResource, error) {
+	return buildCustomResources(fs, map[string]string{
+		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
+		rulePriorityFnName:        albRulePriorityGeneratorFilePath,
+		envControllerFnName:       envControllerFilePath,
+	})
+}
+
+// ScheduledJob returns the custom resources for a scheduled job.
+func ScheduledJob(fs template.Reader) ([]CustomResource, error) {
+	return buildCustomResources(fs, map[string]string{
+		envControllerFnName: envControllerFilePath,
+	})
+}
+
+// Env returns the custom resources for an environment.
+func Env(fs template.Reader) ([]CustomResource, error) {
+	return buildCustomResources(fs, map[string]string{
+		certValidationFnName: dnsCertValidationFilePath,
+		customDomainFnName:   customDomainFilePath,
+		dnsDelegationFnName:  dnsDelegationFilePath,
 	})
 }
 
