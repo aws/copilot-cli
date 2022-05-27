@@ -258,7 +258,7 @@ func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 					return nil
 				}
 			},
-			wantedError: errors.New("get available features of the environment mockEnv stack: some error"),
+			wantedError: errors.New("get available features of the mockEnv environment stack: some error"),
 		},
 		"not compatible": {
 			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
@@ -268,7 +268,7 @@ func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 					return []string{template.InternalALBFeatureName}
 				}
 			},
-			wantedError: errors.New(`environment "mockEnv" is not on the versions that support the feature "Internal ALB"`),
+			wantedError: errors.New(`environment "mockEnv" is not on a version that supports the "Internal ALB" feature`),
 		},
 		"compatible": {
 			setupMock: func(m *checkEnvironmentCompatibilityMocks) {

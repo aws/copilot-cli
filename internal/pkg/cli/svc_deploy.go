@@ -375,7 +375,7 @@ func workloadManifest(in *workloadManifestInput) (interface{}, error) {
 func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName string, env versionFeatureGetter) error {
 	availableFeatures, err := env.AvailableFeatures()
 	if err != nil {
-		return fmt.Errorf("get available features of the environment %s stack: %w", envName, err)
+		return fmt.Errorf("get available features of the %s environment stack: %w", envName, err)
 	}
 	exists := struct{}{}
 	available := make(map[string]struct{})
@@ -394,7 +394,7 @@ The least environment version that supports the feature is %s.`, envName, templa
 			}
 			logMsg += fmt.Sprintf(`Please upgrade your environment by running %s.`, color.HighlightCode(fmt.Sprintf("copilot env upgrade --name %s", envName)))
 			log.Errorln(logMsg)
-			return fmt.Errorf("environment %q is not on the versions that support the feature %q", envName, template.FriendlyFeatureName[f])
+			return fmt.Errorf("environment %q is not on a version that supports the %q feature", envName, template.FriendlyFeatureName[f])
 		}
 	}
 	return nil
