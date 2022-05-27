@@ -217,6 +217,29 @@ func TestFromEnvConfig(t *testing.T) {
 				},
 			},
 		},
+		"converts imported certificates for a public load balancer without an imported vpc": {
+			in: &config.Environment{
+				App:  "phonetool",
+				Name: "test",
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+				},
+			},
+
+			wanted: &Environment{
+				Workload: Workload{
+					Name: stringP("test"),
+					Type: stringP("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: environmentHTTPConfig{
+						Public: publicHTTPConfig{
+							Certificates: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+						},
+					},
+				},
+			},
+		},
 		"converts imported certificates for a private load balancer with subnet placement specified": {
 			in: &config.Environment{
 				App:  "phonetool",
@@ -242,13 +265,9 @@ func TestFromEnvConfig(t *testing.T) {
 								Private: []subnetConfiguration{
 									{
 										SubnetID: aws.String("subnet1"),
-										CIDR:     nil,
-										AZ:       nil,
 									},
 									{
 										SubnetID: aws.String("subnet2"),
-										CIDR:     nil,
-										AZ:       nil,
 									},
 								},
 								Public: []subnetConfiguration{},
@@ -257,8 +276,8 @@ func TestFromEnvConfig(t *testing.T) {
 					},
 					HTTPConfig: environmentHTTPConfig{
 						Private: privateHTTPConfig{
-							Subnets:      []string{"subnet2"},
-							Certificates: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+							InternalALBSubnets: []string{"subnet2"},
+							Certificates:       []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
 						},
 					},
 				},

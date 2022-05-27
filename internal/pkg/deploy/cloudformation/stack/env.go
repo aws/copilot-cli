@@ -95,15 +95,15 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}
 
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
-		AppName:                e.in.App.Name,
-		DNSCertValidatorLambda: dnsCertValidator,
-		DNSDelegationLambda:    dnsDelegation,
-		CustomDomainLambda:     customDomain,
-		ScriptBucketName:       bucket,
-		ArtifactBucketARN:      e.in.ArtifactBucketARN,
-		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
-
-		ImportCertARNs:           e.importCertARNs(),
+		AppName:                  e.in.App.Name,
+		DNSCertValidatorLambda:   dnsCertValidator,
+		DNSDelegationLambda:      dnsDelegation,
+		CustomDomainLambda:       customDomain,
+		ScriptBucketName:         bucket,
+		ArtifactBucketARN:        e.in.ArtifactBucketARN,
+		ArtifactBucketKeyARN:     e.in.ArtifactBucketKeyARN,
+		PublicImportedCertARNs:   e.importPublicCertARNs(),
+		PrivateImportedCertARNs:  e.importPrivateCertARNs(),
 		VPCConfig:                e.vpcConfig(),
 		CustomInternalALBSubnets: e.internalALBSubnets(),
 		Telemetry:                e.telemetryConfig(),
@@ -189,23 +189,42 @@ func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
 	}
 }
 
-func (e *EnvStackConfig) importCertARNs() []string {
+func (e *EnvStackConfig) importPublicCertARNs() []string {
 	// If a manifest is present, it is the only place we look at.
-	// Look under both public and private.
 	if e.in.Mft != nil {
-		allCerts := append(e.in.Mft.HTTPConfig.Public.Certificates, e.in.Mft.HTTPConfig.Private.Certificates...)
-		return allCerts
+		return e.in.Mft.HTTPConfig.Public.Certificates
 	}
 	// Fallthrough to SSM config.
+	if e.in.ImportCertARNs == nil {
+		return nil
+	}
 	return e.in.ImportCertARNs
+}
+
+func (e *EnvStackConfig) importPrivateCertARNs() []string {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		return e.in.Mft.HTTPConfig.Private.Certificates
+	}
+	// Fallthrough to SSM config.
+	if e.in.ImportCertARNs == nil {
+		return nil
+	}
+	if e.in.ImportVPCConfig.PublicSubnetIDs == nil {
+		return e.in.ImportCertARNs
+	}
+	return nil
 }
 
 func (e *EnvStackConfig) internalALBSubnets() []string {
 	// If a manifest is present, it is the only place we look.
 	if e.in.Mft != nil {
-		return e.in.Mft.HTTPConfig.Private.Subnets
+		return e.in.Mft.HTTPConfig.Private.InternalALBSubnets
 	}
 	// Fallthrough to SSM config.
+	if e.in.InternalALBSubnets == nil {
+		return nil
+	}
 	return e.in.InternalALBSubnets
 }
 
