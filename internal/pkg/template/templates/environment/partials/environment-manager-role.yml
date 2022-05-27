@@ -19,7 +19,7 @@ EnvironmentManagerRole:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-{{- if .PublicImportedCertARNs}}
+{{- if or (.PublicImportedCertARNs .PrivateImportedCertARNs)}}
         - Sid: ImportedCertificates
           Effect: Allow
           Action: [
@@ -29,14 +29,6 @@ EnvironmentManagerRole:
 {{- range $arn := .PublicImportedCertARNs}}
           - "{{$arn}}"
 {{- end}}
-{{- end}}
-{{- if .PrivateImportedCertARNs}}
-        - Sid: ImportedCertificates
-          Effect: Allow
-          Action: [
-            acm:DescribeCertificate
-          ]
-          Resource:
 {{- range $arn := .PrivateImportedCertARNs}}
           - "{{$arn}}"
 {{- end}}
