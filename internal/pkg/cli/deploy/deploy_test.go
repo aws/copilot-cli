@@ -1140,11 +1140,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-							Alias: manifest.Alias{
-								String: aws.String("go.dev"),
-							},
+					RoutingRule: manifest.RoutingRuleConfiguration{
+						Alias: manifest.Alias{
+							String: aws.String("go.dev"),
 						},
 					},
 				},
@@ -1166,11 +1164,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-							Alias: manifest.Alias{
-								String: aws.String("go.dev"),
-							},
+					RoutingRule: manifest.RoutingRuleConfiguration{
+						Alias: manifest.Alias{
+							String: aws.String("go.dev"),
 						},
 					},
 				},
@@ -1193,11 +1189,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-							Alias: manifest.Alias{
-								String: aws.String("go.dev"),
-							},
+					RoutingRule: manifest.RoutingRuleConfiguration{
+						Alias: manifest.Alias{
+							String: aws.String("go.dev"),
 						},
 					},
 				},

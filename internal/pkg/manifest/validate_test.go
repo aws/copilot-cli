@@ -536,14 +536,12 @@ func TestBackendService_Validate(t *testing.T) {
 			config: BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							ProtocolVersion: aws.String("GRPC"),
-						},
+					RoutingRule: RoutingRuleConfiguration{
+						ProtocolVersion: aws.String("GRPC"),
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "http": `,
+			wantedErrorMsgPrefix: `validate "http": "path" must be specified`,
 		},
 	}
 	for name, tc := range testCases {
@@ -1299,7 +1297,9 @@ func TestRoutingRule_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
 		},
 		"error if path is missing": {
-			RoutingRule:          RoutingRuleConfiguration{},
+			RoutingRule: RoutingRuleConfiguration{
+				ProtocolVersion: aws.String("GRPC"),
+			},
 			wantedErrorMsgPrefix: `"path" must be specified`,
 		},
 		"should not error if protocol version is not uppercase": {

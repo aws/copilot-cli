@@ -23,11 +23,6 @@ func (r *RoutingRuleConfigOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
 
-// EmptyOrDisabled returns true if the routing rule configuration is not configured or is explicitly disabled.
-func (r *RoutingRuleConfigOrBool) EmptyOrDisabled() bool {
-	return r.Disabled() || r.isEmpty()
-}
-
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
 func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
@@ -40,7 +35,7 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	if !r.RoutingRuleConfiguration.isEmpty() {
+	if !r.RoutingRuleConfiguration.IsEmpty() {
 		// Unmarshalled successfully to r.RoutingRuleConfiguration, unset r.Enabled, and return.
 		r.Enabled = nil
 		return nil
@@ -76,7 +71,7 @@ func (r *RoutingRuleConfiguration) GetTargetContainer() *string {
 	return r.TargetContainerCamelCase
 }
 
-func (r *RoutingRuleConfiguration) isEmpty() bool {
+func (r *RoutingRuleConfiguration) IsEmpty() bool {
 	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() &&
 		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil &&
 		r.HostedZone == nil

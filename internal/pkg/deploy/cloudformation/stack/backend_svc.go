@@ -70,7 +70,7 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 		},
 		manifest:   conf.Manifest,
 		parser:     parser,
-		albEnabled: !conf.Manifest.RoutingRule.EmptyOrDisabled(),
+		albEnabled: !conf.Manifest.RoutingRule.IsEmpty(),
 	}
 
 	if conf.Env.HasImportedCerts() {
@@ -245,7 +245,7 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 	}...)
 
-	if !s.manifest.RoutingRule.EmptyOrDisabled() {
+	if !s.manifest.RoutingRule.IsEmpty() {
 		params = append(params, []*cloudformation.Parameter{
 			{
 				ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
