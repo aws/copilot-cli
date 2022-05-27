@@ -82,7 +82,7 @@ var (
 	envInitImportEnvResourcesSelectOption = "No, I'd like to import existing resources (VPC, subnets)."
 	envInitCustomizedEnvTypes             = []string{envInitDefaultConfigSelectOption, envInitAdjustEnvResourcesSelectOption, envInitImportEnvResourcesSelectOption}
 
-	errDefaultConfigWithSubnetPlacement = errors.New(`to specify internal ALB subnet placement, you must import existing resources, including subnets.
+	errInternalALBPlacementWithManagedVPC = errors.New(`to specify internal ALB subnet placement, you must import existing resources, including subnets.
 For default config without subnet placement specification, Copilot will place the internal ALB in the generated private subnets.`)
 )
 
@@ -374,8 +374,8 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if (o.importVPC.isSet() || o.adjustVPC.isSet()) && o.defaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
-	if o.internalALBSubnets != nil && o.adjustVPC.isSet() || o.defaultConfig {
-		return errDefaultConfigWithSubnetPlacement
+	if o.internalALBSubnets != nil && (o.adjustVPC.isSet() || o.defaultConfig) {
+		return errInternalALBPlacementWithManagedVPC
 	}
 	if o.importVPC.isSet() {
 		// Allow passing in VPC without subnets, but error out early for too few subnets-- we won't prompt the user to select more of one type if they pass in any.
@@ -791,13 +791,8 @@ func (o *initEnvOpts) validateInternalALBSubnets() error {
 	}
 	isImported := make(map[string]bool)
 	for _, placementSubnet := range o.internalALBSubnets {
-		for _, importedPrivateSubnet := range o.importVPC.PrivateSubnetIDs {
-			if placementSubnet == importedPrivateSubnet {
-				isImported[placementSubnet] = true
-			}
-		}
-		for _, importedPublicSubnet := range o.importVPC.PublicSubnetIDs {
-			if placementSubnet == importedPublicSubnet {
+		for _, subnet := range append(o.importVPC.PrivateSubnetIDs, o.importVPC.PublicSubnetIDs...) {
+			if placementSubnet == subnet {
 				isImported[placementSubnet] = true
 			}
 		}
@@ -805,7 +800,7 @@ func (o *initEnvOpts) validateInternalALBSubnets() error {
 	if len(isImported) != len(o.internalALBSubnets) {
 		return fmt.Errorf("%s %s %s designated for ALB placement, but %s imported",
 			english.PluralWord(len(o.internalALBSubnets), "subnet", "subnets"),
-			o.internalALBSubnets,
+			strings.Join(o.internalALBSubnets, ", "),
 			english.PluralWord(len(o.internalALBSubnets), "was", "were"),
 			english.PluralWord(len(o.internalALBSubnets), "it was not", "they were not all"))
 	}

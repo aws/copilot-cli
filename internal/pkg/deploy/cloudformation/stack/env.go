@@ -222,9 +222,6 @@ func (e *EnvStackConfig) internalALBSubnets() []string {
 		return e.in.Mft.HTTPConfig.Private.InternalALBSubnets
 	}
 	// Fallthrough to SSM config.
-	if e.in.InternalALBSubnets == nil {
-		return nil
-	}
 	return e.in.InternalALBSubnets
 }
 

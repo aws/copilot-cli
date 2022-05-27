@@ -417,7 +417,6 @@ Resources:
 {{include "cfn-execution-role" . | indent 2}}
 {{include "environment-manager-role" . | indent 2}}
 {{- if not .PublicImportedCertARNs}}
-{{- if not .PrivateImportedCertARNs}}
 {{include "custom-resources-role" . | indent 2}}
   EnvironmentHostedZone:
     Metadata:
@@ -430,7 +429,6 @@ Resources:
       Name: !Sub ${EnvironmentName}.${AppName}.${AppDNSName}
 {{include "lambdas" . | indent 2}}
 {{include "custom-resources" . | indent 2}}
-{{- end}}
 {{- end}}
 Outputs:
   VpcId:
@@ -548,7 +546,6 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
 {{- if not .PublicImportedCertARNs}}
-{{- if not .PrivateImportedCertARNs}}
   EnvironmentHostedZone:
     Condition: DelegateDNS
     Value: !Ref EnvironmentHostedZone
@@ -561,7 +558,6 @@ Outputs:
     Description: The domain name of this environment.
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
-{{- end}}
 {{- end}}
   EnabledFeatures:
     Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads}'
