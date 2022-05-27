@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -27,6 +28,8 @@ const (
 	allFlag        = "all"
 	forceFlag      = "force"
 	noRollbackFlag = "no-rollback"
+	manifestFlag   = "manifest"
+
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
@@ -205,6 +208,7 @@ const (
 rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
+	manifestFlagDescription = "Optional. Output the manifest file used for the deployment."
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.

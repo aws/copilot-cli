@@ -652,6 +652,29 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`"name" must be specified`),
 		},
+		"error if placement is not private": {
+			config: RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: stringP("mockLocation"),
+						},
+						Port: uint16P(80),
+					},
+					Network: RequestDrivenWebServiceNetworkConfig{
+						VPC: rdwsVpcConfig{
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`placement "public" is not supported for Request-Driven Web Service`),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

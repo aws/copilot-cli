@@ -1399,10 +1399,10 @@ func TestConfigSelect_Service(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			MockconfigLister := mocks.NewMockconfigLister(ctrl)
+			mockconfigLister := mocks.NewMockconfigLister(ctrl)
 			mockprompt := mocks.NewMockprompter(ctrl)
 			mocks := configSelectMocks{
-				workloadLister: MockconfigLister,
+				workloadLister: mockconfigLister,
 				prompt:         mockprompt,
 			}
 			tc.setupMocks(mocks)
@@ -1411,7 +1411,7 @@ func TestConfigSelect_Service(t *testing.T) {
 				AppEnvSelector: &AppEnvSelector{
 					prompt: mockprompt,
 				},
-				workloadLister: MockconfigLister,
+				workloadLister: mockconfigLister,
 			}
 
 			got, err := sel.Service("Select a service", "Help text", appName)
@@ -1530,10 +1530,10 @@ func TestConfigSelect_Job(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			MockconfigLister := mocks.NewMockconfigLister(ctrl)
+			mockconfigLister := mocks.NewMockconfigLister(ctrl)
 			mockprompt := mocks.NewMockprompter(ctrl)
 			mocks := configSelectMocks{
-				workloadLister: MockconfigLister,
+				workloadLister: mockconfigLister,
 				prompt:         mockprompt,
 			}
 			tc.setupMocks(mocks)
@@ -1542,7 +1542,7 @@ func TestConfigSelect_Job(t *testing.T) {
 				AppEnvSelector: &AppEnvSelector{
 					prompt: mockprompt,
 				},
-				workloadLister: MockconfigLister,
+				workloadLister: mockconfigLister,
 			}
 
 			got, err := sel.Job("Select a job", "Help text", appName)
@@ -2393,17 +2393,17 @@ func TestWorkspaceSelect_WsPipeline(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			MockwsPipelinesLister := mocks.NewMockwsPipelinesLister(ctrl)
+			mockwsPipelinesLister := mocks.NewMockwsPipelinesLister(ctrl)
 			mockprompt := mocks.NewMockprompter(ctrl)
 			mocks := wsPipelineSelectMocks{
 				prompt: mockprompt,
-				ws:     MockwsPipelinesLister,
+				ws:     mockwsPipelinesLister,
 			}
 			tc.setupMocks(mocks)
 
 			sel := WsPipelineSelector{
 				prompt: mockprompt,
-				ws:     MockwsPipelinesLister,
+				ws:     mockwsPipelinesLister,
 			}
 			got, err := sel.WsPipeline("Select a pipeline", "Help text")
 			if tc.wantedErr != nil {

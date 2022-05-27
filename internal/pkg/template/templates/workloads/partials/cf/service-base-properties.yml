@@ -37,9 +37,15 @@ NetworkConfiguration:
   AwsvpcConfiguration:
     AssignPublicIp: {{.Network.AssignPublicIP}}
     Subnets:
+    {{- if .Network.SubnetIDs}}
+      {{- range $id := .Network.SubnetIDs}}
+      - {{$id}}
+      {{- end}}
+    {{- else}}
       Fn::Split:
         - ','
         - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
+    {{- end}}
     SecurityGroups:
       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
       {{- range $sg := .Network.SecurityGroups}}
