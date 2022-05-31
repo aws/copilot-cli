@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"gopkg.in/yaml.v2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -207,10 +208,7 @@ func (e *EnvStackConfig) importPrivateCertARNs() []string {
 		return e.in.Mft.HTTPConfig.Private.Certificates
 	}
 	// Fallthrough to SSM config.
-	if e.in.ImportCertARNs == nil {
-		return nil
-	}
-	if e.in.ImportVPCConfig.PublicSubnetIDs == nil {
+	if e.in.ImportVPCConfig != nil && len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
 		return e.in.ImportCertARNs
 	}
 	return nil
