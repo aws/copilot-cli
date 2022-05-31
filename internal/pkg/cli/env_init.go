@@ -149,7 +149,7 @@ type initEnvVars struct {
 	adjustVPC          adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
 	telemetry          telemetryVars // Configure observability and monitoring settings.
 	importCerts        []string      // Addtional existing ACM certificates to use.
-	internalALBSubnets []string      // Private subnets to be used for internal ALB placement.
+	internalALBSubnets []string      // Subnets to be used for internal ALB placement.
 
 	tempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the profile.
 	region    string        // The region to create the environment in.
