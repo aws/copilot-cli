@@ -41,7 +41,7 @@ func (e EnvironmentConfig) Validate() error {
 		if !e.Network.VPC.imported() {
 			return errors.New("in order to specify internal ALB subnet placement, subnets must be imported")
 		}
-		if err := e.validateSubnets(); err != nil {
+		if err := e.validateInternalALBSubnets(); err != nil {
 			return err
 		}
 	}
@@ -208,10 +208,7 @@ func (o privateHTTPConfig) Validate() error {
 	return nil
 }
 
-func (c EnvironmentConfig) validateSubnets() error {
-	if c.HTTPConfig.Private.InternalALBSubnets == nil {
-		return nil
-	}
+func (c EnvironmentConfig) validateInternalALBSubnets() error {
 	isImported := make(map[string]bool)
 	for _, placementSubnet := range c.HTTPConfig.Private.InternalALBSubnets {
 		for _, subnet := range append(c.Network.VPC.Subnets.Private, c.Network.VPC.Subnets.Public...) {

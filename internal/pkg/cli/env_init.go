@@ -385,10 +385,8 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 		if len(o.importVPC.PrivateSubnetIDs) == 1 {
 			return fmt.Errorf("at least two private subnets must be imported")
 		}
-		if o.internalALBSubnets != nil {
-			if err := o.validateInternalALBSubnets(); err != nil {
-				return err
-			}
+		if err := o.validateInternalALBSubnets(); err != nil {
+			return err
 		}
 	}
 	if o.adjustVPC.isSet() {
@@ -786,7 +784,7 @@ func (o *initEnvOpts) validateCredentials() error {
 }
 
 func (o *initEnvOpts) validateInternalALBSubnets() error {
-	if o.internalALBSubnets == nil {
+	if len(o.internalALBSubnets) == 0 {
 		return nil
 	}
 	isImported := make(map[string]bool)
