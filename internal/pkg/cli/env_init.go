@@ -374,7 +374,7 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if (o.importVPC.isSet() || o.adjustVPC.isSet()) && o.defaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
-	if o.internalALBSubnets != nil && (o.adjustVPC.isSet() || o.defaultConfig) {
+	if o.internalALBSubnets != nil && !o.importVPC.isSet() {
 		return errInternalALBPlacementWithManagedVPC
 	}
 	if o.importVPC.isSet() {
