@@ -1108,6 +1108,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 	const (
 		mockAppName = "mock-app"
 		mockEnvName = "mock-env"
+		mockSvcName = "mock-svc"
 	)
 
 	tests := map[string]struct {
@@ -1130,7 +1131,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 			},
 		},
-		"success if alias configured, no env certs": {
+		"failure if alias configured, no env certs": {
 			App: &config.Application{
 				Name: mockAppName,
 			},
@@ -1139,11 +1140,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-							Alias: manifest.Alias{
-								String: aws.String("go.dev"),
-							},
+					RoutingRule: manifest.RoutingRuleConfiguration{
+						Alias: manifest.Alias{
+							String: aws.String("go.dev"),
 						},
 					},
 				},
@@ -1151,6 +1150,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			setupMocks: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 			},
+			expectedErr: `cannot specify "alias" in an environment without imported certs`,
 		},
 		"failure if cert validation fails": {
 			App: &config.Application{
@@ -1164,11 +1164,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-							Alias: manifest.Alias{
-								String: aws.String("go.dev"),
-							},
+					RoutingRule: manifest.RoutingRuleConfiguration{
+						Alias: manifest.Alias{
+							String: aws.String("go.dev"),
 						},
 					},
 				},
@@ -1191,11 +1189,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
-					RoutingRule: manifest.RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-							Alias: manifest.Alias{
-								String: aws.String("go.dev"),
-							},
+					RoutingRule: manifest.RoutingRuleConfiguration{
+						Alias: manifest.Alias{
+							String: aws.String("go.dev"),
 						},
 					},
 				},
@@ -1204,6 +1200,22 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"go.dev"}, []string{"mockCertARN"}).Return(nil)
 			},
+		},
+		"failure if env has imported certs but no alias set": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: []string{"mockCertARN"},
+				},
+			},
+			Manifest: &manifest.BackendService{},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+			},
+			expectedErr: `cannot deploy service mock-svc without http.alias to environment mock-env with certificate imported`,
 		},
 	}
 
@@ -1223,6 +1235,7 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			deployer := &backendSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
+						name:           mockSvcName,
 						app:            tc.App,
 						env:            tc.Env,
 						endpointGetter: m.mockEndpointGetter,
