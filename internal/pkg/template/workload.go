@@ -485,6 +485,7 @@ type WorkloadOpts struct {
 	ServiceDiscoveryEndpoint string
 	HTTPVersion              *string
 	ALBEnabled               bool
+	HostedZoneID             *string
 
 	// Additional options for service templates.
 	WorkloadType            string

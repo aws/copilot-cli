@@ -60,11 +60,11 @@ type errFieldMustBeSpecified struct {
 }
 
 func (e *errFieldMustBeSpecified) Error() string {
-	errMsg := fmt.Sprintf(`"%s" must be specified`, e.missingField)
+	errMsg := fmt.Sprintf(`%q must be specified`, e.missingField)
 	if len(e.conditionalFields) == 0 {
 		return errMsg
 	}
-	return fmt.Sprintf(`%s if "%s" %s specified`, errMsg, english.WordSeries(e.conditionalFields, "or"),
+	return fmt.Sprintf(`%s if %q %s specified`, errMsg, english.WordSeries(e.conditionalFields, "or"),
 		english.PluralWord(len(e.conditionalFields), "is", "are"))
 }
 

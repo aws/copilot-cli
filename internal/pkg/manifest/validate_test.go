@@ -532,6 +532,17 @@ func TestBackendService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
+		"error if fail to validate http": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfiguration{
+						ProtocolVersion: aws.String("GRPC"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "http": "path" must be specified`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -1286,7 +1297,9 @@ func TestRoutingRule_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
 		},
 		"error if path is missing": {
-			RoutingRule:          RoutingRuleConfiguration{},
+			RoutingRule: RoutingRuleConfiguration{
+				ProtocolVersion: aws.String("GRPC"),
+			},
 			wantedErrorMsgPrefix: `"path" must be specified`,
 		},
 		"should not error if protocol version is not uppercase": {
@@ -1294,6 +1307,13 @@ func TestRoutingRule_Validate(t *testing.T) {
 				Path:            stringP("/"),
 				ProtocolVersion: aws.String("gRPC"),
 			},
+		},
+		"error if hosted zone set without alias": {
+			RoutingRule: RoutingRuleConfiguration{
+				Path:       stringP("/"),
+				HostedZone: aws.String("ABCD1234"),
+			},
+			wantedErrorMsgPrefix: `"alias" must be specified if "hosted_zone" is specified`,
 		},
 	}
 	for name, tc := range testCases {
