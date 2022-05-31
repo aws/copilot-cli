@@ -174,13 +174,13 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inDefault:            true,
 			inInternalALBSubnets: []string{"mockSubnet", "anotherMockSubnet"},
 
-			wantedErrMsg: "subnets 'mockSubnet, anotherMockSubnet' specified for internal ALB placement, but those subnets not imported",
+			wantedErrMsg: "subnets 'mockSubnet, anotherMockSubnet' specified for internal ALB placement, but those subnets are not imported",
 		},
 		"cannot specify internal ALB subnet placement with adjusted VPC resources": {
 			inPublicCIDRs:        []string{"mockCIDR"},
 			inInternalALBSubnets: []string{"mockSubnet", "anotherMockSubnet"},
 
-			wantedErrMsg: "subnets 'mockSubnet, anotherMockSubnet' specified for internal ALB placement, but those subnets not imported",
+			wantedErrMsg: "subnets 'mockSubnet, anotherMockSubnet' specified for internal ALB placement, but those subnets are not imported",
 		},
 		"invalid specification of internal ALB subnet placement": {
 			inPrivateIDs:         []string{"mockID", "mockSubnet", "anotherMockSubnet"},
