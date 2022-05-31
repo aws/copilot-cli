@@ -371,7 +371,7 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if (o.importVPC.isSet() || o.adjustVPC.isSet()) && o.defaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
-	if o.internalALBSubnets != nil && !o.importVPC.isSet() {
+	if o.internalALBSubnets != nil && (o.adjustVPC.isSet() || o.defaultConfig) {
 		log.Error(`To specify internal ALB subnet placement, you must import existing resources, including subnets.
 For default config without subnet placement specification, Copilot will place the internal ALB in the generated private subnets.`)
 		return fmt.Errorf("subnets '%s' specified for internal ALB placement, but those subnets are not imported", strings.Join(o.internalALBSubnets, ", "))
