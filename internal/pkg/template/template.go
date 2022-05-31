@@ -51,6 +51,11 @@ var (
 	}
 )
 
+// Reader is the interface that wraps the Read method.
+type Reader interface {
+	Read(path string) (*Content, error)
+}
+
 // Parser is the interface that wraps the Parse method.
 type Parser interface {
 	Parse(path string, data interface{}, options ...ParseOption) (*Content, error)
@@ -58,7 +63,7 @@ type Parser interface {
 
 // ReadParser is the interface that wraps the Read and Parse methods.
 type ReadParser interface {
-	Read(path string) (*Content, error)
+	Reader
 	Parser
 }
 
