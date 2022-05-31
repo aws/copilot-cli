@@ -81,9 +81,6 @@ var (
 	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges, AZs)."
 	envInitImportEnvResourcesSelectOption = "No, I'd like to import existing resources (VPC, subnets)."
 	envInitCustomizedEnvTypes             = []string{envInitDefaultConfigSelectOption, envInitAdjustEnvResourcesSelectOption, envInitImportEnvResourcesSelectOption}
-
-	errInternalALBPlacementWithManagedVPC = errors.New(`to specify internal ALB subnet placement, you must import existing resources, including subnets.
-For default config without subnet placement specification, Copilot will place the internal ALB in the generated private subnets.`)
 )
 
 type importVPCVars struct {
@@ -375,7 +372,9 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
 	if o.internalALBSubnets != nil && !o.importVPC.isSet() {
-		return errInternalALBPlacementWithManagedVPC
+		log.Error(`To specify internal ALB subnet placement, you must import existing resources, including subnets.
+For default config without subnet placement specification, Copilot will place the internal ALB in the generated private subnets.`)
+		return fmt.Errorf("subnets '%s' specified for internal ALB placement, but those subnets not imported", strings.Join(o.internalALBSubnets, ", "))
 	}
 	if o.importVPC.isSet() {
 		// Allow passing in VPC without subnets, but error out early for too few subnets-- we won't prompt the user to select more of one type if they pass in any.
