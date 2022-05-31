@@ -36,6 +36,15 @@ func (e EnvironmentConfig) Validate() error {
 	if err := e.HTTPConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
+
+	if e.HTTPConfig.Private.InternalALBSubnets != nil {
+		if !e.Network.VPC.imported() {
+			return errors.New("in order to specify internal ALB subnet placement, subnets must be imported")
+		}
+		if err := e.validateInternalALBSubnets(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -195,6 +204,21 @@ func (o privateHTTPConfig) Validate() error {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
+	}
+	return nil
+}
+
+func (c EnvironmentConfig) validateInternalALBSubnets() error {
+	isImported := make(map[string]bool)
+	for _, placementSubnet := range c.HTTPConfig.Private.InternalALBSubnets {
+		for _, subnet := range append(c.Network.VPC.Subnets.Private, c.Network.VPC.Subnets.Public...) {
+			if placementSubnet == aws.StringValue(subnet.SubnetID) {
+				isImported[placementSubnet] = true
+			}
+		}
+	}
+	if len(isImported) != len(c.HTTPConfig.Private.InternalALBSubnets) {
+		return fmt.Errorf("subnet(s) specified for internal ALB placement not imported")
 	}
 	return nil
 }
