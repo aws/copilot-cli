@@ -48,11 +48,6 @@ func (c *CustomizeEnv) IsEmpty() bool {
 	return c.ImportVPC == nil && c.VPCConfig == nil && len(c.ImportCertARNs) == 0 && len(c.InternalALBSubnets) == 0
 }
 
-// HasInternalALBSubnets returns if subnet placement of an internal ALB has been specified.
-func (e *Environment) HasInternalALBSubnets() bool {
-	return len(e.CustomConfig.InternalALBSubnets) != 0
-}
-
 // ImportVPC holds the fields to import VPC resources.
 type ImportVPC struct {
 	ID               string   `json:"id"` // ID for the VPC.

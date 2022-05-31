@@ -195,9 +195,6 @@ func (e *EnvStackConfig) importPublicCertARNs() []string {
 		return e.in.Mft.HTTPConfig.Public.Certificates
 	}
 	// Fallthrough to SSM config.
-	if e.in.ImportCertARNs == nil {
-		return nil
-	}
 	return e.in.ImportCertARNs
 }
 
