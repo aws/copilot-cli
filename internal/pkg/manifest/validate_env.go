@@ -39,7 +39,7 @@ func (e EnvironmentConfig) Validate() error {
 
 	if e.HTTPConfig.Private.InternalALBSubnets != nil {
 		if !e.Network.VPC.imported() {
-			return errors.New("in order to specify internal ALB subnet placement, subnets must be imported ")
+			return errors.New("in order to specify internal ALB subnet placement, subnets must be imported")
 		}
 		if err := e.validateSubnets(); err != nil {
 			return err
