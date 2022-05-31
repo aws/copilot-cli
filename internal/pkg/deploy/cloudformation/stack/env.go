@@ -5,7 +5,6 @@ package stack
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
