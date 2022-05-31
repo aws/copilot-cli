@@ -1124,9 +1124,6 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Env: &config.Environment{
 				Name: mockEnvName,
-				CustomConfig: &config.CustomizeEnv{
-					InternalALBSubnets: []string{},
-				},
 			},
 			Manifest: &manifest.BackendService{},
 			setupMocks: func(m *deployMocks) {
@@ -1139,9 +1136,6 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Env: &config.Environment{
 				Name: mockEnvName,
-				CustomConfig: &config.CustomizeEnv{
-					InternalALBSubnets: []string{},
-				},
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
