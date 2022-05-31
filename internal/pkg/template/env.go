@@ -42,7 +42,8 @@ type EnvOpts struct {
 	ArtifactBucketKeyARN      string
 
 	VPCConfig                VPCConfig
-	ImportCertARNs           []string
+	PublicImportedCertARNs   []string
+	PrivateImportedCertARNs  []string
 	CustomInternalALBSubnets []string
 	Telemetry                *Telemetry
 
