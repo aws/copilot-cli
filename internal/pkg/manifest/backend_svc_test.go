@@ -251,20 +251,11 @@ func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
 		},
 		"internal alb feature required": {
 			mft: func(svc *BackendService) {
-				svc.RoutingRule = RoutingRuleConfigOrBool{
-					RoutingRuleConfiguration: RoutingRuleConfiguration{
-						Path: aws.String("/mock_path"),
-					},
+				svc.RoutingRule = RoutingRuleConfiguration{
+					Path: aws.String("/mock_path"),
 				}
 			},
 			wanted: []string{template.InternalALBFeatureName},
-		},
-		"internal alb feature not required as it is explicitly disabled": {
-			mft: func(svc *BackendService) {
-				svc.RoutingRule = RoutingRuleConfigOrBool{
-					Enabled: aws.Bool(false),
-				}
-			},
 		},
 		"nat feature required": {
 			mft: func(svc *BackendService) {

@@ -81,7 +81,7 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 // RequiredEnvironmentFeatures returns environment features that are required for this manifest.
 func (s *BackendService) RequiredEnvironmentFeatures() []string {
 	var features []string
-	if !s.RoutingRule.isEmpty() && !s.RoutingRule.Disabled() {
+	if !s.RoutingRule.IsEmpty() {
 		features = append(features, template.InternalALBFeatureName)
 	}
 	if aws.StringValue((*string)(s.Network.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
