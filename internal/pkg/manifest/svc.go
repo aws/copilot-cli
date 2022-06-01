@@ -219,7 +219,7 @@ func (a *AdvancedCount) hasScalingFieldsSet() bool {
 	case LoadBalancedWebServiceType:
 		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil
 	case BackendServiceType:
-		return a.CPU != nil || a.Memory != nil
+		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil
 	case WorkerServiceType:
 		return a.CPU != nil || a.Memory != nil || !a.QueueScaling.IsEmpty()
 	default:
