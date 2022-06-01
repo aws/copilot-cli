@@ -112,8 +112,13 @@ var _ = Describe("pipeline flow", func() {
 
 			Expect(envs["test"]).NotTo(BeNil())
 			Expect(envs["prod"]).NotTo(BeNil())
-			Expect(envs["test"].Region).NotTo(Equal(envs["prod"].Region))
-			Expect(envs["test"].Account).NotTo(Equal(envs["prod"].Account))
+
+			// Make sure, for the sake of coverage, these are cross account,
+			// cross region environments if we're not doing a dryrun.
+			if os.Getenv("DRYRUN") != "true" {
+				Expect(envs["test"].Region).NotTo(Equal(envs["prod"].Region))
+				Expect(envs["test"].Account).NotTo(Equal(envs["prod"].Account))
+			}
 		})
 	})
 
