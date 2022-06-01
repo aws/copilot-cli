@@ -1652,7 +1652,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				Requests:     aws.Int(123),
 				workloadType: LoadBalancedWebServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests or response_time" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),
 		},
 		"error if range is specified but no autoscaling fields are specified for a Load Balanced Web Service": {
 			AdvancedCount: AdvancedCount{
@@ -1670,7 +1670,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				},
 				workloadType: BackendServiceType,
 			},
-			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage" or "memory_percentage" if "range" is specified`),
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "range" is specified`),
 		},
 		"error if range is specified but no autoscaling fields are specified for a Worker Service": {
 			AdvancedCount: AdvancedCount{
@@ -1686,14 +1686,14 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				CPU:          &mockPerc,
 				workloadType: BackendServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage or memory_percentage" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Worker Service": {
 			AdvancedCount: AdvancedCount{
 				CPU:          &mockPerc,
 				workloadType: WorkerServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage or queue_delay" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage" or "queue_delay" are specified`),
 		},
 		"wrap error from queue_delay on failure": {
 			AdvancedCount: AdvancedCount{
