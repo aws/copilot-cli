@@ -602,14 +602,14 @@ func TestEnvDescriber_Features(t *testing.T) {
 					"AppDNSDelegationRole":     "mock-role",
 					"Aliases":                  "",
 				}
-				for _, f := range deploy.LatestAvailableFeatures {
+				for _, f := range template.AvailableEnvFeatures() {
 					mockParams[f] = ""
 				}
 				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
 					Parameters: mockParams,
 				}, nil)
 			},
-			wanted: deploy.LatestAvailableFeatures,
+			wanted: template.AvailableEnvFeatures(),
 		},
 	}
 	for name, tc := range testCases {

@@ -18,9 +18,6 @@ const (
 	LatestEnvTemplateVersion = "v1.10.1"
 )
 
-// LatestAvailableFeatures is a list of latest available feature names.
-var LatestAvailableFeatures = []string{template.ALBFeatureName, template.EFSFeatureName, template.NATFeatureName, template.InternalALBFeatureName}
-
 // LeastVersionForFeature maps each feature to the least environment template version it requires.
 var LeastVersionForFeature = map[string]string{
 	template.ALBFeatureName:         "v1.0.0",

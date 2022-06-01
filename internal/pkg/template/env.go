@@ -31,6 +31,11 @@ var FriendlyEnvFeatureName = map[string]string{
 	InternalALBFeatureName: "Internal ALB",
 }
 
+// AvailableEnvFeatures returns a list of the latest available feature, named after their corresponding parameter names.
+func AvailableEnvFeatures() []string {
+	return []string{ALBFeatureName, EFSFeatureName, NATFeatureName, InternalALBFeatureName}
+}
+
 var (
 	// Template names under "environment/partials/".
 	envCFSubTemplateNames = []string{
