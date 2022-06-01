@@ -6,10 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize/english"
 	"net"
 	"os"
 	"strings"
+
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 
@@ -721,6 +722,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 		ArtifactBucketKeyARN: artifactBucketKeyARN,
 		AdjustVPCConfig:      o.adjustVPCConfig(),
 		ImportCertARNs:       o.importCerts,
+		InternalALBSubnets:   o.internalALBSubnets,
 		ImportVPCConfig:      o.importVPCConfig(),
 		Telemetry:            o.telemetry.toConfig(),
 		Version:              deploy.LatestEnvTemplateVersion,
