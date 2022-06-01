@@ -431,21 +431,12 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Condition: ExportInternalHTTPSListener
     Properties:
-      Certificates:
-        - CertificateArn: cert-1
       DefaultActions:
         - TargetGroupArn: !Ref DefaultInternalHTTPTargetGroup
           Type: forward
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 443
       Protocol: HTTPS
-  InternalHTTPSImportCertificate2:
-    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
-    Condition: ExportInternalHTTPSListener
-    Properties:
-      ListenerArn: !Ref InternalHTTPSListener
-      Certificates:
-        - CertificateArn: cert-2
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
@@ -861,6 +852,11 @@ Outputs:
     Value: !Ref PublicRouteTable
     Export:
       Name: !Sub ${AWS::StackName}-PublicRouteTableID
+  PrivateRouteTableIDs:
+    Condition: CreateNATGateways
+    Value: !Join [ ',', [ !Ref PrivateRouteTable1, !Ref PrivateRouteTable2, ] ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateRouteTableIDs
   ServiceDiscoveryNamespaceID:
     Value: !GetAtt ServiceDiscoveryNamespace.Id
     Export:

@@ -372,7 +372,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
   HTTPListenerRuleWithDomain:
     Metadata:
       "aws:copilot:description": "An HTTP listener rule that redirects HTTP to HTTPS"
@@ -398,12 +398,8 @@ Resources:
               - - "/*"
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority:
-        !If
-          - IsDefaultRootPath
-          - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-          - !GetAtt HTTPSRulePriorityAction.Priority
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
   HTTPSListenerRule:
     Metadata:
       "aws:copilot:description": "An HTTPS listener rule for forwarding HTTPS traffic to your tasks"
@@ -423,12 +419,8 @@ Resources:
               - - "/*"
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
-      Priority:
-        !If
-          - IsDefaultRootPath
-          - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-          - !GetAtt HTTPSRulePriorityAction.Priority
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
+      Priority: !GetAtt HTTPSRulePriorityAction.Priority
   AddonsStack:
     Metadata:
       "aws:copilot:description": "An Addons CloudFormation Stack for your additional AWS resources"

@@ -217,6 +217,11 @@ func (cfg *environmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	if env.IsEmpty() {
 		return
 	}
+	if env.ImportVPC != nil && len(env.ImportVPC.PublicSubnetIDs) == 0 {
+		cfg.Private.InternalALBSubnets = env.InternalALBSubnets
+		cfg.Private.Certificates = env.ImportCertARNs
+		return
+	}
 	cfg.Public.Certificates = env.ImportCertARNs
 }
 
@@ -225,6 +230,6 @@ type publicHTTPConfig struct {
 }
 
 type privateHTTPConfig struct {
-	Subnets      []string `yaml:"subnets,omitempty"`
-	Certificates []string `yaml:"certificates,omitempty"`
+	InternalALBSubnets []string `yaml:"subnets,omitempty"`
+	Certificates       []string `yaml:"certificates,omitempty"`
 }

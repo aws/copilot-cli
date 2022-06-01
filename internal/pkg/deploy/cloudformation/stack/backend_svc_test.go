@@ -293,25 +293,23 @@ Outputs:
 				svc.manifest.DeployConfig = manifest.DeploymentConfiguration{
 					Rolling: aws.String("recreate"),
 				}
-				svc.manifest.RoutingRule = manifest.RoutingRuleConfigOrBool{
-					RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-						Path: aws.String("/albPath"),
-						HealthCheck: manifest.HealthCheckArgsOrString{
-							HealthCheckArgs: manifest.HTTPHealthCheckArgs{
-								Path:               aws.String("/healthz"),
-								Port:               aws.Int(4200),
-								SuccessCodes:       aws.String("418"),
-								HealthyThreshold:   aws.Int64(64),
-								UnhealthyThreshold: aws.Int64(63),
-								Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
-								Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
-								GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
-							},
+				svc.manifest.RoutingRule = manifest.RoutingRuleConfiguration{
+					Path: aws.String("/albPath"),
+					HealthCheck: manifest.HealthCheckArgsOrString{
+						HealthCheckArgs: manifest.HTTPHealthCheckArgs{
+							Path:               aws.String("/healthz"),
+							Port:               aws.Int(4200),
+							SuccessCodes:       aws.String("418"),
+							HealthyThreshold:   aws.Int64(64),
+							UnhealthyThreshold: aws.Int64(63),
+							Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
+							Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
+							GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
 						},
-						Stickiness:          aws.Bool(true),
-						DeregistrationDelay: (*time.Duration)(aws.Int64(int64(59 * time.Second))),
-						AllowedSourceIps:    []manifest.IPNet{"10.0.1.0/24"},
 					},
+					Stickiness:          aws.Bool(true),
+					DeregistrationDelay: (*time.Duration)(aws.Int64(int64(59 * time.Second))),
+					AllowedSourceIps:    []manifest.IPNet{"10.0.1.0/24"},
 				}
 				svc.albEnabled = true
 			},

@@ -20,6 +20,27 @@ LoadBalancerDNSAlias:
       AliasTarget:
         HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
         DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+{{- else if .HostedZoneID}}
+LoadBalancerDNSAlias:
+  Metadata:
+    'aws:copilot:description': 'Alias records for the application load balancer'
+  Type: AWS::Route53::RecordSetGroup
+  Properties:
+    HostedZoneId: {{.HostedZoneID}}
+    Comment: !Sub "LoadBalancer alias for service ${WorkloadName}"
+    RecordSets:
+    {{- range $alias := .Aliases}}
+      - Name: {{$alias}}
+        Type: A
+        AliasTarget:
+          {{- if eq .WorkloadType "Backend Service"}}
+          HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
+          DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
+          {{- else}}
+          HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
+          DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+          {{- end}}
+    {{- end}}
 {{- end}}
 
 HTTPSRulePriorityAction:
@@ -28,7 +49,11 @@ HTTPSRulePriorityAction:
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
+    {{- if eq .WorkloadType "Backend Service"}}
+    ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
+    {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+    {{- end}}
 
 HTTPListenerRuleWithDomain:
   Metadata:
@@ -69,12 +94,12 @@ HTTPListenerRuleWithDomain:
               -
                 - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
+    {{- if eq .WorkloadType "Backend Service"}}
+    ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
+    {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-    Priority:
-      !If
-        - IsDefaultRootPath
-        - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-        - !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
+    {{- end}}
+    Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
 
 HTTPSListenerRule:
   Metadata:
@@ -117,9 +142,9 @@ HTTPSListenerRule:
               -
                 - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
+    {{- if eq .WorkloadType "Backend Service"}}
+    ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
+    {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
-    Priority:
-      !If
-        - IsDefaultRootPath
-        - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-        - !GetAtt HTTPSRulePriorityAction.Priority
+    {{- end}}
+    Priority: !GetAtt HTTPSRulePriorityAction.Priority

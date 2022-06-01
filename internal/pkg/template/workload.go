@@ -485,6 +485,7 @@ type WorkloadOpts struct {
 	ServiceDiscoveryEndpoint string
 	HTTPVersion              *string
 	ALBEnabled               bool
+	HostedZoneID             *string
 
 	// Additional options for service templates.
 	WorkloadType            string
@@ -587,19 +588,20 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":         ToSnakeCaseFunc,
-			"hasSecrets":          hasSecrets,
-			"fmtSlice":            FmtSliceFunc,
-			"quoteSlice":          QuoteSliceFunc,
-			"randomUUID":          randomUUIDFunc,
-			"jsonMountPoints":     generateMountPointJSON,
-			"jsonSNSTopics":       generateSNSJSON,
-			"jsonQueueURIs":       generateQueueURIJSON,
-			"envControllerParams": envControllerParameters,
-			"logicalIDSafe":       StripNonAlphaNumFunc,
-			"wordSeries":          english.WordSeries,
-			"pluralWord":          english.PluralWord,
-			"contains":            contains,
+			"toSnakeCase":          ToSnakeCaseFunc,
+			"hasSecrets":           hasSecrets,
+			"fmtSlice":             FmtSliceFunc,
+			"quoteSlice":           QuoteSliceFunc,
+			"randomUUID":           randomUUIDFunc,
+			"jsonMountPoints":      generateMountPointJSON,
+			"jsonSNSTopics":        generateSNSJSON,
+			"jsonQueueURIs":        generateQueueURIJSON,
+			"envControllerParams":  envControllerParameters,
+			"logicalIDSafe":        StripNonAlphaNumFunc,
+			"wordSeries":           english.WordSeries,
+			"pluralWord":           english.PluralWord,
+			"contains":             contains,
+			"requiresVPCConnector": requiresVPCConnector,
 		})
 	}
 }
@@ -643,6 +645,13 @@ func envControllerParameters(o WorkloadOpts) []string {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters
+}
+
+func requiresVPCConnector(o WorkloadOpts) bool {
+	if o.WorkloadType != "Request-Driven Web Service" {
+		return false
+	}
+	return len(o.Network.SubnetIDs) > 0 || o.Network.SubnetsType != ""
 }
 
 func contains(list []string, s string) bool {

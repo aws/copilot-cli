@@ -233,8 +233,8 @@ Resources:
     Condition: ExportHTTPSListener
     Properties:
       Certificates:
-{{- if .ImportCertARNs}}
-        - CertificateArn: {{index .ImportCertARNs 0}}
+{{- if .PublicImportedCertARNs}}
+        - CertificateArn: {{index .PublicImportedCertARNs 0}}
 {{- else}}
         - CertificateArn: !Ref HTTPSCert
 {{- end}}
@@ -244,7 +244,7 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
-{{- range $ind, $arn := .ImportCertARNs}}
+{{- range $ind, $arn := .PublicImportedCertARNs}}
 {{- if gt $ind 0}}
   HTTPSImportCertificate{{inc $ind}}:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
@@ -264,9 +264,9 @@ Resources:
       Scheme: internal
       SecurityGroups: [ !GetAtt InternalLoadBalancerSecurityGroup.GroupId ]
 {{- if .CustomInternalALBSubnets}}
-      Subnets: [ {{range $subnet := .CustomInternalALBSubnets}}{{$subnet}}, {{end}} ]
+      Subnets: {{fmtSlice .CustomInternalALBSubnets}}
 {{- else if .VPCConfig.Imported}}
-      Subnets: [ {{range $id := .VPCConfig.Imported.PrivateSubnetIDs}}{{$id}}, {{end}} ]
+      Subnets: {{fmtSlice .VPCConfig.Imported.PrivateSubnetIDs}}
 {{- else}}
       Subnets: [ {{range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}} ]
 {{- end}}
@@ -310,9 +310,9 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Condition: ExportInternalHTTPSListener
     Properties:
-{{- if .ImportCertARNs}}
+{{- if .PrivateImportedCertARNs}}
       Certificates:
-        - CertificateArn: {{index .ImportCertARNs 0}}
+        - CertificateArn: {{index .PrivateImportedCertARNs 0}}
 {{- end}}
       DefaultActions:
         - TargetGroupArn: !Ref DefaultInternalHTTPTargetGroup
@@ -320,7 +320,7 @@ Resources:
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 443
       Protocol: HTTPS
-{{- range $ind, $arn := .ImportCertARNs}}
+{{- range $ind, $arn := .PrivateImportedCertARNs}}
 {{- if gt $ind 0}}
   InternalHTTPSImportCertificate{{inc $ind}}:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
@@ -416,7 +416,7 @@ Resources:
 {{- end}}
 {{include "cfn-execution-role" . | indent 2}}
 {{include "environment-manager-role" . | indent 2}}
-{{- if not .ImportCertARNs}}
+{{- if not .PublicImportedCertARNs}}
 {{include "custom-resources-role" . | indent 2}}
   EnvironmentHostedZone:
     Metadata:
@@ -472,6 +472,13 @@ Outputs:
     Value: !Ref PublicRouteTable
     Export:
       Name: !Sub ${AWS::StackName}-PublicRouteTableID
+{{- end}}
+{{- if not .VPCConfig.Imported}}
+  PrivateRouteTableIDs:
+    Condition: CreateNATGateways
+    Value: !Join [ ',', [ {{range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}!Ref PrivateRouteTable{{inc $ind}}, {{end}}] ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateRouteTableIDs
 {{- end}}
   ServiceDiscoveryNamespaceID:
     Value: !GetAtt ServiceDiscoveryNamespace.Id
@@ -545,7 +552,7 @@ Outputs:
     Description: The role to be assumed by the Cloudformation service when it deploys application infrastructure.
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
-{{- if not .ImportCertARNs}}
+{{- if not .PublicImportedCertARNs}}
   EnvironmentHostedZone:
     Condition: DelegateDNS
     Value: !Ref EnvironmentHostedZone
@@ -565,6 +572,6 @@ Outputs:
   ManagedFileSystemID:
     Condition: CreateEFS
     Value: !Ref FileSystem
-    Description: The ID of the Copilot-managed EFS filesystem. 
+    Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID

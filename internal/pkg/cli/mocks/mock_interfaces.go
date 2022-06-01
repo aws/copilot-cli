@@ -4429,6 +4429,21 @@ func (mr *MockenvDescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockenvDescriber)(nil).Describe))
 }
 
+// Manifest mocks base method.
+func (m *MockenvDescriber) Manifest() ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Manifest")
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Manifest indicates an expected call of Manifest.
+func (mr *MockenvDescriberMockRecorder) Manifest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockenvDescriber)(nil).Manifest))
+}
+
 // PublicCIDRBlocks mocks base method.
 func (m *MockenvDescriber) PublicCIDRBlocks() ([]string, error) {
 	m.ctrl.T.Helper()

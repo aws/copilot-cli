@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/dustin/go-humanize/english"
+
 	"github.com/aws/aws-sdk-go/service/ssm"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -141,10 +143,11 @@ type initEnvVars struct {
 	isProduction  bool   // True means retain resources even after deletion.
 	defaultConfig bool   // True means using default environment configuration.
 
-	importVPC   importVPCVars // Existing VPC resources to use instead of creating new ones.
-	adjustVPC   adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
-	telemetry   telemetryVars // Configure observability and monitoring settings.
-	importCerts []string      // Addtional existing ACM certificates to use.
+	importVPC          importVPCVars // Existing VPC resources to use instead of creating new ones.
+	adjustVPC          adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
+	telemetry          telemetryVars // Configure observability and monitoring settings.
+	importCerts        []string      // Addtional existing ACM certificates to use.
+	internalALBSubnets []string      // Subnets to be used for internal ALB placement.
 
 	tempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the profile.
 	region    string        // The region to create the environment in.
@@ -320,10 +323,12 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
+	env.Prod = o.isProduction
 	customizedEnv := config.CustomizeEnv{
-		ImportVPC:      o.importVPCConfig(),
-		VPCConfig:      o.adjustVPCConfig(),
-		ImportCertARNs: o.importCerts,
+		ImportVPC:          o.importVPCConfig(),
+		VPCConfig:          o.adjustVPCConfig(),
+		ImportCertARNs:     o.importCerts,
+		InternalALBSubnets: o.internalALBSubnets,
 	}
 	if !customizedEnv.IsEmpty() {
 		env.CustomConfig = &customizedEnv
@@ -367,6 +372,11 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if (o.importVPC.isSet() || o.adjustVPC.isSet()) && o.defaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
+	if o.internalALBSubnets != nil && (o.adjustVPC.isSet() || o.defaultConfig) {
+		log.Error(`To specify internal ALB subnet placement, you must import existing resources, including subnets.
+For default config without subnet placement specification, Copilot will place the internal ALB in the generated private subnets.`)
+		return fmt.Errorf("subnets '%s' specified for internal ALB placement, but those subnets are not imported", strings.Join(o.internalALBSubnets, ", "))
+	}
 	if o.importVPC.isSet() {
 		// Allow passing in VPC without subnets, but error out early for too few subnets-- we won't prompt the user to select more of one type if they pass in any.
 		if len(o.importVPC.PublicSubnetIDs) == 1 {
@@ -374,6 +384,9 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 		}
 		if len(o.importVPC.PrivateSubnetIDs) == 1 {
 			return fmt.Errorf("at least two private subnets must be imported")
+		}
+		if err := o.validateInternalALBSubnets(); err != nil {
+			return err
 		}
 	}
 	if o.adjustVPC.isSet() {
@@ -460,6 +473,10 @@ func (o *initEnvOpts) askCustomizedResources() error {
 	}
 	if o.adjustVPC.isSet() {
 		return o.askAdjustResources()
+	}
+	if o.internalALBSubnets != nil {
+		log.Infoln("Because you have designated subnets on which to place an internal ALB, you must import VPC resources.")
+		return o.askImportResources()
 	}
 	adjustOrImport, err := o.prompt.SelectOne(
 		envInitDefaultEnvConfirmPrompt, "",
@@ -565,7 +582,7 @@ be able to add them after this environment is created.
 	if len(o.importVPC.PublicSubnetIDs)+len(o.importVPC.PrivateSubnetIDs) == 0 {
 		return errors.New("VPC must have subnets in order to proceed with environment creation")
 	}
-	return nil
+	return o.validateInternalALBSubnets()
 }
 
 func (o *initEnvOpts) askAdjustResources() error {
@@ -705,6 +722,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 		ArtifactBucketKeyARN: artifactBucketKeyARN,
 		AdjustVPCConfig:      o.adjustVPCConfig(),
 		ImportCertARNs:       o.importCerts,
+		InternalALBSubnets:   o.internalALBSubnets,
 		ImportVPCConfig:      o.importVPCConfig(),
 		Telemetry:            o.telemetry.toConfig(),
 		Version:              deploy.LatestEnvTemplateVersion,
@@ -762,6 +780,28 @@ func (o *initEnvOpts) validateCredentials() error {
 	}
 	if o.profile != "" && o.tempCreds.SessionToken != "" {
 		return fmt.Errorf("cannot specify both --%s and --%s", profileFlag, sessionTokenFlag)
+	}
+	return nil
+}
+
+func (o *initEnvOpts) validateInternalALBSubnets() error {
+	if len(o.internalALBSubnets) == 0 {
+		return nil
+	}
+	isImported := make(map[string]bool)
+	for _, placementSubnet := range o.internalALBSubnets {
+		for _, subnet := range append(o.importVPC.PrivateSubnetIDs, o.importVPC.PublicSubnetIDs...) {
+			if placementSubnet == subnet {
+				isImported[placementSubnet] = true
+			}
+		}
+	}
+	if len(isImported) != len(o.internalALBSubnets) {
+		return fmt.Errorf("%s '%s' %s designated for ALB placement, but %s imported",
+			english.PluralWord(len(o.internalALBSubnets), "subnet", "subnets"),
+			strings.Join(o.internalALBSubnets, ", "),
+			english.PluralWord(len(o.internalALBSubnets), "was", "were"),
+			english.PluralWord(len(o.internalALBSubnets), "it was not", "they were not all"))
 	}
 	return nil
 }
@@ -852,6 +892,7 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringSliceVar(&vars.importVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importCerts, certsFlag, nil, certsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.internalALBSubnets, internalALBSubnetsFlag, nil, internalALBSubnetsFlagDescription)
 	cmd.Flags().IPNetVar(&vars.adjustVPC.CIDR, overrideVPCCIDRFlag, net.IPNet{}, overrideVPCCIDRFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.adjustVPC.AZs, overrideAZsFlag, nil, overrideAZsFlagDescription)
 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
@@ -874,6 +915,7 @@ func buildEnvInitCmd() *cobra.Command {
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(certsFlag))
+	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(internalALBSubnetsFlag))
 	resourcesConfigFlags := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
 	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideVPCCIDRFlag))
 	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideAZsFlag))

@@ -183,6 +183,46 @@ func TestFromEnvConfig(t *testing.T) {
 				Name: "test",
 				CustomConfig: &config.CustomizeEnv{
 					ImportCertARNs: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+					ImportVPC: &config.ImportVPC{
+						PublicSubnetIDs: []string{"subnet1"},
+					},
+				},
+			},
+
+			wanted: &Environment{
+				Workload: Workload{
+					Name: stringP("test"),
+					Type: stringP("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					Network: environmentNetworkConfig{
+						VPC: environmentVPCConfig{
+							Subnets: subnetsConfiguration{
+								Public: []subnetConfiguration{
+									{
+										SubnetID: aws.String("subnet1"),
+										CIDR:     nil,
+										AZ:       nil,
+									},
+								},
+								Private: []subnetConfiguration{},
+							},
+						},
+					},
+					HTTPConfig: environmentHTTPConfig{
+						Public: publicHTTPConfig{
+							Certificates: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+						},
+					},
+				},
+			},
+		},
+		"converts imported certificates for a public load balancer without an imported vpc": {
+			in: &config.Environment{
+				App:  "phonetool",
+				Name: "test",
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
 				},
 			},
 
@@ -195,6 +235,49 @@ func TestFromEnvConfig(t *testing.T) {
 					HTTPConfig: environmentHTTPConfig{
 						Public: publicHTTPConfig{
 							Certificates: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+						},
+					},
+				},
+			},
+		},
+		"converts imported certificates for a private load balancer with subnet placement specified": {
+			in: &config.Environment{
+				App:  "phonetool",
+				Name: "test",
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+					ImportVPC: &config.ImportVPC{
+						PrivateSubnetIDs: []string{"subnet1", "subnet2"},
+					},
+					InternalALBSubnets: []string{"subnet2"},
+				},
+			},
+
+			wanted: &Environment{
+				Workload: Workload{
+					Name: stringP("test"),
+					Type: stringP("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					Network: environmentNetworkConfig{
+						VPC: environmentVPCConfig{
+							Subnets: subnetsConfiguration{
+								Private: []subnetConfiguration{
+									{
+										SubnetID: aws.String("subnet1"),
+									},
+									{
+										SubnetID: aws.String("subnet2"),
+									},
+								},
+								Public: []subnetConfiguration{},
+							},
+						},
+					},
+					HTTPConfig: environmentHTTPConfig{
+						Private: privateHTTPConfig{
+							InternalALBSubnets: []string{"subnet2"},
+							Certificates:       []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
 						},
 					},
 				},

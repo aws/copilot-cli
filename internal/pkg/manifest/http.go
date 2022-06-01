@@ -29,8 +29,8 @@ func (r *RoutingRuleConfigOrBool) EmptyOrDisabled() bool {
 }
 
 func (r *RoutingRuleConfigOrBool) isEmpty() bool {
-	return r.Enabled == nil && r.RoutingRuleConfiguration.isEmpty()
-}
+	return r.Enabled == nil && r.RoutingRuleConfiguration.IsEmpty()
+}g
 
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
@@ -44,7 +44,7 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	if !r.RoutingRuleConfiguration.isEmpty() {
+	if !r.RoutingRuleConfiguration.IsEmpty() {
 		// Unmarshalled successfully to r.RoutingRuleConfiguration, unset r.Enabled, and return.
 		r.Enabled = nil
 		return nil
@@ -68,6 +68,7 @@ type RoutingRuleConfiguration struct {
 	TargetContainer          *string `yaml:"target_container"`
 	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
 	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
+	HostedZone               *string `yaml:"hosted_zone"`
 }
 
 // GetTargetContainer returns the correct target container value, if set.
@@ -79,9 +80,10 @@ func (r *RoutingRuleConfiguration) GetTargetContainer() *string {
 	return r.TargetContainerCamelCase
 }
 
-func (r *RoutingRuleConfiguration) isEmpty() bool {
+func (r *RoutingRuleConfiguration) IsEmpty() bool {
 	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() &&
-		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil
+		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil &&
+		r.HostedZone == nil
 }
 
 // IPNet represents an IP network string. For example: 10.1.0.0/16

@@ -28,7 +28,9 @@ const (
 )
 
 // All placement options.
-var subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
+var (
+	subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
+)
 
 // Error definitions.
 var (
