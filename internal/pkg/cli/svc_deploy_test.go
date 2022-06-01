@@ -241,7 +241,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 }
 
 type checkEnvironmentCompatibilityMocks struct {
-	versionFeatureGetter            *mocks.MockversionFeatureGetter
+	versionFeatureGetter            *mocks.MockversionCompatibilityChecker
 	requiredEnvironmentFeaturesFunc func() []string
 }
 
@@ -286,7 +286,7 @@ func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &checkEnvironmentCompatibilityMocks{
-				versionFeatureGetter: mocks.NewMockversionFeatureGetter(ctrl),
+				versionFeatureGetter: mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			tc.setupMock(m)
 			mockManifest := &mockWorkloadMft{

@@ -419,7 +419,7 @@ type envDescriber interface {
 	PublicCIDRBlocks() ([]string, error)
 }
 
-type versionFeatureGetter interface {
+type versionCompatibilityChecker interface {
 	versionGetter
 	AvailableFeatures() ([]string, error)
 }

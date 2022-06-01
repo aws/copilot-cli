@@ -4444,31 +4444,31 @@ func (mr *MockenvDescriberMockRecorder) PublicCIDRBlocks() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicCIDRBlocks", reflect.TypeOf((*MockenvDescriber)(nil).PublicCIDRBlocks))
 }
 
-// MockversionFeatureGetter is a mock of versionFeatureGetter interface.
-type MockversionFeatureGetter struct {
+// MockversionCompatibilityChecker is a mock of versionCompatibilityChecker interface.
+type MockversionCompatibilityChecker struct {
 	ctrl     *gomock.Controller
-	recorder *MockversionFeatureGetterMockRecorder
+	recorder *MockversionCompatibilityCheckerMockRecorder
 }
 
-// MockversionFeatureGetterMockRecorder is the mock recorder for MockversionFeatureGetter.
-type MockversionFeatureGetterMockRecorder struct {
-	mock *MockversionFeatureGetter
+// MockversionCompatibilityCheckerMockRecorder is the mock recorder for MockversionCompatibilityChecker.
+type MockversionCompatibilityCheckerMockRecorder struct {
+	mock *MockversionCompatibilityChecker
 }
 
-// NewMockversionFeatureGetter creates a new mock instance.
-func NewMockversionFeatureGetter(ctrl *gomock.Controller) *MockversionFeatureGetter {
-	mock := &MockversionFeatureGetter{ctrl: ctrl}
-	mock.recorder = &MockversionFeatureGetterMockRecorder{mock}
+// NewMockversionCompatibilityChecker creates a new mock instance.
+func NewMockversionCompatibilityChecker(ctrl *gomock.Controller) *MockversionCompatibilityChecker {
+	mock := &MockversionCompatibilityChecker{ctrl: ctrl}
+	mock.recorder = &MockversionCompatibilityCheckerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockversionFeatureGetter) EXPECT() *MockversionFeatureGetterMockRecorder {
+func (m *MockversionCompatibilityChecker) EXPECT() *MockversionCompatibilityCheckerMockRecorder {
 	return m.recorder
 }
 
 // AvailableFeatures mocks base method.
-func (m *MockversionFeatureGetter) AvailableFeatures() ([]string, error) {
+func (m *MockversionCompatibilityChecker) AvailableFeatures() ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AvailableFeatures")
 	ret0, _ := ret[0].([]string)
@@ -4477,13 +4477,13 @@ func (m *MockversionFeatureGetter) AvailableFeatures() ([]string, error) {
 }
 
 // AvailableFeatures indicates an expected call of AvailableFeatures.
-func (mr *MockversionFeatureGetterMockRecorder) AvailableFeatures() *gomock.Call {
+func (mr *MockversionCompatibilityCheckerMockRecorder) AvailableFeatures() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AvailableFeatures", reflect.TypeOf((*MockversionFeatureGetter)(nil).AvailableFeatures))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AvailableFeatures", reflect.TypeOf((*MockversionCompatibilityChecker)(nil).AvailableFeatures))
 }
 
 // Version mocks base method.
-func (m *MockversionFeatureGetter) Version() (string, error) {
+func (m *MockversionCompatibilityChecker) Version() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Version")
 	ret0, _ := ret[0].(string)
@@ -4492,9 +4492,9 @@ func (m *MockversionFeatureGetter) Version() (string, error) {
 }
 
 // Version indicates an expected call of Version.
-func (mr *MockversionFeatureGetterMockRecorder) Version() *gomock.Call {
+func (mr *MockversionCompatibilityCheckerMockRecorder) Version() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionFeatureGetter)(nil).Version))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionCompatibilityChecker)(nil).Version))
 }
 
 // MockversionGetter is a mock of versionGetter interface.
@@ -5300,7 +5300,7 @@ func (m *MockwsEnvironmentSelector) EXPECT() *MockwsEnvironmentSelectorMockRecor
 	return m.recorder
 }
 
-// WSEnvironment mocks base method.
+// LocalEnvironment mocks base method.
 func (m *MockwsEnvironmentSelector) LocalEnvironment(msg, help string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LocalEnvironment", msg, help)
@@ -5309,8 +5309,8 @@ func (m *MockwsEnvironmentSelector) LocalEnvironment(msg, help string) (string, 
 	return ret0, ret1
 }
 
-// WSEnvironment indicates an expected call of WSEnvironment.
-func (mr *MockwsEnvironmentSelectorMockRecorder) WSEnvironment(msg, help interface{}) *gomock.Call {
+// LocalEnvironment indicates an expected call of LocalEnvironment.
+func (mr *MockwsEnvironmentSelectorMockRecorder) LocalEnvironment(msg, help interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LocalEnvironment", reflect.TypeOf((*MockwsEnvironmentSelector)(nil).LocalEnvironment), msg, help)
 }

@@ -54,7 +54,7 @@ type deploySvcOpts struct {
 	envUpgradeCmd        actionCommand
 	sessProvider         *sessions.Provider
 	newSvcDeployer       func() (workloadDeployer, error)
-	envFeaturesDescriber versionFeatureGetter
+	envFeaturesDescriber versionCompatibilityChecker
 
 	spinner progress
 	sel     wsSelector
@@ -372,7 +372,7 @@ func workloadManifest(in *workloadManifestInput) (interface{}, error) {
 	return envMft, nil
 }
 
-func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName string, env versionFeatureGetter) error {
+func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName string, env versionCompatibilityChecker) error {
 	availableFeatures, err := env.AvailableFeatures()
 	if err != nil {
 		return fmt.Errorf("get available features of the %s environment stack: %w", envName, err)
@@ -392,7 +392,7 @@ The least environment version that supports the feature is %s.`, envName, templa
 			if err == nil {
 				logMsg += fmt.Sprintf(" Your environment is on %s.\n", currVersion)
 			}
-			logMsg += fmt.Sprintf(`Please upgrade your environment by running %s.`, color.HighlightCode(fmt.Sprintf("copilot env upgrade --name %s", envName)))
+			logMsg += fmt.Sprintf(`Please upgrade your environment by running %s.`, color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", envName)))
 			log.Errorln(logMsg)
 			return fmt.Errorf("environment %q is not on a version that supports the %q feature", envName, template.FriendlyFeatureName[f])
 		}
