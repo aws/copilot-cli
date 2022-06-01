@@ -387,14 +387,14 @@ func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName 
 	for _, f := range features {
 		if _, ok := available[f]; !ok {
 			logMsg := fmt.Sprintf(`Your manifest configuration requires your environment %q to have the feature %q available. 
-The least environment version that supports the feature is %s.`, envName, template.FriendlyFeatureName[f], deploy.LeastVersionForFeature[f])
+The least environment version that supports the feature is %s.`, envName, template.FriendlyEnvFeatureName[f], deploy.LeastVersionForFeature[f])
 			currVersion, err := env.Version()
 			if err == nil {
 				logMsg += fmt.Sprintf(" Your environment is on %s.\n", currVersion)
 			}
 			logMsg += fmt.Sprintf(`Please upgrade your environment by running %s.`, color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", envName)))
 			log.Errorln(logMsg)
-			return fmt.Errorf("environment %q is not on a version that supports the %q feature", envName, template.FriendlyFeatureName[f])
+			return fmt.Errorf("environment %q is not on a version that supports the %q feature", envName, template.FriendlyEnvFeatureName[f])
 		}
 	}
 	return nil

@@ -23,8 +23,8 @@ const (
 	InternalALBFeatureName = "InternalALBWorkloads"
 )
 
-// FriendlyFeatureName maps each feature name to a user-friendly feature name.
-var FriendlyFeatureName = map[string]string{
+// FriendlyEnvFeatureName maps each env-controller managed parameter name to a user-friendly feature name.
+var FriendlyEnvFeatureName = map[string]string{
 	ALBFeatureName:         "ALB",
 	EFSFeatureName:         "EFS",
 	NATFeatureName:         "NAT Gateway",
