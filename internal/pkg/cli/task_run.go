@@ -681,6 +681,9 @@ Did you tag your secrets with the "copilot-application" and "copilot-environment
 		if err := o.displayLogStream(); err != nil {
 			return err
 		}
+		if nonZeroExitCodeErr := o.runner.CheckNonZeroExitCode(tasks); nonZeroExitCodeErr != nil {
+			return nonZeroExitCodeErr
+		}
 	}
 	return nil
 }

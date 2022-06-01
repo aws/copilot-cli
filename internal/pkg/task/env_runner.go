@@ -5,6 +5,7 @@ package task
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -155,4 +156,49 @@ func containsString(s []string, search string) bool {
 		}
 	}
 	return false
+}
+
+// CheckNonZeroExitCode returns the status of the containers part of the given tasks.
+func (r *EnvRunner) CheckNonZeroExitCode(tasks []*Task) error {
+	var essentialContainers []string
+	taskDefName := fmt.Sprintf("copilot-%s", r.GroupName)
+	taskDefinition, err := r.Starter.TaskDefinition(taskDefName)
+	if err != nil {
+		return fmt.Errorf("get task definition %s for a task", taskDefName)
+	}
+
+	for _, container := range taskDefinition.ContainerDefinitions {
+		if aws.BoolValue(container.Essential) {
+			essentialContainers = append(essentialContainers, aws.StringValue(container.Name))
+		}
+	}
+
+	taskARNs := make([]string, len(tasks))
+	for idx, task := range tasks {
+		taskARNs[idx] = task.TaskARN
+	}
+
+	cluster, err := r.ClusterGetter.ClusterARN(r.App, r.Env)
+	if err != nil {
+		return fmt.Errorf("get cluster for environment %s: %w", r.Env, err)
+	}
+	describedTasks, describeErr := r.Starter.DescribeTasks(cluster, taskARNs)
+	if describeErr != nil {
+		return describeErr
+	}
+
+	for _, describedTask := range describedTasks {
+		for _, container := range describedTask.Containers {
+			if contains(essentialContainers, aws.StringValue(container.Name)) && aws.Int64Value(container.ExitCode) != 0 {
+				taskID, err := ecs.TaskID(aws.StringValue(describedTask.TaskArn))
+				if err != nil {
+					return err
+				}
+				return fmt.Errorf(HumanString(aws.StringValue(container.Name),
+					taskID,
+					aws.Int64Value(container.ExitCode)))
+			}
+		}
+	}
+	return nil
 }
