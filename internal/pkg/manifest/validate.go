@@ -209,6 +209,12 @@ func (b BackendServiceConfig) Validate() error {
 	if err = b.RoutingRule.Validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
+	if b.RoutingRule.IsEmpty() && (b.Count.AdvancedCount.Requests != nil || b.Count.AdvancedCount.ResponseTime != nil) {
+		return &errFieldMustBeSpecified{
+			missingField:      "http",
+			conditionalFields: []string{"count.requests", "count.response_time"},
+		}
+	}
 	if err = b.TaskConfig.Validate(); err != nil {
 		return err
 	}

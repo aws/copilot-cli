@@ -206,7 +206,7 @@ func (a *AdvancedCount) validScalingFields() []string {
 	case LoadBalancedWebServiceType:
 		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time"}
 	case BackendServiceType:
-		return []string{"cpu_percentage", "memory_percentage"}
+		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time"}
 	case WorkerServiceType:
 		return []string{"cpu_percentage", "memory_percentage", "queue_delay"}
 	default:

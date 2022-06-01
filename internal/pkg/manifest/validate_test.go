@@ -543,6 +543,22 @@ func TestBackendService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "http": "path" must be specified`,
 		},
+		"error if request scaling without http": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								workloadType: BackendServiceType,
+								Requests:     aws.Int(128),
+							},
+						},
+					},
+				},
+			},
+			wantedError: errors.New(`"http" must be specified if "count.requests" or "count.response_time" are specified`),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
