@@ -523,11 +523,6 @@ Outputs:
     Value: !GetAtt InternalLoadBalancer.DNSName
     Export:
       Name: !Sub ${AWS::StackName}-InternalLoadBalancerDNS
-  InternalLoadBalancerFullName:
-    Condition: CreateInternalALB
-    Value: !GetAtt InternalLoadBalancer.LoadBalancerFullName
-    Export:
-      Name: !Sub ${AWS::StackName}-InternalLoadBalancerFullName
   InternalLoadBalancerHostedZone:
     Condition: CreateInternalALB
     Value: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
