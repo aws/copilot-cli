@@ -23,11 +23,6 @@ func (r *RoutingRuleConfigOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
 
-// EmptyOrDisabled returns true if the routing rule configuration is not configured or is explicitly disabled.
-func (r *RoutingRuleConfigOrBool) EmptyOrDisabled() bool {
-	return r.Disabled() || r.isEmpty()
-}
-
 func (r *RoutingRuleConfigOrBool) isEmpty() bool {
 	return r.Enabled == nil && r.RoutingRuleConfiguration.IsEmpty()
 }
