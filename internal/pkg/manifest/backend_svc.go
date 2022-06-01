@@ -87,7 +87,7 @@ func (s *BackendService) RequiredEnvironmentFeatures() []string {
 	if aws.StringValue((*string)(s.Network.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
 		features = append(features, template.NATFeatureName)
 	}
-	if efsFeatureRequired(s.Storage) {
+	if s.Storage.efsFeatureRequired() {
 		features = append(features, template.EFSFeatureName)
 	}
 	return features

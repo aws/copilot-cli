@@ -25,6 +25,16 @@ func (s *Storage) IsEmpty() bool {
 	return s.Ephemeral == nil && s.Volumes == nil
 }
 
+func (s Storage) efsFeatureRequired() bool {
+	for _, v := range s.Volumes {
+		if v.EmptyVolume() || !v.EFS.UseManagedFS() {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 // Volume is an abstraction which merges the MountPoint and Volumes concepts from the ECS Task Definition
 type Volume struct {
 	EFS            EFSConfigOrBool `yaml:"efs"`
@@ -174,14 +184,4 @@ type AuthorizationConfig struct {
 // IsEmpty returns empty if the struct has all zero members.
 func (a *AuthorizationConfig) IsEmpty() bool {
 	return a.IAM == nil && a.AccessPointID == nil
-}
-
-func efsFeatureRequired(s Storage) bool {
-	for _, v := range s.Volumes {
-		if v.EmptyVolume() || !v.EFS.UseManagedFS() {
-			continue
-		}
-		return true
-	}
-	return false
 }
