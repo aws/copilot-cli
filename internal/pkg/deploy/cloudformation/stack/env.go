@@ -112,7 +112,8 @@ func (e *EnvStackConfig) Template() (string, error) {
 		LatestVersion: deploy.LatestEnvTemplateVersion,
 		Manifest:      mft,
 	}, template.WithFuncs(map[string]interface{}{
-		"inc": template.IncFunc,
+		"inc":      template.IncFunc,
+		"fmtSlice": template.FmtSliceFunc,
 	}))
 	if err != nil {
 		return "", err
