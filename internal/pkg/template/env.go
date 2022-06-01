@@ -31,6 +31,14 @@ var FriendlyEnvFeatureName = map[string]string{
 	InternalALBFeatureName: "Internal ALB",
 }
 
+// LeastVersionForFeature maps each feature to the least environment template version it requires.
+var LeastVersionForFeature = map[string]string{
+	ALBFeatureName:         "v1.0.0",
+	EFSFeatureName:         "v1.3.0",
+	NATFeatureName:         "v1.3.0",
+	InternalALBFeatureName: "v1.10.0",
+}
+
 // AvailableEnvFeatures returns a list of the latest available feature, named after their corresponding parameter names.
 func AvailableEnvFeatures() []string {
 	return []string{ALBFeatureName, EFSFeatureName, NATFeatureName, InternalALBFeatureName}

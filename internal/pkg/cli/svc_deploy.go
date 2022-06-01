@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
@@ -387,7 +386,7 @@ func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName 
 	for _, f := range features {
 		if _, ok := available[f]; !ok {
 			logMsg := fmt.Sprintf(`Your manifest configuration requires your environment %q to have the feature %q available. 
-The least environment version that supports the feature is %s.`, envName, template.FriendlyEnvFeatureName[f], deploy.LeastVersionForFeature[f])
+The least environment version that supports the feature is %s.`, envName, template.FriendlyEnvFeatureName[f], template.LeastVersionForFeature[f])
 			currVersion, err := env.Version()
 			if err == nil {
 				logMsg += fmt.Sprintf(" Your environment is on %s.\n", currVersion)
