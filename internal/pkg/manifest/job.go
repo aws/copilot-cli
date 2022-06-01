@@ -125,12 +125,8 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 // RequiredEnvironmentFeatures returns environment features that are required for this manfiest.
 func (s *ScheduledJob) RequiredEnvironmentFeatures() []string {
 	var features []string
-	if aws.StringValue((*string)(s.Network.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
-		features = append(features, template.NATFeatureName)
-	}
-	if s.Storage.efsFeatureRequired() {
-		features = append(features, template.EFSFeatureName)
-	}
+	features = append(features, s.Network.requiredEnvFeatures()...)
+	features = append(features, s.Storage.requiredEnvFeatures()...)
 	return features
 }
 

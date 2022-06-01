@@ -75,6 +75,7 @@ func (r *RoutingRuleConfiguration) GetTargetContainer() *string {
 	return r.TargetContainerCamelCase
 }
 
+// IsEmpty returns true if RoutingRuleConfiguration has empty configuration.
 func (r *RoutingRuleConfiguration) IsEmpty() bool {
 	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() &&
 		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil &&

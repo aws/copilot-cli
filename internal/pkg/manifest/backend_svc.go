@@ -84,12 +84,8 @@ func (s *BackendService) RequiredEnvironmentFeatures() []string {
 	if !s.RoutingRule.IsEmpty() {
 		features = append(features, template.InternalALBFeatureName)
 	}
-	if aws.StringValue((*string)(s.Network.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
-		features = append(features, template.NATFeatureName)
-	}
-	if s.Storage.efsFeatureRequired() {
-		features = append(features, template.EFSFeatureName)
-	}
+	features = append(features, s.Network.requiredEnvFeatures()...)
+	features = append(features, s.Storage.requiredEnvFeatures()...)
 	return features
 }
 

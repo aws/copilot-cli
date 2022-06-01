@@ -155,16 +155,24 @@ func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
 
 // RequiredEnvironmentFeatures returns environment features that are required for this manifest.
 func (s *LoadBalancedWebService) RequiredEnvironmentFeatures() []string {
+	// var features []string
+	// if !s.RoutingRule.Disabled() {
+	// 	features = append(features, template.ALBFeatureName)
+	// }
+	// if aws.StringValue((*string)(s.Network.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
+	// 	features = append(features, template.NATFeatureName)
+	// }
+	// if s.Storage.hasManagedFS() {
+	// 	features = append(features, template.EFSFeatureName)
+	// }
+	// return features
+
 	var features []string
 	if !s.RoutingRule.Disabled() {
 		features = append(features, template.ALBFeatureName)
 	}
-	if aws.StringValue((*string)(s.Network.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
-		features = append(features, template.NATFeatureName)
-	}
-	if s.Storage.efsFeatureRequired() {
-		features = append(features, template.EFSFeatureName)
-	}
+	features = append(features, s.Network.requiredEnvFeatures()...)
+	features = append(features, s.Storage.requiredEnvFeatures()...)
 	return features
 }
 
