@@ -148,6 +148,30 @@ func (c *Count) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the Resource
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (r *Resource) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&r.ScaledResource); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !r.ScaledResource.IsEmpty() {
+		// Successfully unmarshalled ScaledResource fields, return
+		return nil
+	}
+
+	if err := value.Decode(&r.Value); err != nil {
+		return errUnmarshalCountOpts
+	}
+	return nil
+}
+
 // IsEmpty returns whether Count is empty.
 func (c *Count) IsEmpty() bool {
 	return c.Value == nil && c.AdvancedCount.IsEmpty()
@@ -172,13 +196,30 @@ func (c *Count) Desired() (*int, error) {
 // Percentage represents a valid percentage integer ranging from 0 to 100.
 type Percentage int
 
+// Resource represents a resource that has autoscaling configurations.
+type Resource struct {
+	Value          Percentage       // needs to default to nil
+	ScaledResource AdvancedResource // mutually exclusive with ScaledResource
+}
+
+// Scaled resource represents the allocation of a resource implementing scaling cooldown.
+type AdvancedResource struct {
+	Value            *Percentage    `yaml:"value"`
+	ScaleInCooldown  *time.Duration `yaml:"in"`
+	ScaleOutCooldown *time.Duration `yaml:"out"`
+}
+
+func (a *AdvancedResource) IsEmpty() bool {
+	return a.ScaleInCooldown == nil && a.ScaleOutCooldown == nil && a.Value == nil
+}
+
 // AdvancedCount represents the configurable options for Auto Scaling as well as
 // Capacity configuration (spot).
 type AdvancedCount struct {
 	Spot         *int           `yaml:"spot"` // mutually exclusive with other fields
 	Range        Range          `yaml:"range"`
-	CPU          *Percentage    `yaml:"cpu_percentage"`
-	Memory       *Percentage    `yaml:"memory_percentage"`
+	CPU          *Resource      `yaml:"cpu_percentage"`
+	Memory       *Resource      `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`
 	ResponseTime *time.Duration `yaml:"response_time"`
 	QueueScaling QueueScaling   `yaml:"queue_delay"`

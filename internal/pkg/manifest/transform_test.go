@@ -574,7 +574,9 @@ func TestCountTransformer_Transformer(t *testing.T) {
 }
 
 func TestAdvancedCountTransformer_Transformer(t *testing.T) {
-	mockPerc := Percentage(80)
+	mockRes := Resource{
+		Value: Percentage(80),
+	}
 	testCases := map[string]struct {
 		original func(a *AdvancedCount)
 		override func(a *AdvancedCount)
@@ -588,14 +590,14 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = &mockPerc
+				a.CPU = &mockRes
 				a.Requests = aws.Int(42)
 			},
 			wanted: func(a *AdvancedCount) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = &mockPerc
+				a.CPU = &mockRes
 				a.Requests = aws.Int(42)
 			},
 		},
@@ -604,7 +606,7 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = &mockPerc
+				a.CPU = &mockRes
 				a.Requests = aws.Int(42)
 			},
 			override: func(a *AdvancedCount) {

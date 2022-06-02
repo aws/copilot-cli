@@ -875,6 +875,19 @@ func (p Percentage) Validate() error {
 	return nil
 }
 
+// Validate returns nil if Resource is configured correctly.
+func (r Resource) Validate() error {
+	return r.ScaledResource.Validate()
+}
+
+// Validate returns nil if AdvancedResource is configured correctly.
+func (r AdvancedResource) Validate() error {
+	if err := r.Value.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Validate returns nil if QueueScaling is configured correctly.
 func (qs QueueScaling) Validate() error {
 	if qs.IsEmpty() {

@@ -15,7 +15,9 @@ import (
 )
 
 func TestUnmarshalSvc(t *testing.T) {
-	mockPerc := Percentage(70)
+	mockRes := Resource{
+		Value: Percentage(70),
+	}
 	testCases := map[string]struct {
 		inContent string
 
@@ -209,7 +211,7 @@ environments:
 										Range: Range{
 											Value: &mockRange,
 										},
-										CPU: &mockPerc,
+										CPU: &mockRes,
 									},
 								},
 							},
@@ -395,10 +397,20 @@ type: 'OH NO'
 
 func TestCount_UnmarshalYAML(t *testing.T) {
 	var (
+		perc             = Percentage(70)
+		timeMinute       = 60 * time.Second
 		mockResponseTime = 500 * time.Millisecond
 		mockRange        = IntRangeBand("1-10")
-		mockCPU          = Percentage(70)
-		mockMem          = Percentage(80)
+		mockCPU          = Resource{
+			ScaledResource: AdvancedResource{
+				Value:            &perc,
+				ScaleInCooldown:  &timeMinute,
+				ScaleOutCooldown: &timeMinute,
+			},
+		}
+		mockMem = Resource{
+			Value: Percentage(80),
+		}
 	)
 	testCases := map[string]struct {
 		inContent []byte
@@ -416,7 +428,10 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 		"With auto scaling enabled": {
 			inContent: []byte(`count:
   range: 1-10
-  cpu_percentage: 70
+  cpu_percentage:
+    value: 70
+	in: 1m
+	out: 1m
   memory_percentage: 80
   requests: 1000
   response_time: 500ms
@@ -464,7 +479,10 @@ func TestCount_UnmarshalYAML(t *testing.T) {
     min: 2
     max: 8
     spot_from: 3
-  cpu_percentage: 70
+  cpu_percentage:
+    value: 70
+	in: 1m
+	out: 1m
 `),
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{

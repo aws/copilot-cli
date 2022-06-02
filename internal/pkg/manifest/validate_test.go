@@ -1416,7 +1416,9 @@ func TestIPNet_Validate(t *testing.T) {
 }
 
 func TestTaskConfig_Validate(t *testing.T) {
-	mockPerc := Percentage(70)
+	mockRes := Resource{
+		Value: Percentage(70),
+	}
 	testCases := map[string]struct {
 		TaskConfig TaskConfig
 
@@ -1436,7 +1438,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Count: Count{
 					AdvancedCount: AdvancedCount{
 						Spot: aws.Int(123),
-						CPU:  &mockPerc,
+						CPU:  &mockRes,
 					},
 				},
 			},
@@ -1557,10 +1559,61 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 	}
 }
 
+func TestResource_Validate(t *testing.T) {
+
+	var (
+		time = 60 * time.Second
+		perc = Percentage(70)
+	)
+
+	testCases := map[string]struct {
+		Resource Resource
+
+		wantedError          error
+		wantedErrorMsgPrefix string
+	}{
+		"valid if only value is specified": {
+			Resource: Resource{
+				Value: Percentage(50),
+			},
+		},
+		"valid if only scaled resource is specified": {
+			Resource: Resource{
+				ScaledResource: AdvancedResource{
+					Value:            &perc,
+					ScaleInCooldown:  &time,
+					ScaleOutCooldown: &time,
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.Resource.Validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
+			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
+		})
+	}
+}
+
 func TestAdvancedCount_Validate(t *testing.T) {
 	var (
-		mockPerc    = Percentage(70)
-		invalidPerc = Percentage(-1)
+		mockRes = Resource{
+			Value: Percentage(70),
+		}
+		invalidRes = Resource{
+			Value: Percentage(-1),
+		}
 	)
 	testCases := map[string]struct {
 		AdvancedCount AdvancedCount
@@ -1586,7 +1639,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				},
-				CPU: &mockPerc,
+				CPU: &mockRes,
 				QueueScaling: QueueScaling{
 					AcceptableLatency: durationp(10 * time.Second),
 					AvgProcessingTime: durationp(1 * time.Second),
@@ -1597,7 +1650,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		"error if both spot and autoscaling fields are specified": {
 			AdvancedCount: AdvancedCount{
 				Spot:         aws.Int(123),
-				CPU:          &mockPerc,
+				CPU:          &mockRes,
 				workloadType: LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time"`),
@@ -1647,14 +1700,14 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		},
 		"error if range is missing when autoscaling fields are set for Backend Service": {
 			AdvancedCount: AdvancedCount{
-				CPU:          &mockPerc,
+				CPU:          &mockRes,
 				workloadType: BackendServiceType,
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage or memory_percentage" are specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Worker Service": {
 			AdvancedCount: AdvancedCount{
-				CPU:          &mockPerc,
+				CPU:          &mockRes,
 				workloadType: WorkerServiceType,
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage or queue_delay" are specified`),
@@ -1676,22 +1729,22 @@ func TestAdvancedCount_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "queue_delay": `,
 		},
-		"error if CPU perc is not valid": {
+		"error if CPU res is not valid": {
 			AdvancedCount: AdvancedCount{
 				Range: Range{
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
-				CPU:          &invalidPerc,
+				CPU:          &invalidRes,
 				workloadType: LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "cpu_percentage": `,
 		},
-		"error if memory perc is not valid": {
+		"error if memory res is not valid": {
 			AdvancedCount: AdvancedCount{
 				Range: Range{
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
-				Memory:       &invalidPerc,
+				Memory:       &invalidRes,
 				workloadType: LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "memory_percentage": `,
