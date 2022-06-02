@@ -33,7 +33,7 @@ LoadBalancerDNSAlias:
       - Name: {{$alias}}
         Type: A
         AliasTarget:
-          {{- if eq .WorkloadType "Backend Service"}}
+          {{- if eq $.WorkloadType "Backend Service"}}
           HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
           DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
           {{- else}}

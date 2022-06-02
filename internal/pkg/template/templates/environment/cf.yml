@@ -264,9 +264,9 @@ Resources:
       Scheme: internal
       SecurityGroups: [ !GetAtt InternalLoadBalancerSecurityGroup.GroupId ]
 {{- if .CustomInternalALBSubnets}}
-      Subnets: [ {{range $subnet := .CustomInternalALBSubnets}}{{$subnet}}, {{end}} ]
+      Subnets: {{fmtSlice .CustomInternalALBSubnets}}
 {{- else if .VPCConfig.Imported}}
-      Subnets: [ {{range $id := .VPCConfig.Imported.PrivateSubnetIDs}}{{$id}}, {{end}} ]
+      Subnets: {{fmtSlice .VPCConfig.Imported.PrivateSubnetIDs}}
 {{- else}}
       Subnets: [ {{range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}!Ref PrivateSubnet{{inc $ind}}, {{end}} ]
 {{- end}}
@@ -523,6 +523,16 @@ Outputs:
     Value: !GetAtt InternalLoadBalancer.DNSName
     Export:
       Name: !Sub ${AWS::StackName}-InternalLoadBalancerDNS
+  InternalLoadBalancerFullName:
+    Condition: CreateInternalALB
+    Value: !GetAtt InternalLoadBalancer.LoadBalancerFullName
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalLoadBalancerFullName
+  InternalLoadBalancerHostedZone:
+    Condition: CreateInternalALB
+    Value: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalLoadBalancerCanonicalHostedZoneID
   InternalHTTPListenerArn:
     Condition: CreateInternalALB
     Value: !Ref InternalHTTPListener
