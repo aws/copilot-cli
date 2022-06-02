@@ -17,7 +17,7 @@ Copilot v1.18 では、いくつかの新機能提供と改善が行われまし
 * **Pipeline での順序付け:** 継続的デリバリーの Pipeline において、Service や Job がデプロイされる順番を制御できるようになりました。[詳細はこちら](#pipeline-%E3%81%AB%E3%81%8A%E3%81%91%E3%82%8B%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%AE%E9%A0%86%E5%BA%8F%E3%82%92%E5%88%B6%E5%BE%A1%E3%81%99%E3%82%8B)をご覧ください。
 * **Pipeline の追加改善:** デプロイ順序の他に、Pipeline にデプロイする Service や Job を制限したり、Pipeline にカスタム CloudFormation スタックをデプロイすることができるようになりました。[詳細はこちら](#pipeline-%E3%81%AE%E8%BF%BD%E5%8A%A0%E6%94%B9%E5%96%84)をご覧ください。
 * **再デプロイの迅速化を実現する "recreate" 戦略:** "recreate" デプロイ戦略を指定することで、ECS が新しいタスクを開始する前に Service 内の古いタスクを停止するようになりました。[詳細はこちら](#%E5%86%8D%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%82%92%E5%8A%A0%E9%80%9F%E3%81%95%E3%81%9B%E3%82%8B-recreate-%E6%88%A6%E7%95%A5)をご覧ください。
-* **Load Balanced Web Service、Worker Service、Backend Service のトレース:** ECS タスクから AWS X-Ray にトレースを収集して出力するため、マニフェストに `observability.tracing` の設定を導入し、[AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) のサイドカーコンテナを追加しています。[詳細はこちら]([#load-balanced-web-serviceworker-servicebackend-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9)をご覧ください。
+* **Load Balanced Web Service、Worker Service、Backend Service のトレース:** ECS タスクから AWS X-Ray にトレースを収集して出力するため、マニフェストに `observability.tracing` の設定を導入し、[AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) のサイドカーコンテナを追加しています。[詳細はこちら](#load-balanced-web-serviceworker-servicebackend-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9)をご覧ください。
 
 ## AWS Copilot とは?
 
