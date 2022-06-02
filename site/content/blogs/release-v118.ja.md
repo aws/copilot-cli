@@ -13,13 +13,11 @@ The AWS Copilot コアチームは、Copilot v1.18 リリースを発表しま�
 
 Copilot v1.18 では、いくつかの新機能提供と改善が行われました:
 
-* **証明書のインポート:** `copilot env init --import-cert-arns` を実行すると、検証済みの ACM 証明書を環境のロードバランサーリスナーにインポートできるようになりました。[詳細は
-こちら](#%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%81%AE%E3%82%A4%E3%83%B3%E3%83%9D%E3%83%BC%E3%83%88)をご覧ください。
-* **Pipeline でのデプロイの順序付け:** 継続的デリバリーの Pipeline において、Service や Job がデプロイされる順番を制御できるようになりました。[詳細は
-こちら](.#controlling-order-of-deployments-in-a-pipeline)をご覧ください。
-* **Additional pipeline improvements:** Besides deployment orders, you can now limit which services or jobs to deploy in your pipeline or deploy custom cloudformation stacks in a pipeline. [See detailed section](./#additional-pipeline-improvements).
-* **"recreate" strategy for faster redeployments:** You can now specify "recreate" deployment strategy so that ECS will stop old tasks in your service before starting new ones. [See detailed section](./#recreate-strategy-for-faster-redeployments).
-* **Tracing for Load Balanced Web, Worker, and Backend Service:** To collect and ship traces to AWS X-Ray from ECS tasks, we are introducing `observability.tracing` configuration in the manifest to add an [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) sidecar container. [See detailed section](./#tracing-for-load-balanced-web-service-worker-service-and-backend-service).
+* **証明書のインポート:** `copilot env init --import-cert-arns` を実行すると、検証済みの ACM 証明書を Environment のロードバランサーリスナーにインポートできるようになりました。[詳細はこちら](#%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%81%AE%E3%82%A4%E3%83%B3%E3%83%9D%E3%83%BC%E3%83%88)をご覧ください。
+* **Pipeline での順序付け:** 継続的デリバリーの Pipeline において、Service や Job がデプロイされる順番を制御できるようになりました。[詳細はこちら](#pipeline-%E3%81%AB%E3%81%8A%E3%81%91%E3%82%8B%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%AE%E9%A0%86%E5%BA%8F%E3%82%92%E5%88%B6%E5%BE%A1%E3%81%99%E3%82%8B)をご覧ください。
+* **Pipeline の追加改善:** デプロイ順序の他に、Pipeline にデプロイする Service や Job を制限したり、Pipeline にカスタム CloudFormation スタックをデプロイすることができるようになりました。[詳細はこちら](#pipeline-%E3%81%AE%E8%BF%BD%E5%8A%A0%E6%94%B9%E5%96%84)をご覧ください。
+* **再デプロイの迅速化を実現する "recreate" 戦略:** "recreate" デプロイ戦略を指定することで、ECS が新しいタスクを開始する前に Service 内の古いタスクを停止するようになりました。[詳細はこちら](#%E5%86%8D%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%82%92%E5%8A%A0%E9%80%9F%E3%81%95%E3%81%9B%E3%82%8B-recreate-%E6%88%A6%E7%95%A5)をご覧ください。
+* **Load Balanced Web Service、Worker Service、Backend Service のトレース:** ECS タスクから AWS X-Ray にトレースを収集して出力するため、マニフェストに `observability.tracing` の設定を導入し、[AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) のサイドカーコンテナを追加しています。[詳細はこちら]([#load-balanced-web-serviceworker-servicebackend-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9)をご覧ください。
 
 ## AWS Copilot とは?
 
@@ -34,40 +32,40 @@ Copilot は、 さまざまなタイプのマイクロサービスの作成と�
 ## 証明書のインポート
 _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 
-If you have domains managed outside of Route 53, or want to enable HTTPS without having a domain associated with your application, you can now use the new `--import-cert-arns` flag to import any validated certificates when creating your environments.
-
+Route 53 以外で管理しているドメインがある場合、またはアプリケーションにドメインを関連付けずに HTTPS を有効にしたい場合、新設の `--import-cert-arns` フラグを使用して、Environment 作成時に検証済みの証明書をインポートすることができるようになりました。
 ```
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012 --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/87654321-4321-4321-4321-210987654321
 ```
 
-For example, one of the certificates has `example.com` as its domain and `*.example.com` as a subject alternative name (SAN):
+例えば、ある証明書のドメインが `example.com` で、サブジェクトの別名 （Subject Alternative Names/SAN） が `*.example.com` であったとします。
 
-???+ example "Sample certificate"
-    ```json
-    {
-      "Certificate": {
-        "CertificateArn": "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012",
+???+ "Sample certificate" の例
+```json
+{
+  "Certificate": {
+    "CertificateArn": "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012",
+    "DomainName": "example.com",
+    "SubjectAlternativeNames": [
+      "*.example.com"
+    ],
+    "DomainValidationOptions": [
+      {
         "DomainName": "example.com",
-        "SubjectAlternativeNames": [
-          "*.example.com"
-        ],
-        "DomainValidationOptions": [
-          {
-            "DomainName": "example.com",
-            "ValidationDomain": "example.com",
-            "ValidationStatus": "SUCCESS",
-            "ResourceRecord": {
-              "Name": "_45c8aa9ac85568e905a6c3852e62ebc6.example.com.",
-              "Type": "CNAME",
-              "Value": "_f8be688050b7d23184863690b3d4baa8.xrchbtpdjs.acm-validations.aws."
-            },
-            "ValidationMethod": "DNS"
-          }
-        ],
-        ...
-    }
-    ```
-Then, you need to specify aliases that are valid against any of the imported certificates in a [Load Balanced Web Service manifest](../docs/manifest/lb-web-service.en.md):
+        "ValidationDomain": "example.com",
+        "ValidationStatus": "SUCCESS",
+        "ResourceRecord": {
+          "Name": "_45c8aa9ac85568e905a6c3852e62ebc6.example.com.",
+          "Type": "CNAME",
+          "Value": "_f8be688050b7d23184863690b3d4baa8.xrchbtpdjs.acm-validations.aws."
+        },
+        "ValidationMethod": "DNS"
+      }
+    ],
+    ...
+}
+```
+次に、[Load Balanced Web Service のマニフェスト](../docs/manifest/lb-web-service.ja.md)で、インポートされた証明書のいずれに対しても有効なエイリアスを指定する必要があります。
+
 ```yaml
 name: frontend
 type: Load Balanced Web Service
@@ -76,55 +74,54 @@ http:
   alias: v1.example.com
 ```
 !!!attention
-    Specifying `http.alias` in service manifests is required for deploying services to an environment with imported certificates.
-After the deployment, add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted. For example, if your alias domain is hosted in Route 53:
-???+ example "Sample Route 53 A Record"
-    ```json
-    {
-      "Name": "v1.example.com.",
-      "Type": "A",
-      "AliasTarget": {
-        "HostedZoneId": "Z1H1FL3HABSF5",
-        "DNSName": "demo-publi-1d328e3bqag4r-1914228528.us-west-2.elb.amazonaws.com.",
-        "EvaluateTargetHealth": true
-      }
-    }
-    ```
-Now, your service has HTTPS enabled using your own certificates and can be accessed via `https://v1.example.com`!
+    Service マニフェストに `http.alias` を指定することは、インポートされた証明書を持つ Environment に Service をデプロイするために必要です。デプロイ後、Environment に作成された Application Load Balancer (ALB) の DNS を、エイリアスドメインがホストされている場所に A レコードとして追加してください。例えば、エイリアスドメインが Route 53 でホストされている場合、
 
-## Controlling Order of Deployments in a Pipeline
+???+ "Sample Route 53 A Record" の例
+```json
+{
+  "Name": "v1.example.com.",
+  "Type": "A",
+  "AliasTarget": {
+    "HostedZoneId": "Z1H1FL3HABSF5",
+    "DNSName": "demo-publi-1d328e3bqag4r-1914228528.us-west-2.elb.amazonaws.com.",
+    "EvaluateTargetHealth": true
+  }
+}
+```
+これで、あなたの Service は独自の証明書を使用して HTTPS が有効になり、`https://v1.example.com` からアクセスできるようになりました!
+
+## Pipeline におけるデプロイの順序を制御する
 _Contributed by [Efe Karakus](https://github.com/efekarakus/)_
 
-Copilot provides the `copilot pipeline` commands to create continuous delivery pipelines to automatically release microservices in your git repository.  
-Prior to v1.18, all services and jobs defined in your git repository got deployed in parallel for each stage.
-For example, given a monorepo with three microservices: `frontend`, `orders`, `warehouse`. All of them got deployed at the same time
-to the `test` and `prod` environments:
+Copilot は、git リポジトリにマイクロサービスを自動的にリリースする継続的デリバリーパイプラインを作成するための `copilot pipeline` コマンドを提供します。
+
+v1.18 以前は、git リポジトリで定義されたすべての Service や Job は、ステージごとに並行してデプロイされました。例えば、3 つのマイクロサービス (frontend、orders、warehouse） を持つ monorepo があったとします。これらはすべて、`test` と `prod` Environment に同時にデプロイされました。
 === "Pipeline"
-    ![Rendered pipeline](../assets/images/pipeline-default.png)  
+![Rendered pipeline](../assets/images/pipeline-default.png)  
 === "Pipeline Manifest"
-    ```yaml
-    name: release
-    source:
-      provider: GitHub
-      properties:
-        branch: main
-        repository: https://github.com/user/repo
-    stages:
-    - name: test
-    - name: prod
-      requires_approval: true
-    ```
+```yaml
+name: release
+source:
+  provider: GitHub
+  properties:
+    branch: main
+    repository: https://github.com/user/repo
+stages:
+- name: test
+- name: prod
+  requires_approval: true
+```
 === "Repository Layout"
-    ```
-    copilot
-    ├── frontend
-    │   └── manifest.yml
-    ├── orders
-    │   └── manifest.yml
-    └── warehouse
-        └── manifest.yml
-    ```
-Starting with v1.18, you can control the order of your deployments in your pipeline with the new [`deployments` field](../docs/manifest/pipeline.en.md#stages-deployments).  
+```
+copilot
+├── frontend
+│   └── manifest.yml
+├── orders
+│   └── manifest.yml
+└── warehouse
+    └── manifest.yml
+```
+v1.18 からは、新しい [`deployments` フィールド](../docs/manifest/pipeline.ja.md#stages-deployments)で Pipeline 内のデプロイの順番を制御できるようになりました。
 ```yaml
 stages:
   - name: test
@@ -141,18 +138,17 @@ stages:
       frontend:
         depends_on: [orders, warehouse]
 ```
-With the manifest above, we're declaring that the `orders` and `warehouse` services should be deployed prior to the `frontend` so that clients can't send new API requests
-before the downstream services are ready to accept them. Copilot figures out in which order the stacks should be deployed, and the resulting CodePipeline looks as follows:
+上記のマニフェストでは、`orders` と `warehouse` のService を `frontend` よりも先にデプロイすることを宣言しています。これは、下流の Service が受け入れる準備が整う前にクライアントが新しい API リクエストを送信できないようにするためです。Copilot はスタックをどの順番でデプロイすべきかを判断し、その結果、CodePipeline は次のようになります。
 ![Rendered ordered pipeline](../assets/images/pipeline-ordered.png)
-### Additional pipeline improvements
-There are a few other enhancements that come with the new `deployments` field:
-1. It is now possible for monorepos to configure which services or jobs to deploy in a pipeline. For example, I can limit 
-   the pipeline to only deploy the `orders` microservice:
+
+### Pipeline の追加改善
+その他にも、新しい `deployments` フィールドに付随するいくつかの機能強化があります。
+1. monorepos で、Pipeline にデプロイする Service や Job を設定することができるようになりました。例えば、Pipeline で `orders` のマイクロサービスだけをデプロイするように制限することができます。
    ```yaml
    deployments:
      orders:
    ```
-2. Your pipelines can now deploy standalone CloudFormation templates that are not generated by Copilot. For example, if we have a repository structured as follows:
+2. Pipeline が Copilot で生成されないスタンドアロンの CloudFormation テンプレートをデプロイできるようになりました。例えば、以下のような構造のリポジトリがあった場合、
    ```
    copilot
     ├── api
@@ -161,7 +157,7 @@ There are a few other enhancements that come with the new `deployments` field:
         ├── cognito.params.json
         └── cognito.yml
    ```
-   Then I can leverage the new [`stack_name`](../docs/manifest/pipeline.en.md#stages-deployments-stackname), [`template_path`](../docs/manifest/pipeline.en.md#stages-deployments-templatepath) and [`template_config`](../docs/manifest/pipeline.en.md#stages-deployments-templateconfig) fields under deployments to specify deploying the cognito cloudformation stack in my pipeline:
+   その際、 deployments の新しい [`stack_name`](../docs/manifest/pipeline.ja.md#stages-deployments-stackname)、[`template_path`](../docs/manifest/pipeline.ja.md#stages-deployments-templatepath)、[`template_config`](../docs/manifest/pipeline.ja.md#stages-deployments-templateconfig) フィールドを活用して、Pipeline で cognito cloudformation スタックのデプロイを指定することができます。
    ```yaml
    deployments:
      cognito:
@@ -170,49 +166,37 @@ There are a few other enhancements that come with the new `deployments` field:
        template_config: infrastructure/cognito.params.json
      api:
    ```
-   The final step would be modifying the copilot generated buildspec to copy the files under `copilot/templates`
-   to `infrastructure/` with `cp -r copilot/templates infrastructure/` so that the `template_path` and `template_config`
-   fields point to existing files.
+   最後のステップは、`copilot/templates` の下にあるファイルを `infrastructure/` にコピーするために `cp -r copilot/templates infrastructure/` で、`template_path` と `template_config` フィールドが既存のファイルを指すように、copilot が生成する buildspec を変更することです。
 
-## "recreate" Strategy for Faster Redeployments
+## 再デプロイを加速させる "recreate" 戦略
 _Contributed by [Parag Bhingre](https://github.com/paragbhingre/)_
 
 !!!alert
-    Due to the possible service downtime caused by "recreate", we do **not** recommend using it for your production services.
+    "recreate" によって Service が停止する可能性があるため、本番 Service での使用は**お勧めしません**。
 
-Before v1.18, a Copilot ECS-based service (Load Balanced Web Service, Backend Service, and Worker Service) redeployment always spun up new tasks, waited for them to be stable, and then stopped the old tasks. In order to support faster redeployments for ECS-based services in the development stage, users can specify `"recreate"` as the deployment strategy in the service manifest:
+v1.18 より前のバージョンでは、Copilot ECS ベースのサービス（Load Balanced Web Service、Backend Service、Worker Service）の再デプロイでは常に新しいタスクをスピンアップし、それらが安定するのを待って古いタスクを停止していました。開発段階にある ECS ベースのサービスの高速な再デプロイをサポートするために、ユーザーは Service マニフェストでデプロイ戦略として `"recreate"` を指定することができます。
 
 ```yaml
 deployment:
   rolling: recreate
 ```
 
-Under the hood, Copilot sets [minimumHealthyPercent and maximumPercent](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_DeploymentConfiguration.html) to `0` and `100` respectively (defaults are `100` and `200`), so that old tasks are stopped before spinning up any new tasks.
+Copilot は、新しいタスクを起動する前に古いタスクを停止するように、[minimumHealthyPercent と maximumPercent](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/APIReference/API_DeploymentConfiguration.html) をそれぞれ `0` と `100` に設定します （デフォルトは `100` と `200` です）。
 
-## Tracing for Load Balanced Web Service, Worker Service, and Backend Service
+## Load Balanced Web Service、Worker Service、Backend Service のトレース
 _Contributed by [Danny Randall](https://github.com/dannyrandall/)_
 
-In [v1.17](./release-v117.en.md#send-your-request-driven-web-services-traces-to-aws-x-ray), Copilot launched support for sending traces from your Request-Driven Web Services to [AWS X-Ray](https://aws.amazon.com/xray/).
-Now, you can easily export traces from your Load Balanced Web, Worker, and Backend services to X-Ray by configuring `observability` in your service's manifest:
+[v1.17](./release-v117.ja.md#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92-aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B)で、Copilot は Request-Driven Web Services から [AWS X-Ray](https://aws.amazon.com/jp/xray/) にトレースを送信するサポートを開始しました。 Service のマニフェストで `observability` を設定することで、Load Balanced Web Service、Worker Service、Backend Service から X-Ray に簡単にトレースをエクスポートできるようになりました。
 ```yaml
 observability:
   tracing: awsxray
 ```
 
-For these service types, Copilot will deploy an [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) sidecar container to collect traces from your service and export them to X-Ray.
-After [instrumenting your service](../docs/developing/observability.en.md#instrumenting-your-service) to send traces, you can view the end-to-end journey of requests through your services to aid in debugging and monitoring performance of your application.
+これらのサービスタイプでは、Copilot は [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) サイドカーコンテナをデプロイして、Service からトレースを収集し、X-Ray にエクスポートします。トレースを送信するために [Service をインストルメント化](../docs/developing/observability.ja.md#instrumenting-your-service)した後、Application のデバッグとパフォーマンスの監視するために、Service を通してリクエストのエンドツーエンドの工程を表示することができます。
 
 ![X-Ray Service Map Example](https://user-images.githubusercontent.com/10566468/166986340-e3b7c0e2-c84d-4671-bf37-ba95bdb1d6b2.png)
 
-Read our documentation on [Observability](../docs/developing/observability.en.md) to learn more about tracing and get started!
-
-## What’s next?
-
-Download the new Copilot CLI version by following the link below and leave your feedback on [GitHub](https://github.com/aws/copilot-cli/) or our [Community Chat](https://gitter.im/aws/copilot-cli):
-
-* Download [the latest CLI version](../docs/getting-started/install.en.md)
-* Try our [Getting Started Guide](../docs/getting-started/first-app-tutorial.en.md)
-* Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.18.0)
+[Observability](../docs/developing/observability.ja.md) をご一読いただき、トレースについての知識を深めて、早速始めてみましょう！
 
 ## 次は？
 
