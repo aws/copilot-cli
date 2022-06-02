@@ -1,6 +1,6 @@
 # AWS Copilot v1.17: Request-Driven Web Service のためのトレース
 
-v1.16 のリリースからまだ1週間しか経っていませんが、The AWS Copilot コアチームは AWS App Runner とともに AWS X-Ray with OpenTelemetry を使った統合トレースのサポートを発表しています。App Runner のリリースについては、[こちら](https://aws.amazon.com/jp/blogs/containers/tracing-an-aws-app-runner-service-using-aws-x-ray-with-opentelemetry/)をご覧ください。Copilot でRequest-Driven Web Services のトレースを有効にする方法については、[後述のセクション]([.#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B))をご覧ください。
+v1.16 のリリースからまだ1週間しか経っていませんが、The AWS Copilot コアチームは AWS App Runner とともに AWS X-Ray with OpenTelemetry を使った統合トレースのサポートを発表しています。App Runner のリリースについては、[こちら](https://aws.amazon.com/jp/blogs/containers/tracing-an-aws-app-runner-service-using-aws-x-ray-with-opentelemetry/)をご覧ください。Copilot でRequest-Driven Web Services のトレースを有効にする方法については、[後述のセクション]([#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92-aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B))をご覧ください。
 
 
 このリリースに貢献した [@kangere](https://github.com/kangere) に感謝を申し上げます。私たちのパブリックな[コミュニティチャット](https://gitter.im/aws/copilot-cli)は常に成長しており、オンラインでは 270 人以上の方々が日々助け合っています。AWS Copilot へご支援、ご支持いただいている皆様お一人お一人に感謝をいたします。
@@ -8,7 +8,7 @@ v1.16 のリリースからまだ1週間しか経っていませんが、The AWS
 Copilot v1.17 では、新機能の追加といくつかの改善が行われました:
 
 * **Request-Driven Web Service におけるトレース:** AWS App Runner サービスの AWS X-Ray トレースサポートのリリースに伴い、Request-Driven Web Service のマニフェストに `observability.tracing: awsxray` を追加して、AWS X-Ray にトレースを送信することができるようになりました。詳細は、
-[こちら](.#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B)を確認してください。
+[こちら](#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92-aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B)を確認してください。
 * **スケジュールされたジョブを無効化可能:**:
   マニフェストでスケジュールを "none" に設定し、イベントルールを無効にすることで、スケジュールされたジョブを簡単にオフにすることができます。([#3447](https://github.com/aws/copilot-cli/pull/3447))
   ```yaml
@@ -30,7 +30,7 @@ Copilot は、 さまざまなタイプのマイクロサービスの作成と�
 
 より詳細な AWS Copilot の紹介については、[Overview](../docs/concepts/overview.ja.md) を確認してください。
 
-## Request-Driven Web Service のトレースをAWS X-Ray に送信する
+## Request-Driven Web Service のトレースを AWS X-Ray に送信する
 _Contributed by [Wanxian Yang](https://github.com/Lou1415926/)_
 
 Request-Driven Web Services で生成されたトレースを AWS X-Ray に送信することができるようになりました。これにより、Amazon CloudWatch コンソールや AWS X-Ray コンソールを通して、サービスマップやトレースを可視化することができます。
