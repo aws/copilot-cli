@@ -1209,9 +1209,10 @@ func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) 
 }
 
 func (d *backendSvcDeployer) validateALBRuntime() error {
-	switch {
-	case d.backendMft.RoutingRule.IsEmpty():
+	if d.backendMft.RoutingRule.IsEmpty() {
 		return nil
+	}
+	switch {
 	case d.backendMft.RoutingRule.Alias.IsEmpty() && d.env.HasImportedCerts():
 		return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 			name:    d.name,
