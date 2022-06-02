@@ -7,8 +7,7 @@ v1.16 のリリースからまだ1週間しか経っていませんが、The AWS
 
 Copilot v1.17 では、新機能の追加といくつかの改善が行われました:
 
-* **Request-Driven Web Service におけるトレース:** AWS App Runner サービスの AWS X-Ray トレースサポートのリリースに伴い、Request-Driven Web Service のマニフェストに `observability.tracing: awsxray` を追加して、AWS X-Ray にトレースを送信することができるようになりました。詳細は、
-[こちら](#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92-aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B)を確認してください。
+* **Request-Driven Web Service におけるトレース:** AWS App Runner サービスの AWS X-Ray トレースサポートのリリースに伴い、Request-Driven Web Service のマニフェストに `observability.tracing: awsxray` を追加して、AWS X-Ray にトレースを送信することができるようになりました。[詳細はこちら](#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92-aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B)をご覧ください。
 * **スケジュールされたジョブを無効化可能:**:
   マニフェストでスケジュールを "none" に設定し、イベントルールを無効にすることで、スケジュールされたジョブを簡単にオフにすることができます。([#3447](https://github.com/aws/copilot-cli/pull/3447))
   ```yaml
