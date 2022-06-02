@@ -384,7 +384,7 @@ type taskStackManager interface {
 
 type taskRunner interface {
 	Run() ([]*task.Task, error)
-	CheckNonZeroExitCode(tasks []*task.Task) error
+	CheckNonZeroExitCode([]*task.Task) (int, error)
 }
 
 type defaultClusterGetter interface {

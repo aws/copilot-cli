@@ -6,9 +6,6 @@ package task
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
-	"strings"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
@@ -109,17 +106,17 @@ func (r *ConfigRunner) validateDependencies() error {
 }
 
 // CheckNonZeroExitCode returns the status of the containers part of the given tasks.
-func (r *ConfigRunner) CheckNonZeroExitCode(tasks []*Task) error {
-	var essentialContainers []string
+func (r *ConfigRunner) CheckNonZeroExitCode(tasks []*Task) (int, error) {
+	essentialContainers := make(map[string]bool)
 	taskDefName := fmt.Sprintf("copilot-%s", r.GroupName)
 	taskDefinition, err := r.Starter.TaskDefinition(taskDefName)
 	if err != nil {
-		return fmt.Errorf("get task definition %s of a task", taskDefName)
+		return 0, fmt.Errorf("get task definition %s of a task", taskDefName)
 	}
 
 	for _, container := range taskDefinition.ContainerDefinitions {
 		if aws.BoolValue(container.Essential) {
-			essentialContainers = append(essentialContainers, aws.StringValue(container.Name))
+			essentialContainers[aws.StringValue(container.Name)] = true
 		}
 	}
 
@@ -129,43 +126,21 @@ func (r *ConfigRunner) CheckNonZeroExitCode(tasks []*Task) error {
 	}
 	describedTasks, describeErr := r.Starter.DescribeTasks(r.Cluster, taskARNs)
 	if describeErr != nil {
-		return describeErr
+		return 0, describeErr
 	}
-	// Today we only use one container inside a stand-alone task, shall we keep the looping logic
-	// active for multiple containers or only add this logic when we have multiple containers inside a stand-alone task in the future.
+
 	for _, describedTask := range describedTasks {
 		for _, container := range describedTask.Containers {
-			if contains(essentialContainers, aws.StringValue(container.Name)) && aws.Int64Value(container.ExitCode) > 0 {
+			if essentialContainers[aws.StringValue(container.Name)] && aws.Int64Value(container.ExitCode) > 0 {
 				taskID, err := ecs.TaskID(aws.StringValue(describedTask.TaskArn))
 				if err != nil {
-					return err
+					return 0, err
 				}
-				return fmt.Errorf(HumanString(aws.StringValue(container.Name),
+				return int(aws.Int64Value(container.ExitCode)), &errExitCode{aws.StringValue(container.Name),
 					taskID,
-					aws.Int64Value(container.ExitCode)))
+					aws.Int64Value(container.ExitCode)}
 			}
 		}
 	}
-	return nil
-}
-
-// contains checks if a string is present in a slice
-func contains(s []string, str string) bool {
-	for _, v := range s {
-		if v == str {
-			return true
-		}
-	}
-	return false
-}
-
-// HumanString returns a friendly colorized summary of the container description.
-func HumanString(containerName string, taskName string, exitCode int64) string {
-	buf := new(strings.Builder)
-	code := fmt.Sprintf("%d", exitCode)
-	if exitCode > 0 {
-		code = color.Red.Sprint(exitCode)
-	}
-	buf.WriteString(fmt.Sprintf("Container %s in task %s exited with status code %s", containerName, taskName, code))
-	return buf.String()
+	return 0, nil
 }

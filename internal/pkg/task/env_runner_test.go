@@ -454,7 +454,7 @@ func TestEnvRunner_CheckNonZeroExitCode_Run(t *testing.T) {
 				OS: tc.os,
 			}
 
-			err := task.CheckNonZeroExitCode(tc.inTasks)
+			_, err := task.CheckNonZeroExitCode(tc.inTasks)
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			}
