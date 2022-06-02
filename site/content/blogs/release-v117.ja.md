@@ -1,6 +1,6 @@
 # AWS Copilot v1.17: Request-Driven Web Service のためのトレース
 
-v1.16 のリリースからまだ1週間しか経っていませんが、The AWS Copilot コアチームは AWS App Runner とともに AWS X-Ray with OpenTelemetry を使った統合トレースのサポートを発表しています。App Runner のリリースについては、[こちら](https://aws.amazon.com/jp/blogs/containers/tracing-an-aws-app-runner-service-using-aws-x-ray-with-opentelemetry/)をご覧ください。Copilot でRequest-Driven Web Services のトレースを有効にする方法については、[後述のセクション]([#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92-aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B))をご覧ください。
+v1.16 のリリースからまだ1週間しか経っていませんが、The AWS Copilot コアチームは AWS App Runner とともに AWS X-Ray with OpenTelemetry を使った統合トレースのサポートを発表しています。App Runner のリリースについては、[こちら](https://aws.amazon.com/jp/blogs/containers/tracing-an-aws-app-runner-service-using-aws-x-ray-with-opentelemetry/)をご覧ください。Copilot でRequest-Driven Web Services のトレースを有効にする方法については、[後述のセクション](#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92-aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B)をご覧ください。
 
 
 このリリースに貢献した [@kangere](https://github.com/kangere) に感謝を申し上げます。私たちのパブリックな[コミュニティチャット](https://gitter.im/aws/copilot-cli)は常に成長しており、オンラインでは 270 人以上の方々が日々助け合っています。AWS Copilot へご支援、ご支持いただいている皆様お一人お一人に感謝をいたします。
