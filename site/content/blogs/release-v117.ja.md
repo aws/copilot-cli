@@ -34,9 +34,9 @@ _Contributed by [Wanxian Yang](https://github.com/Lou1415926/)_
 
 Request-Driven Web Services で生成されたトレースを AWS X-Ray に送信することができるようになりました。これにより、Amazon CloudWatch コンソールや AWS X-Ray コンソールを通して、サービスマップやトレースを可視化することができます。
 
-この機能を使うには、まず [AWS Distro for OpenTelemetry](https://aws.amazon.com/jp/otel/?otel-blogs.sort-by=item.additionalFields.createdDate&otel-blogs.sort-order=desc) で Service をインストルメント化する必要があります。[手動でインストルメント化]\(https://aws-otel.github.io/docs/getting-started/python-sdk/trace-manual-instr)を行うか、より迅速で簡単なセットアップのためにアプリケーションコードを変更せずに Dockerfile を通して Service を[自動でインストルメント化](https://aws-otel.github.io/docs/getting-started/python-sdk/trace-auto-instr)することができます。
+この機能を使うには、まず [AWS Distro for OpenTelemetry](https://aws.amazon.com/jp/otel/?otel-blogs.sort-by=item.additionalFields.createdDate&otel-blogs.sort-order=desc) で Service をインストルメント化する必要があります。[手動インストルメンテーション](https://aws-otel.github.io/docs/getting-started/python-sdk/trace-manual-instr)を行うか、より迅速で簡単なセットアップのためにアプリケーションコードを変更せずに Dockerfile を通して Service を[自動インストルメンテーション](https://aws-otel.github.io/docs/getting-started/python-sdk/trace-auto-instr)することができます。
 
-Service をインストルメント化したら、Request-Driven Web Service のマニフェストを変更し、[観測可能性の構成](../docs/manifest/rd-web-service.ja.md#observability)を含めるだけです:
+Service をインストルメント化したら、Request-Driven Web Service のマニフェストを変更し、[observability の構成](../docs/manifest/rd-web-service.ja.md#observability)を含めるだけです:
 ```yaml
 observability:
   tracing: awsxray
