@@ -1211,11 +1211,32 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 					ImportCertARNs: []string{"mockCertARN"},
 				},
 			},
-			Manifest: &manifest.BackendService{},
+			Manifest: &manifest.BackendService{
+				BackendServiceConfig: manifest.BackendServiceConfig{
+					RoutingRule: manifest.RoutingRuleConfiguration{
+						Path: aws.String("/"),
+					},
+				},
+			},
 			setupMocks: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
 			},
 			expectedErr: `cannot deploy service mock-svc without http.alias to environment mock-env with certificate imported`,
+		},
+		"success if env has imported certs but alb not configured": {
+			App: &config.Application{
+				Name: mockAppName,
+			},
+			Env: &config.Environment{
+				Name: mockEnvName,
+				CustomConfig: &config.CustomizeEnv{
+					ImportCertARNs: []string{"mockCertARN"},
+				},
+			},
+			Manifest: &manifest.BackendService{},
+			setupMocks: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return(mockAppName+".local", nil)
+			},
 		},
 	}
 

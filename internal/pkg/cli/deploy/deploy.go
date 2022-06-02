@@ -944,7 +944,6 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, err
 	}
-
 	if err := d.validateALBRuntime(); err != nil {
 		return nil, err
 	}
@@ -1210,6 +1209,9 @@ func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) 
 }
 
 func (d *backendSvcDeployer) validateALBRuntime() error {
+	if d.backendMft.RoutingRule.IsEmpty() {
+		return nil
+	}
 	switch {
 	case d.backendMft.RoutingRule.Alias.IsEmpty() && d.env.HasImportedCerts():
 		return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
