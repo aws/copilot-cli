@@ -148,7 +148,7 @@ Pipeline を作成した後、`buildspec.yml` の以下の行を最新バージ�
 
 ```yaml
 ...
-      # Download the copilot linux binary.
+      # Copilot Linux バイナリをダウンロードします
       - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.16.0
       - mv ./copilot-linux-v1.16.0 ./copilot-linux
 ...
