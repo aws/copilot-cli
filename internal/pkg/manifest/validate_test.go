@@ -1746,9 +1746,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		},
 		"error if cooldown is specified but no autoscaling fields are specified for a Worker Service": {
 			AdvancedCount: AdvancedCount{
-				Range: Range{
-					Value: (*IntRangeBand)(aws.String("1-10")),
-				},
+				Cooldown:     &mockCooldown,
 				workloadType: WorkerServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage" or "queue_delay" if "cooldown" is specified`),
@@ -1758,7 +1756,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				CPU:          &mockConfig,
 				workloadType: BackendServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage or cooldown" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage or memory_percentage" are specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Worker Service": {
 			AdvancedCount: AdvancedCount{
