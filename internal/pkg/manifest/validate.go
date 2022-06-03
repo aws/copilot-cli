@@ -850,6 +850,28 @@ func (a AdvancedCount) Validate() error {
 		}
 	}
 
+	// Validate combinations with cooldown
+	if a.CPU != nil {
+		if !a.CPU.ScaledResource.IsEmpty() {
+			if a.Cooldown != nil && a.CPU.ScaledResource.Cooldown != nil {
+				return &errFieldMutualExclusive{
+					firstField:  "cooldown",
+					secondField: "cpu_percentage/cooldown",
+				}
+			}
+		}
+	}
+	if a.Memory != nil {
+		if !a.Memory.ScaledResource.IsEmpty() {
+			if a.Cooldown != nil && a.Memory.ScaledResource.Cooldown != nil {
+				return &errFieldMutualExclusive{
+					firstField:  "cooldown",
+					secondField: "memory_percentage/cooldown",
+				}
+			}
+		}
+	}
+
 	// Validate individual custom autoscaling options.
 	if err := a.QueueScaling.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue_delay": %w`, err)
@@ -877,11 +899,20 @@ func (p Percentage) Validate() error {
 
 // Validate returns nil if Resource is configured correctly.
 func (r Resource) Validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
+	if r.Value != nil {
+		return r.Value.Validate()
+	}
 	return r.ScaledResource.Validate()
 }
 
 // Validate returns nil if AdvancedResource is configured correctly.
 func (r AdvancedResource) Validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
 	if err := r.Value.Validate(); err != nil {
 		return err
 	}

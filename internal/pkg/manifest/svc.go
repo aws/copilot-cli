@@ -198,19 +198,20 @@ type Percentage int
 
 // Resource represents a resource that has autoscaling configurations.
 type Resource struct {
-	Value          Percentage       // needs to default to nil
-	ScaledResource AdvancedResource // mutually exclusive with ScaledResource
+	Value          *Percentage
+	ScaledResource AdvancedResource // mutually exclusive with Value
 }
 
-// Scaled resource represents the allocation of a resource implementing scaling cooldown.
+// AdvancedResource represents the allocation of a resource implementing scaling cooldown.
 type AdvancedResource struct {
-	Value            *Percentage    `yaml:"value"`
+	Value    *Percentage `yaml:"value"`
+	Cooldown *Cooldown   `yaml:"cooldown"`
+}
+
+// Cooldown represents the autoscaling cooldown of resources.
+type Cooldown struct {
 	ScaleInCooldown  *time.Duration `yaml:"in"`
 	ScaleOutCooldown *time.Duration `yaml:"out"`
-}
-
-func (a *AdvancedResource) IsEmpty() bool {
-	return a.ScaleInCooldown == nil && a.ScaleOutCooldown == nil && a.Value == nil
 }
 
 // AdvancedCount represents the configurable options for Auto Scaling as well as
@@ -218,6 +219,7 @@ func (a *AdvancedResource) IsEmpty() bool {
 type AdvancedCount struct {
 	Spot         *int           `yaml:"spot"` // mutually exclusive with other fields
 	Range        Range          `yaml:"range"`
+	Cooldown     *Cooldown      `yaml:"cooldown"`
 	CPU          *Resource      `yaml:"cpu_percentage"`
 	Memory       *Resource      `yaml:"memory_percentage"`
 	Requests     *int           `yaml:"requests"`
@@ -227,9 +229,19 @@ type AdvancedCount struct {
 	workloadType string
 }
 
+// IsEmpty returns whether Resource is empty
+func (r *Resource) IsEmpty() bool {
+	return r.ScaledResource.IsEmpty() && r.Value == nil
+}
+
+// IsEmpty returns whether AdvancedResource is empty
+func (a *AdvancedResource) IsEmpty() bool {
+	return a.Cooldown == nil && a.Value == nil
+}
+
 // IsEmpty returns whether AdvancedCount is empty.
 func (a *AdvancedCount) IsEmpty() bool {
-	return a.Range.IsEmpty() && a.CPU == nil && a.Memory == nil &&
+	return a.Range.IsEmpty() && a.CPU == nil && a.Memory == nil && a.Cooldown == nil &&
 		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil && a.QueueScaling.IsEmpty()
 }
 
@@ -245,11 +257,11 @@ func (a *AdvancedCount) hasAutoscaling() bool {
 func (a *AdvancedCount) validScalingFields() []string {
 	switch a.workloadType {
 	case LoadBalancedWebServiceType:
-		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time"}
+		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time", "cooldown"}
 	case BackendServiceType:
-		return []string{"cpu_percentage", "memory_percentage"}
+		return []string{"cpu_percentage", "memory_percentage", "cooldown"}
 	case WorkerServiceType:
-		return []string{"cpu_percentage", "memory_percentage", "queue_delay"}
+		return []string{"cpu_percentage", "memory_percentage", "queue_delay", "cooldown"}
 	default:
 		return nil
 	}
@@ -258,18 +270,20 @@ func (a *AdvancedCount) validScalingFields() []string {
 func (a *AdvancedCount) hasScalingFieldsSet() bool {
 	switch a.workloadType {
 	case LoadBalancedWebServiceType:
-		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil
+		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || a.Cooldown != nil
 	case BackendServiceType:
-		return a.CPU != nil || a.Memory != nil
+		return a.CPU != nil || a.Memory != nil || a.Cooldown != nil
 	case WorkerServiceType:
-		return a.CPU != nil || a.Memory != nil || !a.QueueScaling.IsEmpty()
+		return a.CPU != nil || a.Memory != nil || !a.QueueScaling.IsEmpty() || a.Cooldown != nil
 	default:
-		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()
+		return a.CPU != nil || a.Memory != nil || a.Requests != nil ||
+			a.ResponseTime != nil || !a.QueueScaling.IsEmpty() || a.Cooldown != nil
 	}
 }
 
 func (a *AdvancedCount) unsetAutoscaling() {
 	a.Range = Range{}
+	a.Cooldown = nil
 	a.CPU = nil
 	a.Memory = nil
 	a.Requests = nil

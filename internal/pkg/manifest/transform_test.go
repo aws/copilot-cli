@@ -574,8 +574,9 @@ func TestCountTransformer_Transformer(t *testing.T) {
 }
 
 func TestAdvancedCountTransformer_Transformer(t *testing.T) {
+	perc := Percentage(80)
 	mockRes := Resource{
-		Value: Percentage(80),
+		Value: &perc,
 	}
 	testCases := map[string]struct {
 		original func(a *AdvancedCount)

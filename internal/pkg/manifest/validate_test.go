@@ -1416,8 +1416,9 @@ func TestIPNet_Validate(t *testing.T) {
 }
 
 func TestTaskConfig_Validate(t *testing.T) {
+	perc := Percentage(70)
 	mockRes := Resource{
-		Value: Percentage(70),
+		Value: &perc,
 	}
 	testCases := map[string]struct {
 		TaskConfig TaskConfig
@@ -1574,15 +1575,17 @@ func TestResource_Validate(t *testing.T) {
 	}{
 		"valid if only value is specified": {
 			Resource: Resource{
-				Value: Percentage(50),
+				Value: &perc,
 			},
 		},
 		"valid if only scaled resource is specified": {
 			Resource: Resource{
 				ScaledResource: AdvancedResource{
-					Value:            &perc,
-					ScaleInCooldown:  &time,
-					ScaleOutCooldown: &time,
+					Value: &perc,
+					Cooldown: &Cooldown{
+						ScaleInCooldown:  &time,
+						ScaleOutCooldown: &time,
+					},
 				},
 			},
 		},
@@ -1608,11 +1611,29 @@ func TestResource_Validate(t *testing.T) {
 
 func TestAdvancedCount_Validate(t *testing.T) {
 	var (
-		mockRes = Resource{
-			Value: Percentage(70),
+		perc        = Percentage(70)
+		invalidPerc = Percentage(-1)
+		timeMinute  = time.Second * 60
+		mockRes     = Resource{
+			Value: &perc,
 		}
 		invalidRes = Resource{
-			Value: Percentage(-1),
+			Value: &invalidPerc,
+		}
+		mockCooldown = Cooldown{
+			ScaleInCooldown: &timeMinute,
+		}
+		mockAdvancedRes = Resource{
+			ScaledResource: AdvancedResource{
+				Value:    &perc,
+				Cooldown: &mockCooldown,
+			},
+		}
+		mockAdvancedInvRes = Resource{
+			ScaledResource: AdvancedResource{
+				Value:    &invalidPerc,
+				Cooldown: &mockCooldown,
+			},
 		}
 	)
 	testCases := map[string]struct {
@@ -1647,13 +1668,24 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				workloadType: WorkerServiceType,
 			},
 		},
+		"error if cooldown is specified in both advanced count and resource": {
+			AdvancedCount: AdvancedCount{
+				Range: Range{
+					Value: (*IntRangeBand)(aws.String("1-10")),
+				},
+				Cooldown:     &mockCooldown,
+				CPU:          &mockAdvancedRes,
+				workloadType: LoadBalancedWebServiceType,
+			},
+			wantedError: fmt.Errorf(`must specify one, not both, of "cooldown" and "cpu_percentage/cooldown"`),
+		},
 		"error if both spot and autoscaling fields are specified": {
 			AdvancedCount: AdvancedCount{
 				Spot:         aws.Int(123),
 				CPU:          &mockRes,
 				workloadType: LoadBalancedWebServiceType,
 			},
-			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time"`),
+			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time/cooldown"`),
 		},
 		"error if fail to validate range": {
 			AdvancedCount: AdvancedCount{
@@ -1669,7 +1701,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				Requests:     aws.Int(123),
 				workloadType: LoadBalancedWebServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests or response_time" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests, response_time or cooldown" are specified`),
 		},
 		"error if range is specified but no autoscaling fields are specified for a Load Balanced Web Service": {
 			AdvancedCount: AdvancedCount{
@@ -1678,7 +1710,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				},
 				workloadType: LoadBalancedWebServiceType,
 			},
-			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "range" is specified`),
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests", "response_time" or "cooldown" if "range" is specified`),
 		},
 		"error if range is specified but no autoscaling fields are specified for a Backend Service": {
 			AdvancedCount: AdvancedCount{
@@ -1687,7 +1719,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				},
 				workloadType: BackendServiceType,
 			},
-			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage" or "memory_percentage" if "range" is specified`),
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage" or "cooldown" if "range" is specified`),
 		},
 		"error if range is specified but no autoscaling fields are specified for a Worker Service": {
 			AdvancedCount: AdvancedCount{
@@ -1696,21 +1728,21 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				},
 				workloadType: WorkerServiceType,
 			},
-			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage" or "queue_delay" if "range" is specified`),
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "queue_delay" or "cooldown" if "range" is specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Backend Service": {
 			AdvancedCount: AdvancedCount{
 				CPU:          &mockRes,
 				workloadType: BackendServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage or memory_percentage" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage or cooldown" are specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Worker Service": {
 			AdvancedCount: AdvancedCount{
 				CPU:          &mockRes,
 				workloadType: WorkerServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage or queue_delay" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, queue_delay or cooldown" are specified`),
 		},
 		"wrap error from queue_delay on failure": {
 			AdvancedCount: AdvancedCount{
@@ -1735,6 +1767,16 @@ func TestAdvancedCount_Validate(t *testing.T) {
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
 				CPU:          &invalidRes,
+				workloadType: LoadBalancedWebServiceType,
+			},
+			wantedErrorMsgPrefix: `validate "cpu_percentage": `,
+		},
+		"error if CPU advanced res is not valid": {
+			AdvancedCount: AdvancedCount{
+				Range: Range{
+					Value: (*IntRangeBand)(stringP("1-2")),
+				},
+				CPU:          &mockAdvancedInvRes,
 				workloadType: LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "cpu_percentage": `,

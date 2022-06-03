@@ -318,8 +318,9 @@ func TestBackendService_Publish(t *testing.T) {
 }
 
 func TestBackendSvc_ApplyEnv(t *testing.T) {
+	perc := Percentage(70)
 	mockRes := Resource{
-		Value: Percentage(70),
+		Value: &perc,
 	}
 	mockBackendServiceWithNoEnvironments := BackendService{
 		Workload: Workload{
@@ -755,8 +756,9 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	mockRange := IntRangeBand("1-10")
+	perc := Percentage(80)
 	mockRes := Resource{
-		Value: Percentage(80),
+		Value: &perc,
 	}
 	testCases := map[string]struct {
 		svcCount Count
