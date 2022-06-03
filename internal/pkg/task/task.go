@@ -37,11 +37,14 @@ type EnvironmentDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 }
 
+// NonZeroExitCodeGetter wraps the method of getting a default cluster ARN.
+type NonZeroExitCodeGetter interface {
+	NonZeroExitCode([]string, string, string) (int, error)
+}
+
 // Runner wraps the method of running tasks.
 type Runner interface {
 	RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error)
-	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
-	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
 }
 
 // Task represents a one-off workload that runs until completed or an error occurs.

@@ -32,13 +32,3 @@ type errGetDefaultCluster struct {
 func (e *errGetDefaultCluster) Error() string {
 	return fmt.Sprintf("get default cluster: %v", e.parentErr)
 }
-
-type errExitCode struct {
-	containerName string
-	taskId        string
-	exitCode      int64
-}
-
-func (e *errExitCode) Error() string {
-	return fmt.Sprintf("Container %s in task %s exited with status code %d", e.containerName, e.taskId, e.exitCode)
-}

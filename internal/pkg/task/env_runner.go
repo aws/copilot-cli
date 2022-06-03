@@ -5,7 +5,6 @@ package task
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -50,6 +49,9 @@ type EnvRunner struct {
 	ClusterGetter        ClusterGetter
 	Starter              Runner
 	EnvironmentDescriber EnvironmentDescriber
+
+	// Figures non-zero exit code of the task
+	NonZeroExitCodeGetter NonZeroExitCodeGetter
 }
 
 // Run runs tasks in the environment of the application, and returns the tasks.
@@ -160,45 +162,13 @@ func containsString(s []string, search string) bool {
 
 // CheckNonZeroExitCode returns the status of the containers part of the given tasks.
 func (r *EnvRunner) CheckNonZeroExitCode(tasks []*Task) (int, error) {
-	essentialContainers := make(map[string]bool)
-	taskDefName := fmt.Sprintf("copilot-%s", r.GroupName)
-	taskDefinition, err := r.Starter.TaskDefinition(taskDefName)
-	if err != nil {
-		return 0, fmt.Errorf("get task definition %s for a task", taskDefName)
-	}
-
-	for _, container := range taskDefinition.ContainerDefinitions {
-		if aws.BoolValue(container.Essential) {
-			essentialContainers[aws.StringValue(container.Name)] = true
-		}
-	}
-
-	taskARNs := make([]string, len(tasks))
-	for idx, task := range tasks {
-		taskARNs[idx] = task.TaskARN
-	}
-
 	cluster, err := r.ClusterGetter.ClusterARN(r.App, r.Env)
 	if err != nil {
 		return 0, fmt.Errorf("get cluster for environment %s: %w", r.Env, err)
 	}
-	describedTasks, describeErr := r.Starter.DescribeTasks(cluster, taskARNs)
-	if describeErr != nil {
-		return 0, describeErr
+	taskARNs := make([]string, len(tasks))
+	for idx, task := range tasks {
+		taskARNs[idx] = task.TaskARN
 	}
-
-	for _, describedTask := range describedTasks {
-		for _, container := range describedTask.Containers {
-			if essentialContainers[aws.StringValue(container.Name)] && aws.Int64Value(container.ExitCode) != 0 {
-				taskID, err := ecs.TaskID(aws.StringValue(describedTask.TaskArn))
-				if err != nil {
-					return 0, err
-				}
-				return int(aws.Int64Value(container.ExitCode)), &errExitCode{aws.StringValue(container.Name),
-					taskID,
-					aws.Int64Value(container.ExitCode)}
-			}
-		}
-	}
-	return 0, nil
+	return r.NonZeroExitCodeGetter.NonZeroExitCode(taskARNs, r.GroupName, cluster)
 }

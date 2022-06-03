@@ -44,6 +44,7 @@ type ecsClient interface {
 	StopTasks(tasks []string, opts ...ecs.StopTasksOpts) error
 	TaskDefinition(taskDefName string) (*ecs.TaskDefinition, error)
 	UpdateService(clusterName, serviceName string, opts ...ecs.UpdateServiceOpts) error
+	DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error)
 }
 
 type stepFunctionsClient interface {
@@ -464,4 +465,38 @@ func (c Client) stateMachineARN(app, env, job string) (string, error) {
 		return "", fmt.Errorf("state machine for job %s not found", job)
 	}
 	return stateMachineARN, nil
+}
+
+// NonZeroExitCode returns the non zero exit code of the task if any.
+func (c Client) NonZeroExitCode(taskARNs []string, groupName string, cluster string) (int, error) {
+	essentialContainers := make(map[string]bool)
+	taskDefName := fmt.Sprintf("copilot-%s", groupName)
+	taskDefinition, err := c.ecsClient.TaskDefinition(taskDefName)
+	if err != nil {
+		return 0, fmt.Errorf("get task definition %s of a task", taskDefName)
+	}
+	for _, container := range taskDefinition.ContainerDefinitions {
+		if aws.BoolValue(container.Essential) {
+			essentialContainers[aws.StringValue(container.Name)] = true
+		}
+	}
+
+	describedTasks, describeErr := c.ecsClient.DescribeTasks(cluster, taskARNs)
+	if describeErr != nil {
+		return 0, describeErr
+	}
+	for _, describedTask := range describedTasks {
+		for _, container := range describedTask.Containers {
+			if essentialContainers[aws.StringValue(container.Name)] && aws.Int64Value(container.ExitCode) > 0 {
+				taskID, err := ecs.TaskID(aws.StringValue(describedTask.TaskArn))
+				if err != nil {
+					return 0, err
+				}
+				return int(aws.Int64Value(container.ExitCode)), &errExitCode{aws.StringValue(container.Name),
+					taskID,
+					aws.Int64Value(container.ExitCode)}
+			}
+		}
+	}
+	return 0, nil
 }
