@@ -212,7 +212,7 @@ environments:
 										Range: Range{
 											Value: &mockRange,
 										},
-										CPU: &mockConfig,
+										CPU: mockConfig,
 									},
 								},
 							},
@@ -405,7 +405,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 		mockAdvancedConfig = ScalingConfigOrPercentage{
 			ScalingConfig: AdvancedScalingConfig{
 				Value: &perc,
-				Cooldown: &Cooldown{
+				Cooldown: Cooldown{
 					ScaleInCooldown:  &timeMinute,
 					ScaleOutCooldown: &timeMinute,
 				},
@@ -448,8 +448,8 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
 					Range:        Range{Value: &mockRange},
-					CPU:          &mockAdvancedConfig,
-					Memory:       &mockConfig,
+					CPU:          mockAdvancedConfig,
+					Memory:       mockConfig,
 					Requests:     aws.Int(1000),
 					ResponseTime: &mockResponseTime,
 				},
@@ -502,8 +502,8 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 							SpotFrom: aws.Int(3),
 						},
 					},
-					Cooldown: &mockCooldown,
-					CPU:      &mockConfig,
+					Cooldown: mockCooldown,
+					CPU:      mockConfig,
 				},
 			},
 		},

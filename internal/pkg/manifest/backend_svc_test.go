@@ -433,7 +433,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					Count: Count{
 						AdvancedCount: AdvancedCount{
-							CPU: &mockConfig,
+							CPU: mockConfig,
 						},
 					},
 					CPU: aws.Int(512),
@@ -629,7 +629,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(256),
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								CPU: &mockConfig,
+								CPU: mockConfig,
 							},
 						},
 						Variables: map[string]string{
@@ -770,7 +770,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
 					Range: Range{Value: &mockRange},
-					CPU:   &mockConfig,
+					CPU:   mockConfig,
 				},
 			},
 			envCount: Count{},
@@ -780,7 +780,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   &mockConfig,
+								CPU:   mockConfig,
 							},
 						},
 					},

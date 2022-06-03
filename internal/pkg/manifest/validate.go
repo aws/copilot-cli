@@ -851,14 +851,14 @@ func (a AdvancedCount) Validate() error {
 	}
 
 	// Validate combinations with cooldown
-	if a.Cooldown != nil {
+	if !a.Cooldown.IsEmpty() {
 		if !a.hasScalingFieldsSet() {
 			return &errAtLeastOneFieldMustBeSpecified{
 				missingFields:    a.validScalingFields(),
 				conditionalField: "cooldown",
 			}
 		}
-		if a.CPU != nil {
+		if !a.CPU.IsEmpty() {
 			if !a.CPU.ScalingConfig.IsEmpty() {
 				return &errFieldMutualExclusive{
 					firstField:  "cooldown",
@@ -866,7 +866,7 @@ func (a AdvancedCount) Validate() error {
 				}
 			}
 		}
-		if a.Memory != nil {
+		if !a.Memory.IsEmpty() {
 			if !a.Memory.ScalingConfig.IsEmpty() {
 				return &errFieldMutualExclusive{
 					firstField:  "cooldown",
@@ -880,12 +880,12 @@ func (a AdvancedCount) Validate() error {
 	if err := a.QueueScaling.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue_delay": %w`, err)
 	}
-	if a.CPU != nil {
+	if !a.CPU.IsEmpty() {
 		if err := a.CPU.Validate(); err != nil {
 			return fmt.Errorf(`validate "cpu_percentage": %w`, err)
 		}
 	}
-	if a.Memory != nil {
+	if !a.Memory.IsEmpty() {
 		if err := a.Memory.Validate(); err != nil {
 			return fmt.Errorf(`validate "memory_percentage": %w`, err)
 		}

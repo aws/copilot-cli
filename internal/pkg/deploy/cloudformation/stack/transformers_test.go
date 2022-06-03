@@ -263,7 +263,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 				Range: manifest.Range{
 					Value: &mockRange,
 				},
-				CPU: &mockConfig,
+				CPU: mockConfig,
 			},
 			expected: &template.AdvancedCount{
 				Autoscaling: &template.AutoscalingOpts{
@@ -282,7 +282,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 						SpotFrom: aws.Int(5),
 					},
 				},
-				CPU: &mockConfig,
+				CPU: mockConfig,
 			},
 			expected: &template.AdvancedCount{
 				Autoscaling: &template.AutoscalingOpts{
@@ -419,7 +419,7 @@ func Test_convertAutoscaling(t *testing.T) {
 		mockCPU          = manifest.ScalingConfigOrPercentage{
 			ScalingConfig: manifest.AdvancedScalingConfig{
 				Value: &perc,
-				Cooldown: &manifest.Cooldown{
+				Cooldown: manifest.Cooldown{
 					ScaleInCooldown:  &timeMinute,
 					ScaleOutCooldown: &timeMinute,
 				},
@@ -452,8 +452,8 @@ func Test_convertAutoscaling(t *testing.T) {
 				Range: manifest.Range{
 					Value: &mockRange,
 				},
-				CPU:          &mockCPU,
-				Memory:       &mockMem,
+				CPU:          mockCPU,
+				Memory:       mockMem,
 				Requests:     aws.Int(mockRequests),
 				ResponseTime: &mockResponseTime,
 			},
@@ -476,8 +476,8 @@ func Test_convertAutoscaling(t *testing.T) {
 						SpotFrom: aws.Int(5),
 					},
 				},
-				CPU:          &mockCPU,
-				Memory:       &mockMem,
+				CPU:          mockCPU,
+				Memory:       mockMem,
 				Requests:     aws.Int(mockRequests),
 				ResponseTime: &mockResponseTime,
 			},

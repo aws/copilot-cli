@@ -640,7 +640,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   &mockConfig,
+								CPU:   mockConfig,
 							},
 						},
 					},
@@ -666,7 +666,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Value: nil,
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   &mockConfig,
+								CPU:   mockConfig,
 							},
 						},
 					},
@@ -691,7 +691,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   &mockConfig,
+								CPU:   mockConfig,
 							},
 						},
 					},
@@ -717,7 +717,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Value: nil,
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   &mockConfig,
+								CPU:   mockConfig,
 							},
 						},
 					},

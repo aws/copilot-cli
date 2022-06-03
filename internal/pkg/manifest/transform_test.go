@@ -591,14 +591,14 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = &mockRes
+				a.CPU = mockRes
 				a.Requests = aws.Int(42)
 			},
 			wanted: func(a *AdvancedCount) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = &mockRes
+				a.CPU = mockRes
 				a.Requests = aws.Int(42)
 			},
 		},
@@ -607,7 +607,7 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = &mockRes
+				a.CPU = mockRes
 				a.Requests = aws.Int(42)
 			},
 			override: func(a *AdvancedCount) {

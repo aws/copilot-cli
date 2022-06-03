@@ -196,7 +196,7 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 		MinCapacity: &min,
 		MaxCapacity: &max,
 	}
-	if a.CPU != nil {
+	if !a.CPU.IsEmpty() {
 		if a.CPU.Value != nil {
 			autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.Value))
 		}
@@ -204,7 +204,7 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 			autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.ScalingConfig.Value))
 		}
 	}
-	if a.Memory != nil {
+	if !a.Memory.IsEmpty() {
 		if a.Memory.Value != nil {
 			autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.Value))
 		}
