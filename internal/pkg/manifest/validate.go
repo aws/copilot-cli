@@ -919,6 +919,11 @@ func (r AdvancedResource) Validate() error {
 	return nil
 }
 
+// Validation is a no-op for Cooldown
+func (c Cooldown) Validate() error {
+	return nil
+}
+
 // Validate returns nil if QueueScaling is configured correctly.
 func (qs QueueScaling) Validate() error {
 	if qs.IsEmpty() {
