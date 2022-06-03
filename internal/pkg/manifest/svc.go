@@ -148,11 +148,11 @@ func (c *Count) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the Resource
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the ScalingConfigOrPercentage
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (r *Resource) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&r.ScaledResource); err != nil {
+func (r *ScalingConfigOrPercentage) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&r.ScalingConfig); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -161,8 +161,8 @@ func (r *Resource) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	if !r.ScaledResource.IsEmpty() {
-		// Successfully unmarshalled ScaledResource fields, return
+	if !r.ScalingConfig.IsEmpty() {
+		// Successfully unmarshalled ScalingConfig fields, return
 		return nil
 	}
 
@@ -196,14 +196,14 @@ func (c *Count) Desired() (*int, error) {
 // Percentage represents a valid percentage integer ranging from 0 to 100.
 type Percentage int
 
-// Resource represents a resource that has autoscaling configurations.
-type Resource struct {
-	Value          *Percentage
-	ScaledResource AdvancedResource // mutually exclusive with Value
+// ScalingConfigOrPercentage represents a resource that has autoscaling configurations or a default percentage.
+type ScalingConfigOrPercentage struct {
+	Value         *Percentage
+	ScalingConfig AdvancedScalingConfig // mutually exclusive with Value
 }
 
-// AdvancedResource represents the allocation of a resource implementing scaling cooldown.
-type AdvancedResource struct {
+// AdvancedScalingConfig represents advanced configurable options for a scaling policy.
+type AdvancedScalingConfig struct {
 	Value    *Percentage `yaml:"value"`
 	Cooldown *Cooldown   `yaml:"cooldown"`
 }
@@ -217,25 +217,25 @@ type Cooldown struct {
 // AdvancedCount represents the configurable options for Auto Scaling as well as
 // Capacity configuration (spot).
 type AdvancedCount struct {
-	Spot         *int           `yaml:"spot"` // mutually exclusive with other fields
-	Range        Range          `yaml:"range"`
-	Cooldown     *Cooldown      `yaml:"cooldown"`
-	CPU          *Resource      `yaml:"cpu_percentage"`
-	Memory       *Resource      `yaml:"memory_percentage"`
-	Requests     *int           `yaml:"requests"`
-	ResponseTime *time.Duration `yaml:"response_time"`
-	QueueScaling QueueScaling   `yaml:"queue_delay"`
+	Spot         *int                       `yaml:"spot"` // mutually exclusive with other fields
+	Range        Range                      `yaml:"range"`
+	Cooldown     *Cooldown                  `yaml:"cooldown"`
+	CPU          *ScalingConfigOrPercentage `yaml:"cpu_percentage"`
+	Memory       *ScalingConfigOrPercentage `yaml:"memory_percentage"`
+	Requests     *int                       `yaml:"requests"`
+	ResponseTime *time.Duration             `yaml:"response_time"`
+	QueueScaling QueueScaling               `yaml:"queue_delay"`
 
 	workloadType string
 }
 
-// IsEmpty returns whether Resource is empty
-func (r *Resource) IsEmpty() bool {
-	return r.ScaledResource.IsEmpty() && r.Value == nil
+// IsEmpty returns whether ScalingConfigOrPercentage is empty
+func (r *ScalingConfigOrPercentage) IsEmpty() bool {
+	return r.ScalingConfig.IsEmpty() && r.Value == nil
 }
 
-// IsEmpty returns whether AdvancedResource is empty
-func (a *AdvancedResource) IsEmpty() bool {
+// IsEmpty returns whether AdvancedScalingConfig is empty
+func (a *AdvancedScalingConfig) IsEmpty() bool {
 	return a.Cooldown == nil && a.Value == nil
 }
 
@@ -257,11 +257,11 @@ func (a *AdvancedCount) hasAutoscaling() bool {
 func (a *AdvancedCount) validScalingFields() []string {
 	switch a.workloadType {
 	case LoadBalancedWebServiceType:
-		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time", "cooldown"}
+		return []string{"cpu_percentage", "memory_percentage", "requests", "response_time"}
 	case BackendServiceType:
-		return []string{"cpu_percentage", "memory_percentage", "cooldown"}
+		return []string{"cpu_percentage", "memory_percentage"}
 	case WorkerServiceType:
-		return []string{"cpu_percentage", "memory_percentage", "queue_delay", "cooldown"}
+		return []string{"cpu_percentage", "memory_percentage", "queue_delay"}
 	default:
 		return nil
 	}
@@ -270,14 +270,13 @@ func (a *AdvancedCount) validScalingFields() []string {
 func (a *AdvancedCount) hasScalingFieldsSet() bool {
 	switch a.workloadType {
 	case LoadBalancedWebServiceType:
-		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || a.Cooldown != nil
+		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil
 	case BackendServiceType:
-		return a.CPU != nil || a.Memory != nil || a.Cooldown != nil
+		return a.CPU != nil || a.Memory != nil
 	case WorkerServiceType:
-		return a.CPU != nil || a.Memory != nil || !a.QueueScaling.IsEmpty() || a.Cooldown != nil
+		return a.CPU != nil || a.Memory != nil || !a.QueueScaling.IsEmpty()
 	default:
-		return a.CPU != nil || a.Memory != nil || a.Requests != nil ||
-			a.ResponseTime != nil || !a.QueueScaling.IsEmpty() || a.Cooldown != nil
+		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()
 	}
 }
 

@@ -199,15 +199,17 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 	if a.CPU != nil {
 		if a.CPU.Value != nil {
 			autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.Value))
-		} else {
-			autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.ScaledResource.Value))
+		}
+		if a.CPU.ScalingConfig.Value != nil {
+			autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.ScalingConfig.Value))
 		}
 	}
 	if a.Memory != nil {
 		if a.Memory.Value != nil {
 			autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.Value))
-		} else {
-			autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.ScaledResource.Value))
+		}
+		if a.Memory.ScalingConfig.Value != nil {
+			autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.ScalingConfig.Value))
 		}
 	}
 	if a.Requests != nil {

@@ -236,7 +236,7 @@ func Test_convertSidecar(t *testing.T) {
 func Test_convertAdvancedCount(t *testing.T) {
 	mockRange := manifest.IntRangeBand("1-10")
 	perc := manifest.Percentage(70)
-	mockRes := manifest.Resource{
+	mockConfig := manifest.ScalingConfigOrPercentage{
 		Value: &perc,
 	}
 	testCases := map[string]struct {
@@ -263,7 +263,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 				Range: manifest.Range{
 					Value: &mockRange,
 				},
-				CPU: &mockRes,
+				CPU: &mockConfig,
 			},
 			expected: &template.AdvancedCount{
 				Autoscaling: &template.AutoscalingOpts{
@@ -282,7 +282,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 						SpotFrom: aws.Int(5),
 					},
 				},
-				CPU: &mockRes,
+				CPU: &mockConfig,
 			},
 			expected: &template.AdvancedCount{
 				Autoscaling: &template.AutoscalingOpts{
@@ -416,8 +416,8 @@ func Test_convertAutoscaling(t *testing.T) {
 		mockResponseTime = 512 * time.Millisecond
 		perc             = manifest.Percentage(70)
 		timeMinute       = time.Second * 60
-		mockCPU          = manifest.Resource{
-			ScaledResource: manifest.AdvancedResource{
+		mockCPU          = manifest.ScalingConfigOrPercentage{
+			ScalingConfig: manifest.AdvancedScalingConfig{
 				Value: &perc,
 				Cooldown: &manifest.Cooldown{
 					ScaleInCooldown:  &timeMinute,
@@ -425,7 +425,7 @@ func Test_convertAutoscaling(t *testing.T) {
 				},
 			},
 		}
-		mockMem = manifest.Resource{
+		mockMem = manifest.ScalingConfigOrPercentage{
 			Value: &perc,
 		}
 	)

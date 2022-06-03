@@ -851,19 +851,23 @@ func (a AdvancedCount) Validate() error {
 	}
 
 	// Validate combinations with cooldown
-	if a.CPU != nil {
-		if !a.CPU.ScaledResource.IsEmpty() {
-			if a.Cooldown != nil && a.CPU.ScaledResource.Cooldown != nil {
+	if a.Cooldown != nil {
+		if !a.hasScalingFieldsSet() {
+			return &errAtLeastOneFieldMustBeSpecified{
+				missingFields:    a.validScalingFields(),
+				conditionalField: "cooldown",
+			}
+		}
+		if a.CPU != nil {
+			if !a.CPU.ScalingConfig.IsEmpty() {
 				return &errFieldMutualExclusive{
 					firstField:  "cooldown",
 					secondField: "cpu_percentage/cooldown",
 				}
 			}
 		}
-	}
-	if a.Memory != nil {
-		if !a.Memory.ScaledResource.IsEmpty() {
-			if a.Cooldown != nil && a.Memory.ScaledResource.Cooldown != nil {
+		if a.Memory != nil {
+			if !a.Memory.ScalingConfig.IsEmpty() {
 				return &errFieldMutualExclusive{
 					firstField:  "cooldown",
 					secondField: "memory_percentage/cooldown",
@@ -897,19 +901,19 @@ func (p Percentage) Validate() error {
 	return nil
 }
 
-// Validate returns nil if Resource is configured correctly.
-func (r Resource) Validate() error {
+// Validate returns nil if ScalingConfigOrPercentage is configured correctly.
+func (r ScalingConfigOrPercentage) Validate() error {
 	if r.IsEmpty() {
 		return nil
 	}
 	if r.Value != nil {
 		return r.Value.Validate()
 	}
-	return r.ScaledResource.Validate()
+	return r.ScalingConfig.Validate()
 }
 
-// Validate returns nil if AdvancedResource is configured correctly.
-func (r AdvancedResource) Validate() error {
+// Validate returns nil if AdvancedScalingConfig is configured correctly.
+func (r AdvancedScalingConfig) Validate() error {
 	if r.IsEmpty() {
 		return nil
 	}
@@ -919,7 +923,7 @@ func (r AdvancedResource) Validate() error {
 	return nil
 }
 
-// Validation is a no-op for Cooldown
+// Validation is a no-op for Cooldown.
 func (c Cooldown) Validate() error {
 	return nil
 }
