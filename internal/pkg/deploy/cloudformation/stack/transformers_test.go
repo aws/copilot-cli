@@ -235,7 +235,10 @@ func Test_convertSidecar(t *testing.T) {
 
 func Test_convertAdvancedCount(t *testing.T) {
 	mockRange := manifest.IntRangeBand("1-10")
-	mockPerc := manifest.Percentage(70)
+	perc := manifest.Percentage(70)
+	mockRes := manifest.Resource{
+		Value: &perc,
+	}
 	testCases := map[string]struct {
 		input       manifest.AdvancedCount
 		expected    *template.AdvancedCount
@@ -260,7 +263,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 				Range: manifest.Range{
 					Value: &mockRange,
 				},
-				CPU: &mockPerc,
+				CPU: &mockRes,
 			},
 			expected: &template.AdvancedCount{
 				Autoscaling: &template.AutoscalingOpts{
@@ -279,7 +282,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 						SpotFrom: aws.Int(5),
 					},
 				},
-				CPU: &mockPerc,
+				CPU: &mockRes,
 			},
 			expected: &template.AdvancedCount{
 				Autoscaling: &template.AutoscalingOpts{
@@ -411,8 +414,20 @@ func Test_convertAutoscaling(t *testing.T) {
 		badRange         = manifest.IntRangeBand("badRange")
 		mockRequests     = 1000
 		mockResponseTime = 512 * time.Millisecond
-		mockCPU          = manifest.Percentage(70)
-		mockMem          = manifest.Percentage(80)
+		perc             = manifest.Percentage(70)
+		timeMinute       = time.Second * 60
+		mockCPU          = manifest.Resource{
+			ScaledResource: manifest.AdvancedResource{
+				Value: &perc,
+				Cooldown: &manifest.Cooldown{
+					ScaleInCooldown:  &timeMinute,
+					ScaleOutCooldown: &timeMinute,
+				},
+			},
+		}
+		mockMem = manifest.Resource{
+			Value: &perc,
+		}
 	)
 
 	testAcceptableLatency := 10 * time.Minute
@@ -447,7 +462,7 @@ func Test_convertAutoscaling(t *testing.T) {
 				MaxCapacity:  aws.Int(100),
 				MinCapacity:  aws.Int(1),
 				CPU:          aws.Float64(70),
-				Memory:       aws.Float64(80),
+				Memory:       aws.Float64(70),
 				Requests:     aws.Float64(1000),
 				ResponseTime: aws.Float64(0.512),
 			},
@@ -471,7 +486,7 @@ func Test_convertAutoscaling(t *testing.T) {
 				MaxCapacity:  aws.Int(10),
 				MinCapacity:  aws.Int(5),
 				CPU:          aws.Float64(70),
-				Memory:       aws.Float64(80),
+				Memory:       aws.Float64(70),
 				Requests:     aws.Float64(1000),
 				ResponseTime: aws.Float64(0.512),
 			},

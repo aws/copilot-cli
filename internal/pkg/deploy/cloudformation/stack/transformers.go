@@ -197,10 +197,18 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 		MaxCapacity: &max,
 	}
 	if a.CPU != nil {
-		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU))
+		if a.CPU.Value != nil {
+			autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.Value))
+		} else {
+			autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.ScaledResource.Value))
+		}
 	}
 	if a.Memory != nil {
-		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory))
+		if a.Memory.Value != nil {
+			autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.Value))
+		} else {
+			autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.ScaledResource.Value))
+		}
 	}
 	if a.Requests != nil {
 		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))
