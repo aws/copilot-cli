@@ -110,7 +110,7 @@ service:
       exporters: [otlp]
 ```
 
-X-Ray トレースの書き込みには、以下のような追加の IAM 権限が必要です。[公開されているドキュメント](../developing/additional-aws-resources.ja.md)に従ってこれをアドオンに含めてください。
+X-Ray トレースの書き込みには、以下のような追加の IAM 権限が必要です。[公開されているドキュメント](../developing/additional-aws-resources.ja.md)に従ってこれを Addon に含めてください。
 
 ``` yaml
 Resources:
