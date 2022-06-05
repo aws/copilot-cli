@@ -62,7 +62,8 @@ copilot env init \
     --default-config
 ```
 
-Once you press enter on the command, you will be asked to select AWS credentials that will be used to create the necessary infrastructure to host our services. Once the credentials have been selected, Copilot will start to create the resources on your behalf. This process may take a while so stretch a bit while this process is completed.
+Once you press enter on the command, you will be asked to select AWS credentials that will be used to create the necessary infrastructure to host our services. Once the credentials have been selected, Copilot will start to create the resources on your behalf. This process may take a while so stretch a bit while this process is completed.\n
+
 For every environment you create, AWS Copilot will create a separate networking stack (VPC) and an ECS Cluster that won’t be used for this particular demo.
 ![AWS Copilot Groupings](./../assets/images/apprunner-vpc-blog/copilot-groupings.png)
 
@@ -87,26 +88,26 @@ network:
     placement: private
 ```
 
-What will happen under the hood is that these extra lines will create the VPC Connector needed
+What will happen under the hood is that these extra lines will create the VPC Connector needed to connect to private VPC resources.
 
 ### Database on the VPC
 
-To verify that you can connect to a private resource in your VPC, you are going to create an Amazon Aurora PostgreSQL database cluster named `demoDb` using AWS Copilot.
+To verify that you can connect to a private resource in your VPC, you are going to create an Amazon Aurora Serverless v1 PostgreSQL database cluster named `demoDb` using AWS Copilot.
 
 ```
 copilot storage init \
     --name demoDb \
     --storage-type Aurora\
     --workload demo-service \
-    `--``engine PostgreSQL`` \`
-    `--``initial``-``db demo`
+    --engine PostgreSQL\
+    --initial-db demo
 ```
 
 This will create a file under `./copilot/demo-service/addons/demoDb.yml` which contains configuration of the Amazon Aurora Serverless database that will be deployed using the AWS Copilot CLI.
 
 By viewing the manifest file you will see that the database will be created by default inside of the private subnets associated with the Copilot application and environment VPC.
 
-Notice that Copilot will use [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/) to generate the database password and the ser. To be able to access the database password, AWS Copilot will inject an environment variable with the secret’s ARN so we can later use the SDK to retrieve the password. In this example I have used Python, so [boto3](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html) is used and the environment variable injected will be named `DEMO_DB_SECRET_ARN`. In order to retrieve the password using Python we can use the following code:
+Notice that Copilot will use [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/) to generate the database password and the ser. To be able to access the database password, AWS Copilot will inject an environment variable with the secret’s ARN so we can later use the SDK to retrieve the password. In this demo, I have used Python (so [boto3](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html) will be used), and the environment variable injected will be named `DEMO_DB_SECRET_ARN`. In order to retrieve the password using Python we can use the following code:
 
 ```
 sm_client = boto3.client('secretsmanager')
@@ -126,7 +127,7 @@ To connect to the database we need to construct a database connection string as 
 DB_URI = f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}/{secret['dbname']}"
 ```
 
-Notice that we don’t need to explicitly allow the service to access the database secret, Copilot will automatically create the appropriate Instance Role allowing the `secretsmanager:GetSecretValue` action on the secret created. We also don’t need to configure the security groups. Since we added the database through Copilot, the database security group automatically allows traffic onto the PostgreSQL port (5432) from the service security group (which is associated to the VPC connector) and where your service routes outbound traffic.
+Notice that we don’t need to explicitly allow the service to access the database secret, Copilot will automatically create the appropriate Instance Role allowing the `secretsmanager:GetSecretValue` action on the secret created. We also don’t need to configure the security groups. Since we added the database through Copilot, the database security group automatically allows traffic onto the PostgreSQL port (`5432`) from the service security group (which is associated to the VPC connector) and where your service routes outbound traffic.
 
 ### Deploy sample application
 
