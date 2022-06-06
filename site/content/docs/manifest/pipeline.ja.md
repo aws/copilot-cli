@@ -87,7 +87,68 @@ Pipeline のデプロイ先である 1 つ以上の Environment をデプロイ�
 Service をデプロイする Environment 名。
 
 <span class="parent-field">stages.</span><a id="stages-approval" href="#stages-approval" class="field">`requires_approval`</a> <span class="type">Boolean</span>   
-デプロイの前に手動承認ステップを追加するかどうかの指定。
+Optional. Indicates whether to add a manual approval step before the deployment. Defaults to `false`.
+任意項目。デプロイの前に手動承認ステップを追加するかどうかを示します。デフォルトは `false` です。
+
+<span class="parent-field">stages.</span><a id="stages-deployments" href="#stages-deployments" class="field">`deployments`</a> <span class="type">Map</span>  
+Optional. Control which CloudFormation stacks to deploy and their order.  
+The `deployments` dependencies are specified in a map of the form:
+任意項目。デプロイする CloudFormation スタックとその順序を制御します。
+デプロイの依存関係は、次の形式の Map で指定されます。
+```yaml
+stages:
+  - name: test
+    deployments:
+      <service or job name>:
+      <other service or job name>:
+        depends_on: [<name>, ...]
+```
+
+例えば、Git リポジトリのレイアウトが次のようになっているとします。
+```
+copilot
+├── api
+│   └── manifest.yml
+└── frontend
+    └── manifest.yml
+```
+
+また、`frontend` の前に `api` がデプロイされるようにデプロイの順序を制御したい場合は、ステージを次のように設定できます。
+```yaml
+stages:
+  - name: test
+    deployments:
+      api:
+      frontend:
+        depends_on:
+          - api
+```
+また、パイプラインの一部をリリースするマイクロサービスを制限することもできます。以下のマニフェストでは、`api` のみをデプロイし、`frontend` をデプロイしないよう指定しています。
+```yaml
+stages:
+  - name: test
+    deployments:
+      api:
+```
+
+最後に、もし `deployments` が指定されていない場合、デフォルトでは Copilot は git リポジトリにあるすべての Service と Job を並行してデプロイします。
+
+<span class="parent-field">stages.deployments.</span><a id="stages-deployments-name" href="#stages-deployments-name" class="field">`<name>`</a> <span class="type">Map</span>   
+デプロイする Job または Service の名前。
+
+<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-dependson" href="#stages-deployments-dependson" class="field">`depends_on`</a> <span class="type">Array of Strings</span>    
+Optional. Name of other job or services that should be deployed prior to deploying this microservice. Defaults to no dependencies.  
+任意項目。このマイクロサービスをデプロイする前にデプロイする必要がある他の Job または Service の名前。デフォルトでは依存関係はありません。
+
+<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-stackname" href="#stages-deployments-stackname" class="field">`stack_name`</a> <span class="type">String</span>  
+任意項目。作成または更新するスタックの名前。デフォルトは `<app name>-<stage name>-<deployment name>` です。
+たとえば、Application 名が `demo`、ステージ名が `test`、Service 名が `frontend` の場合、スタック名は `demo-test-frontend` になります。
+
+<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-templatepath" href="#stages-deployments-templatepath" class="field">`template_path`</a> <span class="type">String</span>  
+任意項目。`build` フェーズで生成された CloudFormation テンプレートへのパス。デフォルトは `infrastructure/<deployment name>-<stage name>.yml` です。
+
+<span class="parent-field">stages.deployments.`<name>`.</span><a id="stages-deployments-templateconfig" href="#stages-deployments-templatepath" class="field">`template_config`</a> <span class="type">String</span>  
+任意項目。`build` フェーズで生成された CloudFormation テンプレート設定へのパス。デフォルトは `infrastructure/<deployment name>-<stage name>.params.json` です。
 
 <span class="parent-field">stages.</span><a id="stages-test-cmds" href="#stages-test-cmds" class="field">`test_commands`</a> <span class="type">Array of Strings</span>   
 デプロイ後にインテグレーションテストまたは E2E テストを実行するコマンド。
