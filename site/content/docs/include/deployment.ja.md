@@ -1,0 +1,10 @@
+<div class="separator"></div>
+
+<a id="deployment" href="#deployment" class="field">`deployment`</a> <span class="type">Map</span>  
+deployment セクションには、デプロイ中に実行されるタスクの数や、タスクの停止と開始の順序を制御するためのパラメータが含まれています。
+
+<span class="parent-field">deployment.</span><a id="deployment-rolling" href="#deployment-rolling" class="field">`rolling`</a> <span class="type">String</span>  
+ローリングデプロイ戦略。有効な値は以下の通りです。
+
+- `"default"`: 古いタスクを停止する前に、更新されたタスク定義で必要な数だけ新しいタスクを作成します。内部的には、[`minimumHealthyPercent`](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/service_definition_parameters.html#minimumHealthyPercent) を 100 に、[`maximumPercent`](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/service_definition_parameters.html#maximumPercent) を 200 に設定することになります。
+- `"recreate"`: 実行中のタスクをすべて停止し、新しいタスクを起動します。内部的には、[`minimumHealthyPercent`](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/service_definition_parameters.html#minimumHealthyPercent) を 0 に、[`maximumPercent`](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/service_definition_parameters.html#maximumPercent) を 100 に設定します。
