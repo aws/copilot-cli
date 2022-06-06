@@ -1623,12 +1623,6 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		mockCooldown = Cooldown{
 			ScaleInCooldown: &timeMinute,
 		}
-		mockAdvancedConfig = ScalingConfigOrPercentage{
-			ScalingConfig: AdvancedScalingConfig{
-				Value:    &perc,
-				Cooldown: mockCooldown,
-			},
-		}
 		mockAdvancedInvConfig = ScalingConfigOrPercentage{
 			ScalingConfig: AdvancedScalingConfig{
 				Value:    &invalidPerc,
@@ -1667,17 +1661,6 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				},
 				workloadType: WorkerServiceType,
 			},
-		},
-		"error if cooldown is specified in both advanced count and scaled config": {
-			AdvancedCount: AdvancedCount{
-				Range: Range{
-					Value: (*IntRangeBand)(aws.String("1-10")),
-				},
-				Cooldown:     mockCooldown,
-				CPU:          mockAdvancedConfig,
-				workloadType: LoadBalancedWebServiceType,
-			},
-			wantedError: fmt.Errorf(`must specify one, not both, of "cooldown" and "cpu_percentage/cooldown"`),
 		},
 		"error if both spot and autoscaling fields are specified": {
 			AdvancedCount: AdvancedCount{
@@ -1802,7 +1785,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "cpu_percentage": `,
 		},
-		"error if memory res is not valid": {
+		"error if memory config is not valid": {
 			AdvancedCount: AdvancedCount{
 				Range: Range{
 					Value: (*IntRangeBand)(stringP("1-2")),

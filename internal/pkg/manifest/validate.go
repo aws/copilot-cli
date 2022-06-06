@@ -858,38 +858,19 @@ func (a AdvancedCount) Validate() error {
 				conditionalField: "cooldown",
 			}
 		}
-		if !a.CPU.IsEmpty() {
-			if !a.CPU.ScalingConfig.IsEmpty() {
-				return &errFieldMutualExclusive{
-					firstField:  "cooldown",
-					secondField: "cpu_percentage/cooldown",
-				}
-			}
-		}
-		if !a.Memory.IsEmpty() {
-			if !a.Memory.ScalingConfig.IsEmpty() {
-				return &errFieldMutualExclusive{
-					firstField:  "cooldown",
-					secondField: "memory_percentage/cooldown",
-				}
-			}
-		}
 	}
 
 	// Validate individual custom autoscaling options.
 	if err := a.QueueScaling.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue_delay": %w`, err)
 	}
-	if !a.CPU.IsEmpty() {
-		if err := a.CPU.Validate(); err != nil {
-			return fmt.Errorf(`validate "cpu_percentage": %w`, err)
-		}
+	if err := a.CPU.Validate(); err != nil {
+		return fmt.Errorf(`validate "cpu_percentage": %w`, err)
 	}
-	if !a.Memory.IsEmpty() {
-		if err := a.Memory.Validate(); err != nil {
-			return fmt.Errorf(`validate "memory_percentage": %w`, err)
-		}
+	if err := a.Memory.Validate(); err != nil {
+		return fmt.Errorf(`validate "memory_percentage": %w`, err)
 	}
+
 	return nil
 }
 
