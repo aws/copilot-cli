@@ -128,7 +128,10 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 		a.StringSliceOrString = stringSliceOrString{}
 		return nil
 	}
-	return unmarshalYAMLToStringSliceOrString(&a.StringSliceOrString, value)
+	if err := unmarshalYAMLToStringSliceOrString(&a.StringSliceOrString, value); err != nil {
+		return errUnmarshalAlias
+	}
+	return nil
 }
 
 // ToAdvancedAliasSlice converts an Alias to a slice of advancedAliasSlice.
