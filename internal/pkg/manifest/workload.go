@@ -44,7 +44,7 @@ var (
 
 	errUnmarshalExec       = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
 	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
-	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
+	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into advanced alias map, string, or slice of strings`)
 	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
 )
 
@@ -264,9 +264,36 @@ func (c *CommandOverride) ToStringSlice() ([]string, error) {
 	return out, nil
 }
 
+type advancedAliasSliceOrStringSliceOrString struct {
+	AdvancedAliases     []AdvancedAlias
+	StringSliceOrString stringSliceOrString
+}
+
+func unmarshalYAMLToAdvancedAliasSliceOrStringSliceOrString(s *advancedAliasSliceOrStringSliceOrString, value *yaml.Node) error {
+	if err := value.Decode(&s.AdvancedAliases); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if len(s.AdvancedAliases) != 0 {
+		// Unmarshaled successfully to s.StringSlice, unset s.String, and return.
+		s.StringSliceOrString = stringSliceOrString{}
+		return nil
+	}
+	return unmarshalYAMLToStringSliceOrString(&s.StringSliceOrString, value)
+}
+
 type stringSliceOrString struct {
 	String      *string
 	StringSlice []string
+}
+
+func (s *stringSliceOrString) isEmpty() bool {
+	return s.String == nil && len(s.StringSlice) == 0
 }
 
 func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, value *yaml.Node) error {

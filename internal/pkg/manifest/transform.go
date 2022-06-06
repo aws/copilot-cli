@@ -18,6 +18,7 @@ var defaultTransformers = []mergo.Transformers{
 	basicTransformer{},
 	imageTransformer{},
 	buildArgsOrStringTransformer{},
+	advancedAliasSliceOrStringSliceOrStringTransformer{},
 	stringSliceOrStringTransformer{},
 	platformArgsOrStringTransformer{},
 	placementArgOrStringTransformer{},
@@ -98,9 +99,36 @@ func (t buildArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst, sr
 	}
 }
 
+type advancedAliasSliceOrStringSliceOrStringTransformer struct{}
+
+// Transformer returns custom merge logic for advancedAliasSliceOrStringSliceOrString's fields.
+func (t advancedAliasSliceOrStringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if !typ.ConvertibleTo(reflect.TypeOf(advancedAliasSliceOrStringSliceOrString{})) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct := dst.Convert(reflect.TypeOf(advancedAliasSliceOrStringSliceOrString{})).Interface().(advancedAliasSliceOrStringSliceOrString)
+		srcStruct := src.Convert(reflect.TypeOf(advancedAliasSliceOrStringSliceOrString{})).Interface().(advancedAliasSliceOrStringSliceOrString)
+
+		if len(srcStruct.AdvancedAliases) != 0 {
+			dstStruct.StringSliceOrString = stringSliceOrString{}
+		}
+
+		if !srcStruct.StringSliceOrString.isEmpty() {
+			dstStruct.AdvancedAliases = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct).Convert(typ))
+		}
+		return nil
+	}
+}
+
 type stringSliceOrStringTransformer struct{}
 
-// Transformer returns custom merge logic for stringSliceOrStringTransformer's fields.
+// Transformer returns custom merge logic for stringSliceOrString's fields.
 func (t stringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if !typ.ConvertibleTo(reflect.TypeOf(stringSliceOrString{})) {
 		return nil

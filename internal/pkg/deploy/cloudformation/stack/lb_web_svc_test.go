@@ -119,7 +119,9 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	testLBWebServiceManifest.ImageConfig.HealthCheck = manifest.ContainerHealthCheck{
 		Retries: aws.Int(5),
 	}
-	testLBWebServiceManifest.RoutingRule.Alias = manifest.Alias{String: aws.String("mockAlias")}
+	testLBWebServiceManifest.RoutingRule.Alias = manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
+		{Alias: aws.String("mockAlias")},
+	}}
 	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
@@ -717,7 +719,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.NLBConfig = manifest.NetworkLoadBalancerConfiguration{
 					Aliases: manifest.Alias{
-						StringSlice: []string{"example.com", "v1.example.com"},
+						AdvancedAliases: []manifest.AdvancedAlias{
+							{Alias: aws.String("example.com")},
+							{Alias: aws.String("v1.example.com")},
+						},
 					},
 					Port: aws.String("443/tcp"),
 				}

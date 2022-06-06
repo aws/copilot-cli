@@ -88,38 +88,65 @@ func ipNetP(s string) *IPNet {
 	return &ip
 }
 
+// AdvancedAlias represents advanced alias configuration.
+type AdvancedAlias struct {
+	Alias      *string `yaml:"value"`
+	HostedZone *string `yaml:"hosted_zone"`
+}
+
+func (a *AdvancedAlias) isEmpty() bool {
+	return a.Alias == nil && a.HostedZone == nil
+}
+
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
-// can either be of type string or type slice of string.
-type Alias stringSliceOrString
+// can either be of type advancedAlias slice or type stringSliceOrString.
+type Alias advancedAliasSliceOrStringSliceOrString
 
 // IsEmpty returns empty if Alias is empty.
-func (e *Alias) IsEmpty() bool {
-	return e.String == nil && e.StringSlice == nil
+func (a *Alias) IsEmpty() bool {
+	return len(a.AdvancedAliases) == 0 && a.StringSliceOrString.isEmpty()
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Alias
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (e *Alias) UnmarshalYAML(value *yaml.Node) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), value); err != nil {
+func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
+	if err := unmarshalYAMLToAdvancedAliasSliceOrStringSliceOrString(
+		(*advancedAliasSliceOrStringSliceOrString)(a), value); err != nil {
 		return errUnmarshalAlias
 	}
 	return nil
 }
 
-// ToStringSlice converts an Alias to a slice of string using shell-style rules.
-func (e *Alias) ToStringSlice() ([]string, error) {
-	out, err := toStringSlice((*stringSliceOrString)(e))
+// ToAdvancedAliasSlice converts an Alias to a slice of advancedAliasSlice.
+func (a *Alias) ToStringSlice() ([]string, error) {
+	s := (*advancedAliasSliceOrStringSliceOrString)(a)
+	if len(s.AdvancedAliases) != 0 {
+		aliases := make([]string, len(s.AdvancedAliases))
+		for i, advancedAlias := range s.AdvancedAliases {
+			aliases[i] = aws.StringValue(advancedAlias.Alias)
+		}
+		return aliases, nil
+	}
+	aliases, err := toStringSlice(&s.StringSliceOrString)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	return aliases, nil
 }
 
 // ToString converts an Alias to a string.
-func (e *Alias) ToString() string {
-	if e.String != nil {
-		return aws.StringValue(e.String)
+func (a *Alias) ToString() string {
+	s := (*advancedAliasSliceOrStringSliceOrString)(a)
+	if len(s.AdvancedAliases) != 0 {
+		aliases := make([]string, len(s.AdvancedAliases))
+		for i, advancedAlias := range s.AdvancedAliases {
+			aliases[i] = aws.StringValue(advancedAlias.Alias)
+		}
+		return strings.Join(aliases, ",")
 	}
-	return strings.Join(e.StringSlice, ",")
+	if s.StringSliceOrString.String != nil {
+		return aws.StringValue(s.StringSliceOrString.String)
+	}
+	return strings.Join(s.StringSliceOrString.StringSlice, ",")
 }
