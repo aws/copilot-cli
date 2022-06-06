@@ -40,10 +40,10 @@ func TestEnv_AvailableEnvFeatures(t *testing.T) {
 		_, ok := featuresSet[paramName]
 		require.True(t, ok, fmt.Sprintf("env-controller managed feature %s should be added as an available feature", paramName))
 
-		_, ok = FriendlyEnvFeatureName[paramName]
+		_, ok = friendlyEnvFeatureName[paramName]
 		require.True(t, ok, fmt.Sprintf("env-controller managed feature %s should have a friendly feature name", paramName))
 
-		_, ok = LeastVersionForFeature[paramName]
+		_, ok = leastVersionForFeature[paramName]
 		require.True(t, ok, fmt.Sprintf("should specify a least-required environment template version for the env-controller managed feature %s", paramName))
 	}
 }

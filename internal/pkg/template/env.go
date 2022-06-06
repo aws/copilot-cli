@@ -23,16 +23,14 @@ const (
 	InternalALBFeatureName = "InternalALBWorkloads"
 )
 
-// FriendlyEnvFeatureName maps each env-controller managed parameter name to a user-friendly feature name.
-var FriendlyEnvFeatureName = map[string]string{
+var friendlyEnvFeatureName = map[string]string{
 	ALBFeatureName:         "ALB",
 	EFSFeatureName:         "EFS",
 	NATFeatureName:         "NAT Gateway",
 	InternalALBFeatureName: "Internal ALB",
 }
 
-// LeastVersionForFeature maps each feature to the least environment template version it requires.
-var LeastVersionForFeature = map[string]string{
+var leastVersionForFeature = map[string]string{
 	ALBFeatureName:         "v1.0.0",
 	EFSFeatureName:         "v1.3.0",
 	NATFeatureName:         "v1.3.0",
@@ -42,6 +40,21 @@ var LeastVersionForFeature = map[string]string{
 // AvailableEnvFeatures returns a list of the latest available feature, named after their corresponding parameter names.
 func AvailableEnvFeatures() []string {
 	return []string{ALBFeatureName, EFSFeatureName, NATFeatureName, InternalALBFeatureName}
+}
+
+// FriendlyEnvFeatureName returns a user-friendly feature name given a env-controller managed parameter name.
+// If there isn't one, it returns the parameter name that it is given.
+func FriendlyEnvFeatureName(feature string) string {
+	friendly, ok := friendlyEnvFeatureName[feature]
+	if !ok {
+		return feature
+	}
+	return friendly
+}
+
+// LeastVersionForFeature maps each feature to the least environment template version it requires.
+func LeastVersionForFeature(feature string) string {
+	return leastVersionForFeature[feature]
 }
 
 var (
