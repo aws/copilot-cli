@@ -78,9 +78,9 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
 		},
 		"Alias specified in advanced alias slice": {
 			inContent: []byte(`alias:
-  - value: example.com
+  - name: example.com
     hosted_zone: Z0873220N255IR3MTNR4
-  - value: foobar.com`),
+  - name: foobar.com`),
 			wantedStruct: Alias{
 				AdvancedAliases: []AdvancedAlias{
 					{

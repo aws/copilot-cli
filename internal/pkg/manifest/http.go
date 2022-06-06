@@ -90,7 +90,7 @@ func ipNetP(s string) *IPNet {
 
 // AdvancedAlias represents advanced alias configuration.
 type AdvancedAlias struct {
-	Alias      *string `yaml:"value"`
+	Alias      *string `yaml:"name"`
 	HostedZone *string `yaml:"hosted_zone"`
 }
 
