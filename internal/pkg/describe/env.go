@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -20,7 +21,6 @@ import (
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
@@ -175,6 +175,21 @@ func (d *EnvDescriber) Outputs() (map[string]string, error) {
 		return nil, err
 	}
 	return descr.Outputs, nil
+}
+
+// AvailableFeatures returns the available features of the environment stack.
+func (d *EnvDescriber) AvailableFeatures() ([]string, error) {
+	params, err := d.Params()
+	if err != nil {
+		return nil, err
+	}
+	var availableFeatures []string
+	for _, f := range template.AvailableEnvFeatures() {
+		if _, ok := params[f]; ok {
+			availableFeatures = append(availableFeatures, f)
+		}
+	}
+	return availableFeatures, nil
 }
 
 // Version returns the CloudFormation template version associated with
