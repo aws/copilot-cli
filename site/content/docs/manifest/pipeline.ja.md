@@ -151,4 +151,5 @@ Optional. Name of other job or services that should be deployed prior to deployi
 任意項目。`build` フェーズで生成された CloudFormation テンプレート設定へのパス。デフォルトは `infrastructure/<deployment name>-<stage name>.params.json` です。
 
 <span class="parent-field">stages.</span><a id="stages-test-cmds" href="#stages-test-cmds" class="field">`test_commands`</a> <span class="type">Array of Strings</span>   
-デプロイ後にインテグレーションテストまたは E2E テストを実行するコマンド。
+任意項目。デプロイ後にインテグレーションテストまたは E2E テストを実行するコマンドです。デフォルトでは、デプロイ後の検証は行いません。
+    
