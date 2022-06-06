@@ -196,7 +196,7 @@ observability:
 
 ![X-Ray Service Map Example](https://user-images.githubusercontent.com/10566468/166986340-e3b7c0e2-c84d-4671-bf37-ba95bdb1d6b2.png)
 
-[Observability](../docs/developing/observability.ja.md) をご一読いただき、トレースについての知識を深めて、早速始めてみましょう！
+[可観測性 (Observability)](../docs/developing/observability.ja.md) をご一読いただき、トレースについての知識を深めて、早速始めてみましょう！
 
 ## 次は？
 
