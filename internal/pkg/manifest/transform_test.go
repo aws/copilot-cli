@@ -281,6 +281,74 @@ func TestBuildArgsOrStringTransformer_Transformer(t *testing.T) {
 	}
 }
 
+func TestAliasTransformer_Transformer(t *testing.T) {
+	testCases := map[string]struct {
+		original func(*Alias)
+		override func(*Alias)
+		wanted   func(*Alias)
+	}{
+		"advanced alias set to empty if string slice is not nil": {
+			original: func(a *Alias) {
+				a.AdvancedAliases = []AdvancedAlias{
+					{
+						Alias: aws.String("mockAlias"),
+					},
+				}
+			},
+			override: func(a *Alias) {
+				a.StringSliceOrString = stringSliceOrString{
+					StringSlice: []string{"mock", "string", "slice"},
+				}
+			},
+			wanted: func(a *Alias) {
+				a.StringSliceOrString.StringSlice = []string{"mock", "string", "slice"}
+			},
+		},
+		"StringSliceOrString set to empty if advanced alias is not nil": {
+			original: func(a *Alias) {
+				a.StringSliceOrString = stringSliceOrString{
+					StringSlice: []string{"mock", "string", "slice"},
+				}
+			},
+			override: func(a *Alias) {
+				a.AdvancedAliases = []AdvancedAlias{
+					{
+						Alias: aws.String("mockAlias"),
+					},
+				}
+			},
+			wanted: func(a *Alias) {
+				a.AdvancedAliases = []AdvancedAlias{
+					{
+						Alias: aws.String("mockAlias"),
+					},
+				}
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted Alias
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(aliasTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}
+
 func TestStringSliceOrStringTransformer_Transformer(t *testing.T) {
 	testCases := map[string]struct {
 		original func(s *stringSliceOrString)

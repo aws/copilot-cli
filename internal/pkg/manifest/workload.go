@@ -264,29 +264,6 @@ func (c *CommandOverride) ToStringSlice() ([]string, error) {
 	return out, nil
 }
 
-type advancedAliasSliceOrStringSliceOrString struct {
-	AdvancedAliases     []AdvancedAlias
-	StringSliceOrString stringSliceOrString
-}
-
-func unmarshalYAMLToAdvancedAliasSliceOrStringSliceOrString(s *advancedAliasSliceOrStringSliceOrString, value *yaml.Node) error {
-	if err := value.Decode(&s.AdvancedAliases); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
-			return err
-		}
-	}
-
-	if len(s.AdvancedAliases) != 0 {
-		// Unmarshaled successfully to s.StringSlice, unset s.String, and return.
-		s.StringSliceOrString = stringSliceOrString{}
-		return nil
-	}
-	return unmarshalYAMLToStringSliceOrString(&s.StringSliceOrString, value)
-}
-
 type stringSliceOrString struct {
 	String      *string
 	StringSlice []string

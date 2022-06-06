@@ -18,7 +18,7 @@ var defaultTransformers = []mergo.Transformers{
 	basicTransformer{},
 	imageTransformer{},
 	buildArgsOrStringTransformer{},
-	advancedAliasSliceOrStringSliceOrStringTransformer{},
+	aliasTransformer{},
 	stringSliceOrStringTransformer{},
 	platformArgsOrStringTransformer{},
 	placementArgOrStringTransformer{},
@@ -99,17 +99,17 @@ func (t buildArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst, sr
 	}
 }
 
-type advancedAliasSliceOrStringSliceOrStringTransformer struct{}
+type aliasTransformer struct{}
 
-// Transformer returns custom merge logic for advancedAliasSliceOrStringSliceOrString's fields.
-func (t advancedAliasSliceOrStringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if !typ.ConvertibleTo(reflect.TypeOf(advancedAliasSliceOrStringSliceOrString{})) {
+// Transformer returns custom merge logic for Alias's fields.
+func (t aliasTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if !typ.ConvertibleTo(reflect.TypeOf(Alias{})) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct := dst.Convert(reflect.TypeOf(advancedAliasSliceOrStringSliceOrString{})).Interface().(advancedAliasSliceOrStringSliceOrString)
-		srcStruct := src.Convert(reflect.TypeOf(advancedAliasSliceOrStringSliceOrString{})).Interface().(advancedAliasSliceOrStringSliceOrString)
+		dstStruct := dst.Convert(reflect.TypeOf(Alias{})).Interface().(Alias)
+		srcStruct := src.Convert(reflect.TypeOf(Alias{})).Interface().(Alias)
 
 		if len(srcStruct.AdvancedAliases) != 0 {
 			dstStruct.StringSliceOrString = stringSliceOrString{}
