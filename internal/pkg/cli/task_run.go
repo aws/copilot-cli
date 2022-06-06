@@ -260,10 +260,11 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 
 			OS: o.os,
 
-			VPCGetter:            vpcGetter,
-			ClusterGetter:        ecs.New(o.sess),
-			Starter:              ecsService,
-			EnvironmentDescriber: d,
+			VPCGetter:             vpcGetter,
+			ClusterGetter:         ecs.New(o.sess),
+			Starter:               ecsService,
+			EnvironmentDescriber:  d,
+			NonZeroExitCodeGetter: ecs.New(o.sess),
 		}, nil
 	}
 	return &task.ConfigRunner{
@@ -275,9 +276,10 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 		SecurityGroups: o.securityGroups,
 		OS:             o.os,
 
-		VPCGetter:     vpcGetter,
-		ClusterGetter: ecsService,
-		Starter:       ecsService,
+		VPCGetter:             vpcGetter,
+		ClusterGetter:         ecsService,
+		Starter:               ecsService,
+		NonZeroExitCodeGetter: ecs.New(o.sess),
 	}, nil
 
 }
@@ -682,7 +684,7 @@ Did you tag your secrets with the "copilot-application" and "copilot-environment
 			return err
 		}
 		if exitCode, err := o.runner.CheckNonZeroExitCode(tasks); err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			os.Exit(exitCode)
 		}
 	}

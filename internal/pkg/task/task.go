@@ -37,7 +37,7 @@ type EnvironmentDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 }
 
-// NonZeroExitCodeGetter wraps the method of getting a default cluster ARN.
+// NonZeroExitCodeGetter wraps the method of getting a non-zero exit code of a task.
 type NonZeroExitCodeGetter interface {
 	NonZeroExitCode([]string, string, string) (int, error)
 }

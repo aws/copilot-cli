@@ -473,7 +473,7 @@ func (c Client) NonZeroExitCode(taskARNs []string, groupName string, cluster str
 	taskDefName := fmt.Sprintf("copilot-%s", groupName)
 	taskDefinition, err := c.ecsClient.TaskDefinition(taskDefName)
 	if err != nil {
-		return 0, fmt.Errorf("get task definition %s of a task", taskDefName)
+		return 0, fmt.Errorf("get task definition %s: %w", taskDefName, err)
 	}
 	for _, container := range taskDefinition.ContainerDefinitions {
 		if aws.BoolValue(container.Essential) {
