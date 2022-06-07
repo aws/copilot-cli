@@ -23,6 +23,10 @@ func (r *RoutingRuleConfigOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
 
+func (r *RoutingRuleConfigOrBool) isEmpty() bool {
+	return r.Enabled == nil && r.RoutingRuleConfiguration.IsEmpty()
+}
+
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
 func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
@@ -71,6 +75,7 @@ func (r *RoutingRuleConfiguration) GetTargetContainer() *string {
 	return r.TargetContainerCamelCase
 }
 
+// IsEmpty returns true if RoutingRuleConfiguration has empty configuration.
 func (r *RoutingRuleConfiguration) IsEmpty() bool {
 	return r.Path == nil && r.ProtocolVersion == nil && r.HealthCheck.IsEmpty() && r.Stickiness == nil && r.Alias.IsEmpty() &&
 		r.DeregistrationDelay == nil && r.TargetContainer == nil && r.TargetContainerCamelCase == nil && r.AllowedSourceIps == nil &&

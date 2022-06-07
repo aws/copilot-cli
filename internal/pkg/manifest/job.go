@@ -122,6 +122,14 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &j, nil
 }
 
+// RequiredEnvironmentFeatures returns environment features that are required for this manfiest.
+func (s *ScheduledJob) RequiredEnvironmentFeatures() []string {
+	var features []string
+	features = append(features, s.Network.requiredEnvFeatures()...)
+	features = append(features, s.Storage.requiredEnvFeatures()...)
+	return features
+}
+
 // Publish returns the list of topics where notifications can be published.
 func (j *ScheduledJob) Publish() []Topic {
 	return j.ScheduledJobConfig.PublishConfig.Topics

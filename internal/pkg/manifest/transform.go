@@ -25,6 +25,7 @@ var defaultTransformers = []mergo.Transformers{
 	healthCheckArgsOrStringTransformer{},
 	countTransformer{},
 	advancedCountTransformer{},
+	scalingConfigOrPercentageTransformer{},
 	rangeTransformer{},
 	efsConfigOrBoolTransformer{},
 	efsVolumeConfigurationTransformer{},
@@ -274,6 +275,32 @@ func (t advancedCountTransformer) Transformer(typ reflect.Type) func(dst, src re
 
 		if srcStruct.hasAutoscaling() {
 			dstStruct.Spot = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type scalingConfigOrPercentageTransformer struct{}
+
+// Transformer returns custom merge logic for ScalingConfigOrPercentage's fields.
+func (t scalingConfigOrPercentageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(ScalingConfigOrPercentage{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(ScalingConfigOrPercentage), src.Interface().(ScalingConfigOrPercentage)
+
+		if !srcStruct.ScalingConfig.IsEmpty() {
+			dstStruct.Value = nil
+		}
+
+		if srcStruct.Value != nil {
+			dstStruct.ScalingConfig = AdvancedScalingConfig{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

@@ -209,6 +209,12 @@ func (b BackendServiceConfig) Validate() error {
 	if err = b.RoutingRule.Validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
+	if b.RoutingRule.IsEmpty() && (b.Count.AdvancedCount.Requests != nil || b.Count.AdvancedCount.ResponseTime != nil) {
+		return &errFieldMustBeSpecified{
+			missingField:      "http",
+			conditionalFields: []string{"count.requests", "count.response_time"},
+		}
+	}
 	if err = b.TaskConfig.Validate(); err != nil {
 		return err
 	}
@@ -882,20 +888,27 @@ func (a AdvancedCount) Validate() error {
 		}
 	}
 
+	// Validate combinations with cooldown
+	if !a.Cooldown.IsEmpty() {
+		if !a.hasScalingFieldsSet() {
+			return &errAtLeastOneFieldMustBeSpecified{
+				missingFields:    a.validScalingFields(),
+				conditionalField: "cooldown",
+			}
+		}
+	}
+
 	// Validate individual custom autoscaling options.
 	if err := a.QueueScaling.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue_delay": %w`, err)
 	}
-	if a.CPU != nil {
-		if err := a.CPU.Validate(); err != nil {
-			return fmt.Errorf(`validate "cpu_percentage": %w`, err)
-		}
+	if err := a.CPU.Validate(); err != nil {
+		return fmt.Errorf(`validate "cpu_percentage": %w`, err)
 	}
-	if a.Memory != nil {
-		if err := a.Memory.Validate(); err != nil {
-			return fmt.Errorf(`validate "memory_percentage": %w`, err)
-		}
+	if err := a.Memory.Validate(); err != nil {
+		return fmt.Errorf(`validate "memory_percentage": %w`, err)
 	}
+
 	return nil
 }
 
@@ -904,6 +917,33 @@ func (p Percentage) Validate() error {
 	if val := int(p); val < 0 || val > 100 {
 		return fmt.Errorf("percentage value %v must be an integer from 0 to 100", val)
 	}
+	return nil
+}
+
+// Validate returns nil if ScalingConfigOrPercentage is configured correctly.
+func (r ScalingConfigOrPercentage) Validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
+	if r.Value != nil {
+		return r.Value.Validate()
+	}
+	return r.ScalingConfig.Validate()
+}
+
+// Validate returns nil if AdvancedScalingConfig is configured correctly.
+func (r AdvancedScalingConfig) Validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
+	if err := r.Value.Validate(); err != nil {
+		return err
+	}
+	return r.Cooldown.Validate()
+}
+
+// Validation is a no-op for Cooldown.
+func (c Cooldown) Validate() error {
 	return nil
 }
 

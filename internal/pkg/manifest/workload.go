@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/google/shlex"
 
@@ -57,6 +58,7 @@ func WorkloadTypes() []string {
 type WorkloadManifest interface {
 	ApplyEnv(envName string) (WorkloadManifest, error)
 	Validate() error
+	RequiredEnvironmentFeatures() []string
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
@@ -384,6 +386,13 @@ type NetworkConfig struct {
 // IsEmpty returns empty if the struct has all zero members.
 func (c *NetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
+}
+
+func (c *NetworkConfig) requiredEnvFeatures() []string {
+	if aws.StringValue((*string)(c.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
+		return []string{template.NATFeatureName}
+	}
+	return nil
 }
 
 // PlacementArgOrString represents where to place tasks.
