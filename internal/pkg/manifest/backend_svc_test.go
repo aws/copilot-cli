@@ -399,7 +399,10 @@ func TestBackendService_Publish(t *testing.T) {
 }
 
 func TestBackendSvc_ApplyEnv(t *testing.T) {
-	mockPercentage := Percentage(70)
+	perc := Percentage(70)
+	mockConfig := ScalingConfigOrPercentage{
+		Value: &perc,
+	}
 	mockBackendServiceWithNoEnvironments := BackendService{
 		Workload: Workload{
 			Name: aws.String("phonetool"),
@@ -511,7 +514,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 				TaskConfig: TaskConfig{
 					Count: Count{
 						AdvancedCount: AdvancedCount{
-							CPU: &mockPercentage,
+							CPU: mockConfig,
 						},
 					},
 					CPU: aws.Int(512),
@@ -707,7 +710,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(256),
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								CPU: &mockPercentage,
+								CPU: mockConfig,
 							},
 						},
 						Variables: map[string]string{
@@ -834,7 +837,10 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	mockRange := IntRangeBand("1-10")
-	mockPercentage := Percentage(80)
+	perc := Percentage(80)
+	mockConfig := ScalingConfigOrPercentage{
+		Value: &perc,
+	}
 	testCases := map[string]struct {
 		svcCount Count
 		envCount Count
@@ -845,7 +851,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 			svcCount: Count{
 				AdvancedCount: AdvancedCount{
 					Range: Range{Value: &mockRange},
-					CPU:   &mockPercentage,
+					CPU:   mockConfig,
 				},
 			},
 			envCount: Count{},
@@ -855,7 +861,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   &mockPercentage,
+								CPU:   mockConfig,
 							},
 						},
 					},

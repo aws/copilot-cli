@@ -15,7 +15,10 @@ import (
 )
 
 func TestUnmarshalSvc(t *testing.T) {
-	mockPerc := Percentage(70)
+	perc := Percentage(70)
+	mockConfig := ScalingConfigOrPercentage{
+		Value: &perc,
+	}
 	testCases := map[string]struct {
 		inContent string
 
@@ -209,7 +212,7 @@ environments:
 										Range: Range{
 											Value: &mockRange,
 										},
-										CPU: &mockPerc,
+										CPU: mockConfig,
 									},
 								},
 							},
@@ -395,11 +398,28 @@ type: 'OH NO'
 
 func TestCount_UnmarshalYAML(t *testing.T) {
 	var (
-		mockResponseTime = 500 * time.Millisecond
-		mockRange        = IntRangeBand("1-10")
-		mockCPU          = Percentage(70)
-		mockMem          = Percentage(80)
+		perc               = Percentage(70)
+		timeMinute         = 60 * time.Second
+		mockResponseTime   = 500 * time.Millisecond
+		mockRange          = IntRangeBand("1-10")
+		mockAdvancedConfig = ScalingConfigOrPercentage{
+			ScalingConfig: AdvancedScalingConfig{
+				Value: &perc,
+				Cooldown: Cooldown{
+					ScaleInCooldown:  &timeMinute,
+					ScaleOutCooldown: &timeMinute,
+				},
+			},
+		}
+		mockConfig = ScalingConfigOrPercentage{
+			Value: &perc,
+		}
+		mockCooldown = Cooldown{
+			ScaleInCooldown:  &timeMinute,
+			ScaleOutCooldown: &timeMinute,
+		}
 	)
+
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -416,16 +436,20 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 		"With auto scaling enabled": {
 			inContent: []byte(`count:
   range: 1-10
-  cpu_percentage: 70
-  memory_percentage: 80
+  cpu_percentage:
+    value: 70
+    cooldown:
+      in: 1m
+      out: 1m
+  memory_percentage: 70
   requests: 1000
   response_time: 500ms
 `),
 			wantedStruct: Count{
 				AdvancedCount: AdvancedCount{
 					Range:        Range{Value: &mockRange},
-					CPU:          &mockCPU,
-					Memory:       &mockMem,
+					CPU:          mockAdvancedConfig,
+					Memory:       mockConfig,
 					Requests:     aws.Int(1000),
 					ResponseTime: &mockResponseTime,
 				},
@@ -464,6 +488,9 @@ func TestCount_UnmarshalYAML(t *testing.T) {
     min: 2
     max: 8
     spot_from: 3
+  cooldown:
+    in: 1m
+    out: 1m
   cpu_percentage: 70
 `),
 			wantedStruct: Count{
@@ -475,7 +502,8 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 							SpotFrom: aws.Int(3),
 						},
 					},
-					CPU: &mockCPU,
+					Cooldown: mockCooldown,
+					CPU:      mockConfig,
 				},
 			},
 		},
@@ -496,6 +524,7 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				// check memberwise dereferenced pointer equality
 				require.Equal(t, tc.wantedStruct.Value, b.Count.Value)
 				require.Equal(t, tc.wantedStruct.AdvancedCount.Range, b.Count.AdvancedCount.Range)
+				require.Equal(t, tc.wantedStruct.AdvancedCount.Cooldown, b.Count.AdvancedCount.Cooldown)
 				require.Equal(t, tc.wantedStruct.AdvancedCount.CPU, b.Count.AdvancedCount.CPU)
 				require.Equal(t, tc.wantedStruct.AdvancedCount.Memory, b.Count.AdvancedCount.Memory)
 				require.Equal(t, tc.wantedStruct.AdvancedCount.Requests, b.Count.AdvancedCount.Requests)
