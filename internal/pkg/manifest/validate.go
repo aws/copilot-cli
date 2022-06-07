@@ -752,6 +752,13 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 	if err := c.Aliases.Validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
 	}
+	if !c.Aliases.IsEmpty() {
+		for _, advancedAlias := range c.Aliases.AdvancedAliases {
+			if advancedAlias.HostedZone != nil {
+				return fmt.Errorf(`"alias.hosted_zone" is not supported for Network Load Balancer`)
+			}
+		}
+	}
 	return nil
 }
 

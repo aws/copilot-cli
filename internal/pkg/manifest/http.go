@@ -139,17 +139,16 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// ToAdvancedAliasSlice converts an Alias to a slice of advancedAliasSlice.
+// ToStringSlice converts an Alias to a slice of string.
 func (a *Alias) ToStringSlice() ([]string, error) {
-	s := (*Alias)(a)
-	if len(s.AdvancedAliases) != 0 {
-		aliases := make([]string, len(s.AdvancedAliases))
-		for i, advancedAlias := range s.AdvancedAliases {
+	if len(a.AdvancedAliases) != 0 {
+		aliases := make([]string, len(a.AdvancedAliases))
+		for i, advancedAlias := range a.AdvancedAliases {
 			aliases[i] = aws.StringValue(advancedAlias.Alias)
 		}
 		return aliases, nil
 	}
-	aliases, err := toStringSlice(&s.StringSliceOrString)
+	aliases, err := toStringSlice(&a.StringSliceOrString)
 	if err != nil {
 		return nil, err
 	}
@@ -158,16 +157,15 @@ func (a *Alias) ToStringSlice() ([]string, error) {
 
 // ToString converts an Alias to a string.
 func (a *Alias) ToString() string {
-	s := (*Alias)(a)
-	if len(s.AdvancedAliases) != 0 {
-		aliases := make([]string, len(s.AdvancedAliases))
-		for i, advancedAlias := range s.AdvancedAliases {
+	if len(a.AdvancedAliases) != 0 {
+		aliases := make([]string, len(a.AdvancedAliases))
+		for i, advancedAlias := range a.AdvancedAliases {
 			aliases[i] = aws.StringValue(advancedAlias.Alias)
 		}
 		return strings.Join(aliases, ",")
 	}
-	if s.StringSliceOrString.String != nil {
-		return aws.StringValue(s.StringSliceOrString.String)
+	if a.StringSliceOrString.String != nil {
+		return aws.StringValue(a.StringSliceOrString.String)
 	}
-	return strings.Join(s.StringSliceOrString.StringSlice, ",")
+	return strings.Join(a.StringSliceOrString.StringSlice, ",")
 }

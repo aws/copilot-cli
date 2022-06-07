@@ -104,7 +104,7 @@ type aliasTransformer struct{}
 
 // Transformer returns custom merge logic for Alias's fields.
 func (t aliasTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if !typ.ConvertibleTo(reflect.TypeOf(Alias{})) {
+	if typ != reflect.TypeOf(Alias{}) {
 		return nil
 	}
 

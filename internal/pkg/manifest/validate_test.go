@@ -1408,6 +1408,19 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
+		"error if hosted zone is set": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/tcp"),
+				Aliases: Alias{
+					AdvancedAliases: []AdvancedAlias{
+						{
+							HostedZone: aws.String("mockHostedZone"),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`"alias.hosted_zone" is not supported for Network Load Balancer`),
+		},
 	}
 
 	for name, tc := range testCases {
