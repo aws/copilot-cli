@@ -651,7 +651,7 @@ func TestScalingConfigOrPercentage_Transformer(t *testing.T) {
 		override func(s *ScalingConfigOrPercentage)
 		wanted   func(s *ScalingConfigOrPercentage)
 	}{
-		"percentage set to nil if advanced config value is not nil": {
+		"advanced config value set to nil if percentage is not nil": {
 			original: func(s *ScalingConfigOrPercentage) {
 				s.ScalingConfig = mockConfig
 			},
@@ -662,7 +662,7 @@ func TestScalingConfigOrPercentage_Transformer(t *testing.T) {
 				s.Value = &perc
 			},
 		},
-		"advanced config value set to nil if percentage is not nil": {
+		"percentage set to nil if advanced config value is not nil": {
 			original: func(s *ScalingConfigOrPercentage) {
 				s.Value = &perc
 			},

@@ -901,7 +901,7 @@ func (r AdvancedScalingConfig) Validate() error {
 	if err := r.Value.Validate(); err != nil {
 		return err
 	}
-	return nil
+	return r.Cooldown.Validate()
 }
 
 // Validation is a no-op for Cooldown.
