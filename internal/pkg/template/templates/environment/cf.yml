@@ -83,10 +83,10 @@ Resources:
       Configuration:
         ExecuteCommandConfiguration:
           Logging: DEFAULT
-{{- if and .Telemetry .Telemetry.EnableContainerInsights}}
+{{- if .Telemetry}}
       ClusterSettings:
         - Name: containerInsights
-          {{- if .Telemetry.ContainerInsightsEnabled}}
+          {{- if .Telemetry.EnableContainerInsights}}
           Value: enabled
           {{- else}}
           Value: disabled
