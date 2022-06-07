@@ -101,9 +101,12 @@ environments:
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
 								Alias: Alias{
-									StringSlice: []string{
-										"foobar.com",
-										"v1.foobar.com",
+									AdvancedAliases: []AdvancedAlias{},
+									StringSliceOrString: stringSliceOrString{
+										StringSlice: []string{
+											"foobar.com",
+											"v1.foobar.com",
+										},
 									},
 								},
 								Path:            aws.String("svc"),
