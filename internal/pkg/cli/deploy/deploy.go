@@ -944,7 +944,6 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, err
 	}
-
 	if err := d.validateALBRuntime(); err != nil {
 		return nil, err
 	}
@@ -1210,8 +1209,19 @@ func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) 
 }
 
 func (d *backendSvcDeployer) validateALBRuntime() error {
-	if d.backendMft.RoutingRule.EmptyOrDisabled() || d.backendMft.RoutingRule.Alias.IsEmpty() || !d.env.HasImportedCerts() {
+	if d.backendMft.RoutingRule.IsEmpty() {
 		return nil
+	}
+	switch {
+	case d.backendMft.RoutingRule.Alias.IsEmpty() && d.env.HasImportedCerts():
+		return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
+			name:    d.name,
+			envName: d.env.Name,
+		}
+	case d.backendMft.RoutingRule.Alias.IsEmpty():
+		return nil
+	case !d.env.HasImportedCerts():
+		return fmt.Errorf(`cannot specify "alias" in an environment without imported certs`)
 	}
 
 	aliases, err := d.backendMft.RoutingRule.Alias.ToStringSlice()

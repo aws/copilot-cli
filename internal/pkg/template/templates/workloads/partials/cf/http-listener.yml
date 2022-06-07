@@ -4,7 +4,11 @@ HTTPRulePriorityAction:
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
+    {{- if eq .WorkloadType "Backend Service"}}
+    ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
+    {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+    {{- end}}
 
 HTTPListenerRule:
   Metadata:
@@ -33,7 +37,11 @@ HTTPListenerRule:
               -
                 - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
+    {{- if eq .WorkloadType "Backend Service"}}
+    ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
+    {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+    {{- end}}
     Priority: 
       !If
         - IsDefaultRootPath

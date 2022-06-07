@@ -6,10 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/dustin/go-humanize/english"
 	"net"
 	"os"
 	"strings"
+
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 
@@ -371,7 +372,7 @@ func (o *initEnvOpts) validateCustomizedResources() error {
 	if (o.importVPC.isSet() || o.adjustVPC.isSet()) && o.defaultConfig {
 		return fmt.Errorf("cannot import or configure vpc if --%s is set", defaultConfigFlag)
 	}
-	if o.internalALBSubnets != nil && !o.importVPC.isSet() {
+	if o.internalALBSubnets != nil && (o.adjustVPC.isSet() || o.defaultConfig) {
 		log.Error(`To specify internal ALB subnet placement, you must import existing resources, including subnets.
 For default config without subnet placement specification, Copilot will place the internal ALB in the generated private subnets.`)
 		return fmt.Errorf("subnets '%s' specified for internal ALB placement, but those subnets are not imported", strings.Join(o.internalALBSubnets, ", "))
@@ -721,6 +722,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 		ArtifactBucketKeyARN: artifactBucketKeyARN,
 		AdjustVPCConfig:      o.adjustVPCConfig(),
 		ImportCertARNs:       o.importCerts,
+		InternalALBSubnets:   o.internalALBSubnets,
 		ImportVPCConfig:      o.importVPCConfig(),
 		Telemetry:            o.telemetry.toConfig(),
 		Version:              deploy.LatestEnvTemplateVersion,

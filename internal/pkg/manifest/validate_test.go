@@ -532,6 +532,33 @@ func TestBackendService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
+		"error if fail to validate http": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfiguration{
+						ProtocolVersion: aws.String("GRPC"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "http": "path" must be specified`,
+		},
+		"error if request scaling without http": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								workloadType: BackendServiceType,
+								Requests:     aws.Int(128),
+							},
+						},
+					},
+				},
+			},
+			wantedError: errors.New(`"http" must be specified if "count.requests" or "count.response_time" are specified`),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -1286,7 +1313,9 @@ func TestRoutingRule_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
 		},
 		"error if path is missing": {
-			RoutingRule:          RoutingRuleConfiguration{},
+			RoutingRule: RoutingRuleConfiguration{
+				ProtocolVersion: aws.String("GRPC"),
+			},
 			wantedErrorMsgPrefix: `"path" must be specified`,
 		},
 		"should not error if protocol version is not uppercase": {
@@ -1294,6 +1323,13 @@ func TestRoutingRule_Validate(t *testing.T) {
 				Path:            stringP("/"),
 				ProtocolVersion: aws.String("gRPC"),
 			},
+		},
+		"error if hosted zone set without alias": {
+			RoutingRule: RoutingRuleConfiguration{
+				Path:       stringP("/"),
+				HostedZone: aws.String("ABCD1234"),
+			},
+			wantedErrorMsgPrefix: `"alias" must be specified if "hosted_zone" is specified`,
 		},
 	}
 	for name, tc := range testCases {
@@ -1684,7 +1720,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				Requests:     aws.Int(123),
 				workloadType: LoadBalancedWebServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests or response_time" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),
 		},
 		"error if range is specified but no autoscaling fields are specified for a Load Balanced Web Service": {
 			AdvancedCount: AdvancedCount{
@@ -1702,7 +1738,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				},
 				workloadType: BackendServiceType,
 			},
-			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage" or "memory_percentage" if "range" is specified`),
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "range" is specified`),
 		},
 		"error if range is specified but no autoscaling fields are specified for a Worker Service": {
 			AdvancedCount: AdvancedCount{
@@ -1739,14 +1775,14 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				CPU:          mockConfig,
 				workloadType: BackendServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage or memory_percentage" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Worker Service": {
 			AdvancedCount: AdvancedCount{
 				CPU:          mockConfig,
 				workloadType: WorkerServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage or queue_delay" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage" or "queue_delay" are specified`),
 		},
 		"wrap error from queue_delay on failure": {
 			AdvancedCount: AdvancedCount{

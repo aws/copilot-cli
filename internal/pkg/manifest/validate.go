@@ -206,6 +206,15 @@ func (b BackendServiceConfig) Validate() error {
 	if err = b.ImageOverride.Validate(); err != nil {
 		return err
 	}
+	if err = b.RoutingRule.Validate(); err != nil {
+		return fmt.Errorf(`validate "http": %w`, err)
+	}
+	if b.RoutingRule.IsEmpty() && (b.Count.AdvancedCount.Requests != nil || b.Count.AdvancedCount.ResponseTime != nil) {
+		return &errFieldMustBeSpecified{
+			missingField:      "http",
+			conditionalFields: []string{"count.requests", "count.response_time"},
+		}
+	}
 	if err = b.TaskConfig.Validate(); err != nil {
 		return err
 	}
@@ -614,24 +623,26 @@ func (CommandOverride) Validate() error {
 
 // Validate returns nil if RoutingRuleConfigOrBool is configured correctly.
 func (r RoutingRuleConfigOrBool) Validate() error {
-	if aws.BoolValue(r.Enabled) {
+	if r.Disabled() {
+		return nil
+	}
+	if r.Path == nil {
 		return &errFieldMustBeSpecified{
 			missingField: "path",
 		}
-	}
-	if r.Enabled != nil {
-		return nil
 	}
 	return r.RoutingRuleConfiguration.Validate()
 }
 
 // Validate returns nil if RoutingRuleConfiguration is configured correctly.
 func (r RoutingRuleConfiguration) Validate() error {
-	var err error
-	if err = r.HealthCheck.Validate(); err != nil {
+	if r.IsEmpty() {
+		return nil
+	}
+	if err := r.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
-	if err = r.Alias.Validate(); err != nil {
+	if err := r.Alias.Validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
 	}
 	if r.TargetContainer != nil && r.TargetContainerCamelCase != nil {
@@ -641,7 +652,7 @@ func (r RoutingRuleConfiguration) Validate() error {
 		}
 	}
 	for ind, ip := range r.AllowedSourceIps {
-		if err = ip.Validate(); err != nil {
+		if err := ip.Validate(); err != nil {
 			return fmt.Errorf(`validate "allowed_source_ips[%d]": %w`, ind, err)
 		}
 	}
@@ -653,6 +664,12 @@ func (r RoutingRuleConfiguration) Validate() error {
 	if r.Path == nil {
 		return &errFieldMustBeSpecified{
 			missingField: "path",
+		}
+	}
+	if r.HostedZone != nil && r.Alias.IsEmpty() {
+		return &errFieldMustBeSpecified{
+			missingField:      "alias",
+			conditionalFields: []string{"hosted_zone"},
 		}
 	}
 	return nil

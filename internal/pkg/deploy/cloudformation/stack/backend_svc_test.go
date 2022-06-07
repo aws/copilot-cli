@@ -293,25 +293,23 @@ Outputs:
 				svc.manifest.DeployConfig = manifest.DeploymentConfiguration{
 					Rolling: aws.String("recreate"),
 				}
-				svc.manifest.RoutingRule = manifest.RoutingRuleConfigOrBool{
-					RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-						Path: aws.String("/albPath"),
-						HealthCheck: manifest.HealthCheckArgsOrString{
-							HealthCheckArgs: manifest.HTTPHealthCheckArgs{
-								Path:               aws.String("/healthz"),
-								Port:               aws.Int(4200),
-								SuccessCodes:       aws.String("418"),
-								HealthyThreshold:   aws.Int64(64),
-								UnhealthyThreshold: aws.Int64(63),
-								Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
-								Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
-								GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
-							},
+				svc.manifest.RoutingRule = manifest.RoutingRuleConfiguration{
+					Path: aws.String("/albPath"),
+					HealthCheck: manifest.HealthCheckArgsOrString{
+						HealthCheckArgs: manifest.HTTPHealthCheckArgs{
+							Path:               aws.String("/healthz"),
+							Port:               aws.Int(4200),
+							SuccessCodes:       aws.String("418"),
+							HealthyThreshold:   aws.Int64(64),
+							UnhealthyThreshold: aws.Int64(63),
+							Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
+							Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
+							GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
 						},
-						Stickiness:          aws.Bool(true),
-						DeregistrationDelay: (*time.Duration)(aws.Int64(int64(59 * time.Second))),
-						AllowedSourceIps:    []manifest.IPNet{"10.0.1.0/24"},
 					},
+					Stickiness:          aws.Bool(true),
+					DeregistrationDelay: (*time.Duration)(aws.Int64(int64(59 * time.Second))),
+					AllowedSourceIps:    []manifest.IPNet{"10.0.1.0/24"},
 				}
 				svc.albEnabled = true
 			},
@@ -543,6 +541,11 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			ParamsPath:          filepath.Join(testDir, "https-path-alias-params.json"),
 			EnvImportedCertARNs: []string{"exampleComCertARN"},
 		},
+		"http with autoscaling by requests configured": {
+			ManifestPath: filepath.Join(testDir, "http-autoscaling-manifest.yml"),
+			TemplatePath: filepath.Join(testDir, "http-autoscaling-template.yml"),
+			ParamsPath:   filepath.Join(testDir, "http-autoscaling-params.json"),
+		},
 	}
 
 	// run tests
@@ -597,6 +600,17 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			require.NoError(t, err)
 			var actualTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal([]byte(tmpl), &actualTmpl))
+
+			// change the random DynamicDesiredCountAction UpdateID to an expected value
+			if v, ok := actualTmpl["Resources"]; ok {
+				if v, ok := v.(map[string]any)["DynamicDesiredCountAction"]; ok {
+					if v, ok := v.(map[string]any)["Properties"]; ok {
+						if v, ok := v.(map[string]any); ok {
+							v["UpdateID"] = "AVeryRandomUUID"
+						}
+					}
+				}
+			}
 
 			var expectedTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal(tmplBytes, &expectedTmpl))

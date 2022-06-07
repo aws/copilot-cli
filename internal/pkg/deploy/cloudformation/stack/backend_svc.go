@@ -70,7 +70,7 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 		},
 		manifest:   conf.Manifest,
 		parser:     parser,
-		albEnabled: !conf.Manifest.RoutingRule.EmptyOrDisabled(),
+		albEnabled: !conf.Manifest.RoutingRule.IsEmpty(),
 	}
 
 	if conf.Env.HasImportedCerts() {
@@ -191,6 +191,7 @@ func (s *BackendService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
+		HostedZoneID: s.manifest.RoutingRule.HostedZone,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -244,7 +245,7 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 	}...)
 
-	if !s.manifest.RoutingRule.EmptyOrDisabled() {
+	if !s.manifest.RoutingRule.IsEmpty() {
 		params = append(params, []*cloudformation.Parameter{
 			{
 				ParameterKey:   aws.String(WorkloadTargetContainerParamKey),

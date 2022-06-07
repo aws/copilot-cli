@@ -420,6 +420,11 @@ type envDescriber interface {
 	Manifest() ([]byte, error)
 }
 
+type versionCompatibilityChecker interface {
+	versionGetter
+	AvailableFeatures() ([]string, error)
+}
+
 type versionGetter interface {
 	Version() (string, error)
 }
