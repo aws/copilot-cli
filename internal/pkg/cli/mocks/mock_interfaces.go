@@ -3893,12 +3893,11 @@ func (mr *MocktaskRunnerMockRecorder) Run() *gomock.Call {
 }
 
 // CheckNonZeroExitCode mocks base method.
-func (m *MocktaskRunner) CheckNonZeroExitCode(tasks []*task.Task) (int, error) {
+func (m *MocktaskRunner) CheckNonZeroExitCode(tasks []*task.Task) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckNonZeroExitCode", tasks)
-	ret0, _ := ret[0].(int)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // CheckNonZeroExitCode indicates an expected call of CheckNonZeroExitCode.

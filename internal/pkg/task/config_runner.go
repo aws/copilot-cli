@@ -108,7 +108,7 @@ func (r *ConfigRunner) validateDependencies() error {
 }
 
 // CheckNonZeroExitCode returns the status of the containers part of the given tasks.
-func (r *ConfigRunner) CheckNonZeroExitCode(tasks []*Task) (int, error) {
+func (r *ConfigRunner) CheckNonZeroExitCode(tasks []*Task) error {
 	taskARNs := make([]string, len(tasks))
 	for idx, task := range tasks {
 		taskARNs[idx] = task.TaskARN

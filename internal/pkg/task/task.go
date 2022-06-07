@@ -39,7 +39,7 @@ type EnvironmentDescriber interface {
 
 // NonZeroExitCodeGetter wraps the method of getting a non-zero exit code of a task.
 type NonZeroExitCodeGetter interface {
-	NonZeroExitCode([]string, string, string) (int, error)
+	NonZeroExitCode([]string, string, string) error
 }
 
 // Runner wraps the method of running tasks.

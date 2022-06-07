@@ -13,12 +13,16 @@ func (e *ErrMultipleContainersInTaskDef) Error() string {
 	return fmt.Sprintf("found more than one container in task definition: %s", e.taskDefIdentifier)
 }
 
-type errExitCode struct {
+type ErrExitCode struct {
 	containerName string
 	taskId        string
-	exitCode      int64
+	exitCode      int
 }
 
-func (e *errExitCode) Error() string {
+func (e *ErrExitCode) Error() string {
 	return fmt.Sprintf("Container %s in task %s exited with status code %d", e.containerName, e.taskId, e.exitCode)
+}
+
+func (e *ErrExitCode) ExitCode() int {
+	return e.exitCode
 }

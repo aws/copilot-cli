@@ -161,10 +161,10 @@ func containsString(s []string, search string) bool {
 }
 
 // CheckNonZeroExitCode returns the status of the containers part of the given tasks.
-func (r *EnvRunner) CheckNonZeroExitCode(tasks []*Task) (int, error) {
+func (r *EnvRunner) CheckNonZeroExitCode(tasks []*Task) error {
 	cluster, err := r.ClusterGetter.ClusterARN(r.App, r.Env)
 	if err != nil {
-		return 0, fmt.Errorf("get cluster for environment %s: %w", r.Env, err)
+		return fmt.Errorf("get cluster for environment %s: %w", r.Env, err)
 	}
 	taskARNs := make([]string, len(tasks))
 	for idx, task := range tasks {

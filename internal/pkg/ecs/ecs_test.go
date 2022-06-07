@@ -1438,7 +1438,7 @@ func Test_CheckNonZeroExitCode(t *testing.T) {
 			}
 
 			// WHEN
-			_, err := client.NonZeroExitCode(tc.inTaskARNs, tc.inGroupName, tc.inCluster)
+			err := client.NonZeroExitCode(tc.inTaskARNs, tc.inGroupName, tc.inCluster)
 
 			// THEN
 			if tc.wantedError != nil {
