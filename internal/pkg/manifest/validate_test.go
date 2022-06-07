@@ -1761,7 +1761,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				Cooldown:     mockCooldown,
 				workloadType: BackendServiceType,
 			},
-			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage" or "memory_percentage" if "cooldown" is specified`),
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "cooldown" is specified`),
 		},
 		"error if cooldown is specified but no autoscaling fields are specified for a Worker Service": {
 			AdvancedCount: AdvancedCount{
