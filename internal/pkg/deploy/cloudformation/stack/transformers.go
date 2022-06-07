@@ -178,6 +178,25 @@ func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProv
 	return cps
 }
 
+func convertCooldown(c manifest.Cooldown) *template.Cooldown {
+	if c.IsEmpty() {
+		return nil
+	}
+
+	cooldown := template.Cooldown{}
+
+	if c.ScaleInCooldown != nil {
+		scaleInTime := float64(*c.ScaleInCooldown) / float64(time.Second)
+		cooldown.ScaleInCooldown = aws.Float64(scaleInTime)
+	}
+	if c.ScaleOutCooldown != nil {
+		scaleOutTime := float64(*c.ScaleOutCooldown) / float64(time.Second)
+		cooldown.ScaleOutCooldown = aws.Float64(scaleOutTime)
+	}
+
+	return &cooldown
+}
+
 // convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
 // by the templates pkg.
 func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, error) {
@@ -209,6 +228,27 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 	if a.Memory.ScalingConfig.Value != nil {
 		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.ScalingConfig.Value))
 	}
+
+	var (
+		CPUCooldown *template.Cooldown
+		MemCooldown *template.Cooldown
+	)
+
+	// Write from generalized cooldown first
+	generalCooldown := convertCooldown(a.Cooldown)
+	CPUCooldown = generalCooldown
+	MemCooldown = generalCooldown
+
+	// If both generalized cooldown and specific cooldowns are specified, cooldown is overwritten by lower level config
+	if cooldown := convertCooldown(a.CPU.ScalingConfig.Cooldown); cooldown != nil {
+		CPUCooldown = cooldown
+	}
+	if cooldown := convertCooldown(a.Memory.ScalingConfig.Cooldown); cooldown != nil {
+		MemCooldown = cooldown
+	}
+
+	autoscalingOpts.CPUCooldown = CPUCooldown
+	autoscalingOpts.MemCooldown = MemCooldown
 
 	if a.Requests != nil {
 		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))

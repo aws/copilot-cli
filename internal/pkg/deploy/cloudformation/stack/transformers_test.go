@@ -235,15 +235,46 @@ func Test_convertSidecar(t *testing.T) {
 
 func Test_convertAdvancedCount(t *testing.T) {
 	mockRange := manifest.IntRangeBand("1-10")
+	timeMinute := time.Second * 60
 	perc := manifest.Percentage(70)
 	mockConfig := manifest.ScalingConfigOrPercentage{
-		Value: &perc,
+		ScalingConfig: manifest.AdvancedScalingConfig{
+			Value: &perc,
+			Cooldown: manifest.Cooldown{
+				ScaleInCooldown: &timeMinute,
+			},
+		},
 	}
 	testCases := map[string]struct {
 		input       manifest.AdvancedCount
 		expected    *template.AdvancedCount
 		expectedErr error
 	}{
+		"success with generalized cooldown": {
+			input: manifest.AdvancedCount{
+				Range: manifest.Range{
+					Value: &mockRange,
+				},
+				Cooldown: manifest.Cooldown{
+					ScaleInCooldown:  &timeMinute,
+					ScaleOutCooldown: &timeMinute,
+				},
+			},
+			expected: &template.AdvancedCount{
+				Autoscaling: &template.AutoscalingOpts{
+					MinCapacity: aws.Int(1),
+					MaxCapacity: aws.Int(10),
+					CPUCooldown: &template.Cooldown{
+						ScaleInCooldown:  aws.Float64(60),
+						ScaleOutCooldown: aws.Float64(60),
+					},
+					MemCooldown: &template.Cooldown{
+						ScaleInCooldown:  aws.Float64(60),
+						ScaleOutCooldown: aws.Float64(60),
+					},
+				},
+			},
+		},
 		"success with spot count": {
 			input: manifest.AdvancedCount{
 				Spot: aws.Int(1),
@@ -270,6 +301,9 @@ func Test_convertAdvancedCount(t *testing.T) {
 					MinCapacity: aws.Int(1),
 					MaxCapacity: aws.Int(10),
 					CPU:         aws.Float64(70),
+					CPUCooldown: &template.Cooldown{
+						ScaleInCooldown: aws.Float64(60),
+					},
 				},
 			},
 		},
@@ -289,6 +323,9 @@ func Test_convertAdvancedCount(t *testing.T) {
 					MinCapacity: aws.Int(2),
 					MaxCapacity: aws.Int(20),
 					CPU:         aws.Float64(70),
+					CPUCooldown: &template.Cooldown{
+						ScaleInCooldown: aws.Float64(60),
+					},
 				},
 				Cps: []*template.CapacityProviderStrategy{
 					{
@@ -459,10 +496,14 @@ func Test_convertAutoscaling(t *testing.T) {
 			},
 
 			wanted: &template.AutoscalingOpts{
-				MaxCapacity:  aws.Int(100),
-				MinCapacity:  aws.Int(1),
-				CPU:          aws.Float64(70),
-				Memory:       aws.Float64(70),
+				MaxCapacity: aws.Int(100),
+				MinCapacity: aws.Int(1),
+				CPU:         aws.Float64(70),
+				Memory:      aws.Float64(70),
+				CPUCooldown: &template.Cooldown{
+					ScaleInCooldown:  aws.Float64(60),
+					ScaleOutCooldown: aws.Float64(60),
+				},
 				Requests:     aws.Float64(1000),
 				ResponseTime: aws.Float64(0.512),
 			},
@@ -483,10 +524,14 @@ func Test_convertAutoscaling(t *testing.T) {
 			},
 
 			wanted: &template.AutoscalingOpts{
-				MaxCapacity:  aws.Int(10),
-				MinCapacity:  aws.Int(5),
-				CPU:          aws.Float64(70),
-				Memory:       aws.Float64(70),
+				MaxCapacity: aws.Int(10),
+				MinCapacity: aws.Int(5),
+				CPU:         aws.Float64(70),
+				Memory:      aws.Float64(70),
+				CPUCooldown: &template.Cooldown{
+					ScaleInCooldown:  aws.Float64(60),
+					ScaleOutCooldown: aws.Float64(60),
+				},
 				Requests:     aws.Float64(1000),
 				ResponseTime: aws.Float64(0.512),
 			},
