@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -1254,6 +1255,78 @@ func TestSQSQueueOrBool_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.Advanced.Retention, sc.Queue.Advanced.Retention)
 				require.Equal(t, tc.wantedStruct.Advanced.Timeout, sc.Queue.Advanced.Timeout)
 			}
+		})
+	}
+}
+
+func TestWorkerService_RequiredEnvironmentFeatures(t *testing.T) {
+	testCases := map[string]struct {
+		mft    func(svc *WorkerService)
+		wanted []string
+	}{
+		"no feature required by default": {
+			mft: func(svc *WorkerService) {},
+		},
+		"nat feature required": {
+			mft: func(svc *WorkerService) {
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
+						Placement: PlacementArgOrString{
+							PlacementString: placementStringP(PrivateSubnetPlacement),
+						},
+					},
+				}
+			},
+			wanted: []string{template.NATFeatureName},
+		},
+		"efs feature required by enabling managed volume": {
+			mft: func(svc *WorkerService) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mock-managed-volume-1": {
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+						"mock-imported-volume": {
+							EFS: EFSConfigOrBool{
+								Advanced: EFSVolumeConfiguration{
+									FileSystemID: aws.String("mock-id"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wanted: []string{template.EFSFeatureName},
+		},
+		"efs feature not required because storage is imported": {
+			mft: func(svc *WorkerService) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mock-imported-volume": {
+							EFS: EFSConfigOrBool{
+								Advanced: EFSVolumeConfiguration{
+									FileSystemID: aws.String("mock-id"),
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			inSvc := WorkerService{
+				Workload: Workload{
+					Name: aws.String("mock-svc"),
+					Type: aws.String(WorkerServiceType),
+				},
+			}
+			tc.mft(&inSvc)
+			got := inSvc.RequiredEnvironmentFeatures()
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

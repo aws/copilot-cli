@@ -15,6 +15,48 @@ const (
 	fmtEnvCFSubTemplatePath = "environment/partials/%s.yml"
 )
 
+// Latest available env-controller managed feature names.
+const (
+	ALBFeatureName         = "ALBWorkloads"
+	EFSFeatureName         = "EFSWorkloads"
+	NATFeatureName         = "NATWorkloads"
+	InternalALBFeatureName = "InternalALBWorkloads"
+)
+
+var friendlyEnvFeatureName = map[string]string{
+	ALBFeatureName:         "ALB",
+	EFSFeatureName:         "EFS",
+	NATFeatureName:         "NAT Gateway",
+	InternalALBFeatureName: "Internal ALB",
+}
+
+var leastVersionForFeature = map[string]string{
+	ALBFeatureName:         "v1.0.0",
+	EFSFeatureName:         "v1.3.0",
+	NATFeatureName:         "v1.3.0",
+	InternalALBFeatureName: "v1.10.0",
+}
+
+// AvailableEnvFeatures returns a list of the latest available feature, named after their corresponding parameter names.
+func AvailableEnvFeatures() []string {
+	return []string{ALBFeatureName, EFSFeatureName, NATFeatureName, InternalALBFeatureName}
+}
+
+// FriendlyEnvFeatureName returns a user-friendly feature name given a env-controller managed parameter name.
+// If there isn't one, it returns the parameter name that it is given.
+func FriendlyEnvFeatureName(feature string) string {
+	friendly, ok := friendlyEnvFeatureName[feature]
+	if !ok {
+		return feature
+	}
+	return friendly
+}
+
+// LeastVersionForFeature maps each feature to the least environment template version it requires.
+func LeastVersionForFeature(feature string) string {
+	return leastVersionForFeature[feature]
+}
+
 var (
 	// Template names under "environment/partials/".
 	envCFSubTemplateNames = []string{
