@@ -10,6 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"golang.org/x/net/context"
+	"time"
 )
 
 // Application is a named collection of environments and services.
@@ -74,8 +76,18 @@ func (s *Store) UpdateApplication(application *Application) error {
 
 // GetApplication fetches an application by name. If it can't be found, return a ErrNoSuchApplication
 func (s *Store) GetApplication(applicationName string) (*Application, error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	/*ctx := context.Background()
+	var cancelFn func()
+	if timeout > 3 {
+		ctx, cancelFn = context.WithTimeout(ctx, timeout)
+	}*/
+
 	applicationPath := fmt.Sprintf(fmtApplicationPath, applicationName)
-	applicationParam, err := s.ssm.GetParameter(&ssm.GetParameterInput{
+	applicationParam, err := s.ssm.GetParameterWithContext(ctx, &ssm.GetParameterInput{
 		Name: aws.String(applicationPath),
 	})
 

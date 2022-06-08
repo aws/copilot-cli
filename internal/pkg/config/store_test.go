@@ -4,6 +4,8 @@
 package config
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -13,11 +15,12 @@ import (
 
 type mockSSM struct {
 	ssmiface.SSMAPI
-	t                       *testing.T
-	mockPutParameter        func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
-	mockGetParametersByPath func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
-	mockGetParameter        func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
-	mockDeleteParameter     func(t *testing.T, param *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error)
+	t                           *testing.T
+	mockPutParameter            func(t *testing.T, param *ssm.PutParameterInput) (*ssm.PutParameterOutput, error)
+	mockGetParametersByPath     func(t *testing.T, param *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
+	mockGetParameter            func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
+	mockDeleteParameter         func(t *testing.T, param *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error)
+	mockGetParameterWithContext func(t *testing.T, ctx aws.Context, param *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error)
 }
 
 func (m *mockSSM) PutParameter(in *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
@@ -34,6 +37,10 @@ func (m *mockSSM) GetParameter(in *ssm.GetParameterInput) (*ssm.GetParameterOutp
 
 func (m *mockSSM) DeleteParameter(in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error) {
 	return m.mockDeleteParameter(m.t, in)
+}
+
+func (m *mockSSM) GetParameterWithContext(ctx aws.Context, in *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error) {
+	return m.mockGetParameterWithContext(m.t, ctx, in, opts...)
 }
 
 type mockIdentityService struct {

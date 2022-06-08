@@ -6,6 +6,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -144,13 +145,13 @@ func TestStore_GetApplication(t *testing.T) {
 	require.NoError(t, err, "Marshal application should not fail")
 
 	testCases := map[string]struct {
-		mockGetParameter       func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
-		mockIdentityServiceGet func() (identity.Caller, error)
-		wantedApplication      Application
-		wantedErr              error
+		mockGetParameterWithContext func(t *testing.T, ctx aws.Context, param *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error)
+		mockIdentityServiceGet      func() (identity.Caller, error)
+		wantedApplication           Application
+		wantedErr                   error
 	}{
 		"with existing application": {
-			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
+			mockGetParameterWithContext: func(t *testing.T, ctx aws.Context, param *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error) {
 				require.Equal(t, testApplicationPath, *param.Name)
 				return &ssm.GetParameterOutput{
 					Parameter: &ssm.Parameter{
@@ -164,7 +165,7 @@ func TestStore_GetApplication(t *testing.T) {
 			wantedErr:         nil,
 		},
 		"with no existing application": {
-			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
+			mockGetParameterWithContext: func(t *testing.T, ctx aws.Context, param *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error) {
 				require.Equal(t, testApplicationPath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "No Parameter", fmt.Errorf("No Parameter"))
 			},
@@ -180,7 +181,7 @@ func TestStore_GetApplication(t *testing.T) {
 			},
 		},
 		"with no existing application and failed STS call": {
-			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
+			mockGetParameterWithContext: func(t *testing.T, ctx aws.Context, param *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error) {
 				require.Equal(t, testApplicationPath, *param.Name)
 				return nil, awserr.New(ssm.ErrCodeParameterNotFound, "No Parameter", fmt.Errorf("No Parameter"))
 			},
@@ -194,7 +195,7 @@ func TestStore_GetApplication(t *testing.T) {
 			},
 		},
 		"with malformed json": {
-			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
+			mockGetParameterWithContext: func(t *testing.T, ctx aws.Context, param *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error) {
 				require.Equal(t, testApplicationPath, *param.Name)
 				return &ssm.GetParameterOutput{
 					Parameter: &ssm.Parameter{
@@ -207,7 +208,7 @@ func TestStore_GetApplication(t *testing.T) {
 			wantedErr: fmt.Errorf("read configuration for application chicken: invalid character 'o' looking for beginning of value"),
 		},
 		"with SSM error": {
-			mockGetParameter: func(t *testing.T, param *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
+			mockGetParameterWithContext: func(t *testing.T, ctx aws.Context, param *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error) {
 				require.Equal(t, testApplicationPath, *param.Name)
 				return nil, fmt.Errorf("broken")
 			},
@@ -220,8 +221,8 @@ func TestStore_GetApplication(t *testing.T) {
 			// GIVEN
 			store := &Store{
 				ssm: &mockSSM{
-					t:                t,
-					mockGetParameter: tc.mockGetParameter,
+					t:                           t,
+					mockGetParameterWithContext: tc.mockGetParameterWithContext,
 				},
 				sts: mockIdentityService{
 					mockIdentityServiceGet: tc.mockIdentityServiceGet,
