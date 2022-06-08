@@ -4,11 +4,18 @@
 package deploy
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -68,6 +75,25 @@ func (m *mockWorkloadMft) ContainerPlatform() string {
 	return "mockContainerPlatform"
 }
 
+type mockTemplateFS struct {
+	read func(path string) (*template.Content, error)
+}
+
+// Read implements the template.Reader interface.
+func (fs *mockTemplateFS) Read(path string) (*template.Content, error) {
+	return fs.read(path)
+}
+
+func fakeTemplateFS() *mockTemplateFS {
+	return &mockTemplateFS{
+		read: func(path string) (*template.Content, error) {
+			return &template.Content{
+				Buffer: bytes.NewBufferString("fake content"),
+			}, nil
+		},
+	}
+}
+
 func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	const (
 		mockName            = "mockWkld"
@@ -88,12 +114,17 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 	mockEnvFilePath := fmt.Sprintf("%s/%s/%s/%s.env", "manual", "env-files", mockEnvFile, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 	mockAddonPath := fmt.Sprintf("%s/%s/%s/%s.yml", "manual", "addons", mockName, "1307990e6ba5ca145eb35e99182a9bec46531bc54ddf656a602c780fa0240dee")
 	mockError := errors.New("some error")
+
+	type artifactsUploader interface {
+		UploadArtifacts() (*UploadArtifactsOutput, error)
+	}
 	tests := map[string]struct {
 		inEnvFile       string
 		inBuildRequired bool
 		inRegion        string
 
-		mock func(m *deployMocks)
+		mock                func(m *deployMocks)
+		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
 
 		wantAddonsURL     string
 		wantEnvFileARN    string
@@ -127,6 +158,129 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				})
 			},
 			wantImageDigest: aws.String("mockDigest"),
+		},
+		"should retrieve Load Balanced Web Service custom resource URLs": {
+			mock: func(m *deployMocks) {
+				// Ignore addon uploads.
+				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
+				// Ensure all custom resources were uploaded.
+				crs, err := customresource.LBWS(fakeTemplateFS())
+				require.NoError(t, err)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
+					for _, cr := range crs {
+						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+							return "", nil
+						}
+					}
+					return "", errors.New("did not match any custom resource")
+				}).Times(len(crs))
+			},
+			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
+				return &lbSvcDeployer{
+					svcDeployer: &svcDeployer{
+						workloadDeployer: deployer,
+					},
+				}
+			},
+		},
+		"should retrieve Backend Service custom resource URLs": {
+			mock: func(m *deployMocks) {
+				// Ignore addon uploads.
+				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
+				// Ensure all custom resources were uploaded.
+				crs, err := customresource.Backend(fakeTemplateFS())
+				require.NoError(t, err)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
+					for _, cr := range crs {
+						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+							return "", nil
+						}
+					}
+					return "", errors.New("did not match any custom resource")
+				}).Times(len(crs))
+			},
+			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
+				return &backendSvcDeployer{
+					svcDeployer: &svcDeployer{
+						workloadDeployer: deployer,
+					},
+				}
+			},
+		},
+		"should retrieve Worker Service custom resource URLs": {
+			mock: func(m *deployMocks) {
+				// Ignore addon uploads.
+				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
+				// Ensure all custom resources were uploaded.
+				crs, err := customresource.Worker(fakeTemplateFS())
+				require.NoError(t, err)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
+					for _, cr := range crs {
+						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+							return "", nil
+						}
+					}
+					return "", errors.New("did not match any custom resource")
+				}).Times(len(crs))
+			},
+			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
+				return &workerSvcDeployer{
+					svcDeployer: &svcDeployer{
+						workloadDeployer: deployer,
+					},
+				}
+			},
+		},
+		"should retrieve Request-Driven Web Service custom resource URLs": {
+			mock: func(m *deployMocks) {
+				// Ignore addon uploads.
+				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
+				// Ensure all custom resources were uploaded.
+				crs, err := customresource.RDWS(fakeTemplateFS())
+				require.NoError(t, err)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
+					for _, cr := range crs {
+						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+							return "", nil
+						}
+					}
+					return "", errors.New("did not match any custom resource")
+				}).Times(len(crs))
+			},
+			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
+				return &rdwsDeployer{
+					svcDeployer: &svcDeployer{
+						workloadDeployer: deployer,
+					},
+				}
+			},
+		},
+		"should retrieve Scheduled Job custom resource URLs": {
+			mock: func(m *deployMocks) {
+				// Ignore addon uploads.
+				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
+				// Ensure all custom resources were uploaded.
+				crs, err := customresource.ScheduledJob(fakeTemplateFS())
+				require.NoError(t, err)
+				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
+					for _, cr := range crs {
+						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+							return "", nil
+						}
+					}
+					return "", errors.New("did not match any custom resource")
+				}).Times(len(crs))
+			},
+			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
+				return &jobDeployer{
+					workloadDeployer: deployer,
+				}
+			},
 		},
 		"error if fail to read env file": {
 			inEnvFile: mockEnvFile,
@@ -218,7 +372,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			}
 			tc.mock(m)
 
-			deployer := workloadDeployer{
+			var deployer artifactsUploader
+			deployer = &workloadDeployer{
 				name: mockName,
 				env: &config.Environment{
 					Name:   mockEnvName,
@@ -239,6 +394,12 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				fs:                 m.mockFileReader,
 				s3Client:           m.mockUploader,
 				imageBuilderPusher: m.mockImageBuilderPusher,
+				templateFS:         fakeTemplateFS(),
+
+				uploadCustomResourceFlag: true,
+			}
+			if tc.mockServiceDeployer != nil {
+				deployer = tc.mockServiceDeployer(deployer.(*workloadDeployer))
 			}
 
 			got, gotErr := deployer.UploadArtifacts()
@@ -254,7 +415,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		})
 	}
 }
-
 func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 	mockError := errors.New("some error")
 	const (

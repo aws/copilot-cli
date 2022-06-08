@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -168,12 +170,16 @@ type workloadDeployer struct {
 	deployer           serviceDeployer
 	endpointGetter     endpointGetter
 	spinner            spinner
+	templateFS         template.Reader
 
 	// Cached variables.
 	defaultSess              *session.Session
 	defaultSessWithEnvRegion *session.Session
 	envSess                  *session.Session
 	store                    *config.Store
+
+	// Feature flags.
+	uploadCustomResourceFlag bool
 }
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
@@ -245,6 +251,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		deployer:           cloudformation.New(envSession),
 		endpointGetter:     endpointGetter,
 		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
+		templateFS:         template.New(),
 
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
@@ -448,9 +455,10 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
-	ImageDigest *string
-	EnvFileARN  string
-	AddonsURL   string
+	ImageDigest        *string
+	EnvFileARN         string
+	AddonsURL          string
+	CustomResourceURLs map[string]string
 }
 
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
@@ -477,7 +485,7 @@ type Options struct {
 	DisableRollback bool
 }
 
-// UploadArtifacts uploads the deployment artifacts (image, addons files, env files).
+// UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *workloadDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 	imageDigest, err := d.uploadContainerImage(d.imageBuilderPusher)
 	if err != nil {
@@ -497,6 +505,91 @@ func (d *workloadDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 		EnvFileARN:  s3Artifacts.envFileARN,
 		AddonsURL:   s3Artifacts.addonsURL,
 	}, nil
+}
+
+// UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
+func (d *lbSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+	out, err := d.workloadDeployer.UploadArtifacts()
+	if err != nil {
+		return nil, err
+	}
+	if !d.uploadCustomResourceFlag {
+		return out, nil
+	}
+	urls, err := d.uploadCustomResources(manifest.LoadBalancedWebServiceType, customresource.LBWS)
+	if err != nil {
+		return nil, err
+	}
+	out.CustomResourceURLs = urls
+	return out, nil
+}
+
+// UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
+func (d *backendSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+	out, err := d.workloadDeployer.UploadArtifacts()
+	if err != nil {
+		return nil, err
+	}
+	if !d.uploadCustomResourceFlag {
+		return out, nil
+	}
+	urls, err := d.uploadCustomResources(manifest.BackendServiceType, customresource.Backend)
+	if err != nil {
+		return nil, err
+	}
+	out.CustomResourceURLs = urls
+	return out, nil
+}
+
+// UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
+func (d *rdwsDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+	out, err := d.workloadDeployer.UploadArtifacts()
+	if err != nil {
+		return nil, err
+	}
+	if !d.uploadCustomResourceFlag {
+		return out, nil
+	}
+	urls, err := d.uploadCustomResources(manifest.RequestDrivenWebServiceType, customresource.RDWS)
+	if err != nil {
+		return nil, err
+	}
+	out.CustomResourceURLs = urls
+	return out, nil
+}
+
+// UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
+func (d *workerSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+	out, err := d.workloadDeployer.UploadArtifacts()
+	if err != nil {
+		return nil, err
+	}
+	if !d.uploadCustomResourceFlag {
+		return out, nil
+	}
+	urls, err := d.uploadCustomResources(manifest.WorkerServiceType, customresource.Worker)
+	if err != nil {
+		return nil, err
+	}
+	out.CustomResourceURLs = urls
+	return out, nil
+}
+
+// UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
+func (d *jobDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+	out, err := d.workloadDeployer.UploadArtifacts()
+	if err != nil {
+		return nil, err
+	}
+	if !d.uploadCustomResourceFlag {
+		return out, nil
+	}
+	urls, err := d.uploadCustomResources(manifest.ScheduledJobType, customresource.ScheduledJob)
+	if err != nil {
+		return nil, err
+	}
+	out.CustomResourceURLs = urls
+	return out, nil
 }
 
 // GenerateCloudFormationTemplateInput is the input of GenerateCloudFormationTemplate.
@@ -810,6 +903,20 @@ func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (up
 		envFileARN: envFileARN,
 		addonsURL:  addonsURL,
 	}, nil
+}
+
+func (d *workloadDeployer) uploadCustomResources(workloadType string, customResources func(template.Reader) ([]*customresource.CustomResource, error)) (map[string]string, error) {
+	crs, err := customResources(d.templateFS)
+	if err != nil {
+		return nil, fmt.Errorf("read custom resources for a %q: %w", workloadType, err)
+	}
+	urls, err := customresource.Upload(func(key string, contents io.Reader) (string, error) {
+		return d.s3Client.Upload(d.resources.S3Bucket, key, contents)
+	}, crs)
+	if err != nil {
+		return nil, fmt.Errorf("upload custom resources for a %q: %w", workloadType, err)
+	}
+	return urls, nil
 }
 
 type pushEnvFilesToS3BucketInput struct {
