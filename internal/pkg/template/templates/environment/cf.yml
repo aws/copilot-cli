@@ -34,6 +34,9 @@ Parameters:
   CreateInternalHTTPSListener:
     Type: String
     AllowedValues: [true, false]
+  AllowVPCIngressForInternalALB:
+    Type: String
+    AllowedValues: [true, false]
   ServiceDiscoveryEndpoint:
     Type: String
 Conditions:
@@ -41,14 +44,21 @@ Conditions:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
   CreateInternalALB:
     !Not [!Equals [ !Ref InternalALBWorkloads, "" ]]
+  CreateInternalALBIngress: !And
+    - !Condition CreateInternalALB
+    - !Equals [ !Ref AllowVPCIngressForInternalALB, true ]
+  CreateInternalALBIngressForHTTPS: !And
+    - !Condition CreateInternalALB
+    - !Equals [ !Ref AllowVPCIngressForInternalALB, true ]
+    - !Equals [ !Ref CreateInternalHTTPSListener, true ]
   DelegateDNS:
     !Not [!Equals [ !Ref AppDNSName, "" ]]
   ExportHTTPSListener: !And
     - !Condition CreateALB
-    - !Equals [!Ref CreateHTTPSListener, true]
+    - !Equals [ !Ref CreateHTTPSListener, true ]
   ExportInternalHTTPSListener: !And
     - !Condition CreateInternalALB
-    - !Equals [!Ref CreateInternalHTTPSListener, true]
+    - !Equals [ !Ref CreateInternalHTTPSListener, true ]
   CreateEFS:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
@@ -179,6 +189,7 @@ Resources:
       GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+
   PublicLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'
@@ -188,7 +199,30 @@ Resources:
       Scheme: internet-facing
       SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
 {{- if .VPCConfig.Imported}}
-      Subnets: [ {{range $id := .VPCConfig.Imported.PublicSubnetIDs}}{{$id}}, {{end}} ]
+      Subnets:  InternalLoadBalancerSecurityGroupIngressFromHttp:
+Metadata:
+  'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80'
+Type: AWS::EC2::SecurityGroupIngress
+Condition: CreateInternalALBIngress
+Properties:
+  Description: Allow from anyone on port 80
+  CidrIp: 0.0.0.0/0
+  FromPort: 80
+  ToPort: 80
+  IpProtocol: tcp
+  GroupId: !Ref InternalLoadBalancerSecurityGroup
+InternalLoadBalancerSecurityGroupIngressFromHttps:
+  Metadata:
+    'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 443'
+  Type: AWS::EC2::SecurityGroupIngress
+  Condition: CreateInternalALBIngressForHTTPS
+  Properties:
+    Description: Allow from anyone on port 443
+    CidrIp: 0.0.0.0/0
+    FromPort: 443
+    ToPort: 443
+    IpProtocol: tcp
+    GroupId: !Ref InternalLoadBalancerSecurityGroup [ {{range $id := .VPCConfig.Imported.PublicSubnetIDs}}{{$id}}, {{end}} ]
 {{- else}}
       Subnets: [ {{range $ind, $cidr := .VPCConfig.Managed.PublicSubnetCIDRs}}!Ref PublicSubnet{{inc $ind}}, {{end}} ]
 {{- end}}
