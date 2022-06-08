@@ -140,7 +140,7 @@ AutoScalingPolicyECSServiceAverageMemoryUtilization:
     TargetTrackingScalingPolicyConfiguration:
       PredefinedMetricSpecification:
         PredefinedMetricType: ECSServiceAverageMemoryUtilization
-      {{if .Autoscaling.MemCooldown}}
+      {{- if .Autoscaling.MemCooldown}}
       {{- if .Autoscaling.MemCooldown.ScaleInCooldown}}
       ScaleInCooldown: {{.Autoscaling.MemCooldown.ScaleInCooldown}}
       {{- else}}
@@ -154,7 +154,7 @@ AutoScalingPolicyECSServiceAverageMemoryUtilization:
       {{else}}
       ScaleInCooldown: 120
       ScaleOutCooldown: 60
-      {{end}}
+      {{- end}}
       TargetValue: {{.Autoscaling.Memory}}
 {{- end}}
 {{- if .Autoscaling.QueueDelay }}
