@@ -35,7 +35,7 @@ type ConfigRunner struct {
 	// Must not be nil if using default subnets.
 	VPCGetter VPCGetter
 
-	// Figures non-zero exit code of the task
+	// Figures non-zero exit code of the task.
 	NonZeroExitCodeGetter NonZeroExitCodeGetter
 
 	// Platform configuration

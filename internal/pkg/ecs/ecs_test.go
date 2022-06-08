@@ -1416,7 +1416,7 @@ func Test_HasNonZeroExitCode(t *testing.T) {
 					}, nil),
 				)
 			},
-			wantedError: fmt.Errorf("Container the-one-and-only-one-container in task 4082490ee6c245e09d2145010aa1ba8d exited with status code 1"),
+			wantedError: fmt.Errorf("container the-one-and-only-one-container in task 4082490ee6c245e09d2145010aa1ba8d exited with status code 1"),
 		},
 	}
 

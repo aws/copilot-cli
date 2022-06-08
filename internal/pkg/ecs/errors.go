@@ -20,7 +20,7 @@ type ErrExitCode struct {
 }
 
 func (e *ErrExitCode) Error() string {
-	return fmt.Sprintf("Container %s in task %s exited with status code %d", e.containerName, e.taskId, e.exitCode)
+	return fmt.Sprintf("container %s in task %s exited with status code %d", e.containerName, e.taskId, e.exitCode)
 }
 
 func (e *ErrExitCode) ExitCode() int {

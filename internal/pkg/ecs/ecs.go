@@ -471,7 +471,7 @@ func (c Client) stateMachineARN(app, env, job string) (string, error) {
 func (c Client) HasNonZeroExitCode(taskARNs []string, cluster string) error {
 	tasks, err := c.ecsClient.DescribeTasks(cluster, taskARNs)
 	if err != nil {
-		return err
+		return fmt.Errorf("describe tasks %s: %w", taskARNs, err)
 	}
 
 	if len(tasks) == 0 {
