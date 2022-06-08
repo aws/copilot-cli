@@ -245,7 +245,7 @@ Outputs:
 						GracePeriod:     aws.Int64(60),
 					},
 					UseImportedCerts: true,
-					HostedZone: template.HostedZoneToAliases{
+					HostedZoneAliases: template.AliasesForHostedZone{
 						"mockHostedZone": []string{"mockAlias"},
 					},
 					Aliases:             []string{"mockAlias"},
@@ -289,7 +289,7 @@ Outputs:
 						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 					},
 					UseImportedCerts: true,
-					HostedZone: template.HostedZoneToAliases{
+					HostedZoneAliases: template.AliasesForHostedZone{
 						"mockHostedZone": []string{"mockAlias"},
 					},
 					Aliases:           []string{"mockAlias"},

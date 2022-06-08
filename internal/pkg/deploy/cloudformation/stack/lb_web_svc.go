@@ -189,8 +189,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		}
 	}
 
-	hostedZoneToAliases := convertHostedZone(s.manifest.RoutingRule.RoutingRuleConfiguration)
-	if len(hostedZoneToAliases) != 0 && !s.certImported {
+	aliasesFor, err := convertHostedZone(s.manifest.RoutingRule.RoutingRuleConfiguration)
+	if err != nil {
+		return "", err
+	}
+	if len(aliasesFor) != 0 && !s.certImported {
 		return "", fmt.Errorf("cannot specify alias hosted zones when env certificates are managed by Copilot")
 	}
 
@@ -251,7 +254,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		HostedZone: hostedZoneToAliases,
+		HostedZoneAliases: aliasesFor,
 	})
 	if err != nil {
 		return "", err

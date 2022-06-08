@@ -116,28 +116,30 @@ func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.Con
 	}
 }
 
-func convertHostedZone(m manifest.RoutingRuleConfiguration) template.HostedZoneToAliases {
-	hostedZoneToAliases := make(map[string][]string)
+func convertHostedZone(m manifest.RoutingRuleConfiguration) (template.AliasesForHostedZone, error) {
+	aliasesFor := make(map[string][]string)
 	defaultHostedZone := m.HostedZone
-	for _, alias := range m.Alias.AdvancedAliases {
-		if alias.HostedZone != nil {
-			hostedZoneToAliases[*alias.HostedZone] = append(hostedZoneToAliases[*alias.HostedZone], *alias.Alias)
-			continue
+	if len(m.Alias.AdvancedAliases) != 0 {
+		for _, alias := range m.Alias.AdvancedAliases {
+			if alias.HostedZone != nil {
+				aliasesFor[*alias.HostedZone] = append(aliasesFor[*alias.HostedZone], *alias.Alias)
+				continue
+			}
+			if defaultHostedZone != nil {
+				aliasesFor[*defaultHostedZone] = append(aliasesFor[*defaultHostedZone], *alias.Alias)
+			}
 		}
-		if defaultHostedZone != nil {
-			hostedZoneToAliases[*defaultHostedZone] = append(hostedZoneToAliases[*defaultHostedZone], *alias.Alias)
-		}
+		return aliasesFor, nil
 	}
 	if defaultHostedZone == nil {
-		return hostedZoneToAliases
+		return aliasesFor, nil
 	}
-	for _, alias := range m.Alias.StringSliceOrString.StringSlice {
-		hostedZoneToAliases[*defaultHostedZone] = append(hostedZoneToAliases[*defaultHostedZone], alias)
+	aliases, err := m.Alias.ToStringSlice()
+	if err != nil {
+		return nil, err
 	}
-	if m.Alias.StringSliceOrString.String != nil {
-		hostedZoneToAliases[*defaultHostedZone] = append(hostedZoneToAliases[*defaultHostedZone], *m.Alias.StringSliceOrString.String)
-	}
-	return hostedZoneToAliases
+	aliasesFor[*defaultHostedZone] = aliases
+	return aliasesFor, nil
 }
 
 // convertDependsOn converts image and sidecar depends on fields to have upper case statuses.

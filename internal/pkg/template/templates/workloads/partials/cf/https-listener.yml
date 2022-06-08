@@ -21,7 +21,7 @@ LoadBalancerDNSAlias:
         HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
         DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
 {{- else}}
-{{- range $hostedZoneID, $aliases := .HostedZone}}
+{{- range $hostedZoneID, $aliases := .HostedZoneAliases}}
 LoadBalancerDNSAlias{{$hostedZoneID}}:
   Metadata:
     'aws:copilot:description': 'Alias records for the application load balancer in hosted zone {{$hostedZoneID}}'
