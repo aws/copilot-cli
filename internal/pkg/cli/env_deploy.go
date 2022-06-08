@@ -200,3 +200,27 @@ func (o *deployEnvOpts) cachedTargetApp() (*config.Application, error) {
 	}
 	return o.targetApp, nil
 }
+
+// buildEnvDeployCmd builds the command for deploying an environment given a manifest.
+func buildEnvDeployCmd() *cobra.Command {
+	vars := deployEnvVars{}
+	cmd := &cobra.Command{
+		Use:   "deploy",
+		Short: "Deploys an environment to an application.",
+		Long:  "Deploys an environment to an application.",
+		Example: `
+Deploy an environment named "test".
+/code $copilot env deploy --name test`,
+		Hidden: true,
+		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
+			opts, err := newEnvDeployOpts(vars)
+			if err != nil {
+				return err
+			}
+			return run(opts)
+		}),
+	}
+	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
+	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
+	return cmd
+}
