@@ -20,16 +20,17 @@ LoadBalancerDNSAlias:
       AliasTarget:
         HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
         DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-{{- else if .HostedZoneID}}
-LoadBalancerDNSAlias:
+{{- else}}
+{{- range $hostedZoneID, $aliases := .HostedZoneAliases}}
+LoadBalancerDNSAlias{{$hostedZoneID}}:
   Metadata:
-    'aws:copilot:description': 'Alias records for the application load balancer'
+    'aws:copilot:description': 'Alias records for the application load balancer in hosted zone {{$hostedZoneID}}'
   Type: AWS::Route53::RecordSetGroup
   Properties:
-    HostedZoneId: {{.HostedZoneID}}
-    Comment: !Sub "LoadBalancer alias for service ${WorkloadName}"
+    HostedZoneId: {{$hostedZoneID}}
+    Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone {{$hostedZoneID}}"
     RecordSets:
-    {{- range $alias := .Aliases}}
+    {{- range $alias := $aliases}}
       - Name: {{$alias}}
         Type: A
         AliasTarget:
@@ -41,6 +42,7 @@ LoadBalancerDNSAlias:
           DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
           {{- end}}
     {{- end}}
+{{- end}}
 {{- end}}
 
 HTTPSRulePriorityAction:
