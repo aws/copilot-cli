@@ -84,7 +84,6 @@ Route53 以外のドメインを所有している場合や、コンプライア
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
-After deploying a service to that environment, add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted.
 Environment に Service をデプロイした後、その Environment に作成した ALB （Application Load Balancer） の DNS を、エイリアスのドメインがホストされている場所に A レコードとして追加してください。
 
 ブログ記事にも[例](../../blogs/release-v118.ja.md#%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%81%AE%E3%82%A4%E3%83%B3%E3%83%9D%E3%83%BC%E3%83%88)を掲載しています。
