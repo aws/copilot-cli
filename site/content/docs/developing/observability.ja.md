@@ -1,18 +1,18 @@
 # 可観測性 (Observability)
 
 ## はじめに
-Copilot では、マニフェストにて以下のように設定することにより、Service のトレース収集を設定することができます。
+Copilot では、Manifest にて以下のように設定することにより、Service のトレース収集を設定することができます。
 ```yaml
 observability:
   tracing: awsxray
 ```
 
-[Request-Driven Web Services](../concepts/services.ja.md#request-driven-web-service) の場合、Copilot は App Runner に組み込まれた[トレース設定](https://docs.aws.amazon.com/ja_jp/apprunner/latest/dg/monitor-xray.html)を有効にします。
+[Request-Driven Web Service](../concepts/services.ja.md#request-driven-web-service) の場合、Copilot は App Runner に組み込まれた[トレース設定](https://docs.aws.amazon.com/ja_jp/apprunner/latest/dg/monitor-xray.html)を有効にします。
 
-[Load-Balanced Web Services](../concepts/services.ja.md#load-balanced-web-service)、[Backend Services](../concepts/services.ja.md#backend-service)、[Worker Services](../concepts/services.ja.md#worker-service) の場合、Copilot は AWS OpenTelemetry Collector を[サイドカー](./sidecars.ja.md)としてデプロイします。
+[Load-Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service)、[Backend Service](../concepts/services.ja.md#backend-service)、[Worker Service](../concepts/services.ja.md#worker-service) の場合、Copilot は AWS OpenTelemetry Collector を[サイドカー](./sidecars.ja.md)としてデプロイします。
 
 ## Service のインストルメント化
-テレメトリーデータを送信するための Service のインストルメント化は、[各言語毎のSDK](https://opentelemetry.io/docs/instrumentation/)で行います。サンプルは、OpenTelemetry のドキュメントでサポートされている各言語で提供されています。また、[AWS Distro for OpenTelemetry](https://aws-otel.github.io/docs/introduction) が提供するドキュメントやサンプルをご覧いただいたけます。
+テレメトリーデータを送信するための Service のインストルメント化は、[各言語毎の SDK](https://opentelemetry.io/docs/instrumentation/)で行います。サンプルは、OpenTelemetry のドキュメントでサポートされている各言語で提供されています。また、[AWS Distro for OpenTelemetry](https://aws-otel.github.io/docs/introduction) が提供するドキュメントやサンプルをご覧いただいたけます。
 
 ### アプリケーションの例
 
@@ -81,7 +81,7 @@ app.listen(port, () => {
 });
 ```
 
-これで、Copilot を使用してこの Service をデプロイし、マニフェストで observability を有効にすると、[この Service によって生成されたトレースを確認できます](#cloudwatch-%E3%81%A7%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92%E8%A1%A8%E7%A4%BA%E3%81%99%E3%82%8B)。
+これで、Copilot を使用してこの Service をデプロイし、Manifest で observability を有効にすると、[この Service によって生成されたトレースを確認できます](#cloudwatch-%E3%81%A7%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92%E8%A1%A8%E7%A4%BA%E3%81%99%E3%82%8B)。
 
 ### トレースログのインクルード
 !!!attention
