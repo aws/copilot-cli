@@ -191,7 +191,7 @@ func (s *BackendService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		HostedZoneID: s.manifest.RoutingRule.HostedZone,
+		HostedZone: convertHostedZone(s.manifest.RoutingRule),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

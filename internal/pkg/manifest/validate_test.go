@@ -336,6 +336,52 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "deployment"`,
 		},
+		"error if top level hosted zone is specified": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path:       stringP("/"),
+							HostedZone: aws.String("ABCD123"),
+							Alias: Alias{
+								StringSliceOrString: stringSliceOrString{
+									String: aws.String("mockAlias"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: errLBWSHostedZoneNotSupported,
+		},
+		"error if sub level hosted zone is specified": {
+			lbConfig: LoadBalancedWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfigOrBool{
+						RoutingRuleConfiguration: RoutingRuleConfiguration{
+							Path: stringP("/"),
+							Alias: Alias{
+								AdvancedAliases: []AdvancedAlias{
+									{
+										Alias:      aws.String("mockAlias"),
+										HostedZone: aws.String("ABCD123"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: errLBWSHostedZoneNotSupported,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -1331,6 +1377,19 @@ func TestRoutingRule_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `"alias" must be specified if "hosted_zone" is specified`,
 		},
+		"error if one of alias is not valid": {
+			RoutingRule: RoutingRuleConfiguration{
+				Path: stringP("/"),
+				Alias: Alias{
+					AdvancedAliases: []AdvancedAlias{
+						{
+							HostedZone: aws.String("mockHostedZone"),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "alias":`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -1414,12 +1473,13 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 				Aliases: Alias{
 					AdvancedAliases: []AdvancedAlias{
 						{
+							Alias:      aws.String("mockAlias"),
 							HostedZone: aws.String("mockHostedZone"),
 						},
 					},
 				},
 			},
-			wantedError: fmt.Errorf(`"alias.hosted_zone" is not supported for Network Load Balancer`),
+			wantedError: fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`),
 		},
 	}
 
@@ -1437,6 +1497,31 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 				return
 			}
 			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func TestAdvancedAlias_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     AdvancedAlias
+		wanted error
+	}{
+		"should return an error if name is not specified": {
+			in: AdvancedAlias{
+				HostedZone: aws.String("ABCD123"),
+			},
+			wanted: errors.New(`"name" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

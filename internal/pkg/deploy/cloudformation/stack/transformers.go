@@ -116,6 +116,21 @@ func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.Con
 	}
 }
 
+func convertHostedZone(m manifest.RoutingRuleConfiguration) template.HostedZoneToAliases {
+	hostedZoneToAliases := make(map[string][]string)
+	defaultHostedZone := m.HostedZone
+	for _, alias := range m.Alias.AdvancedAliases {
+		if alias.HostedZone != nil {
+			hostedZoneToAliases[*alias.HostedZone] = append(hostedZoneToAliases[*alias.HostedZone], *alias.Alias)
+			continue
+		}
+		if defaultHostedZone != nil {
+			hostedZoneToAliases[*defaultHostedZone] = append(hostedZoneToAliases[*defaultHostedZone], *alias.Alias)
+		}
+	}
+	return hostedZoneToAliases
+}
+
 // convertDependsOn converts image and sidecar depends on fields to have upper case statuses.
 func convertDependsOn(d manifest.DependsOn) map[string]string {
 	if d == nil {
