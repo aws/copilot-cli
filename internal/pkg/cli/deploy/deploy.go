@@ -1368,7 +1368,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 			return err
 		}
-		return validateLBSvcAlias(d.lbMft.RoutingRule.Alias, d.app, d.env.Name)
+		return validateLBWSAlias(d.lbMft.RoutingRule.Alias, d.app, d.env.Name)
 	}
 	log.Errorf(ecsALBAliasUsedWithoutDomainFriendlyText)
 	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)
@@ -1389,10 +1389,10 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		logAppVersionOutdatedError(aws.StringValue(d.lbMft.Name))
 		return err
 	}
-	return validateLBSvcAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name)
+	return validateLBWSAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name)
 }
 
-func validateLBSvcAlias(aliases manifest.Alias, app *config.Application, envName string) error {
+func validateLBWSAlias(aliases manifest.Alias, app *config.Application, envName string) error {
 	if aliases.IsEmpty() {
 		return nil
 	}
