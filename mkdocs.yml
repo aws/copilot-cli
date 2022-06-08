@@ -50,6 +50,7 @@ nav:
       - Container Environment Variables: docs/developing/environment-variables.en.md
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Domain: docs/developing/domain.en.md
+      - Internal ALBs: docs/developing/internal-albs.en.md
       - Manifest Environment Variables: docs/developing/manifest-env-var.en.md
       - Observability: docs/developing/observability.en.md
       - Publish/Subscribe: docs/developing/publish-subscribe.en.md
