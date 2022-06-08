@@ -178,6 +178,8 @@ func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProv
 	return cps
 }
 
+// convertCooldown converts a service manifest cooldown struct into a format parsable
+// by the templates pkg.
 func convertCooldown(c manifest.Cooldown) *template.Cooldown {
 	if c.IsEmpty() {
 		return nil
@@ -198,7 +200,7 @@ func convertCooldown(c manifest.Cooldown) *template.Cooldown {
 }
 
 // convertScalingCooldown handles the logic of converting generalized and specific coodlowns set
-// into the scaling cooldown used in the Auto Scaling configuration
+// into the scaling cooldown used in the Auto Scaling configuration.
 func convertScalingCooldown(specCooldown, genCooldown manifest.Cooldown) *template.Cooldown {
 	cooldown := convertCooldown(genCooldown)
 
