@@ -235,16 +235,34 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 	)
 
 	// Write from generalized cooldown first
-	generalCooldown := convertCooldown(a.Cooldown)
-	CPUCooldown = generalCooldown
-	MemCooldown = generalCooldown
+	if generalCooldown := convertCooldown(a.Cooldown); generalCooldown != nil {
+		CPUCooldown = generalCooldown
+		MemCooldown = generalCooldown
+	}
 
 	// If both generalized cooldown and specific cooldowns are specified, cooldown is overwritten by lower level config
-	if cooldown := convertCooldown(a.CPU.ScalingConfig.Cooldown); cooldown != nil {
-		CPUCooldown = cooldown
+	if specCPUCooldown := convertCooldown(a.CPU.ScalingConfig.Cooldown); specCPUCooldown != nil {
+		if CPUCooldown == nil {
+			CPUCooldown = &template.Cooldown{}
+		}
+		if specCPUCooldown.ScaleInCooldown != nil {
+			CPUCooldown.ScaleInCooldown = specCPUCooldown.ScaleInCooldown
+		}
+		if specCPUCooldown.ScaleOutCooldown != nil {
+			CPUCooldown.ScaleOutCooldown = specCPUCooldown.ScaleOutCooldown
+		}
 	}
-	if cooldown := convertCooldown(a.Memory.ScalingConfig.Cooldown); cooldown != nil {
-		MemCooldown = cooldown
+
+	if specMemCooldown := convertCooldown(a.Memory.ScalingConfig.Cooldown); specMemCooldown != nil {
+		if MemCooldown == nil {
+			MemCooldown = &template.Cooldown{}
+		}
+		if specMemCooldown.ScaleInCooldown != nil {
+			MemCooldown.ScaleInCooldown = specMemCooldown.ScaleInCooldown
+		}
+		if specMemCooldown.ScaleOutCooldown != nil {
+			MemCooldown.ScaleOutCooldown = specMemCooldown.ScaleOutCooldown
+		}
 	}
 
 	autoscalingOpts.CPUCooldown = CPUCooldown

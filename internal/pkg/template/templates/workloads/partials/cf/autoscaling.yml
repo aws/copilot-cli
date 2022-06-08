@@ -113,8 +113,21 @@ AutoScalingPolicyECSServiceAverageCPUUtilization:
     TargetTrackingScalingPolicyConfiguration:
       PredefinedMetricSpecification:
         PredefinedMetricType: ECSServiceAverageCPUUtilization
+      {{if .Autoscaling.CPUCooldown}}
+      {{- if .Autoscaling.CPUCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{.Autoscaling.CPUCooldown.ScaleInCooldown}}
+      {{- else}}
+      ScaleInCooldown: 120
+      {{- end}}
+      {{- if .Autoscaling.CPUCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{.Autoscaling.CPUCooldown.ScaleOutCooldown}}
+      {{- else}}
+      ScaleOutCooldown: 60
+      {{- end}}
+      {{else}}
       ScaleInCooldown: 120
       ScaleOutCooldown: 60
+      {{end}}
       TargetValue: {{.Autoscaling.CPU}}
 {{- end}}
 {{if .Autoscaling.Memory}}
@@ -127,8 +140,21 @@ AutoScalingPolicyECSServiceAverageMemoryUtilization:
     TargetTrackingScalingPolicyConfiguration:
       PredefinedMetricSpecification:
         PredefinedMetricType: ECSServiceAverageMemoryUtilization
+      {{if .Autoscaling.MemCooldown}}
+      {{- if .Autoscaling.MemCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{.Autoscaling.MemCooldown.ScaleInCooldown}}
+      {{- else}}
+      ScaleInCooldown: 120
+      {{- end}}
+      {{- if .Autoscaling.MemCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{.Autoscaling.MemCooldown.ScaleOutCooldown}}
+      {{- else}}
+      ScaleOutCooldown: 60
+      {{- end}}
+      {{else}}
       ScaleInCooldown: 120
       ScaleOutCooldown: 60
+      {{end}}
       TargetValue: {{.Autoscaling.Memory}}
 {{- end}}
 {{- if .Autoscaling.QueueDelay }}
