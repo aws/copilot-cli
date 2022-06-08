@@ -128,6 +128,15 @@ func convertHostedZone(m manifest.RoutingRuleConfiguration) template.HostedZoneT
 			hostedZoneToAliases[*defaultHostedZone] = append(hostedZoneToAliases[*defaultHostedZone], *alias.Alias)
 		}
 	}
+	if defaultHostedZone == nil {
+		return hostedZoneToAliases
+	}
+	for _, alias := range m.Alias.StringSliceOrString.StringSlice {
+		hostedZoneToAliases[*defaultHostedZone] = append(hostedZoneToAliases[*defaultHostedZone], alias)
+	}
+	if m.Alias.StringSliceOrString.String != nil {
+		hostedZoneToAliases[*defaultHostedZone] = append(hostedZoneToAliases[*defaultHostedZone], *m.Alias.StringSliceOrString.String)
+	}
 	return hostedZoneToAliases
 }
 

@@ -336,52 +336,6 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "deployment"`,
 		},
-		"error if top level hosted zone is specified": {
-			lbConfig: LoadBalancedWebService{
-				Workload: Workload{
-					Name: aws.String("mockName"),
-				},
-				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path:       stringP("/"),
-							HostedZone: aws.String("ABCD123"),
-							Alias: Alias{
-								StringSliceOrString: stringSliceOrString{
-									String: aws.String("mockAlias"),
-								},
-							},
-						},
-					},
-				},
-			},
-			wantedError: errLBWSHostedZoneNotSupported,
-		},
-		"error if sub level hosted zone is specified": {
-			lbConfig: LoadBalancedWebService{
-				Workload: Workload{
-					Name: aws.String("mockName"),
-				},
-				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					ImageConfig: testImageConfig,
-					RoutingRule: RoutingRuleConfigOrBool{
-						RoutingRuleConfiguration: RoutingRuleConfiguration{
-							Path: stringP("/"),
-							Alias: Alias{
-								AdvancedAliases: []AdvancedAlias{
-									{
-										Alias:      aws.String("mockAlias"),
-										HostedZone: aws.String("ABCD123"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			wantedError: errLBWSHostedZoneNotSupported,
-		},
 	}
 
 	for name, tc := range testCases {

@@ -387,6 +387,19 @@ Resources: # If a bucket URL is specified, that means the template exists.
                 Action:
                   - elasticloadbalancing:DescribeRules
                 Resource: "*"
+  LoadBalancerDNSAliasmockHostedZone:
+    Metadata:
+      'aws:copilot:description': 'Alias records for the application load balancer in hosted zone mockHostedZone'
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: mockHostedZone
+      Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone mockHostedZone"
+      RecordSets:
+        - Name: example.com
+          Type: A
+          AliasTarget:
+            HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
+            DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
   HTTPSRulePriorityAction:
     Metadata:
       'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
