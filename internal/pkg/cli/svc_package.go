@@ -137,7 +137,7 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
-		deployer, err = clideploy.NewLBDeployer(&in)
+		deployer, err = clideploy.NewLBWSDeployer(&in)
 	case *manifest.BackendService:
 		deployer, err = clideploy.NewBackendDeployer(&in)
 	case *manifest.RequestDrivenWebService:

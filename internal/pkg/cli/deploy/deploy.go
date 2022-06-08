@@ -295,8 +295,8 @@ type lbWebSvcDeployer struct {
 	lbMft                  *manifest.LoadBalancedWebService
 }
 
-// NewLBDeployer is the constructor for lbWebSvcDeployer.
-func NewLBDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
+// NewLBWSDeployer is the constructor for lbWebSvcDeployer.
+func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 	svcDeployer, err := newSvcDeployer(in)
 	if err != nil {
 		return nil, err
