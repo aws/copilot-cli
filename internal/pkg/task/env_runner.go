@@ -170,5 +170,5 @@ func (r *EnvRunner) CheckNonZeroExitCode(tasks []*Task) error {
 	for idx, task := range tasks {
 		taskARNs[idx] = task.TaskARN
 	}
-	return r.NonZeroExitCodeGetter.NonZeroExitCode(taskARNs, r.GroupName, cluster)
+	return r.NonZeroExitCodeGetter.HasNonZeroExitCode(taskARNs, cluster)
 }

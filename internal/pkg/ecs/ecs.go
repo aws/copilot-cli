@@ -467,27 +467,31 @@ func (c Client) stateMachineARN(app, env, job string) (string, error) {
 	return stateMachineARN, nil
 }
 
-// NonZeroExitCode returns the non zero exit code of the task if any.
-func (c Client) NonZeroExitCode(taskARNs []string, groupName string, cluster string) error {
-	essentialContainers := make(map[string]bool)
-	taskDefName := fmt.Sprintf("copilot-%s", groupName)
-	taskDefinition, err := c.ecsClient.TaskDefinition(taskDefName)
+// HasNonZeroExitCode returns an error if at least one of the tasks exited with a non-zero exit code. It assumes that all tasks are built on the same task definition.
+func (c Client) HasNonZeroExitCode(taskARNs []string, cluster string) error {
+	tasks, err := c.ecsClient.DescribeTasks(cluster, taskARNs)
 	if err != nil {
-		return fmt.Errorf("get task definition %s: %w", taskDefName, err)
-	}
-	for _, container := range taskDefinition.ContainerDefinitions {
-		if aws.BoolValue(container.Essential) {
-			essentialContainers[aws.StringValue(container.Name)] = true
-		}
+		return err
 	}
 
-	describedTasks, describeErr := c.ecsClient.DescribeTasks(cluster, taskARNs)
-	if describeErr != nil {
-		return describeErr
+	if len(tasks) == 0 {
+		return fmt.Errorf("describe tasks: none of the tasks %s exist", strings.Join(taskARNs, ","))
 	}
-	for _, describedTask := range describedTasks {
+
+	taskDefinitonARN := aws.StringValue(tasks[0].TaskDefinitionArn)
+	taskDefinition, err := c.ecsClient.TaskDefinition(taskDefinitonARN)
+	if err != nil {
+		return fmt.Errorf("get task definition %s: %w", taskDefinitonARN, err)
+	}
+
+	isContainerEssential := make(map[string]bool)
+	for _, container := range taskDefinition.ContainerDefinitions {
+		isContainerEssential[aws.StringValue(container.Name)] = aws.BoolValue(container.Essential)
+	}
+
+	for _, describedTask := range tasks {
 		for _, container := range describedTask.Containers {
-			if essentialContainers[aws.StringValue(container.Name)] && aws.Int64Value(container.ExitCode) > 0 {
+			if isContainerEssential[aws.StringValue(container.Name)] && aws.Int64Value(container.ExitCode) > 0 {
 				taskID, err := ecs.TaskID(aws.StringValue(describedTask.TaskArn))
 				if err != nil {
 					return err

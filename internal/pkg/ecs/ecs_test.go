@@ -1356,7 +1356,7 @@ func Test_NetworkConfigurationForJob(t *testing.T) {
 	}
 }
 
-func Test_CheckNonZeroExitCode(t *testing.T) {
+func Test_HasNonZeroExitCode(t *testing.T) {
 	testCases := map[string]struct {
 		inTaskARNs  []string
 		inGroupName string
@@ -1367,12 +1367,25 @@ func Test_CheckNonZeroExitCode(t *testing.T) {
 	}{
 
 		"returns the non zero exit code of the essential container": {
-			inGroupName: "my-task",
-			inCluster:   "cluster-1",
-			inTaskARNs:  []string{"mockTask1"},
+			inCluster:  "cluster-1",
+			inTaskARNs: []string{"mockTask1"},
 			setupMocks: func(m clientMocks) {
 				gomock.InOrder(
-					m.ecsClient.EXPECT().TaskDefinition("copilot-my-task").Return(&ecs.TaskDefinition{
+					m.ecsClient.EXPECT().DescribeTasks("cluster-1", []string{"mockTask1"}).Return([]*ecs.Task{
+						{
+							TaskArn:           aws.String("arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d"),
+							TaskDefinitionArn: aws.String("arn:aws:ecs:us-west-2:1233454566:task-definition/CdkExampleStacknametaskdefinitionCA96DCAA:1"),
+							StoppedReason:     aws.String("Task failed to start"),
+							LastStatus:        aws.String("STOPPED"),
+							Containers: []*awsecs.Container{
+								{
+									Name:     aws.String("the-one-and-only-one-container"),
+									ExitCode: aws.Int64(1),
+								},
+							},
+						},
+					}, nil),
+					m.ecsClient.EXPECT().TaskDefinition("arn:aws:ecs:us-west-2:1233454566:task-definition/CdkExampleStacknametaskdefinitionCA96DCAA:1").Return(&ecs.TaskDefinition{
 						ExecutionRoleArn: aws.String("execution-role"),
 						TaskRoleArn:      aws.String("task-role"),
 						ContainerDefinitions: []*awsecs.ContainerDefinition{
@@ -1401,19 +1414,6 @@ func Test_CheckNonZeroExitCode(t *testing.T) {
 							},
 						},
 					}, nil),
-					m.ecsClient.EXPECT().DescribeTasks("cluster-1", []string{"mockTask1"}).Return([]*ecs.Task{
-						{
-							TaskArn:       aws.String("arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d"),
-							StoppedReason: aws.String("Task failed to start"),
-							LastStatus:    aws.String("STOPPED"),
-							Containers: []*awsecs.Container{
-								{
-									Name:     aws.String("the-one-and-only-one-container"),
-									ExitCode: aws.Int64(1),
-								},
-							},
-						},
-					}, nil),
 				)
 			},
 			wantedError: fmt.Errorf("Container the-one-and-only-one-container in task 4082490ee6c245e09d2145010aa1ba8d exited with status code 1"),
@@ -1438,7 +1438,7 @@ func Test_CheckNonZeroExitCode(t *testing.T) {
 			}
 
 			// WHEN
-			err := client.NonZeroExitCode(tc.inTaskARNs, tc.inGroupName, tc.inCluster)
+			err := client.HasNonZeroExitCode(tc.inTaskARNs, tc.inCluster)
 
 			// THEN
 			if tc.wantedError != nil {

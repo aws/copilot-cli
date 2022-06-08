@@ -113,5 +113,5 @@ func (r *ConfigRunner) CheckNonZeroExitCode(tasks []*Task) error {
 	for idx, task := range tasks {
 		taskARNs[idx] = task.TaskARN
 	}
-	return r.NonZeroExitCodeGetter.NonZeroExitCode(taskARNs, r.GroupName, r.Cluster)
+	return r.NonZeroExitCodeGetter.HasNonZeroExitCode(taskARNs, r.Cluster)
 }
