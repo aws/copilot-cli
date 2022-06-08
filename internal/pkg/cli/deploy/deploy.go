@@ -1017,7 +1017,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 	if err := d.validateALBRuntime(); err != nil {
 		return nil, err
 	}
-	if err := d.validateNLBWSRuntime(); err != nil {
+	if err := d.validateNLBRuntime(); err != nil {
 		return nil, err
 	}
 	var opts []stack.LoadBalancedWebServiceOption
@@ -1374,7 +1374,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)
 }
 
-func (d *lbWebSvcDeployer) validateNLBWSRuntime() error {
+func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 	if d.lbMft.NLBConfig.Aliases.IsEmpty() {
 		return nil
 	}
