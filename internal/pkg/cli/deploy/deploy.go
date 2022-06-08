@@ -283,11 +283,11 @@ func newSvcDeployer(in *WorkloadDeployerInput) (*svcDeployer, error) {
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
-func (lbSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+func (lbWebSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
 	return partitions.IsAvailableInRegion(awsecs.EndpointsID, region)
 }
 
-type lbSvcDeployer struct {
+type lbWebSvcDeployer struct {
 	*svcDeployer
 	appVersionGetter       versionGetter
 	aliasCertValidator     aliasCertValidator
@@ -295,8 +295,8 @@ type lbSvcDeployer struct {
 	lbMft                  *manifest.LoadBalancedWebService
 }
 
-// NewLBDeployer is the constructor for lbSvcDeployer.
-func NewLBDeployer(in *WorkloadDeployerInput) (*lbSvcDeployer, error) {
+// NewLBDeployer is the constructor for lbWebSvcDeployer.
+func NewLBDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 	svcDeployer, err := newSvcDeployer(in)
 	if err != nil {
 		return nil, err
@@ -322,7 +322,7 @@ func NewLBDeployer(in *WorkloadDeployerInput) (*lbSvcDeployer, error) {
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifest.LoadBalancedWebServiceType)
 	}
-	return &lbSvcDeployer{
+	return &lbWebSvcDeployer{
 		svcDeployer:            svcDeployer,
 		appVersionGetter:       versionGetter,
 		publicCIDRBlocksGetter: envDescriber,
@@ -508,7 +508,7 @@ func (d *workloadDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
-func (d *lbSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+func (d *lbWebSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 	out, err := d.workloadDeployer.UploadArtifacts()
 	if err != nil {
 		return nil, err
@@ -604,7 +604,7 @@ type GenerateCloudFormationTemplateOutput struct {
 }
 
 // GenerateCloudFormationTemplate genrates a CloudFormation template and parameters for a workload.
-func (d *lbSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
+func (d *lbWebSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
 	*GenerateCloudFormationTemplateOutput, error) {
 	output, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
@@ -614,7 +614,7 @@ func (d *lbSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormatio
 }
 
 // DeployWorkload deploys a load balanced web service using CloudFormation.
-func (d *lbSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
+func (d *lbWebSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
 	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
 	if err != nil {
 		return nil, err
@@ -1009,7 +1009,7 @@ type svcStackConfigurationOutput struct {
 	svcUpdater serviceForceUpdater
 }
 
-func (d *lbSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {
+func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
@@ -1343,7 +1343,7 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 	return nil
 }
 
-func (d *lbSvcDeployer) validateALBWSRuntime() error {
+func (d *lbWebSvcDeployer) validateALBWSRuntime() error {
 	if d.lbMft.RoutingRule.Alias.IsEmpty() {
 		if d.env.HasImportedCerts() {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
@@ -1374,7 +1374,7 @@ func (d *lbSvcDeployer) validateALBWSRuntime() error {
 	return fmt.Errorf("cannot specify http.alias when application is not associated with a domain and env %s doesn't import one or more certificates", d.env.Name)
 }
 
-func (d *lbSvcDeployer) validateNLBWSRuntime() error {
+func (d *lbWebSvcDeployer) validateNLBWSRuntime() error {
 	if d.lbMft.NLBConfig.Aliases.IsEmpty() {
 		return nil
 	}

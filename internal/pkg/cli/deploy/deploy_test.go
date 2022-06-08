@@ -177,7 +177,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				}).Times(len(crs))
 			},
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
-				return &lbSvcDeployer{
+				return &lbWebSvcDeployer{
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
@@ -839,7 +839,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			}
 			tc.mock(m)
 
-			deployer := lbSvcDeployer{
+			deployer := lbWebSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
 						name:           mockName,
