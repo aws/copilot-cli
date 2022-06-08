@@ -43,6 +43,10 @@ func TestRDWS(t *testing.T) {
 			},
 		},
 	}
+	wantedPaths := map[string]string{
+		"CustomDomainFunction":  "manual/scripts/custom-resources/customdomainfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
+		"EnvControllerFunction": "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
+	}
 
 	// WHEN
 	crs, err := RDWS(fakeFS)
@@ -60,17 +64,19 @@ func TestRDWS(t *testing.T) {
 
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		zipFile, err := cr.Zip()
-		require.NoError(t, err, "zipping the contents should not err")
-
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(zipFile)
+		size, err := buf.ReadFrom(cr.Zip())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
 
 		_, err = r.Open("index.js")
 		require.NoError(t, err, "an index.js file must be present in all custom resources")
+	}
+
+	// ensure artifact paths match.
+	for _, cr := range crs {
+		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
 	}
 }
 
@@ -95,6 +101,13 @@ func TestLBWS(t *testing.T) {
 			},
 		},
 	}
+	wantedPaths := map[string]string{
+		"DynamicDesiredCountFunction": "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
+		"EnvControllerFunction":       "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
+		"RulePriorityFunction":        "manual/scripts/custom-resources/rulepriorityfunction/1385d258950a50faf4b5cd7deeecbc4bcc79a0d41d631e3977cffa0332e6f0c6.zip",
+		"NLBCustomDomainFunction":     "manual/scripts/custom-resources/nlbcustomdomainfunction/8f7e392db9b10ae69816b92c0b1d501e0ceb630e029852ac8ea33a3c205f8e4c.zip",
+		"NLBCertValidatorFunction":    "manual/scripts/custom-resources/nlbcertvalidatorfunction/3b9f56301b50779e09a3495a6d7eadc42b4401f265d4cfb359543c1ad3f21769.zip",
+	}
 
 	// WHEN
 	crs, err := LBWS(fakeFS)
@@ -113,17 +126,19 @@ func TestLBWS(t *testing.T) {
 
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		zipFile, err := cr.Zip()
-		require.NoError(t, err, "zipping the contents should not err")
-
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(zipFile)
+		size, err := buf.ReadFrom(cr.Zip())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
 
 		_, err = r.Open("index.js")
 		require.NoError(t, err, "an index.js file must be present in all custom resources")
+	}
+
+	// ensure artifact paths match.
+	for _, cr := range crs {
+		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
 	}
 }
 
@@ -141,6 +156,11 @@ func TestWorker(t *testing.T) {
 				Buffer: bytes.NewBufferString("env controller"),
 			},
 		},
+	}
+	wantedPaths := map[string]string{
+		"DynamicDesiredCountFunction":      "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
+		"BacklogPerTaskCalculatorFunction": "manual/scripts/custom-resources/backlogpertaskcalculatorfunction/bc925d682cb47de9c65ed9cc5438ee51d9e2b9b39ca6b57bb9adda81b0091b30.zip",
+		"EnvControllerFunction":            "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
 	}
 
 	// WHEN
@@ -160,17 +180,19 @@ func TestWorker(t *testing.T) {
 
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		zipFile, err := cr.Zip()
-		require.NoError(t, err, "zipping the contents should not err")
-
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(zipFile)
+		size, err := buf.ReadFrom(cr.Zip())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
 
 		_, err = r.Open("index.js")
 		require.NoError(t, err, "an index.js file must be present in all custom resources")
+	}
+
+	// ensure artifact paths match.
+	for _, cr := range crs {
+		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
 	}
 }
 
@@ -188,6 +210,11 @@ func TestBackend(t *testing.T) {
 				Buffer: bytes.NewBufferString("env controller"),
 			},
 		},
+	}
+	wantedPaths := map[string]string{
+		"DynamicDesiredCountFunction": "manual/scripts/custom-resources/dynamicdesiredcountfunction/2611784f21e91e499306dac066aae5fd8f2ba664b38073bdd3198d2e041c076e.zip",
+		"EnvControllerFunction":       "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
+		"RulePriorityFunction":        "manual/scripts/custom-resources/rulepriorityfunction/1385d258950a50faf4b5cd7deeecbc4bcc79a0d41d631e3977cffa0332e6f0c6.zip",
 	}
 
 	// WHEN
@@ -207,17 +234,19 @@ func TestBackend(t *testing.T) {
 
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		zipFile, err := cr.Zip()
-		require.NoError(t, err, "zipping the contents should not err")
-
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(zipFile)
+		size, err := buf.ReadFrom(cr.Zip())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
 
 		_, err = r.Open("index.js")
 		require.NoError(t, err, "an index.js file must be present in all custom resources")
+	}
+
+	// ensure artifact paths match.
+	for _, cr := range crs {
+		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
 	}
 }
 
@@ -229,6 +258,9 @@ func TestScheduledJob(t *testing.T) {
 				Buffer: bytes.NewBufferString("env controller"),
 			},
 		},
+	}
+	wantedPaths := map[string]string{
+		"EnvControllerFunction": "manual/scripts/custom-resources/envcontrollerfunction/72297cacaeab3a267e371c17ea3f0235905b0da51410eb31c10f7c66ba944044.zip",
 	}
 
 	// WHEN
@@ -248,17 +280,19 @@ func TestScheduledJob(t *testing.T) {
 
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		zipFile, err := cr.Zip()
-		require.NoError(t, err, "zipping the contents should not err")
-
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(zipFile)
+		size, err := buf.ReadFrom(cr.Zip())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
 
 		_, err = r.Open("index.js")
 		require.NoError(t, err, "an index.js file must be present in all custom resources")
+	}
+
+	// ensure artifact paths match.
+	for _, cr := range crs {
+		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
 	}
 }
 
@@ -276,6 +310,11 @@ func TestEnv(t *testing.T) {
 				Buffer: bytes.NewBufferString("dns delegation"),
 			},
 		},
+	}
+	wantedPaths := map[string]string{
+		"CertificateValidationFunction": "manual/scripts/custom-resources/certificatevalidationfunction/ef49fd0cefe5525c1b98ab66614bfaebdf57dfa513a7de0d0677fc024b2f0a2b.zip",
+		"CustomDomainFunction":          "manual/scripts/custom-resources/customdomainfunction/01baf83827dca2ff7df3cdf24f6ad354b3fa4f9b7cda39b5bf91de378f81c791.zip",
+		"DNSDelegationFunction":         "manual/scripts/custom-resources/dnsdelegationfunction/17ec5f580cdb9c1d7c6b5b91decee031592547629a6bfed7cd33b9229f61ab19.zip",
 	}
 
 	// WHEN
@@ -295,17 +334,19 @@ func TestEnv(t *testing.T) {
 
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
-		zipFile, err := cr.Zip()
-		require.NoError(t, err, "zipping the contents should not err")
-
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(zipFile)
+		size, err := buf.ReadFrom(cr.Zip())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
 
 		_, err = r.Open("index.js")
 		require.NoError(t, err, "an index.js file must be present in all custom resources")
+	}
+
+	// ensure artifact paths match.
+	for _, cr := range crs {
+		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
 	}
 }
 
@@ -342,6 +383,7 @@ func TestUpload(t *testing.T) {
 			crs: []*CustomResource{
 				{
 					name: "fn1",
+					zip:  bytes.NewBufferString("hello"),
 				},
 			},
 			wantedErr: errors.New(`upload custom resource "fn1": some err`),
@@ -349,32 +391,18 @@ func TestUpload(t *testing.T) {
 		"should zip and upload all custom resources": {
 			s3: &fakeS3{
 				objects: map[string]string{
-					"manual/scripts/custom-resources/func1/5443a001ec68131761e20b0896fe49ade55c4162adf61ede27daa208b8fb150d.zip": "url1",
-					"manual/scripts/custom-resources/func2/18ef4a5e530a7a52d95d5426e41a4fc0c2bcd1b1febaf19cd05b324d07ef5547.zip": "url2",
+					"manual/scripts/custom-resources/func1/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.zip": "url1",
+					"manual/scripts/custom-resources/func2/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.zip": "url2",
 				},
 			},
 			crs: []*CustomResource{
 				{
 					name: "Func1",
-					files: []file{
-						{
-							name:    "hello.js",
-							content: []byte("hello"),
-						},
-						{
-							name:    "world.js",
-							content: []byte("world"),
-						},
-					},
+					zip:  new(bytes.Buffer),
 				},
 				{
 					name: "Func2",
-					files: []file{
-						{
-							name:    "index.js",
-							content: []byte("some code"),
-						},
-					},
+					zip:  new(bytes.Buffer),
 				},
 			},
 

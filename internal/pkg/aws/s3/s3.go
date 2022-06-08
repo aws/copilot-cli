@@ -155,6 +155,11 @@ func ParseURL(url string) (bucket string, key string, err error) {
 	return
 }
 
+// URL returns a virtual-hosted–style S3 url for the object stored at key in a bucket created in the specified region.
+func URL(region, bucket, key string) string {
+	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucket, region, key)
+}
+
 // FormatARN formats an S3 object ARN.
 // For example: arn:aws:s3:::stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3
 func FormatARN(partition, location string) string {
