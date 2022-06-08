@@ -17,13 +17,13 @@ Copilot v1.18 では、いくつかの新機能提供と改善が行われまし
 * **Pipeline での順序付け:** 継続的デリバリーの Pipeline において、Service や Job がデプロイされる順番を制御できるようになりました。[詳細はこちら](#pipeline-%E3%81%AB%E3%81%8A%E3%81%91%E3%82%8B%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%AE%E9%A0%86%E5%BA%8F%E3%82%92%E5%88%B6%E5%BE%A1%E3%81%99%E3%82%8B)をご覧ください。
 * **Pipeline の追加改善:** デプロイ順序の他に、Pipeline にデプロイする Service や Job を制限したり、Pipeline にカスタム CloudFormation スタックをデプロイすることができるようになりました。[詳細はこちら](#pipeline-%E3%81%AE%E8%BF%BD%E5%8A%A0%E6%94%B9%E5%96%84)をご覧ください。
 * **再デプロイの迅速化を実現する "recreate" 戦略:** "recreate" デプロイ戦略を指定することで、ECS が新しいタスクを開始する前に Service 内の古いタスクを停止するようになりました。[詳細はこちら](#%E5%86%8D%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%82%92%E5%8A%A0%E9%80%9F%E3%81%95%E3%81%9B%E3%82%8B-recreate-%E6%88%A6%E7%95%A5)をご覧ください。
-* **Load Balanced Web Service、Worker Service、Backend Service のトレース:** ECS タスクから AWS X-Ray にトレースを収集して出力するため、マニフェストに `observability.tracing` の設定を導入し、[AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) のサイドカーコンテナを追加しています。[詳細はこちら](#load-balanced-web-serviceworker-servicebackend-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9)をご覧ください。
+* **Load Balanced Web Service、Worker Service、Backend Service のトレース:** ECS タスクから AWS X-Ray にトレースを収集して出力するため、Manifest に `observability.tracing` の設定を導入し、[AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) のサイドカーコンテナを追加しています。[詳細はこちら](#load-balanced-web-serviceworker-servicebackend-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9)をご覧ください。
 
 ## AWS Copilot とは?
 
 AWS Copilot CLI は AWS 上でプロダクションレディなコンテナ化されたアプリケーションのビルド、リリース、そして運用のためのツールです。
 開発のスタートからステージング環境へのプッシュ、本番環境へのリリースまで、Copilot はアプリケーション開発ライフサイクル全体の管理を容易にします。
-Copilot の基礎となるのは、 AWS CloudFormation です。CloudFormation により、インプラストラクチャを 1 回の操作でコードとしてプロビジョニングできます。
+Copilot の基礎となるのは、 AWS CloudFormation です。CloudFormation により、インフラストラクチャを 1 回の操作でコードとしてプロビジョニングできます。
 Copilot は、さまざまなタイプのマイクロサービスの作成と運用の為に、事前定義された CloudFormation テンプレートと、ユーザーフレンドリーなワークフローを提供します。
 デプロイメントスクリプトを記述する代わりに、アプリケーションの開発に集中できます。
 
@@ -64,7 +64,7 @@ $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certifi
     ...
 }
 ```
-次に、[Load Balanced Web Service のマニフェスト](../docs/manifest/lb-web-service.ja.md)で、インポートされた証明書のいずれに対しても有効なエイリアスを指定する必要があります。
+次に、[Load Balanced Web Service の Manifest](../docs/manifest/lb-web-service.ja.md)で、インポートされた証明書のいずれに対しても有効なエイリアスを指定する必要があります。
 
 ```yaml
 name: frontend
@@ -74,7 +74,7 @@ http:
   alias: v1.example.com
 ```
 !!!attention
-    Service マニフェストに `http.alias` を指定することは、インポートされた証明書を持つ Environment に Service をデプロイするために必要です。デプロイ後、Environment に作成された Application Load Balancer (ALB) の DNS を、エイリアスドメインがホストされている場所に A レコードとして追加してください。例えば、エイリアスドメインが Route 53 でホストされている場合、
+    Service Manifest に `http.alias` を指定することは、インポートされた証明書を持つ Environment に Service をデプロイするために必要です。デプロイ後、Environment に作成された Application Load Balancer (ALB) の DNS を、エイリアスドメインがホストされている場所に A レコードとして追加してください。例えば、エイリアスドメインが Route 53 でホストされている場合、
 
 ???+ "Sample Route 53 A Record" の例
 ```json
@@ -138,7 +138,7 @@ stages:
       frontend:
         depends_on: [orders, warehouse]
 ```
-上記のマニフェストでは、`orders` と `warehouse` のService を `frontend` よりも先にデプロイすることを宣言しています。これは、下流の Service が受け入れる準備が整う前にクライアントが新しい API リクエストを送信できないようにするためです。Copilot はスタックをどの順番でデプロイすべきかを判断し、その結果、CodePipeline は次のようになります。
+上記の Manifest では、`orders` と `warehouse` のService を `frontend` よりも先にデプロイすることを宣言しています。これは、下流の Service が受け入れる準備が整う前にクライアントが新しい API リクエストを送信できないようにするためです。Copilot はスタックをどの順番でデプロイすべきかを判断し、その結果、CodePipeline は次のようになります。
 ![Rendered ordered pipeline](../assets/images/pipeline-ordered.png)
 
 ### Pipeline の追加改善
@@ -174,7 +174,7 @@ _Contributed by [Parag Bhingre](https://github.com/paragbhingre/)_
 !!!alert
     "recreate" によって Service が停止する可能性があるため、本番 Service での使用は**お勧めしません**。
 
-v1.18 より前のバージョンでは、Copilot ECS ベースのサービス（Load Balanced Web Service、Backend Service、Worker Service）の再デプロイでは常に新しいタスクをスピンアップし、それらが安定するのを待って古いタスクを停止していました。開発段階にある ECS ベースのサービスの高速な再デプロイをサポートするために、ユーザーは Service マニフェストでデプロイ戦略として `"recreate"` を指定することができます。
+v1.18 より前のバージョンでは、Copilot ECS ベースのサービス（Load Balanced Web Service、Backend Service、Worker Service）の再デプロイでは常に新しいタスクをスピンアップし、それらが安定するのを待って古いタスクを停止していました。開発段階にある ECS ベースのサービスの高速な再デプロイをサポートするために、ユーザーは Service Manifest でデプロイ戦略として `"recreate"` を指定することができます。
 
 ```yaml
 deployment:
@@ -186,13 +186,13 @@ Copilot は、新しいタスクを起動する前に古いタスクを停止す
 ## Load Balanced Web Service、Worker Service、Backend Service のトレース
 _Contributed by [Danny Randall](https://github.com/dannyrandall/)_
 
-[v1.17](./release-v117.ja.md#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92-aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B)で、Copilot は Request-Driven Web Services から [AWS X-Ray](https://aws.amazon.com/jp/xray/) にトレースを送信するサポートを開始しました。 Service のマニフェストで `observability` を設定することで、Load Balanced Web Service、Worker Service、Backend Service から X-Ray に簡単にトレースをエクスポートできるようになりました。
+[v1.17](./release-v117.ja.md#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92-aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B)で、Copilot は Request-Driven Web Service から [AWS X-Ray](https://aws.amazon.com/jp/xray/) にトレースを送信するサポートを開始しました。 Service Manifest で `observability` を設定することで、Load Balanced Web Service、Worker Service、Backend Service から X-Ray に簡単にトレースをエクスポートできるようになりました。
 ```yaml
 observability:
   tracing: awsxray
 ```
 
-これらのサービスタイプでは、Copilot は [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) サイドカーコンテナをデプロイして、Service からトレースを収集し、X-Ray にエクスポートします。トレースを送信するために [Service をインストルメント化](../docs/developing/observability.ja.md#instrumenting-your-service)した後、Application のデバッグとパフォーマンスの監視するために、Service を通してリクエストのエンドツーエンドの工程を表示することができます。
+これらのサービスタイプでは、Copilot は [AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) サイドカーコンテナをデプロイして、Service からトレースを収集し、X-Ray にエクスポートします。トレースを送信するために [Service をインストルメント化](../docs/developing/observability.ja.md#instrumenting-your-service)した後、Application のデバッグとパフォーマンスの監視するために、Service を通してエンドツーエンドでリクエストの実行状況を確認できます。
 
 ![X-Ray Service Map Example](https://user-images.githubusercontent.com/10566468/166986340-e3b7c0e2-c84d-4671-bf37-ba95bdb1d6b2.png)
 
