@@ -1014,7 +1014,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 	if err != nil {
 		return nil, err
 	}
-	if err := d.validateALBWSRuntime(); err != nil {
+	if err := d.validateALBRuntime(); err != nil {
 		return nil, err
 	}
 	if err := d.validateNLBWSRuntime(); err != nil {
@@ -1343,7 +1343,7 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 	return nil
 }
 
-func (d *lbWebSvcDeployer) validateALBWSRuntime() error {
+func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	if d.lbMft.RoutingRule.Alias.IsEmpty() {
 		if d.env.HasImportedCerts() {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
