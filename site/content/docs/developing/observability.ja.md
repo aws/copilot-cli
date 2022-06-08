@@ -12,7 +12,7 @@ observability:
 [Load-Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service)、[Backend Service](../concepts/services.ja.md#backend-service)、[Worker Service](../concepts/services.ja.md#worker-service) の場合、Copilot は AWS OpenTelemetry Collector を[サイドカー](./sidecars.ja.md)としてデプロイします。
 
 ## Service のインストルメント化
-テレメトリーデータを送信するための Service のインストルメント化は、[各言語毎の SDK](https://opentelemetry.io/docs/instrumentation/)で行います。サンプルは、OpenTelemetry のドキュメントでサポートされている各言語で提供されています。また、[AWS Distro for OpenTelemetry](https://aws-otel.github.io/docs/introduction) が提供するドキュメントやサンプルをご覧いただいたけます。
+テレメトリーデータを送信するための Service のインストルメント化 (訳注: 計装、 アプリケーションに計測のためのコードを追加すること) は、[各言語毎の SDK](https://opentelemetry.io/docs/instrumentation/)で行います。サンプルは、OpenTelemetry のドキュメントでサポートされている各言語で提供されています。また、[AWS Distro for OpenTelemetry](https://aws-otel.github.io/docs/introduction) が提供するドキュメントやサンプルをご覧いただいたけます。
 
 ### アプリケーションの例
 
