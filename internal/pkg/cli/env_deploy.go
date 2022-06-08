@@ -6,11 +6,19 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/cobra"
 )
 
 type deployEnvVars struct {
@@ -29,10 +37,10 @@ type deployEnvOpts struct {
 	sel wsEnvironmentSelector
 
 	// Dependencies to execute.
-	ws           wsEnvironmentReader
-	deployer     envDeployer
-	identity     identityService
-	interpolator interpolator
+	ws             wsEnvironmentReader
+	identity       identityService
+	interpolator   interpolator
+	newEnvDeployer func() (envDeployer, error)
 
 	// Cached variables.
 	targetApp *config.Application
@@ -40,6 +48,50 @@ type deployEnvOpts struct {
 
 	// Functions to facilitate testing.
 	unmarshalManifest func(in []byte) (*manifest.Environment, error)
+}
+
+func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("env deploy"))
+	defaultSess, err := sessProvider.Default()
+	if err != nil {
+		return nil, err
+	}
+	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("initiate a new environment deployer: %w", err)
+	}
+	opts := &deployEnvOpts{
+		deployEnvVars: vars,
+
+		store: store,
+		sel:   selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
+
+		ws:           ws,
+		identity:     identity.New(defaultSess),
+		interpolator: manifest.NewInterpolator(vars.appName, vars.name),
+
+		unmarshalManifest: manifest.UnmarshalEnvironment,
+	}
+	opts.newEnvDeployer = func() (envDeployer, error) {
+		app, err := opts.cachedTargetApp()
+		if err != nil {
+			return nil, err
+		}
+		env, err := opts.cachedTargetEnv()
+		if err != nil {
+			return nil, err
+		}
+		return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
+			App:             app,
+			Env:             env,
+			SessionProvider: sessProvider,
+		})
+	}
+	return opts, nil
 }
 
 // Validate is a no-op for this command.
@@ -69,11 +121,15 @@ func (o *deployEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
-	urls, err := o.deployer.UploadArtifacts()
+	deployer, err := o.newEnvDeployer()
+	if err != nil {
+		return err
+	}
+	urls, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload artifacts for environment %s: %w", o.name, err)
 	}
-	if err := o.deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
+	if err := deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
 		RootUserARN:         caller.RootUserARN,
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
