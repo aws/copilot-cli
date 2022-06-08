@@ -28,6 +28,9 @@ Import Existing Resources Flags
       --import-private-subnets strings   Optional. Use existing private subnet IDs.
       --import-public-subnets strings    Optional. Use existing public subnet IDs.
       --import-vpc-id string             Optional. Use an existing VPC ID.
+      --internal-alb-subnets strings     Optional. Specify subnet IDs for an internal load balancer.
+                                         By default, the load balancer will be placed in your private subnets.
+                                         Cannot be specified with --default-config or any of the --override flags.
 
 Configure Default Resources Flags
       --override-az-names strings        Optional. Availability Zone names.
