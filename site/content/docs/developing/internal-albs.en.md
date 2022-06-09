@@ -11,7 +11,7 @@ The internal load balancer is an environment-level resource, to be shared among 
 
 ## Service
 
-The only service type that you can place behind an internal load balancer is a [Backend Service](https://aws.github.io/copilot-cli/docs/concepts/services/#backend-service). To tell Copilot to generate an internal ALB in the environment in which you deploy this service, add the `http` field to your Backend Service's workload manifest:
+The only service type that you can place behind an internal load balancer is a [Backend Service](../concepts/services.en.md#backend-service). To tell Copilot to generate an internal ALB in the environment in which you deploy this service, add the `http` field to your Backend Service's workload manifest:
 
 ```yaml
 # in copilot/{service name}/manifest.yml
