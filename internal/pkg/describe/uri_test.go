@@ -120,7 +120,6 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						Return([]string{"jobs.test.phonetool.com", "phonetool.com"}, nil),
 				)
 			},
-
 			wantedURI: "https://jobs.test.phonetool.com or https://phonetool.com",
 		},
 		"http web service": {
@@ -314,14 +313,10 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 
 func TestBackendServiceDescriber_URI(t *testing.T) {
 	const (
-		testApp          = "phonetool"
-		testEnv          = "test"
-		testSvc          = "my-svc"
-		testEnvSubdomain = "test.phonetool.com"
-		testEnvLBDNSName = "abc.us-west-1.elb.amazonaws.com"
-		testSvcPath      = "/"
-
-		testNLBDNSName = "def.us-west-2.elb.amazonaws.com"
+		testApp                = "phonetool"
+		testEnv                = "test"
+		testSvc                = "my-svc"
+		testEnvInternalDNSName = "abc.us-west-1.elb.amazonaws.internal"
 	)
 	testCases := map[string]struct {
 		setupMocks func(mocks lbWebSvcDescriberMocks)
@@ -347,6 +342,49 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 				m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.app.local", nil)
 			},
 			wantedURI: "my-svc.test.app.local:8080",
+		},
+		"internal url http": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						stack.WorkloadRulePathParamKey: "mySvc",
+					}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputInternalLoadBalancerDNSName: testEnvInternalDNSName,
+					}, nil),
+				)
+			},
+			wantedURI: "http://abc.us-west-1.elb.amazonaws.internal/mySvc",
+		},
+		"internal url https": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						stack.WorkloadRulePathParamKey: "/",
+						stack.WorkloadHTTPSParamKey:    "true",
+					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
+							Type:       svcStackResourceHTTPSListenerRuleResourceType,
+							PhysicalID: "mockRuleARN",
+						},
+					}, nil),
+					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
+						Return([]string{"jobs.test.phonetool.com", "phonetool.com"}, nil),
+				)
+			},
+			wantedURI: "https://jobs.test.phonetool.com or https://phonetool.com",
 		},
 	}
 	for name, tc := range testCases {
