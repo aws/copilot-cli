@@ -307,8 +307,5 @@ type serviceDiscovery struct {
 }
 
 func (s *serviceDiscovery) String() string {
-	if s.Service == "" && s.Endpoint == "" && s.Port == "" {
-		return ""
-	}
 	return fmt.Sprintf(fmtSvcDiscoveryEndpointWithPort, s.Service, s.Endpoint, s.Port)
 }

@@ -47,17 +47,17 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
-					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(nil, mockErr),
+					m.ecsDescriber.EXPECT().Params().Return(nil, mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("get stack parameters for environment test: some error"),
+			wantedError: fmt.Errorf("retrieve service URI: get stack parameters for environment test: some error"),
 		},
 		"return error if fail to retrieve svc discovery endpoint": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
-					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(map[string]string{
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						cfnstack.WorkloadContainerPortParamKey: "80",
 						cfnstack.WorkloadTaskCountParamKey:     "1",
 						cfnstack.WorkloadTaskMemoryParamKey:    "512",
@@ -66,19 +66,22 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("", errors.New("some error")),
 				)
 			},
-			wantedError: fmt.Errorf("some error"),
+			wantedError: fmt.Errorf("retrieve service URI: retrieve service discovery endpoint for environment test: some error"),
 		},
 		"return error if fail to retrieve platform": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
+				params := map[string]string{
+					cfnstack.WorkloadContainerPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:     "1",
+					cfnstack.WorkloadTaskCPUParamKey:       "256",
+					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
-					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "5000",
-						cfnstack.WorkloadTaskCountParamKey:     "1",
-						cfnstack.WorkloadTaskCPUParamKey:       "256",
-						cfnstack.WorkloadTaskMemoryParamKey:    "512",
-					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(nil, errors.New("some error")),
 				)
@@ -87,15 +90,18 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		},
 		"return error if fail to retrieve environment variables": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
+				params := map[string]string{
+					cfnstack.WorkloadContainerPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:     "1",
+					cfnstack.WorkloadTaskCPUParamKey:       "256",
+					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
-					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:     "1",
-						cfnstack.WorkloadTaskMemoryParamKey:    "512",
-						cfnstack.WorkloadTaskCPUParamKey:       "256",
-					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -108,15 +114,18 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		},
 		"return error if fail to retrieve secrets": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
+				params := map[string]string{
+					cfnstack.WorkloadContainerPortParamKey: "80",
+					cfnstack.WorkloadTaskCountParamKey:     "1",
+					cfnstack.WorkloadTaskCPUParamKey:       "256",
+					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
-					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:     "1",
-						cfnstack.WorkloadTaskCPUParamKey:       "256",
-						cfnstack.WorkloadTaskMemoryParamKey:    "512",
-					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -137,15 +146,30 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		"success": {
 			shouldOutputResources: true,
 			setupMocks: func(m lbWebSvcDescriberMocks) {
+				testParams := map[string]string{
+					cfnstack.WorkloadContainerPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:     "1",
+					cfnstack.WorkloadTaskCPUParamKey:       "256",
+					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+				}
+				prodParams := map[string]string{
+					cfnstack.WorkloadContainerPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:     "2",
+					cfnstack.WorkloadTaskCPUParamKey:       "512",
+					cfnstack.WorkloadTaskMemoryParamKey:    "1024",
+				}
+				mockParams := map[string]string{
+					cfnstack.WorkloadContainerPortParamKey: "-1",
+					cfnstack.WorkloadTaskCountParamKey:     "2",
+					cfnstack.WorkloadTaskCPUParamKey:       "512",
+					cfnstack.WorkloadTaskMemoryParamKey:    "1024",
+				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
-					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "5000",
-						cfnstack.WorkloadTaskCountParamKey:     "1",
-						cfnstack.WorkloadTaskCPUParamKey:       "256",
-						cfnstack.WorkloadTaskMemoryParamKey:    "512",
-					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(testParams, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().Params().Return(testParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -165,12 +189,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							ValueFrom: "GH_WEBHOOK_SECRET",
 						},
 					}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "5000",
-						cfnstack.WorkloadTaskCountParamKey:     "2",
-						cfnstack.WorkloadTaskCPUParamKey:       "512",
-						cfnstack.WorkloadTaskMemoryParamKey:    "1024",
-					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().Return(prodParams, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().Params().Return(prodParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -190,12 +212,9 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							ValueFrom: "SHHHHHHHH",
 						},
 					}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "-1",
-						cfnstack.WorkloadTaskCountParamKey:     "2",
-						cfnstack.WorkloadTaskCPUParamKey:       "512",
-						cfnstack.WorkloadTaskMemoryParamKey:    "1024",
-					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
