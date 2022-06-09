@@ -87,6 +87,7 @@ type EnvOpts struct {
 	PublicImportedCertARNs   []string
 	PrivateImportedCertARNs  []string
 	CustomInternalALBSubnets []string
+	AllowVPCIngress          bool
 	Telemetry                *Telemetry
 
 	LatestVersion string

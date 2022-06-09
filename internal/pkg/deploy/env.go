@@ -32,6 +32,7 @@ type CreateEnvironmentInput struct {
 	AdjustVPCConfig      *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
 	ImportCertARNs       []string          // Optional configuration if users want to import certificates.
 	InternalALBSubnets   []string          // Optional configuration if users want to specify internal ALB placement.
+	AllowVPCIngress      bool              // Optional configuration to allow access to internal ALB from ports 80/443.
 	Telemetry            *config.Telemetry // Optional observability and monitoring configuration.
 	Mft                  *manifest.Environment
 

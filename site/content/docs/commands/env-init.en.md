@@ -30,6 +30,10 @@ Import Existing Resources Flags
       --import-vpc-id string             Optional. Use an existing VPC ID.
 
 Configure Default Resources Flags
+      --internal-alb-allow-vpc-ingress   Optional. Allow internal ALB ingress from ports 80 and 443.
+      --internal-alb-subnets strings     Optional. Specify subnet IDs for an internal load balancer.
+                                         By default, the load balancer will be placed in your private subnets.
+                                         Cannot be specified with --default-config or any of the --override flags.
       --override-az-names strings        Optional. Availability Zone names.
                                          (default 2 random AZs)
       --override-private-cidrs strings   Optional. CIDR to use for private subnets.
