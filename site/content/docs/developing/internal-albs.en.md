@@ -69,7 +69,7 @@ or multiple aliases, some of which use the top-level hosted zone:
 ```yaml
 http:
   hosted_zone: HostedZoneID1
-  aliases:
+  alias:
     - name: example.com
     - name: www.example.com
     - name: something-different.com
