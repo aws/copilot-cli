@@ -186,7 +186,7 @@ Resources:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateInternalALB
     Properties:
-      Description: Allow from within VPC on port 80
+      Description: Allow from within the VPC on port 80
       CidrIp: 0.0.0.0/0
       FromPort: 80
       ToPort: 80
@@ -198,7 +198,7 @@ Resources:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: ExportInternalHTTPSListener
     Properties:
-      Description: Allow from anyone on port 443
+      Description: Allow from within the VPC on port 443
       CidrIp: 0.0.0.0/0
       FromPort: 443
       ToPort: 443
