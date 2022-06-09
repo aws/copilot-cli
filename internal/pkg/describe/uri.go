@@ -16,7 +16,8 @@ import (
 type URIAccessType int
 
 const (
-	URIAccessTypeInternet URIAccessType = iota + 1
+	URIAccessTypeNone URIAccessType = iota
+	URIAccessTypeInternet
 	URIAccessTypeInternal
 	URIAccessTypeServiceDiscovery
 )
@@ -57,16 +58,16 @@ func NewReachableService(app, svc string, store ConfigStoreSvc) (ReachableServic
 func (d *LBWebServiceDescriber) URI(envName string) (string, URIAccessType, error) {
 	svcDescr, err := d.initECSServiceDescribers(envName)
 	if err != nil {
-		return "", 0, err
+		return "", URIAccessTypeNone, err
 	}
 	envDescr, err := d.initEnvDescribers(envName)
 	if err != nil {
-		return "", 0, err
+		return "", URIAccessTypeNone, err
 	}
 	var albEnabled, nlbEnabled bool
 	resources, err := svcDescr.ServiceStackResources()
 	if err != nil {
-		return "", 0, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
+		return "", URIAccessTypeNone, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
 	for _, resource := range resources {
 		if resource.LogicalID == svcStackResourceALBTargetGroupLogicalID {
@@ -89,7 +90,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, URIAccessType, erro
 		}
 		albURI, err := albDescr.uri()
 		if err != nil {
-			return "", 0, err
+			return "", URIAccessTypeNone, err
 		}
 		uri.albURI = albURI
 	}
@@ -97,7 +98,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, URIAccessType, erro
 	if nlbEnabled {
 		nlbURI, err := d.nlbURI(envName, svcDescr, envDescr)
 		if err != nil {
-			return "", 0, err
+			return "", URIAccessTypeNone, err
 		}
 		uri.nlbURI = nlbURI
 	}
@@ -145,15 +146,15 @@ func (d *LBWebServiceDescriber) nlbURI(envName string, svcDescr ecsDescriber, en
 func (d *BackendServiceDescriber) URI(envName string) (string, URIAccessType, error) {
 	svcDescr, err := d.initECSServiceDescribers(envName)
 	if err != nil {
-		return "", 0, err
+		return "", URIAccessTypeNone, err
 	}
 	envDescr, err := d.initEnvDescribers(envName)
 	if err != nil {
-		return "", 0, err
+		return "", URIAccessTypeNone, err
 	}
 	resources, err := svcDescr.ServiceStackResources()
 	if err != nil {
-		return "", 0, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
+		return "", URIAccessTypeNone, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
 	for _, res := range resources {
 		if res.LogicalID == svcStackResourceALBTargetGroupLogicalID {
@@ -167,23 +168,23 @@ func (d *BackendServiceDescriber) URI(envName string) (string, URIAccessType, er
 			}
 			albURI, err := albDescr.uri()
 			if err != nil {
-				return "", 0, err
+				return "", URIAccessTypeNone, err
 			}
-			return english.OxfordWordSeries(albURI.uris(), "or"), URIAccessTypeInternal, nil
+			return english.OxfordWordSeries(albURI.strings(), "or"), URIAccessTypeInternal, nil
 		}
 	}
 
 	svcStackParams, err := svcDescr.Params()
 	if err != nil {
-		return "", 0, fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
+		return "", URIAccessTypeNone, fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
 	port := svcStackParams[stack.WorkloadContainerPortParamKey]
 	if port == stack.NoExposedContainerPort {
-		return BlankServiceDiscoveryURI, 0, nil
+		return BlankServiceDiscoveryURI, URIAccessTypeNone, nil
 	}
 	endpoint, err := envDescr.ServiceDiscoveryEndpoint()
 	if err != nil {
-		return "", 0, fmt.Errorf("retrieve service discovery endpoint for environment %s: %w", envName, err)
+		return "", URIAccessTypeNone, fmt.Errorf("retrieve service discovery endpoint for environment %s: %w", envName, err)
 	}
 	s := serviceDiscovery{
 		Service:  d.svc,
@@ -248,12 +249,12 @@ func (d *albDescriber) uri() (albURI, error) {
 func (d *RDWebServiceDescriber) URI(envName string) (string, URIAccessType, error) {
 	describer, err := d.initAppRunnerDescriber(envName)
 	if err != nil {
-		return "", 0, err
+		return "", URIAccessTypeNone, err
 	}
 
 	serviceURL, err := describer.ServiceURL()
 	if err != nil {
-		return "", 0, fmt.Errorf("get outputs for service %s: %w", d.svc, err)
+		return "", URIAccessTypeNone, fmt.Errorf("get outputs for service %s: %w", d.svc, err)
 	}
 
 	return serviceURL, URIAccessTypeInternet, nil
@@ -277,14 +278,14 @@ type nlbURI struct {
 }
 
 func (u *LBWebServiceURI) String() string {
-	uris := u.albURI.uris()
+	uris := u.albURI.strings()
 	for _, dnsName := range u.nlbURI.DNSNames {
 		uris = append(uris, fmt.Sprintf("%s:%s", dnsName, u.nlbURI.Port))
 	}
 	return english.OxfordWordSeries(uris, "or")
 }
 
-func (u *albURI) uris() []string {
+func (u *albURI) strings() []string {
 	var uris []string
 	for _, dnsName := range u.DNSNames {
 		protocol := "http://"
