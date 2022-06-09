@@ -299,7 +299,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			}
 
 			// WHEN
-			actual, err := d.URI(testEnv)
+			actual, _, err := d.URI(testEnv)
 
 			// THEN
 			if tc.wantedError != nil {
@@ -375,7 +375,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 			}
 
 			// WHEN
-			actual, err := d.URI(testEnv)
+			actual, _, err := d.URI(testEnv)
 
 			// THEN
 			if tc.wantedError != nil {
@@ -441,7 +441,7 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 			}
 
 			// WHEN
-			actual, err := d.URI(testEnv)
+			actual, _, err := d.URI(testEnv)
 
 			// THEN
 			if tc.wantedError != nil {

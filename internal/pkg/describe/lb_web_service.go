@@ -134,7 +134,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		webServiceURI, err := d.URI(env)
+		webServiceURI, _, err := d.URI(env)
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service URI: %w", err)
 		}

@@ -54,19 +54,19 @@ func NewReachableService(app, svc string, store ConfigStoreSvc) (ReachableServic
 }
 
 // URI returns the LBWebServiceURI to identify this service uniquely given an environment name.
-func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
+func (d *LBWebServiceDescriber) URI(envName string) (string, URIAccessType, error) {
 	svcDescr, err := d.initECSServiceDescribers(envName)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	envDescr, err := d.initEnvDescribers(envName)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	var albEnabled, nlbEnabled bool
 	resources, err := svcDescr.ServiceStackResources()
 	if err != nil {
-		return "", fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
+		return "", 0, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
 	for _, resource := range resources {
 		if resource.LogicalID == svcStackResourceALBTargetGroupLogicalID {
@@ -89,7 +89,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 		}
 		albURI, err := albDescr.uri()
 		if err != nil {
-			return "", err
+			return "", 0, err
 		}
 		uri.albURI = albURI
 	}
@@ -97,12 +97,12 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 	if nlbEnabled {
 		nlbURI, err := d.nlbURI(envName, svcDescr, envDescr)
 		if err != nil {
-			return "", err
+			return "", 0, err
 		}
 		uri.nlbURI = nlbURI
 	}
 
-	return uri.String(), nil
+	return uri.String(), URIAccessTypeInternet, nil
 }
 
 func (d *LBWebServiceDescriber) nlbURI(envName string, svcDescr ecsDescriber, envDescr envDescriber) (nlbURI, error) {
@@ -245,18 +245,18 @@ func (d *albDescriber) uri() (albURI, error) {
 }
 
 // URI returns the WebServiceURI to identify this service uniquely given an environment name.
-func (d *RDWebServiceDescriber) URI(envName string) (string, error) {
+func (d *RDWebServiceDescriber) URI(envName string) (string, URIAccessType, error) {
 	describer, err := d.initAppRunnerDescriber(envName)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	serviceURL, err := describer.ServiceURL()
 	if err != nil {
-		return "", fmt.Errorf("get outputs for service %s: %w", d.svc, err)
+		return "", 0, fmt.Errorf("get outputs for service %s: %w", d.svc, err)
 	}
 
-	return serviceURL, nil
+	return serviceURL, URIAccessTypeInternet, nil
 }
 
 // LBWebServiceURI represents the unique identifier to access a load balanced web service.
