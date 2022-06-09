@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/google/shlex"
 
@@ -44,7 +45,7 @@ var (
 
 	errUnmarshalExec       = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
 	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
-	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into string or slice of strings`)
+	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into advanced alias map, string, or slice of strings`)
 	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
 )
 
@@ -57,6 +58,7 @@ func WorkloadTypes() []string {
 type WorkloadManifest interface {
 	ApplyEnv(envName string) (WorkloadManifest, error)
 	Validate() error
+	RequiredEnvironmentFeatures() []string
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
@@ -269,6 +271,10 @@ type stringSliceOrString struct {
 	StringSlice []string
 }
 
+func (s *stringSliceOrString) isEmpty() bool {
+	return s.String == nil && len(s.StringSlice) == 0
+}
+
 func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, value *yaml.Node) error {
 	if err := value.Decode(&s.StringSlice); err != nil {
 		switch err.(type) {
@@ -380,6 +386,13 @@ type NetworkConfig struct {
 // IsEmpty returns empty if the struct has all zero members.
 func (c *NetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
+}
+
+func (c *NetworkConfig) requiredEnvFeatures() []string {
+	if aws.StringValue((*string)(c.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
+		return []string{template.NATFeatureName}
+	}
+	return nil
 }
 
 // PlacementArgOrString represents where to place tasks.

@@ -34,7 +34,7 @@ Parameters:
     AllowedValues: [true, false]
   CreateInternalHTTPSListener:
     Type: String
-    AllowedValues: [ true, false ]
+    AllowedValues: [true, false]
   ServiceDiscoveryEndpoint:
     Type: String
 Conditions:
@@ -328,6 +328,30 @@ Resources:
       GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+  InternalLoadBalancerSecurityGroupIngressFromHttp:
+    Metadata:
+      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80 within the VPC'
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateInternalALB
+    Properties:
+      Description: Allow from within the VPC on port 80
+      CidrIp: 0.0.0.0/0
+      FromPort: 80
+      ToPort: 80
+      IpProtocol: tcp
+      GroupId: !Ref InternalLoadBalancerSecurityGroup
+  InternalLoadBalancerSecurityGroupIngressFromHttps:
+    Metadata:
+      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 443 within the VPC'
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: ExportInternalHTTPSListener
+    Properties:
+      Description: Allow from within the VPC on port 443
+      CidrIp: 0.0.0.0/0
+      FromPort: 443
+      ToPort: 443
+      IpProtocol: tcp
+      GroupId: !Ref InternalLoadBalancerSecurityGroup
   PublicLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'

@@ -263,7 +263,19 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		mockName     = "mockWkld"
 		mockS3Bucket = "mockBucket"
 	)
-	mockAliases := []string{"example.com", "foobar.com"}
+	mockMultiAliases := []manifest.AdvancedAlias{
+		{
+			Alias: aws.String("example.com"),
+		},
+		{
+			Alias: aws.String("foobar.com"),
+		},
+	}
+	mockAlias := []manifest.AdvancedAlias{
+		{
+			Alias: aws.String("mockAlias"),
+		},
+	}
 	mockCertARNs := []string{"mockCertARN"}
 	mockResources := &stack.AppRegionalResources{
 		S3Bucket: mockS3Bucket,
@@ -314,14 +326,14 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				},
 			},
 			inAliases: manifest.Alias{
-				StringSlice: mockAliases,
+				AdvancedAliases: mockMultiAliases,
 			},
 			inApp: &config.Application{
 				Name: mockAppName,
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockValidator.EXPECT().ValidateCertAliases(mockAliases, mockCertARNs).Return(mockError)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(mockError)
 			},
 			wantErr: fmt.Errorf("validate aliases against the imported certificate for env mockEnv: some error"),
 		},
@@ -343,7 +355,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			wantErr: fmt.Errorf("get public CIDR blocks information from the VPC of environment mockEnv: some error"),
 		},
 		"alias used while app is not associated with a domain": {
-			inAliases: manifest.Alias{String: aws.String("mockAlias")},
+			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -359,7 +371,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		"nlb alias used while app is not associated with a domain": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
 				Port:    aws.String("80"),
-				Aliases: manifest.Alias{String: aws.String("mockAlias")},
+				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -374,10 +386,10 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			wantErr: errors.New("cannot specify nlb.alias when application is not associated with a domain"),
 		},
 		"nlb alias used while env has imported certs": {
-			inAliases: manifest.Alias{String: aws.String("mockAlias")},
+			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
 				Port:    aws.String("80"),
-				Aliases: manifest.Alias{String: aws.String("mockAlias")},
+				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -396,7 +408,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			wantErr: errors.New("cannot specify nlb.alias when env mockEnv imports one or more certificates"),
 		},
 		"fail to get app version": {
-			inAliases: manifest.Alias{String: aws.String("mockAlias")},
+			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -412,7 +424,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
 		},
 		"fail to enable https alias because of incompatible app version": {
-			inAliases: manifest.Alias{String: aws.String("mockAlias")},
+			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -430,7 +442,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		"fail to enable nlb alias because of incompatible app version": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
 				Port:    aws.String("80"),
-				Aliases: manifest.Alias{String: aws.String("mockAlias")},
+				Aliases: manifest.Alias{AdvancedAliases: mockAlias},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -447,7 +459,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			wantErr: fmt.Errorf("alias is not compatible with application versions below %s", deploy.AliasLeastAppTemplateVersion),
 		},
 		"fail to enable https alias because of invalid alias": {
-			inAliases: manifest.Alias{String: aws.String("v1.v2.mockDomain")},
+			inAliases: manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
+				{Alias: aws.String("v1.v2.mockDomain")},
+			}},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -464,8 +478,10 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"fail to enable nlb alias because of invalid alias": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
-				Port:    aws.String("80"),
-				Aliases: manifest.Alias{String: aws.String("v1.v2.mockDomain")},
+				Port: aws.String("80"),
+				Aliases: manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
+					{Alias: aws.String("v1.v2.mockDomain")},
+				}},
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -606,7 +622,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 		"success": {
 			inAliases: manifest.Alias{
-				StringSlice: mockAliases,
+				AdvancedAliases: mockMultiAliases,
 			},
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -621,7 +637,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockValidator.EXPECT().ValidateCertAliases(mockAliases, mockCertARNs).Return(nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
 			},
 		},
@@ -1142,7 +1158,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				BackendServiceConfig: manifest.BackendServiceConfig{
 					RoutingRule: manifest.RoutingRuleConfiguration{
 						Alias: manifest.Alias{
-							String: aws.String("go.dev"),
+							AdvancedAliases: []manifest.AdvancedAlias{
+								{Alias: aws.String("go.dev")},
+							},
 						},
 					},
 				},
@@ -1166,7 +1184,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				BackendServiceConfig: manifest.BackendServiceConfig{
 					RoutingRule: manifest.RoutingRuleConfiguration{
 						Alias: manifest.Alias{
-							String: aws.String("go.dev"),
+							AdvancedAliases: []manifest.AdvancedAlias{
+								{Alias: aws.String("go.dev")},
+							},
 						},
 					},
 				},
@@ -1191,7 +1211,9 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 				BackendServiceConfig: manifest.BackendServiceConfig{
 					RoutingRule: manifest.RoutingRuleConfiguration{
 						Alias: manifest.Alias{
-							String: aws.String("go.dev"),
+							AdvancedAliases: []manifest.AdvancedAlias{
+								{Alias: aws.String("go.dev")},
+							},
 						},
 					},
 				},
