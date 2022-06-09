@@ -35,7 +35,7 @@ Workload subnet placement can be modified using the [`network.vpc.placement`](..
 
 ###  Load Balancers and DNS
 
-If you set up a Load Balanced Web Service or Backend Service with the `http` field in its manifest, Copilot will set up an internet-facing Application Load Balancer, to be shared among all load-balanced services within that environment. Your load balancer is allowed to communicate with other Copilot services in your VPC.
+If you set up a Load Balanced Web Service or Backend Service with the `http` field in its manifest, Copilot will set up an Application Load Balancer, to be shared among all load-balanced services within that environment. Load Balanced Web Services' ALBs are internet-facing, while Backend Services' are internal. Your load balancer is allowed to communicate with other Copilot services in your VPC.
 
 Optionally, when you set up an application, you can provide a domain name that you own and is registered in Route 53. If you provide a domain name, each time you spin up an environment, Copilot will create a subdomain environment-name.app-name.your-domain.com, provision an ACM cert, and bind it to your Application Load Balancer so it can use HTTPS.
 
