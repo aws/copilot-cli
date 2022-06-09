@@ -1,21 +1,51 @@
-# AWS Copilot v1.19: Internal Load Balancers, Subnet Placement Specification, and More
+# AWS Copilot v1.19: Internal Load Balancers, Subnet Placement Specification, and more
 
-The AWS Copilot core team is excited to announce the v1.19 release.
+The AWS Copilot core team is excited to announce the v1.19 release!
 Special thanks to [@gautam-nutalapati](https://github.com/gautam-nutalapati) who contributed to this release.
 Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has nearly 300 people online,
 who help each other daily. Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.19 brings brand-new features and several improvements:
 
-* **Load Balancing for Backend Services:** You can now add an Application Load Balancer that is 'internal' (as opposed to 'internet-facing', like those created for Load Balanced Web Services). [See detailed section](./#internal-load-balancers).
-* **Allow disabling of Scheduled Jobs**:
-Easily toggle your Scheduled Job off by setting your schedule to "none" in your manifest, disabling the event rule. ([#3447](https://github.com/aws/copilot-cli/pull/3447))
+* **Load Balancing for Backend Services:** You can now add an Application Load Balancer that is **internal** (as opposed to 'internet-facing', like those created for Load Balanced Web Services). [See detailed section](./#internal-load-balancers).
+* **Subnet Placement Specification**:
+You now have even finer-grained control over where your ECS tasks are launched. Beyond `public` and `private` subnet placement, you can now tell Copilot specific subnets. Simply add the IDs of the desired subnets to your workload manifest.
 ```yaml
-on:
-schedule: "none"
+# in copilot/{service name}/manifest.yml
+network:
+  vpc:
+    placement:
+      subnets: ["SubnetID1", "SubnetID2"]
 ```
-* **Increased visibility for progress trackers:** Now progress trackers are showing more information, such as the creation of HTTP listener rules. ([#3430](https://github.com/aws/copilot-cli/pull/3430) & [#3432](https://github.com/aws/copilot-cli/pull/3432)).
-* **Bug fix:** Remove color formatting of suggested pipeline names ([#3437](https://github.com/aws/copilot-cli/pull/3437)).
+* **Hosted Zones–A Record Management**:
+You can now list, along with aliases, the IDs of hosted zones in your service manifest. Copilot will handle the insertion of A records upon deployment to an environment with imported certificates. ([#3608](https://github.com/aws/copilot-cli/pull/3608), [#3643](https://github.com/aws/copilot-cli/pull/3643))
+```yaml
+# single alias and hosted zone
+http:
+  alias: example.com
+  hosted_zone: HostedZoneID1
+
+# multiple aliases that share a hosted zone
+http:
+  alias: ["example.com", "www.example.com"]
+  hosted_zone: HostedZoneID1
+
+# multiple aliases, some of which use the top-level hosted zone
+http:
+  hosted_zone: HostedZoneID1
+  alias:
+    - name: example.com
+    - name: www.example.com
+    - name: something-different.com
+      hosted_zone: HostedZoneID2
+```
+* **Access to Created Private Route Tables**:
+Copilot now exports private route table IDs from CloudFormation environment stacks. Use them to create VPC gateway endpoints with [addons](../docs/developing/additional-aws-resources.en.md). ([#3611](https://github.com/aws/copilot-cli/pull/3611))
+
+* **Bug fixes:** 
+    * Preserve tags applied by `app init --resource-tags` when services are deleted from an application ([#3582](https://github.com/aws/copilot-cli/pull/3582))
+    * Fix regression when enabling autoscaling fields for Load Balanced Web Services with Network Load Balancers ([#3578](https://github.com/aws/copilot-cli/pull/3578))
+    * Enable `copilot svc exec` for Fargate Windows tasks ([#3566](https://github.com/aws/copilot-cli/pull/3566))
 
 There is no breaking change in this release.
 
@@ -30,28 +60,25 @@ enabling you to focus on developing your application, instead of writing deploym
 See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## Internal Load Balancers
-_Contributed by [Janice Huang](https://github.com/huanjani)and [Danny Randall](https://github.com/dannyrandall)_
+_Contributed by [Janice Huang](https://github.com/huanjani) and [Danny Randall](https://github.com/dannyrandall)_  
+By configuring a few things when you initiate your Copilot environment and workload, you can now create an [internal load balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internal-load-balancers.html), whose nodes have only private IP addresses.
 
-The private ALB is shared among all allowed services in the environment.
+The internal load balancer is an environment-level resource, to be shared among other permitted services. When you run `copilot env init`, you can import some specific resources to support the ALB. For services with `https` capability, use the [`--import-cert-arns`](../docs/commands/env-init.en.md#what-are-the-flags) flag to import the ARNs of your existing private certificates. If you'd like your ALB to receive ingress traffic within the environment VPC, use the [`--internal-alb-allow-vpc-ingress`](../docs/commands/env-init.en.md#what-are-the-flags) flag; otherwise, by default, access to the internal ALB will be limited to only Copilot-created services within the environment. For now, Copilot will associate imported certs with an internal ALB *only if* the environment's VPC has no public subnets, so import only private subnets.
 
-You can now send traces generated by your Request-Driven Web Services to AWS X-Ray. This allows you to visualize the service map and traces
-through the Amazon CloudWatch console or AWS X-Ray console.
+The only service type that you can place behind an internal load balancer is a [Backend Service](../docs/concepts/services.en.md#backend-service). To tell Copilot to generate an internal ALB in the environment in which you deploy this service, add the `http` field to your Backend Service's workload manifest:
 
-To use this feature, your service needs to be first instrumented with
-[AWS Distro for OpenTelemetry](https://aws.amazon.com/otel/?otel-blogs.sort-by=item.additionalFields.createdDate&otel-blogs.sort-order=desc).
-You can either [manually instrument](https://aws-otel.github.io/docs/getting-started/python-sdk/trace-manual-instr) your service,
-or for a quicker, easier set up, [auto-instrument](https://aws-otel.github.io/docs/getting-started/python-sdk/trace-auto-instr)
-your service through your Dockerfile without changing the application code.
-
-After instrumenting your service, simply modify your Request-Driven Web Service's manifest to include the [observability](../docs/manifest/rd-web-service.en.md#observability) configuration:
 ```yaml
-observability:
-tracing: awsxray
+# in copilot/{service name}/manifest.yml
+http:
+  path: '/'
+  network:
+    vpc:
+      placement: private
+  # for https
+  alias: example.aws
+  hosted_zone: Z0873220N255IR3MTNR4
 ```
-
-After running `copilot svc deploy`, traces generated by your service will get sent to AWS X-Ray, allowing you to measure
-the current state of your services easily.
-
+For more, read our documentation on [Internal ALBs](../docs/developing/internal-albs.en.md)!
 
 ## What’s next?
 
