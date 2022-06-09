@@ -34,10 +34,11 @@ func (e *Environment) HasImportedCerts() bool {
 
 // CustomizeEnv represents the custom environment config.
 type CustomizeEnv struct {
-	ImportVPC          *ImportVPC `json:"importVPC,omitempty"`
-	VPCConfig          *AdjustVPC `json:"adjustVPC,omitempty"`
-	ImportCertARNs     []string   `json:"importCertARNs,omitempty"`
-	InternalALBSubnets []string   `json:"internalALBSubnets,omitempty"`
+	ImportVPC                   *ImportVPC `json:"importVPC,omitempty"`
+	VPCConfig                   *AdjustVPC `json:"adjustVPC,omitempty"`
+	ImportCertARNs              []string   `json:"importCertARNs,omitempty"`
+	InternalALBSubnets          []string   `json:"internalALBSubnets,omitempty"`
+	EnableInternalALBVPCIngress bool       `json:"enableInternalALBVPCIngress,omitempty"`
 }
 
 // IsEmpty returns if CustomizeEnv is an empty struct.

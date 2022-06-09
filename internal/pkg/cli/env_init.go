@@ -148,6 +148,7 @@ type initEnvVars struct {
 	telemetry          telemetryVars // Configure observability and monitoring settings.
 	importCerts        []string      // Addtional existing ACM certificates to use.
 	internalALBSubnets []string      // Subnets to be used for internal ALB placement.
+	allowVPCIngress    bool          // True means the env stack will create ingress to the internal ALB from ports 80/443.
 
 	tempCreds tempCredsVars // Temporary credentials to initialize the environment. Mutually exclusive with the profile.
 	region    string        // The region to create the environment in.
@@ -325,10 +326,11 @@ func (o *initEnvOpts) Execute() error {
 	}
 	env.Prod = o.isProduction
 	customizedEnv := config.CustomizeEnv{
-		ImportVPC:          o.importVPCConfig(),
-		VPCConfig:          o.adjustVPCConfig(),
-		ImportCertARNs:     o.importCerts,
-		InternalALBSubnets: o.internalALBSubnets,
+		ImportVPC:                   o.importVPCConfig(),
+		VPCConfig:                   o.adjustVPCConfig(),
+		ImportCertARNs:              o.importCerts,
+		InternalALBSubnets:          o.internalALBSubnets,
+		EnableInternalALBVPCIngress: o.allowVPCIngress,
 	}
 	if !customizedEnv.IsEmpty() {
 		env.CustomConfig = &customizedEnv
@@ -724,6 +726,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 		ImportCertARNs:       o.importCerts,
 		InternalALBSubnets:   o.internalALBSubnets,
 		ImportVPCConfig:      o.importVPCConfig(),
+		AllowVPCIngress:      o.allowVPCIngress,
 		Telemetry:            o.telemetry.toConfig(),
 		Version:              deploy.LatestEnvTemplateVersion,
 	}
@@ -892,12 +895,13 @@ func buildEnvInitCmd() *cobra.Command {
 	cmd.Flags().StringSliceVar(&vars.importVPC.PublicSubnetIDs, publicSubnetsFlag, nil, publicSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importVPC.PrivateSubnetIDs, privateSubnetsFlag, nil, privateSubnetsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.importCerts, certsFlag, nil, certsFlagDescription)
-	cmd.Flags().StringSliceVar(&vars.internalALBSubnets, internalALBSubnetsFlag, nil, internalALBSubnetsFlagDescription)
 	cmd.Flags().IPNetVar(&vars.adjustVPC.CIDR, overrideVPCCIDRFlag, net.IPNet{}, overrideVPCCIDRFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.adjustVPC.AZs, overrideAZsFlag, nil, overrideAZsFlagDescription)
 	// TODO: use IPNetSliceVar when it is available (https://github.com/spf13/pflag/issues/273).
 	cmd.Flags().StringSliceVar(&vars.adjustVPC.PublicSubnetCIDRs, overridePublicSubnetCIDRsFlag, nil, overridePublicSubnetCIDRsFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.adjustVPC.PrivateSubnetCIDRs, overridePrivateSubnetCIDRsFlag, nil, overridePrivateSubnetCIDRsFlagDescription)
+	cmd.Flags().StringSliceVar(&vars.internalALBSubnets, internalALBSubnetsFlag, nil, internalALBSubnetsFlagDescription)
+	cmd.Flags().BoolVar(&vars.allowVPCIngress, allowVPCIngressFlag, false, allowVPCIngressFlagDescription)
 	cmd.Flags().BoolVar(&vars.defaultConfig, defaultConfigFlag, false, defaultConfigFlagDescription)
 
 	flags := pflag.NewFlagSet("Common", pflag.ContinueOnError)
@@ -915,12 +919,14 @@ func buildEnvInitCmd() *cobra.Command {
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(publicSubnetsFlag))
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(privateSubnetsFlag))
 	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(certsFlag))
-	resourcesImportFlags.AddFlag(cmd.Flags().Lookup(internalALBSubnetsFlag))
+
 	resourcesConfigFlags := pflag.NewFlagSet("Configure Default Resources", pflag.ContinueOnError)
 	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideVPCCIDRFlag))
 	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overrideAZsFlag))
 	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overridePublicSubnetCIDRsFlag))
 	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(overridePrivateSubnetCIDRsFlag))
+	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(internalALBSubnetsFlag))
+	resourcesConfigFlags.AddFlag(cmd.Flags().Lookup(allowVPCIngressFlag))
 
 	telemetryFlags := pflag.NewFlagSet("Telemetry", pflag.ContinueOnError)
 	telemetryFlags.AddFlag(cmd.Flags().Lookup(enableContainerInsightsFlag))
