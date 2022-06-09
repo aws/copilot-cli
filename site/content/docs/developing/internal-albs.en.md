@@ -1,6 +1,6 @@
 # Internal Application Load Balancers
 
-By default, the ALBs created for environments with Load Balanced Web Services are [internet-facing](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internet-facing-load-balancers.html). To create an [internal](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internal-load-balancers.html) load balancer whose nodes have only private IP addresses, you'll need to configure a few things when you initiate your environment and workload.
+By default, the ALBs created for environments with Load Balanced Web Services are [internet-facing](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internet-facing-load-balancers.html). To create an [internal load balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internal-load-balancers.html) whose nodes have only private IP addresses, you'll need to configure a few things when you initiate your environment and workload.
 
 ## Environment
 
