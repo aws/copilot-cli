@@ -126,7 +126,6 @@ func (s *BackendService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
-
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -135,19 +134,20 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	var aliases []string
 	if s.httpsEnabled {
 		if aliases, err = convertAlias(s.manifest.RoutingRule.Alias); err != nil {
 			return "", err
 		}
 	}
-
+	hostedZoneAliases, err := convertHostedZone(s.manifest.RoutingRule)
+	if err != nil {
+		return "", err
+	}
 	var deregistrationDelay *int64 = aws.Int64(60)
 	if s.manifest.RoutingRule.DeregistrationDelay != nil {
 		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
 	}
-
 	var allowedSourceIPs []string
 	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
@@ -191,7 +191,7 @@ func (s *BackendService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		HostedZoneID: s.manifest.RoutingRule.HostedZone,
+		HostedZoneAliases: hostedZoneAliases,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

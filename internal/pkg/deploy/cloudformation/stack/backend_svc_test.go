@@ -226,6 +226,7 @@ Outputs:
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
+					HostedZoneAliases: make(template.AliasesForHostedZone),
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: manifest.DefaultHealthCheckPath,
 						GracePeriod:     aws.Int64(manifest.DefaultHealthCheckGracePeriod),
@@ -337,6 +338,7 @@ Outputs:
 						Interval:           aws.Int64(61),
 						GracePeriod:        aws.Int64(60),
 					},
+					HostedZoneAliases:   make(template.AliasesForHostedZone),
 					DeregistrationDelay: aws.Int64(59),
 					AllowedSourceIps:    []string{"10.0.1.0/24"},
 					RulePriorityLambda:  "something",
@@ -541,6 +543,11 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			ParamsPath:          filepath.Join(testDir, "https-path-alias-params.json"),
 			EnvImportedCertARNs: []string{"exampleComCertARN"},
 		},
+		"http with autoscaling by requests configured": {
+			ManifestPath: filepath.Join(testDir, "http-autoscaling-manifest.yml"),
+			TemplatePath: filepath.Join(testDir, "http-autoscaling-template.yml"),
+			ParamsPath:   filepath.Join(testDir, "http-autoscaling-params.json"),
+		},
 	}
 
 	// run tests
@@ -595,6 +602,17 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			require.NoError(t, err)
 			var actualTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal([]byte(tmpl), &actualTmpl))
+
+			// change the random DynamicDesiredCountAction UpdateID to an expected value
+			if v, ok := actualTmpl["Resources"]; ok {
+				if v, ok := v.(map[string]any)["DynamicDesiredCountAction"]; ok {
+					if v, ok := v.(map[string]any)["Properties"]; ok {
+						if v, ok := v.(map[string]any); ok {
+							v["UpdateID"] = "AVeryRandomUUID"
+						}
+					}
+				}
+			}
 
 			var expectedTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal(tmplBytes, &expectedTmpl))

@@ -281,6 +281,74 @@ func TestBuildArgsOrStringTransformer_Transformer(t *testing.T) {
 	}
 }
 
+func TestAliasTransformer_Transformer(t *testing.T) {
+	testCases := map[string]struct {
+		original func(*Alias)
+		override func(*Alias)
+		wanted   func(*Alias)
+	}{
+		"advanced alias set to empty if string slice is not nil": {
+			original: func(a *Alias) {
+				a.AdvancedAliases = []AdvancedAlias{
+					{
+						Alias: aws.String("mockAlias"),
+					},
+				}
+			},
+			override: func(a *Alias) {
+				a.StringSliceOrString = stringSliceOrString{
+					StringSlice: []string{"mock", "string", "slice"},
+				}
+			},
+			wanted: func(a *Alias) {
+				a.StringSliceOrString.StringSlice = []string{"mock", "string", "slice"}
+			},
+		},
+		"StringSliceOrString set to empty if advanced alias is not nil": {
+			original: func(a *Alias) {
+				a.StringSliceOrString = stringSliceOrString{
+					StringSlice: []string{"mock", "string", "slice"},
+				}
+			},
+			override: func(a *Alias) {
+				a.AdvancedAliases = []AdvancedAlias{
+					{
+						Alias: aws.String("mockAlias"),
+					},
+				}
+			},
+			wanted: func(a *Alias) {
+				a.AdvancedAliases = []AdvancedAlias{
+					{
+						Alias: aws.String("mockAlias"),
+					},
+				}
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted Alias
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(aliasTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}
+
 func TestStringSliceOrStringTransformer_Transformer(t *testing.T) {
 	testCases := map[string]struct {
 		original func(s *stringSliceOrString)
@@ -574,7 +642,10 @@ func TestCountTransformer_Transformer(t *testing.T) {
 }
 
 func TestAdvancedCountTransformer_Transformer(t *testing.T) {
-	mockPerc := Percentage(80)
+	perc := Percentage(80)
+	mockConfig := ScalingConfigOrPercentage{
+		Value: &perc,
+	}
 	testCases := map[string]struct {
 		original func(a *AdvancedCount)
 		override func(a *AdvancedCount)
@@ -588,14 +659,14 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = &mockPerc
+				a.CPU = mockConfig
 				a.Requests = aws.Int(42)
 			},
 			wanted: func(a *AdvancedCount) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = &mockPerc
+				a.CPU = mockConfig
 				a.Requests = aws.Int(42)
 			},
 		},
@@ -604,7 +675,7 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
-				a.CPU = &mockPerc
+				a.CPU = mockConfig
 				a.Requests = aws.Int(42)
 			},
 			override: func(a *AdvancedCount) {
@@ -630,6 +701,62 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 
 			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(advancedCountTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}
+
+func TestScalingConfigOrPercentage_Transformer(t *testing.T) {
+	perc := Percentage(80)
+	mockConfig := AdvancedScalingConfig{
+		Value: &perc,
+	}
+	testCases := map[string]struct {
+		original func(s *ScalingConfigOrPercentage)
+		override func(s *ScalingConfigOrPercentage)
+		wanted   func(s *ScalingConfigOrPercentage)
+	}{
+		"advanced config value set to nil if percentage is not nil": {
+			original: func(s *ScalingConfigOrPercentage) {
+				s.ScalingConfig = mockConfig
+			},
+			override: func(s *ScalingConfigOrPercentage) {
+				s.Value = &perc
+			},
+			wanted: func(s *ScalingConfigOrPercentage) {
+				s.Value = &perc
+			},
+		},
+		"percentage set to nil if advanced config value is not nil": {
+			original: func(s *ScalingConfigOrPercentage) {
+				s.Value = &perc
+			},
+			override: func(s *ScalingConfigOrPercentage) {
+				s.ScalingConfig = mockConfig
+			},
+			wanted: func(s *ScalingConfigOrPercentage) {
+				s.ScalingConfig = mockConfig
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted ScalingConfigOrPercentage
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(scalingConfigOrPercentageTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)
