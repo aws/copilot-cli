@@ -326,10 +326,11 @@ func (o *initEnvOpts) Execute() error {
 	}
 	env.Prod = o.isProduction
 	customizedEnv := config.CustomizeEnv{
-		ImportVPC:          o.importVPCConfig(),
-		VPCConfig:          o.adjustVPCConfig(),
-		ImportCertARNs:     o.importCerts,
-		InternalALBSubnets: o.internalALBSubnets,
+		ImportVPC:                   o.importVPCConfig(),
+		VPCConfig:                   o.adjustVPCConfig(),
+		ImportCertARNs:              o.importCerts,
+		InternalALBSubnets:          o.internalALBSubnets,
+		EnableInternalALBVPCIngress: o.allowVPCIngress,
 	}
 	if !customizedEnv.IsEmpty() {
 		env.CustomConfig = &customizedEnv

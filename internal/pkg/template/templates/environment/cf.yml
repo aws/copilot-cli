@@ -34,9 +34,6 @@ Parameters:
   CreateInternalHTTPSListener:
     Type: String
     AllowedValues: [true, false]
-  AllowVPCIngressForInternalALB:
-    Type: String
-    AllowedValues: [true, false]
   ServiceDiscoveryEndpoint:
     Type: String
 Conditions:
@@ -44,13 +41,6 @@ Conditions:
     !Not [!Equals [ !Ref ALBWorkloads, "" ]]
   CreateInternalALB:
     !Not [!Equals [ !Ref InternalALBWorkloads, "" ]]
-  CreateInternalALBIngress: !And
-    - !Condition CreateInternalALB
-    - !Equals [ !Ref AllowVPCIngressForInternalALB, true ]
-  CreateInternalALBIngressForHTTPS: !And
-    - !Condition CreateInternalALB
-    - !Equals [ !Ref AllowVPCIngressForInternalALB, true ]
-    - !Equals [ !Ref CreateInternalHTTPSListener, true ]
   DelegateDNS:
     !Not [!Equals [ !Ref AppDNSName, "" ]]
   ExportHTTPSListener: !And
@@ -189,13 +179,14 @@ Resources:
       GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+{{- if .AllowVPCIngress }}
   InternalLoadBalancerSecurityGroupIngressFromHttp:
     Metadata:
-      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80'
+      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80 within the VPC'
     Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateInternalALBIngress
+    Condition: CreateInternalALB
     Properties:
-      Description: Allow from anyone on port 80
+      Description: Allow from within VPC on port 80
       CidrIp: 0.0.0.0/0
       FromPort: 80
       ToPort: 80
@@ -203,9 +194,9 @@ Resources:
       GroupId: !Ref InternalLoadBalancerSecurityGroup
   InternalLoadBalancerSecurityGroupIngressFromHttps:
     Metadata:
-      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 443'
+      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 443 within the VPC'
     Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateInternalALBIngressForHTTPS
+    Condition: ExportInternalHTTPSListener
     Properties:
       Description: Allow from anyone on port 443
       CidrIp: 0.0.0.0/0
@@ -213,6 +204,7 @@ Resources:
       ToPort: 443
       IpProtocol: tcp
       GroupId: !Ref InternalLoadBalancerSecurityGroup
+{{- end}}
   PublicLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'

@@ -43,7 +43,6 @@ const (
 	envParamNATWorkloadsKey                = "NATWorkloads"
 	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
 	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
-	envParamAllowVPCIngressKey             = "AllowVPCIngressForInternalALB"
 	EnvParamServiceDiscoveryEndpoint       = "ServiceDiscoveryEndpoint"
 
 	// Output keys.
@@ -106,7 +105,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		PrivateImportedCertARNs:  e.importPrivateCertARNs(),
 		VPCConfig:                e.vpcConfig(),
 		CustomInternalALBSubnets: e.internalALBSubnets(),
-		AllowVPCIngress:          e.in.AllowVPCIngress,
+		AllowVPCIngress:          e.in.AllowVPCIngress, // TODO(jwh): fetch AllowVPCIngress from Manifest or SSM.
 		Telemetry:                e.telemetryConfig(),
 
 		Version:       e.in.Version,
@@ -234,10 +233,6 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	if len(e.in.ImportCertARNs) != 0 && len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
 		internalHTTPSListener = "true"
 	}
-	allowVPCIngress := "false"
-	if e.in.AllowVPCIngress {
-		allowVPCIngress = "true"
-	}
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(envParamAppNameKey),
@@ -270,10 +265,6 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		{
 			ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 			ParameterValue: aws.String(internalHTTPSListener),
-		},
-		{
-			ParameterKey:   aws.String(envParamAllowVPCIngressKey),
-			ParameterValue: aws.String(allowVPCIngress),
 		},
 		{
 			ParameterKey:   aws.String(EnvParamAliasesKey),

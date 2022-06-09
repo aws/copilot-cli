@@ -79,8 +79,6 @@ func TestEnv_Parameters(t *testing.T) {
 	deploymentInputWithDNS.App.Domain = "ecs.aws"
 	deploymentInputWithPrivateDNS := mockDeployEnvironmentInput()
 	deploymentInputWithPrivateDNS.ImportCertARNs = []string{"arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"}
-	deploymentInputWithIngressAllowed := mockDeployEnvironmentInput()
-	deploymentInputWithIngressAllowed.AllowVPCIngress = true
 	testCases := map[string]struct {
 		input *deploy.CreateEnvironmentInput
 		want  []*cloudformation.Parameter
@@ -119,10 +117,6 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
 					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamAllowVPCIngressKey),
-					ParameterValue: aws.String("false"),
 				},
 				{
 					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
@@ -190,10 +184,6 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterValue: aws.String(""),
 				},
 				{
-					ParameterKey:   aws.String(envParamAllowVPCIngressKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
 					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
@@ -243,10 +233,6 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterValue: aws.String(""),
 				},
 				{
-					ParameterKey:   aws.String(envParamAllowVPCIngressKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
 					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
@@ -265,67 +251,6 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("true"),
-				},
-			},
-		},
-		"with internal ALB ingress allowed": {
-			input: deploymentInputWithIngressAllowed,
-			want: []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(envParamAppNameKey),
-					ParameterValue: aws.String(deploymentInput.App.Name),
-				},
-				{
-					ParameterKey:   aws.String(envParamEnvNameKey),
-					ParameterValue: aws.String(deploymentInput.Name),
-				},
-				{
-					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
-				},
-				{
-					ParameterKey:   aws.String(envParamAppDNSKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(EnvParamAliasesKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamAllowVPCIngressKey),
-					ParameterValue: aws.String("true"),
-				},
-				{
-					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(envParamNATWorkloadsKey),
-					ParameterValue: aws.String(""),
-				},
-				{
-					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
-					ParameterValue: aws.String("env.project.local"),
-				},
-				{
-					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
-					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
-					ParameterValue: aws.String("false"),
 				},
 			},
 		},
