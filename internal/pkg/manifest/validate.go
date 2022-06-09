@@ -705,18 +705,23 @@ func (a Alias) Validate() error {
 		return nil
 	}
 	if err := a.StringSliceOrString.Validate(); err != nil {
-		return fmt.Errorf(`validate "alias": %w`, err)
+		return err
 	}
 	for _, alias := range a.AdvancedAliases {
 		if err := alias.Validate(); err != nil {
-			return fmt.Errorf(`validate "alias": %w`, err)
+			return err
 		}
 	}
 	return nil
 }
 
-// Validate is a no-op for AdvancedAlias.
-func (AdvancedAlias) Validate() error {
+// Validate returns nil if AdvancedAlias is configured correctly.
+func (a AdvancedAlias) Validate() error {
+	if a.Alias == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
 	return nil
 }
 
@@ -755,7 +760,7 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 	if !c.Aliases.IsEmpty() {
 		for _, advancedAlias := range c.Aliases.AdvancedAliases {
 			if advancedAlias.HostedZone != nil {
-				return fmt.Errorf(`"alias.hosted_zone" is not supported for Network Load Balancer`)
+				return fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`)
 			}
 		}
 	}

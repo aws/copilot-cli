@@ -226,6 +226,7 @@ Outputs:
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
+					HostedZoneAliases: make(template.AliasesForHostedZone),
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: manifest.DefaultHealthCheckPath,
 						GracePeriod:     aws.Int64(manifest.DefaultHealthCheckGracePeriod),
@@ -337,6 +338,7 @@ Outputs:
 						Interval:           aws.Int64(61),
 						GracePeriod:        aws.Int64(60),
 					},
+					HostedZoneAliases:   make(template.AliasesForHostedZone),
 					DeregistrationDelay: aws.Int64(59),
 					AllowedSourceIps:    []string{"10.0.1.0/24"},
 					RulePriorityLambda:  "something",
