@@ -28,9 +28,9 @@ import (
 )
 
 const (
-	envOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
-	envOutputSubdomain                 = "EnvironmentSubdomain"
-	svcParamHTTPSEnabled               = "HTTPSEnabled"
+	envOutputPublicLoadBalancerDNSName   = "PublicLoadBalancerDNSName"
+	envOutputInternalLoadBalancerDNSName = "InternalLoadBalancerDNSName"
+	envOutputSubdomain                   = "EnvironmentSubdomain"
 
 	svcStackResourceALBTargetGroupLogicalID       = "TargetGroup"
 	svcStackResourceNLBTargetGroupLogicalID       = "NLBTargetGroup"

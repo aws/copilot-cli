@@ -55,10 +55,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var (
-		albEnabled bool
-		nlbEnabled bool
-	)
+	var albEnabled, nlbEnabled bool
 	resources, err := svcDescr.ServiceStackResources()
 	if err != nil {
 		return "", fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
@@ -74,7 +71,15 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 
 	var uri LBWebServiceURI
 	if albEnabled {
-		albURI, err := d.albURI(envName, svcDescr, envDescr)
+		albDescr := &albDescriber{
+			svc:             d.svc,
+			env:             envName,
+			svcDescriber:    svcDescr,
+			envDescriber:    envDescr,
+			initLBDescriber: d.initLBDescriber,
+			envDNSNameKey:   envOutputPublicLoadBalancerDNSName,
+		}
+		albURI, err := albDescr.uri()
 		if err != nil {
 			return "", err
 		}
@@ -90,49 +95,6 @@ func (d *LBWebServiceDescriber) URI(envName string) (string, error) {
 	}
 
 	return uri.String(), nil
-}
-
-func (d *LBWebServiceDescriber) albURI(envName string, svcDescr ecsDescriber, envDescr envDescriber) (albURI, error) {
-	svcParams, err := svcDescr.Params()
-	if err != nil {
-		return albURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
-	}
-	path := svcParams[stack.WorkloadRulePathParamKey]
-	isHTTPS, _ := svcParams[svcParamHTTPSEnabled]
-	if isHTTPS != "true" {
-		envOutputs, err := envDescr.Outputs()
-		if err != nil {
-			return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", envName, err)
-		}
-		return albURI{
-			DNSNames: []string{envOutputs[envOutputPublicLoadBalancerDNSName]},
-			Path:     path,
-		}, nil
-	}
-	svcResources, err := svcDescr.ServiceStackResources()
-	if err != nil {
-		return albURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
-	}
-	var httpsRuleARN string
-	for _, resource := range svcResources {
-		if resource.LogicalID == svcStackResourceHTTPSListenerRuleLogicalID &&
-			resource.Type == svcStackResourceHTTPSListenerRuleResourceType {
-			httpsRuleARN = resource.PhysicalID
-		}
-	}
-	lbDescr, err := d.initLBDescriber(envName)
-	if err != nil {
-		return albURI{}, nil
-	}
-	dnsNames, err := lbDescr.ListenerRuleHostHeaders(httpsRuleARN)
-	if err != nil {
-		return albURI{}, fmt.Errorf("get host headers for listener rule %s: %w", httpsRuleARN, err)
-	}
-	return albURI{
-		HTTPS:    true,
-		DNSNames: dnsNames,
-		Path:     path,
-	}, nil
 }
 
 func (d *LBWebServiceDescriber) nlbURI(envName string, svcDescr ecsDescriber, envDescr envDescriber) (nlbURI, error) {
@@ -177,6 +139,32 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	envDescr, err := d.initEnvDescribers(envName)
+	if err != nil {
+		return "", err
+	}
+	resources, err := svcDescr.ServiceStackResources()
+	if err != nil {
+		return "", fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
+	}
+	for _, res := range resources {
+		if res.LogicalID == svcStackResourceALBTargetGroupLogicalID {
+			albDescr := &albDescriber{
+				svc:             d.svc,
+				env:             envName,
+				svcDescriber:    svcDescr,
+				envDescriber:    envDescr,
+				initLBDescriber: d.initLBDescriber,
+				envDNSNameKey:   envOutputInternalLoadBalancerDNSName,
+			}
+			albURI, err := albDescr.uri()
+			if err != nil {
+				return "", err
+			}
+			return english.OxfordWordSeries(albURI.uris(), "or"), nil
+		}
+	}
+
 	svcStackParams, err := svcDescr.Params()
 	if err != nil {
 		return "", fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
@@ -184,10 +172,6 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 	port := svcStackParams[stack.WorkloadContainerPortParamKey]
 	if port == stack.NoExposedContainerPort {
 		return BlankServiceDiscoveryURI, nil
-	}
-	envDescr, err := d.initEnvDescribers(envName)
-	if err != nil {
-		return "", err
 	}
 	endpoint, err := envDescr.ServiceDiscoveryEndpoint()
 	if err != nil {
@@ -199,6 +183,57 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 		Endpoint: endpoint,
 	}
 	return s.String(), nil
+}
+
+type albDescriber struct {
+	svc             string
+	env             string
+	svcDescriber    ecsDescriber
+	envDescriber    envDescriber
+	initLBDescriber func(string) (lbDescriber, error)
+	envDNSNameKey   string
+}
+
+func (d *albDescriber) uri() (albURI, error) {
+	svcParams, err := d.svcDescriber.Params()
+	if err != nil {
+		return albURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
+	}
+	path := svcParams[stack.WorkloadRulePathParamKey]
+	if svcParams[stack.WorkloadHTTPSParamKey] != "true" {
+		envOutputs, err := d.envDescriber.Outputs()
+		if err != nil {
+			return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
+		}
+		return albURI{
+			DNSNames: []string{envOutputs[d.envDNSNameKey]},
+			Path:     path,
+		}, nil
+	}
+	svcResources, err := d.svcDescriber.ServiceStackResources()
+	if err != nil {
+		return albURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
+	}
+	var httpsRuleARN string
+	for _, resource := range svcResources {
+		if resource.LogicalID == svcStackResourceHTTPSListenerRuleLogicalID &&
+			resource.Type == svcStackResourceHTTPSListenerRuleResourceType {
+			httpsRuleARN = resource.PhysicalID
+		}
+	}
+	lbDescr, err := d.initLBDescriber(d.env)
+	if err != nil {
+		return albURI{}, nil
+	}
+	dnsNames, err := lbDescr.ListenerRuleHostHeaders(httpsRuleARN)
+	if err != nil {
+		return albURI{}, fmt.Errorf("get host headers for listener rule %s: %w", httpsRuleARN, err)
+	}
+	return albURI{
+		HTTPS:    true,
+		DNSNames: dnsNames,
+		Path:     path,
+	}, nil
 }
 
 // URI returns the WebServiceURI to identify this service uniquely given an environment name.
@@ -234,23 +269,27 @@ type nlbURI struct {
 }
 
 func (u *LBWebServiceURI) String() string {
-	var uris []string
-	for _, dnsName := range u.albURI.DNSNames {
-		protocol := "http://"
-		if u.albURI.HTTPS {
-			protocol = "https://"
-		}
-		path := ""
-		if u.albURI.Path != "/" {
-			path = fmt.Sprintf("/%s", u.albURI.Path)
-		}
-		uris = append(uris, fmt.Sprintf("%s%s%s", protocol, dnsName, path))
-	}
-
+	uris := u.albURI.uris()
 	for _, dnsName := range u.nlbURI.DNSNames {
 		uris = append(uris, fmt.Sprintf("%s:%s", dnsName, u.nlbURI.Port))
 	}
 	return english.OxfordWordSeries(uris, "or")
+}
+
+func (u *albURI) uris() []string {
+	var uris []string
+	for _, dnsName := range u.DNSNames {
+		protocol := "http://"
+		if u.HTTPS {
+			protocol = "https://"
+		}
+		path := ""
+		if u.Path != "/" {
+			path = fmt.Sprintf("/%s", u.Path)
+		}
+		uris = append(uris, protocol+dnsName+path)
+	}
+	return uris
 }
 
 type serviceDiscovery struct {
