@@ -335,6 +335,9 @@ type AutoscalingOpts struct {
 	QueueDelay   *AutoscalingQueueDelayOpts
 }
 
+// AliasesForHostedZone maps hosted zone IDs to aliases that belong to it.
+type AliasesForHostedZone map[string][]string
+
 // AutoscalingQueueDelayOpts holds configuration to scale SQS queues.
 type AutoscalingQueueDelayOpts struct {
 	AcceptableBacklogPerTask int
@@ -485,7 +488,7 @@ type WorkloadOpts struct {
 	ServiceDiscoveryEndpoint string
 	HTTPVersion              *string
 	ALBEnabled               bool
-	HostedZoneID             *string
+	HostedZoneAliases        AliasesForHostedZone
 
 	// Additional options for service templates.
 	WorkloadType            string

@@ -209,6 +209,12 @@ func (b BackendServiceConfig) Validate() error {
 	if err = b.RoutingRule.Validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
+	if b.RoutingRule.IsEmpty() && (b.Count.AdvancedCount.Requests != nil || b.Count.AdvancedCount.ResponseTime != nil) {
+		return &errFieldMustBeSpecified{
+			missingField:      "http",
+			conditionalFields: []string{"count.requests", "count.response_time"},
+		}
+	}
 	if err = b.TaskConfig.Validate(); err != nil {
 		return err
 	}
@@ -694,7 +700,33 @@ func (h NLBHealthCheckArgs) Validate() error {
 }
 
 // Validate returns nil if Alias is configured correctly.
-func (Alias) Validate() error {
+func (a Alias) Validate() error {
+	if a.IsEmpty() {
+		return nil
+	}
+	if err := a.StringSliceOrString.Validate(); err != nil {
+		return err
+	}
+	for _, alias := range a.AdvancedAliases {
+		if err := alias.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if AdvancedAlias is configured correctly.
+func (a AdvancedAlias) Validate() error {
+	if a.Alias == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
+	return nil
+}
+
+// Validate is a no-op for stringSliceOrString.
+func (stringSliceOrString) Validate() error {
 	return nil
 }
 
@@ -724,6 +756,13 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 	}
 	if err := c.Aliases.Validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
+	}
+	if !c.Aliases.IsEmpty() {
+		for _, advancedAlias := range c.Aliases.AdvancedAliases {
+			if advancedAlias.HostedZone != nil {
+				return fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`)
+			}
+		}
 	}
 	return nil
 }
@@ -861,20 +900,27 @@ func (a AdvancedCount) Validate() error {
 		}
 	}
 
+	// Validate combinations with cooldown
+	if !a.Cooldown.IsEmpty() {
+		if !a.hasScalingFieldsSet() {
+			return &errAtLeastOneFieldMustBeSpecified{
+				missingFields:    a.validScalingFields(),
+				conditionalField: "cooldown",
+			}
+		}
+	}
+
 	// Validate individual custom autoscaling options.
 	if err := a.QueueScaling.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue_delay": %w`, err)
 	}
-	if a.CPU != nil {
-		if err := a.CPU.Validate(); err != nil {
-			return fmt.Errorf(`validate "cpu_percentage": %w`, err)
-		}
+	if err := a.CPU.Validate(); err != nil {
+		return fmt.Errorf(`validate "cpu_percentage": %w`, err)
 	}
-	if a.Memory != nil {
-		if err := a.Memory.Validate(); err != nil {
-			return fmt.Errorf(`validate "memory_percentage": %w`, err)
-		}
+	if err := a.Memory.Validate(); err != nil {
+		return fmt.Errorf(`validate "memory_percentage": %w`, err)
 	}
+
 	return nil
 }
 
@@ -883,6 +929,33 @@ func (p Percentage) Validate() error {
 	if val := int(p); val < 0 || val > 100 {
 		return fmt.Errorf("percentage value %v must be an integer from 0 to 100", val)
 	}
+	return nil
+}
+
+// Validate returns nil if ScalingConfigOrPercentage is configured correctly.
+func (r ScalingConfigOrPercentage) Validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
+	if r.Value != nil {
+		return r.Value.Validate()
+	}
+	return r.ScalingConfig.Validate()
+}
+
+// Validate returns nil if AdvancedScalingConfig is configured correctly.
+func (r AdvancedScalingConfig) Validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
+	if err := r.Value.Validate(); err != nil {
+		return err
+	}
+	return r.Cooldown.Validate()
+}
+
+// Validation is a no-op for Cooldown.
+func (c Cooldown) Validate() error {
 	return nil
 }
 
