@@ -25,7 +25,14 @@ network:
 !!!attention
     Currently, you must use a new Backend Service that has not yet been deployed. Very soon, you will be able to add internal load balancers to existing Backend Services!
 
-## Aliases, Health Checks, and More
+## Advanced Configuration
+
+### Subnet Placement
+You can specify exactly which private subnets your internal ALB is placed in.
+
+When you run `copilot env init`, use the [`--internal-alb-subnets`](../commands/env-init.en.md#what-are-the-flags) flag to pass in the IDs of the subnets in which you'd like the ALB to be placed.
+
+### Aliases, Health Checks, and More
 The `http` field for Backend Services has all the subfields and capabilities that Load Balanced Web Services's `http` field has.
 
 ``` yaml
