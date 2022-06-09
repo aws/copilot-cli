@@ -13,6 +13,7 @@ import (
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
+	describeStack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -355,6 +356,110 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					},
 				},
 				environments: []string{"test", "prod", "mockEnv"},
+			},
+		},
+		"internal alb success http": {
+			shouldOutputResources: true,
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				params := map[string]string{
+					cfnstack.WorkloadContainerPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:     "1",
+					cfnstack.WorkloadTaskCPUParamKey:       "256",
+					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+					cfnstack.WorkloadRulePathParamKey:      "mySvc",
+				}
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputInternalLoadBalancerDNSName: "us-west-1.elb.amazonaws.internal",
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+						{
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     testEnv,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
+						{
+							Name:      "GITHUB_WEBHOOK_SECRET",
+							Container: "container",
+							ValueFrom: "GH_WEBHOOK_SECRET",
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+				)
+			},
+			wantedBackendSvc: &backendSvcDesc{
+				Service: testSvc,
+				Type:    "Backend Service",
+				App:     testApp,
+				Configurations: []*ECSServiceConfig{
+					{
+						ServiceConfig: &ServiceConfig{
+							CPU:         "256",
+							Environment: "test",
+							Memory:      "512",
+							Platform:    "LINUX/X86_64",
+							Port:        "5000",
+						},
+						Tasks: "1",
+					},
+				},
+				Routes: []*WebServiceRoute{
+					{
+						Environment: "test",
+						URL:         "http://us-west-1.elb.amazonaws.internal/mySvc",
+					},
+				},
+				ServiceDiscovery: []*ServiceDiscovery{
+					{
+						Environment: []string{"test"},
+						Namespace:   "jobs.test.phonetool.local:5000",
+					},
+				},
+				Variables: []*containerEnvVar{
+					{
+						envVar: &envVar{
+							Environment: "test",
+							Name:        "COPILOT_ENVIRONMENT_NAME",
+							Value:       "test",
+						},
+						Container: "container",
+					},
+				},
+				Secrets: []*secret{
+					{
+						Name:        "GITHUB_WEBHOOK_SECRET",
+						Container:   "container",
+						Environment: "test",
+						ValueFrom:   "GH_WEBHOOK_SECRET",
+					},
+				},
+				Resources: map[string][]*stack.Resource{
+					"test": {
+						{
+							LogicalID: "TargetGroup",
+						},
+					},
+				},
+				environments: []string{"test"},
 			},
 		},
 	}
