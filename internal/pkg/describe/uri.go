@@ -13,13 +13,21 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
+type URIAccessType int
+
+const (
+	URIAccessTypeInternet URIAccessType = iota + 1
+	URIAccessTypeInternal
+	URIAccessTypeServiceDiscovery
+)
+
 var (
 	fmtSvcDiscoveryEndpointWithPort = "%s.%s:%s" // Format string of the form {svc}.{endpoint}:{port}
 )
 
-// ReachableService represents a service describe that has an endpoint.
+// ReachableService represents a service describer that has an endpoint.
 type ReachableService interface {
-	URI(env string) (string, error)
+	URI(env string) (string, URIAccessType, error)
 }
 
 // NewReachableService returns a ReachableService based on the type of the service.
@@ -134,18 +142,18 @@ func (d *LBWebServiceDescriber) nlbURI(envName string, svcDescr ecsDescriber, en
 
 // URI returns the service discovery namespace and is used to make
 // BackendServiceDescriber have the same signature as WebServiceDescriber.
-func (d *BackendServiceDescriber) URI(envName string) (string, error) {
+func (d *BackendServiceDescriber) URI(envName string) (string, URIAccessType, error) {
 	svcDescr, err := d.initECSServiceDescribers(envName)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	envDescr, err := d.initEnvDescribers(envName)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	resources, err := svcDescr.ServiceStackResources()
 	if err != nil {
-		return "", fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
+		return "", 0, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
 	for _, res := range resources {
 		if res.LogicalID == svcStackResourceALBTargetGroupLogicalID {
@@ -159,30 +167,30 @@ func (d *BackendServiceDescriber) URI(envName string) (string, error) {
 			}
 			albURI, err := albDescr.uri()
 			if err != nil {
-				return "", err
+				return "", 0, err
 			}
-			return english.OxfordWordSeries(albURI.uris(), "or"), nil
+			return english.OxfordWordSeries(albURI.uris(), "or"), URIAccessTypeInternal, nil
 		}
 	}
 
 	svcStackParams, err := svcDescr.Params()
 	if err != nil {
-		return "", fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
+		return "", 0, fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
 	port := svcStackParams[stack.WorkloadContainerPortParamKey]
 	if port == stack.NoExposedContainerPort {
-		return BlankServiceDiscoveryURI, nil
+		return BlankServiceDiscoveryURI, 0, nil
 	}
 	endpoint, err := envDescr.ServiceDiscoveryEndpoint()
 	if err != nil {
-		return "nil", fmt.Errorf("retrieve service discovery endpoint for environment %s: %w", envName, err)
+		return "", 0, fmt.Errorf("retrieve service discovery endpoint for environment %s: %w", envName, err)
 	}
 	s := serviceDiscovery{
 		Service:  d.svc,
 		Port:     port,
 		Endpoint: endpoint,
 	}
-	return s.String(), nil
+	return s.String(), URIAccessTypeServiceDiscovery, nil
 }
 
 type albDescriber struct {
@@ -299,5 +307,8 @@ type serviceDiscovery struct {
 }
 
 func (s *serviceDiscovery) String() string {
+	if s.Service == "" && s.Endpoint == "" && s.Port == "" {
+		return ""
+	}
 	return fmt.Sprintf(fmtSvcDiscoveryEndpointWithPort, s.Service, s.Endpoint, s.Port)
 }

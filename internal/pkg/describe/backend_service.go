@@ -112,13 +112,13 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		webServiceURI, err := d.URI(env)
+		internalURI, _, err := d.URI(env)
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service URI: %w", err)
 		}
 		routes = append(routes, &WebServiceRoute{
 			Environment: env,
-			URL:         webServiceURI,
+			URL:         internalURI,
 		})
 		svcParams, err := svcDescr.Params()
 		if err != nil {
@@ -233,13 +233,15 @@ func (w *backendSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
-	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
-	writer.Flush()
-	headers := []string{"Environment", "URL"}
-	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
-	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
-	for _, route := range w.Routes {
-		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
+	if len(w.Routes) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
+		writer.Flush()
+		headers := []string{"Environment", "URL"}
+		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+		for _, route := range w.Routes {
+			fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
+		}
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nService Discovery\n\n"))
 	writer.Flush()

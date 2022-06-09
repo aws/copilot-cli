@@ -46,7 +46,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(nil, mockErr),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("get stack parameters for environment test: some error"),
@@ -55,7 +56,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(map[string]string{
 						cfnstack.WorkloadContainerPortParamKey: "80",
 						cfnstack.WorkloadTaskCountParamKey:     "1",
 						cfnstack.WorkloadTaskMemoryParamKey:    "512",
@@ -70,7 +72,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(map[string]string{
 						cfnstack.WorkloadContainerPortParamKey: "5000",
 						cfnstack.WorkloadTaskCountParamKey:     "1",
 						cfnstack.WorkloadTaskCPUParamKey:       "256",
@@ -86,7 +89,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(map[string]string{
 						cfnstack.WorkloadContainerPortParamKey: "80",
 						cfnstack.WorkloadTaskCountParamKey:     "1",
 						cfnstack.WorkloadTaskMemoryParamKey:    "512",
@@ -106,8 +110,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(map[string]string{
 						cfnstack.WorkloadContainerPortParamKey: "80",
 						cfnstack.WorkloadTaskCountParamKey:     "1",
 						cfnstack.WorkloadTaskCPUParamKey:       "256",
@@ -135,8 +139,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
-
-					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().AnyTimes().Return(map[string]string{
 						cfnstack.WorkloadContainerPortParamKey: "5000",
 						cfnstack.WorkloadTaskCountParamKey:     "1",
 						cfnstack.WorkloadTaskCPUParamKey:       "256",
