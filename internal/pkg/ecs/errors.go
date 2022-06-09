@@ -13,6 +13,7 @@ func (e *ErrMultipleContainersInTaskDef) Error() string {
 	return fmt.Sprintf("found more than one container in task definition: %s", e.taskDefIdentifier)
 }
 
+// ErrExitCode builds custom non-zero exit code error
 type ErrExitCode struct {
 	containerName string
 	taskId        string

@@ -475,7 +475,7 @@ func (c Client) HasNonZeroExitCode(taskARNs []string, cluster string) error {
 	}
 
 	if len(tasks) == 0 {
-		return fmt.Errorf("describe tasks: none of the tasks %s exist", strings.Join(taskARNs, ","))
+		return fmt.Errorf("cannot find tasks %s", strings.Join(taskARNs, ", "))
 	}
 
 	taskDefinitonARN := aws.StringValue(tasks[0].TaskDefinitionArn)
@@ -491,7 +491,7 @@ func (c Client) HasNonZeroExitCode(taskARNs []string, cluster string) error {
 
 	for _, describedTask := range tasks {
 		for _, container := range describedTask.Containers {
-			if isContainerEssential[aws.StringValue(container.Name)] && aws.Int64Value(container.ExitCode) > 0 {
+			if isContainerEssential[aws.StringValue(container.Name)] && aws.Int64Value(container.ExitCode) != 0 {
 				taskID, err := ecs.TaskID(aws.StringValue(describedTask.TaskArn))
 				if err != nil {
 					return err
