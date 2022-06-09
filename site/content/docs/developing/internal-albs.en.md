@@ -1,17 +1,17 @@
 # Internal Application Load Balancers
 
-By default, the ALBs created for environments with Load Balanced Web Services are [internet-facing](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internet-facing-load-balancers.html). To create an [internal](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internal-load-balancers.html) load balancer whose nodes have only private IP addresses, you'll need to configure a few things when you initiate your environment and workload.
+By default, the ALBs created for environments with Load Balanced Web Services are [internet-facing](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internet-facing-load-balancers.html). To create an [internal load balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-internal-load-balancers.html) whose nodes have only private IP addresses, you'll need to configure a few things when you initiate your environment and workload.
 
 ## Environment
 
-The internal load balancer is an environment-level resource, to be shared among other permitted services. When you run `copilot env init`, you can import some specific resources to support the ALB. For services with `https` capability, use the [`--import-cert-arns`](../commands/env-init.en.md#what-are-the-flags) flag to import the ARNs of your existing private certificates. If you'd like your ALB to have ingress from port 80 and/or port 443, use the [`--internal-alb-allow-vpc-ingress`](../commands/env-init.en.md#what-are-the-flags) flag; otherwise, by default, access to the internal ALB will be limited to only Copilot-created services within the environment.
+The internal load balancer is an environment-level resource, to be shared among other permitted services. When you run `copilot env init`, you can import some specific resources to support the ALB. For services with `https` capability, use the [`--import-cert-arns`](../commands/env-init.en.md#what-are-the-flags) flag to import the ARNs of your existing private certificates. If you'd like your ALB to receive ingress traffic within the environment VPC, use the [`--internal-alb-allow-vpc-ingress`](../commands/env-init.en.md#what-are-the-flags) flag; otherwise, by default, access to the internal ALB will be limited to only Copilot-created services within the environment.
 
 !!!info
     Today, Copilot will associate imported certs with an internal ALB *only if* the environment's VPC has no public subnets; otherwise, they will be associated with the default internet-facing load balancer. When initiating your environment, you may use the `--import-vpc-id` and `--import-private-subnets` flags to pass in your VPC and subnet IDs along with `--import-cert-arns`. For a more managed experience, you may use just the `--import-cert-arns` flag with `copilot env init`, then follow the prompts to import your existing VPC resources, opting out of importing public subnets. (Copilot's env config will soon have increased flexibility...stay tuned!)
 
 ## Service
 
-The only service type that you can place behind an internal load balancer is a [Backend Service](https://aws.github.io/copilot-cli/docs/concepts/services/#backend-service). These workloads, by definition, are not internet-facing. To tell Copilot to generate an ALB in the environment in which you deploy this service, add the `http` field to your Backend Service's workload manifest:
+The only service type that you can place behind an internal load balancer is a [Backend Service](https://aws.github.io/copilot-cli/docs/concepts/services/#backend-service). To tell Copilot to generate an internal ALB in the environment in which you deploy this service, add the `http` field to your Backend Service's workload manifest:
 
 ```yaml
 # in copilot/{service name}/manifest.yml
