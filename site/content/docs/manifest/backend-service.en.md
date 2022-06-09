@@ -111,7 +111,7 @@ http:
       hosted_zone: AN0THE9H05TED20NEID
 ```
 <span class="parent-field">http.</span><a id="http-hosted-zone" href="#http-hosted-zone" class="field">`hosted_zone`</a> <span class="type">String</span>  
-ID of existing private hosted zone, into which Copilot will insert the alias record once the internal load balancer is created, mapping the alias name to the LB's DNS name.
+ID of existing private hosted zone, into which Copilot will insert the alias record once the internal load balancer is created, mapping the alias name to the LB's DNS name. Must be used with `alias`.
 ```yaml
 http:
   alias: example.com
