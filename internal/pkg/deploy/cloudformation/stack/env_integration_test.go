@@ -57,7 +57,8 @@ observability:
 						template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					Mft: &mft,
+					AllowVPCIngress: true,
+					Mft:             &mft,
 				}
 			}(),
 			wantedFileName: "template-with-imported-certs-observability.yml",
