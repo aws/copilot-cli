@@ -22,11 +22,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
-// Environment stack's parameters that need to updated while moving the legacy template to a newer version.
-const (
-	includeLoadBalancerParamKey = "IncludePublicLoadBalancer"
-)
-
 // CreateAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
 func (cf CloudFormation) CreateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
 	cfnStack, err := cf.environmentStack(env)
