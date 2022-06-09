@@ -4,7 +4,7 @@ By default, the ALBs created for environments with Load Balanced Web Services ar
 
 ## Environment
 
-The internal load balancer is an environment-level resource, to be shared among other permitted services. When you run `copilot env init`, you can import some specific resources to support the ALB. For services with `https` capability, use the [`--import-cert-arns`](../commands/env-init.en.md#what-are-the-flags) flag to import the ARNs of your existing private certificates.
+The internal load balancer is an environment-level resource, to be shared among other permitted services. When you run `copilot env init`, you can import some specific resources to support the ALB. For services with `https` capability, use the [`--import-cert-arns`](../commands/env-init.en.md#what-are-the-flags) flag to import the ARNs of your existing private certificates. If you'd like your ALB to have ingress from port 80 and/or port 443, use the [`--internal-alb-allow-vpc-ingress`](../commands/env-init.en.md#what-are-the-flags) flag; otherwise, by default, access to the internal ALB will be limited to only Copilot-created services within the environment.
 
 !!!info
     Today, Copilot will associate imported certs with an internal ALB *only if* the environment's VPC has no public subnets; otherwise, they will be associated with the default internet-facing load balancer. When initiating your environment, you may use the `--import-vpc-id` and `--import-private-subnets` flags to pass in your VPC and subnet IDs along with `--import-cert-arns`. For a more managed experience, you may use just the `--import-cert-arns` flag with `copilot env init`, then follow the prompts to import your existing VPC resources, opting out of importing public subnets. (Copilot's env config will soon have increased flexibility...stay tuned!)
@@ -28,9 +28,9 @@ network:
 ## Advanced Configuration
 
 ### Subnet Placement
-Maybe you would like your internal ALB and service(s) placed in different subnets than each other, or just want to specify subnet placement for one or the other...or both.
+Maybe you would like your internal ALB and service(s) placed in different subnets than each other, or just want to specify subnet placement for one or the other or both.
 
-With `copilot env init`, use the [`internal-alb-subnets`](../commands/env-init.en.md#what-are-the-flags) flag to pass in the IDs of the subnets in which you'd like the ALB to be placed.
+When you run `copilot env init`, use the [`--internal-alb-subnets`](../commands/env-init.en.md#what-are-the-flags) flag to pass in the IDs of the subnets in which you'd like the ALB to be placed.
 
 Call out specific subnets in your Backend Service manifest:
 
@@ -45,7 +45,7 @@ network:
 ```
 
 ### Aliases, Health Checks, and More
-The `http` field for Backend Services has all the subfields and capabilities as that for Load Balanced Web Services.
+The `http` field for Backend Services has all the subfields and capabilities that Load Balanced Web Services's `http` field has.
 
 ``` yaml
 http:
@@ -64,25 +64,26 @@ http:
   alias: example.com
 ```
 
-For `alias`, you may 1. bring your own existing private hosted zone(s), or 2. add your own alias records after deployment, independently of Copilot. You may add a single alias:
+For `alias`, you may 1. bring your own existing private hosted zone(s), or 2. add your own alias record(s) after deployment, independently of Copilot. You may add a single alias:
 ```yaml
 http:
   alias: example.com
   hosted_zone: HostedZoneID1
 ```
-or multiple aliases:
+or multiple aliases that share a hosted zone:
 ```yaml
 http:
-  alias: ["example.com", "v1.example.com"]
+  alias: ["example.com", "www.example.com"]
+  hosted_zone: HostedZoneID1
 ```
-or
+or multiple aliases, some of which use the top-level hosted zone:
 ```yaml
 http:
+  hosted_zone: HostedZoneID1
   aliases:
     - name: example.com
-      hosted_zone: HostedZoneID1
-    - name: another.example.com
-    - name: still.another.example.com
+    - name: www.example.com
+    - name: something-different.com
       hosted_zone: HostedZoneID2
 ```
 
