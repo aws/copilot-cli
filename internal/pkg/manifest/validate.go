@@ -842,6 +842,15 @@ func (a AdvancedCount) Validate() error {
 	if len(a.validScalingFields()) == 0 {
 		return fmt.Errorf("cannot have autoscaling options for workloads of type '%s'", a.workloadType)
 	}
+
+	// Validate if incorrect autoscaling fields are set
+	if fields := a.getInvalidFieldsSet(); fields != nil {
+		return &errInvalidAutoscalingFieldsWithWkldType{
+			invalidFields: fields,
+			workloadType:  a.workloadType,
+		}
+	}
+
 	// Validate spot and remaining autoscaling fields.
 	if a.Spot != nil && a.hasAutoscaling() {
 		return &errFieldMutualExclusive{
