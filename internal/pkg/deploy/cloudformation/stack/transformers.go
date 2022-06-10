@@ -180,9 +180,9 @@ func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProv
 
 // convertCooldown converts a service manifest cooldown struct into a format parsable
 // by the templates pkg.
-func convertCooldown(c manifest.Cooldown) *template.Cooldown {
+func convertCooldown(c manifest.Cooldown) template.Cooldown {
 	if c.IsEmpty() {
-		return nil
+		return template.Cooldown{}
 	}
 
 	cooldown := template.Cooldown{}
@@ -196,24 +196,20 @@ func convertCooldown(c manifest.Cooldown) *template.Cooldown {
 		cooldown.ScaleOutCooldown = aws.Float64(scaleOutTime)
 	}
 
-	return &cooldown
+	return cooldown
 }
 
-// convertScalingCooldown handles the logic of converting generalized and specific coodlowns set
+// convertScalingCooldown handles the logic of converting generalized and specific cooldowns set
 // into the scaling cooldown used in the Auto Scaling configuration.
-func convertScalingCooldown(specCooldown, genCooldown manifest.Cooldown) *template.Cooldown {
+func convertScalingCooldown(specCooldown, genCooldown manifest.Cooldown) template.Cooldown {
 	cooldown := convertCooldown(genCooldown)
 
-	if specTemplateCooldown := convertCooldown(specCooldown); specTemplateCooldown != nil {
-		if cooldown == nil {
-			cooldown = &template.Cooldown{}
-		}
-		if specCooldown.ScaleInCooldown != nil {
-			cooldown.ScaleInCooldown = specTemplateCooldown.ScaleInCooldown
-		}
-		if specCooldown.ScaleOutCooldown != nil {
-			cooldown.ScaleOutCooldown = specTemplateCooldown.ScaleOutCooldown
-		}
+	specTemplateCooldown := convertCooldown(specCooldown)
+	if specCooldown.ScaleInCooldown != nil {
+		cooldown.ScaleInCooldown = specTemplateCooldown.ScaleInCooldown
+	}
+	if specCooldown.ScaleOutCooldown != nil {
+		cooldown.ScaleOutCooldown = specTemplateCooldown.ScaleOutCooldown
 	}
 
 	return cooldown

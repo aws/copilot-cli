@@ -335,11 +335,11 @@ type AutoscalingOpts struct {
 	MinCapacity  *int
 	MaxCapacity  *int
 	CPU          *float64
-	CPUCooldown  *Cooldown
 	Memory       *float64
-	MemCooldown  *Cooldown
 	Requests     *float64
 	ResponseTime *float64
+	CPUCooldown  Cooldown
+	MemCooldown  Cooldown
 	QueueDelay   *AutoscalingQueueDelayOpts
 }
 

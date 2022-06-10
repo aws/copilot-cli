@@ -264,11 +264,11 @@ func Test_convertAdvancedCount(t *testing.T) {
 				Autoscaling: &template.AutoscalingOpts{
 					MinCapacity: aws.Int(1),
 					MaxCapacity: aws.Int(10),
-					CPUCooldown: &template.Cooldown{
+					CPUCooldown: template.Cooldown{
 						ScaleInCooldown:  aws.Float64(60),
 						ScaleOutCooldown: aws.Float64(60),
 					},
-					MemCooldown: &template.Cooldown{
+					MemCooldown: template.Cooldown{
 						ScaleInCooldown:  aws.Float64(60),
 						ScaleOutCooldown: aws.Float64(60),
 					},
@@ -301,7 +301,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 					MinCapacity: aws.Int(1),
 					MaxCapacity: aws.Int(10),
 					CPU:         aws.Float64(70),
-					CPUCooldown: &template.Cooldown{
+					CPUCooldown: template.Cooldown{
 						ScaleInCooldown: aws.Float64(60),
 					},
 				},
@@ -323,7 +323,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 					MinCapacity: aws.Int(2),
 					MaxCapacity: aws.Int(20),
 					CPU:         aws.Float64(70),
-					CPUCooldown: &template.Cooldown{
+					CPUCooldown: template.Cooldown{
 						ScaleInCooldown: aws.Float64(60),
 					},
 				},
@@ -500,7 +500,7 @@ func Test_convertAutoscaling(t *testing.T) {
 				MinCapacity: aws.Int(1),
 				CPU:         aws.Float64(70),
 				Memory:      aws.Float64(70),
-				CPUCooldown: &template.Cooldown{
+				CPUCooldown: template.Cooldown{
 					ScaleInCooldown:  aws.Float64(60),
 					ScaleOutCooldown: aws.Float64(60),
 				},
@@ -528,7 +528,7 @@ func Test_convertAutoscaling(t *testing.T) {
 				MinCapacity: aws.Int(5),
 				CPU:         aws.Float64(70),
 				Memory:      aws.Float64(70),
-				CPUCooldown: &template.Cooldown{
+				CPUCooldown: template.Cooldown{
 					ScaleInCooldown:  aws.Float64(60),
 					ScaleOutCooldown: aws.Float64(60),
 				},
