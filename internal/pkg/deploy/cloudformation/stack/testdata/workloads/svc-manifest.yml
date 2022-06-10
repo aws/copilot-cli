@@ -53,6 +53,7 @@ environments:
     count:
       spot: 5
     http:
+      hosted_zone: mockHostedZone
       healthcheck:
         path: /
         grace_period: 30s

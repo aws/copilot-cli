@@ -700,7 +700,33 @@ func (h NLBHealthCheckArgs) Validate() error {
 }
 
 // Validate returns nil if Alias is configured correctly.
-func (Alias) Validate() error {
+func (a Alias) Validate() error {
+	if a.IsEmpty() {
+		return nil
+	}
+	if err := a.StringSliceOrString.Validate(); err != nil {
+		return err
+	}
+	for _, alias := range a.AdvancedAliases {
+		if err := alias.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if AdvancedAlias is configured correctly.
+func (a AdvancedAlias) Validate() error {
+	if a.Alias == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
+	return nil
+}
+
+// Validate is a no-op for stringSliceOrString.
+func (stringSliceOrString) Validate() error {
 	return nil
 }
 
@@ -730,6 +756,13 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 	}
 	if err := c.Aliases.Validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
+	}
+	if !c.Aliases.IsEmpty() {
+		for _, advancedAlias := range c.Aliases.AdvancedAliases {
+			if advancedAlias.HostedZone != nil {
+				return fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`)
+			}
+		}
 	}
 	return nil
 }
