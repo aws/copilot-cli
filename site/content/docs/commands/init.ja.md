@@ -1,5 +1,5 @@
 # init
-```bash
+```console
 $ copilot init
 ```
 
@@ -14,7 +14,7 @@ $ copilot init
 
 Copilot CLI の全てのコマンドと同様に、必要なフラグを指定しない場合は、アプリの実行に必要な情報をすべて入力するように求められます。フラグを介して情報を提供することで、プロンプトをスキップできます。
 
-```sh
+```
   -a, --app string          Name of the application.
       --deploy              Deploy your service or job to a "test" environment.
   -d, --dockerfile string   Path to the Dockerfile.

@@ -1,5 +1,5 @@
 # task delete
-```
+```console
 $ copilot task delete
 ```
 
@@ -21,16 +21,16 @@ $ copilot task delete
 ```
 ## Example
 Delete the "test" task from the default cluster.
-```
+```console
 $ copilot task delete --name test --default
 ```
 
 Delete the "db-migrate" task from the prod environment.
-```
+```console
 $ copilot task delete --name db-migrate --env prod
 ```
 
 Delete the "test" task without confirmation prompt.
-```
+```console
 $ copilot task delete --name test --yes
 ```

@@ -1,5 +1,5 @@
 # pipeline init
-```bash
+```console
 $ copilot pipeline init [flags]
 ```
 
@@ -7,7 +7,7 @@ $ copilot pipeline init [flags]
 `copilot pipeline init` は、ワークスペース内の全ての Service をデプロイする Pipeline 用の Manifest を作成します。この Manifest では Application に関連づけられた Environment がデプロイターゲットとなります。
 
 ## フラグ
-```bash
+```
 -a, --app string             Name of the application.
 -e, --environments strings   Environments to add to the pipeline.
 -b, --git-branch string      Branch used to trigger your pipeline.
@@ -18,7 +18,7 @@ $ copilot pipeline init [flags]
 
 ## 実行例
 ワークスペース内の全ての Service をデプロイする Pipeline 用の Manifest を作成します。
-```bash
+```console
 $ copilot pipeline init \
 --name frontend-main \
 --url https://github.com/gitHubUserName/frontend.git \
