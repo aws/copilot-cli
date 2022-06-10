@@ -42,7 +42,7 @@ http:
 * **Access to Created Private Route Tables**:
 Copilot now exports private route table IDs from CloudFormation environment stacks. Use them to create VPC gateway endpoints with [addons](../docs/developing/additional-aws-resources.en.md). ([#3611](https://github.com/aws/copilot-cli/pull/3611))
 * **`port` for Target Group Health Checks**:
-With the new `port` field, you can configure a non-default port for health checks, one different than that for requests from the load balancer.
+With the new `port` field, you can configure a non-default port for health checks, one different than that for requests from the load balancer. ([#3548](https://github.com/aws/copilot-cli/pull/3548))
 ```yaml
 http:
   path: '/'
