@@ -55,7 +55,7 @@ http:
     * Fix regression when enabling autoscaling fields for Load Balanced Web Services with Network Load Balancers ([#3578](https://github.com/aws/copilot-cli/pull/3578))
     * Enable `copilot svc exec` for Fargate Windows tasks ([#3566](https://github.com/aws/copilot-cli/pull/3566))
 
-There is no breaking change in this release.
+There are no breaking changes in this release.
 
 ## What’s AWS Copilot?
 
