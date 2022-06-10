@@ -94,4 +94,4 @@ Download the new Copilot CLI version by following the link below and leave your 
 
 * Download [the latest CLI version](../docs/getting-started/install.en.md)
 * Try our [Getting Started Guide](../docs/getting-started/first-app-tutorial.en.md)
-* Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.17.0)
+* Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.19.0)
