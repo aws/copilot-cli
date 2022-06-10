@@ -286,23 +286,26 @@ func (a *AdvancedCount) hasScalingFieldsSet() bool {
 }
 
 func (a *AdvancedCount) getInvalidFieldsSet() []string {
+	var invalidFields []string
+
 	switch a.workloadType {
 	case LoadBalancedWebServiceType:
 		if !a.QueueScaling.IsEmpty() {
-			return []string{"queue_delay"}
+			invalidFields = append(invalidFields, "queue_delay")
 		}
 	case BackendServiceType:
 		if !a.QueueScaling.IsEmpty() {
-			return []string{"queue_delay"}
+			invalidFields = append(invalidFields, "queue_delay")
 		}
 	case WorkerServiceType:
-		if a.Requests != nil || a.ResponseTime != nil {
-			return []string{"requests", "response_time"}
+		if a.Requests != nil {
+			invalidFields = append(invalidFields, "requests")
 		}
-	default:
-		return nil
+		if a.ResponseTime != nil {
+			invalidFields = append(invalidFields, "response_time")
+		}
 	}
-	return nil
+	return invalidFields
 }
 
 func (a *AdvancedCount) unsetAutoscaling() {
