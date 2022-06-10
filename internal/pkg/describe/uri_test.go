@@ -298,14 +298,14 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			}
 
 			// WHEN
-			actual, _, err := d.URI(testEnv)
+			actual, err := d.URI(testEnv)
 
 			// THEN
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedURI, actual)
+				require.Equal(t, tc.wantedURI, actual.URI)
 			}
 		})
 	}
@@ -413,14 +413,14 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 			}
 
 			// WHEN
-			actual, _, err := d.URI(testEnv)
+			actual, err := d.URI(testEnv)
 
 			// THEN
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedURI, actual)
+				require.Equal(t, tc.wantedURI, actual.URI)
 			}
 		})
 	}
@@ -479,14 +479,14 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 			}
 
 			// WHEN
-			actual, _, err := d.URI(testEnv)
+			actual, err := d.URI(testEnv)
 
 			// THEN
 			if tc.wantedError != nil {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedURI, actual)
+				require.Equal(t, tc.wantedURI, actual.URI)
 			}
 		})
 	}

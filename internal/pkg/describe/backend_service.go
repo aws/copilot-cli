@@ -112,14 +112,14 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		internalURI, typ, err := d.URI(env)
+		uri, err := d.URI(env)
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service URI: %w", err)
 		}
-		if typ == URIAccessTypeInternal {
+		if uri.AccessType == URIAccessTypeInternal {
 			routes = append(routes, &WebServiceRoute{
 				Environment: env,
-				URL:         internalURI,
+				URL:         uri.URI,
 			})
 		}
 		svcParams, err := svcDescr.Params()

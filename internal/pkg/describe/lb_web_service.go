@@ -134,13 +134,13 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		webServiceURI, _, err := d.URI(env)
+		uri, err := d.URI(env)
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service URI: %w", err)
 		}
 		routes = append(routes, &WebServiceRoute{
 			Environment: env,
-			URL:         webServiceURI,
+			URL:         uri.URI,
 		})
 		containerPlatform, err := svcDescr.Platform()
 		if err != nil {

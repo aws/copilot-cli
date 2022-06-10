@@ -416,13 +416,13 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	uri, typ, err := describer.URI(o.envName)
+	uri, err := describer.URI(o.envName)
 	if err != nil {
 		return nil, fmt.Errorf("get uri for environment %s: %w", o.envName, err)
 	}
 
 	network := "over the internet."
-	switch typ {
+	switch uri.AccessType {
 	case describe.URIAccessTypeInternal:
 		network = "from your internal network."
 	case describe.URIAccessTypeServiceDiscovery:
@@ -430,7 +430,7 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	}
 
 	return []string{
-		fmt.Sprintf("You can access your service at %s %s", color.HighlightResource(uri), network),
+		fmt.Sprintf("You can access your service at %s %s", color.HighlightResource(uri.URI), network),
 	}, nil
 }
 
