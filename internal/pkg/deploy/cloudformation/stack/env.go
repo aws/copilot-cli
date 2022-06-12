@@ -230,7 +230,8 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		httpsListener = "true"
 	}
 	internalHTTPSListener := "false"
-	if len(e.in.ImportCertARNs) != 0 && len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
+	if len(e.in.ImportCertARNs) != 0 && e.in.ImportVPCConfig != nil &&
+		len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
 		internalHTTPSListener = "true"
 	}
 	return []*cloudformation.Parameter{
