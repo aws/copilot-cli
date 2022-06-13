@@ -210,7 +210,7 @@ func TestWorkerSvc_MarshalBinary(t *testing.T) {
 
 func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	perc := Percentage(70)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	mockWorkerServiceWithNoEnvironments := WorkerService{
@@ -1019,7 +1019,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	mockRange := IntRangeBand("1-10")
 	perc := Percentage(70)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	testCases := map[string]struct {

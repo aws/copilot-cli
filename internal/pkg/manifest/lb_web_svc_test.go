@@ -275,7 +275,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 		mockIPNet1 = IPNet("10.1.0.0/24")
 		mockIPNet2 = IPNet("10.1.1.0/24")
 		mockRange  = IntRangeBand("1-10")
-		mockConfig = ScalingConfigOrPercentage{
+		mockConfig = ScalingConfigOrT[Percentage]{
 			Value: &perc,
 		}
 	)
