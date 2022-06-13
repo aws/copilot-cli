@@ -1,5 +1,5 @@
 # copilot deploy
-```
+```console
 $ copilot deploy
 ```
 
@@ -15,7 +15,7 @@ This command is used to run either [`copilot svc deploy`](../commands/svc-deploy
 
 ## What are the flags?
 
-```bash
+```
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
@@ -38,11 +38,11 @@ rollback of the stack via the AWS console or AWS CLI before the next deployment.
 ## Examples
 
 Deploys a service named "frontend" to a "test" environment.
-```bash
+```console
  $ copilot deploy --name frontend --env test
 ```
 
 Deploys a job named "mailer" with additional resource tags to a "prod" environment.
-```bash
+```console
 $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual
 ```
