@@ -113,7 +113,6 @@ AutoScalingPolicyECSServiceAverageCPUUtilization:
     TargetTrackingScalingPolicyConfiguration:
       PredefinedMetricSpecification:
         PredefinedMetricType: ECSServiceAverageCPUUtilization
-      {{if .Autoscaling.CPUCooldown}}
       {{- if .Autoscaling.CPUCooldown.ScaleInCooldown}}
       ScaleInCooldown: {{.Autoscaling.CPUCooldown.ScaleInCooldown}}
       {{- else}}
@@ -124,10 +123,6 @@ AutoScalingPolicyECSServiceAverageCPUUtilization:
       {{- else}}
       ScaleOutCooldown: 60
       {{- end}}
-      {{else}}
-      ScaleInCooldown: 120
-      ScaleOutCooldown: 60
-      {{end}}
       TargetValue: {{.Autoscaling.CPU}}
 {{- end}}
 {{if .Autoscaling.Memory}}
@@ -140,7 +135,6 @@ AutoScalingPolicyECSServiceAverageMemoryUtilization:
     TargetTrackingScalingPolicyConfiguration:
       PredefinedMetricSpecification:
         PredefinedMetricType: ECSServiceAverageMemoryUtilization
-      {{- if .Autoscaling.MemCooldown}}
       {{- if .Autoscaling.MemCooldown.ScaleInCooldown}}
       ScaleInCooldown: {{.Autoscaling.MemCooldown.ScaleInCooldown}}
       {{- else}}
@@ -149,10 +143,6 @@ AutoScalingPolicyECSServiceAverageMemoryUtilization:
       {{- if .Autoscaling.MemCooldown.ScaleOutCooldown}}
       ScaleOutCooldown: {{.Autoscaling.MemCooldown.ScaleOutCooldown}}
       {{- else}}
-      ScaleOutCooldown: 60
-      {{- end}}
-      {{else}}
-      ScaleInCooldown: 120
       ScaleOutCooldown: 60
       {{- end}}
       TargetValue: {{.Autoscaling.Memory}}
