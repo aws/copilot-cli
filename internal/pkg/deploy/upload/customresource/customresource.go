@@ -69,8 +69,8 @@ func (cr *CustomResource) ArtifactPath() string {
 	return artifactpath.CustomResource(strings.ToLower(cr.FunctionName()), cr.zip.Bytes())
 }
 
-// Zip returns a reader for the zip archive from all the files in the custom resource.
-func (cr *CustomResource) Zip() io.Reader {
+// zipReader returns a reader for the zip archive from all the files in the custom resource.
+func (cr *CustomResource) zipReader() io.Reader {
 	return bytes.NewBuffer(cr.zip.Bytes())
 }
 
@@ -160,7 +160,7 @@ type UploadFunc func(key string, contents io.Reader) (url string, err error)
 func Upload(upload UploadFunc, crs []*CustomResource) (map[string]string, error) {
 	urls := make(map[string]string)
 	for _, cr := range crs {
-		url, err := upload(cr.ArtifactPath(), cr.Zip())
+		url, err := upload(cr.ArtifactPath(), cr.zipReader())
 		if err != nil {
 			return nil, fmt.Errorf("upload custom resource %q: %w", cr.FunctionName(), err)
 		}

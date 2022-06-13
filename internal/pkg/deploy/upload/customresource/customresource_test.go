@@ -65,7 +65,7 @@ func TestRDWS(t *testing.T) {
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(cr.Zip())
+		size, err := buf.ReadFrom(cr.zipReader())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
@@ -127,7 +127,7 @@ func TestLBWS(t *testing.T) {
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(cr.Zip())
+		size, err := buf.ReadFrom(cr.zipReader())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
@@ -181,7 +181,7 @@ func TestWorker(t *testing.T) {
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(cr.Zip())
+		size, err := buf.ReadFrom(cr.zipReader())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
@@ -235,7 +235,7 @@ func TestBackend(t *testing.T) {
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(cr.Zip())
+		size, err := buf.ReadFrom(cr.zipReader())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
@@ -281,7 +281,7 @@ func TestScheduledJob(t *testing.T) {
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(cr.Zip())
+		size, err := buf.ReadFrom(cr.zipReader())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
@@ -335,7 +335,7 @@ func TestEnv(t *testing.T) {
 	// ensure the zip files contain an index.js file.
 	for _, cr := range crs {
 		buf := new(bytes.Buffer)
-		size, err := buf.ReadFrom(cr.Zip())
+		size, err := buf.ReadFrom(cr.zipReader())
 		require.NoError(t, err)
 		r, err := zip.NewReader(bytes.NewReader(buf.Bytes()), size)
 		require.NoError(t, err)
