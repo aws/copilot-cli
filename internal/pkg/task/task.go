@@ -37,6 +37,11 @@ type EnvironmentDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 }
 
+// NonZeroExitCodeGetter wraps the method of getting a non-zero exit code of a task.
+type NonZeroExitCodeGetter interface {
+	HasNonZeroExitCode([]string, string) error
+}
+
 // Runner wraps the method of running tasks.
 type Runner interface {
 	RunTask(input ecs.RunTaskInput) ([]*ecs.Task, error)

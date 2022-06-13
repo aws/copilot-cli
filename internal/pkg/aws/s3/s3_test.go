@@ -409,6 +409,38 @@ func TestS3_ParseURL(t *testing.T) {
 	}
 }
 
+func TestURL(t *testing.T) {
+	testCases := map[string]struct {
+		region string
+		bucket string
+		key    string
+
+		wanted string
+	}{
+		// See https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-bucket-intro.html#virtual-host-style-url-ex
+		"Formats a virtual-hosted-style URL": {
+			region: "us-west-2",
+			bucket: "mybucket",
+			key:    "puppy.jpg",
+
+			wanted: "https://mybucket.s3.us-west-2.amazonaws.com/puppy.jpg",
+		},
+		"Formats the URL for a region in the aws-cn partition": {
+			region: "cn-north-1",
+			bucket: "mybucket",
+			key:    "puppy.jpg",
+
+			wanted: "https://mybucket.s3.cn-north-1.amazonaws.cn/puppy.jpg",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, URL(tc.region, tc.bucket, tc.key))
+		})
+	}
+}
+
 func TestS3_FormatARN(t *testing.T) {
 	testCases := map[string]struct {
 		inPartition string
