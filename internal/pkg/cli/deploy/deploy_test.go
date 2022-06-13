@@ -119,9 +119,10 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		UploadArtifacts() (*UploadArtifactsOutput, error)
 	}
 	tests := map[string]struct {
-		inEnvFile       string
-		inBuildRequired bool
-		inRegion        string
+		inEnvFile                   string
+		inBuildRequired             bool
+		inRegion                    string
+		inUploadCustomResourcesFlag bool
 
 		mock                func(m *deployMocks)
 		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
@@ -160,6 +161,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantImageDigest: aws.String("mockDigest"),
 		},
 		"should retrieve Load Balanced Web Service custom resource URLs": {
+			inUploadCustomResourcesFlag: true,
 			mock: func(m *deployMocks) {
 				// Ignore addon uploads.
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
@@ -186,6 +188,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"should retrieve Backend Service custom resource URLs": {
+			inUploadCustomResourcesFlag: true,
 			mock: func(m *deployMocks) {
 				// Ignore addon uploads.
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
@@ -212,6 +215,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"should retrieve Worker Service custom resource URLs": {
+			inUploadCustomResourcesFlag: true,
 			mock: func(m *deployMocks) {
 				// Ignore addon uploads.
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
@@ -238,6 +242,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"should retrieve Request-Driven Web Service custom resource URLs": {
+			inUploadCustomResourcesFlag: true,
 			mock: func(m *deployMocks) {
 				// Ignore addon uploads.
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
@@ -264,6 +269,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"should retrieve Scheduled Job custom resource URLs": {
+			inUploadCustomResourcesFlag: true,
 			mock: func(m *deployMocks) {
 				// Ignore addon uploads.
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
@@ -377,8 +383,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			}
 			tc.mock(m)
 
-			var deployer artifactsUploader
-			deployer = &workloadDeployer{
+			wkldDeployer := &workloadDeployer{
 				name: mockName,
 				env: &config.Environment{
 					Name:   mockEnvName,
@@ -401,10 +406,16 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				imageBuilderPusher: m.mockImageBuilderPusher,
 				templateFS:         fakeTemplateFS(),
 
-				uploadCustomResourceFlag: true,
+				uploadCustomResourceFlag: tc.inUploadCustomResourcesFlag,
+			}
+			var deployer artifactsUploader
+			deployer = &lbWebSvcDeployer{
+				svcDeployer: &svcDeployer{
+					workloadDeployer: wkldDeployer,
+				},
 			}
 			if tc.mockServiceDeployer != nil {
-				deployer = tc.mockServiceDeployer(deployer.(*workloadDeployer))
+				deployer = tc.mockServiceDeployer(wkldDeployer)
 			}
 
 			got, gotErr := deployer.UploadArtifacts()

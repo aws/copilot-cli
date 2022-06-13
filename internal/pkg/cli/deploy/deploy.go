@@ -528,28 +528,6 @@ type Options struct {
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
-func (d *workloadDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	imageDigest, err := d.uploadContainerImage(d.imageBuilderPusher)
-	if err != nil {
-		return nil, err
-	}
-	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
-		fs:        d.fs,
-		uploader:  d.s3Client,
-		templater: d.templater,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &UploadArtifactsOutput{
-		ImageDigest: imageDigest,
-		EnvFileARN:  s3Artifacts.envFileARN,
-		AddonsURL:   s3Artifacts.addonsURL,
-	}, nil
-}
-
-// UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *lbWebSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 	return d.uploadArtifacts(d.customResources)
 }
