@@ -244,6 +244,9 @@ func NewCLI() (*CLI, error) {
 	// with test data and files. Since this is going to run
 	// from Docker, the binary will be located in the root bin.
 	cliPath := filepath.Join("/", "bin", "copilot")
+	if os.Getenv("DRYRUN") == "true" {
+		cliPath = filepath.Join("..", "..", "bin", "local", "copilot")
+	}
 	if _, err := os.Stat(cliPath); err != nil {
 		return nil, err
 	}

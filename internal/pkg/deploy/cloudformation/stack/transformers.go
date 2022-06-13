@@ -53,6 +53,10 @@ const (
 
 var (
 	taskDefOverrideRulePrefixes = []string{"Resources", "TaskDefinition", "Properties"}
+	subnetPlacementForTemplate  = map[manifest.PlacementString]string{
+		manifest.PrivateSubnetPlacement: template.PrivateSubnetsPlacement,
+		manifest.PublicSubnetPlacement:  template.PublicSubnetsPlacement,
+	}
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
@@ -110,6 +114,32 @@ func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.Con
 		StartPeriod: aws.Int64(int64(hc.StartPeriod.Seconds())),
 		Timeout:     aws.Int64(int64(hc.Timeout.Seconds())),
 	}
+}
+
+func convertHostedZone(m manifest.RoutingRuleConfiguration) (template.AliasesForHostedZone, error) {
+	aliasesFor := make(map[string][]string)
+	defaultHostedZone := m.HostedZone
+	if len(m.Alias.AdvancedAliases) != 0 {
+		for _, alias := range m.Alias.AdvancedAliases {
+			if alias.HostedZone != nil {
+				aliasesFor[*alias.HostedZone] = append(aliasesFor[*alias.HostedZone], *alias.Alias)
+				continue
+			}
+			if defaultHostedZone != nil {
+				aliasesFor[*defaultHostedZone] = append(aliasesFor[*defaultHostedZone], *alias.Alias)
+			}
+		}
+		return aliasesFor, nil
+	}
+	if defaultHostedZone == nil {
+		return aliasesFor, nil
+	}
+	aliases, err := m.Alias.ToStringSlice()
+	if err != nil {
+		return nil, err
+	}
+	aliasesFor[*defaultHostedZone] = aliases
+	return aliasesFor, nil
 }
 
 // convertDependsOn converts image and sidecar depends on fields to have upper case statuses.
@@ -192,12 +222,20 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 		MinCapacity: &min,
 		MaxCapacity: &max,
 	}
-	if a.CPU != nil {
-		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU))
+
+	if a.CPU.Value != nil {
+		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.Value))
 	}
-	if a.Memory != nil {
-		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory))
+	if a.CPU.ScalingConfig.Value != nil {
+		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.ScalingConfig.Value))
 	}
+	if a.Memory.Value != nil {
+		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.Value))
+	}
+	if a.Memory.ScalingConfig.Value != nil {
+		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.ScalingConfig.Value))
+	}
+
 	if a.Requests != nil {
 		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))
 	}
@@ -580,13 +618,19 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 		SubnetsType:    template.PublicSubnetsPlacement,
 		SecurityGroups: network.VPC.SecurityGroups,
 	}
-	if network.VPC.Placement == nil {
+	placement := network.VPC.Placement
+	if placement.IsEmpty() {
 		return opts
 	}
-	if *network.VPC.Placement != manifest.PublicSubnetPlacement {
+	if placement.PlacementString == nil {
 		opts.AssignPublicIP = template.DisablePublicIP
-		opts.SubnetsType = template.PrivateSubnetsPlacement
+		opts.SubnetIDs = placement.PlacementArgs.Subnets
+		return opts
 	}
+	if *placement.PlacementString == manifest.PrivateSubnetPlacement {
+		opts.AssignPublicIP = template.DisablePublicIP
+	}
+	opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
 	return opts
 }
 
@@ -595,12 +639,15 @@ func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkCon
 	if network.IsEmpty() {
 		return opts
 	}
-	if network.VPC.Placement == nil {
+	placement := network.VPC.Placement
+	if placement.IsEmpty() {
 		return opts
 	}
-	if string(*network.VPC.Placement) == string(manifest.PrivateSubnetPlacement) {
-		opts.SubnetsType = template.PrivateSubnetsPlacement
+	if placement.PlacementString == nil {
+		opts.SubnetIDs = placement.PlacementArgs.Subnets
+		return opts
 	}
+	opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
 	return opts
 }
 

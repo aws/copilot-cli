@@ -57,6 +57,7 @@ func TestScheduledJob_Template(t *testing.T) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Eq(template.WorkloadOpts{
+					WorkloadType:       manifest.ScheduledJobType,
 					ScheduleExpression: "cron(0 0 * * ? *)",
 					StateMachine: &template.StateMachineOpts{
 						Timeout: aws.Int(5400),
@@ -81,6 +82,7 @@ func TestScheduledJob_Template(t *testing.T) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Eq(template.WorkloadOpts{
+					WorkloadType: manifest.ScheduledJobType,
 					NestedStack: &template.WorkloadNestedStackOpts{
 						StackName:       addon.StackName,
 						VariableOutputs: []string{"Hello"},

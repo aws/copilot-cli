@@ -8,16 +8,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -227,6 +226,7 @@ Outputs:
 						StartPeriod: aws.Int64(0),
 						Timeout:     aws.Int64(10),
 					},
+					HostedZoneAliases: make(template.AliasesForHostedZone),
 					HTTPHealthCheck: template.HTTPHealthCheckOpts{
 						HealthCheckPath: manifest.DefaultHealthCheckPath,
 						GracePeriod:     aws.Int64(manifest.DefaultHealthCheckGracePeriod),
@@ -294,26 +294,25 @@ Outputs:
 				svc.manifest.DeployConfig = manifest.DeploymentConfiguration{
 					Rolling: aws.String("recreate"),
 				}
-				svc.manifest.RoutingRule = manifest.RoutingRuleConfigOrBool{
-					RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-						Path: aws.String("/albPath"),
-						HealthCheck: manifest.HealthCheckArgsOrString{
-							HealthCheckArgs: manifest.HTTPHealthCheckArgs{
-								Path:               aws.String("/healthz"),
-								Port:               aws.Int(4200),
-								SuccessCodes:       aws.String("418"),
-								HealthyThreshold:   aws.Int64(64),
-								UnhealthyThreshold: aws.Int64(63),
-								Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
-								Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
-								GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
-							},
+				svc.manifest.RoutingRule = manifest.RoutingRuleConfiguration{
+					Path: aws.String("/albPath"),
+					HealthCheck: manifest.HealthCheckArgsOrString{
+						HealthCheckArgs: manifest.HTTPHealthCheckArgs{
+							Path:               aws.String("/healthz"),
+							Port:               aws.Int(4200),
+							SuccessCodes:       aws.String("418"),
+							HealthyThreshold:   aws.Int64(64),
+							UnhealthyThreshold: aws.Int64(63),
+							Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
+							Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
+							GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
 						},
-						Stickiness:          aws.Bool(true),
-						DeregistrationDelay: (*time.Duration)(aws.Int64(int64(59 * time.Second))),
-						AllowedSourceIps:    []manifest.IPNet{"10.0.1.0/24"},
 					},
+					Stickiness:          aws.Bool(true),
+					DeregistrationDelay: (*time.Duration)(aws.Int64(int64(59 * time.Second))),
+					AllowedSourceIps:    []manifest.IPNet{"10.0.1.0/24"},
 				}
+				svc.albEnabled = true
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
@@ -339,6 +338,7 @@ Outputs:
 						Interval:           aws.Int64(61),
 						GracePeriod:        aws.Int64(60),
 					},
+					HostedZoneAliases:   make(template.AliasesForHostedZone),
 					DeregistrationDelay: aws.Int64(59),
 					AllowedSourceIps:    []string{"10.0.1.0/24"},
 					RulePriorityLambda:  "something",
@@ -402,8 +402,10 @@ Outputs:
 
 			if tc.setUpManifest != nil {
 				tc.setUpManifest(conf)
-				privatePlacement := manifest.Placement(manifest.PrivateSubnetPlacement)
-				conf.manifest.Network.VPC.Placement = &privatePlacement
+				privatePlacement := manifest.PlacementString(manifest.PrivateSubnetPlacement)
+				conf.manifest.Network.VPC.Placement = manifest.PlacementArgOrString{
+					PlacementString: &privatePlacement,
+				}
 				conf.manifest.Network.VPC.SecurityGroups = []string{"sg-1234"}
 			}
 
@@ -508,51 +510,79 @@ func TestBackendService_Parameters(t *testing.T) {
 
 func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 	const (
-		appName        = "my-app"
-		envName        = "my-env"
-		manifestSuffix = "-manifest.yml"
-		templateSuffix = "-template.yml"
-		paramsSuffix   = "-params.json"
+		appName = "my-app"
+		envName = "my-env"
 	)
 
-	// discover test cases
-	tests := make(map[string]string) // name -> path prefix
-	dir := filepath.Join("testdata", "workloads", "backend")
-	filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
-		if info.IsDir() {
-			return nil
-		}
+	testDir := filepath.Join("testdata", "workloads", "backend")
 
-		if strings.HasSuffix(info.Name(), manifestSuffix) {
-			name := strings.TrimSuffix(info.Name(), manifestSuffix)
-			tests[name] = strings.TrimSuffix(path, manifestSuffix)
-		}
-
-		return nil
-	})
+	tests := map[string]struct {
+		ManifestPath        string
+		TemplatePath        string
+		ParamsPath          string
+		EnvImportedCertARNs []string
+	}{
+		"simple": {
+			ManifestPath: filepath.Join(testDir, "simple-manifest.yml"),
+			TemplatePath: filepath.Join(testDir, "simple-template.yml"),
+			ParamsPath:   filepath.Join(testDir, "simple-params.json"),
+		},
+		"http only path configured": {
+			ManifestPath: filepath.Join(testDir, "http-only-path-manifest.yml"),
+			TemplatePath: filepath.Join(testDir, "http-only-path-template.yml"),
+			ParamsPath:   filepath.Join(testDir, "http-only-path-params.json"),
+		},
+		"http full config": {
+			ManifestPath: filepath.Join(testDir, "http-full-config-manifest.yml"),
+			TemplatePath: filepath.Join(testDir, "http-full-config-template.yml"),
+			ParamsPath:   filepath.Join(testDir, "http-full-config-params.json"),
+		},
+		"https path and alias configured": {
+			ManifestPath:        filepath.Join(testDir, "https-path-alias-manifest.yml"),
+			TemplatePath:        filepath.Join(testDir, "https-path-alias-template.yml"),
+			ParamsPath:          filepath.Join(testDir, "https-path-alias-params.json"),
+			EnvImportedCertARNs: []string{"exampleComCertARN"},
+		},
+		"http with autoscaling by requests configured": {
+			ManifestPath: filepath.Join(testDir, "http-autoscaling-manifest.yml"),
+			TemplatePath: filepath.Join(testDir, "http-autoscaling-template.yml"),
+			ParamsPath:   filepath.Join(testDir, "http-autoscaling-params.json"),
+		},
+	}
 
 	// run tests
-	for name, pathPrefix := range tests {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
 			// parse files
-			manifestBytes, err := ioutil.ReadFile(pathPrefix + manifestSuffix)
+			manifestBytes, err := ioutil.ReadFile(tc.ManifestPath)
 			require.NoError(t, err)
-			tmplBytes, err := ioutil.ReadFile(pathPrefix + templateSuffix)
+			tmplBytes, err := ioutil.ReadFile(tc.TemplatePath)
 			require.NoError(t, err)
-			paramsBytes, err := ioutil.ReadFile(pathPrefix + paramsSuffix)
+			paramsBytes, err := ioutil.ReadFile(tc.ParamsPath)
 			require.NoError(t, err)
 
 			mft, err := manifest.UnmarshalWorkload([]byte(manifestBytes))
 			require.NoError(t, err)
 			require.NoError(t, mft.Validate())
 
-			serializer, err := NewBackendService(mft.(*manifest.BackendService), envName, appName,
-				RuntimeConfig{
+			serializer, err := NewBackendService(BackendServiceConfig{
+				App: &config.Application{
+					Name: appName,
+				},
+				Env: &config.Environment{
+					Name: envName,
+					CustomConfig: &config.CustomizeEnv{
+						ImportCertARNs: tc.EnvImportedCertARNs,
+					},
+				},
+				Manifest: mft.(*manifest.BackendService),
+				RuntimeConfig: RuntimeConfig{
 					ServiceDiscoveryEndpoint: fmt.Sprintf("%s.%s.local", envName, appName),
-				})
+				},
+			})
 			require.NoError(t, err)
 
 			// mock parser for lambda functions
@@ -572,6 +602,17 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			require.NoError(t, err)
 			var actualTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal([]byte(tmpl), &actualTmpl))
+
+			// change the random DynamicDesiredCountAction UpdateID to an expected value
+			if v, ok := actualTmpl["Resources"]; ok {
+				if v, ok := v.(map[string]any)["DynamicDesiredCountAction"]; ok {
+					if v, ok := v.(map[string]any)["Properties"]; ok {
+						if v, ok := v.(map[string]any); ok {
+							v["UpdateID"] = "AVeryRandomUUID"
+						}
+					}
+				}
+			}
 
 			var expectedTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal(tmplBytes, &expectedTmpl))

@@ -1,5 +1,5 @@
 # pipeline ls
-```bash
+```console
 $ copilot pipeline ls [flags]
 ```
 
@@ -7,15 +7,16 @@ $ copilot pipeline ls [flags]
 `copilot pipeline ls` は、Application にデプロイされた全ての Pipeline を一覧表示します。
 
 ## フラグ
-```bash
+```
 -a, --app string   Name of the application.
 -h, --help         help for ls
     --json         Optional. Outputs in JSON format.
+    --local        Only show pipelines in the workspace.
 ```
 
 ## 実行例
 Application "phonetool" のすべての Pipeline を一覧表示します。
 
-```bash
+```console
 $ copilot pipeline ls -a phonetool
 ```

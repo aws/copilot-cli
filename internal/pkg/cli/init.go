@@ -102,7 +102,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompt := prompt.New()
-	sel := selector.NewWorkspaceSelector(prompt, configStore, ws)
+	sel := selector.NewLocalWorkloadSelector(prompt, configStore, ws)
 	deployStore, err := deploy.NewStore(sessProvider, configStore)
 	if err != nil {
 		return nil, err
@@ -228,7 +228,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					fs:                fs,
 					store:             configStore,
 					init:              wlInitializer,
-					sel:               sel,
+					sel:               selector.NewWorkspaceSelector(prompt, ws),
 					prompt:            prompt,
 					mftReader:         ws,
 					dockerEngine:      dockerengine.New(cmd),
@@ -250,7 +250,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 					fs:                fs,
 					init:              wlInitializer,
-					sel:               sel,
+					sel:               selector.NewWorkspaceSelector(prompt, ws),
 					store:             configStore,
 					topicSel:          snsSel,
 					mftReader:         ws,

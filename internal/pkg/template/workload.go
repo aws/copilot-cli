@@ -335,6 +335,9 @@ type AutoscalingOpts struct {
 	QueueDelay   *AutoscalingQueueDelayOpts
 }
 
+// AliasesForHostedZone maps hosted zone IDs to aliases that belong to it.
+type AliasesForHostedZone map[string][]string
+
 // AutoscalingQueueDelayOpts holds configuration to scale SQS queues.
 type AutoscalingQueueDelayOpts struct {
 	AcceptableBacklogPerTask int
@@ -418,9 +421,11 @@ type DeadLetterQueue struct {
 
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
-	AssignPublicIP string
-	SubnetsType    string
 	SecurityGroups []string
+	AssignPublicIP string
+	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
+	SubnetsType string
+	SubnetIDs   []string
 }
 
 // RuntimePlatformOpts holds configuration needed for Platform configuration.
@@ -483,6 +488,7 @@ type WorkloadOpts struct {
 	ServiceDiscoveryEndpoint string
 	HTTPVersion              *string
 	ALBEnabled               bool
+	HostedZoneAliases        AliasesForHostedZone
 
 	// Additional options for service templates.
 	WorkloadType            string
@@ -585,19 +591,20 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":         ToSnakeCaseFunc,
-			"hasSecrets":          hasSecrets,
-			"fmtSlice":            FmtSliceFunc,
-			"quoteSlice":          QuoteSliceFunc,
-			"randomUUID":          randomUUIDFunc,
-			"jsonMountPoints":     generateMountPointJSON,
-			"jsonSNSTopics":       generateSNSJSON,
-			"jsonQueueURIs":       generateQueueURIJSON,
-			"envControllerParams": envControllerParameters,
-			"logicalIDSafe":       StripNonAlphaNumFunc,
-			"wordSeries":          english.WordSeries,
-			"pluralWord":          english.PluralWord,
-			"contains":            contains,
+			"toSnakeCase":          ToSnakeCaseFunc,
+			"hasSecrets":           hasSecrets,
+			"fmtSlice":             FmtSliceFunc,
+			"quoteSlice":           QuoteSliceFunc,
+			"randomUUID":           randomUUIDFunc,
+			"jsonMountPoints":      generateMountPointJSON,
+			"jsonSNSTopics":        generateSNSJSON,
+			"jsonQueueURIs":        generateQueueURIJSON,
+			"envControllerParams":  envControllerParameters,
+			"logicalIDSafe":        StripNonAlphaNumFunc,
+			"wordSeries":           english.WordSeries,
+			"pluralWord":           english.PluralWord,
+			"contains":             contains,
+			"requiresVPCConnector": requiresVPCConnector,
 		})
 	}
 }
@@ -629,6 +636,11 @@ func envControllerParameters(o WorkloadOpts) []string {
 		}
 		parameters = append(parameters, "Aliases,") // YAML needs the comma separator; resolved in EnvContr.
 	}
+	if o.WorkloadType == "Backend Service" {
+		if o.ALBEnabled {
+			parameters = append(parameters, "InternalALBWorkloads,")
+		}
+	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
 		parameters = append(parameters, "NATWorkloads,")
 	}
@@ -636,6 +648,13 @@ func envControllerParameters(o WorkloadOpts) []string {
 		parameters = append(parameters, "EFSWorkloads,")
 	}
 	return parameters
+}
+
+func requiresVPCConnector(o WorkloadOpts) bool {
+	if o.WorkloadType != "Request-Driven Web Service" {
+		return false
+	}
+	return len(o.Network.SubnetIDs) > 0 || o.Network.SubnetsType != ""
 }
 
 func contains(list []string, s string) bool {

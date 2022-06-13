@@ -34,6 +34,9 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
+  HTTPSEnabled:
+    Type: String
+    AllowedValues: [true, false]
   RulePath:
     Type: String
   Stickiness:
@@ -334,11 +337,11 @@ Resources:
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
-      Role: !GetAtt "CustomResourceRole.Arn"
+      Role: !GetAtt "RulePriorityFunctionRole.Arn"
       Runtime: nodejs12.x
-  CustomResourceRole:
+  RulePriorityFunctionRole:
     Metadata:
-      "aws:copilot:description": "An IAM role used by custom resources to describe your ECS service"
+      "aws:copilot:description": "An IAM Role to describe load balancer rules for assigning a priority"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -351,6 +354,8 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
         - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
@@ -360,15 +365,13 @@ Resources:
                 Action:
                   - elasticloadbalancing:DescribeRules
                 Resource: "*"
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
   HTTPRulePriorityAction:
     Metadata:
       "aws:copilot:description": "A custom resource assigning priority for HTTP listener rules"
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
   HTTPListenerRule:
     Metadata:
       "aws:copilot:description": "A HTTP listener rule for forwarding HTTP traffic"
@@ -385,7 +388,7 @@ Resources:
               - - "/*"
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
       Priority: !If
         - IsDefaultRootPath
         - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
@@ -410,7 +413,7 @@ Resources:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
       EnvStack: !Sub "${AppName}-${EnvName}"
-      Parameters: []
+      Parameters: ["InternalALBWorkloads"]
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:

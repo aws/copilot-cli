@@ -1,5 +1,5 @@
 # job deploy
-```bash
+```console
 $ copilot job deploy
 ```
 
@@ -17,24 +17,32 @@ $ copilot job deploy
 
 ## フラグ
 
-```bash
+```
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
   -h, --help                           help for deploy
   -n, --name string                    Name of the job.
+      --no-rollback bool               Optional. Disable automatic stack
+                                       rollback in case of deployment failure.
+                                       We do not recommend using this flag for a
+                                       production environment.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
-      --tag string                     Optional. The container image tag.
+      --tag string                     Optional. The container image tag..
 ```
+
+!!!info
+`--no-rollback` フラグは、サービスのダウンタイムを招く可能性があるため、本番環境にデプロイする場合は ***お勧めしません*** 。
+自動スタックロールバックが無効になっている場合に、デプロイに失敗すると、手動でスタックを開始する必要があります。次のデプロイの前に AWS コンソールまたは AWS CLI を利用してスタックのスタックロールバックを手動で開始する必要があります。
 
 ## 実行例
 
 "report-gen" という Job を "test" Environment にデプロイします。
-```bash
+```console
 $ copilot job deploy --name report-gen --env test
 ```
 
 追加のリソースタグを付与して Job をデプロイします。
-```bash
+```console
 $ copilot job deploy --resource-tags source/revision=bb133e7,deployment/initiator=manual`
 ```

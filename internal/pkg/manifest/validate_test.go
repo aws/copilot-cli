@@ -83,7 +83,9 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
@@ -404,7 +406,9 @@ func TestBackendService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -528,6 +532,33 @@ func TestBackendService_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
+		"error if fail to validate http": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfiguration{
+						ProtocolVersion: aws.String("GRPC"),
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "http": "path" must be specified`,
+		},
+		"error if request scaling without http": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					TaskConfig: TaskConfig{
+						Count: Count{
+							AdvancedCount: AdvancedCount{
+								workloadType: BackendServiceType,
+								Requests:     aws.Int(128),
+							},
+						},
+					},
+				},
+			},
+			wantedError: errors.New(`"http" must be specified if "count.requests" or "count.response_time" are specified`),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -607,7 +638,9 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 					},
 					Network: RequestDrivenWebServiceNetworkConfig{
 						VPC: rdwsVpcConfig{
-							Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -645,6 +678,29 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 				},
 			},
 			wantedError: fmt.Errorf(`"name" must be specified`),
+		},
+		"error if placement is not private": {
+			config: RequestDrivenWebService{
+				Workload: Workload{
+					Name: aws.String("mockName"),
+				},
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					ImageConfig: ImageWithPort{
+						Image: Image{
+							Location: stringP("mockLocation"),
+						},
+						Port: uint16P(80),
+					},
+					Network: RequestDrivenWebServiceNetworkConfig{
+						VPC: rdwsVpcConfig{
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`placement "public" is not supported for Request-Driven Web Service`),
 		},
 	}
 	for name, tc := range testCases {
@@ -710,7 +766,9 @@ func TestWorkerService_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -914,7 +972,9 @@ func TestScheduledJob_Validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						vpcConfig{
-							Placement: (*Placement)(aws.String("")),
+							Placement: PlacementArgOrString{
+								PlacementString: (*PlacementString)(aws.String("")),
+							},
 						},
 					},
 				},
@@ -1253,7 +1313,9 @@ func TestRoutingRule_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `"version" field value 'quic' must be one of GRPC, HTTP1 or HTTP2`,
 		},
 		"error if path is missing": {
-			RoutingRule:          RoutingRuleConfiguration{},
+			RoutingRule: RoutingRuleConfiguration{
+				ProtocolVersion: aws.String("GRPC"),
+			},
 			wantedErrorMsgPrefix: `"path" must be specified`,
 		},
 		"should not error if protocol version is not uppercase": {
@@ -1261,6 +1323,26 @@ func TestRoutingRule_Validate(t *testing.T) {
 				Path:            stringP("/"),
 				ProtocolVersion: aws.String("gRPC"),
 			},
+		},
+		"error if hosted zone set without alias": {
+			RoutingRule: RoutingRuleConfiguration{
+				Path:       stringP("/"),
+				HostedZone: aws.String("ABCD1234"),
+			},
+			wantedErrorMsgPrefix: `"alias" must be specified if "hosted_zone" is specified`,
+		},
+		"error if one of alias is not valid": {
+			RoutingRule: RoutingRuleConfiguration{
+				Path: stringP("/"),
+				Alias: Alias{
+					AdvancedAliases: []AdvancedAlias{
+						{
+							HostedZone: aws.String("mockHostedZone"),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "alias":`,
 		},
 	}
 	for name, tc := range testCases {
@@ -1339,6 +1421,20 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
+		"error if hosted zone is set": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/tcp"),
+				Aliases: Alias{
+					AdvancedAliases: []AdvancedAlias{
+						{
+							Alias:      aws.String("mockAlias"),
+							HostedZone: aws.String("mockHostedZone"),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -1355,6 +1451,31 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 				return
 			}
 			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func TestAdvancedAlias_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     AdvancedAlias
+		wanted error
+	}{
+		"should return an error if name is not specified": {
+			in: AdvancedAlias{
+				HostedZone: aws.String("ABCD123"),
+			},
+			wanted: errors.New(`"name" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
@@ -1383,7 +1504,10 @@ func TestIPNet_Validate(t *testing.T) {
 }
 
 func TestTaskConfig_Validate(t *testing.T) {
-	mockPerc := Percentage(70)
+	perc := Percentage(70)
+	mockConfig := ScalingConfigOrPercentage{
+		Value: &perc,
+	}
 	testCases := map[string]struct {
 		TaskConfig TaskConfig
 
@@ -1403,7 +1527,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 				Count: Count{
 					AdvancedCount: AdvancedCount{
 						Spot: aws.Int(123),
-						CPU:  &mockPerc,
+						CPU:  mockConfig,
 					},
 				},
 			},
@@ -1524,10 +1648,75 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 	}
 }
 
+func TestResource_Validate(t *testing.T) {
+
+	var (
+		time = 60 * time.Second
+		perc = Percentage(70)
+	)
+
+	testCases := map[string]struct {
+		Resource ScalingConfigOrPercentage
+
+		wantedError          error
+		wantedErrorMsgPrefix string
+	}{
+		"valid if only value is specified": {
+			Resource: ScalingConfigOrPercentage{
+				Value: &perc,
+			},
+		},
+		"valid if only scaling config is specified": {
+			Resource: ScalingConfigOrPercentage{
+				ScalingConfig: AdvancedScalingConfig{
+					Value: &perc,
+					Cooldown: Cooldown{
+						ScaleInCooldown:  &time,
+						ScaleOutCooldown: &time,
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.Resource.Validate()
+
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+				return
+			}
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+				return
+			}
+			require.NoError(t, gotErr)
+		})
+	}
+}
+
 func TestAdvancedCount_Validate(t *testing.T) {
 	var (
-		mockPerc    = Percentage(70)
+		perc        = Percentage(70)
 		invalidPerc = Percentage(-1)
+		timeMinute  = time.Second * 60
+		mockConfig  = ScalingConfigOrPercentage{
+			Value: &perc,
+		}
+		invalidConfig = ScalingConfigOrPercentage{
+			Value: &invalidPerc,
+		}
+		mockCooldown = Cooldown{
+			ScaleInCooldown: &timeMinute,
+		}
+		mockAdvancedInvConfig = ScalingConfigOrPercentage{
+			ScalingConfig: AdvancedScalingConfig{
+				Value:    &invalidPerc,
+				Cooldown: mockCooldown,
+			},
+		}
 	)
 	testCases := map[string]struct {
 		AdvancedCount AdvancedCount
@@ -1553,7 +1742,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				Range: Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				},
-				CPU: &mockPerc,
+				CPU: mockConfig,
 				QueueScaling: QueueScaling{
 					AcceptableLatency: durationp(10 * time.Second),
 					AvgProcessingTime: durationp(1 * time.Second),
@@ -1564,7 +1753,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		"error if both spot and autoscaling fields are specified": {
 			AdvancedCount: AdvancedCount{
 				Spot:         aws.Int(123),
-				CPU:          &mockPerc,
+				CPU:          mockConfig,
 				workloadType: LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`must specify one, not both, of "spot" and "range/cpu_percentage/memory_percentage/requests/response_time"`),
@@ -1583,7 +1772,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				Requests:     aws.Int(123),
 				workloadType: LoadBalancedWebServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage, requests or response_time" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),
 		},
 		"error if range is specified but no autoscaling fields are specified for a Load Balanced Web Service": {
 			AdvancedCount: AdvancedCount{
@@ -1601,7 +1790,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				},
 				workloadType: BackendServiceType,
 			},
-			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage" or "memory_percentage" if "range" is specified`),
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "range" is specified`),
 		},
 		"error if range is specified but no autoscaling fields are specified for a Worker Service": {
 			AdvancedCount: AdvancedCount{
@@ -1612,19 +1801,40 @@ func TestAdvancedCount_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage" or "queue_delay" if "range" is specified`),
 		},
-		"error if range is missing when autoscaling fields are set for Backend Service": {
+		"error if cooldown is specified but no autoscaling fields are specified for a Load Balanced Web Service": {
 			AdvancedCount: AdvancedCount{
-				CPU:          &mockPerc,
+				Cooldown:     mockCooldown,
+				workloadType: LoadBalancedWebServiceType,
+			},
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "cooldown" is specified`),
+		},
+		"error if cooldown is specified but no autoscaling fields are specified for a Backend Service": {
+			AdvancedCount: AdvancedCount{
+				Cooldown:     mockCooldown,
 				workloadType: BackendServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage or memory_percentage" are specified`),
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage", "requests" or "response_time" if "cooldown" is specified`),
+		},
+		"error if cooldown is specified but no autoscaling fields are specified for a Worker Service": {
+			AdvancedCount: AdvancedCount{
+				Cooldown:     mockCooldown,
+				workloadType: WorkerServiceType,
+			},
+			wantedError: fmt.Errorf(`must specify at least one of "cpu_percentage", "memory_percentage" or "queue_delay" if "cooldown" is specified`),
+		},
+		"error if range is missing when autoscaling fields are set for Backend Service": {
+			AdvancedCount: AdvancedCount{
+				CPU:          mockConfig,
+				workloadType: BackendServiceType,
+			},
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),
 		},
 		"error if range is missing when autoscaling fields are set for Worker Service": {
 			AdvancedCount: AdvancedCount{
-				CPU:          &mockPerc,
+				CPU:          mockConfig,
 				workloadType: WorkerServiceType,
 			},
-			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage, memory_percentage or queue_delay" are specified`),
+			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage" or "queue_delay" are specified`),
 		},
 		"wrap error from queue_delay on failure": {
 			AdvancedCount: AdvancedCount{
@@ -1643,22 +1853,32 @@ func TestAdvancedCount_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "queue_delay": `,
 		},
-		"error if CPU perc is not valid": {
+		"error if CPU config is not valid": {
 			AdvancedCount: AdvancedCount{
 				Range: Range{
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
-				CPU:          &invalidPerc,
+				CPU:          invalidConfig,
 				workloadType: LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "cpu_percentage": `,
 		},
-		"error if memory perc is not valid": {
+		"error if CPU advanced config is not valid": {
 			AdvancedCount: AdvancedCount{
 				Range: Range{
 					Value: (*IntRangeBand)(stringP("1-2")),
 				},
-				Memory:       &invalidPerc,
+				CPU:          mockAdvancedInvConfig,
+				workloadType: LoadBalancedWebServiceType,
+			},
+			wantedErrorMsgPrefix: `validate "cpu_percentage": `,
+		},
+		"error if memory config is not valid": {
+			AdvancedCount: AdvancedCount{
+				Range: Range{
+					Value: (*IntRangeBand)(stringP("1-2")),
+				},
+				Memory:       invalidConfig,
 				workloadType: LoadBalancedWebServiceType,
 			},
 			wantedErrorMsgPrefix: `validate "memory_percentage": `,
@@ -2099,7 +2319,9 @@ func TestNetworkConfig_Validate(t *testing.T) {
 		"error if fail to validate vpc": {
 			config: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: (*Placement)(aws.String("")),
+					Placement: PlacementArgOrString{
+						PlacementString: (*PlacementString)(aws.String("")),
+					},
 				},
 			},
 			wantedErrorPrefix: `validate "vpc": `,
@@ -2127,7 +2349,9 @@ func TestRequestDrivenWebServiceNetworkConfig_Validate(t *testing.T) {
 		"error if fail to validate vpc": {
 			config: RequestDrivenWebServiceNetworkConfig{
 				VPC: rdwsVpcConfig{
-					Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
+					Placement: PlacementArgOrString{
+						PlacementString: (*PlacementString)(aws.String("")),
+					},
 				},
 			},
 			wantedErrorPrefix: `validate "vpc": `,
@@ -2154,7 +2378,9 @@ func TestRdwsVpcConfig_Validate(t *testing.T) {
 	}{
 		"error if fail to validate placement": {
 			config: rdwsVpcConfig{
-				Placement: (*RequestDrivenWebServicePlacement)(aws.String("")),
+				Placement: PlacementArgOrString{
+					PlacementString: (*PlacementString)(aws.String("")),
+				},
 			},
 			wantedErrorPrefix: `validate "placement": `,
 		},
@@ -2180,7 +2406,9 @@ func TestVpcConfig_Validate(t *testing.T) {
 	}{
 		"error if fail to validate placement": {
 			config: vpcConfig{
-				Placement: (*Placement)(aws.String("")),
+				Placement: PlacementArgOrString{
+					PlacementString: (*PlacementString)(aws.String("")),
+				},
 			},
 			wantedErrorPrefix: `validate "placement": `,
 		},
@@ -2198,11 +2426,11 @@ func TestVpcConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestPlacement_Validate(t *testing.T) {
-	mockEmptyPlacement := Placement("")
-	mockInvalidPlacement := Placement("external")
+func TestPlacementString_Validate(t *testing.T) {
+	mockEmptyPlacement := PlacementString("")
+	mockInvalidPlacement := PlacementString("external")
 	testCases := map[string]struct {
-		in     *Placement
+		in     *PlacementString
 		wanted error
 	}{
 		"should return an error if placement is empty": {
@@ -2212,29 +2440,6 @@ func TestPlacement_Validate(t *testing.T) {
 		"should return an error if placement is invalid": {
 			in:     &mockInvalidPlacement,
 			wanted: errors.New(`"placement" external must be one of public, private`),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
-
-			if tc.wanted != nil {
-				require.EqualError(t, err, tc.wanted.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestRequestDrivenWebServicePlacement_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		in     *RequestDrivenWebServicePlacement
-		wanted error
-	}{
-		"should return an error if placement is public": {
-			in:     (*RequestDrivenWebServicePlacement)(aws.String("public")),
-			wanted: errors.New(`placement "public" is not supported for Request-Driven Web Service`),
 		},
 	}
 	for name, tc := range testCases {

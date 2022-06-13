@@ -159,6 +159,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		Variables:                j.manifest.Variables,
 		Secrets:                  convertSecrets(j.manifest.Secrets),
+		WorkloadType:             manifest.ScheduledJobType,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
@@ -252,7 +253,7 @@ func (j *ScheduledJob) awsSchedule() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("parse preset schedule: %w", err)
 		}
-	case schedule == "none": 
+	case schedule == "none":
 		scheduleExpression = schedule // Keep expression as "none" when the job is disabled.
 	default:
 		scheduleExpression, err = toAWSCron(schedule)

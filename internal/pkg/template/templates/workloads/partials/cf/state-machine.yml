@@ -19,11 +19,17 @@ StateMachine:
       TaskDefinition: !Ref TaskDefinition
       Partition: !Ref AWS::Partition
       Subnets:
+      {{- if .Network.SubnetIDs}}
+        {{- range $id := .Network.SubnetIDs}}
+        - {{$id}}
+        {{- end}}
+      {{- else}}
         Fn::Join:
           - '","'
           - Fn::Split:
             - ','
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
+      {{- end}}
       AssignPublicIp: {{.Network.AssignPublicIP}}
       SecurityGroups:
         Fn::Join:

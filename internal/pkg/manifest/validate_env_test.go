@@ -45,6 +45,112 @@ func TestEnvironment_Validate(t *testing.T) {
 	}
 }
 
+func TestEnvironmentConfig_Validate(t *testing.T) {
+	mockPublicSubnet1CIDR := IPNet("10.0.0.0/24")
+	mockPublicSubnet2CIDR := IPNet("10.0.1.0/24")
+	mockPrivateSubnet1CIDR := IPNet("10.0.3.0/24")
+	mockPrivateSubnet2CIDR := IPNet("10.0.4.0/24")
+	testCases := map[string]struct {
+		in          EnvironmentConfig
+		wantedError string
+	}{
+		"error if internal ALB subnet placement specified with adjusted vpc": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						CIDR: ipNetP("apple cider"),
+						Subnets: subnetsConfiguration{
+							Public: []subnetConfiguration{
+								{
+									CIDR: &mockPublicSubnet1CIDR,
+									AZ:   aws.String("us-east-2a"),
+								},
+								{
+									CIDR: &mockPublicSubnet2CIDR,
+									AZ:   aws.String("us-east-1b"),
+								},
+							},
+							Private: []subnetConfiguration{
+								{
+									CIDR: &mockPrivateSubnet1CIDR,
+									AZ:   aws.String("us-east-2a"),
+								},
+								{
+									CIDR: &mockPrivateSubnet2CIDR,
+									AZ:   aws.String("us-east-1b"),
+								},
+							},
+						},
+					},
+				},
+
+				HTTPConfig: environmentHTTPConfig{
+					Private: privateHTTPConfig{
+						InternalALBSubnets: []string{"mockSubnet"},
+					},
+				},
+			},
+			wantedError: "in order to specify internal ALB subnet placement, subnets must be imported",
+		},
+		"error if subnets specified for internal ALB placement don't exist": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						ID: aws.String("mockID"),
+						Subnets: subnetsConfiguration{
+							Private: []subnetConfiguration{
+								{SubnetID: aws.String("existentSubnet")},
+								{SubnetID: aws.String("anotherExistentSubnet")},
+							},
+						},
+					},
+				},
+				HTTPConfig: environmentHTTPConfig{
+					Private: privateHTTPConfig{
+						InternalALBSubnets: []string{"nonexistentSubnet"},
+					},
+				},
+			},
+			wantedError: "subnet(s) specified for internal ALB placement not imported",
+		},
+		"valid case with internal ALB placement": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						ID: aws.String("mockID"),
+						Subnets: subnetsConfiguration{
+							Private: []subnetConfiguration{
+								{SubnetID: aws.String("existentSubnet")},
+								{SubnetID: aws.String("anotherExistentSubnet")},
+							},
+							Public: []subnetConfiguration{
+								{SubnetID: aws.String("publicSubnet1")},
+								{SubnetID: aws.String("publicSubnet2")},
+							},
+						},
+					},
+				},
+				HTTPConfig: environmentHTTPConfig{
+					Private: privateHTTPConfig{
+						InternalALBSubnets: []string{"existentSubnet", "anotherExistentSubnet"},
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.in.Validate()
+			if tc.wantedError != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedError)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
 func TestEnvironmentNetworkConfig_Validate(t *testing.T) {
 	mockVPCCIDR := IPNet("10.0.0.0/16")
 	testCases := map[string]struct {
@@ -518,17 +624,32 @@ func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
 		in                   environmentHTTPConfig
 		wantedErrorMsgPrefix string
 	}{
-		"malformed certificates": {
+		"malformed public certificate": {
 			in: environmentHTTPConfig{
 				Public: publicHTTPConfig{
 					Certificates: []string{"arn:aws:weird-little-arn"},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "certificates[0]": `,
+			wantedErrorMsgPrefix: `parse "certificates[0]": `,
 		},
-		"success": {
+		"malformed private certificate": {
+			in: environmentHTTPConfig{
+				Private: privateHTTPConfig{
+					Certificates: []string{"arn:aws:weird-little-arn"},
+				},
+			},
+			wantedErrorMsgPrefix: `parse "certificates[0]": `,
+		},
+		"success with public cert": {
 			in: environmentHTTPConfig{
 				Public: publicHTTPConfig{
+					Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
+				},
+			},
+		},
+		"success with private cert": {
+			in: environmentHTTPConfig{
+				Private: privateHTTPConfig{
 					Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
 				},
 			},

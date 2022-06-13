@@ -1,5 +1,5 @@
 # copilot deploy
-```
+```console
 $ copilot deploy
 ```
 
@@ -16,25 +16,33 @@ $ copilot deploy
 
 ## フラグ
 
-```bash
+```
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
   -h, --help                           help for deploy
   -n, --name string                    Name of the service or job.
+      --no-rollback bool               Optional. Disable automatic stack
+                                       rollback in case of deployment failure.
+                                       We do not recommend using this flag for a
+                                       production environment.
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
                                        Allows you to categorize resources. (default [])
       --tag string                     Optional. The container image tag.
 ```
 
+!!!info
+`--no-rollback` フラグは、サービスのダウンタイムを招く可能性があるため、本番環境にデプロイする場合は ***お勧めしません*** 。
+自動スタックロールバックが無効になっている場合に、デプロイに失敗すると、手動でスタックを開始する必要があります。次のデプロイの前に AWS コンソールまたは AWS CLI を利用してスタックのスタックロールバックを手動で開始する必要があります。
+
 ## 実行例
 
 "frontend"という名前の Service を "test" Environment にデプロイします。
-```bash
+```console
  $ copilot deploy --name frontend --env test
 ```
 
 "mailer"という名前の Job を、追加のリソースタグを付加して、"prod" Environment にデプロイします。
-```bash
+```console
 $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual
 ```

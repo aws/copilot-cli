@@ -1,5 +1,5 @@
 # pipeline status
-```bash
+```console
 $ copilot pipeline status [flags]
 ```
 
@@ -7,7 +7,7 @@ $ copilot pipeline status [flags]
 `copilot pipeline status` では、デプロイされた Pipeline のステージの状態を表示します。
 
 ## フラグ
-```bash
+```
 -a, --app string    Name of the application.
 -h, --help          help for status
     --json          Optional. Outputs in JSON format.
@@ -15,9 +15,9 @@ $ copilot pipeline status [flags]
 ```
 
 ## 実行例
-Pipeline "pipeline-myapp-myrepo" の状態を表示します。
-```bash
-$ copilot pipeline status -n pipeline-myapp-myrepo
+Pipeline "my-repo-my-branch" の状態を表示します。
+```console
+$ copilot pipeline status -n my-repo-my-branch
 ```
 
 ## 出力例

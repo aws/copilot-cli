@@ -8,15 +8,15 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/spf13/cobra"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -45,14 +45,15 @@ type deployWkldVars struct {
 type deploySvcOpts struct {
 	deployWkldVars
 
-	store           store
-	ws              wsWlDirReader
-	unmarshal       func([]byte) (manifest.WorkloadManifest, error)
-	newInterpolator func(app, env string) interpolator
-	cmd             runner
-	envUpgradeCmd   actionCommand
-	sessProvider    *sessions.Provider
-	newSvcDeployer  func() (workloadDeployer, error)
+	store                store
+	ws                   wsWlDirReader
+	unmarshal            func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator      func(app, env string) interpolator
+	cmd                  runner
+	envUpgradeCmd        actionCommand
+	sessProvider         *sessions.Provider
+	newSvcDeployer       func() (workloadDeployer, error)
+	envFeaturesDescriber versionCompatibilityChecker
 
 	spinner progress
 	sel     wsSelector
@@ -64,7 +65,7 @@ type deploySvcOpts struct {
 	svcType         string
 	appliedManifest interface{}
 	rootUserARN     string
-	deployRecs      deploy.ActionRecommender
+	deployRecs      clideploy.ActionRecommender
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -88,7 +89,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 		ws:              ws,
 		unmarshal:       manifest.UnmarshalWorkload,
 		spinner:         termprogress.NewSpinner(log.DiagnosticWriter),
-		sel:             selector.NewWorkspaceSelector(prompter, store, ws),
+		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws),
 		prompt:          prompter,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
@@ -107,7 +108,7 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		return nil, err
 	}
 	var deployer workloadDeployer
-	in := deploy.WorkloadDeployerInput{
+	in := clideploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
 		Name:            o.name,
 		App:             targetApp,
@@ -117,13 +118,13 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
-		deployer, err = deploy.NewLBDeployer(&in)
+		deployer, err = clideploy.NewLBDeployer(&in)
 	case *manifest.BackendService:
-		deployer, err = deploy.NewBackendDeployer(&in)
+		deployer, err = clideploy.NewBackendDeployer(&in)
 	case *manifest.RequestDrivenWebService:
-		deployer, err = deploy.NewRDWSDeployer(&in)
+		deployer, err = clideploy.NewRDWSDeployer(&in)
 	case *manifest.WorkerService:
-		deployer, err = deploy.NewWorkerSvcDeployer(&in)
+		deployer, err = clideploy.NewWorkerSvcDeployer(&in)
 	default:
 		return nil, fmt.Errorf("unknown manifest type %T while creating the CloudFormation stack", t)
 	}
@@ -206,15 +207,15 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	deployRecs, err := deployer.DeployWorkload(&deploy.DeployWorkloadInput{
-		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
+	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
+		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			ImageDigest: uploadOut.ImageDigest,
 			EnvFileARN:  uploadOut.EnvFileARN,
 			AddonsURL:   uploadOut.AddonsURL,
 			RootUserARN: o.rootUserARN,
 			Tags:        tags.Merge(targetApp.Tags, o.resourceTags),
 		},
-		Options: deploy.Options{
+		Options: clideploy.Options{
 			ForceNewUpdate:  o.forceNewUpdate,
 			DisableRollback: o.disableRollback,
 		},
@@ -364,11 +365,39 @@ func workloadManifest(in *workloadManifestInput) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("apply environment %s override: %s", in.envName, err)
 	}
-
 	if err := envMft.Validate(); err != nil {
 		return nil, fmt.Errorf("validate manifest against environment %s: %s", in.envName, err)
 	}
 	return envMft, nil
+}
+
+func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName string, env versionCompatibilityChecker) error {
+	availableFeatures, err := env.AvailableFeatures()
+	if err != nil {
+		return fmt.Errorf("get available features of the %s environment stack: %w", envName, err)
+	}
+	exists := struct{}{}
+	available := make(map[string]struct{})
+	for _, f := range availableFeatures {
+		available[f] = exists
+	}
+
+	features := mft.RequiredEnvironmentFeatures()
+	for _, f := range features {
+		if _, ok := available[f]; !ok {
+			logMsg := fmt.Sprintf(`Your manifest configuration requires your environment %q to have the feature %q available.`, envName, template.FriendlyEnvFeatureName(f))
+			if v := template.LeastVersionForFeature(f); v != "" {
+				logMsg += fmt.Sprintf(`The least environment version that supports the feature is %s.`, v)
+			}
+			if currVersion, err := env.Version(); err == nil {
+				logMsg += fmt.Sprintf(" Your environment is on %s.\n", currVersion)
+			}
+			logMsg += fmt.Sprintf(`Please upgrade your environment by running %s.`, color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", envName)))
+			log.Errorln(logMsg)
+			return fmt.Errorf("environment %q is not on a version that supports the %q feature", envName, template.FriendlyEnvFeatureName(f))
+		}
+	}
+	return nil
 }
 
 func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
@@ -393,13 +422,16 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	}
 
 	network := "over the internet."
-	if o.svcType == manifest.BackendServiceType {
+	switch uri.AccessType {
+	case describe.URIAccessTypeInternal:
+		network = "from your internal network."
+	case describe.URIAccessTypeServiceDiscovery:
 		network = "with service discovery."
 	}
-	recs := []string{
-		fmt.Sprintf("You can access your service at %s %s", color.HighlightResource(uri), network),
-	}
-	return recs, nil
+
+	return []string{
+		fmt.Sprintf("You can access your service at %s %s", color.HighlightResource(uri.URI), network),
+	}, nil
 }
 
 func (o *deploySvcOpts) publishRecommendedActions() []string {

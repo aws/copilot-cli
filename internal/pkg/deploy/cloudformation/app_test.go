@@ -547,12 +547,13 @@ func TestCloudFormation_RemoveServiceFromApp(t *testing.T) {
 				}, nil)
 				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).
-					Do(func(_, template string, _ ...stackset.CreateOrUpdateOption) {
+					Do(func(_, template string, opts ...stackset.CreateOrUpdateOption) {
 						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
 						require.ElementsMatch(t, []string{"firsttest"}, configToDeploy.Services)
 						require.Empty(t, configToDeploy.Accounts, "config account list should be empty")
 						require.Equal(t, 2, configToDeploy.Version)
+						require.Equal(t, 5, len(opts))
 					})
 				return m
 			},

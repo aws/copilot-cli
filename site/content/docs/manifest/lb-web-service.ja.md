@@ -2,67 +2,68 @@
 
 ???+ note "frontend Service のサンプル Manifest"
 
-```yaml
-# Service 名はロググループや ECS サービスなどのリソースの命名に利用されます。
-name: frontend
-type: Load Balanced Web Service
+    ```yaml
+        # Service 名はロググループや ECS サービスなどのリソースの命名に利用されます。
+        name: frontend
+        type: Load Balanced Web Service
 
-# Serviceのトラフィックを分散します。
-http:
-  path: '/'
-  healthcheck:
-    path: '/_healthcheck'
-    success_codes: '200,301'
-    healthy_threshold: 3
-    unhealthy_threshold: 2
-    interval: 15s
-    timeout: 10s
-    grace_period: 45s
-  deregistration_delay: 5s
-  stickiness: false
-  allowed_source_ips: ["10.24.34.0/23"]
-  alias: example.com
+        # Serviceのトラフィックを分散します。
+        http:
+          path: '/'
+          healthcheck:
+            path: '/_healthcheck'
+            port: 8080
+            success_codes: '200,301'
+            healthy_threshold: 3
+            unhealthy_threshold: 2
+            interval: 15s
+            timeout: 10s
+            grace_period: 45s
+          deregistration_delay: 5s
+          stickiness: false
+          allowed_source_ips: ["10.24.34.0/23"]
+          alias: example.com
 
-nlb:
-  port: 443/tls
+        nlb:
+          port: 443/tls
 
-# コンテナと Service の構成
-image:
-  build:
-    dockerfile: ./frontend/Dockerfile
-    context: ./frontend
-  port: 80
+        # コンテナと Service の構成
+        image:
+          build:
+            dockerfile: ./frontend/Dockerfile
+            context: ./frontend
+          port: 80
 
-cpu: 256
-memory: 512
-count:
-  range: 1-10
-  cpu_percentage: 70
-  memory_percentage: 80
-  requests: 10000
-  response_time: 2s
-exec: true
+        cpu: 256
+        memory: 512
+        count:
+          range: 1-10
+          cpu_percentage: 70
+          memory_percentage: 80
+          requests: 10000
+          response_time: 2s
+        exec: true
 
-variables:
-  LOG_LEVEL: info
-env_file: log.env
-secrets:
-  GITHUB_TOKEN: GITHUB_TOKEN
+        variables:
+          LOG_LEVEL: info
+        env_file: log.env
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
 
-# 上記すべての値は Environment ごとにオーバーライド可能です。
-environments:
-  test:
-    count:
-      range:
-        min: 1
-        max: 10
-        spot_from: 2
-  staging:
-    count:
-      spot: 2
-  production:
-    count: 2
-```
+        # 上記すべての値は Environment ごとにオーバーライド可能です。
+        environments:
+          test:
+            count:
+              range:
+                min: 1
+                max: 10
+                spot_from: 2
+          staging:
+            count:
+              spot: 2
+          production:
+            count: 2
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。
@@ -158,6 +159,8 @@ Service の平均レスポンスタイムを指定し、それによってスケ
 
 {% include 'exec.ja.md' %}
 
+{% include 'deployment.en.md' %}
+
 {% include 'entrypoint.ja.md' %}
 
 {% include 'command.ja.md' %}
@@ -173,6 +176,8 @@ Service の平均レスポンスタイムを指定し、それによってスケ
 {% include 'publish.ja.md' %}
 
 {% include 'logging.ja.md' %}
+
+{% include 'observability.en.md' %}
 
 {% include 'taskdef-overrides.ja.md' %}
 

@@ -359,11 +359,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
-      Role: !GetAtt 'CustomResourceRole.Arn'
+      Role: !GetAtt 'RulePriorityFunctionRole.Arn'
       Runtime: nodejs12.x
-  CustomResourceRole:
+  RulePriorityFunctionRole:
     Metadata:
-      'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'
+      'aws:copilot:description': "An IAM Role to describe load balancer rules for assigning a priority"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -376,17 +376,30 @@ Resources: # If a bucket URL is specified, that means the template exists.
             Action:
               - sts:AssumeRole
       Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-        - PolicyName: "DNSandACMAccess"
+        - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
                   - elasticloadbalancing:DescribeRules
                 Resource: "*"
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  LoadBalancerDNSAliasmockHostedZone:
+    Metadata:
+      'aws:copilot:description': 'Alias records for the application load balancer in hosted zone mockHostedZone'
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: mockHostedZone
+      Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone mockHostedZone"
+      RecordSets:
+        - Name: example.com
+          Type: A
+          AliasTarget:
+            HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
+            DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
   HTTPSRulePriorityAction:
     Metadata:
       'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'

@@ -31,17 +31,19 @@ type EnvStackConfig struct {
 
 const (
 	// Parameter keys.
-	envParamAppNameKey               = "AppName"
-	envParamEnvNameKey               = "EnvironmentName"
-	envParamToolsAccountPrincipalKey = "ToolsAccountPrincipalARN"
-	envParamAppDNSKey                = "AppDNSName"
-	envParamAppDNSDelegationRoleKey  = "AppDNSDelegationRole"
-	EnvParamAliasesKey               = "Aliases"
-	EnvParamALBWorkloadsKey          = "ALBWorkloads"
-	envParamEFSWorkloadsKey          = "EFSWorkloads"
-	envParamNATWorkloadsKey          = "NATWorkloads"
-	envParamCreateHTTPSListenerKey   = "CreateHTTPSListener"
-	EnvParamServiceDiscoveryEndpoint = "ServiceDiscoveryEndpoint"
+	envParamAppNameKey                     = "AppName"
+	envParamEnvNameKey                     = "EnvironmentName"
+	envParamToolsAccountPrincipalKey       = "ToolsAccountPrincipalARN"
+	envParamAppDNSKey                      = "AppDNSName"
+	envParamAppDNSDelegationRoleKey        = "AppDNSDelegationRole"
+	EnvParamAliasesKey                     = "Aliases"
+	EnvParamALBWorkloadsKey                = "ALBWorkloads"
+	envParamInternalALBWorkloadsKey        = "InternalALBWorkloads"
+	envParamEFSWorkloadsKey                = "EFSWorkloads"
+	envParamNATWorkloadsKey                = "NATWorkloads"
+	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
+	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
+	EnvParamServiceDiscoveryEndpoint       = "ServiceDiscoveryEndpoint"
 
 	// Output keys.
 	EnvOutputVPCID               = "VpcId"
@@ -91,25 +93,27 @@ func (e *EnvStackConfig) Template() (string, error) {
 		}
 		mft = string(out)
 	}
-
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
-		AppName:                e.in.App.Name,
-		DNSCertValidatorLambda: dnsCertValidator,
-		DNSDelegationLambda:    dnsDelegation,
-		CustomDomainLambda:     customDomain,
-		ScriptBucketName:       bucket,
-		ArtifactBucketARN:      e.in.ArtifactBucketARN,
-		ArtifactBucketKeyARN:   e.in.ArtifactBucketKeyARN,
-
-		ImportCertARNs: e.importCertARNs(),
-		VPCConfig:      e.vpcConfig(),
-		Telemetry:      e.telemetryConfig(),
+		AppName:                  e.in.App.Name,
+		DNSCertValidatorLambda:   dnsCertValidator,
+		DNSDelegationLambda:      dnsDelegation,
+		CustomDomainLambda:       customDomain,
+		ScriptBucketName:         bucket,
+		ArtifactBucketARN:        e.in.ArtifactBucketARN,
+		ArtifactBucketKeyARN:     e.in.ArtifactBucketKeyARN,
+		PublicImportedCertARNs:   e.importPublicCertARNs(),
+		PrivateImportedCertARNs:  e.importPrivateCertARNs(),
+		VPCConfig:                e.vpcConfig(),
+		CustomInternalALBSubnets: e.internalALBSubnets(),
+		AllowVPCIngress:          e.in.AllowVPCIngress, // TODO(jwh): fetch AllowVPCIngress from Manifest or SSM.
+		Telemetry:                e.telemetryConfig(),
 
 		Version:       e.in.Version,
 		LatestVersion: deploy.LatestEnvTemplateVersion,
 		Manifest:      mft,
 	}, template.WithFuncs(map[string]interface{}{
-		"inc": template.IncFunc,
+		"inc":      template.IncFunc,
+		"fmtSlice": template.FmtSliceFunc,
 	}))
 	if err != nil {
 		return "", err
@@ -186,20 +190,49 @@ func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
 	}
 }
 
-func (e *EnvStackConfig) importCertARNs() []string {
+func (e *EnvStackConfig) importPublicCertARNs() []string {
 	// If a manifest is present, it is the only place we look at.
 	if e.in.Mft != nil {
 		return e.in.Mft.HTTPConfig.Public.Certificates
 	}
 	// Fallthrough to SSM config.
+	if e.in.ImportVPCConfig != nil && len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
+		return nil
+	}
 	return e.in.ImportCertARNs
 }
 
-// Parameters returns the parameters to be passed into a environment CloudFormation template.
+func (e *EnvStackConfig) importPrivateCertARNs() []string {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		return e.in.Mft.HTTPConfig.Private.Certificates
+	}
+	// Fallthrough to SSM config.
+	if e.in.ImportVPCConfig != nil && len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
+		return e.in.ImportCertARNs
+	}
+	return nil
+}
+
+func (e *EnvStackConfig) internalALBSubnets() []string {
+	// If a manifest is present, it is the only place we look.
+	if e.in.Mft != nil {
+		return e.in.Mft.HTTPConfig.Private.InternalALBSubnets
+	}
+	// Fallthrough to SSM config.
+	return e.in.InternalALBSubnets
+}
+
+// Parameters returns the parameters to be passed into an environment CloudFormation template.
 func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	httpsListener := "false"
 	if len(e.in.ImportCertARNs) != 0 || e.in.App.Domain != "" {
 		httpsListener = "true"
+	}
+	internalHTTPSListener := "false"
+	if len(e.in.ImportCertARNs) != 0 && e.in.ImportVPCConfig != nil &&
+		len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
+		internalHTTPSListener = "true"
 	}
 	return []*cloudformation.Parameter{
 		{
@@ -231,11 +264,19 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterValue: aws.String(httpsListener),
 		},
 		{
+			ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
+			ParameterValue: aws.String(internalHTTPSListener),
+		},
+		{
 			ParameterKey:   aws.String(EnvParamAliasesKey),
 			ParameterValue: aws.String(""),
 		},
 		{
 			ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
 			ParameterValue: aws.String(""),
 		},
 		{
@@ -285,7 +326,6 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.Environment
 	return &config.Environment{
 		Name:             e.in.Name,
 		App:              e.in.App.Name,
-		Prod:             e.in.Prod,
 		Region:           stackARN.Region,
 		AccountID:        stackARN.AccountID,
 		ManagerRoleARN:   stackOutputs[envOutputManagerRoleKey],

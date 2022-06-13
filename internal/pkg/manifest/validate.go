@@ -206,6 +206,15 @@ func (b BackendServiceConfig) Validate() error {
 	if err = b.ImageOverride.Validate(); err != nil {
 		return err
 	}
+	if err = b.RoutingRule.Validate(); err != nil {
+		return fmt.Errorf(`validate "http": %w`, err)
+	}
+	if b.RoutingRule.IsEmpty() && (b.Count.AdvancedCount.Requests != nil || b.Count.AdvancedCount.ResponseTime != nil) {
+		return &errFieldMustBeSpecified{
+			missingField:      "http",
+			conditionalFields: []string{"count.requests", "count.response_time"},
+		}
+	}
 	if err = b.TaskConfig.Validate(); err != nil {
 		return err
 	}
@@ -271,6 +280,11 @@ func (r RequestDrivenWebServiceConfig) Validate() error {
 	}
 	if err = r.Network.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	if r.Network.VPC.Placement.PlacementString != nil &&
+		*r.Network.VPC.Placement.PlacementString != PrivateSubnetPlacement {
+		return fmt.Errorf(`placement %q is not supported for %s`,
+			*r.Network.VPC.Placement.PlacementString, RequestDrivenWebServiceType)
 	}
 	if err = r.Observability.Validate(); err != nil {
 		return fmt.Errorf(`validate "observability": %w`, err)
@@ -609,24 +623,26 @@ func (CommandOverride) Validate() error {
 
 // Validate returns nil if RoutingRuleConfigOrBool is configured correctly.
 func (r RoutingRuleConfigOrBool) Validate() error {
-	if aws.BoolValue(r.Enabled) {
+	if r.Disabled() {
+		return nil
+	}
+	if r.Path == nil {
 		return &errFieldMustBeSpecified{
 			missingField: "path",
 		}
-	}
-	if r.Enabled != nil {
-		return nil
 	}
 	return r.RoutingRuleConfiguration.Validate()
 }
 
 // Validate returns nil if RoutingRuleConfiguration is configured correctly.
 func (r RoutingRuleConfiguration) Validate() error {
-	var err error
-	if err = r.HealthCheck.Validate(); err != nil {
+	if r.IsEmpty() {
+		return nil
+	}
+	if err := r.HealthCheck.Validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
-	if err = r.Alias.Validate(); err != nil {
+	if err := r.Alias.Validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
 	}
 	if r.TargetContainer != nil && r.TargetContainerCamelCase != nil {
@@ -636,7 +652,7 @@ func (r RoutingRuleConfiguration) Validate() error {
 		}
 	}
 	for ind, ip := range r.AllowedSourceIps {
-		if err = ip.Validate(); err != nil {
+		if err := ip.Validate(); err != nil {
 			return fmt.Errorf(`validate "allowed_source_ips[%d]": %w`, ind, err)
 		}
 	}
@@ -648,6 +664,12 @@ func (r RoutingRuleConfiguration) Validate() error {
 	if r.Path == nil {
 		return &errFieldMustBeSpecified{
 			missingField: "path",
+		}
+	}
+	if r.HostedZone != nil && r.Alias.IsEmpty() {
+		return &errFieldMustBeSpecified{
+			missingField:      "alias",
+			conditionalFields: []string{"hosted_zone"},
 		}
 	}
 	return nil
@@ -678,7 +700,33 @@ func (h NLBHealthCheckArgs) Validate() error {
 }
 
 // Validate returns nil if Alias is configured correctly.
-func (Alias) Validate() error {
+func (a Alias) Validate() error {
+	if a.IsEmpty() {
+		return nil
+	}
+	if err := a.StringSliceOrString.Validate(); err != nil {
+		return err
+	}
+	for _, alias := range a.AdvancedAliases {
+		if err := alias.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Validate returns nil if AdvancedAlias is configured correctly.
+func (a AdvancedAlias) Validate() error {
+	if a.Alias == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "name",
+		}
+	}
+	return nil
+}
+
+// Validate is a no-op for stringSliceOrString.
+func (stringSliceOrString) Validate() error {
 	return nil
 }
 
@@ -708,6 +756,13 @@ func (c NetworkLoadBalancerConfiguration) Validate() error {
 	}
 	if err := c.Aliases.Validate(); err != nil {
 		return fmt.Errorf(`validate "alias": %w`, err)
+	}
+	if !c.Aliases.IsEmpty() {
+		for _, advancedAlias := range c.Aliases.AdvancedAliases {
+			if advancedAlias.HostedZone != nil {
+				return fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`)
+			}
+		}
 	}
 	return nil
 }
@@ -845,20 +900,27 @@ func (a AdvancedCount) Validate() error {
 		}
 	}
 
+	// Validate combinations with cooldown
+	if !a.Cooldown.IsEmpty() {
+		if !a.hasScalingFieldsSet() {
+			return &errAtLeastOneFieldMustBeSpecified{
+				missingFields:    a.validScalingFields(),
+				conditionalField: "cooldown",
+			}
+		}
+	}
+
 	// Validate individual custom autoscaling options.
 	if err := a.QueueScaling.Validate(); err != nil {
 		return fmt.Errorf(`validate "queue_delay": %w`, err)
 	}
-	if a.CPU != nil {
-		if err := a.CPU.Validate(); err != nil {
-			return fmt.Errorf(`validate "cpu_percentage": %w`, err)
-		}
+	if err := a.CPU.Validate(); err != nil {
+		return fmt.Errorf(`validate "cpu_percentage": %w`, err)
 	}
-	if a.Memory != nil {
-		if err := a.Memory.Validate(); err != nil {
-			return fmt.Errorf(`validate "memory_percentage": %w`, err)
-		}
+	if err := a.Memory.Validate(); err != nil {
+		return fmt.Errorf(`validate "memory_percentage": %w`, err)
 	}
+
 	return nil
 }
 
@@ -867,6 +929,33 @@ func (p Percentage) Validate() error {
 	if val := int(p); val < 0 || val > 100 {
 		return fmt.Errorf("percentage value %v must be an integer from 0 to 100", val)
 	}
+	return nil
+}
+
+// Validate returns nil if ScalingConfigOrPercentage is configured correctly.
+func (r ScalingConfigOrPercentage) Validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
+	if r.Value != nil {
+		return r.Value.Validate()
+	}
+	return r.ScalingConfig.Validate()
+}
+
+// Validate returns nil if AdvancedScalingConfig is configured correctly.
+func (r AdvancedScalingConfig) Validate() error {
+	if r.IsEmpty() {
+		return nil
+	}
+	if err := r.Value.Validate(); err != nil {
+		return err
+	}
+	return r.Cooldown.Validate()
+}
+
+// Validation is a no-op for Cooldown.
+func (c Cooldown) Validate() error {
 	return nil
 }
 
@@ -1136,10 +1225,8 @@ func (v rdwsVpcConfig) Validate() error {
 	if v.isEmpty() {
 		return nil
 	}
-	if v.Placement != nil {
-		if err := v.Placement.Validate(); err != nil {
-			return fmt.Errorf(`validate "placement": %w`, err)
-		}
+	if err := v.Placement.Validate(); err != nil {
+		return fmt.Errorf(`validate "placement": %w`, err)
 	}
 	return nil
 }
@@ -1149,27 +1236,30 @@ func (v vpcConfig) Validate() error {
 	if v.isEmpty() {
 		return nil
 	}
-	if v.Placement != nil {
-		if err := v.Placement.Validate(); err != nil {
-			return fmt.Errorf(`validate "placement": %w`, err)
-		}
+	if err := v.Placement.Validate(); err != nil {
+		return fmt.Errorf(`validate "placement": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if RequestDrivenWebServicePlacement is configured correctly.
-func (p RequestDrivenWebServicePlacement) Validate() error {
-	if err := (Placement)(p).Validate(); err != nil {
-		return err
-	}
-	if string(p) == string(PrivateSubnetPlacement) {
+// Validate returns nil if PlacementArgOrString is configured correctly.
+func (p PlacementArgOrString) Validate() error {
+	if p.IsEmpty() {
 		return nil
 	}
-	return fmt.Errorf(`placement "%s" is not supported for %s`, string(p), RequestDrivenWebServiceType)
+	if p.PlacementString != nil {
+		return p.PlacementString.Validate()
+	}
+	return p.PlacementArgs.Validate()
 }
 
-// Validate returns nil if Placement is configured correctly.
-func (p Placement) Validate() error {
+// Validate is a no-op for PlacementArgs.
+func (p PlacementArgs) Validate() error {
+	return nil
+}
+
+// Validate returns nil if PlacementString is configured correctly.
+func (p PlacementString) Validate() error {
 	if string(p) == "" {
 		return fmt.Errorf(`"placement" cannot be empty`)
 	}

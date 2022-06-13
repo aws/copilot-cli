@@ -15,6 +15,8 @@ Parameters:
     Type: String
   ALBWorkloads:
     Type: String
+  InternalALBWorkloads:
+    Type: String
   EFSWorkloads:
     Type: String
   NATWorkloads:
@@ -30,6 +32,9 @@ Parameters:
   CreateHTTPSListener:
     Type: String
     AllowedValues: [true, false]
+  CreateInternalHTTPSListener:
+    Type: String
+    AllowedValues: [true, false]
   ServiceDiscoveryEndpoint:
     Type: String
 Conditions:
@@ -40,8 +45,13 @@ Conditions:
   ExportHTTPSListener: !And
     - !Condition CreateALB
     - !Equals [!Ref CreateHTTPSListener, true]
+  ExportInternalHTTPSListener: !And
+    - !Condition CreateInternalALB
+    - !Equals [ !Ref CreateInternalHTTPSListener, true]
   CreateEFS:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
+  CreateInternalALB:
+    !Not [!Equals [ !Ref InternalALBWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
   HasAliases:
@@ -265,6 +275,17 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+  InternalLoadBalancerSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your internal load balancer allowing HTTP traffic from within the VPC'
+    Condition: CreateInternalALB
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Access to the internal load balancer
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-internal-lb'
   # Only accept requests coming from the public ALB or other containers in the same security group.
   EnvironmentSecurityGroup:
     Metadata:
@@ -284,6 +305,14 @@ Resources:
       GroupId: !Ref EnvironmentSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref PublicLoadBalancerSecurityGroup
+  EnvironmentSecurityGroupIngressFromInternalALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateInternalALB
+    Properties:
+      Description: Ingress from the internal ALB
+      GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref InternalLoadBalancerSecurityGroup
   EnvironmentSecurityGroupIngressFromSelf:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -291,6 +320,38 @@ Resources:
       GroupId: !Ref EnvironmentSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+  InternalALBIngressFromEnvironmentSecurityGroup:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateInternalALB
+    Properties:
+      Description: Ingress from the env security group
+      GroupId: !Ref InternalLoadBalancerSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+  InternalLoadBalancerSecurityGroupIngressFromHttp:
+    Metadata:
+      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80 within the VPC'
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateInternalALB
+    Properties:
+      Description: Allow from within the VPC on port 80
+      CidrIp: 0.0.0.0/0
+      FromPort: 80
+      ToPort: 80
+      IpProtocol: tcp
+      GroupId: !Ref InternalLoadBalancerSecurityGroup
+  InternalLoadBalancerSecurityGroupIngressFromHttps:
+    Metadata:
+      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 443 within the VPC'
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: ExportInternalHTTPSListener
+    Properties:
+      Description: Allow from within the VPC on port 443
+      CidrIp: 0.0.0.0/0
+      FromPort: 443
+      ToPort: 443
+      IpProtocol: tcp
+      GroupId: !Ref InternalLoadBalancerSecurityGroup
   PublicLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'
@@ -351,6 +412,55 @@ Resources:
       ListenerArn: !Ref HTTPSListener
       Certificates:
         - CertificateArn: cert-2
+  InternalLoadBalancer:
+    Metadata:
+      'aws:copilot:description': 'An internal Application Load Balancer to distribute private traffic from within the VPC to your services'
+    Condition: CreateInternalALB
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internal
+      SecurityGroups: [ !GetAtt InternalLoadBalancerSecurityGroup.GroupId ]
+      Subnets: [ !Ref PrivateSubnet1, !Ref PrivateSubnet2, ]
+      Type: application
+  DefaultInternalHTTPTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Condition: CreateInternalALB
+    Properties:
+      #  Check if your application is healthy within 20 = 10*2 seconds, compared to 2.5 mins = 30*5 seconds.
+      HealthCheckIntervalSeconds: 10 # Default is 30.
+      HealthyThresholdCount: 2       # Default is 5.
+      HealthCheckTimeoutSeconds: 5
+      Port: 80
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60                  # Default is 300.
+      TargetType: ip
+      VpcId: !Ref VPC
+  InternalHTTPListener:
+    Metadata:
+      'aws:copilot:description': 'An internal load balancer listener to route HTTP traffic'
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: CreateInternalALB
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref DefaultInternalHTTPTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref InternalLoadBalancer
+      Port: 80
+      Protocol: HTTP
+  InternalHTTPSListener:
+    Metadata:
+      'aws:copilot:description': 'An internal load balancer listener to route HTTPS traffic'
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: ExportInternalHTTPSListener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref DefaultInternalHTTPTargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref InternalLoadBalancer
+      Port: 443
+      Protocol: HTTPS
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
@@ -766,6 +876,11 @@ Outputs:
     Value: !Ref PublicRouteTable
     Export:
       Name: !Sub ${AWS::StackName}-PublicRouteTableID
+  PrivateRouteTableIDs:
+    Condition: CreateNATGateways
+    Value: !Join [ ',', [ !Ref PrivateRouteTable1, !Ref PrivateRouteTable2, ] ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateRouteTableIDs
   ServiceDiscoveryNamespaceID:
     Value: !GetAtt ServiceDiscoveryNamespace.Id
     Export:
@@ -804,6 +919,36 @@ Outputs:
     Value: !Ref DefaultHTTPTargetGroup
     Export:
       Name: !Sub ${AWS::StackName}-DefaultHTTPTargetGroup
+  InternalLoadBalancerDNSName:
+    Condition: CreateInternalALB
+    Value: !GetAtt InternalLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalLoadBalancerDNS
+  InternalLoadBalancerFullName:
+    Condition: CreateInternalALB
+    Value: !GetAtt InternalLoadBalancer.LoadBalancerFullName
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalLoadBalancerFullName
+  InternalLoadBalancerHostedZone:
+    Condition: CreateInternalALB
+    Value: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalLoadBalancerCanonicalHostedZoneID
+  InternalHTTPListenerArn:
+    Condition: CreateInternalALB
+    Value: !Ref InternalHTTPListener
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalHTTPListenerArn
+  InternalHTTPSListenerArn:
+    Condition: ExportInternalHTTPSListener
+    Value: !Ref InternalHTTPSListener
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalHTTPSListenerArn
+  InternalLoadBalancerSecurityGroup:
+    Condition: CreateInternalALB
+    Value: !Ref InternalLoadBalancerSecurityGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalLoadBalancerSecurityGroup
   ClusterId:
     Value: !Ref Cluster
     Export:
@@ -819,7 +964,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${EFSWorkloads},${NATWorkloads}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS

@@ -2,62 +2,66 @@
 
 ???+ note "Worker Service の Manifest のサンプル"
 
-```yaml
-    # Service 名は、ロググループや ECS サービスなどのリソースの命名に使用されます。
-    name: orders-worker
-    type: Worker Service
+    ```yaml
+        # Service 名は、ロググループや ECS サービスなどのリソースの命名に使用されます。
+        name: orders-worker
+        type: Worker Service
 
-    image:
-      build: ./orders/Dockerfile
+        image:
+          build: ./orders/Dockerfile
 
-    subscribe:
-      topics:
-        - name: events
-          service: api
-        - name: events
-          service: fe
-      queue:
-        retention: 96h
-        timeout: 30s
-        dead_letter:
-          tries: 10
+        subscribe:
+          topics:
+            - name: events
+              service: api
+              filter_policy:
+                event:
+                - anything-but: order_cancelled
+            - name: events
+              service: fe
+          queue:
+            retention: 96h
+            timeout: 30s
+            dead_letter:
+              tries: 10
 
-    cpu: 256
-    memory: 512
-    count: 1
+        cpu: 256
+        memory: 512
+        count: 1
+        exec: true
 
-    variables:
-      LOG_LEVEL: info
-    env_file: log.env
-    secrets:
-      GITHUB_TOKEN: GITHUB_TOKEN
+        variables:
+          LOG_LEVEL: info
+        env_file: log.env
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
 
-    # 上記で定義された値は、environment で上書きすることができます。
-    environments:
-      production:
-        count:
-          range:
-            min: 1
-            max: 50
-            spot_from: 26
-          queue_delay:
-            acceptable_latency: 1m
-            msg_processing_time: 250ms
-```
+        # 上記で定義された値は、environment で上書きすることができます。
+        environments:
+          production:
+            count:
+              range:
+                min: 1
+                max: 50
+                spot_from: 26
+              queue_delay:
+                acceptable_latency: 1m
+                msg_processing_time: 250ms
+    ```
 
-<a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>
+<a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。
 
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 
-Service のアーキテクチャタイプ。[Worker Service](../concepts/services.ja.md#worker-service) は、インターネットや VPC 外からはアクセスできません。Worker Service は関連する SQS キューからメッセージをプルするように設計されています。SQS キューは、他 のCopilot Service の `publish` フィールドで作成された SNS トピックへのサブスクリプションによって生成されます。
+Service のアーキテクチャタイプ。[Worker Service](../concepts/services.ja.md#worker-service) は、インターネットや VPC 外からはアクセスできません。Worker Service は関連する SQS キューからメッセージをプルするように設計されています。SQS キューは、他の Copilot Service の `publish` フィールドで作成された SNS トピックへのサブスクリプションによって生成されます。
 
 
 <div class="separator"></div>
 
-<a id="subscribe" href="#subscribe" class="field">`subscribe`</a> <span class="type">Map</span>
+<a id="subscribe" href="#subscribe" class="field">`subscribe`</a> <span class="type">Map</span>  
 `subscribe` セクションでは、Worker Service が、同じ Application や Environment にある他の Copilot Service が公開する SNS トピックへのサブスクリプションを作成できるようにします。各トピックは独自の SQS キューを定義できますが、デフォルトではすべてのトピックが Worker Service のデフォルトキューにサブスクライブされます。
 
 ```yaml
@@ -75,32 +79,58 @@ subscribe:
     delay: 30s
 ```
 
-<span class="parent-field">subscribe.</span><a id="subscribe-queue" href="#subscribe-queue" class="field">`queue`</a> <span class="type">Map</span>
-デフォルトでは、サービスレベルのキューが常に作成されます。`queue` では、そのデフォルトキューの特定の属性をカスタマイズすることができます。
+<span class="parent-field">subscribe.</span><a id="subscribe-queue" href="#subscribe-queue" class="field">`queue`</a> <span class="type">Map</span>  
+デフォルトでは、サービスレベルのキューが常に作成されます。`queue` では、そのデフォルトキューの特定の属性をカスタマイズできます。
 
-<span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-delay" href="#subscribe-queue-delay" class="field">`delay`</a> <span class="type">Duration</span>
+<span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-delay" href="#subscribe-queue-delay" class="field">`delay`</a> <span class="type">Duration</span>  
 キュー内のすべてのメッセージの配信を遅延させる時間を秒単位で指定します。デフォルトは 0 秒です。指定できる範囲は 0 秒 - 15 分です。
 
-<span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-retention" href="#subscribe-queue-retention" class="field">`retention`</a> <span class="type">Duration</span>
-Retention はメッセージが削除される前にキューに残っている時間を指定します。デフォルトは 4 日です。指定できる範囲は 60 秒 - 336 時間 です。
+<span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-retention" href="#subscribe-queue-retention" class="field">`retention`</a> <span class="type">Duration</span>  
+Retention はメッセージが削除される前にキューに残っている時間を指定します。デフォルトは 4 日です。指定できる範囲は 60 秒 - 336 時間です。
 
-<span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-timeout" href="#subscribe-queue-timeout" class="field">`timeout`</a> <span class="type">Duration</span>
+<span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-timeout" href="#subscribe-queue-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 Timeout はメッセージが配信された後に利用できない時間の長さを定義します。デフォルトは 30 秒です。範囲は 0 秒 - 12 時間です。
 
-<span class="parent-field">subscribe.queue.dead_letter.</span><a id="subscribe-queue-dead-letter-tries" href="#subscribe-queue-dead-letter-tries" class="field">`tries`</a> <span class="type">Integer</span>
-指定された場合、DLQ(デッドレターキュー)を作成し、メッセージを `tries` 回試行した後に DLQ にルーティングするリドライブポリシーを設定します。つまり、Worker Service がメッセージの処理に `tries` 回成功しなかった場合、メッセージ送信はリトライされずに DLQ にルーティングされるため、あとからメッセージの内容を確認して失敗の原因分析に役立てることができます。
+<span class="parent-field">subscribe.queue.dead_letter.</span><a id="subscribe-queue-dead-letter-tries" href="#subscribe-queue-dead-letter-tries" class="field">`tries`</a> <span class="type">Integer</span>  
+指定された場合、DLQ(デッドレターキュー)を作成し、メッセージを `tries` 回試行した後に DLQ にルーティングするリドライブポリシーを設定します。つまり、Worker Service がメッセージの処理に `tries` 回成功しなかった場合、メッセージ送信はリトライされません。 メッセージは DLQ にルーティングされるため、あとからメッセージの内容を確認して失敗の原因分析に役立てることができます。
 
-<span class="parent-field">subscribe.</span><a id="subscribe-topics" href="#subscribe-topics" class="field">`topics`</a> <span class="type">Array of `topic`s</span>
+<span class="parent-field">subscribe.</span><a id="subscribe-topics" href="#subscribe-topics" class="field">`topics`</a> <span class="type">Array of `topic`s</span>  
 Worker Service がサブスクライブすべき SNS トピックの情報が含まれています。
 
-<span class="parent-field">topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>
+<span class="parent-field">topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
 必須項目。サブスクライブする SNS トピックの名前。
 
-<span class="parent-field">topic.</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>
+<span class="parent-field">topic.</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>  
 必須項目。この SNS トピックが公開されているサービスです。トピック名と合わせて、Copilot Environment 内で SNS トピックを一意に識別します。
 
+<span class="parent-field">topic.</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
+任意項目。SNS サブスクリプションフィルターポリシーを指定します。このポリシーは、着信メッセージの属性を評価します。フィルターポリシーは JSON で指定します。例えば以下の様になります。
+
+```json
+filter_policy: {"store":["example_corp"],"event":[{"anything-but":"order_cancelled"}],"customer_interests":["rugby","football","baseball"],"price_usd":[{"numeric":[">=",100]}]}
+```
+または、YAML の MAP を利用して記述します。
+
+```yaml
+filter_policy:
+  store:
+    - example_corp
+  event:
+    - anything-but: order_cancelled
+  cutomer_interests:
+    - rugby
+    - football
+    - baseball
+  price_usd:
+    - numeric:
+      - ">="
+      - 100
+```
+フィルターポリシーの書き方に関するさらに詳しい情報については、[SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html)を確認してください。
+
+
 <span class="parent-field">topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>
-任意項目。トピックに対する SQS キューの設定です。`true` を指定した場合、キューはデフォルト設定で作成されます。トピックに対応したキューに関する特性の属性についてカスタマイズする場合は、このフィールドを Map で指定していします。
+任意項目。トピックに対する SQS キューの設定です。`true` を指定した場合、キューはデフォルト設定で作成されます。トピックに対応したキューに関する特性の属性についてカスタマイズする場合は、このフィールドを Map で指定します。
 
 {% include 'image-config.ja.md' %}
 
@@ -141,7 +171,7 @@ count:
 ```
 
 <span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String or Map</span>
-メトリクスに指定した値に基づいて、Service が保つべきタスク数の最小と最大を範囲指定できます。
+メトリクスで指定した値に基づいて、Service が保つべきタスク数の最小と最大を範囲指定できます。
 ```yaml
 count:
   range: n-m
@@ -177,8 +207,8 @@ Service が保つべき平均メモリ使用率を指定し、それによって
 
 <span class="parent-field">count.</span><a id="count-queue-delay" href="#count-queue-delay" class="field">`queue_delay`</a> <span class="type">Integer</span>
 タスク単位の許容可能なバックログをトラッキングし、許容可能なキュー遅延を維持するようにスケールアップ・ダウンします。
-タスク単位の許容可能なバックログとは、`acceptable_latency` を `msg_processing_time`で割る事で計算されます。例えば、メッセージが到着後、10分以内に処理できれば良いとします。またメッセージを処理するのに平均 250 ミリ秒かかるとすると、この時、`acceptableBacklogPerTask = 10 * 60 / 0.25 = 2400` となります。各タスクは2,400 件のメッセージを処理することになります。
-ターゲットトラッキングポリシーはタスクあたり 2400メッセージ以下の処理となる様に Service をスケールアップ・ダウンします。詳細については、[docs](https://docs.aws.amazon.com/ja_jp/autoscaling/ec2/userguide/as-using-sqs-queue.html)を確認してください.
+タスク単位の許容可能なバックログとは、`acceptable_latency` を `msg_processing_time` で割って計算されます。例えば、メッセージが到着後、10 分以内に処理できれば良いとします。またメッセージを処理するのに平均 250 ミリ秒かかるとすると、この時、`acceptableBacklogPerTask = 10 * 60 / 0.25 = 2400` となります。各タスクは 2,400 件のメッセージを処理することになります。
+ターゲットトラッキングポリシーはタスクあたり 2400 メッセージ以下の処理となる様に Service をスケールアップ・ダウンします。詳細については、[docs](https://docs.aws.amazon.com/ja_jp/autoscaling/ec2/userguide/as-using-sqs-queue.html)を確認してください。
 
 <span class="parent-field">count.queue_delay.</span><a id="count-queue-delay-acceptable-latency" href="#count-queue-delay-acceptable-latency" class="field">`acceptable_latency`</a> <span class="type">Duration</span>
 メッセージがキューに格納されている許容可能な時間。例えば、`"45s"`、 `"5m"`、`10h` を指定します。
@@ -187,6 +217,8 @@ Service が保つべき平均メモリ使用率を指定し、それによって
 SQS メッセージ 1 件あたりの平均処理時間。例えば、`"250ms"`、`"1s"` を指定します。
 
 {% include 'exec.ja.md' %}
+
+{% include 'deployment.ja.md' %}
 
 {% include 'entrypoint.ja.md' %}
 
@@ -203,6 +235,8 @@ SQS メッセージ 1 件あたりの平均処理時間。例えば、`"250ms"`�
 {% include 'publish.ja.md' %}
 
 {% include 'logging.ja.md' %}
+
+{% include 'observability.ja.md' %}
 
 {% include 'taskdef-overrides.ja.md' %}
 
