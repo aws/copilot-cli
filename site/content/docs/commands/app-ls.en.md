@@ -1,5 +1,5 @@
 # app ls
-```bash
+```console
 $ copilot app ls [flags]
 ```
 
@@ -9,13 +9,13 @@ $ copilot app ls [flags]
 
 ## What are the flags?
 
-```bash
+```
 -h, --help             help for ls
 ```
 
 ## Examples
 List all the applications in your account and region.
-```bash
+```console
 $ copilot app ls
 ```
 

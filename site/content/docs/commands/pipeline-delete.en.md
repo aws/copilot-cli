@@ -1,5 +1,5 @@
 # pipeline delete
-```bash
+```console
 $ copilot pipeline delete [flags]
 ```
 
@@ -7,7 +7,7 @@ $ copilot pipeline delete [flags]
 `copilot pipeline delete` deletes the pipeline associated with your workspace.
 
 ## What are the flags?
-```bash
+```
 -a, --app             Name of the application.
     --delete-secret   Deletes AWS Secrets Manager secret associated with a pipeline source repository.
 -h, --help            help for delete
@@ -17,6 +17,6 @@ $ copilot pipeline delete [flags]
 
 ## Examples
 Delete the pipeline associated with your workspace.
-```bash
+```console
 $ copilot pipeline delete
 ```

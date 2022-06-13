@@ -1355,3 +1355,95 @@ func Test_NetworkConfigurationForJob(t *testing.T) {
 		})
 	}
 }
+
+func Test_HasNonZeroExitCode(t *testing.T) {
+	testCases := map[string]struct {
+		inTaskARNs  []string
+		inGroupName string
+		inCluster   string
+		setupMocks  func(m clientMocks)
+
+		wantedError error
+	}{
+
+		"returns the non zero exit code of the essential container": {
+			inCluster:  "cluster-1",
+			inTaskARNs: []string{"mockTask1"},
+			setupMocks: func(m clientMocks) {
+				gomock.InOrder(
+					m.ecsClient.EXPECT().DescribeTasks("cluster-1", []string{"mockTask1"}).Return([]*ecs.Task{
+						{
+							TaskArn:           aws.String("arn:aws:ecs:us-west-2:123456789:task/4082490ee6c245e09d2145010aa1ba8d"),
+							TaskDefinitionArn: aws.String("arn:aws:ecs:us-west-2:1233454566:task-definition/CdkExampleStacknametaskdefinitionCA96DCAA:1"),
+							StoppedReason:     aws.String("Task failed to start"),
+							LastStatus:        aws.String("STOPPED"),
+							Containers: []*awsecs.Container{
+								{
+									Name:     aws.String("the-one-and-only-one-container"),
+									ExitCode: aws.Int64(1),
+								},
+							},
+						},
+					}, nil),
+					m.ecsClient.EXPECT().TaskDefinition("arn:aws:ecs:us-west-2:1233454566:task-definition/CdkExampleStacknametaskdefinitionCA96DCAA:1").Return(&ecs.TaskDefinition{
+						ExecutionRoleArn: aws.String("execution-role"),
+						TaskRoleArn:      aws.String("task-role"),
+						ContainerDefinitions: []*awsecs.ContainerDefinition{
+							{
+								Name:       aws.String("the-one-and-only-one-container"),
+								Image:      aws.String("beautiful-image"),
+								EntryPoint: aws.StringSlice([]string{"enter", "here"}),
+								Command:    aws.StringSlice([]string{"do", "not", "enter", "here"}),
+								Essential:  aws.Bool(true),
+								Environment: []*awsecs.KeyValuePair{
+									{
+										Name:  aws.String("enter"),
+										Value: aws.String("no"),
+									},
+									{
+										Name:  aws.String("kidding"),
+										Value: aws.String("yes"),
+									},
+								},
+								Secrets: []*awsecs.Secret{
+									{
+										Name:      aws.String("truth"),
+										ValueFrom: aws.String("go-ask-the-wise"),
+									},
+								},
+							},
+						},
+					}, nil),
+				)
+			},
+			wantedError: fmt.Errorf("container the-one-and-only-one-container in task 4082490ee6c245e09d2145010aa1ba8d exited with status code 1"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// GIVEN
+			m := clientMocks{
+				ecsClient: mocks.NewMockecsClient(ctrl),
+			}
+
+			tc.setupMocks(m)
+
+			client := Client{
+				ecsClient: m.ecsClient,
+			}
+
+			// WHEN
+			err := client.HasNonZeroExitCode(tc.inTaskARNs, tc.inCluster)
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			}
+		})
+	}
+}

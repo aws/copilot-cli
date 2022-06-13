@@ -1,5 +1,5 @@
 # env delete
-```bash
+```console
 $ copilot env delete [flags]
 ```
 
@@ -18,10 +18,10 @@ $ copilot env delete [flags]
 
 ## 実行例
 "test" Environment を削除します。
-```bash
+```console
 $ copilot env delete --name test 
 ```
 "test" Environment をプロンプトなしで削除します。
-```bash
+```console
 $ copilot env delete --name test --yes
 ```

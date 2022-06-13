@@ -1,5 +1,5 @@
 # env delete
-```bash
+```console
 $ copilot env delete [flags]
 ```
 
@@ -18,10 +18,10 @@ After you answer the questions, you should see that the AWS CloudFormation stack
 
 ## Examples
 Delete the "test" environment.
-```bash
+```console
 $ copilot env delete --name test 
 ```
 Delete the "test" environment without prompting.
-```bash
+```console
 $ copilot env delete --name test --yes
 ```

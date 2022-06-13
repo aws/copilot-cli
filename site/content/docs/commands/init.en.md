@@ -1,5 +1,5 @@
 # init
-```bash
+```console
 $ copilot init
 ```
 
@@ -14,7 +14,7 @@ If you have an existing app, and want to add another service or job to that app,
 
 Like all commands in the Copilot CLI, if you don't provide required flags, we'll prompt you for all the information we need to get you going. You can skip the prompts by providing information via flags:
 
-```sh
+```
   -a, --app string          Name of the application.
       --deploy              Deploy your service or job to a "test" environment.
   -d, --dockerfile string   Path to the Dockerfile.

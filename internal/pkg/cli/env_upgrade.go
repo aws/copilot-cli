@@ -392,10 +392,12 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 	var importedVPC *config.ImportVPC
 	var adjustedVPC *config.AdjustVPC
 	var importCertARNs []string
+	var allowVPCIngressForInternalALB bool
 	if conf.CustomConfig != nil {
 		importedVPC = conf.CustomConfig.ImportVPC
 		adjustedVPC = conf.CustomConfig.VPCConfig
 		importCertARNs = conf.CustomConfig.ImportCertARNs
+		allowVPCIngressForInternalALB = conf.CustomConfig.EnableInternalALBVPCIngress
 	}
 
 	if err := upgrader.UpgradeEnvironment(&deploy.CreateEnvironmentInput{
@@ -413,6 +415,7 @@ func (o *envUpgradeOpts) upgradeEnvironment(upgrader envUpgrader, conf *config.E
 		ImportCertARNs:       importCertARNs,
 		CFNServiceRoleARN:    conf.ExecutionRoleARN,
 		Telemetry:            conf.Telemetry,
+		AllowVPCIngress:      allowVPCIngressForInternalALB,
 	}); err != nil {
 		return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)
 	}
@@ -490,6 +493,7 @@ func (o *envUpgradeOpts) upgradeLegacyEnvironmentWithVPCOverrides(upgrader legac
 			ImportVPCConfig:   conf.CustomConfig.ImportVPC,
 			AdjustVPCConfig:   conf.CustomConfig.VPCConfig,
 			ImportCertARNs:    conf.CustomConfig.ImportCertARNs,
+			AllowVPCIngress:   conf.CustomConfig.EnableInternalALBVPCIngress,
 			CFNServiceRoleARN: conf.ExecutionRoleARN,
 		}, albWorkloads...); err != nil {
 			return fmt.Errorf("upgrade environment %s from version %s to version %s: %v", conf.Name, fromVersion, toVersion, err)

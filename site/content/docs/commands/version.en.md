@@ -1,5 +1,5 @@
 # version
-```
+```console
 $ copilot version [flags]
 ```
 
@@ -7,6 +7,6 @@ $ copilot version [flags]
 `copilot version` prints the version of the CLI along with the target operating system it was built for.
 
 ## What are the flags?
-```bash
+```
 -h, --help   help for version
 ```
