@@ -324,6 +324,12 @@ type CapacityProviderStrategy struct {
 	CapacityProvider string
 }
 
+// Cooldown holds configuration needed for autoscaling cooldown fields.
+type Cooldown struct {
+	ScaleInCooldown  *float64
+	ScaleOutCooldown *float64
+}
+
 // AutoscalingOpts holds configuration that's needed for Auto Scaling.
 type AutoscalingOpts struct {
 	MinCapacity  *int
@@ -332,6 +338,8 @@ type AutoscalingOpts struct {
 	Memory       *float64
 	Requests     *float64
 	ResponseTime *float64
+	CPUCooldown  Cooldown
+	MemCooldown  Cooldown
 	QueueDelay   *AutoscalingQueueDelayOpts
 }
 
