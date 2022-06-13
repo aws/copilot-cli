@@ -287,12 +287,15 @@ func (lbWebSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) 
 	return partitions.IsAvailableInRegion(awsecs.EndpointsID, region)
 }
 
+type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResource, error)
+
 type lbWebSvcDeployer struct {
 	*svcDeployer
 	appVersionGetter       versionGetter
 	aliasCertValidator     aliasCertValidator
 	publicCIDRBlocksGetter publicCIDRBlocksGetter
 	lbMft                  *manifest.LoadBalancedWebService
+	customResources        customResourcesFunc
 }
 
 // NewLBWSDeployer is the constructor for lbWebSvcDeployer.
@@ -328,6 +331,13 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		publicCIDRBlocksGetter: envDescriber,
 		lbMft:                  lbMft,
 		aliasCertValidator:     acm.New(svcDeployer.envSess),
+		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+			crs, err := customresource.LBWS(fs)
+			if err != nil {
+				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.LoadBalancedWebServiceType, err)
+			}
+			return crs, nil
+		},
 	}, nil
 }
 
@@ -335,6 +345,7 @@ type backendSvcDeployer struct {
 	*svcDeployer
 	backendMft         *manifest.BackendService
 	aliasCertValidator aliasCertValidator
+	customResources    customResourcesFunc
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -356,12 +367,20 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 		svcDeployer:        svcDeployer,
 		backendMft:         bsMft,
 		aliasCertValidator: acm.New(svcDeployer.envSess),
+		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+			crs, err := customresource.Backend(fs)
+			if err != nil {
+				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.BackendServiceType, err)
+			}
+			return crs, nil
+		},
 	}, nil
 }
 
 type jobDeployer struct {
 	*workloadDeployer
-	jobMft *manifest.ScheduledJob
+	jobMft          *manifest.ScheduledJob
+	customResources customResourcesFunc
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -382,6 +401,13 @@ func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
 	return &jobDeployer{
 		workloadDeployer: wkldDeployer,
 		jobMft:           jobMft,
+		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+			crs, err := customresource.ScheduledJob(fs)
+			if err != nil {
+				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.ScheduledJobType, err)
+			}
+			return crs, nil
+		},
 	}, nil
 }
 
@@ -391,6 +417,7 @@ type rdwsDeployer struct {
 	customResourceS3Client uploader
 	appVersionGetter       versionGetter
 	rdwsMft                *manifest.RequestDrivenWebService
+	customResources        customResourcesFunc
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -418,13 +445,21 @@ func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
 		customResourceS3Client: s3.New(svcDeployer.defaultSessWithEnvRegion),
 		appVersionGetter:       versionGetter,
 		rdwsMft:                rdwsMft,
+		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+			crs, err := customresource.RDWS(fs)
+			if err != nil {
+				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.RequestDrivenWebServiceType, err)
+			}
+			return crs, nil
+		},
 	}, nil
 }
 
 type workerSvcDeployer struct {
 	*svcDeployer
-	topicLister snsTopicsLister
-	wsMft       *manifest.WorkerService
+	topicLister     snsTopicsLister
+	wsMft           *manifest.WorkerService
+	customResources customResourcesFunc
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -450,6 +485,13 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 		svcDeployer: svcDeployer,
 		topicLister: deployStore,
 		wsMft:       wsMft,
+		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+			crs, err := customresource.Worker(fs)
+			if err != nil {
+				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.WorkerServiceType, err)
+			}
+			return crs, nil
+		},
 	}, nil
 }
 
@@ -509,87 +551,27 @@ func (d *workloadDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *lbWebSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	out, err := d.workloadDeployer.UploadArtifacts()
-	if err != nil {
-		return nil, err
-	}
-	if !d.uploadCustomResourceFlag {
-		return out, nil
-	}
-	urls, err := d.uploadCustomResources(manifest.LoadBalancedWebServiceType, customresource.LBWS)
-	if err != nil {
-		return nil, err
-	}
-	out.CustomResourceURLs = urls
-	return out, nil
+	return d.uploadArtifacts(d.customResources)
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *backendSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	out, err := d.workloadDeployer.UploadArtifacts()
-	if err != nil {
-		return nil, err
-	}
-	if !d.uploadCustomResourceFlag {
-		return out, nil
-	}
-	urls, err := d.uploadCustomResources(manifest.BackendServiceType, customresource.Backend)
-	if err != nil {
-		return nil, err
-	}
-	out.CustomResourceURLs = urls
-	return out, nil
+	return d.uploadArtifacts(d.customResources)
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *rdwsDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	out, err := d.workloadDeployer.UploadArtifacts()
-	if err != nil {
-		return nil, err
-	}
-	if !d.uploadCustomResourceFlag {
-		return out, nil
-	}
-	urls, err := d.uploadCustomResources(manifest.RequestDrivenWebServiceType, customresource.RDWS)
-	if err != nil {
-		return nil, err
-	}
-	out.CustomResourceURLs = urls
-	return out, nil
+	return d.uploadArtifacts(d.customResources)
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *workerSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	out, err := d.workloadDeployer.UploadArtifacts()
-	if err != nil {
-		return nil, err
-	}
-	if !d.uploadCustomResourceFlag {
-		return out, nil
-	}
-	urls, err := d.uploadCustomResources(manifest.WorkerServiceType, customresource.Worker)
-	if err != nil {
-		return nil, err
-	}
-	out.CustomResourceURLs = urls
-	return out, nil
+	return d.uploadArtifacts(d.customResources)
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
 func (d *jobDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
-	out, err := d.workloadDeployer.UploadArtifacts()
-	if err != nil {
-		return nil, err
-	}
-	if !d.uploadCustomResourceFlag {
-		return out, nil
-	}
-	urls, err := d.uploadCustomResources(manifest.ScheduledJobType, customresource.ScheduledJob)
-	if err != nil {
-		return nil, err
-	}
-	out.CustomResourceURLs = urls
-	return out, nil
+	return d.uploadArtifacts(d.customResources)
 }
 
 // GenerateCloudFormationTemplateInput is the input of GenerateCloudFormationTemplate.
@@ -905,18 +887,40 @@ func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (up
 	}, nil
 }
 
-func (d *workloadDeployer) uploadCustomResources(workloadType string, customResources func(template.Reader) ([]*customresource.CustomResource, error)) (map[string]string, error) {
+func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) (*UploadArtifactsOutput, error) {
+	imageDigest, err := d.uploadContainerImage(d.imageBuilderPusher)
+	if err != nil {
+		return nil, err
+	}
+	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
+		fs:        d.fs,
+		uploader:  d.s3Client,
+		templater: d.templater,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	out := &UploadArtifactsOutput{
+		ImageDigest: imageDigest,
+		EnvFileARN:  s3Artifacts.envFileARN,
+		AddonsURL:   s3Artifacts.addonsURL,
+	}
+	if !d.uploadCustomResourceFlag {
+		return out, nil
+	}
 	crs, err := customResources(d.templateFS)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for a %q: %w", workloadType, err)
+		return nil, err
 	}
 	urls, err := customresource.Upload(func(key string, contents io.Reader) (string, error) {
 		return d.s3Client.Upload(d.resources.S3Bucket, key, contents)
 	}, crs)
 	if err != nil {
-		return nil, fmt.Errorf("upload custom resources for a %q: %w", workloadType, err)
+		return nil, fmt.Errorf("upload custom resources for %q: %w", d.name, err)
 	}
-	return urls, nil
+	out.CustomResourceURLs = urls
+	return out, nil
 }
 
 type pushEnvFilesToS3BucketInput struct {

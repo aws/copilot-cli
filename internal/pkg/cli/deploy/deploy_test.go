@@ -181,6 +181,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
+					customResources: customresource.LBWS,
 				}
 			},
 		},
@@ -206,6 +207,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
+					customResources: customresource.Backend,
 				}
 			},
 		},
@@ -231,6 +233,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
+					customResources: customresource.Worker,
 				}
 			},
 		},
@@ -256,6 +259,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
+					customResources: customresource.RDWS,
 				}
 			},
 		},
@@ -279,6 +283,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &jobDeployer{
 					workloadDeployer: deployer,
+					customResources:  customresource.ScheduledJob,
 				}
 			},
 		},
