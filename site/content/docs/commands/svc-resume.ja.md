@@ -1,5 +1,5 @@
 # svc resume
-```bash
+```console
 $ copilot svc resume [flags]
 ```
 
@@ -12,7 +12,7 @@ $ copilot svc resume [flags]
 
 ## フラグ
 
-```bash
+```
   -a, --app string    Name of the application.
   -e, --env string    Name of the environment.
   -h, --help          help for resume
@@ -22,6 +22,6 @@ $ copilot svc resume [flags]
 ## 実行例
 
 一時停止中の App Runner サービス、"my-svc" を再開します。
-```
+```console
 $ copilot svc resume -n my-svc
 ```

@@ -1,5 +1,5 @@
 # job package
-```bash
+```console
 $ copilot job package
 ```
 
@@ -9,7 +9,7 @@ $ copilot job package
 
 ## What are the flags?
 
-```bash
+```
   -a, --app string          Name of the application.
   -e, --env string          Name of the environment.
   -h, --help                help for package
@@ -24,13 +24,13 @@ $ copilot job package
 
 Prints the CloudFormation template for the "report-generator" job parametrized for the "test" environment.
 
-```bash
+```console
 $ copilot job package -n report-generator -e test
 ```
 
 Writes the CloudFormation stack and configuration to an "infrastructure/" sub-directory instead of printing.
 
-```bash
+```console
 $ copilot job package -n report-generator -e test --output-dir ./infrastructure
 $ ls ./infrastructure
   report-generator-test.stack.yml      report-generator-test.params.yml

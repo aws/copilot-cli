@@ -338,7 +338,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageCPUUtilization
         ScaleInCooldown: 120
-        ScaleOutCooldown: 60
+        ScaleOutCooldown: 150
         TargetValue: 70
   EnvControllerAction:
     Metadata:

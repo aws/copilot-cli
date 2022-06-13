@@ -204,6 +204,43 @@ func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProv
 	return cps
 }
 
+// convertCooldown converts a service manifest cooldown struct into a format parsable
+// by the templates pkg.
+func convertCooldown(c manifest.Cooldown) template.Cooldown {
+	if c.IsEmpty() {
+		return template.Cooldown{}
+	}
+
+	cooldown := template.Cooldown{}
+
+	if c.ScaleInCooldown != nil {
+		scaleInTime := float64(*c.ScaleInCooldown) / float64(time.Second)
+		cooldown.ScaleInCooldown = aws.Float64(scaleInTime)
+	}
+	if c.ScaleOutCooldown != nil {
+		scaleOutTime := float64(*c.ScaleOutCooldown) / float64(time.Second)
+		cooldown.ScaleOutCooldown = aws.Float64(scaleOutTime)
+	}
+
+	return cooldown
+}
+
+// convertScalingCooldown handles the logic of converting generalized and specific cooldowns set
+// into the scaling cooldown used in the Auto Scaling configuration.
+func convertScalingCooldown(specCooldown, genCooldown manifest.Cooldown) template.Cooldown {
+	cooldown := convertCooldown(genCooldown)
+
+	specTemplateCooldown := convertCooldown(specCooldown)
+	if specCooldown.ScaleInCooldown != nil {
+		cooldown.ScaleInCooldown = specTemplateCooldown.ScaleInCooldown
+	}
+	if specCooldown.ScaleOutCooldown != nil {
+		cooldown.ScaleOutCooldown = specTemplateCooldown.ScaleOutCooldown
+	}
+
+	return cooldown
+}
+
 // convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
 // by the templates pkg.
 func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, error) {
@@ -235,6 +272,9 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 	if a.Memory.ScalingConfig.Value != nil {
 		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.ScalingConfig.Value))
 	}
+
+	autoscalingOpts.CPUCooldown = convertScalingCooldown(a.CPU.ScalingConfig.Cooldown, a.Cooldown)
+	autoscalingOpts.MemCooldown = convertScalingCooldown(a.Memory.ScalingConfig.Cooldown, a.Cooldown)
 
 	if a.Requests != nil {
 		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))

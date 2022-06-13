@@ -1,5 +1,5 @@
 # job delete
-```bash
+```console
 $ copilot job delete [flags]
 ```
 
@@ -9,7 +9,7 @@ $ copilot job delete [flags]
 
 ## What are the flags?
 
-```bash
+```
   -a, --app string    Name of the application.
   -e, --env string    Name of the environment.
   -h, --help          help for delete
@@ -20,21 +20,21 @@ $ copilot job delete [flags]
 ## Examples
 
 Delete the "report-generator" job from the my-app application.
-```bash
+```console
 $ copilot job delete --name report-generator --app my-app
 ```
 
 Delete the "report-generator" job from just the prod environment.
-```bash
+```console
 $ copilot job delete --name report-generator --env prod
 ```
 
 Delete the "report-generator" job from the my-app application from outside of the workspace.
-```bash
+```console
 $ copilot job delete --name report-generator --app my-app
 ```
 
 Delete the "report-generator" job without the confirmation prompt.
-```bash
+```console
 $ copilot job delete --name report-generator --yes
 ```

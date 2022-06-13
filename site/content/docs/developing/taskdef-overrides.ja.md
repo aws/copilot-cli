@@ -18,7 +18,7 @@ taskdef_overrides:
 - path: ContainerDefinitions[0].Cpu
   value: 512
 - path: ContainerDefinitions[0].Memory
-   value: 1024
+  value: 1024
 ```
 
 それぞれのルールは CloudFormation テンプレートに順次適用されます。結果として得られた CloudFormation テンプレートが次のルールの対象となります。すべてのルールが正常に適用されるか、エラーが発生するまで評価が続けられます。
@@ -62,7 +62,7 @@ taskdef_overrides:
 taskdef_overrides:
   - path: "ContainerDefinitions[0].PortMappings[-].ContainerPort"
     value: 2056
-  // Copilot はデフォルトでポートマッピングを作成するため、PortMappings[1] とすることで、上記ルールで追加されたポートマッピングを取得します。
+  # Copilot はデフォルトでポートマッピングを作成するため、PortMappings[1] とすることで、上記ルールで追加されたポートマッピングを取得します。
   - path: "ContainerDefinitions[0].PortMappings[1].Protocol"
     value: "udp"
 ```

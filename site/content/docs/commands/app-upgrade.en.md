@@ -1,5 +1,5 @@
 # app upgrade
-```bash
+```console
 $ copilot app upgrade [flags]
 ```
 
@@ -9,13 +9,13 @@ $ copilot app upgrade [flags]
 
 ## What are the flags?
 
-```bash
+```
 -h, --help          help for upgrade
 -n, --name string   Name of the application.
 ```
 
 ## Examples
 Upgrade the application "my-app" to the latest version
-```bash
+```console
 $ copilot app upgrade -n my-app
 ```

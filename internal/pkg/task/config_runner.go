@@ -5,7 +5,6 @@ package task
 
 import (
 	"fmt"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 )
@@ -35,6 +34,9 @@ type ConfigRunner struct {
 
 	// Must not be nil if using default subnets.
 	VPCGetter VPCGetter
+
+	// Figures non-zero exit code of the task.
+	NonZeroExitCodeGetter NonZeroExitCodeGetter
 
 	// Platform configuration
 	OS string
@@ -103,4 +105,13 @@ func (r *ConfigRunner) validateDependencies() error {
 	}
 
 	return nil
+}
+
+// CheckNonZeroExitCode returns the status of the containers part of the given tasks.
+func (r *ConfigRunner) CheckNonZeroExitCode(tasks []*Task) error {
+	taskARNs := make([]string, len(tasks))
+	for idx, task := range tasks {
+		taskARNs[idx] = task.TaskARN
+	}
+	return r.NonZeroExitCodeGetter.HasNonZeroExitCode(taskARNs, r.Cluster)
 }

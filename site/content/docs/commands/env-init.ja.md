@@ -1,5 +1,5 @@
 # env init
-```bash
+```console
 $ copilot env init [flags]
 ```
 
@@ -24,6 +24,7 @@ Common Flags
       --region string                  Optional. An AWS region where the environment will be created.
 
 Import Existing Resources Flags
+      --import-cert-arns strings         Optional. Apply existing ACM certificates to the internet-facing load balancer.
       --import-private-subnets strings   Optional. Use existing private subnet IDs.
       --import-public-subnets strings    Optional. Use existing public subnet IDs.
       --import-vpc-id string             Optional. Use an existing VPC ID.
@@ -44,25 +45,26 @@ Telemetry Flags
 
 ## 実行例
 AWS プロファイルの "default" 利用し、デフォルト設定を使用して test Environment を作成します。
-```bash
+```console
 $ copilot env init --name test --profile default --default-config
 ```
 
 AWS プロファイルの "prod-admin" を利用して prod-iad Environment を作成し、 CloudWatch Container Insights　を有効化します。
-```bash
+```console
 $ copilot env init --name prod-iad --profile prod-admin --container-insights 
 ```
 
 VPC リソースをインポートして Environment を作成します。
-```bash
+```console
 $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
   --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
-  --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
+  --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f \
+  --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
 CIDR と AZ を上書きして、Environment を作成します。
 
-```bash
+```console
 $ copilot env init --override-vpc-cidr 10.1.0.0/16 \
   --override-az-names us-west-2b,us-west-2c \
   --override-public-cidrs 10.1.0.0/24,10.1.1.0/24 \
