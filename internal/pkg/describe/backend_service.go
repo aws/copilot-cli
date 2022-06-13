@@ -7,8 +7,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"text/tabwriter"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -33,6 +36,7 @@ type BackendServiceDescriber struct {
 	store                    DeployedEnvServicesLister
 	initECSServiceDescribers func(string) (ecsDescriber, error)
 	initEnvDescribers        func(string) (envDescriber, error)
+	initLBDescriber          func(string) (lbDescriber, error)
 	ecsServiceDescribers     map[string]ecsDescriber
 	envStackDescriber        map[string]envDescriber
 }
@@ -46,6 +50,17 @@ func NewBackendServiceDescriber(opt NewServiceConfig) (*BackendServiceDescriber,
 		store:                opt.DeployStore,
 		ecsServiceDescribers: make(map[string]ecsDescriber),
 		envStackDescriber:    make(map[string]envDescriber),
+	}
+	describer.initLBDescriber = func(envName string) (lbDescriber, error) {
+		env, err := opt.ConfigStore.GetEnvironment(opt.App, envName)
+		if err != nil {
+			return nil, fmt.Errorf("get environment %s: %w", envName, err)
+		}
+		sess, err := sessions.ImmutableProvider().FromRole(env.ManagerRoleARN, env.Region)
+		if err != nil {
+			return nil, err
+		}
+		return elbv2.New(sess), nil
 	}
 	describer.initECSServiceDescribers = func(env string) (ecsDescriber, error) {
 		if describer, ok := describer.ecsServiceDescribers[env]; ok {
@@ -87,6 +102,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		return nil, fmt.Errorf("list deployed environments for application %s: %w", d.app, err)
 	}
 
+	var routes []*WebServiceRoute
 	var configs []*ECSServiceConfig
 	var services []*ServiceDiscovery
 	var envVars []*containerEnvVar
@@ -95,6 +111,16 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		svcDescr, err := d.initECSServiceDescribers(env)
 		if err != nil {
 			return nil, err
+		}
+		uri, err := d.URI(env)
+		if err != nil {
+			return nil, fmt.Errorf("retrieve service URI: %w", err)
+		}
+		if uri.AccessType == URIAccessTypeInternal {
+			routes = append(routes, &WebServiceRoute{
+				Environment: env,
+				URL:         uri.URI,
+			})
 		}
 		svcParams, err := svcDescr.Params()
 		if err != nil {
@@ -163,6 +189,7 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		Type:             manifest.BackendServiceType,
 		App:              d.app,
 		Configurations:   configs,
+		Routes:           routes,
 		ServiceDiscovery: services,
 		Variables:        envVars,
 		Secrets:          secrets,
@@ -178,6 +205,7 @@ type backendSvcDesc struct {
 	Type             string               `json:"type"`
 	App              string               `json:"application"`
 	Configurations   ecsConfigurations    `json:"configurations"`
+	Routes           []*WebServiceRoute   `json:"routes"`
 	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
 	Variables        containerEnvVars     `json:"variables"`
 	Secrets          secrets              `json:"secrets,omitempty"`
@@ -207,6 +235,16 @@ func (w *backendSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nConfigurations\n\n"))
 	writer.Flush()
 	w.Configurations.humanString(writer)
+	if len(w.Routes) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
+		writer.Flush()
+		headers := []string{"Environment", "URL"}
+		fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
+		fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
+		for _, route := range w.Routes {
+			fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
+		}
+	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nService Discovery\n\n"))
 	writer.Flush()
 	w.ServiceDiscovery.humanString(writer)

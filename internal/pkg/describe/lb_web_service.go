@@ -28,9 +28,9 @@ import (
 )
 
 const (
-	envOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
-	envOutputSubdomain                 = "EnvironmentSubdomain"
-	svcParamHTTPSEnabled               = "HTTPSEnabled"
+	envOutputPublicLoadBalancerDNSName   = "PublicLoadBalancerDNSName"
+	envOutputInternalLoadBalancerDNSName = "InternalLoadBalancerDNSName"
+	envOutputSubdomain                   = "EnvironmentSubdomain"
 
 	svcStackResourceALBTargetGroupLogicalID       = "TargetGroup"
 	svcStackResourceNLBTargetGroupLogicalID       = "NLBTargetGroup"
@@ -134,13 +134,13 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		webServiceURI, err := d.URI(env)
+		uri, err := d.URI(env)
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service URI: %w", err)
 		}
 		routes = append(routes, &WebServiceRoute{
 			Environment: env,
-			URL:         webServiceURI,
+			URL:         uri.URI,
 		})
 		containerPlatform, err := svcDescr.Platform()
 		if err != nil {

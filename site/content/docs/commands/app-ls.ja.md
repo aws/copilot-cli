@@ -1,5 +1,5 @@
 # app ls
-```bash
+```console
 $ copilot app ls [flags]
 ```
 
@@ -9,13 +9,13 @@ $ copilot app ls [flags]
 
 ## フラグ
 
-```bash
+```
 -h, --help             help for ls
 ```
 
 ## 実行例
 AWS アカウント、リージョンにある全ての Application を一覧表示します。
-```bash
+```console
 $ copilot app ls
 ```
 

@@ -1,5 +1,5 @@
 # svc show
-```bash
+```console
 $ copilot svc show
 ```
 
@@ -9,7 +9,7 @@ $ copilot svc show
 
 ## What are the flags?
 
-```bash
+```
   -a, --app string    Name of the application.
   -h, --help          help for show
       --json          Optional. Outputs in JSON format.

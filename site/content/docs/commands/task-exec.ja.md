@@ -1,5 +1,5 @@
 # task exec
-```
+```console
 $ copilot task exec
 ```
 
@@ -22,19 +22,19 @@ $ copilot task exec
 
 現在のワークスペース配下の "test" Environment で、タスクグループ "db-migrate" 内のタスクへ対話型の bash セッションを開始します。
 
-```bash
+```console
 $ copilot task exec -e test -n db-migrate
 ```
 
 タスクグループ "db-migrate" 内の、ID "1848c38" のプレフィックスを持つタスクで 'cat progress.csv' コマンドを実行します。
 
-```bash
+```console
 $ copilot task exec --name db-migrate --task-id 1848c38 --command "cat progress.csv"
 ```
 
 デフォルトクラスター内で動作する、ID "38c3818" のプレフィックスを持つタスクへ対話型の bash セッションを開始します。
 
-```bash
+```console
 $ copilot task exec --default --task-id 38c3818
 ```
 

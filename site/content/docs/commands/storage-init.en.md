@@ -1,5 +1,5 @@
 # storage init
-```bash
+```console
 $ copilot storage init
 ```
 ## What does it do?
@@ -8,7 +8,7 @@ $ copilot storage init
 After running this command, the CLI creates an `addons` subdirectory inside your `copilot/service` directory if it does not exist. When you run `copilot svc deploy`, your newly initialized storage resource is created in the environment you're deploying to. By default, only the service you specify during `storage init` will have access to that storage resource.
 
 ## What are the flags?
-```bash
+```
 Required Flags
   -n, --name string           Name of the storage resource to create.
   -t, --storage-type string   Type of storage to add. Must be one of:
@@ -34,18 +34,18 @@ Aurora Serverless Flags
 ## How can I use it? 
 Create an S3 bucket named "my-bucket" attached to the "frontend" service.
 
-```
+```console
 $ copilot storage init -n my-bucket -t S3 -w frontend
 ```
 Create a basic DynamoDB table named "my-table" attached to the "frontend" service with a sort key specified.
 
-```
+```console
 $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
 ```
 
 Create a DynamoDB table with multiple alternate sort keys.
 
-```
+```console
 $ copilot storage init \
   -n my-table -t DynamoDB -w frontend \
   --partition-key Email:S \
@@ -55,7 +55,7 @@ $ copilot storage init \
 ```
 
 Create an RDS Aurora Serverless cluster using PostgreSQL as the database engine.
-```
+```console
 $ copilot storage init \
   -n my-cluster -t Aurora -w frontend --engine PostgreSQL
 ```
@@ -64,7 +64,7 @@ $ copilot storage init \
 Copilot writes a Cloudformation template specifying the S3 bucket or DDB table to the `addons` dir. When you run `copilot svc deploy`, the CLI merges this template with all the other templates in the addons directory to create a nested stack associated with your service. This nested stack describes all the additional resources you've associated with that service and is deployed wherever your service is deployed. 
 
 This means that after running
-```
+```console
 $ copilot storage init -n bucket -t S3 -w fe
 $ copilot svc deploy -n fe -e test
 $ copilot svc deploy -n fe -e prod

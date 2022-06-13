@@ -38,15 +38,15 @@ Job 名。
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 Job のアーキテクチャタイプ。
-現在、Copilot は定期的にもしくは固定したスケジュールでトリガされるタスクである "Scheduled Job" タイプのみをサポートしています。
+現在、Copilot は定期的にもしくは固定したスケジュールでトリガーされるタスクである "Scheduled Job" タイプのみをサポートしています。
 
 <div class="separator"></div>
 
 <a id="on" href="#on" class="field">`on`</a> <span class="type">Map</span>  
-Job をトリガするイベントの設定。
+Job をトリガーするイベントの設定。
 
 <span class="parent-field">on.</span><a id="on-schedule" href="#on-schedule" class="field">`schedule`</a> <span class="type">String</span>  
-定期的に Job をトリガする頻度を指定できます。
+定期的に Job をトリガーする頻度を指定できます。
 サポートする頻度は:
 
 
@@ -61,10 +61,17 @@ Job をトリガするイベントの設定。
 * `"@every {duration}"` (例: "1m", "5m")
 * `"rate({duration})"` CloudWatch の[rate 式](https://docs.aws.amazon.com/ja_jp/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions) の形式
 
-特定の時間に Job をトリガしたい場合、cron でスケジュールを指定できます。
+特定の時間に Job をトリガーしたい場合、cron でスケジュールを指定できます。
 
 * `"* * * * *"` 標準的な [cron フォーマット](https://en.wikipedia.org/wiki/Cron#Overview)を利用する
 * `"cron({fields})"` 6 つフィールドからなる CloudWatch の[cron 式](https://docs.aws.amazon.com/ja_jp/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) を利用する
+
+最後に、例えば `schedule` フィールドを `none` に設定することで、Job がトリガーされないようにすることができます。
+```yaml
+on:
+  schedule: "none"
+```
+
 <div class="separator"></div>
 
 {% include 'image-config.ja.md' %}
