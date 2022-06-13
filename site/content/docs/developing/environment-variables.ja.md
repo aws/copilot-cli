@@ -56,7 +56,7 @@ environments:
 
 ![Editing the manifest to add env vars](https://raw.githubusercontent.com/kohidave/ecs-cliv2-demos/master/env-vars-edit.svg?sanitize=true)
 
-さらに、環境変数をまとめて追加したい場合、 [env file](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations) に環境変数を追加します。そして、 ファイルパス ( Workspace の root からのファイルパス ) を [マニフェスト](../manifest/overview.ja.md)の `env_file` フィールドに記述します。
+さらに、環境変数をまとめて追加したい場合、 [env file](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-considerations) に環境変数を追加します。そして、ファイルパス (Workspace の root からのファイルパス) を [Manifest](../manifest/overview.ja.md) の `env_file` フィールドに記述します。
 
 ```yaml
 # in copilot/{service name}/manifest.yml

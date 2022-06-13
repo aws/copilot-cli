@@ -116,6 +116,32 @@ func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.Con
 	}
 }
 
+func convertHostedZone(m manifest.RoutingRuleConfiguration) (template.AliasesForHostedZone, error) {
+	aliasesFor := make(map[string][]string)
+	defaultHostedZone := m.HostedZone
+	if len(m.Alias.AdvancedAliases) != 0 {
+		for _, alias := range m.Alias.AdvancedAliases {
+			if alias.HostedZone != nil {
+				aliasesFor[*alias.HostedZone] = append(aliasesFor[*alias.HostedZone], *alias.Alias)
+				continue
+			}
+			if defaultHostedZone != nil {
+				aliasesFor[*defaultHostedZone] = append(aliasesFor[*defaultHostedZone], *alias.Alias)
+			}
+		}
+		return aliasesFor, nil
+	}
+	if defaultHostedZone == nil {
+		return aliasesFor, nil
+	}
+	aliases, err := m.Alias.ToStringSlice()
+	if err != nil {
+		return nil, err
+	}
+	aliasesFor[*defaultHostedZone] = aliases
+	return aliasesFor, nil
+}
+
 // convertDependsOn converts image and sidecar depends on fields to have upper case statuses.
 func convertDependsOn(d manifest.DependsOn) map[string]string {
 	if d == nil {
@@ -196,12 +222,20 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 		MinCapacity: &min,
 		MaxCapacity: &max,
 	}
-	if a.CPU != nil {
-		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU))
+
+	if a.CPU.Value != nil {
+		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.Value))
 	}
-	if a.Memory != nil {
-		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory))
+	if a.CPU.ScalingConfig.Value != nil {
+		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.ScalingConfig.Value))
 	}
+	if a.Memory.Value != nil {
+		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.Value))
+	}
+	if a.Memory.ScalingConfig.Value != nil {
+		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.ScalingConfig.Value))
+	}
+
 	if a.Requests != nil {
 		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))
 	}

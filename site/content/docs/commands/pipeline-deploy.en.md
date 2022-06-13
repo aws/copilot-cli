@@ -1,5 +1,5 @@
 # pipeline deploy
-```bash
+```console
 $ copilot pipeline deploy [flags]
 ```
 
@@ -7,7 +7,7 @@ $ copilot pipeline deploy [flags]
 `copilot pipeline deploy` deploys a pipeline for the services in your workspace, using the environments associated with the application from a pipeline manifest.
 
 ## What are the flags?
-```bash
+```
 -a, --app string    Name of the application.
 -h, --help          help for deploy
 -n, --name string   Name of the pipeline.
@@ -16,6 +16,6 @@ $ copilot pipeline deploy [flags]
 
 ## Examples
 Deploys a pipeline for the services and jobs in your workspace.
-```bash
+```console
 $ copilot pipeline deploy
 ```

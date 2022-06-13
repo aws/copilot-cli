@@ -1,5 +1,5 @@
 # app init
-```bash
+```console
 $ copilot app init [name] [flags]
 ```
 
@@ -12,7 +12,7 @@ Typically, you don't need to run `app init` (`init` does all the same work) unle
 
 ## What are the flags?
 Like all commands in the Copilot CLI, if you don't provide required flags, we'll prompt you for all the information we need to get you going. You can skip the prompts by providing information via flags:
-```bash
+```
       --domain string                  Optional. Your existing custom domain name.
   -h, --help                           help for init
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
@@ -25,15 +25,15 @@ For example: `copilot app init --resource-tags department=MyDept,team=MyTeam`
 
 ## Examples
 Create a new application named "my-app".
-```bash
+```console
 $ copilot app init my-app
 ```
 Create a new application with an existing domain name in Amazon Route53.
-```bash
+```console
 $ copilot app init --domain example.com
 ```
 Create a new application with resource tags.
-```bash
+```console
 $ copilot app init --resource-tags department=MyDept,team=MyTeam
 ```
 ## What does it look like?

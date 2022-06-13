@@ -148,6 +148,30 @@ func (c *Count) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the ScalingConfigOrPercentage
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (r *ScalingConfigOrPercentage) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&r.ScalingConfig); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !r.ScalingConfig.IsEmpty() {
+		// Successfully unmarshalled ScalingConfig fields, return
+		return nil
+	}
+
+	if err := value.Decode(&r.Value); err != nil {
+		return errors.New(`unable to unmarshal into int or composite-style map`)
+	}
+	return nil
+}
+
 // IsEmpty returns whether Count is empty.
 func (c *Count) IsEmpty() bool {
 	return c.Value == nil && c.AdvancedCount.IsEmpty()
@@ -172,23 +196,57 @@ func (c *Count) Desired() (*int, error) {
 // Percentage represents a valid percentage integer ranging from 0 to 100.
 type Percentage int
 
+// ScalingConfigOrPercentage represents a resource that has autoscaling configurations or a default percentage.
+type ScalingConfigOrPercentage struct {
+	Value         *Percentage
+	ScalingConfig AdvancedScalingConfig // mutually exclusive with Value
+}
+
+// AdvancedScalingConfig represents advanced configurable options for a scaling policy.
+type AdvancedScalingConfig struct {
+	Value    *Percentage `yaml:"value"`
+	Cooldown Cooldown    `yaml:"cooldown"`
+}
+
+// Cooldown represents the autoscaling cooldown of resources.
+type Cooldown struct {
+	ScaleInCooldown  *time.Duration `yaml:"in"`
+	ScaleOutCooldown *time.Duration `yaml:"out"`
+}
+
 // AdvancedCount represents the configurable options for Auto Scaling as well as
 // Capacity configuration (spot).
 type AdvancedCount struct {
-	Spot         *int           `yaml:"spot"` // mutually exclusive with other fields
-	Range        Range          `yaml:"range"`
-	CPU          *Percentage    `yaml:"cpu_percentage"`
-	Memory       *Percentage    `yaml:"memory_percentage"`
-	Requests     *int           `yaml:"requests"`
-	ResponseTime *time.Duration `yaml:"response_time"`
-	QueueScaling QueueScaling   `yaml:"queue_delay"`
+	Spot         *int                      `yaml:"spot"` // mutually exclusive with other fields
+	Range        Range                     `yaml:"range"`
+	Cooldown     Cooldown                  `yaml:"cooldown"`
+	CPU          ScalingConfigOrPercentage `yaml:"cpu_percentage"`
+	Memory       ScalingConfigOrPercentage `yaml:"memory_percentage"`
+	Requests     *int                      `yaml:"requests"`
+	ResponseTime *time.Duration            `yaml:"response_time"`
+	QueueScaling QueueScaling              `yaml:"queue_delay"`
 
 	workloadType string
 }
 
+// IsEmpty returns whether ScalingConfigOrPercentage is empty
+func (r *ScalingConfigOrPercentage) IsEmpty() bool {
+	return r.ScalingConfig.IsEmpty() && r.Value == nil
+}
+
+// IsEmpty returns whether AdvancedScalingConfig is empty
+func (a *AdvancedScalingConfig) IsEmpty() bool {
+	return a.Cooldown.IsEmpty() && a.Value == nil
+}
+
+// IsEmpty returns whether Cooldown is empty
+func (c *Cooldown) IsEmpty() bool {
+	return c.ScaleInCooldown == nil && c.ScaleOutCooldown == nil
+}
+
 // IsEmpty returns whether AdvancedCount is empty.
 func (a *AdvancedCount) IsEmpty() bool {
-	return a.Range.IsEmpty() && a.CPU == nil && a.Memory == nil &&
+	return a.Range.IsEmpty() && a.CPU.IsEmpty() && a.Memory.IsEmpty() && a.Cooldown.IsEmpty() &&
 		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil && a.QueueScaling.IsEmpty()
 }
 
@@ -217,20 +275,21 @@ func (a *AdvancedCount) validScalingFields() []string {
 func (a *AdvancedCount) hasScalingFieldsSet() bool {
 	switch a.workloadType {
 	case LoadBalancedWebServiceType:
-		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil
+		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || a.Requests != nil || a.ResponseTime != nil
 	case BackendServiceType:
-		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil
+		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || a.Requests != nil || a.ResponseTime != nil
 	case WorkerServiceType:
-		return a.CPU != nil || a.Memory != nil || !a.QueueScaling.IsEmpty()
+		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.QueueScaling.IsEmpty()
 	default:
-		return a.CPU != nil || a.Memory != nil || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()
+		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()
 	}
 }
 
 func (a *AdvancedCount) unsetAutoscaling() {
 	a.Range = Range{}
-	a.CPU = nil
-	a.Memory = nil
+	a.Cooldown = Cooldown{}
+	a.CPU = ScalingConfigOrPercentage{}
+	a.Memory = ScalingConfigOrPercentage{}
 	a.Requests = nil
 	a.ResponseTime = nil
 	a.QueueScaling = QueueScaling{}

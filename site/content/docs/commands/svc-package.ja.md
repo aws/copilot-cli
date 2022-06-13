@@ -1,5 +1,5 @@
 # svc package 
-```bash
+```console
 $ copilot svc package
 ```
 
@@ -9,7 +9,7 @@ $ copilot svc package
 
 ## フラグ
 
-```bash
+```
   -a, --app string          Name of the application.
   -e, --env string          Name of the environment.
   -h, --help                help for package
@@ -24,7 +24,7 @@ $ copilot svc package
 
 CloudFormaiton スタックと設定を表示する代わりに、"infrastructure/" サブディレクトリへ書き込みます。
 
-```bash
+```console
 $ copilot svc package -n frontend -e test --output-dir ./infrastructure
 $ ls ./infrastructure
 frontend.stack.yml      frontend-test.config.yml

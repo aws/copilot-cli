@@ -1,5 +1,5 @@
 # app delete
-```bash
+```console
 $ copilot app delete [flags]
 ```
 
@@ -9,13 +9,13 @@ $ copilot app delete [flags]
 
 ## フラグ
 
-```bash
+```
 -h, --help                          help for delete
     --yes                           Skips confirmation prompt.
 ```
 
 ## 実行例
 Application を強制的に削除します。
-```bash
+```console
 $ copilot app delete --yes 
 ```
