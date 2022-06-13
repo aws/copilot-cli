@@ -86,7 +86,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
-							Type:       svcStackResourceHTTPSListenerRuleResourceType,
+							Type:       svcStackResourceListenerRuleResourceType,
 							PhysicalID: "mockRuleARN",
 						},
 					}, nil),
@@ -112,7 +112,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
-							Type:       svcStackResourceHTTPSListenerRuleResourceType,
+							Type:       svcStackResourceListenerRuleResourceType,
 							PhysicalID: "mockRuleARN",
 						},
 					}, nil),
@@ -255,7 +255,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
-							Type:       svcStackResourceHTTPSListenerRuleResourceType,
+							Type:       svcStackResourceListenerRuleResourceType,
 							PhysicalID: "mockRuleARN",
 						},
 					}, nil),
@@ -376,7 +376,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
-							Type:       svcStackResourceHTTPSListenerRuleResourceType,
+							Type:       svcStackResourceListenerRuleResourceType,
 							PhysicalID: "mockRuleARN",
 						},
 					}, nil),
