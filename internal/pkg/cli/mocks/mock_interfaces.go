@@ -3892,6 +3892,20 @@ func (mr *MocktaskRunnerMockRecorder) Run() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MocktaskRunner)(nil).Run))
 }
 
+// CheckNonZeroExitCode mocks base method.
+func (m *MocktaskRunner) CheckNonZeroExitCode(tasks []*task.Task) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckNonZeroExitCode", tasks)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckNonZeroExitCode indicates an expected call of CheckNonZeroExitCode.
+func (mr *MocktaskRunnerMockRecorder) CheckNonZeroExitCode(tasks []*task.Task) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckNonZeroExitCode", reflect.TypeOf((*MocktaskRunner)(nil).CheckNonZeroExitCode), tasks)
+}
+
 // MockdefaultClusterGetter is a mock of defaultClusterGetter interface.
 type MockdefaultClusterGetter struct {
 	ctrl     *gomock.Controller
