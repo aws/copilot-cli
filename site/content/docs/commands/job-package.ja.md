@@ -1,5 +1,5 @@
 # job package 
-```bash
+```console
 $ copilot job package
 ```
 
@@ -9,7 +9,7 @@ $ copilot job package
 
 ## フラグ
 
-```bash
+```
   -a, --app string          Name of the application.
   -e, --env string          Name of the environment.
   -h, --help                help for package
@@ -24,13 +24,13 @@ $ copilot job package
 
 "report-generator" Job を作成する CloudFormation テンプレートを、"test" Environment にデプロイする形で出力します。
  
-```bash
+```console
 $ copilot job package -n report-generator -e test
 ```
 
 CloudFormation テンプレートと設定を "infrastructure/" ディレクトリ以下に書き出します。
   
-```bash
+```console
 $ copilot job package -n report-generator -e test --output-dir ./infrastructure
 $ ls ./infrastructure
   report-generator-test.stack.yml      report-generator-test.params.yml

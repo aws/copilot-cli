@@ -1,5 +1,5 @@
 # copilot deploy
-```
+```console
 $ copilot deploy
 ```
 
@@ -16,7 +16,7 @@ $ copilot deploy
 
 ## フラグ
 
-```bash
+```
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
@@ -38,11 +38,11 @@ $ copilot deploy
 ## 実行例
 
 "frontend"という名前の Service を "test" Environment にデプロイします。
-```bash
+```console
  $ copilot deploy --name frontend --env test
 ```
 
 "mailer"という名前の Job を、追加のリソースタグを付加して、"prod" Environment にデプロイします。
-```bash
+```console
 $ copilot deploy -n mailer -e prod --resource-tags source/revision=bb133e7,deployment/initiator=manual
 ```

@@ -1,5 +1,5 @@
 # app upgrade
-```bash
+```console
 $ copilot app upgrade [flags]
 ```
 
@@ -9,13 +9,13 @@ $ copilot app upgrade [flags]
 
 ## フラグ
 
-```bash
+```
 -h, --help          help for upgrade
 -n, --name string   Name of the application.
 ```
 
 ## 実行例
 Application "my-app" を最新バージョンにアップグレードします。
-```bash
+```console
 $ copilot app upgrade -n my-app
 ```

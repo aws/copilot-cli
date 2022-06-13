@@ -1,5 +1,5 @@
 # job delete
-```bash
+```console
 $ copilot job delete [flags]
 ```
 
@@ -9,7 +9,7 @@ $ copilot job delete [flags]
 
 ## フラグ
 
-```bash
+```
   -a, --app string    Name of the application.
   -e, --env string    Name of the environment.
   -h, --help          help for delete
@@ -20,16 +20,16 @@ $ copilot job delete [flags]
 ## 実行例
 
 "report-generator" Job を "my-app" Application から削除します。このコマンドはワークスペースの外からでも実行できます。
-```bash
+```console
 $ copilot job delete --name report-generator --app my-app
 ```
 
 "report-generator" Job を "prod" Environment からのみ削除します。
-```bash
+```console
 $ copilot job delete --name report-generator --env prod
 ```
 
 確認をプロンプトに表示せず "report-generator" Job を削除します。
-```bash
+```console
 $ copilot job delete --name report-generator --yes
 ```

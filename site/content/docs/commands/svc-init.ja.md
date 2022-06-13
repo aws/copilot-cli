@@ -1,5 +1,5 @@
 # svc init
-```bash
+```console
 $ copilot svc init
 ```
 
@@ -15,7 +15,7 @@ $ copilot svc init
 
 ## フラグ
 
-```bash
+```
 Flags
   -a, --app string          Name of the application.
   -d, --dockerfile string   Path to the Dockerfile.

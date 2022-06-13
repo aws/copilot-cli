@@ -1,5 +1,5 @@
 # pipeline deploy
-```bash
+```console
 $ copilot pipeline deploy [flags]
 ```
 
@@ -7,7 +7,7 @@ $ copilot pipeline deploy [flags]
 `copilot pipeline deploy` は、ワークスペース内の全ての Service に対する Pipeline をデプロイします。Pipeline 用 Manifest にて Application と紐付けられた Environment 群を利用します。
 
 ## フラグ
-```bash
+```
 -a, --app string    Name of the application.
 -h, --help          help for deploy
 -n, --name string   Name of the pipeline.
@@ -16,6 +16,6 @@ $ copilot pipeline deploy [flags]
 
 ## 実行例
 ワークスペース内の Service 群と Job 群に対する Pipeline をデプロイします。
-```bash
+```console
 $ copilot pipeline deploy
 ```
