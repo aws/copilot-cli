@@ -358,13 +358,13 @@ Resources:
 {{- end}}
 {{- end}}
   {{- if not .PrivateImportedCertARNs}}
-  InternalLoadBalancerDefaultHostedZone:
+  InternalWorkloadsHostedZone:
     Metadata:
-      'aws:copilot:description': 'Default hosted zone for backend services exposed with a private ALB'
+      'aws:copilot:description': 'Default hosted zone for workloads exposed with a private ALB'
     Condition: CreateInternalALB
     Type: AWS::Route53::HostedZone
     Properties:
-      Name: !Sub "backends.${ServiceDiscoveryEndpoint}"
+      Name: !Sub ${EnvironmentName}.${AppName}.internal
       VPCs:
         {{- if .VPCConfig.Imported}}
         - VPCId: {{.VPCConfig.Imported.ID}}
@@ -373,20 +373,6 @@ Resources:
         - VPCId: !Ref VPC
           VPCRegion: !Ref AWS::Region
         {{- end}}
-  InternalLoadBalancerDefaultAlias:
-    Metadata:
-      'aws:copilot:description': 'Default alias for backend services'
-    Condition: CreateInternalALB
-    Type: AWS::Route53::RecordSetGroup
-    Properties:
-      HostedZoneId: !Ref InternalLoadBalancerDefaultHostedZone
-      Comment: "test comment"
-      RecordSets:
-        - Name: !Sub "backends.${ServiceDiscoveryEndpoint}"
-          Type: A
-          AliasTarget:
-            HostedZoneId: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
-            DNSName: !GetAtt InternalLoadBalancer.DNSName
   {{- end}}
   FileSystem:
     Condition: CreateEFS
@@ -590,6 +576,18 @@ Outputs:
     Value: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
     Export:
       Name: !Sub ${AWS::StackName}-InternalLoadBalancerCanonicalHostedZoneID
+  {{- if not .PrivateImportedCertARNs}}
+  InternalWorkloadsHostedZone:
+    Condition: CreateInternalALB
+    Value: !GetAtt InternalWorkloadsHostedZone.Id
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalWorkloadsHostedZoneID
+  InternalWorkloadsHostedZoneName:
+    Condition: CreateInternalALB
+    Value: !Sub ${EnvironmentName}.${AppName}.internal
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalWorkloadsHostedZoneName
+  {{- end}}
   InternalHTTPListenerArn:
     Condition: CreateInternalALB
     Value: !Ref InternalHTTPListener
