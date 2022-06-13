@@ -24,6 +24,7 @@ Common Flags
       --region string                  Optional. An AWS region where the environment will be created.
 
 Import Existing Resources Flags
+      --import-cert-arns strings         Optional. Apply existing ACM certificates to the internet-facing load balancer.
       --import-private-subnets strings   Optional. Use existing private subnet IDs.
       --import-public-subnets strings    Optional. Use existing public subnet IDs.
       --import-vpc-id string             Optional. Use an existing VPC ID.
@@ -57,7 +58,8 @@ VPC リソースをインポートして Environment を作成します。
 ```console
 $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
   --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
-  --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f
+  --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f \
+  --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
 CIDR と AZ を上書きして、Environment を作成します。

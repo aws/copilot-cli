@@ -159,6 +159,8 @@ Service の平均レスポンスタイムを指定し、それによってスケ
 
 {% include 'exec.ja.md' %}
 
+{% include 'deployment.en.md' %}
+
 {% include 'entrypoint.ja.md' %}
 
 {% include 'command.ja.md' %}
@@ -174,6 +176,8 @@ Service の平均レスポンスタイムを指定し、それによってスケ
 {% include 'publish.ja.md' %}
 
 {% include 'logging.ja.md' %}
+
+{% include 'observability.en.md' %}
 
 {% include 'taskdef-overrides.ja.md' %}
 
