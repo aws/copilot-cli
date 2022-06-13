@@ -64,7 +64,11 @@ func (e *errFieldMustBeSpecified) Error() string {
 	if len(e.conditionalFields) == 0 {
 		return errMsg
 	}
-	return fmt.Sprintf(`%s if %q %s specified`, errMsg, english.WordSeries(e.conditionalFields, "or"),
+	quoted := make([]string, len(e.conditionalFields))
+	for i, f := range e.conditionalFields {
+		quoted[i] = strconv.Quote(f)
+	}
+	return fmt.Sprintf(`%s if %s %s specified`, errMsg, english.WordSeries(quoted, "or"),
 		english.PluralWord(len(e.conditionalFields), "is", "are"))
 }
 

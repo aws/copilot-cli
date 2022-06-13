@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
 
@@ -384,6 +385,78 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				require.NoError(t, actualErr)
 				require.Equal(t, tc.wantedManifest, actualManifest)
 			}
+		})
+	}
+}
+
+func TestScheduledJob_RequiredEnvironmentFeatures(t *testing.T) {
+	testCases := map[string]struct {
+		mft    func(svc *ScheduledJob)
+		wanted []string
+	}{
+		"no feature required by default": {
+			mft: func(svc *ScheduledJob) {},
+		},
+		"nat feature required": {
+			mft: func(svc *ScheduledJob) {
+				svc.Network = NetworkConfig{
+					VPC: vpcConfig{
+						Placement: PlacementArgOrString{
+							PlacementString: placementStringP(PrivateSubnetPlacement),
+						},
+					},
+				}
+			},
+			wanted: []string{template.NATFeatureName},
+		},
+		"efs feature required by enabling managed volume": {
+			mft: func(svc *ScheduledJob) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mock-managed-volume-1": {
+							EFS: EFSConfigOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+						"mock-imported-volume": {
+							EFS: EFSConfigOrBool{
+								Advanced: EFSVolumeConfiguration{
+									FileSystemID: aws.String("mock-id"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wanted: []string{template.EFSFeatureName},
+		},
+		"efs feature not required because storage is imported": {
+			mft: func(svc *ScheduledJob) {
+				svc.Storage = Storage{
+					Volumes: map[string]*Volume{
+						"mock-imported-volume": {
+							EFS: EFSConfigOrBool{
+								Advanced: EFSVolumeConfiguration{
+									FileSystemID: aws.String("mock-id"),
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			inSvc := ScheduledJob{
+				Workload: Workload{
+					Name: aws.String("mock-svc"),
+					Type: aws.String(ScheduledJobType),
+				},
+			}
+			tc.mft(&inSvc)
+			got := inSvc.RequiredEnvironmentFeatures()
+			require.Equal(t, tc.wanted, got)
 		})
 	}
 }

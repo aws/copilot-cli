@@ -1,5 +1,5 @@
 # app show
-```bash
+```console
 $ copilot app show [flags]
 ```
 
@@ -9,7 +9,7 @@ $ copilot app show [flags]
 
 ## フラグ
 
-```bash
+```
 -h, --help          help for show
     --json          Optional. Outputs in JSON format.
 -n, --name string   Name of the application.
@@ -17,7 +17,7 @@ $ copilot app show [flags]
 
 ## 実行例
 "my-app"という Application に関する情報を出力します。
-```bash
+```console
 $ copilot app show -n my-app
 ```
 

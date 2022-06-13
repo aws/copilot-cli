@@ -1,5 +1,5 @@
 # svc delete
-```bash
+```console
 $ copilot svc delete [flags]
 ```
 
@@ -9,7 +9,7 @@ $ copilot svc delete [flags]
 
 ## フラグ
 
-```bash
+```
   -e, --env string    Name of the environment.
   -h, --help          help for delete
   -n, --name string   Name of the service.
@@ -18,6 +18,6 @@ $ copilot svc delete [flags]
 
 ## 実行例
 "test" アプリケーションを全ての Environment から強制的に削除します。
-```bash
+```console
 $ copilot svc delete --name test --yes
 ```

@@ -1,5 +1,5 @@
 # svc pause
-```bash
+```console
 $ copilot svc pause [flags]
 ```
 
@@ -12,7 +12,7 @@ $ copilot svc pause [flags]
 
 ## What are the flags?
 
-```bash
+```
   -a, --app string    Name of the application.
   -e, --env string    Name of the environment.
   -h, --help          help for pause
@@ -22,6 +22,6 @@ $ copilot svc pause [flags]
 
 ## Examples
 Pause running App Runner service "my-svc".
-```
+```console
 $ copilot svc pause -n my-svc
 ```

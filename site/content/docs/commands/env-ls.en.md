@@ -1,5 +1,5 @@
 # env ls
-```bash
+```console
 $ copilot env ls [flags]
 ```
 
@@ -7,7 +7,7 @@ $ copilot env ls [flags]
 `copilot env ls` lists all the environments in your application.
 
 ## What are the flags?
-```bash
+```
 -h, --help          help for ls
     --json          Optional. Outputs in JSON format.
 -a, --app string    Name of the application.
@@ -16,7 +16,7 @@ You can use the `--json` flag if you'd like to programmatically parse the result
 
 ## Examples
 Lists all the environments for the frontend application.
-```bash
+```console
 $ copilot env ls -a frontend
 ```
 

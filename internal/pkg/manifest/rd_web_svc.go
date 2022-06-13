@@ -60,6 +60,13 @@ func (c *RequestDrivenWebServiceNetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
 }
 
+func (c *RequestDrivenWebServiceNetworkConfig) requiredEnvFeatures() []string {
+	if aws.StringValue((*string)(c.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
+		return []string{template.NATFeatureName}
+	}
+	return nil
+}
+
 type rdwsVpcConfig struct {
 	Placement PlacementArgOrString `yaml:"placement"`
 }
@@ -158,6 +165,13 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 
 	s.Environments = nil
 	return &s, nil
+}
+
+// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
+func (s *RequestDrivenWebService) RequiredEnvironmentFeatures() []string {
+	var features []string
+	features = append(features, s.Network.requiredEnvFeatures()...)
+	return features
 }
 
 // newDefaultRequestDrivenWebService returns an empty RequestDrivenWebService with only the default values set.

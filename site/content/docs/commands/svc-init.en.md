@@ -1,5 +1,5 @@
 # svc init
-```bash
+```console
 $ copilot svc init
 ```
 
@@ -13,7 +13,7 @@ After that, if you already have an environment set up, you can run `copilot depl
 
 ## What are the flags?
 
-```bash
+```
 Flags
   -a, --app string          Name of the application.
   -d, --dockerfile string   Path to the Dockerfile.
