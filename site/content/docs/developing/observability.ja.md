@@ -9,14 +9,14 @@ observability:
 
 [Request-Driven Web Service](../concepts/services.ja.md#request-driven-web-service) の場合、Copilot は App Runner に組み込まれた[トレース設定](https://docs.aws.amazon.com/ja_jp/apprunner/latest/dg/monitor-xray.html)を有効にします。
 
-[Load-Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service)、[Backend Service](../concepts/services.ja.md#backend-service)、[Worker Service](../concepts/services.ja.md#worker-service) の場合、Copilot は AWS OpenTelemetry Collector を[サイドカー](./sidecars.ja.md)としてデプロイします。
+[Load Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service)、[Backend Service](../concepts/services.ja.md#backend-service)、[Worker Service](../concepts/services.ja.md#worker-service) の場合、Copilot は AWS OpenTelemetry Collector を[サイドカー](./sidecars.ja.md)としてデプロイします。
 
 ## Service のインストルメント化
 テレメトリーデータを送信するための Service のインストルメント化 (訳注: 計装、 アプリケーションに計測のためのコードを追加すること) は、[各言語毎の SDK](https://opentelemetry.io/docs/instrumentation/)で行います。サンプルは、OpenTelemetry のドキュメントでサポートされている各言語で提供されています。また、[AWS Distro for OpenTelemetry](https://aws-otel.github.io/docs/introduction) が提供するドキュメントやサンプルをご覧いただいたけます。
 
 ### アプリケーションの例
 
-これは、すべてのエンドポイントにインストルメントが設定された [Express.js](https://expressjs.com/) による小さな Service です。開始するには、必要な依存関係をインストールします。
+これは、すべてのエンドポイントがインストルメント化された [Express.js](https://expressjs.com/) による小さな Service です。開始するには、必要な依存関係をインストールします。
 
 ```
 npm install express \
