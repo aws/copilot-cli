@@ -50,6 +50,16 @@ HTTPListenerRule:
             - {{$sourceIP}}
             {{- end}}
       {{- end}}
+      {{- if eq $.WorkloadType "Backend Service"}}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values:
+            - !Join
+              - '.'
+              - - !Ref WorkloadName
+                - Fn::ImportValue:
+                    !Sub "${AppName}-${EnvName}-InternalWorkloadsHostedZoneName"
+      {{- end}}
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
