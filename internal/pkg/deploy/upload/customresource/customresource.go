@@ -54,6 +54,9 @@ var (
 type CustomResource struct {
 	name  string
 	files []file
+
+	// Post-initialization cached fields.
+	zip *bytes.Buffer
 }
 
 // FunctionName is the name of the Lambda function.
@@ -61,24 +64,34 @@ func (cr *CustomResource) FunctionName() string {
 	return cr.name
 }
 
-// Zip creates a zip archive from all the files in the custom resource and returns a reader for its content.
-func (cr *CustomResource) Zip() (io.Reader, error) {
+// ArtifactPath returns the S3 key for the zipped custom resource object.
+func (cr *CustomResource) ArtifactPath() string {
+	return artifactpath.CustomResource(strings.ToLower(cr.FunctionName()), cr.zip.Bytes())
+}
+
+// zipReader returns a reader for the zip archive from all the files in the custom resource.
+func (cr *CustomResource) zipReader() io.Reader {
+	return bytes.NewBuffer(cr.zip.Bytes())
+}
+
+func (cr *CustomResource) init() error {
 	buf := new(bytes.Buffer)
 	w := zip.NewWriter(buf)
 	for _, file := range cr.files {
 		f, err := w.Create(file.name)
 		if err != nil {
-			return nil, fmt.Errorf("create zip file %q for custom resource %q: %v", file.name, cr.FunctionName(), err)
+			return fmt.Errorf("create zip file %q for custom resource %q: %v", file.name, cr.FunctionName(), err)
 		}
 		_, err = f.Write(file.content)
 		if err != nil {
-			return nil, fmt.Errorf("write zip file %q for custom resource %q: %v", file.name, cr.FunctionName(), err)
+			return fmt.Errorf("write zip file %q for custom resource %q: %v", file.name, cr.FunctionName(), err)
 		}
 	}
 	if err := w.Close(); err != nil {
-		return nil, fmt.Errorf("close zip file for custom resource %q: %v", cr.FunctionName(), err)
+		return fmt.Errorf("close zip file for custom resource %q: %v", cr.FunctionName(), err)
 	}
-	return buf, nil
+	cr.zip = buf
+	return nil
 }
 
 type file struct {
@@ -147,15 +160,7 @@ type UploadFunc func(key string, contents io.Reader) (url string, err error)
 func Upload(upload UploadFunc, crs []*CustomResource) (map[string]string, error) {
 	urls := make(map[string]string)
 	for _, cr := range crs {
-		zipFile, err := cr.Zip()
-		if err != nil {
-			return nil, err
-		}
-		out, err := io.ReadAll(zipFile)
-		if err != nil {
-			return nil, fmt.Errorf("read content of zip file for custom resource %q: %v", cr.FunctionName(), err)
-		}
-		url, err := upload(artifactpath.CustomResource(strings.ToLower(cr.FunctionName()), out), zipFile)
+		url, err := upload(cr.ArtifactPath(), cr.zipReader())
 		if err != nil {
 			return nil, fmt.Errorf("upload custom resource %q: %w", cr.FunctionName(), err)
 		}
@@ -180,6 +185,9 @@ func buildCustomResources(fs template.Reader, pathForFn map[string]string) ([]*C
 					content: content.Bytes(),
 				},
 			},
+		}
+		if err := crs[idx].init(); err != nil {
+			return nil, err
 		}
 		idx += 1
 	}
