@@ -11,6 +11,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
+
 	"github.com/aws/aws-sdk-go/aws/awserr"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -157,7 +159,15 @@ func ParseURL(url string) (bucket string, key string, err error) {
 
 // URL returns a virtual-hosted–style S3 url for the object stored at key in a bucket created in the specified region.
 func URL(region, bucket, key string) string {
-	return fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucket, region, key)
+	tld := "com"
+	for cn := range endpoints.AwsCnPartition().Regions() {
+		if cn == region {
+			tld = "cn"
+			break
+		}
+	}
+
+	return fmt.Sprintf("https://%s.s3.%s.amazonaws.%s/%s", bucket, region, tld, key)
 }
 
 // FormatARN formats an S3 object ARN.

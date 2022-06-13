@@ -425,6 +425,13 @@ func TestURL(t *testing.T) {
 
 			wanted: "https://mybucket.s3.us-west-2.amazonaws.com/puppy.jpg",
 		},
+		"Formats the URL for a region in the aws-cn partition": {
+			region: "cn-north-1",
+			bucket: "mybucket",
+			key:    "puppy.jpg",
+
+			wanted: "https://mybucket.s3.cn-north-1.amazonaws.cn/puppy.jpg",
+		},
 	}
 
 	for name, tc := range testCases {
