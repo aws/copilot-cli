@@ -237,8 +237,8 @@ func Test_convertAdvancedCount(t *testing.T) {
 	mockRange := manifest.IntRangeBand("1-10")
 	timeMinute := time.Second * 60
 	perc := manifest.Percentage(70)
-	mockConfig := manifest.ScalingConfigOrPercentage{
-		ScalingConfig: manifest.AdvancedScalingConfig{
+	mockConfig := manifest.ScalingConfigOrT[manifest.Percentage]{
+		ScalingConfig: manifest.AdvancedScalingConfig[manifest.Percentage]{
 			Value: &perc,
 			Cooldown: manifest.Cooldown{
 				ScaleInCooldown: &timeMinute,
@@ -269,6 +269,18 @@ func Test_convertAdvancedCount(t *testing.T) {
 						ScaleOutCooldown: aws.Float64(60),
 					},
 					MemCooldown: template.Cooldown{
+						ScaleInCooldown:  aws.Float64(60),
+						ScaleOutCooldown: aws.Float64(60),
+					},
+					ReqCooldown: template.Cooldown{
+						ScaleInCooldown:  aws.Float64(60),
+						ScaleOutCooldown: aws.Float64(60),
+					},
+					RespTimeCooldown: template.Cooldown{
+						ScaleInCooldown:  aws.Float64(60),
+						ScaleOutCooldown: aws.Float64(60),
+					},
+					QDelayCooldown: template.Cooldown{
 						ScaleInCooldown:  aws.Float64(60),
 						ScaleOutCooldown: aws.Float64(60),
 					},
@@ -447,14 +459,19 @@ func Test_convertCapacityProviders(t *testing.T) {
 
 func Test_convertAutoscaling(t *testing.T) {
 	var (
-		mockRange        = manifest.IntRangeBand("1-100")
-		badRange         = manifest.IntRangeBand("badRange")
-		mockRequests     = 1000
-		mockResponseTime = 512 * time.Millisecond
-		perc             = manifest.Percentage(70)
-		timeMinute       = time.Second * 60
-		mockCPU          = manifest.ScalingConfigOrPercentage{
-			ScalingConfig: manifest.AdvancedScalingConfig{
+		respTime     = 512 * time.Millisecond
+		mockRange    = manifest.IntRangeBand("1-100")
+		badRange     = manifest.IntRangeBand("badRange")
+		mockRequests = manifest.ScalingConfigOrT[int]{
+			Value: aws.Int(1000),
+		}
+		mockResponseTime = manifest.ScalingConfigOrT[time.Duration]{
+			Value: &respTime,
+		}
+		perc       = manifest.Percentage(70)
+		timeMinute = time.Second * 60
+		mockCPU    = manifest.ScalingConfigOrT[manifest.Percentage]{
+			ScalingConfig: manifest.AdvancedScalingConfig[manifest.Percentage]{
 				Value: &perc,
 				Cooldown: manifest.Cooldown{
 					ScaleInCooldown:  &timeMinute,
@@ -462,7 +479,7 @@ func Test_convertAutoscaling(t *testing.T) {
 				},
 			},
 		}
-		mockMem = manifest.ScalingConfigOrPercentage{
+		mockMem = manifest.ScalingConfigOrT[manifest.Percentage]{
 			Value: &perc,
 		}
 	)
@@ -491,8 +508,8 @@ func Test_convertAutoscaling(t *testing.T) {
 				},
 				CPU:          mockCPU,
 				Memory:       mockMem,
-				Requests:     aws.Int(mockRequests),
-				ResponseTime: &mockResponseTime,
+				Requests:     mockRequests,
+				ResponseTime: mockResponseTime,
 			},
 
 			wanted: &template.AutoscalingOpts{
@@ -519,8 +536,8 @@ func Test_convertAutoscaling(t *testing.T) {
 				},
 				CPU:          mockCPU,
 				Memory:       mockMem,
-				Requests:     aws.Int(mockRequests),
-				ResponseTime: &mockResponseTime,
+				Requests:     mockRequests,
+				ResponseTime: mockResponseTime,
 			},
 
 			wanted: &template.AutoscalingOpts{
@@ -548,11 +565,17 @@ func Test_convertAutoscaling(t *testing.T) {
 				QueueScaling: manifest.QueueScaling{
 					AcceptableLatency: &testAcceptableLatency,
 					AvgProcessingTime: &testAvgProcessingTime,
+					Cooldown: manifest.Cooldown{
+						ScaleInCooldown: &timeMinute,
+					},
 				},
 			},
 			wanted: &template.AutoscalingOpts{
 				MaxCapacity: aws.Int(10),
 				MinCapacity: aws.Int(5),
+				QDelayCooldown: template.Cooldown{
+					ScaleInCooldown: aws.Float64(60),
+				},
 				QueueDelay: &template.AutoscalingQueueDelayOpts{
 					AcceptableBacklogPerTask: 2400,
 				},

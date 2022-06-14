@@ -972,13 +972,13 @@ func (qs QueueScaling) Validate() error {
 	if qs.IsEmpty() {
 		return nil
 	}
-	if qs.AcceptableLatency == nil {
+	if qs.AcceptableLatency == nil && qs.AvgProcessingTime != nil {
 		return &errFieldMustBeSpecified{
 			missingField:      "acceptable_latency",
 			conditionalFields: []string{"msg_processing_time"},
 		}
 	}
-	if qs.AvgProcessingTime == nil {
+	if qs.AvgProcessingTime == nil && qs.AcceptableLatency != nil {
 		return &errFieldMustBeSpecified{
 			missingField:      "msg_processing_time",
 			conditionalFields: []string{"acceptable_latency"},
@@ -994,7 +994,7 @@ func (qs QueueScaling) Validate() error {
 	if process > latency {
 		return errors.New(`"msg_processing_time" cannot be longer than "acceptable_latency"`)
 	}
-	return nil
+	return qs.Cooldown.Validate()
 }
 
 // Validate returns nil if Range is configured correctly.

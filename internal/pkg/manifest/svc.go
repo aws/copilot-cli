@@ -299,11 +299,12 @@ func (a *AdvancedCount) unsetAutoscaling() {
 type QueueScaling struct {
 	AcceptableLatency *time.Duration `yaml:"acceptable_latency"`
 	AvgProcessingTime *time.Duration `yaml:"msg_processing_time"`
+	Cooldown          Cooldown       `yaml:"cooldown"`
 }
 
 // IsEmpty returns true if the QueueScaling is set.
 func (qs *QueueScaling) IsEmpty() bool {
-	return qs.AcceptableLatency == nil && qs.AvgProcessingTime == nil
+	return qs.AcceptableLatency == nil && qs.AvgProcessingTime == nil && qs.Cooldown.IsEmpty()
 }
 
 // AcceptableBacklogPerTask returns the total number of messages that each task can accumulate in the queue
