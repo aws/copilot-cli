@@ -135,6 +135,8 @@ func (cf CloudFormation) UpdateEnvironmentTemplate(appName, envName, templateBod
 // UpgradeEnvironment updates an environment stack's template to a newer version.
 func (cf CloudFormation) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) error {
 	return cf.upgradeEnvironment(in, func(new *awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
+		// If a parameter exists in both the new template and the old template, use its previous value.
+		// Otherwise, keep the parameter untouched.
 		if new == nil {
 			return nil
 		}
@@ -156,6 +158,9 @@ func (cf CloudFormation) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) e
 // UpgradeLegacyEnvironment does the necessary transformation to use the "ALBWorkloads" parameter instead.
 func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentInput, lbWebServices ...string) error {
 	return cf.upgradeEnvironment(in, func(new *awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
+		// If a parameter exists in both the new template and the old template, use its previous value.
+		// Otherwise, if the parameter is `EnvParamALBWorkloadsKey` (currently "ALBWorkloads"), assign it a parameter value.
+		// Otherwise, keep the parameter untouched.
 		if new == nil {
 			return nil
 		}
@@ -191,10 +196,6 @@ func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, t
 			return err
 		}
 
-		// Generally, we want to:
-		// 1. Remove params that only exist in old template.
-		// 2. Use previous values for params that exist in both old and new template.
-		// 3. Use new values for params that only exist in new template.
 		params, err := cf.transformParameters(s.Parameters, descr.Parameters, transformParam)
 		if err != nil {
 			return err
@@ -266,6 +267,10 @@ func (cf CloudFormation) waitAndDescribeStack(stackName string) (*cloudformation
 }
 
 // transformParameters removes or transforms each of the current parameters and does not add any new parameters.
+// This means that parameters that exist only in the old template are left out.
+// The parameter`transform` is a function that transform a parameter, given its value in the new template and the old template.
+// If `old` is `nil`, the parameter does not exist in the old template.
+// `transform` should return `nil` if caller intends to delete the parameter.
 func (cf CloudFormation) transformParameters(
 	currParams []*awscfn.Parameter,
 	oldParams []*awscfn.Parameter,
@@ -298,6 +303,10 @@ func (cf CloudFormation) transformParameters(
 	return params, nil
 }
 
+// transformEnvControllerParameters transforms a parameter such that it uses its previous value if:
+// 1. The parameter exists in the old template.
+// 2. The parameter is env-controller managed.
+// Otherwise, it returns the parameter untouched.
 func transformEnvControllerParameters(new *awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
 	if new == nil {
 		return nil
