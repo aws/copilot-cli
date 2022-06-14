@@ -262,21 +262,25 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				mockParser.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
 				mockBucket, mockCustomDomainLambda := "mockbucket", "mockURL1"
-				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
-					WorkloadType:        manifest.RequestDrivenWebServiceType,
-					Variables:           c.manifest.Variables,
-					Tags:                c.manifest.Tags,
-					EnableHealthCheck:   true,
-					Alias:               aws.String("convex.domain.com"),
-					ScriptBucketName:    &mockBucket,
-					CustomDomainLambda:  &mockCustomDomainLambda,
-					EnvControllerLambda: "something",
-					Network: template.NetworkOpts{
-						SubnetsType: "PrivateSubnets",
-					},
-					ServiceDiscoveryEndpoint: mockSD,
-					AWSSDKLayer:              aws.String("arn:aws:lambda:us-west-2:420165488524:layer:AWSLambda-Node-AWS-SDK:14"),
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				mockParser.EXPECT().ParseRequestDrivenWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						WorkloadType:        manifest.RequestDrivenWebServiceType,
+						Variables:           c.manifest.Variables,
+						Tags:                c.manifest.Tags,
+						EnableHealthCheck:   true,
+						Alias:               aws.String("convex.domain.com"),
+						ScriptBucketName:    &mockBucket,
+						CustomResources:     make(map[string]template.S3ObjectLocation),
+						CustomDomainLambda:  &mockCustomDomainLambda,
+						EnvControllerLambda: "something",
+						Network: template.NetworkOpts{
+							SubnetsType: "PrivateSubnets",
+						},
+						ServiceDiscoveryEndpoint: mockSD,
+						AWSSDKLayer:              aws.String("arn:aws:lambda:us-west-2:420165488524:layer:AWSLambda-Node-AWS-SDK:14"),
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 				c.parser = mockParser
 				c.wkld.addons = addons
 			},
@@ -286,13 +290,17 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
-				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
-					WorkloadType:             manifest.RequestDrivenWebServiceType,
-					Variables:                c.manifest.Variables,
-					Tags:                     c.manifest.Tags,
-					ServiceDiscoveryEndpoint: mockSD,
-					EnableHealthCheck:        true,
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				mockParser.EXPECT().ParseRequestDrivenWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						WorkloadType:             manifest.RequestDrivenWebServiceType,
+						Variables:                c.manifest.Variables,
+						Tags:                     c.manifest.Tags,
+						ServiceDiscoveryEndpoint: mockSD,
+						EnableHealthCheck:        true,
+						CustomResources:          make(map[string]template.S3ObjectLocation),
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 				c.parser = mockParser
 				c.addons = addons
 			},
@@ -323,18 +331,22 @@ Outputs:
   Hello:
     Value: hello`,
 				}
-				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
-					WorkloadType:             manifest.RequestDrivenWebServiceType,
-					Variables:                c.manifest.Variables,
-					Tags:                     c.manifest.Tags,
-					ServiceDiscoveryEndpoint: mockSD,
-					NestedStack: &template.WorkloadNestedStackOpts{
-						StackName:       addon.StackName,
-						VariableOutputs: []string{"DDBTableName", "Hello"},
-						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
-					},
-					EnableHealthCheck: true,
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				mockParser.EXPECT().ParseRequestDrivenWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						WorkloadType:             manifest.RequestDrivenWebServiceType,
+						Variables:                c.manifest.Variables,
+						Tags:                     c.manifest.Tags,
+						ServiceDiscoveryEndpoint: mockSD,
+						NestedStack: &template.WorkloadNestedStackOpts{
+							StackName:       addon.StackName,
+							VariableOutputs: []string{"DDBTableName", "Hello"},
+							PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
+						},
+						CustomResources:   make(map[string]template.S3ObjectLocation),
+						EnableHealthCheck: true,
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 				c.parser = mockParser
 				c.addons = addons
 			},
@@ -344,13 +356,7 @@ Outputs:
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
-				mockParser.EXPECT().ParseRequestDrivenWebService(template.WorkloadOpts{
-					WorkloadType:             manifest.RequestDrivenWebServiceType,
-					Variables:                c.manifest.Variables,
-					Tags:                     c.manifest.Tags,
-					ServiceDiscoveryEndpoint: mockSD,
-					EnableHealthCheck:        true,
-				}).Return(nil, errors.New("parsing error"))
+				mockParser.EXPECT().ParseRequestDrivenWebService(gomock.Any()).Return(nil, errors.New("parsing error"))
 				c.parser = mockParser
 				c.addons = addons
 			},

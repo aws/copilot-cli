@@ -280,7 +280,9 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Requests: aws.Int(3),
+								Requests: ScalingConfigOrT[int]{
+									Value: aws.Int(3),
+								},
 							},
 						},
 					},
@@ -303,7 +305,9 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								ResponseTime: durationp(10 * time.Second),
+								ResponseTime: ScalingConfigOrT[time.Duration]{
+									Value: durationp(10 * time.Second),
+								},
 							},
 						},
 					},
@@ -551,7 +555,9 @@ func TestBackendService_Validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								workloadType: BackendServiceType,
-								Requests:     aws.Int(128),
+								Requests: ScalingConfigOrT[int]{
+									Value: aws.Int(128),
+								},
 							},
 						},
 					},
@@ -1505,7 +1511,7 @@ func TestIPNet_Validate(t *testing.T) {
 
 func TestTaskConfig_Validate(t *testing.T) {
 	perc := Percentage(70)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	testCases := map[string]struct {
@@ -1648,7 +1654,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 	}
 }
 
-func TestResource_Validate(t *testing.T) {
+func TestScalingConfigOrT_Validate(t *testing.T) {
 
 	var (
 		time = 60 * time.Second
@@ -1656,19 +1662,19 @@ func TestResource_Validate(t *testing.T) {
 	)
 
 	testCases := map[string]struct {
-		Resource ScalingConfigOrPercentage
+		ScalingConfig ScalingConfigOrT[Percentage]
 
 		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
 		"valid if only value is specified": {
-			Resource: ScalingConfigOrPercentage{
+			ScalingConfig: ScalingConfigOrT[Percentage]{
 				Value: &perc,
 			},
 		},
 		"valid if only scaling config is specified": {
-			Resource: ScalingConfigOrPercentage{
-				ScalingConfig: AdvancedScalingConfig{
+			ScalingConfig: ScalingConfigOrT[Percentage]{
+				ScalingConfig: AdvancedScalingConfig[Percentage]{
 					Value: &perc,
 					Cooldown: Cooldown{
 						ScaleInCooldown:  &time,
@@ -1681,7 +1687,7 @@ func TestResource_Validate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.Resource.Validate()
+			gotErr := tc.ScalingConfig.Validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1702,17 +1708,17 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		perc        = Percentage(70)
 		invalidPerc = Percentage(-1)
 		timeMinute  = time.Second * 60
-		mockConfig  = ScalingConfigOrPercentage{
+		mockConfig  = ScalingConfigOrT[Percentage]{
 			Value: &perc,
 		}
-		invalidConfig = ScalingConfigOrPercentage{
+		invalidConfig = ScalingConfigOrT[Percentage]{
 			Value: &invalidPerc,
 		}
 		mockCooldown = Cooldown{
 			ScaleInCooldown: &timeMinute,
 		}
-		mockAdvancedInvConfig = ScalingConfigOrPercentage{
-			ScalingConfig: AdvancedScalingConfig{
+		mockAdvancedInvConfig = ScalingConfigOrT[Percentage]{
+			ScalingConfig: AdvancedScalingConfig[Percentage]{
 				Value:    &invalidPerc,
 				Cooldown: mockCooldown,
 			},
@@ -1769,7 +1775,9 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		},
 		"error if range is missing when autoscaling fields are set for Load Balanced Web Service": {
 			AdvancedCount: AdvancedCount{
-				Requests:     aws.Int(123),
+				Requests: ScalingConfigOrT[int]{
+					Value: aws.Int(123),
+				},
 				workloadType: LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),

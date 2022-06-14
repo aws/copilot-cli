@@ -4,6 +4,7 @@
 package stack
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -237,8 +238,8 @@ func Test_convertAdvancedCount(t *testing.T) {
 	mockRange := manifest.IntRangeBand("1-10")
 	timeMinute := time.Second * 60
 	perc := manifest.Percentage(70)
-	mockConfig := manifest.ScalingConfigOrPercentage{
-		ScalingConfig: manifest.AdvancedScalingConfig{
+	mockConfig := manifest.ScalingConfigOrT[manifest.Percentage]{
+		ScalingConfig: manifest.AdvancedScalingConfig[manifest.Percentage]{
 			Value: &perc,
 			Cooldown: manifest.Cooldown{
 				ScaleInCooldown: &timeMinute,
@@ -269,6 +270,18 @@ func Test_convertAdvancedCount(t *testing.T) {
 						ScaleOutCooldown: aws.Float64(60),
 					},
 					MemCooldown: template.Cooldown{
+						ScaleInCooldown:  aws.Float64(60),
+						ScaleOutCooldown: aws.Float64(60),
+					},
+					ReqCooldown: template.Cooldown{
+						ScaleInCooldown:  aws.Float64(60),
+						ScaleOutCooldown: aws.Float64(60),
+					},
+					RespTimeCooldown: template.Cooldown{
+						ScaleInCooldown:  aws.Float64(60),
+						ScaleOutCooldown: aws.Float64(60),
+					},
+					QueueDelayCooldown: template.Cooldown{
 						ScaleInCooldown:  aws.Float64(60),
 						ScaleOutCooldown: aws.Float64(60),
 					},
@@ -447,14 +460,19 @@ func Test_convertCapacityProviders(t *testing.T) {
 
 func Test_convertAutoscaling(t *testing.T) {
 	var (
-		mockRange        = manifest.IntRangeBand("1-100")
-		badRange         = manifest.IntRangeBand("badRange")
-		mockRequests     = 1000
-		mockResponseTime = 512 * time.Millisecond
-		perc             = manifest.Percentage(70)
-		timeMinute       = time.Second * 60
-		mockCPU          = manifest.ScalingConfigOrPercentage{
-			ScalingConfig: manifest.AdvancedScalingConfig{
+		respTime     = 512 * time.Millisecond
+		mockRange    = manifest.IntRangeBand("1-100")
+		badRange     = manifest.IntRangeBand("badRange")
+		mockRequests = manifest.ScalingConfigOrT[int]{
+			Value: aws.Int(1000),
+		}
+		mockResponseTime = manifest.ScalingConfigOrT[time.Duration]{
+			Value: &respTime,
+		}
+		perc       = manifest.Percentage(70)
+		timeMinute = time.Second * 60
+		mockCPU    = manifest.ScalingConfigOrT[manifest.Percentage]{
+			ScalingConfig: manifest.AdvancedScalingConfig[manifest.Percentage]{
 				Value: &perc,
 				Cooldown: manifest.Cooldown{
 					ScaleInCooldown:  &timeMinute,
@@ -462,7 +480,7 @@ func Test_convertAutoscaling(t *testing.T) {
 				},
 			},
 		}
-		mockMem = manifest.ScalingConfigOrPercentage{
+		mockMem = manifest.ScalingConfigOrT[manifest.Percentage]{
 			Value: &perc,
 		}
 	)
@@ -491,8 +509,8 @@ func Test_convertAutoscaling(t *testing.T) {
 				},
 				CPU:          mockCPU,
 				Memory:       mockMem,
-				Requests:     aws.Int(mockRequests),
-				ResponseTime: &mockResponseTime,
+				Requests:     mockRequests,
+				ResponseTime: mockResponseTime,
 			},
 
 			wanted: &template.AutoscalingOpts{
@@ -519,8 +537,8 @@ func Test_convertAutoscaling(t *testing.T) {
 				},
 				CPU:          mockCPU,
 				Memory:       mockMem,
-				Requests:     aws.Int(mockRequests),
-				ResponseTime: &mockResponseTime,
+				Requests:     mockRequests,
+				ResponseTime: mockResponseTime,
 			},
 
 			wanted: &template.AutoscalingOpts{
@@ -548,11 +566,17 @@ func Test_convertAutoscaling(t *testing.T) {
 				QueueScaling: manifest.QueueScaling{
 					AcceptableLatency: &testAcceptableLatency,
 					AvgProcessingTime: &testAvgProcessingTime,
+					Cooldown: manifest.Cooldown{
+						ScaleInCooldown: &timeMinute,
+					},
 				},
 			},
 			wanted: &template.AutoscalingOpts{
 				MaxCapacity: aws.Int(10),
 				MinCapacity: aws.Int(5),
+				QueueDelayCooldown: template.Cooldown{
+					ScaleInCooldown: aws.Float64(60),
+				},
 				QueueDelay: &template.AutoscalingQueueDelayOpts{
 					AcceptableBacklogPerTask: 2400,
 				},
@@ -1544,6 +1568,45 @@ func Test_convertHTTPVersion(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.wanted, convertHTTPVersion(tc.in))
+		})
+	}
+}
+
+func Test_convertCustomResources(t *testing.T) {
+	testCases := map[string]struct {
+		in        map[string]string
+		wanted    map[string]template.S3ObjectLocation
+		wantedErr error
+	}{
+		"returns a wrapped error if a url cannot be parsed": {
+			in: map[string]string{
+				"EnvControllerFunction":       "https://my-bucket.s3.us-west-2.amazonaws.com/puppy.png",
+				"DynamicDesiredCountFunction": "bad",
+			},
+			wantedErr: errors.New(`convert custom resource "DynamicDesiredCountFunction" url: cannot parse S3 URL bad into bucket name and key`),
+		},
+		"transforms custom resources with valid urls": {
+			in: map[string]string{
+				"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/good/dogs/puppy.png",
+			},
+			wanted: map[string]template.S3ObjectLocation{
+				"EnvControllerFunction": {
+					Bucket: "my-bucket",
+					Key:    "good/dogs/puppy.png",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			out, err := convertCustomResources(tc.in)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, out)
+			}
 		})
 	}
 }
