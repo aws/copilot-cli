@@ -345,21 +345,29 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 		},
 		"internal url http": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
+				resources := []*describeStack.Resource{
+					{
+						Type:       "AWS::ElasticLoadBalancingV2::TargetGroup",
+						LogicalID:  svcStackResourceALBTargetGroupLogicalID,
+						PhysicalID: "targetGroupARN",
+					},
+					{
+						Type:       svcStackResourceListenerRuleResourceType,
+						LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
+						PhysicalID: "mockRuleARN",
+					},
+				}
 				gomock.InOrder(
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
-						{
-							LogicalID: svcStackResourceALBTargetGroupLogicalID,
-						},
-					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						stack.WorkloadRulePathParamKey: "mySvc",
 					}, nil),
-					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
-						envOutputInternalLoadBalancerDNSName: testEnvInternalDNSName,
-					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
+					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
+						Return([]string{"jobs.test.phonetool.internal"}, nil),
 				)
 			},
-			wantedURI: "http://abc.us-west-1.elb.amazonaws.internal/mySvc",
+			wantedURI: "http://jobs.test.phonetool.internal/mySvc",
 		},
 		"internal url https": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
