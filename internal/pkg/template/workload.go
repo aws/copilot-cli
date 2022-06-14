@@ -332,18 +332,18 @@ type Cooldown struct {
 
 // AutoscalingOpts holds configuration that's needed for Auto Scaling.
 type AutoscalingOpts struct {
-	MinCapacity      *int
-	MaxCapacity      *int
-	CPU              *float64
-	Memory           *float64
-	Requests         *float64
-	ResponseTime     *float64
-	CPUCooldown      Cooldown
-	MemCooldown      Cooldown
-	ReqCooldown      Cooldown
-	RespTimeCooldown Cooldown
-	QDelayCooldown   Cooldown
-	QueueDelay       *AutoscalingQueueDelayOpts
+	MinCapacity        *int
+	MaxCapacity        *int
+	CPU                *float64
+	Memory             *float64
+	Requests           *float64
+	ResponseTime       *float64
+	CPUCooldown        Cooldown
+	MemCooldown        Cooldown
+	ReqCooldown        Cooldown
+	RespTimeCooldown   Cooldown
+	QueueDelayCooldown Cooldown
+	QueueDelay         *AutoscalingQueueDelayOpts
 }
 
 // AliasesForHostedZone maps hosted zone IDs to aliases that belong to it.

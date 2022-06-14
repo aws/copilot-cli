@@ -280,7 +280,7 @@ func Test_convertAdvancedCount(t *testing.T) {
 						ScaleInCooldown:  aws.Float64(60),
 						ScaleOutCooldown: aws.Float64(60),
 					},
-					QDelayCooldown: template.Cooldown{
+					QueueDelayCooldown: template.Cooldown{
 						ScaleInCooldown:  aws.Float64(60),
 						ScaleOutCooldown: aws.Float64(60),
 					},
@@ -573,7 +573,7 @@ func Test_convertAutoscaling(t *testing.T) {
 			wanted: &template.AutoscalingOpts{
 				MaxCapacity: aws.Int(10),
 				MinCapacity: aws.Int(5),
-				QDelayCooldown: template.Cooldown{
+				QueueDelayCooldown: template.Cooldown{
 					ScaleInCooldown: aws.Float64(60),
 				},
 				QueueDelay: &template.AutoscalingQueueDelayOpts{

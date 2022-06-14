@@ -291,7 +291,7 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 	autoscalingOpts.MemCooldown = convertScalingCooldown(a.Memory.ScalingConfig.Cooldown, a.Cooldown)
 	autoscalingOpts.ReqCooldown = convertScalingCooldown(a.Requests.ScalingConfig.Cooldown, a.Cooldown)
 	autoscalingOpts.RespTimeCooldown = convertScalingCooldown(a.ResponseTime.ScalingConfig.Cooldown, a.Cooldown)
-	autoscalingOpts.QDelayCooldown = convertScalingCooldown(a.QueueScaling.Cooldown, a.Cooldown)
+	autoscalingOpts.QueueDelayCooldown = convertScalingCooldown(a.QueueScaling.Cooldown, a.Cooldown)
 
 	if !a.QueueScaling.IsEmpty() {
 		acceptableBacklog, err := a.QueueScaling.AcceptableBacklogPerTask()
