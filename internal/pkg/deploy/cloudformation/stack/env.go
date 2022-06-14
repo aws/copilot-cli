@@ -174,12 +174,8 @@ func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
 func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
 	// If a manifest is present, it is the only place we look at.
 	if e.in.Mft != nil {
-		var enabled bool
-		if aws.BoolValue(e.in.Mft.Observability.ContainerInsights) {
-			enabled = true
-		}
 		return &template.Telemetry{
-			EnableContainerInsights: enabled,
+			EnableContainerInsights: aws.BoolValue(e.in.Mft.Observability.ContainerInsights),
 		}
 	}
 
