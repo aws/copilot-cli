@@ -367,7 +367,7 @@ Resources:
                 Resource: "*"
   LoadBalancerInternalDNSAlias:
     Metadata:
-      "aws:copilot:description": "Load balancer alias for service"
+      "aws:copilot:description": "Alias for http-only-path.my-env.my-app.internal to the internal load balancer"
     Type: AWS::Route53::RecordSetGroup
     Properties:
       Comment: !Sub "Load balancer alias for service ${WorkloadName}"

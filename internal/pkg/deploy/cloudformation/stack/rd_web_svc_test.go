@@ -264,6 +264,9 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				mockBucket, mockCustomDomainLambda := "mockbucket", "mockURL1"
 				mockParser.EXPECT().ParseRequestDrivenWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
+						AppName:             "phonetool",
+						EnvName:             "test",
+						WorkloadName:        "frontend",
 						WorkloadType:        manifest.RequestDrivenWebServiceType,
 						Variables:           c.manifest.Variables,
 						Tags:                c.manifest.Tags,
