@@ -6,19 +6,16 @@ LoadBalancerInternalDNSAlias:
   Properties:
     Comment: !Sub "Load balancer alias for service ${WorkloadName}"
     HostedZoneId:
-      Fn::ImportValue:
-        !Sub "${AppName}-${EnvName}-InternalWorkloadsHostedZoneID"
+      Fn::ImportValue: !Sub "${AppName}-${EnvName}-InternalWorkloadsHostedZoneID"
     RecordSets:
       - Type: A
         AliasTarget:
           HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
           DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
-        Name:
-          !Join
-            - '.'
-            - - !Ref WorkloadName
-              - Fn::ImportValue:
-                  !Sub "${AppName}-${EnvName}-InternalWorkloadsHostedZoneName"
+        Name: !Join
+          - '.'
+          - - !Ref WorkloadName
+            - Fn::ImportValue: !Sub "${AppName}-${EnvName}-InternalWorkloadsHostedZoneName"
 {{- end}}
 
 HTTPRulePriorityAction:
@@ -57,8 +54,7 @@ HTTPListenerRule:
             - !Join
               - '.'
               - - !Ref WorkloadName
-                - Fn::ImportValue:
-                    !Sub "${AppName}-${EnvName}-InternalWorkloadsHostedZoneName"
+                - Fn::ImportValue: !Sub "${AppName}-${EnvName}-InternalWorkloadsHostedZoneName"
       {{- end}}
       - Field: 'path-pattern'
         PathPatternConfig:
