@@ -44,8 +44,8 @@
 {{- if $sidecar.Essential}}
   Essential: {{$sidecar.Essential}}
 {{- end}}
+{{include "image-overrides" . | indent 2}}  
 {{- if $sidecar.Port}}
-{{include "image-overrides" . | indent 2}}
   PortMappings:
     - ContainerPort: {{$sidecar.Port}}
     {{- if $sidecar.Protocol}}
