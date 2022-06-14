@@ -87,4 +87,7 @@ environments:
         healthcheck:
           command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
           interval: 10s
-
+      configuration:
+        image: "alpine:latest"
+        command: ["echo", "$COPILOT_APPLICATION_NAME"]
+      
