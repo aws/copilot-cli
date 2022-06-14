@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -64,8 +65,17 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 	if s == nil {
 		return nil, nil
 	}
+
+	// Sort the sidecars so that the order is consistent and the integration test won't be flaky.
+	keys := make([]string, 0, len(s))
+	for k := range s {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	var sidecars []*template.SidecarOpts
-	for name, config := range s {
+	for _, name := range keys {
+		config := s[name]
 		port, protocol, err := manifest.ParsePortMapping(config.Port)
 		if err != nil {
 			return nil, err
