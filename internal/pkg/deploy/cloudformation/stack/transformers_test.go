@@ -4,6 +4,7 @@
 package stack
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -1567,6 +1568,45 @@ func Test_convertHTTPVersion(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.wanted, convertHTTPVersion(tc.in))
+		})
+	}
+}
+
+func Test_convertCustomResources(t *testing.T) {
+	testCases := map[string]struct {
+		in        map[string]string
+		wanted    map[string]template.S3ObjectLocation
+		wantedErr error
+	}{
+		"returns a wrapped error if a url cannot be parsed": {
+			in: map[string]string{
+				"EnvControllerFunction":       "https://my-bucket.s3.us-west-2.amazonaws.com/puppy.png",
+				"DynamicDesiredCountFunction": "bad",
+			},
+			wantedErr: errors.New(`convert custom resource "DynamicDesiredCountFunction" url: cannot parse S3 URL bad into bucket name and key`),
+		},
+		"transforms custom resources with valid urls": {
+			in: map[string]string{
+				"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/good/dogs/puppy.png",
+			},
+			wanted: map[string]template.S3ObjectLocation{
+				"EnvControllerFunction": {
+					Bucket: "my-bucket",
+					Key:    "good/dogs/puppy.png",
+				},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			out, err := convertCustomResources(tc.in)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, out)
+			}
 		})
 	}
 }

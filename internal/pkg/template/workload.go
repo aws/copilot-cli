@@ -470,6 +470,12 @@ func (p RuntimePlatformOpts) isEmpty() bool {
 	return p.OS == "" && p.Arch == ""
 }
 
+// S3ObjectLocation represents an object stored in an S3 bucket.
+type S3ObjectLocation struct {
+	Bucket string // Name of the bucket.
+	Key    string // Key of the object.
+}
+
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
@@ -510,7 +516,8 @@ type WorkloadOpts struct {
 	NLB                     *NetworkLoadBalancer
 	DeploymentConfiguration DeploymentConfigurationOpts
 
-	// Lambda functions.
+	// Custom Resources backed by Lambda functions.
+	CustomResources                map[string]S3ObjectLocation
 	RulePriorityLambda             string
 	DesiredCountLambda             string
 	EnvControllerLambda            string

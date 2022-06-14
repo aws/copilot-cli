@@ -95,6 +95,10 @@ func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env strin
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
 func (s *RequestDrivenWebService) Template() (string, error) {
+	crs, err := convertCustomResources(s.rc.CustomResourcesURL)
+	if err != nil {
+		return "", err
+	}
 	networkConfig := convertRDWSNetworkConfig(s.manifest.Network)
 	var envControllerLambda string
 	if networkConfig.SubnetsType == template.PrivateSubnetsPlacement {
@@ -136,6 +140,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		WorkloadType:         manifest.RequestDrivenWebServiceType,
 		Alias:                s.manifest.Alias,
 		ScriptBucketName:     bucket,
+		CustomResources:      crs,
 		EnvControllerLambda:  envControllerLambda,
 		CustomDomainLambda:   urls[template.AppRunnerCustomDomainLambdaFileName],
 		AWSSDKLayer:          layerARN,
