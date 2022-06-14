@@ -263,6 +263,7 @@ PermissionToInvokeBacklogPerTaskCalculatorLambda:
     SourceArn: !GetAtt BacklogPerTaskScheduledRule.Arn
 
 {{- $acceptableBacklog := .Autoscaling.QueueDelay.AcceptableBacklogPerTask }}
+{{- $queueDelayCooldown := .Autoscaling.QueueDelayCooldown }}
 
 AutoScalingPolicyEventsQueue:
   Metadata:
@@ -273,8 +274,16 @@ AutoScalingPolicyEventsQueue:
     PolicyType: TargetTrackingScaling
     ScalingTargetId: !Ref AutoScalingTarget
     TargetTrackingScalingPolicyConfiguration:
+      {{- if $queueDelayCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{$queueDelayCooldown.ScaleInCooldown}}
+      {{- else}}
       ScaleInCooldown: 120
+      {{- end}}
+      {{- if $queueDelayCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{$queueDelayCooldown.ScaleOutCooldown}}
+      {{- else}}
       ScaleOutCooldown: 60
+      {{- end}}
       CustomizedMetricSpecification:
         Namespace: !Sub '${AppName}-${EnvName}-${WorkloadName}'
         MetricName: BacklogPerTask
@@ -297,8 +306,16 @@ AutoScalingPolicy{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}Ev
     PolicyType: TargetTrackingScaling
     ScalingTargetId: !Ref AutoScalingTarget
     TargetTrackingScalingPolicyConfiguration:
+      {{- if $queueDelayCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{$queueDelayCooldown.ScaleInCooldown}}
+      {{- else}}
       ScaleInCooldown: 120
+      {{- end}}
+      {{- if $queueDelayCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{$queueDelayCooldown.ScaleOutCooldown}}
+      {{- else}}
       ScaleOutCooldown: 60
+      {{- end}}
       CustomizedMetricSpecification:
         Namespace: !Sub '${AppName}-${EnvName}-${WorkloadName}'
         MetricName: BacklogPerTask
@@ -335,8 +352,16 @@ AutoScalingPolicyALBSumRequestCountPerTarget:
         MetricName: RequestCountPerTarget
         Namespace: AWS/ApplicationELB
         Statistic: Sum
+      {{- if .Autoscaling.ReqCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{.Autoscaling.ReqCooldown.ScaleInCooldown}}
+      {{- else}}
       ScaleInCooldown: 120
+      {{- end}}
+      {{- if .Autoscaling.ReqCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{.Autoscaling.ReqCooldown.ScaleOutCooldown}}
+      {{- else}}
       ScaleOutCooldown: 60
+      {{- end}}
       TargetValue: {{.Autoscaling.Requests}}
 {{- end}}
 
@@ -361,7 +386,15 @@ AutoScalingPolicyALBAverageResponseTime:
         MetricName: TargetResponseTime
         Namespace: AWS/ApplicationELB
         Statistic: Average
+      {{- if .Autoscaling.RespTimeCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{.Autoscaling.RespTimeCooldown.ScaleInCooldown}}
+      {{- else}}
       ScaleInCooldown: 120
+      {{- end}}
+      {{- if .Autoscaling.RespTimeCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{.Autoscaling.RespTimeCooldown.ScaleOutCooldown}}
+      {{- else}}
       ScaleOutCooldown: 60
+      {{- end}}
       TargetValue: {{.Autoscaling.ResponseTime}}
 {{- end}}

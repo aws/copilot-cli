@@ -282,17 +282,27 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 	if a.Memory.ScalingConfig.Value != nil {
 		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.ScalingConfig.Value))
 	}
+	if a.Requests.Value != nil {
+		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests.Value))
+	}
+	if a.Requests.ScalingConfig.Value != nil {
+		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests.ScalingConfig.Value))
+	}
+	if a.ResponseTime.Value != nil {
+		responseTime := float64(*a.ResponseTime.Value) / float64(time.Second)
+		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
+	}
+	if a.ResponseTime.ScalingConfig.Value != nil {
+		responseTime := float64(*a.ResponseTime.ScalingConfig.Value) / float64(time.Second)
+		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
+	}
 
 	autoscalingOpts.CPUCooldown = convertScalingCooldown(a.CPU.ScalingConfig.Cooldown, a.Cooldown)
 	autoscalingOpts.MemCooldown = convertScalingCooldown(a.Memory.ScalingConfig.Cooldown, a.Cooldown)
+	autoscalingOpts.ReqCooldown = convertScalingCooldown(a.Requests.ScalingConfig.Cooldown, a.Cooldown)
+	autoscalingOpts.RespTimeCooldown = convertScalingCooldown(a.ResponseTime.ScalingConfig.Cooldown, a.Cooldown)
+	autoscalingOpts.QueueDelayCooldown = convertScalingCooldown(a.QueueScaling.Cooldown, a.Cooldown)
 
-	if a.Requests != nil {
-		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))
-	}
-	if a.ResponseTime != nil {
-		responseTime := float64(*a.ResponseTime) / float64(time.Second)
-		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
-	}
 	if !a.QueueScaling.IsEmpty() {
 		acceptableBacklog, err := a.QueueScaling.AcceptableBacklogPerTask()
 		if err != nil {

@@ -643,8 +643,11 @@ func TestCountTransformer_Transformer(t *testing.T) {
 
 func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 	perc := Percentage(80)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
+	}
+	mockReq := ScalingConfigOrT[int]{
+		Value: aws.Int(42),
 	}
 	testCases := map[string]struct {
 		original func(a *AdvancedCount)
@@ -660,14 +663,14 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
 				a.CPU = mockConfig
-				a.Requests = aws.Int(42)
+				a.Requests = mockReq
 			},
 			wanted: func(a *AdvancedCount) {
 				a.Range = Range{
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
 				a.CPU = mockConfig
-				a.Requests = aws.Int(42)
+				a.Requests = mockReq
 			},
 		},
 		"auto scaling set to empty if spot is not nil": {
@@ -676,7 +679,7 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 					Value: (*IntRangeBand)(aws.String("1-10")),
 				}
 				a.CPU = mockConfig
-				a.Requests = aws.Int(42)
+				a.Requests = mockReq
 			},
 			override: func(a *AdvancedCount) {
 				a.Spot = aws.Int(24)
@@ -709,35 +712,35 @@ func TestAdvancedCountTransformer_Transformer(t *testing.T) {
 	}
 }
 
-func TestScalingConfigOrPercentage_Transformer(t *testing.T) {
+func TestScalingConfigOrT_Transformer(t *testing.T) {
 	perc := Percentage(80)
-	mockConfig := AdvancedScalingConfig{
+	mockConfig := AdvancedScalingConfig[Percentage]{
 		Value: &perc,
 	}
 	testCases := map[string]struct {
-		original func(s *ScalingConfigOrPercentage)
-		override func(s *ScalingConfigOrPercentage)
-		wanted   func(s *ScalingConfigOrPercentage)
+		original func(s *ScalingConfigOrT[Percentage])
+		override func(s *ScalingConfigOrT[Percentage])
+		wanted   func(s *ScalingConfigOrT[Percentage])
 	}{
 		"advanced config value set to nil if percentage is not nil": {
-			original: func(s *ScalingConfigOrPercentage) {
+			original: func(s *ScalingConfigOrT[Percentage]) {
 				s.ScalingConfig = mockConfig
 			},
-			override: func(s *ScalingConfigOrPercentage) {
+			override: func(s *ScalingConfigOrT[Percentage]) {
 				s.Value = &perc
 			},
-			wanted: func(s *ScalingConfigOrPercentage) {
+			wanted: func(s *ScalingConfigOrT[Percentage]) {
 				s.Value = &perc
 			},
 		},
 		"percentage set to nil if advanced config value is not nil": {
-			original: func(s *ScalingConfigOrPercentage) {
+			original: func(s *ScalingConfigOrT[Percentage]) {
 				s.Value = &perc
 			},
-			override: func(s *ScalingConfigOrPercentage) {
+			override: func(s *ScalingConfigOrT[Percentage]) {
 				s.ScalingConfig = mockConfig
 			},
-			wanted: func(s *ScalingConfigOrPercentage) {
+			wanted: func(s *ScalingConfigOrT[Percentage]) {
 				s.ScalingConfig = mockConfig
 			},
 		},
@@ -745,7 +748,7 @@ func TestScalingConfigOrPercentage_Transformer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var dst, override, wanted ScalingConfigOrPercentage
+			var dst, override, wanted ScalingConfigOrT[Percentage]
 
 			tc.original(&dst)
 			tc.override(&override)
@@ -756,7 +759,7 @@ func TestScalingConfigOrPercentage_Transformer(t *testing.T) {
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(scalingConfigOrPercentageTransformer{}))
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(scalingConfigOrTTransformer[Percentage]{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)

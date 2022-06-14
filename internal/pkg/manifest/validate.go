@@ -116,7 +116,7 @@ func (l LoadBalancedWebServiceConfig) Validate() error {
 			missingFields: []string{"http", "nlb"},
 		}
 	}
-	if l.RoutingRule.Disabled() && (l.Count.AdvancedCount.Requests != nil || l.Count.AdvancedCount.ResponseTime != nil) {
+	if l.RoutingRule.Disabled() && (!l.Count.AdvancedCount.Requests.IsEmpty() || !l.Count.AdvancedCount.ResponseTime.IsEmpty()) {
 		return errors.New(`scaling based on "nlb" requests or response time is not supported`)
 	}
 	if err = l.ImageConfig.Validate(); err != nil {
@@ -209,7 +209,7 @@ func (b BackendServiceConfig) Validate() error {
 	if err = b.RoutingRule.Validate(); err != nil {
 		return fmt.Errorf(`validate "http": %w`, err)
 	}
-	if b.RoutingRule.IsEmpty() && (b.Count.AdvancedCount.Requests != nil || b.Count.AdvancedCount.ResponseTime != nil) {
+	if b.RoutingRule.IsEmpty() && (!b.Count.AdvancedCount.Requests.IsEmpty() || !b.Count.AdvancedCount.ResponseTime.IsEmpty()) {
 		return &errFieldMustBeSpecified{
 			missingField:      "http",
 			conditionalFields: []string{"count.requests", "count.response_time"},
@@ -901,12 +901,10 @@ func (a AdvancedCount) Validate() error {
 	}
 
 	// Validate combinations with cooldown
-	if !a.Cooldown.IsEmpty() {
-		if !a.hasScalingFieldsSet() {
-			return &errAtLeastOneFieldMustBeSpecified{
-				missingFields:    a.validScalingFields(),
-				conditionalField: "cooldown",
-			}
+	if !a.Cooldown.IsEmpty() && !a.hasScalingFieldsSet() {
+		return &errAtLeastOneFieldMustBeSpecified{
+			missingFields:    a.validScalingFields(),
+			conditionalField: "cooldown",
 		}
 	}
 
@@ -932,24 +930,32 @@ func (p Percentage) Validate() error {
 	return nil
 }
 
-// Validate returns nil if ScalingConfigOrPercentage is configured correctly.
-func (r ScalingConfigOrPercentage) Validate() error {
+// Validate returns nil if ScalingConfigOrT is configured correctly.
+func (r ScalingConfigOrT[_]) Validate() error {
 	if r.IsEmpty() {
 		return nil
 	}
 	if r.Value != nil {
-		return r.Value.Validate()
+		switch any(r.Value).(type) {
+		case *Percentage:
+			return any(r.Value).(*Percentage).Validate()
+		default:
+			return nil
+		}
 	}
 	return r.ScalingConfig.Validate()
 }
 
 // Validate returns nil if AdvancedScalingConfig is configured correctly.
-func (r AdvancedScalingConfig) Validate() error {
+func (r AdvancedScalingConfig[_]) Validate() error {
 	if r.IsEmpty() {
 		return nil
 	}
-	if err := r.Value.Validate(); err != nil {
-		return err
+	switch any(r.Value).(type) {
+	case *Percentage:
+		if err := any(r.Value).(*Percentage).Validate(); err != nil {
+			return err
+		}
 	}
 	return r.Cooldown.Validate()
 }
@@ -964,13 +970,13 @@ func (qs QueueScaling) Validate() error {
 	if qs.IsEmpty() {
 		return nil
 	}
-	if qs.AcceptableLatency == nil {
+	if qs.AcceptableLatency == nil && qs.AvgProcessingTime != nil {
 		return &errFieldMustBeSpecified{
 			missingField:      "acceptable_latency",
 			conditionalFields: []string{"msg_processing_time"},
 		}
 	}
-	if qs.AvgProcessingTime == nil {
+	if qs.AvgProcessingTime == nil && qs.AcceptableLatency != nil {
 		return &errFieldMustBeSpecified{
 			missingField:      "msg_processing_time",
 			conditionalFields: []string{"acceptable_latency"},
@@ -986,7 +992,7 @@ func (qs QueueScaling) Validate() error {
 	if process > latency {
 		return errors.New(`"msg_processing_time" cannot be longer than "acceptable_latency"`)
 	}
-	return nil
+	return qs.Cooldown.Validate()
 }
 
 // Validate returns nil if Range is configured correctly.
