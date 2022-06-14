@@ -238,35 +238,39 @@ Outputs:
 				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
-					WorkloadType: manifest.LoadBalancedWebServiceType,
-					HTTPHealthCheck: template.HTTPHealthCheckOpts{
-						HealthCheckPath: "/",
-						GracePeriod:     aws.Int64(60),
-					},
-					UseImportedCerts: true,
-					HostedZoneAliases: template.AliasesForHostedZone{
-						"mockHostedZone": []string{"mockAlias"},
-					},
-					Aliases:             []string{"mockAlias"},
-					HTTPSListener:       true,
-					DeregistrationDelay: aws.Int64(60),
-					HealthCheck:         &overridenContainerHealthCheck,
-					RulePriorityLambda:  "lambda",
-					DesiredCountLambda:  "something",
-					EnvControllerLambda: "something",
-					Network: template.NetworkOpts{
-						AssignPublicIP: template.EnablePublicIP,
-						SubnetsType:    template.PublicSubnetsPlacement,
-					},
-					DeploymentConfiguration: template.DeploymentConfigurationOpts{
-						MinHealthyPercent: 100,
-						MaxPercent:        200,
-					},
-					EntryPoint: []string{"/bin/echo", "hello"},
-					Command:    []string{"world"},
-					ALBEnabled: true,
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						WorkloadType: manifest.LoadBalancedWebServiceType,
+						HTTPHealthCheck: template.HTTPHealthCheckOpts{
+							HealthCheckPath: "/",
+							GracePeriod:     aws.Int64(60),
+						},
+						UseImportedCerts: true,
+						HostedZoneAliases: template.AliasesForHostedZone{
+							"mockHostedZone": []string{"mockAlias"},
+						},
+						Aliases:             []string{"mockAlias"},
+						HTTPSListener:       true,
+						DeregistrationDelay: aws.Int64(60),
+						HealthCheck:         &overridenContainerHealthCheck,
+						CustomResources:     make(map[string]template.S3ObjectLocation),
+						RulePriorityLambda:  "lambda",
+						DesiredCountLambda:  "something",
+						EnvControllerLambda: "something",
+						Network: template.NetworkOpts{
+							AssignPublicIP: template.EnablePublicIP,
+							SubnetsType:    template.PublicSubnetsPlacement,
+						},
+						DeploymentConfiguration: template.DeploymentConfigurationOpts{
+							MinHealthyPercent: 100,
+							MaxPercent:        200,
+						},
+						EntryPoint: []string{"/bin/echo", "hello"},
+						Command:    []string{"world"},
+						ALBEnabled: true,
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
 				c.parser = m
@@ -281,42 +285,46 @@ Outputs:
 				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
-					NestedStack: &template.WorkloadNestedStackOpts{
-						StackName:       addon.StackName,
-						VariableOutputs: []string{"Hello"},
-						SecretOutputs:   []string{"MySecretArn"},
-						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
-					},
-					UseImportedCerts: true,
-					HostedZoneAliases: template.AliasesForHostedZone{
-						"mockHostedZone": []string{"mockAlias"},
-					},
-					Aliases:           []string{"mockAlias"},
-					HTTPSListener:     true,
-					AddonsExtraParams: "ServiceName: !GetAtt Service.Name",
-					WorkloadType:      manifest.LoadBalancedWebServiceType,
-					HTTPHealthCheck: template.HTTPHealthCheckOpts{
-						HealthCheckPath: "/",
-						GracePeriod:     aws.Int64(60),
-					},
-					DeregistrationDelay: aws.Int64(60),
-					HealthCheck:         &overridenContainerHealthCheck,
-					RulePriorityLambda:  "lambda",
-					DesiredCountLambda:  "something",
-					EnvControllerLambda: "something",
-					Network: template.NetworkOpts{
-						AssignPublicIP: template.EnablePublicIP,
-						SubnetsType:    template.PublicSubnetsPlacement,
-					},
-					DeploymentConfiguration: template.DeploymentConfigurationOpts{
-						MinHealthyPercent: 100,
-						MaxPercent:        200,
-					},
-					EntryPoint: []string{"/bin/echo", "hello"},
-					Command:    []string{"world"},
-					ALBEnabled: true,
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						NestedStack: &template.WorkloadNestedStackOpts{
+							StackName:       addon.StackName,
+							VariableOutputs: []string{"Hello"},
+							SecretOutputs:   []string{"MySecretArn"},
+							PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
+						},
+						UseImportedCerts: true,
+						HostedZoneAliases: template.AliasesForHostedZone{
+							"mockHostedZone": []string{"mockAlias"},
+						},
+						Aliases:           []string{"mockAlias"},
+						HTTPSListener:     true,
+						AddonsExtraParams: "ServiceName: !GetAtt Service.Name",
+						WorkloadType:      manifest.LoadBalancedWebServiceType,
+						HTTPHealthCheck: template.HTTPHealthCheckOpts{
+							HealthCheckPath: "/",
+							GracePeriod:     aws.Int64(60),
+						},
+						DeregistrationDelay: aws.Int64(60),
+						HealthCheck:         &overridenContainerHealthCheck,
+						CustomResources:     make(map[string]template.S3ObjectLocation),
+						RulePriorityLambda:  "lambda",
+						DesiredCountLambda:  "something",
+						EnvControllerLambda: "something",
+						Network: template.NetworkOpts{
+							AssignPublicIP: template.EnablePublicIP,
+							SubnetsType:    template.PublicSubnetsPlacement,
+						},
+						DeploymentConfiguration: template.DeploymentConfigurationOpts{
+							MinHealthyPercent: 100,
+							MaxPercent:        200,
+						},
+						EntryPoint: []string{"/bin/echo", "hello"},
+						Command:    []string{"world"},
+						ALBEnabled: true,
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 				addons := mockAddons{
 					tpl: `Resources:
   AdditionalResourcesPolicy:

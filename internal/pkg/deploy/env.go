@@ -27,14 +27,16 @@ type CreateEnvironmentInput struct {
 	AdditionalTags       map[string]string // AdditionalTags are labels applied to resources under the application.
 	ArtifactBucketARN    string            // ARN of the regional application bucket.
 	ArtifactBucketKeyARN string            // ARN of the KMS key used to encrypt the contents in the regional application bucket.
-	CustomResourcesURLs  map[string]string // Environment custom resource script S3 object URLs.
-	ImportVPCConfig      *config.ImportVPC // Optional configuration if users have an existing VPC.
-	AdjustVPCConfig      *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
-	ImportCertARNs       []string          // Optional configuration if users want to import certificates.
-	InternalALBSubnets   []string          // Optional configuration if users want to specify internal ALB placement.
-	AllowVPCIngress      bool              // Optional configuration to allow access to internal ALB from ports 80/443.
-	Telemetry            *config.Telemetry // Optional observability and monitoring configuration.
-	Mft                  *manifest.Environment
+	CustomResourcesURLs  map[string]string // Deprecated: Remove this in favor of LambdaURLs. Environment custom resource script S3 object URLs.
+	LambdaURLs           map[string]string // TODO(efekarakus): rename this field to CustomResourcesURLs when we can swap the implementation.
+
+	ImportVPCConfig    *config.ImportVPC // Optional configuration if users have an existing VPC.
+	AdjustVPCConfig    *config.AdjustVPC // Optional configuration if users want to override default VPC configuration.
+	ImportCertARNs     []string          // Optional configuration if users want to import certificates.
+	InternalALBSubnets []string          // Optional configuration if users want to specify internal ALB placement.
+	AllowVPCIngress    bool              // Optional configuration to allow access to internal ALB from ports 80/443.
+	Telemetry          *config.Telemetry // Optional observability and monitoring configuration.
+	Mft                *manifest.Environment
 
 	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
 }

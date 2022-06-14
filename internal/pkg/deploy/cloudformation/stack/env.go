@@ -73,6 +73,11 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 
 // Template returns the environment CloudFormation template.
 func (e *EnvStackConfig) Template() (string, error) {
+	crs, err := convertCustomResources(e.in.LambdaURLs)
+	if err != nil {
+		return "", err
+	}
+
 	bucket, dnsCertValidator, err := s3.ParseURL(e.in.CustomResourcesURLs[template.DNSCertValidatorFileName])
 	if err != nil {
 		return "", err
@@ -95,6 +100,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:                  e.in.App.Name,
+		CustomResources:          crs,
 		DNSCertValidatorLambda:   dnsCertValidator,
 		DNSDelegationLambda:      dnsDelegation,
 		CustomDomainLambda:       customDomain,

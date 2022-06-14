@@ -129,6 +129,10 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
 func (s *LoadBalancedWebService) Template() (string, error) {
+	crs, err := convertCustomResources(s.rc.CustomResourcesURL)
+	if err != nil {
+		return "", err
+	}
 	rulePriorityLambda, err := s.parser.Read(albRulePriorityGeneratorPath)
 	if err != nil {
 		return "", fmt.Errorf("read rule priority lambda: %w", err)
@@ -231,6 +235,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		HTTPHealthCheck:                convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:            deregistrationDelay,
 		AllowedSourceIps:               allowedSourceIPs,
+		CustomResources:                crs,
 		RulePriorityLambda:             rulePriorityLambda.String(),
 		DesiredCountLambda:             desiredCountLambda.String(),
 		EnvControllerLambda:            envControllerLambda.String(),

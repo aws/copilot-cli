@@ -42,6 +42,20 @@ func TestEnv_Template(t *testing.T) {
 						},
 					},
 					LatestVersion: deploy.LatestEnvTemplateVersion,
+					CustomResources: map[string]template.S3ObjectLocation{
+						"CertificateValidationFunction": {
+							Bucket: "mockbucket",
+							Key:    "mockkey1",
+						},
+						"DNSDelegationFunction": {
+							Bucket: "mockbucket",
+							Key:    "mockkey2",
+						},
+						"CustomDomainFunction": {
+							Bucket: "mockbucket",
+							Key:    "mockkey4",
+						},
+					},
 				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
 				e.parser = m
 			},
@@ -376,6 +390,11 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
 			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
 			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
+		},
+		LambdaURLs: map[string]string{
+			"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
+			"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
+			"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
 		ImportVPCConfig: &config.ImportVPC{},
 	}

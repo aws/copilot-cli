@@ -913,3 +913,18 @@ func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secr
 	}
 	return m
 }
+
+func convertCustomResources(urlForFunc map[string]string) (map[string]template.S3ObjectLocation, error) {
+	out := make(map[string]template.S3ObjectLocation)
+	for fn, url := range urlForFunc {
+		bucket, key, err := s3.ParseURL(url)
+		if err != nil {
+			return nil, fmt.Errorf("convert custom resource %q url: %w", fn, err)
+		}
+		out[fn] = template.S3ObjectLocation{
+			Bucket: bucket,
+			Key:    key,
+		}
+	}
+	return out, nil
+}
