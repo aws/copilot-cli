@@ -944,7 +944,7 @@ Outputs:
     Value: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
     Export:
       Name: !Sub ${AWS::StackName}-InternalLoadBalancerCanonicalHostedZoneID
-   InternalWorkloadsHostedZone:
+  InternalWorkloadsHostedZone:
     Condition: CreateInternalALB
     Value: !GetAtt InternalWorkloadsHostedZone.Id
     Export:
