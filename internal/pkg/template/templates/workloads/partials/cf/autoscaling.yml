@@ -263,7 +263,7 @@ PermissionToInvokeBacklogPerTaskCalculatorLambda:
     SourceArn: !GetAtt BacklogPerTaskScheduledRule.Arn
 
 {{- $acceptableBacklog := .Autoscaling.QueueDelay.AcceptableBacklogPerTask }}
-{{- $queueDelayCooldown := .Autoscaling.QDelayCooldown }}
+{{- $queueDelayCooldown := .Autoscaling.QueueDelayCooldown }}
 
 AutoScalingPolicyEventsQueue:
   Metadata:
