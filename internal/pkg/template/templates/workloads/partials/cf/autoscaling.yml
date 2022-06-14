@@ -263,6 +263,7 @@ PermissionToInvokeBacklogPerTaskCalculatorLambda:
     SourceArn: !GetAtt BacklogPerTaskScheduledRule.Arn
 
 {{- $acceptableBacklog := .Autoscaling.QueueDelay.AcceptableBacklogPerTask }}
+{{- $queueDelayCooldown := .Autoscaling.QDelayCooldown }}
 
 AutoScalingPolicyEventsQueue:
   Metadata:
@@ -273,13 +274,13 @@ AutoScalingPolicyEventsQueue:
     PolicyType: TargetTrackingScaling
     ScalingTargetId: !Ref AutoScalingTarget
     TargetTrackingScalingPolicyConfiguration:
-      {{- if .Autoscaling.QDelayCooldown.ScaleInCooldown}}
-      ScaleInCooldown: {{.Autoscaling.QDelayCooldown.ScaleInCooldown}}
+      {{- if $queueDelayCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{$queueDelayCooldown.ScaleInCooldown}}
       {{- else}}
       ScaleInCooldown: 120
       {{- end}}
-      {{- if .Autoscaling.QDelayCooldown.ScaleOutCooldown}}
-      ScaleOutCooldown: {{.Autoscaling.QDelayCooldown.ScaleOutCooldown}}
+      {{- if $queueDelayCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{$queueDelayCooldown.ScaleOutCooldown}}
       {{- else}}
       ScaleOutCooldown: 60
       {{- end}}
@@ -305,13 +306,13 @@ AutoScalingPolicy{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}Ev
     PolicyType: TargetTrackingScaling
     ScalingTargetId: !Ref AutoScalingTarget
     TargetTrackingScalingPolicyConfiguration:
-      {{- if .Autoscaling.QDelayCooldown.ScaleInCooldown}}
-      ScaleInCooldown: {{.Autoscaling.QDelayCooldown.ScaleInCooldown}}
+      {{- if $queueDelayCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{$queueDelayCooldown.ScaleInCooldown}}
       {{- else}}
       ScaleInCooldown: 120
       {{- end}}
-      {{- if .Autoscaling.QDelayCooldown.ScaleOutCooldown}}
-      ScaleOutCooldown: {{.Autoscaling.QDelayCooldown.ScaleOutCooldown}}
+      {{- if $queueDelayCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{$queueDelayCooldown.ScaleOutCooldown}}
       {{- else}}
       ScaleOutCooldown: 60
       {{- end}}

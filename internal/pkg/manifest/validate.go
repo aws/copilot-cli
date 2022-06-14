@@ -901,12 +901,10 @@ func (a AdvancedCount) Validate() error {
 	}
 
 	// Validate combinations with cooldown
-	if !a.Cooldown.IsEmpty() {
-		if !a.hasScalingFieldsSet() {
-			return &errAtLeastOneFieldMustBeSpecified{
-				missingFields:    a.validScalingFields(),
-				conditionalField: "cooldown",
-			}
+	if !a.Cooldown.IsEmpty() && !a.hasScalingFieldsSet() {
+		return &errAtLeastOneFieldMustBeSpecified{
+			missingFields:    a.validScalingFields(),
+			conditionalField: "cooldown",
 		}
 	}
 
