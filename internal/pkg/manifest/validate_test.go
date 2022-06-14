@@ -1662,18 +1662,18 @@ func TestScalingConfigOrT_Validate(t *testing.T) {
 	)
 
 	testCases := map[string]struct {
-		Resource ScalingConfigOrT[Percentage]
+		ScalingConfig ScalingConfigOrT[Percentage]
 
 		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
 		"valid if only value is specified": {
-			Resource: ScalingConfigOrT[Percentage]{
+			ScalingConfig: ScalingConfigOrT[Percentage]{
 				Value: &perc,
 			},
 		},
 		"valid if only scaling config is specified": {
-			Resource: ScalingConfigOrT[Percentage]{
+			ScalingConfig: ScalingConfigOrT[Percentage]{
 				ScalingConfig: AdvancedScalingConfig[Percentage]{
 					Value: &perc,
 					Cooldown: Cooldown{
@@ -1687,7 +1687,7 @@ func TestScalingConfigOrT_Validate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.Resource.Validate()
+			gotErr := tc.ScalingConfig.Validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
