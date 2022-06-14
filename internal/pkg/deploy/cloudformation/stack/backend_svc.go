@@ -83,6 +83,10 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 
 // Template returns the CloudFormation template for the backend service.
 func (s *BackendService) Template() (string, error) {
+	crs, err := convertCustomResources(s.rc.CustomResourcesURL)
+	if err != nil {
+		return "", err
+	}
 	rulePriorityLambda, err := s.parser.Read(albRulePriorityGeneratorPath)
 	if err != nil {
 		return "", fmt.Errorf("read rule priority lambda: %w", err)
@@ -171,6 +175,7 @@ func (s *BackendService) Template() (string, error) {
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:      deregistrationDelay,
 		AllowedSourceIps:         allowedSourceIPs,
+		CustomResources:          crs,
 		RulePriorityLambda:       rulePriorityLambda.String(),
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
