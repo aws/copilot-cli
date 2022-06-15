@@ -130,7 +130,8 @@ type initSvcOpts struct {
 	wsPendingCreation bool
 
 	// Cache variables
-	df dockerfileParser
+	df             dockerfileParser
+	manifestExists bool
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
@@ -288,7 +289,7 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
-	if o.image == "" {
+	if o.image == "" && !o.manifestExists {
 		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
 		if err != nil {
 			return err
@@ -424,6 +425,8 @@ func (o *initSvcOpts) shouldSkipAsking() (bool, error) {
 		}
 		return false, nil
 	}
+	o.manifestExists = true
+
 	svcType, err := localMft.WorkloadType()
 	if err != nil {
 		return false, fmt.Errorf(`read "type" field for service %s from local manifest: %w`, o.name, err)

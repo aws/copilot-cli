@@ -694,6 +694,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 		inDockerfilePath string
 		inImage          string
 		inAppName        string
+		inManifestExists bool
 
 		wantedErr          error
 		wantedManifestPath string
@@ -751,6 +752,35 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+			},
+
+			wantedManifestPath: "manifest/path",
+		},
+		"doesn't attempt to detect and populate the platform if manifest already exists": {
+			inAppName:        "sample",
+			inSvcName:        "frontend",
+			inDockerfilePath: "./Dockerfile",
+			inSvcType:        manifest.LoadBalancedWebServiceType,
+			inSvcPort:        80,
+			inManifestExists: true,
+
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(nil, nil)
+			},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().CheckDockerEngineRunning().Times(0)
+				m.EXPECT().GetPlatform().Times(0)
+			},
+			mockSvcInit: func(m *mocks.MocksvcInitializer) {
+				m.EXPECT().Service(&initialize.ServiceProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:            "sample",
+						Name:           "frontend",
+						Type:           "Load Balanced Web Service",
+						DockerfilePath: "./Dockerfile",
+					},
+					Port: 80,
+				}).Return("manifest/path", nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -1003,9 +1033,10 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				dockerfile: func(s string) dockerfileParser {
 					return mockDockerfile
 				},
-				df:           mockDockerfile,
-				dockerEngine: mockDockerEngine,
-				topicSel:     mockTopicSel,
+				df:             mockDockerfile,
+				dockerEngine:   mockDockerEngine,
+				topicSel:       mockTopicSel,
+				manifestExists: tc.inManifestExists,
 			}
 
 			// WHEN
