@@ -208,7 +208,7 @@ func Test_App_Infrastructure(t *testing.T) {
 			&cloudformation.AddEnvToAppOpts{
 				App:          &app,
 				EnvName:      "test",
-				EnvAccountID: "000312697014",
+				EnvAccountID: callerInfo.Account,
 				EnvRegion:    *sess.Config.Region,
 			},
 		)
@@ -349,7 +349,7 @@ func Test_App_Infrastructure(t *testing.T) {
 		err = deployer.AddEnvToApp(&cloudformation.AddEnvToAppOpts{
 			App:          &app,
 			EnvName:      "test",
-			EnvAccountID: "000312697014",
+			EnvAccountID: callerInfo.Account,
 			EnvRegion:    *sess.Config.Region,
 		})
 
