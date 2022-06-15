@@ -50,9 +50,9 @@ You will first need to create a logical group of related services, environments,
 
 `copilot app init apprunner-vpc`
 
-Once you execute that command, Copilot will use a folder named `./copilot` to hold special YAML configuration files, called _manifests,_ that will enable you to easily deploy containerised applications on the AWS using Copilot.
+Once you execute that command, Copilot will use a folder named `./copilot` to hold infrastructure-as-code YAML configuration files, called _manifests,_ that will enable you to easily deploy containerised applications on  AWS using Copilot.
 
-Your next step is to create an environment for the application where you will deploy your services. With AWS Copilot it is possible to create different environments that logically isolate the deployments of our applications in a very easy way. A common use case is to have a test environment and a separate production environment where applications are deployed only when they have been validated on the test environment. For the scope of this post, you will only deploy the services to a testing environment named _test_ that you create with the following command:
+Your next step is to create an environment for the application where you will deploy your services. With AWS Copilot it is possible to create different environments that logically isolate the deployments of our applications in separate accounts and regions. A common use case is to have a test environment and a separate production environment where applications are deployed only when they have been validated on the test environment. For the scope of this post, you will only deploy the services to a testing environment named _test_ that you create with the following command:
 
 ```
 copilot env init \
@@ -62,7 +62,7 @@ copilot env init \
     --default-config
 ```
 
-Once you press enter on the command, you will be asked to select AWS credentials that will be used to create the necessary infrastructure to host our services. Once the credentials have been selected, Copilot will start to create the resources on your behalf. This process may take a while so stretch a bit while this process is completed.\n
+Once you press enter on the command, you will be asked to select AWS credentials that will be used to create the necessary infrastructure to host our services. Once the credentials have been selected, Copilot will start to create the resources on your behalf. This process may take a while so stretch a bit while this process is completed.  
 
 For every environment you create, AWS Copilot will create a separate networking stack (VPC) and an ECS Cluster that won’t be used for this particular demo.
 ![AWS Copilot Groupings](./../assets/images/apprunner-vpc-blog/copilot-groupings.png)
@@ -80,7 +80,7 @@ copilot svc init \
     --dockerfile "demo-service/Dockerfile"
 ```
 
-As usual, AWS Copilot generates a `manifest.yml` file that you can use to further customise the resources before you proceed to the actual deployment. To enable VPC access by your application all you need is to uncomment is the following section from the manifest file:
+As usual, AWS Copilot generates a `manifest.yml` file that you can use to further customise the resources before you proceed to the actual deployment. To enable VPC access by your application all you need is to uncomment is the following section from the manifest file `copilot/demo-service/manifest.yml`:
 
 ```
 network:
