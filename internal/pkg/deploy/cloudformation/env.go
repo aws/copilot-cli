@@ -137,7 +137,7 @@ func (cf CloudFormation) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) e
 	return cf.upgradeEnvironment(in, func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
 		// If a parameter exists in both the new template and the old template, use its previous value.
 		// Otherwise, keep the parameter untouched.
-		if old == nil {
+		if old == nil { // The ParamKey doesn't exist in the old stack, use the new value.
 			return &new
 		}
 		// Use existing parameter values.
@@ -165,7 +165,7 @@ func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentIn
 			}
 		}
 		if old == nil {
-			return &new
+			return &new // The ParamKey doesn't exist in the old stack, use the new value.
 		}
 		return &awscfn.Parameter{
 			ParameterKey:     new.ParameterKey,
@@ -295,7 +295,7 @@ func (cf CloudFormation) transformParameters(
 // 2. The parameter is env-controller managed.
 // Otherwise, it returns the parameter untouched.
 func transformEnvControllerParameters(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
-	if old == nil {
+	if old == nil { // The ParamKey doesn't exist in the old stack, use the new value.
 		return &new
 	}
 
