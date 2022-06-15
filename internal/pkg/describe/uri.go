@@ -220,43 +220,59 @@ type albDescriber struct {
 	envDNSNameKey   string
 }
 
+func (d *albDescriber) envDNSName(path string) (albURI, error) {
+	envOutputs, err := d.envDescriber.Outputs()
+	if err != nil {
+		return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
+	}
+	return albURI{
+		DNSNames: []string{envOutputs[d.envDNSNameKey]},
+		Path:     path,
+	}, nil
+}
+
 func (d *albDescriber) uri() (albURI, error) {
 	svcParams, err := d.svcDescriber.Params()
 	if err != nil {
 		return albURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
+
 	path := svcParams[stack.WorkloadRulePathParamKey]
-	if svcParams[stack.WorkloadHTTPSParamKey] != "true" {
-		envOutputs, err := d.envDescriber.Outputs()
-		if err != nil {
-			return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
-		}
-		return albURI{
-			DNSNames: []string{envOutputs[d.envDNSNameKey]},
-			Path:     path,
-		}, nil
+	httpsEnabled := svcParams[stack.WorkloadHTTPSParamKey] == "true"
+
+	// public load balancers use the env DNS name if https is not enabled
+	if d.envDNSNameKey == envOutputPublicLoadBalancerDNSName && !httpsEnabled {
+		return d.envDNSName(path)
 	}
+
 	svcResources, err := d.svcDescriber.ServiceStackResources()
 	if err != nil {
 		return albURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
-	var httpsRuleARN string
+
+	var ruleARN string
 	for _, resource := range svcResources {
-		if resource.LogicalID == svcStackResourceHTTPSListenerRuleLogicalID &&
-			resource.Type == svcStackResourceHTTPSListenerRuleResourceType {
-			httpsRuleARN = resource.PhysicalID
+		if resource.Type == svcStackResourceListenerRuleResourceType &&
+			((httpsEnabled && resource.LogicalID == svcStackResourceHTTPSListenerRuleLogicalID) ||
+				(!httpsEnabled && resource.LogicalID == svcStackResourceHTTPListenerRuleLogicalID)) {
+			ruleARN = resource.PhysicalID
+			break
 		}
 	}
+
 	lbDescr, err := d.initLBDescriber(d.env)
 	if err != nil {
 		return albURI{}, nil
 	}
-	dnsNames, err := lbDescr.ListenerRuleHostHeaders(httpsRuleARN)
+	dnsNames, err := lbDescr.ListenerRuleHostHeaders(ruleARN)
 	if err != nil {
-		return albURI{}, fmt.Errorf("get host headers for listener rule %s: %w", httpsRuleARN, err)
+		return albURI{}, fmt.Errorf("get host headers for listener rule %s: %w", ruleARN, err)
+	}
+	if len(dnsNames) == 0 {
+		return d.envDNSName(path)
 	}
 	return albURI{
-		HTTPS:    true,
+		HTTPS:    httpsEnabled,
 		DNSNames: dnsNames,
 		Path:     path,
 	}, nil

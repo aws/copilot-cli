@@ -1,3 +1,22 @@
+{{- if eq $.WorkloadType "Backend Service"}}
+LoadBalancerInternalDNSAlias:
+  Metadata:
+    'aws:copilot:description': 'Alias for {{.WorkloadName}}.{{.EnvName}}.{{.AppName}}.internal to the internal load balancer'
+  Type: AWS::Route53::RecordSetGroup
+  Properties:
+    Comment: !Sub "Load balancer alias for service ${WorkloadName}"
+    HostedZoneId: !GetAtt EnvControllerAction.InternalWorkloadsHostedZone
+    RecordSets:
+      - Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
+          DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
+        Name: !Join
+          - '.'
+          - - !Ref WorkloadName
+            - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
+{{- end}}
+
 HTTPRulePriorityAction:
   Metadata:
     'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
@@ -19,14 +38,24 @@ HTTPListenerRule:
       - TargetGroupArn: !Ref TargetGroup
         Type: forward
     Conditions:
-    {{- if .AllowedSourceIps}}
+      {{- if .AllowedSourceIps}}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-          {{- range $sourceIP := .AllowedSourceIps}}
-          - {{$sourceIP}}
-          {{- end}}
-    {{- end}}
+            {{- range $sourceIP := .AllowedSourceIps}}
+            - {{$sourceIP}}
+            {{- end}}
+      {{- end}}
+      {{- if eq $.WorkloadType "Backend Service"}}
+      - Field: 'host-header'
+        HostHeaderConfig:
+          Values:
+            - !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
+            - !Join
+              - '.'
+              - - !Ref WorkloadName
+                - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
+      {{- end}}
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:

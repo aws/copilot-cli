@@ -368,17 +368,24 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					cfnstack.WorkloadTaskMemoryParamKey:    "512",
 					cfnstack.WorkloadRulePathParamKey:      "mySvc",
 				}
+				resources := []*describeStack.Resource{
+					{
+						Type:       "AWS::ElasticLoadBalancingV2::TargetGroup",
+						LogicalID:  svcStackResourceALBTargetGroupLogicalID,
+						PhysicalID: "targetGroupARN",
+					},
+					{
+						Type:       svcStackResourceListenerRuleResourceType,
+						LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
+						PhysicalID: "listenerRuleARN",
+					},
+				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
-						{
-							LogicalID: svcStackResourceALBTargetGroupLogicalID,
-						},
-					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
-					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
-						envOutputInternalLoadBalancerDNSName: "us-west-1.elb.amazonaws.internal",
-					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
+					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("listenerRuleARN").Return([]string{"jobs.test.phonetool.internal"}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
@@ -399,11 +406,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							ValueFrom: "GH_WEBHOOK_SECRET",
 						},
 					}, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
-						{
-							LogicalID: svcStackResourceALBTargetGroupLogicalID,
-						},
-					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
 				)
 			},
 			wantedBackendSvc: &backendSvcDesc{
@@ -425,7 +428,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				Routes: []*WebServiceRoute{
 					{
 						Environment: "test",
-						URL:         "http://us-west-1.elb.amazonaws.internal/mySvc",
+						URL:         "http://jobs.test.phonetool.internal/mySvc",
 					},
 				},
 				ServiceDiscovery: []*ServiceDiscovery{
@@ -455,7 +458,14 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				Resources: map[string][]*stack.Resource{
 					"test": {
 						{
-							LogicalID: "TargetGroup",
+							Type:       "AWS::ElasticLoadBalancingV2::TargetGroup",
+							LogicalID:  svcStackResourceALBTargetGroupLogicalID,
+							PhysicalID: "targetGroupARN",
+						},
+						{
+							Type:       svcStackResourceListenerRuleResourceType,
+							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
+							PhysicalID: "listenerRuleARN",
 						},
 					},
 				},
@@ -469,13 +479,11 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
-			mockSvcDescriber := mocks.NewMockecsDescriber(ctrl)
-			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
 			mocks := lbWebSvcDescriberMocks{
-				storeSvc:     mockStore,
-				ecsDescriber: mockSvcDescriber,
-				envDescriber: mockEnvDescriber,
+				storeSvc:     mocks.NewMockDeployedEnvServicesLister(ctrl),
+				ecsDescriber: mocks.NewMockecsDescriber(ctrl),
+				envDescriber: mocks.NewMockenvDescriber(ctrl),
+				lbDescriber:  mocks.NewMocklbDescriber(ctrl),
 			}
 
 			tc.setupMocks(mocks)
@@ -484,9 +492,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				app:                      testApp,
 				svc:                      testSvc,
 				enableResources:          tc.shouldOutputResources,
-				store:                    mockStore,
-				initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mockSvcDescriber, nil },
-				initEnvDescribers:        func(s string) (envDescriber, error) { return mockEnvDescriber, nil },
+				store:                    mocks.storeSvc,
+				initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mocks.ecsDescriber, nil },
+				initEnvDescribers:        func(s string) (envDescriber, error) { return mocks.envDescriber, nil },
+				initLBDescriber:          func(s string) (lbDescriber, error) { return mocks.lbDescriber, nil },
 			}
 
 			// WHEN

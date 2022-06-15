@@ -158,6 +158,9 @@ func (s *BackendService) Template() (string, error) {
 	}
 
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
+		AppName:                  s.app,
+		EnvName:                  s.env,
+		WorkloadName:             s.name,
 		Variables:                s.manifest.BackendServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
 		Aliases:                  aliases,
