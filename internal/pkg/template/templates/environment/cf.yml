@@ -360,7 +360,7 @@ Resources:
   {{- if not .PrivateImportedCertARNs}}
   InternalWorkloadsHostedZone:
     Metadata:
-      'aws:copilot:description': 'A hosted zone named "{{.EnvName}}.{{.AppName}}.internal" for backends behind a private load balancer'
+      'aws:copilot:description': 'A hosted zone named {{.EnvName}}.{{.AppName}}.internal for backends behind a private load balancer'
     Condition: CreateInternalALB
     Type: AWS::Route53::HostedZone
     Properties:
