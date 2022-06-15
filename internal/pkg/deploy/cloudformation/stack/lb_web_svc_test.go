@@ -240,6 +240,9 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
+						AppName:      "phonetool",
+						EnvName:      "test",
+						WorkloadName: "frontend",
 						WorkloadType: manifest.LoadBalancedWebServiceType,
 						HTTPHealthCheck: template.HTTPHealthCheckOpts{
 							HealthCheckPath: "/",
@@ -287,6 +290,9 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
+						AppName:      "phonetool",
+						EnvName:      "test",
+						WorkloadName: "frontend",
 						NestedStack: &template.WorkloadNestedStackOpts{
 							StackName:       addon.StackName,
 							VariableOutputs: []string{"Hello"},
