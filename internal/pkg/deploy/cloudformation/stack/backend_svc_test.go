@@ -219,6 +219,9 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
+						AppName:      "phonetool",
+						EnvName:      "test",
+						WorkloadName: "frontend",
 						WorkloadType: manifest.BackendServiceType,
 						HealthCheck: &template.ContainerHealthCheck{
 							Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
@@ -325,6 +328,9 @@ Outputs:
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
+						AppName:      "phonetool",
+						EnvName:      "test",
+						WorkloadName: "frontend",
 						WorkloadType: manifest.BackendServiceType,
 						HealthCheck: &template.ContainerHealthCheck{
 							Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
