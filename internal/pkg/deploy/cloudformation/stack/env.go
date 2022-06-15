@@ -73,6 +73,11 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 
 // Template returns the environment CloudFormation template.
 func (e *EnvStackConfig) Template() (string, error) {
+	crs, err := convertCustomResources(e.in.LambdaURLs)
+	if err != nil {
+		return "", err
+	}
+
 	bucket, dnsCertValidator, err := s3.ParseURL(e.in.CustomResourcesURLs[template.DNSCertValidatorFileName])
 	if err != nil {
 		return "", err
@@ -95,6 +100,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:                  e.in.App.Name,
+		CustomResources:          crs,
 		DNSCertValidatorLambda:   dnsCertValidator,
 		DNSDelegationLambda:      dnsDelegation,
 		CustomDomainLambda:       customDomain,
@@ -174,19 +180,20 @@ func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
 func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
 	// If a manifest is present, it is the only place we look at.
 	if e.in.Mft != nil {
-		if e.in.Mft.Observability.IsEmpty() {
-			return nil
-		}
 		return &template.Telemetry{
-			EnableContainerInsights: e.in.Mft.Observability.ContainerInsights,
+			EnableContainerInsights: aws.BoolValue(e.in.Mft.Observability.ContainerInsights),
 		}
 	}
+
 	// Fallthrough to SSM config.
 	if e.in.Telemetry == nil {
+		// For environments before Copilot v1.14.0, `Telemetry` is nil.
 		return nil
 	}
 	return &template.Telemetry{
-		EnableContainerInsights: aws.Bool(e.in.Telemetry.EnableContainerInsights),
+		// For environments after v1.14.0, and v1.20.0, `Telemetry` is never nil,
+		// and `EnableContainerInsights` is either true or false.
+		EnableContainerInsights: e.in.Telemetry.EnableContainerInsights,
 	}
 }
 

@@ -6,6 +6,7 @@ package manifest
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/imdario/mergo"
 )
@@ -25,7 +26,9 @@ var defaultTransformers = []mergo.Transformers{
 	healthCheckArgsOrStringTransformer{},
 	countTransformer{},
 	advancedCountTransformer{},
-	scalingConfigOrPercentageTransformer{},
+	scalingConfigOrTTransformer[Percentage]{},
+	scalingConfigOrTTransformer[int]{},
+	scalingConfigOrTTransformer[time.Duration]{},
 	rangeTransformer{},
 	efsConfigOrBoolTransformer{},
 	efsVolumeConfigurationTransformer{},
@@ -284,23 +287,23 @@ func (t advancedCountTransformer) Transformer(typ reflect.Type) func(dst, src re
 	}
 }
 
-type scalingConfigOrPercentageTransformer struct{}
+type scalingConfigOrTTransformer[T ~int | time.Duration] struct{}
 
 // Transformer returns custom merge logic for ScalingConfigOrPercentage's fields.
-func (t scalingConfigOrPercentageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(ScalingConfigOrPercentage{}) {
+func (t scalingConfigOrTTransformer[T]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(ScalingConfigOrT[T]{}) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(ScalingConfigOrPercentage), src.Interface().(ScalingConfigOrPercentage)
+		dstStruct, srcStruct := dst.Interface().(ScalingConfigOrT[T]), src.Interface().(ScalingConfigOrT[T])
 
 		if !srcStruct.ScalingConfig.IsEmpty() {
 			dstStruct.Value = nil
 		}
 
 		if srcStruct.Value != nil {
-			dstStruct.ScalingConfig = AdvancedScalingConfig{}
+			dstStruct.ScalingConfig = AdvancedScalingConfig[T]{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

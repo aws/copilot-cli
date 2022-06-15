@@ -400,7 +400,7 @@ func TestBackendService_Publish(t *testing.T) {
 
 func TestBackendSvc_ApplyEnv(t *testing.T) {
 	perc := Percentage(70)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	mockBackendServiceWithNoEnvironments := BackendService{
@@ -838,7 +838,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	mockRange := IntRangeBand("1-10")
 	perc := Percentage(80)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	testCases := map[string]struct {

@@ -148,10 +148,10 @@ func (c *Count) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the ScalingConfigOrPercentage
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the ScalingConfigOrT
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (r *ScalingConfigOrPercentage) UnmarshalYAML(value *yaml.Node) error {
+func (r *ScalingConfigOrT[_]) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&r.ScalingConfig); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
@@ -196,16 +196,16 @@ func (c *Count) Desired() (*int, error) {
 // Percentage represents a valid percentage integer ranging from 0 to 100.
 type Percentage int
 
-// ScalingConfigOrPercentage represents a resource that has autoscaling configurations or a default percentage.
-type ScalingConfigOrPercentage struct {
-	Value         *Percentage
-	ScalingConfig AdvancedScalingConfig // mutually exclusive with Value
+// ScalingConfigOrT represents a resource that has autoscaling configurations or a generic value.
+type ScalingConfigOrT[T ~int | time.Duration] struct {
+	Value         *T
+	ScalingConfig AdvancedScalingConfig[T] // mutually exclusive with Value
 }
 
 // AdvancedScalingConfig represents advanced configurable options for a scaling policy.
-type AdvancedScalingConfig struct {
-	Value    *Percentage `yaml:"value"`
-	Cooldown Cooldown    `yaml:"cooldown"`
+type AdvancedScalingConfig[T ~int | time.Duration] struct {
+	Value    *T       `yaml:"value"`
+	Cooldown Cooldown `yaml:"cooldown"`
 }
 
 // Cooldown represents the autoscaling cooldown of resources.
@@ -217,25 +217,25 @@ type Cooldown struct {
 // AdvancedCount represents the configurable options for Auto Scaling as well as
 // Capacity configuration (spot).
 type AdvancedCount struct {
-	Spot         *int                      `yaml:"spot"` // mutually exclusive with other fields
-	Range        Range                     `yaml:"range"`
-	Cooldown     Cooldown                  `yaml:"cooldown"`
-	CPU          ScalingConfigOrPercentage `yaml:"cpu_percentage"`
-	Memory       ScalingConfigOrPercentage `yaml:"memory_percentage"`
-	Requests     *int                      `yaml:"requests"`
-	ResponseTime *time.Duration            `yaml:"response_time"`
-	QueueScaling QueueScaling              `yaml:"queue_delay"`
+	Spot         *int                            `yaml:"spot"` // mutually exclusive with other fields
+	Range        Range                           `yaml:"range"`
+	Cooldown     Cooldown                        `yaml:"cooldown"`
+	CPU          ScalingConfigOrT[Percentage]    `yaml:"cpu_percentage"`
+	Memory       ScalingConfigOrT[Percentage]    `yaml:"memory_percentage"`
+	Requests     ScalingConfigOrT[int]           `yaml:"requests"`
+	ResponseTime ScalingConfigOrT[time.Duration] `yaml:"response_time"`
+	QueueScaling QueueScaling                    `yaml:"queue_delay"`
 
 	workloadType string
 }
 
-// IsEmpty returns whether ScalingConfigOrPercentage is empty
-func (r *ScalingConfigOrPercentage) IsEmpty() bool {
+// IsEmpty returns whether ScalingConfigOrT is empty
+func (r *ScalingConfigOrT[_]) IsEmpty() bool {
 	return r.ScalingConfig.IsEmpty() && r.Value == nil
 }
 
 // IsEmpty returns whether AdvancedScalingConfig is empty
-func (a *AdvancedScalingConfig) IsEmpty() bool {
+func (a *AdvancedScalingConfig[_]) IsEmpty() bool {
 	return a.Cooldown.IsEmpty() && a.Value == nil
 }
 
@@ -247,7 +247,7 @@ func (c *Cooldown) IsEmpty() bool {
 // IsEmpty returns whether AdvancedCount is empty.
 func (a *AdvancedCount) IsEmpty() bool {
 	return a.Range.IsEmpty() && a.CPU.IsEmpty() && a.Memory.IsEmpty() && a.Cooldown.IsEmpty() &&
-		a.Requests == nil && a.ResponseTime == nil && a.Spot == nil && a.QueueScaling.IsEmpty()
+		a.Requests.IsEmpty() && a.ResponseTime.IsEmpty() && a.Spot == nil && a.QueueScaling.IsEmpty()
 }
 
 // IgnoreRange returns whether desiredCount is specified on spot capacity
@@ -275,23 +275,23 @@ func (a *AdvancedCount) validScalingFields() []string {
 func (a *AdvancedCount) hasScalingFieldsSet() bool {
 	switch a.workloadType {
 	case LoadBalancedWebServiceType:
-		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || a.Requests != nil || a.ResponseTime != nil
+		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.Requests.IsEmpty() || !a.ResponseTime.IsEmpty()
 	case BackendServiceType:
-		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || a.Requests != nil || a.ResponseTime != nil
+		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.Requests.IsEmpty() || !a.ResponseTime.IsEmpty()
 	case WorkerServiceType:
 		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.QueueScaling.IsEmpty()
 	default:
-		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || a.Requests != nil || a.ResponseTime != nil || !a.QueueScaling.IsEmpty()
+		return !a.CPU.IsEmpty() || !a.Memory.IsEmpty() || !a.Requests.IsEmpty() || !a.ResponseTime.IsEmpty() || !a.QueueScaling.IsEmpty()
 	}
 }
 
 func (a *AdvancedCount) unsetAutoscaling() {
 	a.Range = Range{}
 	a.Cooldown = Cooldown{}
-	a.CPU = ScalingConfigOrPercentage{}
-	a.Memory = ScalingConfigOrPercentage{}
-	a.Requests = nil
-	a.ResponseTime = nil
+	a.CPU = ScalingConfigOrT[Percentage]{}
+	a.Memory = ScalingConfigOrT[Percentage]{}
+	a.Requests = ScalingConfigOrT[int]{}
+	a.ResponseTime = ScalingConfigOrT[time.Duration]{}
 	a.QueueScaling = QueueScaling{}
 }
 
@@ -299,11 +299,12 @@ func (a *AdvancedCount) unsetAutoscaling() {
 type QueueScaling struct {
 	AcceptableLatency *time.Duration `yaml:"acceptable_latency"`
 	AvgProcessingTime *time.Duration `yaml:"msg_processing_time"`
+	Cooldown          Cooldown       `yaml:"cooldown"`
 }
 
 // IsEmpty returns true if the QueueScaling is set.
 func (qs *QueueScaling) IsEmpty() bool {
-	return qs.AcceptableLatency == nil && qs.AvgProcessingTime == nil
+	return qs.AcceptableLatency == nil && qs.AvgProcessingTime == nil && qs.Cooldown.IsEmpty()
 }
 
 // AcceptableBacklogPerTask returns the total number of messages that each task can accumulate in the queue
