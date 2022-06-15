@@ -1,12 +1,12 @@
 site_name: AWS Copilot CLI
-site_description: "Develop, Release and Operate Container Apps on AWS."
-site_url: "https://aws.github.io/copilot-cli/"
-repo_name: "aws/copilot-cli"
-repo_url: "https://github.com/aws/copilot-cli"
-edit_uri: "edit/mainline/site/content"
-copyright: "Copyright &copy; 2022 Amazon"
-docs_dir: "site/content"
-site_dir: "docs"
+site_description: 'Develop, Release and Operate Container Apps on AWS.'
+site_url: 'https://aws.github.io/copilot-cli/'
+repo_name: 'aws/copilot-cli'
+repo_url: 'https://github.com/aws/copilot-cli'
+edit_uri: 'edit/mainline/site/content'
+copyright: 'Copyright &copy; 2022 Amazon'
+docs_dir: 'site/content'
+site_dir: 'docs'
 extra_css:
   - stylesheets/extra.css
 extra:
@@ -24,129 +24,131 @@ extra:
 nav:
   - Home: index.en.md
   - Documentation:
-      - Overview: docs/overview.en.md
+    - Overview: docs/overview.en.md
+    - Getting Started:
+      - Install Copilot: docs/getting-started/install.en.md
+      - (Optional) Verify the installation: docs/getting-started/verify.en.md
+      - Deploy your first application: docs/getting-started/first-app-tutorial.en.md
+    - Concepts:
+      - Overview: docs/concepts/overview.en.md
+      - Applications: docs/concepts/applications.en.md
+      - Environments: docs/concepts/environments.en.md
+      - Services: docs/concepts/services.en.md
+      - Jobs: docs/concepts/jobs.en.md
+      - Pipelines: docs/concepts/pipelines.en.md
+    - Credentials: docs/credentials.en.md
+    - Manifest:
+      - Overview: docs/manifest/overview.en.md
+      - Backend Service: docs/manifest/backend-service.en.md
+      - Load Balanced Web Service: docs/manifest/lb-web-service.en.md
+      - Request-Driven Web Service: docs/manifest/rd-web-service.en.md
+      - Scheduled Job: docs/manifest/scheduled-job.en.md
+      - Worker Service: docs/manifest/worker-service.en.md
+      - Pipeline: docs/manifest/pipeline.en.md
+    - Developing:
+      - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
+      - Container Environment Variables: docs/developing/environment-variables.en.md
+      - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
+      - Domain: docs/developing/domain.en.md
+      - Internal Load Balancers: docs/developing/internal-albs.en.md
+      - Manifest Environment Variables: docs/developing/manifest-env-var.en.md
+      - Observability: docs/developing/observability.en.md
+      - Publish/Subscribe: docs/developing/publish-subscribe.en.md
+      - Secrets: docs/developing/secrets.en.md
+      - Service Discovery: docs/developing/service-discovery.en.md
+      - Sidecars: docs/developing/sidecars.en.md
+      - Storage: docs/developing/storage.en.md
+      - Task Definition Overrides: docs/developing/taskdef-overrides.en.md
+    - Commands:
       - Getting Started:
-          - Install Copilot: docs/getting-started/install.en.md
-          - (Optional) Verify the installation: docs/getting-started/verify.en.md
-          - Deploy your first application: docs/getting-started/first-app-tutorial.en.md
-      - Concepts:
-          - Overview: docs/concepts/overview.en.md
-          - Applications: docs/concepts/applications.en.md
-          - Environments: docs/concepts/environments.en.md
-          - Services: docs/concepts/services.en.md
-          - Jobs: docs/concepts/jobs.en.md
-          - Pipelines: docs/concepts/pipelines.en.md
-      - Credentials: docs/credentials.en.md
-      - Manifest:
-          - Overview: docs/manifest/overview.en.md
-          - Backend Service: docs/manifest/backend-service.en.md
-          - Load Balanced Web Service: docs/manifest/lb-web-service.en.md
-          - Request-Driven Web Service: docs/manifest/rd-web-service.en.md
-          - Scheduled Job: docs/manifest/scheduled-job.en.md
-          - Worker Service: docs/manifest/worker-service.en.md
-          - Pipeline: docs/manifest/pipeline.en.md
-      - Developing:
-          - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
-          - Container Environment Variables: docs/developing/environment-variables.en.md
-          - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
-          - Domain: docs/developing/domain.en.md
-          - Manifest Environment Variables: docs/developing/manifest-env-var.en.md
-          - Observability: docs/developing/observability.en.md
-          - Publish/Subscribe: docs/developing/publish-subscribe.en.md
-          - Secrets: docs/developing/secrets.en.md
-          - Service Discovery: docs/developing/service-discovery.en.md
-          - Sidecars: docs/developing/sidecars.en.md
-          - Storage: docs/developing/storage.en.md
-          - Task Definition Overrides: docs/developing/taskdef-overrides.en.md
-      - Commands:
-          - Getting Started:
-              - docs: docs/commands/docs.en.md
-              - init: docs/commands/init.en.md
-          - Build:
-              - app init: docs/commands/app-init.en.md
-              - app upgrade: docs/commands/app-upgrade.en.md
-              - app delete: docs/commands/app-delete.en.md
-              - env init: docs/commands/env-init.en.md
-              - env delete: docs/commands/env-delete.en.md
-              - job init: docs/commands/job-init.en.md
-              - job package: docs/commands/job-package.en.md
-              - job deploy: docs/commands/job-deploy.en.md
-              - job delete: docs/commands/job-delete.en.md
-              - svc init: docs/commands/svc-init.en.md
-              - svc package: docs/commands/svc-package.en.md
-              - svc deploy: docs/commands/svc-deploy.en.md
-              - svc delete: docs/commands/svc-delete.en.md
-          - Release:
-              - pipeline init: docs/commands/pipeline-init.en.md
-              - pipeline deploy: docs/commands/pipeline-deploy.en.md
-              - pipeline ls: docs/commands/pipeline-ls.en.md
-              - pipeline show: docs/commands/pipeline-show.en.md
-              - pipeline status: docs/commands/pipeline-status.en.md
-              - pipeline delete: docs/commands/pipeline-delete.en.md
-              - deploy: docs/commands/deploy.en.md
-          - Operate:
-              - app ls: docs/commands/app-ls.en.md
-              - app show: docs/commands/app-show.en.md
-              - env ls: docs/commands/env-ls.en.md
-              - env show: docs/commands/env-show.en.md
-              - job ls: docs/commands/job-ls.en.md
-              - svc ls: docs/commands/svc-ls.en.md
-              - svc show: docs/commands/svc-show.en.md
-              - svc status: docs/commands/svc-status.en.md
-              - svc logs: docs/commands/svc-logs.en.md
-              - svc exec: docs/commands/svc-exec.en.md
-              - task run: docs/commands/task-run.en.md
-              - task exec: docs/commands/task-exec.en.md
-              - task delete: docs/commands/task-delete.en.md
-          - Extend:
-              - secret init: docs/commands/secret-init.en.md
-              - storage init: docs/commands/storage-init.en.md
-          - Settings:
-              - version: docs/commands/version.en.md
-              - completion: docs/commands/completion.en.md
-          - All:
-              - app delete: docs/commands/app-delete.en.md
-              - app init: docs/commands/app-init.en.md
-              - app ls: docs/commands/app-ls.en.md
-              - app show: docs/commands/app-show.en.md
-              - app upgrade: docs/commands/app-upgrade.en.md
-              - completion: docs/commands/completion.en.md
-              - docs: docs/commands/docs.en.md
-              - env delete: docs/commands/env-delete.en.md
-              - env init: docs/commands/env-init.en.md
-              - env ls: docs/commands/env-ls.en.md
-              - env show: docs/commands/env-show.en.md
-              - init: docs/commands/init.en.md
-              - job delete: docs/commands/job-delete.en.md
-              - job deploy: docs/commands/job-deploy.en.md
-              - job init: docs/commands/job-init.en.md
-              - job ls: docs/commands/job-ls.en.md
-              - job package: docs/commands/job-package.en.md
-              - pipeline delete: docs/commands/pipeline-delete.en.md
-              - pipeline deploy: docs/commands/pipeline-deploy.en.md
-              - pipeline init: docs/commands/pipeline-init.en.md
-              - pipeline ls: docs/commands/pipeline-ls.en.md
-              - pipeline show: docs/commands/pipeline-show.en.md
-              - pipeline status: docs/commands/pipeline-status.en.md
-              - secret init: docs/commands/secret-init.en.md
-              - storage init: docs/commands/storage-init.en.md
-              - svc delete: docs/commands/svc-delete.en.md
-              - svc deploy: docs/commands/svc-deploy.en.md
-              - svc exec: docs/commands/svc-exec.en.md
-              - svc init: docs/commands/svc-init.en.md
-              - svc logs: docs/commands/svc-logs.en.md
-              - svc ls: docs/commands/svc-ls.en.md
-              - svc package: docs/commands/svc-package.en.md
-              - svc show: docs/commands/svc-show.en.md
-              - svc status: docs/commands/svc-status.en.md
-              - svc pause: docs/commands/svc-pause.en.md
-              - svc resume: docs/commands/svc-resume.en.md
-              - task delete: docs/commands/task-delete.en.md
-              - task exec: docs/commands/task-exec.en.md
-              - task run: docs/commands/task-run.en.md
-              - version: docs/commands/version.en.md
+        - docs: docs/commands/docs.en.md
+        - init: docs/commands/init.en.md
+      - Build:
+        - app init: docs/commands/app-init.en.md
+        - app upgrade: docs/commands/app-upgrade.en.md
+        - app delete: docs/commands/app-delete.en.md
+        - env init: docs/commands/env-init.en.md
+        - env delete: docs/commands/env-delete.en.md
+        - job init: docs/commands/job-init.en.md
+        - job package: docs/commands/job-package.en.md
+        - job deploy: docs/commands/job-deploy.en.md
+        - job delete: docs/commands/job-delete.en.md
+        - svc init: docs/commands/svc-init.en.md
+        - svc package: docs/commands/svc-package.en.md
+        - svc deploy: docs/commands/svc-deploy.en.md
+        - svc delete: docs/commands/svc-delete.en.md
+      - Release:
+        - pipeline init: docs/commands/pipeline-init.en.md
+        - pipeline deploy: docs/commands/pipeline-deploy.en.md
+        - pipeline ls: docs/commands/pipeline-ls.en.md
+        - pipeline show: docs/commands/pipeline-show.en.md
+        - pipeline status: docs/commands/pipeline-status.en.md
+        - pipeline delete: docs/commands/pipeline-delete.en.md
+        - deploy: docs/commands/deploy.en.md
+      - Operate:
+        - app ls: docs/commands/app-ls.en.md
+        - app show: docs/commands/app-show.en.md
+        - env ls: docs/commands/env-ls.en.md
+        - env show: docs/commands/env-show.en.md
+        - job ls: docs/commands/job-ls.en.md
+        - svc ls: docs/commands/svc-ls.en.md
+        - svc show: docs/commands/svc-show.en.md
+        - svc status: docs/commands/svc-status.en.md
+        - svc logs: docs/commands/svc-logs.en.md
+        - svc exec: docs/commands/svc-exec.en.md
+        - task run: docs/commands/task-run.en.md
+        - task exec: docs/commands/task-exec.en.md
+        - task delete: docs/commands/task-delete.en.md
+      - Extend:
+        - secret init: docs/commands/secret-init.en.md
+        - storage init: docs/commands/storage-init.en.md
+      - Settings:
+        - version: docs/commands/version.en.md
+        - completion: docs/commands/completion.en.md
+      - All:
+        - app delete: docs/commands/app-delete.en.md
+        - app init: docs/commands/app-init.en.md
+        - app ls: docs/commands/app-ls.en.md
+        - app show: docs/commands/app-show.en.md
+        - app upgrade: docs/commands/app-upgrade.en.md
+        - completion: docs/commands/completion.en.md
+        - docs: docs/commands/docs.en.md
+        - env delete: docs/commands/env-delete.en.md
+        - env init: docs/commands/env-init.en.md
+        - env ls: docs/commands/env-ls.en.md
+        - env show: docs/commands/env-show.en.md
+        - init: docs/commands/init.en.md
+        - job delete: docs/commands/job-delete.en.md
+        - job deploy: docs/commands/job-deploy.en.md
+        - job init: docs/commands/job-init.en.md
+        - job ls: docs/commands/job-ls.en.md
+        - job package: docs/commands/job-package.en.md
+        - pipeline delete: docs/commands/pipeline-delete.en.md
+        - pipeline deploy: docs/commands/pipeline-deploy.en.md
+        - pipeline init: docs/commands/pipeline-init.en.md
+        - pipeline ls: docs/commands/pipeline-ls.en.md
+        - pipeline show: docs/commands/pipeline-show.en.md
+        - pipeline status: docs/commands/pipeline-status.en.md
+        - secret init: docs/commands/secret-init.en.md
+        - storage init: docs/commands/storage-init.en.md
+        - svc delete: docs/commands/svc-delete.en.md
+        - svc deploy: docs/commands/svc-deploy.en.md
+        - svc exec: docs/commands/svc-exec.en.md
+        - svc init: docs/commands/svc-init.en.md
+        - svc logs: docs/commands/svc-logs.en.md
+        - svc ls: docs/commands/svc-ls.en.md
+        - svc package: docs/commands/svc-package.en.md
+        - svc show: docs/commands/svc-show.en.md
+        - svc status: docs/commands/svc-status.en.md
+        - svc pause: docs/commands/svc-pause.en.md
+        - svc resume: docs/commands/svc-resume.en.md
+        - task delete: docs/commands/task-delete.en.md
+        - task exec: docs/commands/task-exec.en.md
+        - task run: docs/commands/task-run.en.md
+        - version: docs/commands/version.en.md
   - Blogs:
       - AWS App Runner VPC: blogs/apprunner-vpc.en.md
+      - Release v1.19: blogs/release-v119.en.md
       - Release v1.18: blogs/release-v118.en.md
       - Release v1.17: blogs/release-v117.en.md
       - Release v1.16: blogs/release-v116.en.md
@@ -182,18 +184,18 @@ markdown_extensions:
           - site/overrides/.icons
 
 plugins:
-  - search
-  - redirects:
-      redirect_maps:
-        "docs/installing.md": "docs/getting-started/install.en.md"
-        "docs/getting-started.md": "docs/getting-started/first-app-tutorial.en.md"
-        "docs/commands/pipeline-update.en.md": "docs/commands/pipeline-deploy.en.md"
-        "docs/commands/pipeline-update.ja.md": "docs/commands/pipeline-deploy.ja.md"
-  - i18n:
-      default_language: en
-      languages:
-        en: english
-        ja: japanese
-      material_alternate: false
-  - macros:
-      include_dir: site/content/docs/include
+    - search
+    - redirects:
+        redirect_maps:
+            'docs/installing.md': 'docs/getting-started/install.en.md'
+            'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
+            'docs/commands/pipeline-update.en.md': 'docs/commands/pipeline-deploy.en.md'
+            'docs/commands/pipeline-update.ja.md': 'docs/commands/pipeline-deploy.ja.md'
+    - i18n:
+        default_language: en
+        languages:
+          en: english
+          ja: japanese
+        material_alternate: false
+    - macros:
+        include_dir: site/content/docs/include

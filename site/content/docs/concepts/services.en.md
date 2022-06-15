@@ -49,7 +49,7 @@ Below is a diagram for a Load Balanced Web Service that involves an Application 
 ![lb-web-service-infra](https://user-images.githubusercontent.com/879348/86045951-39762880-ba01-11ea-9a47-fc9278600154.png)
 
 ### Backend Service
-If you want a service that can't be accessed externally, but only from other services within your application, you can create a __Backend Service__. Copilot will provision an ECS Service running on AWS Fargate, but won't set up any internet-facing endpoints.
+If you want a service that can't be accessed externally, but only from other services within your application, you can create a __Backend Service__. Copilot will provision an ECS Service running on AWS Fargate, but won't set up any internet-facing endpoints. To learn about creating Backend Services with internal load balancers, go [here](../developing/internal-albs.en.md).
 
 ![backend-service-infra](https://user-images.githubusercontent.com/879348/86046929-e8673400-ba02-11ea-8676-addd6042e517.png)
 

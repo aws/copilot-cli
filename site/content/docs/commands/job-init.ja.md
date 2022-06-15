@@ -1,5 +1,5 @@
 # job init
-```bash
+```console
 $ copilot job init
 ```
 
@@ -13,7 +13,7 @@ $ copilot job init
 
 ## フラグ
 
-```bash
+```
   -a, --app string          Name of the application.
   -d, --dockerfile string   Path to the Dockerfile.
                             Mutually exclusive with -i, --image.
@@ -36,10 +36,10 @@ $ copilot job init
 ## 実行例
 
 1 日 1 回実行される "reaper" という名前のスケジュールされたタスクを作成します。
-```bash
+```console
 $ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --schedule "@daily"
 ```
 リトライ回数を指定した "report-generator" という名前のスケジュールされたタスクを作成します。
-```bash
+```console
 $ copilot job init --name report-generator --schedule "@monthly" --retries 3 --timeout 900s
 ```

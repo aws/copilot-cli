@@ -45,10 +45,10 @@ Conditions:
     !Not [!Equals [ !Ref AppDNSName, "" ]]
   ExportHTTPSListener: !And
     - !Condition CreateALB
-    - !Equals [!Ref CreateHTTPSListener, true]
+    - !Equals [ !Ref CreateHTTPSListener, true ]
   ExportInternalHTTPSListener: !And
     - !Condition CreateInternalALB
-    - !Equals [!Ref CreateInternalHTTPSListener, true]
+    - !Equals [ !Ref CreateInternalHTTPSListener, true ]
   CreateEFS:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
@@ -83,10 +83,10 @@ Resources:
       Configuration:
         ExecuteCommandConfiguration:
           Logging: DEFAULT
-{{- if and .Telemetry .Telemetry.EnableContainerInsights}}
+{{- if .Telemetry}}
       ClusterSettings:
         - Name: containerInsights
-          {{- if .Telemetry.ContainerInsightsEnabled}}
+          {{- if .Telemetry.EnableContainerInsights}}
           Value: enabled
           {{- else}}
           Value: disabled
@@ -179,6 +179,32 @@ Resources:
       GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+{{- if .AllowVPCIngress }}
+  InternalLoadBalancerSecurityGroupIngressFromHttp:
+    Metadata:
+      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80 within the VPC'
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateInternalALB
+    Properties:
+      Description: Allow from within the VPC on port 80
+      CidrIp: 0.0.0.0/0
+      FromPort: 80
+      ToPort: 80
+      IpProtocol: tcp
+      GroupId: !Ref InternalLoadBalancerSecurityGroup
+  InternalLoadBalancerSecurityGroupIngressFromHttps:
+    Metadata:
+      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 443 within the VPC'
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: ExportInternalHTTPSListener
+    Properties:
+      Description: Allow from within the VPC on port 443
+      CidrIp: 0.0.0.0/0
+      FromPort: 443
+      ToPort: 443
+      IpProtocol: tcp
+      GroupId: !Ref InternalLoadBalancerSecurityGroup
+{{- end}}
   PublicLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'

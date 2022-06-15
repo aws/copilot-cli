@@ -3892,6 +3892,20 @@ func (mr *MocktaskRunnerMockRecorder) Run() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MocktaskRunner)(nil).Run))
 }
 
+// CheckNonZeroExitCode mocks base method.
+func (m *MocktaskRunner) CheckNonZeroExitCode(tasks []*task.Task) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckNonZeroExitCode", tasks)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckNonZeroExitCode indicates an expected call of CheckNonZeroExitCode.
+func (mr *MocktaskRunnerMockRecorder) CheckNonZeroExitCode(tasks []*task.Task) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckNonZeroExitCode", reflect.TypeOf((*MocktaskRunner)(nil).CheckNonZeroExitCode), tasks)
+}
+
 // MockdefaultClusterGetter is a mock of defaultClusterGetter interface.
 type MockdefaultClusterGetter struct {
 	ctrl     *gomock.Controller
@@ -4457,6 +4471,59 @@ func (m *MockenvDescriber) PublicCIDRBlocks() ([]string, error) {
 func (mr *MockenvDescriberMockRecorder) PublicCIDRBlocks() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicCIDRBlocks", reflect.TypeOf((*MockenvDescriber)(nil).PublicCIDRBlocks))
+}
+
+// MockversionCompatibilityChecker is a mock of versionCompatibilityChecker interface.
+type MockversionCompatibilityChecker struct {
+	ctrl     *gomock.Controller
+	recorder *MockversionCompatibilityCheckerMockRecorder
+}
+
+// MockversionCompatibilityCheckerMockRecorder is the mock recorder for MockversionCompatibilityChecker.
+type MockversionCompatibilityCheckerMockRecorder struct {
+	mock *MockversionCompatibilityChecker
+}
+
+// NewMockversionCompatibilityChecker creates a new mock instance.
+func NewMockversionCompatibilityChecker(ctrl *gomock.Controller) *MockversionCompatibilityChecker {
+	mock := &MockversionCompatibilityChecker{ctrl: ctrl}
+	mock.recorder = &MockversionCompatibilityCheckerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockversionCompatibilityChecker) EXPECT() *MockversionCompatibilityCheckerMockRecorder {
+	return m.recorder
+}
+
+// AvailableFeatures mocks base method.
+func (m *MockversionCompatibilityChecker) AvailableFeatures() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AvailableFeatures")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AvailableFeatures indicates an expected call of AvailableFeatures.
+func (mr *MockversionCompatibilityCheckerMockRecorder) AvailableFeatures() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AvailableFeatures", reflect.TypeOf((*MockversionCompatibilityChecker)(nil).AvailableFeatures))
+}
+
+// Version mocks base method.
+func (m *MockversionCompatibilityChecker) Version() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Version")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Version indicates an expected call of Version.
+func (mr *MockversionCompatibilityCheckerMockRecorder) Version() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionCompatibilityChecker)(nil).Version))
 }
 
 // MockversionGetter is a mock of versionGetter interface.

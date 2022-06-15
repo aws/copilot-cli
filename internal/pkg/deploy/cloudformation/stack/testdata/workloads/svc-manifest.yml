@@ -27,7 +27,10 @@ memory: 512
 # Number of tasks that should be running in your service.
 count:
   range: 2-10
-  cpu_percentage: 70
+  cpu_percentage:
+    value: 70
+    cooldown:
+      out: 2m30s 
 storage:
   volumes:
     persistence:
@@ -50,6 +53,7 @@ environments:
     count:
       spot: 5
     http:
+      hosted_zone: mockHostedZone
       healthcheck:
         path: /
         grace_period: 30s
@@ -60,6 +64,9 @@ environments:
         min: 3
         max: 12
         spot_from: 6
+      cooldown:
+        in: 30s
+        out: 1m30s
     logging:
       retention: 1
       destination:
@@ -80,4 +87,7 @@ environments:
         healthcheck:
           command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
           interval: 10s
-
+      operation:
+        image: "alpine:latest"
+        command: ["echo", "$COPILOT_APPLICATION_NAME"]
+      

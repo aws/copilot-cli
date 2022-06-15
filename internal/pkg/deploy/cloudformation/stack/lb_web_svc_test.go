@@ -119,7 +119,12 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	testLBWebServiceManifest.ImageConfig.HealthCheck = manifest.ContainerHealthCheck{
 		Retries: aws.Int(5),
 	}
-	testLBWebServiceManifest.RoutingRule.Alias = manifest.Alias{String: aws.String("mockAlias")}
+	testLBWebServiceManifest.RoutingRule.Alias = manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
+		{
+			Alias:      aws.String("mockAlias"),
+			HostedZone: aws.String("mockHostedZone"),
+		},
+	}}
 	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
 		String:      nil,
 		StringSlice: []string{"/bin/echo", "hello"},
@@ -130,6 +135,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
+		noImportedCerts  bool
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
 		wantedTemplate   string
 		wantedError      error
@@ -188,6 +194,21 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("parse addons parameters for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
 		},
+		"failed if hosted zone is set without imported certs": {
+			noImportedCerts: true,
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
+				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
+				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
+				c.parser = m
+				c.wkld.addons = addons
+			},
+
+			wantedTemplate: "",
+			wantedError:    fmt.Errorf("cannot specify alias hosted zones when env certificates are managed by Copilot"),
+		},
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
 				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
@@ -217,29 +238,39 @@ Outputs:
 				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
-					WorkloadType: manifest.LoadBalancedWebServiceType,
-					HTTPHealthCheck: template.HTTPHealthCheckOpts{
-						HealthCheckPath: "/",
-						GracePeriod:     aws.Int64(60),
-					},
-					DeregistrationDelay: aws.Int64(60),
-					HealthCheck:         &overridenContainerHealthCheck,
-					RulePriorityLambda:  "lambda",
-					DesiredCountLambda:  "something",
-					EnvControllerLambda: "something",
-					Network: template.NetworkOpts{
-						AssignPublicIP: template.EnablePublicIP,
-						SubnetsType:    template.PublicSubnetsPlacement,
-					},
-					DeploymentConfiguration: template.DeploymentConfigurationOpts{
-						MinHealthyPercent: 100,
-						MaxPercent:        200,
-					},
-					EntryPoint: []string{"/bin/echo", "hello"},
-					Command:    []string{"world"},
-					ALBEnabled: true,
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						WorkloadType: manifest.LoadBalancedWebServiceType,
+						HTTPHealthCheck: template.HTTPHealthCheckOpts{
+							HealthCheckPath: "/",
+							GracePeriod:     aws.Int64(60),
+						},
+						UseImportedCerts: true,
+						HostedZoneAliases: template.AliasesForHostedZone{
+							"mockHostedZone": []string{"mockAlias"},
+						},
+						Aliases:             []string{"mockAlias"},
+						HTTPSListener:       true,
+						DeregistrationDelay: aws.Int64(60),
+						HealthCheck:         &overridenContainerHealthCheck,
+						CustomResources:     make(map[string]template.S3ObjectLocation),
+						RulePriorityLambda:  "lambda",
+						DesiredCountLambda:  "something",
+						EnvControllerLambda: "something",
+						Network: template.NetworkOpts{
+							AssignPublicIP: template.EnablePublicIP,
+							SubnetsType:    template.PublicSubnetsPlacement,
+						},
+						DeploymentConfiguration: template.DeploymentConfigurationOpts{
+							MinHealthyPercent: 100,
+							MaxPercent:        200,
+						},
+						EntryPoint: []string{"/bin/echo", "hello"},
+						Command:    []string{"world"},
+						ALBEnabled: true,
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
 				c.parser = m
@@ -254,36 +285,46 @@ Outputs:
 				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("lambda")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseLoadBalancedWebService(template.WorkloadOpts{
-					NestedStack: &template.WorkloadNestedStackOpts{
-						StackName:       addon.StackName,
-						VariableOutputs: []string{"Hello"},
-						SecretOutputs:   []string{"MySecretArn"},
-						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
-					},
-					AddonsExtraParams: "ServiceName: !GetAtt Service.Name",
-					WorkloadType:      manifest.LoadBalancedWebServiceType,
-					HTTPHealthCheck: template.HTTPHealthCheckOpts{
-						HealthCheckPath: "/",
-						GracePeriod:     aws.Int64(60),
-					},
-					DeregistrationDelay: aws.Int64(60),
-					HealthCheck:         &overridenContainerHealthCheck,
-					RulePriorityLambda:  "lambda",
-					DesiredCountLambda:  "something",
-					EnvControllerLambda: "something",
-					Network: template.NetworkOpts{
-						AssignPublicIP: template.EnablePublicIP,
-						SubnetsType:    template.PublicSubnetsPlacement,
-					},
-					DeploymentConfiguration: template.DeploymentConfigurationOpts{
-						MinHealthyPercent: 100,
-						MaxPercent:        200,
-					},
-					EntryPoint: []string{"/bin/echo", "hello"},
-					Command:    []string{"world"},
-					ALBEnabled: true,
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						NestedStack: &template.WorkloadNestedStackOpts{
+							StackName:       addon.StackName,
+							VariableOutputs: []string{"Hello"},
+							SecretOutputs:   []string{"MySecretArn"},
+							PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
+						},
+						UseImportedCerts: true,
+						HostedZoneAliases: template.AliasesForHostedZone{
+							"mockHostedZone": []string{"mockAlias"},
+						},
+						Aliases:           []string{"mockAlias"},
+						HTTPSListener:     true,
+						AddonsExtraParams: "ServiceName: !GetAtt Service.Name",
+						WorkloadType:      manifest.LoadBalancedWebServiceType,
+						HTTPHealthCheck: template.HTTPHealthCheckOpts{
+							HealthCheckPath: "/",
+							GracePeriod:     aws.Int64(60),
+						},
+						DeregistrationDelay: aws.Int64(60),
+						HealthCheck:         &overridenContainerHealthCheck,
+						CustomResources:     make(map[string]template.S3ObjectLocation),
+						RulePriorityLambda:  "lambda",
+						DesiredCountLambda:  "something",
+						EnvControllerLambda: "something",
+						Network: template.NetworkOpts{
+							AssignPublicIP: template.EnablePublicIP,
+							SubnetsType:    template.PublicSubnetsPlacement,
+						},
+						DeploymentConfiguration: template.DeploymentConfigurationOpts{
+							MinHealthyPercent: 100,
+							MaxPercent:        200,
+						},
+						EntryPoint: []string{"/bin/echo", "hello"},
+						Command:    []string{"world"},
+						ALBEnabled: true,
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 				addons := mockAddons{
 					tpl: `Resources:
   AdditionalResourcesPolicy:
@@ -341,7 +382,9 @@ Outputs:
 					},
 					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
-				manifest: testLBWebServiceManifest,
+				certImported: !tc.noImportedCerts,
+				httpsEnabled: true,
+				manifest:     testLBWebServiceManifest,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 
@@ -717,7 +760,10 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.NLBConfig = manifest.NetworkLoadBalancerConfiguration{
 					Aliases: manifest.Alias{
-						StringSlice: []string{"example.com", "v1.example.com"},
+						AdvancedAliases: []manifest.AdvancedAlias{
+							{Alias: aws.String("example.com")},
+							{Alias: aws.String("v1.example.com")},
+						},
 					},
 					Port: aws.String("443/tcp"),
 				}

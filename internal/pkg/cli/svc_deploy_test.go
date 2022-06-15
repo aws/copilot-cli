@@ -8,13 +8,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 )
 
 func TestSvcDeployOpts_Validate(t *testing.T) {
@@ -239,7 +240,75 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 	}
 }
 
-type mockWorkloadMft struct{}
+type checkEnvironmentCompatibilityMocks struct {
+	versionFeatureGetter            *mocks.MockversionCompatibilityChecker
+	requiredEnvironmentFeaturesFunc func() []string
+}
+
+func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
+	testCases := map[string]struct {
+		setupMock    func(m *checkEnvironmentCompatibilityMocks)
+		mockManifest *mockWorkloadMft
+		wantedError  error
+	}{
+		"error getting environment available features": {
+			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
+				m.versionFeatureGetter.EXPECT().AvailableFeatures().Return(nil, errors.New("some error"))
+				m.requiredEnvironmentFeaturesFunc = func() []string {
+					return nil
+				}
+			},
+			wantedError: errors.New("get available features of the mockEnv environment stack: some error"),
+		},
+		"not compatible": {
+			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
+				m.versionFeatureGetter.EXPECT().AvailableFeatures().Return([]string{template.ALBFeatureName}, nil)
+				m.versionFeatureGetter.EXPECT().Version().Return("mockVersion", nil)
+				m.requiredEnvironmentFeaturesFunc = func() []string {
+					return []string{template.InternalALBFeatureName}
+				}
+			},
+			wantedError: errors.New(`environment "mockEnv" is not on a version that supports the "Internal ALB" feature`),
+		},
+		"compatible": {
+			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
+				m.versionFeatureGetter.EXPECT().AvailableFeatures().Return([]string{template.ALBFeatureName, template.InternalALBFeatureName}, nil)
+				m.requiredEnvironmentFeaturesFunc = func() []string {
+					return []string{template.InternalALBFeatureName}
+				}
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := &checkEnvironmentCompatibilityMocks{
+				versionFeatureGetter: mocks.NewMockversionCompatibilityChecker(ctrl),
+			}
+			tc.setupMock(m)
+			mockManifest := &mockWorkloadMft{
+				mockRequiredEnvironmentFeatures: m.requiredEnvironmentFeaturesFunc,
+			}
+
+			// WHEN
+			err := isManifestCompatibleWithEnvironment(mockManifest, "mockEnv", m.versionFeatureGetter)
+
+			// THEN
+			if tc.wantedError == nil {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tc.wantedError.Error())
+			}
+		})
+	}
+}
+
+type mockWorkloadMft struct {
+	mockRequiredEnvironmentFeatures func() []string
+}
 
 func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, error) {
 	return m, nil
@@ -247,4 +316,8 @@ func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, e
 
 func (m *mockWorkloadMft) Validate() error {
 	return nil
+}
+
+func (m *mockWorkloadMft) RequiredEnvironmentFeatures() []string {
+	return m.mockRequiredEnvironmentFeatures()
 }

@@ -1,5 +1,5 @@
 # env show
-```bash
+```console
 $ copilot env show [flags]
 ```
 
@@ -14,7 +14,7 @@ $ copilot env show [flags]
 You can optionally pass in a `--resources` flag which will include the AWS resources associated specifically with the environment. 
 
 ## What are the flags?
-```bash
+```
 -a, --app string    Name of the application.
 -h, --help          help for show
     --json          Optional. Outputs in JSON format.
@@ -25,6 +25,6 @@ You can use the `--json` flag if you'd like to programmatically parse the result
 
 ## Examples
 Shows info about the environment "test".
-```bash
+```console
 $ copilot env show -n test
 ```

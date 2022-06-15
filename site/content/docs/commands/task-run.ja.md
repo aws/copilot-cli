@@ -1,5 +1,5 @@
 # task run
-```
+```console
 $ copilot task run
 ```
 
@@ -77,36 +77,36 @@ Utility Flags
 ## 実行例
 ローカルの Dockerfile を使用してタスクを実行し、タスクの実行後はログストリームを表示します。
 コマンド実行後には質問が表示されますので、タスクを実行する Environment を指定します。
-```
+```console
 $ copilot task run --follow
 ```
 
 現在のワークスペース配下の "test" Environment で、"db-migrate" という名前のタスクを実行します。
-```
+```console
 $ copilot task run -n db-migrate --env test --follow
 ```
 
 2GB のメモリ、既存のイメージ、およびカスタムタスクロールを使用して 4 つのタスクを実行します。
-```
+```console
 $ copilot task run --count 4 --memory 2048 --image=rds-migrate --task-role migrate-role --follow
 ```
 
 環境変数を使用してタスクを実行します。
-```
+```console
 $ copilot task run --env-vars name=myName,user=myUser
 ```
 
 指定したサブネットとセキュリティグループを使用して、現在のワークスペース配下でタスクを実行します。
-```
+```console
 $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
 ```
 
 コマンドを指定してタスクを実行します。
-```
+```console
 $ copilot task run --command "python migrate-script.py"
 ```
 
 Windows タスクを最小のCPUとメモリで実行します。 
-```
+```console
 $ copilot task run --platform-os WINDOWS_SERVER_2019_CORE --platform-arch X86_64 --cpu 1024 --memory 2048
 ```

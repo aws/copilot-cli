@@ -384,6 +384,7 @@ type taskStackManager interface {
 
 type taskRunner interface {
 	Run() ([]*task.Task, error)
+	CheckNonZeroExitCode([]*task.Task) error
 }
 
 type defaultClusterGetter interface {
@@ -418,6 +419,11 @@ type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 	PublicCIDRBlocks() ([]string, error)
 	Manifest() ([]byte, error)
+}
+
+type versionCompatibilityChecker interface {
+	versionGetter
+	AvailableFeatures() ([]string, error)
 }
 
 type versionGetter interface {

@@ -1,5 +1,5 @@
 # svc resume
-```bash
+```console
 $ copilot svc resume [flags]
 ```
 
@@ -12,7 +12,7 @@ $ copilot svc resume [flags]
 
 ## What are the flags?
 
-```bash
+```
   -a, --app string    Name of the application.
   -e, --env string    Name of the environment.
   -h, --help          help for resume
@@ -21,6 +21,6 @@ $ copilot svc resume [flags]
 
 ## Examples
 Resume paused App Runner service "my-svc".
-```
+```console
 $ copilot svc resume -n my-svc
 ```

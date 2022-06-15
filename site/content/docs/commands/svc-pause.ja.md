@@ -1,5 +1,5 @@
 # svc pause
-```bash
+```console
 $ copilot svc pause [flags]
 ```
 
@@ -12,7 +12,7 @@ $ copilot svc pause [flags]
 
 ## フラグ
 
-```bash
+```
   -a, --app string    Name of the application.
   -e, --env string    Name of the environment.
   -h, --help          help for pause
@@ -23,6 +23,6 @@ $ copilot svc pause [flags]
 ## 実行例
 
 実行中の App Runner サービス、"my-svc" を一時停止します。
-```
+```console
 $ copilot svc pause -n my-svc
 ```

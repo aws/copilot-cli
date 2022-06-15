@@ -1,5 +1,5 @@
 # version
-```
+```console
 $ copilot version [flags]
 ```
 
@@ -7,6 +7,6 @@ $ copilot version [flags]
 `copilot version` Copilot CLI のバージョンと、ビルドのターゲットオペレーティングシステムを表示します。
 
 ## フラグ
-```bash
+```
 -h, --help   help for version
 ```

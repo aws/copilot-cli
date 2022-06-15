@@ -1,5 +1,5 @@
 # secret init
-```
+```console
 $ copilot secret init
 ```
 
@@ -25,16 +25,16 @@ $ copilot secret init
 ```
 ## 使用例
 インタラクティブにシークレットを作成します。コマンドを実行すると、シークレットの名前、そして各 Environment ごとの値を尋ねられます。
-```
+```console
 $ copilot secret init
 ```
 
 `db_password` という名前のシークレットを複数の Environment に作成します。コマンドを実行すると、各 Environment ごとの `db_password` の値を尋ねられます。
-```
+```console
 $ copilot secret init --name db_password
 ```
 `input.yml` からシークレットを作成します。YAML ファイルのフォーマットは<a href="#secret-init-cli-input-yaml">ページ下部</a>をご覧ください。
-```
+```console
 $ copilot secret init --cli-input-yaml input.yml
 ```
 
