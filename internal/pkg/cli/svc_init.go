@@ -531,6 +531,21 @@ func (o *initSvcOpts) askSvcPort() (err error) {
 }
 
 func legitimizePlatform(engine dockerEngine, wkldType string) (manifest.PlatformString, error) {
+	if err := engine.CheckDockerEngineRunning(); err != nil {
+		// This is a best-effort attempt to detect the platform for users.
+		// If docker is not available, we skip this information.
+		var errDaemon *dockerengine.ErrDockerDaemonNotResponsive
+		switch {
+		case errors.Is(err, dockerengine.ErrDockerCommandNotFound):
+			log.Info("Docker command is not found; Copilot won't detect and populate the \"platform\" field in the manifest.\n")
+			return "", nil
+		case errors.As(err, &errDaemon):
+			log.Info("Docker daemon is not responsive; Copilot won't detect and populate the \"platform\" field in the manifest.\n")
+			return "", nil
+		default:
+			return "", fmt.Errorf("check if docker engine is running: %w", err)
+		}
+	}
 	detectedOs, detectedArch, err := engine.GetPlatform()
 	if err != nil {
 		return "", fmt.Errorf("get docker engine platform: %w", err)
