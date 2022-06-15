@@ -371,8 +371,7 @@ Resources:
     Type: AWS::Route53::RecordSetGroup
     Properties:
       Comment: !Sub "Load balancer alias for service ${WorkloadName}"
-      HostedZoneId:
-        Fn::ImportValue: !Sub "${AppName}-${EnvName}-InternalWorkloadsHostedZoneID"
+      HostedZoneId: !GetAtt EnvControllerAction.InternalWorkloadsHostedZone
       RecordSets:
         - Type: A
           AliasTarget:
@@ -381,7 +380,7 @@ Resources:
           Name: !Join
             - "."
             - - !Ref WorkloadName
-              - Fn::ImportValue: !Sub "${AppName}-${EnvName}-InternalWorkloadsHostedZoneName"
+              - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
   HTTPRulePriorityAction:
     Metadata:
       "aws:copilot:description": "A custom resource assigning priority for HTTP listener rules"
@@ -401,10 +400,11 @@ Resources:
         - Field: "host-header"
           HostHeaderConfig:
             Values:
+              - !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
               - !Join
                 - "."
                 - - !Ref WorkloadName
-                  - Fn::ImportValue: !Sub "${AppName}-${EnvName}-InternalWorkloadsHostedZoneName"
+                  - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
         - Field: "path-pattern"
           PathPatternConfig:
             Values: !If

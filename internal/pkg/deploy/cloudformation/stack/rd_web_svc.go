@@ -131,7 +131,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 	content, err := s.parser.ParseRequestDrivenWebService(template.WorkloadOpts{
-		AppName:              s.app.Name,
+		AppName:              s.wkld.app,
 		EnvName:              s.env,
 		WorkloadName:         s.name,
 		Variables:            s.manifest.Variables,
