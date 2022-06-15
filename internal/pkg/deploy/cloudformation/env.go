@@ -287,18 +287,11 @@ func (cf CloudFormation) transformParameters(
 	}
 
 	// Remove or transform each of the current parameters.
-	for k, p := range curr {
-		transformed := transform(p, old[k])
-		if transformed == nil {
-			delete(curr, k)
-		} else {
-			curr[k] = transformed
-		}
-	}
-
 	var params []*awscfn.Parameter
-	for _, param := range curr {
-		params = append(params, param)
+	for k, p := range curr {
+		if transformed := transform(p, old[k]); transformed != nil {
+			params = append(params, transformed)
+		}
 	}
 	return params, nil
 }
