@@ -134,14 +134,11 @@ func (cf CloudFormation) UpdateEnvironmentTemplate(appName, envName, templateBod
 
 // UpgradeEnvironment updates an environment stack's template to a newer version.
 func (cf CloudFormation) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) error {
-	return cf.upgradeEnvironment(in, func(new *awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
+	return cf.upgradeEnvironment(in, func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
 		// If a parameter exists in both the new template and the old template, use its previous value.
 		// Otherwise, keep the parameter untouched.
-		if new == nil {
-			return nil
-		}
 		if old == nil {
-			return new
+			return &new
 		}
 		// Use existing parameter values.
 		return &awscfn.Parameter{
@@ -157,13 +154,10 @@ func (cf CloudFormation) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) e
 // "IncludePublicLoadBalancer" parameter which has been deprecated in favor of the "ALBWorkloads".
 // UpgradeLegacyEnvironment does the necessary transformation to use the "ALBWorkloads" parameter instead.
 func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentInput, lbWebServices ...string) error {
-	return cf.upgradeEnvironment(in, func(new *awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
+	return cf.upgradeEnvironment(in, func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
 		// If a parameter exists in both the new template and the old template, use its previous value.
 		// Otherwise, if the parameter is `EnvParamALBWorkloadsKey` (currently "ALBWorkloads"), assign it a parameter value.
 		// Otherwise, keep the parameter untouched.
-		if new == nil {
-			return nil
-		}
 		if aws.StringValue(new.ParameterKey) == stack.EnvParamALBWorkloadsKey {
 			return &awscfn.Parameter{
 				ParameterKey:   aws.String(stack.EnvParamALBWorkloadsKey),
@@ -171,7 +165,7 @@ func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentIn
 			}
 		}
 		if old == nil {
-			return new
+			return &new
 		}
 		return &awscfn.Parameter{
 			ParameterKey:     new.ParameterKey,
@@ -180,7 +174,7 @@ func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentIn
 	})
 }
 
-func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, transformParam func(new *awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter) error {
+func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, transformParam func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter) error {
 	s, err := cf.environmentStack(in)
 	if err != nil {
 		return err
@@ -274,12 +268,12 @@ func (cf CloudFormation) waitAndDescribeStack(stackName string) (*cloudformation
 func (cf CloudFormation) transformParameters(
 	currParams []*awscfn.Parameter,
 	oldParams []*awscfn.Parameter,
-	transform func(new *awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter) ([]*awscfn.Parameter, error) {
+	transform func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter) ([]*awscfn.Parameter, error) {
 
 	// Make a map out of `currParams` and out of `oldParams`.
-	curr := make(map[string]*awscfn.Parameter)
+	curr := make(map[string]awscfn.Parameter)
 	for _, p := range currParams {
-		curr[aws.StringValue(p.ParameterKey)] = p
+		curr[aws.StringValue(p.ParameterKey)] = *p
 	}
 	old := make(map[string]*awscfn.Parameter)
 	for _, p := range oldParams {
@@ -300,12 +294,9 @@ func (cf CloudFormation) transformParameters(
 // 1. The parameter exists in the old template.
 // 2. The parameter is env-controller managed.
 // Otherwise, it returns the parameter untouched.
-func transformEnvControllerParameters(new *awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
-	if new == nil {
-		return nil
-	}
+func transformEnvControllerParameters(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
 	if old == nil {
-		return new
+		return &new
 	}
 
 	var (
@@ -316,7 +307,7 @@ func transformEnvControllerParameters(new *awscfn.Parameter, old *awscfn.Paramet
 		isEnvControllerManaged[f] = exists
 	}
 	if _, ok := isEnvControllerManaged[aws.StringValue(new.ParameterKey)]; !ok {
-		return new
+		return &new
 	}
 	return &awscfn.Parameter{
 		ParameterKey:     new.ParameterKey,
