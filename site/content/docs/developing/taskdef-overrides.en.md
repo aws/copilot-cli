@@ -17,7 +17,7 @@ taskdef_overrides:
 - path: ContainerDefinitions[0].Cpu
   value: 512
 - path: ContainerDefinitions[0].Memory
-   value: 1024
+  value: 1024
 ```
 
 Each rule is applied sequentially to the CloudFormation template. The resulting CloudFormation template becomes the target of the next rule. Evaluation continues until all rules are successfully applied or an error is encountered.
@@ -61,7 +61,7 @@ taskdef_overrides:
 taskdef_overrides:
   - path: "ContainerDefinitions[0].PortMappings[-].ContainerPort"
     value: 2056
-  // PortMappings[1] gets the port mapping added by the previous rule, since by default Copilot creates a port mapping.
+  # PortMappings[1] gets the port mapping added by the previous rule, since by default Copilot creates a port mapping.
   - path: "ContainerDefinitions[0].PortMappings[1].Protocol"
     value: "udp"
 ```

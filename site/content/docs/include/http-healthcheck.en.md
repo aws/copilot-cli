@@ -1,15 +1,4 @@
-<div class="separator"></div>
-
-<a id="http" href="#http" class="field">`http`</a> <span class="type">Boolean or Map</span>  
-The http section contains parameters related to integrating your service with an Application Load Balancer. 
-
-To disable the Application Load Balancer, specify `http: false`. Note that for a Load-Balanced Web Service,
-at least one of Application Load Balancer or Network Load Balancer must be enabled.
-
-<span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
-Requests to this path will be forwarded to your service. Each Load Balanced Web Service should listen on a unique path.
-
-<span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>  
+<span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>
 If you specify a string, Copilot interprets it as the path exposed in your container to handle target group health check requests. The default is "/".
 ```yaml
 http:
@@ -52,34 +41,3 @@ The amount of time, in seconds, during which no response from a target means a f
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-grace-period" href="#http-healthcheck-grace-period" class="field">`grace_period`</a> <span class="type">Duration</span>  
 The amount of time to ignore failing target group healthchecks on container start. The default is 60s. This can be useful to fix deployment issues for containers which take a while to become healthy and begin listening for incoming connections, or to speed up deployment of containers guaranteed to start quickly.
-
-<span class="parent-field">http.</span><a id="http-deregistration-delay" href="#http-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
-The amount of time to wait for targets to drain connections during deregistration. The default is 60s. Setting this to a larger value gives targets more time to gracefully drain connections, but increases the time required for new deployments. Range 0s-3600s.
-
-<span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
-A sidecar container that takes the place of a service container.
-
-<span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
-Indicates whether sticky sessions are enabled.
-
-<span class="parent-field">http.</span><a id="http-allowed-source-ips" href="#http-allowed-source-ips" class="field">`allowed_source_ips`</a> <span class="type">Array of Strings</span>  
-CIDR IP addresses permitted to access your service.
-```yaml
-http:
-  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
-```
-
-<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String or Array of Strings</span>  
-HTTPS domain alias of your service.
-```yaml
-# String version.
-http:
-  alias: example.com
-# Alteratively, as an array of strings.
-http:
-  alias: ["example.com", "v1.example.com"]
-```
-
-<span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
-The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. If omitted, then `'http1'` is assumed.    
-If using gRPC, please note that a domain must be associated with your application.

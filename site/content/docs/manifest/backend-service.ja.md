@@ -1,8 +1,6 @@
 以下は `'Backend Service'` Manifest で利用できるすべてのプロパティのリストです。[Copilot Service の概念](../concepts/services.ja.md)説明のページも合わせてご覧ください。
 
-<!-- textlint-disable ja-technical-writing/no-exclamation-question-mark, ja-technical-writing/ja-no-mixed-period -->
 ???+ note "api service のサンプル Manifest"
-<!-- textlint-enable ja-technical-writing/no-exclamation-question-mark, ja-technical-writing/ja-no-mixed-period -->
 
     ```yaml
         # Service 名はロググループや ECS サービスなどのリソースの命名に利用されます。
@@ -143,6 +141,8 @@ Service が保つべき平均メモリ使用率を指定し、それによって
 
 {% include 'exec.ja.md' %}
 
+{% include 'deployment.ja.md' %}
+
 {% include 'entrypoint.ja.md' %}
 
 {% include 'command.ja.md' %}
@@ -158,6 +158,8 @@ Service が保つべき平均メモリ使用率を指定し、それによって
 {% include 'publish.ja.md' %}
 
 {% include 'logging.ja.md' %}
+
+{% include 'observability.ja.md' %}
 
 {% include 'taskdef-overrides.ja.md' %}
 

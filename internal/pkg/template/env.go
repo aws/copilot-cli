@@ -73,18 +73,22 @@ type EnvOpts struct {
 	AppName string // The application name. Needed to create default value for svc discovery endpoint for upgraded environments.
 	Version string // The template version to use for the environment. If empty uses the "legacy" template.
 
+	// Custom Resourced backed by Lambda functions.
+	CustomResources           map[string]S3ObjectLocation
 	DNSDelegationLambda       string
 	DNSCertValidatorLambda    string
 	EnableLongARNFormatLambda string
 	CustomDomainLambda        string
-	ScriptBucketName          string
-	ArtifactBucketARN         string
-	ArtifactBucketKeyARN      string
+
+	ScriptBucketName     string
+	ArtifactBucketARN    string
+	ArtifactBucketKeyARN string
 
 	VPCConfig                VPCConfig
 	PublicImportedCertARNs   []string
 	PrivateImportedCertARNs  []string
 	CustomInternalALBSubnets []string
+	AllowVPCIngress          bool
 	Telemetry                *Telemetry
 
 	LatestVersion string

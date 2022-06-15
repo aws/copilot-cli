@@ -217,40 +217,45 @@ Outputs:
 				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseBackendService(template.WorkloadOpts{
-					WorkloadType: manifest.BackendServiceType,
-					HealthCheck: &template.ContainerHealthCheck{
-						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-						Interval:    aws.Int64(5),
-						Retries:     aws.Int64(3),
-						StartPeriod: aws.Int64(0),
-						Timeout:     aws.Int64(10),
-					},
-					HTTPHealthCheck: template.HTTPHealthCheckOpts{
-						HealthCheckPath: manifest.DefaultHealthCheckPath,
-						GracePeriod:     aws.Int64(manifest.DefaultHealthCheckGracePeriod),
-					},
-					DeregistrationDelay: aws.Int64(60), // defaults to 60
-					RulePriorityLambda:  "something",
-					DesiredCountLambda:  "something",
-					EnvControllerLambda: "something",
-					ExecuteCommand:      &template.ExecuteCommandOpts{},
-					NestedStack: &template.WorkloadNestedStackOpts{
-						StackName:       addon.StackName,
-						VariableOutputs: []string{"MyTable"},
-					},
-					Network: template.NetworkOpts{
-						AssignPublicIP: template.DisablePublicIP,
-						SubnetsType:    template.PrivateSubnetsPlacement,
-						SecurityGroups: []string{"sg-1234"},
-					},
-					DeploymentConfiguration: template.DeploymentConfigurationOpts{
-						MinHealthyPercent: 0,
-						MaxPercent:        100,
-					},
-					EntryPoint: []string{"enter", "from"},
-					Command:    []string{"here"},
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				m.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						WorkloadType: manifest.BackendServiceType,
+						HealthCheck: &template.ContainerHealthCheck{
+							Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+							Interval:    aws.Int64(5),
+							Retries:     aws.Int64(3),
+							StartPeriod: aws.Int64(0),
+							Timeout:     aws.Int64(10),
+						},
+						HostedZoneAliases: make(template.AliasesForHostedZone),
+						HTTPHealthCheck: template.HTTPHealthCheckOpts{
+							HealthCheckPath: manifest.DefaultHealthCheckPath,
+							GracePeriod:     aws.Int64(manifest.DefaultHealthCheckGracePeriod),
+						},
+						DeregistrationDelay: aws.Int64(60), // defaults to 60
+						CustomResources:     make(map[string]template.S3ObjectLocation),
+						RulePriorityLambda:  "something",
+						DesiredCountLambda:  "something",
+						EnvControllerLambda: "something",
+						ExecuteCommand:      &template.ExecuteCommandOpts{},
+						NestedStack: &template.WorkloadNestedStackOpts{
+							StackName:       addon.StackName,
+							VariableOutputs: []string{"MyTable"},
+						},
+						Network: template.NetworkOpts{
+							AssignPublicIP: template.DisablePublicIP,
+							SubnetsType:    template.PrivateSubnetsPlacement,
+							SecurityGroups: []string{"sg-1234"},
+						},
+						DeploymentConfiguration: template.DeploymentConfigurationOpts{
+							MinHealthyPercent: 0,
+							MaxPercent:        100,
+						},
+						EntryPoint: []string{"enter", "from"},
+						Command:    []string{"here"},
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 				svc.parser = m
 				svc.addons = mockAddons{
 					tpl: `
@@ -318,48 +323,53 @@ Outputs:
 				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseBackendService(template.WorkloadOpts{
-					WorkloadType: manifest.BackendServiceType,
-					HealthCheck: &template.ContainerHealthCheck{
-						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-						Interval:    aws.Int64(5),
-						Retries:     aws.Int64(3),
-						StartPeriod: aws.Int64(0),
-						Timeout:     aws.Int64(10),
-					},
-					HTTPHealthCheck: template.HTTPHealthCheckOpts{
-						HealthCheckPath:    "/healthz",
-						Port:               "4200",
-						SuccessCodes:       "418",
-						HealthyThreshold:   aws.Int64(64),
-						UnhealthyThreshold: aws.Int64(63),
-						Timeout:            aws.Int64(62),
-						Interval:           aws.Int64(61),
-						GracePeriod:        aws.Int64(60),
-					},
-					DeregistrationDelay: aws.Int64(59),
-					AllowedSourceIps:    []string{"10.0.1.0/24"},
-					RulePriorityLambda:  "something",
-					DesiredCountLambda:  "something",
-					EnvControllerLambda: "something",
-					ExecuteCommand:      &template.ExecuteCommandOpts{},
-					NestedStack: &template.WorkloadNestedStackOpts{
-						StackName:       addon.StackName,
-						VariableOutputs: []string{"MyTable"},
-					},
-					Network: template.NetworkOpts{
-						AssignPublicIP: template.DisablePublicIP,
-						SubnetsType:    template.PrivateSubnetsPlacement,
-						SecurityGroups: []string{"sg-1234"},
-					},
-					DeploymentConfiguration: template.DeploymentConfigurationOpts{
-						MinHealthyPercent: 0,
-						MaxPercent:        100,
-					},
-					EntryPoint: []string{"enter", "from"},
-					Command:    []string{"here"},
-					ALBEnabled: true,
-				}).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				m.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						WorkloadType: manifest.BackendServiceType,
+						HealthCheck: &template.ContainerHealthCheck{
+							Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+							Interval:    aws.Int64(5),
+							Retries:     aws.Int64(3),
+							StartPeriod: aws.Int64(0),
+							Timeout:     aws.Int64(10),
+						},
+						HTTPHealthCheck: template.HTTPHealthCheckOpts{
+							HealthCheckPath:    "/healthz",
+							Port:               "4200",
+							SuccessCodes:       "418",
+							HealthyThreshold:   aws.Int64(64),
+							UnhealthyThreshold: aws.Int64(63),
+							Timeout:            aws.Int64(62),
+							Interval:           aws.Int64(61),
+							GracePeriod:        aws.Int64(60),
+						},
+						HostedZoneAliases:   make(template.AliasesForHostedZone),
+						DeregistrationDelay: aws.Int64(59),
+						AllowedSourceIps:    []string{"10.0.1.0/24"},
+						CustomResources:     make(map[string]template.S3ObjectLocation),
+						RulePriorityLambda:  "something",
+						DesiredCountLambda:  "something",
+						EnvControllerLambda: "something",
+						ExecuteCommand:      &template.ExecuteCommandOpts{},
+						NestedStack: &template.WorkloadNestedStackOpts{
+							StackName:       addon.StackName,
+							VariableOutputs: []string{"MyTable"},
+						},
+						Network: template.NetworkOpts{
+							AssignPublicIP: template.DisablePublicIP,
+							SubnetsType:    template.PrivateSubnetsPlacement,
+							SecurityGroups: []string{"sg-1234"},
+						},
+						DeploymentConfiguration: template.DeploymentConfigurationOpts{
+							MinHealthyPercent: 0,
+							MaxPercent:        100,
+						},
+						EntryPoint: []string{"enter", "from"},
+						Command:    []string{"here"},
+						ALBEnabled: true,
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 				svc.parser = m
 				svc.addons = mockAddons{
 					tpl: `
@@ -541,6 +551,11 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			ParamsPath:          filepath.Join(testDir, "https-path-alias-params.json"),
 			EnvImportedCertARNs: []string{"exampleComCertARN"},
 		},
+		"http with autoscaling by requests configured": {
+			ManifestPath: filepath.Join(testDir, "http-autoscaling-manifest.yml"),
+			TemplatePath: filepath.Join(testDir, "http-autoscaling-template.yml"),
+			ParamsPath:   filepath.Join(testDir, "http-autoscaling-params.json"),
+		},
 	}
 
 	// run tests
@@ -595,6 +610,17 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			require.NoError(t, err)
 			var actualTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal([]byte(tmpl), &actualTmpl))
+
+			// change the random DynamicDesiredCountAction UpdateID to an expected value
+			if v, ok := actualTmpl["Resources"]; ok {
+				if v, ok := v.(map[string]any)["DynamicDesiredCountAction"]; ok {
+					if v, ok := v.(map[string]any)["Properties"]; ok {
+						if v, ok := v.(map[string]any); ok {
+							v["UpdateID"] = "AVeryRandomUUID"
+						}
+					}
+				}
+			}
 
 			var expectedTmpl map[any]any
 			require.NoError(t, yaml.Unmarshal(tmplBytes, &expectedTmpl))

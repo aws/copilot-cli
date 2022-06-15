@@ -1,5 +1,5 @@
 # task exec
-```
+```console
 $ copilot task exec
 ```
 
@@ -22,19 +22,19 @@ $ copilot task exec
 
 Start an interactive bash session with a task in task group "db-migrate" in the "test" environment under the current workspace.
 
-```bash
+```console
 $ copilot task exec -e test -n db-migrate
 ```
 
 Runs the 'cat progress.csv' command in the task prefixed with ID "1848c38" part of the "db-migrate" task group.
 
-```bash
+```console
 $ copilot task exec --name db-migrate --task-id 1848c38 --command "cat progress.csv"
 ```
 
 Start an interactive bash session with a task prefixed with ID "38c3818" in the default cluster.
 
-```bash
+```console
 $ copilot task exec --default --task-id 38c3818
 ```
 

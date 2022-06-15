@@ -129,6 +129,10 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
 func (s *LoadBalancedWebService) Template() (string, error) {
+	crs, err := convertCustomResources(s.rc.CustomResourcesURL)
+	if err != nil {
+		return "", err
+	}
 	rulePriorityLambda, err := s.parser.Read(albRulePriorityGeneratorPath)
 	if err != nil {
 		return "", fmt.Errorf("read rule priority lambda: %w", err)
@@ -189,6 +193,14 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		}
 	}
 
+	aliasesFor, err := convertHostedZone(s.manifest.RoutingRule.RoutingRuleConfiguration)
+	if err != nil {
+		return "", err
+	}
+	if len(aliasesFor) != 0 && !s.certImported {
+		return "", fmt.Errorf("cannot specify alias hosted zones when env certificates are managed by Copilot")
+	}
+
 	var deregistrationDelay *int64 = aws.Int64(60)
 	if s.manifest.RoutingRule.DeregistrationDelay != nil {
 		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
@@ -223,6 +235,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		HTTPHealthCheck:                convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:            deregistrationDelay,
 		AllowedSourceIps:               allowedSourceIPs,
+		CustomResources:                crs,
 		RulePriorityLambda:             rulePriorityLambda.String(),
 		DesiredCountLambda:             desiredCountLambda.String(),
 		EnvControllerLambda:            envControllerLambda.String(),
@@ -246,6 +259,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
+		HostedZoneAliases: aliasesFor,
 	})
 	if err != nil {
 		return "", err

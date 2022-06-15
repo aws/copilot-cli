@@ -1,5 +1,5 @@
 # app delete
-```bash
+```console
 $ copilot app delete [flags]
 ```
 
@@ -9,13 +9,13 @@ $ copilot app delete [flags]
 
 ## What are the flags?
 
-```bash
+```
 -h, --help                          help for delete
     --yes                           Skips confirmation prompt.
 ```
 
 ## Examples
 Force delete the application.
-```bash
+```console
 $ copilot app delete --yes 
 ```

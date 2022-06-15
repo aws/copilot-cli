@@ -118,7 +118,7 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
-		deployer, err = clideploy.NewLBDeployer(&in)
+		deployer, err = clideploy.NewLBWSDeployer(&in)
 	case *manifest.BackendService:
 		deployer, err = clideploy.NewBackendDeployer(&in)
 	case *manifest.RequestDrivenWebService:
@@ -422,13 +422,16 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	}
 
 	network := "over the internet."
-	if o.svcType == manifest.BackendServiceType {
+	switch uri.AccessType {
+	case describe.URIAccessTypeInternal:
+		network = "from your internal network."
+	case describe.URIAccessTypeServiceDiscovery:
 		network = "with service discovery."
 	}
-	recs := []string{
-		fmt.Sprintf("You can access your service at %s %s", color.HighlightResource(uri), network),
-	}
-	return recs, nil
+
+	return []string{
+		fmt.Sprintf("You can access your service at %s %s", color.HighlightResource(uri.URI), network),
+	}, nil
 }
 
 func (o *deploySvcOpts) publishRecommendedActions() []string {

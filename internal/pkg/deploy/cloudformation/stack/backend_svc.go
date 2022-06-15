@@ -83,6 +83,10 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 
 // Template returns the CloudFormation template for the backend service.
 func (s *BackendService) Template() (string, error) {
+	crs, err := convertCustomResources(s.rc.CustomResourcesURL)
+	if err != nil {
+		return "", err
+	}
 	rulePriorityLambda, err := s.parser.Read(albRulePriorityGeneratorPath)
 	if err != nil {
 		return "", fmt.Errorf("read rule priority lambda: %w", err)
@@ -126,7 +130,6 @@ func (s *BackendService) Template() (string, error) {
 		desiredCountOnSpot = advancedCount.Spot
 		capacityProviders = advancedCount.Cps
 	}
-
 	entrypoint, err := convertEntryPoint(s.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -135,19 +138,20 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	var aliases []string
 	if s.httpsEnabled {
 		if aliases, err = convertAlias(s.manifest.RoutingRule.Alias); err != nil {
 			return "", err
 		}
 	}
-
+	hostedZoneAliases, err := convertHostedZone(s.manifest.RoutingRule)
+	if err != nil {
+		return "", err
+	}
 	var deregistrationDelay *int64 = aws.Int64(60)
 	if s.manifest.RoutingRule.DeregistrationDelay != nil {
 		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
 	}
-
 	var allowedSourceIPs []string
 	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
@@ -171,6 +175,7 @@ func (s *BackendService) Template() (string, error) {
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:      deregistrationDelay,
 		AllowedSourceIps:         allowedSourceIPs,
+		CustomResources:          crs,
 		RulePriorityLambda:       rulePriorityLambda.String(),
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
@@ -191,7 +196,7 @@ func (s *BackendService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		HostedZoneID: s.manifest.RoutingRule.HostedZone,
+		HostedZoneAliases: hostedZoneAliases,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)

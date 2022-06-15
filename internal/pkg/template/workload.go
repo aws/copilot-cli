@@ -324,16 +324,30 @@ type CapacityProviderStrategy struct {
 	CapacityProvider string
 }
 
+// Cooldown holds configuration needed for autoscaling cooldown fields.
+type Cooldown struct {
+	ScaleInCooldown  *float64
+	ScaleOutCooldown *float64
+}
+
 // AutoscalingOpts holds configuration that's needed for Auto Scaling.
 type AutoscalingOpts struct {
-	MinCapacity  *int
-	MaxCapacity  *int
-	CPU          *float64
-	Memory       *float64
-	Requests     *float64
-	ResponseTime *float64
-	QueueDelay   *AutoscalingQueueDelayOpts
+	MinCapacity        *int
+	MaxCapacity        *int
+	CPU                *float64
+	Memory             *float64
+	Requests           *float64
+	ResponseTime       *float64
+	CPUCooldown        Cooldown
+	MemCooldown        Cooldown
+	ReqCooldown        Cooldown
+	RespTimeCooldown   Cooldown
+	QueueDelayCooldown Cooldown
+	QueueDelay         *AutoscalingQueueDelayOpts
 }
+
+// AliasesForHostedZone maps hosted zone IDs to aliases that belong to it.
+type AliasesForHostedZone map[string][]string
 
 // AutoscalingQueueDelayOpts holds configuration to scale SQS queues.
 type AutoscalingQueueDelayOpts struct {
@@ -456,6 +470,12 @@ func (p RuntimePlatformOpts) isEmpty() bool {
 	return p.OS == "" && p.Arch == ""
 }
 
+// S3ObjectLocation represents an object stored in an S3 bucket.
+type S3ObjectLocation struct {
+	Bucket string // Name of the bucket.
+	Key    string // Key of the object.
+}
+
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
 	// Additional options that are common between **all** workload templates.
@@ -485,7 +505,7 @@ type WorkloadOpts struct {
 	ServiceDiscoveryEndpoint string
 	HTTPVersion              *string
 	ALBEnabled               bool
-	HostedZoneID             *string
+	HostedZoneAliases        AliasesForHostedZone
 
 	// Additional options for service templates.
 	WorkloadType            string
@@ -496,7 +516,8 @@ type WorkloadOpts struct {
 	NLB                     *NetworkLoadBalancer
 	DeploymentConfiguration DeploymentConfigurationOpts
 
-	// Lambda functions.
+	// Custom Resources backed by Lambda functions.
+	CustomResources                map[string]S3ObjectLocation
 	RulePriorityLambda             string
 	DesiredCountLambda             string
 	EnvControllerLambda            string

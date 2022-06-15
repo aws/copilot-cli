@@ -1,5 +1,5 @@
 # svc ls
-```bash
+```console
 $ copilot svc ls
 ```
 
@@ -9,7 +9,7 @@ $ copilot svc ls
 
 ## フラグ
 
-```bash
+```
   -a, --app string   Name of the application.
   -h, --help         help for ls
       --json         Optional. Outputs in JSON format.

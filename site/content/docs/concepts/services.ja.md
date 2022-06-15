@@ -29,7 +29,7 @@ Service のタイプを選択すると、Copilot は Dockerfile 内で記述さ�
 
 AWS App Runner を利用する Service で、受け付けるトラフィックに応じてオートスケールし、トラフィックがない場合は設定された最低インスタンス数までスケールダウンします。リクエスト量の大きな変化や恒常的な少ないリクエスト量が見込まれる HTTP サービスにとってもよりコスト効率の高い選択肢です。
 ECS とは異なり、 App Runner サービスはデフォルトでは VPC とは接続されていません。 Egress トラフィックを VPC 経由でルーティングするには、
-マニフェスト内の[`network`](../manifest/rd-web-service.ja.md#network)フィールドを設定します。
+Manifest 内の[`network`](../manifest/rd-web-service.ja.md#network)フィールドを設定します。
 
 #### Load Balanced Web Service
 

@@ -95,6 +95,7 @@ const (
 	privateSubnetsFlag             = "import-private-subnets"
 	certsFlag                      = "import-cert-arns"
 	internalALBSubnetsFlag         = "internal-alb-subnets"
+	allowVPCIngressFlag            = "internal-alb-allow-vpc-ingress"
 	overrideVPCCIDRFlag            = "override-vpc-cidr"
 	overrideAZsFlag                = "override-az-names"
 	overridePublicSubnetCIDRsFlag  = "override-public-cidrs"
@@ -290,6 +291,7 @@ Cannot be specified with any other flags.`
 	internalALBSubnetsFlagDescription = `Optional. Specify subnet IDs for an internal load balancer.
 By default, the load balancer will be placed in your private subnets.
 Cannot be specified with --default-config or any of the --override flags.`
+	allowVPCIngressFlagDescription = `Optional. Allow internal ALB ingress from port 80 and/or port 443.`
 	overrideVPCCIDRFlagDescription = `Optional. Global CIDR to use for VPC.
 (default 10.0.0.0/16)`
 	overrideAZsFlagDescription = `Optional. Availability Zone names.

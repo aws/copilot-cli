@@ -1,5 +1,5 @@
 # svc deploy
-```bash
+```console
 $ copilot svc deploy
 ```
 
@@ -17,7 +17,7 @@ Service デプロイの手順は以下の通りです。
 
 ## フラグ
 
-```bash
+```
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
       --force                          Optional. Force a new service deployment using the existing image.
