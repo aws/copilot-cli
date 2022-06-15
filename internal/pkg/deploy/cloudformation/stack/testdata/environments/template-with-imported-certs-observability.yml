@@ -463,7 +463,6 @@ Resources:
       Protocol: HTTPS
   InternalWorkloadsHostedZone:
     Metadata:
-      'aws:copilot:description': 'Default hosted zone for workloads exposed with a private ALB'
       'aws:copilot:description': 'A hosted zone named test.demo.internal for backends behind a private load balancer'
     Condition: CreateInternalALB
     Type: AWS::Route53::HostedZone
