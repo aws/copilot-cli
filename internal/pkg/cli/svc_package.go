@@ -305,12 +305,12 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	if err != nil {
 		return nil, err
 	}
-	uploadOut := clideploy.UploadArtifactsOutput{
-		ImageDigest: aws.String(""),
-	}
 	targetApp, err := o.getTargetApp()
 	if err != nil {
 		return nil, err
+	}
+	uploadOut := clideploy.UploadArtifactsOutput{
+		ImageDigest: aws.String(""),
 	}
 	if o.uploadAssets {
 		out, err := generator.UploadArtifacts()
