@@ -177,9 +177,6 @@ type workloadDeployer struct {
 	defaultSessWithEnvRegion *session.Session
 	envSess                  *session.Session
 	store                    *config.Store
-
-	// Feature flags.
-	uploadCustomResourceFlag bool
 }
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
@@ -884,9 +881,6 @@ func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) 
 		ImageDigest: imageDigest,
 		EnvFileARN:  s3Artifacts.envFileARN,
 		AddonsURL:   s3Artifacts.addonsURL,
-	}
-	if !d.uploadCustomResourceFlag {
-		return out, nil
 	}
 	crs, err := customResources(d.templateFS)
 	if err != nil {

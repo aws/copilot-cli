@@ -17,9 +17,11 @@ DynamicDesiredCountAction:
 DynamicDesiredCountFunction:
   Type: AWS::Lambda::Function
   Properties:
+    {{- with $cr := index .CustomResources "DynamicDesiredCountFunction" }}
     Code:
-      ZipFile: |
-        {{.DesiredCountLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end }}
     Handler: "index.handler"
     Timeout: 600
     MemorySize: 512
@@ -164,9 +166,11 @@ BacklogPerTaskCalculatorFunction:
     'aws:copilot:description': "A Lambda function to emit BacklogPerTask metrics to CloudWatch"
   Type: AWS::Lambda::Function
   Properties:
+    {{- with $cr := index .CustomResources "BacklogPerTaskCalculatorFunction" }}
     Code:
-      ZipFile: |
-        {{.BacklogPerTaskCalculatorLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end }}
     Handler: "index.handler"
     Timeout: 600
     MemorySize: 512
