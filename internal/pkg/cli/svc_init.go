@@ -393,7 +393,7 @@ func (o *initSvcOpts) askImage() error {
 		return nil
 	}
 
-	var validator prompt.ValidatorFunc
+	validator := validateNonEmptyString
 	promptHelp := wkldInitImagePromptHelp
 	if o.wkldType == manifest.RequestDrivenWebServiceType {
 		promptHelp = wkldInitAppRunnerImagePromptHelp

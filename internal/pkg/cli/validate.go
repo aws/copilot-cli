@@ -286,6 +286,17 @@ func validateAppRunnerImage(img interface{}) error {
 	return nil
 }
 
+func validateNonEmptyString(in interface{}) error {
+	strVal, ok := in.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	if strVal == "" {
+		return errValueEmpty
+	}
+	return nil
+}
+
 func validateTimeout(timeout interface{}) error {
 	t, ok := timeout.(string)
 	if !ok {
