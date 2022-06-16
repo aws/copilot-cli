@@ -68,8 +68,9 @@ type initJobOpts struct {
 	mftReader    manifestReader
 
 	// Outputs stored on successful actions.
-	manifestPath string
-	platform     *manifest.PlatformString
+	manifestPath   string
+	manifestExists bool
+	platform       *manifest.PlatformString
 
 	// For workspace validation.
 	wsPendingCreation bool
@@ -181,6 +182,7 @@ func (o *initJobOpts) Ask() error {
 			return fmt.Errorf("manifest file for job %s exists with a different type %s", o.name, jobType)
 		}
 		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
+		o.manifestExists = true
 		return nil
 	}
 	var (
@@ -222,7 +224,7 @@ func (o *initJobOpts) Execute() error {
 		}
 	}
 	// If the user passes in an image, their docker engine isn't necessarily running, and we can't do anything with the platform because we're not building the Docker image.
-	if o.image == "" {
+	if o.image == "" && !o.manifestExists {
 		platform, err := legitimizePlatform(o.dockerEngine, o.wkldType)
 		if err != nil {
 			return err
