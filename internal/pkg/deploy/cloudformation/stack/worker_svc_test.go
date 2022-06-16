@@ -201,6 +201,9 @@ Outputs:
 				m.EXPECT().Read(backlogCalculatorLambdaPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseWorkerService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
+						AppName:      "phonetool",
+						EnvName:      "test",
+						WorkloadName: "frontend",
 						WorkloadType: manifest.WorkerServiceType,
 						HealthCheck: &template.ContainerHealthCheck{
 							Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},

@@ -357,6 +357,23 @@ Resources:
         - CertificateArn: {{$arn}}
 {{- end}}
 {{- end}}
+  {{- if not .PrivateImportedCertARNs}}
+  InternalWorkloadsHostedZone:
+    Metadata:
+      'aws:copilot:description': 'A hosted zone named {{.EnvName}}.{{.AppName}}.internal for backends behind a private load balancer'
+    Condition: CreateInternalALB
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Sub ${EnvironmentName}.${AppName}.internal
+      VPCs:
+        {{- if .VPCConfig.Imported}}
+        - VPCId: {{.VPCConfig.Imported.ID}}
+          VPCRegion: !Ref AWS::Region
+        {{- else}}
+        - VPCId: !Ref VPC
+          VPCRegion: !Ref AWS::Region
+        {{- end}}
+  {{- end}}
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
@@ -559,6 +576,18 @@ Outputs:
     Value: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
     Export:
       Name: !Sub ${AWS::StackName}-InternalLoadBalancerCanonicalHostedZoneID
+  {{- if not .PrivateImportedCertARNs}}
+  InternalWorkloadsHostedZone:
+    Condition: CreateInternalALB
+    Value: !GetAtt InternalWorkloadsHostedZone.Id
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalWorkloadsHostedZoneID
+  InternalWorkloadsHostedZoneName:
+    Condition: CreateInternalALB
+    Value: !Sub ${EnvironmentName}.${AppName}.internal
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalWorkloadsHostedZoneName
+  {{- end}}
   InternalHTTPListenerArn:
     Condition: CreateInternalALB
     Value: !Ref InternalHTTPListener

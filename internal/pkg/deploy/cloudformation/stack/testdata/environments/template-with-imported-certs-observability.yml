@@ -461,6 +461,16 @@ Resources:
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 443
       Protocol: HTTPS
+  InternalWorkloadsHostedZone:
+    Metadata:
+      'aws:copilot:description': 'A hosted zone named test.demo.internal for backends behind a private load balancer'
+    Condition: CreateInternalALB
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Sub ${EnvironmentName}.${AppName}.internal
+      VPCs:
+        - VPCId: !Ref VPC
+          VPCRegion: !Ref AWS::Region
   FileSystem:
     Condition: CreateEFS
     Type: AWS::EFS::FileSystem
@@ -934,6 +944,16 @@ Outputs:
     Value: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
     Export:
       Name: !Sub ${AWS::StackName}-InternalLoadBalancerCanonicalHostedZoneID
+  InternalWorkloadsHostedZone:
+    Condition: CreateInternalALB
+    Value: !GetAtt InternalWorkloadsHostedZone.Id
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalWorkloadsHostedZoneID
+  InternalWorkloadsHostedZoneName:
+    Condition: CreateInternalALB
+    Value: !Sub ${EnvironmentName}.${AppName}.internal
+    Export:
+      Name: !Sub ${AWS::StackName}-InternalWorkloadsHostedZoneName
   InternalHTTPListenerArn:
     Condition: CreateInternalALB
     Value: !Ref InternalHTTPListener

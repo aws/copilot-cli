@@ -27,36 +27,40 @@ func TestEnv_Template(t *testing.T) {
 		"should return template body when present": {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
 				m := mocks.NewMockenvReadParser(ctrl)
-				m.EXPECT().ParseEnv(&template.EnvOpts{
-					AppName:                "project",
-					ScriptBucketName:       "mockbucket",
-					DNSCertValidatorLambda: "mockkey1",
-					DNSDelegationLambda:    "mockkey2",
-					CustomDomainLambda:     "mockkey4",
-					VPCConfig: template.VPCConfig{
-						Imported: &template.ImportVPC{},
-						Managed: template.ManagedVPC{
-							CIDR:               DefaultVPCCIDR,
-							PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
-							PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
+				m.EXPECT().ParseEnv(gomock.Any(), gomock.Any()).DoAndReturn(func(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error) {
+					require.Equal(t, &template.EnvOpts{
+						AppName:                "project",
+						EnvName:                "env",
+						ScriptBucketName:       "mockbucket",
+						DNSCertValidatorLambda: "mockkey1",
+						DNSDelegationLambda:    "mockkey2",
+						CustomDomainLambda:     "mockkey4",
+						VPCConfig: template.VPCConfig{
+							Imported: &template.ImportVPC{},
+							Managed: template.ManagedVPC{
+								CIDR:               DefaultVPCCIDR,
+								PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
+								PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
+							},
 						},
-					},
-					LatestVersion: deploy.LatestEnvTemplateVersion,
-					CustomResources: map[string]template.S3ObjectLocation{
-						"CertificateValidationFunction": {
-							Bucket: "mockbucket",
-							Key:    "mockkey1",
+						LatestVersion: deploy.LatestEnvTemplateVersion,
+						CustomResources: map[string]template.S3ObjectLocation{
+							"CertificateValidationFunction": {
+								Bucket: "mockbucket",
+								Key:    "mockkey1",
+							},
+							"DNSDelegationFunction": {
+								Bucket: "mockbucket",
+								Key:    "mockkey2",
+							},
+							"CustomDomainFunction": {
+								Bucket: "mockbucket",
+								Key:    "mockkey4",
+							},
 						},
-						"DNSDelegationFunction": {
-							Bucket: "mockbucket",
-							Key:    "mockkey2",
-						},
-						"CustomDomainFunction": {
-							Bucket: "mockbucket",
-							Key:    "mockkey4",
-						},
-					},
-				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
+					}, data)
+					return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
+				})
 				e.parser = m
 			},
 			expectedOutput: mockTemplate,
