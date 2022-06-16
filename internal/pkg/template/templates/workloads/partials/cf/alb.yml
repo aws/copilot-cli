@@ -41,9 +41,11 @@ TargetGroup:
 RulePriorityFunction:
   Type: AWS::Lambda::Function
   Properties:
+    {{- with $cr := index .CustomResources "RulePriorityFunction" }}
     Code:
-      ZipFile: |
-        {{.RulePriorityLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end }}
     Handler: "index.nextAvailableRulePriorityHandler"
     Timeout: 600
     MemorySize: 512

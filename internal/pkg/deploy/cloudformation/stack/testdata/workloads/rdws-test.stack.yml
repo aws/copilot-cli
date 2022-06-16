@@ -213,8 +213,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockEnvControllerZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512

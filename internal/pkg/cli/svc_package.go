@@ -305,12 +305,12 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	if err != nil {
 		return nil, err
 	}
-	uploadOut := clideploy.UploadArtifactsOutput{
-		ImageDigest: aws.String(""),
-	}
 	targetApp, err := o.getTargetApp()
 	if err != nil {
 		return nil, err
+	}
+	uploadOut := clideploy.UploadArtifactsOutput{
+		ImageDigest: aws.String(""),
 	}
 	if o.uploadAssets {
 		out, err := generator.UploadArtifacts()
@@ -321,11 +321,12 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	}
 	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
-			RootUserARN: o.rootUserARN,
-			Tags:        targetApp.Tags,
-			ImageDigest: uploadOut.ImageDigest,
-			EnvFileARN:  uploadOut.EnvFileARN,
-			AddonsURL:   uploadOut.AddonsURL,
+			RootUserARN:        o.rootUserARN,
+			Tags:               targetApp.Tags,
+			ImageDigest:        uploadOut.ImageDigest,
+			EnvFileARN:         uploadOut.EnvFileARN,
+			AddonsURL:          uploadOut.AddonsURL,
+			CustomResourceURLs: uploadOut.CustomResourceURLs,
 		},
 	})
 	if err != nil {
