@@ -15,11 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
-// Template rendering configuration.
-const (
-	backlogCalculatorLambdaPath = "custom-resources/backlog-per-task-calculator.js"
-)
-
 type workerSvcReadParser interface {
 	template.ReadParser
 	ParseWorkerService(template.WorkloadOpts) (*template.Content, error)

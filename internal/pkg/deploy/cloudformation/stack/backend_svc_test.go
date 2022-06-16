@@ -605,9 +605,3 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 		})
 	}
 }
-
-func templateContent(str string) *template.Content {
-	return &template.Content{
-		Buffer: bytes.NewBuffer([]byte(str)),
-	}
-}

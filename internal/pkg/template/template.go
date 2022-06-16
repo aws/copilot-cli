@@ -42,13 +42,6 @@ var (
 		DNSDelegationFileName,
 		CustomDomainFileName,
 	}
-	rdWkldCustomResourceFiles = []string{
-		AppRunnerCustomDomainLambdaFileName,
-	}
-	nlbWkldCustomResourceFiles = []string{
-		NLBCertValidatorLambdaFileName,
-		NLBCustomDomainLambdaFileName,
-	}
 )
 
 // Reader is the interface that wraps the Read method.
