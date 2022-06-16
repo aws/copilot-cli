@@ -130,16 +130,6 @@ func (t *Template) UploadEnvironmentCustomResources(upload s3.CompressAndUploadF
 	return t.uploadCustomResources(upload, envCustomResourceFiles)
 }
 
-// UploadRequestDrivenWebServiceCustomResources uploads the request driven web service custom resource scripts.
-func (t *Template) UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	return t.uploadCustomResources(upload, rdWkldCustomResourceFiles)
-}
-
-// UploadNetworkLoadBalancedWebServiceCustomResources uploads the network load-balanced web service custom resource scripts.
-func (t *Template) UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	return t.uploadCustomResources(upload, nlbWkldCustomResourceFiles)
-}
-
 func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) (map[string]string, error) {
 	urls := make(map[string]string)
 	for _, name := range fileNames {

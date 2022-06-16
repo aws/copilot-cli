@@ -52,54 +52,14 @@ func TestBackendService_Template(t *testing.T) {
 		wantedTemplate   string
 		wantedErr        error
 	}{
-		"unavailable rule priority lambda template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(nil, errors.New("some error"))
-				svc.parser = m
-			},
-			wantedTemplate: "",
-			wantedErr:      fmt.Errorf("read rule priority lambda: some error"),
-		},
-		"unavailable desired count lambda template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(nil, errors.New("some error"))
-				svc.parser = m
-			},
-			wantedTemplate: "",
-			wantedErr:      fmt.Errorf("read desired count lambda: some error"),
-		},
-		"unavailable env controller lambda template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(nil, errors.New("some error"))
-				svc.parser = m
-			},
-			wantedTemplate: "",
-			wantedErr:      fmt.Errorf("read env controller lambda: some error"),
-		},
 		"unexpected addons parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				svc.parser = m
 				svc.addons = mockAddons{tplErr: errors.New("some error")}
 			},
 			wantedErr: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")),
 		},
 		"unexpected addons parameter parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				svc.parser = m
 				svc.addons = mockAddons{paramsErr: errors.New("some error")}
 			},
 			wantedErr: fmt.Errorf("parse addons parameters for %s: %w", testServiceName, errors.New("some error")),
@@ -116,9 +76,6 @@ func TestBackendService_Template(t *testing.T) {
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockAddons{
 					tpl: `
@@ -145,9 +102,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				svc.parser = m
 				svc.addons = mockAddons{
 					tpl: `
@@ -167,9 +121,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
 				svc.parser = m
 				svc.addons = mockAddons{
@@ -215,9 +166,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
 						AppName:      "phonetool",
@@ -237,11 +185,17 @@ Outputs:
 							GracePeriod:     aws.Int64(manifest.DefaultHealthCheckGracePeriod),
 						},
 						DeregistrationDelay: aws.Int64(60), // defaults to 60
-						CustomResources:     make(map[string]template.S3ObjectLocation),
-						RulePriorityLambda:  "something",
-						DesiredCountLambda:  "something",
-						EnvControllerLambda: "something",
-						ExecuteCommand:      &template.ExecuteCommandOpts{},
+						CustomResources: map[string]template.S3ObjectLocation{
+							"EnvControllerFunction": {
+								Bucket: "my-bucket",
+								Key:    "sha1/envcontroller.zip",
+							},
+							"DynamicDesiredCountFunction": {
+								Bucket: "my-bucket",
+								Key:    "sha2/count.zip",
+							},
+						},
+						ExecuteCommand: &template.ExecuteCommandOpts{},
 						NestedStack: &template.WorkloadNestedStackOpts{
 							StackName:       addon.StackName,
 							VariableOutputs: []string{"MyTable"},
@@ -324,9 +278,6 @@ Outputs:
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
 				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().Read(albRulePriorityGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(desiredCountGeneratorPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
 						AppName:      "phonetool",
@@ -353,11 +304,17 @@ Outputs:
 						HostedZoneAliases:   make(template.AliasesForHostedZone),
 						DeregistrationDelay: aws.Int64(59),
 						AllowedSourceIps:    []string{"10.0.1.0/24"},
-						CustomResources:     make(map[string]template.S3ObjectLocation),
-						RulePriorityLambda:  "something",
-						DesiredCountLambda:  "something",
-						EnvControllerLambda: "something",
-						ExecuteCommand:      &template.ExecuteCommandOpts{},
+						CustomResources: map[string]template.S3ObjectLocation{
+							"EnvControllerFunction": {
+								Bucket: "my-bucket",
+								Key:    "sha1/envcontroller.zip",
+							},
+							"DynamicDesiredCountFunction": {
+								Bucket: "my-bucket",
+								Key:    "sha2/count.zip",
+							},
+						},
+						ExecuteCommand: &template.ExecuteCommandOpts{},
 						NestedStack: &template.WorkloadNestedStackOpts{
 							StackName:       addon.StackName,
 							VariableOutputs: []string{"MyTable"},
@@ -408,6 +365,10 @@ Outputs:
 							Image: &ECRImage{
 								RepoURL:  testImageRepoURL,
 								ImageTag: testImageTag,
+							},
+							CustomResourcesURL: map[string]string{
+								"EnvControllerFunction":       "https://my-bucket.s3.Region.amazonaws.com/sha1/envcontroller.zip",
+								"DynamicDesiredCountFunction": "https://my-bucket.s3.Region.amazonaws.com/sha2/count.zip",
 							},
 						},
 					},
@@ -603,9 +564,6 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			// mock parser for lambda functions
 			realParser := serializer.parser
 			mockParser := mocks.NewMockbackendSvcReadParser(ctrl)
-			mockParser.EXPECT().Read(albRulePriorityGeneratorPath).Return(templateContent("albRulePriorityGenerator"), nil)
-			mockParser.EXPECT().Read(desiredCountGeneratorPath).Return(templateContent("desiredCountGenerator"), nil)
-			mockParser.EXPECT().Read(envControllerPath).Return(templateContent("envController"), nil)
 			mockParser.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(data template.WorkloadOpts) (*template.Content, error) {
 				// pass call to real parser
 				return realParser.ParseBackendService(data)

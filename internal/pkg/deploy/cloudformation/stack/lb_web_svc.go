@@ -133,18 +133,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rulePriorityLambda, err := s.parser.Read(albRulePriorityGeneratorPath)
-	if err != nil {
-		return "", fmt.Errorf("read rule priority lambda: %w", err)
-	}
-	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
-	if err != nil {
-		return "", fmt.Errorf("read desired count lambda: %w", err)
-	}
-	envControllerLambda, err := s.parser.Read(envControllerPath)
-	if err != nil {
-		return "", fmt.Errorf("read env controller lambda: %w", err)
-	}
 	addonsParams, err := s.addonsParameters()
 	if err != nil {
 		return "", err
@@ -216,49 +204,44 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", err
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
-		AppName:                        s.app,
-		EnvName:                        s.env,
-		WorkloadName:                   s.name,
-		Variables:                      s.manifest.TaskConfig.Variables,
-		Secrets:                        convertSecrets(s.manifest.TaskConfig.Secrets),
-		Aliases:                        aliases,
-		HTTPSListener:                  s.httpsEnabled,
-		UseImportedCerts:               s.certImported,
-		NestedStack:                    addonsOutputs,
-		AddonsExtraParams:              addonsParams,
-		Sidecars:                       sidecars,
-		LogConfig:                      convertLogging(s.manifest.Logging),
-		DockerLabels:                   s.manifest.ImageConfig.Image.DockerLabels,
-		Autoscaling:                    autoscaling,
-		CapacityProviders:              capacityProviders,
-		DesiredCountOnSpot:             desiredCountOnSpot,
-		ExecuteCommand:                 convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:                   manifest.LoadBalancedWebServiceType,
-		HealthCheck:                    convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
-		HTTPHealthCheck:                convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
-		DeregistrationDelay:            deregistrationDelay,
-		AllowedSourceIps:               allowedSourceIPs,
-		CustomResources:                crs,
-		RulePriorityLambda:             rulePriorityLambda.String(),
-		DesiredCountLambda:             desiredCountLambda.String(),
-		EnvControllerLambda:            envControllerLambda.String(),
-		Storage:                        convertStorageOpts(s.manifest.Name, s.manifest.Storage),
-		Network:                        convertNetworkConfig(s.manifest.Network),
-		EntryPoint:                     entrypoint,
-		Command:                        command,
-		DependsOn:                      convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
-		CredentialsParameter:           aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
-		ServiceDiscoveryEndpoint:       s.rc.ServiceDiscoveryEndpoint,
-		Publish:                        publishers,
-		Platform:                       convertPlatform(s.manifest.Platform),
-		HTTPVersion:                    convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
-		NLB:                            nlbConfig.settings,
-		DeploymentConfiguration:        convertDeploymentConfig(s.manifest.DeployConfig),
-		AppDNSName:                     nlbConfig.appDNSName,
-		AppDNSDelegationRole:           nlbConfig.appDNSDelegationRole,
-		NLBCertValidatorFunctionLambda: nlbConfig.certValidatorLambda,
-		NLBCustomDomainFunctionLambda:  nlbConfig.customDomainLambda,
-		ALBEnabled:                     !s.manifest.RoutingRule.Disabled(),
+		AppName:                  s.app,
+		EnvName:                  s.env,
+		WorkloadName:             s.name,
+		Variables:                s.manifest.TaskConfig.Variables,
+		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),
+		Aliases:                  aliases,
+		HTTPSListener:            s.httpsEnabled,
+		UseImportedCerts:         s.certImported,
+		NestedStack:              addonsOutputs,
+		AddonsExtraParams:        addonsParams,
+		Sidecars:                 sidecars,
+		LogConfig:                convertLogging(s.manifest.Logging),
+		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
+		Autoscaling:              autoscaling,
+		CapacityProviders:        capacityProviders,
+		DesiredCountOnSpot:       desiredCountOnSpot,
+		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:             manifest.LoadBalancedWebServiceType,
+		HealthCheck:              convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
+		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
+		DeregistrationDelay:      deregistrationDelay,
+		AllowedSourceIps:         allowedSourceIPs,
+		CustomResources:          crs,
+		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
+		Network:                  convertNetworkConfig(s.manifest.Network),
+		EntryPoint:               entrypoint,
+		Command:                  command,
+		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
+		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
+		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
+		Publish:                  publishers,
+		Platform:                 convertPlatform(s.manifest.Platform),
+		HTTPVersion:              convertHTTPVersion(s.manifest.RoutingRule.ProtocolVersion),
+		NLB:                      nlbConfig.settings,
+		DeploymentConfiguration:  convertDeploymentConfig(s.manifest.DeployConfig),
+		AppDNSName:               nlbConfig.appDNSName,
+		AppDNSDelegationRole:     nlbConfig.appDNSDelegationRole,
+		ALBEnabled:               !s.manifest.RoutingRule.Disabled(),
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
