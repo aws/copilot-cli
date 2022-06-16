@@ -11,7 +11,6 @@ package config
 
 import (
 	"encoding/json"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -49,7 +48,6 @@ type SSM interface {
 	GetParametersByPath(in *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error)
 	GetParameter(in *ssm.GetParameterInput) (*ssm.GetParameterOutput, error)
 	DeleteParameter(in *ssm.DeleteParameterInput) (*ssm.DeleteParameterOutput, error)
-	GetParameterWithContext(ctx aws.Context, in *ssm.GetParameterInput, opts ...request.Option) (*ssm.GetParameterOutput, error)
 }
 
 // Store is in charge of fetching and creating applications, environment, services and other workloads, and pipeline configuration in SSM.
