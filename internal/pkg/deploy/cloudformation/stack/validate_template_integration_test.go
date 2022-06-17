@@ -38,6 +38,11 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 				ImageTag: imageTag,
 			},
 			ServiceDiscoveryEndpoint: "test.app.local",
+			CustomResourcesURL: map[string]string{
+				"EnvControllerFunction":       "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
+				"DynamicDesiredCountFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
+				"RulePriorityFunction":        "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
+			},
 		},
 	})
 	require.NoError(t, err)
@@ -65,6 +70,9 @@ func TestScheduledJob_Validate(t *testing.T) {
 	require.True(t, ok)
 	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{
 		ServiceDiscoveryEndpoint: "test.app.local",
+		CustomResourcesURL: map[string]string{
+			"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
+		},
 	})
 
 	tpl, err := serializer.Template()

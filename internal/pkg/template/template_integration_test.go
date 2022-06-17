@@ -18,6 +18,13 @@ import (
 )
 
 func TestTemplate_ParseScheduledJob(t *testing.T) {
+	customResources := map[string]template.S3ObjectLocation{
+		"EnvControllerFunction": {
+			Bucket: "my-bucket",
+			Key:    "key",
+		},
+	}
+
 	testCases := map[string]struct {
 		opts template.WorkloadOpts
 	}{
@@ -28,6 +35,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
+				CustomResources: customResources,
 			},
 		},
 		"renders with timeout and no retries": {
@@ -40,6 +48,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				CustomResources:          customResources,
 			},
 		},
 		"renders with options": {
@@ -53,6 +62,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				CustomResources:          customResources,
 			},
 		},
 		"renders with options and addons": {
@@ -71,6 +81,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				CustomResources:          customResources,
 			},
 		},
 		"renders with Windows platform": {
@@ -84,6 +95,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					Arch: "x86_64",
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				CustomResources:          customResources,
 			},
 		},
 	}
@@ -112,6 +124,18 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 	defaultHttpHealthCheck := template.HTTPHealthCheckOpts{
 		HealthCheckPath: "/",
 	}
+	fakeS3Object := template.S3ObjectLocation{
+		Bucket: "my-bucket",
+		Key:    "key",
+	}
+	customResources := map[string]template.S3ObjectLocation{
+		"DynamicDesiredCountFunction": fakeS3Object,
+		"EnvControllerFunction":       fakeS3Object,
+		"RulePriorityFunction":        fakeS3Object,
+		"NLBCustomDomainFunction":     fakeS3Object,
+		"NLBCertValidatorFunction":    fakeS3Object,
+	}
+
 	testCases := map[string]struct {
 		opts template.WorkloadOpts
 	}{
@@ -123,7 +147,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid grpc template by default": {
@@ -135,7 +160,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with addons with no outputs": {
@@ -150,6 +176,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
+				CustomResources:          customResources,
 			},
 		},
 		"renders a valid template with addons with outputs": {
@@ -167,6 +194,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
+				CustomResources:          customResources,
 			},
 		},
 		"renders a valid template with private subnet placement": {
@@ -178,6 +206,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
+				CustomResources:          customResources,
 			},
 		},
 		"renders a valid template with all storage options": {
@@ -216,7 +245,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with minimal storage options": {
@@ -250,7 +280,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with ephemeral storage": {
@@ -264,7 +295,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				Storage: &template.StorageOpts{
 					Ephemeral: aws.Int(500),
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with entrypoint and command overrides": {
@@ -277,7 +309,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with additional addons parameters": {
@@ -292,7 +325,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 DiscoveryServiceArn:
   Fn::GetAtt: [DiscoveryService, Arn]
 `,
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with Windows platform": {
@@ -308,6 +342,7 @@ DiscoveryServiceArn:
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
+				CustomResources:          customResources,
 			},
 		},
 	}
