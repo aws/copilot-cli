@@ -352,8 +352,6 @@ type networkLoadBalancerConfig struct {
 	// If a domain is associated these values are not empty.
 	appDNSDelegationRole *string
 	appDNSName           *string
-	certValidatorLambda  string
-	customDomainLambda   string
 }
 
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
@@ -432,17 +430,6 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		dnsDelegationRole, dnsName := convertAppInformation(s.appInfo)
 		config.appDNSName = dnsName
 		config.appDNSDelegationRole = dnsDelegationRole
-
-		nlbCertValidatorLambda, err := s.parser.Read(nlbCertValidatorPath)
-		if err != nil {
-			return networkLoadBalancerConfig{}, fmt.Errorf("read nlb certificate validator lambda: %w", err)
-		}
-		nlbCustomDomainLambda, err := s.parser.Read(nlbCustomDomainPath)
-		if err != nil {
-			return networkLoadBalancerConfig{}, fmt.Errorf("read nlb custom domain lambda: %w", err)
-		}
-		config.certValidatorLambda = nlbCertValidatorLambda.String()
-		config.customDomainLambda = nlbCustomDomainLambda.String()
 	}
 	return config, nil
 }
@@ -859,22 +846,6 @@ func convertDeadLetter(d manifest.DeadLetterQueue) *template.DeadLetterQueue {
 	return &template.DeadLetterQueue{
 		Tries: d.Tries,
 	}
-}
-
-func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys map[string]*string, err error) {
-	if len(nameToS3URL) == 0 {
-		return nil, nil, nil
-	}
-	s3ObjectKeys = make(map[string]*string)
-	for fname, s3url := range nameToS3URL {
-		bucketName, key, err := s3.ParseURL(s3url)
-		if err != nil {
-			return nil, nil, err
-		}
-		s3ObjectKeys[fname] = &key
-		bucket = &bucketName
-	}
-	return
 }
 
 func convertAppInformation(app deploy.AppInformation) (delegationRole *string, domain *string) {

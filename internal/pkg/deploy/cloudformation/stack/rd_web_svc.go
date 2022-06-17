@@ -47,22 +47,10 @@ type requestDrivenWebSvcReadParser interface {
 // RequestDrivenWebService represents the configuration needed to create a CloudFormation stack from a request-drive web service manifest.
 type RequestDrivenWebService struct {
 	*appRunnerWkld
-	manifest            *manifest.RequestDrivenWebService
-	app                 deploy.AppInformation
-	customResourceS3URL map[string]string
+	manifest *manifest.RequestDrivenWebService
+	app      deploy.AppInformation
 
 	parser requestDrivenWebSvcReadParser
-}
-
-// NewRequestDrivenWebServiceWithAlias creates a new RequestDrivenWebService stack from a manifest file. It creates
-// custom resources needed for alias with scripts accessible from the urls.
-func NewRequestDrivenWebServiceWithAlias(mft *manifest.RequestDrivenWebService, env string, app deploy.AppInformation, rc RuntimeConfig, urls map[string]string) (*RequestDrivenWebService, error) {
-	rdSvc, err := NewRequestDrivenWebService(mft, env, app, rc)
-	if err != nil {
-		return nil, err
-	}
-	rdSvc.customResourceS3URL = urls
-	return rdSvc, nil
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
@@ -100,14 +88,6 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", err
 	}
 	networkConfig := convertRDWSNetworkConfig(s.manifest.Network)
-	var envControllerLambda string
-	if networkConfig.SubnetsType == template.PrivateSubnetsPlacement {
-		content, err := s.parser.Read(envControllerPath)
-		if err != nil {
-			return "", fmt.Errorf("read env controller lambda: %w", err)
-		}
-		envControllerLambda = content.String()
-	}
 	addonsParams, err := s.addonsParameters()
 	if err != nil {
 		return "", err
@@ -116,13 +96,8 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var layerARN, bucket, dnsDelegationRole, dnsName *string
-	var urls map[string]*string
+	var layerARN, dnsDelegationRole, dnsName *string
 	if s.manifest.Alias != nil {
-		bucket, urls, err = parseS3URLs(s.customResourceS3URL)
-		if err != nil {
-			return "", err
-		}
 		dnsDelegationRole, dnsName = convertAppInformation(s.app)
 		layerARN = awsSDKLayerForRegion[s.rc.Region]
 	}
@@ -142,10 +117,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		EnableHealthCheck:    !s.healthCheckConfig.IsEmpty(),
 		WorkloadType:         manifest.RequestDrivenWebServiceType,
 		Alias:                s.manifest.Alias,
-		ScriptBucketName:     bucket,
 		CustomResources:      crs,
-		EnvControllerLambda:  envControllerLambda,
-		CustomDomainLambda:   urls[template.AppRunnerCustomDomainLambdaFileName],
 		AWSSDKLayer:          layerARN,
 		AppDNSDelegationRole: dnsDelegationRole,
 		AppDNSName:           dnsName,

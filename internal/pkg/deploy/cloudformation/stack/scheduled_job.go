@@ -147,10 +147,6 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	envControllerLambda, err := j.parser.Read(envControllerPath)
-	if err != nil {
-		return "", fmt.Errorf("read env controller lambda: %w", err)
-	}
 	entrypoint, err := convertEntryPoint(j.manifest.EntryPoint)
 	if err != nil {
 		return "", err
@@ -182,8 +178,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Publish:                  publishers,
 		Platform:                 convertPlatform(j.manifest.Platform),
 
-		CustomResources:     crs,
-		EnvControllerLambda: envControllerLambda.String(),
+		CustomResources: crs,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)

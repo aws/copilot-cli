@@ -410,7 +410,6 @@ func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
 
 type rdwsDeployer struct {
 	*svcDeployer
-	customResourceUploader customResourcesUploader
 	customResourceS3Client uploader
 	appVersionGetter       versionGetter
 	rdwsMft                *manifest.RequestDrivenWebService
@@ -438,7 +437,6 @@ func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
 	}
 	return &rdwsDeployer{
 		svcDeployer:            svcDeployer,
-		customResourceUploader: template.New(),
 		customResourceS3Client: s3.New(svcDeployer.defaultSessWithEnvRegion),
 		appVersionGetter:       versionGetter,
 		rdwsMft:                rdwsMft,
@@ -1071,11 +1069,11 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		Domain:              d.app.Domain,
 		AccountPrincipalARN: in.RootUserARN,
 	}
+	conf, err := stack.NewRequestDrivenWebService(d.rdwsMft, d.env.Name, appInfo, *rc)
+	if err != nil {
+		return nil, fmt.Errorf("create stack configuration: %w", err)
+	}
 	if d.rdwsMft.Alias == nil {
-		conf, err := stack.NewRequestDrivenWebService(d.rdwsMft, d.env.Name, appInfo, *rc)
-		if err != nil {
-			return nil, fmt.Errorf("create stack configuration: %w", err)
-		}
 		return &rdwsStackConfigurationOutput{
 			svcStackConfigurationOutput: svcStackConfigurationOutput{
 				conf: conf,
@@ -1089,18 +1087,6 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 	if err = validateRDSvcAliasAndAppVersion(d.name,
 		aws.StringValue(d.rdwsMft.Alias), d.env.Name, d.app, d.appVersionGetter); err != nil {
 		return nil, err
-	}
-	var urls map[string]string
-	if urls, err = uploadRDWSCustomResources(&uploadRDWSCustomResourcesInput{
-		customResourceUploader: d.customResourceUploader,
-		s3Uploader:             d.customResourceS3Client,
-		s3Bucket:               d.resources.S3Bucket,
-	}); err != nil {
-		return nil, err
-	}
-	conf, err := stack.NewRequestDrivenWebServiceWithAlias(d.rdwsMft, d.env.Name, appInfo, *rc, urls)
-	if err != nil {
-		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
 	return &rdwsStackConfigurationOutput{
 		svcStackConfigurationOutput: svcStackConfigurationOutput{
@@ -1232,23 +1218,6 @@ func contains(s string, items []string) bool {
 		}
 	}
 	return false
-}
-
-type uploadRDWSCustomResourcesInput struct {
-	customResourceUploader customResourcesUploader
-	s3Uploader             uploader
-	s3Bucket               string
-}
-
-func uploadRDWSCustomResources(in *uploadRDWSCustomResourcesInput) (map[string]string, error) {
-	urls, err := in.customResourceUploader.UploadRequestDrivenWebServiceCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return in.s3Uploader.ZipAndUpload(in.s3Bucket, key, objects...)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", in.s3Bucket, err)
-	}
-
-	return urls, nil
 }
 
 func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config.Application, appVersionGetter versionGetter) error {

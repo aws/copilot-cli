@@ -1021,24 +1021,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 
 			wantErr: fmt.Errorf("mockDomain is a root domain alias, which is not supported yet"),
 		},
-		"fail to upload custom resource scripts": {
-			inAlias: "v1.mockDomain",
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
-			},
-			mock: func(m *deployRDSvcMocks) {
-				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceCustomResources(gomock.Any()).Return(nil, errors.New("some error"))
-			},
-
-			wantErr: fmt.Errorf("upload custom resources to bucket mockBucket: some error"),
-		},
 		"success": {
 			inAlias: "v1.mockDomain",
 			inEnvironment: &config.Environment{
@@ -1052,9 +1034,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			mock: func(m *deployRDSvcMocks) {
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceCustomResources(gomock.Any()).Return(map[string]string{
-					"mockResource2": "mockURL2",
-				}, nil)
 			},
 			wantAlias: "v1.mockDomain",
 		},
@@ -1068,7 +1047,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			m := &deployRDSvcMocks{
 				mockVersionGetter:  mocks.NewMockversionGetter(ctrl),
 				mockEndpointGetter: mocks.NewMockendpointGetter(ctrl),
-				mockUploader:       mocks.NewMockcustomResourcesUploader(ctrl),
 			}
 			tc.mock(m)
 
@@ -1085,8 +1063,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 						return nil
 					},
 				},
-				customResourceUploader: m.mockUploader,
-				appVersionGetter:       m.mockVersionGetter,
+				appVersionGetter: m.mockVersionGetter,
 				rdwsMft: &manifest.RequestDrivenWebService{
 					Workload: manifest.Workload{
 						Name: aws.String(mockName),

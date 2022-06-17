@@ -87,18 +87,6 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	rulePriorityLambda, err := s.parser.Read(albRulePriorityGeneratorPath)
-	if err != nil {
-		return "", fmt.Errorf("read rule priority lambda: %w", err)
-	}
-	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
-	if err != nil {
-		return "", fmt.Errorf("read desired count lambda: %w", err)
-	}
-	envControllerLambda, err := s.parser.Read(envControllerPath)
-	if err != nil {
-		return "", fmt.Errorf("read env controller lambda: %w", err)
-	}
 	addonsParams, err := s.addonsParameters()
 	if err != nil {
 		return "", err
@@ -179,11 +167,8 @@ func (s *BackendService) Template() (string, error) {
 		DeregistrationDelay:      deregistrationDelay,
 		AllowedSourceIps:         allowedSourceIPs,
 		CustomResources:          crs,
-		RulePriorityLambda:       rulePriorityLambda.String(),
 		LogConfig:                convertLogging(s.manifest.Logging),
 		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
-		DesiredCountLambda:       desiredCountLambda.String(),
-		EnvControllerLambda:      envControllerLambda.String(),
 		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
 		Network:                  convertNetworkConfig(s.manifest.Network),
 		DeploymentConfiguration:  convertDeploymentConfig(s.manifest.DeployConfig),
