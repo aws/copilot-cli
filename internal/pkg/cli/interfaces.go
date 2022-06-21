@@ -630,3 +630,7 @@ type workloadTemplateGenerator interface {
 	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
 }
+
+type Runner interface {
+	Run() error
+}
