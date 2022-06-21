@@ -19,7 +19,6 @@ import (
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -40,8 +39,9 @@ type envDeployer struct {
 
 	// Dependencies.
 	appCFN appResourcesGetter
+
 	// Dependencies to upload artifacts.
-	uploader   customResourcesUploader
+	uploader   customResourcesUploader // Deprecated: after legacy is removed.
 	templateFS template.Reader
 	s3         uploader
 	// Dependencies to deploy an environment.
@@ -77,10 +77,9 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		app: in.App,
 		env: in.Env,
 
-		appCFN: deploycfn.New(defaultSession),
-
-		uploader: template.New(),
-		s3:       s3.New(envRegionSession),
+		appCFN:     deploycfn.New(defaultSession),
+		templateFS: template.New(),
+		s3:         s3.New(envRegionSession),
 
 		envDeployer: deploycfn.New(envManagerSession),
 	}, nil

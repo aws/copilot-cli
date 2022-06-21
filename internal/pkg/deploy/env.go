@@ -41,6 +41,13 @@ type CreateEnvironmentInput struct {
 	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
 }
 
+const (
+	// TODO(efekarakus): remove these consts when we can swap the implementation.
+	CustomResourceCertValidationName = "CertificateValidationFunction"
+	CustomResourceDNSDelegationName  = "DNSDelegationFunction"
+	CustomResourceCustomDomainName   = "CustomDomainFunction"
+)
+
 // CreateEnvironmentResponse holds the created environment on successful deployment.
 // Otherwise, the environment is set to nil and a descriptive error is returned.
 type CreateEnvironmentResponse struct {

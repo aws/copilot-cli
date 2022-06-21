@@ -14,7 +14,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -29,9 +28,9 @@ func TestCloudFormation_UpgradeEnvironment(t *testing.T) {
 		Version:           "v1.0.0",
 		ArtifactBucketARN: "arn:aws:s3:::mockbucket",
 		CustomResourcesURLs: map[string]string{
-			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
-			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
-			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
+			deploy.CustomResourceCertValidationName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
+			deploy.CustomResourceDNSDelegationName:  "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
+			deploy.CustomResourceCustomDomainName:   "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
 	}
 	testCases := map[string]struct {
@@ -234,9 +233,9 @@ func TestCloudFormation_UpgradeLegacyEnvironment(t *testing.T) {
 		Version:           "v1.0.0",
 		ArtifactBucketARN: "arn:aws:s3:::mockbucket",
 		CustomResourcesURLs: map[string]string{
-			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
-			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
-			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
+			deploy.CustomResourceCertValidationName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
+			deploy.CustomResourceDNSDelegationName:  "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
+			deploy.CustomResourceCustomDomainName:   "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
 	}
 	testCases := map[string]struct {
