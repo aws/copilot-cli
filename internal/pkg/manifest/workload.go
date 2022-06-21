@@ -441,14 +441,78 @@ func (p *PlacementArgs) isEmpty() bool {
 // PlacementString represents what types of subnets (public or private subnets) to place tasks.
 type PlacementString string
 
-// vpcConfig represents the security groups and subnets attached to a task.
-type vpcConfig struct {
-	Placement      PlacementArgOrString `yaml:"placement"`
-	SecurityGroups []string             `yaml:"security_groups"`
+// SecurityGroupsIDsOrConfig represents security groups attached to task. It supports unmarshalling
+// yaml which can either be of type SecurityGroupsConfig or a list of strings.
+type SecurityGroupsIDsOrConfig struct {
+	SecurityGroupIds     []string `yaml:"security_groups"`
+	SecurityGroupsConfig SecurityGroupsConfig
 }
 
-func (c *vpcConfig) isEmpty() bool {
-	return c.Placement.IsEmpty() && c.SecurityGroups == nil
+func (s *SecurityGroupsIDsOrConfig) IsEmpty() bool {
+	return (s.SecurityGroupIds == nil || len(s.SecurityGroupIds) == 0) && s.SecurityGroupsConfig.isEmpty()
+}
+
+// SecurityGroupsConfig represents which security groups are attached to a task
+// and if default security group is applied.
+type SecurityGroupsConfig struct {
+	SecurityGroups []string `yaml:"groups"`
+	DenyDefault    bool     `yaml:"deny_default"`
+}
+
+func (s *SecurityGroupsConfig) isEmpty() bool {
+	return (s.SecurityGroups == nil || len(s.SecurityGroups) == 0) && !s.DenyDefault
+}
+
+// UnmarshalYAML overrides the default YAML unmarshalling logic for the SecurityGroupsIDsOrConfig
+// struct, allowing it to perform more complex unmarshalling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (s *SecurityGroupsIDsOrConfig) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&s.SecurityGroupsConfig); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if !s.SecurityGroupsConfig.isEmpty() {
+		// Unmarshalled successfully to s.SecurityGroupsConfig, unset s.SecurityGroupIds, and return.
+		s.SecurityGroupIds = nil
+		return nil
+	}
+
+	if err := value.Decode(&s.SecurityGroupIds); err != nil {
+		return errUnmarshalPlatformOpts
+	}
+	return nil
+}
+
+func (s *SecurityGroupsIDsOrConfig) GetSecurityGroupIds() []string {
+	if !s.SecurityGroupsConfig.isEmpty() && s.SecurityGroupsConfig.SecurityGroups != nil && len(s.SecurityGroupsConfig.SecurityGroups) > 0 {
+		return s.SecurityGroupsConfig.SecurityGroups
+	}
+	if s.SecurityGroupIds != nil && len(s.SecurityGroupIds) > 0 {
+		return s.SecurityGroupIds
+	}
+	return nil
+}
+
+func (s *SecurityGroupsIDsOrConfig) IsDefaultSecurityGroupDenied() bool {
+	if !s.SecurityGroupsConfig.isEmpty() {
+		return s.SecurityGroupsConfig.DenyDefault
+	}
+	return false
+}
+
+// vpcConfig represents the security groups and subnets attached to a task.
+type vpcConfig struct {
+	Placement                 PlacementArgOrString      `yaml:"placement"`
+	SecurityGroupsIDsOrConfig SecurityGroupsIDsOrConfig `yaml:"security_groups"`
+}
+
+func (v *vpcConfig) isEmpty() bool {
+	return v.Placement.IsEmpty() && v.SecurityGroupsIDsOrConfig.IsEmpty()
 }
 
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which

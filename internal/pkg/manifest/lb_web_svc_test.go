@@ -465,7 +465,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroups: []string{"sg-123"},
+							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
+								SecurityGroupIds: []string{"sg-123"},
+							},
 						},
 					},
 				},
@@ -532,7 +534,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								SecurityGroups: []string{"sg-456", "sg-789"},
+								SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
+									SecurityGroupIds: []string{"sg-456", "sg-789"},
+								},
 							},
 						},
 					},
@@ -628,7 +632,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroups: []string{"sg-456", "sg-789"},
+							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
+								SecurityGroupIds: []string{"sg-456", "sg-789"},
+							},
 						},
 					},
 				},
@@ -701,7 +707,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroups: []string{"sg-456", "sg-789"},
+							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
+								SecurityGroupIds: []string{"sg-456", "sg-789"},
+							},
 						},
 					},
 				},
@@ -727,7 +735,60 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroups: []string{"sg-456", "sg-789"},
+							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
+								SecurityGroupIds: []string{"sg-456", "sg-789"},
+							},
+						},
+					},
+				},
+			},
+		},
+		"with network config overridden by security group config": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
+								SecurityGroupsConfig: SecurityGroupsConfig{
+									SecurityGroups: []string{"sg-535", "sg-789"},
+								},
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
+									SecurityGroupsConfig: SecurityGroupsConfig{
+										SecurityGroups: []string{"sg-456", "sg-700"},
+										DenyDefault:    true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
+								SecurityGroupsConfig: SecurityGroupsConfig{
+									SecurityGroups: []string{"sg-456", "sg-700"},
+									DenyDefault:    true,
+								},
+							},
 						},
 					},
 				},

@@ -1245,6 +1245,9 @@ func (v vpcConfig) Validate() error {
 	if err := v.Placement.Validate(); err != nil {
 		return fmt.Errorf(`validate "placement": %w`, err)
 	}
+	if err := v.SecurityGroupsIDsOrConfig.Validate(); err != nil {
+		return fmt.Errorf(`validate "security_groups": %w`, err)
+	}
 	return nil
 }
 
@@ -1275,6 +1278,19 @@ func (p PlacementString) Validate() error {
 		}
 	}
 	return fmt.Errorf(`"placement" %s must be one of %s`, string(p), strings.Join(subnetPlacements, ", "))
+}
+
+// Validate is a no-op for SecurityGroupsIDsOrConfig.
+func (s SecurityGroupsIDsOrConfig) Validate() error {
+	if s.IsEmpty() {
+		return nil
+	}
+	return s.SecurityGroupsConfig.Validate()
+}
+
+// Validate is a no-op for SecurityGroupsConfig.
+func (SecurityGroupsConfig) Validate() error {
+	return nil
 }
 
 // Validate returns nil if AppRunnerInstanceConfig is configured correctly.
