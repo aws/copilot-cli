@@ -25,6 +25,10 @@ import (
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
+type customResourcesUploader interface {
+	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
+}
+
 type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
 }
@@ -79,6 +83,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 
 		appCFN:     deploycfn.New(defaultSession),
 		templateFS: template.New(),
+		uploader:   template.New(),
 		s3:         s3.New(envRegionSession),
 
 		envDeployer: deploycfn.New(envManagerSession),

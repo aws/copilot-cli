@@ -79,15 +79,15 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}
 
 	// TODO: remove all these after we are able to migrate to the new upload workflow.
-	bucket, dnsCertValidator, err := s3.ParseURL(e.in.CustomResourcesURLs[deploy.CustomResourceCertValidationName])
+	bucket, dnsCertValidator, err := s3.ParseURL(e.in.CustomResourcesURLs[template.DNSCertValidatorFileName])
 	if err != nil {
 		return "", err
 	}
-	_, dnsDelegation, err := s3.ParseURL(e.in.CustomResourcesURLs[deploy.CustomResourceDNSDelegationName])
+	_, dnsDelegation, err := s3.ParseURL(e.in.CustomResourcesURLs[template.DNSDelegationFileName])
 	if err != nil {
 		return "", err
 	}
-	_, customDomain, err := s3.ParseURL(e.in.CustomResourcesURLs[deploy.CustomResourceCustomDomainName])
+	_, customDomain, err := s3.ParseURL(e.in.CustomResourcesURLs[template.CustomDomainFileName])
 	if err != nil {
 		return "", err
 	}

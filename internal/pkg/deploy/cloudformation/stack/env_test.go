@@ -391,9 +391,9 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 			AccountPrincipalARN: "arn:aws:iam::000000000:root",
 		},
 		CustomResourcesURLs: map[string]string{
-			deploy.CustomResourceCertValidationName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
-			deploy.CustomResourceDNSDelegationName:  "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
-			deploy.CustomResourceCustomDomainName:   "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
+			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
+			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
+			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
 		LambdaURLs: map[string]string{
 			"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
