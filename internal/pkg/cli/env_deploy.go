@@ -61,9 +61,6 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("initiate a new environment deployer: %w", err)
-	}
 	opts := &deployEnvOpts{
 		deployEnvVars: vars,
 
