@@ -215,7 +215,7 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 			},
 		},
-		"with private DNS": {
+		"with private DNS only": {
 			input: deploymentInputWithPrivateDNS,
 			want: []*cloudformation.Parameter{
 				{
@@ -264,7 +264,7 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
-					ParameterValue: aws.String("true"),
+					ParameterValue: aws.String("false"),
 				},
 				{
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),

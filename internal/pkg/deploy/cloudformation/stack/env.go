@@ -235,12 +235,11 @@ func (e *EnvStackConfig) internalALBSubnets() []string {
 // Parameters returns the parameters to be passed into an environment CloudFormation template.
 func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	httpsListener := "false"
-	if len(e.in.ImportCertARNs) != 0 || e.in.App.Domain != "" {
+	if len(e.importPublicCertARNs()) != 0 || e.in.App.Domain != "" {
 		httpsListener = "true"
 	}
 	internalHTTPSListener := "false"
-	if len(e.in.ImportCertARNs) != 0 && e.in.ImportVPCConfig != nil &&
-		len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
+	if len(e.importPrivateCertARNs()) != 0 {
 		internalHTTPSListener = "true"
 	}
 	return []*cloudformation.Parameter{

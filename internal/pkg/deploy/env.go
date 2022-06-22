@@ -42,7 +42,7 @@ type CreateEnvironmentInput struct {
 }
 
 const (
-	// TODO(efekarakus): remove these consts when we can swap the implementation.
+	// TODO: remove these consts when we can swap the implementation.
 	CustomResourceCertValidationName = "CertificateValidationFunction"
 	CustomResourceDNSDelegationName  = "DNSDelegationFunction"
 	CustomResourceCustomDomainName   = "CustomDomainFunction"
