@@ -5,6 +5,8 @@ package sessions
 
 import (
 	"errors"
+	sessionMocks "github.com/aws/copilot-cli/internal/pkg/aws/sessions/mocks"
+	"github.com/golang/mock/gomock"
 	"os"
 	"testing"
 
@@ -171,7 +173,15 @@ func TestProvider_FromProfile(t *testing.T) {
 	})
 
 	t.Run("region information present", func(t *testing.T) {
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		m := sessionMocks.NewMocksessionValidator(ctrl)
+		m.EXPECT().ValidateCredentials(gomock.Any()).Return(credentials.Value{}, nil)
+
 		ogRegion := os.Getenv("AWS_REGION")
+
 		defer func() {
 			err := restoreEnvVar("AWS_REGION", ogRegion)
 			require.NoError(t, err)
@@ -183,11 +193,17 @@ func TestProvider_FromProfile(t *testing.T) {
 		require.NoError(t, err)
 
 		// WHEN
-		sess, err := ImmutableProvider().FromProfile("walk-like-an-egyptian")
+
+		provider := &Provider{
+			sessionValidator: m,
+		}
+
+		sess, err := provider.FromProfile("walk-like-an-egyptian")
 
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, "us-west-2", *sess.Config.Region)
+
 	})
 }
 
@@ -197,3 +213,46 @@ func restoreEnvVar(key string, originalValue string) error {
 	}
 	return os.Setenv(key, originalValue)
 }
+
+/*
+func TestProvider_FromDefault(t *testing.T) {
+	t.Run("error if creds are missing", func(t *testing.T) {
+
+		// When
+		sess, err := ImmutableProvider().Default()
+
+		// THEN
+		require.NotNil(t, err)
+		require.EqualError(t, errors.New("retrieving credentials timeout"), err.Error())
+		require.Nil(t, sess)
+	})
+
+	t.Run(""creds information present", func(t *testing.T) {
+		ogRegion := os.Getenv("AWS_REGION")
+		ogAccessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+		ogSecretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+		defer func() {
+			err := restoreEnvVar("AWS_REGION", ogRegion)
+			require.NoError(t, err)
+			err = restoreEnvVar("AWS_ACCESS_KEY_ID", ogAccessKey)
+			require.NoError(t, err)
+			err = restoreEnvVar("AWS_SECRET_ACCESS_KEY", ogSecretKey)
+			require.NoError(t, err)
+		}()
+
+		err := os.Setenv("AWS_REGION", "us-west-2")
+		require.NoError(t, err)
+		err = os.Setenv("AWS_ACCESS_KEY_ID", "fakeaccesskey")
+		require.NoError(t, err)
+		err = os.Setenv("AWS_SECRET_ACCESS_KEY", "fakesecretkey")
+		require.NoError(t, err)
+
+		// WHEN
+		sess, err := ImmutableProvider().Default()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, "us-west-2", *sess.Config.Region)
+		require.Equal(t, t., sess)
+	})
+}*/

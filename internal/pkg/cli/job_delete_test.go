@@ -6,11 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -292,13 +292,21 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 type deleteJobMocks struct {
 	store          *mocks.Mockstore
 	secretsmanager *mocks.MocksecretsManager
-	sessProvider   *sessions.Provider
+	sessProvider   *mocks.MocksessionProvider
 	appCFN         *mocks.MockjobRemoverFromApp
 	spinner        *mocks.Mockprogress
 	jobCFN         *mocks.MockwlDeleter
 	ecr            *mocks.MockimageRemover
 	ecs            *mocks.MocktaskStopper
+	//sessioncredentials *sessionMocks.MocksessionCredentials
 }
+
+/*func restoreEnvVar(key string, originalValue string) error {
+	if originalValue == "" {
+		return os.Unsetenv(key)
+	}
+	return os.Setenv(key, originalValue)
+}*/
 
 func TestDeleteJobOpts_Execute(t *testing.T) {
 	mockJobName := "resizer"
@@ -314,6 +322,25 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 	mockApp := &config.Application{
 		Name: mockAppName,
 	}
+
+	/*ogRegion := os.Getenv("AWS_REGION")
+	ogAccessKey := os.Getenv("AWS_ACCESS_KEY_ID")
+	ogSecretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	defer func() {
+		err := restoreEnvVar("AWS_REGION", ogRegion)
+		require.NoError(t, err)
+		err = restoreEnvVar("AWS_ACCESS_KEY_ID", ogAccessKey)
+		require.NoError(t, err)
+		err = restoreEnvVar("AWS_SECRET_ACCESS_KEY", ogSecretKey)
+		require.NoError(t, err)
+	}()
+
+	err := os.Setenv("AWS_REGION", "us-west-2")
+	require.NoError(t, err)
+	err = os.Setenv("AWS_ACCESS_KEY_ID", "fakeaccesskey")
+	require.NoError(t, err)
+	err = os.Setenv("AWS_SECRET_ACCESS_KEY", "fakesecretkey")
+	require.NoError(t, err)*/
 
 	mockRepo := fmt.Sprintf("%s/%s", mockAppName, mockJobName)
 	testError := errors.New("some error")
@@ -334,6 +361,8 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().ListEnvironments(gomock.Eq(mockAppName)).Times(1).Return(mockEnvs, nil),
+
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
@@ -342,9 +371,10 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
 					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobTasksStopComplete, mockJobName, mockEnvName)),
+
+					mocks.sessProvider.EXPECT().DefaultWithRegion(gomock.Any()).Return(&session.Session{}, nil),
 					// emptyECRRepos
 					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
-
 					// removeJobFromApp
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobDeleteResourcesStart, mockJobName, mockAppName)),
@@ -352,6 +382,12 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobDeleteResourcesComplete, mockJobName, mockAppName)),
 
 					// deleteSSMParam
+					/*mocks.sessioncredentials.EXPECT().GetWithContext(gomock.Any()).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("us-west-2"),
+						},
+					}, nil),*/
+
 					mocks.store.EXPECT().DeleteJob(mockAppName, mockJobName).Return(nil),
 				)
 			},
@@ -368,6 +404,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
@@ -397,6 +434,11 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("mockRegion"),
+						},
+					}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(testError),
@@ -413,6 +455,11 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("mockRegion"),
+						},
+					}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
@@ -435,7 +482,8 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			// GIVEN
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
-			mockSession := sessions.ImmutableProvider()
+			mockSession := mocks.NewMocksessionProvider(ctrl)
+			//mockSessionCredentials := sessionMocks.NewMocksessionCredentials(ctrl)
 			mockAppCFN := mocks.NewMockjobRemoverFromApp(ctrl)
 			mockJobCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
@@ -460,6 +508,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				jobCFN:         mockJobCFN,
 				ecr:            mockImageRemover,
 				ecs:            mockTaskStopper,
+				//sessioncredentials: mockSessionCredentials,
 			}
 
 			test.setupMocks(mocks)

@@ -6,6 +6,7 @@ package sessions
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -39,7 +40,15 @@ type Provider struct {
 	defaultSess *session.Session
 
 	// Metadata associated with the provider.
-	userAgentExtras []string
+	userAgentExtras  []string
+	sessionValidator sessionValidator
+}
+
+type validator struct {
+}
+
+type sessionValidator interface {
+	ValidateCredentials(sess *session.Session) (credentials.Value, error)
 }
 
 var instance *Provider
@@ -48,7 +57,9 @@ var once sync.Once
 // ImmutableProvider returns an immutable session Provider with the options applied.
 func ImmutableProvider(options ...func(*Provider)) *Provider {
 	once.Do(func() {
-		instance = &Provider{}
+		instance = &Provider{
+			sessionValidator: &validator{},
+		}
 		for _, option := range options {
 			option(instance)
 		}
@@ -104,6 +115,9 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 	if aws.StringValue(sess.Config.Region) == "" {
 		return nil, &errMissingRegion{}
 	}
+	if _, credErr := p.sessionValidator.ValidateCredentials(sess); credErr != nil {
+		return nil, &errCredProviderTimeout{name + " profile"}
+	}
 	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
 	return sess, nil
 }
@@ -155,9 +169,11 @@ func (p *Provider) defaultSession() (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	if _, credErr := validateCredentials(sess); credErr != nil {
-		return nil, &errCredProviderTimeout{}
+	if _, credErr := p.sessionValidator.ValidateCredentials(sess); credErr != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, &errCredProviderTimeout{"default profile"}
+		}
+		return nil, credErr
 	}
 
 	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
@@ -177,11 +193,14 @@ func AreCredsFromEnvVars(sess *session.Session) (bool, error) {
 
 // Creds returns the credential values from a session.
 func Creds(sess *session.Session) (credentials.Value, error) {
-	if v, err := validateCredentials(sess); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
+	defer cancel()
+
+	v, err := sess.Config.Credentials.GetWithContext(ctx)
+	if err != nil {
 		return credentials.Value{}, fmt.Errorf("get credentials of session: %w", err)
-	} else {
-		return v, nil
 	}
+	return v, nil
 }
 
 // newConfig returns a config with an end-to-end request timeout and verbose credentials errors.
@@ -205,13 +224,13 @@ func (p *Provider) userAgentHandler() request.NamedHandler {
 	}
 }
 
-func validateCredentials(sess *session.Session) (credentials.Value, error) {
+func (v *validator) ValidateCredentials(sess *session.Session) (credentials.Value, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
 	defer cancel()
 
-	v, credErr := sess.Config.Credentials.GetWithContext(ctx)
-	if credErr != nil {
-		return credentials.Value{}, credErr
+	val, err := sess.Config.Credentials.GetWithContext(ctx)
+	if err != nil {
+		return credentials.Value{}, err
 	}
-	return v, nil
+	return val, nil
 }

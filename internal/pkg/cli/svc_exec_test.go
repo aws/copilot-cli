@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -24,6 +22,7 @@ import (
 
 type execSvcMocks struct {
 	storeSvc           *mocks.Mockstore
+	sessProvider       *mocks.MocksessionProvider
 	sel                *mocks.MockdeploySelector
 	ecsSvcDescriber    *mocks.MockserviceDescriber
 	ecsCommandExecutor *mocks.MockecsCommandExecutor
@@ -452,6 +451,11 @@ func TestSvcExec_Execute(t *testing.T) {
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
 					}, nil),
+					m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("mockRegion"),
+						},
+					}, nil),
 					m.ecsSvcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(nil, mockError),
 				)
 			},
@@ -463,6 +467,11 @@ func TestSvcExec_Execute(t *testing.T) {
 					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockWl, nil),
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
+					}, nil),
+					m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("mockRegion"),
+						},
 					}, nil),
 					m.ecsSvcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						Tasks: []*awsecs.Task{},
@@ -478,6 +487,11 @@ func TestSvcExec_Execute(t *testing.T) {
 					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockWl, nil),
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
+					}, nil),
+					m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("mockRegion"),
+						},
 					}, nil),
 					m.ecsSvcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						Tasks: []*awsecs.Task{
@@ -498,6 +512,11 @@ func TestSvcExec_Execute(t *testing.T) {
 					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockWl, nil),
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
+					}, nil),
+					m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("mockRegion"),
+						},
 					}, nil),
 					m.ecsSvcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName: "mockCluster",
@@ -524,6 +543,11 @@ func TestSvcExec_Execute(t *testing.T) {
 					m.storeSvc.EXPECT().GetWorkload("mockApp", "mockSvc").Return(&mockWl, nil),
 					m.storeSvc.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{
 						Name: "my-env",
+					}, nil),
+					m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("mockRegion"),
+						},
 					}, nil),
 					m.ecsSvcDescriber.EXPECT().DescribeService("mockApp", "mockEnv", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName: "mockCluster",
@@ -557,6 +581,7 @@ func TestSvcExec_Execute(t *testing.T) {
 			mockStoreReader := mocks.NewMockstore(ctrl)
 			mockSvcDescriber := mocks.NewMockserviceDescriber(ctrl)
 			mockCommandExecutor := mocks.NewMockecsCommandExecutor(ctrl)
+			mockSessionProvider := mocks.NewMocksessionProvider(ctrl)
 			mockNewSvcDescriber := func(_ *session.Session) serviceDescriber {
 				return mockSvcDescriber
 			}
@@ -568,6 +593,7 @@ func TestSvcExec_Execute(t *testing.T) {
 				storeSvc:           mockStoreReader,
 				ecsCommandExecutor: mockCommandExecutor,
 				ecsSvcDescriber:    mockSvcDescriber,
+				sessProvider:       mockSessionProvider,
 			}
 
 			tc.setupMocks(mocks)
@@ -585,7 +611,7 @@ func TestSvcExec_Execute(t *testing.T) {
 				newSvcDescriber:    mockNewSvcDescriber,
 				newCommandExecutor: mockNewCommandExecutor,
 				randInt:            func(i int) int { return 0 },
-				sessProvider:       sessions.ImmutableProvider(),
+				sessProvider:       mockSessionProvider,
 			}
 
 			// WHEN
