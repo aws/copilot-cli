@@ -58,12 +58,14 @@ type envDeployer struct {
 	uploadCustomResourceFlag bool
 }
 
+// NewEnvDeployerInput contains information needd to construct an environment deployer.
 type NewEnvDeployerInput struct {
 	App             *config.Application
 	Env             *config.Environment
 	SessionProvider *sessions.Provider
 }
 
+// NewEnvDeployer constructs an environment deployer.
 func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 	defaultSession, err := in.SessionProvider.Default()
 	if err != nil {
