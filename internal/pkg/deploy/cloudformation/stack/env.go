@@ -78,7 +78,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		return "", err
 	}
 
-	// TODO: remove all these after we are able to migrate to the new upload workflow.
+	// TODO(Lou1415926): remove all these after we are able to migrate to the new upload workflow.
 	bucket, dnsCertValidator, err := s3.ParseURL(e.in.CustomResourcesURLs[template.DNSCertValidatorFileName])
 	if err != nil {
 		return "", err
