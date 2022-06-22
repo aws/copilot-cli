@@ -43,7 +43,6 @@ type envDeployer struct {
 
 	// Dependencies.
 	appCFN appResourcesGetter
-
 	// Dependencies to upload artifacts.
 	uploader   customResourcesUploader // Deprecated: after legacy is removed.
 	templateFS template.Reader
