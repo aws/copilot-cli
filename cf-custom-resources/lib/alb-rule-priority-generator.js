@@ -79,11 +79,10 @@ let report = function (
  * priorities, and then returns max + 1.
  *
  * @param {string} listenerArn the ARN of the ALB listener.
- * @param {bool} isRootPath if it is the root listener rule path.
 
  * @returns {number} The next available ALB listener rule priority.
  */
-const calculateNextRulePriority = async function (listenerArn, isRootPath) {
+const calculateNextRulePriority = async function (listenerArn) {
   var elb = new aws.ELBv2();
   // Grab all the rules for this listener
   var marker;
@@ -100,41 +99,67 @@ const calculateNextRulePriority = async function (listenerArn, isRootPath) {
     marker = rulesResponse.NextMarker;
   } while (marker);
 
-  var nextRulePriority;
-  if (isRootPath) {
-    nextRulePriority = maxPriorityForRootRule;
-    if (rules.length > 0) {
-      // Take the min rule priority, and decrement it by 1.
-      const rulePriorities = rules.map((rule) => {
-        if (
-          rule.Priority === "default" ||
-          rule.Priority < minPriorityForRootRule
-        ) {
-          // Ignore the root rule's priority.
-          // Ignore the non root rule's priority.
-          return maxPriorityForRootRule + 1;
-        }
-        return parseInt(rule.Priority);
-      });
-      nextRulePriority = Math.min(...rulePriorities) - 1;
-    }
-  } else {
-    nextRulePriority = 1;
-    if (rules.length > 0) {
-      // Take the max rule priority, and add 1 to it.
-      const rulePriorities = rules.map((rule) => {
-        if (
-          rule.Priority === "default" ||
-          rule.Priority >= minPriorityForRootRule
-        ) {
-          // Ignore the root rule's priority.
-          // Ignore the default rule's prority since it's the same as 0.
-          return 0;
-        }
-        return parseInt(rule.Priority);
-      });
-      nextRulePriority = Math.max(...rulePriorities) + 1;
-    }
+  var nextRulePriority = 1;
+  if (rules.length > 0) {
+    // Take the max rule priority, and add 1 to it.
+    const rulePriorities = rules.map((rule) => {
+      if (
+        rule.Priority === "default" ||
+        rule.Priority >= minPriorityForRootRule
+      ) {
+        // Ignore the root rule's priority.
+        // Ignore the default rule's prority since it's the same as 0.
+        return 0;
+      }
+      return parseInt(rule.Priority);
+    });
+    nextRulePriority = Math.max(...rulePriorities) + 1;
+  }
+  return nextRulePriority;
+};
+
+/**
+ * Lists all the existing rules for a ALB Listener, finds the min of their root rule
+ * priorities, and then returns min - 1.
+ *
+ * @param {string} listenerArn the ARN of the ALB listener.
+
+ * @returns {number} The next available ALB listener rule priority.
+ */
+const calculateNextRootRulePriority = async function (listenerArn) {
+  var elb = new aws.ELBv2();
+  // Grab all the rules for this listener
+  var marker;
+  var rules = [];
+  do {
+    const rulesResponse = await elb
+      .describeRules({
+        ListenerArn: listenerArn,
+        Marker: marker,
+      })
+      .promise();
+
+    rules = rules.concat(rulesResponse.Rules);
+    marker = rulesResponse.NextMarker;
+  } while (marker);
+
+  var nextRulePriority = maxPriorityForRootRule;
+  if (rules.length > 0) {
+    // We'll start from the max rule priority number for root path so that
+    // it won't override any other rule with the same host header.
+    // Then, take the min rule priority among all the root rule, and decrement it by 1.
+    const rulePriorities = rules.map((rule) => {
+      if (
+        rule.Priority === "default" ||
+        rule.Priority < minPriorityForRootRule
+      ) {
+        // Ignore the root rule's priority.
+        // Ignore the non root rule's priority.
+        return maxPriorityForRootRule + 1;
+      }
+      return parseInt(rule.Priority);
+    });
+    nextRulePriority = Math.min(...rulePriorities) - 1;
   }
   return nextRulePriority;
 };
@@ -153,11 +178,15 @@ exports.nextAvailableRulePriorityHandler = async function (event, context) {
     switch (event.RequestType) {
       case "Create":
       case "Update":
-        rulePriority = await calculateNextRulePriority(
-          event.ResourceProperties.ListenerArn,
-          isRootPath
-        );
-        responseData.Priority = rulePriority;
+        if (isRootPath) {
+          responseData.Priority = await calculateNextRootRulePriority(
+            event.ResourceProperties.ListenerArn
+          );
+        } else {
+          responseData.Priority = await calculateNextRulePriority(
+            event.ResourceProperties.ListenerArn
+          );
+        }
         break;
       // Do nothing on delete, since this isn't a "real" resource.
       case "Delete":
