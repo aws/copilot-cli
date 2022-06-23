@@ -79,11 +79,15 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 		require.True(t, ok)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
-
+		envConfig := &manifest.Environment{
+			Workload: manifest.Workload{
+				Name: &tc.envName,
+			},
+		}
 		serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-			App:      &config.Application{Name: appName, Domain: "example.com"},
-			Env:      &config.Environment{Name: tc.envName},
-			Manifest: v,
+			App:       &config.Application{Name: appName, Domain: "example.com"},
+			EnvConfig: envConfig,
+			Manifest:  v,
 			RuntimeConfig: stack.RuntimeConfig{
 				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 				AccountID:                "123456789123",
