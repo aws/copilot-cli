@@ -153,6 +153,10 @@ type aliasCertValidator interface {
 	ValidateCertAliases(aliases []string, certs []string) error
 }
 
+type configDescriber interface {
+	Manifest() ([]byte, error)
+}
+
 type workloadDeployer struct {
 	name          string
 	app           *config.Application
@@ -171,12 +175,30 @@ type workloadDeployer struct {
 	endpointGetter     endpointGetter
 	spinner            spinner
 	templateFS         template.Reader
+	envConfigDescriber configDescriber
 
 	// Cached variables.
 	defaultSess              *session.Session
 	defaultSessWithEnvRegion *session.Session
 	envSess                  *session.Session
 	store                    *config.Store
+	environmentConfig        *manifest.Environment
+}
+
+func (d *workloadDeployer) cachedEnvironmentConfig() (*manifest.Environment, error) {
+	if d.environmentConfig != nil {
+		return d.environmentConfig, nil
+	}
+	mft, err := d.envConfigDescriber.Manifest()
+	if err != nil {
+		return nil, fmt.Errorf("read the manifest used to deploy environment %s: %w", d.env.Name, err)
+	}
+	env, err := manifest.UnmarshalEnvironment(mft)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", d.env.Name, err)
+	}
+	d.environmentConfig = env
+	return d.environmentConfig, nil
 }
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
@@ -226,7 +248,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	imageBuilderPusher := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
-	endpointGetter, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 		App:         in.App.Name,
 		Env:         in.Env.Name,
 		ConfigStore: store,
@@ -246,9 +268,10 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		templater:          addonsSvc,
 		imageBuilderPusher: imageBuilderPusher,
 		deployer:           cloudformation.New(envSession),
-		endpointGetter:     endpointGetter,
+		endpointGetter:     envDescriber,
 		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
 		templateFS:         template.New(),
+		envConfigDescriber: envDescriber,
 
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
@@ -1005,9 +1028,13 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		}
 		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
+	envConfig, err := d.cachedEnvironmentConfig()
+	if err != nil {
+		return nil, err
+	}
 	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App:           d.app,
-		Env:           d.env,
+		EnvConfig:     envConfig,
 		Manifest:      d.lbMft,
 		RuntimeConfig: *rc,
 		RootUserARN:   in.RootUserARN,
@@ -1032,9 +1059,13 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		return nil, err
 	}
 
+	envConfig, err := d.cachedEnvironmentConfig()
+	if err != nil {
+		return nil, err
+	}
 	conf, err := stack.NewBackendService(stack.BackendServiceConfig{
 		App:           d.app,
-		Env:           d.env,
+		EnvConfig:     envConfig,
 		Manifest:      d.backendMft,
 		RuntimeConfig: *rc,
 	})
@@ -1267,15 +1298,19 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 	if d.backendMft.RoutingRule.IsEmpty() {
 		return nil
 	}
+	certsImported, err := d.envHasImportedCertificates()
+	if err != nil {
+		return err
+	}
 	switch {
-	case d.backendMft.RoutingRule.Alias.IsEmpty() && d.env.HasImportedCerts():
+	case d.backendMft.RoutingRule.Alias.IsEmpty() && certsImported:
 		return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 			name:    d.name,
 			envName: d.env.Name,
 		}
 	case d.backendMft.RoutingRule.Alias.IsEmpty():
 		return nil
-	case !d.env.HasImportedCerts():
+	case !certsImported:
 		return fmt.Errorf(`cannot specify "alias" in an environment without imported certs`)
 	}
 
@@ -1284,16 +1319,28 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 		return fmt.Errorf("convert aliases to string slice: %w", err)
 	}
 
-	if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.env.CustomConfig.ImportCertARNs); err != nil {
+	if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Private.Certificates); err != nil {
 		return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
 	}
 
 	return nil
 }
 
+func (d *backendSvcDeployer) envHasImportedCertificates() (bool, error) {
+	env, err := d.cachedEnvironmentConfig()
+	if err != nil {
+		return false, err
+	}
+	return len(env.HTTPConfig.Private.Certificates) != 0, nil
+}
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
+	certsImported, err := d.envHasImportedCertificates()
+	if err != nil {
+		return err
+	}
+
 	if d.lbMft.RoutingRule.Alias.IsEmpty() {
-		if d.env.HasImportedCerts() {
+		if certsImported {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 				name:    d.name,
 				envName: d.env.Name,
@@ -1301,12 +1348,12 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		}
 		return nil
 	}
-	if d.env.HasImportedCerts() {
+	if certsImported {
 		aliases, err := d.lbMft.RoutingRule.Alias.ToStringSlice()
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
-		if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.env.CustomConfig.ImportCertARNs); err != nil {
+		if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
 			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
 		}
 		return nil
@@ -1326,7 +1373,12 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 	if d.lbMft.NLBConfig.Aliases.IsEmpty() {
 		return nil
 	}
-	if d.env.HasImportedCerts() {
+
+	certsImported, err := d.envHasImportedCertificates()
+	if err != nil {
+		return err
+	}
+	if certsImported {
 		return fmt.Errorf("cannot specify nlb.alias when env %s imports one or more certificates", d.env.Name)
 	}
 	if d.app.Domain == "" {
@@ -1338,6 +1390,14 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		return err
 	}
 	return validateLBWSAlias(d.lbMft.NLBConfig.Aliases, d.app, d.env.Name)
+}
+
+func (d *lbWebSvcDeployer) envHasImportedCertificates() (bool, error) {
+	env, err := d.cachedEnvironmentConfig()
+	if err != nil {
+		return false, err
+	}
+	return len(env.HTTPConfig.Public.Certificates) != 0, nil
 }
 
 func validateLBWSAlias(aliases manifest.Alias, app *config.Application, envName string) error {
