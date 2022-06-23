@@ -510,6 +510,7 @@ type WorkloadOpts struct {
 	HTTPVersion              *string
 	ALBEnabled               bool
 	HostedZoneAliases        AliasesForHostedZone
+	CredentialsParameter     string
 
 	// Additional options for service templates.
 	WorkloadType            string
@@ -521,14 +522,7 @@ type WorkloadOpts struct {
 	DeploymentConfiguration DeploymentConfigurationOpts
 
 	// Custom Resources backed by Lambda functions.
-	CustomResources                map[string]S3ObjectLocation
-	RulePriorityLambda             string
-	DesiredCountLambda             string
-	EnvControllerLambda            string
-	CredentialsParameter           string
-	BacklogPerTaskCalculatorLambda string
-	NLBCertValidatorFunctionLambda string
-	NLBCustomDomainFunctionLambda  string
+	CustomResources map[string]S3ObjectLocation
 
 	// Additional options for job templates.
 	ScheduleExpression string
@@ -541,8 +535,6 @@ type WorkloadOpts struct {
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
-	ScriptBucketName     *string
-	CustomDomainLambda   *string
 	AWSSDKLayer          *string
 	AppDNSDelegationRole *string
 	AppDNSName           *string

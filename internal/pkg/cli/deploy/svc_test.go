@@ -119,10 +119,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		UploadArtifacts() (*UploadArtifactsOutput, error)
 	}
 	tests := map[string]struct {
-		inEnvFile                   string
-		inBuildRequired             bool
-		inRegion                    string
-		inUploadCustomResourcesFlag bool
+		inEnvFile       string
+		inBuildRequired bool
+		inRegion        string
 
 		mock                func(t *testing.T, m *deployMocks)
 		mockServiceDeployer func(deployer *workloadDeployer) artifactsUploader
@@ -161,7 +160,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			wantImageDigest: aws.String("mockDigest"),
 		},
 		"should retrieve Load Balanced Web Service custom resource URLs": {
-			inUploadCustomResourcesFlag: true,
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
@@ -188,7 +186,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"should retrieve Backend Service custom resource URLs": {
-			inUploadCustomResourcesFlag: true,
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
@@ -215,7 +212,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"should retrieve Worker Service custom resource URLs": {
-			inUploadCustomResourcesFlag: true,
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
@@ -242,7 +238,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"should retrieve Request-Driven Web Service custom resource URLs": {
-			inUploadCustomResourcesFlag: true,
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
@@ -269,7 +264,6 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			},
 		},
 		"should retrieve Scheduled Job custom resource URLs": {
-			inUploadCustomResourcesFlag: true,
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
 				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
@@ -405,13 +399,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				s3Client:           m.mockUploader,
 				imageBuilderPusher: m.mockImageBuilderPusher,
 				templateFS:         fakeTemplateFS(),
-
-				uploadCustomResourceFlag: tc.inUploadCustomResourcesFlag,
 			}
 			var deployer artifactsUploader
 			deployer = &lbWebSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: wkldDeployer,
+				},
+				customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+					return nil, nil
 				},
 			}
 			if tc.mockServiceDeployer != nil {
@@ -1026,24 +1021,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 
 			wantErr: fmt.Errorf("mockDomain is a root domain alias, which is not supported yet"),
 		},
-		"fail to upload custom resource scripts": {
-			inAlias: "v1.mockDomain",
-			inEnvironment: &config.Environment{
-				Name:   mockEnvName,
-				Region: "us-west-2",
-			},
-			inApp: &config.Application{
-				Name:   mockAppName,
-				Domain: "mockDomain",
-			},
-			mock: func(m *deployRDSvcMocks) {
-				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
-				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceCustomResources(gomock.Any()).Return(nil, errors.New("some error"))
-			},
-
-			wantErr: fmt.Errorf("upload custom resources to bucket mockBucket: some error"),
-		},
 		"success": {
 			inAlias: "v1.mockDomain",
 			inEnvironment: &config.Environment{
@@ -1057,9 +1034,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			mock: func(m *deployRDSvcMocks) {
 				m.mockVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockUploader.EXPECT().UploadRequestDrivenWebServiceCustomResources(gomock.Any()).Return(map[string]string{
-					"mockResource2": "mockURL2",
-				}, nil)
 			},
 			wantAlias: "v1.mockDomain",
 		},
@@ -1073,7 +1047,6 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 			m := &deployRDSvcMocks{
 				mockVersionGetter:  mocks.NewMockversionGetter(ctrl),
 				mockEndpointGetter: mocks.NewMockendpointGetter(ctrl),
-				mockUploader:       mocks.NewMockcustomResourcesUploader(ctrl),
 			}
 			tc.mock(m)
 
@@ -1090,8 +1063,7 @@ func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {
 						return nil
 					},
 				},
-				customResourceUploader: m.mockUploader,
-				appVersionGetter:       m.mockVersionGetter,
+				appVersionGetter: m.mockVersionGetter,
 				rdwsMft: &manifest.RequestDrivenWebService{
 					Workload: manifest.Workload{
 						Name: aws.String(mockName),

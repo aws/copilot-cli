@@ -55,7 +55,6 @@ func TestScheduledJob_Template(t *testing.T) {
 		"render template without addons successfully": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
 						WorkloadType:       manifest.ScheduledJobType,
@@ -68,10 +67,9 @@ func TestScheduledJob_Template(t *testing.T) {
 							AssignPublicIP: template.EnablePublicIP,
 							SubnetsType:    template.PublicSubnetsPlacement,
 						},
-						EntryPoint:          []string{"/bin/echo", "hello"},
-						Command:             []string{"world"},
-						CustomResources:     make(map[string]template.S3ObjectLocation),
-						EnvControllerLambda: "something",
+						EntryPoint:      []string{"/bin/echo", "hello"},
+						Command:         []string{"world"},
+						CustomResources: make(map[string]template.S3ObjectLocation),
 					}, actual)
 					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
 				})
@@ -84,7 +82,6 @@ func TestScheduledJob_Template(t *testing.T) {
 		"render template with addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
 						WorkloadType: manifest.ScheduledJobType,
@@ -105,10 +102,9 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 							AssignPublicIP: template.EnablePublicIP,
 							SubnetsType:    template.PublicSubnetsPlacement,
 						},
-						EntryPoint:          []string{"/bin/echo", "hello"},
-						Command:             []string{"world"},
-						CustomResources:     make(map[string]template.S3ObjectLocation),
-						EnvControllerLambda: "something",
+						EntryPoint:      []string{"/bin/echo", "hello"},
+						Command:         []string{"world"},
+						CustomResources: make(map[string]template.S3ObjectLocation),
 					}, actual)
 					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
 				})
@@ -148,9 +144,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 		},
 		"error parsing addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
-				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				addons := mockAddons{tplErr: errors.New("some error")}
-				j.parser = m
 				j.wkld.addons = addons
 			},
 			wantedError: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testScheduledJobManifest.Name), errors.New("some error")),
@@ -158,7 +152,6 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 		"template parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
 				j.parser = m
