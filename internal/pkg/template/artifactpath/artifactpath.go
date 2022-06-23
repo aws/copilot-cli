@@ -30,6 +30,13 @@ func Addons(key string, content []byte) string {
 	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, key, fmt.Sprintf("%x.yml", sha256.Sum256(content)))
 }
 
+// AddonArtifact returns the path to store addon artifact files with sha256 of the content.
+// Example: manual/addons/key/sha.yml.
+// TODO for artifcacts from addons
+func AddonArtifact(addonKey, key, ext string, content []byte) string {
+	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, addonKey, key, fmt.Sprintf("%x.%s", sha256.Sum256(content), ext))
+}
+
 // CFNTemplate returns the path to store cloudformation templates with sha256 of the content.
 // Example: manual/templates/key/sha.yml.
 func CFNTemplate(key string, content []byte) string {

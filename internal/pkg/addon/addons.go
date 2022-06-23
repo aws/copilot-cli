@@ -43,6 +43,9 @@ type Addons struct {
 
 	parser template.Parser
 	ws     workspaceReader
+
+	template string
+	uploader uploader
 }
 
 // New creates an Addons object given a workload name.
@@ -64,6 +67,10 @@ func New(wlName string) (*Addons, error) {
 // If the addons directory doesn't exist, it returns the empty string and
 // ErrAddonsDirNotExist.
 func (a *Addons) Template() (string, error) {
+	if a.template != "" {
+		return a.template, nil
+	}
+
 	fnames, err := a.ws.ReadAddonsDir(a.wlName)
 	if err != nil {
 		return "", &ErrAddonsNotFound{
@@ -93,6 +100,15 @@ func (a *Addons) Template() (string, error) {
 			return "", err
 		}
 	}
+
+	tmpl, err := a.packageLocalArtifacts(mergedTemplate)
+	if err != nil {
+		return "", fmt.Errorf("package local artifacts: %w", err)
+	}
+
+	return a.oldVer(tmpl)
+
+	// see if any resources need to be uploaded to s3
 	out, err := yaml.Marshal(mergedTemplate)
 	if err != nil {
 		return "", fmt.Errorf("marshal merged addons template: %w", err)
