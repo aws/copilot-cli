@@ -1,9 +1,15 @@
 package addon
 
 import (
+	"archive/zip"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"gopkg.in/yaml.v3"
@@ -28,20 +34,12 @@ func (s s3BucketData) IsZero() bool {
 	return s.Bucket == "" && s.Key == ""
 }
 
-type lambdaFunctionCode struct {
-	aOrB[yamlString, s3BucketData]
-}
-
-// type lambdaFunctionCode *aOrB[yamlString, s3BucketData]
-
 func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) {
-	fmt.Printf("before resources:\n%s\n", nodeString(tmpl.Resources))
+	// fmt.Printf("before resources:\n%s\n", nodeString(tmpl.Resources))
 	resources := mappingNode(&tmpl.Resources)
-	fmt.Printf("resources: %#v\n", resources)
 
 	for name := range resources {
 		res := mappingNode(resources[name])
-		fmt.Printf("%s: %#v\n", name, res)
 		typeNode, ok := res["Type"]
 		if !ok || typeNode.Kind != yaml.ScalarNode {
 			continue
@@ -52,39 +50,124 @@ func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) 
 			continue
 		}
 
-		fmt.Printf("\tType: %#v\n", typeNode)
-		fmt.Printf("\tProperties: %#v\n", propsNode)
-
 		switch typeNode.Value {
 		case "AWS::Lambda::Function":
-			props := mappingNode(propsNode)
-			fmt.Printf("\tProperties: %#v\n", props)
-			codeNode, ok := props["Code"]
-			fmt.Printf("\t\tCode: %#v\n", codeNode)
-			if !ok {
-				continue
-			}
-
-			var code lambdaFunctionCode
-			if err := codeNode.Decode(&code); err != nil {
-				return nil, fmt.Errorf("decode: %w", err)
-			}
-			fmt.Printf("\t\tCode: %#v\n", code)
-			if code.a == "" {
-				continue
-			}
-
-			code.b.Bucket = "s3::bucket::myBucket"
-			code.b.Key = "s3::myBucket::myKey"
-			code.a = ""
-			if err := codeNode.Encode(code); err != nil {
-				return nil, fmt.Errorf("encode: %w", err)
+			if err := a.transformStringToBucketObject(propsNode, "Code"); err != nil {
+				return nil, fmt.Errorf("upload and transform %q: %w", name, err)
 			}
 		}
 	}
 
 	// fmt.Printf("after resources:\n%s\n", nodeString(tmpl.Resources))
 	return tmpl, nil
+}
+
+func (a *Addons) transformStringToBucketObject(propsNode *yaml.Node, propsKey string) error {
+	props := mappingNode(propsNode)
+	node, ok := props[propsKey]
+	if !ok {
+		return nil
+	}
+
+	var val *aOrB[yamlString, s3BucketData]
+	if err := node.Decode(&val); err != nil {
+		return fmt.Errorf("decode: %w", err)
+	}
+	if val.a == "" {
+		// no need to transform
+		return nil
+	}
+
+	addonsDirAbs, err := a.ws.AddonsDirAbs(a.wlName)
+	if err != nil {
+		return fmt.Errorf("get addons directory: %w", err)
+	}
+
+	// TODO check that val.a is a local url?
+	path := path.Join(addonsDirAbs, string(val.a))
+	url, err := a.uploadAddonAsset(path)
+	if err != nil {
+		return fmt.Errorf("upload asset: %w", err)
+	}
+
+	fmt.Printf("url: %s\n", url)
+	return errors.New("hello")
+
+	// TODO upload
+	// transform
+	return node.Encode(val)
+}
+
+func (a *Addons) uploadAddonAsset(path string) (string, error) {
+	fmt.Printf("path: %s\n", path)
+	fs, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+
+	if !fs.IsDir() {
+		// upload file
+		return "", errors.New("TODO")
+	}
+
+	// TODO use zip and upload?
+
+	reader, err = zipDir(path)
+	if err != nil {
+		return "", fmt.Errorf("zip %s: %w", path, err)
+	}
+
+	/*
+		url, err := a.Uploader.Upload(a.Bucket, artifactpath.AddonArtifact(path, content), reader)
+		if err != nil {
+			return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
+		}
+	*/
+
+	//bucket, key, err := s3.ParseURL(url)
+	//if err != nil {
+	//	return "", fmt.Errorf("parse s3 url: %w", err)
+	//}
+
+	return "", nil
+}
+
+func zipDir(dirPath string) (io.Reader, error) {
+	buf := &bytes.Buffer{}
+	w := zip.NewWriter(buf)
+	defer w.Close()
+
+	if err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		fname, err := filepath.Rel(dirPath, path)
+		if err != nil {
+			return err
+		}
+		zf, err := w.Create(fname)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(zf, f)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return buf, nil
 }
 
 func nodeString(n yaml.Node) string {
@@ -120,7 +203,6 @@ func (a *aOrB[_, _]) UnmarshalYAML(value *yaml.Node) error {
 }
 
 func (a *aOrB[_, _]) MarshalYAML() (interface{}, error) {
-	fmt.Printf("hi DANNY value unam\n")
 	switch {
 	case !a.a.IsZero():
 		return a.a, nil
@@ -134,48 +216,4 @@ type yamlString string
 
 func (y yamlString) IsZero() bool {
 	return len(y) == 0
-}
-
-func mapGet[T any](m map[string]any, keys ...string) (T, bool) {
-	var zero T
-
-	for i := range keys {
-		v, ok := m[keys[i]]
-		if !ok {
-			return zero, false
-		}
-
-		if i+1 == len(keys) {
-			vt, ok := v.(T)
-			if !ok {
-				return zero, false
-			}
-			return vt, true
-		}
-
-		m, ok = v.(map[string]any)
-		if !ok {
-			return zero, false
-		}
-	}
-
-	return zero, false
-}
-
-func mapPut(m map[string]any, value any, keys ...string) bool {
-	cur := m
-	for i := range keys {
-		if i+1 == len(keys) {
-			cur[keys[i]] = value
-		}
-
-		/*
-			sub, ok := cur[keys[i]]
-			if !ok {
-				cur[keys[i]] = make(map[string]any)
-			}
-		*/
-		// not finished
-	}
-	return false
 }

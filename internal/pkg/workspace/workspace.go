@@ -421,6 +421,15 @@ func (ws *Workspace) ReadAddon(svc, fname string) ([]byte, error) {
 	return ws.read(svc, addonsDirName, fname)
 }
 
+func (ws *Workspace) AddonsDirAbs(svcName string) (string, error) {
+	copilotPath, err := ws.copilotDirPath()
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Abs(filepath.Join(copilotPath, svcName, addonsDirName))
+}
+
 // WriteAddon writes the content of an addon file under "{svc}/addons/{name}.yml".
 // If successful returns the full path of the file, otherwise an empty string and an error.
 func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, name string) (string, error) {

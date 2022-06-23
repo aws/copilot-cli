@@ -218,10 +218,13 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
 	}
+	s3Client := s3.New(envSession)
 	addonsSvc, err := addon.New(in.Name)
 	if err != nil {
 		return nil, fmt.Errorf("initiate addons service: %w", err)
 	}
+	addonsSvc.Uploader = s3Client
+	addonsSvc.Bucket = resources.S3Bucket
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
 	imageBuilderPusher := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
@@ -242,7 +245,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		resources:          resources,
 		workspacePath:      workspacePath,
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
-		s3Client:           s3.New(envSession),
+		s3Client:           s3Client,
 		templater:          addonsSvc,
 		imageBuilderPusher: imageBuilderPusher,
 		deployer:           cloudformation.New(envSession),

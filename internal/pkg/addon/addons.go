@@ -5,7 +5,6 @@
 package addon
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -36,6 +35,7 @@ var (
 type workspaceReader interface {
 	ReadAddonsDir(svcName string) ([]string, error)
 	ReadAddon(svcName, fileName string) ([]byte, error)
+	AddonsDirAbs(svcName string) (string, error)
 }
 
 // Addons represents additional resources for a workload.
@@ -46,7 +46,8 @@ type Addons struct {
 	ws     workspaceReader
 
 	template string
-	uploader uploader
+	Uploader uploader
+	Bucket   string
 }
 
 // New creates an Addons object given a workload name.
@@ -106,9 +107,7 @@ func (a *Addons) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("package local artifacts: %w", err)
 	}
-	return "", errors.New("bye")
 
-	// see if any resources need to be uploaded to s3
 	out, err := yaml.Marshal(mergedTemplate)
 	if err != nil {
 		return "", fmt.Errorf("marshal merged addons template: %w", err)
