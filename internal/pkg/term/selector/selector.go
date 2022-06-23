@@ -292,6 +292,15 @@ func NewLocalWorkloadSelector(prompt prompter, store configLister, ws workspaceR
 	}
 }
 
+// NewLocalEnvironmentSelector returns a new selector that chooses applications from the config store, but an environment
+// from the local workspace.
+func NewLocalEnvironmentSelector(prompt prompter, store configLister, ws workspaceRetriever) *LocalEnvironmentSelector {
+	return &LocalEnvironmentSelector{
+		AppEnvSelector: NewAppEnvSelector(prompt, store),
+		ws:             ws,
+	}
+}
+
 // NewWorkspaceSelector returns a new selector that prompts for local information.
 func NewWorkspaceSelector(prompt prompter, ws workspaceRetriever) *WorkspaceSelector {
 	return &WorkspaceSelector{
