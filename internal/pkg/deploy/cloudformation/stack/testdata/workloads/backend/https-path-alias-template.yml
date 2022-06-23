@@ -305,6 +305,7 @@ Resources:
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
+      RulePath: !Ref RulePath
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
   HTTPListenerRuleWithDomain:
     Metadata:
