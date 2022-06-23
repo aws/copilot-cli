@@ -6,10 +6,10 @@ package sessions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,8 +44,7 @@ type Provider struct {
 	sessionValidator sessionValidator
 }
 
-type validator struct {
-}
+type validator struct{}
 
 type sessionValidator interface {
 	ValidateCredentials(sess *session.Session) (credentials.Value, error)
@@ -116,7 +115,10 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 		return nil, &errMissingRegion{}
 	}
 	if _, credErr := p.sessionValidator.ValidateCredentials(sess); credErr != nil {
-		return nil, &errCredProviderTimeout{name + " profile"}
+		if strings.Contains(credErr.Error(), "context deadline exceeded") {
+			return sess, &errCredProviderTimeout{}
+		}
+		return nil, credErr
 	}
 	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
 	return sess, nil
@@ -170,8 +172,8 @@ func (p *Provider) defaultSession() (*session.Session, error) {
 		return nil, err
 	}
 	if _, credErr := p.sessionValidator.ValidateCredentials(sess); credErr != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			return nil, &errCredProviderTimeout{"default profile"}
+		if strings.Contains(credErr.Error(), "context deadline exceeded") {
+			return sess, &errCredProviderTimeout{}
 		}
 		return nil, credErr
 	}
