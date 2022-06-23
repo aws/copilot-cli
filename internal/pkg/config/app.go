@@ -74,7 +74,6 @@ func (s *Store) UpdateApplication(application *Application) error {
 
 // GetApplication fetches an application by name. If it can't be found, return a ErrNoSuchApplication
 func (s *Store) GetApplication(applicationName string) (*Application, error) {
-
 	applicationPath := fmt.Sprintf(fmtApplicationPath, applicationName)
 	applicationParam, err := s.ssm.GetParameter(&ssm.GetParameterInput{
 		Name: aws.String(applicationPath),

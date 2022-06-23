@@ -298,15 +298,7 @@ type deleteJobMocks struct {
 	jobCFN         *mocks.MockwlDeleter
 	ecr            *mocks.MockimageRemover
 	ecs            *mocks.MocktaskStopper
-	//sessioncredentials *sessionMocks.MocksessionCredentials
 }
-
-/*func restoreEnvVar(key string, originalValue string) error {
-	if originalValue == "" {
-		return os.Unsetenv(key)
-	}
-	return os.Setenv(key, originalValue)
-}*/
 
 func TestDeleteJobOpts_Execute(t *testing.T) {
 	mockJobName := "resizer"
@@ -322,25 +314,6 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 	mockApp := &config.Application{
 		Name: mockAppName,
 	}
-
-	/*ogRegion := os.Getenv("AWS_REGION")
-	ogAccessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	ogSecretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	defer func() {
-		err := restoreEnvVar("AWS_REGION", ogRegion)
-		require.NoError(t, err)
-		err = restoreEnvVar("AWS_ACCESS_KEY_ID", ogAccessKey)
-		require.NoError(t, err)
-		err = restoreEnvVar("AWS_SECRET_ACCESS_KEY", ogSecretKey)
-		require.NoError(t, err)
-	}()
-
-	err := os.Setenv("AWS_REGION", "us-west-2")
-	require.NoError(t, err)
-	err = os.Setenv("AWS_ACCESS_KEY_ID", "fakeaccesskey")
-	require.NoError(t, err)
-	err = os.Setenv("AWS_SECRET_ACCESS_KEY", "fakesecretkey")
-	require.NoError(t, err)*/
 
 	mockRepo := fmt.Sprintf("%s/%s", mockAppName, mockJobName)
 	testError := errors.New("some error")
@@ -382,12 +355,6 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobDeleteResourcesComplete, mockJobName, mockAppName)),
 
 					// deleteSSMParam
-					/*mocks.sessioncredentials.EXPECT().GetWithContext(gomock.Any()).Return(&session.Session{
-						Config: &aws.Config{
-							Region: aws.String("us-west-2"),
-						},
-					}, nil),*/
-
 					mocks.store.EXPECT().DeleteJob(mockAppName, mockJobName).Return(nil),
 				)
 			},
@@ -483,7 +450,6 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
 			mockSession := mocks.NewMocksessionProvider(ctrl)
-			//mockSessionCredentials := sessionMocks.NewMocksessionCredentials(ctrl)
 			mockAppCFN := mocks.NewMockjobRemoverFromApp(ctrl)
 			mockJobCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
@@ -508,7 +474,6 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				jobCFN:         mockJobCFN,
 				ecr:            mockImageRemover,
 				ecs:            mockTaskStopper,
-				//sessioncredentials: mockSessionCredentials,
 			}
 
 			test.setupMocks(mocks)
