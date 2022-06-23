@@ -9,41 +9,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//type resource struct {
-//	Type       string `yaml:"Type"`
-//	Properties struct {
-//		Code any `yaml:"Code"`
-//		yaml.Node
-//	} `yaml:"Properties"`
-//	yaml.Node
-//}
-
 type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
 	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
-}
-
-func (a *Addons) oldVer(template *cfnTemplate) (string, error) {
-	// TODO upload and transform keys
-	var resources map[string]resource
-	if err := template.Resources.Decode(&resources); err != nil {
-		return "", fmt.Errorf("decode: %w", err)
-	}
-
-	/*
-		for name, res := range resources {
-			switch res.Type {
-			case "AWS::Lambda::Function":
-				if v, ok := res.Properties.Code.(string); ok {
-					// fmt.Printf("code uri in %s: %s\n", name, v)
-					// upload
-					// 		resources[name].Properties.Code = any(map[string]string{})
-				}
-			}
-		}
-	*/
-
-	return "", fmt.Errorf("bye")
 }
 
 type resource struct {
@@ -60,63 +28,62 @@ func (s s3BucketData) IsZero() bool {
 	return s.Bucket == "" && s.Key == ""
 }
 
-type lambdaFunctionProperties struct {
-	Code *aOrB[yamlString, s3BucketData] `yaml:"Code"`
+type lambdaFunctionCode struct {
+	aOrB[yamlString, s3BucketData]
 }
+
+// type lambdaFunctionCode *aOrB[yamlString, s3BucketData]
 
 func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) {
 	fmt.Printf("before resources:\n%s\n", nodeString(tmpl.Resources))
-	var resources map[string]*resource
-	if err := tmpl.Resources.Decode(&resources); err != nil {
-		return nil, fmt.Errorf("decode resources: %w", err)
-	}
+	resources := mappingNode(&tmpl.Resources)
+	fmt.Printf("resources: %#v\n", resources)
 
-	for name, res := range resources {
-		switch res.Type {
+	for name := range resources {
+		res := mappingNode(resources[name])
+		fmt.Printf("%s: %#v\n", name, res)
+		typeNode, ok := res["Type"]
+		if !ok || typeNode.Kind != yaml.ScalarNode {
+			continue
+		}
+
+		propsNode, ok := res["Properties"]
+		if !ok || propsNode.Kind != yaml.MappingNode {
+			continue
+		}
+
+		fmt.Printf("\tType: %#v\n", typeNode)
+		fmt.Printf("\tProperties: %#v\n", propsNode)
+
+		switch typeNode.Value {
 		case "AWS::Lambda::Function":
-			var props lambdaFunctionProperties
-			if err := res.Properties.Decode(&props); err != nil {
-				return nil, fmt.Errorf("decode properties of %s: %w", name, err)
-			}
-			if props.Code.a == "" {
+			props := mappingNode(propsNode)
+			fmt.Printf("\tProperties: %#v\n", props)
+			codeNode, ok := props["Code"]
+			fmt.Printf("\t\tCode: %#v\n", codeNode)
+			if !ok {
 				continue
 			}
 
-			fmt.Printf("before props %s:\n%s\n", name, nodeString(res.Properties))
-
-			// TODO upload
-			props.Code.b.Bucket = "s3::bucket::jkl;"
-			props.Code.b.Key = string(props.Code.a)
-			props.Code.a = ""
-
-			if err := res.Properties.Encode(props); err != nil {
-				return nil, fmt.Errorf("encode properties of %s: %w", name, err)
+			var code lambdaFunctionCode
+			if err := codeNode.Decode(&code); err != nil {
+				return nil, fmt.Errorf("decode: %w", err)
+			}
+			fmt.Printf("\t\tCode: %#v\n", code)
+			if code.a == "" {
+				continue
 			}
 
-			fmt.Printf("after props %s:\n%s\n", name, nodeString(res.Properties))
+			code.b.Bucket = "s3::bucket::myBucket"
+			code.b.Key = "s3::myBucket::myKey"
+			code.a = ""
+			if err := codeNode.Encode(code); err != nil {
+				return nil, fmt.Errorf("encode: %w", err)
+			}
 		}
 	}
 
-	if err := tmpl.Resources.Encode(resources); err != nil {
-		return nil, fmt.Errorf("encode resources: %w", err)
-	}
-
-	fmt.Printf("after resources:\n%s\n", nodeString(tmpl.Resources))
-
-	/*
-		fmt.Printf("resources: %#v\n", tmpl.Resources)
-		if tmpl.Resources.Kind != yaml.MappingNode {
-			return nil, fmt.Errorf("1")
-		}
-
-		for i := range tmpl.Resources.Content {
-			if tmpl.Resources.Content[i].Kind == yaml.MappingNode {
-				m := mappingNode(tmpl.Resources.Content[i])
-				fmt.Printf("%v: %#v\n", i, m)
-			}
-		}
-	*/
-
+	// fmt.Printf("after resources:\n%s\n", nodeString(tmpl.Resources))
 	return tmpl, nil
 }
 
@@ -153,6 +120,7 @@ func (a *aOrB[_, _]) UnmarshalYAML(value *yaml.Node) error {
 }
 
 func (a *aOrB[_, _]) MarshalYAML() (interface{}, error) {
+	fmt.Printf("hi DANNY value unam\n")
 	switch {
 	case !a.a.IsZero():
 		return a.a, nil
@@ -166,4 +134,48 @@ type yamlString string
 
 func (y yamlString) IsZero() bool {
 	return len(y) == 0
+}
+
+func mapGet[T any](m map[string]any, keys ...string) (T, bool) {
+	var zero T
+
+	for i := range keys {
+		v, ok := m[keys[i]]
+		if !ok {
+			return zero, false
+		}
+
+		if i+1 == len(keys) {
+			vt, ok := v.(T)
+			if !ok {
+				return zero, false
+			}
+			return vt, true
+		}
+
+		m, ok = v.(map[string]any)
+		if !ok {
+			return zero, false
+		}
+	}
+
+	return zero, false
+}
+
+func mapPut(m map[string]any, value any, keys ...string) bool {
+	cur := m
+	for i := range keys {
+		if i+1 == len(keys) {
+			cur[keys[i]] = value
+		}
+
+		/*
+			sub, ok := cur[keys[i]]
+			if !ok {
+				cur[keys[i]] = make(map[string]any)
+			}
+		*/
+		// not finished
+	}
+	return false
 }
