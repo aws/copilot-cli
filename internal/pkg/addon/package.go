@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"reflect"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"gopkg.in/yaml.v3"
@@ -30,8 +29,6 @@ func (a *Addons) oldVer(template *cfnTemplate) (string, error) {
 	if err := template.Resources.Decode(&resources); err != nil {
 		return "", fmt.Errorf("decode: %w", err)
 	}
-
-	// fmt.Printf("resources: %#v\n", resources)
 
 	/*
 		for name, res := range resources {
@@ -67,44 +64,72 @@ type lambdaFunctionProperties struct {
 	Code *aOrB[yamlString, s3BucketData] `yaml:"Code"`
 }
 
-type yamlAOrB[A, B yaml.IsZeroer] struct {
-	Value yaml.IsZeroer
-}
+func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) {
+	fmt.Printf("before resources:\n%s\n", nodeString(tmpl.Resources))
+	var resources map[string]*resource
+	if err := tmpl.Resources.Decode(&resources); err != nil {
+		return nil, fmt.Errorf("decode resources: %w", err)
+	}
 
-func (y *yamlAOrB[A, B]) IsA() bool {
-	var a A
-	return reflect.TypeOf(a) == reflect.TypeOf(y.Value)
-}
+	for name, res := range resources {
+		switch res.Type {
+		case "AWS::Lambda::Function":
+			var props lambdaFunctionProperties
+			if err := res.Properties.Decode(&props); err != nil {
+				return nil, fmt.Errorf("decode properties of %s: %w", name, err)
+			}
+			if props.Code.a == "" {
+				continue
+			}
 
-func (y *yamlAOrB[A, B]) IsB() bool {
-	var b B
-	return reflect.TypeOf(b) == reflect.TypeOf(y.Value)
-}
+			fmt.Printf("before props %s:\n%s\n", name, nodeString(res.Properties))
 
-func (y *yamlAOrB[A, B]) UnmarshalYAML(value *yaml.Node) error {
-	var a A
-	if err := value.Decode(&a); err != nil {
-		var te *yaml.TypeError
-		if !errors.As(err, &te) {
-			return err
+			// TODO upload
+			props.Code.b.Bucket = "s3::bucket::jkl;"
+			props.Code.b.Key = string(props.Code.a)
+			props.Code.a = ""
+
+			if err := res.Properties.Encode(props); err != nil {
+				return nil, fmt.Errorf("encode properties of %s: %w", name, err)
+			}
+
+			fmt.Printf("after props %s:\n%s\n", name, nodeString(res.Properties))
 		}
 	}
 
-	if !a.IsZero() {
-		y.Value = a
-		return nil
+	if err := tmpl.Resources.Encode(resources); err != nil {
+		return nil, fmt.Errorf("encode resources: %w", err)
 	}
 
-	var b B
-	if err := value.Decode(&a); err != nil {
-		return err
-	}
-	y.Value = b
-	return nil
+	fmt.Printf("after resources:\n%s\n", nodeString(tmpl.Resources))
+
+	/*
+		fmt.Printf("resources: %#v\n", tmpl.Resources)
+		if tmpl.Resources.Kind != yaml.MappingNode {
+			return nil, fmt.Errorf("1")
+		}
+
+		for i := range tmpl.Resources.Content {
+			if tmpl.Resources.Content[i].Kind == yaml.MappingNode {
+				m := mappingNode(tmpl.Resources.Content[i])
+				fmt.Printf("%v: %#v\n", i, m)
+			}
+		}
+	*/
+
+	return tmpl, nil
 }
 
-func (y *yamlAOrB[A, B]) MarshalYAML() (interface{}, error) {
-	return y.Value, nil
+func nodeString(n yaml.Node) string {
+	b, err := yaml.Marshal(n)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func (a *Addons) uploadArtifact() (s3BucketData, error) {
+	return s3BucketData{}, nil
 }
 
 type aOrB[A, B yaml.IsZeroer] struct {
@@ -141,73 +166,4 @@ type yamlString string
 
 func (y yamlString) IsZero() bool {
 	return len(y) == 0
-}
-
-func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) {
-	fmt.Printf("before resources:\n%s\n", nodeString(tmpl.Resources))
-	var resources map[string]resource
-	if err := tmpl.Resources.Decode(&resources); err != nil {
-		return nil, fmt.Errorf("decode: %w", err)
-	}
-
-	for name, res := range resources {
-		switch res.Type {
-		case "AWS::Lambda::Function":
-			var props lambdaFunctionProperties
-			if err := res.Properties.Decode(&props); err != nil {
-				return nil, fmt.Errorf("decode properties of %s: %w", name, err)
-			}
-			if props.Code.a == "" {
-				continue
-			}
-
-			fmt.Printf("before props %s:\n%s\n", name, nodeString(res.Properties))
-
-			// TODO upload
-			props.Code.b.Bucket = "s3::bucket::jkl;"
-			props.Code.b.Key = string(props.Code.a)
-			props.Code.a = ""
-
-			if err := res.Properties.Encode(props); err != nil {
-				return nil, fmt.Errorf("encode properties of %s: %w", name, err)
-			}
-
-			fmt.Printf("after props %s:\n%s\n", name, nodeString(res.Properties))
-		}
-	}
-
-	fmt.Printf("after resources:\n%s\n", nodeString(tmpl.Resources))
-
-	/*
-		fmt.Printf("resources: %#v\n", tmpl.Resources)
-		if tmpl.Resources.Kind != yaml.MappingNode {
-			return nil, fmt.Errorf("1")
-		}
-
-		for i := range tmpl.Resources.Content {
-			if tmpl.Resources.Content[i].Kind == yaml.MappingNode {
-				m := mappingNode(tmpl.Resources.Content[i])
-				fmt.Printf("%v: %#v\n", i, m)
-			}
-		}
-	*/
-
-	return tmpl, nil
-}
-
-func nodeString(n yaml.Node) string {
-	b, err := yaml.Marshal(n)
-	if err != nil {
-		return ""
-	}
-	return string(b)
-}
-
-type s3Location struct {
-	Bucket string
-	Key    string
-}
-
-func (a *Addons) uploadArtifact() (s3Location, error) {
-	return s3Location{}, nil
 }

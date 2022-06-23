@@ -5,6 +5,7 @@
 package addon
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -101,12 +102,11 @@ func (a *Addons) Template() (string, error) {
 		}
 	}
 
-	tmpl, err := a.packageLocalArtifacts(mergedTemplate)
+	mergedTemplate, err = a.packageLocalArtifacts(mergedTemplate)
 	if err != nil {
 		return "", fmt.Errorf("package local artifacts: %w", err)
 	}
-
-	return a.oldVer(tmpl)
+	return "", errors.New("bye")
 
 	// see if any resources need to be uploaded to s3
 	out, err := yaml.Marshal(mergedTemplate)
