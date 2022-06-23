@@ -56,7 +56,6 @@ func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 // LoadBalancedWebServiceConfig contains fields to configure LoadBalancedWebService.
 type LoadBalancedWebServiceConfig struct {
 	App           *config.Application
-	Env           *config.Environment // Deprecated.
 	EnvConfig     *manifest.Environment
 	Manifest      *manifest.LoadBalancedWebService
 	RuntimeConfig RuntimeConfig

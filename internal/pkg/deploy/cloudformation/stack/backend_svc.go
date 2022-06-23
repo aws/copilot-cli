@@ -39,8 +39,7 @@ type BackendService struct {
 }
 
 type BackendServiceConfig struct {
-	App *config.Application
-	Env *config.Environment // Deprecated
+	App           *config.Application
 	EnvConfig     *manifest.Environment
 	Manifest      *manifest.BackendService
 	RuntimeConfig RuntimeConfig
