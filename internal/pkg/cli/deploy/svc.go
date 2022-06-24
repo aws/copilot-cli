@@ -1065,6 +1065,7 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		App:           d.app,
 		EnvManifest:   envConfig,
 		Manifest:      d.backendMft,
+		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 	})
 	if err != nil {
