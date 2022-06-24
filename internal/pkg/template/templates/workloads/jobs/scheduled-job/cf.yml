@@ -1,7 +1,12 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 AWSTemplateFormatVersion: 2010-09-09
-Description: CloudFormation template that represents a scheduled job on Amazon ECS. 
+Description: CloudFormation template that represents a scheduled job on Amazon ECS.
+{{- if .Manifest }}
+Metadata:
+  Manifest: |
+{{indent 4 .Manifest}}
+{{- end }}
 Parameters: 
   AppName:
     Type: String
