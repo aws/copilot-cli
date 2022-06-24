@@ -1182,7 +1182,13 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 	if err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewScheduledJob(d.jobMft, d.env.Name, d.app.Name, *rc)
+	conf, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
+		App:           d.app.Name,
+		Env:           d.env.Name,
+		Manifest:      d.jobMft,
+		RawManifest:   d.rawMft,
+		RuntimeConfig: *rc,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
