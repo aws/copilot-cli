@@ -115,8 +115,8 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 		return nil, &errMissingRegion{}
 	}
 	if _, credErr := p.sessionValidator.ValidateCredentials(sess); credErr != nil {
-		if strings.Contains(credErr.Error(), "context deadline exceeded") {
-			return sess, &errCredProviderTimeout{}
+		if strings.Contains(credErr.Error(), "context deadline exceeded") || strings.Contains(credErr.Error(), "NoCredentialProviders") {
+			return nil, &errCredProviderTimeout{name}
 		}
 		return nil, credErr
 	}
@@ -172,8 +172,8 @@ func (p *Provider) defaultSession() (*session.Session, error) {
 		return nil, err
 	}
 	if _, credErr := p.sessionValidator.ValidateCredentials(sess); credErr != nil {
-		if strings.Contains(credErr.Error(), "context deadline exceeded") {
-			return sess, &errCredProviderTimeout{}
+		if strings.Contains(credErr.Error(), "context deadline exceeded") || strings.Contains(credErr.Error(), "NoCredentialProviders") {
+			return nil, &errCredProviderTimeout{"default"}
 		}
 		return nil, credErr
 	}
@@ -229,10 +229,5 @@ func (p *Provider) userAgentHandler() request.NamedHandler {
 func (v *validator) ValidateCredentials(sess *session.Session) (credentials.Value, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
 	defer cancel()
-
-	val, err := sess.Config.Credentials.GetWithContext(ctx)
-	if err != nil {
-		return credentials.Value{}, err
-	}
-	return val, nil
+	return sess.Config.Credentials.GetWithContext(ctx)
 }

@@ -25,7 +25,9 @@ func (e *errMissingRegion) RecommendActions() string { // implements new actionR
 More information: https://aws.github.io/copilot-cli/docs/credentials/`, color.HighlightCode("export AWS_REGION=<application region>"))
 }
 
-type errCredProviderTimeout struct{}
+type errCredProviderTimeout struct {
+	profile string
+}
 
 // Implements error interface.
 func (e *errCredProviderTimeout) Error() string {
@@ -41,5 +43,5 @@ https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#s
 - Alternatively, you can also set credentials throguh 
 	* Environment Variables
 	* EC2 Instance Metadata (credentials only)
-More information: https://aws.github.io/copilot-cli/docs/credentials/`, color.HighlightCode("default AWS credential"))
+More information: https://aws.github.io/copilot-cli/docs/credentials/`, color.HighlightCode(e.profile))
 }
