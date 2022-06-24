@@ -231,8 +231,7 @@ func TestProvider_FromProfile(t *testing.T) {
 		sess, err := provider.FromProfile("walk-like-an-egyptian")
 
 		// THEN
-		require.NotNil(t, err)
-		require.EqualError(t, errors.New("retrieving credentials timeout"), err.Error())
+		require.EqualError(t, err, "retrieving credentials timeout")
 		require.Nil(t, sess)
 	})
 }

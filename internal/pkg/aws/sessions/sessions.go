@@ -44,8 +44,6 @@ type Provider struct {
 	sessionValidator sessionValidator
 }
 
-type validator struct{}
-
 type sessionValidator interface {
 	ValidateCredentials(sess *session.Session) (credentials.Value, error)
 }
@@ -114,11 +112,11 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 	if aws.StringValue(sess.Config.Region) == "" {
 		return nil, &errMissingRegion{}
 	}
-	if _, credErr := p.sessionValidator.ValidateCredentials(sess); credErr != nil {
-		if strings.Contains(credErr.Error(), "context deadline exceeded") || strings.Contains(credErr.Error(), "NoCredentialProviders") {
+	if _, err := p.sessionValidator.ValidateCredentials(sess); err != nil {
+		if strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "NoCredentialProviders") {
 			return nil, &errCredProviderTimeout{name}
 		}
-		return nil, credErr
+		return nil, err
 	}
 	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
 	return sess, nil
@@ -171,11 +169,11 @@ func (p *Provider) defaultSession() (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, credErr := p.sessionValidator.ValidateCredentials(sess); credErr != nil {
-		if strings.Contains(credErr.Error(), "context deadline exceeded") || strings.Contains(credErr.Error(), "NoCredentialProviders") {
+	if _, err = p.sessionValidator.ValidateCredentials(sess); err != nil {
+		if strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "NoCredentialProviders") {
 			return nil, &errCredProviderTimeout{"default"}
 		}
-		return nil, credErr
+		return nil, err
 	}
 
 	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
@@ -225,6 +223,8 @@ func (p *Provider) userAgentHandler() request.NamedHandler {
 		Fn:   request.MakeAddToUserAgentHandler(userAgentProductName, version.Version, extras...),
 	}
 }
+
+type validator struct{}
 
 func (v *validator) ValidateCredentials(sess *session.Session) (credentials.Value, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
