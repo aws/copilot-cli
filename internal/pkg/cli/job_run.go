@@ -69,7 +69,7 @@ func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 		jobRunVars:  vars,
 		configStore: configStore,
 		sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
-		ws:          selector.NewWorkspaceSelect(prompter, configStore, ws),
+		ws:          selector.NewLocalWorkloadSelector(prompter, configStore, ws),
 	}
 
 	opts.initRunner = func() {
