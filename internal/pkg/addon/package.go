@@ -217,3 +217,37 @@ type yamlString string
 func (y yamlString) IsZero() bool {
 	return len(y) == 0
 }
+
+type yamlPrimitives interface {
+	~string | ~bool | ~int | ~float64
+}
+
+type yamlPrimitive[T yamlPrimitives] struct {
+	isSet bool
+	v     T
+}
+
+func (y *yamlPrimitive[T]) UnmarshalYAML(value *yaml.Node) error {
+	var v T
+	if err := value.Decode(&v); err != nil {
+		return err
+	}
+	y.isSet = true
+	y.v = v
+	return nil
+}
+
+func (y *yamlPrimitive[T]) MarshalYAML() (interface{}, error) {
+	if !y.isSet {
+		return nil, nil
+	}
+	return y.v, nil
+}
+
+func (y *yamlPrimitive[T]) IsZero() bool {
+	return !y.isSet
+}
+
+func (y *yamlPrimitive[T]) Value() T {
+	return y.v
+}
