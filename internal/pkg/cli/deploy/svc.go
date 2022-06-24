@@ -1094,12 +1094,18 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		log.Errorf(rdwsAliasUsedWithoutDomainFriendlyText)
 		return nil, errors.New("alias specified when application is not associated with a domain")
 	}
-	appInfo := deploy.AppInformation{
-		Name:                d.app.Name,
-		Domain:              d.app.Domain,
-		AccountPrincipalARN: in.RootUserARN,
-	}
-	conf, err := stack.NewRequestDrivenWebService(d.rdwsMft, d.env.Name, appInfo, *rc)
+
+	conf, err := stack.NewRequestDrivenWebService(stack.RequestDrivenWebServiceConfig{
+		App: deploy.AppInformation{
+			Name:                d.app.Name,
+			Domain:              d.app.Domain,
+			AccountPrincipalARN: in.RootUserARN,
+		},
+		Env:           d.env.Name,
+		Manifest:      d.rdwsMft,
+		RawManifest:   d.rawMft,
+		RuntimeConfig: *rc,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}

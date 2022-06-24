@@ -53,30 +53,41 @@ type RequestDrivenWebService struct {
 	parser requestDrivenWebSvcReadParser
 }
 
+// RequestDrivenWebServiceConfig contains data required to initialize a request-driven web service stack.
+type RequestDrivenWebServiceConfig struct {
+	App         deploy.AppInformation
+	Env         string
+	Manifest    *manifest.RequestDrivenWebService
+	RawManifest []byte
+
+	RuntimeConfig RuntimeConfig
+}
+
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
-func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env string, app deploy.AppInformation, rc RuntimeConfig) (*RequestDrivenWebService, error) {
+func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDrivenWebService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name))
+	addons, err := addon.New(aws.StringValue(cfg.Manifest.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
 	return &RequestDrivenWebService{
 		appRunnerWkld: &appRunnerWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(mft.Name),
-				env:    env,
-				app:    app.Name,
-				rc:     rc,
-				image:  mft.ImageConfig.Image,
-				addons: addons,
-				parser: parser,
+				name:        aws.StringValue(cfg.Manifest.Name),
+				env:         cfg.Env,
+				app:         cfg.App.Name,
+				rc:          cfg.RuntimeConfig,
+				image:       cfg.Manifest.ImageConfig.Image,
+				rawManifest: cfg.RawManifest,
+				addons:      addons,
+				parser:      parser,
 			},
-			instanceConfig:    mft.InstanceConfig,
-			imageConfig:       mft.ImageConfig,
-			healthCheckConfig: mft.HealthCheckConfiguration,
+			instanceConfig:    cfg.Manifest.InstanceConfig,
+			imageConfig:       cfg.Manifest.ImageConfig,
+			healthCheckConfig: cfg.Manifest.HealthCheckConfiguration,
 		},
-		app:      app,
-		manifest: mft,
+		app:      cfg.App,
+		manifest: cfg.Manifest,
 		parser:   parser,
 	}, nil
 }

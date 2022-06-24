@@ -38,6 +38,7 @@ type BackendService struct {
 	parser backendSvcReadParser
 }
 
+// BackendServiceConfig contains data required to initialize a backend service stack.
 type BackendServiceConfig struct {
 	App           *config.Application
 	EnvManifest   *manifest.Environment
