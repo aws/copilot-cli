@@ -8,7 +8,9 @@ package job
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
 )
 
 type JobExecutor interface {
@@ -28,6 +30,28 @@ type JobRunner struct {
 	Job string
 
 	StackRetriever StackRetriever
+}
+
+type JobRunnerConfig struct {
+	App  string
+	Env  string
+	Job  string
+	Sess *session.Session
+}
+
+func NewJobRunner(opts *JobRunnerConfig) *JobRunner {
+	executor := stepfunctions.New(opts.Sess)
+
+	retriever := cloudformation.New(opts.Sess)
+
+	return &JobRunner{
+		Executor:       executor,
+		StackRetriever: retriever,
+		App:            opts.App,
+		Env:            opts.Env,
+		Job:            opts.Job,
+	}
+
 }
 
 func (r *JobRunner) Run() error {

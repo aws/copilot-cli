@@ -15,9 +15,9 @@ import (
 )
 
 type jobRunMock struct {
-	configStore    *mocks.Mockstore
-	sel            *mocks.MockdeploySelector
-	configSelector *mocks.MockconfigSelector
+	configStore *mocks.Mockstore
+	sel         *mocks.MockdeploySelector
+	ws          *mocks.MockwsSelector
 }
 
 func TestJobRun_Ask(t *testing.T) {
@@ -40,17 +40,15 @@ func TestJobRun_Ask(t *testing.T) {
 		wantedJob   string
 		wantedError error
 	}{
-		"validate app env and svc with all flags passed in": {
+		"validate app env and job with all flags passed in": {
 			inputApp:     inputApp,
 			inputJob:     inputJob,
 			inputEnvName: inputEnv,
 			setupMocks: func(m jobRunMock) {
 				gomock.InOrder(
 					m.configStore.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil),
-					m.configStore.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{Name: "my-env"}, nil),
 					m.configStore.EXPECT().GetJob("my-app", "my-job").Return(&config.Workload{}, nil),
-					m.configSelector.EXPECT().Environment(envPrompt, envHelpPrompt, "my-app").Return("my-env", nil),
-					m.configSelector.EXPECT().Job(jobNamePrompt, jobNameHelpPrompt, "my-app").Return("my-job", nil),
+					m.configStore.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{Name: "my-env"}, nil),
 				)
 			},
 			wantedApp: inputApp,
@@ -64,10 +62,10 @@ func TestJobRun_Ask(t *testing.T) {
 				gomock.InOrder(
 					m.sel.EXPECT().Application(jobAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil),
 					m.configStore.EXPECT().GetApplication(gomock.Any()).Times(0),
-					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes(),
 					m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).AnyTimes(),
-					m.configSelector.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Return("my-env", nil).AnyTimes(),
-					m.configSelector.EXPECT().Job(gomock.Any(), gomock.Any(), gomock.Any()).Return("my-job", nil).AnyTimes(),
+					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes(),
+					m.ws.EXPECT().Job(gomock.Any(), gomock.Any()).Return("my-job", nil).AnyTimes(),
+					m.ws.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Return("my-env", nil).AnyTimes(),
 				)
 			},
 			wantedApp: inputApp,
@@ -87,10 +85,10 @@ func TestJobRun_Ask(t *testing.T) {
 			setupMocks: func(m jobRunMock) {
 				gomock.InOrder(
 					m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes(),
-					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0),
 					m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).Times(0),
-					m.configSelector.EXPECT().Environment(envPrompt, envHelpPrompt, "my-app").Return("my-env", nil),
-					m.configSelector.EXPECT().Job(jobNamePrompt, jobNameHelpPrompt, "my-app").Return("my-job", nil),
+					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0),
+					m.ws.EXPECT().Job("Select a job from your workspace", "").Return("my-job", nil),
+					m.ws.EXPECT().Environment("Select an environment", "", "my-app").Return("my-env", nil),
 				)
 			},
 			wantedApp: inputApp,
@@ -99,17 +97,18 @@ func TestJobRun_Ask(t *testing.T) {
 		},
 		"return error if fail to select environment": {
 			inputApp: inputApp,
+			inputJob: inputJob,
 			setupMocks: func(m jobRunMock) {
 				gomock.InOrder(
 					m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes(),
 					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0),
-					m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).Times(0),
-					m.configSelector.EXPECT().Environment(envPrompt, envHelpPrompt, "my-app").Return("", errors.New("some error")),
+					m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).AnyTimes(),
+					m.ws.EXPECT().Environment("Select an environment", "", "my-app").Return("", errors.New("some error")),
 				)
 			},
-			wantedError: fmt.Errorf("select environment for application my-app: some error"),
+			wantedError: fmt.Errorf("select environment: some error"),
 		},
-		"return error if fail to select deployed jobs": {
+		"return error if fail to select job": {
 			inputApp:     inputApp,
 			inputEnvName: inputEnv,
 			setupMocks: func(m jobRunMock) {
@@ -117,11 +116,10 @@ func TestJobRun_Ask(t *testing.T) {
 					m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes(),
 					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes(),
 					m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).Times(0),
-					m.configSelector.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes(),
-					m.configSelector.EXPECT().Job(jobNamePrompt, jobNameHelpPrompt, inputApp).Return("", errors.New("some error")),
+					m.ws.EXPECT().Job("Select a job from your workspace", "").Return("", errors.New("some error")),
 				)
 			},
-			wantedError: fmt.Errorf("select job for application my-app: some error"),
+			wantedError: fmt.Errorf("select job: some error"),
 		},
 	}
 
@@ -132,12 +130,12 @@ func TestJobRun_Ask(t *testing.T) {
 
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSel := mocks.NewMockdeploySelector(ctrl)
-			mockConfigSel := mocks.NewMockconfigSelector(ctrl)
+			mockWs := mocks.NewMockwsSelector(ctrl)
 
 			mocks := jobRunMock{
-				configStore:    mockstore,
-				sel:            mockSel,
-				configSelector: mockConfigSel,
+				configStore: mockstore,
+				sel:         mockSel,
+				ws:          mockWs,
 			}
 
 			tc.setupMocks(mocks)
@@ -148,9 +146,9 @@ func TestJobRun_Ask(t *testing.T) {
 					appName: tc.inputApp,
 					jobName: tc.inputJob,
 				},
-				configStore:    mockstore,
-				sel:            mockSel,
-				configSelector: mockConfigSel,
+				configStore: mockstore,
+				sel:         mockSel,
+				ws:          mockWs,
 			}
 
 			err := jobRun.Ask()
@@ -202,7 +200,8 @@ func TestJobRun_Execute(t *testing.T) {
 				jobRunVars: jobRunVars{
 					jobName: tc.jobName,
 				},
-				runner: tc.mockjobRunner(ctrl),
+				runner:     tc.mockjobRunner(ctrl),
+				initRunner: func() {},
 			}
 
 			err := jobRunOpts.Execute()

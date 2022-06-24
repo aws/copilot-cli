@@ -12,8 +12,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	jobRunner "github.com/aws/copilot-cli/internal/pkg/runner/job"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -33,14 +35,15 @@ type jobRunVars struct {
 type jobRunOpts struct {
 	jobRunVars
 
-	configStore    store
-	configSelector configSelector
-	sel            deploySelector
+	configStore store
+	sel         deploySelector
+	ws          wsSelector
 
 	// cached variables.
 	targetEnv *config.Environment
 
-	runner Runner // Instantiated as JobRunner
+	runner     Runner
+	initRunner func()
 }
 
 func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
@@ -56,13 +59,27 @@ func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
 
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
+	prompter := prompt.New()
+
 	opts := &jobRunOpts{
-		jobRunVars:     vars,
-		configStore:    configStore,
-		configSelector: selector.NewConfigSelect(prompt.New(), configStore),
-		sel:            selector.NewDeploySelect(prompt.New(), configStore, deployStore),
+		jobRunVars:  vars,
+		configStore: configStore,
+		sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
+		ws:          selector.NewWorkspaceSelect(prompter, configStore, ws),
 	}
 
+	opts.initRunner = func() {
+		opts.runner = jobRunner.NewJobRunner(&jobRunner.JobRunnerConfig{
+			Sess: defaultSess,
+			Env:  opts.envName,
+			App:  opts.appName,
+			Job:  opts.jobName,
+		})
+	}
 	return opts, nil
 }
 
@@ -77,7 +94,13 @@ func (o *jobRunOpts) Ask() error {
 	if err := o.validateOrAskApp(); err != nil {
 		return err
 	}
-	return o.validateOrAskForJobEnvName()
+	if err := o.askJobName(); err != nil {
+		return err
+	}
+	if err := o.askEnvName(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o *jobRunOpts) validateOrAskApp() error {
@@ -95,33 +118,35 @@ func (o *jobRunOpts) validateOrAskApp() error {
 	return nil
 }
 
-func (o *jobRunOpts) validateOrAskForJobEnvName() error {
-
-	if o.envName != "" {
-		if _, err := o.getTargetEnv(); err != nil {
-			return err
-		}
-	}
-
+func (o *jobRunOpts) askJobName() error {
 	if o.jobName != "" {
 		if _, err := o.configStore.GetJob(o.appName, o.jobName); err != nil {
 			return err
 		}
+		return nil
 	}
 
-	env, err := o.configSelector.Environment(envPrompt, envHelpPrompt, o.appName)
+	name, err := o.ws.Job("Select a job from your workspace", "")
 	if err != nil {
-		return fmt.Errorf("select environment for application %s: %w", o.appName, err)
+		return fmt.Errorf("select job: %w", err)
+	}
+	o.jobName = name
+	return nil
+}
+
+func (o *jobRunOpts) askEnvName() error {
+	if o.envName != "" {
+		if _, err := o.getTargetEnv(); err != nil {
+			return err
+		}
+		return nil
 	}
 
-	o.envName = env
-
-	job, err := o.configSelector.Job(jobNamePrompt, jobNameHelpPrompt, o.appName)
+	name, err := o.ws.Environment("Select an environment", "", o.appName)
 	if err != nil {
-		return fmt.Errorf("select job for application %s: %w", o.appName, err)
+		return fmt.Errorf("select environment: %w", err)
 	}
-
-	o.jobName = job
+	o.envName = name
 	return nil
 }
 
@@ -138,6 +163,7 @@ func (o *jobRunOpts) getTargetEnv() (*config.Environment, error) {
 }
 
 func (o *jobRunOpts) Execute() error {
+	o.initRunner()
 	err := o.runner.Run()
 
 	if err != nil {
