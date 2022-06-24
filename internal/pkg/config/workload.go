@@ -19,10 +19,10 @@ const (
 	jobWorkloadType = "job"
 )
 
-// Workload represents a deployable long running service or task.
+// Workload represents a deployable long-running service or task.
 type Workload struct {
 	App  string `json:"app"`  // Name of the app this workload belongs to.
-	Name string `json:"name"` // Name of the workload, which must be unique within a app.
+	Name string `json:"name"` // Name of the workload, which must be unique within an app.
 	Type string `json:"type"` // Type of the workload (ex: Load Balanced Web Service, etc)
 }
 

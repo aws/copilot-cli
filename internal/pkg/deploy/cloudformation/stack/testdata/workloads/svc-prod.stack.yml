@@ -111,7 +111,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
           PortMappings:
             - ContainerPort: !Ref ContainerPort
         - Name: firelens_log_router
-          Image: public.ecr.aws/aws-observability/aws-for-fluent-bit:latest
+          Image: public.ecr.aws/aws-observability/aws-for-fluent-bit:stable
           Environment:
             - Name: COPILOT_APPLICATION_NAME
               Value: !Sub '${AppName}'
@@ -171,6 +171,30 @@ Resources: # If a bucket URL is specified, that means the template exists.
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
+        - Name: operation
+          Image: alpine:latest
+          Command:
+            - echo
+            - $COPILOT_APPLICATION_NAME
+          Environment:
+            - Name: COPILOT_APPLICATION_NAME
+              Value: !Sub '${AppName}'
+            - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
+              Value: prod.my-app.local
+            - Name: COPILOT_ENVIRONMENT_NAME
+              Value: !Sub '${EnvName}'
+            - Name: COPILOT_SERVICE_NAME
+              Value: !Sub '${WorkloadName}'
+            - Name: COPILOT_SNS_TOPIC_ARNS
+              Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-givesdogs"}'
+            - Name: COPILOT_LB_DNS
+              Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+          LogConfiguration:
+              LogDriver: awslogs
+              Options:
+                awslogs-region: !Ref AWS::Region
+                awslogs-group: !Ref LogGroup
+                awslogs-stream-prefix: copilot
       Volumes:
         - Name: persistence
   ExecutionRole:
@@ -307,13 +331,57 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockDynamicDesiredCountZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
-      Role: !GetAtt 'CustomResourceRole.Arn'
+      Role: !GetAtt 'DynamicDesiredCountFunctionRole.Arn'
       Runtime: nodejs12.x
+  DynamicDesiredCountFunctionRole:
+    Metadata:
+      'aws:copilot:description': "An IAM Role for describing number of running tasks in your ECS service"
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: "DelegateDesiredCountAccess"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ECS
+                Effect: Allow
+                Action:
+                  - ecs:DescribeServices
+                Resource: "*"
+                Condition:
+                  ArnEquals:
+                    'ecs:cluster':
+                      Fn::Sub:
+                        - arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterName}
+                        - ClusterName:
+                            Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
+              - Sid: ResourceGroups
+                Effect: Allow
+                Action:
+                  - resource-groups:GetResources
+                Resource: "*"
+              - Sid: Tags
+                Effect: Allow
+                Action:
+                  - "tag:GetResources"
+                Resource: "*"
   AutoScalingRole:
     Metadata:
       'aws:copilot:description': 'An IAM role for container auto scaling'
@@ -352,8 +420,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
       TargetTrackingScalingPolicyConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageCPUUtilization
-        ScaleInCooldown: 120
-        ScaleOutCooldown: 60
+        ScaleInCooldown: 30
+        ScaleOutCooldown: 150
         TargetValue: 70
   EnvControllerAction:
     Metadata:
@@ -368,8 +436,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockEnvControllerZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -482,17 +550,17 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockRulePriorityZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
-      Role: !GetAtt 'CustomResourceRole.Arn'
+      Role: !GetAtt 'RulePriorityFunctionRole.Arn'
       Runtime: nodejs12.x
-  CustomResourceRole:
-    Metadata:
-      'aws:copilot:description': 'An IAM role used by custom resources to describe your ECS service'
+  RulePriorityFunctionRole:
     Type: AWS::IAM::Role
+    Metadata:
+      'aws:copilot:description': "An IAM Role to describe load balancer rules for assigning a priority"
     Properties:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -504,43 +572,17 @@ Resources: # If a bucket URL is specified, that means the template exists.
             Action:
               - sts:AssumeRole
       Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-        - PolicyName: "DNSandACMAccess"
+        - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
                   - elasticloadbalancing:DescribeRules
                 Resource: "*"
-        - PolicyName: "DelegateDesiredCountAccess"
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Sid: ECS
-                Effect: Allow
-                Action:
-                  - ecs:DescribeServices
-                Resource: "*"
-                Condition:
-                  ArnEquals:
-                    'ecs:cluster':
-                      Fn::Sub:
-                        - arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/${ClusterName}
-                        - ClusterName:
-                            Fn::ImportValue: !Sub '${AppName}-${EnvName}-ClusterId'
-              - Sid: ResourceGroups
-                Effect: Allow
-                Action:
-                  - resource-groups:GetResources
-                Resource: "*"
-              - Sid: Tags
-                Effect: Allow
-                Action:
-                  - "tag:GetResources"
-                Resource: "*"
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
   HTTPSRulePriorityAction:
     Metadata:
       'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'

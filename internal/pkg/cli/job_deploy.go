@@ -67,7 +67,7 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 		store:           store,
 		ws:              ws,
 		unmarshal:       manifest.UnmarshalWorkload,
-		sel:             selector.NewWorkspaceSelect(prompter, store, ws),
+		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws),
 		sessProvider:    sessProvider,
 		newInterpolator: newManifestInterpolator,
 		cmd:             exec.NewCmd(),
@@ -172,11 +172,12 @@ func (o *deployJobOpts) Execute() error {
 	}
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
-			ImageDigest: uploadOut.ImageDigest,
-			EnvFileARN:  uploadOut.EnvFileARN,
-			AddonsURL:   uploadOut.AddonsURL,
-			RootUserARN: o.rootUserARN,
-			Tags:        tags.Merge(o.targetApp.Tags, o.resourceTags),
+			ImageDigest:        uploadOut.ImageDigest,
+			EnvFileARN:         uploadOut.EnvFileARN,
+			AddonsURL:          uploadOut.AddonsURL,
+			RootUserARN:        o.rootUserARN,
+			Tags:               tags.Merge(o.targetApp.Tags, o.resourceTags),
+			CustomResourceURLs: uploadOut.CustomResourceURLs,
 		},
 		Options: deploy.Options{
 			DisableRollback: o.disableRollback,

@@ -283,6 +283,10 @@ type wsWlDirReader interface {
 	Summary() (*workspace.Summary, error)
 }
 
+type wsEnvironmentReader interface {
+	ReadEnvironmentManifest(mftDirName string) (workspace.EnvironmentManifest, error)
+}
+
 type wsPipelineReader interface {
 	wsPipelineGetter
 	Rel(path string) (string, error)
@@ -312,8 +316,6 @@ type uploader interface {
 
 type customResourcesUploader interface {
 	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
-	UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
-	UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 }
 
 type bucketEmptier interface {
@@ -380,6 +382,7 @@ type taskStackManager interface {
 
 type taskRunner interface {
 	Run() ([]*task.Task, error)
+	CheckNonZeroExitCode([]*task.Task) error
 }
 
 type defaultClusterGetter interface {
@@ -413,6 +416,12 @@ type statusDescriber interface {
 type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 	PublicCIDRBlocks() ([]string, error)
+	Manifest() ([]byte, error)
+}
+
+type versionCompatibilityChecker interface {
+	versionGetter
+	AvailableFeatures() ([]string, error)
 }
 
 type versionGetter interface {
@@ -484,6 +493,10 @@ type pipelineEnvSelector interface {
 
 type wsPipelineSelector interface {
 	WsPipeline(prompt, help string) (*workspace.PipelineManifest, error)
+}
+
+type wsEnvironmentSelector interface {
+	LocalEnvironment(msg, help string) (wl string, err error)
 }
 
 type codePipelineSelector interface {
@@ -631,6 +644,12 @@ type workloadTemplateGenerator interface {
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
 }
 
+
 type Runner interface {
 	Run() error
+}
+
+type envDeployer interface {
+	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
+	UploadArtifacts() (map[string]string, error)
 }

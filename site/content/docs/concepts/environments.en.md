@@ -35,9 +35,11 @@ Workload subnet placement can be modified using the [`network.vpc.placement`](..
 
 ###  Load Balancers and DNS
 
-If you set up any service using one of the Load Balanced Service types, Copilot will set up an Application Load Balancer. All Load Balanced Web Services within an environment will share an Application Load Balancer by creating app-specific listeners on it. Your load balancer is allowed to communicate with services in your VPC.
+If you set up a Load Balanced Web Service or Backend Service with the `http` field in its manifest, Copilot will set up an Application Load Balancer to be shared among all load-balanced services within that environment. Load Balanced Web Services' ALBs are internet-facing, while Backend Services' are internal. Your load balancer is allowed to communicate with other Copilot services in your VPC.
 
 Optionally, when you set up an application, you can provide a domain name that you own and is registered in Route 53. If you provide a domain name, each time you spin up an environment, Copilot will create a subdomain environment-name.app-name.your-domain.com, provision an ACM cert, and bind it to your Application Load Balancer so it can use HTTPS.
+
+An internal ALB is created when a Backend Service with [`http`](../manifest/backend-service.en.md#http) configured in its manifest is deployed in an environment. For an HTTPS endpoint, use the [`--import-cert-arns`](../commands/env-init.en.md#what-are-the-flags) flag when running `copilot env init` and import a VPC with only private subnets. For more on internal ALBs, go [here](../developing/internal-albs.en.md).
 
 ## Customize your Environment
 Optionally, you can customize your environment interactively by using flags to import your existing resources, or configure the default environment resources. Currently, only VPC resources are customizable. However, if you want to customize more types of resources, feel free to bring your use cases and cut an issue! 

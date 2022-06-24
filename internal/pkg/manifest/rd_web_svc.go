@@ -60,15 +60,19 @@ func (c *RequestDrivenWebServiceNetworkConfig) IsEmpty() bool {
 	return c.VPC.isEmpty()
 }
 
-// RequestDrivenWebServicePlacement represents where to place tasks for a Request-Driven Web Service.
-type RequestDrivenWebServicePlacement Placement
+func (c *RequestDrivenWebServiceNetworkConfig) requiredEnvFeatures() []string {
+	if aws.StringValue((*string)(c.VPC.Placement.PlacementString)) == string(PrivateSubnetPlacement) {
+		return []string{template.NATFeatureName}
+	}
+	return nil
+}
 
 type rdwsVpcConfig struct {
-	Placement *RequestDrivenWebServicePlacement `yaml:"placement"`
+	Placement PlacementArgOrString `yaml:"placement"`
 }
 
 func (c *rdwsVpcConfig) isEmpty() bool {
-	return c.Placement == nil
+	return c.Placement.IsEmpty()
 }
 
 // RequestDrivenWebServiceHttpConfig represents options for configuring http.
@@ -161,6 +165,13 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 
 	s.Environments = nil
 	return &s, nil
+}
+
+// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
+func (s *RequestDrivenWebService) RequiredEnvironmentFeatures() []string {
+	var features []string
+	features = append(features, s.Network.requiredEnvFeatures()...)
+	return features
 }
 
 // newDefaultRequestDrivenWebService returns an empty RequestDrivenWebService with only the default values set.

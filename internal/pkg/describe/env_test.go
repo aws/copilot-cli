@@ -14,6 +14,7 @@ import (
 	cfstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -274,6 +275,77 @@ func TestEnvDescriber_Describe(t *testing.T) {
 	}
 }
 
+func TestEnvDescriber_Manifest(t *testing.T) {
+	testCases := map[string]struct {
+		given func(ctrl *gomock.Controller) *EnvDescriber
+
+		wantedManifest []byte
+		wantedErr      error
+	}{
+		"should return an error when the template Metadata cannot be retrieved": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return("", errors.New("some error"))
+				return &EnvDescriber{
+					cfn: m,
+				}
+			},
+			wantedErr: errors.New("some error"),
+		},
+		"should unmarshal from SSM when the stack template does not have any Metadata.Manifest": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return(`
+Metadata:
+  Version: 1.9.0
+`, nil)
+				return &EnvDescriber{
+					env: &config.Environment{
+						Name: "test",
+					},
+					cfn: m,
+				}
+			},
+			wantedManifest: []byte(`name: test
+type: Environment`),
+		},
+		"should prioritize stack template's Metadata over SSM": {
+			given: func(ctrl *gomock.Controller) *EnvDescriber {
+				m := mocks.NewMockstackDescriber(ctrl)
+				m.EXPECT().StackMetadata().Return(`{"Version":"1.9.0","Manifest":"\nname: prod\ntype: Environment"}`, nil)
+				return &EnvDescriber{
+					env: &config.Environment{
+						Name: "test",
+					},
+					cfn: m,
+				}
+			},
+			wantedManifest: []byte(`name: prod
+type: Environment`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			describer := tc.given(ctrl)
+
+			// WHEN
+			mft, err := describer.Manifest()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, string(tc.wantedManifest), string(mft), "expected manifests to match")
+			}
+		})
+	}
+}
+
 func TestEnvDescriber_Version(t *testing.T) {
 	testCases := map[string]struct {
 		given func(ctrl *gomock.Controller) *EnvDescriber
@@ -484,6 +556,84 @@ func TestEnvDescriber_PublicCIDRBlocks(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedCIDRBlocks, actual)
+			}
+		})
+	}
+}
+
+func TestEnvDescriber_Features(t *testing.T) {
+	testCases := map[string]struct {
+		setupMock func(m *envDescriberMocks)
+
+		wanted    []string
+		wantedErr error
+	}{
+		"error describing stack": {
+			setupMock: func(m *envDescriberMocks) {
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{}, errors.New("some error"))
+			},
+			wantedErr: errors.New("some error"),
+		},
+		"return outdated features": {
+			setupMock: func(m *envDescriberMocks) {
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: map[string]string{
+						"AppName":                  "mock-app",
+						"EnvironmentName":          "mock-env",
+						"ToolsAccountPrincipalARN": "mock-arn",
+						"AppDNSName":               "mock-dns",
+						"AppDNSDelegationRole":     "mock-role",
+						"Aliases":                  "",
+						template.ALBFeatureName:    "workload1,workload2",
+						template.EFSFeatureName:    "",
+						template.NATFeatureName:    "",
+					},
+				}, nil)
+			},
+			wanted: []string{template.ALBFeatureName, template.EFSFeatureName, template.NATFeatureName},
+		},
+		"return up-to-date features": {
+			setupMock: func(m *envDescriberMocks) {
+				mockParams := map[string]string{
+					"AppName":                  "mock-app",
+					"EnvironmentName":          "mock-env",
+					"ToolsAccountPrincipalARN": "mock-arn",
+					"AppDNSName":               "mock-dns",
+					"AppDNSDelegationRole":     "mock-role",
+					"Aliases":                  "",
+				}
+				for _, f := range template.AvailableEnvFeatures() {
+					mockParams[f] = ""
+				}
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: mockParams,
+				}, nil)
+			},
+			wanted: template.AvailableEnvFeatures(),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &envDescriberMocks{
+				stackDescriber: mocks.NewMockstackDescriber(ctrl),
+			}
+			tc.setupMock(m)
+			d := &EnvDescriber{
+				cfn: m.stackDescriber,
+			}
+
+			// WHEN
+			got, err := d.AvailableFeatures()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, got, "expected features to match")
 			}
 		})
 	}

@@ -1,5 +1,5 @@
 # task delete
-```
+```console
 $ copilot task delete
 ```
 
@@ -21,16 +21,16 @@ $ copilot task delete
 ```
 ## 実行例
 デフォルトのクラスターから、"test" タスクを削除します。
-```
+```console
 $ copilot task delete --name test --default
 ```
 
 prod Environment から、"db-migrate" タスクを削除します。
-```
+```console
 $ copilot task delete --name db-migrate --env prod
 ```
 
 確認のプロンプトを表示せずに、"test" タスクを削除します。
-```
+```console
 $ copilot task delete --name test --yes
 ```

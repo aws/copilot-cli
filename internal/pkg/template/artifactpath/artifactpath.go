@@ -15,9 +15,11 @@ const (
 	s3TemplateDirName         = "templates"
 	s3ArtifactAddonsDirName   = "addons"
 	s3ArtifactEnvFilesDirName = "env-files"
+	s3ScriptsDirName          = "scripts"
+	s3CustomResourcesDirName  = "custom-resources"
 )
 
-// MkdirSHA prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
+// MkdirSHA256 prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
 func MkdirSHA256(key string, content []byte) string {
 	return path.Join(s3ArtifactDirName, fmt.Sprintf("%x", sha256.Sum256(content)), key)
 }
@@ -38,4 +40,10 @@ func CFNTemplate(key string, content []byte) string {
 // Example: manual/env-files/key/sha.env.
 func EnvFiles(key string, content []byte) string {
 	return path.Join(s3ArtifactDirName, s3ArtifactEnvFilesDirName, key, fmt.Sprintf("%x.env", sha256.Sum256(content)))
+}
+
+// CustomResource returns the path to store a custom resource with a sha256 of the contents of the file.
+// Example: manual/scripts/custom-resources/key/sha.zip
+func CustomResource(key string, zipFile []byte) string {
+	return path.Join(s3ArtifactDirName, s3ScriptsDirName, s3CustomResourcesDirName, key, fmt.Sprintf("%x.zip", sha256.Sum256(zipFile)))
 }

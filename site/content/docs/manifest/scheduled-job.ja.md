@@ -2,34 +2,34 @@
 
 ???+ note "レポートを作成する cron ジョブのサンプル Manifest"
 
-```yaml
-# Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
-name: report-generator
-type: Scheduled Job
+    ```yaml
+        # Service 名はロググループや ECS タスクなどのリソースの命名に利用されます。
+        name: report-generator
+        type: Scheduled Job
+    
+        on:
+          schedule: "@daily"
+        cpu: 256
+        memory: 512
+        retries: 3
+        timeout: 1h
+    
+        image:
+          # Service で利用する Dockerfileへのパス.
+          build: ./Dockerfile
+    
+        variables:
+          LOG_LEVEL: info
+        env_file: log.env
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
 
-on:
-  schedule: "@daily"
-cpu: 256
-memory: 512
-retries: 3
-timeout: 1h
-
-image:
-  # Path to your service's Dockerfile.
-  build: ./Dockerfile
-
-variables:
-  LOG_LEVEL: info
-env_file: log.env
-secrets:
-  GITHUB_TOKEN: GITHUB_TOKEN
-
-# You can override any of the values defined above by environment.
-environments:
-  prod:
-    cpu: 2048               # Larger CPU value for prod environment
-    memory: 4096
-```
+        # 上記すべての値は Environment ごとにオーバーライド可能です。
+        environments:
+          prod:
+            cpu: 2048               # prod Enviroment では 大きな CPU 値。
+            memory: 4096
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Job 名。
@@ -38,15 +38,15 @@ Job 名。
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 Job のアーキテクチャタイプ。
-現在、Copilot は定期的にもしくは固定したスケジュールでトリガされるタスクである "Scheduled Job" タイプのみをサポートしています。
+現在、Copilot は定期的にもしくは固定したスケジュールでトリガーされるタスクである "Scheduled Job" タイプのみをサポートしています。
 
 <div class="separator"></div>
 
 <a id="on" href="#on" class="field">`on`</a> <span class="type">Map</span>  
-Job をトリガするイベントの設定。
+Job をトリガーするイベントの設定。
 
 <span class="parent-field">on.</span><a id="on-schedule" href="#on-schedule" class="field">`schedule`</a> <span class="type">String</span>  
-定期的に Job をトリガする頻度を指定できます。
+定期的に Job をトリガーする頻度を指定できます。
 サポートする頻度は:
 
 
@@ -61,10 +61,17 @@ Job をトリガするイベントの設定。
 * `"@every {duration}"` (例: "1m", "5m")
 * `"rate({duration})"` CloudWatch の[rate 式](https://docs.aws.amazon.com/ja_jp/AmazonCloudWatch/latest/events/ScheduledEvents.html#RateExpressions) の形式
 
-特定の時間に Job をトリガしたい場合、cron でスケジュールを指定できます。
+特定の時間に Job をトリガーしたい場合、cron でスケジュールを指定できます。
 
 * `"* * * * *"` 標準的な [cron フォーマット](https://en.wikipedia.org/wiki/Cron#Overview)を利用する
 * `"cron({fields})"` 6 つフィールドからなる CloudWatch の[cron 式](https://docs.aws.amazon.com/ja_jp/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) を利用する
+
+最後に、例えば `schedule` フィールドを `none` に設定することで、Job がトリガーされないようにすることができます。
+```yaml
+on:
+  schedule: "none"
+```
+
 <div class="separator"></div>
 
 {% include 'image-config.ja.md' %}
@@ -206,7 +213,7 @@ EFS の高度な認可の設定を指定します。
 logging セクションには、コンテナの [FireLens](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) ログドライバ用のログ設定パラメータが含まれます。(設定例は[こちら](../developing/sidecars.ja.md#sidecar-patterns))
 
 <span class="parent-field">logging.</span><a id="logging-image" href="#logging-image" class="field">`image`</a> <span class="type">Map</span>  
-任意項目。使用する Fluent Bit のイメージ。デフォルト値は `public.ecr.aws/aws-observability/aws-for-fluent-bit:latest`。
+任意項目。使用する Fluent Bit のイメージ。デフォルト値は `public.ecr.aws/aws-observability/aws-for-fluent-bit:stable`。
 
 <span class="parent-field">logging.</span><a id="logging-destination" href="#logging-destination" class="field">`destination`</a> <span class="type">Map</span>  
 任意項目。Firelens ログドライバーにログを送信するときの設定。

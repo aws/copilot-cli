@@ -42,14 +42,12 @@ var (
 		DNSDelegationFileName,
 		CustomDomainFileName,
 	}
-	rdWkldCustomResourceFiles = []string{
-		AppRunnerCustomDomainLambdaFileName,
-	}
-	nlbWkldCustomResourceFiles = []string{
-		NLBCertValidatorLambdaFileName,
-		NLBCustomDomainLambdaFileName,
-	}
 )
+
+// Reader is the interface that wraps the Read method.
+type Reader interface {
+	Read(path string) (*Content, error)
+}
 
 // Parser is the interface that wraps the Parse method.
 type Parser interface {
@@ -58,7 +56,7 @@ type Parser interface {
 
 // ReadParser is the interface that wraps the Read and Parse methods.
 type ReadParser interface {
-	Read(path string) (*Content, error)
+	Reader
 	Parser
 }
 
@@ -123,16 +121,6 @@ func (t *Template) Parse(path string, data interface{}, options ...ParseOption) 
 // UploadEnvironmentCustomResources uploads the environment custom resource scripts.
 func (t *Template) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
 	return t.uploadCustomResources(upload, envCustomResourceFiles)
-}
-
-// UploadRequestDrivenWebServiceCustomResources uploads the request driven web service custom resource scripts.
-func (t *Template) UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	return t.uploadCustomResources(upload, rdWkldCustomResourceFiles)
-}
-
-// UploadLoadBalancedWebServiceNLBCustomResources uploads the network load-balanced web service custom resource scripts.
-func (t *Template) UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	return t.uploadCustomResources(upload, nlbWkldCustomResourceFiles)
 }
 
 func (t *Template) uploadCustomResources(upload s3.CompressAndUploadFunc, fileNames []string) (map[string]string, error) {

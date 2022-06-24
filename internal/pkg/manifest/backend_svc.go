@@ -27,7 +27,7 @@ type BackendService struct {
 type BackendServiceConfig struct {
 	ImageConfig      ImageWithHealthcheckAndOptionalPort `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
-	RoutingRule      RoutingRuleConfigOrBool `yaml:"http,flow"`
+	RoutingRule      RoutingRuleConfiguration `yaml:"http,flow"`
 	TaskConfig       `yaml:",inline"`
 	Logging          Logging                   `yaml:"logging,flow"`
 	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
@@ -76,6 +76,17 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 	return content.Bytes(), nil
+}
+
+// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
+func (s *BackendService) RequiredEnvironmentFeatures() []string {
+	var features []string
+	if !s.RoutingRule.IsEmpty() {
+		features = append(features, template.InternalALBFeatureName)
+	}
+	features = append(features, s.Network.requiredEnvFeatures()...)
+	features = append(features, s.Storage.requiredEnvFeatures()...)
+	return features
 }
 
 // Port returns the exposed the exposed port in the manifest.
@@ -156,7 +167,9 @@ func newDefaultBackendService() *BackendService {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: placementP(PublicSubnetPlacement),
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PublicSubnetPlacement),
+					},
 				},
 			},
 		},

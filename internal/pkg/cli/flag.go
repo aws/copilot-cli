@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
@@ -27,6 +28,8 @@ const (
 	allFlag        = "all"
 	forceFlag      = "force"
 	noRollbackFlag = "no-rollback"
+	manifestFlag   = "manifest"
+
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
 	dockerFileContextFlag = "build-context"
@@ -91,6 +94,8 @@ const (
 	publicSubnetsFlag              = "import-public-subnets"
 	privateSubnetsFlag             = "import-private-subnets"
 	certsFlag                      = "import-cert-arns"
+	internalALBSubnetsFlag         = "internal-alb-subnets"
+	allowVPCIngressFlag            = "internal-alb-allow-vpc-ingress"
 	overrideVPCCIDRFlag            = "override-vpc-cidr"
 	overrideAZsFlag                = "override-az-names"
 	overridePublicSubnetCIDRsFlag  = "override-public-cidrs"
@@ -204,6 +209,7 @@ const (
 rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
+	manifestFlagDescription = "Optional. Output the manifest file used for the deployment."
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
@@ -278,10 +284,14 @@ To use it for an ECS service, specify --generate-cmd <cluster name>/<service nam
 Alternatively, if the service or job is created with Copilot, specify --generate-cmd <application>/<environment>/<service or job name>.
 Cannot be specified with any other flags.`
 
-	vpcIDFlagDescription           = "Optional. Use an existing VPC ID."
-	publicSubnetsFlagDescription   = "Optional. Use existing public subnet IDs."
-	privateSubnetsFlagDescription  = "Optional. Use existing private subnet IDs."
-	certsFlagDescription           = "Optional. Apply existing ACM certificates to the internet-facing load balancer."
+	vpcIDFlagDescription              = "Optional. Use an existing VPC ID."
+	publicSubnetsFlagDescription      = "Optional. Use existing public subnet IDs."
+	privateSubnetsFlagDescription     = "Optional. Use existing private subnet IDs."
+	certsFlagDescription              = "Optional. Apply existing ACM certificates to the internet-facing load balancer."
+	internalALBSubnetsFlagDescription = `Optional. Specify subnet IDs for an internal load balancer.
+By default, the load balancer will be placed in your private subnets.
+Cannot be specified with --default-config or any of the --override flags.`
+	allowVPCIngressFlagDescription = `Optional. Allow internal ALB ingress from port 80 and/or port 443.`
 	overrideVPCCIDRFlagDescription = `Optional. Global CIDR to use for VPC.
 (default 10.0.0.0/16)`
 	overrideAZsFlagDescription = `Optional. Availability Zone names.

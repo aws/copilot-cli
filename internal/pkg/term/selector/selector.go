@@ -89,8 +89,8 @@ var presetSchedules = []prompt.Option{
 	{Value: yearly, Hint: "At midnight, Jan 1st UTC"},
 }
 
-// Prompter wraps the methods to ask for inputs from the terminal.
-type Prompter interface {
+// prompter wraps the methods to ask for inputs from the terminal.
+type prompter interface {
 	Get(message, help string, validator prompt.ValidatorFunc, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOne(message, help string, options []string, promptOpts ...prompt.PromptConfig) (string, error)
 	SelectOption(message, help string, opts []prompt.Option, promptCfgs ...prompt.PromptConfig) (value string, err error)
@@ -98,51 +98,51 @@ type Prompter interface {
 	Confirm(message, help string, promptOpts ...prompt.PromptConfig) (bool, error)
 }
 
-// AppEnvLister wraps methods to list apps and envs in config store.
-type AppEnvLister interface {
+type appEnvLister interface {
 	ListEnvironments(appName string) ([]*config.Environment, error)
 	ListApplications() ([]*config.Application, error)
 }
 
-// ConfigWorkloadLister wraps the method to list workloads in config store.
-type ConfigWorkloadLister interface {
+type configWorkloadLister interface {
 	ListServices(appName string) ([]*config.Workload, error)
 	ListJobs(appName string) ([]*config.Workload, error)
 	ListWorkloads(appName string) ([]*config.Workload, error)
 }
 
-// ConfigLister wraps config store listing methods.
-type ConfigLister interface {
-	AppEnvLister
-	ConfigWorkloadLister
+type configLister interface {
+	appEnvLister
+	configWorkloadLister
 }
 
-// WsWorkloadLister wraps the method to get workloads in current workspace.
-type WsWorkloadLister interface {
+type wsWorkloadLister interface {
 	ListServices() ([]string, error)
 	ListJobs() ([]string, error)
 	ListWorkloads() ([]string, error)
 }
 
-// WsPipelinesLister is a pipeline lister.
-type WsPipelinesLister interface {
+type wsEnvironmentsLister interface {
+	ListEnvironments() ([]string, error)
+}
+
+type wsPipelinesLister interface {
 	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
-// CodePipelineLister is a pipeline lister for deployed pipelines.
-type CodePipelineLister interface {
+// codePipelineLister lists deployed pipelines.
+type codePipelineLister interface {
 	ListDeployedPipelines(appName string) ([]deploy.Pipeline, error)
 }
 
-// WorkspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
-type WorkspaceRetriever interface {
-	WsWorkloadLister
+// workspaceRetriever wraps methods to get workload names, app names, and Dockerfiles from the workspace.
+type workspaceRetriever interface {
+	wsWorkloadLister
+	wsEnvironmentsLister
 	Summary() (*workspace.Summary, error)
 	ListDockerfiles() ([]string, error)
 }
 
-// DeployStoreClient wraps methods of deploy store.
-type DeployStoreClient interface {
+// deployedWorkloadsRetriever retrieves information about deployed services or jobs.
+type deployedWorkloadsRetriever interface {
 	ListDeployedServices(appName string, envName string) ([]string, error)
 	ListDeployedJobs(appName, envName string) ([]string, error)
 	IsServiceDeployed(appName string, envName string, svcName string) (bool, error)
@@ -150,102 +150,116 @@ type DeployStoreClient interface {
 	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }
 
-// TaskStackDescriber wraps cloudformation client methods to describe task stacks
-type TaskStackDescriber interface {
+// taskStackDescriber wraps cloudformation client methods to describe task stacks
+type taskStackDescriber interface {
 	ListDefaultTaskStacks() ([]deploy.TaskStackInfo, error)
 	ListTaskStacks(appName, envName string) ([]deploy.TaskStackInfo, error)
 }
 
-// TaskLister wraps methods of listing tasks.
-type TaskLister interface {
+// taskLister wraps methods of listing tasks.
+type taskLister interface {
 	ListActiveAppEnvTasks(opts ecs.ListActiveAppEnvTasksOpts) ([]*awsecs.Task, error)
 	ListActiveDefaultClusterTasks(filter ecs.ListTasksFilter) ([]*awsecs.Task, error)
 }
 
-// Select prompts users to select the name of an application or environment.
-type Select struct {
-	prompt Prompter
-	config ConfigLister
+// AppEnvSelector prompts users to select the name of an application or environment.
+type AppEnvSelector struct {
+	prompt       prompter
+	appEnvLister appEnvLister
 }
 
-// ConfigSelect is an application and environment selector, but can also choose a service from the config store.
-type ConfigSelect struct {
-	*Select
-	workloadLister ConfigWorkloadLister
+// ConfigSelector is an application and environment selector, but can also choose a service from the config store.
+type ConfigSelector struct {
+	*AppEnvSelector
+	workloadLister configWorkloadLister
 }
 
-// WorkspaceSelect  is an application and environment selector, but can also choose a service from the workspace.
-type WorkspaceSelect struct {
-	*Select
-	ws      WorkspaceRetriever
+// LocalWorkloadSelector is an application and environment selector, but can also choose a service from the workspace.
+type LocalWorkloadSelector struct {
+	*ConfigSelector
+	ws      workspaceRetriever
 	appName string
 }
 
-// WsPipelineSelect is a workspace pipeline selector.
-type WsPipelineSelect struct {
-	prompt Prompter
-	ws     WsPipelinesLister
+// LocalEnvironmentSelector is an application and environment selector, but can also choose an environment from the workspace.
+type LocalEnvironmentSelector struct {
+	*AppEnvSelector
+	ws      workspaceRetriever
+	appName string
 }
 
-// CodePipelineSelect is a selector for deployed pipelines.
-type CodePipelineSelect struct {
-	prompt         Prompter
-	pipelineLister CodePipelineLister
+// WorkspaceSelector selects from local workspace.
+type WorkspaceSelector struct {
+	prompt prompter
+	ws     workspaceRetriever
 }
 
-// AppPipelineSelect is a selector for deployed pipelines and apps.
-type AppPipelineSelect struct {
-	*Select
-	*CodePipelineSelect
+// WsPipelineSelector is a workspace pipeline selector.
+type WsPipelineSelector struct {
+	prompt prompter
+	ws     wsPipelinesLister
 }
 
-// DeploySelect is a service and environment selector from the deploy store.
-type DeploySelect struct {
-	*Select
-	deployStoreSvc DeployStoreClient
+// CodePipelineSelector is a selector for deployed pipelines.
+type CodePipelineSelector struct {
+	prompt         prompter
+	pipelineLister codePipelineLister
+}
+
+// AppPipelineSelector is a selector for deployed pipelines and apps.
+type AppPipelineSelector struct {
+	*AppEnvSelector
+	*CodePipelineSelector
+}
+
+// DeploySelector is a service and environment selector from the deploy store.
+type DeploySelector struct {
+	*ConfigSelector
+	deployStoreSvc deployedWorkloadsRetriever
 	svc            string
 	env            string
 	filters        []DeployedServiceFilter
 }
 
-// CFTaskSelect is a selector based on CF methods to get deployed one off tasks.
-type CFTaskSelect struct {
-	*Select
-	cfStore        TaskStackDescriber
+// CFTaskSelector is a selector based on CF methods to get deployed one off tasks.
+type CFTaskSelector struct {
+	*AppEnvSelector
+	cfStore        taskStackDescriber
 	app            string
 	env            string
 	defaultCluster bool
 }
 
-func NewCFTaskSelect(prompt Prompter, store ConfigLister, cf TaskStackDescriber) *CFTaskSelect {
-	return &CFTaskSelect{
-		Select:  NewSelect(prompt, store),
-		cfStore: cf,
+// NewCFTaskSelect constructs a CFTaskSelector.
+func NewCFTaskSelect(prompt prompter, store configLister, cf taskStackDescriber) *CFTaskSelector {
+	return &CFTaskSelector{
+		AppEnvSelector: NewAppEnvSelector(prompt, store),
+		cfStore:        cf,
 	}
 }
 
 // GetDeployedTaskOpts sets up optional parameters for GetDeployedTaskOpts function.
-type GetDeployedTaskOpts func(*CFTaskSelect)
+type GetDeployedTaskOpts func(*CFTaskSelector)
 
-// TaskWithAppEnv sets up the env name for TaskSelect.
+// TaskWithAppEnv sets up the env name for TaskSelector.
 func TaskWithAppEnv(app, env string) GetDeployedTaskOpts {
-	return func(in *CFTaskSelect) {
+	return func(in *CFTaskSelector) {
 		in.app = app
 		in.env = env
 	}
 }
 
-// TaskWithDefaultCluster sets up whether CFTaskSelect should use only the default cluster.
+// TaskWithDefaultCluster sets up whether CFTaskSelector should use only the default cluster.
 func TaskWithDefaultCluster() GetDeployedTaskOpts {
-	return func(in *CFTaskSelect) {
+	return func(in *CFTaskSelector) {
 		in.defaultCluster = true
 	}
 }
 
-// TaskSelect is a Copilot running task selector.
-type TaskSelect struct {
-	prompt         Prompter
-	lister         TaskLister
+// TaskSelector is a Copilot running task selector.
+type TaskSelector struct {
+	prompt         prompter
+	lister         taskLister
 	app            string
 	env            string
 	defaultCluster bool
@@ -253,44 +267,61 @@ type TaskSelect struct {
 	taskID         string
 }
 
-// NewSelect returns a selector that chooses applications or environments.
-func NewSelect(prompt Prompter, store ConfigLister) *Select {
-	return &Select{
-		prompt: prompt,
-		config: store,
+// NewAppEnvSelector returns a selector that chooses applications or environments.
+func NewAppEnvSelector(prompt prompter, store appEnvLister) *AppEnvSelector {
+	return &AppEnvSelector{
+		prompt:       prompt,
+		appEnvLister: store,
 	}
 }
 
-// NewConfigSelect returns a new selector that chooses applications, environments, or services from the config store.
-func NewConfigSelect(prompt Prompter, store ConfigLister) *ConfigSelect {
-	return &ConfigSelect{
-		Select:         NewSelect(prompt, store),
+// NewConfigSelector returns a new selector that chooses applications, environments, or services from the config store.
+func NewConfigSelector(prompt prompter, store configLister) *ConfigSelector {
+	return &ConfigSelector{
+		AppEnvSelector: NewAppEnvSelector(prompt, store),
 		workloadLister: store,
 	}
 }
 
-// NewWorkspaceSelect returns a new selector that chooses applications and environments from the config store, but
+// NewLocalWorkloadSelector returns a new selector that chooses applications and environments from the config store, but
 // services from the local workspace.
-func NewWorkspaceSelect(prompt Prompter, store ConfigLister, ws WorkspaceRetriever) *WorkspaceSelect {
-	return &WorkspaceSelect{
-		Select: NewSelect(prompt, store),
-		ws:     ws,
+func NewLocalWorkloadSelector(prompt prompter, store configLister, ws workspaceRetriever) *LocalWorkloadSelector {
+	return &LocalWorkloadSelector{
+		ConfigSelector: NewConfigSelector(prompt, store),
+		ws:             ws,
 	}
 }
 
-// NewWsPipelineSelect returns a new selector with pipelines from the local workspace.
-func NewWsPipelineSelect(prompt Prompter, ws WsPipelinesLister) *WsPipelineSelect {
-	return &WsPipelineSelect{
+// NewLocalEnvironmentSelector returns a new selector that chooses applications from the config store, but an environment
+// from the local workspace.
+func NewLocalEnvironmentSelector(prompt prompter, store configLister, ws workspaceRetriever) *LocalEnvironmentSelector {
+	return &LocalEnvironmentSelector{
+		AppEnvSelector: NewAppEnvSelector(prompt, store),
+		ws:             ws,
+	}
+}
+
+// NewWorkspaceSelector returns a new selector that prompts for local information.
+func NewWorkspaceSelector(prompt prompter, ws workspaceRetriever) *WorkspaceSelector {
+	return &WorkspaceSelector{
 		prompt: prompt,
 		ws:     ws,
 	}
 }
 
-// NewAppPipelineSelect returns new selectors with deployed pipelines and apps.
-func NewAppPipelineSelect(prompt Prompter, store ConfigLister, lister CodePipelineLister) *AppPipelineSelect {
-	return &AppPipelineSelect{
-		Select: NewSelect(prompt, store),
-		CodePipelineSelect: &CodePipelineSelect{
+// NewWsPipelineSelector returns a new selector with pipelines from the local workspace.
+func NewWsPipelineSelector(prompt prompter, ws wsPipelinesLister) *WsPipelineSelector {
+	return &WsPipelineSelector{
+		prompt: prompt,
+		ws:     ws,
+	}
+}
+
+// NewAppPipelineSelector returns new selectors with deployed pipelines and apps.
+func NewAppPipelineSelector(prompt prompter, store configLister, lister codePipelineLister) *AppPipelineSelector {
+	return &AppPipelineSelector{
+		AppEnvSelector: NewAppEnvSelector(prompt, store),
+		CodePipelineSelector: &CodePipelineSelector{
 			prompt:         prompt,
 			pipelineLister: lister,
 		},
@@ -298,58 +329,58 @@ func NewAppPipelineSelect(prompt Prompter, store ConfigLister, lister CodePipeli
 }
 
 // NewDeploySelect returns a new selector that chooses services and environments from the deploy store.
-func NewDeploySelect(prompt Prompter, configStore ConfigLister, deployStore DeployStoreClient) *DeploySelect {
-	return &DeploySelect{
-		Select:         NewSelect(prompt, configStore),
+func NewDeploySelect(prompt prompter, configStore configLister, deployStore deployedWorkloadsRetriever) *DeploySelector {
+	return &DeploySelector{
+		ConfigSelector: NewConfigSelector(prompt, configStore),
 		deployStoreSvc: deployStore,
 	}
 }
 
-// NewTaskSelect returns a new selector that chooses a running task.
-func NewTaskSelect(prompt Prompter, lister TaskLister) *TaskSelect {
-	return &TaskSelect{
+// NewTaskSelector returns a new selector that chooses a running task.
+func NewTaskSelector(prompt prompter, lister taskLister) *TaskSelector {
+	return &TaskSelector{
 		prompt: prompt,
 		lister: lister,
 	}
 }
 
 // TaskOpts sets up optional parameters for Task function.
-type TaskOpts func(*TaskSelect)
+type TaskOpts func(*TaskSelector)
 
-// WithAppEnv sets up the app name and env name for TaskSelect.
+// WithAppEnv sets up the app name and env name for TaskSelector.
 func WithAppEnv(app, env string) TaskOpts {
-	return func(in *TaskSelect) {
+	return func(in *TaskSelector) {
 		in.app = app
 		in.env = env
 	}
 }
 
-// WithDefault uses default cluster for TaskSelect.
+// WithDefault uses default cluster for TaskSelector.
 func WithDefault() TaskOpts {
-	return func(in *TaskSelect) {
+	return func(in *TaskSelector) {
 		in.defaultCluster = true
 	}
 }
 
-// WithTaskGroup sets up the task group name for TaskSelect.
+// WithTaskGroup sets up the task group name for TaskSelector.
 func WithTaskGroup(taskGroup string) TaskOpts {
-	return func(in *TaskSelect) {
+	return func(in *TaskSelector) {
 		if taskGroup != "" {
 			in.taskGroup = fmt.Sprintf(fmtCopilotTaskGroup, taskGroup)
 		}
 	}
 }
 
-// WithTaskID sets up the task ID for TaskSelect.
+// WithTaskID sets up the task ID for TaskSelector.
 func WithTaskID(id string) TaskOpts {
-	return func(in *TaskSelect) {
+	return func(in *TaskSelector) {
 		in.taskID = id
 	}
 }
 
 // RunningTask has the user select a running task. Callers can provide either app and env names,
 // or use default cluster.
-func (s *TaskSelect) RunningTask(msg, help string, opts ...TaskOpts) (*awsecs.Task, error) {
+func (s *TaskSelector) RunningTask(msg, help string, opts ...TaskOpts) (*awsecs.Task, error) {
 	var tasks []*awsecs.Task
 	var err error
 	for _, opt := range opts {
@@ -404,35 +435,34 @@ func (s *TaskSelect) RunningTask(msg, help string, opts ...TaskOpts) (*awsecs.Ta
 }
 
 // GetDeployedServiceOpts sets up optional parameters for GetDeployedServiceOpts function.
-type GetDeployedServiceOpts func(*DeploySelect)
+type GetDeployedServiceOpts func(*DeploySelector)
 
 // DeployedServiceFilter determines if a service should be included in the results.
 type DeployedServiceFilter func(*DeployedService) (bool, error)
 
-// WithSvc sets up the svc name for DeploySelect.
+// WithSvc sets up the svc name for DeploySelector.
 func WithSvc(svc string) GetDeployedServiceOpts {
-	return func(in *DeploySelect) {
+	return func(in *DeploySelector) {
 		in.svc = svc
 	}
 }
 
-// WithEnv sets up the env name for DeploySelect.
+// WithEnv sets up the env name for DeploySelector.
 func WithEnv(env string) GetDeployedServiceOpts {
-	return func(in *DeploySelect) {
+	return func(in *DeploySelector) {
 		in.env = env
 	}
 }
 
-// WithFilter sets up filters for DeploySelect
+// WithFilter sets up filters for DeploySelector
 func WithFilter(filter DeployedServiceFilter) GetDeployedServiceOpts {
-	return func(in *DeploySelect) {
+	return func(in *DeploySelector) {
 		in.filters = append(in.filters, filter)
 	}
 }
 
-// WithServiceTypesFilter sets up a ServiceType filter for DeploySelect
+// WithServiceTypesFilter sets up a ServiceType filter for DeploySelector
 func WithServiceTypesFilter(svcTypes []string) GetDeployedServiceOpts {
-
 	return WithFilter(func(svc *DeployedService) (bool, error) {
 		for _, svcType := range svcTypes {
 			if svc.SvcType == svcType {
@@ -456,7 +486,7 @@ func (s *DeployedService) String() string {
 
 // Task has the user select a task. Callers can provide an environment, an app, or a "use default cluster" option
 // to filter the returned tasks.
-func (s *CFTaskSelect) Task(msg, help string, opts ...GetDeployedTaskOpts) (string, error) {
+func (s *CFTaskSelector) Task(msg, help string, opts ...GetDeployedTaskOpts) (string, error) {
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -506,7 +536,7 @@ func (s *CFTaskSelect) Task(msg, help string, opts ...GetDeployedTaskOpts) (stri
 
 // DeployedService has the user select a deployed service. Callers can provide either a particular environment,
 // a particular service to filter on, or both.
-func (s *DeploySelect) DeployedService(msg, help string, app string, opts ...GetDeployedServiceOpts) (*DeployedService, error) {
+func (s *DeploySelector) DeployedService(msg, help string, app string, opts ...GetDeployedServiceOpts) (*DeployedService, error) {
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -516,7 +546,7 @@ func (s *DeploySelect) DeployedService(msg, help string, app string, opts ...Get
 
 	// ServiceType is only utilized by the filtering functionality. No need to retrieve types if filters are not being applied
 	if len(s.filters) > 0 {
-		services, err := s.config.ListServices(app)
+		services, err := s.workloadLister.ListServices(app)
 		if err != nil {
 			return nil, fmt.Errorf("list services: %w", err)
 		}
@@ -605,7 +635,7 @@ func (s *DeploySelect) DeployedService(msg, help string, app string, opts ...Get
 	return deployedSvc, nil
 }
 
-func (s *DeploySelect) filterServices(inServices []*DeployedService) ([]*DeployedService, error) {
+func (s *DeploySelector) filterServices(inServices []*DeployedService) ([]*DeployedService, error) {
 	outServices := inServices
 	for _, filter := range s.filters {
 		if result, err := filterDeployedServices(filter, outServices); err != nil {
@@ -618,7 +648,7 @@ func (s *DeploySelect) filterServices(inServices []*DeployedService) ([]*Deploye
 }
 
 // Service fetches all services in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
+func (s *LocalWorkloadSelector) Service(msg, help string) (string, error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)
@@ -627,7 +657,7 @@ func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from workspace: %w", err)
 	}
-	storeServiceNames, err := s.Select.config.ListServices(summary.Application)
+	storeServiceNames, err := s.ConfigSelector.workloadLister.ListServices(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve services from store: %w", err)
 	}
@@ -648,7 +678,7 @@ func (s *WorkspaceSelect) Service(msg, help string) (string, error) {
 }
 
 // Job fetches all jobs in the workspace and then prompts the user to select one.
-func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
+func (s *LocalWorkloadSelector) Job(msg, help string) (string, error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)
@@ -657,7 +687,7 @@ func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from workspace: %w", err)
 	}
-	storeJobNames, err := s.Select.config.ListJobs(summary.Application)
+	storeJobNames, err := s.ConfigSelector.workloadLister.ListJobs(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs from store: %w", err)
 	}
@@ -678,7 +708,7 @@ func (s *WorkspaceSelect) Job(msg, help string) (string, error) {
 }
 
 // Workload fetches all jobs and services in an app and prompts the user to select one.
-func (s *WorkspaceSelect) Workload(msg, help string) (wl string, err error) {
+func (s *LocalWorkloadSelector) Workload(msg, help string) (wl string, err error) {
 	summary, err := s.ws.Summary()
 	if err != nil {
 		return "", fmt.Errorf("read workspace summary: %w", err)
@@ -687,7 +717,7 @@ func (s *WorkspaceSelect) Workload(msg, help string) (wl string, err error) {
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs and services from workspace: %w", err)
 	}
-	storeWls, err := s.Select.config.ListWorkloads(summary.Application)
+	storeWls, err := s.ConfigSelector.workloadLister.ListWorkloads(summary.Application)
 	if err != nil {
 		return "", fmt.Errorf("retrieve jobs and services from store: %w", err)
 	}
@@ -706,6 +736,51 @@ func (s *WorkspaceSelect) Workload(msg, help string) (wl string, err error) {
 	return selectedWlName, nil
 }
 
+// LocalEnvironment fetches all environments belong to the app in the workspace and prompts the user to select one.
+func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (wl string, err error) {
+	summary, err := s.ws.Summary()
+	if err != nil {
+		return "", fmt.Errorf("read workspace summary: %w", err)
+	}
+	wsEnvNames, err := s.ws.ListEnvironments()
+	if err != nil {
+		return "", fmt.Errorf("retrieve environments from workspace: %w", err)
+	}
+	envs, err := s.appEnvLister.ListEnvironments(summary.Application)
+	if err != nil {
+		return "", fmt.Errorf("retrieve environments from store: %w", err)
+	}
+	filteredEnvNames := filterEnvsByName(envs, wsEnvNames)
+	if len(filteredEnvNames) == 0 {
+		return "", errors.New("no environments found")
+	}
+	if len(filteredEnvNames) == 1 {
+		log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(filteredEnvNames[0]))
+		return filteredEnvNames[0], nil
+	}
+	selectedEnvName, err := s.prompt.SelectOne(msg, help, filteredEnvNames, prompt.WithFinalMessage(workloadFinalMsg))
+	if err != nil {
+		return "", fmt.Errorf("select environment: %w", err)
+	}
+	return selectedEnvName, nil
+}
+
+func filterEnvsByName(envs []*config.Environment, wantedNames []string) []string {
+	// TODO: refactor this and `filterWlsByName`  when generic supports using common struct fields: https://github.com/golang/go/issues/48522
+	isWanted := make(map[string]bool)
+	for _, name := range wantedNames {
+		isWanted[name] = true
+	}
+	var filtered []string
+	for _, wl := range envs {
+		if _, ok := isWanted[wl.Name]; !ok {
+			continue
+		}
+		filtered = append(filtered, wl.Name)
+	}
+	return filtered
+}
+
 func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 	isWanted := make(map[string]bool)
 	for _, name := range wantedNames {
@@ -722,7 +797,7 @@ func filterWlsByName(wls []*config.Workload, wantedNames []string) []string {
 }
 
 // WsPipeline fetches all the pipelines in a workspace and prompts the user to select one.
-func (s *WsPipelineSelect) WsPipeline(msg, help string) (*workspace.PipelineManifest, error) {
+func (s *WsPipelineSelector) WsPipeline(msg, help string) (*workspace.PipelineManifest, error) {
 	pipelines, err := s.ws.ListPipelines()
 	if err != nil {
 		return nil, fmt.Errorf("list pipelines: %w", err)
@@ -752,7 +827,7 @@ func (s *WsPipelineSelect) WsPipeline(msg, help string) (*workspace.PipelineMani
 }
 
 // DeployedPipeline fetches all the pipelines in a workspace and prompts the user to select one.
-func (s *CodePipelineSelect) DeployedPipeline(msg, help, app string) (deploy.Pipeline, error) {
+func (s *CodePipelineSelector) DeployedPipeline(msg, help, app string) (deploy.Pipeline, error) {
 	pipelines, err := s.pipelineLister.ListDeployedPipelines(app)
 	if err != nil {
 		return deploy.Pipeline{}, fmt.Errorf("list deployed pipelines: %w", err)
@@ -779,7 +854,7 @@ func (s *CodePipelineSelect) DeployedPipeline(msg, help, app string) (deploy.Pip
 }
 
 // Service fetches all services in an app and prompts the user to select one.
-func (s *ConfigSelect) Service(msg, help, app string) (string, error) {
+func (s *ConfigSelector) Service(msg, help, app string) (string, error) {
 	services, err := s.retrieveServices(app)
 	if err != nil {
 		return "", err
@@ -802,7 +877,7 @@ func (s *ConfigSelect) Service(msg, help, app string) (string, error) {
 }
 
 // Job fetches all jobs in an app and prompts the user to select one.
-func (s *ConfigSelect) Job(msg, help, app string) (string, error) {
+func (s *ConfigSelector) Job(msg, help, app string) (string, error) {
 	jobs, err := s.retrieveJobs(app)
 	if err != nil {
 		return "", err
@@ -825,7 +900,7 @@ func (s *ConfigSelect) Job(msg, help, app string) (string, error) {
 }
 
 // Environment fetches all the environments in an app and prompts the user to select one.
-func (s *Select) Environment(msg, help, app string, additionalOpts ...string) (string, error) {
+func (s *AppEnvSelector) Environment(msg, help, app string, additionalOpts ...string) (string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
 		return "", fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
@@ -852,7 +927,7 @@ func (s *Select) Environment(msg, help, app string, additionalOpts ...string) (s
 
 // Environments fetches all the environments in an app and prompts the user to select one OR MORE.
 // The List of options decreases as envs are chosen. Chosen envs displayed above with the finalMsg.
-func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error) {
+func (s *AppEnvSelector) Environments(prompt, help, app string, finalMsgFunc func(int) prompt.PromptConfig) ([]string, error) {
 	envs, err := s.retrieveEnvironments(app)
 	if err != nil {
 		return nil, fmt.Errorf("get environments for app %s from metadata store: %w", app, err)
@@ -892,7 +967,7 @@ func (s *Select) Environments(prompt, help, app string, finalMsgFunc func(int) p
 }
 
 // Application fetches all the apps in an account/region and prompts the user to select one.
-func (s *Select) Application(msg, help string, additionalOpts ...string) (string, error) {
+func (s *AppEnvSelector) Application(msg, help string, additionalOpts ...string) (string, error) {
 	appNames, err := s.retrieveApps()
 	if err != nil {
 		return "", err
@@ -919,7 +994,7 @@ func (s *Select) Application(msg, help string, additionalOpts ...string) (string
 
 // Dockerfile asks the user to select from a list of Dockerfiles in the current
 // directory or one level down. If no dockerfiles are found, it asks for a custom path.
-func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+func (s *WorkspaceSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
 	dockerfiles, err := s.ws.ListDockerfiles()
 	if err != nil {
 		return "", fmt.Errorf("list Dockerfiles: %w", err)
@@ -950,7 +1025,7 @@ func (s *WorkspaceSelect) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoun
 }
 
 // Schedule asks the user to select either a rate, preset cron, or custom cron.
-func (s *WorkspaceSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
+func (s *WorkspaceSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
 	scheduleType, err := s.prompt.SelectOne(
 		scheduleTypePrompt,
 		scheduleTypeHelp,
@@ -972,8 +1047,8 @@ func (s *WorkspaceSelect) Schedule(scheduleTypePrompt, scheduleTypeHelp string, 
 
 // Topics asks the user to select from all Copilot-managed SNS topics *which are deployed
 // across all environments* and returns the topic structs.
-func (s *DeploySelect) Topics(promptMsg, help, app string) ([]deploy.Topic, error) {
-	envs, err := s.config.ListEnvironments(app)
+func (s *DeploySelector) Topics(promptMsg, help, app string) ([]deploy.Topic, error) {
+	envs, err := s.appEnvLister.ListEnvironments(app)
 	if err != nil {
 		return nil, fmt.Errorf("list environments: %w", err)
 	}
@@ -1039,8 +1114,8 @@ func (s *DeploySelect) Topics(promptMsg, help, app string) ([]deploy.Topic, erro
 	return topics, nil
 }
 
-func (s *Select) retrieveApps() ([]string, error) {
-	apps, err := s.config.ListApplications()
+func (s *AppEnvSelector) retrieveApps() ([]string, error) {
+	apps, err := s.appEnvLister.ListApplications()
 	if err != nil {
 		return nil, fmt.Errorf("list applications: %w", err)
 	}
@@ -1051,8 +1126,8 @@ func (s *Select) retrieveApps() ([]string, error) {
 	return appNames, nil
 }
 
-func (s *Select) retrieveEnvironments(app string) ([]string, error) {
-	envs, err := s.config.ListEnvironments(app)
+func (s *AppEnvSelector) retrieveEnvironments(app string) ([]string, error) {
+	envs, err := s.appEnvLister.ListEnvironments(app)
 	if err != nil {
 		return nil, fmt.Errorf("list environments: %w", err)
 	}
@@ -1063,7 +1138,7 @@ func (s *Select) retrieveEnvironments(app string) ([]string, error) {
 	return envsNames, nil
 }
 
-func (s *ConfigSelect) retrieveServices(app string) ([]string, error) {
+func (s *ConfigSelector) retrieveServices(app string) ([]string, error) {
 	services, err := s.workloadLister.ListServices(app)
 	if err != nil {
 		return nil, fmt.Errorf("list services: %w", err)
@@ -1075,7 +1150,7 @@ func (s *ConfigSelect) retrieveServices(app string) ([]string, error) {
 	return serviceNames, nil
 }
 
-func (s *ConfigSelect) retrieveJobs(app string) ([]string, error) {
+func (s *ConfigSelector) retrieveJobs(app string) ([]string, error) {
 	jobs, err := s.workloadLister.ListJobs(app)
 	if err != nil {
 		return nil, fmt.Errorf("list jobs: %w", err)
@@ -1087,7 +1162,7 @@ func (s *ConfigSelect) retrieveJobs(app string) ([]string, error) {
 	return jobNames, nil
 }
 
-func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
+func (s *LocalWorkloadSelector) retrieveWorkspaceServices() ([]string, error) {
 	localServiceNames, err := s.ws.ListServices()
 	if err != nil {
 		return nil, err
@@ -1095,7 +1170,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceServices() ([]string, error) {
 	return localServiceNames, nil
 }
 
-func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
+func (s *LocalWorkloadSelector) retrieveWorkspaceJobs() ([]string, error) {
 	localJobNames, err := s.ws.ListJobs()
 	if err != nil {
 		return nil, err
@@ -1103,7 +1178,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceJobs() ([]string, error) {
 	return localJobNames, nil
 }
 
-func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
+func (s *LocalWorkloadSelector) retrieveWorkspaceWorkloads() ([]string, error) {
 	localWlNames, err := s.ws.ListWorkloads()
 	if err != nil {
 		return nil, err
@@ -1111,7 +1186,7 @@ func (s *WorkspaceSelect) retrieveWorkspaceWorkloads() ([]string, error) {
 	return localWlNames, nil
 }
 
-func (s *WsPipelineSelect) pipelinePath(pipelines []workspace.PipelineManifest, name string) string {
+func (s *WsPipelineSelector) pipelinePath(pipelines []workspace.PipelineManifest, name string) string {
 	for _, pipeline := range pipelines {
 		if pipeline.Name == name {
 			return pipeline.Path
@@ -1120,7 +1195,7 @@ func (s *WsPipelineSelect) pipelinePath(pipelines []workspace.PipelineManifest, 
 	return ""
 }
 
-func (s *WorkspaceSelect) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
+func (s *WorkspaceSelector) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
 	rateInput, err := s.prompt.Get(
 		ratePrompt,
 		rateHelp,
@@ -1134,7 +1209,7 @@ func (s *WorkspaceSelect) askRate(rateValidator prompt.ValidatorFunc) (string, e
 	return fmt.Sprintf(every, rateInput), nil
 }
 
-func (s *WorkspaceSelect) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
+func (s *WorkspaceSelector) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
 	cronInput, err := s.prompt.SelectOption(
 		schedulePrompt,
 		scheduleHelp,

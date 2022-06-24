@@ -558,12 +558,13 @@ func TestJobInitOpts_Execute(t *testing.T) {
 		mockDockerfile   func(m *mocks.MockdockerfileParser)
 		mockDockerEngine func(m *mocks.MockdockerEngine)
 
-		inApp  string
-		inName string
-		inType string
-		inDf   string
-
+		inApp      string
+		inName     string
+		inType     string
+		inDf       string
 		inSchedule string
+
+		inManifestExists bool
 
 		wantedErr          error
 		wantedManifestPath string
@@ -586,6 +587,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
@@ -610,6 +612,7 @@ func TestJobInitOpts_Execute(t *testing.T) {
 		},
 		"fail to init job": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
@@ -617,8 +620,92 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			},
 			wantedErr: errors.New("some error"),
 		},
+		"doesn't attempt to detect and populate the platform if manifest already exists": {
+			inApp:              "sample",
+			inName:             "mailer",
+			inType:             manifest.ScheduledJobType,
+			inDf:               "./Dockerfile",
+			inSchedule:         "@hourly",
+			inManifestExists:   true,
+			wantedManifestPath: "manifest/path",
+
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(&dockerfile.HealthCheck{
+					Cmd:         []string{"mockCommand"},
+					Interval:    second,
+					Timeout:     second,
+					StartPeriod: second,
+					Retries:     zero,
+				}, nil)
+			},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().CheckDockerEngineRunning().Times(0)
+				m.EXPECT().GetPlatform().Times(0)
+			},
+			mockJobInit: func(m *mocks.MockjobInitializer) {
+				m.EXPECT().Job(&initialize.JobProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:            "sample",
+						Name:           "mailer",
+						Type:           "Scheduled Job",
+						DockerfilePath: "./Dockerfile",
+						Platform:       manifest.PlatformArgsOrString{},
+					},
+					Schedule: "@hourly",
+					HealthCheck: manifest.ContainerHealthCheck{
+						Command:     []string{"mockCommand"},
+						Interval:    &second,
+						Retries:     &zero,
+						Timeout:     &second,
+						StartPeriod: &second,
+					},
+				}).Return("manifest/path", nil)
+			},
+		},
+		"doesn't complain if docker is unavailable": {
+			inApp:              "sample",
+			inName:             "mailer",
+			inType:             manifest.ScheduledJobType,
+			inDf:               "./Dockerfile",
+			inSchedule:         "@hourly",
+			wantedManifestPath: "manifest/path",
+
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(&dockerfile.HealthCheck{
+					Cmd:         []string{"mockCommand"},
+					Interval:    second,
+					Timeout:     second,
+					StartPeriod: second,
+					Retries:     zero,
+				}, nil)
+			},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().CheckDockerEngineRunning().Return(dockerengine.ErrDockerCommandNotFound)
+				m.EXPECT().GetPlatform().Times(0)
+			},
+			mockJobInit: func(m *mocks.MockjobInitializer) {
+				m.EXPECT().Job(&initialize.JobProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:            "sample",
+						Name:           "mailer",
+						Type:           "Scheduled Job",
+						DockerfilePath: "./Dockerfile",
+						Platform:       manifest.PlatformArgsOrString{},
+					},
+					Schedule: "@hourly",
+					HealthCheck: manifest.ContainerHealthCheck{
+						Command:     []string{"mockCommand"},
+						Interval:    &second,
+						Retries:     &zero,
+						Timeout:     &second,
+						StartPeriod: &second,
+					},
+				}).Return("manifest/path", nil)
+			},
+		},
 		"return error if platform detection fails": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.EXPECT().GetPlatform().Return("", "", errors.New("some error"))
 			},
 			wantedErr: errors.New("get docker engine platform: some error"),
@@ -658,7 +745,8 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				initParser: func(s string) dockerfileParser {
 					return mockDockerfile
 				},
-				dockerEngine: mockDockerEngine,
+				dockerEngine:   mockDockerEngine,
+				manifestExists: tc.inManifestExists,
 			}
 
 			// WHEN

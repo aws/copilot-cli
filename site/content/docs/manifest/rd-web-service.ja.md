@@ -2,42 +2,41 @@
 
 ???+ note "frontend Service のサンプル Manifest"
 
-```yaml
-    # Service 名はロググループや App Runner サービスなどのリソースの命名に利用されます。
-    name: frontend
-    type: Request-Driven Web Service
-
-    http:
-      healthcheck:
-        path: '/_healthcheck'
-        healthy_threshold: 3
-        unhealthy_threshold: 5
-        interval: 10s
-        timeout: 5s
-      alias: web.example.com
-
-    # コンテナと Service の構成
-    image:
-      build: ./frontend/Dockerfile
-      port: 80
-    cpu: 1024
-    memory: 2048
-
-    network:
-      vpc:
-        placement: 'private'
+    ```yaml
+        # Service 名はロググループや App Runner サービスなどのリソースの命名に利用されます。
+        name: frontend
+        type: Request-Driven Web Service
     
-    variables:
-      LOG_LEVEL: info
-    
-    tags:
-      owner: frontend-team
+        http:
+          healthcheck:
+            path: '/_healthcheck'
+            healthy_threshold: 3
+            unhealthy_threshold: 5
+            interval: 10s
+            timeout: 5s
+          alias: web.example.com
 
-    environments:
-      test:
+        # コンテナと Service の構成
+        image:
+          build: ./frontend/Dockerfile
+          port: 80
+        cpu: 1024
+        memory: 2048
+    
+        network:
+          vpc:
+            placement: 'private'
+    
         variables:
-          LOG_LEVEL: debug
-```
+          LOG_LEVEL: info
+        
+        tags:
+          owner: frontend-team
+    
+        environments:
+          test:
+            LOG_LEVEL: debug
+    ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。
@@ -151,6 +150,8 @@ Service からの Egress トラフィックをルーティングする VPC 内�
 
 この項目が 'private' の場合、App Runner サービスは VPC のプライベートサブネットを経由して Egress トラフィックをルーティングします。
 Copilot で生成された VPC を使用する場合、Copilot はインターネット接続用の NAT Gateway を Environment に自動的に追加します。 ([VPC の料金](https://aws.amazon.com/jp/vpc/pricing/)をご覧ください。) また、`copilot env init` を実行する際に、NAT ゲートウェイを持つ既存の VPC や、分離されたワークロードのための VPC エンドポイントをインポートすることも可能です。詳しくは、[Environment のリソースをカスタマイズする](../developing/custom-environment-resources.ja.md)をご覧ください。
+
+{% include 'observability.ja.md' %}
 
 <div class="separator"></div>
 

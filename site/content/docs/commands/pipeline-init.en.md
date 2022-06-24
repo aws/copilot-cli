@@ -1,5 +1,5 @@
 # pipeline init
-```bash
+```console
 $ copilot pipeline init [flags]
 ```
 
@@ -7,7 +7,7 @@ $ copilot pipeline init [flags]
 `copilot pipeline init` creates a pipeline manifest for the services in your workspace, using the environments associated with the application.
 
 ## What are the flags?
-```bash
+```
 -a, --app string             Name of the application.
 -e, --environments strings   Environments to add to the pipeline.
 -b, --git-branch string      Branch used to trigger your pipeline.
@@ -18,7 +18,7 @@ $ copilot pipeline init [flags]
 
 ## Examples
 Create a pipeline for the services in your workspace.
-```bash
+```console
 $ copilot pipeline init \
 --name frontend-main \
 --url https://github.com/gitHubUserName/frontend.git \

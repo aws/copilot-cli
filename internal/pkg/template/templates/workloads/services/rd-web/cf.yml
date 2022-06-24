@@ -84,7 +84,7 @@ Resources:
                 Value: !Ref EnvName
               - Name: COPILOT_SERVICE_NAME
                 Value: !Ref WorkloadName
-{{- if eq .Network.SubnetsType "PrivateSubnets"}}
+{{- if requiresVPCConnector .}}
               - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
                 Value: {{.ServiceDiscoveryEndpoint}}
 {{- end}}
@@ -128,7 +128,7 @@ Resources:
         HealthyThreshold: !If [HasHealthCheckHealthyThreshold, !Ref HealthCheckHealthyThreshold, !Ref AWS::NoValue]
         UnhealthyThreshold: !If [HasHealthCheckUnhealthyThreshold, !Ref HealthCheckUnhealthyThreshold, !Ref AWS::NoValue]
       {{- end }}
-      {{- if eq .Network.SubnetsType "PrivateSubnets"}}
+      {{- if requiresVPCConnector .}}
       NetworkConfiguration:
         EgressConfiguration:
           EgressType: VPC
@@ -154,9 +154,11 @@ Resources:
   CustomDomainFunction:
     Type: AWS::Lambda::Function
     Properties:
+      {{- with $cr := index .CustomResources "CustomDomainFunction" }}
       Code:
-        S3Bucket: {{ .ScriptBucketName }}
-        S3Key: {{ .CustomDomainLambda }}
+        S3Bucket: {{$cr.Bucket}}
+        S3Key: {{$cr.Key}}
+      {{- end }}
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -213,10 +215,10 @@ Resources:
 {{- end }}
 {{include "publish" . | indent 2}}
 
-{{- if ne .EnvControllerLambda ""}}
+{{- if gt (len (envControllerParams .)) 0}}
 {{include "env-controller" . | indent 2}}
 {{- end}}
 
-{{- if eq .Network.SubnetsType "PrivateSubnets"}}
+{{- if requiresVPCConnector .}}
 {{include "vpc-connector" . | indent 2 }}
 {{- end }}

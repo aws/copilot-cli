@@ -34,6 +34,9 @@ Parameters:
     Type: String
   TargetPort:
     Type: Number
+  HTTPSEnabled:
+    Type: String
+    AllowedValues: [true, false]
   RulePath:
     Type: String
   Stickiness:
@@ -336,16 +339,16 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          albRulePriorityGenerator
+        S3Bucket:
+        S3Key:
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
-      Role: !GetAtt "CustomResourceRole.Arn"
+      Role: !GetAtt "RulePriorityFunctionRole.Arn"
       Runtime: nodejs12.x
-  CustomResourceRole:
+  RulePriorityFunctionRole:
     Metadata:
-      "aws:copilot:description": "An IAM role used by custom resources to describe your ECS service"
+      "aws:copilot:description": "An IAM Role to describe load balancer rules for assigning a priority"
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -358,6 +361,8 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
         - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
@@ -367,15 +372,29 @@ Resources:
                 Action:
                   - elasticloadbalancing:DescribeRules
                 Resource: "*"
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  LoadBalancerInternalDNSAlias:
+    Metadata:
+      "aws:copilot:description": "Alias for http-full-config.my-env.my-app.internal to the internal load balancer"
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      Comment: !Sub "Load balancer alias for service ${WorkloadName}"
+      HostedZoneId: !GetAtt EnvControllerAction.InternalWorkloadsHostedZone
+      RecordSets:
+        - Type: A
+          AliasTarget:
+            HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
+            DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
+          Name: !Join
+            - "."
+            - - !Ref WorkloadName
+              - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
   HTTPRulePriorityAction:
     Metadata:
       "aws:copilot:description": "A custom resource assigning priority for HTTP listener rules"
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
   HTTPListenerRule:
     Metadata:
       "aws:copilot:description": "A HTTP listener rule for forwarding HTTP traffic"
@@ -389,6 +408,14 @@ Resources:
           SourceIpConfig:
             Values:
               - 10.24.34.0/23
+        - Field: "host-header"
+          HostHeaderConfig:
+            Values:
+              - !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
+              - !Join
+                - "."
+                - - !Ref WorkloadName
+                  - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
         - Field: "path-pattern"
           PathPatternConfig:
             Values: !If
@@ -396,7 +423,7 @@ Resources:
               - - "/*"
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
-      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
       Priority: !If
         - IsDefaultRootPath
         - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
@@ -421,13 +448,13 @@ Resources:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
       EnvStack: !Sub "${AppName}-${EnvName}"
-      Parameters: []
+      Parameters: ["InternalALBWorkloads"]
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          envController
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512

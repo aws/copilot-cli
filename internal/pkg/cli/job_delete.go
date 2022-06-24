@@ -90,7 +90,7 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		store:   store,
 		spinner: termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:  prompt.New(),
-		sel:     selector.NewConfigSelect(prompter, store),
+		sel:     selector.NewConfigSelector(prompter, store),
 		sess:    provider,
 		appCFN:  cloudformation.New(defaultSession),
 		newWlDeleter: func(session *session.Session) wlDeleter {

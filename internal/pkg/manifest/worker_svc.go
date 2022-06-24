@@ -217,6 +217,14 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &s, nil
 }
 
+// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
+func (s *WorkerService) RequiredEnvironmentFeatures() []string {
+	var features []string
+	features = append(features, s.Network.requiredEnvFeatures()...)
+	features = append(features, s.Storage.requiredEnvFeatures()...)
+	return features
+}
+
 // newDefaultWorkerService returns a Worker service with minimal task sizes and a single replica.
 func newDefaultWorkerService() *WorkerService {
 	return &WorkerService{
@@ -241,7 +249,9 @@ func newDefaultWorkerService() *WorkerService {
 			},
 			Network: NetworkConfig{
 				VPC: vpcConfig{
-					Placement: placementP(PublicSubnetPlacement),
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PublicSubnetPlacement),
+					},
 				},
 			},
 		},

@@ -1,5 +1,5 @@
 # env init
-```bash
+```console
 $ copilot env init [flags]
 ```
 
@@ -30,6 +30,10 @@ Import Existing Resources Flags
       --import-vpc-id string             Optional. Use an existing VPC ID.
 
 Configure Default Resources Flags
+      --internal-alb-allow-vpc-ingress   Optional. Allow internal ALB ingress from ports 80 and 443.
+      --internal-alb-subnets strings     Optional. Specify subnet IDs for an internal load balancer.
+                                         By default, the load balancer will be placed in your private subnets.
+                                         Cannot be specified with --default-config or any of the --override flags.
       --override-az-names strings        Optional. Availability Zone names.
                                          (default 2 random AZs)
       --override-private-cidrs strings   Optional. CIDR to use for private subnets.
@@ -45,17 +49,17 @@ Telemetry Flags
 
 ## Examples
 Creates a test environment using your "default" AWS profile and default configuration.
-```bash
+```console
 $ copilot env init --name test --profile default --default-config
 ```
 
 Creates a prod-iad environment using your "prod-admin" AWS profile and enables CloudWatch Container Insights.
-```bash
+```console
 $ copilot env init --name prod-iad --profile prod-admin --container-insights
 ```
 
 Creates an environment with imported VPC resources.
-```bash
+```console
 $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
   --import-public-subnets subnet-013e8b691862966cf,subnet-014661ebb7ab8681a \
   --import-private-subnets subnet-055fafef48fb3c547,subnet-00c9e76f288363e7f \
@@ -64,7 +68,7 @@ $ copilot env init --import-vpc-id vpc-099c32d2b98cdcf47 \
 
 Creates an environment with overridden CIDRs and AZs.
 
-```bash
+```console
 $ copilot env init --override-vpc-cidr 10.1.0.0/16 \
   --override-az-names us-west-2b,us-west-2c \
   --override-public-cidrs 10.1.0.0/24,10.1.1.0/24 \

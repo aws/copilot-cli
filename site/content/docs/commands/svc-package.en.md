@@ -1,5 +1,5 @@
 # svc package
-```bash
+```console
 $ copilot svc package
 ```
 
@@ -9,7 +9,7 @@ $ copilot svc package
 
 ## What are the flags?
 
-```bash
+```
   -a, --app string          Name of the application.
   -e, --env string          Name of the environment.
   -h, --help                help for package
@@ -24,7 +24,7 @@ $ copilot svc package
 
 Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of printing.
 
-```bash
+```console
 $ copilot svc package -n frontend -e test --output-dir ./infrastructure
 $ ls ./infrastructure
 frontend.stack.yml      frontend-test.config.yml

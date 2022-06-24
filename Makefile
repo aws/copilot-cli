@@ -120,6 +120,16 @@ e2e: build-e2e
 	@echo "Running E2E Tests" &&\
 	docker run --privileged -v ${HOME}/.aws:/home/.aws -e "HOME=/home" copilot/e2e:latest
 
+.PHONY: e2e-dryrun
+e2e-dryrun: build # Sample command "make e2e-dryrun test=multi-env-app" to run the test suit under "e2e/multi-env-app"
+	@echo "Install ginkgo"
+	go install github.com/onsi/ginkgo/ginkgo@latest
+	@echo "Setup credentials"
+	./scripts/e2e-dryrun-creds.sh
+	@echo "Run the $(test) test"
+	cd e2e/$(test) && DRYRUN=true ginkgo -v -r
+	cd -
+
 .PHONY: tools
 tools:
 	@echo "Installing custom resource dependencies" &&\

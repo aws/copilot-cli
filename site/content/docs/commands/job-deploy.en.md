@@ -1,5 +1,5 @@
 # job deploy
-```bash
+```console
 $ copilot job deploy
 ```
 
@@ -17,7 +17,7 @@ The steps involved in `job deploy` are:
 
 ## What are the flags?
 
-```bash
+```
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
   -h, --help                           help for deploy
@@ -39,11 +39,11 @@ rollback of the stack via the AWS console or AWS CLI before the next deployment.
 ## Examples
 
 Deploys a job named "report-gen" to a "test" environment.
-```bash
+```console
 $ copilot job deploy --name report-gen --env test
 ```
 
 Deploys a job with additional resource tags.
-```bash
+```console
 $ copilot job deploy --resource-tags source/revision=bb133e7,deployment/initiator=manual`
 ```

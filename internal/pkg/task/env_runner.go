@@ -49,6 +49,9 @@ type EnvRunner struct {
 	ClusterGetter        ClusterGetter
 	Starter              Runner
 	EnvironmentDescriber EnvironmentDescriber
+
+	// Figures non-zero exit code of the task
+	NonZeroExitCodeGetter NonZeroExitCodeGetter
 }
 
 // Run runs tasks in the environment of the application, and returns the tasks.
@@ -99,6 +102,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 		TaskFamilyName:  taskFamilyName(r.GroupName),
 		StartedBy:       startedBy,
 		PlatformVersion: platformVersion,
+		EnableExec:      true,
 	})
 	if err != nil {
 		return nil, &errRunTask{
@@ -154,4 +158,17 @@ func containsString(s []string, search string) bool {
 		}
 	}
 	return false
+}
+
+// CheckNonZeroExitCode returns the status of the containers part of the given tasks.
+func (r *EnvRunner) CheckNonZeroExitCode(tasks []*Task) error {
+	cluster, err := r.ClusterGetter.ClusterARN(r.App, r.Env)
+	if err != nil {
+		return fmt.Errorf("get cluster for environment %s: %w", r.Env, err)
+	}
+	taskARNs := make([]string, len(tasks))
+	for idx, task := range tasks {
+		taskARNs[idx] = task.TaskARN
+	}
+	return r.NonZeroExitCodeGetter.HasNonZeroExitCode(taskARNs, cluster)
 }

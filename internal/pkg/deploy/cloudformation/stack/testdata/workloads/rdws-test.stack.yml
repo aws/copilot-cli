@@ -213,8 +213,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockEnvControllerZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -293,7 +293,7 @@ Resources:
     Type: AWS::AppRunner::VpcConnector
     DependsOn: EnvControllerAction # Ensure NAT gateways are created before connecting to a VPC.
     Metadata:
-      'aws:copilot:description': 'A VPC connector to link your service to private subnets in your environment'
+      'aws:copilot:description': 'A VPC connector to link your service to subnets in your environment'
     Properties:
       Subnets:
         Fn::Split:

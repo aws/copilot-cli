@@ -24,15 +24,23 @@ EnvironmentSecurityGroupIngressFromServiceSecurityGroup:
 
 VpcConnector:
   Type: AWS::AppRunner::VpcConnector
+{{- if gt (len (envControllerParams .)) 0}}
   DependsOn: EnvControllerAction # Ensure NAT gateways are created before connecting to a VPC.
+{{- end}}
   Metadata:
-    'aws:copilot:description': 'A VPC connector to link your service to private subnets in your environment'
+    'aws:copilot:description': 'A VPC connector to link your service to subnets in your environment'
   Properties:
     Subnets:
+    {{- if .Network.SubnetIDs}}
+      {{- range $id := .Network.SubnetIDs}}
+      - {{$id}}
+      {{- end}}
+    {{- else}}
       Fn::Split:
         - ","
         - Fn::ImportValue:
-            !Sub '${AppName}-${EnvName}-PrivateSubnets'
+            !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
+    {{- end}}
     SecurityGroups:
     - !Ref ServiceSecurityGroup
     Tags:

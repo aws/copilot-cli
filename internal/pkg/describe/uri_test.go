@@ -86,7 +86,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
-							Type:       svcStackResourceHTTPSListenerRuleResourceType,
+							Type:       svcStackResourceListenerRuleResourceType,
 							PhysicalID: "mockRuleARN",
 						},
 					}, nil),
@@ -112,7 +112,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
-							Type:       svcStackResourceHTTPSListenerRuleResourceType,
+							Type:       svcStackResourceListenerRuleResourceType,
 							PhysicalID: "mockRuleARN",
 						},
 					}, nil),
@@ -120,7 +120,6 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						Return([]string{"jobs.test.phonetool.com", "phonetool.com"}, nil),
 				)
 			},
-
 			wantedURI: "https://jobs.test.phonetool.com or https://phonetool.com",
 		},
 		"http web service": {
@@ -256,7 +255,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
-							Type:       svcStackResourceHTTPSListenerRuleResourceType,
+							Type:       svcStackResourceListenerRuleResourceType,
 							PhysicalID: "mockRuleARN",
 						},
 					}, nil),
@@ -306,57 +305,133 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedURI, actual)
+				require.Equal(t, tc.wantedURI, actual.URI)
 			}
 		})
 	}
 }
 
 func TestBackendServiceDescriber_URI(t *testing.T) {
-	t.Run("should return a blank service discovery URI if there is no port exposed", func(t *testing.T) {
-		// GIVEN
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		m := mocks.NewMockecsDescriber(ctrl)
-		m.EXPECT().Params().Return(map[string]string{
-			stack.WorkloadContainerPortParamKey: stack.NoExposedContainerPort, // No port is set for the backend service.
-		}, nil)
+	const (
+		testApp                = "phonetool"
+		testEnv                = "test"
+		testSvc                = "my-svc"
+		testEnvInternalDNSName = "abc.us-west-1.elb.amazonaws.internal"
+	)
+	testCases := map[string]struct {
+		setupMocks func(mocks lbWebSvcDescriberMocks)
 
-		d := &BackendServiceDescriber{
-			initECSServiceDescribers: func(s string) (ecsDescriber, error) { return m, nil },
-		}
+		wantedURI   string
+		wantedError error
+	}{
+		"should return a blank service discovery URI if there is no port exposed": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
+				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+					stack.WorkloadContainerPortParamKey: stack.NoExposedContainerPort, // No port is set for the backend service.
+				}, nil)
+			},
+			wantedURI: BlankServiceDiscoveryURI,
+		},
+		"should return service discovery endpoint if port is exposed": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
+				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+					stack.WorkloadContainerPortParamKey: "8080",
+				}, nil)
+				m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.app.local", nil)
+			},
+			wantedURI: "my-svc.test.app.local:8080",
+		},
+		"internal url http": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				resources := []*describeStack.Resource{
+					{
+						Type:       "AWS::ElasticLoadBalancingV2::TargetGroup",
+						LogicalID:  svcStackResourceALBTargetGroupLogicalID,
+						PhysicalID: "targetGroupARN",
+					},
+					{
+						Type:       svcStackResourceListenerRuleResourceType,
+						LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
+						PhysicalID: "mockRuleARN",
+					},
+				}
+				gomock.InOrder(
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						stack.WorkloadRulePathParamKey: "mySvc",
+					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
+					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
+						Return([]string{"jobs.test.phonetool.internal"}, nil),
+				)
+			},
+			wantedURI: "http://jobs.test.phonetool.internal/mySvc",
+		},
+		"internal url https": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						stack.WorkloadRulePathParamKey: "/",
+						stack.WorkloadHTTPSParamKey:    "true",
+					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
+							Type:       svcStackResourceListenerRuleResourceType,
+							PhysicalID: "mockRuleARN",
+						},
+					}, nil),
+					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
+						Return([]string{"jobs.test.phonetool.com", "phonetool.com"}, nil),
+				)
+			},
+			wantedURI: "https://jobs.test.phonetool.com or https://phonetool.com",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-		// WHEN
-		actual, err := d.URI("test")
+			mockSvcDescriber := mocks.NewMockecsDescriber(ctrl)
+			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
+			mockLBDescriber := mocks.NewMocklbDescriber(ctrl)
+			mocks := lbWebSvcDescriberMocks{
+				ecsDescriber: mockSvcDescriber,
+				envDescriber: mockEnvDescriber,
+				lbDescriber:  mockLBDescriber,
+			}
 
-		// THEN
-		require.NoError(t, err)
-		require.Equal(t, BlankServiceDiscoveryURI, actual)
-	})
-	t.Run("should return service discovery endpoint if port is exposed", func(t *testing.T) {
-		// GIVEN
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		mockSvcStack := mocks.NewMockecsDescriber(ctrl)
-		mockSvcStack.EXPECT().Params().Return(map[string]string{
-			stack.WorkloadContainerPortParamKey: "8080",
-		}, nil)
-		mockEnvStack := mocks.NewMockenvDescriber(ctrl)
-		mockEnvStack.EXPECT().ServiceDiscoveryEndpoint().Return("test.app.local", nil)
+			tc.setupMocks(mocks)
 
-		d := &BackendServiceDescriber{
-			svc:                      "hello",
-			initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mockSvcStack, nil },
-			initEnvDescribers:        func(s string) (envDescriber, error) { return mockEnvStack, nil },
-		}
+			d := &BackendServiceDescriber{
+				app:                      testApp,
+				svc:                      testSvc,
+				initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mockSvcDescriber, nil },
+				initEnvDescribers:        func(s string) (envDescriber, error) { return mockEnvDescriber, nil },
+				initLBDescriber:          func(s string) (lbDescriber, error) { return mockLBDescriber, nil },
+			}
 
-		// WHEN
-		actual, err := d.URI("test")
+			// WHEN
+			actual, err := d.URI(testEnv)
 
-		// THEN
-		require.NoError(t, err)
-		require.Equal(t, "hello.test.app.local:8080", actual)
-	})
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedURI, actual.URI)
+			}
+		})
+	}
 }
 
 func TestRDWebServiceDescriber_URI(t *testing.T) {
@@ -419,7 +494,7 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedURI, actual)
+				require.Equal(t, tc.wantedURI, actual.URI)
 			}
 		})
 	}
