@@ -481,6 +481,7 @@ type WorkloadOpts struct {
 	AppName      string
 	EnvName      string
 	WorkloadName string
+	Manifest     string // Serialized manifest used to deploy the workload.
 
 	// Additional options that are common between **all** workload templates.
 	Variables                map[string]string

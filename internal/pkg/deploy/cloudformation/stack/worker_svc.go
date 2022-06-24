@@ -106,9 +106,11 @@ func (s *WorkerService) Template() (string, error) {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
-		AppName:                  s.app,
-		EnvName:                  s.env,
-		WorkloadName:             s.name,
+		AppName:      s.app,
+		EnvName:      s.env,
+		WorkloadName: s.name,
+		Manifest:     string(s.rawManifest),
+
 		Variables:                s.manifest.WorkerServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
 		NestedStack:              addonsOutputs,

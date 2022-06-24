@@ -157,6 +157,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	}
 
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
+		Manifest:                 string(j.rawManifest),
 		Variables:                j.manifest.Variables,
 		Secrets:                  convertSecrets(j.manifest.Secrets),
 		WorkloadType:             manifest.ScheduledJobType,
