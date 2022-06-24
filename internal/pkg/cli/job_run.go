@@ -19,13 +19,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	jobNamePrompt     = "Which Job would you like to run?"
-	jobNameHelpPrompt = "The selected Job will be run"
-	envPrompt         = "Which Environment do you want to run your job in?"
-	envHelpPrompt     = "The Environment where your job will run"
-)
-
 type jobRunVars struct {
 	appName string
 	envName string
