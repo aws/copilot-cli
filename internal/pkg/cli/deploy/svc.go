@@ -1158,7 +1158,13 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 	if err = validateTopicsExist(subs, topicARNs, d.app.Name, d.env.Name); err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewWorkerService(d.wsMft, d.env.Name, d.app.Name, *rc)
+	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
+		App:           d.app.Name,
+		Env:           d.env.Name,
+		Manifest:      d.wsMft,
+		RawManifest:   d.rawMft,
+		RuntimeConfig: *rc,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}

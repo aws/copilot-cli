@@ -44,10 +44,15 @@ func TestWorkerService_Template(t *testing.T) {
 	v, ok := envMft.(*manifest.WorkerService)
 	require.True(t, ok)
 
-	serializer, err := stack.NewWorkerService(v, envName, appName, stack.RuntimeConfig{
-		ServiceDiscoveryEndpoint: "test.my-app.local",
-		AccountID:                "123456789123",
-		Region:                   "us-west-2",
+	serializer, err := stack.NewWorkerService(stack.WorkerServiceConfig{
+		App:      appName,
+		Env:      envName,
+		Manifest: v,
+		RuntimeConfig: stack.RuntimeConfig{
+			ServiceDiscoveryEndpoint: "test.my-app.local",
+			AccountID:                "123456789123",
+			Region:                   "us-west-2",
+		},
 	})
 
 	tpl, err := serializer.Template()
