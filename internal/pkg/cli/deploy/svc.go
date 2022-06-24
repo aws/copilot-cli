@@ -158,6 +158,7 @@ type workloadDeployer struct {
 	imageTag      string
 	resources     *stack.AppRegionalResources
 	mft           interface{}
+	rawMft        []byte
 	workspacePath string
 
 	// Dependencies.
@@ -202,7 +203,8 @@ type WorkloadDeployerInput struct {
 	App             *config.Application
 	Env             *config.Environment
 	ImageTag        string
-	Mft             interface{}
+	Mft             interface{} // Interpolated, applied, and unmarshaled manifest.
+	RawMft          []byte      // Content of the manifest file without any transformations.
 }
 
 // NewWorkloadDeployer is the constructor for workloadDeployer.
@@ -272,7 +274,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 
-		mft: in.Mft,
+		mft:    in.Mft,
+		rawMft: in.RawMft,
 	}, nil
 }
 
@@ -1030,6 +1033,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		App:           d.app,
 		EnvManifest:   envConfig,
 		Manifest:      d.lbMft,
+		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 		RootUserARN:   in.RootUserARN,
 	}, opts...)

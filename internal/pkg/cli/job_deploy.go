@@ -80,8 +80,10 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 }
 
 func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
-	var err error
-	var deployer workloadDeployer
+	raw, err := minifyRawManifest(o.ws, o.name)
+	if err != nil {
+		return nil, err
+	}
 	in := deploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
 		Name:            o.name,
@@ -89,7 +91,9 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 		Env:             o.targetEnv,
 		ImageTag:        o.imageTag,
 		Mft:             o.appliedManifest,
+		RawMft:          raw,
 	}
+	var deployer workloadDeployer
 	switch t := o.appliedManifest.(type) {
 	case *manifest.ScheduledJob:
 		deployer, err = deploy.NewJobDeployer(&in)
