@@ -47,7 +47,7 @@ func (s *StepFunctions) Execute(stateMachineARN string) error {
 		StateMachineArn: aws.String(stateMachineARN),
 	})
 	if err != nil {
-		return fmt.Errorf("execute state machine: %w", err)
+		return fmt.Errorf("execute state machine %s: %w", stateMachineARN, err)
 	}
 
 	return nil
