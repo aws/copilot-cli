@@ -13,7 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
 )
 
-type JobExecutor interface {
+type jobExecutor interface {
 	Execute(stateMachineARN string) error
 }
 
