@@ -645,7 +645,7 @@ type workloadTemplateGenerator interface {
 }
 
 
-type Runner interface {
+type runner interface {
 	Run() error
 }
 
