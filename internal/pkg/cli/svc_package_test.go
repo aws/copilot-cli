@@ -132,6 +132,13 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 	}
 }
 
+type svcPackageExecuteMock struct {
+	ws           *mocks.MockwsWlDirReader
+	generator    *mocks.MockworkloadTemplateGenerator
+	interpolator *mocks.Mockinterpolator
+	addons       *mocks.Mocktemplater
+}
+
 func TestPackageSvcOpts_Execute(t *testing.T) {
 	const (
 		mockARN    = "mockARN"
@@ -161,6 +168,7 @@ count: 1`
 		inVars packageSvcVars
 
 		mockDependencies func(*gomock.Controller, *packageSvcOpts)
+		setupMocks       func(m *svcPackageExecuteMock)
 
 		wantedStack  string
 		wantedParams string
@@ -176,47 +184,23 @@ count: 1`
 				clientConfigured: true,
 				uploadAssets:     true,
 			},
-			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
-				mockWs := mocks.NewMockwsWlDirReader(ctrl)
-				mockWs.EXPECT().
-					ReadWorkloadManifest("api").
-					Return([]byte(lbwsMft), nil)
-
-				mockGenerator := mocks.NewMockworkloadTemplateGenerator(ctrl)
-				mockGenerator.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{
+			setupMocks: func(m *svcPackageExecuteMock) {
+				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(lbwsMft), nil)
+				m.generator.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{
 					ImageDigest: aws.String(mockDigest),
 				}, nil)
-				mockGenerator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
+				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						ImageDigest: aws.String(mockDigest),
 						RootUserARN: mockARN,
 					},
-				}).
-					Return(&deploy.GenerateCloudFormationTemplateOutput{
-						Template:   "mystack",
-						Parameters: "myparams",
-					}, nil)
-
-				mockItpl := mocks.NewMockinterpolator(ctrl)
-				mockItpl.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
-
-				mockAddons := mocks.NewMocktemplater(ctrl)
-				mockAddons.EXPECT().Template().
-					Return("", &addon.ErrAddonsNotFound{})
-
-				opts.ws = mockWs
-				opts.initAddonsClient = func(opts *packageSvcOpts) error {
-					opts.addonsClient = mockAddons
-					return nil
-				}
-				opts.newInterpolator = func(app, env string) interpolator {
-					return mockItpl
-				}
-				opts.newTplGenerator = func(pso *packageSvcOpts) (workloadTemplateGenerator, error) {
-					return mockGenerator, nil
-				}
+				}).Return(&deploy.GenerateCloudFormationTemplateOutput{
+					Template:   "mystack",
+					Parameters: "myparams",
+				}, nil)
+				m.interpolator.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
+				m.addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
 			},
-
 			wantedStack:  "mystack",
 			wantedParams: "myparams",
 		},
@@ -228,44 +212,21 @@ count: 1`
 				tag:              "1234",
 				clientConfigured: true,
 			},
-			mockDependencies: func(ctrl *gomock.Controller, opts *packageSvcOpts) {
-				mockWs := mocks.NewMockwsWlDirReader(ctrl)
-				mockWs.EXPECT().
-					ReadWorkloadManifest("api").
-					Return([]byte(rdwsMft), nil)
-
-				mockItpl := mocks.NewMockinterpolator(ctrl)
-				mockItpl.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
-
-				mockAddons := mocks.NewMocktemplater(ctrl)
-				mockAddons.EXPECT().Template().
-					Return("", &addon.ErrAddonsNotFound{})
-
-				mockGenerator := mocks.NewMockworkloadTemplateGenerator(ctrl)
-				mockGenerator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
+			setupMocks: func(m *svcPackageExecuteMock) {
+				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(rdwsMft), nil)
+				m.interpolator.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
+				m.addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						ImageDigest: aws.String(""),
 						RootUserARN: mockARN,
 					},
-				}).
-					Return(&deploy.GenerateCloudFormationTemplateOutput{
-						Template:   "mystack",
-						Parameters: "myparams",
-					}, nil)
+				}).Return(&deploy.GenerateCloudFormationTemplateOutput{
+					Template:   "mystack",
+					Parameters: "myparams",
+				}, nil)
 
-				opts.ws = mockWs
-				opts.initAddonsClient = func(opts *packageSvcOpts) error {
-					opts.addonsClient = mockAddons
-					return nil
-				}
-				opts.newInterpolator = func(app, env string) interpolator {
-					return mockItpl
-				}
-				opts.newTplGenerator = func(pso *packageSvcOpts) (workloadTemplateGenerator, error) {
-					return mockGenerator, nil
-				}
 			},
-
 			wantedStack:  "mystack",
 			wantedParams: "myparams",
 		},
@@ -280,6 +241,14 @@ count: 1`
 			stackBuf := new(bytes.Buffer)
 			paramsBuf := new(bytes.Buffer)
 			addonsBuf := new(bytes.Buffer)
+
+			m := &svcPackageExecuteMock{
+				ws:           mocks.NewMockwsWlDirReader(ctrl),
+				generator:    mocks.NewMockworkloadTemplateGenerator(ctrl),
+				interpolator: mocks.NewMockinterpolator(ctrl),
+				addons:       mocks.NewMocktemplater(ctrl),
+			}
+			tc.setupMocks(m)
 			opts := &packageSvcOpts{
 				packageSvcVars: tc.inVars,
 
@@ -290,10 +259,23 @@ count: 1`
 					return &mockWorkloadMft{}, nil
 				},
 				rootUserARN: mockARN,
-				targetApp:   &config.Application{},
-				targetEnv:   &config.Environment{},
+
+				ws: m.ws,
+				initAddonsClient: func(opts *packageSvcOpts) error {
+					opts.addonsClient = m.addons
+					return nil
+				},
+				newInterpolator: func(_, _ string) interpolator {
+					return m.interpolator
+				},
+				newTplGenerator: func(_ *packageSvcOpts) (workloadTemplateGenerator, error) {
+					return m.generator, nil
+				},
+
+				targetApp: &config.Application{},
+				targetEnv: &config.Environment{},
 			}
-			tc.mockDependencies(ctrl, opts)
+			// tc.mockDependencies(ctrl, opts)
 
 			// WHEN
 			err := opts.Execute()
