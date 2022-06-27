@@ -183,7 +183,6 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 	o.appliedManifest = mft
-
 	if err := isManifestCompatibleWithEnvironment(mft, o.envName, o.envFeaturesDescriber); err != nil {
 		return err
 	}

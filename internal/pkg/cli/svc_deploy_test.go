@@ -126,7 +126,6 @@ type deployMocks struct {
 	mockDeployer             *mocks.MockworkloadDeployer
 	mockInterpolator         *mocks.Mockinterpolator
 	mockWsReader             *mocks.MockwsWlDirReader
-	mockEnvUpgrader          *mocks.MockactionCommand
 	mockEnvFeaturesDescriber *mocks.MockversionCompatibilityChecker
 	mockMft                  *mockWorkloadMft
 }
