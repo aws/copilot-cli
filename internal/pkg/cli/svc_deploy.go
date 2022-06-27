@@ -183,6 +183,7 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 	o.appliedManifest = mft
+
 	if err := isManifestCompatibleWithEnvironment(mft, o.envName, o.envFeaturesDescriber); err != nil {
 		return err
 	}
@@ -391,11 +392,13 @@ func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName 
 				logMsg += fmt.Sprintf(`The least environment version that supports the feature is %s.`, v)
 			}
 			if currVersion, err := env.Version(); err == nil {
-				logMsg += fmt.Sprintf(" Your environment is on %s.\n", currVersion)
+				logMsg += fmt.Sprintf(" Your environment is on %s.", currVersion)
 			}
-			logMsg += fmt.Sprintf(`To deploy your service with these configurations, please first upgrade your environment by running %s.`, color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", envName)))
 			log.Errorln(logMsg)
-			return fmt.Errorf("environment %q is not on a version that supports the %q feature", envName, template.FriendlyEnvFeatureName(f))
+			return &errManifestIncompatibleWithEnvironment{
+				missingFeature: f,
+				envName:        envName,
+			}
 		}
 	}
 	return nil
@@ -465,6 +468,21 @@ func (o *deploySvcOpts) getTargetApp() (*config.Application, error) {
 	}
 	o.targetApp = app
 	return o.targetApp, nil
+}
+
+type errManifestIncompatibleWithEnvironment struct {
+	missingFeature string
+	envName        string
+}
+
+func (e *errManifestIncompatibleWithEnvironment) Error() string {
+	return fmt.Sprintf("environment %q is not on a version that supports the %q feature", e.envName, template.FriendlyEnvFeatureName(e.missingFeature))
+}
+
+// RecommendActions returns recommended actions to be taken after the error.
+// Implements main.actionRecommender interface.
+func (e *errManifestIncompatibleWithEnvironment) RecommendActions() string {
+	return fmt.Sprintf("You can upgrade your environment by running %s.\n", color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", e.envName)))
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
