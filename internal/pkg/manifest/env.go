@@ -74,7 +74,7 @@ type environmentCDNConfig struct {
 	EnableCDN *bool
 }
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the ScalingConfigOrT
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the environmentCDNConfig
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (e *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
