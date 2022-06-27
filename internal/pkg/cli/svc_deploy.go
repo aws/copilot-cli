@@ -50,7 +50,6 @@ type deploySvcOpts struct {
 	unmarshal            func([]byte) (manifest.WorkloadManifest, error)
 	newInterpolator      func(app, env string) interpolator
 	cmd                  runner
-	envUpgradeCmd        actionCommand
 	sessProvider         *sessions.Provider
 	newSvcDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
@@ -82,6 +81,7 @@ func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
 
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
+
 	opts := &deploySvcOpts{
 		deployWkldVars: vars,
 
@@ -171,9 +171,6 @@ func (o *deploySvcOpts) Execute() error {
 			return err
 		}
 	}
-	if err := o.envUpgradeCmd.Execute(); err != nil {
-		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.envName, err)
-	}
 	mft, err := workloadManifest(&workloadManifestInput{
 		name:         o.name,
 		appName:      o.appName,
@@ -186,6 +183,9 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 	o.appliedManifest = mft
+	if err := isManifestCompatibleWithEnvironment(mft, o.envName, o.envFeaturesDescriber); err != nil {
+		return err
+	}
 	deployer, err := o.newSvcDeployer()
 	if err != nil {
 		return err
@@ -315,15 +315,6 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 	o.svcType = svc.Type
 
-	cmd, err := newEnvUpgradeOpts(envUpgradeVars{
-		appName: o.appName,
-		name:    env.Name,
-	})
-	if err != nil {
-		return fmt.Errorf("new env upgrade command: %v", err)
-	}
-	o.envUpgradeCmd = cmd
-
 	// client to retrieve an application's resources created with CloudFormation.
 	defaultSess, err := o.sessProvider.Default()
 	if err != nil {
@@ -337,6 +328,15 @@ func (o *deploySvcOpts) configureClients() error {
 	}
 	o.rootUserARN = caller.RootUserARN
 
+	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		ConfigStore: o.store,
+	})
+	if err != nil {
+		return err
+	}
+	o.envFeaturesDescriber = envDescriber
 	return nil
 }
 
@@ -349,7 +349,7 @@ type workloadManifestInput struct {
 	unmarshal    func([]byte) (manifest.WorkloadManifest, error)
 }
 
-func workloadManifest(in *workloadManifestInput) (interface{}, error) {
+func workloadManifest(in *workloadManifestInput) (manifest.WorkloadManifest, error) {
 	raw, err := in.ws.ReadWorkloadManifest(in.name)
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", in.name, err)
@@ -393,7 +393,7 @@ func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName 
 			if currVersion, err := env.Version(); err == nil {
 				logMsg += fmt.Sprintf(" Your environment is on %s.\n", currVersion)
 			}
-			logMsg += fmt.Sprintf(`Please upgrade your environment by running %s.`, color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", envName)))
+			logMsg += fmt.Sprintf(`To deploy your service with these configurations, please first upgrade your environment by running %s.`, color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", envName)))
 			log.Errorln(logMsg)
 			return fmt.Errorf("environment %q is not on a version that supports the %q feature", envName, template.FriendlyEnvFeatureName(f))
 		}
