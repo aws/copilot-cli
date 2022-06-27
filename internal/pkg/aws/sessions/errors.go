@@ -46,6 +46,7 @@ https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#s
 	* Environment Variables
 	* EC2 Instance Metadata (credentials only)
 More information: https://aws.github.io/copilot-cli/docs/credentials/`
+		return fmt.Sprint(msg)
 	} else {
 		msg = `It looks like your profile [%s] is misconfigured or missing:
 https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials
