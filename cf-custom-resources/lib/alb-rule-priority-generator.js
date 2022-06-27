@@ -37,7 +37,7 @@ let report = function (
     const https = require("https");
     const { URL } = require("url");
 
-    var responseBody = JSON.stringify({
+    let responseBody = JSON.stringify({
       Status: responseStatus,
       Reason: reason,
       PhysicalResourceId: physicalResourceId || context.logStreamName,
@@ -83,8 +83,8 @@ let report = function (
  * @returns {number} The next available ALB listener rule priority.
  */
 const calculateNextRulePriority = async function (listenerArn) {
-  var rules = await getListenerRules(listenerArn);
-  var nextRulePriority = 1;
+  let rules = await getListenerRules(listenerArn);
+  let nextRulePriority = 1;
   if (rules.length > 0) {
     // Take the max rule priority, and add 1 to it.
     const rulePriorities = rules.map((rule) => {
@@ -112,8 +112,8 @@ const calculateNextRulePriority = async function (listenerArn) {
  * @returns {number} The next available ALB listener rule priority.
  */
 const calculateNextRootRulePriority = async function (listenerArn) {
-  var rules = await getListenerRules(listenerArn);
-  var nextRulePriority = maxPriorityForRootRule;
+  let rules = await getListenerRules(listenerArn);
+  let nextRulePriority = maxPriorityForRootRule;
   if (rules.length > 0) {
     // We'll start from the max rule priority number for root path so that
     // it won't override any other rule with the same host header.
@@ -135,10 +135,10 @@ const calculateNextRootRulePriority = async function (listenerArn) {
 };
 
 const getListenerRules = async function (listenerArn) {
-  var elb = new aws.ELBv2();
+  let elb = new aws.ELBv2();
   // Grab all the rules for this listener
-  var marker;
-  var rules = [];
+  let marker;
+  let rules = [];
   do {
     const rulesResponse = await elb
       .describeRules({
@@ -157,11 +157,10 @@ const getListenerRules = async function (listenerArn) {
  * Next Available ALB Rule Priority handler, invoked by Lambda
  */
 exports.nextAvailableRulePriorityHandler = async function (event, context) {
-  var responseData = {};
+  let responseData = {};
   const physicalResourceId =
     event.PhysicalResourceId || `alb-rule-priority-${event.LogicalResourceId}`;
-  var rulePriority;
-  var isRootPath = event.ResourceProperties.RulePath === "/";
+  let isRootPath = event.ResourceProperties.RulePath === "/";
 
   try {
     switch (event.RequestType) {
