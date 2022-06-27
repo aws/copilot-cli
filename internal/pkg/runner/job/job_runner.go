@@ -67,7 +67,7 @@ func (r *JobRunner) Run() error {
 	for _, resource := range resources {
 
 		if aws.StringValue(resource.ResourceType) == "AWS::StepFunctions::StateMachine" {
-			stateMachineARN = *resource.PhysicalResourceId
+			stateMachineARN = aws.StringValue(resource.PhysicalReourceId)
 			break
 		}
 	}
