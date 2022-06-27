@@ -5,6 +5,7 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -133,10 +134,12 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 }
 
 type svcPackageExecuteMock struct {
-	ws           *mocks.MockwsWlDirReader
-	generator    *mocks.MockworkloadTemplateGenerator
-	interpolator *mocks.Mockinterpolator
-	addons       *mocks.Mocktemplater
+	ws                   *mocks.MockwsWlDirReader
+	generator            *mocks.MockworkloadTemplateGenerator
+	interpolator         *mocks.Mockinterpolator
+	addons               *mocks.Mocktemplater
+	envFeaturesDescriber *mocks.MockversionCompatibilityChecker
+	mft                  *mockWorkloadMft
 }
 
 func TestPackageSvcOpts_Execute(t *testing.T) {
@@ -243,10 +246,11 @@ count: 1`
 			addonsBuf := new(bytes.Buffer)
 
 			m := &svcPackageExecuteMock{
-				ws:           mocks.NewMockwsWlDirReader(ctrl),
-				generator:    mocks.NewMockworkloadTemplateGenerator(ctrl),
-				interpolator: mocks.NewMockinterpolator(ctrl),
-				addons:       mocks.NewMocktemplater(ctrl),
+				ws:                   mocks.NewMockwsWlDirReader(ctrl),
+				generator:            mocks.NewMockworkloadTemplateGenerator(ctrl),
+				interpolator:         mocks.NewMockinterpolator(ctrl),
+				addons:               mocks.NewMocktemplater(ctrl),
+				envFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			tc.setupMocks(m)
 			opts := &packageSvcOpts{
@@ -256,7 +260,7 @@ count: 1`
 				paramsWriter: paramsBuf,
 				addonsWriter: addonsBuf,
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
-					return &mockWorkloadMft{}, nil
+					return m.mft, nil
 				},
 				rootUserARN: mockARN,
 
@@ -271,6 +275,7 @@ count: 1`
 				newTplGenerator: func(_ *packageSvcOpts) (workloadTemplateGenerator, error) {
 					return m.generator, nil
 				},
+				envFeaturesDescriber: m.envFeaturesDescriber,
 
 				targetApp: &config.Application{},
 				targetEnv: &config.Environment{},
@@ -285,6 +290,60 @@ count: 1`
 			require.Equal(t, tc.wantedStack, stackBuf.String())
 			require.Equal(t, tc.wantedParams, paramsBuf.String())
 			require.Equal(t, tc.wantedAddons, addonsBuf.String())
+		})
+	}
+}
+
+func TestPackageSvcOpts_RecommendedActions(t *testing.T) {
+	testCases := map[string]struct {
+		setupMocks  func(m *svcPackageExecuteMock)
+		wantedError error
+	}{
+		"no recommended action when manifest is compatible with env": {
+			setupMocks: func(m *svcPackageExecuteMock) {
+				m.mft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.envFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+			},
+		},
+		"error out when manifest is incompatible with env": {
+			setupMocks: func(m *svcPackageExecuteMock) {
+				m.mft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1", "mockFeature3"}
+					},
+				}
+				m.envFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.envFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+			},
+			wantedError: errors.New("environment \"mockEnv\" is not on a version that supports the \"mockFeature3\" feature"),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &svcPackageExecuteMock{
+				envFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
+			}
+			tc.setupMocks(m)
+			opts := &packageSvcOpts{
+				packageSvcVars: packageSvcVars{
+					name:    "mockSvc",
+					envName: "mockEnv",
+				},
+				envFeaturesDescriber: m.envFeaturesDescriber,
+				appliedManifest:      m.mft,
+			}
+			got := opts.RecommendActions()
+			if tc.wantedError != nil {
+				require.EqualError(t, got, tc.wantedError.Error())
+			} else {
+				require.NoError(t, got)
+			}
 		})
 	}
 }
