@@ -400,6 +400,24 @@ observability:
 				},
 			},
 		},
+		"unmarshal with content delivery network": {
+			inContent: `name: prod
+type: Environment
+
+cdn: true
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					CDN: environmentCDNConfig{
+						aws.Bool(true),
+					},
+				},
+			},
+		},
 		"unmarshal with http": {
 			inContent: `name: prod
 type: Environment

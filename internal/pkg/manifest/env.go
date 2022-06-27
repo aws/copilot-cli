@@ -57,6 +57,7 @@ type EnvironmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
 	Observability environmentObservability `yaml:"observability,omitempty,flow"`
 	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty,flow"`
+	CDN           environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
 type environmentNetworkConfig struct {
@@ -67,6 +68,26 @@ type environmentVPCConfig struct {
 	ID      *string              `yaml:"id"`
 	CIDR    *IPNet               `yaml:"cidr"`
 	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
+}
+
+type environmentCDNConfig struct {
+	EnableCDN *bool
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the ScalingConfigOrT
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (e *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&e.EnableCDN); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (cfg *environmentVPCConfig) loadVPCConfig(env *config.CustomizeEnv) {
