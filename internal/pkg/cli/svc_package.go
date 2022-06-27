@@ -404,7 +404,7 @@ func (o *packageSvcOpts) getTargetEnv() (*config.Environment, error) {
 	return o.targetEnv, nil
 }
 
-// RecommendActions is a no-op for this command.
+// RecommendActions suggests recommended actions before the packaged template is used for deployment.
 func (o *packageSvcOpts) RecommendActions() error {
 	return isManifestCompatibleWithEnvironment(o.appliedManifest.(manifest.WorkloadManifest), o.envName, o.envFeaturesDescriber)
 }
