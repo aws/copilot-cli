@@ -260,6 +260,9 @@ func containerInformation(taskDef *awsecs.TaskDefinition, containerName string) 
 }
 
 // This function will format a map to a string as "key1=value1,key2=value2,key3=value3".
+// Much of the complexity here comes from the two levels of escaping going on:
+// 1. we are outputting a command to be copied and pasted into a shell, so we need to shell-escape the output.
+// 2. the pflag library parses StringToString args as csv, so we csv escape the individual key/value pairs.
 func fmtStringMapToString(m map[string]string) string {
 	var output []string
 
@@ -271,7 +274,11 @@ func fmtStringMapToString(m map[string]string) string {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		output = append(output, fmt.Sprintf(`%s="%v"`, k, m[k]))
+		// params are parsed as csv, so we escape double quotes by doubling them up
+		v := strings.ReplaceAll(m[k], `"`, `""`)
+		// need to allow single quotes through the shell escaping
+		v = strings.ReplaceAll(v, `'`, `'\''`)
+		output = append(output, fmt.Sprintf(`"%s=%s"`, k, v))
 	}
-	return strings.Join(output, ",")
+	return `'` + strings.Join(output, ",") + `'`
 }
