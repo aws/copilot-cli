@@ -59,7 +59,7 @@ func (r *JobRunner) Run() error {
 	resources, err := r.StackRetriever.StackResources(fmt.Sprintf("%s-%s-%s", r.App, r.Env, r.Job))
 
 	if err != nil {
-		return fmt.Errorf("describe stack error: %v", err)
+		return fmt.Errorf("describe stack %s: %v", NameForService(r.App, r.Env, r.Job), err)
 	}
 
 	var stateMachineARN string
