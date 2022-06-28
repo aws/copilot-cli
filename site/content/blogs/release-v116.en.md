@@ -158,7 +158,7 @@ subscribe:
         store:
             - example_corp
         event:
-            - anything-but: order_canceled
+            - order_canceled
         price_usd:
             - numeric:
               - ">="
