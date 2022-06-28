@@ -41,8 +41,8 @@ func (s *StepFunctions) StateMachineDefinition(stateMachineARN string) (string, 
 	return aws.StringValue(out.Definition), nil
 }
 
-//Execute starts a state machine execution
-func (s *StepFunctions) Execute(stateMachineARN string) error {
+//Execute starts a state machine execution.
+func (s *StepFunctions) Execute(arn string) error {
 	_, err := s.client.StartExecution(&sfn.StartExecutionInput{
 		StateMachineArn: aws.String(stateMachineARN),
 	})
