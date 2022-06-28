@@ -121,12 +121,6 @@ type publicCIDRBlocksGetter interface {
 	PublicCIDRBlocks() ([]string, error)
 }
 
-type customResourcesUploader interface {
-	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
-	UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
-	UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
-}
-
 type snsTopicsLister interface {
 	ListSNSTopics(appName string, envName string) ([]deploy.Topic, error)
 }

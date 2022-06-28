@@ -36,8 +36,7 @@ import (
 )
 
 const (
-	defaultEnvironmentName    = "test"
-	defaultEnvironmentProfile = "default"
+	defaultEnvironmentName = "test"
 )
 
 const (
@@ -473,8 +472,7 @@ func BuildInitCmd() *cobra.Command {
 			}
 			if !opts.ShouldDeploy {
 				log.Info("\nNo problem, you can deploy your service later:\n")
-				log.Infof("- Run %s to create your staging environment.\n",
-					color.HighlightCode(fmt.Sprintf("copilot env init --name %s --profile %s --app %s", defaultEnvironmentName, defaultEnvironmentProfile, *opts.appName)))
+				log.Infof("- Run %s to create your environment.\n", color.HighlightCode("copilot env init"))
 				log.Infof("- Run %s to deploy your service.\n", color.HighlightCode("copilot deploy"))
 			}
 			log.Infoln(`- Be a part of the Copilot ✨community✨!
