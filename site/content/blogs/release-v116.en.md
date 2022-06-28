@@ -154,18 +154,18 @@ subscribe:
   topics:
     - name: ordersTopic
       service: api
-  queue:
-    dead_letter:
-      tries: 5
-    filter_policy:
+      filter_policy:
         store:
             - example_corp
         event:
-            - anything-but: order_canceled
+            - order_canceled
         price_usd:
             - numeric:
               - ">="
               - 100
+  queue:
+    dead_letter:
+      tries: 5
 ```
 
 With this filter policy in place, Amazon SNS will filter all messages by matching those attributes.
