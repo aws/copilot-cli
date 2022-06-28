@@ -15,19 +15,19 @@ Copilot v1.16 にはいくつかの新機能と改善が加えられました:
 * **SNS サブスクリプションフィルターポリシー:** `filter_policy` フィールドを利用して、 Worker Service は、サブスクライブしたトピックに対する SNS メッセージをフィルターできます。
 詳細は、[こちら](./#define-messages-filter-policy-in-publishsubscribe-service-architecture)を確認してください。
 * **その他 たくさんの改善点:**
-    * `deploy` コマンドに `--no-rollback` フラグが追加されました。デプロイが失敗した場合にスタックの自動ロールバックを無効化します([#3341](https://github.com/aws/copilot-cli/pull/3341))。 新しいフラグは、インフラストラクチャの更新失敗時にトラブルシューティングをする際に役立ちます。例えば、デプロイが失敗した場合、CloudFormation はスタックをロールバックするため、失敗時に発生したログを削除します。このフラグは、問題のトラブルシューティングの為にログを保存するのに役立ちます。保存後にロールバックし、マニフェストを再度更新できます。
+    * `deploy` コマンドに `--no-rollback` フラグが追加されました。デプロイが失敗した場合にスタックの自動ロールバックを無効化します([#3341](https://github.com/aws/copilot-cli/pull/3341))。 新しいフラグは、インフラストラクチャの更新失敗時にトラブルシューティングをする際に役立ちます。例えば、デプロイが失敗した場合、CloudFormation はスタックをロールバックするため、失敗時に発生したログを削除します。このフラグは、問題のトラブルシューティングの為にログを保存するのに役立ちます。保存後にロールバックし、Manifest を再度更新できます。
     * `package` コマンドに `--upload-assets` フラグが追加されました。CloudFormation テンプレートを生成する前に、ECR または S3 にアセットをプッシュします ([#3268](https://github.com/aws/copilot-cli/pull/3268))。 このフラグによりパイプラインの buildspec を大幅に簡略化ができます。 buildspec を再作成する場合は、ファイルを削除し、`copilot pipeline init` を再度実行します。その際に、プロンプトでは、既存のパイプライン名を指定します。
     * Environment で `task run` 実行中にセキュリティグループを追加できるようになりました ([#3365](https://github.com/aws/copilot-cli/pull/3365))。
     * Copilot が CI 環境で実行されている場合(環境変数 `CI` を `true` を設定している場合)に、Docker 進行状況の更新ノイズが少なくなりました ([#3345](https://github.com/aws/copilot-cli/pull/3345))。
     * App Runner がサポートされていないリージョンに対して、App Runner Service をデプロイするときに警告ログを出力するようになりました([#3326](https://github.com/aws/copilot-cli/pull/3326))。
     * `app show` および `env show` コマンドは、テーブル形式で Service や Job がデプロイされた Environment を出力するようになりました。([#3379](https://github.com/aws/copilot-cli/pull/3379)、[#3316](https://github.com/aws/copilot-cli/pull/3316))。
-    * パイプラインマニフェストの `build.buildspec` を使って buildspec パスをカスタマイズできるようになりました([#3403](https://github.com/aws/copilot-cli/pull/3403))。
+    * Pipeline Manifest の `build.buildspec` を使って buildspec パスをカスタマイズできるようになりました([#3403](https://github.com/aws/copilot-cli/pull/3403))。
 
 ## AWS Copilot とは?
 
 AWS Copilot CLI は AWS 上でプロダクションレディなコンテナ化されたアプリケーションのビルド、リリース、そして運用のためのツールです。
 開発のスタートからステージング環境へのプッシュ、本番環境へのリリースまで、Copilot はアプリケーション開発ライフサイクル全体の管理を容易にします。
-Copilot の基礎となるのは、 AWS CloudFormation です。CloudFormation により、インプラストラクチャを 1 回の操作でコードとしてプロビジョニングできます。
+Copilot の基礎となるのは、 AWS CloudFormation です。CloudFormation により、インフラストラクチャを 1 回の操作でコードとしてプロビジョニングできます。
 Copilot は、 さまざまなタイプのマイクロサービスの作成と運用の為に、事前定義された CloudFormation テンプレートと、ユーザーフレンドリーなワークフローを提供します。
 デプロイメントスクリプトを記述する代わりに、アプリケーションの開発に集中できます。
 
@@ -48,7 +48,7 @@ _Contributed by [Efe Karakus](https://github.com/efekarakus/), [Janice Huang](ht
 * Build: リポジトリからコードがダウンロードされると、Service 用のコンテナイメージがビルドされ、すべての Environment の Amazon ECR リポジトリにプッシュされます。加えて、Addon テンプレート、Lambda 関数 zip ファイル、環境変数ファイルなどのすべての入力ファイルが S3　にアップロードされます。
 * Deploy ステージ: コードがビルドされた後、任意または全ての Environment にデプロイでき、オプションでデプロイ後のテストや手動承認を使用できます。
 
-以前は、 Copilot では git リポジトリごとに 1 つのパイプラインしか作成できませんでした。`copilot pipeline init` を実行すると単一のパイプラインマニフェストが生成されます。例えば、以下のマニフェストファイルは、まず "test" にリリースします。デプロイが成功すると "prod" Environment にリリースする CodePipeline をモデル化します。 
+以前は、 Copilot では git リポジトリごとに 1 つのパイプラインしか作成できませんでした。`copilot pipeline init` を実行すると単一の Pipeline Manifest が生成されます。例えば、以下の Manifest ファイルは、まず "test" にリリースします。デプロイが成功すると "prod" Environment にリリースする CodePipeline をモデル化します。 
 
 ```
 $ copilot pipeline init
@@ -75,7 +75,7 @@ stages:
 ```
 
 このモデルは "main" ブランチへの全てのコミットを Enviroment 全体でリリースしたいユーザに適しています。
-代替モデルは、ブランチごとにパイプラインを作成することです。例えば、"main" ブランチにいくつかの変更をコミットし、満足したら "test" ブランチに変更をマージして "test" Environment にデプロイします。次に "prod" ブランチにマージします。v1.15 までは単一のパイプラインマニフェストのみがサポートされていたため、このモデルは実現できませんでした。
+代替モデルは、ブランチごとにパイプラインを作成することです。例えば、"main" ブランチにいくつかの変更をコミットし、満足したら "test" ブランチに変更をマージして "test" Environment にデプロイします。次に "prod" ブランチにマージします。v1.15 までは単一の Pipeline Manifest のみがサポートされていたため、このモデルは実現できませんでした。
 
 v1.16 からは、Copilot ユーザは git リポジトリに複数のパイプラインを作成できる様になったので、ブランチごとに別々のパイプラインを設定できます。例えば、 マージ時のコンフリクトを気にすることなく、`copilot pipeline init` を git リポジトリの別々のブランチで実行できます。
 
@@ -157,18 +157,18 @@ subscribe:
   topics:
     - name: ordersTopic
       service: api
-  queue:
-    dead_letter:
-      tries: 5
-    filter_policy:
+      filter_policy:
         store:
             - example_corp
         event:
-            - anything-but: order_canceled
+            - order_canceled
         price_usd:
             - numeric:
               - ">="
               - 100
+  queue:
+    dead_letter:
+      tries: 5
 ```
 
 このフィルターポリシーを設定すると、Amazon SNS はこれらの属性とのマッチングにより全てのメッセージをフィルターします。

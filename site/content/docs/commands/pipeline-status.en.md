@@ -1,5 +1,5 @@
 # pipeline status
-```bash
+```console
 $ copilot pipeline status [flags]
 ```
 
@@ -7,7 +7,7 @@ $ copilot pipeline status [flags]
 `copilot pipeline status` shows the status of the stages in a deployed pipeline.
 
 ## What are the flags?
-```bash
+```
 -a, --app string    Name of the application.
 -h, --help          help for status
     --json          Optional. Outputs in JSON format.
@@ -16,7 +16,7 @@ $ copilot pipeline status [flags]
 
 ## Examples
 Shows status of the pipeline "my-repo-my-branch".
-```bash
+```console
 $ copilot pipeline status -n my-repo-my-branch
 ```
 

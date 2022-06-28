@@ -1,5 +1,5 @@
 # task run
-```
+```console
 $ copilot task run
 ```
 
@@ -77,36 +77,36 @@ Utility Flags
 ## Examples
 Run a task using your local Dockerfile and display log streams after the task is running. 
 You will be prompted to specify an environment for the tasks to run in.
-```
+```console
 $ copilot task run --follow
 ```
 
 Run a task named "db-migrate" in the "test" environment under the current workspace.
-```
+```console
 $ copilot task run -n db-migrate --env test --follow
 ```
 
 Run 4 tasks with 2GB memory, an existing image, and a custom task role.
-```
+```console
 $ copilot task run --count 4 --memory 2048 --image=rds-migrate --task-role migrate-role --follow
 ```
 
 Run a task with environment variables.
-```
+```console
 $ copilot task run --env-vars name=myName,user=myUser
 ```
 
 Run a task using the current workspace with specific subnets and security groups.
-```
+```console
 $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-456
 ```
 
 Run a task with a command.
-```
+```console
 $ copilot task run --command "python migrate-script.py"
 ```
 
 Run a Windows task with the minimum cpu and memory values.
-```
+```console
 $ copilot task run --platform-os WINDOWS_SERVER_2019_CORE --platform-arch X86_64 --cpu 1024 --memory 2048
 ```

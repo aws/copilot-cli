@@ -27,22 +27,40 @@ func TestEnv_Template(t *testing.T) {
 		"should return template body when present": {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
 				m := mocks.NewMockenvReadParser(ctrl)
-				m.EXPECT().ParseEnv(&template.EnvOpts{
-					AppName:                "project",
-					ScriptBucketName:       "mockbucket",
-					DNSCertValidatorLambda: "mockkey1",
-					DNSDelegationLambda:    "mockkey2",
-					CustomDomainLambda:     "mockkey4",
-					VPCConfig: template.VPCConfig{
-						Imported: &template.ImportVPC{},
-						Managed: template.ManagedVPC{
-							CIDR:               DefaultVPCCIDR,
-							PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
-							PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
+				m.EXPECT().ParseEnv(gomock.Any(), gomock.Any()).DoAndReturn(func(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error) {
+					require.Equal(t, &template.EnvOpts{
+						AppName:                "project",
+						EnvName:                "env",
+						ScriptBucketName:       "mockbucket",
+						DNSCertValidatorLambda: "mockkey1",
+						DNSDelegationLambda:    "mockkey2",
+						CustomDomainLambda:     "mockkey4",
+						VPCConfig: template.VPCConfig{
+							Imported: &template.ImportVPC{},
+							Managed: template.ManagedVPC{
+								CIDR:               DefaultVPCCIDR,
+								PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
+								PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
+							},
 						},
-					},
-					LatestVersion: deploy.LatestEnvTemplateVersion,
-				}, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil)
+						LatestVersion: deploy.LatestEnvTemplateVersion,
+						CustomResources: map[string]template.S3ObjectLocation{
+							"CertificateValidationFunction": {
+								Bucket: "mockbucket",
+								Key:    "mockkey1",
+							},
+							"DNSDelegationFunction": {
+								Bucket: "mockbucket",
+								Key:    "mockkey2",
+							},
+							"CustomDomainFunction": {
+								Bucket: "mockbucket",
+								Key:    "mockkey4",
+							},
+						},
+					}, data)
+					return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
+				})
 				e.parser = m
 			},
 			expectedOutput: mockTemplate,
@@ -197,7 +215,7 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 			},
 		},
-		"with private DNS": {
+		"with private DNS only": {
 			input: deploymentInputWithPrivateDNS,
 			want: []*cloudformation.Parameter{
 				{
@@ -246,7 +264,7 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
-					ParameterValue: aws.String("true"),
+					ParameterValue: aws.String("false"),
 				},
 				{
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
@@ -376,6 +394,11 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
 			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
 			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
+		},
+		LambdaURLs: map[string]string{
+			"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
+			"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
+			"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
 		ImportVPCConfig: &config.ImportVPC{},
 	}

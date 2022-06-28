@@ -143,9 +143,9 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("convert retry/timeout config for job %s: %w", j.name, err)
 	}
-	envControllerLambda, err := j.parser.Read(envControllerPath)
+	crs, err := convertCustomResources(j.rc.CustomResourcesURL)
 	if err != nil {
-		return "", fmt.Errorf("read env controller lambda: %w", err)
+		return "", err
 	}
 	entrypoint, err := convertEntryPoint(j.manifest.EntryPoint)
 	if err != nil {
@@ -178,7 +178,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		Publish:                  publishers,
 		Platform:                 convertPlatform(j.manifest.Platform),
 
-		EnvControllerLambda: envControllerLambda.String(),
+		CustomResources: crs,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)

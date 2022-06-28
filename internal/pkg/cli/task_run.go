@@ -249,6 +249,7 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 			return nil, fmt.Errorf("create describer for environment %s in application %s: %w", o.env, o.appName, err)
 		}
 
+		ecsClient := ecs.New(o.sess)
 		return &task.EnvRunner{
 			Count:     o.count,
 			GroupName: o.groupName,
@@ -260,10 +261,11 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 
 			OS: o.os,
 
-			VPCGetter:            vpcGetter,
-			ClusterGetter:        ecs.New(o.sess),
-			Starter:              ecsService,
-			EnvironmentDescriber: d,
+			VPCGetter:             vpcGetter,
+			ClusterGetter:         ecsClient,
+			Starter:               ecsService,
+			EnvironmentDescriber:  d,
+			NonZeroExitCodeGetter: ecsClient,
 		}, nil
 	}
 	return &task.ConfigRunner{
@@ -275,9 +277,10 @@ func (o *runTaskOpts) configureRunner() (taskRunner, error) {
 		SecurityGroups: o.securityGroups,
 		OS:             o.os,
 
-		VPCGetter:     vpcGetter,
-		ClusterGetter: ecsService,
-		Starter:       ecsService,
+		VPCGetter:             vpcGetter,
+		ClusterGetter:         ecsService,
+		Starter:               ecsService,
+		NonZeroExitCodeGetter: ecs.New(o.sess),
 	}, nil
 
 }
@@ -679,6 +682,9 @@ Did you tag your secrets with the "copilot-application" and "copilot-environment
 	if o.follow {
 		o.configureEventsWriter(tasks)
 		if err := o.displayLogStream(); err != nil {
+			return err
+		}
+		if err := o.runner.CheckNonZeroExitCode(tasks); err != nil {
 			return err
 		}
 	}

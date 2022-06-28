@@ -1,5 +1,5 @@
 # pipeline delete
-```bash
+```console
 $ copilot pipeline delete [flags]
 ```
 
@@ -7,7 +7,7 @@ $ copilot pipeline delete [flags]
 `copilot pipeline delete` は、ワークスペースに紐付いている Pipeline を削除します。
 
 ## フラグ
-```bash
+```
 -a, --app             Name of the application.
     --delete-secret   Deletes AWS Secrets Manager secret associated with a pipeline source repository.
 -h, --help            help for delete
@@ -17,6 +17,6 @@ $ copilot pipeline delete [flags]
 
 ## 実行例
 ワークスペースに紐付いている Pipeline を削除します。
-```bash
+```console
 $ copilot pipeline delete
 ```

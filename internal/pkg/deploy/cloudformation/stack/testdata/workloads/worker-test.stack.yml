@@ -215,8 +215,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockDynamicDesiredCountZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
@@ -311,8 +311,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockBacklogPerTaskLambda
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
@@ -657,8 +657,7 @@ Resources:
   AddonsStack:
     Metadata:
       'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'
-    Type: AWS::CloudFormation::Stack # Needed for #1848
-    DependsOn: EnvControllerAction
+    Type: AWS::CloudFormation::Stack
     Condition: HasAddons
     Properties:
       Parameters:
@@ -679,8 +678,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockEnvControllerZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512

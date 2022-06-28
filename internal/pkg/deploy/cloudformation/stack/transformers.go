@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -64,8 +65,17 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 	if s == nil {
 		return nil, nil
 	}
+
+	// Sort the sidecars so that the order is consistent and the integration test won't be flaky.
+	keys := make([]string, 0, len(s))
+	for k := range s {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	var sidecars []*template.SidecarOpts
-	for name, config := range s {
+	for _, name := range keys {
+		config := s[name]
 		port, protocol, err := manifest.ParsePortMapping(config.Port)
 		if err != nil {
 			return nil, err
@@ -114,6 +124,32 @@ func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.Con
 		StartPeriod: aws.Int64(int64(hc.StartPeriod.Seconds())),
 		Timeout:     aws.Int64(int64(hc.Timeout.Seconds())),
 	}
+}
+
+func convertHostedZone(m manifest.RoutingRuleConfiguration) (template.AliasesForHostedZone, error) {
+	aliasesFor := make(map[string][]string)
+	defaultHostedZone := m.HostedZone
+	if len(m.Alias.AdvancedAliases) != 0 {
+		for _, alias := range m.Alias.AdvancedAliases {
+			if alias.HostedZone != nil {
+				aliasesFor[*alias.HostedZone] = append(aliasesFor[*alias.HostedZone], *alias.Alias)
+				continue
+			}
+			if defaultHostedZone != nil {
+				aliasesFor[*defaultHostedZone] = append(aliasesFor[*defaultHostedZone], *alias.Alias)
+			}
+		}
+		return aliasesFor, nil
+	}
+	if defaultHostedZone == nil {
+		return aliasesFor, nil
+	}
+	aliases, err := m.Alias.ToStringSlice()
+	if err != nil {
+		return nil, err
+	}
+	aliasesFor[*defaultHostedZone] = aliases
+	return aliasesFor, nil
 }
 
 // convertDependsOn converts image and sidecar depends on fields to have upper case statuses.
@@ -178,6 +214,43 @@ func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProv
 	return cps
 }
 
+// convertCooldown converts a service manifest cooldown struct into a format parsable
+// by the templates pkg.
+func convertCooldown(c manifest.Cooldown) template.Cooldown {
+	if c.IsEmpty() {
+		return template.Cooldown{}
+	}
+
+	cooldown := template.Cooldown{}
+
+	if c.ScaleInCooldown != nil {
+		scaleInTime := float64(*c.ScaleInCooldown) / float64(time.Second)
+		cooldown.ScaleInCooldown = aws.Float64(scaleInTime)
+	}
+	if c.ScaleOutCooldown != nil {
+		scaleOutTime := float64(*c.ScaleOutCooldown) / float64(time.Second)
+		cooldown.ScaleOutCooldown = aws.Float64(scaleOutTime)
+	}
+
+	return cooldown
+}
+
+// convertScalingCooldown handles the logic of converting generalized and specific cooldowns set
+// into the scaling cooldown used in the Auto Scaling configuration.
+func convertScalingCooldown(specCooldown, genCooldown manifest.Cooldown) template.Cooldown {
+	cooldown := convertCooldown(genCooldown)
+
+	specTemplateCooldown := convertCooldown(specCooldown)
+	if specCooldown.ScaleInCooldown != nil {
+		cooldown.ScaleInCooldown = specTemplateCooldown.ScaleInCooldown
+	}
+	if specCooldown.ScaleOutCooldown != nil {
+		cooldown.ScaleOutCooldown = specTemplateCooldown.ScaleOutCooldown
+	}
+
+	return cooldown
+}
+
 // convertAutoscaling converts the service's Auto Scaling configuration into a format parsable
 // by the templates pkg.
 func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, error) {
@@ -196,19 +269,40 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 		MinCapacity: &min,
 		MaxCapacity: &max,
 	}
-	if a.CPU != nil {
-		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU))
+
+	if a.CPU.Value != nil {
+		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.Value))
 	}
-	if a.Memory != nil {
-		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory))
+	if a.CPU.ScalingConfig.Value != nil {
+		autoscalingOpts.CPU = aws.Float64(float64(*a.CPU.ScalingConfig.Value))
 	}
-	if a.Requests != nil {
-		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests))
+	if a.Memory.Value != nil {
+		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.Value))
 	}
-	if a.ResponseTime != nil {
-		responseTime := float64(*a.ResponseTime) / float64(time.Second)
+	if a.Memory.ScalingConfig.Value != nil {
+		autoscalingOpts.Memory = aws.Float64(float64(*a.Memory.ScalingConfig.Value))
+	}
+	if a.Requests.Value != nil {
+		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests.Value))
+	}
+	if a.Requests.ScalingConfig.Value != nil {
+		autoscalingOpts.Requests = aws.Float64(float64(*a.Requests.ScalingConfig.Value))
+	}
+	if a.ResponseTime.Value != nil {
+		responseTime := float64(*a.ResponseTime.Value) / float64(time.Second)
 		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
 	}
+	if a.ResponseTime.ScalingConfig.Value != nil {
+		responseTime := float64(*a.ResponseTime.ScalingConfig.Value) / float64(time.Second)
+		autoscalingOpts.ResponseTime = aws.Float64(responseTime)
+	}
+
+	autoscalingOpts.CPUCooldown = convertScalingCooldown(a.CPU.ScalingConfig.Cooldown, a.Cooldown)
+	autoscalingOpts.MemCooldown = convertScalingCooldown(a.Memory.ScalingConfig.Cooldown, a.Cooldown)
+	autoscalingOpts.ReqCooldown = convertScalingCooldown(a.Requests.ScalingConfig.Cooldown, a.Cooldown)
+	autoscalingOpts.RespTimeCooldown = convertScalingCooldown(a.ResponseTime.ScalingConfig.Cooldown, a.Cooldown)
+	autoscalingOpts.QueueDelayCooldown = convertScalingCooldown(a.QueueScaling.Cooldown, a.Cooldown)
+
 	if !a.QueueScaling.IsEmpty() {
 		acceptableBacklog, err := a.QueueScaling.AcceptableBacklogPerTask()
 		if err != nil {
@@ -258,8 +352,6 @@ type networkLoadBalancerConfig struct {
 	// If a domain is associated these values are not empty.
 	appDNSDelegationRole *string
 	appDNSName           *string
-	certValidatorLambda  string
-	customDomainLambda   string
 }
 
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
@@ -338,17 +430,6 @@ func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalanc
 		dnsDelegationRole, dnsName := convertAppInformation(s.appInfo)
 		config.appDNSName = dnsName
 		config.appDNSDelegationRole = dnsDelegationRole
-
-		nlbCertValidatorLambda, err := s.parser.Read(nlbCertValidatorPath)
-		if err != nil {
-			return networkLoadBalancerConfig{}, fmt.Errorf("read nlb certificate validator lambda: %w", err)
-		}
-		nlbCustomDomainLambda, err := s.parser.Read(nlbCustomDomainPath)
-		if err != nil {
-			return networkLoadBalancerConfig{}, fmt.Errorf("read nlb custom domain lambda: %w", err)
-		}
-		config.certValidatorLambda = nlbCertValidatorLambda.String()
-		config.customDomainLambda = nlbCustomDomainLambda.String()
 	}
 	return config, nil
 }
@@ -767,22 +848,6 @@ func convertDeadLetter(d manifest.DeadLetterQueue) *template.DeadLetterQueue {
 	}
 }
 
-func parseS3URLs(nameToS3URL map[string]string) (bucket *string, s3ObjectKeys map[string]*string, err error) {
-	if len(nameToS3URL) == 0 {
-		return nil, nil, nil
-	}
-	s3ObjectKeys = make(map[string]*string)
-	for fname, s3url := range nameToS3URL {
-		bucketName, key, err := s3.ParseURL(s3url)
-		if err != nil {
-			return nil, nil, err
-		}
-		s3ObjectKeys[fname] = &key
-		bucket = &bucketName
-	}
-	return
-}
-
 func convertAppInformation(app deploy.AppInformation) (delegationRole *string, domain *string) {
 	role := app.DNSDelegationRole()
 	if role != "" {
@@ -838,4 +903,19 @@ func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secr
 		m[name] = tplSecret
 	}
 	return m
+}
+
+func convertCustomResources(urlForFunc map[string]string) (map[string]template.S3ObjectLocation, error) {
+	out := make(map[string]template.S3ObjectLocation)
+	for fn, url := range urlForFunc {
+		bucket, key, err := s3.ParseURL(url)
+		if err != nil {
+			return nil, fmt.Errorf("convert custom resource %q url: %w", fn, err)
+		}
+		out[fn] = template.S3ObjectLocation{
+			Bucket: bucket,
+			Key:    key,
+		}
+	}
+	return out, nil
 }

@@ -14,9 +14,11 @@ EnvControllerAction:
 EnvControllerFunction:
   Type: AWS::Lambda::Function
   Properties:
+    {{- with $cr := index .CustomResources "EnvControllerFunction" }}
     Code:
-      ZipFile: |
-        {{.EnvControllerLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end }}
     Handler: "index.handler"
     Timeout: 900
     MemorySize: 512

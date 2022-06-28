@@ -15,11 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
-// Template rendering configuration.
-const (
-	backlogCalculatorLambdaPath = "custom-resources/backlog-per-task-calculator.js"
-)
-
 type workerSvcReadParser interface {
 	template.ReadParser
 	ParseWorkerService(template.WorkloadOpts) (*template.Content, error)
@@ -63,17 +58,9 @@ func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeCo
 
 // Template returns the CloudFormation template for the worker service.
 func (s *WorkerService) Template() (string, error) {
-	desiredCountLambda, err := s.parser.Read(desiredCountGeneratorPath)
+	crs, err := convertCustomResources(s.rc.CustomResourcesURL)
 	if err != nil {
-		return "", fmt.Errorf("read desired count lambda function source code: %w", err)
-	}
-	envControllerLambda, err := s.parser.Read(envControllerPath)
-	if err != nil {
-		return "", fmt.Errorf("read env controller lambda function source code: %w", err)
-	}
-	backlogPerTaskLambda, err := s.parser.Read(backlogCalculatorLambdaPath)
-	if err != nil {
-		return "", fmt.Errorf("read backlog-per-task-calculator lambda function source code: %w", err)
+		return "", err
 	}
 	addonsParams, err := s.addonsParameters()
 	if err != nil {
@@ -119,33 +106,34 @@ func (s *WorkerService) Template() (string, error) {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
-		Variables:                      s.manifest.WorkerServiceConfig.Variables,
-		Secrets:                        convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
-		NestedStack:                    addonsOutputs,
-		AddonsExtraParams:              addonsParams,
-		Sidecars:                       sidecars,
-		Autoscaling:                    autoscaling,
-		CapacityProviders:              capacityProviders,
-		DesiredCountOnSpot:             desiredCountOnSpot,
-		ExecuteCommand:                 convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:                   manifest.WorkerServiceType,
-		HealthCheck:                    convertContainerHealthCheck(s.manifest.WorkerServiceConfig.ImageConfig.HealthCheck),
-		LogConfig:                      convertLogging(s.manifest.Logging),
-		DockerLabels:                   s.manifest.ImageConfig.Image.DockerLabels,
-		DesiredCountLambda:             desiredCountLambda.String(),
-		EnvControllerLambda:            envControllerLambda.String(),
-		BacklogPerTaskCalculatorLambda: backlogPerTaskLambda.String(),
-		Storage:                        convertStorageOpts(s.manifest.Name, s.manifest.Storage),
-		Network:                        convertNetworkConfig(s.manifest.Network),
-		DeploymentConfiguration:        convertDeploymentConfig(s.manifest.DeployConfig),
-		EntryPoint:                     entrypoint,
-		Command:                        command,
-		DependsOn:                      convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
-		CredentialsParameter:           aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
-		ServiceDiscoveryEndpoint:       s.rc.ServiceDiscoveryEndpoint,
-		Subscribe:                      subscribe,
-		Publish:                        publishers,
-		Platform:                       convertPlatform(s.manifest.Platform),
+		AppName:                  s.app,
+		EnvName:                  s.env,
+		WorkloadName:             s.name,
+		Variables:                s.manifest.WorkerServiceConfig.Variables,
+		Secrets:                  convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
+		NestedStack:              addonsOutputs,
+		AddonsExtraParams:        addonsParams,
+		Sidecars:                 sidecars,
+		Autoscaling:              autoscaling,
+		CapacityProviders:        capacityProviders,
+		DesiredCountOnSpot:       desiredCountOnSpot,
+		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:             manifest.WorkerServiceType,
+		HealthCheck:              convertContainerHealthCheck(s.manifest.WorkerServiceConfig.ImageConfig.HealthCheck),
+		LogConfig:                convertLogging(s.manifest.Logging),
+		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
+		CustomResources:          crs,
+		Storage:                  convertStorageOpts(s.manifest.Name, s.manifest.Storage),
+		Network:                  convertNetworkConfig(s.manifest.Network),
+		DeploymentConfiguration:  convertDeploymentConfig(s.manifest.DeployConfig),
+		EntryPoint:               entrypoint,
+		Command:                  command,
+		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
+		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),
+		ServiceDiscoveryEndpoint: s.rc.ServiceDiscoveryEndpoint,
+		Subscribe:                subscribe,
+		Publish:                  publishers,
+		Platform:                 convertPlatform(s.manifest.Platform),
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},

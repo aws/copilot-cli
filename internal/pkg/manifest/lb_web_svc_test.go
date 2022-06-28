@@ -271,10 +271,13 @@ func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
 
 func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 	var (
+		perc       = Percentage(80)
 		mockIPNet1 = IPNet("10.1.0.0/24")
 		mockIPNet2 = IPNet("10.1.1.0/24")
 		mockRange  = IntRangeBand("1-10")
-		mockPerc   = Percentage(80)
+		mockConfig = ScalingConfigOrT[Percentage]{
+			Value: &perc,
+		}
 	)
 	testCases := map[string]struct {
 		in         *LoadBalancedWebService
@@ -638,7 +641,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   &mockPerc,
+								CPU:   mockConfig,
 							},
 						},
 					},
@@ -664,7 +667,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Value: nil,
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   &mockPerc,
+								CPU:   mockConfig,
 							},
 						},
 					},
@@ -689,7 +692,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   &mockPerc,
+								CPU:   mockConfig,
 							},
 						},
 					},
@@ -715,7 +718,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Value: nil,
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
-								CPU:   &mockPerc,
+								CPU:   mockConfig,
 							},
 						},
 					},

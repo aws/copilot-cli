@@ -1,5 +1,5 @@
 # job deploy
-```bash
+```console
 $ copilot job deploy
 ```
 
@@ -17,7 +17,7 @@ $ copilot job deploy
 
 ## フラグ
 
-```bash
+```
   -a, --app string                     Name of the application.
   -e, --env string                     Name of the environment.
   -h, --help                           help for deploy
@@ -38,11 +38,11 @@ $ copilot job deploy
 ## 実行例
 
 "report-gen" という Job を "test" Environment にデプロイします。
-```bash
+```console
 $ copilot job deploy --name report-gen --env test
 ```
 
 追加のリソースタグを付与して Job をデプロイします。
-```bash
+```console
 $ copilot job deploy --resource-tags source/revision=bb133e7,deployment/initiator=manual`
 ```

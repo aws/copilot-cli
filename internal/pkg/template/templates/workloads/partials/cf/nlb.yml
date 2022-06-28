@@ -136,9 +136,11 @@ NLBCustomDomainFunction:
   Type: AWS::Lambda::Function
   Condition: HasAssociatedDomain
   Properties:
+    {{- with $cr := index .CustomResources "NLBCustomDomainFunction" }}
     Code:
-      ZipFile: |
-        {{.NLBCustomDomainFunctionLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end }}
     Handler: "index.handler"
     Timeout: 900
     MemorySize: 512
@@ -211,9 +213,11 @@ NLBCertValidatorFunction:
   Type: AWS::Lambda::Function
   Condition: HasAssociatedDomain
   Properties:
+    {{- with $cr := index .CustomResources "NLBCertValidatorFunction" }}
     Code:
-      ZipFile: |
-        {{.NLBCertValidatorFunctionLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end }}
     Handler: "index.handler"
     Timeout: 900
     MemorySize: 512

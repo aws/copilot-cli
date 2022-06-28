@@ -1,5 +1,5 @@
 # job init
-```bash
+```console
 $ copilot job init
 ```
 
@@ -13,7 +13,7 @@ After that, if you already have an environment set up, you can run `copilot job 
 
 ## What are the flags?
 
-```bash
+```
   -a, --app string          Name of the application.
   -d, --dockerfile string   Path to the Dockerfile.
                             Mutually exclusive with -i, --image.
@@ -36,10 +36,10 @@ After that, if you already have an environment set up, you can run `copilot job 
 ## Examples
 
  Creates a "reaper" scheduled task to run once per day.
-```bash
+```console
 $ copilot job init --name reaper --dockerfile ./frontend/Dockerfile --schedule "@daily"
 ```
 Creates a "report-generator" scheduled task with retries.
-```bash
+```console
 $ copilot job init --name report-generator --schedule "@monthly" --retries 3 --timeout 900s
 ```

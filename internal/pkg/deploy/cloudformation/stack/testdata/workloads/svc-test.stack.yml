@@ -248,8 +248,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockDynamicDesiredCountZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
@@ -338,7 +338,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
         PredefinedMetricSpecification:
           PredefinedMetricType: ECSServiceAverageCPUUtilization
         ScaleInCooldown: 120
-        ScaleOutCooldown: 60
+        ScaleOutCooldown: 150
         TargetValue: 70
   EnvControllerAction:
     Metadata:
@@ -353,8 +353,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockEnvControllerZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -462,8 +462,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockRulePriorityZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512

@@ -14,9 +14,17 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestTemplate_ParseScheduledJob(t *testing.T) {
+	customResources := map[string]template.S3ObjectLocation{
+		"EnvControllerFunction": {
+			Bucket: "my-bucket",
+			Key:    "key",
+		},
+	}
+
 	testCases := map[string]struct {
 		opts template.WorkloadOpts
 	}{
@@ -27,6 +35,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
+				CustomResources: customResources,
 			},
 		},
 		"renders with timeout and no retries": {
@@ -39,6 +48,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				CustomResources:          customResources,
 			},
 		},
 		"renders with options": {
@@ -52,6 +62,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				CustomResources:          customResources,
 			},
 		},
 		"renders with options and addons": {
@@ -70,6 +81,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				CustomResources:          customResources,
 			},
 		},
 		"renders with Windows platform": {
@@ -83,6 +95,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					Arch: "x86_64",
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
+				CustomResources:          customResources,
 			},
 		},
 	}
@@ -111,6 +124,18 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 	defaultHttpHealthCheck := template.HTTPHealthCheckOpts{
 		HealthCheckPath: "/",
 	}
+	fakeS3Object := template.S3ObjectLocation{
+		Bucket: "my-bucket",
+		Key:    "key",
+	}
+	customResources := map[string]template.S3ObjectLocation{
+		"DynamicDesiredCountFunction": fakeS3Object,
+		"EnvControllerFunction":       fakeS3Object,
+		"RulePriorityFunction":        fakeS3Object,
+		"NLBCustomDomainFunction":     fakeS3Object,
+		"NLBCertValidatorFunction":    fakeS3Object,
+	}
+
 	testCases := map[string]struct {
 		opts template.WorkloadOpts
 	}{
@@ -122,7 +147,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid grpc template by default": {
@@ -134,7 +160,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with addons with no outputs": {
@@ -149,6 +176,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
+				CustomResources:          customResources,
 			},
 		},
 		"renders a valid template with addons with outputs": {
@@ -166,6 +194,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
+				CustomResources:          customResources,
 			},
 		},
 		"renders a valid template with private subnet placement": {
@@ -177,6 +206,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
+				CustomResources:          customResources,
 			},
 		},
 		"renders a valid template with all storage options": {
@@ -215,7 +245,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with minimal storage options": {
@@ -249,7 +280,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with ephemeral storage": {
@@ -263,7 +295,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				Storage: &template.StorageOpts{
 					Ephemeral: aws.Int(500),
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with entrypoint and command overrides": {
@@ -276,7 +309,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 					AssignPublicIP: template.EnablePublicIP,
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with additional addons parameters": {
@@ -291,7 +325,8 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 DiscoveryServiceArn:
   Fn::GetAtt: [DiscoveryService, Arn]
 `,
-				ALBEnabled: true,
+				ALBEnabled:      true,
+				CustomResources: customResources,
 			},
 		},
 		"renders a valid template with Windows platform": {
@@ -307,6 +342,7 @@ DiscoveryServiceArn:
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
+				CustomResources:          customResources,
 			},
 		},
 	}
@@ -328,6 +364,85 @@ DiscoveryServiceArn:
 				TemplateBody: aws.String(content.String()),
 			})
 			require.NoError(t, err, content.String())
+		})
+	}
+}
+
+func TestTemplate_ParseNetwork(t *testing.T) {
+	type cfn struct {
+		Resources struct {
+			Service struct {
+				Properties struct {
+					NetworkConfiguration map[interface{}]interface{} `yaml:"NetworkConfiguration"`
+				} `yaml:"Properties"`
+			} `yaml:"Service"`
+		} `yaml:"Resources"`
+	}
+
+	testCases := map[string]struct {
+		input template.NetworkOpts
+
+		wantedNetworkConfig string
+	}{
+		"should render AWS VPC configuration for private subnets": {
+			input: template.NetworkOpts{
+				AssignPublicIP: "DISABLED",
+				SubnetsType:    "PrivateSubnets",
+			},
+			wantedNetworkConfig: `
+ AwsvpcConfiguration:
+   AssignPublicIp: DISABLED
+   Subnets:
+     Fn::Split:
+       - ','
+       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+   SecurityGroups:
+     - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+`,
+		},
+		"should render AWS VPC configuration for private subnets with security groups": {
+			input: template.NetworkOpts{
+				AssignPublicIP: "DISABLED",
+				SubnetsType:    "PrivateSubnets",
+				SecurityGroups: []string{
+					"sg-1bcf1d5b",
+					"sg-asdasdas",
+				},
+			},
+			wantedNetworkConfig: `
+ AwsvpcConfiguration:
+   AssignPublicIp: DISABLED
+   Subnets:
+     Fn::Split:
+       - ','
+       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+   SecurityGroups:
+     - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+     - "sg-1bcf1d5b"
+     - "sg-asdasdas"
+`,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			tpl := template.New()
+			wanted := make(map[interface{}]interface{})
+			err := yaml.Unmarshal([]byte(tc.wantedNetworkConfig), &wanted)
+			require.NoError(t, err, "unmarshal wanted config")
+
+			// WHEN
+			content, err := tpl.ParseLoadBalancedWebService(template.WorkloadOpts{
+				Network: tc.input,
+			})
+
+			// THEN
+			require.NoError(t, err, "parse load balanced web service")
+			var actual cfn
+			err = yaml.Unmarshal(content.Bytes(), &actual)
+			require.NoError(t, err, "unmarshal actual config")
+			require.Equal(t, wanted, actual.Resources.Service.Properties.NetworkConfiguration)
 		})
 	}
 }

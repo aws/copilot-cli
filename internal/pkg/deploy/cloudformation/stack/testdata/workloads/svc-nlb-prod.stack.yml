@@ -240,8 +240,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockEnvControllerZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -409,8 +409,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Condition: HasAssociatedDomain
     Properties:
       Code:
-        ZipFile: |
-          mockNLBCustomDomainFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -476,8 +476,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Condition: HasAssociatedDomain
     Properties:
       Code:
-        ZipFile: |
-          mockNLBCertValidatorFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512

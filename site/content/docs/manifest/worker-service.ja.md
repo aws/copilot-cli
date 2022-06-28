@@ -218,6 +218,8 @@ SQS メッセージ 1 件あたりの平均処理時間。例えば、`"250ms"`�
 
 {% include 'exec.ja.md' %}
 
+{% include 'deployment.ja.md' %}
+
 {% include 'entrypoint.ja.md' %}
 
 {% include 'command.ja.md' %}
@@ -233,6 +235,8 @@ SQS メッセージ 1 件あたりの平均処理時間。例えば、`"250ms"`�
 {% include 'publish.ja.md' %}
 
 {% include 'logging.ja.md' %}
+
+{% include 'observability.ja.md' %}
 
 {% include 'taskdef-overrides.ja.md' %}
 

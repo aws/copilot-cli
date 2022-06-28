@@ -1,5 +1,5 @@
 # svc status
-```
+```console
 $ copilot svc status
 ```
 

@@ -332,8 +332,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          albRulePriorityGenerator
+        S3Bucket:
+        S3Key:
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
@@ -365,6 +365,22 @@ Resources:
                 Action:
                   - elasticloadbalancing:DescribeRules
                 Resource: "*"
+  LoadBalancerInternalDNSAlias:
+    Metadata:
+      "aws:copilot:description": "Alias for http-only-path.my-env.my-app.internal to the internal load balancer"
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      Comment: !Sub "Load balancer alias for service ${WorkloadName}"
+      HostedZoneId: !GetAtt EnvControllerAction.InternalWorkloadsHostedZone
+      RecordSets:
+        - Type: A
+          AliasTarget:
+            HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
+            DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
+          Name: !Join
+            - "."
+            - - !Ref WorkloadName
+              - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
   HTTPRulePriorityAction:
     Metadata:
       "aws:copilot:description": "A custom resource assigning priority for HTTP listener rules"
@@ -381,6 +397,14 @@ Resources:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
       Conditions:
+        - Field: "host-header"
+          HostHeaderConfig:
+            Values:
+              - !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
+              - !Join
+                - "."
+                - - !Ref WorkloadName
+                  - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
         - Field: "path-pattern"
           PathPatternConfig:
             Values: !If
@@ -418,8 +442,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          envController
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512

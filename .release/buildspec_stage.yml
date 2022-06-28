@@ -22,7 +22,7 @@ phases:
       - |
         for artifact in `cat ./$GIT_COMMIT_ID.manifest`
         do
-            md5FileName="${artifact%.exe}"
+            md5FileName="${artifact}"
             md5sum $artifact | sed 's/ .*//' > "$md5FileName.md5"
             echo "Generated m5d for $artifact: $(cat $md5FileName.md5)"
             aws s3 cp $artifact "s3://$STAGE_BUCKET/$artifact" || exit 1
