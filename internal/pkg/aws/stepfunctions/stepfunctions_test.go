@@ -86,7 +86,7 @@ func TestStepFunctions_Execute(t *testing.T) {
 					StateMachineArn: aws.String("forca barca"),
 				}).Return(nil, errors.New("some error"))
 			},
-			wantedError: errors.New("execute state machine: some error"),
+			wantedError: errors.New("execute state machine forca barca: some error"),
 		},
 		"success": {
 			inStateMachineARN: "forca barca",

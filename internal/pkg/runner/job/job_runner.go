@@ -8,9 +8,11 @@ package job
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 )
 
 type jobExecutor interface {
@@ -22,7 +24,7 @@ type StackRetriever interface {
 }
 
 type JobRunner struct {
-	Executor JobExecutor
+	Executor jobExecutor
 
 	//App Env and Job name to retrieve cloudformation stack
 	App string
@@ -56,10 +58,10 @@ func NewJobRunner(opts *JobRunnerConfig) *JobRunner {
 
 func (r *JobRunner) Run() error {
 
-	resources, err := r.StackRetriever.StackResources(fmt.Sprintf("%s-%s-%s", r.App, r.Env, r.Job))
+	resources, err := r.StackRetriever.StackResources(stack.NameForService(r.App, r.Env, r.Job))
 
 	if err != nil {
-		return fmt.Errorf("describe stack %s: %v", NameForService(r.App, r.Env, r.Job), err)
+		return fmt.Errorf("describe stack %s: %v", stack.NameForService(r.App, r.Env, r.Job), err)
 	}
 
 	var stateMachineARN string
@@ -67,7 +69,7 @@ func (r *JobRunner) Run() error {
 	for _, resource := range resources {
 
 		if aws.StringValue(resource.ResourceType) == "AWS::StepFunctions::StateMachine" {
-			stateMachineARN = aws.StringValue(resource.PhysicalReourceId)
+			stateMachineARN = aws.StringValue(resource.PhysicalResourceId)
 			break
 		}
 	}

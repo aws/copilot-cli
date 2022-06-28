@@ -38,7 +38,7 @@ func TestJobRunner_Run(t *testing.T) {
 			MockStackRetriever: func(m *mocks.MockStackRetriever) {
 				m.EXPECT().StackResources("appname-envname-jobname").Return(nil, fmt.Errorf("Missing Stack Resource"))
 			},
-			wantedError: fmt.Errorf("describe stack error: Missing Stack Resource"),
+			wantedError: fmt.Errorf("describe stack appname-envname-jobname: Missing Stack Resource"),
 		},
 
 		"missing statemachine resource": {

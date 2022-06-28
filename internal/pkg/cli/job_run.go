@@ -35,7 +35,7 @@ type jobRunOpts struct {
 	// cached variables.
 	targetEnv *config.Environment
 
-	runner     Runner
+	runner     simpleRunner
 	initRunner func()
 }
 

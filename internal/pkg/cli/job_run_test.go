@@ -169,12 +169,12 @@ func TestJobRun_Execute(t *testing.T) {
 
 	testCases := map[string]struct {
 		jobName       string
-		mockjobRunner func(ctrl *gomock.Controller) Runner
+		mockjobRunner func(ctrl *gomock.Controller) simpleRunner
 		wantedError   error
 	}{
 		"success": {
 			jobName: "mockJob",
-			mockjobRunner: func(ctrl *gomock.Controller) Runner {
+			mockjobRunner: func(ctrl *gomock.Controller) simpleRunner {
 				m := mocks.NewMockRunner(ctrl)
 				m.EXPECT().Run().Return(nil)
 				return m
@@ -182,7 +182,7 @@ func TestJobRun_Execute(t *testing.T) {
 		},
 		"fail": {
 			jobName: "mockJob",
-			mockjobRunner: func(ctrl *gomock.Controller) Runner {
+			mockjobRunner: func(ctrl *gomock.Controller) simpleRunner {
 				m := mocks.NewMockRunner(ctrl)
 				m.EXPECT().Run().Return(errors.New("some error"))
 				return m

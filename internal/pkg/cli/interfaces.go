@@ -644,8 +644,7 @@ type workloadTemplateGenerator interface {
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
 }
 
-
-type runner interface {
+type simpleRunner interface {
 	Run() error
 }
 
