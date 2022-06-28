@@ -113,8 +113,8 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 		return nil, &errMissingRegion{}
 	}
 	if _, err := p.sessionValidator.ValidateCredentials(sess); err != nil {
-		if strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "NoCredentialProviders") {
-			return nil, &errCredProviderTimeout{name}
+		if isCredRetrievalErr(err) {
+			return nil, &errCredRetrieval{profile: name, parentErr: err}
 		}
 		return nil, err
 	}
@@ -170,8 +170,8 @@ func (p *Provider) defaultSession() (*session.Session, error) {
 		return nil, err
 	}
 	if _, err = p.sessionValidator.ValidateCredentials(sess); err != nil {
-		if strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "NoCredentialProviders") {
-			return nil, &errCredProviderTimeout{"default"}
+		if isCredRetrievalErr(err) {
+			return nil, &errCredRetrieval{profile: "profile", parentErr: err}
 		}
 		return nil, err
 	}
@@ -230,4 +230,8 @@ func (v *validator) ValidateCredentials(sess *session.Session) (credentials.Valu
 	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
 	defer cancel()
 	return sess.Config.Credentials.GetWithContext(ctx)
+}
+
+func isCredRetrievalErr(err error) bool {
+	return strings.Contains(err.Error(), "context deadline exceeded") || strings.Contains(err.Error(), "NoCredentialProviders")
 }
