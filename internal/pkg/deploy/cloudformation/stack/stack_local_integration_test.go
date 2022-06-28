@@ -48,9 +48,9 @@ func Test_Stack_Local_Integration(t *testing.T) {
 	}
 	envConfig.HTTPConfig.Public.Certificates = []string{"mockCertARN"}
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-		App:       &config.Application{Name: appName},
-		EnvConfig: envConfig,
-		Manifest:  v,
+		App:         &config.Application{Name: appName},
+		EnvManifest: envConfig,
+		Manifest:    v,
 		RuntimeConfig: stack.RuntimeConfig{
 			Image: &stack.ECRImage{
 				RepoURL:  imageURL,

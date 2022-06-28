@@ -85,9 +85,9 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 			},
 		}
 		serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-			App:       &config.Application{Name: appName, Domain: "example.com"},
-			EnvConfig: envConfig,
-			Manifest:  v,
+			App:         &config.Application{Name: appName, Domain: "example.com"},
+			EnvManifest: envConfig,
+			Manifest:    v,
 			RuntimeConfig: stack.RuntimeConfig{
 				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 				AccountID:                "123456789123",

@@ -1034,7 +1034,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 	}
 	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App:           d.app,
-		EnvConfig:     envConfig,
+		EnvManifest:   envConfig,
 		Manifest:      d.lbMft,
 		RuntimeConfig: *rc,
 		RootUserARN:   in.RootUserARN,
@@ -1065,7 +1065,7 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	}
 	conf, err := stack.NewBackendService(stack.BackendServiceConfig{
 		App:           d.app,
-		EnvConfig:     envConfig,
+		EnvManifest:   envConfig,
 		Manifest:      d.backendMft,
 		RuntimeConfig: *rc,
 	})
@@ -1298,19 +1298,19 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 	if d.backendMft.RoutingRule.IsEmpty() {
 		return nil
 	}
-	certsImported, err := d.envHasImportedCertificates()
+	hasImportedCerts, err := d.envHasImportedCertificates()
 	if err != nil {
 		return err
 	}
 	switch {
-	case d.backendMft.RoutingRule.Alias.IsEmpty() && certsImported:
+	case d.backendMft.RoutingRule.Alias.IsEmpty() && hasImportedCerts:
 		return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 			name:    d.name,
 			envName: d.env.Name,
 		}
 	case d.backendMft.RoutingRule.Alias.IsEmpty():
 		return nil
-	case !certsImported:
+	case !hasImportedCerts:
 		return fmt.Errorf(`cannot specify "alias" in an environment without imported certs`)
 	}
 
@@ -1334,13 +1334,13 @@ func (d *backendSvcDeployer) envHasImportedCertificates() (bool, error) {
 	return len(env.HTTPConfig.Private.Certificates) != 0, nil
 }
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
-	certsImported, err := d.envHasImportedCertificates()
+	hasImportedCerts, err := d.envHasImportedCertificates()
 	if err != nil {
 		return err
 	}
 
 	if d.lbMft.RoutingRule.Alias.IsEmpty() {
-		if certsImported {
+		if hasImportedCerts {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 				name:    d.name,
 				envName: d.env.Name,
@@ -1348,7 +1348,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		}
 		return nil
 	}
-	if certsImported {
+	if hasImportedCerts {
 		aliases, err := d.lbMft.RoutingRule.Alias.ToStringSlice()
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
@@ -1374,11 +1374,11 @@ func (d *lbWebSvcDeployer) validateNLBRuntime() error {
 		return nil
 	}
 
-	certsImported, err := d.envHasImportedCertificates()
+	hasImportedCerts, err := d.envHasImportedCertificates()
 	if err != nil {
 		return err
 	}
-	if certsImported {
+	if hasImportedCerts {
 		return fmt.Errorf("cannot specify nlb.alias when env %s imports one or more certificates", d.env.Name)
 	}
 	if d.app.Domain == "" {

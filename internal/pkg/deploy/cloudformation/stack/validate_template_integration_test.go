@@ -30,7 +30,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	require.Equal(t, ok, true)
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App: &config.Application{Name: appName},
-		EnvConfig: &manifest.Environment{
+		EnvManifest: &manifest.Environment{
 			Workload: manifest.Workload{
 				Name: &tc.envName,
 			},

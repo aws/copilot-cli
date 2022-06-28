@@ -554,8 +554,8 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 				App: &config.Application{
 					Name: appName,
 				},
-				EnvConfig: envConfig,
-				Manifest:  mft.(*manifest.BackendService),
+				EnvManifest: envConfig,
+				Manifest:    mft.(*manifest.BackendService),
 				RuntimeConfig: RuntimeConfig{
 					ServiceDiscoveryEndpoint: fmt.Sprintf("%s.%s.local", envName, appName),
 				},
