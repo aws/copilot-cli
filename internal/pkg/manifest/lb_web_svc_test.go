@@ -278,6 +278,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 		mockConfig = ScalingConfigOrT[Percentage]{
 			Value: &perc,
 		}
+		trueValue = true
 	)
 	testCases := map[string]struct {
 		in         *LoadBalancedWebService
@@ -465,8 +466,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-								SecurityGroupIds: []string{"sg-123"},
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								IDs: []string{"sg-123"},
 							},
 						},
 					},
@@ -534,8 +535,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-									SecurityGroupIds: []string{"sg-456", "sg-789"},
+								SecurityGroups: SecurityGroupsIDsOrConfig{
+									IDs: []string{"sg-456", "sg-789"},
 								},
 							},
 						},
@@ -632,8 +633,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-								SecurityGroupIds: []string{"sg-456", "sg-789"},
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								IDs: []string{"sg-456", "sg-789"},
 							},
 						},
 					},
@@ -707,8 +708,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-								SecurityGroupIds: []string{"sg-456", "sg-789"},
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								IDs: []string{"sg-456", "sg-789"},
 							},
 						},
 					},
@@ -735,8 +736,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-								SecurityGroupIds: []string{"sg-456", "sg-789"},
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								IDs: []string{"sg-456", "sg-789"},
 							},
 						},
 					},
@@ -751,8 +752,8 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-								SecurityGroupsConfig: SecurityGroupsConfig{
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								AdvancedConfig: SecurityGroupsConfig{
 									SecurityGroups: []string{"sg-535", "sg-789"},
 								},
 							},
@@ -763,10 +764,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					"prod-iad": {
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-									SecurityGroupsConfig: SecurityGroupsConfig{
+								SecurityGroups: SecurityGroupsIDsOrConfig{
+									AdvancedConfig: SecurityGroupsConfig{
 										SecurityGroups: []string{"sg-456", "sg-700"},
-										DenyDefault:    true,
+										DenyDefault:    &trueValue,
 									},
 								},
 							},
@@ -783,10 +784,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-								SecurityGroupsConfig: SecurityGroupsConfig{
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								AdvancedConfig: SecurityGroupsConfig{
 									SecurityGroups: []string{"sg-456", "sg-700"},
-									DenyDefault:    true,
+									DenyDefault:    &trueValue,
 								},
 							},
 						},

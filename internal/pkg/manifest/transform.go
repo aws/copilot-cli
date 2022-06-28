@@ -195,12 +195,12 @@ func (s securityGroupsIDsOrConfigTransformer) Transformer(typ reflect.Type) func
 	return func(dst, src reflect.Value) error {
 		dstStruct, srcStruct := dst.Interface().(SecurityGroupsIDsOrConfig), src.Interface().(SecurityGroupsIDsOrConfig)
 
-		if !srcStruct.SecurityGroupsConfig.isEmpty() {
-			dstStruct.SecurityGroupIds = nil
+		if !srcStruct.AdvancedConfig.isEmpty() {
+			dstStruct.IDs = nil
 		}
 
-		if srcStruct.SecurityGroupIds != nil {
-			dstStruct.SecurityGroupsConfig = SecurityGroupsConfig{}
+		if srcStruct.IDs != nil {
+			dstStruct.AdvancedConfig = SecurityGroupsConfig{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

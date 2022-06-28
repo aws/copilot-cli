@@ -664,8 +664,8 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 		AssignPublicIP: template.EnablePublicIP,
 		SubnetsType:    template.PublicSubnetsPlacement,
 	}
-	opts.SecurityGroups = network.VPC.SecurityGroupsIDsOrConfig.GetSecurityGroupIds()
-	opts.DenyDefaultSecurityGroup = network.VPC.SecurityGroupsIDsOrConfig.IsDefaultSecurityGroupDenied()
+	opts.SecurityGroups = network.VPC.SecurityGroups.GetIDs()
+	opts.DenyDefaultSecurityGroup = network.VPC.SecurityGroups.IsDefaultSecurityGroupDenied()
 
 	placement := network.VPC.Placement
 	if placement.IsEmpty() {

@@ -220,8 +220,8 @@ Outputs:
 				conf.manifest.Network.VPC.Placement = manifest.PlacementArgOrString{
 					PlacementString: &testPrivatePlacement,
 				}
-				conf.manifest.Network.VPC.SecurityGroupsIDsOrConfig = manifest.SecurityGroupsIDsOrConfig{
-					SecurityGroupIds: []string{"sg-1234"},
+				conf.manifest.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{
+					IDs: []string{"sg-1234"},
 				}
 			}
 

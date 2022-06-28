@@ -633,8 +633,8 @@ func TestNetworkConfig_IsEmpty(t *testing.T) {
 		"non empty network config": {
 			in: NetworkConfig{
 				VPC: vpcConfig{
-					SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-						SecurityGroupIds: []string{"group"},
+					SecurityGroups: SecurityGroupsIDsOrConfig{
+						IDs: []string{"group"},
 					},
 				},
 			},
@@ -662,7 +662,7 @@ func TestSecurityGroupsConfig_UtilityFuncForSecurityGroups(t *testing.T) {
 		},
 		"security groups in map are returned": {
 			data: SecurityGroupsIDsOrConfig{
-				SecurityGroupsConfig: SecurityGroupsConfig{
+				AdvancedConfig: SecurityGroupsConfig{
 					SecurityGroups: []string{"group", "group1"},
 				},
 			},
@@ -670,7 +670,7 @@ func TestSecurityGroupsConfig_UtilityFuncForSecurityGroups(t *testing.T) {
 		},
 		"nil returned when security groups in map are empty": {
 			data: SecurityGroupsIDsOrConfig{
-				SecurityGroupsConfig: SecurityGroupsConfig{
+				AdvancedConfig: SecurityGroupsConfig{
 					SecurityGroups: []string{},
 				},
 			},
@@ -678,13 +678,13 @@ func TestSecurityGroupsConfig_UtilityFuncForSecurityGroups(t *testing.T) {
 		},
 		"security groups in array are returned": {
 			data: SecurityGroupsIDsOrConfig{
-				SecurityGroupIds: []string{"123", "45"},
+				IDs: []string{"123", "45"},
 			},
 			wantedSecurityGroups: []string{"123", "45"},
 		},
 		"nil returned when security groups in array are empty": {
 			data: SecurityGroupsIDsOrConfig{
-				SecurityGroupIds: []string{},
+				IDs: []string{},
 			},
 			wantedSecurityGroups: nil,
 		},
@@ -693,7 +693,7 @@ func TestSecurityGroupsConfig_UtilityFuncForSecurityGroups(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			sgs := tc.data.GetSecurityGroupIds()
+			sgs := tc.data.GetIDs()
 
 			// THEN
 			require.Equal(t, tc.wantedSecurityGroups, sgs)
@@ -702,6 +702,10 @@ func TestSecurityGroupsConfig_UtilityFuncForSecurityGroups(t *testing.T) {
 }
 
 func TestSecurityGroupsConfig_UtilityFuncForDefaultSecurityGroup(t *testing.T) {
+	var (
+		falseValue = false
+		trueValue  = true
+	)
 	testCases := map[string]struct {
 		data              SecurityGroupsIDsOrConfig
 		IsDefaultSGDenied bool
@@ -712,7 +716,7 @@ func TestSecurityGroupsConfig_UtilityFuncForDefaultSecurityGroup(t *testing.T) {
 		},
 		"default security group is applied when deny_default is not specified in SG config": {
 			data: SecurityGroupsIDsOrConfig{
-				SecurityGroupsConfig: SecurityGroupsConfig{
+				AdvancedConfig: SecurityGroupsConfig{
 					SecurityGroups: []string{"1"},
 				},
 			},
@@ -720,23 +724,23 @@ func TestSecurityGroupsConfig_UtilityFuncForDefaultSecurityGroup(t *testing.T) {
 		},
 		"default security group is applied when deny_default is false in SG config": {
 			data: SecurityGroupsIDsOrConfig{
-				SecurityGroupsConfig: SecurityGroupsConfig{
+				AdvancedConfig: SecurityGroupsConfig{
 					SecurityGroups: []string{"1"},
-					DenyDefault:    false,
+					DenyDefault:    &falseValue,
 				},
 			},
 			IsDefaultSGDenied: false,
 		},
 		"default security group is applied when security group array is specified": {
 			data: SecurityGroupsIDsOrConfig{
-				SecurityGroupIds: []string{"1"},
+				IDs: []string{"1"},
 			},
 			IsDefaultSGDenied: false,
 		},
 		"default security group is not applied when default_deny is true": {
 			data: SecurityGroupsIDsOrConfig{
-				SecurityGroupsConfig: SecurityGroupsConfig{
-					DenyDefault: true,
+				AdvancedConfig: SecurityGroupsConfig{
+					DenyDefault: &trueValue,
 				},
 			},
 			IsDefaultSGDenied: true,
@@ -755,6 +759,9 @@ func TestSecurityGroupsConfig_UtilityFuncForDefaultSecurityGroup(t *testing.T) {
 }
 
 func TestNetworkConfig_UnmarshalYAML(t *testing.T) {
+	var (
+		trueValue = true
+	)
 	testCases := map[string]struct {
 		data string
 
@@ -784,9 +791,9 @@ network:
 					Placement: PlacementArgOrString{
 						PlacementString: placementStringP(PublicSubnetPlacement),
 					},
-					SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-						SecurityGroupIds:     []string{"sg-1234", "sg-4567"},
-						SecurityGroupsConfig: SecurityGroupsConfig{},
+					SecurityGroups: SecurityGroupsIDsOrConfig{
+						IDs:            []string{"sg-1234", "sg-4567"},
+						AdvancedConfig: SecurityGroupsConfig{},
 					},
 				},
 			},
@@ -802,17 +809,17 @@ network:
 			wantedConfig: &NetworkConfig{
 				VPC: vpcConfig{
 					Placement: PlacementArgOrString{},
-					SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-						SecurityGroupIds: nil,
-						SecurityGroupsConfig: SecurityGroupsConfig{
+					SecurityGroups: SecurityGroupsIDsOrConfig{
+						IDs: nil,
+						AdvancedConfig: SecurityGroupsConfig{
 							SecurityGroups: []string{"sg-1234", "sg-4567"},
-							DenyDefault:    true,
+							DenyDefault:    &trueValue,
 						},
 					},
 				},
 			},
 		},
-		"unmarshal security group config ensures by default deny default security group is false": {
+		"unmarshal is successful for security groups specified in config without default deny": {
 			data: `
 network:
   vpc:
@@ -822,11 +829,11 @@ network:
 			wantedConfig: &NetworkConfig{
 				VPC: vpcConfig{
 					Placement: PlacementArgOrString{},
-					SecurityGroupsIDsOrConfig: SecurityGroupsIDsOrConfig{
-						SecurityGroupIds: nil,
-						SecurityGroupsConfig: SecurityGroupsConfig{
+					SecurityGroups: SecurityGroupsIDsOrConfig{
+						IDs: nil,
+						AdvancedConfig: SecurityGroupsConfig{
 							SecurityGroups: []string{"sg-1234", "sg-4567"},
-							DenyDefault:    false,
+							DenyDefault:    nil,
 						},
 					},
 				},

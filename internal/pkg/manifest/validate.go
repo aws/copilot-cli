@@ -1245,7 +1245,7 @@ func (v vpcConfig) Validate() error {
 	if err := v.Placement.Validate(); err != nil {
 		return fmt.Errorf(`validate "placement": %w`, err)
 	}
-	if err := v.SecurityGroupsIDsOrConfig.Validate(); err != nil {
+	if err := v.SecurityGroups.Validate(); err != nil {
 		return fmt.Errorf(`validate "security_groups": %w`, err)
 	}
 	return nil
@@ -1282,10 +1282,10 @@ func (p PlacementString) Validate() error {
 
 // Validate is a no-op for SecurityGroupsIDsOrConfig.
 func (s SecurityGroupsIDsOrConfig) Validate() error {
-	if s.IsEmpty() {
+	if s.isEmpty() {
 		return nil
 	}
-	return s.SecurityGroupsConfig.Validate()
+	return s.AdvancedConfig.Validate()
 }
 
 // Validate is a no-op for SecurityGroupsConfig.

@@ -37,11 +37,12 @@ var (
 var (
 	ErrAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
 
-	errUnmarshalBuildOpts     = errors.New("unable to unmarshal build field into string or compose-style map")
-	errUnmarshalPlatformOpts  = errors.New("unable to unmarshal platform field into string or compose-style map")
-	errUnmarshalPlacementOpts = errors.New("unable to unmarshal placement field into string or compose-style map")
-	errUnmarshalCountOpts     = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
-	errUnmarshalRangeOpts     = errors.New(`unable to unmarshal "range" field`)
+	errUnmarshalBuildOpts         = errors.New("unable to unmarshal build field into string or compose-style map")
+	errUnmarshalPlatformOpts      = errors.New("unable to unmarshal platform field into string or compose-style map")
+	errUnmarshalSecurityGroupOpts = errors.New(`unable to unmarshal "security groups" field into slice of strings or compose-style map`)
+	errUnmarshalPlacementOpts     = errors.New("unable to unmarshal placement field into string or compose-style map")
+	errUnmarshalCountOpts         = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalRangeOpts         = errors.New(`unable to unmarshal "range" field`)
 
 	errUnmarshalExec       = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
 	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
@@ -444,30 +445,30 @@ type PlacementString string
 // SecurityGroupsIDsOrConfig represents security groups attached to task. It supports unmarshalling
 // yaml which can either be of type SecurityGroupsConfig or a list of strings.
 type SecurityGroupsIDsOrConfig struct {
-	SecurityGroupIds     []string `yaml:"security_groups"`
-	SecurityGroupsConfig SecurityGroupsConfig
+	IDs            []string
+	AdvancedConfig SecurityGroupsConfig
 }
 
-func (s *SecurityGroupsIDsOrConfig) IsEmpty() bool {
-	return (s.SecurityGroupIds == nil || len(s.SecurityGroupIds) == 0) && s.SecurityGroupsConfig.isEmpty()
+func (s *SecurityGroupsIDsOrConfig) isEmpty() bool {
+	return len(s.IDs) == 0 && s.AdvancedConfig.isEmpty()
 }
 
 // SecurityGroupsConfig represents which security groups are attached to a task
 // and if default security group is applied.
 type SecurityGroupsConfig struct {
 	SecurityGroups []string `yaml:"groups"`
-	DenyDefault    bool     `yaml:"deny_default"`
+	DenyDefault    *bool    `yaml:"deny_default"`
 }
 
 func (s *SecurityGroupsConfig) isEmpty() bool {
-	return (s.SecurityGroups == nil || len(s.SecurityGroups) == 0) && !s.DenyDefault
+	return len(s.SecurityGroups) == 0 && s.DenyDefault == nil
 }
 
 // UnmarshalYAML overrides the default YAML unmarshalling logic for the SecurityGroupsIDsOrConfig
 // struct, allowing it to perform more complex unmarshalling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (s *SecurityGroupsIDsOrConfig) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&s.SecurityGroupsConfig); err != nil {
+	if err := value.Decode(&s.AdvancedConfig); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -476,43 +477,47 @@ func (s *SecurityGroupsIDsOrConfig) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	if !s.SecurityGroupsConfig.isEmpty() {
-		// Unmarshalled successfully to s.SecurityGroupsConfig, unset s.SecurityGroupIds, and return.
-		s.SecurityGroupIds = nil
+	if !s.AdvancedConfig.isEmpty() {
+		// Unmarshalled successfully to s.AdvancedConfig, unset s.IDs, and return.
+		s.IDs = nil
 		return nil
 	}
 
-	if err := value.Decode(&s.SecurityGroupIds); err != nil {
-		return errUnmarshalPlatformOpts
+	if err := value.Decode(&s.IDs); err != nil {
+		return errUnmarshalSecurityGroupOpts
 	}
 	return nil
 }
 
-func (s *SecurityGroupsIDsOrConfig) GetSecurityGroupIds() []string {
-	if !s.SecurityGroupsConfig.isEmpty() && s.SecurityGroupsConfig.SecurityGroups != nil && len(s.SecurityGroupsConfig.SecurityGroups) > 0 {
-		return s.SecurityGroupsConfig.SecurityGroups
+// GetIDs returns security groups from SecurityGroupsIDsOrConfig that are attached to task.
+// nil is returned if no security groups are specified.
+func (s *SecurityGroupsIDsOrConfig) GetIDs() []string {
+	if !s.AdvancedConfig.isEmpty() && len(s.AdvancedConfig.SecurityGroups) > 0 {
+		return s.AdvancedConfig.SecurityGroups
 	}
-	if s.SecurityGroupIds != nil && len(s.SecurityGroupIds) > 0 {
-		return s.SecurityGroupIds
+	if len(s.IDs) > 0 {
+		return s.IDs
 	}
 	return nil
 }
 
+// IsDefaultSecurityGroupDenied returns true if DenyDefault is set to true
+// in SecurityGroupsIDsOrConfig.AdvancedConfig. Otherwise, false is returned.
 func (s *SecurityGroupsIDsOrConfig) IsDefaultSecurityGroupDenied() bool {
-	if !s.SecurityGroupsConfig.isEmpty() {
-		return s.SecurityGroupsConfig.DenyDefault
+	if !s.AdvancedConfig.isEmpty() && s.AdvancedConfig.DenyDefault != nil {
+		return *s.AdvancedConfig.DenyDefault
 	}
 	return false
 }
 
 // vpcConfig represents the security groups and subnets attached to a task.
 type vpcConfig struct {
-	Placement                 PlacementArgOrString      `yaml:"placement"`
-	SecurityGroupsIDsOrConfig SecurityGroupsIDsOrConfig `yaml:"security_groups"`
+	Placement      PlacementArgOrString      `yaml:"placement"`
+	SecurityGroups SecurityGroupsIDsOrConfig `yaml:"security_groups"`
 }
 
 func (v *vpcConfig) isEmpty() bool {
-	return v.Placement.IsEmpty() && v.SecurityGroupsIDsOrConfig.IsEmpty()
+	return v.Placement.IsEmpty() && v.SecurityGroups.isEmpty()
 }
 
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which
