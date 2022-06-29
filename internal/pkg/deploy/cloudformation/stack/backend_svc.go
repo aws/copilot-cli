@@ -40,7 +40,7 @@ type BackendService struct {
 
 type BackendServiceConfig struct {
 	App           *config.Application
-	Env           *config.Environment
+	EnvManifest   *manifest.Environment
 	Manifest      *manifest.BackendService
 	RuntimeConfig RuntimeConfig
 }
@@ -57,7 +57,7 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
 				name:   aws.StringValue(conf.Manifest.Name),
-				env:    conf.Env.Name,
+				env:    aws.StringValue(conf.EnvManifest.Name),
 				app:    conf.App.Name,
 				rc:     conf.RuntimeConfig,
 				image:  conf.Manifest.ImageConfig.Image,
@@ -73,7 +73,7 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 		albEnabled: !conf.Manifest.RoutingRule.IsEmpty(),
 	}
 
-	if conf.Env.HasImportedCerts() {
+	if len(conf.EnvManifest.HTTPConfig.Private.Certificates) != 0 {
 		b.certImported = true
 		b.httpsEnabled = b.albEnabled
 	}

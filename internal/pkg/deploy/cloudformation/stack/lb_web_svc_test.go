@@ -333,7 +333,6 @@ Outputs:
 				manifest:     testLBWebServiceManifest,
 			}
 			tc.mockDependencies(t, ctrl, conf)
-
 			// WHEN
 			template, err := conf.Template()
 
