@@ -199,16 +199,8 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 
 		wantedError error
 	}{
-		"error if failed to upgrade environment": {
-			mock: func(m *deployMocks) {
-				m.mockEnvUpgrader.EXPECT().Execute().Return(mockError)
-			},
-
-			wantedError: fmt.Errorf(`execute "env upgrade --app phonetool --name prod-iad": some error`),
-		},
 		"error out if fail to read workload manifest": {
 			mock: func(m *deployMocks) {
-				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return(nil, mockError)
 			},
 
@@ -216,18 +208,46 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		},
 		"error out if fail to interpolate workload manifest": {
 			mock: func(m *deployMocks) {
-				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", mockError)
 			},
 
 			wantedError: fmt.Errorf("interpolate environment variables for upload manifest: some error"),
 		},
-		"error if failed to upload artifacts": {
+		"error if fail to get a list of available features from the environment": {
 			mock: func(m *deployMocks) {
-				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return(nil, mockError)
+			},
+
+			wantedError: fmt.Errorf("get available features of the prod-iad environment stack: some error"),
+		},
+		"error if some required features are not available in the environment": {
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1", "mockFeature3"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+			},
+			wantedError: fmt.Errorf(`environment "prod-iad" is not on a version that supports the "mockFeature3" feature`),
+		},
+		"error if failed to upload artifacts": {
+			mock: func(m *deployMocks) {
+				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
+				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Times(0)
 				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(nil, mockError)
 			},
@@ -236,9 +256,15 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 		},
 		"error if failed to deploy service": {
 			mock: func(m *deployMocks) {
-				m.mockEnvUpgrader.EXPECT().Execute().Return(nil)
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockMft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{"mockFeature1"}
+					},
+				}
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Times(0)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
 				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
@@ -255,10 +281,10 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployMocks{
-				mockDeployer:     mocks.NewMockworkloadDeployer(ctrl),
-				mockEnvUpgrader:  mocks.NewMockactionCommand(ctrl),
-				mockInterpolator: mocks.NewMockinterpolator(ctrl),
-				mockWsReader:     mocks.NewMockwsWlDirReader(ctrl),
+				mockDeployer:             mocks.NewMockworkloadDeployer(ctrl),
+				mockInterpolator:         mocks.NewMockinterpolator(ctrl),
+				mockWsReader:             mocks.NewMockwsWlDirReader(ctrl),
+				mockEnvFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			tc.mock(m)
 
@@ -278,9 +304,9 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 					return m.mockInterpolator
 				},
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
-					return &mockWorkloadMft{}, nil
+					return m.mockMft, nil
 				},
-				envUpgradeCmd: m.mockEnvUpgrader,
+				envFeaturesDescriber: m.mockEnvFeaturesDescriber,
 
 				targetApp: &config.Application{},
 				targetEnv: &config.Environment{},
