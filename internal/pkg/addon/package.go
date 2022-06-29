@@ -3,6 +3,7 @@ package addon
 import (
 	"archive/zip"
 	"bytes"
+	sha256 "crypto/md5"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"gopkg.in/yaml.v3"
 )
 
@@ -117,12 +119,10 @@ func (a *Addons) uploadAddonAsset(path string) (string, error) {
 		return "", fmt.Errorf("zip %s: %w", path, err)
 	}
 
-	/*
-		url, err := a.Uploader.Upload(a.Bucket, artifactpath.AddonArtifact(path, content), reader)
-		if err != nil {
-			return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
-		}
-	*/
+	url, err := a.Uploader.Upload(a.Bucket, artifactpath.AddonArtifact(path, content), reader)
+	if err != nil {
+		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
+	}
 
 	//bucket, key, err := s3.ParseURL(url)
 	//if err != nil {
@@ -132,42 +132,60 @@ func (a *Addons) uploadAddonAsset(path string) (string, error) {
 	return "", nil
 }
 
-func zipDir(dirPath string) (io.Reader, error) {
+// zipDir TODO...
+func zipDir(dirPath string) (io.Reader, string, error) {
 	buf := &bytes.Buffer{}
-	w := zip.NewWriter(buf)
-	defer w.Close()
+	z := zip.NewWriter(buf)
+	defer z.Close()
+
+	hash := sha256.New()
 
 	if err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
+		switch {
+		case err != nil:
+			return err
+		case info.IsDir():
+			return nil
+		}
+
+		// the file fname in the zip should be relative
+		// to the directory that is being zipped
+		fname, err := filepath.Rel(dirPath, path)
 		if err != nil {
 			return err
 		}
-		if info.IsDir() {
-			return nil
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
 		}
+
+		header.Name = fname
+		header.Method = zip.Deflate
+		zf, err := z.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		// include the file name and permissions as part of the hash
+		_, err = hash.Write([]byte(fmt.Sprintf("%s %s", fname, info.Mode().String())))
+		if err != nil {
+			return err
+		}
+
 		f, err := os.Open(path)
 		if err != nil {
 			return err
 		}
 		defer f.Close()
 
-		fname, err := filepath.Rel(dirPath, path)
-		if err != nil {
-			return err
-		}
-		zf, err := w.Create(fname)
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(zf, f)
-		if err != nil {
-			return err
-		}
-		return nil
+		_, err = io.Copy(io.MultiWriter(zf, hash), f)
+		return err
 	}); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return buf, nil
+	return buf, "", nil
 }
 
 func nodeString(n yaml.Node) string {

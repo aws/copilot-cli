@@ -103,6 +103,7 @@ func (a *Addons) Template() (string, error) {
 		}
 	}
 
+	// TODO respect uploadAssets flag?
 	mergedTemplate, err = a.packageLocalArtifacts(mergedTemplate)
 	if err != nil {
 		return "", fmt.Errorf("package local artifacts: %w", err)
