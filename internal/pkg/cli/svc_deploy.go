@@ -388,7 +388,7 @@ func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName 
 		if _, ok := available[f]; !ok {
 			logMsg := fmt.Sprintf(`Your manifest configuration requires your environment %q to have the feature %q available.`, envName, template.FriendlyEnvFeatureName(f))
 			if v := template.LeastVersionForFeature(f); v != "" {
-				logMsg += fmt.Sprintf(`The least environment version that supports the feature is %s.`, v)
+				logMsg += fmt.Sprintf(` The least environment version that supports the feature is %s.`, v)
 			}
 			if currVersion, err := env.Version(); err == nil {
 				logMsg += fmt.Sprintf(" Your environment is on %s.", currVersion)
