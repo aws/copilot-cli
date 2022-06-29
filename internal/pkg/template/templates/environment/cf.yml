@@ -56,6 +56,9 @@ Conditions:
   HasAliases:
     !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
+{{- if .CDNConfig.EnableCDN}}
+{{include "cdn-resources" . | indent 2}}
+{{- end}}
 {{- if not .VPCConfig.Imported}}
 {{include "vpc-resources" .VPCConfig.Managed | indent 2}}
 {{include "nat-gateways" .VPCConfig.Managed | indent 2}}

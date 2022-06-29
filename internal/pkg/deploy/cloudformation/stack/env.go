@@ -115,6 +115,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		CustomInternalALBSubnets: e.internalALBSubnets(),
 		AllowVPCIngress:          e.in.AllowVPCIngress, // TODO(jwh): fetch AllowVPCIngress from Manifest or SSM.
 		Telemetry:                e.telemetryConfig(),
+		CDNConfig:                e.cdnConfig(), // VERY TEMP LOL
 
 		Version:       e.in.Version,
 		LatestVersion: deploy.LatestEnvTemplateVersion,
@@ -133,6 +134,12 @@ func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
 	return template.VPCConfig{
 		Imported: e.importVPC(),
 		Managed:  e.managedVPC(),
+	}
+}
+
+func (e *EnvStackConfig) cdnConfig() template.CDNConfig {
+	return template.CDNConfig{
+		EnableCDN: true, //TEMP, ENABLING WON'T ALWAYS BE SET TO TRUE
 	}
 }
 

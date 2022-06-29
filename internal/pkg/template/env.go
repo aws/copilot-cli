@@ -58,6 +58,7 @@ func LeastVersionForFeature(feature string) string {
 var (
 	// Template names under "environment/partials/".
 	envCFSubTemplateNames = []string{
+		"cdn-resources",
 		"cfn-execution-role",
 		"custom-resources",
 		"custom-resources-role",
@@ -92,8 +93,14 @@ type EnvOpts struct {
 	AllowVPCIngress          bool
 	Telemetry                *Telemetry
 
+	CDNConfig CDNConfig
+
 	LatestVersion string
 	Manifest      string // Serialized manifest used to render the environment template.
+}
+
+type CDNConfig struct {
+	EnableCDN bool
 }
 
 type VPCConfig struct {

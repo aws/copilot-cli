@@ -1,0 +1,22 @@
+cloudfrontdistribution:
+  Type: AWS::CloudFront::Distribution
+  Properties:
+    DistributionConfig:
+      # DefaultCacheBehavior:
+      #   CachePolicyId: !Sub 'copilot-${AppName}-${EnvironmentName}-cache'
+      #   TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+      #   ViewerProtocolPolicy: allow-all
+      Enabled: false
+      ForwardedValues:
+        QueryString: false
+      IPV6Enabled: true
+      Origins:
+        - CustomOriginConfig:
+            OriginProtocolPolicy: match-viewer
+          DomainName: copilot-cf.penghaoh.com # This needs to be the ALB DNS
+          Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+    Tags:
+      - Key: copilot-application
+        Value: {{.AppName}}
+      - Key: copilot-environment
+        Value: {{.EnvName}}
