@@ -322,7 +322,7 @@ func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 			}
 
 			// WHEN
-			err := isManifestCompatibleWithEnvironment(mockManifest, "mockEnv", m.versionFeatureGetter)
+			err := validateManifestCompatibilityWithEnv(mockManifest, "mockEnv", m.versionFeatureGetter)
 
 			// THEN
 			if tc.wantedError == nil {

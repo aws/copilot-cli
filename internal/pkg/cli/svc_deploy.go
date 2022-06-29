@@ -183,7 +183,7 @@ func (o *deploySvcOpts) Execute() error {
 		return err
 	}
 	o.appliedManifest = mft
-	if err := isManifestCompatibleWithEnvironment(mft, o.envName, o.envFeaturesDescriber); err != nil {
+	if err := validateManifestCompatibilityWithEnv(mft, o.envName, o.envFeaturesDescriber); err != nil {
 		return err
 	}
 	deployer, err := o.newSvcDeployer()
@@ -372,7 +372,7 @@ func workloadManifest(in *workloadManifestInput) (manifest.WorkloadManifest, err
 	return envMft, nil
 }
 
-func isManifestCompatibleWithEnvironment(mft manifest.WorkloadManifest, envName string, env versionCompatibilityChecker) error {
+func validateManifestCompatibilityWithEnv(mft manifest.WorkloadManifest, envName string, env versionCompatibilityChecker) error {
 	availableFeatures, err := env.AvailableFeatures()
 	if err != nil {
 		return fmt.Errorf("get available features of the %s environment stack: %w", envName, err)
@@ -481,7 +481,7 @@ func (e *errManifestIncompatibleWithEnvironment) Error() string {
 // RecommendActions returns recommended actions to be taken after the error.
 // Implements main.actionRecommender interface.
 func (e *errManifestIncompatibleWithEnvironment) RecommendActions() string {
-	return fmt.Sprintf("You can upgrade your environment by running %s.\n", color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", e.envName)))
+	return fmt.Sprintf("You can upgrade your environment template by running %s.\n", color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", e.envName)))
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.
