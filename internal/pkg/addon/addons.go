@@ -35,7 +35,7 @@ var (
 type workspaceReader interface {
 	ReadAddonsDir(svcName string) ([]string, error)
 	ReadAddon(svcName, fileName string) ([]byte, error)
-	AddonsDirAbs(svcName string) (string, error)
+	Path() (string, error)
 }
 
 // Addons represents additional resources for a workload.
@@ -104,15 +104,20 @@ func (a *Addons) Template() (string, error) {
 	}
 
 	// TODO respect uploadAssets flag?
-	mergedTemplate, err = a.packageLocalArtifacts(mergedTemplate)
-	if err != nil {
-		return "", fmt.Errorf("package local artifacts: %w", err)
+	if a.Uploader != nil { // TODO do better lol
+		mergedTemplate, err = a.packageLocalArtifacts(mergedTemplate)
+		if err != nil {
+			return "", fmt.Errorf("package local artifacts: %w", err)
+		}
 	}
 
 	out, err := yaml.Marshal(mergedTemplate)
 	if err != nil {
 		return "", fmt.Errorf("marshal merged addons template: %w", err)
 	}
+
+	// TODO something better than this...?
+	a.template = string(out)
 	return string(out), nil
 }
 

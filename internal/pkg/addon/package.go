@@ -3,7 +3,8 @@ package addon
 import (
 	"archive/zip"
 	"bytes"
-	sha256 "crypto/md5"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -36,6 +37,7 @@ func (s s3BucketData) IsZero() bool {
 	return s.Bucket == "" && s.Key == ""
 }
 
+// TODO a flag to not do this on svc package
 func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) {
 	// fmt.Printf("before resources:\n%s\n", nodeString(tmpl.Resources))
 	resources := mappingNode(&tmpl.Resources)
@@ -71,37 +73,44 @@ func (a *Addons) transformStringToBucketObject(propsNode *yaml.Node, propsKey st
 		return nil
 	}
 
-	var val *aOrB[yamlString, s3BucketData]
+	var val *aOrB[*yamlPrimitive[string], s3BucketData]
 	if err := node.Decode(&val); err != nil {
 		return fmt.Errorf("decode: %w", err)
 	}
-	if val.a == "" {
+	if !val.a.IsSet {
 		// no need to transform
 		return nil
 	}
 
-	addonsDirAbs, err := a.ws.AddonsDirAbs(a.wlName)
+	wsPath, err := a.ws.Path() // TODO set this in New() (*Addons)?
 	if err != nil {
-		return fmt.Errorf("get addons directory: %w", err)
+		return fmt.Errorf("get workspace path: %w", err)
 	}
 
 	// TODO check that val.a is a local url?
-	path := path.Join(addonsDirAbs, string(val.a))
+	// TODO don't do if absolute path
+	path := path.Join(wsPath, val.a.Value)
 	url, err := a.uploadAddonAsset(path)
 	if err != nil {
 		return fmt.Errorf("upload asset: %w", err)
 	}
 
-	fmt.Printf("url: %s\n", url)
-	return errors.New("hello")
+	bucket, key, err := s3.ParseURL(url)
+	if err != nil {
+		return fmt.Errorf("parse s3 url: %w", err)
+	}
 
-	// TODO upload
-	// transform
+	fmt.Printf("Uploaded %s as a zip to S3 at %s/%s\n", path, bucket, key)
+
+	val.a.IsSet = false
+	val.a.Value = ""
+	val.b.Bucket = bucket
+	val.b.Key = key
+
 	return node.Encode(val)
 }
 
 func (a *Addons) uploadAddonAsset(path string) (string, error) {
-	fmt.Printf("path: %s\n", path)
 	fs, err := os.Stat(path)
 	if err != nil {
 		return "", err
@@ -112,28 +121,29 @@ func (a *Addons) uploadAddonAsset(path string) (string, error) {
 		return "", errors.New("TODO")
 	}
 
-	// TODO use zip and upload?
-
-	reader, err = zipDir(path)
+	zip, err := zipDir(path)
 	if err != nil {
 		return "", fmt.Errorf("zip %s: %w", path, err)
 	}
 
-	url, err := a.Uploader.Upload(a.Bucket, artifactpath.AddonArtifact(path, content), reader)
+	// TODO copy sam logic for logging
+	s3Path := artifactpath.AddonArtifact(a.wlName, zip.hash)
+
+	url, err := a.Uploader.Upload(a.Bucket, s3Path, zip.zip)
 	if err != nil {
-		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
+		return "", fmt.Errorf("upload %s to s3 bucket %s: %w", path, a.Bucket, err)
 	}
 
-	//bucket, key, err := s3.ParseURL(url)
-	//if err != nil {
-	//	return "", fmt.Errorf("parse s3 url: %w", err)
-	//}
+	return url, nil
+}
 
-	return "", nil
+type zippedDirectory struct {
+	zip  io.Reader
+	hash string
 }
 
 // zipDir TODO...
-func zipDir(dirPath string) (io.Reader, string, error) {
+func zipDir(dirPath string) (zippedDirectory, error) {
 	buf := &bytes.Buffer{}
 	z := zip.NewWriter(buf)
 	defer z.Close()
@@ -168,10 +178,7 @@ func zipDir(dirPath string) (io.Reader, string, error) {
 		}
 
 		// include the file name and permissions as part of the hash
-		_, err = hash.Write([]byte(fmt.Sprintf("%s %s", fname, info.Mode().String())))
-		if err != nil {
-			return err
-		}
+		hash.Write([]byte(fmt.Sprintf("%s %s", fname, info.Mode().String())))
 
 		f, err := os.Open(path)
 		if err != nil {
@@ -182,22 +189,13 @@ func zipDir(dirPath string) (io.Reader, string, error) {
 		_, err = io.Copy(io.MultiWriter(zf, hash), f)
 		return err
 	}); err != nil {
-		return nil, "", err
+		return zippedDirectory{}, err
 	}
 
-	return buf, "", nil
-}
-
-func nodeString(n yaml.Node) string {
-	b, err := yaml.Marshal(n)
-	if err != nil {
-		return ""
-	}
-	return string(b)
-}
-
-func (a *Addons) uploadArtifact() (s3BucketData, error) {
-	return s3BucketData{}, nil
+	return zippedDirectory{
+		zip:  buf,
+		hash: hex.EncodeToString(hash.Sum(nil)),
+	}, nil
 }
 
 type aOrB[A, B yaml.IsZeroer] struct {
@@ -241,8 +239,8 @@ type yamlPrimitives interface {
 }
 
 type yamlPrimitive[T yamlPrimitives] struct {
-	isSet bool
-	v     T
+	IsSet bool
+	Value T
 }
 
 func (y *yamlPrimitive[T]) UnmarshalYAML(value *yaml.Node) error {
@@ -250,22 +248,18 @@ func (y *yamlPrimitive[T]) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&v); err != nil {
 		return err
 	}
-	y.isSet = true
-	y.v = v
+	y.IsSet = true
+	y.Value = v
 	return nil
 }
 
 func (y *yamlPrimitive[T]) MarshalYAML() (interface{}, error) {
-	if !y.isSet {
+	if !y.IsSet {
 		return nil, nil
 	}
-	return y.v, nil
+	return y.Value, nil
 }
 
 func (y *yamlPrimitive[T]) IsZero() bool {
-	return !y.isSet
-}
-
-func (y *yamlPrimitive[T]) Value() T {
-	return y.v
+	return !y.IsSet
 }
