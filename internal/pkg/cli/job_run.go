@@ -12,7 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	jobRunner "github.com/aws/copilot-cli/internal/pkg/runner/job"
+	"github.com/aws/copilot-cli/internal/pkg/runner/jobrunner"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -35,12 +35,13 @@ type jobRunOpts struct {
 	// cached variables.
 	targetEnv *config.Environment
 
-	runner     simpleRunner
+	runner     runner
 	initRunner func()
 }
 
 func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("job deploy"))
+
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, err
@@ -66,7 +67,7 @@ func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 	}
 
 	opts.initRunner = func() {
-		opts.runner = jobRunner.NewJobRunner(&jobRunner.JobRunnerConfig{
+		opts.runner = jobrunner.New(&jobrunner.JobRunnerConfig{
 			Sess: defaultSess,
 			Env:  opts.envName,
 			App:  opts.appName,

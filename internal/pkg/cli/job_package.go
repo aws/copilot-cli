@@ -43,7 +43,7 @@ type packageJobOpts struct {
 	// Interfaces to interact with dependencies.
 	ws     wsJobDirReader
 	store  store
-	runner runner
+	runner execRunner
 	sel    wsSelector
 	prompt prompter
 

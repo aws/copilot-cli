@@ -44,10 +44,10 @@ func (s *StepFunctions) StateMachineDefinition(stateMachineARN string) (string, 
 //Execute starts a state machine execution.
 func (s *StepFunctions) Execute(arn string) error {
 	_, err := s.client.StartExecution(&sfn.StartExecutionInput{
-		StateMachineArn: aws.String(stateMachineARN),
+		StateMachineArn: aws.String(arn),
 	})
 	if err != nil {
-		return fmt.Errorf("execute state machine %s: %w", stateMachineARN, err)
+		return fmt.Errorf("execute state machine %s: %w", arn, err)
 	}
 
 	return nil

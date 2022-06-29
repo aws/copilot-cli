@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package job
+package jobrunner
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/runner/job/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/runner/jobrunner/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -107,11 +107,11 @@ func TestJobRunner_Run(t *testing.T) {
 			tc.MockExecutor(MockJobExecutor)
 
 			jobRunner := JobRunner{
-				Executor:       MockJobExecutor,
-				App:            tc.App,
-				Env:            tc.Env,
-				Job:            tc.Job,
-				StackRetriever: MockStackRetriever,
+				executor:       MockJobExecutor,
+				app:            tc.App,
+				env:            tc.Env,
+				job:            tc.Job,
+				stackRetriever: MockStackRetriever,
 			}
 
 			err := jobRunner.Run()

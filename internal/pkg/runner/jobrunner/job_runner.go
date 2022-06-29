@@ -1,9 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-//Package job provides support for invoking scheduled jobs
+//Package jobrunner provides support for invoking scheduled jobs
 
-package job
+package jobrunner
 
 import (
 	"fmt"
@@ -24,14 +24,20 @@ type StackRetriever interface {
 }
 
 type JobRunner struct {
-	Executor jobExecutor
+	//Executes the job statemachine
+	executor jobExecutor
 
-	//App Env and Job name to retrieve cloudformation stack
-	App string
-	Env string
-	Job string
+	//Application of the job
+	app string
 
-	StackRetriever StackRetriever
+	// Environment where the job will be executed
+	env string
+
+	//The name of the Job to be executed
+	job string
+
+	//Retrieves the stack resources from cloudformation
+	stackRetriever StackRetriever
 }
 
 type JobRunnerConfig struct {
@@ -41,27 +47,27 @@ type JobRunnerConfig struct {
 	Sess *session.Session
 }
 
-func NewJobRunner(opts *JobRunnerConfig) *JobRunner {
+func New(opts *JobRunnerConfig) *JobRunner {
 	executor := stepfunctions.New(opts.Sess)
 
 	retriever := cloudformation.New(opts.Sess)
 
 	return &JobRunner{
-		Executor:       executor,
-		StackRetriever: retriever,
-		App:            opts.App,
-		Env:            opts.Env,
-		Job:            opts.Job,
+		executor:       executor,
+		stackRetriever: retriever,
+		app:            opts.App,
+		env:            opts.Env,
+		job:            opts.Job,
 	}
 
 }
 
 func (r *JobRunner) Run() error {
 
-	resources, err := r.StackRetriever.StackResources(stack.NameForService(r.App, r.Env, r.Job))
+	resources, err := r.stackRetriever.StackResources(stack.NameForService(r.app, r.env, r.job))
 
 	if err != nil {
-		return fmt.Errorf("describe stack %s: %v", stack.NameForService(r.App, r.Env, r.Job), err)
+		return fmt.Errorf("describe stack %s: %v", stack.NameForService(r.app, r.env, r.job), err)
 	}
 
 	var stateMachineARN string
@@ -78,7 +84,7 @@ func (r *JobRunner) Run() error {
 		return fmt.Errorf("statemachine not found")
 	}
 
-	err = r.Executor.Execute(stateMachineARN)
+	err = r.executor.Execute(stateMachineARN)
 
 	if err != nil {
 		return fmt.Errorf("statemachine execution: %v", err)

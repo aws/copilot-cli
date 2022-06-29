@@ -34,7 +34,7 @@ type deployJobOpts struct {
 	ws              wsWlDirReader
 	unmarshal       func(in []byte) (manifest.WorkloadManifest, error)
 	newInterpolator func(app, env string) interpolator
-	cmd             runner
+	cmd             execRunner
 	sessProvider    *sessions.Provider
 	envUpgradeCmd   actionCommand
 	newJobDeployer  func() (workloadDeployer, error)
