@@ -129,109 +129,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 	return content.String(), nil
 }
 
-func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
-	return template.VPCConfig{
-		Imported: e.importVPC(),
-		Managed:  e.managedVPC(),
-	}
-}
-
-func (e *EnvStackConfig) importVPC() *template.ImportVPC {
-	// If a manifest is present, it is the only place we look at.
-	if e.in.Mft != nil {
-		return e.in.Mft.Network.VPC.ImportedVPC()
-	}
-
-	// Fallthrough to SSM config.
-	if e.in.ImportVPCConfig == nil {
-		return nil
-	}
-	return &template.ImportVPC{
-		ID:               e.in.ImportVPCConfig.ID,
-		PublicSubnetIDs:  e.in.ImportVPCConfig.PublicSubnetIDs,
-		PrivateSubnetIDs: e.in.ImportVPCConfig.PrivateSubnetIDs,
-	}
-}
-
-func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
-	defaultManagedVPC := template.ManagedVPC{
-		CIDR:               DefaultVPCCIDR,
-		PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
-		PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
-	}
-	// If a manifest is present, it is the only place we look at.
-	if e.in.Mft != nil {
-		if v := e.in.Mft.Network.VPC.ManagedVPC(); v != nil {
-			return *v
-		}
-		return defaultManagedVPC
-	}
-
-	// Fallthrough to SSM config.
-	if e.in.AdjustVPCConfig == nil {
-		return defaultManagedVPC
-	}
-	return template.ManagedVPC{
-		CIDR:               e.in.AdjustVPCConfig.CIDR,
-		AZs:                e.in.AdjustVPCConfig.AZs,
-		PublicSubnetCIDRs:  e.in.AdjustVPCConfig.PublicSubnetCIDRs,
-		PrivateSubnetCIDRs: e.in.AdjustVPCConfig.PrivateSubnetCIDRs,
-	}
-}
-
-func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
-	// If a manifest is present, it is the only place we look at.
-	if e.in.Mft != nil {
-		return &template.Telemetry{
-			EnableContainerInsights: aws.BoolValue(e.in.Mft.Observability.ContainerInsights),
-		}
-	}
-
-	// Fallthrough to SSM config.
-	if e.in.Telemetry == nil {
-		// For environments before Copilot v1.14.0, `Telemetry` is nil.
-		return nil
-	}
-	return &template.Telemetry{
-		// For environments after v1.14.0, and v1.20.0, `Telemetry` is never nil,
-		// and `EnableContainerInsights` is either true or false.
-		EnableContainerInsights: e.in.Telemetry.EnableContainerInsights,
-	}
-}
-
-func (e *EnvStackConfig) importPublicCertARNs() []string {
-	// If a manifest is present, it is the only place we look at.
-	if e.in.Mft != nil {
-		return e.in.Mft.HTTPConfig.Public.Certificates
-	}
-	// Fallthrough to SSM config.
-	if e.in.ImportVPCConfig != nil && len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
-		return nil
-	}
-	return e.in.ImportCertARNs
-}
-
-func (e *EnvStackConfig) importPrivateCertARNs() []string {
-	// If a manifest is present, it is the only place we look at.
-	if e.in.Mft != nil {
-		return e.in.Mft.HTTPConfig.Private.Certificates
-	}
-	// Fallthrough to SSM config.
-	if e.in.ImportVPCConfig != nil && len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
-		return e.in.ImportCertARNs
-	}
-	return nil
-}
-
-func (e *EnvStackConfig) internalALBSubnets() []string {
-	// If a manifest is present, it is the only place we look.
-	if e.in.Mft != nil {
-		return e.in.Mft.HTTPConfig.Private.InternalALBSubnets
-	}
-	// Fallthrough to SSM config.
-	return e.in.InternalALBSubnets
-}
-
 // Parameters returns the parameters to be passed into an environment CloudFormation template.
 func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	httpsListener := "false"
@@ -339,4 +236,107 @@ func (e *EnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.Environment
 		ManagerRoleARN:   stackOutputs[envOutputManagerRoleKey],
 		ExecutionRoleARN: stackOutputs[envOutputCFNExecutionRoleARN],
 	}, nil
+}
+
+func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
+	return template.VPCConfig{
+		Imported: e.importVPC(),
+		Managed:  e.managedVPC(),
+	}
+}
+
+func (e *EnvStackConfig) importVPC() *template.ImportVPC {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		return e.in.Mft.Network.VPC.ImportedVPC()
+	}
+
+	// Fallthrough to SSM config.
+	if e.in.ImportVPCConfig == nil {
+		return nil
+	}
+	return &template.ImportVPC{
+		ID:               e.in.ImportVPCConfig.ID,
+		PublicSubnetIDs:  e.in.ImportVPCConfig.PublicSubnetIDs,
+		PrivateSubnetIDs: e.in.ImportVPCConfig.PrivateSubnetIDs,
+	}
+}
+
+func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
+	defaultManagedVPC := template.ManagedVPC{
+		CIDR:               DefaultVPCCIDR,
+		PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
+		PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
+	}
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		if v := e.in.Mft.Network.VPC.ManagedVPC(); v != nil {
+			return *v
+		}
+		return defaultManagedVPC
+	}
+
+	// Fallthrough to SSM config.
+	if e.in.AdjustVPCConfig == nil {
+		return defaultManagedVPC
+	}
+	return template.ManagedVPC{
+		CIDR:               e.in.AdjustVPCConfig.CIDR,
+		AZs:                e.in.AdjustVPCConfig.AZs,
+		PublicSubnetCIDRs:  e.in.AdjustVPCConfig.PublicSubnetCIDRs,
+		PrivateSubnetCIDRs: e.in.AdjustVPCConfig.PrivateSubnetCIDRs,
+	}
+}
+
+func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		return &template.Telemetry{
+			EnableContainerInsights: aws.BoolValue(e.in.Mft.Observability.ContainerInsights),
+		}
+	}
+
+	// Fallthrough to SSM config.
+	if e.in.Telemetry == nil {
+		// For environments before Copilot v1.14.0, `Telemetry` is nil.
+		return nil
+	}
+	return &template.Telemetry{
+		// For environments after v1.14.0, and v1.20.0, `Telemetry` is never nil,
+		// and `EnableContainerInsights` is either true or false.
+		EnableContainerInsights: e.in.Telemetry.EnableContainerInsights,
+	}
+}
+
+func (e *EnvStackConfig) importPublicCertARNs() []string {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		return e.in.Mft.HTTPConfig.Public.Certificates
+	}
+	// Fallthrough to SSM config.
+	if e.in.ImportVPCConfig != nil && len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
+		return nil
+	}
+	return e.in.ImportCertARNs
+}
+
+func (e *EnvStackConfig) importPrivateCertARNs() []string {
+	// If a manifest is present, it is the only place we look at.
+	if e.in.Mft != nil {
+		return e.in.Mft.HTTPConfig.Private.Certificates
+	}
+	// Fallthrough to SSM config.
+	if e.in.ImportVPCConfig != nil && len(e.in.ImportVPCConfig.PublicSubnetIDs) == 0 {
+		return e.in.ImportCertARNs
+	}
+	return nil
+}
+
+func (e *EnvStackConfig) internalALBSubnets() []string {
+	// If a manifest is present, it is the only place we look.
+	if e.in.Mft != nil {
+		return e.in.Mft.HTTPConfig.Private.InternalALBSubnets
+	}
+	// Fallthrough to SSM config.
+	return e.in.InternalALBSubnets
 }
