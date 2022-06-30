@@ -39,7 +39,7 @@ var (
 
 	errUnmarshalBuildOpts         = errors.New("unable to unmarshal build field into string or compose-style map")
 	errUnmarshalPlatformOpts      = errors.New("unable to unmarshal platform field into string or compose-style map")
-	errUnmarshalSecurityGroupOpts = errors.New(`unable to unmarshal "security groups" field into slice of strings or compose-style map`)
+	errUnmarshalSecurityGroupOpts = errors.New(`unable to unmarshal "security_groups" field into slice of strings or compose-style map`)
 	errUnmarshalPlacementOpts     = errors.New("unable to unmarshal placement field into string or compose-style map")
 	errUnmarshalCountOpts         = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts         = errors.New(`unable to unmarshal "range" field`)
@@ -492,20 +492,17 @@ func (s *SecurityGroupsIDsOrConfig) UnmarshalYAML(value *yaml.Node) error {
 // GetIDs returns security groups from SecurityGroupsIDsOrConfig that are attached to task.
 // nil is returned if no security groups are specified.
 func (s *SecurityGroupsIDsOrConfig) GetIDs() []string {
-	if !s.AdvancedConfig.isEmpty() && len(s.AdvancedConfig.SecurityGroups) > 0 {
+	if !s.AdvancedConfig.isEmpty() {
 		return s.AdvancedConfig.SecurityGroups
 	}
-	if len(s.IDs) > 0 {
-		return s.IDs
-	}
-	return nil
+	return s.IDs
 }
 
 // IsDefaultSecurityGroupDenied returns true if DenyDefault is set to true
 // in SecurityGroupsIDsOrConfig.AdvancedConfig. Otherwise, false is returned.
 func (s *SecurityGroupsIDsOrConfig) IsDefaultSecurityGroupDenied() bool {
-	if !s.AdvancedConfig.isEmpty() && s.AdvancedConfig.DenyDefault != nil {
-		return *s.AdvancedConfig.DenyDefault
+	if !s.AdvancedConfig.isEmpty() {
+		return aws.BoolValue(s.AdvancedConfig.DenyDefault)
 	}
 	return false
 }

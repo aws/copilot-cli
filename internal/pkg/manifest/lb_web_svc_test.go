@@ -278,7 +278,6 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 		mockConfig = ScalingConfigOrT[Percentage]{
 			Value: &perc,
 		}
-		trueValue = true
 	)
 	testCases := map[string]struct {
 		in         *LoadBalancedWebService
@@ -767,7 +766,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								SecurityGroups: SecurityGroupsIDsOrConfig{
 									AdvancedConfig: SecurityGroupsConfig{
 										SecurityGroups: []string{"sg-456", "sg-700"},
-										DenyDefault:    &trueValue,
+										DenyDefault:    aws.Bool(true),
 									},
 								},
 							},
@@ -787,7 +786,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							SecurityGroups: SecurityGroupsIDsOrConfig{
 								AdvancedConfig: SecurityGroupsConfig{
 									SecurityGroups: []string{"sg-456", "sg-700"},
-									DenyDefault:    &trueValue,
+									DenyDefault:    aws.Bool(true),
 								},
 							},
 						},

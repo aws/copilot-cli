@@ -651,109 +651,98 @@ func TestNetworkConfig_IsEmpty(t *testing.T) {
 	}
 }
 
-func TestSecurityGroupsConfig_UtilityFuncForSecurityGroups(t *testing.T) {
+func TestSecurityGroupsConfig_GetIDs(t *testing.T) {
 	testCases := map[string]struct {
-		data                 SecurityGroupsIDsOrConfig
-		wantedSecurityGroups []string
+		in     SecurityGroupsIDsOrConfig
+		wanted []string
 	}{
 		"nil returned when no security groups are specified": {
-			data:                 SecurityGroupsIDsOrConfig{},
-			wantedSecurityGroups: nil,
+			in:     SecurityGroupsIDsOrConfig{},
+			wanted: nil,
 		},
 		"security groups in map are returned": {
-			data: SecurityGroupsIDsOrConfig{
+			in: SecurityGroupsIDsOrConfig{
 				AdvancedConfig: SecurityGroupsConfig{
 					SecurityGroups: []string{"group", "group1"},
 				},
 			},
-			wantedSecurityGroups: []string{"group", "group1"},
+			wanted: []string{"group", "group1"},
 		},
 		"nil returned when security groups in map are empty": {
-			data: SecurityGroupsIDsOrConfig{
+			in: SecurityGroupsIDsOrConfig{
 				AdvancedConfig: SecurityGroupsConfig{
 					SecurityGroups: []string{},
 				},
 			},
-			wantedSecurityGroups: nil,
+			wanted: nil,
 		},
 		"security groups in array are returned": {
-			data: SecurityGroupsIDsOrConfig{
+			in: SecurityGroupsIDsOrConfig{
 				IDs: []string{"123", "45"},
 			},
-			wantedSecurityGroups: []string{"123", "45"},
-		},
-		"nil returned when security groups in array are empty": {
-			data: SecurityGroupsIDsOrConfig{
-				IDs: []string{},
-			},
-			wantedSecurityGroups: nil,
+			wanted: []string{"123", "45"},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			sgs := tc.data.GetIDs()
+			sgs := tc.in.GetIDs()
 
 			// THEN
-			require.Equal(t, tc.wantedSecurityGroups, sgs)
+			require.Equal(t, tc.wanted, sgs)
 		})
 	}
 }
 
-func TestSecurityGroupsConfig_UtilityFuncForDefaultSecurityGroup(t *testing.T) {
-	var (
-		falseValue = false
-		trueValue  = true
-	)
+func TestSecurityGroupsConfig_IsDefaultSecurityGroupDenied(t *testing.T) {
 	testCases := map[string]struct {
-		data              SecurityGroupsIDsOrConfig
-		IsDefaultSGDenied bool
+		in     SecurityGroupsIDsOrConfig
+		wanted bool
 	}{
 		"default security group is applied when no vpc security config is present": {
-			data:              SecurityGroupsIDsOrConfig{},
-			IsDefaultSGDenied: false,
+			wanted: false,
 		},
 		"default security group is applied when deny_default is not specified in SG config": {
-			data: SecurityGroupsIDsOrConfig{
+			in: SecurityGroupsIDsOrConfig{
 				AdvancedConfig: SecurityGroupsConfig{
 					SecurityGroups: []string{"1"},
 				},
 			},
-			IsDefaultSGDenied: false,
+			wanted: false,
 		},
 		"default security group is applied when deny_default is false in SG config": {
-			data: SecurityGroupsIDsOrConfig{
+			in: SecurityGroupsIDsOrConfig{
 				AdvancedConfig: SecurityGroupsConfig{
 					SecurityGroups: []string{"1"},
-					DenyDefault:    &falseValue,
+					DenyDefault:    aws.Bool(false),
 				},
 			},
-			IsDefaultSGDenied: false,
+			wanted: false,
 		},
 		"default security group is applied when security group array is specified": {
-			data: SecurityGroupsIDsOrConfig{
+			in: SecurityGroupsIDsOrConfig{
 				IDs: []string{"1"},
 			},
-			IsDefaultSGDenied: false,
+			wanted: false,
 		},
 		"default security group is not applied when default_deny is true": {
-			data: SecurityGroupsIDsOrConfig{
+			in: SecurityGroupsIDsOrConfig{
 				AdvancedConfig: SecurityGroupsConfig{
-					DenyDefault: &trueValue,
+					DenyDefault: aws.Bool(true),
 				},
 			},
-			IsDefaultSGDenied: true,
+			wanted: true,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			actualIsDefaultSGDenied := tc.data.IsDefaultSecurityGroupDenied()
+			actualIsDefaultSGDenied := tc.in.IsDefaultSecurityGroupDenied()
 
 			// THEN
-			require.Equal(t, tc.IsDefaultSGDenied, actualIsDefaultSGDenied)
+			require.Equal(t, tc.wanted, actualIsDefaultSGDenied)
 		})
 	}
 }
