@@ -26,6 +26,7 @@ RUN apk --no-cache add ca-certificates
 COPY --from=builder /app ./
 # Make the binary executable
 RUN chmod +x ./e2e-service
+RUN apk --no-cache add curl
 
 # Start the service
 ENTRYPOINT ["./e2e-service"]

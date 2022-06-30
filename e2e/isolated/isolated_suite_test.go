@@ -22,10 +22,10 @@ var vpcImport client.EnvInitRequestVPCImport
 var vpcConfig client.EnvInitRequestVPCConfig
 
 const svcName = "backend"
-const envName = "private                          "
+const envName = "private"
 
 /**
-The Isolated Suite creates an environment with an imported VPC with only 
+The Isolated Suite creates an environment with an imported VPC with only
 private subnets, deploys a backend service to it, and then tears it down.
 */
 

@@ -6,19 +6,14 @@ package isolated_test
 import (
 	"errors"
 	"fmt"
-	"net/http"
-	"os"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	osExec "os/exec"
+
+	"os"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 )
-
-type countAssertionTracker struct {
-	expected int
-	actual   int
-}
 
 var _ = Describe("Isolated", func() {
 	Context("when creating a new app", func() {
@@ -35,15 +30,12 @@ var _ = Describe("Isolated", func() {
 		It("app init succeeds", func() {
 			Expect(appInitErr).NotTo(HaveOccurred())
 		})
-
 		It("app init creates a copilot directory", func() {
 			Expect("./copilot").Should(BeADirectory())
 		})
-
 		It("app ls includes new app", func() {
 			Eventually(cli.AppList, "30s", "5s").Should(ContainSubstring(appName))
 		})
-
 		It("app show includes app name", func() {
 			appShowOutput, err := cli.AppShow(appName)
 			Expect(err).NotTo(HaveOccurred())
@@ -59,6 +51,7 @@ var _ = Describe("Isolated", func() {
 			err = aws.WaitStackCreateComplete(vpcStackName)
 			Expect(err).NotTo(HaveOccurred(), "vpc stack create complete")
 		})
+
 		It("parse vpc stack output", func() {
 			outputs, err := aws.VPCStackOutput(vpcStackName)
 			Expect(err).NotTo(HaveOccurred(), "get VPC stack output")
@@ -70,8 +63,8 @@ var _ = Describe("Isolated", func() {
 					vpcImport.ID = output.OutputValue
 				}
 			}
-			if !vpcImport.IsSet() {
-				err = errors.New("vpc resources are not configured properly")
+			if vpcImport.ID == "" || vpcImport.PrivateSubnetIDs == "" {
+				err = errors.New("resources are not configured properly")
 			}
 			Expect(err).NotTo(HaveOccurred(), "invalid vpc stack output")
 		})
@@ -93,7 +86,6 @@ var _ = Describe("Isolated", func() {
 		It("env init should succeed for 'private' env", func() {
 			Expect(testEnvInitErr).NotTo(HaveOccurred())
 		})
-
 		It("env ls should list private env", func() {
 			envListOutput, err := cli.EnvList(appName)
 			Expect(err).NotTo(HaveOccurred())
@@ -108,7 +100,6 @@ var _ = Describe("Isolated", func() {
 
 	Context("when creating and deploying a backend service in private subnets", func() {
 		var initErr error
-
 		BeforeAll(func() {
 			_, initErr = cli.SvcInit(&client.SvcInitRequest{
 				Name:       svcName,
@@ -165,7 +156,6 @@ network:
 			svc          *client.SvcShowOutput
 			svcShowError error
 		)
-
 		BeforeAll(func() {
 			svc, svcShowError = cli.SvcShow(&client.SvcShowRequest{
 				Name:      svcName,
@@ -183,63 +173,75 @@ network:
 			Expect(svc.AppName).To(Equal(appName))
 			Expect(len(svc.Configs)).To(Equal(1))
 			Expect(svc.Configs[0].Environment).To(Equal(envName))
-			Expect(svc.Configs[0].CPU).To(Equal("1024"))
-			Expect(svc.Configs[0].Memory).To(Equal("2048"))
+			Expect(svc.Configs[0].CPU).To(Equal("256"))
+			Expect(svc.Configs[0].Memory).To(Equal("512"))
 			Expect(svc.Configs[0].Port).To(Equal("80"))
 		})
 
-		It("should return correct, working route", func() {
-			Expect(svc.Routes[0].Environment).To(Equal(envName))
-			//Expect(svc.Routes[0].URL).NotTo(BeEmpty())
-			Expect(svc.Routes[0].URL).To(Equal("TKTK"))
-			Eventually(func() (int, error) {
-				resp, fetchErr := http.Get(svc.Routes[0].URL)
-				return resp.StatusCode, fetchErr
-			}, "30s", "1s").Should(Equal(200))
-		})
+		Context("when running `svc logs`", func() {
+			It("logs should be displayed", func() {
+				var svcLogs []client.SvcLogsOutput
+				var svcLogsErr error
+				Eventually(func() ([]client.SvcLogsOutput, error) {
+					svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
+						AppName: appName,
+						Name:    svcName,
+						EnvName: envName,
+						Since:   "1h",
+					})
+					return svcLogs, svcLogsErr
+				}, "60s", "10s").ShouldNot(BeEmpty())
 
-		It("should return correct, working service discovery namespace", func() {
-			Expect(svc.ServiceDiscoveries[0].Environment).To(Equal(envName))
-			Expect(svc.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.local", envName, appName)))
-			Eventually(func() (int, error) {
-				resp, fetchErr := http.Get(svc.ServiceDiscoveries[0].Namespace)
-				return resp.StatusCode, fetchErr
-			}, "30s", "1s").Should(Equal(200))
-		})
-
-		It("should return correct environment variables", func() {
-			fmt.Printf("\n\nenvironment variables: %+v\n\n", svc.Variables)
-			expectedVars := map[string]string{
-				"COPILOT_APPLICATION_NAME":           appName,
-				"COPILOT_ENVIRONMENT_NAME":           envName,
-				"COPILOT_SERVICE_NAME":               svcName,
-				"COPILOT_SERVICE_DISCOVERY_ENDPOINT": fmt.Sprintf("%s.%s.local", envName, appName),
-			}
-			for _, variable := range svc.Variables {
-				Expect(variable.Value).To(Equal(expectedVars[variable.Name]))
-			}
-		})
-
-	})
-
-	It("svc logs should display logs", func() {
-		var svcLogs []client.SvcLogsOutput
-		var svcLogsErr error
-		Eventually(func() ([]client.SvcLogsOutput, error) {
-			svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
-				AppName: appName,
-				Name:    svcName,
-				EnvName: "test",
-				Since:   "1h",
+				for _, logLine := range svcLogs {
+					Expect(logLine.Message).NotTo(Equal(""))
+					Expect(logLine.LogStreamName).NotTo(Equal(""))
+					Expect(logLine.Timestamp).NotTo(Equal(0))
+					Expect(logLine.IngestionTime).NotTo(Equal(0))
+				}
 			})
-			return svcLogs, svcLogsErr
-		}, "60s", "10s").ShouldNot(BeEmpty())
+		})
 
-		for _, logLine := range svcLogs {
-			Expect(logLine.Message).NotTo(Equal(""))
-			Expect(logLine.LogStreamName).NotTo(Equal(""))
-			Expect(logLine.Timestamp).NotTo(Equal(0))
-			Expect(logLine.IngestionTime).NotTo(Equal(0))
-		}
+		Context("when running `env show --resources`", func() {
+			var envShowOutput *client.EnvShowOutput
+			var envShowErr error
+			It("show show internal ALB", func() {
+				envShowOutput, envShowErr = cli.EnvShow(&client.EnvShowRequest{
+					AppName: appName,
+					EnvName: envName,
+				})
+			})
+			It("should not return an error", func() {
+				Expect(envShowErr).NotTo(HaveOccurred())
+			})
+			It("should now have an internal ALB", func() {
+				Expect(envShowOutput.Resources).To(ContainElement(HaveKeyWithValue("type", "AWS::ElasticLoadBalancingV2::LoadBalancer")))
+			})
+		})
+
+		Context("when `curl`ing the LB DNS", func() {
+			It("is not reachable", func() {
+				cmd := osExec.Command("curl", fmt.Sprintf("http://%s.%s.%s.internal", svcName, envName, appName))
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				Expect(cmd.Stderr).NotTo(BeNil())
+			})
+		})
+
+		Context("when `curl`ing the LB DNS from within the container", func() {
+			It("session manager should be installed", func() {
+				// Use custom SSM plugin as the public version is not compatible to Alpine Linux.
+				err := client.BashExec("chmod +x ./session-manager-plugin")
+				Expect(err).NotTo(HaveOccurred())
+			})
+			It("is reachable", func() {
+				_, svcExecErr := cli.SvcExec(&client.SvcExecRequest{
+					Name:    svcName,
+					AppName: appName,
+					Command: fmt.Sprintf(`/bin/sh -c "curl 'http://%s.%s.%s.internal'"`, svcName, envName, appName),
+					EnvName: envName,
+				})
+				Expect(svcExecErr).NotTo(HaveOccurred())
+			})
+		})
 	})
-}
+})

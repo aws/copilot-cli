@@ -45,12 +45,6 @@ Resources:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref 'VPC'
-  PrivateRouteOne:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTableOne
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGatewayOne
   PrivateRouteTableOneAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -60,12 +54,6 @@ Resources:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref 'VPC'
-  PrivateRouteTwo:
-    Type: AWS::EC2::Route
-    Properties:
-      RouteTableId: !Ref PrivateRouteTableTwo
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId: !Ref NatGatewayTwo
   PrivateRouteTableTwoAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -79,9 +67,9 @@ Resources:
       VpcEndpointType: Interface
       PrivateDnsEnabled: true
       SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
-      ServiceName: com.amazonaws.${AWS::Region}.ecr.api
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
       VpcId: !Ref VPC
       SecurityGroupIds:
         - !Ref VPCEndpointSecurityGroup
@@ -91,12 +79,85 @@ Resources:
       VpcEndpointType: Interface
       PrivateDnsEnabled: true
       SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
-      ServiceName: com.amazonaws.${AWS::Region}.ecr.dkr
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
       VpcId: !Ref VPC
       SecurityGroupIds:
         - !Ref VPCEndpointSecurityGroup
+  # Gateway endpoint for S3.
+  S3GatewayVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PrivateRouteTableOne
+        - !Ref PrivateRouteTableTwo
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcId: !Ref VPC
+  # Enables CloudWatch logging.
+  LogsVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+      VpcId: !Ref VPC
+      SecurityGroupIds:
+        - !Ref VPCEndpointSecurityGroup
+  # To enable exec.
+  SSMVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+      VpcId: !Ref VPC
+      SecurityGroupIds:
+        - !Ref VPCEndpointSecurityGroup
+  EC2MessagesVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2messages
+      VpcId: !Ref VPC
+      SecurityGroupIds:
+        - !Ref VPCEndpointSecurityGroup
+  EC2VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2
+      VpcId: !Ref VPC
+      SecurityGroupIds:
+        - !Ref VPCEndpointSecurityGroup
+  SSMMessagesVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnetOne
+        - !Ref PrivateSubnetTwo
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssmmessages
+      VpcId: !Ref VPC
+      SecurityGroupIds:
+        - !Ref VPCEndpointSecurityGroup
+
 Outputs:
   VpcId:
     Value: !Ref VPC
