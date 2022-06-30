@@ -168,7 +168,7 @@ func RunTaskRequestFromJob(client JobDescriber, app, env, job string) (*RunTaskR
 }
 
 // String stringifies a RunTaskRequest.
-func (r RunTaskRequest) CLIString() string {
+func (r RunTaskRequest) CLIString() (string, error) {
 	output := []string{"copilot task run"}
 	if r.executionRole != "" {
 		output = append(output, fmt.Sprintf("--execution-role %s", r.executionRole))
@@ -191,11 +191,19 @@ func (r RunTaskRequest) CLIString() string {
 	}
 
 	if r.envVars != nil && len(r.envVars) != 0 {
-		output = append(output, fmt.Sprintf("--env-vars %s", fmtStringMapToString(r.envVars)))
+		vars, err := fmtStringMapToString(r.envVars)
+		if err != nil {
+			return "", err
+		}
+		output = append(output, fmt.Sprintf("--env-vars %s", vars))
 	}
 
 	if r.secrets != nil && len(r.secrets) != 0 {
-		output = append(output, fmt.Sprintf("--secrets %s", fmtStringMapToString(r.secrets)))
+		secrets, err := fmtStringMapToString(r.secrets)
+		if err != nil {
+			return "", err
+		}
+		output = append(output, fmt.Sprintf("--secrets %s", secrets))
 	}
 
 	if r.networkConfiguration.Subnets != nil && len(r.networkConfiguration.Subnets) != 0 {
@@ -218,7 +226,7 @@ func (r RunTaskRequest) CLIString() string {
 		output = append(output, fmt.Sprintf("--cluster %s", r.cluster))
 	}
 
-	return strings.Join(output, " \\\n")
+	return strings.Join(output, " \\\n"), nil
 }
 
 func containerInformation(taskDef *awsecs.TaskDefinition, containerName string) (*containerInfo, error) {
@@ -264,7 +272,7 @@ func containerInformation(taskDef *awsecs.TaskDefinition, containerName string) 
 // Much of the complexity here comes from the two levels of escaping going on:
 // 1. we are outputting a command to be copied and pasted into a shell, so we need to shell-escape the output.
 // 2. the pflag library parses StringToString args as csv, so we csv escape the individual key/value pairs.
-func fmtStringMapToString(m map[string]string) string {
+func fmtStringMapToString(m map[string]string) (string, error) {
 	// Sort the map so that the output is consistent and the unit test won't be flaky.
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -282,12 +290,15 @@ func fmtStringMapToString(m map[string]string) string {
 	}
 	buf := new(strings.Builder)
 	w := csv.NewWriter(buf)
-	w.Write(output)
+	err := w.Write(output)
+	if err != nil {
+		return "", err
+	}
 	w.Flush()
 	final := strings.TrimSuffix(buf.String(), "\n")
 
 	// Then for shell escaping, wrap the entire argument in single quotes
 	// and escape any internal single quotes.
 	final = strings.ReplaceAll(final, `'`, `'\''`)
-	return `'` + final + `'`
+	return `'` + final + `'`, nil
 }
