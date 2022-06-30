@@ -1,22 +1,24 @@
 cloudfrontdistribution:
+  Metadata:
+    'aws:copilot:description': 'A CloudFront distribution for global content delivery'
+  Condition: CreateALB
   Type: AWS::CloudFront::Distribution
   Properties:
     DistributionConfig:
-      # DefaultCacheBehavior:
-      #   CachePolicyId: !Sub 'copilot-${AppName}-${EnvironmentName}-cache'
-      #   TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
-      #   ViewerProtocolPolicy: allow-all
-      Enabled: false
-      ForwardedValues:
-        QueryString: false
+      DefaultCacheBehavior:
+        AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
+        CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+        TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+        ViewerProtocolPolicy: allow-all # Will need to change with TLS termination and Alias usage
+      Enabled: true
       IPV6Enabled: true
       Origins:
         - CustomOriginConfig:
-            OriginProtocolPolicy: match-viewer
-          DomainName: copilot-cf.penghaoh.com # This needs to be the ALB DNS
+            OriginProtocolPolicy: http-only # Will need to change with TLS termination and Alias usage
+          DomainName: !GetAtt PublicLoadBalancer.DNSName
           Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
-    Tags:
-      - Key: copilot-application
-        Value: {{.AppName}}
-      - Key: copilot-environment
-        Value: {{.EnvName}}
+      # ViewerCertificate: # Used for Aliases
+      #   AcmCertificateArn: # Imported certificate goes here
+      #   CloudFrontDefaultCertificate: true # If importing certificate, set to false
+      #   MinimumProtocolVersion: TLSv1 # Default for now, may need to change later
+      #   SsLSupportMethod: sni-only # Changing this can incur costs to the user
