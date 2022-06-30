@@ -4,7 +4,7 @@ CloudformationExecutionRole:
   Metadata:
     'aws:copilot:description': 'An IAM Role for AWS CloudFormation to manage resources'
   DeletionPolicy: Retain
-  Type: AWS::IAM::Roleg
+  Type: AWS::IAM::Role
   Properties:
     RoleName: !Sub ${AWS::StackName}-CFNExecutionRole
     AssumeRolePolicyDocument:
