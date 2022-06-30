@@ -39,7 +39,12 @@ type Provider struct {
 	defaultSess *session.Session
 
 	// Metadata associated with the provider.
-	userAgentExtras []string
+	userAgentExtras  []string
+	sessionValidator sessionValidator
+}
+
+type sessionValidator interface {
+	ValidateCredentials(sess *session.Session) (credentials.Value, error)
 }
 
 var instance *Provider
@@ -48,7 +53,9 @@ var once sync.Once
 // ImmutableProvider returns an immutable session Provider with the options applied.
 func ImmutableProvider(options ...func(*Provider)) *Provider {
 	once.Do(func() {
-		instance = &Provider{}
+		instance = &Provider{
+			sessionValidator: &validator{},
+		}
 		for _, option := range options {
 			option(instance)
 		}
@@ -104,6 +111,12 @@ func (p *Provider) FromProfile(name string) (*session.Session, error) {
 	if aws.StringValue(sess.Config.Region) == "" {
 		return nil, &errMissingRegion{}
 	}
+	if _, err := p.sessionValidator.ValidateCredentials(sess); err != nil {
+		if isCredRetrievalErr(err) {
+			return nil, &errCredRetrieval{profile: name, parentErr: err}
+		}
+		return nil, err
+	}
 	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
 	return sess, nil
 }
@@ -155,6 +168,13 @@ func (p *Provider) defaultSession() (*session.Session, error) {
 	if err != nil {
 		return nil, err
 	}
+	if _, err = p.sessionValidator.ValidateCredentials(sess); err != nil {
+		if isCredRetrievalErr(err) {
+			return nil, &errCredRetrieval{parentErr: err}
+		}
+		return nil, err
+	}
+
 	sess.Handlers.Build.PushBackNamed(p.userAgentHandler())
 	p.defaultSess = sess
 	return sess, nil
@@ -201,4 +221,12 @@ func (p *Provider) userAgentHandler() request.NamedHandler {
 		Name: "UserAgentHandler",
 		Fn:   request.MakeAddToUserAgentHandler(userAgentProductName, version.Version, extras...),
 	}
+}
+
+type validator struct{}
+
+func (v *validator) ValidateCredentials(sess *session.Session) (credentials.Value, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), credsTimeout)
+	defer cancel()
+	return sess.Config.Credentials.GetWithContext(ctx)
 }

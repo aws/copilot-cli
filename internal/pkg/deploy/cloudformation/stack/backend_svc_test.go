@@ -487,8 +487,8 @@ func TestBackendService_Parameters(t *testing.T) {
 func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 	const (
 		appName = "my-app"
-		envName = "my-env"
 	)
+	envName := "my-env"
 
 	testDir := filepath.Join("testdata", "workloads", "backend")
 
@@ -544,17 +544,18 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			require.NoError(t, err)
 			require.NoError(t, mft.Validate())
 
+			envConfig := &manifest.Environment{
+				Workload: manifest.Workload{
+					Name: &envName,
+				},
+			}
+			envConfig.HTTPConfig.Private.Certificates = tc.EnvImportedCertARNs
 			serializer, err := NewBackendService(BackendServiceConfig{
 				App: &config.Application{
 					Name: appName,
 				},
-				Env: &config.Environment{
-					Name: envName,
-					CustomConfig: &config.CustomizeEnv{
-						ImportCertARNs: tc.EnvImportedCertARNs,
-					},
-				},
-				Manifest: mft.(*manifest.BackendService),
+				EnvManifest: envConfig,
+				Manifest:    mft.(*manifest.BackendService),
 				RuntimeConfig: RuntimeConfig{
 					ServiceDiscoveryEndpoint: fmt.Sprintf("%s.%s.local", envName, appName),
 				},

@@ -144,6 +144,7 @@ site-local:
 gen-mocks: tools
 	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
 	# TODO: make this more extensible?
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/sessions/mocks/mock_sessions.go -source=./internal/pkg/aws/sessions/sessions.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go -source=./internal/pkg/cli/env_delete.go resourceGetter
 	${GOBIN}/mockgen -source=./internal/pkg/term/progress/spinner.go -package=mocks -destination=./internal/pkg/term/progress/mocks/mock_spinner.go
 	${GOBIN}/mockgen -source=./internal/pkg/term/progress/render.go -package=mocks -destination=./internal/pkg/term/progress/mocks/mock_render.go

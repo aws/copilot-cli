@@ -56,7 +56,7 @@ func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 // LoadBalancedWebServiceConfig contains fields to configure LoadBalancedWebService.
 type LoadBalancedWebServiceConfig struct {
 	App           *config.Application
-	Env           *config.Environment
+	EnvManifest   *manifest.Environment
 	Manifest      *manifest.LoadBalancedWebService
 	RuntimeConfig RuntimeConfig
 	RootUserARN   string
@@ -82,7 +82,8 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 		}
 		httpsEnabled = true
 	}
-	if conf.Env.HasImportedCerts() {
+	certImported := len(conf.EnvManifest.HTTPConfig.Public.Certificates) != 0
+	if certImported {
 		httpsEnabled = true
 		dnsDelegationEnabled = false
 	}
@@ -93,7 +94,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
 				name:   aws.StringValue(conf.Manifest.Name),
-				env:    conf.Env.Name,
+				env:    aws.StringValue(conf.EnvManifest.Name),
 				app:    conf.App.Name,
 				rc:     conf.RuntimeConfig,
 				image:  conf.Manifest.ImageConfig.Image,
@@ -105,7 +106,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest:             conf.Manifest,
-		certImported:         conf.Env.HasImportedCerts(),
+		certImported:         certImported,
 		httpsEnabled:         httpsEnabled,
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,

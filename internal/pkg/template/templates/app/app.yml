@@ -50,7 +50,7 @@ Resources:
                 Action:
                   - sts:AssumeRole
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:iam::*:role/${AdminRoleName}'
+                  - !Sub 'arn:${AWS::Partition}:iam::*:role/${ExecutionRoleName}'
   ExecutionRole:
     Type: AWS::IAM::Role
     Properties:

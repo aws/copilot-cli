@@ -140,6 +140,11 @@ func (o *packageJobOpts) Execute() error {
 	return o.packageCmd.Execute()
 }
 
+// RecommendActions suggests recommended actions before the packaged template is used for deployment.
+func (o *packageJobOpts) RecommendActions() error {
+	return o.packageCmd.RecommendActions()
+}
+
 func (o *packageJobOpts) askJobName() error {
 	if o.name != "" {
 		return nil
