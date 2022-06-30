@@ -5,6 +5,7 @@
 package ecs
 
 import (
+	"encoding/csv"
 	"fmt"
 	"sort"
 	"strings"
@@ -264,21 +265,29 @@ func containerInformation(taskDef *awsecs.TaskDefinition, containerName string) 
 // 1. we are outputting a command to be copied and pasted into a shell, so we need to shell-escape the output.
 // 2. the pflag library parses StringToString args as csv, so we csv escape the individual key/value pairs.
 func fmtStringMapToString(m map[string]string) string {
-	var output []string
-
-	// Sort the map so that `output` is consistent and the unit test won't be flaky.
+	// Sort the map so that the output is consistent and the unit test won't be flaky.
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
+	// write the key=value pairs as csv fields, which is what
+	// pflag expects to read in.
+	// This will escape internal double quotes and commas.
+	// We then need to trim the trailing newline that the csv writer adds.
+	var output []string
 	for _, k := range keys {
-		// params are parsed as csv, so we escape double quotes by doubling them up
-		v := strings.ReplaceAll(m[k], `"`, `""`)
-		// need to allow single quotes through the shell escaping
-		v = strings.ReplaceAll(v, `'`, `'\''`)
-		output = append(output, fmt.Sprintf(`"%s=%s"`, k, v))
+		output = append(output, fmt.Sprintf("%s=%s", k, m[k]))
 	}
-	return `'` + strings.Join(output, ",") + `'`
+	buf := new(strings.Builder)
+	w := csv.NewWriter(buf)
+	w.Write(output)
+	w.Flush()
+	final := strings.TrimSuffix(buf.String(), "\n")
+
+	// Then for shell escaping, wrap the entire argument in single quotes
+	// and escape any internal single quotes.
+	final = strings.ReplaceAll(final, `'`, `'\''`)
+	return `'` + final + `'`
 }

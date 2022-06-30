@@ -431,8 +431,8 @@ func TestRunTaskRequest_CLIString(t *testing.T) {
 				"--image beautiful-image",
 				"--entrypoint \"enter here\"",
 				"--command \"do not enter here\"",
-				`--env-vars '"enter=no","kidding=yes"'`,
-				`--secrets '"truth=go-ask-the-wise"'`,
+				`--env-vars 'enter=no,kidding=yes'`,
+				`--secrets 'truth=go-ask-the-wise'`,
 				"--security-groups sg-1,sg-2",
 				fmt.Sprintf("--app %s", testApp),
 				fmt.Sprintf("--env %s", testEnv),
@@ -455,15 +455,15 @@ func TestRunTaskRequest_fmtStringMapToString(t *testing.T) {
 	}{
 		"with internal commas": {
 			in:     map[string]string{"a": "1,2,3", "b": "2"},
-			wanted: `'"a=1,2,3","b=2"'`,
+			wanted: `'"a=1,2,3",b=2'`,
 		},
 		"with internal quotes": {
 			in:     map[string]string{"name": `john "nickname" doe`, "single": "single 'quote'"},
-			wanted: `'"name=john ""nickname"" doe","single=single '\''quote'\''"'`,
+			wanted: `'"name=john ""nickname"" doe",single=single '\''quote'\'''`,
 		},
 		"with internal equals sign": {
 			in:     map[string]string{"a": "4=2+2=4", "b": "b"},
-			wanted: `'"a=4=2+2=4","b=b"'`,
+			wanted: `'a=4=2+2=4,b=b'`,
 		},
 		"with a json env var": {
 			in:     map[string]string{"myval": `{"key1":"val1","key2":5}`},
