@@ -17,7 +17,7 @@ import (
 func TestJobRunner_Run(t *testing.T) {
 
 	testCases := map[string]struct {
-		MockExecutor func(m *mocks.MockJobExecutor)
+		MockExecutor func(m *mocks.MockjobExecutor)
 
 		App string
 		Env string
@@ -29,7 +29,7 @@ func TestJobRunner_Run(t *testing.T) {
 	}{
 
 		"missing stack": {
-			MockExecutor: func(m *mocks.MockJobExecutor) {
+			MockExecutor: func(m *mocks.MockjobExecutor) {
 				m.EXPECT().Execute("arn:aws:states:us-east-1:111111111111:stateMachine:app-env-job").Return(nil).AnyTimes()
 			},
 			App: "appname",
@@ -42,7 +42,7 @@ func TestJobRunner_Run(t *testing.T) {
 		},
 
 		"missing statemachine resource": {
-			MockExecutor: func(m *mocks.MockJobExecutor) {
+			MockExecutor: func(m *mocks.MockjobExecutor) {
 				m.EXPECT().Execute("arn:aws:states:us-east-1:111111111111:stateMachine:app-env-job").Return(nil).AnyTimes()
 			},
 			App: "appname",
@@ -59,7 +59,7 @@ func TestJobRunner_Run(t *testing.T) {
 		},
 
 		"failed statemachine execution": {
-			MockExecutor: func(m *mocks.MockJobExecutor) {
+			MockExecutor: func(m *mocks.MockjobExecutor) {
 				m.EXPECT().Execute("arn:aws:states:us-east-1:111111111111:stateMachine:app-env-job").Return(fmt.Errorf("ExecutionLimitExceeded"))
 			},
 			App: "appname",
@@ -77,7 +77,7 @@ func TestJobRunner_Run(t *testing.T) {
 		},
 
 		"run success": {
-			MockExecutor: func(m *mocks.MockJobExecutor) {
+			MockExecutor: func(m *mocks.MockjobExecutor) {
 				m.EXPECT().Execute("arn:aws:states:us-east-1:111111111111:stateMachine:app-env-job").Return(nil)
 			},
 			App: "appname",
@@ -101,7 +101,7 @@ func TestJobRunner_Run(t *testing.T) {
 			defer ctrl.Finish()
 
 			MockStackRetriever := mocks.NewMockStackRetriever(ctrl)
-			MockJobExecutor := mocks.NewMockJobExecutor(ctrl)
+			MockJobExecutor := mocks.NewMockjobExecutor(ctrl)
 
 			tc.MockStackRetriever(MockStackRetriever)
 			tc.MockExecutor(MockJobExecutor)

@@ -49,6 +49,5 @@ func (s *StepFunctions) Execute(arn string) error {
 	if err != nil {
 		return fmt.Errorf("execute state machine %s: %w", arn, err)
 	}
-
 	return nil
 }

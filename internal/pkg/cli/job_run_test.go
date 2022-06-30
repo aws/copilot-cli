@@ -175,7 +175,7 @@ func TestJobRun_Execute(t *testing.T) {
 		"success": {
 			jobName: "mockJob",
 			mockjobRunner: func(ctrl *gomock.Controller) runner {
-				m := mocks.NewMockRunner(ctrl)
+				m := mocks.NewMockrunner(ctrl)
 				m.EXPECT().Run().Return(nil)
 				return m
 			},
@@ -183,7 +183,7 @@ func TestJobRun_Execute(t *testing.T) {
 		"fail": {
 			jobName: "mockJob",
 			mockjobRunner: func(ctrl *gomock.Controller) runner {
-				m := mocks.NewMockRunner(ctrl)
+				m := mocks.NewMockrunner(ctrl)
 				m.EXPECT().Run().Return(errors.New("some error"))
 				return m
 			},

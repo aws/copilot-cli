@@ -30,16 +30,17 @@ import (
 
 type deployJobOpts struct {
 	deployWkldVars
-	store           store
-	ws              wsWlDirReader
-	unmarshal       func(in []byte) (manifest.WorkloadManifest, error)
-	newInterpolator func(app, env string) interpolator
-	cmd             execRunner
-	sessProvider    *sessions.Provider
-	envUpgradeCmd   actionCommand
-	newJobDeployer  func() (workloadDeployer, error)
-  envFeaturesDescriber versionCompatibilityChecker
-	sel wsSelector
+
+	store                store
+	ws                   wsWlDirReader
+	unmarshal            func(in []byte) (manifest.WorkloadManifest, error)
+	newInterpolator      func(app, env string) interpolator
+	cmd                  execRunner
+	sessProvider         *sessions.Provider
+	envUpgradeCmd        actionCommand
+	newJobDeployer       func() (workloadDeployer, error)
+	envFeaturesDescriber versionCompatibilityChecker
+	sel                  wsSelector
 
 	// cached variables
 	targetApp       *config.Application
