@@ -15,7 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/runner/jobrunner"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -28,9 +27,9 @@ type jobRunVars struct {
 type jobRunOpts struct {
 	jobRunVars
 
-	configStore store
-	sel         deploySelector
-	ws          wsSelector
+	configStore    store
+	sel            deploySelector
+	configSelector configSelector
 
 	// cached variables.
 	targetEnv *config.Environment
@@ -53,17 +52,13 @@ func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
 
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
-	}
 	prompter := prompt.New()
 
 	opts := &jobRunOpts{
-		jobRunVars:  vars,
-		configStore: configStore,
-		sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
-		ws:          selector.NewLocalWorkloadSelector(prompter, configStore, ws),
+		jobRunVars:     vars,
+		configStore:    configStore,
+		sel:            selector.NewDeploySelect(prompter, configStore, deployStore),
+		configSelector: selector.NewConfigSelector(prompter, configStore),
 	}
 
 	opts.initRunner = func() {
@@ -120,7 +115,7 @@ func (o *jobRunOpts) askJobName() error {
 		return nil
 	}
 
-	name, err := o.ws.Job("Select a job from your workspace", "")
+	name, err := o.configSelector.Job("Select a job from your workspace", "The job you want to run", o.appName)
 	if err != nil {
 		return fmt.Errorf("select job: %w", err)
 	}
@@ -136,7 +131,7 @@ func (o *jobRunOpts) askEnvName() error {
 		return nil
 	}
 
-	name, err := o.ws.Environment("Select an environment", "", o.appName)
+	name, err := o.configSelector.Environment("Select an environment", "The environment to run your job in", o.appName)
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}

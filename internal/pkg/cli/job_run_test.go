@@ -15,9 +15,9 @@ import (
 )
 
 type jobRunMock struct {
-	configStore *mocks.Mockstore
-	sel         *mocks.MockdeploySelector
-	ws          *mocks.MockwsSelector
+	configStore    *mocks.Mockstore
+	sel            *mocks.MockdeploySelector
+	configSelector *mocks.MockconfigSelector
 }
 
 func TestJobRun_Ask(t *testing.T) {
@@ -64,8 +64,8 @@ func TestJobRun_Ask(t *testing.T) {
 					m.configStore.EXPECT().GetApplication(gomock.Any()).Times(0),
 					m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).AnyTimes(),
 					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes(),
-					m.ws.EXPECT().Job(gomock.Any(), gomock.Any()).Return("my-job", nil).AnyTimes(),
-					m.ws.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Return("my-env", nil).AnyTimes(),
+					m.configSelector.EXPECT().Job(gomock.Any(), gomock.Any(), gomock.Any()).Return("my-job", nil).AnyTimes(),
+					m.configSelector.EXPECT().Environment(gomock.Any(), gomock.Any(), gomock.Any()).Return("my-env", nil).AnyTimes(),
 				)
 			},
 			wantedApp: inputApp,
@@ -87,8 +87,8 @@ func TestJobRun_Ask(t *testing.T) {
 					m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes(),
 					m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).Times(0),
 					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0),
-					m.ws.EXPECT().Job("Select a job from your workspace", "").Return("my-job", nil),
-					m.ws.EXPECT().Environment("Select an environment", "", "my-app").Return("my-env", nil),
+					m.configSelector.EXPECT().Job("Select a job from your workspace", "The job you want to run", "my-app").Return("my-job", nil),
+					m.configSelector.EXPECT().Environment("Select an environment", "The environment to run your job in", "my-app").Return("my-env", nil),
 				)
 			},
 			wantedApp: inputApp,
@@ -103,7 +103,7 @@ func TestJobRun_Ask(t *testing.T) {
 					m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes(),
 					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0),
 					m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).AnyTimes(),
-					m.ws.EXPECT().Environment("Select an environment", "", "my-app").Return("", errors.New("some error")),
+					m.configSelector.EXPECT().Environment("Select an environment", "The environment to run your job in", "my-app").Return("", errors.New("some error")),
 				)
 			},
 			wantedError: fmt.Errorf("select environment: some error"),
@@ -116,7 +116,7 @@ func TestJobRun_Ask(t *testing.T) {
 					m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes(),
 					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes(),
 					m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).Times(0),
-					m.ws.EXPECT().Job("Select a job from your workspace", "").Return("", errors.New("some error")),
+					m.configSelector.EXPECT().Job("Select a job from your workspace", "The job you want to run", "my-app").Return("", errors.New("some error")),
 				)
 			},
 			wantedError: fmt.Errorf("select job: some error"),
@@ -130,12 +130,12 @@ func TestJobRun_Ask(t *testing.T) {
 
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSel := mocks.NewMockdeploySelector(ctrl)
-			mockWs := mocks.NewMockwsSelector(ctrl)
+			mockconfigSelector := mocks.NewMockconfigSelector(ctrl)
 
 			mocks := jobRunMock{
-				configStore: mockstore,
-				sel:         mockSel,
-				ws:          mockWs,
+				configStore:    mockstore,
+				sel:            mockSel,
+				configSelector: mockconfigSelector,
 			}
 
 			tc.setupMocks(mocks)
@@ -146,9 +146,9 @@ func TestJobRun_Ask(t *testing.T) {
 					appName: tc.inputApp,
 					jobName: tc.inputJob,
 				},
-				configStore: mockstore,
-				sel:         mockSel,
-				ws:          mockWs,
+				configStore:    mockstore,
+				sel:            mockSel,
+				configSelector: mockconfigSelector,
 			}
 
 			err := jobRun.Ask()
