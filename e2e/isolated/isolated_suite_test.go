@@ -28,10 +28,6 @@ const envName = "private"
 The Isolated Suite creates an environment with an imported VPC with only
 private subnets, deploys a backend service to it, and then tears it down.
 */
-
-//Ensures the load balancer is in private subnets
-//Curls the load balancer DNS from outside the VPC and make sure it's not reachable
-//Runs copilot svc exec and curls http://backends.env.app.local to get an HTTP OK response.
 func Test_Isolated(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Isolated Suite")

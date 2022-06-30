@@ -18,16 +18,8 @@ func HealthCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 	w.WriteHeader(http.StatusOK)
 }
 
-// ServiceDiscoveryGet just returns true no matter what
-func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-	log.Printf("Get on ServiceDiscovery endpoint Succeeded with message %s\n", message)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(message))
-}
-
 func main() {
 	router := httprouter.New()
-	router.GET("/service-discovery/", ServiceDiscoveryGet)
 
 	// Health Check
 	router.GET("/", HealthCheck)
