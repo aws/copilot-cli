@@ -155,6 +155,7 @@ func (t *Template) ParseEnv(data *EnvOpts, options ...ParseOption) (*Content, er
 	return &Content{buf}, nil
 }
 
+// ParseEnvBootstrap parses the CloudFormation template that bootstrap IAM resources with the specified data object and returns its content.
 func (t *Template) ParseEnvBootstrap(data *EnvOpts, options ...ParseOption) (*Content, error) {
 	tpl, err := t.parse("base", envBootstrapCFTemplatePath, options...)
 	if err != nil {
