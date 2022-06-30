@@ -22,19 +22,7 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
 
         cpu: 256
         memory: 512
-        count:
-          range: 1-10
-          cooldown:
-            in: 30s
-            out: 60s
-          cpu_percentage: 70
-          memory_percentage:
-            value: 80
-            cooldown:
-              in: 80s
-              out: 160s
-          requests: 10000
-          response_time: 2s
+        count: 1
         exec: true
 
         storage:
@@ -169,13 +157,11 @@ count:
   range: 1-10
   cooldown:
     in: 30s
-    out: 60s
   cpu_percentage: 70
   memory_percentage:
     value: 80
     cooldown:
-      in: 80s
-      out: 160s
+      out: 45s
   requests: 10000
   response_time: 2s
 ```
