@@ -102,6 +102,11 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the public facing load balancer
+       # Change load balancer to only accept ingress from CloudFront when CDN Enabled
+{{- if .CDNConfig.EnableCDN}}
+      SecurityGroupIngress:
+        SourcePrefixListId: pl-82a045eb
+{{- else}}
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 80
@@ -113,6 +118,7 @@ Resources:
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
+{{- end}}
 {{- if .VPCConfig.Imported}}
       VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}
