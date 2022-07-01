@@ -440,7 +440,7 @@ func (idx *routeTableIndex) IsPublicSubnet(subnetID string) bool {
 	return idx.mainTable.HasIGW()
 }
 
-// managedPrefixListId returns the DescribeManagedPrefixListsOutput of a query by name.
+// managedPrefixList returns the DescribeManagedPrefixListsOutput of a query by name.
 func (c *EC2) managedPrefixList(prefixListName string) (*ec2.DescribeManagedPrefixListsOutput, error) {
 	prefixListOutput, err := c.client.DescribeManagedPrefixLists(&ec2.DescribeManagedPrefixListsInput{
 		Filters: []*ec2.Filter{
@@ -458,8 +458,8 @@ func (c *EC2) managedPrefixList(prefixListName string) (*ec2.DescribeManagedPref
 	return prefixListOutput, nil
 }
 
-// CloudFrontManagedPrefixListId returns the PrefixListId of the associated cloudfront prefix list as a *string.
-func (c *EC2) CloudFrontManagedPrefixListId() (*string, error) {
+// CloudFrontManagedPrefixListID returns the PrefixListId of the associated cloudfront prefix list as a *string.
+func (c *EC2) CloudFrontManagedPrefixListID() (*string, error) {
 	prefixListsOutput, err := c.managedPrefixList(cloudFrontPrefixListName)
 
 	if err != nil {
