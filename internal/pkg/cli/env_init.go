@@ -295,16 +295,6 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get app resources: %w", err)
 	}
-	s3Client, err := o.newS3(envRegion)
-	if err != nil {
-		return err
-	}
-	urls, err := o.uploader.UploadEnvironmentCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return s3Client.ZipAndUpload(resources.S3Bucket, key, objects...)
-	})
-	if err != nil {
-		return fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
-	}
 
 	// 4. Start creating the CloudFormation stack for the environment.
 	if resources.S3Bucket == "" {
@@ -315,7 +305,7 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	if err := o.deployEnv(app, s3.FormatARN(partition.ID(), resources.S3Bucket), resources.KMSKeyARN, urls); err != nil {
+	if err := o.deployEnv(app, s3.FormatARN(partition.ID(), resources.S3Bucket), resources.KMSKeyARN); err != nil {
 		return err
 	}
 
@@ -706,7 +696,7 @@ func (o *initEnvOpts) adjustVPCConfig() *config.AdjustVPC {
 }
 
 func (o *initEnvOpts) deployEnv(app *config.Application,
-	artifactBucketARN, artifactBucketKeyARN string, customResourcesURLs map[string]string) error {
+	artifactBucketARN, artifactBucketKeyARN string) error {
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
@@ -719,16 +709,8 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 			AccountPrincipalARN: caller.RootUserARN,
 		},
 		AdditionalTags:       app.Tags,
-		CustomResourcesURLs:  customResourcesURLs,
 		ArtifactBucketARN:    artifactBucketARN,
 		ArtifactBucketKeyARN: artifactBucketKeyARN,
-		AdjustVPCConfig:      o.adjustVPCConfig(),
-		ImportCertARNs:       o.importCerts,
-		InternalALBSubnets:   o.internalALBSubnets,
-		ImportVPCConfig:      o.importVPCConfig(),
-		AllowVPCIngress:      o.allowVPCIngress,
-		Telemetry:            o.telemetry.toConfig(),
-		Version:              deploy.LatestEnvTemplateVersion,
 	}
 
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {

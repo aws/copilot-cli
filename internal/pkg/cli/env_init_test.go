@@ -980,34 +980,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErrorS: "get app resources: some error",
 		},
-		"errors cannot read env lambdas": {
-			expectStore: func(m *mocks.Mockstore) {
-				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
-			},
-			expectProgress: func(m *mocks.Mockprogress) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
-			},
-			expectIdentity: func(m *mocks.MockidentityService) {
-				m.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
-			},
-			expectIAM: func(m *mocks.MockroleManager) {
-				m.EXPECT().CreateECSServiceLinkedRole().Return(nil)
-			},
-			expectDeployer: func(m *mocks.Mockdeployer) {
-				m.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
-			},
-			expectAppCFN: func(m *mocks.MockappResourcesGetter) {
-				m.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
-					Return(&stack.AppRegionalResources{
-						S3Bucket: "mockBucket",
-					}, nil)
-			},
-			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
-				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, fmt.Errorf("some error"))
-			},
-			wantedErrorS: "upload custom resources to bucket mockBucket: some error",
-		},
 		"deletes retained IAM roles if environment stack fails creation": {
 			expectStore: func(m *mocks.Mockstore) {
 				m.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
@@ -1048,9 +1020,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 			},
-			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
-				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
-			},
 			wantedErrorS: "some deploy error",
 		},
 		"returns error from CreateEnvironment": {
@@ -1090,9 +1059,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
 					}, nil)
-			},
-			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
-				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 			wantedErrorS: "store environment: some create error",
 		},
@@ -1142,9 +1108,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						S3Bucket: "mockBucket",
 					}, nil)
 			},
-			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
-				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
-			},
 		},
 		"skips creating stack if environment stack already exists": {
 			expectStore: func(m *mocks.Mockstore) {
@@ -1181,11 +1144,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						Name:                "phonetool",
 						AccountPrincipalARN: "some arn",
 					},
-					CustomResourcesURLs: map[string]string{"mockCustomResource": "mockURL"},
-					Telemetry: &config.Telemetry{
-						EnableContainerInsights: false,
-					},
-					Version:              deploy.LatestEnvTemplateVersion,
 					ArtifactBucketARN:    "arn:aws:s3:::mockBucket",
 					ArtifactBucketKeyARN: "mockKMS",
 				}).Return(&cloudformation.ErrStackAlreadyExists{})
@@ -1203,9 +1161,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						S3Bucket:  "mockBucket",
 						KMSKeyARN: "mockKMS",
 					}, nil)
-			},
-			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
-				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{"mockCustomResource": "mockURL"}, nil)
 			},
 		},
 		"failed to delegate DNS (app has Domain and env and apps are different)": {
@@ -1274,9 +1229,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
 					}, nil)
-			},
-			expectResourcesUploader: func(m *mocks.MockcustomResourcesUploader) {
-				m.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, nil)
 			},
 		},
 	}
