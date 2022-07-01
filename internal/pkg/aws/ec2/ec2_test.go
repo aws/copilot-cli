@@ -407,7 +407,7 @@ func TestEC2_CloudFrontManagedPrefixListId(t *testing.T) {
 				client: mockAPI,
 			}
 
-			id, err := ec2Client.CloudFrontManagedPrefixListId()
+			id, err := ec2Client.CloudFrontManagedPrefixListID()
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
 			} else if tc.wantedErrorMsgPrefix != "" {
