@@ -1072,9 +1072,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					AccountID: "1234",
 					Region:    "mars-1",
-					Telemetry: &config.Telemetry{
-						EnableContainerInsights: true,
-					},
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -1117,9 +1114,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					AccountID: "1234",
 					Region:    "mars-1",
-					Telemetry: &config.Telemetry{
-						EnableContainerInsights: false,
-					},
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {
@@ -1187,9 +1181,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					Name:      "test",
 					AccountID: "4567",
 					Region:    "us-west-2",
-					Telemetry: &config.Telemetry{
-						EnableContainerInsights: false,
-					},
 				}).Return(nil)
 			},
 			expectIdentity: func(m *mocks.MockidentityService) {

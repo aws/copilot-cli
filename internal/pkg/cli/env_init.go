@@ -130,12 +130,6 @@ type telemetryVars struct {
 	EnableContainerInsights bool
 }
 
-func (v telemetryVars) toConfig() *config.Telemetry {
-	return &config.Telemetry{
-		EnableContainerInsights: v.EnableContainerInsights,
-	}
-}
-
 type initEnvVars struct {
 	appName       string
 	name          string // Name for the environment.
@@ -146,7 +140,7 @@ type initEnvVars struct {
 	importVPC          importVPCVars // Existing VPC resources to use instead of creating new ones.
 	adjustVPC          adjustVPCVars // Configure parameters for VPC resources generated while initializing an environment.
 	telemetry          telemetryVars // Configure observability and monitoring settings.
-	importCerts        []string      // Addtional existing ACM certificates to use.
+	importCerts        []string      // Additional existing ACM certificates to use.
 	internalALBSubnets []string      // Subnets to be used for internal ALB placement.
 	allowVPCIngress    bool          // True means the env stack will create ingress to the internal ALB from ports 80/443.
 
@@ -315,17 +309,6 @@ func (o *initEnvOpts) Execute() error {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
 	env.Prod = o.isProduction
-	customizedEnv := config.CustomizeEnv{
-		ImportVPC:                   o.importVPCConfig(),
-		VPCConfig:                   o.adjustVPCConfig(),
-		ImportCertARNs:              o.importCerts,
-		InternalALBSubnets:          o.internalALBSubnets,
-		EnableInternalALBVPCIngress: o.allowVPCIngress,
-	}
-	if !customizedEnv.IsEmpty() {
-		env.CustomConfig = &customizedEnv
-	}
-	env.Telemetry = o.telemetry.toConfig()
 
 	// 6. Store the environment in SSM.
 	if err := o.store.CreateEnvironment(env); err != nil {
