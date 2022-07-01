@@ -617,7 +617,7 @@ type publicIPGetter interface {
 }
 
 type cliStringer interface {
-	CLIString() string
+	CLIString() (string, error)
 }
 
 type secretPutter interface {
