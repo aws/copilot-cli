@@ -484,7 +484,8 @@ type configSelector interface {
 
 type deploySelector interface {
 	appSelector
-	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error)
+	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedService, error)
+	DeployedJob(prompt, help string, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedJob, error)
 }
 
 type pipelineEnvSelector interface {

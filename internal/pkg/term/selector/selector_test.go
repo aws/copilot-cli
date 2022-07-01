@@ -349,7 +349,7 @@ func TestDeploySelect_Service(t *testing.T) {
 		},
 		"filter deployed services": {
 			opts: []GetDeployedServiceOpts{
-				WithFilter(func(svc *DeployedService) (bool, error) {
+				WithSvcFilter(func(svc *DeployedService) (bool, error) {
 					return svc.Env == "test1", nil
 				}),
 				WithServiceTypesFilter([]string{manifest.BackendServiceType}),
@@ -404,7 +404,7 @@ func TestDeploySelect_Service(t *testing.T) {
 		},
 		"filter returns error": {
 			opts: []GetDeployedServiceOpts{
-				WithFilter(func(svc *DeployedService) (bool, error) {
+				WithSvcFilter(func(svc *DeployedService) (bool, error) {
 					return svc.Env == "test1", fmt.Errorf("filter error")
 				}),
 			},
@@ -477,7 +477,7 @@ func TestDeploySelect_Service(t *testing.T) {
 				},
 				deployStoreSvc: mockdeploySvc,
 			}
-			opts := append([]GetDeployedServiceOpts{WithEnv(tc.env), WithSvc(tc.svc)}, tc.opts...)
+			opts := append([]GetDeployedServiceOpts{WithEnv(tc.env), WithName(tc.svc)}, tc.opts...)
 
 			gotDeployed, err := sel.DeployedService("Select a deployed service", "Help text", testApp, opts...)
 			if tc.wantErr != nil {

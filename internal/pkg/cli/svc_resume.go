@@ -119,7 +119,7 @@ func (o *resumeSvcOpts) validateAndAskSvcEnvName() error {
 		svcResumeSvcNameHelpPrompt,
 		o.appName,
 		selector.WithEnv(o.envName),
-		selector.WithSvc(o.svcName),
+		selector.WithName(o.svcName),
 		selector.WithServiceTypesFilter([]string{manifest.RequestDrivenWebServiceType}),
 	)
 	if err != nil {
