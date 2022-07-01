@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -21,7 +20,6 @@ import (
 
 type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
-	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
 }
 
 type transformInfo struct {
@@ -32,15 +30,13 @@ type transformInfo struct {
 	ForceZip bool
 }
 
-func transformInfoFor() map[string]transformInfo {
-	return map[string]transformInfo{
-		"AWS::Lambda::Function": {
-			Property:           "Code",
-			ForceZip:           true,
-			BucketNameProperty: "S3Bucket",
-			ObjectKeyProperty:  "S3Key",
-		},
-	}
+var transformInfoFor = map[string]transformInfo{
+	"AWS::Lambda::Function": {
+		Property:           "Code",
+		ForceZip:           true,
+		BucketNameProperty: "S3Bucket",
+		ObjectKeyProperty:  "S3Key",
+	},
 }
 
 // TODO a flag to not do this on svc package
@@ -59,7 +55,7 @@ func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) 
 			continue
 		}
 
-		info, ok := transformInfoFor()[typeNode.Value]
+		info, ok := transformInfoFor[typeNode.Value]
 		if !ok {
 			continue
 		}
@@ -76,7 +72,7 @@ func (a *Addons) transformProperty(properties *yaml.Node, tr transformInfo) erro
 	props := mappingNode(properties)
 	node, ok := props[tr.Property]
 	if !ok || node.Kind != yaml.ScalarNode {
-		// only transorm if it's preset and a scalar node
+		// only transorm if the property is preset and a scalar node
 		return nil
 	}
 
@@ -89,7 +85,7 @@ func (a *Addons) transformProperty(properties *yaml.Node, tr transformInfo) erro
 		assetPath = path.Join(a.wsPath, node.Value)
 	}
 
-	url, err := a.uploadAddonAsset(assetPath)
+	url, err := a.uploadAddonAsset(assetPath, tr.ForceZip)
 	if err != nil {
 		return fmt.Errorf("upload asset: %w", err)
 	}
@@ -112,26 +108,26 @@ func (a *Addons) transformProperty(properties *yaml.Node, tr transformInfo) erro
 	})
 }
 
-func (a *Addons) uploadAddonAsset(path string) (string, error) {
-	fs, err := os.Stat(path)
+func (a *Addons) uploadAddonAsset(path string, forceZip bool) (string, error) {
+	info, err := os.Stat(path)
 	if err != nil {
 		return "", err
 	}
 
-	if !fs.IsDir() {
-		// upload file
-		return "", errors.New("TODO")
+	var asset asset
+	if forceZip || info.IsDir() {
+		asset, err = zipAsset(path)
+	} else {
+		asset, err = fileAsset(path)
 	}
-
-	zip, err := zipDir(path)
 	if err != nil {
-		return "", fmt.Errorf("zip %s: %w", path, err)
+		return "", fmt.Errorf("create asset: %w", err)
 	}
 
 	// TODO copy sam logic for logging
-	s3Path := artifactpath.AddonArtifact(a.wlName, zip.hash)
+	s3Path := artifactpath.AddonArtifact(a.wlName, asset.hash)
 
-	url, err := a.Uploader.Upload(a.Bucket, s3Path, zip.zip)
+	url, err := a.Uploader.Upload(a.Bucket, s3Path, asset.data)
 	if err != nil {
 		return "", fmt.Errorf("upload %s to s3 bucket %s: %w", path, a.Bucket, err)
 	}
@@ -139,63 +135,92 @@ func (a *Addons) uploadAddonAsset(path string) (string, error) {
 	return url, nil
 }
 
-type zippedDirectory struct {
-	zip  io.Reader
+type asset struct {
+	data io.Reader
 	hash string
 }
 
-// zipDir TODO...
-func zipDir(dirPath string) (zippedDirectory, error) {
+// zipAsset TODO...
+func zipAsset(root string) (asset, error) {
 	buf := &bytes.Buffer{}
 	z := zip.NewWriter(buf)
 	defer z.Close()
 
 	hash := sha256.New()
 
-	if err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
+	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		switch {
 		case err != nil:
 			return err
-		case info.IsDir():
+		case d.IsDir():
 			return nil
 		}
 
-		// the file fname in the zip should be relative
-		// to the directory that is being zipped
-		fname, err := filepath.Rel(dirPath, path)
+		fname, err := filepath.Rel(root, path)
+		switch {
+		case err != nil:
+			return fmt.Errorf("rel: %w", err)
+		case fname == ".": // TODO best way to check equality?
+			fname = d.Name()
+		}
+
+		f, err := os.Open(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("open: %w", err)
+		}
+		defer f.Close()
+
+		info, err := f.Stat()
+		if err != nil {
+			return fmt.Errorf("stat: %w", err)
 		}
 
 		header, err := zip.FileInfoHeader(info)
 		if err != nil {
-			return err
+			return fmt.Errorf("create zip file header: %w", err)
 		}
 
 		header.Name = fname
 		header.Method = zip.Deflate
+
 		zf, err := z.CreateHeader(header)
 		if err != nil {
-			return err
+			return fmt.Errorf("create zip file: %w", err)
 		}
 
 		// include the file name and permissions as part of the hash
 		hash.Write([]byte(fmt.Sprintf("%s %s", fname, info.Mode().String())))
 
-		f, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
 		_, err = io.Copy(io.MultiWriter(zf, hash), f)
 		return err
 	}); err != nil {
-		return zippedDirectory{}, err
+		return asset{}, err
 	}
 
-	return zippedDirectory{
-		zip:  buf,
+	return asset{
+		data: buf,
+		hash: hex.EncodeToString(hash.Sum(nil)),
+	}, nil
+}
+
+// fileAsset TODO...
+func fileAsset(path string) (asset, error) {
+	hash := sha256.New()
+	buf := &bytes.Buffer{}
+
+	f, err := os.Open(path)
+	if err != nil {
+		return asset{}, fmt.Errorf("open: %w", err)
+	}
+	defer f.Close()
+
+	_, err = io.Copy(io.MultiWriter(buf, hash), f)
+	if err != nil {
+		return asset{}, fmt.Errorf("copy: %w", err)
+	}
+
+	return asset{
+		data: buf,
 		hash: hex.EncodeToString(hash.Sum(nil)),
 	}, nil
 }
