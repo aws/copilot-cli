@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
@@ -30,14 +31,14 @@ import (
 type deployJobOpts struct {
 	deployWkldVars
 
-	store           store
-	ws              wsWlDirReader
-	unmarshal       func(in []byte) (manifest.WorkloadManifest, error)
-	newInterpolator func(app, env string) interpolator
-	cmd             runner
-	sessProvider    *sessions.Provider
-	envUpgradeCmd   actionCommand
-	newJobDeployer  func() (workloadDeployer, error)
+	store                store
+	ws                   wsWlDirReader
+	unmarshal            func(in []byte) (manifest.WorkloadManifest, error)
+	newInterpolator      func(app, env string) interpolator
+	cmd                  runner
+	sessProvider         *sessions.Provider
+	newJobDeployer       func() (workloadDeployer, error)
+	envFeaturesDescriber versionCompatibilityChecker
 
 	sel wsSelector
 
@@ -138,9 +139,6 @@ func (o *deployJobOpts) Execute() error {
 			return err
 		}
 	}
-	if err := o.envUpgradeCmd.Execute(); err != nil {
-		return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, o.envName, err)
-	}
 	mft, err := workloadManifest(&workloadManifestInput{
 		name:         o.name,
 		appName:      o.appName,
@@ -153,6 +151,9 @@ func (o *deployJobOpts) Execute() error {
 		return err
 	}
 	o.appliedManifest = mft
+	if err := validateManifestCompatibilityWithEnv(mft, o.envName, o.envFeaturesDescriber); err != nil {
+		return err
+	}
 	deployer, err := o.newJobDeployer()
 	if err != nil {
 		return err
@@ -217,15 +218,6 @@ func (o *deployJobOpts) configureClients() error {
 		return fmt.Errorf("create default session: %w", err)
 	}
 
-	cmd, err := newEnvUpgradeOpts(envUpgradeVars{
-		appName: o.appName,
-		name:    env.Name,
-	})
-	if err != nil {
-		return fmt.Errorf("new env upgrade command: %v", err)
-	}
-	o.envUpgradeCmd = cmd
-
 	// client to retrieve caller identity.
 	caller, err := identity.New(defaultSess).Get()
 	if err != nil {
@@ -233,6 +225,15 @@ func (o *deployJobOpts) configureClients() error {
 	}
 	o.rootUserARN = caller.RootUserARN
 
+	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		ConfigStore: o.store,
+	})
+	if err != nil {
+		return err
+	}
+	o.envFeaturesDescriber = envDescriber
 	return nil
 }
 
