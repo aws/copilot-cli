@@ -1706,31 +1706,31 @@ func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
 }
 
-// Mockrunner is a mock of runner interface.
-type Mockrunner struct {
+// MockexecRunner is a mock of execRunner interface.
+type MockexecRunner struct {
 	ctrl     *gomock.Controller
-	recorder *MockrunnerMockRecorder
+	recorder *MockexecRunnerMockRecorder
 }
 
-// MockrunnerMockRecorder is the mock recorder for Mockrunner.
-type MockrunnerMockRecorder struct {
-	mock *Mockrunner
+// MockexecRunnerMockRecorder is the mock recorder for MockexecRunner.
+type MockexecRunnerMockRecorder struct {
+	mock *MockexecRunner
 }
 
-// NewMockrunner creates a new mock instance.
-func NewMockrunner(ctrl *gomock.Controller) *Mockrunner {
-	mock := &Mockrunner{ctrl: ctrl}
-	mock.recorder = &MockrunnerMockRecorder{mock}
+// NewMockexecRunner creates a new mock instance.
+func NewMockexecRunner(ctrl *gomock.Controller) *MockexecRunner {
+	mock := &MockexecRunner{ctrl: ctrl}
+	mock.recorder = &MockexecRunnerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Mockrunner) EXPECT() *MockrunnerMockRecorder {
+func (m *MockexecRunner) EXPECT() *MockexecRunnerMockRecorder {
 	return m.recorder
 }
 
 // Run mocks base method.
-func (m *Mockrunner) Run(name string, args []string, options ...exec.CmdOption) error {
+func (m *MockexecRunner) Run(name string, args []string, options ...exec.CmdOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{name, args}
 	for _, a := range options {
@@ -1742,10 +1742,10 @@ func (m *Mockrunner) Run(name string, args []string, options ...exec.CmdOption) 
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockrunnerMockRecorder) Run(name, args interface{}, options ...interface{}) *gomock.Call {
+func (mr *MockexecRunnerMockRecorder) Run(name, args interface{}, options ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{name, args}, options...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*Mockrunner)(nil).Run), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockexecRunner)(nil).Run), varargs...)
 }
 
 // MockeventsWriter is a mock of eventsWriter interface.
@@ -6815,6 +6815,43 @@ func (m *MockworkloadTemplateGenerator) UploadArtifacts() (*deploy.UploadArtifac
 func (mr *MockworkloadTemplateGeneratorMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).UploadArtifacts))
+}
+
+// Mockrunner is a mock of runner interface.
+type Mockrunner struct {
+	ctrl     *gomock.Controller
+	recorder *MockrunnerMockRecorder
+}
+
+// MockrunnerMockRecorder is the mock recorder for Mockrunner.
+type MockrunnerMockRecorder struct {
+	mock *Mockrunner
+}
+
+// NewMockrunner creates a new mock instance.
+func NewMockrunner(ctrl *gomock.Controller) *Mockrunner {
+	mock := &Mockrunner{ctrl: ctrl}
+	mock.recorder = &MockrunnerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockrunner) EXPECT() *MockrunnerMockRecorder {
+	return m.recorder
+}
+
+// Run mocks base method.
+func (m *Mockrunner) Run() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Run")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Run indicates an expected call of Run.
+func (mr *MockrunnerMockRecorder) Run() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*Mockrunner)(nil).Run))
 }
 
 // MockenvDeployer is a mock of envDeployer interface.

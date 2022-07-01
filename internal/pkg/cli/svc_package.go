@@ -11,15 +11,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/aws-sdk-go/service/ssm"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -62,25 +60,26 @@ type packageSvcOpts struct {
 	packageSvcVars
 
 	// Interfaces to interact with dependencies.
-	addonsClient     templater
-	initAddonsClient func(*packageSvcOpts) error // Overridden in tests.
-	ws               wsWlDirReader
-	fs               afero.Fs
-	store            store
-	stackWriter      io.Writer
-	paramsWriter     io.Writer
-	addonsWriter     io.Writer
-	runner           runner
-	sessProvider     *sessions.Provider
-	sel              wsSelector
-	unmarshal        func([]byte) (manifest.WorkloadManifest, error)
-	newInterpolator  func(app, env string) interpolator
-	newTplGenerator  func(*packageSvcOpts) (workloadTemplateGenerator, error)
+	addonsClient         templater
+	initAddonsClient     func(*packageSvcOpts) error // Overridden in tests.
+	ws                   wsWlDirReader
+	fs                   afero.Fs
+	store                store
+	stackWriter          io.Writer
+	paramsWriter         io.Writer
+	addonsWriter         io.Writer
+	runner               execRunner
+	sessProvider         *sessions.Provider
+	sel                  wsSelector
+	unmarshal            func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator      func(app, env string) interpolator
+	newTplGenerator      func(*packageSvcOpts) (workloadTemplateGenerator, error)
+	envFeaturesDescriber versionCompatibilityChecker
 
 	// cached variables
 	targetApp       *config.Application
 	targetEnv       *config.Environment
-	appliedManifest interface{}
+	appliedManifest manifest.WorkloadManifest
 	rootUserARN     string
 }
 
@@ -195,14 +194,14 @@ func (o *packageSvcOpts) Execute() error {
 	if err != nil {
 		return nil
 	}
-	appTemplates, err := o.getSvcTemplates(targetEnv)
+	svcTemplates, err := o.getSvcTemplates(targetEnv)
 	if err != nil {
 		return err
 	}
-	if _, err = o.stackWriter.Write([]byte(appTemplates.stack)); err != nil {
+	if _, err = o.stackWriter.Write([]byte(svcTemplates.stack)); err != nil {
 		return err
 	}
-	if _, err = o.paramsWriter.Write([]byte(appTemplates.configuration)); err != nil {
+	if _, err = o.paramsWriter.Write([]byte(svcTemplates.configuration)); err != nil {
 		return err
 	}
 	addonsTemplate, err := o.getAddonsTemplate()
@@ -279,6 +278,15 @@ func (o *packageSvcOpts) configureClients() error {
 	}
 	o.rootUserARN = caller.RootUserARN
 
+	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		ConfigStore: o.store,
+	})
+	if err != nil {
+		return err
+	}
+	o.envFeaturesDescriber = envDescriber
 	return nil
 }
 
@@ -396,9 +404,9 @@ func (o *packageSvcOpts) getTargetEnv() (*config.Environment, error) {
 	return o.targetEnv, nil
 }
 
-// RecommendActions is a no-op for this command.
+// RecommendActions suggests recommended actions before the packaged template is used for deployment.
 func (o *packageSvcOpts) RecommendActions() error {
-	return nil
+	return validateManifestCompatibilityWithEnv(o.appliedManifest.(manifest.WorkloadManifest), o.envName, o.envFeaturesDescriber)
 }
 
 func contains(s string, items []string) bool {

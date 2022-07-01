@@ -184,7 +184,7 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 
 			mockSelector := mocks.NewMockwsSelector(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
-			mockRunner := mocks.NewMockrunner(ctrl)
+			mockRunner := mocks.NewMockexecRunner(ctrl)
 
 			tc.expectSelector(mockSelector)
 			tc.expectPrompt(mockPrompt)
@@ -256,6 +256,42 @@ func TestPackageJobOpts_Execute(t *testing.T) {
 
 			// WHEN
 			err := opts.Execute()
+
+			// THEN
+			require.Equal(t, tc.wantedErr, err)
+		})
+	}
+}
+
+func TestPackageJobOpts_RecommendActions(t *testing.T) {
+	testCases := map[string]struct {
+		mockDependencies func(*gomock.Controller, *packageJobOpts)
+
+		wantedErr error
+	}{
+		"reuse svc package RecommandActions": {
+			mockDependencies: func(ctrl *gomock.Controller, opts *packageJobOpts) {
+				mockCmd := mocks.NewMockactionCommand(ctrl)
+				mockCmd.EXPECT().RecommendActions().Return(nil)
+				opts.packageCmd = mockCmd
+			},
+			wantedErr: nil,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			opts := &packageJobOpts{
+				packageCmd: mocks.NewMockactionCommand(ctrl),
+			}
+			tc.mockDependencies(ctrl, opts)
+
+			// WHEN
+			err := opts.RecommendActions()
 
 			// THEN
 			require.Equal(t, tc.wantedErr, err)
