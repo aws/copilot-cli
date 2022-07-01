@@ -13,7 +13,7 @@ const (
 	fmtEnvCFSubTemplatePath = "environment/partials/%s.yml"
 )
 
-// Latest available env-controller managed feature names.
+// Available env-controller managed feature names.
 const (
 	ALBFeatureName         = "ALBWorkloads"
 	EFSFeatureName         = "EFSWorkloads"

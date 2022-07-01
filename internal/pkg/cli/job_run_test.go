@@ -159,26 +159,67 @@ func TestJobRun_Ask(t *testing.T) {
 
 func TestJobRun_Execute(t *testing.T) {
 	testCases := map[string]struct {
-		jobName       string
-		mockjobRunner func(ctrl *gomock.Controller) runner
-		wantedError   error
+		appName        string
+		envName        string
+		jobName        string
+		mockjobRunner  func(ctrl *gomock.Controller) runner
+		mockEnvChecker func(ctrl *gomock.Controller) versionCompatibilityChecker
+		wantedError    error
 	}{
-		"success": {
+		"successfully invoke job": {
 			jobName: "mockJob",
 			mockjobRunner: func(ctrl *gomock.Controller) runner {
 				m := mocks.NewMockrunner(ctrl)
 				m.EXPECT().Run().Return(nil)
 				return m
 			},
+			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
+				m := mocks.NewMockversionCompatibilityChecker(ctrl)
+				m.EXPECT().Version().Return("v1.12.1", nil)
+				return m
+			},
 		},
-		"fail": {
+		"should return a wrapped error when state machine cannot be run": {
 			jobName: "mockJob",
 			mockjobRunner: func(ctrl *gomock.Controller) runner {
 				m := mocks.NewMockrunner(ctrl)
 				m.EXPECT().Run().Return(errors.New("some error"))
 				return m
 			},
+			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
+				m := mocks.NewMockversionCompatibilityChecker(ctrl)
+				m.EXPECT().Version().Return("v1.12.0", nil)
+				return m
+			},
 			wantedError: fmt.Errorf(`execute job "mockJob": some error`),
+		},
+		"should return a wrapped error when environment version cannot be retrieved": {
+			appName: "finance",
+			envName: "test",
+			jobName: "report",
+			mockjobRunner: func(ctrl *gomock.Controller) runner {
+				return nil
+			},
+			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
+				m := mocks.NewMockversionCompatibilityChecker(ctrl)
+				m.EXPECT().Version().Return("", errors.New("some error"))
+				return m
+			},
+			wantedError: errors.New(`retrieve version of environment stack "test" in application "finance": some error`),
+		},
+		"should return an error when environment template version is below v1.12.0": {
+			appName: "finance",
+			envName: "test",
+			jobName: "report",
+			mockjobRunner: func(ctrl *gomock.Controller) runner {
+				return nil
+			},
+			mockEnvChecker: func(ctrl *gomock.Controller) versionCompatibilityChecker {
+				m := mocks.NewMockversionCompatibilityChecker(ctrl)
+				m.EXPECT().Version().Return("v1.11.0", nil)
+				return m
+			},
+			wantedError: errors.New(`environment template version "v1.11.0" does not support running jobs`),
 		},
 	}
 
@@ -189,10 +230,15 @@ func TestJobRun_Execute(t *testing.T) {
 
 			jobRunOpts := &jobRunOpts{
 				jobRunVars: jobRunVars{
+					appName: tc.appName,
+					envName: tc.envName,
 					jobName: tc.jobName,
 				},
 				newRunner: func() (runner, error) {
 					return tc.mockjobRunner(ctrl), nil
+				},
+				newEnvCompatibilityChecker: func() (versionCompatibilityChecker, error) {
+					return tc.mockEnvChecker(ctrl), nil
 				},
 			}
 

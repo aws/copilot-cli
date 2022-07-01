@@ -6,21 +6,22 @@ package cli
 import (
 	"fmt"
 
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/runner/jobrunner"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
 
 type jobRunVars struct {
@@ -39,7 +40,8 @@ type jobRunOpts struct {
 	targetEnv    *config.Environment
 	sessProvider *sessions.Provider
 
-	newRunner func() (runner, error)
+	newRunner                  func() (runner, error)
+	newEnvCompatibilityChecker func() (versionCompatibilityChecker, error)
 }
 
 func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
@@ -75,6 +77,17 @@ func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 			CFN:          cloudformation.New(sess),
 			StateMachine: stepfunctions.New(sess),
 		}), nil
+	}
+	opts.newEnvCompatibilityChecker = func() (versionCompatibilityChecker, error) {
+		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         opts.appName,
+			Env:         opts.envName,
+			ConfigStore: opts.configStore,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("new environment compatibility checker: %v", err)
+		}
+		return envDescriber, nil
 	}
 	return opts, nil
 }
@@ -158,12 +171,13 @@ func (o *jobRunOpts) getTargetEnv() (*config.Environment, error) {
 }
 
 func (o *jobRunOpts) Execute() error {
-	// TODO(efekarakus): Validate first that the env template is at least v1.12 otherwise the EnvManagerRole won't have permission to invoke.
+	if err := o.validateEnvCompatible(); err != nil {
+		return err
+	}
 	runner, err := o.newRunner()
 	if err != nil {
 		return err
 	}
-
 	if err := runner.Run(); err != nil {
 		return fmt.Errorf("execute job %q: %w", o.jobName, err)
 	}
@@ -177,6 +191,25 @@ func (o *jobRunOpts) envSession() (*session.Session, error) {
 		return nil, err
 	}
 	return o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+}
+
+func (o *jobRunOpts) validateEnvCompatible() error {
+	envStack, err := o.newEnvCompatibilityChecker()
+	if err != nil {
+		return err
+	}
+	version, err := envStack.Version()
+	if err != nil {
+		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", o.envName, o.appName, err)
+	}
+	if semver.Compare(version, "v1.12.0") < 0 {
+		log.Errorf(`The %q environment template must be at least on v1.12.0.
+Please run %s to upgrade the template to the latest version.
+`,
+			o.envName, color.HighlightCode(fmt.Sprintf("copilot env deploy --app %s --name %s", o.appName, o.envName)))
+		return fmt.Errorf("environment template version %q does not support running jobs", version)
+	}
+	return nil
 }
 
 func buildJobRunCmd() *cobra.Command {
@@ -200,6 +233,5 @@ func buildJobRunCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.jobName, nameFlag, nameFlagShort, "", jobFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
-
 	return cmd
 }
