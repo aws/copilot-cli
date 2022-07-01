@@ -4,6 +4,7 @@
 package jobrunner
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -17,55 +18,55 @@ import (
 func TestJobRunner_Run(t *testing.T) {
 
 	testCases := map[string]struct {
-		MockExecutor func(m *mocks.MockjobExecutor)
+		MockExecutor func(m *mocks.MockStateMachineExecutor)
 
 		App string
 		Env string
 		Job string
 
-		MockStackRetriever func(m *mocks.MockStackRetriever)
+		MockCFN func(m *mocks.MockCFNStackResourceLister)
 
 		wantedError error
 	}{
 
 		"missing stack": {
-			MockExecutor: func(m *mocks.MockjobExecutor) {
+			MockExecutor: func(m *mocks.MockStateMachineExecutor) {
 				m.EXPECT().Execute("arn:aws:states:us-east-1:111111111111:stateMachine:app-env-job").Return(nil).AnyTimes()
 			},
 			App: "appname",
 			Env: "envname",
 			Job: "jobname",
-			MockStackRetriever: func(m *mocks.MockStackRetriever) {
+			MockCFN: func(m *mocks.MockCFNStackResourceLister) {
 				m.EXPECT().StackResources("appname-envname-jobname").Return(nil, fmt.Errorf("Missing Stack Resource"))
 			},
-			wantedError: fmt.Errorf("describe stack appname-envname-jobname: Missing Stack Resource"),
+			wantedError: fmt.Errorf(`describe stack "appname-envname-jobname": Missing Stack Resource`),
 		},
 
 		"missing statemachine resource": {
-			MockExecutor: func(m *mocks.MockjobExecutor) {
+			MockExecutor: func(m *mocks.MockStateMachineExecutor) {
 				m.EXPECT().Execute("arn:aws:states:us-east-1:111111111111:stateMachine:app-env-job").Return(nil).AnyTimes()
 			},
 			App: "appname",
 			Env: "envname",
 			Job: "jobname",
-			MockStackRetriever: func(m *mocks.MockStackRetriever) {
+			MockCFN: func(m *mocks.MockCFNStackResourceLister) {
 				m.EXPECT().StackResources("appname-envname-jobname").Return([]*cloudformation.StackResource{
 					{
 						ResourceType: aws.String("AWS::Lambda::Function"),
 					},
 				}, nil)
 			},
-			wantedError: fmt.Errorf("statemachine not found"),
+			wantedError: errors.New(`state machine for job "jobname" is not found in environment "envname" and application "appname"`),
 		},
 
 		"failed statemachine execution": {
-			MockExecutor: func(m *mocks.MockjobExecutor) {
+			MockExecutor: func(m *mocks.MockStateMachineExecutor) {
 				m.EXPECT().Execute("arn:aws:states:us-east-1:111111111111:stateMachine:app-env-job").Return(fmt.Errorf("ExecutionLimitExceeded"))
 			},
 			App: "appname",
 			Env: "envname",
 			Job: "jobname",
-			MockStackRetriever: func(m *mocks.MockStackRetriever) {
+			MockCFN: func(m *mocks.MockCFNStackResourceLister) {
 				m.EXPECT().StackResources("appname-envname-jobname").Return([]*cloudformation.StackResource{
 					{
 						ResourceType:       aws.String("AWS::StepFunctions::StateMachine"),
@@ -73,17 +74,17 @@ func TestJobRunner_Run(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedError: fmt.Errorf("statemachine execution: ExecutionLimitExceeded"),
+			wantedError: fmt.Errorf(`execute state machine "arn:aws:states:us-east-1:111111111111:stateMachine:app-env-job": ExecutionLimitExceeded`),
 		},
 
 		"run success": {
-			MockExecutor: func(m *mocks.MockjobExecutor) {
+			MockExecutor: func(m *mocks.MockStateMachineExecutor) {
 				m.EXPECT().Execute("arn:aws:states:us-east-1:111111111111:stateMachine:app-env-job").Return(nil)
 			},
 			App: "appname",
 			Env: "envname",
 			Job: "jobname",
-			MockStackRetriever: func(m *mocks.MockStackRetriever) {
+			MockCFN: func(m *mocks.MockCFNStackResourceLister) {
 				m.EXPECT().StackResources("appname-envname-jobname").Return([]*cloudformation.StackResource{
 					{
 						ResourceType:       aws.String("AWS::StepFunctions::StateMachine"),
@@ -100,18 +101,18 @@ func TestJobRunner_Run(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			MockStackRetriever := mocks.NewMockStackRetriever(ctrl)
-			MockJobExecutor := mocks.NewMockjobExecutor(ctrl)
+			cfn := mocks.NewMockCFNStackResourceLister(ctrl)
+			sfn := mocks.NewMockStateMachineExecutor(ctrl)
 
-			tc.MockStackRetriever(MockStackRetriever)
-			tc.MockExecutor(MockJobExecutor)
+			tc.MockCFN(cfn)
+			tc.MockExecutor(sfn)
 
 			jobRunner := JobRunner{
-				executor:       MockJobExecutor,
-				app:            tc.App,
-				env:            tc.Env,
-				job:            tc.Job,
-				stackRetriever: MockStackRetriever,
+				stateMachine: sfn,
+				app:          tc.App,
+				env:          tc.Env,
+				job:          tc.Job,
+				cfn:          cfn,
 			}
 
 			err := jobRunner.Run()
