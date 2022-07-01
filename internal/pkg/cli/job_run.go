@@ -6,12 +6,17 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/stepfunctions"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/runner/jobrunner"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
@@ -27,15 +32,14 @@ type jobRunVars struct {
 type jobRunOpts struct {
 	jobRunVars
 
-	configStore    store
-	sel            deploySelector
-	configSelector configSelector
+	configStore store
+	sel         configSelector
 
 	// cached variables.
-	targetEnv *config.Environment
+	targetEnv    *config.Environment
+	sessProvider *sessions.Provider
 
-	runner     runner
-	initRunner func()
+	newRunner func() (runner, error)
 }
 
 func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
@@ -47,27 +51,30 @@ func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 	}
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
-	deployStore, err := deploy.NewStore(sessProvider, configStore)
-	if err != nil {
-		return nil, fmt.Errorf("connect to deploy store: %w", err)
-	}
-
 	prompter := prompt.New()
 
 	opts := &jobRunOpts{
-		jobRunVars:     vars,
-		configStore:    configStore,
-		sel:            selector.NewDeploySelect(prompter, configStore, deployStore),
-		configSelector: selector.NewConfigSelector(prompter, configStore),
-	}
+		jobRunVars: vars,
 
-	opts.initRunner = func() {
-		opts.runner = jobrunner.New(&jobrunner.JobRunnerConfig{
-			Sess: defaultSess,
-			Env:  opts.envName,
-			App:  opts.appName,
-			Job:  opts.jobName,
-		})
+		configStore: configStore,
+		sel:         selector.NewConfigSelector(prompter, configStore),
+
+		sessProvider: sessProvider,
+	}
+	opts.newRunner = func() (runner, error) {
+		sess, err := opts.envSession()
+		if err != nil {
+			return nil, err
+		}
+
+		return jobrunner.New(&jobrunner.Config{
+			App: opts.appName,
+			Env: opts.envName,
+			Job: opts.jobName,
+
+			CFN:          cloudformation.New(sess),
+			StateMachine: stepfunctions.New(sess),
+		}), nil
 	}
 	return opts, nil
 }
@@ -98,7 +105,6 @@ func (o *jobRunOpts) validateOrAskApp() error {
 		_, err := o.configStore.GetApplication(o.appName)
 		return err
 	}
-
 	app, err := o.sel.Application(jobAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
@@ -115,7 +121,7 @@ func (o *jobRunOpts) askJobName() error {
 		return nil
 	}
 
-	name, err := o.configSelector.Job("Select a job from your workspace", "The job you want to run", o.appName)
+	name, err := o.sel.Job("Which job would you like to invoke?", "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select job: %w", err)
 	}
@@ -131,7 +137,7 @@ func (o *jobRunOpts) askEnvName() error {
 		return nil
 	}
 
-	name, err := o.configSelector.Environment("Select an environment", "The environment to run your job in", o.appName)
+	name, err := o.sel.Environment("Which environment?", "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}
@@ -152,13 +158,24 @@ func (o *jobRunOpts) getTargetEnv() (*config.Environment, error) {
 }
 
 func (o *jobRunOpts) Execute() error {
-	o.initRunner()
-	err := o.runner.Run()
-
+	runner, err := o.newRunner()
 	if err != nil {
-		return fmt.Errorf("job execution %s: %w", o.jobName, err)
+		return err
 	}
+
+	if err := runner.Run(); err != nil {
+		return fmt.Errorf("execute job %q: %w", o.jobName, err)
+	}
+	log.Successf("Invoked job %q successfully", o.jobName)
 	return nil
+}
+
+func (o *jobRunOpts) envSession() (*session.Session, error) {
+	env, err := o.getTargetEnv()
+	if err != nil {
+		return nil, err
+	}
+	return o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 }
 
 func buildJobRunCmd() *cobra.Command {
@@ -166,10 +183,10 @@ func buildJobRunCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "Runs a job in an environment",
-		Long:  "Runs a job in an environment",
+		Short: "Invoke a job in an environment.",
+		Long:  "Invoke a job in an environment.",
 		Example: `
-		Runs a job named "report-gen" in an application named "report" to a "test" environment
+		Run a job named "report-gen" in an application named "report" within a "test" environment
 		/code $ copilot job run -a report -n report-gen -e test
 		`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
