@@ -35,12 +35,11 @@ type deployJobOpts struct {
 	ws                   wsWlDirReader
 	unmarshal            func(in []byte) (manifest.WorkloadManifest, error)
 	newInterpolator      func(app, env string) interpolator
-	cmd                  runner
+	cmd                  execRunner
 	sessProvider         *sessions.Provider
 	newJobDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
-
-	sel wsSelector
+	sel                  wsSelector
 
 	// cached variables
 	targetApp       *config.Application
