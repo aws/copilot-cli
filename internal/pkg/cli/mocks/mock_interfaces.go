@@ -3166,36 +3166,6 @@ func (mr *MockcustomResourcesUploaderMockRecorder) UploadEnvironmentCustomResour
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadEnvironmentCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadEnvironmentCustomResources), upload)
 }
 
-// UploadNetworkLoadBalancedWebServiceCustomResources mocks base method.
-func (m *MockcustomResourcesUploader) UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadNetworkLoadBalancedWebServiceCustomResources", upload)
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UploadNetworkLoadBalancedWebServiceCustomResources indicates an expected call of UploadNetworkLoadBalancedWebServiceCustomResources.
-func (mr *MockcustomResourcesUploaderMockRecorder) UploadNetworkLoadBalancedWebServiceCustomResources(upload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadNetworkLoadBalancedWebServiceCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadNetworkLoadBalancedWebServiceCustomResources), upload)
-}
-
-// UploadRequestDrivenWebServiceCustomResources mocks base method.
-func (m *MockcustomResourcesUploader) UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadRequestDrivenWebServiceCustomResources", upload)
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UploadRequestDrivenWebServiceCustomResources indicates an expected call of UploadRequestDrivenWebServiceCustomResources.
-func (mr *MockcustomResourcesUploaderMockRecorder) UploadRequestDrivenWebServiceCustomResources(upload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadRequestDrivenWebServiceCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadRequestDrivenWebServiceCustomResources), upload)
-}
-
 // MockbucketEmptier is a mock of bucketEmptier interface.
 type MockbucketEmptier struct {
 	ctrl     *gomock.Controller
@@ -3877,6 +3847,20 @@ func (m *MocktaskRunner) EXPECT() *MocktaskRunnerMockRecorder {
 	return m.recorder
 }
 
+// CheckNonZeroExitCode mocks base method.
+func (m *MocktaskRunner) CheckNonZeroExitCode(arg0 []*task.Task) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckNonZeroExitCode", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckNonZeroExitCode indicates an expected call of CheckNonZeroExitCode.
+func (mr *MocktaskRunnerMockRecorder) CheckNonZeroExitCode(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckNonZeroExitCode", reflect.TypeOf((*MocktaskRunner)(nil).CheckNonZeroExitCode), arg0)
+}
+
 // Run mocks base method.
 func (m *MocktaskRunner) Run() ([]*task.Task, error) {
 	m.ctrl.T.Helper()
@@ -3890,20 +3874,6 @@ func (m *MocktaskRunner) Run() ([]*task.Task, error) {
 func (mr *MocktaskRunnerMockRecorder) Run() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MocktaskRunner)(nil).Run))
-}
-
-// CheckNonZeroExitCode mocks base method.
-func (m *MocktaskRunner) CheckNonZeroExitCode(tasks []*task.Task) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckNonZeroExitCode", tasks)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CheckNonZeroExitCode indicates an expected call of CheckNonZeroExitCode.
-func (mr *MocktaskRunnerMockRecorder) CheckNonZeroExitCode(tasks []*task.Task) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckNonZeroExitCode", reflect.TypeOf((*MocktaskRunner)(nil).CheckNonZeroExitCode), tasks)
 }
 
 // MockdefaultClusterGetter is a mock of defaultClusterGetter interface.
@@ -5210,8 +5180,28 @@ func (mr *MockdeploySelectorMockRecorder) Application(prompt, help interface{}, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockdeploySelector)(nil).Application), varargs...)
 }
 
+// DeployedJob mocks base method.
+func (m *MockdeploySelector) DeployedJob(prompt, help, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedJob, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{prompt, help, app}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeployedJob", varargs...)
+	ret0, _ := ret[0].(*selector.DeployedJob)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployedJob indicates an expected call of DeployedJob.
+func (mr *MockdeploySelectorMockRecorder) DeployedJob(prompt, help, app interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{prompt, help, app}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedJob", reflect.TypeOf((*MockdeploySelector)(nil).DeployedJob), varargs...)
+}
+
 // DeployedService mocks base method.
-func (m *MockdeploySelector) DeployedService(prompt, help, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error) {
+func (m *MockdeploySelector) DeployedService(prompt, help, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedService, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help, app}
 	for _, a := range opts {

@@ -206,7 +206,7 @@ func TestDeploySelect_Service(t *testing.T) {
 		setupMocks func(mocks deploySelectMocks)
 		svc        string
 		env        string
-		opts       []GetDeployedServiceOpts
+		opts       []GetDeployedWorkloadOpts
 
 		wantErr error
 		wantEnv string
@@ -348,7 +348,7 @@ func TestDeploySelect_Service(t *testing.T) {
 			wantSvc: "mockSvc",
 		},
 		"filter deployed services": {
-			opts: []GetDeployedServiceOpts{
+			opts: []GetDeployedWorkloadOpts{
 				WithSvcFilter(func(svc *DeployedService) (bool, error) {
 					return svc.Env == "test1", nil
 				}),
@@ -403,7 +403,7 @@ func TestDeploySelect_Service(t *testing.T) {
 			wantSvc: "mockSvc1",
 		},
 		"filter returns error": {
-			opts: []GetDeployedServiceOpts{
+			opts: []GetDeployedWorkloadOpts{
 				WithSvcFilter(func(svc *DeployedService) (bool, error) {
 					return svc.Env == "test1", fmt.Errorf("filter error")
 				}),
@@ -477,7 +477,7 @@ func TestDeploySelect_Service(t *testing.T) {
 				},
 				deployStoreSvc: mockdeploySvc,
 			}
-			opts := append([]GetDeployedServiceOpts{WithEnv(tc.env), WithName(tc.svc)}, tc.opts...)
+			opts := append([]GetDeployedWorkloadOpts{WithEnv(tc.env), WithName(tc.svc)}, tc.opts...)
 
 			gotDeployed, err := sel.DeployedService("Select a deployed service", "Help text", testApp, opts...)
 			if tc.wantErr != nil {
