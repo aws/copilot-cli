@@ -112,6 +112,7 @@ func (o *jobRunOpts) Ask() error {
 	return nil
 }
 
+// Execute runs the "job run" command.
 func (o *jobRunOpts) Execute() error {
 	if err := o.validateEnvCompatible(); err != nil {
 		return err
