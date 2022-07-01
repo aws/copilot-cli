@@ -49,6 +49,21 @@ func (mr *MockapiMockRecorder) DescribeAvailabilityZones(input interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeAvailabilityZones", reflect.TypeOf((*Mockapi)(nil).DescribeAvailabilityZones), input)
 }
 
+// DescribeManagedPrefixLists mocks base method.
+func (m *Mockapi) DescribeManagedPrefixLists(input *ec2.DescribeManagedPrefixListsInput) (*ec2.DescribeManagedPrefixListsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeManagedPrefixLists", input)
+	ret0, _ := ret[0].(*ec2.DescribeManagedPrefixListsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeManagedPrefixLists indicates an expected call of DescribeManagedPrefixLists.
+func (mr *MockapiMockRecorder) DescribeManagedPrefixLists(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeManagedPrefixLists", reflect.TypeOf((*Mockapi)(nil).DescribeManagedPrefixLists), input)
+}
+
 // DescribeNetworkInterfaces mocks base method.
 func (m *Mockapi) DescribeNetworkInterfaces(input *ec2.DescribeNetworkInterfacesInput) (*ec2.DescribeNetworkInterfacesOutput, error) {
 	m.ctrl.T.Helper()
