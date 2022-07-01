@@ -28,6 +28,11 @@ var PipelineProviders = []string{
 	BitbucketProviderName,
 }
 
+var (
+	errUnmarshalAction   = errors.New(`unable to unmarshal "action" into string, or slice of strings`)
+	errUnmarshalResource = errors.New(`unable to unmarshal "resource" into string or slice of strings`)
+)
+
 // Provider defines a source of the artifacts
 // that will be built and deployed via a pipeline
 type Provider interface {
@@ -178,8 +183,9 @@ type Source struct {
 
 // Build defines the build project to build and test image.
 type Build struct {
-	Image     string `yaml:"image"`
-	Buildspec string `yaml:"buildspec,omitempty"`
+	Image            string            `yaml:"image"`
+	Buildspec        string            `yaml:"buildspec,omitempty"`
+	AdditionalPolicy *AdditionalPolicy `yaml:"additional_policy,omitempty"`
 }
 
 // PipelineStage represents a stage in the pipeline manifest
@@ -199,6 +205,57 @@ type Deployment struct {
 	TemplatePath   string   `yaml:"template_path"`
 	TemplateConfig string   `yaml:"template_config"`
 	DependsOn      []string `yaml:"depends_on"`
+}
+
+type AdditionalPolicy struct {
+	PolicyDocument *PolicyDocument `yaml:"document,omitempty"`
+}
+
+type PolicyDocument struct {
+	Version   string      `yaml:"version,omitempty"`
+	Statement []Statement `yaml:"statement,omitempty"`
+}
+
+type Statement struct {
+	Effect   string           `yaml:"effect,omitempty"`
+	Action   ActionOverride   `yaml:"action,omitempty"` // can remove * if nothing works as expected
+	Resource ResourceOverride `yaml:"resource,omitempty"`
+}
+
+// ActionOverride is a custom type which supports unmarshaling "action" field of the
+// policy document in the yaml which can either be of type string or type slice of string.
+type ActionOverride stringSliceOrString
+
+// ResourceOverride is a custom type which supports unmarshaling "resource" field of the
+// policy document in the yaml which can either be of type string or type slice of string.
+type ResourceOverride stringSliceOrString
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the ActionOverride
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (a *ActionOverride) UnmarshalYAML(unmarshal *yaml.Node) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(a), unmarshal); err != nil {
+		return errUnmarshalAction
+	}
+	return nil
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the ResourceOverride
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v2) interface.
+func (r *ResourceOverride) UnmarshalYAML(unmarshal *yaml.Node) error {
+	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(r), unmarshal); err != nil {
+		return errUnmarshalResource
+	}
+	return nil
+}
+
+func (a *ActionOverride) isEmpty() bool {
+	return a.String == nil && len(a.StringSlice) == 0
+}
+
+func (r *ResourceOverride) isEmpty() bool {
+	return r.String == nil && len(r.StringSlice) == 0
 }
 
 // NewPipeline returns a pipeline manifest object.

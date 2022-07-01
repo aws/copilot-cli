@@ -80,9 +80,10 @@ type CreatePipelineInput struct {
 // to build and test Docker image.
 type Build struct {
 	// The URI that identifies the Docker image to use for this build project.
-	Image           string
-	EnvironmentType string
-	BuildspecPath   string
+	Image            string
+	EnvironmentType  string
+	BuildspecPath    string
+	AdditionalPolicy *manifest.AdditionalPolicy
 }
 
 // Init populates the fields in Build by parsing the manifest file's "build" section.
@@ -98,6 +99,9 @@ func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) {
 	}
 	if strings.Contains(image, "aarch64") {
 		environmentType = "ARM_CONTAINER"
+	}
+	if mfBuild != nil && mfBuild.AdditionalPolicy != nil {
+		b.AdditionalPolicy = mfBuild.AdditionalPolicy
 	}
 	b.Image = image
 	b.EnvironmentType = environmentType

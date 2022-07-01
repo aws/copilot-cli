@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -313,6 +314,112 @@ stages:
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.Equal(t, tc.expectedManifest, m)
+			}
+		})
+	}
+}
+
+func TestActionOverrides_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inAction []byte
+
+		wantedStruct ActionOverride
+		wantedError  error
+	}{
+		"action specified in string": {
+			inAction: []byte(`action: '*'`),
+			wantedStruct: ActionOverride{
+				String:      aws.String("*"),
+				StringSlice: nil,
+			},
+		},
+		"action specified in slice of strings": {
+			inAction: []byte(`action: 
+- get:s3
+- get:asd`),
+			wantedStruct: ActionOverride{
+				String:      nil,
+				StringSlice: []string{"get:s3", "get:asd"},
+			},
+		},
+		"Error if action is unmarshalable": {
+			inAction: []byte(`action: {"*", "get:s3*"}`),
+			wantedStruct: ActionOverride{
+				String:      nil,
+				StringSlice: nil,
+			},
+			wantedError: errUnmarshalAction,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			e := Statement{
+				Action: ActionOverride{
+					String: aws.String("wrong"),
+				},
+			}
+
+			err := yaml.Unmarshal(tc.inAction, &e)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedStruct.StringSlice, e.Action.StringSlice)
+				require.Equal(t, tc.wantedStruct.String, e.Action.String)
+			}
+		})
+	}
+}
+
+func TestSourceOverrides_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inReSource []byte
+
+		wantedStruct ResourceOverride
+		wantedError  error
+	}{
+		"resource specified in string": {
+			inReSource: []byte(`resource: '*'`),
+			wantedStruct: ResourceOverride{
+				String:      aws.String("*"),
+				StringSlice: nil,
+			},
+		},
+		"resource specified in slice of strings": {
+			inReSource: []byte(`resource: 
+- get:s3
+- get:asd`),
+			wantedStruct: ResourceOverride{
+				String:      nil,
+				StringSlice: []string{"get:s3", "get:asd"},
+			},
+		},
+		"Error if resource is unmarshalable": {
+			inReSource: []byte(`resource: {"*", "get:s3*"}`),
+			wantedStruct: ResourceOverride{
+				String:      nil,
+				StringSlice: nil,
+			},
+			wantedError: errUnmarshalResource,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			e := Statement{
+				Resource: ResourceOverride{
+					String: aws.String("wrong"),
+				},
+			}
+
+			err := yaml.Unmarshal(tc.inReSource, &e)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedStruct.StringSlice, e.Resource.StringSlice)
+				require.Equal(t, tc.wantedStruct.String, e.Resource.String)
 			}
 		})
 	}
