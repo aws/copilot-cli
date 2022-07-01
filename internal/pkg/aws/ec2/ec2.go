@@ -439,8 +439,8 @@ func (idx *routeTableIndex) IsPublicSubnet(subnetID string) bool {
 	return idx.mainTable.HasIGW()
 }
 
-// GetManagedPrefixListId returns the PrefixListId of a prefix list queried by name.
-func (c *EC2) GetManagedPrefixListId(prefixListName string) (*string, error) {
+// ManagedPrefixListId returns the PrefixListId of a prefix list queried by name.
+func (c *EC2) ManagedPrefixListId(prefixListName string) (*string, error) {
 	prefixListOutput, err := c.client.DescribeManagedPrefixLists(&ec2.DescribeManagedPrefixListsInput{
 		Filters: []*ec2.Filter{
 			{
@@ -454,8 +454,16 @@ func (c *EC2) GetManagedPrefixListId(prefixListName string) (*string, error) {
 		return nil, fmt.Errorf("query returned error: %w", err)
 	}
 
-	if len(prefixListOutput.PrefixLists) != 1 {
-		return nil, fmt.Errorf("query `%s` did not return one prefix list", prefixListName)
+	if len(prefixListOutput.PrefixLists) == 0 {
+		return nil, fmt.Errorf("cannot find any prefix list with name: %s", prefixListName)
+	}
+
+	if len(prefixListOutput.PrefixLists) > 1 {
+		var ids []*string
+		for _, v := range prefixListOutput.PrefixLists {
+			ids = append(ids, v.PrefixListId)
+		}
+		return nil, fmt.Errorf("found more than one prefix list with the name %s: %v", prefixListName, ids)
 	}
 
 	return prefixListOutput.PrefixLists[0].PrefixListId, nil

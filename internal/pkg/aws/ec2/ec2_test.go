@@ -262,8 +262,9 @@ func TestEC2_GetManagedPrefixListId(t *testing.T) {
 	testCases := map[string]struct {
 		mockEC2Client func(m *mocks.Mockapi)
 
-		wantedError error
-		wantedId    *string
+		wantedError          error
+		wantedErrorMsgPrefix string
+		wantedId             *string
 	}{
 		"query returns error": {
 			mockEC2Client: func(m *mocks.Mockapi) {
@@ -280,7 +281,7 @@ func TestEC2_GetManagedPrefixListId(t *testing.T) {
 					PrefixLists: []*ec2.ManagedPrefixList{},
 				}, nil)
 			},
-			wantedError: fmt.Errorf("query `%s` did not return one prefix list", mockPrefixListName),
+			wantedError: fmt.Errorf("cannot find any prefix list with name: %s", mockPrefixListName),
 		},
 		"query returns too many prefix list ids": {
 			mockEC2Client: func(m *mocks.Mockapi) {
@@ -298,7 +299,7 @@ func TestEC2_GetManagedPrefixListId(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedError: fmt.Errorf("query `%s` did not return one prefix list", mockPrefixListName),
+			wantedErrorMsgPrefix: `found more than one prefix list with the name `,
 		},
 		"query returns succesfully": {
 			mockEC2Client: func(m *mocks.Mockapi) {
@@ -328,9 +329,13 @@ func TestEC2_GetManagedPrefixListId(t *testing.T) {
 				client: mockAPI,
 			}
 
-			id, err := ec2Client.GetManagedPrefixListId(mockPrefixListName)
+			id, err := ec2Client.ManagedPrefixListId(mockPrefixListName)
 			if tc.wantedError != nil {
 				require.EqualError(t, tc.wantedError, err.Error())
+			} else if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.wantedErrorMsgPrefix)
+				return
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedId, id, "ids must be equal")
