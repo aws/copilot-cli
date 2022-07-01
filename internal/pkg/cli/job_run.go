@@ -112,8 +112,22 @@ func (o *jobRunOpts) Ask() error {
 	return nil
 }
 
-func (o *jobRunOpts) validateOrAskApp() error {
+func (o *jobRunOpts) Execute() error {
+	if err := o.validateEnvCompatible(); err != nil {
+		return err
+	}
+	runner, err := o.newRunner()
+	if err != nil {
+		return err
+	}
+	if err := runner.Run(); err != nil {
+		return fmt.Errorf("execute job %q: %w", o.jobName, err)
+	}
+	log.Successf("Invoked job %q successfully\n", o.jobName)
+	return nil
+}
 
+func (o *jobRunOpts) validateOrAskApp() error {
 	if o.appName != "" {
 		_, err := o.configStore.GetApplication(o.appName)
 		return err
@@ -168,21 +182,6 @@ func (o *jobRunOpts) getTargetEnv() (*config.Environment, error) {
 	}
 	o.targetEnv = env
 	return o.targetEnv, nil
-}
-
-func (o *jobRunOpts) Execute() error {
-	if err := o.validateEnvCompatible(); err != nil {
-		return err
-	}
-	runner, err := o.newRunner()
-	if err != nil {
-		return err
-	}
-	if err := runner.Run(); err != nil {
-		return fmt.Errorf("execute job %q: %w", o.jobName, err)
-	}
-	log.Successf("Invoked job %q successfully\n", o.jobName)
-	return nil
 }
 
 func (o *jobRunOpts) envSession() (*session.Session, error) {
