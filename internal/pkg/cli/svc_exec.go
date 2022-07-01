@@ -55,7 +55,7 @@ type svcExecOpts struct {
 	newCommandExecutor func(*session.Session) ecsCommandExecutor
 	ssmPluginManager   ssmPluginManager
 	prompter           prompter
-	sessProvider       *sessions.Provider
+	sessProvider       sessionProvider
 	// Override in unit test
 	randInt func(int) int
 }

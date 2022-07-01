@@ -462,6 +462,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		inForceDeploy     bool
 		inDisableRollback bool
 
+		// Cached variables.
+		inEnvironmentConfig func() *manifest.Environment
+
 		mock func(m *deployMocks)
 
 		wantErr error
@@ -476,9 +479,11 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
-				CustomConfig: &config.CustomizeEnv{
-					ImportCertARNs: mockCertARNs,
-				},
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				return envConfig
 			},
 			inApp: &config.Application{
 				Name: mockAppName,
@@ -492,9 +497,11 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
-				CustomConfig: &config.CustomizeEnv{
-					ImportCertARNs: mockCertARNs,
-				},
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				return envConfig
 			},
 			inAliases: manifest.Alias{
 				AdvancedAliases: mockMultiAliases,
@@ -565,9 +572,11 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
-				CustomConfig: &config.CustomizeEnv{
-					ImportCertARNs: mockCertARNs,
-				},
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				return envConfig
 			},
 			inApp: &config.Application{
 				Name: mockAppName,
@@ -798,9 +807,11 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
-				CustomConfig: &config.CustomizeEnv{
-					ImportCertARNs: mockCertARNs,
-				},
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				return envConfig
 			},
 			inApp: &config.Application{
 				Name:   mockAppName,
@@ -850,16 +861,22 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			}
 			tc.mock(m)
 
+			if tc.inEnvironmentConfig == nil {
+				tc.inEnvironmentConfig = func() *manifest.Environment {
+					return &manifest.Environment{}
+				}
+			}
 			deployer := lbWebSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
-						name:           mockName,
-						app:            tc.inApp,
-						env:            tc.inEnvironment,
-						resources:      mockResources,
-						deployer:       m.mockServiceDeployer,
-						endpointGetter: m.mockEndpointGetter,
-						spinner:        m.mockSpinner,
+						name:              mockName,
+						app:               tc.inApp,
+						env:               tc.inEnvironment,
+						environmentConfig: tc.inEnvironmentConfig(),
+						resources:         mockResources,
+						deployer:          m.mockServiceDeployer,
+						endpointGetter:    m.mockEndpointGetter,
+						spinner:           m.mockSpinner,
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return m.mockServiceForceUpdater
@@ -1276,9 +1293,13 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 	)
 
 	tests := map[string]struct {
-		App        *config.Application
-		Env        *config.Environment
-		Manifest   *manifest.BackendService
+		App      *config.Application
+		Env      *config.Environment
+		Manifest *manifest.BackendService
+
+		// Cached variables.
+		inEnvironmentConfig func() *manifest.Environment
+
 		setupMocks func(m *deployMocks)
 
 		expectedErr string
@@ -1324,9 +1345,11 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Env: &config.Environment{
 				Name: mockEnvName,
-				CustomConfig: &config.CustomizeEnv{
-					ImportCertARNs: []string{"mockCertARN"},
-				},
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Private.Certificates = []string{"mockCertARN"}
+				return envConfig
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
@@ -1351,9 +1374,11 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Env: &config.Environment{
 				Name: mockEnvName,
-				CustomConfig: &config.CustomizeEnv{
-					ImportCertARNs: []string{"mockCertARN"},
-				},
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Private.Certificates = []string{"mockCertARN"}
+				return envConfig
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
@@ -1377,9 +1402,11 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			},
 			Env: &config.Environment{
 				Name: mockEnvName,
-				CustomConfig: &config.CustomizeEnv{
-					ImportCertARNs: []string{"mockCertARN"},
-				},
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Private.Certificates = []string{"mockCertARN"}
+				return envConfig
 			},
 			Manifest: &manifest.BackendService{
 				BackendServiceConfig: manifest.BackendServiceConfig{
@@ -1422,14 +1449,19 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			if tc.setupMocks != nil {
 				tc.setupMocks(m)
 			}
-
+			if tc.inEnvironmentConfig == nil {
+				tc.inEnvironmentConfig = func() *manifest.Environment {
+					return &manifest.Environment{}
+				}
+			}
 			deployer := &backendSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
-						name:           mockSvcName,
-						app:            tc.App,
-						env:            tc.Env,
-						endpointGetter: m.mockEndpointGetter,
+						name:              mockSvcName,
+						app:               tc.App,
+						env:               tc.Env,
+						endpointGetter:    m.mockEndpointGetter,
+						environmentConfig: tc.inEnvironmentConfig(),
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return nil
