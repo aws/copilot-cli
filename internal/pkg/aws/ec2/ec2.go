@@ -451,20 +451,21 @@ func (c *EC2) ManagedPrefixListId(prefixListName string) (*string, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("query returned error: %w", err)
+		return nil, fmt.Errorf("describe managed prefix list with name %s: %w", prefixListName, err)
 	}
 
-	if len(prefixListOutput.PrefixLists) == 0 {
+	var ids []*string
+	for _, v := range prefixListOutput.PrefixLists {
+		ids = append(ids, v.PrefixListId)
+	}
+
+	if len(ids) == 0 {
 		return nil, fmt.Errorf("cannot find any prefix list with name: %s", prefixListName)
 	}
 
-	if len(prefixListOutput.PrefixLists) > 1 {
-		var ids []*string
-		for _, v := range prefixListOutput.PrefixLists {
-			ids = append(ids, v.PrefixListId)
-		}
+	if len(ids) > 1 {
 		return nil, fmt.Errorf("found more than one prefix list with the name %s: %v", prefixListName, ids)
 	}
 
-	return prefixListOutput.PrefixLists[0].PrefixListId, nil
+	return ids[0], nil
 }

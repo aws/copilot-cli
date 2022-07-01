@@ -270,7 +270,7 @@ func TestEC2_GetManagedPrefixListId(t *testing.T) {
 			mockEC2Client: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeManagedPrefixLists(gomock.Any()).Return(nil, mockError)
 			},
-			wantedError: fmt.Errorf("query returned error: some error"),
+			wantedError: fmt.Errorf("describe managed prefix list with name %s: %w", mockPrefixListName, mockError),
 		},
 		"query returns no prefix list ids": {
 			mockEC2Client: func(m *mocks.Mockapi) {
