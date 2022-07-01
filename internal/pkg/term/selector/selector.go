@@ -492,7 +492,7 @@ type DeployedJob struct {
 }
 
 func (j *DeployedJob) String() string {
-	return fmt.Sprintf("#{j.Job} (#{j.Env}")
+	return fmt.Sprintf("%s (%s)", j.Job, j.Env)
 }
 
 // Task has the user select a task. Callers can provide an environment, an app, or a "use default cluster" option
