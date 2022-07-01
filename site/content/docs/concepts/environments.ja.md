@@ -36,9 +36,11 @@ $ copilot env init
 
 ### ロードバランサーと DNS
 
-"Load Balanced Web Service" タイプの Service を作ると、Copilot は Application Load Balancer を作成します。同一 Environment 内にデプロイされたすべての "Load Balanced Web Service" タイプの Service は、Service 固有のリスナーを作成してこの Application Load Balancer を共有します。ロードバランサーは VPC 内の各 Service と通信できるようにセットアップされます。
+Load Balanced Web Service または、Manifest に `http` フィールドを記載した Backend Service を作ると、Copilot は Environment 内の負荷分散する Service で共有される Application Load Balancer を作成します。Load Balanced Web Service の ALB は、インターネットからアクセス可能です。それに対して、Backend Service の ALB は内部向けです。Load Balancer は VPC 内の他の Copilot サービスを通信可能です。
 
 所有するドメイン名を Route 53 に登録するよう、Application 作成時にオプションとして設定できます。ドメイン名の利用が設定されている場合、Copilot は各 Environment の作成時に `environment-name.app-name.your-domain.com` のような形でサブドメインを登録し、ACM を通して発行した証明書を Application Load Balancer に設定します。これにより Service が HTTPS を利用できるようになります。
+
+Manifest で [`http`](../manifest/backend-service.ja.md#http)フィールドが設定された Backend Service が Enviroment 内にデプロイされる場合、内部 ALB が作成されます。HTTPS のエンドポイントを利用する場合は、`copilot env init` を実行する際に、[`--import-cert-arns`](../commands/env-init.ja.md#what-are-the-flags) フラグを使用してください。そして、 プライベートサブネットのみの VPC をインポートします。内部 ALB に関する詳細は[こちら](../developing/internal-albs.ja.md)を確認してください。
 
 ## Environment のカスタマイズ
 
