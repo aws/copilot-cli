@@ -299,6 +299,9 @@ func fmtStringMapToString(m map[string]string) (string, error) {
 
 	// Then for shell escaping, wrap the entire argument in single quotes
 	// and escape any internal single quotes.
-	final = strings.ReplaceAll(final, `'`, `'\''`)
-	return `'` + final + `'`, nil
+	return shellQuote(final), nil
+}
+
+func shellQuote(s string) string {
+	return `'` + strings.ReplaceAll(s, `'`, `'\''`) + `'`
 }
