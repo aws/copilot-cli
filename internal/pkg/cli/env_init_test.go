@@ -37,6 +37,7 @@ type initEnvMocks struct {
 	ec2Client    *mocks.Mockec2Client
 	selApp       *mocks.MockappSelector
 	store        *mocks.Mockstore
+	wsAppName    string
 }
 
 func TestInitEnvOpts_Validate(t *testing.T) {
@@ -59,35 +60,63 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 		inSecretAccessKey string
 		inSessionToken    string
 
-		setupMocks func(m initEnvMocks)
+		setupMocks func(m *initEnvMocks)
 
 		wantedErrMsg string
 	}{
 		"valid environment creation": {
 			inEnvName: "test-pdx",
 			inAppName: "phonetool",
-			setupMocks: func(m initEnvMocks) {
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
 				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
+		},
+		"fail if command not run under a workspace": {
+			wantedErrMsg: "could not find an application attached to this workspace, please run `app init` first",
+		},
+		"fail if using different app name from the workspace": {
+			inAppName: "demo",
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+			},
+			wantedErrMsg: "cannot specify app demo because the workspace is already registered with app phonetool",
+		},
+		"fail if cannot validate application": {
+			inAppName: "phonetool",
+
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, errors.New("some error"))
+			},
+			wantedErrMsg: "get application phonetool configuration: some error",
 		},
 		"invalid environment name": {
 			inEnvName: "123env",
 			inAppName: "phonetool",
 
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+			},
 			wantedErrMsg: fmt.Sprintf("environment name 123env is invalid: %s", errValueBadFormat),
 		},
 		"should error if environment already exists": {
 			inEnvName: "test-pdx",
 			inAppName: "phonetool",
 
-			setupMocks: func(m initEnvMocks) {
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
 				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, nil)
 			},
 			wantedErrMsg: "environment test-pdx already exists",
 		},
 		"cannot specify both vpc resources importing flags and configuring flags": {
-			inEnvName:     "test-pdx",
-			inAppName:     "phonetool",
+			inEnvName: "test-pdx",
+			inAppName: "phonetool",
+
 			inPublicCIDRs: []string{"mockCIDR"},
 			inPublicIDs:   []string{"mockID", "anotherMockID"},
 			inVPCCIDR: net.IPNet{
@@ -96,7 +125,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			},
 			inVPCID: "mockID",
 
-			setupMocks: func(m initEnvMocks) {
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
 				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 
@@ -105,9 +136,12 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 		"cannot import or configure resources if use default flag is set": {
 			inEnvName: "test-pdx",
 			inAppName: "phonetool",
+
 			inDefault: true,
 			inVPCID:   "mockID",
-			setupMocks: func(m initEnvMocks) {
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
 				m.store.EXPECT().GetEnvironment("phonetool", "test-pdx").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 			wantedErrMsg: fmt.Sprintf("cannot import or configure vpc if --%s is set", defaultConfigFlag),
@@ -117,7 +151,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:     "test",
 			inProfileName: "default",
 			inAccessKeyID: "AKIAIOSFODNN7EXAMPLE",
-			setupMocks: func(m initEnvMocks) {
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
 				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 			wantedErrMsg: "cannot specify both --profile and --aws-access-key-id",
@@ -127,7 +163,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:         "test",
 			inProfileName:     "default",
 			inSecretAccessKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-			setupMocks: func(m initEnvMocks) {
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
 				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 			wantedErrMsg: "cannot specify both --profile and --aws-secret-access-key",
@@ -137,7 +175,9 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inEnvName:      "test",
 			inProfileName:  "default",
 			inSessionToken: "verylongtoken",
-			setupMocks: func(m initEnvMocks) {
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
 				m.store.EXPECT().GetEnvironment("phonetool", "test").Return(nil, &config.ErrNoSuchEnvironment{})
 			},
 			wantedErrMsg: "cannot specify both --profile and --aws-session-token",
@@ -146,51 +186,81 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 			inVPCID:      "mockID",
 			inPublicIDs:  []string{"mockID", "anotherMockID"},
 			inPrivateIDs: []string{"mockID"},
-
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+			},
 			wantedErrMsg: "at least two private subnets must be imported",
 		},
 		"should err if fewer than two availability zones are provided": {
 			inAZs: []string{"us-east-1a"},
-
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+			},
 			wantedErrMsg: "at least two availability zones must be provided to enable Load Balancing",
 		},
 		"invalid VPC resource import (no VPC, 1 public, 2 private)": {
 			inPublicIDs:  []string{"mockID"},
 			inPrivateIDs: []string{"mockID", "anotherMockID"},
-
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+			},
 			wantedErrMsg: "at least two public subnets must be imported to enable Load Balancing",
 		},
 		"valid VPC resource import (0 public, 3 private)": {
 			inVPCID:      "mockID",
 			inPublicIDs:  []string{},
 			inPrivateIDs: []string{"mockID", "anotherMockID", "yetAnotherMockID"},
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+			},
 		},
 		"valid VPC resource import (3 public, 2 private)": {
 			inVPCID:      "mockID",
 			inPublicIDs:  []string{"mockID", "anotherMockID", "yetAnotherMockID"},
 			inPrivateIDs: []string{"mockID", "anotherMockID"},
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+			},
 		},
 		"cannot specify internal ALB subnet placement with default config": {
 			inDefault:            true,
 			inInternalALBSubnets: []string{"mockSubnet", "anotherMockSubnet"},
-
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+			},
 			wantedErrMsg: "subnets 'mockSubnet, anotherMockSubnet' specified for internal ALB placement, but those subnets are not imported",
 		},
 		"cannot specify internal ALB subnet placement with adjusted VPC resources": {
 			inPublicCIDRs:        []string{"mockCIDR"},
 			inInternalALBSubnets: []string{"mockSubnet", "anotherMockSubnet"},
-
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+			},
 			wantedErrMsg: "subnets 'mockSubnet, anotherMockSubnet' specified for internal ALB placement, but those subnets are not imported",
 		},
 		"invalid specification of internal ALB subnet placement": {
 			inPrivateIDs:         []string{"mockID", "mockSubnet", "anotherMockSubnet"},
 			inInternalALBSubnets: []string{"mockSubnet", "notMockSubnet"},
-
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+			},
 			wantedErrMsg: "subnets 'mockSubnet, notMockSubnet' were designated for ALB placement, but they were not all imported",
 		},
 		"valid specification of internal ALB subnet placement": {
 			inPrivateIDs:         []string{"mockID", "mockSubnet", "anotherMockSubnet"},
 			inInternalALBSubnets: []string{"mockSubnet", "anotherMockSubnet"},
+			setupMocks: func(m *initEnvMocks) {
+				m.wsAppName = "phonetool"
+				m.store.EXPECT().GetApplication("phonetool").Return(nil, nil)
+			},
 		},
 	}
 
@@ -198,7 +268,7 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			m := initEnvMocks{
+			m := &initEnvMocks{
 				store: mocks.NewMockstore(ctrl),
 			}
 			if tc.setupMocks != nil {
@@ -229,7 +299,8 @@ func TestInitEnvOpts_Validate(t *testing.T) {
 						SessionToken:    tc.inSessionToken,
 					},
 				},
-				store: m.store,
+				store:     m.store,
+				wsAppName: m.wsAppName,
 			}
 
 			// WHEN
@@ -288,36 +359,6 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 
 		wantedError error
 	}{
-		"should prompt for app if currently not under a workspace and none is specified": {
-			inAppName: "",
-			inEnv:     mockEnv,
-			inProfile: mockProfile,
-			inDefault: true,
-
-			setupMocks: func(m initEnvMocks) {
-				m.selApp.EXPECT().
-					Application(envInitAppNamePrompt, envInitAppNameHelpPrompt).
-					Return(mockApp, nil)
-				m.sessProvider.EXPECT().FromProfile(mockProfile).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("us-west-2"),
-					},
-				}, nil)
-			},
-
-			wantedError: nil,
-		},
-		"fail to get app name": {
-			inAppName: "",
-
-			setupMocks: func(m initEnvMocks) {
-				m.selApp.EXPECT().
-					Application(envInitAppNamePrompt, envInitAppNameHelpPrompt).
-					Return("", mockErr)
-			},
-
-			wantedError: fmt.Errorf("ask for application: some error"),
-		},
 		"fail to get env name": {
 			inAppName: mockApp,
 			setupMocks: func(m initEnvMocks) {

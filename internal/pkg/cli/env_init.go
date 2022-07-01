@@ -171,6 +171,9 @@ type initEnvOpts struct {
 	uploader     customResourcesUploader
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
+
+	// Cached variables.
+	wsAppName string
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
@@ -210,11 +213,18 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			}
 			return s3.New(sess), nil
 		},
+
+		wsAppName: tryReadingAppName(),
 	}, nil
 }
 
 // Validate returns an error if the values passed by flags are invalid.
 func (o *initEnvOpts) Validate() error {
+	if err := validateWorkspaceApp(o.wsAppName, o.appName, o.store); err != nil {
+		return err
+	}
+	o.appName = o.wsAppName
+
 	if o.name != "" {
 		if err := validateEnvironmentName(o.name); err != nil {
 			return err
@@ -232,9 +242,6 @@ func (o *initEnvOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *initEnvOpts) Ask() error {
-	if err := o.askAppName(); err != nil {
-		return err
-	}
 	if err := o.askEnvName(); err != nil {
 		return err
 	}
@@ -369,19 +376,6 @@ For default config without subnet placement specification, Copilot will place th
 			return errors.New("at least two availability zones must be provided to enable Load Balancing")
 		}
 	}
-	return nil
-}
-
-func (o *initEnvOpts) askAppName() error {
-	if o.appName != "" {
-		return nil
-	}
-
-	app, err := o.selApp.Application(envInitAppNamePrompt, envInitAppNameHelpPrompt)
-	if err != nil {
-		return fmt.Errorf("ask for application: %w", err)
-	}
-	o.appName = app
 	return nil
 }
 
