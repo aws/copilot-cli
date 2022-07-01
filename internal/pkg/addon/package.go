@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
@@ -23,23 +24,27 @@ type uploader interface {
 	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
 }
 
-type resource struct {
-	Type       string    `yaml:"Type"`
-	Properties yaml.Node `yaml:"Properties"`
+type transformInfo struct {
+	Property           string
+	BucketNameProperty string
+	ObjectKeyProperty  string
+
+	ForceZip bool
 }
 
-type s3BucketData struct {
-	Bucket string `yaml:"S3Bucket"`
-	Key    string `yaml:"S3Key"`
-}
-
-func (s s3BucketData) IsZero() bool {
-	return s.Bucket == "" && s.Key == ""
+func transformInfoFor() map[string]transformInfo {
+	return map[string]transformInfo{
+		"AWS::Lambda::Function": {
+			Property:           "Code",
+			ForceZip:           true,
+			BucketNameProperty: "S3Bucket",
+			ObjectKeyProperty:  "S3Key",
+		},
+	}
 }
 
 // TODO a flag to not do this on svc package
 func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) {
-	// fmt.Printf("before resources:\n%s\n", nodeString(tmpl.Resources))
 	resources := mappingNode(&tmpl.Resources)
 
 	for name := range resources {
@@ -54,43 +59,37 @@ func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) 
 			continue
 		}
 
-		switch typeNode.Value {
-		case "AWS::Lambda::Function":
-			if err := a.transformStringToBucketObject(propsNode, "Code"); err != nil {
-				return nil, fmt.Errorf("upload and transform %q: %w", name, err)
-			}
+		info, ok := transformInfoFor()[typeNode.Value]
+		if !ok {
+			continue
+		}
+
+		if err := a.transformProperty(propsNode, info); err != nil {
+			return nil, fmt.Errorf("transform property %s property for %s: %w", name, info.Property, err)
 		}
 	}
 
-	// fmt.Printf("after resources:\n%s\n", nodeString(tmpl.Resources))
 	return tmpl, nil
 }
 
-func (a *Addons) transformStringToBucketObject(propsNode *yaml.Node, propsKey string) error {
-	props := mappingNode(propsNode)
-	node, ok := props[propsKey]
-	if !ok {
+func (a *Addons) transformProperty(properties *yaml.Node, tr transformInfo) error {
+	props := mappingNode(properties)
+	node, ok := props[tr.Property]
+	if !ok || node.Kind != yaml.ScalarNode {
+		// only transorm if it's preset and a scalar node
 		return nil
 	}
 
-	var val *aOrB[*yamlPrimitive[string], s3BucketData]
-	if err := node.Decode(&val); err != nil {
-		return fmt.Errorf("decode: %w", err)
-	}
-	if !val.a.IsSet {
-		// no need to transform
+	if strings.HasPrefix(node.Value, "s3://") || strings.HasPrefix(node.Value, "http://") || strings.HasPrefix(node.Value, "https://") {
 		return nil
 	}
 
-	wsPath, err := a.ws.Path() // TODO set this in New() (*Addons)?
-	if err != nil {
-		return fmt.Errorf("get workspace path: %w", err)
+	assetPath := node.Value
+	if !path.IsAbs(node.Value) {
+		assetPath = path.Join(a.wsPath, node.Value)
 	}
 
-	// TODO check that val.a is a local url?
-	// TODO don't do if absolute path
-	path := path.Join(wsPath, val.a.Value)
-	url, err := a.uploadAddonAsset(path)
+	url, err := a.uploadAddonAsset(assetPath)
 	if err != nil {
 		return fmt.Errorf("upload asset: %w", err)
 	}
@@ -100,14 +99,17 @@ func (a *Addons) transformStringToBucketObject(propsNode *yaml.Node, propsKey st
 		return fmt.Errorf("parse s3 url: %w", err)
 	}
 
-	fmt.Printf("Uploaded %s as a zip to S3 at %s/%s\n", path, bucket, key)
+	fmt.Printf("Uploaded %s as a zip to S3 at %s/%s\n", assetPath, bucket, key)
 
-	val.a.IsSet = false
-	val.a.Value = ""
-	val.b.Bucket = bucket
-	val.b.Key = key
+	if len(tr.BucketNameProperty) == 0 && len(tr.ObjectKeyProperty) == 0 {
+		node.Value = url // TODO update to s3:// type URL, not HTTPS
+		return nil
+	}
 
-	return node.Encode(val)
+	return node.Encode(map[string]string{
+		tr.BucketNameProperty: bucket,
+		tr.ObjectKeyProperty:  key,
+	})
 }
 
 func (a *Addons) uploadAddonAsset(path string) (string, error) {
@@ -196,70 +198,4 @@ func zipDir(dirPath string) (zippedDirectory, error) {
 		zip:  buf,
 		hash: hex.EncodeToString(hash.Sum(nil)),
 	}, nil
-}
-
-type aOrB[A, B yaml.IsZeroer] struct {
-	a A
-	b B
-}
-
-func (a *aOrB[_, _]) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&a.a); err != nil {
-		var te *yaml.TypeError
-		if !errors.As(err, &te) {
-			return err
-		}
-	}
-
-	if !a.a.IsZero() {
-		return nil
-	}
-
-	return value.Decode(&a.b)
-}
-
-func (a *aOrB[_, _]) MarshalYAML() (interface{}, error) {
-	switch {
-	case !a.a.IsZero():
-		return a.a, nil
-	case !a.b.IsZero():
-		return a.b, nil
-	}
-	return nil, nil
-}
-
-type yamlString string
-
-func (y yamlString) IsZero() bool {
-	return len(y) == 0
-}
-
-type yamlPrimitives interface {
-	~string | ~bool | ~int | ~float64
-}
-
-type yamlPrimitive[T yamlPrimitives] struct {
-	IsSet bool
-	Value T
-}
-
-func (y *yamlPrimitive[T]) UnmarshalYAML(value *yaml.Node) error {
-	var v T
-	if err := value.Decode(&v); err != nil {
-		return err
-	}
-	y.IsSet = true
-	y.Value = v
-	return nil
-}
-
-func (y *yamlPrimitive[T]) MarshalYAML() (interface{}, error) {
-	if !y.IsSet {
-		return nil, nil
-	}
-	return y.Value, nil
-}
-
-func (y *yamlPrimitive[T]) IsZero() bool {
-	return !y.IsSet
 }

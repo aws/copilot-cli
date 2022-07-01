@@ -35,7 +35,6 @@ var (
 type workspaceReader interface {
 	ReadAddonsDir(svcName string) ([]string, error)
 	ReadAddon(svcName, fileName string) ([]byte, error)
-	Path() (string, error)
 }
 
 // Addons represents additional resources for a workload.
@@ -46,6 +45,7 @@ type Addons struct {
 	ws     workspaceReader
 
 	template string
+	wsPath   string
 	Uploader uploader
 	Bucket   string
 }
@@ -56,10 +56,15 @@ func New(wlName string) (*Addons, error) {
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
+	wsPath, err := ws.Path()
+	if err != nil {
+		return nil, fmt.Errorf("get workspace path: %w", err)
+	}
 	return &Addons{
 		wlName: wlName,
 		parser: template.New(),
 		ws:     ws,
+		wsPath: wsPath,
 	}, nil
 }
 
