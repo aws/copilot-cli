@@ -158,6 +158,7 @@ func (o *jobRunOpts) getTargetEnv() (*config.Environment, error) {
 }
 
 func (o *jobRunOpts) Execute() error {
+	// TODO(efekarakus): Validate first that the env template is at least v1.12 otherwise the EnvManagerRole won't have permission to invoke.
 	runner, err := o.newRunner()
 	if err != nil {
 		return err
@@ -166,7 +167,7 @@ func (o *jobRunOpts) Execute() error {
 	if err := runner.Run(); err != nil {
 		return fmt.Errorf("execute job %q: %w", o.jobName, err)
 	}
-	log.Successf("Invoked job %q successfully", o.jobName)
+	log.Successf("Invoked job %q successfully\n", o.jobName)
 	return nil
 }
 
