@@ -336,10 +336,10 @@ func TestActionOverrides_UnmarshalYAML(t *testing.T) {
 		"action specified in slice of strings": {
 			inAction: []byte(`action: 
 - get:s3
-- get:asd`),
+- get:ecr*`),
 			wantedStruct: ActionOverride{
 				String:      nil,
-				StringSlice: []string{"get:s3", "get:asd"},
+				StringSlice: []string{"get:s3", "get:ecr*"},
 			},
 		},
 		"Error if action is unmarshalable": {
@@ -388,15 +388,15 @@ func TestSourceOverrides_UnmarshalYAML(t *testing.T) {
 		},
 		"resource specified in slice of strings": {
 			inReSource: []byte(`resource: 
-- get:s3
-- get:asd`),
+- arn:aws:iam::12345667890:user/testUser
+- arn:aws:iam::1122334455:user/testUser1`),
 			wantedStruct: ResourceOverride{
 				String:      nil,
-				StringSlice: []string{"get:s3", "get:asd"},
+				StringSlice: []string{"arn:aws:iam::12345667890:user/testUser", "arn:aws:iam::1122334455:user/testUser1"},
 			},
 		},
 		"Error if resource is unmarshalable": {
-			inReSource: []byte(`resource: {"*", "get:s3*"}`),
+			inReSource: []byte(`resource: {"*", "arn:aws:iam::1122334455:user/testUser1"}`),
 			wantedStruct: ResourceOverride{
 				String:      nil,
 				StringSlice: nil,

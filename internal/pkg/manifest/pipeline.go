@@ -218,7 +218,7 @@ type PolicyDocument struct {
 
 type Statement struct {
 	Effect   string           `yaml:"effect,omitempty"`
-	Action   ActionOverride   `yaml:"action,omitempty"` // can remove * if nothing works as expected
+	Action   ActionOverride   `yaml:"action,omitempty"`
 	Resource ResourceOverride `yaml:"resource,omitempty"`
 }
 
