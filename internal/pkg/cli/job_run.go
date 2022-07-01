@@ -186,9 +186,8 @@ func buildJobRunCmd() *cobra.Command {
 		Short: "Invoke a job in an environment.",
 		Long:  "Invoke a job in an environment.",
 		Example: `
-		Run a job named "report-gen" in an application named "report" within a "test" environment
-		/code $ copilot job run -a report -n report-gen -e test
-		`,
+  Run a job named "report-gen" in an application named "report" within a "test" environment
+  /code $ copilot job run -a report -n report-gen -e test`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newJobRunOpts(vars)
 			if err != nil {
