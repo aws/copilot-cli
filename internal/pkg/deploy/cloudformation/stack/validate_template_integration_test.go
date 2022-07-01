@@ -32,7 +32,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 		App: &config.Application{Name: appName},
 		EnvManifest: &manifest.Environment{
 			Workload: manifest.Workload{
-				Name: &tc.envName,
+				Name: &envName,
 			},
 		},
 		Manifest: v,
