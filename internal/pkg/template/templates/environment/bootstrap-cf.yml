@@ -1,6 +1,6 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
-Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
+Description: CloudFormation environment bootstrap template with the necessary roles to create envs and workloads.
 Metadata:
   Version: v1.10.1
 
