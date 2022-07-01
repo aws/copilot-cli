@@ -37,6 +37,7 @@ type api interface {
 	DescribeNetworkInterfaces(input *ec2.DescribeNetworkInterfacesInput) (*ec2.DescribeNetworkInterfacesOutput, error)
 	DescribeRouteTables(input *ec2.DescribeRouteTablesInput) (*ec2.DescribeRouteTablesOutput, error)
 	DescribeAvailabilityZones(input *ec2.DescribeAvailabilityZonesInput) (*ec2.DescribeAvailabilityZonesOutput, error)
+	DescribeManagedPrefixLists(input *ec2.DescribeManagedPrefixListsInput) (*ec2.DescribeManagedPrefixListsOutput, error)
 }
 
 // Filter contains the name and values of a filter.
@@ -436,4 +437,26 @@ func (idx *routeTableIndex) IsPublicSubnet(subnetID string) bool {
 		return rt.HasIGW()
 	}
 	return idx.mainTable.HasIGW()
+}
+
+// GetManagedPrefixListId returns the PrefixListId of a prefix list queried by name.
+func (c *EC2) GetManagedPrefixListId(prefixListName string) (*string, error) {
+	prefixListOutput, err := c.client.DescribeManagedPrefixLists(&ec2.DescribeManagedPrefixListsInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("prefix-list-name"),
+				Values: aws.StringSlice([]string{prefixListName}),
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("query returned error: %w", err)
+	}
+
+	if len(prefixListOutput.PrefixLists) != 1 {
+		return nil, fmt.Errorf("query `%s` did not return one prefix list", prefixListName)
+	}
+
+	return prefixListOutput.PrefixLists[0].PrefixListId, nil
 }

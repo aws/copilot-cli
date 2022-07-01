@@ -245,6 +245,100 @@ func TestEC2_ListAZs(t *testing.T) {
 	}
 }
 
+func TestEC2_GetManagedPrefixListId(t *testing.T) {
+	const (
+		mockPrefixListName = "mockName"
+		mockPrefixListId   = "mockId"
+		mockNextToken      = "mockNextToken"
+	)
+	mockError := errors.New("some error")
+	mockFilter := []*ec2.Filter{
+		{
+			Name:   aws.String("prefix-list-name"),
+			Values: aws.StringSlice([]string{mockPrefixListName}),
+		},
+	}
+
+	testCases := map[string]struct {
+		mockEC2Client func(m *mocks.Mockapi)
+
+		wantedError error
+		wantedId    *string
+	}{
+		"query returns error": {
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeManagedPrefixLists(gomock.Any()).Return(nil, mockError)
+			},
+			wantedError: fmt.Errorf("query returned error: some error"),
+		},
+		"query returns no prefix list ids": {
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeManagedPrefixLists(&ec2.DescribeManagedPrefixListsInput{
+					Filters: mockFilter,
+				}).Return(&ec2.DescribeManagedPrefixListsOutput{
+					NextToken:   aws.String(mockNextToken),
+					PrefixLists: []*ec2.ManagedPrefixList{},
+				}, nil)
+			},
+			wantedError: fmt.Errorf("query `%s` did not return one prefix list", mockPrefixListName),
+		},
+		"query returns too many prefix list ids": {
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeManagedPrefixLists(&ec2.DescribeManagedPrefixListsInput{
+					Filters: mockFilter,
+				}).Return(&ec2.DescribeManagedPrefixListsOutput{
+					NextToken: aws.String(mockNextToken),
+					PrefixLists: []*ec2.ManagedPrefixList{
+						{
+							PrefixListId: aws.String(mockPrefixListId),
+						},
+						{
+							PrefixListId: aws.String(mockPrefixListId),
+						},
+					},
+				}, nil)
+			},
+			wantedError: fmt.Errorf("query `%s` did not return one prefix list", mockPrefixListName),
+		},
+		"query returns succesfully": {
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeManagedPrefixLists(&ec2.DescribeManagedPrefixListsInput{
+					Filters: mockFilter,
+				}).Return(&ec2.DescribeManagedPrefixListsOutput{
+					NextToken: aws.String(mockNextToken),
+					PrefixLists: []*ec2.ManagedPrefixList{
+						{
+							PrefixListId: aws.String(mockPrefixListId),
+						},
+					},
+				}, nil)
+			},
+			wantedId: aws.String(mockPrefixListId),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			mockAPI := mocks.NewMockapi(ctrl)
+			tc.mockEC2Client(mockAPI)
+
+			ec2Client := EC2{
+				client: mockAPI,
+			}
+
+			id, err := ec2Client.GetManagedPrefixListId(mockPrefixListName)
+			if tc.wantedError != nil {
+				require.EqualError(t, tc.wantedError, err.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedId, id, "ids must be equal")
+			}
+		})
+	}
+}
+
 func TestEC2_ListVPCSubnets(t *testing.T) {
 	const (
 		mockVPCID     = "mockVPC"
