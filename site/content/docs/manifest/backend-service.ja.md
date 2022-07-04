@@ -112,7 +112,7 @@ http:
       hosted_zone: AN0THE9H05TED20NEID
 ```
 <span class="parent-field">http.</span><a id="http-hosted-zone" href="#http-hosted-zone" class="field">`hosted_zone`</a> <span class="type">String</span>  
-既存のプライベートホストゾーンの ID。内部ロードバランサーの作成後に、 Copilot がエイリアスレコードを挿入し、エリアス名を LB の DNS 名にマッピングします。 `alias` と共に使用します。
+既存のプライベートホストゾーンの ID。内部ロードバランサーの作成後に、 Copilot がエイリアスレコードを挿入し、エイリアス名を LB の DNS 名にマッピングします。 `alias` と共に使用します。
 ```yaml
 http:
   alias: example.com

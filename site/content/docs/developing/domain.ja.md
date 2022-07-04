@@ -84,7 +84,7 @@ Route53 以外のドメインを所有している場合や、コンプライア
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
-Service の Manifestにおいて、次のどちらかを行います。
+Service の Manifest において、次のどちらかを行います。
 1. Copilot が A レコードを追加する[ホストゾーン](../manifest/lb-web-service.ja.md#http-hosted-zone)のIDを指定する
 ``` yaml
 # in copilot/{service name}/manifest.yml

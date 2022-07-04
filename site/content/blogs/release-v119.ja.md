@@ -18,7 +18,7 @@ network:
       subnets: ["SubnetID1", "SubnetID2"]
 ```
 * **ホストゾーン-Aレコード管理**:
-Service Manifest に、エリアスと共にホストゾーンの ID を記載出来る様になりました。インポートした証明書を使用する Enviroment へのデプロイ時に Copilot が A レコードを追加します。([#3608](https://github.com/aws/copilot-cli/pull/3608), [#3643](https://github.com/aws/copilot-cli/pull/3643))
+Service Manifest に、エイリアスと共にホストゾーンの ID を記載出来る様になりました。インポートした証明書を使用する Environment へのデプロイ時に Copilot が A レコードを追加します。([#3608](https://github.com/aws/copilot-cli/pull/3608), [#3643](https://github.com/aws/copilot-cli/pull/3643))
 ```yaml
 # single alias and hosted zone
 http:
@@ -53,7 +53,7 @@ http:
 
 * **バグフィックス:** 
     * Application から Service が削除された場合に、`app init --resource-tags` で適用されたタグを保持します([#3582](https://github.com/aws/copilot-cli/pull/3582))。
-    * Network Load Balancers を利用した Load Balanced Web Service のオートスケーリングフィールドを有効化する際の不具合を修正しました([#3578](https://github.com/aws/copilot-cli/pull/3578))。
+    * Network Load Balancer を利用した Load Balanced Web Service のオートスケーリングフィールドを有効化する際の不具合を修正しました([#3578](https://github.com/aws/copilot-cli/pull/3578))。
     * Fargate Windows タスクに対する `copilot svc exec` を有効にしました([#3566](https://github.com/aws/copilot-cli/pull/3566))。
 
 このリリースには互換性を破る変更はありません。
@@ -70,11 +70,11 @@ Copilot は、さまざまなタイプのマイクロサービスの作成と運
 <a id="internal-load-balancers"></a>
 ## 内部ロードバランサー
 _Contributed by [Janice Huang](https://github.com/huanjani) and [Danny Randall](https://github.com/dannyrandall)_  
-Copilot の Enviroment とワークロードを開始する際にいくつかの設定し、[内部ロードバランサー](https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/classic/elb-internal-load-balancers.html)を作成することが出来る様になりました。内部ロードバランサは、プライベート IP アドレスのみを利用します。
+Copilot の Environment とワークロードを開始する際にいくつかの設定し、[内部ロードバランサー](https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/classic/elb-internal-load-balancers.html)を作成することが出来る様になりました。内部ロードバランサーは、プライベート IP アドレスのみを利用します。
 
-内部ロードバランサーは Environment レベルのリソースです。許可されたサービス間で共有されます。`copilot env init` を実行すると、ALB をサポートする為に、いつくかの特定のリソースをインポートできます。 `https` を利用している Service に対しては、 [`--import-cert-arns`](../docs/commands/env-init.ja.md#what-are-the-flags)フラグを使って、既存のプライベート証明書の ARN をインポートしてください。現時点では、Copilot は Enviroment で利用している VPC にパブリックサブネットが *無い場合* にインポートした証明書を内部 ALB と関連づけます。つまりプライベートサブネットのみの場合にインポートします。Enviroment の VPC 内から入力トラフィックを ALB が受け付ける様にしたい場合は、[`--internal-alb-allow-vpc-ingress`](../docs/commands/env-init.ja.md#what-are-the-flags) フラグを利用します ; そうしない場合、デフォルトでは、内部 ALB へのアクセスは、Enviroment 内に Copilot が作成した Service のみに限定されます。
+内部ロードバランサーは Environment レベルのリソースです。許可された Service 間で共有されます。`copilot env init` を実行すると、ALB をサポートする為に、いつくかの特定のリソースをインポートできます。 `https` を利用している Service に対しては、 [`--import-cert-arns`](../docs/commands/env-init.ja.md#what-are-the-flags)フラグを使って、既存のプライベート証明書の ARN をインポートしてください。現時点では、Copilot は Environment で利用している VPC にパブリックサブネットが *無い場合* にインポートした証明書を内部 ALB と関連づけます。つまりプライベートサブネットのみの場合にインポートします。Environment の VPC 内から入力トラフィックを ALB が受け付ける様にしたい場合は、[`--internal-alb-allow-vpc-ingress`](../docs/commands/env-init.ja.md#what-are-the-flags) フラグを利用します ; そうしない場合、デフォルトでは、内部 ALB へのアクセスは、Environment 内に Copilot が作成した Service のみに限定されます。
 
-内部ロードバランサの背後に設置できる唯一の Service タイプは[Backend Service](../docs/concepts/services.ja.md#backend-service)です。Service をデプロイした Environment で ALB を作成する様に Copilot に指示をする為に、`http` フィールドを Backend Service ワークロードの Manifest に追加してください。
+内部ロードバランサーの背後に設置できる唯一の Service タイプは[Backend Service](../docs/concepts/services.ja.md#backend-service)です。Service をデプロイした Environment で ALB を作成する様に Copilot に指示をする為に、`http` フィールドを Backend Service ワークロードの Manifest に追加してください。
 
 
 ```yaml

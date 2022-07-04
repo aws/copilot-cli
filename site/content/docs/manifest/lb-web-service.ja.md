@@ -76,9 +76,9 @@ Service のアーキテクチャタイプ。 [Load Balanced Web Service](../conc
 <div class="separator"></div>
 
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Boolean or Map</span>
-http セクションは Application Load Balancer と Serrice との連携に関するパラメータを含みます。
+http セクションは Application Load Balancer と Service との連携に関するパラメータを含みます。
 
-Application Load Balancer を無効化する場合は、 `http: false` と指定します。 Load-Balanced Web Service では、Application Load Balancer または、Network Load Balancer が少なくとも 1 つ有効となっていなければならない事に注意してください。 
+Application Load Balancer を無効化する場合は、 `http: false` と指定します。 Load Balanced Web Service では、Application Load Balancer または、Network Load Balancer が少なくとも 1 つ有効となっていなければならない事に注意してください。 
 
 <span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
 このパスに到着したリクエストが、Service に転送されます。各 Load Balanced Web Service は一意のパスでリクエストを受け付ける必要があります。
@@ -90,7 +90,7 @@ Application Load Balancer を無効化する場合は、 `http: false` と指定
 登録解除時にターゲットがクライアントとの接続を閉じるのを待つ時間を指定します。デフォルトでは 60 秒です。この値を大きくするとターゲットが安全に接続を閉じるための時間を確保できますが、新バージョンのデプロイに必要となる時間が長くなります。範囲は 0 〜 3600 です。
 
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
-サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサからのリクエストを受け取れます。
+サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサーからのリクエストを受け取れます。
 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 スティッキーセッションの有効化、あるいは無効化を指定します。
@@ -121,7 +121,7 @@ http:
 ```
 <span class="parent-field">http.</span><a id="http-hosted-zone" href="#http-hosted-zone" class="field">`hosted_zone`</a> <span class="type">String</span>  
 ID of your existing hosted zone; must be used with `http.alias`. If you have an environment with imported certificates, you can specify the hosted zone into which Copilot should insert the A record once the load balancer is created.
-既存のプライベートホストゾーンの ID。`http.alias` と共に使用します。証明書をインポートした Environment がある場合、ロードバランサの作成後に Copilot が A レコードを挿入するホストゾーンを指定できます。
+既存のプライベートホストゾーンの ID。`http.alias` と共に使用します。証明書をインポートした Environment がある場合、ロードバランサーの作成後に Copilot が A レコードを挿入するホストゾーンを指定できます。
 ```yaml
 http:
   alias: example.com

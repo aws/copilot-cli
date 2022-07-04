@@ -53,7 +53,7 @@ Copilot が Application を管理するためのインフラの設定を終え�
 
 ここで、Copilot が Service を実行するために必要なすべてのリソースをセットアップする間、数分待つでしょう⏳。Service のためのすべてのインフラがセットアップされると、Copilot はイメージを構築して Amazon ECR にプッシュし、Amazon ECS on AWS Fargate へのデプロイを開始します。
 
-デプロイが完了すると、サービスが稼働し、Copilot が URL へのリンクを出力します！🎉
+デプロイが完了すると、Service が稼働し、Copilot が URL へのリンクを出力します！🎉
 <img width="834" alt="deploy" src="https://user-images.githubusercontent.com/879348/86040356-be107900-b9f8-11ea-82cd-3bf2a5eb5c9d.png">
 
 ## Step 6: クリーンアップ

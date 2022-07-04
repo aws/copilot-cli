@@ -4,7 +4,7 @@ $ copilot init
 ```
 
 ## コマンドの概要
-`copilot init` は、コンテナアプリを AWS App Runner や Amazon ECS on AWS Faragete 上にデプロイしたい場合の出発点となります。Dockerfile を含むディレクトリ内で実行すると、あとは `init` の質問に答えていくだけですぐに Application を作成し、実行できます。
+`copilot init` は、コンテナアプリを AWS App Runner や Amazon ECS on AWS Fargate 上にデプロイしたい場合の出発点となります。Dockerfile を含むディレクトリ内で実行すると、あとは `init` の質問に答えていくだけですぐに Application を作成し、実行できます。
 
 すべての質問に答えると、`copilot init` は ECR リポジトリをセットアップし、デプロイするかどうかを尋ねます。デプロイを選択すると、ネットワークスタックとロールを備えた新しい `test` Environemnt を作成します。そして、Dockerfile をビルドして Amazon ECR に Push し、Service や Job をデプロイします。
 
