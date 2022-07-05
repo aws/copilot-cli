@@ -103,8 +103,8 @@ type EnvOpts struct {
 	AllowVPCIngress          bool
 	Telemetry                *Telemetry
 
-	LatestVersion string
-	Manifest      string // Serialized manifest used to render the environment template.
+	LatestVersion      string
+	SerializedManifest string // Serialized manifest used to render the environment template.
 }
 
 type VPCConfig struct {

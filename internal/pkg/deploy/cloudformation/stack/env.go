@@ -116,9 +116,9 @@ func (e *EnvStackConfig) Template() (string, error) {
 		AllowVPCIngress:          e.in.AllowVPCIngress, // TODO(jwh): fetch AllowVPCIngress from Manifest or SSM.
 		Telemetry:                e.telemetryConfig(),
 
-		Version:       e.in.Version,
-		LatestVersion: deploy.LatestEnvTemplateVersion,
-		Manifest:      mft,
+		Version:            e.in.Version,
+		LatestVersion:      deploy.LatestEnvTemplateVersion,
+		SerializedManifest: mft,
 	}, template.WithFuncs(map[string]interface{}{
 		"inc":      template.IncFunc,
 		"fmtSlice": template.FmtSliceFunc,
