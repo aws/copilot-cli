@@ -78,7 +78,7 @@ type environmentCDNConfig struct {
 
 // AdvancedCDNConfig represents an advanced configuration for a Content Delivery Network.
 type AdvancedCDNConfig struct {
-	PrefixListIngress *bool `yaml:"public_ingress_enabled"`
+	PrefixListIngress *bool `yaml:"public_ingress_allowed"`
 }
 
 // IsEmpty returns whether AdvancedCDNConfig is empty.
@@ -86,8 +86,8 @@ func (a *AdvancedCDNConfig) IsEmpty() bool {
 	return a.PrefixListIngress == nil
 }
 
-// PublicIngressEnabled returns whether the cloud front facing security group allows public access.
-func (e *environmentCDNConfig) PublicIngressEnabled() bool {
+// PublicIngressAllowed returns whether the cloud front facing security group allows public access.
+func (e *environmentCDNConfig) PublicIngressAllowed() bool {
 	if e.CDNConfig.PrefixListIngress != nil {
 		return *e.CDNConfig.PrefixListIngress
 	}

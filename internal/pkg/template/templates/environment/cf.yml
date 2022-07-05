@@ -102,7 +102,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the public facing load balancer
-       # Change load balancer to only accept ingress from CloudFront when CDN Enabled
+       # Change load balancer to only accept ingress from CloudFront when prefix list specified
 {{- if .CDNConfig.PrefixListID}}
       SecurityGroupIngress:
         SourcePrefixListId: {{.CDNConfig.PrefixListID}}

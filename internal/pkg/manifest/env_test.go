@@ -657,7 +657,7 @@ func TestEnvironmentObservability_IsEmpty(t *testing.T) {
 	}
 }
 
-func TestEnvironmentCDNConfig_PublicIngressEnabled(t *testing.T) {
+func TestEnvironmentCDNConfig_PublicIngressAllowed(t *testing.T) {
 	testCases := map[string]struct {
 		in     environmentCDNConfig
 		wanted bool
@@ -688,7 +688,7 @@ func TestEnvironmentCDNConfig_PublicIngressEnabled(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := tc.in.PublicIngressEnabled()
+			got := tc.in.PublicIngressAllowed()
 			require.Equal(t, tc.wanted, got)
 		})
 	}

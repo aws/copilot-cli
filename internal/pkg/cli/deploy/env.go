@@ -113,7 +113,7 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 
 func (d *envDeployer) getPrefixListId(in *DeployEnvironmentInput) (*string, error) {
 	if in.Manifest != nil {
-		if in.Manifest.CDN.PublicIngressEnabled() {
+		if in.Manifest.CDN.PublicIngressAllowed() {
 			return nil, nil
 		}
 	}
