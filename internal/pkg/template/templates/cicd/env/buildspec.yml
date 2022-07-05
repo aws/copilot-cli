@@ -1,0 +1,36 @@
+# Buildspec runs in the build stage of your environment pipeline to generate the environment CloudFormation stack config.
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      ruby: 2.6
+    commands:
+      - echo "cd into $CODEBUILD_SRC_DIR"
+      - cd $CODEBUILD_SRC_DIR
+      # Download the copilot linux binary. You can update this version.
+      - wget -q {{.BinaryS3BucketPath}}/copilot-linux-{{.Version}}
+      - mv ./copilot-linux-{{.Version}} ./copilot-linux
+      - chmod +x ./copilot-linux
+  build:
+    commands:
+      - echo "Run your tests"
+      # - make test
+  post_build:
+    commands:
+      - ls -l
+      - export COLOR="false"
+      - pipeline=$(cat $CODEBUILD_SRC_DIR/{{.ManifestPath}} | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
+      - stages=$(echo $pipeline | jq -r '.stages[].name')
+      # Generate the cloudformation templates.
+      - >
+        for env in $stages; do
+          ./copilot-linux env package -n $env --output-dir './infrastructure' --upload-assets;
+          if [ $? -ne 0 ]; then
+            echo "Cloudformation stack and config files were not generated. Please check build logs to see if there was a manifest validation error." 1>&2;
+            exit 1;
+          fi
+        done;
+      - ls -lah ./infrastructure
+artifacts:
+  files:
+    - "infrastructure/*"
