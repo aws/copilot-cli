@@ -28,7 +28,7 @@ type pipelineInitMocks struct {
 	workspace      *mocks.MockwsPipelineIniter
 	secretsmanager *mocks.MocksecretsManager
 	parser         *templatemocks.MockParser
-	runner         *mocks.Mockrunner
+	runner         *mocks.MockexecRunner
 	sessProvider   *mocks.MocksessionProvider
 	cfnClient      *mocks.MockappResourcesGetter
 	store          *mocks.Mockstore
@@ -384,7 +384,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 			mocks := pipelineInitMocks{
 				prompt:         mocks.NewMockprompter(ctrl),
-				runner:         mocks.NewMockrunner(ctrl),
+				runner:         mocks.NewMockexecRunner(ctrl),
 				sessProvider:   mocks.NewMocksessionProvider(ctrl),
 				sel:            mocks.NewMockpipelineEnvSelector(ctrl),
 				store:          mocks.NewMockstore(ctrl),

@@ -49,7 +49,7 @@ type deploySvcOpts struct {
 	ws                   wsWlDirReader
 	unmarshal            func([]byte) (manifest.WorkloadManifest, error)
 	newInterpolator      func(app, env string) interpolator
-	cmd                  runner
+	cmd                  execRunner
 	sessProvider         *sessions.Provider
 	newSvcDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker

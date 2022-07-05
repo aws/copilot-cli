@@ -114,7 +114,7 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 				sel:    m.sel,
 				store:  m.store,
 				ws:     m.ws,
-				runner: mocks.NewMockrunner(ctrl),
+				runner: mocks.NewMockexecRunner(ctrl),
 			}
 
 			// WHEN

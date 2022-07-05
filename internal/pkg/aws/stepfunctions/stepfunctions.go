@@ -14,6 +14,7 @@ import (
 
 type api interface {
 	DescribeStateMachine(input *sfn.DescribeStateMachineInput) (*sfn.DescribeStateMachineOutput, error)
+	StartExecution(input *sfn.StartExecutionInput) (*sfn.StartExecutionOutput, error)
 }
 
 // StepFunctions wraps an AWS StepFunctions client.
@@ -38,4 +39,15 @@ func (s *StepFunctions) StateMachineDefinition(stateMachineARN string) (string, 
 	}
 
 	return aws.StringValue(out.Definition), nil
+}
+
+//Execute starts a state machine execution.
+func (s *StepFunctions) Execute(arn string) error {
+	_, err := s.client.StartExecution(&sfn.StartExecutionInput{
+		StateMachineArn: aws.String(arn),
+	})
+	if err != nil {
+		return fmt.Errorf("execute state machine %s: %w", arn, err)
+	}
+	return nil
 }

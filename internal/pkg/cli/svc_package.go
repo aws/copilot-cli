@@ -68,7 +68,7 @@ type packageSvcOpts struct {
 	stackWriter          io.Writer
 	paramsWriter         io.Writer
 	addonsWriter         io.Writer
-	runner               runner
+	runner               execRunner
 	sessProvider         *sessions.Provider
 	sel                  wsSelector
 	unmarshal            func([]byte) (manifest.WorkloadManifest, error)

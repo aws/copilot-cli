@@ -1,0 +1,28 @@
+# Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+Description: CloudFormation environment bootstrap template with the necessary roles to create envs and workloads.
+Metadata:
+  Version: bootstrap
+
+Parameters:
+  AppName:
+    Type: String
+  EnvironmentName:
+    Type: String
+  ToolsAccountPrincipalARN:
+    Type: String
+
+Resources:
+{{include "bootstrap-resources" . | indent 2}}
+
+Outputs:
+  EnvironmentManagerRoleARN:
+    Value: !GetAtt EnvironmentManagerRole.Arn
+    Description: The role to be assumed by the ecs-cli to manage environments.
+    Export:
+      Name: !Sub ${AWS::StackName}-EnvironmentManagerRoleARN
+  CFNExecutionRoleARN:
+    Value: !GetAtt CloudformationExecutionRole.Arn
+    Description: The role to be assumed by the Cloudformation service when it deploys application infrastructure.
+    Export:
+      Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
