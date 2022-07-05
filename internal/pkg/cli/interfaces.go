@@ -184,7 +184,7 @@ type templater interface {
 	Template() (string, error)
 }
 
-type runner interface {
+type execRunner interface {
 	Run(name string, args []string, options ...exec.CmdOption) error
 }
 
@@ -642,6 +642,10 @@ type workloadTemplateGenerator interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
+}
+
+type runner interface {
+	Run() error
 }
 
 type envDeployer interface {

@@ -5,9 +5,6 @@ CloudformationExecutionRole:
     'aws:copilot:description': 'An IAM Role for AWS CloudFormation to manage resources'
   DeletionPolicy: Retain
   Type: AWS::IAM::Role
-{{- if not .VPCConfig.Imported}}
-  DependsOn: VPC
-{{- end}}
   Properties:
     RoleName: !Sub ${AWS::StackName}-CFNExecutionRole
     AssumeRolePolicyDocument:

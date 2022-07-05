@@ -56,11 +56,16 @@ func TestRDWS_Template(t *testing.T) {
 		require.NoError(t, err, "read cloudformation stack")
 
 		// Read actual stack template.
-		serializer, err := stack.NewRequestDrivenWebService(v, tc.envName, deploy.AppInformation{
-			Name: appName,
-		}, stack.RuntimeConfig{
-			AccountID: "123456789123",
-			Region:    "us-west-2",
+		serializer, err := stack.NewRequestDrivenWebService(stack.RequestDrivenWebServiceConfig{
+			App: deploy.AppInformation{
+				Name: appName,
+			},
+			Env:      tc.envName,
+			Manifest: v,
+			RuntimeConfig: stack.RuntimeConfig{
+				AccountID: "123456789123",
+				Region:    "us-west-2",
+			},
 		})
 		require.NoError(t, err, "create rdws serializer")
 		actualTemplate, err := serializer.Template()

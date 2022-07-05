@@ -5,51 +5,12 @@
 package mocks
 
 import (
-	context "context"
 	reflect "reflect"
 
 	credentials "github.com/aws/aws-sdk-go/aws/credentials"
 	session "github.com/aws/aws-sdk-go/aws/session"
 	gomock "github.com/golang/mock/gomock"
 )
-
-// MocksessionCredentials is a mock of sessionCredentials interface.
-type MocksessionCredentials struct {
-	ctrl     *gomock.Controller
-	recorder *MocksessionCredentialsMockRecorder
-}
-
-// MocksessionCredentialsMockRecorder is the mock recorder for MocksessionCredentials.
-type MocksessionCredentialsMockRecorder struct {
-	mock *MocksessionCredentials
-}
-
-// NewMocksessionCredentials creates a new mock instance.
-func NewMocksessionCredentials(ctrl *gomock.Controller) *MocksessionCredentials {
-	mock := &MocksessionCredentials{ctrl: ctrl}
-	mock.recorder = &MocksessionCredentialsMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MocksessionCredentials) EXPECT() *MocksessionCredentialsMockRecorder {
-	return m.recorder
-}
-
-// GetWithContext mocks base method.
-func (m *MocksessionCredentials) GetWithContext(ctx *context.Context) (credentials.Value, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWithContext", ctx)
-	ret0, _ := ret[0].(credentials.Value)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetWithContext indicates an expected call of GetWithContext.
-func (mr *MocksessionCredentialsMockRecorder) GetWithContext(ctx interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWithContext", reflect.TypeOf((*MocksessionCredentials)(nil).GetWithContext), ctx)
-}
 
 // MocksessionValidator is a mock of sessionValidator interface.
 type MocksessionValidator struct {

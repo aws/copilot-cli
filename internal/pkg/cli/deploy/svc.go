@@ -158,6 +158,7 @@ type workloadDeployer struct {
 	imageTag      string
 	resources     *stack.AppRegionalResources
 	mft           interface{}
+	rawMft        []byte
 	workspacePath string
 
 	// Dependencies.
@@ -202,7 +203,8 @@ type WorkloadDeployerInput struct {
 	App             *config.Application
 	Env             *config.Environment
 	ImageTag        string
-	Mft             interface{}
+	Mft             interface{} // Interpolated, applied, and unmarshaled manifest.
+	RawMft          []byte      // Content of the manifest file without any transformations.
 }
 
 // NewWorkloadDeployer is the constructor for workloadDeployer.
@@ -272,7 +274,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 
-		mft: in.Mft,
+		mft:    in.Mft,
+		rawMft: in.RawMft,
 	}, nil
 }
 
@@ -1030,6 +1033,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		App:           d.app,
 		EnvManifest:   envConfig,
 		Manifest:      d.lbMft,
+		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 		RootUserARN:   in.RootUserARN,
 	}, opts...)
@@ -1061,6 +1065,7 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		App:           d.app,
 		EnvManifest:   envConfig,
 		Manifest:      d.backendMft,
+		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 	})
 	if err != nil {
@@ -1089,12 +1094,18 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		log.Errorf(rdwsAliasUsedWithoutDomainFriendlyText)
 		return nil, errors.New("alias specified when application is not associated with a domain")
 	}
-	appInfo := deploy.AppInformation{
-		Name:                d.app.Name,
-		Domain:              d.app.Domain,
-		AccountPrincipalARN: in.RootUserARN,
-	}
-	conf, err := stack.NewRequestDrivenWebService(d.rdwsMft, d.env.Name, appInfo, *rc)
+
+	conf, err := stack.NewRequestDrivenWebService(stack.RequestDrivenWebServiceConfig{
+		App: deploy.AppInformation{
+			Name:                d.app.Name,
+			Domain:              d.app.Domain,
+			AccountPrincipalARN: in.RootUserARN,
+		},
+		Env:           d.env.Name,
+		Manifest:      d.rdwsMft,
+		RawManifest:   d.rawMft,
+		RuntimeConfig: *rc,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
@@ -1147,7 +1158,13 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 	if err = validateTopicsExist(subs, topicARNs, d.app.Name, d.env.Name); err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewWorkerService(d.wsMft, d.env.Name, d.app.Name, *rc)
+	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
+		App:           d.app.Name,
+		Env:           d.env.Name,
+		Manifest:      d.wsMft,
+		RawManifest:   d.rawMft,
+		RuntimeConfig: *rc,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
@@ -1171,7 +1188,13 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 	if err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewScheduledJob(d.jobMft, d.env.Name, d.app.Name, *rc)
+	conf, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
+		App:           d.app.Name,
+		Env:           d.env.Name,
+		Manifest:      d.jobMft,
+		RawManifest:   d.rawMft,
+		RuntimeConfig: *rc,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}

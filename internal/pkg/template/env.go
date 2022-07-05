@@ -9,11 +9,12 @@ import (
 )
 
 const (
-	envCFTemplatePath       = "environment/cf.yml"
-	fmtEnvCFSubTemplatePath = "environment/partials/%s.yml"
+	envCFTemplatePath          = "environment/cf.yml"
+	fmtEnvCFSubTemplatePath    = "environment/partials/%s.yml"
+	envBootstrapCFTemplatePath = "environment/bootstrap-cf.yml"
 )
 
-// Latest available env-controller managed feature names.
+// Available env-controller managed feature names.
 const (
 	ALBFeatureName         = "ALBWorkloads"
 	EFSFeatureName         = "EFSWorkloads"
@@ -66,6 +67,16 @@ var (
 		"lambdas",
 		"vpc-resources",
 		"nat-gateways",
+		"bootstrap-resources",
+	}
+)
+
+var (
+	// Template names under "environment/partials/".
+	bootstrapEnvSubTemplateName = []string{
+		"cfn-execution-role",
+		"environment-manager-role",
+		"bootstrap-resources",
 	}
 )
 
@@ -96,7 +107,7 @@ type EnvOpts struct {
 	CDNConfig CDNConfig
 
 	LatestVersion string
-	Manifest      string // Serialized manifest used to render the environment template.
+	SerializedManifest string // Serialized manifest used to render the environment template.
 }
 
 type CDNConfig struct {
@@ -136,6 +147,29 @@ func (t *Template) ParseEnv(data *EnvOpts, options ...ParseOption) (*Content, er
 		return nil, err
 	}
 	for _, templateName := range envCFSubTemplateNames {
+		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtEnvCFSubTemplatePath, templateName), options...)
+		if err != nil {
+			return nil, err
+		}
+		_, err = tpl.AddParseTree(templateName, nestedTpl.Tree)
+		if err != nil {
+			return nil, fmt.Errorf("add parse tree of %s to base template: %w", templateName, err)
+		}
+	}
+	buf := &bytes.Buffer{}
+	if err := tpl.Execute(buf, data); err != nil {
+		return nil, fmt.Errorf("execute environment template with data %v: %w", data, err)
+	}
+	return &Content{buf}, nil
+}
+
+// ParseEnvBootstrap parses the CloudFormation template that bootstrap IAM resources with the specified data object and returns its content.
+func (t *Template) ParseEnvBootstrap(data *EnvOpts, options ...ParseOption) (*Content, error) {
+	tpl, err := t.parse("base", envBootstrapCFTemplatePath, options...)
+	if err != nil {
+		return nil, err
+	}
+	for _, templateName := range bootstrapEnvSubTemplateName {
 		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtEnvCFSubTemplatePath, templateName), options...)
 		if err != nil {
 			return nil, err
