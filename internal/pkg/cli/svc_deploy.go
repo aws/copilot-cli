@@ -107,9 +107,9 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, err
 	}
-	raw, err := minifyRawManifest(o.ws, o.name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
 	var deployer workloadDeployer
 	in := clideploy.WorkloadDeployerInput{

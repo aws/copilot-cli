@@ -3,9 +3,9 @@
 Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
   Version: {{ .LatestVersion }}
-{{- if .Manifest }}
+{{- if .SerializedManifest }}
   Manifest: |
-{{indent 4 .Manifest}}
+{{indent 4 .SerializedManifest}}
 {{- end}}
 Parameters:
   AppName:

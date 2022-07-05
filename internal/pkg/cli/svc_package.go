@@ -20,7 +20,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -118,22 +117,6 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	return opts, nil
 }
 
-func minifyRawManifest(ws manifestReader, workloadName string) ([]byte, error) {
-	raw, err := ws.ReadWorkloadManifest(workloadName)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest file for %s: %w", workloadName, err)
-	}
-	var cleaned any
-	if err := yaml.Unmarshal(raw, &cleaned); err != nil {
-		return nil, fmt.Errorf("unmarshal to minify manifest file for %s: %w", workloadName, err)
-	}
-	mini, err := yaml.Marshal(cleaned)
-	if err != nil {
-		return nil, fmt.Errorf("marshal minified manifest file: %w", err)
-	}
-	return mini, nil
-}
-
 func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 	targetApp, err := o.getTargetApp()
 	if err != nil {
@@ -143,9 +126,9 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 	if err != nil {
 		return nil, err
 	}
-	raw, err := minifyRawManifest(o.ws, o.name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
 
 	var deployer workloadTemplateGenerator

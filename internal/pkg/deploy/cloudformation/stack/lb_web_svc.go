@@ -198,10 +198,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", err
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
-		AppName:      s.app,
-		EnvName:      s.env,
-		WorkloadName: s.name,
-		Manifest:     string(s.rawManifest),
+		AppName:            s.app,
+		EnvName:            s.env,
+		WorkloadName:       s.name,
+		SerializedManifest: string(s.rawManifest),
 
 		Variables:                s.manifest.TaskConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),

@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: MIT-0
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a worker service on Amazon ECS.
-{{- if .Manifest }}
+{{- if .SerializedManifest }}
 Metadata:
   Manifest: |
-{{indent 4 .Manifest}}
+{{indent 4 .SerializedManifest}}
 {{- end }}
 Parameters:
   AppName:

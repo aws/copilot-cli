@@ -80,9 +80,9 @@ func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
 }
 
 func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
-	raw, err := minifyRawManifest(o.ws, o.name)
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
 	in := deploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
