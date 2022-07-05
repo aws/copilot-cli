@@ -23,12 +23,34 @@ func TestTemplate_ParseEnv(t *testing.T) {
 				"templates/environment/partials/lambdas.yml":                  []byte("lambdas"),
 				"templates/environment/partials/vpc-resources.yml":            []byte("vpc-resources"),
 				"templates/environment/partials/nat-gateways.yml":             []byte("nat-gateways"),
+				"templates/environment/partials/bootstrap-resources.yml":      []byte("bootstrap"),
 			},
 		},
 	}
 
 	// WHEN
 	c, err := tpl.ParseEnv(&EnvOpts{})
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, "test", c.String())
+}
+
+func TestTemplate_ParseEnvBootstrap(t *testing.T) {
+	// GIVEN
+	tpl := &Template{
+		fs: &mockReadFileFS{
+			fs: map[string][]byte{
+				"templates/environment/bootstrap-cf.yml":                      []byte("test"),
+				"templates/environment/partials/cfn-execution-role.yml":       []byte("cfn-execution-role"),
+				"templates/environment/partials/environment-manager-role.yml": []byte("environment-manager-role"),
+				"templates/environment/partials/bootstrap-resources.yml":      []byte("bootstrap"),
+			},
+		},
+	}
+
+	// WHEN
+	c, err := tpl.ParseEnvBootstrap(&EnvOpts{})
 
 	// THEN
 	require.NoError(t, err)

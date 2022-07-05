@@ -28,29 +28,39 @@ type WorkerService struct {
 	parser workerSvcReadParser
 }
 
+// WorkerServiceConfig contains data required to initialize a scheduled job stack.
+type WorkerServiceConfig struct {
+	App           string
+	Env           string
+	Manifest      *manifest.WorkerService
+	RawManifest   []byte
+	RuntimeConfig RuntimeConfig
+}
+
 // NewWorkerService creates a new WorkerService stack from a manifest file.
-func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeConfig) (*WorkerService, error) {
+func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name))
+	addons, err := addon.New(aws.StringValue(cfg.Manifest.Name))
 	if err != nil {
 		return nil, fmt.Errorf("new addons: %w", err)
 	}
 	return &WorkerService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(mft.Name),
-				env:    env,
-				app:    app,
-				rc:     rc,
-				image:  mft.ImageConfig.Image,
-				parser: parser,
-				addons: addons,
+				name:        aws.StringValue(cfg.Manifest.Name),
+				env:         cfg.Env,
+				app:         cfg.App,
+				rc:          cfg.RuntimeConfig,
+				image:       cfg.Manifest.ImageConfig.Image,
+				rawManifest: cfg.RawManifest,
+				parser:      parser,
+				addons:      addons,
 			},
-			logRetention:        mft.Logging.Retention,
-			tc:                  mft.TaskConfig,
+			logRetention:        cfg.Manifest.Logging.Retention,
+			tc:                  cfg.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest: mft,
+		manifest: cfg.Manifest,
 
 		parser: parser,
 	}, nil
@@ -106,9 +116,11 @@ func (s *WorkerService) Template() (string, error) {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
-		AppName:                  s.app,
-		EnvName:                  s.env,
-		WorkloadName:             s.name,
+		AppName:            s.app,
+		EnvName:            s.env,
+		WorkloadName:       s.name,
+		SerializedManifest: string(s.rawManifest),
+
 		Variables:                s.manifest.WorkerServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
 		NestedStack:              addonsOutputs,

@@ -51,9 +51,9 @@ Dockerfile を選択すると、Copilot は Service を管理するための AWS
 
 Copilot が Application を管理するためのインフラの設定を終えると、Service をテスト環境にデプロイするかどうかを尋ねられますので、**yes** と入力します。
 
-ここで、Copilot が Service を実行するために必要なすべてのリソースをセットアップする間、数分待つでしょう⏳。Service のためのすべてのインフラがセットアップされると、Copilot はイメージを構築して Amazon ECR にプッシュし、Amazon ECS へのデプロイを開始します。
+ここで、Copilot が Service を実行するために必要なすべてのリソースをセットアップする間、数分待つでしょう⏳。Service のためのすべてのインフラがセットアップされると、Copilot はイメージを構築して Amazon ECR にプッシュし、Amazon ECS on AWS Fargate へのデプロイを開始します。
 
-デプロイが完了すると、AWS Fargate 上でサービスが稼働し、Copilot が URL へのリンクを出力します！🎉
+デプロイが完了すると、Service が稼働し、Copilot が URL へのリンクを出力します！🎉
 <img width="834" alt="deploy" src="https://user-images.githubusercontent.com/879348/86040356-be107900-b9f8-11ea-82cd-3bf2a5eb5c9d.png">
 
 ## Step 6: クリーンアップ
@@ -68,6 +68,6 @@ $ copilot app delete
 
 ## おめでとうございます！
 
-おめでとうございます！AWS Copilot を使って、Amazon ECS にコンテナアプリを設定、デプロイ、削除する方法を学びました。AWS Copilot は、AWS 上でコンテナアプリを開発、リリース、運用するためのコマンドラインツールです。
+おめでとうございます！AWS Copilot を使って、コンテナアプリを設定し、Amazon ECS on Fargate にデプロイし、削除する方法を学びました。AWS Copilot は、AWS 上でコンテナアプリを開発、リリース、運用するためのコマンドラインツールです。
 
 Application のデプロイを楽しんでいただけましたか？AWS Copilot をより深く理解し、AWS 上で本番環境に対応したコンテナアプリを構築・管理する方法を学ぶ準備はできましたか？引き続きサイドバーの _Developing_ セクションをご覧ください。
