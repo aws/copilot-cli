@@ -31,15 +31,60 @@ type transformInfo struct {
 }
 
 var transformInfoFor = map[string]transformInfo{
+	"AWS::ApiGateway::RestApi": {
+		Property:           "BodyS3Location",
+		BucketNameProperty: "Bucket",
+		ObjectKeyProperty:  "Key",
+	},
 	"AWS::Lambda::Function": {
 		Property:           "Code",
-		ForceZip:           true,
 		BucketNameProperty: "S3Bucket",
 		ObjectKeyProperty:  "S3Key",
+		ForceZip:           true,
+	},
+	"AWS::Lambda::LayerVersion": {
+		Property:           "Content",
+		BucketNameProperty: "S3Bucket",
+		ObjectKeyProperty:  "S3Key",
+		ForceZip:           true,
+	},
+	"AWS::AppSync::GraphQLSchema": {
+		Property: "DefinitionS3Location",
+	},
+	"AWS::AppSync::Resolver": {
+		Property: "RequestMappingTemplateS3Location",
+		// TODO support multiple properties (this and "ResponseMappingTemplateS3Location")
+	},
+	"AWS::AppSync::FunctionConfiguration": {
+		Property: "RequestMappingTemplateS3Location",
+		// TODO support multiple properties (this and "ResponseMappingTemplateS3Location")
+	},
+	"AWS::ElasticBeanstalk::ApplicationVersion": {
+		Property:           "SourceBundle",
+		BucketNameProperty: "S3Bucket",
+		ObjectKeyProperty:  "S3Key",
+	},
+	"AWS::CloudFormation::Stack": { // TODO look at this one, has extra logic
+		Property: "TemplateURL",
+	},
+	"AWS::Glue::Job": {
+		Property: "Command.ScriptLocation", // TODO...support nested :sob:
+	},
+	"AWS::StepFunctions::StateMachine": {
+		Property:           "DefinitionS3Location",
+		BucketNameProperty: "Bucket",
+		ObjectKeyProperty:  "Key",
+	},
+	"AWS::CodeCommit::Repository": { // TODO idk what this one's deal is, seems nested though
+		Property:           "Code.S3",
+		BucketNameProperty: "Bucket",
+		ObjectKeyProperty:  "Key",
+		ForceZip:           true,
 	},
 }
 
 // TODO a flag to not do this on svc package
+// TODO(dnrnd) AWS::Include.Location
 func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) {
 	resources := mappingNode(&tmpl.Resources)
 
@@ -95,10 +140,10 @@ func (a *Addons) transformProperty(properties *yaml.Node, tr transformInfo) erro
 		return fmt.Errorf("parse s3 url: %w", err)
 	}
 
-	fmt.Printf("Uploaded %s as a zip to S3 at %s/%s\n", assetPath, bucket, key)
+	fmt.Printf("Uploaded %s to s3 at: %s\n", assetPath, s3.Location(bucket, key))
 
 	if len(tr.BucketNameProperty) == 0 && len(tr.ObjectKeyProperty) == 0 {
-		node.Value = url // TODO update to s3:// type URL, not HTTPS
+		node.Value = s3.Location(bucket, key)
 		return nil
 	}
 

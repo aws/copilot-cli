@@ -170,6 +170,10 @@ func URL(region, bucket, key string) string {
 	return fmt.Sprintf("https://%s.s3.%s.amazonaws.%s/%s", bucket, region, tld, key)
 }
 
+func Location(bucket, key string) string {
+	return fmt.Sprintf("s3://%s/%s", bucket, key)
+}
+
 // FormatARN formats an S3 object ARN.
 // For example: arn:aws:s3:::stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3
 func FormatARN(partition, location string) string {
