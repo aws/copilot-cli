@@ -100,7 +100,8 @@ type EnvOpts struct {
 }
 
 type CDNConfig struct {
-	EnableCDN bool
+	EnableCDN    bool
+	PrefixListID *string
 }
 
 type VPCConfig struct {

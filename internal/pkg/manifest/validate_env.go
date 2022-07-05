@@ -208,6 +208,19 @@ func (o privateHTTPConfig) Validate() error {
 	return nil
 }
 
+// Validate returns nil if environmentCDNConfig is configured correctly.
+func (cfg environmentCDNConfig) Validate() error {
+	if cfg.CDNConfig.IsEmpty() {
+		return nil
+	}
+	return cfg.CDNConfig.Validate()
+}
+
+// Validate is a no-op for AdvancedCDNConfig.
+func (a AdvancedCDNConfig) Validate() error {
+	return nil
+}
+
 func (c EnvironmentConfig) validateInternalALBSubnets() error {
 	isImported := make(map[string]bool)
 	for _, placementSubnet := range c.HTTPConfig.Private.InternalALBSubnets {

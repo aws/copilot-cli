@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -37,6 +38,10 @@ type environmentDeployer interface {
 	UpdateAndRenderEnvironment(out termprogress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error
 }
 
+type prefixListGetter interface {
+	CloudFrontManagedPrefixListID() (*string, error)
+}
+
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
@@ -47,6 +52,7 @@ type envDeployer struct {
 	uploader   customResourcesUploader // Deprecated: after legacy is removed.
 	templateFS template.Reader
 	s3         uploader
+	ec2        prefixListGetter
 	// Dependencies to deploy an environment.
 	envDeployer environmentDeployer
 
@@ -86,6 +92,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		templateFS: template.New(),
 		uploader:   template.New(),
 		s3:         s3.New(envRegionSession),
+		ec2:        ec2.New(envRegionSession),
 
 		envDeployer: deploycfn.New(envManagerSession),
 	}, nil
@@ -102,6 +109,24 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 		return d.uploadCustomResources(resources.S3Bucket)
 	}
 	return d.legacyUploadCustomResources(resources.S3Bucket)
+}
+
+func (d *envDeployer) getPrefixListId(in *DeployEnvironmentInput) (*string, error) {
+	if in.Manifest != nil {
+		if !in.Manifest.CDN.CDNEnabled() {
+			return nil, nil
+		}
+	}
+
+	if d.ec2 == nil {
+		return nil, nil
+	}
+
+	id, err := d.ec2.CloudFrontManagedPrefixListID()
+	if err != nil {
+		return nil, err
+	}
+	return id, nil
 }
 
 func (d *envDeployer) legacyUploadCustomResources(bucket string) (map[string]string, error) {
@@ -145,6 +170,10 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if err != nil {
 		return err
 	}
+	prefixListId, err := d.getPrefixListId(in)
+	if err != nil {
+		return err
+	}
 	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
@@ -156,6 +185,7 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 		CustomResourcesURLs:  in.CustomResourcesURLs,
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
+		PrefixListID:         prefixListId,
 		Mft:                  in.Manifest,
 		Version:              deploy.LatestEnvTemplateVersion,
 	}

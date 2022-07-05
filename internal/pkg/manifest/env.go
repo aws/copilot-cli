@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -72,13 +73,39 @@ type environmentVPCConfig struct {
 
 type environmentCDNConfig struct {
 	EnableCDN *bool
+	CDNConfig AdvancedCDNConfig // mutually exclusive with EnableCDN
+}
+
+// AdvancedCDNConfig represents an advanced configuration for a Content Delivery Network.
+type AdvancedCDNConfig struct {
+	PrefixListIngress *bool `yaml:"public_ingress_enabled"`
+}
+
+// IsEmpty returns whether AdvancedCDNConfig is empty.
+func (a *AdvancedCDNConfig) IsEmpty() bool {
+	return a.PrefixListIngress == nil
+}
+
+// CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
+func (e *environmentCDNConfig) CDNEnabled() bool {
+	if e.EnableCDN != nil {
+		if *e.EnableCDN {
+			return true
+		}
+	}
+
+	if !e.CDNConfig.IsEmpty() {
+		return true
+	}
+
+	return false
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the environmentCDNConfig
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (e *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&e.EnableCDN); err != nil {
+	if err := value.Decode(&e.CDNConfig); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -87,6 +114,14 @@ func (e *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
+	if !e.CDNConfig.IsEmpty() {
+		// Successfully unmarshalled CDNConfig fields, return
+		return nil
+	}
+
+	if err := value.Decode(&e.EnableCDN); err != nil {
+		return errors.New(`unable to unmarshal into bool or composite-style map`)
+	}
 	return nil
 }
 

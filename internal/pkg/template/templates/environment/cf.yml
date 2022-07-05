@@ -103,9 +103,9 @@ Resources:
     Properties:
       GroupDescription: Access to the public facing load balancer
        # Change load balancer to only accept ingress from CloudFront when CDN Enabled
-{{- if .CDNConfig.EnableCDN}}
+{{- if .CDNConfig.PrefixListID}}
       SecurityGroupIngress:
-        SourcePrefixListId: pl-82a045eb
+        SourcePrefixListId: {{.CDNConfig.PrefixListID}}
 {{- else}}
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0

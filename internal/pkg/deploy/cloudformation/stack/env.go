@@ -115,7 +115,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		CustomInternalALBSubnets: e.internalALBSubnets(),
 		AllowVPCIngress:          e.in.AllowVPCIngress, // TODO(jwh): fetch AllowVPCIngress from Manifest or SSM.
 		Telemetry:                e.telemetryConfig(),
-		CDNConfig:                e.cdnConfig(), // VERY TEMP LOL
+		CDNConfig:                e.cdnConfig(),
 
 		Version:       e.in.Version,
 		LatestVersion: deploy.LatestEnvTemplateVersion,
@@ -138,8 +138,29 @@ func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
 }
 
 func (e *EnvStackConfig) cdnConfig() template.CDNConfig {
+	var (
+		enabled      bool
+		prefixListId *string
+	)
+
+	if e.in.Mft != nil {
+		// CDN Config specified by AdvancedCDNConfig
+		if !e.in.Mft.CDN.CDNConfig.IsEmpty() {
+			enabled = true
+			prefixListId = e.in.PrefixListID
+		}
+
+		// CDN Config specified by basic boolean enabler
+		if e.in.Mft.CDN.EnableCDN != nil {
+			if *e.in.Mft.CDN.EnableCDN {
+				enabled = true
+			}
+		}
+	}
+
 	return template.CDNConfig{
-		EnableCDN: true, //TEMP, ENABLING WON'T ALWAYS BE SET TO TRUE
+		EnableCDN:    enabled, // TODO(CaptainCarpensir): create CDN config with manifest-specified settings
+		PrefixListID: prefixListId,
 	}
 }
 
