@@ -19,6 +19,68 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestServiceStackDescriber_Manifest(t *testing.T) {
+	testApp, testEnv, testWorkload := "phonetool", "test", "api"
+	testCases := map[string]struct {
+		mockCFN func(ctrl *gomock.Controller) *mocks.MockstackDescriber
+
+		wantedMft []byte
+		wantedErr error
+	}{
+		"should return wrapped error if Metadata cannot be retrieved from stack": {
+			mockCFN: func(ctrl *gomock.Controller) *mocks.MockstackDescriber {
+				cfn := mocks.NewMockstackDescriber(ctrl)
+				cfn.EXPECT().StackMetadata().Return("", errors.New("some error"))
+				return cfn
+			},
+			wantedErr: errors.New("retrieve stack metadata for phonetool-test-api: some error"),
+		},
+		"should return ErrManifestNotFoundInTemplate if Metadata.Manifest is empty": {
+			mockCFN: func(ctrl *gomock.Controller) *mocks.MockstackDescriber {
+				cfn := mocks.NewMockstackDescriber(ctrl)
+				cfn.EXPECT().StackMetadata().Return("", nil)
+				return cfn
+			},
+			wantedErr: &ErrManifestNotFoundInTemplate{app: testApp, env: testEnv, name: testWorkload},
+		},
+		"should return content of Metadata.Manifest if it exists": {
+			mockCFN: func(ctrl *gomock.Controller) *mocks.MockstackDescriber {
+				cfn := mocks.NewMockstackDescriber(ctrl)
+				cfn.EXPECT().StackMetadata().Return(`
+Manifest: |
+  hello`, nil)
+				return cfn
+			},
+			wantedMft: []byte("hello"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			describer := serviceStackDescriber{
+				app:     testApp,
+				env:     testEnv,
+				service: testWorkload,
+				cfn:     tc.mockCFN(ctrl),
+			}
+
+			// WHEN
+			actualMft, actualErr := describer.Manifest()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, actualErr, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, actualErr)
+				require.Equal(t, tc.wantedMft, actualMft)
+			}
+		})
+	}
+}
+
 type ecsSvcDescriberMocks struct {
 	mockCFN       *mocks.MockstackDescriber
 	mockECSClient *mocks.MockecsClient

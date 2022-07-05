@@ -8,17 +8,17 @@ import (
 	"io"
 	"net/url"
 	"sort"
-
-	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -124,7 +124,7 @@ func (d *serviceStackDescriber) Params() (map[string]string, error) {
 	return descr.Parameters, nil
 }
 
-// Params returns the outputs of the service stack.
+// Outputs returns the outputs of the service stack.
 func (d *serviceStackDescriber) Outputs() (map[string]string, error) {
 	if d.outputs != nil {
 		return d.outputs, nil
@@ -159,6 +159,30 @@ func (d *serviceStackDescriber) ServiceStackResources() ([]*stack.Resource, erro
 	}
 	d.stackResources = resources
 	return resources, nil
+}
+
+// Manifest returns the contents of the manifest used to deploy a workload stack.
+// If the Manifest metadata doesn't exist in the stack template, then returns ErrManifestNotFoundInTemplate.
+func (d *serviceStackDescriber) Manifest() ([]byte, error) {
+	tpl, err := d.cfn.StackMetadata()
+	if err != nil {
+		return nil, fmt.Errorf("retrieve stack metadata for %s-%s-%s: %w", d.app, d.env, d.service, err)
+	}
+
+	metadata := struct {
+		Manifest string `yaml:"Manifest"`
+	}{}
+	if err := yaml.Unmarshal([]byte(tpl), &metadata); err != nil {
+		return nil, fmt.Errorf("unmarshal Metadata.Manifest in stack %s-%s-%s: %v", d.app, d.env, d.service, err)
+	}
+	if len(strings.TrimSpace(metadata.Manifest)) == 0 {
+		return nil, &ErrManifestNotFoundInTemplate{
+			app:  d.app,
+			env:  d.env,
+			name: d.service,
+		}
+	}
+	return []byte(metadata.Manifest), nil
 }
 
 type ecsServiceDescriber struct {
