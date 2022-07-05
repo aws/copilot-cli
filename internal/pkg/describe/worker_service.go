@@ -129,6 +129,16 @@ func (d *WorkerServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}, nil
 }
 
+// Manifest returns the contents of the manifest used to deploy a worker service stack.
+// If the Manifest metadata doesn't exist in the stack template, then returns ErrManifestNotFoundInTemplate.
+func (d *WorkerServiceDescriber) Manifest(env string) ([]byte, error) {
+	cfn, err := d.initECSDescriber(env)
+	if err != nil {
+		return nil, err
+	}
+	return cfn.Manifest()
+}
+
 // workerSvcDesc contains serialized parameters for a worker service.
 type workerSvcDesc struct {
 	Service        string               `json:"service"`

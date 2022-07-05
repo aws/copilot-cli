@@ -215,6 +215,16 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}, nil
 }
 
+// Manifest returns the contents of the manifest used to deploy a load balanced web service stack.
+// If the Manifest metadata doesn't exist in the stack template, then returns ErrManifestNotFoundInTemplate.
+func (d *LBWebServiceDescriber) Manifest(env string) ([]byte, error) {
+	cfn, err := d.initECSServiceDescribers(env)
+	if err != nil {
+		return nil, err
+	}
+	return cfn.Manifest()
+}
+
 type secret struct {
 	Name        string `json:"name"`
 	Container   string `json:"container"`

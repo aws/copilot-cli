@@ -81,6 +81,114 @@ Manifest: |
 	}
 }
 
+func Test_WorkloadManifest(t *testing.T) {
+	testApp, testService := "phonetool", "api"
+
+	testCases := map[string]struct {
+		inEnv         string
+		mockDescriber func(ctrl *gomock.Controller) interface{ Manifest(string) ([]byte, error) }
+
+		wantedMft []byte
+		wantedErr error
+	}{
+		"should return the error as is from the mock ecs client for LBWSDescriber": {
+			inEnv: "test",
+			mockDescriber: func(ctrl *gomock.Controller) interface{ Manifest(string) ([]byte, error) } {
+				m := mocks.NewMockecsDescriber(ctrl)
+				m.EXPECT().Manifest().Return(nil, errors.New("some error"))
+				return &LBWebServiceDescriber{
+					app: testApp,
+					svc: testService,
+					initECSServiceDescribers: func(s string) (ecsDescriber, error) {
+						return m, nil
+					},
+				}
+			},
+			wantedErr: errors.New("some error"),
+		},
+		"should return the error as is from the mock ecs client for BackendServiceDescriber": {
+			inEnv: "test",
+			mockDescriber: func(ctrl *gomock.Controller) interface{ Manifest(string) ([]byte, error) } {
+				m := mocks.NewMockecsDescriber(ctrl)
+				m.EXPECT().Manifest().Return(nil, errors.New("some error"))
+				return &BackendServiceDescriber{
+					app: testApp,
+					svc: testService,
+					initECSServiceDescribers: func(s string) (ecsDescriber, error) {
+						return m, nil
+					},
+				}
+			},
+			wantedErr: errors.New("some error"),
+		},
+		"should return the error as is from the mock app runner client for RDWebServiceDescriber": {
+			inEnv: "test",
+			mockDescriber: func(ctrl *gomock.Controller) interface{ Manifest(string) ([]byte, error) } {
+				m := mocks.NewMockapprunnerDescriber(ctrl)
+				m.EXPECT().Manifest().Return(nil, errors.New("some error"))
+				return &RDWebServiceDescriber{
+					app: testApp,
+					svc: testService,
+					initAppRunnerDescriber: func(s string) (apprunnerDescriber, error) {
+						return m, nil
+					},
+				}
+			},
+			wantedErr: errors.New("some error"),
+		},
+		"should return the error as is from the mock app runner client for WorkerServiceDescriber": {
+			inEnv: "test",
+			mockDescriber: func(ctrl *gomock.Controller) interface{ Manifest(string) ([]byte, error) } {
+				m := mocks.NewMockecsDescriber(ctrl)
+				m.EXPECT().Manifest().Return(nil, errors.New("some error"))
+				return &WorkerServiceDescriber{
+					app: testApp,
+					svc: testService,
+					initECSDescriber: func(s string) (ecsDescriber, error) {
+						return m, nil
+					},
+				}
+			},
+			wantedErr: errors.New("some error"),
+		},
+		"should return the manifest content on success for LBWSDescriber": {
+			inEnv: "test",
+			mockDescriber: func(ctrl *gomock.Controller) interface{ Manifest(string) ([]byte, error) } {
+				m := mocks.NewMockecsDescriber(ctrl)
+				m.EXPECT().Manifest().Return([]byte("hello"), nil)
+				return &LBWebServiceDescriber{
+					app: testApp,
+					svc: testService,
+					initECSServiceDescribers: func(s string) (ecsDescriber, error) {
+						return m, nil
+					},
+				}
+			},
+			wantedMft: []byte("hello"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			describer := tc.mockDescriber(ctrl)
+
+			// WHEN
+			actualMft, actualErr := describer.Manifest(tc.inEnv)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, actualErr, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, actualErr)
+				require.Equal(t, tc.wantedMft, actualMft)
+			}
+		})
+	}
+}
+
 type ecsSvcDescriberMocks struct {
 	mockCFN       *mocks.MockstackDescriber
 	mockECSClient *mocks.MockecsClient

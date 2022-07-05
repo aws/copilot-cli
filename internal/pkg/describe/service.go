@@ -58,6 +58,7 @@ type workloadStackDescriber interface {
 	Params() (map[string]string, error)
 	Outputs() (map[string]string, error)
 	ServiceStackResources() ([]*stack.Resource, error)
+	Manifest() ([]byte, error)
 }
 
 type ecsDescriber interface {
