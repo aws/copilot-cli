@@ -4,8 +4,11 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"strings"
+	"unicode"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -29,10 +32,11 @@ const (
 )
 
 type showSvcVars struct {
-	shouldOutputJSON      bool
-	shouldOutputResources bool
 	appName               string
 	svcName               string
+	shouldOutputJSON      bool
+	shouldOutputResources bool
+	outputManifestForEnv  string
 }
 
 type showSvcOpts struct {
@@ -40,7 +44,7 @@ type showSvcOpts struct {
 
 	w             io.Writer
 	store         store
-	describer     describer
+	describer     workloadDescriber
 	sel           configSelector
 	initDescriber func() error // Overridden in tests.
 
@@ -68,7 +72,7 @@ func newShowSvcOpts(vars showSvcVars) (*showSvcOpts, error) {
 		sel:         selector.NewConfigSelector(prompt.New(), ssmStore),
 	}
 	opts.initDescriber = func() error {
-		var d describer
+		var d workloadDescriber
 		svc, err := opts.getTargetSvc()
 		if err != nil {
 			return err
@@ -140,6 +144,10 @@ func (o *showSvcOpts) Execute() error {
 	if err := o.initDescriber(); err != nil {
 		return err
 	}
+
+	if o.outputManifestForEnv != "" {
+		return o.writeManifest()
+	}
 	svc, err := o.describer.Describe()
 	if err != nil {
 		return fmt.Errorf("describe service %s: %w", o.svcName, err)
@@ -198,6 +206,20 @@ func (o *showSvcOpts) getTargetSvc() (*config.Workload, error) {
 	return o.targetSvc, nil
 }
 
+func (o *showSvcOpts) writeManifest() error {
+	out, err := o.describer.Manifest(o.outputManifestForEnv)
+	if err != nil {
+		var errNotFound *describe.ErrManifestNotFoundInTemplate
+		if errors.As(err, &errNotFound) {
+			log.Infof("You must deploy a new version of your service with %s before printing its manifest.\n",
+				color.HighlightCode("copilot deploy"))
+		}
+		return fmt.Errorf("fetch manifest for service %q in environment %q: %v", o.svcName, o.outputManifestForEnv, err)
+	}
+	fmt.Fprintln(o.w, strings.TrimRightFunc(string(out), unicode.IsSpace))
+	return nil
+}
+
 // buildSvcShowCmd builds the command for showing services in an application.
 func buildSvcShowCmd() *cobra.Command {
 	vars := showSvcVars{}
@@ -207,8 +229,10 @@ func buildSvcShowCmd() *cobra.Command {
 		Long:  "Shows info about a deployed service, including endpoints, capacity and related resources per environment.",
 
 		Example: `
-  Shows info about the service "my-svc"
-  /code $ copilot svc show -n my-svc`,
+  Print service configuration in deployed environments.
+  /code $ copilot svc show -n api
+  Print manifest file used for deploying service "api" in the "prod" environment.
+  /code $ copilot svc show -n api --manifest prod`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowSvcOpts(vars)
 			if err != nil {
@@ -221,5 +245,9 @@ func buildSvcShowCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, svcResourcesFlagDescription)
+	cmd.Flags().StringVar(&vars.outputManifestForEnv, manifestFlag, "", manifestFlagDescription)
+
+	cmd.MarkFlagsMutuallyExclusive(jsonFlag, manifestFlag)
+	cmd.MarkFlagsMutuallyExclusive(resourcesFlag, manifestFlag)
 	return cmd
 }

@@ -85,12 +85,6 @@ func newShowEnvOpts(vars showEnvVars) (*showEnvOpts, error) {
 
 // Validate returns an error if any optional flags are invalid.
 func (o *showEnvOpts) Validate() error {
-	if o.shouldOutputManifest && o.shouldOutputResources {
-		return fmt.Errorf("--%s and --%s cannot be specified together", manifestFlag, resourcesFlag)
-	}
-	if o.shouldOutputManifest && o.shouldOutputJSON {
-		return fmt.Errorf("--%s and --%s cannot be specified together", manifestFlag, jsonFlag)
-	}
 	return nil
 }
 
@@ -183,8 +177,10 @@ func buildEnvShowCmd() *cobra.Command {
 		Long:  "Shows info about a deployed environment, including region, account ID, and services.",
 
 		Example: `
-  Shows info about the environment "test".
-  /code $ copilot env show -n test`,
+  Print configuration for the "test" environment "test".
+  /code $ copilot env show -n test
+  Print manifest file for deploying the "prod" environment.
+  /code $ copilot env show -n prod --manifest`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newShowEnvOpts(vars)
 			if err != nil {
@@ -198,6 +194,8 @@ func buildEnvShowCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, envResourcesFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputManifest, manifestFlag, false, manifestFlagDescription)
-	_ = cmd.Flags().MarkHidden(manifestFlag)
+
+	cmd.MarkFlagsMutuallyExclusive(jsonFlag, manifestFlag)
+	cmd.MarkFlagsMutuallyExclusive(resourcesFlag, manifestFlag)
 	return cmd
 }
