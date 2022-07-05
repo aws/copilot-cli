@@ -106,6 +106,9 @@ Resources:
 {{- if .CDNConfig.PrefixListID}}
       SecurityGroupIngress:
         SourcePrefixListId: {{.CDNConfig.PrefixListID}}
+        FromPort: 0
+        IpProtocol: tcp
+        ToPort: 0
 {{- else}}
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0

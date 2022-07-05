@@ -657,6 +657,43 @@ func TestEnvironmentObservability_IsEmpty(t *testing.T) {
 	}
 }
 
+func TestEnvironmentCDNConfig_PublicIngressEnabled(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentCDNConfig
+		wanted bool
+	}{
+		"enabled via bool": {
+			in: environmentCDNConfig{
+				CDNConfig: AdvancedCDNConfig{
+					PrefixListIngress: aws.Bool(true),
+				},
+			},
+			wanted: true,
+		},
+		"disabled via bool": {
+			in: environmentCDNConfig{
+				CDNConfig: AdvancedCDNConfig{
+					PrefixListIngress: aws.Bool(false),
+				},
+			},
+			wanted: false,
+		},
+		"enabled by default": {
+			in: environmentCDNConfig{
+				EnableCDN: aws.Bool(true),
+			},
+			wanted: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.PublicIngressEnabled()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
 func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
 	testCases := map[string]struct {
 		in     environmentCDNConfig

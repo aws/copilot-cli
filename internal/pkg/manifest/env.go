@@ -86,6 +86,19 @@ func (a *AdvancedCDNConfig) IsEmpty() bool {
 	return a.PrefixListIngress == nil
 }
 
+// PublicIngressEnabled returns whether the cloud front facing security group allows public access.
+func (e *environmentCDNConfig) PublicIngressEnabled() bool {
+	if e.CDNConfig.PrefixListIngress != nil {
+		return *e.CDNConfig.PrefixListIngress
+	}
+	if e.EnableCDN != nil {
+		if *e.EnableCDN {
+			return true
+		}
+	}
+	return false
+}
+
 // CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
 func (e *environmentCDNConfig) CDNEnabled() bool {
 	if e.EnableCDN != nil {
