@@ -423,7 +423,7 @@ cdn: true
 type: Environment
 
 cdn:
-  public_ingress_enabled: false
+  public_ingress_allowed: false
 `,
 			wantedStruct: &Environment{
 				Workload: Workload{
