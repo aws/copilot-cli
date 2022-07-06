@@ -2111,6 +2111,59 @@ func (mr *MockdescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*Mockdescriber)(nil).Describe))
 }
 
+// MockworkloadDescriber is a mock of workloadDescriber interface.
+type MockworkloadDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockworkloadDescriberMockRecorder
+}
+
+// MockworkloadDescriberMockRecorder is the mock recorder for MockworkloadDescriber.
+type MockworkloadDescriberMockRecorder struct {
+	mock *MockworkloadDescriber
+}
+
+// NewMockworkloadDescriber creates a new mock instance.
+func NewMockworkloadDescriber(ctrl *gomock.Controller) *MockworkloadDescriber {
+	mock := &MockworkloadDescriber{ctrl: ctrl}
+	mock.recorder = &MockworkloadDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockworkloadDescriber) EXPECT() *MockworkloadDescriberMockRecorder {
+	return m.recorder
+}
+
+// Describe mocks base method.
+func (m *MockworkloadDescriber) Describe() (describe.HumanJSONStringer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Describe")
+	ret0, _ := ret[0].(describe.HumanJSONStringer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Describe indicates an expected call of Describe.
+func (mr *MockworkloadDescriberMockRecorder) Describe() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockworkloadDescriber)(nil).Describe))
+}
+
+// Manifest mocks base method.
+func (m *MockworkloadDescriber) Manifest(arg0 string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Manifest", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Manifest indicates an expected call of Manifest.
+func (mr *MockworkloadDescriberMockRecorder) Manifest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockworkloadDescriber)(nil).Manifest), arg0)
+}
+
 // MockwsFileDeleter is a mock of wsFileDeleter interface.
 type MockwsFileDeleter struct {
 	ctrl     *gomock.Controller
@@ -5180,8 +5233,28 @@ func (mr *MockdeploySelectorMockRecorder) Application(prompt, help interface{}, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockdeploySelector)(nil).Application), varargs...)
 }
 
+// DeployedJob mocks base method.
+func (m *MockdeploySelector) DeployedJob(prompt, help, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedJob, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{prompt, help, app}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeployedJob", varargs...)
+	ret0, _ := ret[0].(*selector.DeployedJob)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployedJob indicates an expected call of DeployedJob.
+func (mr *MockdeploySelectorMockRecorder) DeployedJob(prompt, help, app interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{prompt, help, app}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedJob", reflect.TypeOf((*MockdeploySelector)(nil).DeployedJob), varargs...)
+}
+
 // DeployedService mocks base method.
-func (m *MockdeploySelector) DeployedService(prompt, help, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error) {
+func (m *MockdeploySelector) DeployedService(prompt, help, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedService, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help, app}
 	for _, a := range opts {
@@ -6550,11 +6623,12 @@ func (m *MockcliStringer) EXPECT() *MockcliStringerMockRecorder {
 }
 
 // CLIString mocks base method.
-func (m *MockcliStringer) CLIString() string {
+func (m *MockcliStringer) CLIString() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CLIString")
 	ret0, _ := ret[0].(string)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CLIString indicates an expected call of CLIString.

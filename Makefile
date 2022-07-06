@@ -142,7 +142,7 @@ site-local:
 
 .PHONY: gen-mocks
 gen-mocks: tools
-	GOBIN=${GOBIN} go get github.com/golang/mock/mockgen
+	GOBIN=${GOBIN} go install github.com/golang/mock/mockgen
 	# TODO: make this more extensible?
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/sessions/mocks/mock_sessions.go -source=./internal/pkg/aws/sessions/sessions.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go -source=./internal/pkg/cli/env_delete.go resourceGetter

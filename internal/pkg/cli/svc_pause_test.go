@@ -62,8 +62,8 @@ func TestSvcPause_Ask(t *testing.T) {
 				)
 				m.sel.EXPECT().DeployedService(fmt.Sprintf(svcPauseNamePrompt, inputApp), svcPauseSvcNameHelpPrompt, "my-app", gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: "my-env",
-						Svc: "my-svc",
+						Env:  "my-env",
+						Name: "my-svc",
 					}, nil) // Let prompter handles the case when svc(env) is definite.
 				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
@@ -82,8 +82,8 @@ func TestSvcPause_Ask(t *testing.T) {
 				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: "my-env",
-						Svc: "my-svc",
+						Env:  "my-env",
+						Name: "my-svc",
 					}, nil).AnyTimes()
 				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			},
@@ -107,8 +107,8 @@ func TestSvcPause_Ask(t *testing.T) {
 				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
 				m.sel.EXPECT().DeployedService(fmt.Sprintf(svcPauseNamePrompt, inputApp), svcPauseSvcNameHelpPrompt, "my-app", gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: "my-env",
-						Svc: "my-svc",
+						Env:  "my-env",
+						Name: "my-svc",
 					}, nil)
 			},
 			wantedApp: inputApp,
@@ -138,8 +138,8 @@ func TestSvcPause_Ask(t *testing.T) {
 				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: "my-env",
-						Svc: "my-svc",
+						Env:  "my-env",
+						Name: "my-svc",
 					}, nil)
 				m.prompt.EXPECT().Confirm("Are you sure you want to stop processing requests for service my-svc?", "", gomock.Any()).
 					Times(1).Return(true, mockError)
@@ -157,8 +157,8 @@ func TestSvcPause_Ask(t *testing.T) {
 				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: "my-env",
-						Svc: "my-svc",
+						Env:  "my-env",
+						Name: "my-svc",
 					}, nil)
 				m.prompt.EXPECT().Confirm("Are you sure you want to stop processing requests for service my-svc?", "", gomock.Any()).
 					Times(1).Return(false, nil)
@@ -176,8 +176,8 @@ func TestSvcPause_Ask(t *testing.T) {
 				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: "my-env",
-						Svc: "my-svc",
+						Env:  "my-env",
+						Name: "my-svc",
 					}, nil)
 				m.prompt.EXPECT().Confirm("Are you sure you want to stop processing requests for service my-svc?", "", gomock.Any()).
 					Times(1).Return(true, nil)
