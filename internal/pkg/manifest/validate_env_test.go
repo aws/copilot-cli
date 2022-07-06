@@ -19,7 +19,7 @@ func TestEnvironment_Validate(t *testing.T) {
 	}{
 		"malformed network": {
 			in: Environment{
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							ID:   stringP("vpc-123"),
@@ -51,11 +51,11 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 	mockPrivateSubnet1CIDR := IPNet("10.0.3.0/24")
 	mockPrivateSubnet2CIDR := IPNet("10.0.4.0/24")
 	testCases := map[string]struct {
-		in          EnvironmentConfig
+		in          environmentConfig
 		wantedError string
 	}{
 		"error if internal ALB subnet placement specified with adjusted vpc": {
-			in: EnvironmentConfig{
+			in: environmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						CIDR: ipNetP("apple cider"),
@@ -93,7 +93,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 			wantedError: "in order to specify internal ALB subnet placement, subnets must be imported",
 		},
 		"error if subnets specified for internal ALB placement don't exist": {
-			in: EnvironmentConfig{
+			in: environmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						ID: aws.String("mockID"),
@@ -114,7 +114,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 			wantedError: "subnet(s) specified for internal ALB placement not imported",
 		},
 		"valid case with internal ALB placement": {
-			in: EnvironmentConfig{
+			in: environmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						ID: aws.String("mockID"),
