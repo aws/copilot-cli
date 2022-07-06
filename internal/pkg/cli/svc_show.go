@@ -211,8 +211,8 @@ func (o *showSvcOpts) writeManifest() error {
 	if err != nil {
 		var errNotFound *describe.ErrManifestNotFoundInTemplate
 		if errors.As(err, &errNotFound) {
-			log.Infof("You must deploy a new version of your service with %s before printing its manifest.\n",
-				color.HighlightCode("copilot deploy"))
+			log.Infof("You must deploy a new version of your service before printing its manifest:\n%s\n",
+				color.HighlightCodeBlock(fmt.Sprintf(" copilot deploy -n %s -e %s", o.svcName, o.outputManifestForEnv)))
 		}
 		return fmt.Errorf("fetch manifest for service %q in environment %q: %v", o.svcName, o.outputManifestForEnv, err)
 	}
