@@ -8,6 +8,7 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -83,7 +84,7 @@ type Build struct {
 	Image            string
 	EnvironmentType  string
 	BuildspecPath    string
-	AdditionalPolicy *manifest.AdditionalPolicy
+	AdditionalPolicy string
 }
 
 // Init populates the fields in Build by parsing the manifest file's "build" section.
@@ -100,8 +101,12 @@ func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) {
 	if strings.Contains(image, "aarch64") {
 		environmentType = "ARM_CONTAINER"
 	}
-	if mfBuild != nil && mfBuild.AdditionalPolicy != nil {
-		b.AdditionalPolicy = mfBuild.AdditionalPolicy
+	if mfBuild != nil && mfBuild.AdditionalPolicy.Content != nil {
+		additionalPolicy, err := yaml.Marshal(mfBuild.AdditionalPolicy)
+		if err != nil {
+			fmt.Errorf("marshal pipeline manifest to embed in template: %v", err)
+		}
+		b.AdditionalPolicy = string(additionalPolicy)
 	}
 	b.Image = image
 	b.EnvironmentType = environmentType

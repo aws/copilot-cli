@@ -124,22 +124,14 @@ Resources:
           {{- end }} {{/* endif ne .Source.OutputArtifactFormat "" */}}{{- end }} {{/* endif ne .Source.ProviderName "GitHubV1" */}}
       Roles:
         - !Ref BuildProjectRole
-  {{- if isSet .Build.AdditionalPolicy }}
+  {{- if .Build.AdditionalPolicy }}
   BuildProjectAdditionalPolicy:
     Type: 'AWS::IAM::Policy'
     Properties:
       PolicyName: !Sub ${AWS::StackName}-BuildProjectAdditionalPolicy
-      PolicyDocument:
-        Version: {{.Build.AdditionalPolicy.PolicyDocument.Version}}
-        Statement:  {{range $index, $statement := .Build.AdditionalPolicy.PolicyDocument.Statement}}
-          - Effect: {{$statement.Effect}}
-            Action: {{- if isSet $statement.Action.String }} '{{$statement.Action.String}}' {{- else }} {{range $Action := $statement.Action.StringSlice}}
-              - {{$Action}}{{end}}{{- end}}
-            Resource: {{- if isSet $statement.Resource.String }} '{{$statement.Resource.String}}' {{- else }} {{range $Resource := $statement.Resource.StringSlice}}
-              - {{$Resource}}{{end}}{{- end}}{{end}}
+  {{indent 4 .Build.AdditionalPolicy}}
       Roles:
-        - !Ref BuildProjectRole
-  {{- end}}
+        - !Ref BuildProjectRole {{- end}}
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:

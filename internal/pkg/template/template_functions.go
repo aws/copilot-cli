@@ -6,7 +6,6 @@ package template
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -39,11 +38,6 @@ func IsARNFunc(value string) bool {
 // TrimSlashPrefix takes a string value and removes slash prefix from the string if present.
 func TrimSlashPrefix(value string) string {
 	return strings.TrimPrefix(value, "/")
-}
-
-// IsSet takes any value and determines if it is set to non-nil.
-func IsSet(value any) bool {
-	return !reflect.ValueOf(value).IsNil()
 }
 
 // DashReplacedLogicalIDToOriginal takes a "sanitized" logical ID

@@ -452,31 +452,6 @@ func (p Pipeline) Validate() error {
 			return fmt.Errorf(`validate "deployments" for pipeline stage %s: %w`, stg.Name, err)
 		}
 	}
-	if err := p.validatePolicyGrammer(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (p Pipeline) validatePolicyGrammer() error {
-	if p.Build == nil || p.Build.AdditionalPolicy == nil {
-		return nil
-	}
-
-	if p.Build.AdditionalPolicy.PolicyDocument == nil || p.Build.AdditionalPolicy.PolicyDocument.Statement == nil || p.Build.AdditionalPolicy.PolicyDocument.Version == "" {
-		return fmt.Errorf("build project additional policy structure is incorrect")
-	}
-
-	for _, statement := range p.Build.AdditionalPolicy.PolicyDocument.Statement {
-		fmt.Println("printing validation ", statement.Action.isEmpty())
-		if statement.Effect == "" || statement.Action.isEmpty() || statement.Resource.isEmpty() {
-			return fmt.Errorf("build project additional policy statement is incorrect")
-		}
-	}
-
-	//To be determined if we should also add checks for the specific vaulues of the policy parameters
-	//e.g. to check if <effect_block> = "Effect" : ("Allow" | "Deny") has only allow and deny values. Or leave
-	// it to the AWS SDK to fail.
 	return nil
 }
 

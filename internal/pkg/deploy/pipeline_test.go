@@ -241,6 +241,18 @@ func TestPipelineBuild_Init(t *testing.T) {
 				BuildspecPath:   "some/path",
 			},
 		},
+		"additional policy is empty": {
+			mfBuild: &manifest.Build{
+				Image:     "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				Buildspec: "some/path",
+			},
+			expectedBuild: Build{
+				Image:            "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				EnvironmentType:  "ARM_CONTAINER",
+				BuildspecPath:    "some/path",
+				AdditionalPolicy: "",
+			},
+		},
 		"by default convert legacy manifest path to buildspec path": {
 			mfDirPath: "copilot/",
 			expectedBuild: Build{
