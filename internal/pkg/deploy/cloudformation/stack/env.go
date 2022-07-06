@@ -297,31 +297,17 @@ func (e *BootstrapEnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.En
 	}, nil
 }
 
-func (e *EnvStackConfig) cdnConfig() template.CDNConfig {
-	var (
-		enabled      bool
-		prefixListId *string
-	)
-
+func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
+	// If a manifest is present, check there, otherwise cdn cannot be enabled
 	if e.in.Mft != nil {
-		// CDN Config specified by AdvancedCDNConfig
-		if !e.in.Mft.CDN.CDNConfig.IsEmpty() {
-			enabled = true
-			prefixListId = e.in.PrefixListID
+		if !e.in.Mft.CDNConfig.CDNEnabled() {
+			return nil
 		}
-
-		// CDN Config specified by basic boolean enabler
-		if e.in.Mft.CDN.EnableCDN != nil {
-			if *e.in.Mft.CDN.EnableCDN {
-				enabled = true
-			}
-		}
+	} else {
+		return nil
 	}
 
-	return template.CDNConfig{
-		EnableCDN:    enabled,
-		PrefixListID: prefixListId,
-	}
+	return &template.CDNConfig{}
 }
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {

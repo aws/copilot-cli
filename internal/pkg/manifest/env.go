@@ -58,7 +58,7 @@ type EnvironmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
 	Observability environmentObservability `yaml:"observability,omitempty,flow"`
 	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty,flow"`
-	CDN           environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
+	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
 type environmentNetworkConfig struct {
@@ -72,53 +72,37 @@ type environmentVPCConfig struct {
 }
 
 type environmentCDNConfig struct {
-	EnableCDN *bool
-	CDNConfig AdvancedCDNConfig // mutually exclusive with EnableCDN
+	Enabled   *bool
+	CDNConfig AdvancedCDNConfig // mutually exclusive with Enabled
 }
 
 // AdvancedCDNConfig represents an advanced configuration for a Content Delivery Network.
-type AdvancedCDNConfig struct {
-	PrefixListIngress *bool `yaml:"public_ingress_allowed"`
+type AdvancedCDNConfig struct{}
+
+// IsEmpty returns whether environmentCDNConfig is empty.
+func (cfg *environmentCDNConfig) IsEmpty() bool {
+	return cfg.Enabled == nil && cfg.CDNConfig.IsEmpty()
 }
 
 // IsEmpty returns whether AdvancedCDNConfig is empty.
-func (a *AdvancedCDNConfig) IsEmpty() bool {
-	return a.PrefixListIngress == nil
-}
-
-// PublicIngressAllowed returns whether the cloud front facing security group allows public access.
-func (e *environmentCDNConfig) PublicIngressAllowed() bool {
-	if e.CDNConfig.PrefixListIngress != nil {
-		return *e.CDNConfig.PrefixListIngress
-	}
-	if e.EnableCDN != nil {
-		if *e.EnableCDN {
-			return true
-		}
-	}
-	return false
+func (cfg *AdvancedCDNConfig) IsEmpty() bool {
+	return true
 }
 
 // CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
-func (e *environmentCDNConfig) CDNEnabled() bool {
-	if e.EnableCDN != nil {
-		if *e.EnableCDN {
-			return true
-		}
-	}
-
-	if !e.CDNConfig.IsEmpty() {
+func (cfg *environmentCDNConfig) CDNEnabled() bool {
+	if !cfg.CDNConfig.IsEmpty() {
 		return true
 	}
 
-	return false
+	return aws.BoolValue(cfg.Enabled)
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the environmentCDNConfig
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (e *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&e.CDNConfig); err != nil {
+func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&cfg.CDNConfig); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -127,12 +111,12 @@ func (e *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	if !e.CDNConfig.IsEmpty() {
+	if !cfg.CDNConfig.IsEmpty() {
 		// Successfully unmarshalled CDNConfig fields, return
 		return nil
 	}
 
-	if err := value.Decode(&e.EnableCDN); err != nil {
+	if err := value.Decode(&cfg.Enabled); err != nil {
 		return errors.New(`unable to unmarshal into bool or composite-style map`)
 	}
 	return nil

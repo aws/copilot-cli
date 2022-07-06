@@ -56,10 +56,10 @@ Conditions:
   HasAliases:
     !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
-{{- if .CDNConfig.EnableCDN}}
+{{include "bootstrap-resources" . | indent 2}}
+{{- if .CDNConfig}}
 {{include "cdn-resources" . | indent 2}}
 {{- end}}
-{{include "bootstrap-resources" . | indent 2}}
 {{- if not .VPCConfig.Imported}}
 {{include "vpc-resources" .VPCConfig.Managed | indent 2}}
 {{include "nat-gateways" .VPCConfig.Managed | indent 2}}
@@ -103,14 +103,6 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Access to the public facing load balancer
-       # Change load balancer to only accept ingress from CloudFront when prefix list specified
-{{- if .CDNConfig.PrefixListID}}
-      SecurityGroupIngress:
-        SourcePrefixListId: {{.CDNConfig.PrefixListID}}
-        FromPort: 0
-        IpProtocol: tcp
-        ToPort: 0
-{{- else}}
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 80
@@ -122,7 +114,6 @@ Resources:
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
-{{- end}}
 {{- if .VPCConfig.Imported}}
       VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}

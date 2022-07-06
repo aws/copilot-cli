@@ -566,14 +566,12 @@ func TestCDNConfiguration_Validate(t *testing.T) {
 		},
 		"valid if bool specified": {
 			in: environmentCDNConfig{
-				EnableCDN: aws.Bool(false),
+				Enabled: aws.Bool(false),
 			},
 		},
 		"valid if advanced config configured correctly": {
 			in: environmentCDNConfig{
-				CDNConfig: AdvancedCDNConfig{
-					PrefixListIngress: aws.Bool(false),
-				},
+				CDNConfig: AdvancedCDNConfig{},
 			},
 		},
 	}

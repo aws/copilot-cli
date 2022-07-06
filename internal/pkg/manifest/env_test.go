@@ -412,29 +412,8 @@ cdn: true
 					Type: aws.String("Environment"),
 				},
 				EnvironmentConfig: EnvironmentConfig{
-					CDN: environmentCDNConfig{
-						EnableCDN: aws.Bool(true),
-					},
-				},
-			},
-		},
-		"unmarshal with content delivery network map": {
-			inContent: `name: prod
-type: Environment
-
-cdn:
-  public_ingress_allowed: false
-`,
-			wantedStruct: &Environment{
-				Workload: Workload{
-					Name: aws.String("prod"),
-					Type: aws.String("Environment"),
-				},
-				EnvironmentConfig: EnvironmentConfig{
-					CDN: environmentCDNConfig{
-						CDNConfig: AdvancedCDNConfig{
-							PrefixListIngress: aws.Bool(false),
-						},
+					CDNConfig: environmentCDNConfig{
+						Enabled: aws.Bool(true),
 					},
 				},
 			},
@@ -657,38 +636,26 @@ func TestEnvironmentObservability_IsEmpty(t *testing.T) {
 	}
 }
 
-func TestEnvironmentCDNConfig_PublicIngressAllowed(t *testing.T) {
+func TestEnvironmentCDNConfig_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
 		in     environmentCDNConfig
 		wanted bool
 	}{
-		"enabled via bool": {
-			in: environmentCDNConfig{
-				CDNConfig: AdvancedCDNConfig{
-					PrefixListIngress: aws.Bool(true),
-				},
-			},
+		"empty": {
+			in:     environmentCDNConfig{},
 			wanted: true,
 		},
-		"disabled via bool": {
+		"not empty": {
 			in: environmentCDNConfig{
-				CDNConfig: AdvancedCDNConfig{
-					PrefixListIngress: aws.Bool(false),
-				},
+				Enabled: aws.Bool(false),
 			},
 			wanted: false,
-		},
-		"enabled by default": {
-			in: environmentCDNConfig{
-				EnableCDN: aws.Bool(true),
-			},
-			wanted: true,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := tc.in.PublicIngressAllowed()
+			got := tc.in.IsEmpty()
 			require.Equal(t, tc.wanted, got)
 		})
 	}
@@ -701,25 +668,23 @@ func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
 	}{
 		"enabled via bool": {
 			in: environmentCDNConfig{
-				EnableCDN: aws.Bool(true),
+				Enabled: aws.Bool(true),
 			},
 			wanted: true,
 		},
-		"enabled via struct": {
-			in: environmentCDNConfig{
-				CDNConfig: AdvancedCDNConfig{
-					PrefixListIngress: aws.Bool(false),
-				},
-			},
-			wanted: true,
-		},
+		// "enabled via struct": {
+		// 	in: environmentCDNConfig{
+		// 		CDNConfig: AdvancedCDNConfig{},
+		// 	},
+		// 	wanted: true,
+		// },
 		"not enabled because empty": {
 			in:     environmentCDNConfig{},
 			wanted: false,
 		},
 		"not enabled via bool": {
 			in: environmentCDNConfig{
-				EnableCDN: aws.Bool(false),
+				Enabled: aws.Bool(false),
 			},
 			wanted: false,
 		},
