@@ -43,7 +43,7 @@ type packageJobOpts struct {
 	// Interfaces to interact with dependencies.
 	ws     wsJobDirReader
 	store  store
-	runner runner
+	runner execRunner
 	sel    wsSelector
 	prompt prompter
 
@@ -138,6 +138,11 @@ func (o *packageJobOpts) Ask() error {
 func (o *packageJobOpts) Execute() error {
 	o.newPackageCmd(o)
 	return o.packageCmd.Execute()
+}
+
+// RecommendActions suggests recommended actions before the packaged template is used for deployment.
+func (o *packageJobOpts) RecommendActions() error {
+	return o.packageCmd.RecommendActions()
 }
 
 func (o *packageJobOpts) askJobName() error {

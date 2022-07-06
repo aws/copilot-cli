@@ -188,6 +188,43 @@ func (mr *MockEnvironmentDescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockEnvironmentDescriber)(nil).Describe))
 }
 
+// MockNonZeroExitCodeGetter is a mock of NonZeroExitCodeGetter interface.
+type MockNonZeroExitCodeGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockNonZeroExitCodeGetterMockRecorder
+}
+
+// MockNonZeroExitCodeGetterMockRecorder is the mock recorder for MockNonZeroExitCodeGetter.
+type MockNonZeroExitCodeGetterMockRecorder struct {
+	mock *MockNonZeroExitCodeGetter
+}
+
+// NewMockNonZeroExitCodeGetter creates a new mock instance.
+func NewMockNonZeroExitCodeGetter(ctrl *gomock.Controller) *MockNonZeroExitCodeGetter {
+	mock := &MockNonZeroExitCodeGetter{ctrl: ctrl}
+	mock.recorder = &MockNonZeroExitCodeGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockNonZeroExitCodeGetter) EXPECT() *MockNonZeroExitCodeGetterMockRecorder {
+	return m.recorder
+}
+
+// HasNonZeroExitCode mocks base method.
+func (m *MockNonZeroExitCodeGetter) HasNonZeroExitCode(arg0 []string, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasNonZeroExitCode", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// HasNonZeroExitCode indicates an expected call of HasNonZeroExitCode.
+func (mr *MockNonZeroExitCodeGetterMockRecorder) HasNonZeroExitCode(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasNonZeroExitCode", reflect.TypeOf((*MockNonZeroExitCodeGetter)(nil).HasNonZeroExitCode), arg0, arg1)
+}
+
 // MockRunner is a mock of Runner interface.
 type MockRunner struct {
 	ctrl     *gomock.Controller

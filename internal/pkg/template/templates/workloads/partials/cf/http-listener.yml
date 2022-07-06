@@ -23,6 +23,7 @@ HTTPRulePriorityAction:
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
+    RulePath: !Ref RulePath
     {{- if eq .WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
     {{- else}}
@@ -71,8 +72,4 @@ HTTPListenerRule:
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
-    Priority: 
-      !If
-        - IsDefaultRootPath
-        - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-        - !GetAtt HTTPRulePriorityAction.Priority
+    Priority: !GetAtt HTTPRulePriorityAction.Priority

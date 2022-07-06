@@ -57,14 +57,14 @@ Resources:
           Name: !Ref TaskName{{if .EnvVars}}
           Environment:{{range $name, $value := .EnvVars}}
           - Name: {{$name}}
-            Value: {{$value}}{{end}}{{end}}
+            Value: {{$value | printf "%q"}}{{end}}{{end}}
           {{- if or .SSMParamSecrets .SecretsManagerSecrets}}
           Secrets:{{range $name, $valueFrom := .SSMParamSecrets}}
           - Name: {{$name}}
-            ValueFrom: {{$valueFrom}}{{end}}
+            ValueFrom: {{$valueFrom | printf "%q"}}{{end}}
           {{- range $name, $valueFrom := .SecretsManagerSecrets}}
           - Name: {{$name}}
-            ValueFrom: {{$valueFrom}}{{end}}
+            ValueFrom: {{$valueFrom | printf "%q"}}{{end}}
           {{- end}}
       Family: !Join ['-', ["copilot", !Ref TaskName]]
       RuntimePlatform: !If [HasCustomPlatform, {OperatingSystemFamily: !Ref OS, CpuArchitecture: !Ref Arch}, !Ref "AWS::NoValue"]
