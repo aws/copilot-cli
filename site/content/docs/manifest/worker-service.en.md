@@ -162,10 +162,17 @@ Alternatively, you can specify a map for setting up autoscaling:
 count:
   range: 1-10
   cpu_percentage: 70
-  memory_percentage: 80
+  memory_percentage:
+    value: 80
+    cooldown:
+      in: 80s
+      out: 160s
   queue_delay:
     acceptable_latency: 10m
     msg_processing_time: 250ms
+    cooldown:
+      in: 30s
+      out: 60s
 ```
 
 <span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String or Map</span>  
@@ -188,33 +195,54 @@ count:
 
 This will set your range as 1-10 as above, but will place the first two copies of your service on dedicated Fargate capacity. If your service scales to 3 or higher, the third and any additional copies will be placed on Spot until the maximum is reached.
 
-<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>  
+<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
 The minimum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>  
+<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
 The maximum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>  
+<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
 The desired count at which you wish to start placing your service using Fargate Spot capacity providers.
 
-<span class="parent-field">count.</span><a id="count-cpu-percentage" href="#count-cpu-percentage" class="field">`cpu_percentage`</a> <span class="type">Integer</span>  
+<span class="parent-field">count.</span><a id="count-cooldown" href="#count-cooldown" class="field">`cooldown`</a> <span class="type">Map</span>
+Cooldown scaling fields that are used as the default cooldown for all autoscaling fields specified.
+
+<span class="parent-field">count.cooldown.</span><a id="count-cooldown-in" href="#count-cooldown-in" class="field">`in`</a> <span class="type">Duration</span>
+The cooldown time for autoscaling fields to scale up the service.
+
+<span class="parent-field">count.cooldown.</span><a id="count-cooldown-out" href="#count-cooldown-out" class="field">`out`</a> <span class="type">Duration</span>
+The cooldown time for autoscaling fields to scale down the service.
+
+The following options `cpu_percentage` and `memory_percentage` are autoscaling fields for `count` which can be defined either as the value of the field, or as a Map containing advanced information about the field's `value` and `cooldown`:
+```yaml
+value: 50
+cooldown:
+  in: 30s
+  out: 60s
+```
+The cooldown specified here will override the default cooldown.
+
+<span class="parent-field">count.</span><a id="count-cpu-percentage" href="#count-cpu-percentage" class="field">`cpu_percentage`</a> <span class="type">Integer or Map</span>
 Scale up or down based on the average CPU your service should maintain.
 
-<span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>  
+<span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer or Map</span>
 Scale up or down based on the average memory your service should maintain.
 
-<span class="parent-field">count.</span><a id="count-queue-delay" href="#count-queue-delay" class="field">`queue_delay`</a> <span class="type">Integer</span>   
+<span class="parent-field">count.</span><a id="count-queue-delay" href="#count-queue-delay" class="field">`queue_delay`</a> <span class="type">Map</span>
 Scale up or down to maintain an acceptable queue latency by tracking against the acceptable backlog per task.  
 The acceptable backlog per task is calculated by dividing `acceptable_latency` by `msg_processing_time`. For example, if you can tolerate consuming a message within 10 minutes
 of its arrival and it takes your task on average 250 milliseconds to process a message, then `acceptableBacklogPerTask = 10 * 60 / 0.25 = 2400`. Therefore, each task can hold up to
 2,400 messages.   
 A target tracking policy is set up on your behalf to ensure your service scales up and down to maintain <= 2400 messages per task. To learn more see [docs](https://docs.aws.amazon.com/autoscaling/ec2/userguide/as-using-sqs-queue.html).
 
-<span class="parent-field">count.queue_delay.</span><a id="count-queue-delay-acceptable-latency" href="#count-queue-delay-acceptable-latency" class="field">`acceptable_latency`</a> <span class="type">Duration</span>   
+<span class="parent-field">count.queue_delay.</span><a id="count-queue-delay-acceptable-latency" href="#count-queue-delay-acceptable-latency" class="field">`acceptable_latency`</a> <span class="type">Duration</span>
 The acceptable amount of time that a message can sit in the queue. For example, `"45s"`, `"5m"`, `10h`.
 
-<span class="parent-field">count.queue_delay.</span><a id="count-queue-delay-msg-processing-time" href="#count-queue-delay-msg-processing-time" class="field">`msg_processing_time`</a> <span class="type">Duration</span>   
+<span class="parent-field">count.queue_delay.</span><a id="count-queue-delay-msg-processing-time" href="#count-queue-delay-msg-processing-time" class="field">`msg_processing_time`</a> <span class="type">Duration</span>
 The average amount of time it takes to process an SQS message. For example, `"250ms"`, `"1s"`.
+
+<span class="parent-field">count.queue_delay.</span><a id="count-queue-delay-cooldown" href="#count-queue-delay-cooldown" class="field">`cooldown`</a> <span class="type">Map</span>
+Scale up and down cooldown fields for queue delay autoscaling.
 
 {% include 'exec.en.md' %}
 
