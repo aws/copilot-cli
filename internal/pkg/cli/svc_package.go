@@ -80,6 +80,7 @@ type packageSvcOpts struct {
 	targetApp       *config.Application
 	targetEnv       *config.Environment
 	appliedManifest manifest.WorkloadManifest
+	rawManifest     []byte
 	rootUserARN     string
 }
 
@@ -125,6 +126,11 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 	if err != nil {
 		return nil, err
 	}
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
+	}
+
 	var deployer workloadTemplateGenerator
 	in := clideploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
@@ -133,6 +139,7 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 		Env:             targetEnv,
 		ImageTag:        o.tag,
 		Mft:             o.appliedManifest,
+		RawMft:          raw,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
