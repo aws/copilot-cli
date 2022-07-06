@@ -422,6 +422,28 @@ func TestTemplate_ParseNetwork(t *testing.T) {
      - "sg-asdasdas"
 `,
 		},
+		"should render AWS VPC configuration without default environment security group": {
+			input: template.NetworkOpts{
+				AssignPublicIP: "DISABLED",
+				SubnetsType:    "PrivateSubnets",
+				SecurityGroups: []string{
+					"sg-1bcf1d5b",
+					"sg-asdasdas",
+				},
+				DenyDefaultSecurityGroup: true,
+			},
+			wantedNetworkConfig: `
+ AwsvpcConfiguration:
+   AssignPublicIp: DISABLED
+   Subnets:
+     Fn::Split:
+       - ','
+       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PrivateSubnets'
+   SecurityGroups:
+     - "sg-1bcf1d5b"
+     - "sg-asdasdas"
+`,
+		},
 	}
 
 	for name, tc := range testCases {

@@ -22,6 +22,7 @@ var defaultTransformers = []mergo.Transformers{
 	aliasTransformer{},
 	stringSliceOrStringTransformer{},
 	platformArgsOrStringTransformer{},
+	securityGroupsIDsOrConfigTransformer{},
 	placementArgOrStringTransformer{},
 	healthCheckArgsOrStringTransformer{},
 	countTransformer{},
@@ -174,6 +175,32 @@ func (t platformArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst,
 
 		if !srcStruct.PlatformArgs.isEmpty() {
 			dstStruct.PlatformString = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type securityGroupsIDsOrConfigTransformer struct{}
+
+// Transformer returns custom merge logic for SecurityGroupsIDsOrConfig's fields.
+func (s securityGroupsIDsOrConfigTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(SecurityGroupsIDsOrConfig{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(SecurityGroupsIDsOrConfig), src.Interface().(SecurityGroupsIDsOrConfig)
+
+		if !srcStruct.AdvancedConfig.isEmpty() {
+			dstStruct.IDs = nil
+		}
+
+		if srcStruct.IDs != nil {
+			dstStruct.AdvancedConfig = SecurityGroupsConfig{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.
