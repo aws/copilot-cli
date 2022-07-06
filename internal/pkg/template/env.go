@@ -104,15 +104,14 @@ type EnvOpts struct {
 	AllowVPCIngress          bool
 	Telemetry                *Telemetry
 
-	CDNConfig CDNConfig
+	CDNConfig *CDNConfig
 
-	LatestVersion string
+	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
 }
 
+// CDNConfig represents configuration settings for a Content Delivery Network with CloudFront.
 type CDNConfig struct {
-	EnableCDN    bool
-	PrefixListID *string
 }
 
 type VPCConfig struct {

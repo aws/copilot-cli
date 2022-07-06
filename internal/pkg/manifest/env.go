@@ -58,7 +58,7 @@ type EnvironmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
 	Observability environmentObservability `yaml:"observability,omitempty,flow"`
 	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty,flow"`
-	CDN           environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
+	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
 type environmentNetworkConfig struct {
@@ -78,33 +78,17 @@ type environmentCDNConfig struct {
 
 // AdvancedCDNConfig represents an advanced configuration for a Content Delivery Network.
 type AdvancedCDNConfig struct {
-	PrefixListIngress *bool `yaml:"public_ingress_allowed"`
 }
 
 // IsEmpty returns whether AdvancedCDNConfig is empty.
 func (a *AdvancedCDNConfig) IsEmpty() bool {
-	return a.PrefixListIngress == nil
-}
-
-// PublicIngressAllowed returns whether the cloud front facing security group allows public access.
-func (e *environmentCDNConfig) PublicIngressAllowed() bool {
-	if e.CDNConfig.PrefixListIngress != nil {
-		return *e.CDNConfig.PrefixListIngress
-	}
-	if e.EnableCDN != nil {
-		if *e.EnableCDN {
-			return true
-		}
-	}
-	return false
+	return true
 }
 
 // CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
 func (e *environmentCDNConfig) CDNEnabled() bool {
 	if e.EnableCDN != nil {
-		if *e.EnableCDN {
-			return true
-		}
+		return *e.EnableCDN
 	}
 
 	if !e.CDNConfig.IsEmpty() {
