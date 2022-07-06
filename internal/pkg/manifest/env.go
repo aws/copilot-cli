@@ -273,7 +273,7 @@ type publicHTTPConfig struct {
 	Certificates []string `yaml:"certificates,omitempty"`
 }
 
-// IsEmpty returns true if there are customization to the public ALB.
+// IsEmpty returns true if there is no customization to the public ALB.
 func (cfg publicHTTPConfig) IsEmpty() bool {
 	return len(cfg.Certificates) == 0
 }
