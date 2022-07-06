@@ -413,7 +413,7 @@ func (o *packageSvcOpts) getTargetEnv() (*config.Environment, error) {
 
 // RecommendActions suggests recommended actions before the packaged template is used for deployment.
 func (o *packageSvcOpts) RecommendActions() error {
-	return validateManifestCompatibilityWithEnv(o.appliedManifest.(manifest.WorkloadManifest), o.envName, o.envFeaturesDescriber)
+	return validateManifestCompatibilityWithEnv(o.appliedManifest, o.envName, o.envFeaturesDescriber)
 }
 
 func contains(s string, items []string) bool {
