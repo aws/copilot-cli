@@ -333,6 +333,11 @@ func (o *initEnvOpts) Execute() error {
 
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initEnvOpts) RecommendActions() error {
+	logRecommendedActions([]string{
+		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.mftPath)),
+		fmt.Sprintf("Run %s to deploy your environment.",
+			color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", o.name))),
+	})
 	return nil
 }
 
