@@ -17,12 +17,30 @@ import (
 // EnvironmentManifestType identifies that the type of manifest is environment manifest.
 const EnvironmentManifestType = "Environment"
 
+var environmentManifestPath = "environment/manifest.yml"
+
 // Environment is the manifest configuration for an environment.
 type Environment struct {
 	Workload          `yaml:",inline"`
-	EnvironmentConfig `yaml:",inline"`
+	environmentConfig `yaml:",inline"`
 
 	parser template.Parser
+}
+
+// EnvironmentProps contains properties for creating a new environment manifest.
+type EnvironmentProps struct {
+	Name          string
+	CustomizedEnv *config.CustomizeEnv
+	Telemetry     *config.Telemetry
+}
+
+// NewEnvironment creates a new environment manifest object.
+func NewEnvironment(props *EnvironmentProps) *Environment {
+	return FromEnvConfig(&config.Environment{
+		Name:         props.Name,
+		CustomConfig: props.CustomizedEnv,
+		Telemetry:    props.Telemetry,
+	}, template.New())
 }
 
 // FromEnvConfig transforms an environment configuration into a manifest.
@@ -41,7 +59,7 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 			Name: stringP(cfg.Name),
 			Type: stringP(EnvironmentManifestType),
 		},
-		EnvironmentConfig: EnvironmentConfig{
+		environmentConfig: environmentConfig{
 			Network: environmentNetworkConfig{
 				VPC: vpc,
 			},
@@ -52,8 +70,19 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 	}
 }
 
-// EnvironmentConfig holds the configuration for an environment.
-type EnvironmentConfig struct {
+// MarshalBinary serializes the manifest object into a binary YAML document.
+// Implements the encoding.BinaryMarshaler interface.
+func (e *Environment) MarshalBinary() ([]byte, error) {
+	content, err := e.parser.Parse(environmentManifestPath, *e, template.WithFuncs(map[string]interface{}{
+		"fmtStringSlice": template.FmtSliceFunc,
+	}))
+	if err != nil {
+		return nil, err
+	}
+	return content.Bytes(), nil
+}
+
+type environmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
 	Observability environmentObservability `yaml:"observability,omitempty,flow"`
 	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty,flow"`
