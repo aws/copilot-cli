@@ -104,7 +104,7 @@ type EnvOpts struct {
 	AllowVPCIngress          bool
 	Telemetry                *Telemetry
 
-	CDNConfig *CDNConfig
+	CDNConfig *CDNConfig // If nil, no cdn is to be used
 
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.

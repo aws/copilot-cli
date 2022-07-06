@@ -1124,3 +1124,55 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvironmentCDNConfigTransformer_Transformer(t *testing.T) {
+	testCases := map[string]struct {
+		original func(cfg *environmentCDNConfig)
+		override func(cfg *environmentCDNConfig)
+		wanted   func(cfg *environmentCDNConfig)
+	}{
+		// "enabled set to nil if cdnconfig is not empty": {
+		// 	original: func(cfg *environmentCDNConfig) {
+		// 		cfg.Enabled = aws.Bool(true)
+		// 	},
+		// 	override: func(cfg *environmentCDNConfig) {
+		// 		cfg.CDNConfig = AdvancedCDNConfig{} // Need to update with advanced fields when AdvancedCDNConfig struct is not empty
+		// 	},
+		// 	wanted: func(cfg *environmentCDNConfig) {
+		// 		cfg.CDNConfig = AdvancedCDNConfig{} // Need to update with advanced fields when AdvancedCDNConfig struct is not empty
+		// 	},
+		// },
+		"cdnconfig set to empty if enabled is not nil": {
+			original: func(cfg *environmentCDNConfig) {
+				cfg.CDNConfig = AdvancedCDNConfig{} // Need to update with advanced fields when AdvancedCDNConfig struct is not empty
+			},
+			override: func(cfg *environmentCDNConfig) {
+				cfg.Enabled = aws.Bool(true)
+			},
+			wanted: func(cfg *environmentCDNConfig) {
+				cfg.Enabled = aws.Bool(true)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted environmentCDNConfig
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(environmentCDNConfigTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}

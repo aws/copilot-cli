@@ -435,8 +435,9 @@ type NetworkOpts struct {
 	SecurityGroups []string
 	AssignPublicIP string
 	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
-	SubnetsType string
-	SubnetIDs   []string
+	SubnetsType              string
+	SubnetIDs                []string
+	DenyDefaultSecurityGroup bool
 }
 
 // RuntimePlatformOpts holds configuration needed for Platform configuration.

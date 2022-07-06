@@ -199,6 +199,16 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}, nil
 }
 
+// Manifest returns the contents of the manifest used to deploy a backend service stack.
+// If the Manifest metadata doesn't exist in the stack template, then returns ErrManifestNotFoundInTemplate.
+func (d *BackendServiceDescriber) Manifest(env string) ([]byte, error) {
+	cfn, err := d.initECSServiceDescribers(env)
+	if err != nil {
+		return nil, err
+	}
+	return cfn.Manifest()
+}
+
 // backendSvcDesc contains serialized parameters for a backend service.
 type backendSvcDesc struct {
 	Service          string               `json:"service"`
