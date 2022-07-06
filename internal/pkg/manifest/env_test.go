@@ -593,6 +593,122 @@ func TestEnvironmentVPCConfig_ManagedVPC(t *testing.T) {
 	}
 }
 
+func TestEnvironmentVPCConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentVPCConfig
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: environmentVPCConfig{
+				ID: aws.String("mock-vpc-id"),
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestSubnetsConfiguration_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     subnetsConfiguration
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: subnetsConfiguration{
+				Public: []subnetConfiguration{
+					{
+						SubnetID: aws.String("mock-subnet-id"),
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentHTTPConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentHTTPConfig
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: environmentHTTPConfig{
+				Public: publicHTTPConfig{
+					Certificates: []string{"mock-cert"},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestPublicHTTPConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     publicHTTPConfig
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: publicHTTPConfig{
+				Certificates: []string{"mock-cert-1"},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestPrivateHTTPConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     privateHTTPConfig
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: privateHTTPConfig{
+				InternalALBSubnets: []string{"mock-subnet-1"},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
 func TestEnvironmentObservability_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
 		in     environmentObservability

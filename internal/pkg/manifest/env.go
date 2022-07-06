@@ -69,6 +69,11 @@ type environmentVPCConfig struct {
 	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
 }
 
+// IsEmpty returns true if vpc is not configured.
+func (cfg environmentVPCConfig) IsEmpty() bool {
+	return cfg.ID == nil && cfg.CIDR == nil && cfg.Subnets.IsEmpty()
+}
+
 func (cfg *environmentVPCConfig) loadVPCConfig(env *config.CustomizeEnv) {
 	if env.IsEmpty() {
 		return
@@ -186,6 +191,11 @@ type subnetsConfiguration struct {
 	Private []subnetConfiguration `yaml:"private,omitempty"`
 }
 
+// IsEmpty returns true if neither public subnets nor private subnets are configured.
+func (cs subnetsConfiguration) IsEmpty() bool {
+	return len(cs.Public) == 0 && len(cs.Private) == 0
+}
+
 type subnetConfiguration struct {
 	SubnetID *string `yaml:"id"`
 	CIDR     *IPNet  `yaml:"cidr"`
@@ -213,6 +223,11 @@ type environmentHTTPConfig struct {
 	Private privateHTTPConfig `yaml:"private,omitempty"`
 }
 
+// IsEmpty returns true if neither the public ALB nor the internal ALB is configured.
+func (cfg environmentHTTPConfig) IsEmpty() bool {
+	return cfg.Public.IsEmpty() && cfg.Private.IsEmpty()
+}
+
 func (cfg *environmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	if env.IsEmpty() {
 		return
@@ -229,7 +244,17 @@ type publicHTTPConfig struct {
 	Certificates []string `yaml:"certificates,omitempty"`
 }
 
+// IsEmpty returns true if there are customization to the public ALB.
+func (c publicHTTPConfig) IsEmpty() bool {
+	return len(c.Certificates) == 0
+}
+
 type privateHTTPConfig struct {
 	InternalALBSubnets []string `yaml:"subnets,omitempty"`
 	Certificates       []string `yaml:"certificates,omitempty"`
+}
+
+// IsEmpty returns true if there are customization to the internal ALB.
+func (c privateHTTPConfig) IsEmpty() bool {
+	return len(c.InternalALBSubnets) == 0 && len(c.Certificates) == 0
 }
