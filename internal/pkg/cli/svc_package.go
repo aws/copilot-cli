@@ -80,7 +80,6 @@ type packageSvcOpts struct {
 	targetApp       *config.Application
 	targetEnv       *config.Environment
 	appliedManifest manifest.WorkloadManifest
-	rawManifest     []byte
 	rootUserARN     string
 }
 
