@@ -167,8 +167,8 @@ func TestSvcLogs_Ask(t *testing.T) {
 					m.configStore.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{}, nil),
 					m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
 						Return(&selector.DeployedService{
-							Env: "my-env",
-							Svc: "my-svc",
+							Env:  "my-env",
+							Name: "my-svc",
 						}, nil), // Let prompter handles the case when svc(env) is definite.
 				)
 			},
@@ -185,8 +185,8 @@ func TestSvcLogs_Ask(t *testing.T) {
 				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
-					Env: "my-env",
-					Svc: "my-svc",
+					Env:  "my-env",
+					Name: "my-svc",
 				}, nil).AnyTimes()
 			},
 			wantedApp: inputApp,
@@ -209,8 +209,8 @@ func TestSvcLogs_Ask(t *testing.T) {
 				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
 				m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: "my-env",
-						Svc: "my-svc",
+						Env:  "my-env",
+						Name: "my-svc",
 					}, nil)
 			},
 			wantedApp: inputApp,

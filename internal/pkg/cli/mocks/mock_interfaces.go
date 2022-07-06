@@ -5233,8 +5233,28 @@ func (mr *MockdeploySelectorMockRecorder) Application(prompt, help interface{}, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Application", reflect.TypeOf((*MockdeploySelector)(nil).Application), varargs...)
 }
 
+// DeployedJob mocks base method.
+func (m *MockdeploySelector) DeployedJob(prompt, help, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedJob, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{prompt, help, app}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeployedJob", varargs...)
+	ret0, _ := ret[0].(*selector.DeployedJob)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeployedJob indicates an expected call of DeployedJob.
+func (mr *MockdeploySelectorMockRecorder) DeployedJob(prompt, help, app interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{prompt, help, app}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedJob", reflect.TypeOf((*MockdeploySelector)(nil).DeployedJob), varargs...)
+}
+
 // DeployedService mocks base method.
-func (m *MockdeploySelector) DeployedService(prompt, help, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error) {
+func (m *MockdeploySelector) DeployedService(prompt, help, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedService, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{prompt, help, app}
 	for _, a := range opts {
