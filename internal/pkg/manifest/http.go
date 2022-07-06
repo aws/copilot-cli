@@ -23,10 +23,6 @@ func (r *RoutingRuleConfigOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
 
-func (r *RoutingRuleConfigOrBool) isEmpty() bool {
-	return r.Enabled == nil && r.RoutingRuleConfiguration.IsEmpty()
-}
-
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
 func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
@@ -97,10 +93,6 @@ func ipNetP(s string) *IPNet {
 type AdvancedAlias struct {
 	Alias      *string `yaml:"name"`
 	HostedZone *string `yaml:"hosted_zone"`
-}
-
-func (a *AdvancedAlias) isEmpty() bool {
-	return a.Alias == nil && a.HostedZone == nil
 }
 
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
