@@ -177,7 +177,7 @@ func buildEnvShowCmd() *cobra.Command {
 		Long:  "Shows info about a deployed environment, including region, account ID, and services.",
 
 		Example: `
-  Print configuration for the "test" environment "test".
+  Print configuration for the "test" environment.
   /code $ copilot env show -n test
   Print manifest file for deploying the "prod" environment.
   /code $ copilot env show -n prod --manifest`,
