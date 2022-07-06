@@ -178,7 +178,7 @@ func (o *svcPauseOpts) validateAndAskSvcEnvName() error {
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
 	}
-	o.svcName = deployedService.Svc
+	o.svcName = deployedService.Name
 	o.envName = deployedService.Env
 	return nil
 }

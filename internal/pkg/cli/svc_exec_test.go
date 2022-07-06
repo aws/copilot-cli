@@ -278,8 +278,8 @@ func TestSvcExec_Ask(t *testing.T) {
 				m.storeSvc.EXPECT().GetService("my-app", "my-svc").Return(&config.Workload{}, nil)
 				m.sel.EXPECT().DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: "my-env",
-						Svc: "my-svc",
+						Env:  "my-env",
+						Name: "my-svc",
 					}, nil) // Let prompter handles the case when svc(env) is definite.
 			},
 			wantedApp: inputApp,
@@ -296,8 +296,8 @@ func TestSvcExec_Ask(t *testing.T) {
 				m.storeSvc.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.storeSvc.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&selector.DeployedService{
-					Env: "my-env",
-					Svc: "my-svc",
+					Env:  "my-env",
+					Name: "my-svc",
 				}, nil).AnyTimes()
 			},
 			wantedApp: inputApp,
@@ -317,8 +317,8 @@ func TestSvcExec_Ask(t *testing.T) {
 				m.storeSvc.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
 				m.sel.EXPECT().DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: "my-env",
-						Svc: "my-svc",
+						Env:  "my-env",
+						Name: "my-svc",
 					}, nil)
 				// Don't care about the other calls.
 				m.storeSvc.EXPECT().GetApplication(gomock.Any()).AnyTimes()
@@ -344,8 +344,8 @@ func TestSvcExec_Ask(t *testing.T) {
 					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil),
 					m.sel.EXPECT().DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
 						Return(&selector.DeployedService{
-							Env: "my-env",
-							Svc: "my-svc",
+							Env:  "my-env",
+							Name: "my-svc",
 						}, nil),
 				)
 			},

@@ -6570,11 +6570,12 @@ func (m *MockcliStringer) EXPECT() *MockcliStringerMockRecorder {
 }
 
 // CLIString mocks base method.
-func (m *MockcliStringer) CLIString() string {
+func (m *MockcliStringer) CLIString() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CLIString")
 	ret0, _ := ret[0].(string)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CLIString indicates an expected call of CLIString.

@@ -238,7 +238,7 @@ func TestDeploySelect_Service(t *testing.T) {
 					ListDeployedServices(testApp, "test").
 					Return(nil, errors.New("some error"))
 			},
-			wantErr: fmt.Errorf("list deployed service for environment test: some error"),
+			wantErr: fmt.Errorf("list deployed services for environment test: some error"),
 		},
 		"return error if no deployed services found": {
 			setupMocks: func(m deploySelectMocks) {
@@ -349,7 +349,7 @@ func TestDeploySelect_Service(t *testing.T) {
 		},
 		"filter deployed services": {
 			opts: []GetDeployedWorkloadOpts{
-				WithSvcFilter(func(svc *DeployedService) (bool, error) {
+				WithWkldFilter(func(svc *DeployedWorkload) (bool, error) {
 					return svc.Env == "test1", nil
 				}),
 				WithServiceTypesFilter([]string{manifest.BackendServiceType}),
@@ -357,7 +357,7 @@ func TestDeploySelect_Service(t *testing.T) {
 			setupMocks: func(m deploySelectMocks) {
 				m.configSvc.
 					EXPECT().
-					ListServices(testApp).
+					ListWorkloads(testApp).
 					Return([]*config.Workload{
 						{
 							App:  testApp,
@@ -373,6 +373,11 @@ func TestDeploySelect_Service(t *testing.T) {
 							App:  testApp,
 							Name: "mockSvc3",
 							Type: manifest.LoadBalancedWebServiceType,
+						},
+						{
+							App:  testApp,
+							Name: "mockJob1",
+							Type: manifest.ScheduledJobType,
 						},
 					}, nil)
 
@@ -404,14 +409,14 @@ func TestDeploySelect_Service(t *testing.T) {
 		},
 		"filter returns error": {
 			opts: []GetDeployedWorkloadOpts{
-				WithSvcFilter(func(svc *DeployedService) (bool, error) {
+				WithWkldFilter(func(svc *DeployedWorkload) (bool, error) {
 					return svc.Env == "test1", fmt.Errorf("filter error")
 				}),
 			},
 			setupMocks: func(m deploySelectMocks) {
 				m.configSvc.
 					EXPECT().
-					ListServices(testApp).
+					ListWorkloads(testApp).
 					Return([]*config.Workload{
 						{
 							App:  testApp,
@@ -483,7 +488,7 @@ func TestDeploySelect_Service(t *testing.T) {
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
-				require.Equal(t, tc.wantSvc, gotDeployed.Svc)
+				require.Equal(t, tc.wantSvc, gotDeployed.Name)
 				require.Equal(t, tc.wantEnv, gotDeployed.Env)
 			}
 		})
@@ -637,6 +642,114 @@ func TestDeploySelect_Job(t *testing.T) {
 			wantEnv: "test",
 			wantJob: "mockJob",
 		},
+		"filter deployed jobs": {
+			opts: []GetDeployedWorkloadOpts{
+				WithWkldFilter(func(job *DeployedWorkload) (bool, error) {
+					return job.Env == "test2", nil
+				}),
+				WithServiceTypesFilter([]string{manifest.ScheduledJobType}),
+			},
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListWorkloads(testApp).
+					Return([]*config.Workload{
+						{
+							App:  testApp,
+							Name: "mockSvc1",
+							Type: manifest.BackendServiceType,
+						},
+						{
+							App:  testApp,
+							Name: "mockSvc2",
+							Type: manifest.BackendServiceType,
+						},
+						{
+							App:  testApp,
+							Name: "mockJob1",
+							Type: manifest.ScheduledJobType,
+						},
+						{
+							App:  testApp,
+							Name: "mockJob2",
+							Type: manifest.ScheduledJobType,
+						},
+					}, nil)
+
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{Name: "test1"},
+						{Name: "test2"},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedJobs(testApp, "test1").
+					Return([]string{"mockJob1"}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedJobs(testApp, "test2").
+					Return([]string{"mockJob1", "mockJob2"}, nil)
+
+				m.prompt.
+					EXPECT().
+					SelectOne("Select a deployed job", "Help text", []string{"mockJob1 (test2)", "mockJob2 (test2)"}, gomock.Any()).
+					Return("mockJob1 (test2)", nil)
+			},
+			wantEnv: "test2",
+			wantJob: "mockJob1",
+		},
+		"filter returns error": {
+			opts: []GetDeployedWorkloadOpts{
+				WithWkldFilter(func(job *DeployedWorkload) (bool, error) {
+					return job.Env == "test1", fmt.Errorf("filter error")
+				}),
+			},
+			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.
+					EXPECT().
+					ListWorkloads(testApp).
+					Return([]*config.Workload{
+						{
+							App:  testApp,
+							Name: "mockJob1",
+							Type: manifest.ScheduledJobType,
+						},
+						{
+							App:  testApp,
+							Name: "mockJob2",
+							Type: manifest.ScheduledJobType,
+						},
+						{
+							App:  testApp,
+							Name: "mockSvc3",
+							Type: manifest.LoadBalancedWebServiceType,
+						},
+					}, nil)
+
+				m.configSvc.
+					EXPECT().
+					ListEnvironments(testApp).
+					Return([]*config.Environment{
+						{Name: "test1"},
+						{Name: "test2"},
+					}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedJobs(testApp, "test1").
+					Return([]string{"mockJob1", "mockJob2"}, nil)
+
+				m.deploySvc.
+					EXPECT().
+					ListDeployedJobs(testApp, "test2").
+					Return([]string{"mockJob1", "mockJob2"}, nil)
+			},
+			wantErr: fmt.Errorf("filter error"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -670,7 +783,8 @@ func TestDeploySelect_Job(t *testing.T) {
 			if tc.wantErr != nil {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
-				require.Equal(t, tc.wantJob, gotDeployed.Job)
+				require.NoError(t, err)
+				require.Equal(t, tc.wantJob, gotDeployed.Name)
 				require.Equal(t, tc.wantEnv, gotDeployed.Env)
 			}
 		})
