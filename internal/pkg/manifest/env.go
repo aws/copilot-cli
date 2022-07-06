@@ -283,7 +283,7 @@ type privateHTTPConfig struct {
 	Certificates       []string `yaml:"certificates,omitempty"`
 }
 
-// IsEmpty returns true if there are customization to the internal ALB.
+// IsEmpty returns true if there is no customization to the internal ALB.
 func (cfg privateHTTPConfig) IsEmpty() bool {
 	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0
 }
