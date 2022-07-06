@@ -435,8 +435,9 @@ type NetworkOpts struct {
 	SecurityGroups []string
 	AssignPublicIP string
 	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
-	SubnetsType string
-	SubnetIDs   []string
+	SubnetsType              string
+	SubnetIDs                []string
+	DenyDefaultSecurityGroup bool
 }
 
 // RuntimePlatformOpts holds configuration needed for Platform configuration.
@@ -478,9 +479,10 @@ type S3ObjectLocation struct {
 
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
-	AppName      string
-	EnvName      string
-	WorkloadName string
+	AppName            string
+	EnvName            string
+	WorkloadName       string
+	SerializedManifest string // Raw manifest file used to deploy the workload.
 
 	// Additional options that are common between **all** workload templates.
 	Variables                map[string]string

@@ -99,7 +99,7 @@ func (cf CloudFormation) DeleteEnvironment(appName, envName, cfnExecRoleARN stri
 
 // GetEnvironment returns the Environment metadata from the CloudFormation stack.
 func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Environment, error) {
-	conf := stack.NewEnvStackConfig(&deploy.CreateEnvironmentInput{
+	conf := stack.NewBootstrapEnvStackConfig(&deploy.CreateEnvironmentInput{
 		App: deploy.AppInformation{
 			Name: appName,
 		},

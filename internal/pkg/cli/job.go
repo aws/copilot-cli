@@ -25,6 +25,7 @@ Jobs are tasks that are triggered by events.`,
 	cmd.AddCommand(buildJobDeployCmd())
 	cmd.AddCommand(buildJobDeleteCmd())
 	cmd.AddCommand(buildJobLogsCmd())
+	cmd.AddCommand(buildJobRunCmd())
 
 	cmd.SetUsageTemplate(template.Usage)
 

@@ -21,10 +21,9 @@ import (
 )
 
 const (
-	workerManifestPath       = "worker-manifest.yml"
-	workerStackPath          = "worker-test.stack.yml"
-	workerParamsPath         = "worker-test.params.json"
-	backlogPerTaskLambdaPath = "custom-resources/backlog-per-task-calculator.js"
+	workerManifestPath = "worker-manifest.yml"
+	workerStackPath    = "worker-test.stack.yml"
+	workerParamsPath   = "worker-test.params.json"
 )
 
 func TestWorkerService_Template(t *testing.T) {
@@ -44,10 +43,16 @@ func TestWorkerService_Template(t *testing.T) {
 	v, ok := envMft.(*manifest.WorkerService)
 	require.True(t, ok)
 
-	serializer, err := stack.NewWorkerService(v, envName, appName, stack.RuntimeConfig{
-		ServiceDiscoveryEndpoint: "test.my-app.local",
-		AccountID:                "123456789123",
-		Region:                   "us-west-2",
+	serializer, err := stack.NewWorkerService(stack.WorkerServiceConfig{
+		App:         appName,
+		Env:         envName,
+		Manifest:    v,
+		RawManifest: manifestBytes,
+		RuntimeConfig: stack.RuntimeConfig{
+			ServiceDiscoveryEndpoint: "test.my-app.local",
+			AccountID:                "123456789123",
+			Region:                   "us-west-2",
+		},
 	})
 
 	tpl, err := serializer.Template()
@@ -63,10 +68,9 @@ func TestWorkerService_Template(t *testing.T) {
 
 		expected, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", workerStackPath))
 		require.NoError(t, err, "should be able to read expected bytes")
-		expectedBytes := []byte(expected)
 		mExpected := make(map[interface{}]interface{})
 
-		require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
+		require.NoError(t, yaml.Unmarshal(expected, mExpected))
 		require.Equal(t, mExpected, mActual)
 	})
 

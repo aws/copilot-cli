@@ -2,6 +2,73 @@
 # SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a worker service on Amazon ECS.
+Metadata:
+  Manifest: |
+    # The manifest for the "dog-worker" service.
+    # Read the full specification for the "Worker Service" type at:
+    # https://aws.github.io/copilot-cli/docs/manifest/worker-service/
+
+    # Your service name will be used in naming your resources like log groups, ECS services, etc.
+    name: dogworker
+    type: Worker Service
+
+    # Configuration for your containers and service.
+
+    cpu: 256       # Number of CPU units for the task.
+    memory: 512    # Amount of memory in MiB used by the task.
+    count:
+      range:
+        min: 1
+        max: 10
+        spot_from: 6
+      queue_delay:  # Should result in 900 msgs backlog.
+        acceptable_latency: 15m
+        msg_processing_time: 1s
+    exec: true     # Enable running commands in your container.
+
+    publish:
+      topics:
+        - name: givesOtherdogs
+
+    subscribe:
+      queue:
+        delay: 1s
+        dead_letter:
+          tries: 5
+      topics:
+        - name: givesdogs
+          service: dogsvc
+          filter_policy:
+            store:
+              - example_corp
+            event:
+              - anything-but: order_cancelled
+            cutomer_interests:
+              - rugby
+              - football
+              - baseball
+            price_usd:
+              - numeric:
+                  - ">="
+                  - 100
+        - name: giveshuskies
+          service: dogsvc
+          queue:
+            timeout: 1s
+
+    # Optional fields for more advanced use-cases.
+    #
+    #variables:                    # Pass environment variables as key value pairs.
+    #  LOG_LEVEL: info
+
+    #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+    #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+
+    # You can override any of the values defined above by environment.
+    environments:
+      test:
+        image:
+          location: amazon/ecs-example
 Parameters:
   AppName:
     Type: String

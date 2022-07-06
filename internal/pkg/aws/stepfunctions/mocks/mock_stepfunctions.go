@@ -48,3 +48,18 @@ func (mr *MockapiMockRecorder) DescribeStateMachine(input interface{}) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeStateMachine", reflect.TypeOf((*Mockapi)(nil).DescribeStateMachine), input)
 }
+
+// StartExecution mocks base method.
+func (m *Mockapi) StartExecution(input *sfn.StartExecutionInput) (*sfn.StartExecutionOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartExecution", input)
+	ret0, _ := ret[0].(*sfn.StartExecutionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartExecution indicates an expected call of StartExecution.
+func (mr *MockapiMockRecorder) StartExecution(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartExecution", reflect.TypeOf((*Mockapi)(nil).StartExecution), input)
+}
