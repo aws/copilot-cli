@@ -2111,6 +2111,59 @@ func (mr *MockdescriberMockRecorder) Describe() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*Mockdescriber)(nil).Describe))
 }
 
+// MockworkloadDescriber is a mock of workloadDescriber interface.
+type MockworkloadDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockworkloadDescriberMockRecorder
+}
+
+// MockworkloadDescriberMockRecorder is the mock recorder for MockworkloadDescriber.
+type MockworkloadDescriberMockRecorder struct {
+	mock *MockworkloadDescriber
+}
+
+// NewMockworkloadDescriber creates a new mock instance.
+func NewMockworkloadDescriber(ctrl *gomock.Controller) *MockworkloadDescriber {
+	mock := &MockworkloadDescriber{ctrl: ctrl}
+	mock.recorder = &MockworkloadDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockworkloadDescriber) EXPECT() *MockworkloadDescriberMockRecorder {
+	return m.recorder
+}
+
+// Describe mocks base method.
+func (m *MockworkloadDescriber) Describe() (describe.HumanJSONStringer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Describe")
+	ret0, _ := ret[0].(describe.HumanJSONStringer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Describe indicates an expected call of Describe.
+func (mr *MockworkloadDescriberMockRecorder) Describe() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockworkloadDescriber)(nil).Describe))
+}
+
+// Manifest mocks base method.
+func (m *MockworkloadDescriber) Manifest(arg0 string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Manifest", arg0)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Manifest indicates an expected call of Manifest.
+func (mr *MockworkloadDescriberMockRecorder) Manifest(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockworkloadDescriber)(nil).Manifest), arg0)
+}
+
 // MockwsFileDeleter is a mock of wsFileDeleter interface.
 type MockwsFileDeleter struct {
 	ctrl     *gomock.Controller

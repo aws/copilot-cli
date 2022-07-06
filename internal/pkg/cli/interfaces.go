@@ -224,6 +224,11 @@ type describer interface {
 	Describe() (describe.HumanJSONStringer, error)
 }
 
+type workloadDescriber interface {
+	describer
+	Manifest(string) ([]byte, error)
+}
+
 type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }

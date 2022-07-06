@@ -279,6 +279,21 @@ func (m *MockworkloadStackDescriber) EXPECT() *MockworkloadStackDescriberMockRec
 	return m.recorder
 }
 
+// Manifest mocks base method.
+func (m *MockworkloadStackDescriber) Manifest() ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Manifest")
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Manifest indicates an expected call of Manifest.
+func (mr *MockworkloadStackDescriberMockRecorder) Manifest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockworkloadStackDescriber)(nil).Manifest))
+}
+
 // Outputs mocks base method.
 func (m *MockworkloadStackDescriber) Outputs() (map[string]string, error) {
 	m.ctrl.T.Helper()
@@ -360,6 +375,21 @@ func (m *MockecsDescriber) EnvVars() ([]*ecs.ContainerEnvVar, error) {
 func (mr *MockecsDescriberMockRecorder) EnvVars() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvVars", reflect.TypeOf((*MockecsDescriber)(nil).EnvVars))
+}
+
+// Manifest mocks base method.
+func (m *MockecsDescriber) Manifest() ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Manifest")
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Manifest indicates an expected call of Manifest.
+func (mr *MockecsDescriberMockRecorder) Manifest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockecsDescriber)(nil).Manifest))
 }
 
 // Outputs mocks base method.
@@ -458,6 +488,21 @@ func NewMockapprunnerDescriber(ctrl *gomock.Controller) *MockapprunnerDescriber 
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockapprunnerDescriber) EXPECT() *MockapprunnerDescriberMockRecorder {
 	return m.recorder
+}
+
+// Manifest mocks base method.
+func (m *MockapprunnerDescriber) Manifest() ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Manifest")
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Manifest indicates an expected call of Manifest.
+func (mr *MockapprunnerDescriberMockRecorder) Manifest() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockapprunnerDescriber)(nil).Manifest))
 }
 
 // Outputs mocks base method.
