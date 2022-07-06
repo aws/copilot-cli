@@ -88,7 +88,7 @@ type Build struct {
 }
 
 // Init populates the fields in Build by parsing the manifest file's "build" section.
-func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) {
+func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) error {
 	image := defaultPipelineBuildImage
 	environmentType := defaultPipelineEnvironmentType
 	path := filepath.Join(mfDirPath, "buildspec.yml")
@@ -104,13 +104,15 @@ func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) {
 	if mfBuild != nil && mfBuild.AdditionalPolicy.Content != nil {
 		additionalPolicy, err := yaml.Marshal(mfBuild.AdditionalPolicy)
 		if err != nil {
-			fmt.Errorf("marshal pipeline manifest to embed in template: %v", err)
+			return fmt.Errorf("marshal pipeline manifest to embed in template: %v", err)
 		}
 		b.AdditionalPolicy = string(additionalPolicy)
 	}
 	b.Image = image
 	b.EnvironmentType = environmentType
 	b.BuildspecPath = filepath.ToSlash(path) // Buildspec path must be with '/' because CloudFormation expects forward-slash separated file path.
+
+	return nil
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store

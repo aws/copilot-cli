@@ -28,11 +28,6 @@ var PipelineProviders = []string{
 	BitbucketProviderName,
 }
 
-var (
-	errUnmarshalAction   = errors.New(`unable to unmarshal "action" into string, or slice of strings`)
-	errUnmarshalResource = errors.New(`unable to unmarshal "resource" into string or slice of strings`)
-)
-
 // Provider defines a source of the artifacts
 // that will be built and deployed via a pipeline
 type Provider interface {
