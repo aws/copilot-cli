@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -130,6 +132,12 @@ type telemetryVars struct {
 	EnableContainerInsights bool
 }
 
+func (v telemetryVars) toConfig() *config.Telemetry {
+	return &config.Telemetry{
+		EnableContainerInsights: v.EnableContainerInsights,
+	}
+}
+
 type initEnvVars struct {
 	appName       string
 	name          string // Name for the environment.
@@ -152,28 +160,30 @@ type initEnvOpts struct {
 	initEnvVars
 
 	// Interfaces to interact with dependencies.
-	sessProvider sessionProvider
-	store        store
-	envDeployer  deployer
-	appDeployer  deployer
-	identity     identityService
-	envIdentity  identityService
-	ec2Client    ec2Client
-	iam          roleManager
-	cfn          stackExistChecker
-	prog         progress
-	prompt       prompter
-	selVPC       ec2Selector
-	selCreds     credsSelector
-	selApp       appSelector
-	appCFN       appResourcesGetter
-	newS3        func(string) (uploader, error)
-	uploader     customResourcesUploader
+	sessProvider   sessionProvider
+	store          store
+	envDeployer    deployer
+	appDeployer    deployer
+	identity       identityService
+	envIdentity    identityService
+	ec2Client      ec2Client
+	iam            roleManager
+	cfn            stackExistChecker
+	prog           progress
+	prompt         prompter
+	selVPC         ec2Selector
+	selCreds       credsSelector
+	selApp         appSelector
+	appCFN         appResourcesGetter
+	newS3          func(string) (uploader, error)
+	uploader       customResourcesUploader
+	manifestWriter environmentManifestWriter
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 
 	// Cached variables.
 	wsAppName string
+	mftPath   string
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
@@ -190,6 +200,11 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	}
 
 	prompter := prompt.New()
+
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+	}
 	return &initEnvOpts{
 		initEnvVars:  vars,
 		sessProvider: sessProvider,
@@ -213,6 +228,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			}
 			return s3.New(sess), nil
 		},
+		manifestWriter: ws,
 
 		wsAppName: tryReadingAppName(),
 	}, nil
@@ -262,24 +278,31 @@ func (o *initEnvOpts) Execute() error {
 		// Ensure the app actually exists before we do a deployment.
 		return err
 	}
-
 	envCaller, err := o.envIdentity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
+	// 1. Write environment manifest.
+	mftPath, err := o.writeManifest()
+	if err != nil {
+		return err
+	}
+	o.mftPath = mftPath
+
+	// 2. Perform DNS delegation from app to env.
 	if app.Domain != "" {
 		if err := o.delegateDNSFromApp(app, envCaller.Account); err != nil {
 			return fmt.Errorf("granting DNS permissions: %w", err)
 		}
 	}
 
-	// 1. Attempt to create the service linked role if it doesn't exist.
+	// 3. Attempt to create the service linked role if it doesn't exist.
 	// If the call fails because the role already exists, nothing to do.
 	// If the call fails because the user doesn't have permissions, then the role must be created outside of Copilot.
 	_ = o.iam.CreateECSServiceLinkedRole()
 
-	// 2. Add the stack set instance to the app stackset.
+	// 4. Add the stack set instance to the app stackset.
 	if err := o.addToStackset(&deploycfn.AddEnvToAppOpts{
 		App:          app,
 		EnvName:      o.name,
@@ -289,35 +312,17 @@ func (o *initEnvOpts) Execute() error {
 		return err
 	}
 
-	// 3. Upload environment custom resource scripts to the S3 bucket, because of the 4096 characters limit (see
-	// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-lambda-function-code.html#cfn-lambda-function-code-zipfile)
-	envRegion := aws.StringValue(o.sess.Config.Region)
-	resources, err := o.appCFN.GetAppResourcesByRegion(app, envRegion)
-	if err != nil {
-		return fmt.Errorf("get app resources: %w", err)
-	}
-
-	// 4. Start creating the CloudFormation stack for the environment.
-	if resources.S3Bucket == "" {
-		log.Errorf("Cannot find the S3 artifact bucket in %s region created by app %s. The S3 bucket is necessary for many future operations. For example, when you need addons to your services.", envRegion, app.Name)
-		return fmt.Errorf("cannot find the S3 artifact bucket in %s region", envRegion)
-	}
-	partition, err := partitions.Region(envRegion).Partition()
-	if err != nil {
-		return err
-	}
-	if err := o.deployEnv(app, s3.FormatARN(partition.ID(), resources.S3Bucket), resources.KMSKeyARN); err != nil {
+	// 5. Start creating the CloudFormation stack for the environment.
+	if err := o.deployEnv(app); err != nil {
 		return err
 	}
 
-	// 5. Get the environment
+	// 6. Store the environment in SSM with information about the deployed bootstrap roles.
 	env, err := o.envDeployer.GetEnvironment(o.appName, o.name)
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
 	env.Prod = o.isProduction
-
-	// 6. Store the environment in SSM.
 	if err := o.store.CreateEnvironment(env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}
@@ -649,8 +654,45 @@ To recreate the environment, please run:
 	return nil
 }
 
-func (o *initEnvOpts) deployEnv(app *config.Application,
-	artifactBucketARN, artifactBucketKeyARN string) error {
+func (o *initEnvOpts) importVPCConfig() *config.ImportVPC {
+	if o.defaultConfig || !o.importVPC.isSet() {
+		return nil
+	}
+	return &config.ImportVPC{
+		ID:               o.importVPC.ID,
+		PrivateSubnetIDs: o.importVPC.PrivateSubnetIDs,
+		PublicSubnetIDs:  o.importVPC.PublicSubnetIDs,
+	}
+}
+
+func (o *initEnvOpts) adjustVPCConfig() *config.AdjustVPC {
+	if o.defaultConfig || !o.adjustVPC.isSet() {
+		return nil
+	}
+	return &config.AdjustVPC{
+		CIDR:               o.adjustVPC.CIDR.String(),
+		AZs:                o.adjustVPC.AZs,
+		PrivateSubnetCIDRs: o.adjustVPC.PrivateSubnetCIDRs,
+		PublicSubnetCIDRs:  o.adjustVPC.PublicSubnetCIDRs,
+	}
+}
+
+func (o *initEnvOpts) deployEnv(app *config.Application) error {
+	envRegion := aws.StringValue(o.sess.Config.Region)
+	resources, err := o.appCFN.GetAppResourcesByRegion(app, envRegion)
+	if err != nil {
+		return fmt.Errorf("get app resources: %w", err)
+	}
+	if resources.S3Bucket == "" {
+		log.Errorf("Cannot find the S3 artifact bucket in %s region created by app %s. The S3 bucket is necessary for many future operations. For example, when you need addons to your services.", envRegion, app.Name)
+		return fmt.Errorf("cannot find the S3 artifact bucket in %s region", envRegion)
+	}
+	partition, err := partitions.Region(envRegion).Partition()
+	if err != nil {
+		return err
+	}
+	artifactBucketARN := s3.FormatARN(partition.ID(), resources.S3Bucket)
+
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
@@ -664,7 +706,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application,
 		},
 		AdditionalTags:       app.Tags,
 		ArtifactBucketARN:    artifactBucketARN,
-		ArtifactBucketKeyARN: artifactBucketKeyARN,
+		ArtifactBucketKeyARN: resources.KMSKeyARN,
 	}
 
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
@@ -781,6 +823,45 @@ func (o *initEnvOpts) tryDeletingEnvRoles(app, env string) {
 		}
 		_ = o.iam.DeleteRole(roleName)
 	}
+}
+
+func (o *initEnvOpts) writeManifest() (string, error) {
+	customizedEnv := &config.CustomizeEnv{
+		ImportVPC:                   o.importVPCConfig(),
+		VPCConfig:                   o.adjustVPCConfig(),
+		ImportCertARNs:              o.importCerts,
+		InternalALBSubnets:          o.internalALBSubnets,
+		EnableInternalALBVPCIngress: o.allowVPCIngress,
+	}
+	if customizedEnv.IsEmpty() {
+		customizedEnv = nil
+	}
+	props := manifest.EnvironmentProps{
+		Name:         o.name,
+		CustomConfig: customizedEnv,
+		Telemetry:    o.telemetry.toConfig(),
+	}
+
+	var manifestExists bool
+	manifestPath, err := o.manifestWriter.WriteEnvironmentManifest(manifest.NewEnvironment(&props), props.Name)
+	if err != nil {
+		e, ok := err.(*workspace.ErrFileExists)
+		if !ok {
+			return "", fmt.Errorf("write environment manifest: %w", err)
+		}
+		manifestExists = true
+		manifestPath = e.FileName
+	}
+	manifestPath, err = relPath(manifestPath)
+	if err != nil {
+		return "", err
+	}
+	manifestMsgFmt := "Wrote the manifest for environment %s at %s\n"
+	if manifestExists {
+		manifestMsgFmt = "Manifest file for environment %s already exists at %s, skipping writing it.\n"
+	}
+	log.Successf(manifestMsgFmt, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
+	return manifestPath, nil
 }
 
 // buildEnvInitCmd builds the command for adding an environment.
