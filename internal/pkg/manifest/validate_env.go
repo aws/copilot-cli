@@ -221,7 +221,7 @@ func (cfg AdvancedCDNConfig) Validate() error {
 	return nil
 }
 
-func (c EnvironmentConfig) validateInternalALBSubnets() error {
+func (c environmentConfig) validateInternalALBSubnets() error {
 	isImported := make(map[string]bool)
 	for _, placementSubnet := range c.HTTPConfig.Private.InternalALBSubnets {
 		for _, subnet := range append(c.Network.VPC.Subnets.Private, c.Network.VPC.Subnets.Public...) {

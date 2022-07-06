@@ -413,7 +413,7 @@ cdn: true
 					Name: aws.String("prod"),
 					Type: aws.String("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					CDNConfig: environmentCDNConfig{
 						Enabled: aws.Bool(true),
 					},
