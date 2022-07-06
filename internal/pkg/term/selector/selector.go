@@ -596,13 +596,16 @@ func (s *DeploySelector) deployedWorkload(workloadType string, msg, help string,
 
 	var isWorkloadDeployed func(string, string, string) (bool, error)
 	var listDeployedWorkloads func(string, string) ([]string, error)
+	var finalMessage string
 	switch workloadType {
 	case svcWorkloadType:
 		isWorkloadDeployed = s.deployStoreSvc.IsServiceDeployed
 		listDeployedWorkloads = s.deployStoreSvc.ListDeployedServices
+		finalMessage = deployedSvcFinalMsg
 	case jobWorkloadType:
 		isWorkloadDeployed = s.deployStoreSvc.IsJobDeployed
 		listDeployedWorkloads = s.deployStoreSvc.ListDeployedJobs
+		finalMessage = deployedJobFinalMsg
 	default:
 		return nil, fmt.Errorf("unrecognized workload type %s", workloadType)
 	}
@@ -691,7 +694,7 @@ func (s *DeploySelector) deployedWorkload(workloadType string, msg, help string,
 		msg,
 		help,
 		wkldEnvNames,
-		prompt.WithFinalMessage(fmt.Sprintf("%s:", strings.ToTitle(workloadType))),
+		prompt.WithFinalMessage(finalMessage),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("select deployed %ss for application %s: %w", workloadType, app, err)
