@@ -6,12 +6,23 @@
 <span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    
 タスクを配置するサブネットとアタッチされるセキュリティグループの設定です。
 
-<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String</span>  
-`public` あるいは `private` のどちらかを指定します。デフォルトではタスクはパブリックサブネットに配置されます。
+<span class="parent-field">network.vpc.</span><a id="network-vpc-placement" href="#network-vpc-placement" class="field">`placement`</a> <span class="type">String or Map</span>  
+String として利用する場合、`public` あるいは `private` のどちらかを指定します。デフォルトではタスクはパブリックサブネットに配置されます。
 
 !!! info
-    Copilot が生成した VPC を利用して `private` サブネットにタスクを配置する場合、Copilot は Environment にインターネット接続用の NAT ゲートウェイを作成します。(価格は[こちら](https://aws.amazon.com/vpc/pricing/)。)
-    あるいは `copilot env init` コマンドで既存の VPC をインポートして利用することや、分離されたワークロード用に VPC エンドポイントが構成された VPC を構成ができます。詳細は、[custom environment resources](../developing/custom-environment-resources.ja.md)を確認してください。
+    Copilot が生成した VPC を利用して `private` サブネットにタスクを配置する場合、Copilot は Environment にインターネット接続用の NAT ゲートウェイを作成します。(価格は[こちら](https://aws.amazon.com/vpc/pricing/)。)あるいは `copilot env init` コマンドで既存の VPC をインポートして利用することや、分離されたワークロード用に VPC エンドポイントが構成された VPC を構成ができます。詳細は、[custom environment resources](../developing/custom-environment-resources.ja.md)を確認してください。
+
+Map として利用する場合、 Copilot が ECS タスクを起動するサブネットを指定します。例：
+
+```yaml
+network:
+  vpc:
+    placement:
+      subnets: ["SubnetID1", "SubnetID2"]
+```
+
+<span class="parent-field">network.vpc.placement.</span><a id="network-vpc-placement-subnets" href="#network-vpc-placement-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>  
+Copilot が ECS タスクを起動するサブネット ID のリスト
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>
 Copilot がタスクに対して自動で設定するセキュリティグループ以外に追加で設定したいセキュリティグループがある場合にそれらの ID を指定します。複数のセキュリティグループ ID を指定可能です。(Copilot が自動設定するセキュリティグループは、同一 Environment 内の Service 間通信を可能にする目的で設定されます。)
