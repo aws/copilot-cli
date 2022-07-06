@@ -563,7 +563,7 @@ func (s *CFTaskSelector) Task(msg, help string, opts ...GetDeployedTaskOpts) (st
 }
 
 // DeployedJob has the user select a deployed job. Callers can provide either a particular environment,
-//// a particular service to filter on, or both.
+// a particular job to filter on, or both.
 func (s *DeploySelector) DeployedJob(msg, help string, app string, opts ...GetDeployedWorkloadOpts) (*DeployedJob, error) {
 	j, err := s.deployedWorkload(jobWorkloadType, msg, help, app, opts...)
 	if err != nil {
