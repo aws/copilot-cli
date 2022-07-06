@@ -274,8 +274,8 @@ type publicHTTPConfig struct {
 }
 
 // IsEmpty returns true if there are customization to the public ALB.
-func (c publicHTTPConfig) IsEmpty() bool {
-	return len(c.Certificates) == 0
+func (cfg publicHTTPConfig) IsEmpty() bool {
+	return len(cfg.Certificates) == 0
 }
 
 type privateHTTPConfig struct {
@@ -284,6 +284,6 @@ type privateHTTPConfig struct {
 }
 
 // IsEmpty returns true if there are customization to the internal ALB.
-func (c privateHTTPConfig) IsEmpty() bool {
-	return len(c.InternalALBSubnets) == 0 && len(c.Certificates) == 0
+func (cfg privateHTTPConfig) IsEmpty() bool {
+	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0
 }

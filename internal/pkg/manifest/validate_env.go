@@ -189,8 +189,8 @@ func (cfg environmentHTTPConfig) Validate() error {
 }
 
 // Validate returns nil if publicHTTPConfig is configured correctly.
-func (c publicHTTPConfig) Validate() error {
-	for idx, certARN := range c.Certificates {
+func (cfg publicHTTPConfig) Validate() error {
+	for idx, certARN := range cfg.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
@@ -199,8 +199,8 @@ func (c publicHTTPConfig) Validate() error {
 }
 
 // Validate returns nil if privateHTTPConfig is configured correctly.
-func (c privateHTTPConfig) Validate() error {
-	for idx, certARN := range c.Certificates {
+func (cfg privateHTTPConfig) Validate() error {
+	for idx, certARN := range cfg.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
