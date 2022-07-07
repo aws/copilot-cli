@@ -111,8 +111,7 @@ type EnvOpts struct {
 }
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.
-type CDNConfig struct {
-}
+type CDNConfig struct{}
 
 type VPCConfig struct {
 	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.

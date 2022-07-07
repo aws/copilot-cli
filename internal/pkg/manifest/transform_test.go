@@ -1144,7 +1144,7 @@ func TestEnvironmentCDNConfigTransformer_Transformer(t *testing.T) {
 		// },
 		"cdnconfig set to empty if enabled is not nil": {
 			original: func(cfg *environmentCDNConfig) {
-				cfg.CDNConfig = AdvancedCDNConfig{} // Need to update with advanced fields when AdvancedCDNConfig struct is not empty
+				cfg.CDNConfig = advancedCDNConfig{} // Need to update with advanced fields when AdvancedCDNConfig struct is not empty
 			},
 			override: func(cfg *environmentCDNConfig) {
 				cfg.Enabled = aws.Bool(true)

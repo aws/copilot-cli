@@ -507,7 +507,7 @@ func (t environmentCDNConfigTransformer) Transformer(typ reflect.Type) func(dst,
 		}
 
 		if srcStruct.Enabled != nil {
-			dstStruct.CDNConfig = AdvancedCDNConfig{}
+			dstStruct.CDNConfig = advancedCDNConfig{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

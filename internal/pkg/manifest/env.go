@@ -102,11 +102,11 @@ type environmentVPCConfig struct {
 
 type environmentCDNConfig struct {
 	Enabled   *bool
-	CDNConfig AdvancedCDNConfig // mutually exclusive with Enabled
+	CDNConfig advancedCDNConfig // mutually exclusive with Enabled
 }
 
-// AdvancedCDNConfig represents an advanced configuration for a Content Delivery Network.
-type AdvancedCDNConfig struct{}
+// advancedCDNConfig represents an advanced configuration for a Content Delivery Network.
+type advancedCDNConfig struct{}
 
 // IsEmpty returns whether environmentCDNConfig is empty.
 func (cfg *environmentCDNConfig) IsEmpty() bool {
@@ -114,7 +114,7 @@ func (cfg *environmentCDNConfig) IsEmpty() bool {
 }
 
 // IsEmpty returns whether AdvancedCDNConfig is empty.
-func (cfg *AdvancedCDNConfig) IsEmpty() bool {
+func (cfg *advancedCDNConfig) IsEmpty() bool {
 	return true
 }
 

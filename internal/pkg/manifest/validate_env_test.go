@@ -571,7 +571,7 @@ func TestCDNConfiguration_Validate(t *testing.T) {
 		},
 		"valid if advanced config configured correctly": {
 			in: environmentCDNConfig{
-				CDNConfig: AdvancedCDNConfig{},
+				CDNConfig: advancedCDNConfig{},
 			},
 		},
 	}
