@@ -458,7 +458,7 @@ func (p Pipeline) Validate() error {
 // Validate returns nil if deployments are configured correctly.
 func (d Deployments) Validate() error {
 	names := make(map[string]bool)
-	for name, _ := range d {
+	for name := range d {
 		names[name] = true
 	}
 
