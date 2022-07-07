@@ -36,10 +36,10 @@ type deployEnvOpts struct {
 	sel wsEnvironmentSelector
 
 	// Dependencies to execute.
-	ws             wsEnvironmentReader
-	identity       identityService
-	interpolator   interpolator
-	newEnvDeployer func() (envDeployer, error)
+	ws              wsEnvironmentReader
+	identity        identityService
+	newInterpolator func(string, string) interpolator
+	newEnvDeployer  func() (envDeployer, error)
 
 	// Cached variables.
 	targetApp *config.Application
@@ -66,9 +66,9 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 		store: store,
 		sel:   selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
 
-		ws:           ws,
-		identity:     identity.New(defaultSess),
-		interpolator: manifest.NewInterpolator(vars.appName, vars.name),
+		ws:              ws,
+		identity:        identity.New(defaultSess),
+		newInterpolator: newManifestInterpolator,
 
 		unmarshalManifest: manifest.UnmarshalEnvironment,
 	}
@@ -144,7 +144,7 @@ func (o *deployEnvOpts) environmentManifest() (*manifest.Environment, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest for environment %s: %w", targetEnv.Name, err)
 	}
-	interpolated, err := o.interpolator.Interpolate(string(raw))
+	interpolated, err := o.newInterpolator(o.appName, targetEnv.Name).Interpolate(string(raw))
 	if err != nil {
 		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", targetEnv.Name, err)
 	}

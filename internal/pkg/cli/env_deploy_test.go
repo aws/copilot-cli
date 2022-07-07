@@ -224,11 +224,13 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				deployEnvVars: deployEnvVars{
 					name: "mockEnv",
 				},
-				ws:           m.ws,
-				identity:     m.identity,
-				interpolator: m.interpolator,
+				ws:       m.ws,
+				identity: m.identity,
 				newEnvDeployer: func() (envDeployer, error) {
 					return m.deployer, nil
+				},
+				newInterpolator: func(s string, s2 string) interpolator {
+					return m.interpolator
 				},
 				targetEnv: &config.Environment{
 					Name: "mockEnv",
