@@ -179,7 +179,6 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 				return URI{}, err
 			}
 			if !albURI.HTTPS && len(albURI.DNSNames) > 1 {
-				// filter out the default LB DNS Name
 				albURI, _ = albDescr.removeEnvDNSName(albURI)
 			}
 			return URI{
