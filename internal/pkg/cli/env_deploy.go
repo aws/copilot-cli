@@ -30,7 +30,8 @@ type deployEnvOpts struct {
 	deployEnvVars
 
 	// Dependencies.
-	store store
+	store           store
+	sessionProvider *sessions.Provider
 
 	// Dependencies to ask.
 	sel wsEnvironmentSelector
@@ -63,8 +64,9 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 	opts := &deployEnvOpts{
 		deployEnvVars: vars,
 
-		store: store,
-		sel:   selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
+		store:           store,
+		sessionProvider: sessProvider,
+		sel:             selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
 
 		ws:              ws,
 		identity:        identity.New(defaultSess),
@@ -73,21 +75,25 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 		unmarshalManifest: manifest.UnmarshalEnvironment,
 	}
 	opts.newEnvDeployer = func() (envDeployer, error) {
-		app, err := opts.cachedTargetApp()
-		if err != nil {
-			return nil, err
-		}
-		env, err := opts.cachedTargetEnv()
-		if err != nil {
-			return nil, err
-		}
-		return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
-			App:             app,
-			Env:             env,
-			SessionProvider: sessProvider,
-		})
+		return newEnvDeployer(opts)
 	}
 	return opts, nil
+}
+
+func newEnvDeployer(opts *deployEnvOpts) (envDeployer, error) {
+	app, err := opts.cachedTargetApp()
+	if err != nil {
+		return nil, err
+	}
+	env, err := opts.cachedTargetEnv()
+	if err != nil {
+		return nil, err
+	}
+	return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
+		App:             app,
+		Env:             env,
+		SessionProvider: opts.sessionProvider,
+	})
 }
 
 // Validate is a no-op for this command.

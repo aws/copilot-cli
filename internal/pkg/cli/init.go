@@ -5,8 +5,10 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -73,6 +75,7 @@ type initOpts struct {
 	initAppCmd   actionCommand
 	initWlCmd    actionCommand
 	initEnvCmd   actionCommand
+	deployEnvCmd cmd
 	deploySvcCmd actionCommand
 	deployJobCmd actionCommand
 
@@ -147,8 +150,25 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			}
 			return s3.New(sess), nil
 		},
+		manifestWriter: ws,
 
 		sess: defaultSess,
+	}
+	deployEnvCmd := &deployEnvOpts{
+		deployEnvVars: deployEnvVars{
+			appName:      vars.appName,
+			name:         defaultEnvironmentName,
+			isProduction: false,
+		},
+		store:             configStore,
+		sessionProvider:   sessProvider,
+		ws:                ws,
+		identity:          id,
+		newInterpolator:   newManifestInterpolator,
+		unmarshalManifest: manifest.UnmarshalEnvironment,
+	}
+	deployEnvCmd.newEnvDeployer = func() (envDeployer, error) {
+		return newEnvDeployer(deployEnvCmd)
 	}
 
 	deploySvcCmd := &deploySvcOpts{
@@ -196,6 +216,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 		initAppCmd:   initAppCmd,
 		initEnvCmd:   initEnvCmd,
+		deployEnvCmd: deployEnvCmd,
 		deploySvcCmd: deploySvcCmd,
 		deployJobCmd: deployJobCmd,
 
@@ -398,7 +419,22 @@ func (o *initOpts) deployEnv() error {
 	}
 
 	log.Infoln()
-	return o.initEnvCmd.Execute()
+	if err := o.initEnvCmd.Execute(); err != nil {
+		return err
+	}
+	log.Successf("Provisioned bootstrap resources for environment %s.\n", defaultEnvironmentName)
+	if deployEnvCmd, ok := o.deployEnvCmd.(*deployEnvOpts); ok {
+		// Set the application name from app init to the env init command.
+		deployEnvCmd.appName = *o.appName
+	}
+
+	if err := o.deployEnvCmd.Execute(); err != nil {
+		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
+		if !errors.As(err, &errEmptyChangeSet) {
+			return err
+		}
+	}
+	return nil
 }
 
 func (o *initOpts) deploySvc() error {
