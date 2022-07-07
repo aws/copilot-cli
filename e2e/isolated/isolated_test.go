@@ -6,13 +6,10 @@ package isolated_test
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	osExec "os/exec"
-
-	"os"
-
-	"github.com/aws/copilot-cli/e2e/internal/client"
+	"net/http"
 )
 
 var _ = Describe("Isolated", func() {
@@ -112,23 +109,6 @@ var _ = Describe("Isolated", func() {
 		It("should not return an error", func() {
 			Expect(initErr).NotTo(HaveOccurred())
 		})
-		It("svc init should create a svc manifest", func() {
-			Expect("./copilot/backend/manifest.yml").Should(BeAnExistingFile())
-		})
-		It("should write 'http' and private placement to the manifest", func() {
-			f, err := os.OpenFile("./copilot/backend/manifest.yml", os.O_WRONLY|os.O_APPEND, 0644)
-			Expect(err).NotTo(HaveOccurred(), "should be able to open the file to append content")
-			_, err = f.WriteString(`
-http:
-  path: '/'
-network:
-  vpc:
-    placement: 'private'
-`)
-			Expect(err).NotTo(HaveOccurred(), "should be able to write 'private' placement to manifest file")
-			err = f.Close()
-			Expect(err).NotTo(HaveOccurred(), "should have been able to close the manifest file")
-		})
 		It("svc ls should list the svc", func() {
 			svcList, svcListError := cli.SvcList(appName)
 			Expect(svcListError).NotTo(HaveOccurred())
@@ -177,71 +157,51 @@ network:
 			Expect(svc.Configs[0].Memory).To(Equal("512"))
 			Expect(svc.Configs[0].Port).To(Equal("80"))
 		})
+	})
 
-		Context("when running `svc logs`", func() {
-			It("logs should be displayed", func() {
-				var svcLogs []client.SvcLogsOutput
-				var svcLogsErr error
-				Eventually(func() ([]client.SvcLogsOutput, error) {
-					svcLogs, svcLogsErr = cli.SvcLogs(&client.SvcLogsRequest{
-						AppName: appName,
-						Name:    svcName,
-						EnvName: envName,
-						Since:   "1h",
-					})
-					return svcLogs, svcLogsErr
-				}, "60s", "10s").ShouldNot(BeEmpty())
-
-				for _, logLine := range svcLogs {
-					Expect(logLine.Message).NotTo(Equal(""))
-					Expect(logLine.LogStreamName).NotTo(Equal(""))
-					Expect(logLine.Timestamp).NotTo(Equal(0))
-					Expect(logLine.IngestionTime).NotTo(Equal(0))
-				}
+	Context("when running `env show --resources`", func() {
+		var envShowOutput *client.EnvShowOutput
+		var envShowErr error
+		It("show show internal ALB", func() {
+			envShowOutput, envShowErr = cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: envName,
 			})
 		})
-
-		Context("when running `env show --resources`", func() {
-			var envShowOutput *client.EnvShowOutput
-			var envShowErr error
-			It("show show internal ALB", func() {
-				envShowOutput, envShowErr = cli.EnvShow(&client.EnvShowRequest{
-					AppName: appName,
-					EnvName: envName,
-				})
-			})
-			It("should not return an error", func() {
-				Expect(envShowErr).NotTo(HaveOccurred())
-			})
-			It("should now have an internal ALB", func() {
-				Expect(envShowOutput.Resources).To(ContainElement(HaveKeyWithValue("type", "AWS::ElasticLoadBalancingV2::LoadBalancer")))
-			})
+		It("should not return an error", func() {
+			Expect(envShowErr).NotTo(HaveOccurred())
 		})
-
-		Context("when `curl`ing the LB DNS", func() {
-			It("is not reachable", func() {
-				cmd := osExec.Command("curl", fmt.Sprintf("http://%s.%s.%s.internal", svcName, envName, appName))
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				Expect(cmd.Stderr).NotTo(BeNil())
-			})
+		It("should now have an internal ALB", func() {
+			Expect(envShowOutput.Resources).To(ContainElement(HaveKeyWithValue("type", "AWS::ElasticLoadBalancingV2::LoadBalancer")))
 		})
+	})
 
-		Context("when `curl`ing the LB DNS from within the container", func() {
-			It("session manager should be installed", func() {
-				// Use custom SSM plugin as the public version is not compatible to Alpine Linux.
-				err := client.BashExec("chmod +x ./session-manager-plugin")
-				Expect(err).NotTo(HaveOccurred())
+	Context("when trying to reach the LB DNS", func() {
+		It("it is not reachable", func() {
+			var resp *http.Response
+			var fetchErr error
+			Eventually(func() (*http.Response, error) {
+				resp, fetchErr = http.Get(fmt.Sprintf("http://%s.%s.%s.internal", svcName, envName, appName))
+				return resp, fetchErr
+			}, "60s", "1s")
+			Expect(resp).To(BeNil())
+		})
+	})
+
+	Context("when `curl`ing the LB DNS from within the container", func() {
+		It("session manager should be installed", func() {
+			// Use custom SSM plugin as the public version is not compatible to Alpine Linux.
+			err := client.BashExec("chmod +x ./session-manager-plugin")
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("is reachable", func() {
+			_, svcExecErr := cli.SvcExec(&client.SvcExecRequest{
+				Name:    svcName,
+				AppName: appName,
+				Command: fmt.Sprintf(`/bin/sh -c "curl 'http://%s.%s.%s.internal'"`, svcName, envName, appName),
+				EnvName: envName,
 			})
-			It("is reachable", func() {
-				_, svcExecErr := cli.SvcExec(&client.SvcExecRequest{
-					Name:    svcName,
-					AppName: appName,
-					Command: fmt.Sprintf(`/bin/sh -c "curl 'http://%s.%s.%s.internal'"`, svcName, envName, appName),
-					EnvName: envName,
-				})
-				Expect(svcExecErr).NotTo(HaveOccurred())
-			})
+			Expect(svcExecErr).NotTo(HaveOccurred())
 		})
 	})
 })

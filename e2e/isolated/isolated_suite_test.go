@@ -41,11 +41,6 @@ var _ = BeforeSuite(func() {
 	cli = ecsCli
 	aws = client.NewAWS()
 	appName = fmt.Sprintf("e2e-isolated-%d", time.Now().Unix())
-	vpcConfig = client.EnvInitRequestVPCConfig{
-		CIDR:               "10.1.0.0/16",
-		PrivateSubnetCIDRs: "10.1.2.0/24,10.1.3.0/24",
-		PublicSubnetCIDRs:  "10.1.0.0/24,10.1.1.0/24",
-	}
 })
 
 var _ = AfterSuite(func() {

@@ -10,8 +10,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-var message = "hello world"
-
 // HealthCheck just returns true if the service is up.
 func HealthCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	log.Println("🚑 healthcheck ok!")
