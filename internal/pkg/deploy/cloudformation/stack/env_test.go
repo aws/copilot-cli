@@ -30,12 +30,8 @@ func TestEnv_Template(t *testing.T) {
 				m := mocks.NewMockenvReadParser(ctrl)
 				m.EXPECT().ParseEnv(gomock.Any(), gomock.Any()).DoAndReturn(func(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error) {
 					require.Equal(t, &template.EnvOpts{
-						AppName:                "project",
-						EnvName:                "env",
-						ScriptBucketName:       "mockbucket",
-						DNSCertValidatorLambda: "mockkey1",
-						DNSDelegationLambda:    "mockkey2",
-						CustomDomainLambda:     "mockkey4",
+						AppName: "project",
+						EnvName: "env",
 						VPCConfig: template.VPCConfig{
 							Imported: &template.ImportVPC{},
 							Managed: template.ManagedVPC{
@@ -536,11 +532,6 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 			AccountPrincipalARN: "arn:aws:iam::000000000:root",
 		},
 		CustomResourcesURLs: map[string]string{
-			template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
-			template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
-			template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
-		},
-		LambdaURLs: map[string]string{
 			"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey1",
 			"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
 			"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",

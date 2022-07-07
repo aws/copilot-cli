@@ -12,8 +12,6 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
-	"github.com/aws/copilot-cli/internal/pkg/template"
-
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -53,9 +51,9 @@ observability:
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					CustomResourcesURLs: map[string]string{
-						template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
 					AllowVPCIngress: true,
 					Mft:             &mft,
@@ -81,9 +79,9 @@ type: Environment
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					CustomResourcesURLs: map[string]string{
-						template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
-						template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
-						template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
 					AllowVPCIngress: true,
 					Mft:             &mft,
