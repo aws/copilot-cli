@@ -96,7 +96,7 @@ Resources:
         - Grants read access to the ${Secret} secret
         - { Secret: !Ref {{logicalIDSafe .ClusterName}}AuroraSecret }
       PolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Sid: SecretActions
             Effect: Allow

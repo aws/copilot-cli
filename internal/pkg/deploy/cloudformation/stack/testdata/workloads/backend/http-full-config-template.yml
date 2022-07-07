@@ -130,7 +130,7 @@ Resources:
               ],
             ]
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: "Allow"
                 Action:
@@ -173,7 +173,7 @@ Resources:
                 ],
               ]
             PolicyDocument:
-              Version: "2012-10-17"
+              Version: '2012-10-17'
               Statement:
                 - Effect: "Allow"
                   Action:
@@ -214,7 +214,7 @@ Resources:
       Policies:
         - PolicyName: "DenyIAMExceptTaggedRoles"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: "Deny"
                 Action: "iam:*"
@@ -229,7 +229,7 @@ Resources:
                     "iam:ResourceTag/copilot-environment": !Sub "${EnvName}"
         - PolicyName: "ExecuteCommand"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: "Allow"
                 Action:
@@ -354,7 +354,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -368,7 +368,7 @@ Resources:
       Policies:
         - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -466,7 +466,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -478,7 +478,7 @@ Resources:
       Policies:
         - PolicyName: "EnvControllerStackUpdate"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -491,7 +491,7 @@ Resources:
                     "cloudformation:ResourceTag/copilot-environment": !Sub "${EnvName}"
         - PolicyName: "EnvControllerRolePass"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:

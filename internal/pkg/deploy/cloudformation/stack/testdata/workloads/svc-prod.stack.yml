@@ -346,7 +346,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -452,7 +452,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -566,7 +566,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       'aws:copilot:description': "An IAM Role to describe load balancer rules for assigning a priority"
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -580,7 +580,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Policies:
         - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
