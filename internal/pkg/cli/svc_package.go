@@ -435,10 +435,12 @@ func buildSvcPackageCmd() *cobra.Command {
   Print the CloudFormation template for the "frontend" service parametrized for the "test" environment.
   /code $ copilot svc package -n frontend -e test
 
-  Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of printing.
-  /code $ copilot svc package -n frontend -e test --output-dir ./infrastructure
-  /code $ ls ./infrastructure
-  /code frontend-test.stack.yml      frontend-test.params.yml`,
+  Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of stdout.
+  /startcodeblock
+  $ copilot svc package -n frontend -e test --output-dir ./infrastructure
+  $ ls ./infrastructure
+  frontend-test.stack.yml      frontend-test.params.json
+  /endcodeblock`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newPackageSvcOpts(vars)
 			if err != nil {
