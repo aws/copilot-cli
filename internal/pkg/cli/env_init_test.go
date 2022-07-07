@@ -999,7 +999,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 					EnvRegion:    "us-west-2",
 				}).Return(errors.New("some cfn error"))
 			},
-			wantedErrorS: "deploy env test to application phonetool: some cfn error",
+			wantedErrorS: "add env test to application phonetool: some cfn error",
 		},
 		"errors cannot get app resources by region": {
 			setupMocks: func(m *initEnvExecuteMocks) {

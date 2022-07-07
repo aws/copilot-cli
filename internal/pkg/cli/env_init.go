@@ -326,7 +326,7 @@ func (o *initEnvOpts) Execute() error {
 	if err := o.store.CreateEnvironment(env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}
-	log.Successf("Created environment %s in region %s under application %s.\n",
+	log.Successf("Provisioned bootstrap resources for environment %s in region %s under application %s.\n",
 		color.HighlightUserInput(env.Name), color.Emphasize(env.Region), color.HighlightUserInput(env.App))
 	return nil
 }
@@ -735,7 +735,7 @@ func (o *initEnvOpts) addToStackset(opts *deploycfn.AddEnvToAppOpts) error {
 	o.prog.Start(fmt.Sprintf(fmtAddEnvToAppStart, color.Emphasize(opts.EnvAccountID), color.Emphasize(opts.EnvRegion), color.HighlightUserInput(o.appName)))
 	if err := o.appDeployer.AddEnvToApp(opts); err != nil {
 		o.prog.Stop(log.Serrorf(fmtAddEnvToAppFailed, color.Emphasize(opts.EnvAccountID), color.Emphasize(opts.EnvRegion), color.HighlightUserInput(o.appName)))
-		return fmt.Errorf("deploy env %s to application %s: %w", opts.EnvName, opts.App.Name, err)
+		return fmt.Errorf("add env %s to application %s: %w", opts.EnvName, opts.App.Name, err)
 	}
 	o.prog.Stop(log.Ssuccessf(fmtAddEnvToAppComplete, color.Emphasize(opts.EnvAccountID), color.Emphasize(opts.EnvRegion), color.HighlightUserInput(o.appName)))
 
