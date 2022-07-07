@@ -178,6 +178,10 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 			if err != nil {
 				return URI{}, err
 			}
+			if !albURI.HTTPS && len(albURI.DNSNames) > 1 {
+				// filter out the default LB DNS Name
+				albURI, _ = albDescr.removeEnvDNSName(albURI)
+			}
 			return URI{
 				URI:        english.OxfordWordSeries(albURI.strings(), "or"),
 				AccessType: URIAccessTypeInternal,
@@ -276,6 +280,21 @@ func (d *albDescriber) uri() (albURI, error) {
 		DNSNames: dnsNames,
 		Path:     path,
 	}, nil
+}
+
+func (d *albDescriber) removeEnvDNSName(albURI albURI) (albURI, error) {
+	envOutputs, err := d.envDescriber.Outputs()
+	if err != nil {
+		return albURI, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
+	}
+	lbDNSName := envOutputs[d.envDNSNameKey]
+	for i := range albURI.DNSNames {
+		if albURI.DNSNames[i] == lbDNSName {
+			albURI.DNSNames = append(albURI.DNSNames[:i], albURI.DNSNames[i+1:]...)
+			break
+		}
+	}
+	return albURI, nil
 }
 
 // URI returns the WebServiceURI to identify this service uniquely given an environment name.
