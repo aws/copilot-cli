@@ -655,29 +655,6 @@ To recreate the environment, please run:
 	return nil
 }
 
-func (o *initEnvOpts) importVPCConfig() *config.ImportVPC {
-	if o.defaultConfig || !o.importVPC.isSet() {
-		return nil
-	}
-	return &config.ImportVPC{
-		ID:               o.importVPC.ID,
-		PrivateSubnetIDs: o.importVPC.PrivateSubnetIDs,
-		PublicSubnetIDs:  o.importVPC.PublicSubnetIDs,
-	}
-}
-
-func (o *initEnvOpts) adjustVPCConfig() *config.AdjustVPC {
-	if o.defaultConfig || !o.adjustVPC.isSet() {
-		return nil
-	}
-	return &config.AdjustVPC{
-		CIDR:               o.adjustVPC.CIDR.String(),
-		AZs:                o.adjustVPC.AZs,
-		PrivateSubnetCIDRs: o.adjustVPC.PrivateSubnetCIDRs,
-		PublicSubnetCIDRs:  o.adjustVPC.PublicSubnetCIDRs,
-	}
-}
-
 func (o *initEnvOpts) deployEnv(app *config.Application,
 	artifactBucketARN, artifactBucketKeyARN string) error {
 	caller, err := o.identity.Get()
