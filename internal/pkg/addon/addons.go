@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -43,6 +44,7 @@ type Addons struct {
 
 	parser template.Parser
 	ws     workspaceReader
+	fs     *afero.Afero
 
 	template string
 	wsPath   string
@@ -63,6 +65,7 @@ func New(wlName string) (*Addons, error) {
 	return &Addons{
 		wlName: wlName,
 		parser: template.New(),
+		fs:     &afero.Afero{Fs: afero.NewOsFs()},
 		ws:     ws,
 		wsPath: wsPath,
 	}, nil

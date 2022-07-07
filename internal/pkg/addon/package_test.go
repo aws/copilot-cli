@@ -1,6 +1,8 @@
 package addon
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon/mocks"
@@ -22,6 +24,14 @@ func TestPackage(t *testing.T) {
 		wsPath = "/"
 		bucket = "mockBucket"
 	)
+	defaultFS := func() afero.Fs {
+		fs := afero.NewMemMapFs()
+		fs.Mkdir("/lambda", 0644)
+		f, _ := fs.Create("/lambda/index.js")
+		defer f.Close()
+		f.Write([]byte(`exports.handler = function(event, context) {}`))
+		return fs
+	}
 	tests := map[string]struct {
 		inTemplate  string
 		outTemplate string
@@ -29,14 +39,7 @@ func TestPackage(t *testing.T) {
 		setupMocks  func(m addonMocks)
 	}{
 		"lambda": {
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.Mkdir("/lambda", 0644)
-				f, _ := fs.Create("/lambda/index.js")
-				defer f.Close()
-				f.Write([]byte(`exports.handler = function(event, context) {}`))
-				return fs
-			},
+			fs: defaultFS,
 			setupMocks: func(m addonMocks) {
 				m.uploader.EXPECT().Upload(bucket, gomock.Any(), gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
 			},
@@ -62,8 +65,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-	    S3Bucket: mockBucket
-		S3Key: asdf
+        S3Bucket: mockBucket
+        S3Key: asdf
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -89,6 +92,8 @@ Resources:
 				wsPath:   wsPath,
 				Uploader: mocks.uploader,
 				ws:       mocks.ws,
+				fs:       &afero.Afero{Fs: tc.fs()},
+				Bucket:   bucket,
 			}
 
 			tmpl := newCFNTemplate("merged")
@@ -98,9 +103,12 @@ Resources:
 			packaged, err := a.packageLocalArtifacts(tmpl)
 			require.NoError(t, err)
 
-			out, err := yaml.Marshal(packaged)
-			require.NoError(t, err)
-			require.Equal(t, tc.outTemplate, out)
+			buf := &bytes.Buffer{}
+			enc := yaml.NewEncoder(buf)
+			enc.SetIndent(2)
+
+			require.NoError(t, enc.Encode(packaged))
+			require.Equal(t, strings.TrimSpace(tc.outTemplate), strings.TrimSpace(buf.String()))
 		})
 	}
 }

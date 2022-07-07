@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -30,56 +29,82 @@ type transformInfo struct {
 	ForceZip bool
 }
 
-var transformInfoFor = map[string]transformInfo{
+var transformInfoFor = map[string][]transformInfo{
 	"AWS::ApiGateway::RestApi": {
-		Property:           "BodyS3Location",
-		BucketNameProperty: "Bucket",
-		ObjectKeyProperty:  "Key",
+		{
+			Property:           "BodyS3Location",
+			BucketNameProperty: "Bucket",
+			ObjectKeyProperty:  "Key",
+		},
 	},
 	"AWS::Lambda::Function": {
-		Property:           "Code",
-		BucketNameProperty: "S3Bucket",
-		ObjectKeyProperty:  "S3Key",
-		ForceZip:           true,
+		{
+			Property:           "Code",
+			BucketNameProperty: "S3Bucket",
+			ObjectKeyProperty:  "S3Key",
+			ForceZip:           true,
+		},
 	},
 	"AWS::Lambda::LayerVersion": {
-		Property:           "Content",
-		BucketNameProperty: "S3Bucket",
-		ObjectKeyProperty:  "S3Key",
-		ForceZip:           true,
+		{
+			Property:           "Content",
+			BucketNameProperty: "S3Bucket",
+			ObjectKeyProperty:  "S3Key",
+			ForceZip:           true,
+		},
 	},
 	"AWS::AppSync::GraphQLSchema": {
-		Property: "DefinitionS3Location",
+		{
+			Property: "DefinitionS3Location",
+		},
 	},
 	"AWS::AppSync::Resolver": {
-		Property: "RequestMappingTemplateS3Location",
-		// TODO support multiple properties (this and "ResponseMappingTemplateS3Location")
+		{
+			Property: "RequestMappingTemplateS3Location",
+		},
+		{
+			Property: "ResponseMappingTemplateS3Location",
+		},
 	},
 	"AWS::AppSync::FunctionConfiguration": {
-		Property: "RequestMappingTemplateS3Location",
-		// TODO support multiple properties (this and "ResponseMappingTemplateS3Location")
+		{
+			Property: "RequestMappingTemplateS3Location",
+		},
+		{
+			Property: "ResponseMappingTemplateS3Location",
+		},
 	},
 	"AWS::ElasticBeanstalk::ApplicationVersion": {
-		Property:           "SourceBundle",
-		BucketNameProperty: "S3Bucket",
-		ObjectKeyProperty:  "S3Key",
+		{
+			Property:           "SourceBundle",
+			BucketNameProperty: "S3Bucket",
+			ObjectKeyProperty:  "S3Key",
+		},
 	},
 	"AWS::CloudFormation::Stack": { // TODO look at this one, has extra logic
-		Property: "TemplateURL",
+		{
+			Property: "TemplateURL",
+		},
 	},
 	"AWS::Glue::Job": {
-		Property: "Command.ScriptLocation", // TODO...support nested :sob:
+		{
+			Property: "Command.ScriptLocation", // TODO...support nested :sob:
+		},
 	},
 	"AWS::StepFunctions::StateMachine": {
-		Property:           "DefinitionS3Location",
-		BucketNameProperty: "Bucket",
-		ObjectKeyProperty:  "Key",
+		{
+			Property:           "DefinitionS3Location",
+			BucketNameProperty: "Bucket",
+			ObjectKeyProperty:  "Key",
+		},
 	},
 	"AWS::CodeCommit::Repository": { // TODO idk what this one's deal is, seems nested though
-		Property:           "Code.S3",
-		BucketNameProperty: "Bucket",
-		ObjectKeyProperty:  "Key",
-		ForceZip:           true,
+		{
+			Property:           "Code.S3",
+			BucketNameProperty: "Bucket",
+			ObjectKeyProperty:  "Key",
+			ForceZip:           true,
+		},
 	},
 }
 
@@ -100,13 +125,15 @@ func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) 
 			continue
 		}
 
-		info, ok := transformInfoFor[typeNode.Value]
+		transforms, ok := transformInfoFor[typeNode.Value]
 		if !ok {
 			continue
 		}
 
-		if err := a.transformProperty(propsNode, info); err != nil {
-			return nil, fmt.Errorf("transform property %s property for %s: %w", name, info.Property, err)
+		for _, tr := range transforms {
+			if err := a.transformProperty(propsNode, tr); err != nil {
+				return nil, fmt.Errorf("transform property %s property for %s: %w", name, tr.Property, err)
+			}
 		}
 	}
 
@@ -154,16 +181,16 @@ func (a *Addons) transformProperty(properties *yaml.Node, tr transformInfo) erro
 }
 
 func (a *Addons) uploadAddonAsset(path string, forceZip bool) (string, error) {
-	info, err := os.Stat(path)
+	info, err := a.fs.Stat(path)
 	if err != nil {
 		return "", err
 	}
 
 	var asset asset
 	if forceZip || info.IsDir() {
-		asset, err = zipAsset(path)
+		asset, err = a.zipAsset(path)
 	} else {
-		asset, err = fileAsset(path)
+		asset, err = a.fileAsset(path)
 	}
 	if err != nil {
 		return "", fmt.Errorf("create asset: %w", err)
@@ -186,18 +213,18 @@ type asset struct {
 }
 
 // zipAsset TODO...
-func zipAsset(root string) (asset, error) {
+func (a *Addons) zipAsset(root string) (asset, error) {
 	buf := &bytes.Buffer{}
 	z := zip.NewWriter(buf)
 	defer z.Close()
 
 	hash := sha256.New()
 
-	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	if err := a.fs.Walk(root, func(path string, info fs.FileInfo, err error) error {
 		switch {
 		case err != nil:
 			return err
-		case d.IsDir():
+		case info.IsDir():
 			return nil
 		}
 
@@ -206,19 +233,14 @@ func zipAsset(root string) (asset, error) {
 		case err != nil:
 			return fmt.Errorf("rel: %w", err)
 		case fname == ".": // TODO best way to check equality?
-			fname = d.Name()
+			fname = info.Name()
 		}
 
-		f, err := os.Open(path)
+		f, err := a.fs.Open(path)
 		if err != nil {
 			return fmt.Errorf("open: %w", err)
 		}
 		defer f.Close()
-
-		info, err := f.Stat()
-		if err != nil {
-			return fmt.Errorf("stat: %w", err)
-		}
 
 		header, err := zip.FileInfoHeader(info)
 		if err != nil {
@@ -235,7 +257,6 @@ func zipAsset(root string) (asset, error) {
 
 		// include the file name and permissions as part of the hash
 		hash.Write([]byte(fmt.Sprintf("%s %s", fname, info.Mode().String())))
-
 		_, err = io.Copy(io.MultiWriter(zf, hash), f)
 		return err
 	}); err != nil {
@@ -249,11 +270,11 @@ func zipAsset(root string) (asset, error) {
 }
 
 // fileAsset TODO...
-func fileAsset(path string) (asset, error) {
+func (a *Addons) fileAsset(path string) (asset, error) {
 	hash := sha256.New()
 	buf := &bytes.Buffer{}
 
-	f, err := os.Open(path)
+	f, err := a.fs.Open(path)
 	if err != nil {
 		return asset{}, fmt.Errorf("open: %w", err)
 	}
