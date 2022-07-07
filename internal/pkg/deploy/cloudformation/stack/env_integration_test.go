@@ -63,6 +63,34 @@ observability:
 			}(),
 			wantedFileName: "template-with-imported-certs-observability.yml",
 		},
+		"generate template with custom resources": {
+			input: func() *deploy.CreateEnvironmentInput {
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(`
+name: test
+type: Environment
+`), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+					},
+					AllowVPCIngress: true,
+					Mft:             &mft,
+				}
+			}(),
+			wantedFileName: "template-with-basic-manifest.yml",
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
