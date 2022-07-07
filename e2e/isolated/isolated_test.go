@@ -95,7 +95,7 @@ var _ = Describe("Isolated", func() {
 		})
 	})
 
-	Context("when creating and deploying a backend service in private subnets", func() {
+	Context("when creating a backend service in private subnets", func() {
 		var initErr error
 		BeforeAll(func() {
 			_, initErr = cli.SvcInit(&client.SvcInitRequest{
@@ -159,19 +159,32 @@ var _ = Describe("Isolated", func() {
 		})
 	})
 
+	Context("when running `svc status`", func() {
+		It("it should include the service, tasks, and alarm status", func() {
+			svc, svcStatusErr := cli.SvcStatus(&client.SvcStatusRequest{
+				AppName: appName,
+				Name:    svcName,
+				EnvName: envName,
+			})
+			Expect(svcStatusErr).NotTo(HaveOccurred())
+			// Service should be active.
+			Expect(svc.Service.Status).To(Equal("ACTIVE"))
+			// Desired count should be minimum auto scaling number.
+			Expect(svc.Service.DesiredCount).To(Equal(int64(1)))
+			// Should have correct number of running tasks.
+			Expect(len(svc.Tasks)).To(Equal(1))
+		})
+	})
+
 	Context("when running `env show --resources`", func() {
 		var envShowOutput *client.EnvShowOutput
 		var envShowErr error
-		It("show show internal ALB", func() {
+		It("should show internal ALB", func() {
 			envShowOutput, envShowErr = cli.EnvShow(&client.EnvShowRequest{
 				AppName: appName,
 				EnvName: envName,
 			})
-		})
-		It("should not return an error", func() {
 			Expect(envShowErr).NotTo(HaveOccurred())
-		})
-		It("should now have an internal ALB", func() {
 			Expect(envShowOutput.Resources).To(ContainElement(HaveKeyWithValue("type", "AWS::ElasticLoadBalancingV2::LoadBalancer")))
 		})
 	})

@@ -20,6 +20,7 @@ var vpcStackName string
 var vpcStackTemplatePath string
 var vpcImport client.EnvInitRequestVPCImport
 var vpcConfig client.EnvInitRequestVPCConfig
+var timeNow = time.Now().Unix()
 
 const svcName = "backend"
 const envName = "private"
@@ -34,13 +35,13 @@ func Test_Isolated(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	vpcStackName = fmt.Sprintf("e2e-isolated-vpc-stack-%d", time.Now().Unix())
+	vpcStackName = fmt.Sprintf("e2e-isolated-vpc-stack-%d", timeNow)
 	vpcStackTemplatePath = "file://vpc.yml"
 	ecsCli, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = ecsCli
 	aws = client.NewAWS()
-	appName = fmt.Sprintf("e2e-isolated-%d", time.Now().Unix())
+	appName = fmt.Sprintf("e2e-isolated-%d", timeNow)
 })
 
 var _ = AfterSuite(func() {

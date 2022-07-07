@@ -8,13 +8,6 @@ Resources:
       EnableDnsHostnames: true
       EnableDnsSupport: true
       InstanceTenancy: default
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-  InternetGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC
   # Security Group to allow use of VPC Endpoints.
   VPCEndpointSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -118,30 +111,6 @@ Resources:
         - !Ref PrivateSubnetOne
         - !Ref PrivateSubnetTwo
       ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
-      VpcId: !Ref VPC
-      SecurityGroupIds:
-        - !Ref VPCEndpointSecurityGroup
-  EC2MessagesVPCEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: true
-      SubnetIds:
-        - !Ref PrivateSubnetOne
-        - !Ref PrivateSubnetTwo
-      ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2messages
-      VpcId: !Ref VPC
-      SecurityGroupIds:
-        - !Ref VPCEndpointSecurityGroup
-  EC2VPCEndpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: true
-      SubnetIds:
-        - !Ref PrivateSubnetOne
-        - !Ref PrivateSubnetTwo
-      ServiceName: !Sub com.amazonaws.${AWS::Region}.ec2
       VpcId: !Ref VPC
       SecurityGroupIds:
         - !Ref VPCEndpointSecurityGroup
