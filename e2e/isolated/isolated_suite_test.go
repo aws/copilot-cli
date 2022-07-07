@@ -42,6 +42,11 @@ var _ = BeforeSuite(func() {
 	cli = ecsCli
 	aws = client.NewAWS()
 	appName = fmt.Sprintf("e2e-isolated-%d", timeNow)
+	// Create the VPC stack.
+	err = aws.CreateStack(vpcStackName, vpcStackTemplatePath)
+	Expect(err).NotTo(HaveOccurred())
+	err = aws.WaitStackCreateComplete(vpcStackName)
+	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {

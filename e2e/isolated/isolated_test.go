@@ -42,13 +42,10 @@ var _ = Describe("Isolated", func() {
 	})
 
 	Context("when deploying resources to be imported", func() {
-		BeforeAll(func() {
-			err := aws.CreateStack(vpcStackName, vpcStackTemplatePath)
-			Expect(err).NotTo(HaveOccurred(), "create vpc cloudformation stack")
-			err = aws.WaitStackCreateComplete(vpcStackName)
-			Expect(err).NotTo(HaveOccurred(), "vpc stack create complete")
+		It("vpc stack exists", func() {
+			err := aws.WaitStackCreateComplete(vpcStackName)
+			Expect(err).NotTo(HaveOccurred())
 		})
-
 		It("parse vpc stack output", func() {
 			outputs, err := aws.VPCStackOutput(vpcStackName)
 			Expect(err).NotTo(HaveOccurred(), "get VPC stack output")
