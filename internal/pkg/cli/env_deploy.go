@@ -22,9 +22,8 @@ import (
 )
 
 type deployEnvVars struct {
-	appName      string
-	name         string
-	isProduction bool
+	appName string
+	name    string
 }
 
 type deployEnvOpts struct {
