@@ -25,8 +25,8 @@ type Environment struct {
 	ManagerRoleARN   string `json:"managerRoleARN"`   // ARN for the manager role assumed to manipulate the environment and its services.
 
 	// Fields that store user configuration is no longer updated, but kept for retrofitting purpose.
-	CustomConfig *CustomizeEnv `json:"customConfig,omitempty"` // Custom environment configuration by users.
-	Telemetry    *Telemetry    `json:"telemetry,omitempty"`    // Optional environment telemetry features.
+	CustomConfig *CustomizeEnv `json:"customConfig,omitempty"` // Deprecated. Custom environment configuration by users. This configuration is now available in the env manifest.
+	Telemetry    *Telemetry    `json:"telemetry,omitempty"`    // Deprecated. Optional environment telemetry features. This configuration is now available in the env manifest.
 }
 
 // CustomizeEnv represents the custom environment config.
