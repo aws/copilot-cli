@@ -112,6 +112,11 @@ type DeployEnvironmentInput struct {
 	Manifest            *manifest.Environment
 }
 
+// GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
+func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput) (*GenerateCloudFormationTemplateOutput, error) {
+	return &GenerateCloudFormationTemplateOutput{}, nil
+}
+
 // DeployEnvironment deploys an environment using CloudFormation.
 func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	resources, err := d.getAppRegionalResources()

@@ -5,6 +5,14 @@ package cli
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+
+	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	"github.com/spf13/afero"
+
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -28,13 +36,30 @@ type packageEnvVars struct {
 	uploadAssets bool
 }
 
+type discardFile struct{}
+
+func (df discardFile) Write(p []byte) (n int, err error) {
+	return io.Discard.Write(p)
+}
+
+func (df discardFile) Close() error {
+	return nil //noop
+}
+
 type packageEnvOpts struct {
 	packageEnvVars
 
 	// Dependencies.
-	cfgStore store
-	ws       wsEnvironmentReader
-	sel      wsEnvironmentSelector
+	cfgStore     store
+	ws           wsEnvironmentReader
+	sel          wsEnvironmentSelector
+	caller       identityService
+	fs           afero.Fs
+	tplWriter    io.WriteCloser
+	paramsWriter io.WriteCloser
+
+	newInterpolator func(appName, envName string) interpolator
+	newEnvDeployer  func() (envPackager, error)
 
 	// Cached variables.
 	appCfg *config.Application
@@ -54,13 +79,37 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 	}
 	cfgStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
-	return &packageEnvOpts{
+	opts := &packageEnvOpts{
 		packageEnvVars: vars,
 
-		cfgStore: cfgStore,
-		ws:       ws,
-		sel:      selector.NewLocalEnvironmentSelector(prompt.New(), cfgStore, ws),
-	}, nil
+		cfgStore:     cfgStore,
+		ws:           ws,
+		sel:          selector.NewLocalEnvironmentSelector(prompt.New(), cfgStore, ws),
+		caller:       identity.New(defaultSess),
+		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		tplWriter:    os.Stdout,
+		paramsWriter: discardFile{},
+
+		newInterpolator: func(appName, envName string) interpolator {
+			return manifest.NewInterpolator(appName, envName)
+		},
+	}
+	opts.newEnvDeployer = func() (envPackager, error) {
+		appCfg, err := opts.getAppCfg()
+		if err != nil {
+			return nil, err
+		}
+		envCfg, err := opts.getEnvCfg()
+		if err != nil {
+			return nil, err
+		}
+		return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
+			App:             appCfg,
+			Env:             envCfg,
+			SessionProvider: sessProvider,
+		})
+	}
+	return opts, nil
 }
 
 // Validate returns an error for any invalid optional flags.
@@ -83,7 +132,41 @@ func (o *packageEnvOpts) Ask() error {
 
 // Execute prints the CloudFormation configuration for the environment.
 func (o *packageEnvOpts) Execute() error {
-	return nil
+	mft, err := o.environmentManifest()
+	if err != nil {
+		return err
+	}
+	principal, err := o.caller.Get()
+	if err != nil {
+		return fmt.Errorf("get caller principal identity: %v", err)
+	}
+	deployer, err := o.newEnvDeployer()
+	if err != nil {
+		return err
+	}
+
+	var urls map[string]string
+	if o.uploadAssets {
+		urls, err = deployer.UploadArtifacts()
+		if err != nil {
+			return fmt.Errorf("upload assets for environment %q: %v", o.envName, err)
+		}
+	}
+	res, err := deployer.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
+		RootUserARN:         principal.RootUserARN,
+		CustomResourcesURLs: urls,
+		Manifest:            mft,
+	})
+	if err != nil {
+		return fmt.Errorf("generate CloudFormation template from environment %q manifest: %v", o.envName, err)
+	}
+	if err := o.setWriters(); err != nil {
+		return err
+	}
+	if err := o.write(o.tplWriter, res.Template); err != nil {
+		return err
+	}
+	return o.write(o.paramsWriter, res.Parameters)
 }
 
 func (o *packageEnvOpts) getAppCfg() (*config.Application, error) {
@@ -126,6 +209,60 @@ func (o *packageEnvOpts) validateOrAskEnvName() error {
 	}
 	o.envName = name
 	return nil
+}
+
+func (o *packageEnvOpts) environmentManifest() (*manifest.Environment, error) {
+	envCfg, err := o.getEnvCfg()
+	if err != nil {
+		return nil, err
+	}
+	raw, err := o.ws.ReadEnvironmentManifest(envCfg.Name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest for environment %q: %w", envCfg.Name, err)
+	}
+	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
+	if err != nil {
+		return nil, fmt.Errorf("interpolate environment variables for %q manifest: %w", o.envName, err)
+	}
+	mft, err := manifest.UnmarshalEnvironment([]byte(interpolated))
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal environment manifest for %q: %w", envCfg.Name, err)
+	}
+	if err := mft.Validate(); err != nil {
+		return nil, fmt.Errorf("validate environment manifest for %q: %w", envCfg.Name, err)
+	}
+	return mft, nil
+}
+
+func (o *packageEnvOpts) setWriters() error {
+	if o.outputDir == "" {
+		return nil
+	}
+	if err := o.fs.MkdirAll(o.outputDir, 0755); err != nil {
+		return fmt.Errorf("create directory %q: %w", o.outputDir, err)
+	}
+
+	path := filepath.Join(o.outputDir, fmt.Sprintf("env-%s.yml", o.envName))
+	tplFile, err := o.fs.Create(path)
+	if err != nil {
+		return fmt.Errorf("create file at %q: %w", path, err)
+	}
+	path = filepath.Join(o.outputDir, fmt.Sprintf("env-%s.params.json", o.envName))
+	paramsFile, err := o.fs.Create(path)
+	if err != nil {
+		return fmt.Errorf("create file at %q: %w", path, err)
+	}
+
+	o.tplWriter = tplFile
+	o.paramsWriter = paramsFile
+	return nil
+}
+
+func (o *packageEnvOpts) write(wc io.WriteCloser, dat string) error {
+	if _, err := wc.Write([]byte(dat)); err != nil {
+		return err
+	}
+	return wc.Close()
 }
 
 // buildEnvPkgCmd builds the command for printing an environment CloudFormation stack configuration.
