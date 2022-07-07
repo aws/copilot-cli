@@ -101,8 +101,8 @@ func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) error {
 	if strings.Contains(image, "aarch64") {
 		environmentType = "ARM_CONTAINER"
 	}
-	if mfBuild != nil && mfBuild.AdditionalPolicy.Content != nil {
-		additionalPolicy, err := yaml.Marshal(mfBuild.AdditionalPolicy)
+	if mfBuild != nil && !mfBuild.AdditionalPolicy.Document.IsZero() {
+		additionalPolicy, err := yaml.Marshal(&mfBuild.AdditionalPolicy)
 		if err != nil {
 			return fmt.Errorf("marshal pipeline manifest to embed in template: %v", err)
 		}

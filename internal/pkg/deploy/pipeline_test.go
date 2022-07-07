@@ -5,6 +5,8 @@ package deploy
 
 import (
 	"errors"
+	"fmt"
+	"gopkg.in/yaml.v3"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -203,7 +205,24 @@ func TestPipelineBuild_Init(t *testing.T) {
 		defaultImage   = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 		defaultEnvType = "LINUX_CONTAINER"
 	)
+	yamlNode := yaml.Node{}
+	additionalPolicy := []byte(`
+PolicyDocument:
+  Statement:
+    Action: '*'
+    Effect: Allow
+    Resource: "*"
+  Version: 2012-10-17`)
 
+	if err := yaml.Unmarshal(additionalPolicy, &yamlNode); err != nil {
+		t.Errorf("printing errpr:  %v", err)
+		fmt.Println("printing error", err)
+	}
+	b, err := yaml.Marshal(&yamlNode)
+	if err != nil {
+		t.Errorf("printing err:%v", err)
+	}
+	fmt.Printf("nodeStr: %s\n", string(b))
 	testCases := map[string]struct {
 		mfBuild       *manifest.Build
 		mfDirPath     string
@@ -245,6 +264,9 @@ func TestPipelineBuild_Init(t *testing.T) {
 			mfBuild: &manifest.Build{
 				Image:     "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
 				Buildspec: "some/path",
+				AdditionalPolicy: manifest.AdditionalPolicy{
+					Document: &yamlNode,
+				},
 			},
 			expectedBuild: Build{
 				Image:            "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
