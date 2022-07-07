@@ -53,7 +53,7 @@ Resources:
                 - Grants CRUD access to MyTable
                 - { Table: !Ref MyTable }
             PolicyDocument:
-                Version: 2012-10-17
+                Version: '2012-10-17'
                 Statement:
                     - Sid: DDBActions
                       Effect: Allow
