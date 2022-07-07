@@ -41,8 +41,6 @@ import (
 )
 
 const (
-	envInitAppNameHelpPrompt = "An environment will be created in the selected application."
-
 	envInitNamePrompt              = "What is your environment's name?"
 	envInitNameHelpPrompt          = "A unique identifier for an environment (e.g. dev, test, prod)."
 	envInitDefaultEnvConfirmPrompt = `Would you like to use the default configuration for a new environment?
@@ -79,7 +77,6 @@ https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 )
 
 var (
-	envInitAppNamePrompt                  = fmt.Sprintf("In which %s would you like to create the environment?", color.Emphasize("application"))
 	envInitDefaultConfigSelectOption      = "Yes, use default."
 	envInitAdjustEnvResourcesSelectOption = "Yes, but I'd like configure the default resources (CIDR ranges, AZs)."
 	envInitImportEnvResourcesSelectOption = "No, I'd like to import existing resources (VPC, subnets)."
