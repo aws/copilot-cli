@@ -23,7 +23,7 @@ var environmentManifestPath = "environment/manifest.yml"
 // Environment is the manifest configuration for an environment.
 type Environment struct {
 	Workload          `yaml:",inline"`
-	environmentConfig `yaml:",inline"`
+	EnvironmentConfig `yaml:",inline"`
 
 	parser template.Parser
 }
@@ -49,7 +49,7 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 	var vpc environmentVPCConfig
 	vpc.loadVPCConfig(cfg.CustomConfig)
 
-	var http environmentHTTPConfig
+	var http EnvironmentHTTPConfig
 	http.loadLBConfig(cfg.CustomConfig)
 
 	var obs environmentObservability
@@ -60,7 +60,7 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 			Name: stringP(cfg.Name),
 			Type: stringP(EnvironmentManifestType),
 		},
-		environmentConfig: environmentConfig{
+		EnvironmentConfig: EnvironmentConfig{
 			Network: environmentNetworkConfig{
 				VPC: vpc,
 			},
@@ -83,10 +83,11 @@ func (e *Environment) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-type environmentConfig struct {
+// EnvironmentConfig defines the configuration settings for an environment manifest
+type EnvironmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
 	Observability environmentObservability `yaml:"observability,omitempty,flow"`
-	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty,flow"`
+	HTTPConfig    EnvironmentHTTPConfig    `yaml:"http,omitempty,flow"`
 	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
@@ -300,17 +301,18 @@ func (o *environmentObservability) loadObsConfig(tele *config.Telemetry) {
 	o.ContainerInsights = &tele.EnableContainerInsights
 }
 
-type environmentHTTPConfig struct {
-	Public  publicHTTPConfig  `yaml:"public,omitempty"`
+// EnvironmentHTTPConfig defines the configuration settings for an environment group's HTTP connections
+type EnvironmentHTTPConfig struct {
+	Public  PublicHTTPConfig  `yaml:"public,omitempty"`
 	Private privateHTTPConfig `yaml:"private,omitempty"`
 }
 
 // IsEmpty returns true if neither the public ALB nor the internal ALB is configured.
-func (cfg environmentHTTPConfig) IsEmpty() bool {
+func (cfg EnvironmentHTTPConfig) IsEmpty() bool {
 	return cfg.Public.IsEmpty() && cfg.Private.IsEmpty()
 }
 
-func (cfg *environmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
+func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	if env.IsEmpty() {
 		return
 	}
@@ -322,13 +324,14 @@ func (cfg *environmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	cfg.Public.Certificates = env.ImportCertARNs
 }
 
-type publicHTTPConfig struct {
-	Certificates []string `yaml:"certificates,omitempty"`
+type PublicHTTPConfig struct {
+	LimitToCFIngress *bool    `yaml:"restrict_alb_ingress_to_cf"`
+	Certificates     []string `yaml:"certificates,omitempty"`
 }
 
 // IsEmpty returns true if there is no customization to the public ALB.
-func (cfg publicHTTPConfig) IsEmpty() bool {
-	return len(cfg.Certificates) == 0
+func (cfg PublicHTTPConfig) IsEmpty() bool {
+	return len(cfg.Certificates) == 0 && cfg.LimitToCFIngress == nil
 }
 
 type privateHTTPConfig struct {

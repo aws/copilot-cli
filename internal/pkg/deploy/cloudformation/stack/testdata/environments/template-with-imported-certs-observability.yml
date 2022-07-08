@@ -6,7 +6,7 @@ Metadata:
     name: test
     type: Environment
     observability: {container_insights: true}
-    http: {public: {certificates: [cert-1, cert-2]}}
+    http: {public: {restrict_alb_ingress_to_cf: false, certificates: [cert-1, cert-2]}}
 
 Parameters:
   AppName:

@@ -104,6 +104,15 @@ Resources:
     Properties:
       GroupDescription: Access to the public facing load balancer
       SecurityGroupIngress:
+{{- if .PublicFacingPrefixListIDs}}
+        {{- range $id := .PublicFacingPrefixListIDs}}
+        - SourcePrefixListId: {{$id}}
+          Description: Allow ingress from prefix list {{$id}} on all ports
+          FromPort: 0
+          IpProtocol: tcp
+          ToPort: 0
+        {{- end}}
+{{- else}}
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 80
           FromPort: 80
@@ -114,6 +123,7 @@ Resources:
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
+{{- end}}
 {{- if .VPCConfig.Imported}}
       VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}

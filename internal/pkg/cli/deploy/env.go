@@ -8,11 +8,13 @@ import (
 	"io"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -37,6 +39,10 @@ type environmentDeployer interface {
 	UpdateAndRenderEnvironment(out termprogress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error
 }
 
+type prefixListGetter interface {
+	CloudFrontManagedPrefixListID() (*string, error)
+}
+
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
@@ -47,6 +53,7 @@ type envDeployer struct {
 	uploader   customResourcesUploader // Deprecated: after legacy is removed.
 	templateFS template.Reader
 	s3         uploader
+	ec2        prefixListGetter
 	// Dependencies to deploy an environment.
 	envDeployer environmentDeployer
 
@@ -86,6 +93,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		templateFS: template.New(),
 		uploader:   template.New(),
 		s3:         s3.New(envRegionSession),
+		ec2:        ec2.New(envRegionSession),
 
 		envDeployer: deploycfn.New(envManagerSession),
 	}, nil
@@ -128,6 +136,37 @@ func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, e
 	return urls, nil
 }
 
+func (d *envDeployer) prefixLists(in *DeployEnvironmentInput) ([]string, error) {
+	var prefixListIDs []string
+
+	cfManagedPrefixListId, err := d.cfManagedPrefixListId(in)
+	if err != nil {
+		return nil, err
+	}
+	if cfManagedPrefixListId != nil {
+		prefixListIDs = append(prefixListIDs, *cfManagedPrefixListId)
+	}
+
+	return prefixListIDs, nil
+}
+
+func (d *envDeployer) cfManagedPrefixListId(in *DeployEnvironmentInput) (*string, error) {
+	// Check if ingress is allowed from cloudfront
+	if in.Manifest != nil {
+		if !aws.BoolValue(in.Manifest.HTTPConfig.Public.LimitToCFIngress) {
+			return nil, nil
+		}
+	} else {
+		return nil, nil
+	}
+
+	id, err := d.ec2.CloudFrontManagedPrefixListID()
+	if err != nil {
+		return nil, fmt.Errorf("retrieve CloudFront managed prefix list id: %s", err)
+	}
+	return id, nil
+}
+
 // DeployEnvironmentInput contains information used to deploy the environment.
 type DeployEnvironmentInput struct {
 	RootUserARN         string
@@ -145,6 +184,10 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if err != nil {
 		return err
 	}
+	prefixListIDs, err := d.prefixLists(in)
+	if err != nil {
+		return err
+	}
 	deployEnvInput := &deploy.CreateEnvironmentInput{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
@@ -156,6 +199,7 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 		CustomResourcesURLs:  in.CustomResourcesURLs,
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
+		PrefixListIDs:        prefixListIDs,
 		Mft:                  in.Manifest,
 		Version:              deploy.LatestEnvTemplateVersion,
 	}

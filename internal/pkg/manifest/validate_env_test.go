@@ -19,7 +19,7 @@ func TestEnvironment_Validate(t *testing.T) {
 	}{
 		"malformed network": {
 			in: Environment{
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							ID:   stringP("vpc-123"),
@@ -51,11 +51,11 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 	mockPrivateSubnet1CIDR := IPNet("10.0.3.0/24")
 	mockPrivateSubnet2CIDR := IPNet("10.0.4.0/24")
 	testCases := map[string]struct {
-		in          environmentConfig
+		in          EnvironmentConfig
 		wantedError string
 	}{
 		"error if internal ALB subnet placement specified with adjusted vpc": {
-			in: environmentConfig{
+			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						CIDR: ipNetP("apple cider"),
@@ -84,7 +84,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 					},
 				},
 
-				HTTPConfig: environmentHTTPConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
 					Private: privateHTTPConfig{
 						InternalALBSubnets: []string{"mockSubnet"},
 					},
@@ -92,8 +92,21 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 			},
 			wantedError: "in order to specify internal ALB subnet placement, subnets must be imported",
 		},
+		"error if security group ingress is limited to a cdn distribution not enabled": {
+			in: EnvironmentConfig{
+				CDNConfig: environmentCDNConfig{
+					Enabled: aws.Bool(false),
+				},
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						LimitToCFIngress: aws.Bool(true),
+					},
+				},
+			},
+			wantedError: "CDN must be enabled to limit security group ingress to CloudFront",
+		},
 		"error if subnets specified for internal ALB placement don't exist": {
-			in: environmentConfig{
+			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						ID: aws.String("mockID"),
@@ -105,7 +118,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 						},
 					},
 				},
-				HTTPConfig: environmentHTTPConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
 					Private: privateHTTPConfig{
 						InternalALBSubnets: []string{"nonexistentSubnet"},
 					},
@@ -114,7 +127,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 			wantedError: "subnet(s) specified for internal ALB placement not imported",
 		},
 		"valid case with internal ALB placement": {
-			in: environmentConfig{
+			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						ID: aws.String("mockID"),
@@ -130,7 +143,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 						},
 					},
 				},
-				HTTPConfig: environmentHTTPConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
 					Private: privateHTTPConfig{
 						InternalALBSubnets: []string{"existentSubnet", "anotherExistentSubnet"},
 					},
@@ -653,19 +666,19 @@ func TestSubnetConfiguration_Validate(t *testing.T) {
 
 func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		in                   environmentHTTPConfig
+		in                   EnvironmentHTTPConfig
 		wantedErrorMsgPrefix string
 	}{
 		"malformed public certificate": {
-			in: environmentHTTPConfig{
-				Public: publicHTTPConfig{
+			in: EnvironmentHTTPConfig{
+				Public: PublicHTTPConfig{
 					Certificates: []string{"arn:aws:weird-little-arn"},
 				},
 			},
 			wantedErrorMsgPrefix: `parse "certificates[0]": `,
 		},
 		"malformed private certificate": {
-			in: environmentHTTPConfig{
+			in: EnvironmentHTTPConfig{
 				Private: privateHTTPConfig{
 					Certificates: []string{"arn:aws:weird-little-arn"},
 				},
@@ -673,14 +686,14 @@ func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `parse "certificates[0]": `,
 		},
 		"success with public cert": {
-			in: environmentHTTPConfig{
-				Public: publicHTTPConfig{
+			in: EnvironmentHTTPConfig{
+				Public: PublicHTTPConfig{
 					Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
 				},
 			},
 		},
 		"success with private cert": {
-			in: environmentHTTPConfig{
+			in: EnvironmentHTTPConfig{
 				Private: privateHTTPConfig{
 					Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
 				},

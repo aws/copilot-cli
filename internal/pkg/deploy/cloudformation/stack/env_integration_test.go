@@ -36,6 +36,7 @@ type: Environment
 # All these comments should be deleted.
 http:
   public:
+    restrict_alb_ingress_to_cf: false
     certificates:
       - cert-1
       - cert-2
