@@ -133,7 +133,7 @@ Resources:
 {{.Build.AdditionalPolicyDocument | indent 8}}
       Roles:
         - !Ref BuildProjectRole
-{{- end}}
+ {{- end}}
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
