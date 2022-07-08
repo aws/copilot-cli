@@ -248,7 +248,8 @@ type wsPipelineManifestReader interface {
 type wsPipelineIniter interface {
 	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error)
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error)
-	Rel(path string) (string, error)
+	RelWsRoot(path string) (string, error)
+	RelCwd(path string) (string, error)
 	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
@@ -294,7 +295,8 @@ type wsEnvironmentReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
-	Rel(path string) (string, error)
+	RelWsRoot(path string) (string, error)
+	RelCwd(path string) (string, error)
 }
 
 type wsPipelineGetter interface {
@@ -310,7 +312,8 @@ type wsAppManager interface {
 
 type wsAddonManager interface {
 	WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error)
-	Rel(path string) (string, error)
+	RelWsRoot(path string) (string, error)
+	RelCwd(path string) (string, error)
 	manifestReader
 	wlLister
 }

@@ -2353,19 +2353,34 @@ func (mr *MockwsPipelineIniterMockRecorder) ListPipelines() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPipelines", reflect.TypeOf((*MockwsPipelineIniter)(nil).ListPipelines))
 }
 
-// Rel mocks base method.
-func (m *MockwsPipelineIniter) Rel(path string) (string, error) {
+// RelCwd mocks base method.
+func (m *MockwsPipelineIniter) RelCwd(path string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Rel", path)
+	ret := m.ctrl.Call(m, "RelCwd", path)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Rel indicates an expected call of Rel.
-func (mr *MockwsPipelineIniterMockRecorder) Rel(path interface{}) *gomock.Call {
+// RelCwd indicates an expected call of RelCwd.
+func (mr *MockwsPipelineIniterMockRecorder) RelCwd(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockwsPipelineIniter)(nil).Rel), path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelCwd", reflect.TypeOf((*MockwsPipelineIniter)(nil).RelCwd), path)
+}
+
+// RelWsRoot mocks base method.
+func (m *MockwsPipelineIniter) RelWsRoot(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelWsRoot", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RelWsRoot indicates an expected call of RelWsRoot.
+func (mr *MockwsPipelineIniterMockRecorder) RelWsRoot(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelWsRoot", reflect.TypeOf((*MockwsPipelineIniter)(nil).RelWsRoot), path)
 }
 
 // WritePipelineBuildspec mocks base method.
@@ -2920,19 +2935,34 @@ func (mr *MockwsPipelineReaderMockRecorder) ReadPipelineManifest(path interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineReader)(nil).ReadPipelineManifest), path)
 }
 
-// Rel mocks base method.
-func (m *MockwsPipelineReader) Rel(path string) (string, error) {
+// RelCwd mocks base method.
+func (m *MockwsPipelineReader) RelCwd(path string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Rel", path)
+	ret := m.ctrl.Call(m, "RelCwd", path)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Rel indicates an expected call of Rel.
-func (mr *MockwsPipelineReaderMockRecorder) Rel(path interface{}) *gomock.Call {
+// RelCwd indicates an expected call of RelCwd.
+func (mr *MockwsPipelineReaderMockRecorder) RelCwd(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockwsPipelineReader)(nil).Rel), path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelCwd", reflect.TypeOf((*MockwsPipelineReader)(nil).RelCwd), path)
+}
+
+// RelWsRoot mocks base method.
+func (m *MockwsPipelineReader) RelWsRoot(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelWsRoot", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RelWsRoot indicates an expected call of RelWsRoot.
+func (mr *MockwsPipelineReaderMockRecorder) RelWsRoot(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelWsRoot", reflect.TypeOf((*MockwsPipelineReader)(nil).RelWsRoot), path)
 }
 
 // MockwsPipelineGetter is a mock of wsPipelineGetter interface.
@@ -3108,19 +3138,34 @@ func (mr *MockwsAddonManagerMockRecorder) ReadWorkloadManifest(name interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadWorkloadManifest), name)
 }
 
-// Rel mocks base method.
-func (m *MockwsAddonManager) Rel(path string) (string, error) {
+// RelCwd mocks base method.
+func (m *MockwsAddonManager) RelCwd(path string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Rel", path)
+	ret := m.ctrl.Call(m, "RelCwd", path)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Rel indicates an expected call of Rel.
-func (mr *MockwsAddonManagerMockRecorder) Rel(path interface{}) *gomock.Call {
+// RelCwd indicates an expected call of RelCwd.
+func (mr *MockwsAddonManagerMockRecorder) RelCwd(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockwsAddonManager)(nil).Rel), path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelCwd", reflect.TypeOf((*MockwsAddonManager)(nil).RelCwd), path)
+}
+
+// RelWsRoot mocks base method.
+func (m *MockwsAddonManager) RelWsRoot(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelWsRoot", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RelWsRoot indicates an expected call of RelWsRoot.
+func (mr *MockwsAddonManagerMockRecorder) RelWsRoot(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelWsRoot", reflect.TypeOf((*MockwsAddonManager)(nil).RelWsRoot), path)
 }
 
 // WriteAddon mocks base method.

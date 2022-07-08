@@ -505,13 +505,29 @@ func (ws *Workspace) Path() (string, error) {
 	return filepath.Dir(copilotDirPath), nil
 }
 
-// Rel returns the path relative to the workspace root.
-func (ws *Workspace) Rel(fullPath string) (string, error) {
+// RelWsRoot returns the path relative to the workspace root.
+//
+// This is useful for storing a file path in configuration.
+//
+// Prefer RelCwd for displaying paths to users.
+func (ws *Workspace) RelWsRoot(fullPath string) (string, error) {
 	copiDir, err := ws.copilotDirPath()
 	if err != nil {
 		return "", fmt.Errorf("get path to Copilot dir: %w", err)
 	}
 	return filepath.Rel(filepath.Dir(copiDir), fullPath)
+}
+
+// RelCwd returns the path relative to the current working directory.
+//
+// This is useful when displaying a file path to the user.
+//
+// You probably want to use RelWsRoot for most other cases.
+// In the common case (the user running commands from the workspace root)
+// these functions have the same behavior, which can be a dangerous
+// source of false assumptions because that is not guaranteed!
+func (ws *Workspace) RelCwd(fullPath string) (string, error) {
+	return filepath.Rel(ws.workingDir, fullPath)
 }
 
 // copilotDirPath tries to find the current app's copilot directory from the workspace working directory.

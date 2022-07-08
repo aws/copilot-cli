@@ -617,7 +617,7 @@ func (o *initStorageOpts) Execute() error {
 			}
 			return fmt.Errorf("addon file already exists: %w", e)
 		}
-		path, err = o.ws.Rel(path)
+		path, err = o.ws.RelCwd(path)
 		if err != nil {
 			return err
 		}

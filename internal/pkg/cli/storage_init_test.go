@@ -939,7 +939,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Worker Service"), nil)
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-bucket").Return("/frontend/addons/my-bucket.yml", nil)
-				m.EXPECT().Rel("/frontend/addons/my-bucket.yml").Return("frontend/addons/my-bucket.yml", nil)
+				m.EXPECT().RelCwd("/frontend/addons/my-bucket.yml").Return("frontend/addons/my-bucket.yml", nil)
 			},
 
 			wantedErr: nil,
@@ -956,7 +956,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Backend Service"), nil)
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-table").Return("/frontend/addons/my-table.yml", nil)
-				m.EXPECT().Rel("/frontend/addons/my-table.yml").Return("frontend/addons/my-table.yml", nil)
+				m.EXPECT().RelCwd("/frontend/addons/my-table.yml").Return("frontend/addons/my-table.yml", nil)
 			},
 
 			wantedErr: nil,
@@ -973,7 +973,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Backend Service"), nil)
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "my-table").Return("/frontend/addons/my-table.yml", nil)
-				m.EXPECT().Rel("/frontend/addons/my-table.yml").Return("frontend/addons/my-table.yml", nil)
+				m.EXPECT().RelCwd("/frontend/addons/my-table.yml").Return("frontend/addons/my-table.yml", nil)
 			},
 
 			wantedErr: nil,
@@ -988,7 +988,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			mockWs: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Load Balanced Web Service"), nil)
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "mycluster").Return("/frontend/addons/mycluster.yml", nil)
-				m.EXPECT().Rel("/frontend/addons/mycluster.yml").Return("frontend/addons/mycluster.yml", nil)
+				m.EXPECT().RelCwd("/frontend/addons/mycluster.yml").Return("frontend/addons/mycluster.yml", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()
@@ -1006,8 +1006,8 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return([]byte("type: Request-Driven Web Service"), nil)
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "mycluster").Return("/frontend/addons/mycluster.yml", nil)
 				m.EXPECT().WriteAddon(gomock.Any(), wantedSvcName, "addons.parameters").Return("/frontend/addons/addons.parameters.yml", nil)
-				m.EXPECT().Rel("/frontend/addons/mycluster.yml").Return("frontend/addons/mycluster.yml", nil)
-				m.EXPECT().Rel("/frontend/addons/addons.parameters.yml").Return("frontend/addons/addons.parameters.yml", nil)
+				m.EXPECT().RelCwd("/frontend/addons/mycluster.yml").Return("frontend/addons/mycluster.yml", nil)
+				m.EXPECT().RelCwd("/frontend/addons/addons.parameters.yml").Return("frontend/addons/addons.parameters.yml", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments(gomock.Any()).AnyTimes()

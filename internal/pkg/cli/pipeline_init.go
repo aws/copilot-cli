@@ -640,7 +640,16 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		manifestExists = true
 		o.manifestPath = e.FileName
 	}
-	o.manifestPath, err = o.workspace.Rel(o.manifestPath)
+
+	// RelWsRoot might give us a path not relative to the current working directory.
+	// So we want a path relative to the current working directory to display to the
+	// user.
+	manifestPathRel, err := o.workspace.RelCwd(o.manifestPath)
+	if err != nil {
+		return err
+	}
+
+	o.manifestPath, err = o.workspace.RelWsRoot(o.manifestPath)
 	if err != nil {
 		return err
 	}
@@ -650,10 +659,10 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		manifestMsgFmt = `Pipeline manifest file for %s already exists at %s, skipping writing it.
 Previously set repository URL, branch, and environment stages will remain.
 `
-		log.Infof(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
+		log.Infof(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPathRel))
 
 	} else {
-		log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
+		log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPathRel))
 	}
 	log.Debug(`The manifest contains configurations for your pipeline.
 Update the file to add stages, change the tracked branch, add test commands or manual approval actions.
@@ -690,7 +699,7 @@ func (o *initPipelineOpts) createBuildspec() error {
 		buildspecExists = true
 		buildspecPath = e.FileName
 	}
-	buildspecPath, err = o.workspace.Rel(buildspecPath)
+	buildspecPath, err = o.workspace.RelCwd(buildspecPath)
 	if err != nil {
 		return err
 	}
