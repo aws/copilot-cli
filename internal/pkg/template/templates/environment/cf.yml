@@ -108,9 +108,9 @@ Resources:
         {{- range $id := .PublicFacingPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on all ports
-          FromPort: 0
-          IpProtocol: tcp
-          ToPort: 0
+          FromPort: -1
+          IpProtocol: -1
+          ToPort: -1
         {{- end}}
 {{- else}}
         - CidrIp: 0.0.0.0/0
