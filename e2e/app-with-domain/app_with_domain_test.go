@@ -48,10 +48,10 @@ var _ = Describe("App With Domain", func() {
 		})
 	})
 
-	Context("when creating new environments", func() {
+	Context("when adding new environments", func() {
 		fatalErrors := make(chan error)
 		wgDone := make(chan bool)
-		It("env init should succeed for creating test and prod environments", func() {
+		It("env init should succeed for adding test and prod environments", func() {
 			var wg sync.WaitGroup
 			wg.Add(2)
 			go func() {
@@ -88,6 +88,46 @@ var _ = Describe("App With Domain", func() {
 						fatalErrors <- err
 					}
 					time.Sleep(waitingInterval)
+				}
+			}()
+			go func() {
+				wg.Wait()
+				close(wgDone)
+				close(fatalErrors)
+			}()
+
+			select {
+			case <-wgDone:
+			case err := <-fatalErrors:
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+	})
+
+	Context("when deploying the environments", func() {
+		fatalErrors := make(chan error)
+		wgDone := make(chan bool)
+		It("env deploy should succeed for deploying test and prod environments", func() {
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				_, err := cli.EnvDeploy(&client.EnvDeployRequest{
+					AppName: appName,
+					Name:    "test",
+				})
+				if err != nil {
+					fatalErrors <- err
+				}
+			}()
+			go func() {
+				defer wg.Done()
+				_, err := cli.EnvDeploy(&client.EnvDeployRequest{
+					AppName: appName,
+					Name:    "prod",
+				})
+				if err != nil {
+					fatalErrors <- err
 				}
 			}()
 			go func() {
