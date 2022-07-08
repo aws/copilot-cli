@@ -298,16 +298,7 @@ func (e *BootstrapEnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.En
 }
 
 func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
-	// If a manifest is present, check there, otherwise cdn cannot be enabled
-	if e.in.Mft != nil {
-		if !e.in.Mft.CDNConfig.CDNEnabled() {
-			return nil
-		}
-	} else {
-		return nil
-	}
-
-	return nil // return &template.CDNConfig{} when feature is ready
+	return nil // no-op - return &template.CDNConfig{} when feature is ready
 }
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
