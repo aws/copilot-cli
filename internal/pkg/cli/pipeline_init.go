@@ -690,7 +690,7 @@ func (o *initPipelineOpts) createBuildspec() error {
 		buildspecExists = true
 		buildspecPath = e.FileName
 	}
-	buildspecPath, err = relPath(buildspecPath)
+	buildspecPath, err = o.workspace.Rel(buildspecPath)
 	if err != nil {
 		return err
 	}

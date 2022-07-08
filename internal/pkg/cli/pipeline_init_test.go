@@ -433,10 +433,11 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 
 func TestInitPipelineOpts_Execute(t *testing.T) {
 	const (
-		wantedName          = "mypipe"
-		wantedManifestFile  = "/pipelines/mypipe/manifest.yml"
-		wantedBuildspecFile = "/pipelines/mypipe/buildspec.yml"
-		wantedRelativePath  = "/copilot/pipelines/mypipe/manifest.yml"
+		wantedName             = "mypipe"
+		wantedManifestFile     = "/pipelines/mypipe/manifest.yml"
+		wantedManifestRelPath  = "/copilot/pipelines/mypipe/manifest.yml"
+		wantedBuildspecFile    = "/pipelines/mypipe/buildspec.yml"
+		wantedBuildspecRelPath = "/copilot/pipelines/mypipe/buildspec.yml"
 	)
 
 	buildspecExistsErr := &workspace.ErrFileExists{FileName: wantedBuildspecFile}
@@ -469,7 +470,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.workspace.EXPECT().Rel(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -499,7 +501,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.workspace.EXPECT().Rel(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -529,7 +532,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.workspace.EXPECT().Rel(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -564,7 +568,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.workspace.EXPECT().Rel(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -597,7 +602,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("", existsErr)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.workspace.EXPECT().Rel(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -644,7 +650,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
-				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(nil, errors.New("some error"))
 			},
 			expectedError: errors.New("get application badgoose: some error"),
@@ -662,7 +668,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
-				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
@@ -686,7 +692,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Times(0)
-				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
@@ -716,7 +722,8 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return("", manifestExistsErr)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", buildspecExistsErr)
-				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.workspace.EXPECT().Rel(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -747,7 +754,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
-				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", errors.New("some error"))
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
