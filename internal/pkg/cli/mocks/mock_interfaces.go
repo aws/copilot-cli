@@ -2239,6 +2239,44 @@ func (mr *MockmanifestReaderMockRecorder) ReadWorkloadManifest(name interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockmanifestReader)(nil).ReadWorkloadManifest), name)
 }
 
+// MockenvironmentManifestWriter is a mock of environmentManifestWriter interface.
+type MockenvironmentManifestWriter struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvironmentManifestWriterMockRecorder
+}
+
+// MockenvironmentManifestWriterMockRecorder is the mock recorder for MockenvironmentManifestWriter.
+type MockenvironmentManifestWriterMockRecorder struct {
+	mock *MockenvironmentManifestWriter
+}
+
+// NewMockenvironmentManifestWriter creates a new mock instance.
+func NewMockenvironmentManifestWriter(ctrl *gomock.Controller) *MockenvironmentManifestWriter {
+	mock := &MockenvironmentManifestWriter{ctrl: ctrl}
+	mock.recorder = &MockenvironmentManifestWriterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockenvironmentManifestWriter) EXPECT() *MockenvironmentManifestWriterMockRecorder {
+	return m.recorder
+}
+
+// WriteEnvironmentManifest mocks base method.
+func (m *MockenvironmentManifestWriter) WriteEnvironmentManifest(arg0 encoding.BinaryMarshaler, arg1 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteEnvironmentManifest", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WriteEnvironmentManifest indicates an expected call of WriteEnvironmentManifest.
+func (mr *MockenvironmentManifestWriterMockRecorder) WriteEnvironmentManifest(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteEnvironmentManifest", reflect.TypeOf((*MockenvironmentManifestWriter)(nil).WriteEnvironmentManifest), arg0, arg1)
+}
+
 // MockworkspacePathGetter is a mock of workspacePathGetter interface.
 type MockworkspacePathGetter struct {
 	ctrl     *gomock.Controller
