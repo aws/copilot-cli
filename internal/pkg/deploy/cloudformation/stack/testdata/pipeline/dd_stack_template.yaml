@@ -113,7 +113,6 @@ Resources:
               - codestar-connections:DeleteConnection
               - codestar-connections:GetConnection
             Resource: '*'
-
       Roles:
         - !Ref BuildProjectRole
   BuildProject:

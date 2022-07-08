@@ -104,7 +104,7 @@ func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) error {
 	if mfBuild != nil && !mfBuild.AdditionalPolicy.Document.IsZero() {
 		additionalPolicy, err := yaml.Marshal(&mfBuild.AdditionalPolicy.Document)
 		if err != nil {
-			return fmt.Errorf("marshal pipeline manifest to embed in template: %v", err)
+			return fmt.Errorf("marshal `additional_policy.PolicyDocument` in pipeline manifest: %v", err)
 		}
 		b.AdditionalPolicyDocument = strings.TrimSpace(string(additionalPolicy))
 	}
