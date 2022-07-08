@@ -200,7 +200,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 
 	ws, err := workspace.New()
 	if err != nil {
-		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+		return nil, fmt.Errorf("create workspace: %w", err)
 	}
 	return &initEnvOpts{
 		initEnvVars:  vars,
