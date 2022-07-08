@@ -590,7 +590,7 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 
 func (stg *PipelineStage) buildDeploymentsGraph() *graph.Graph[string] {
 	var names []string
-	for name, _ := range stg.deployments {
+	for name := range stg.deployments {
 		names = append(names, name)
 	}
 	digraph := graph.New(names...)

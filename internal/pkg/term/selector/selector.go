@@ -181,15 +181,13 @@ type ConfigSelector struct {
 // LocalWorkloadSelector is an application and environment selector, but can also choose a service from the workspace.
 type LocalWorkloadSelector struct {
 	*ConfigSelector
-	ws      workspaceRetriever
-	appName string
+	ws workspaceRetriever
 }
 
 // LocalEnvironmentSelector is an application and environment selector, but can also choose an environment from the workspace.
 type LocalEnvironmentSelector struct {
 	*AppEnvSelector
-	ws      workspaceRetriever
-	appName string
+	ws workspaceRetriever
 }
 
 // WorkspaceSelector selects from local workspace.

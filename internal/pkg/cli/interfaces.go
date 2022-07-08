@@ -237,6 +237,10 @@ type manifestReader interface {
 	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
 }
 
+type environmentManifestWriter interface {
+	WriteEnvironmentManifest(encoding.BinaryMarshaler, string) (string, error)
+}
+
 type workspacePathGetter interface {
 	Path() (string, error)
 }

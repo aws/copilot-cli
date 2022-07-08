@@ -59,6 +59,7 @@ func LeastVersionForFeature(feature string) string {
 var (
 	// Template names under "environment/partials/".
 	envCFSubTemplateNames = []string{
+		"cdn-resources",
 		"cfn-execution-role",
 		"custom-resources",
 		"custom-resources-role",
@@ -103,9 +104,14 @@ type EnvOpts struct {
 	AllowVPCIngress          bool
 	Telemetry                *Telemetry
 
+	CDNConfig *CDNConfig // If nil, no cdn is to be used
+
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
 }
+
+// CDNConfig represents a Content Delivery Network deployed by CloudFront.
+type CDNConfig struct{}
 
 type VPCConfig struct {
 	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.

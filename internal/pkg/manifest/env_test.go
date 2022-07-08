@@ -402,6 +402,24 @@ observability:
 				},
 			},
 		},
+		"unmarshal with content delivery network bool": {
+			inContent: `name: prod
+type: Environment
+
+cdn: true
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				environmentConfig: environmentConfig{
+					CDNConfig: environmentCDNConfig{
+						Enabled: aws.Bool(true),
+					},
+				},
+			},
+		},
 		"unmarshal with http": {
 			inContent: `name: prod
 type: Environment
@@ -452,7 +470,7 @@ func TestEnvironment_MarshalBinary(t *testing.T) {
 		"fully configured with customized vpc resources": {
 			inProps: EnvironmentProps{
 				Name: "test",
-				CustomizedEnv: &config.CustomizeEnv{
+				CustomConfig: &config.CustomizeEnv{
 					VPCConfig: &config.AdjustVPC{
 						CIDR:               "mock-cidr-0",
 						AZs:                []string{"mock-az-1", "mock-az-2"},
@@ -471,7 +489,7 @@ func TestEnvironment_MarshalBinary(t *testing.T) {
 		"fully configured with imported vpc resources": {
 			inProps: EnvironmentProps{
 				Name: "test",
-				CustomizedEnv: &config.CustomizeEnv{
+				CustomConfig: &config.CustomizeEnv{
 					ImportVPC: &config.ImportVPC{
 						ID:               "mock-vpc-id",
 						PublicSubnetIDs:  []string{"mock-subnet-id-1", "mock-subnet-id-2"},
@@ -797,6 +815,62 @@ func TestEnvironmentObservability_IsEmpty(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentCDNConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentCDNConfig
+		wanted bool
+	}{
+		"empty": {
+			in:     environmentCDNConfig{},
+			wanted: true,
+		},
+		"not empty": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(false),
+			},
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentCDNConfig
+		wanted bool
+	}{
+		"enabled via bool": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(true),
+			},
+			wanted: true,
+		},
+		"not enabled because empty": {
+			in:     environmentCDNConfig{},
+			wanted: false,
+		},
+		"not enabled via bool": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(false),
+			},
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.CDNEnabled()
 			require.Equal(t, tc.wanted, got)
 		})
 	}

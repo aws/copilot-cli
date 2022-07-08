@@ -19,7 +19,7 @@ Resources:
     Properties:
       EnableKeyRotation: true
       KeyPolicy:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Id: !Ref AWS::StackName
         Statement:
           -
@@ -63,6 +63,7 @@ Resources:
     Properties:
       Bucket: !Ref PipelineBuiltArtifactBucket
       PolicyDocument:
+        Version: '2012-10-17'
         Statement:
           -
             Action:
@@ -95,7 +96,7 @@ Resources:
           Key: {{$svcTag}}
           Value: {{$service}}
       RepositoryPolicyText:
-        Version: '2008-10-17'
+        Version: '2012-10-17'
         Statement:
         - Sid: AllowPushPull
           Effect: Allow
