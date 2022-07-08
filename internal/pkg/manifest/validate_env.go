@@ -221,7 +221,7 @@ func (cfg environmentCDNConfig) Validate() error {
 }
 
 // Validate is a no-op for AdvancedCDNConfig.
-func (cfg AdvancedCDNConfig) Validate() error {
+func (cfg advancedCDNConfig) Validate() error {
 	return nil
 }
 

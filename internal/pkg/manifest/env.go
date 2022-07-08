@@ -30,16 +30,16 @@ type Environment struct {
 
 // EnvironmentProps contains properties for creating a new environment manifest.
 type EnvironmentProps struct {
-	Name          string
-	CustomizedEnv *config.CustomizeEnv
-	Telemetry     *config.Telemetry
+	Name         string
+	CustomConfig *config.CustomizeEnv
+	Telemetry    *config.Telemetry
 }
 
 // NewEnvironment creates a new environment manifest object.
 func NewEnvironment(props *EnvironmentProps) *Environment {
 	return FromEnvConfig(&config.Environment{
 		Name:         props.Name,
-		CustomConfig: props.CustomizedEnv,
+		CustomConfig: props.CustomConfig,
 		Telemetry:    props.Telemetry,
 	}, template.New())
 }
@@ -103,19 +103,19 @@ type environmentVPCConfig struct {
 
 type environmentCDNConfig struct {
 	Enabled   *bool
-	CDNConfig AdvancedCDNConfig // mutually exclusive with Enabled
+	CDNConfig advancedCDNConfig // mutually exclusive with Enabled
 }
 
-// AdvancedCDNConfig represents an advanced configuration for a Content Delivery Network.
-type AdvancedCDNConfig struct{}
+// advancedCDNConfig represents an advanced configuration for a Content Delivery Network.
+type advancedCDNConfig struct{}
 
 // IsEmpty returns whether environmentCDNConfig is empty.
 func (cfg *environmentCDNConfig) IsEmpty() bool {
 	return cfg.Enabled == nil && cfg.CDNConfig.IsEmpty()
 }
 
-// IsEmpty returns whether AdvancedCDNConfig is empty.
-func (cfg *AdvancedCDNConfig) IsEmpty() bool {
+// IsEmpty is a no-op for advancedCDNConfig.
+func (cfg *advancedCDNConfig) IsEmpty() bool {
 	return true
 }
 
@@ -133,10 +133,8 @@ func (cfg *environmentCDNConfig) CDNEnabled() bool {
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&cfg.CDNConfig); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
 			return err
 		}
 	}

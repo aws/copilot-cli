@@ -33,7 +33,7 @@ func TestEnv_AvailableEnvFeatures(t *testing.T) {
 	for _, f := range AvailableEnvFeatures() {
 		featuresSet[f] = exists
 	}
-	for paramName, _ := range tmpl.Params {
+	for paramName := range tmpl.Params {
 		if !strings.HasSuffix(paramName, "Workloads") {
 			continue
 		}

@@ -111,9 +111,8 @@ type EnvOpts struct {
 	SerializedManifest string // Serialized manifest used to render the environment template.
 }
 
-// CDNConfig represents configuration settings for a Content Delivery Network with CloudFront.
-type CDNConfig struct {
-}
+// CDNConfig represents a Content Delivery Network deployed by CloudFront.
+type CDNConfig struct{}
 
 type VPCConfig struct {
 	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.

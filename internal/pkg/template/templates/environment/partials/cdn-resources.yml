@@ -14,7 +14,7 @@ CloudFrontDistribution:
       IPV6Enabled: true
       Origins:
         - CustomOriginConfig:
-            OriginProtocolPolicy: http-only # Will need to change with TLS termination and Alias usage
+            OriginProtocolPolicy: match-viewer # Will need to change with TLS termination and Alias usage
           DomainName: !GetAtt PublicLoadBalancer.DNSName
           Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
       # ViewerCertificate: # Used for Aliases

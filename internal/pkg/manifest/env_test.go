@@ -470,7 +470,7 @@ func TestEnvironment_MarshalBinary(t *testing.T) {
 		"fully configured with customized vpc resources": {
 			inProps: EnvironmentProps{
 				Name: "test",
-				CustomizedEnv: &config.CustomizeEnv{
+				CustomConfig: &config.CustomizeEnv{
 					VPCConfig: &config.AdjustVPC{
 						CIDR:               "mock-cidr-0",
 						AZs:                []string{"mock-az-1", "mock-az-2"},
@@ -489,7 +489,7 @@ func TestEnvironment_MarshalBinary(t *testing.T) {
 		"fully configured with imported vpc resources": {
 			inProps: EnvironmentProps{
 				Name: "test",
-				CustomizedEnv: &config.CustomizeEnv{
+				CustomConfig: &config.CustomizeEnv{
 					ImportVPC: &config.ImportVPC{
 						ID:               "mock-vpc-id",
 						PublicSubnetIDs:  []string{"mock-subnet-id-1", "mock-subnet-id-2"},
@@ -856,12 +856,6 @@ func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
 			},
 			wanted: true,
 		},
-		// "enabled via struct": {
-		// 	in: environmentCDNConfig{
-		// 		CDNConfig: AdvancedCDNConfig{},
-		// 	},
-		// 	wanted: true,
-		// },
 		"not enabled because empty": {
 			in:     environmentCDNConfig{},
 			wanted: false,
