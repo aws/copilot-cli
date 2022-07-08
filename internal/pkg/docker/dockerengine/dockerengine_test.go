@@ -108,7 +108,7 @@ func TestDockerCommand_Build(t *testing.T) {
 					"-t", mockURI,
 					"-t", mockURI + ":" + mockTag1,
 					"mockPath/to",
-					"-f", filepath.FromSlash("mockPath/to/mockDockerfile")}).Return(nil)
+					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 

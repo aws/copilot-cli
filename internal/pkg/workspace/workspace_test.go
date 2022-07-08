@@ -119,7 +119,7 @@ func TestWorkspace_Summary(t *testing.T) {
 		"existing workspace summary": {
 			expectedSummary: Summary{
 				Application: "DavidsApp",
-				Path:        "test/copilot/.workspace",
+				Path:        filepath.FromSlash("test/copilot/.workspace"),
 			},
 			workingDir: "test/",
 			mockFileSystem: func(fs afero.Fs) {
@@ -192,7 +192,7 @@ func TestWorkspace_Create(t *testing.T) {
 		"existing workspace and different application": {
 			workingDir:    "test/",
 			appName:       "DavidsApp",
-			expectedError: fmt.Errorf("workspace is already registered with application DavidsOtherApp under copilot/.workspace"),
+			expectedError: fmt.Errorf("workspace is already registered with application DavidsOtherApp under " + filepath.FromSlash("copilot/.workspace")),
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll("test/copilot", 0755)
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsOtherApp")), 0644)
@@ -257,7 +257,7 @@ func TestWorkspace_ListServices(t *testing.T) {
 				fs := afero.NewMemMapFs()
 				return fs
 			},
-			wantedErr: errors.New("read directory /copilot: open /copilot: file does not exist"),
+			wantedErr: errors.New("read directory /copilot: open " + filepath.FromSlash("/copilot") + ": file does not exist"),
 		},
 		"return error if directory name and manifest name do not match": {
 			copilotDir: "/copilot",
@@ -371,7 +371,7 @@ func TestWorkspace_ListJobs(t *testing.T) {
 				fs := afero.NewMemMapFs()
 				return fs
 			},
-			wantedErr: errors.New("read directory /copilot: open /copilot: file does not exist"),
+			wantedErr: errors.New("read directory /copilot: open " + filepath.FromSlash("/copilot") + ": file does not exist"),
 		},
 		"retrieve only directories with manifest files": {
 			copilotDir: "/copilot",
@@ -527,7 +527,7 @@ func TestWorkspace_ListEnvironments(t *testing.T) {
 				fs.Mkdir("/copilot", 0755)
 				return fs
 			},
-			wantedErr: errors.New("read directory /copilot/environments: open /copilot/environments: file does not exist"),
+			wantedErr: errors.New("read directory " + filepath.FromSlash("/copilot/environments") + ": open " + filepath.FromSlash("/copilot/environments") + ": file does not exist"),
 		},
 		"retrieve only env directories with manifest files": {
 			copilotDir: "/copilot",
@@ -625,15 +625,15 @@ version: 1
 			wantedPipelines: []PipelineManifest{
 				{
 					Name: "betaManifest",
-					Path: "/copilot/pipelines/beta/manifest.yml",
+					Path: filepath.FromSlash("/copilot/pipelines/beta/manifest.yml"),
 				},
 				{
 					Name: "legacyInCopiDir",
-					Path: "/copilot/pipeline.yml",
+					Path: filepath.FromSlash("/copilot/pipeline.yml"),
 				},
 				{
 					Name: "prodManifest",
-					Path: "/copilot/pipelines/prod/manifest.yml",
+					Path: filepath.FromSlash("/copilot/pipelines/prod/manifest.yml"),
 				},
 			},
 
@@ -658,7 +658,7 @@ version: 1
 			wantedPipelines: []PipelineManifest{
 				{
 					Name: "legacyInCopiDir",
-					Path: "/copilot/pipeline.yml",
+					Path: filepath.FromSlash("/copilot/pipeline.yml"),
 				},
 			},
 			wantedErr: nil,
@@ -692,11 +692,11 @@ version: 1
 			wantedPipelines: []PipelineManifest{
 				{
 					Name: "betaManifest",
-					Path: "/copilot/pipelines/beta/manifest.yml",
+					Path: filepath.FromSlash("/copilot/pipelines/beta/manifest.yml"),
 				},
 				{
 					Name: "prodManifest",
-					Path: "/copilot/pipelines/prod/manifest.yml",
+					Path: filepath.FromSlash("/copilot/pipelines/prod/manifest.yml"),
 				},
 			},
 			wantedErr: nil,
@@ -746,11 +746,11 @@ version: 1
 			wantedPipelines: []PipelineManifest{
 				{
 					Name: "prodManifest",
-					Path: "/copilot/pipelines/prod/manifest.yml",
+					Path: filepath.FromSlash("/copilot/pipelines/prod/manifest.yml"),
 				},
 			},
 			wantedErr: nil,
-			wantedLog: "Unable to read pipeline manifest at '/copilot/pipelines/beta/manifest.yml': unmarshal pipeline manifest: yaml: unmarshal errors:\n  line 3: cannot unmarshal !!str `invalid...` into manifest.PipelineSchemaMajorVersion\n",
+			wantedLog: "Unable to read pipeline manifest at '" + filepath.FromSlash("/copilot/pipelines/beta/manifest.yml") + "': unmarshal pipeline manifest: yaml: unmarshal errors:\n  line 3: cannot unmarshal !!str `invalid...` into manifest.PipelineSchemaMajorVersion\n",
 		},
 		"handles missing copilot directory error": {
 			copilotDir: "",
@@ -845,7 +845,7 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 			},
 			wantedErr: &os.PathError{
 				Op:   "open",
-				Path: "/copilot/webhook/addons",
+				Path: filepath.FromSlash("/copilot/webhook/addons"),
 				Err:  os.ErrNotExist,
 			},
 		},
@@ -901,7 +901,7 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 			svc:         "webhook",
 			storageName: "s3",
 
-			wantedPath: "/copilot/webhook/addons/s3.yml",
+			wantedPath: filepath.FromSlash("/copilot/webhook/addons/s3.yml"),
 		},
 		"wraps error if cannot marshal to binary": {
 			marshaler: mockBinaryMarshaler{
@@ -962,7 +962,7 @@ func TestWorkspace_ReadWorkloadManifest(t *testing.T) {
 				fs := afero.NewMemMapFs()
 				return fs
 			},
-			wantedErr: fmt.Errorf("file /copilot/webhook/manifest.yml does not exists"),
+			wantedErr: fmt.Errorf("file " + filepath.FromSlash("/copilot/webhook/manifest.yml") + " does not exists"),
 		},
 		"fail to read name from manifest": {
 			mockFS: func() afero.Fs {
@@ -1042,7 +1042,7 @@ func TestWorkspace_ReadEnvironmentManifest(t *testing.T) {
 				fs := afero.NewMemMapFs()
 				return fs
 			},
-			wantedErr: errors.New("file /copilot/environments/test/manifest.yml does not exists"),
+			wantedErr: errors.New("file " + filepath.FromSlash("/copilot/environments/test/manifest.yml") + " does not exists"),
 		},
 		"fail to read name from manifest": {
 			mockFS: func() afero.Fs {
@@ -1329,7 +1329,7 @@ func TestWorkspace_read(t *testing.T) {
 				return fs
 			},
 
-			wantedErr: fmt.Errorf("file /copilot/webhook/manifest.yml does not exists"),
+			wantedErr: fmt.Errorf("file " + filepath.FromSlash("/copilot/webhook/manifest.yml") + " does not exists"),
 		},
 		"read existing file": {
 			elems: []string{"webhook", "manifest.yml"},
@@ -1378,15 +1378,15 @@ func TestWorkspace_write(t *testing.T) {
 	}{
 		"create file under nested directories": {
 			elems:      []string{"webhook", "addons", "policy.yml"},
-			wantedPath: "/copilot/webhook/addons/policy.yml",
+			wantedPath: filepath.FromSlash("/copilot/webhook/addons/policy.yml"),
 		},
 		"create file under copilot directory": {
 			elems:      []string{legacyPipelineFileName},
-			wantedPath: "/copilot/pipeline.yml",
+			wantedPath: filepath.FromSlash("/copilot/pipeline.yml"),
 		},
 		"return ErrFileExists if file already exists": {
 			elems:     []string{"manifest.yml"},
-			wantedErr: &ErrFileExists{FileName: "/copilot/manifest.yml"},
+			wantedErr: &ErrFileExists{FileName: filepath.FromSlash("/copilot/manifest.yml")},
 		},
 	}
 
