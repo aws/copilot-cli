@@ -514,17 +514,23 @@ func (ws *Workspace) Rel(fullPath string) (string, error) {
 	return filepath.Rel(filepath.Dir(copiDir), fullPath)
 }
 
+// copilotDirPath tries to find the current app's copilot directory from the workspace working directory.
 func (ws *Workspace) copilotDirPath() (string, error) {
 	if ws.copilotDir != "" {
 		return ws.copilotDir, nil
 	}
-	// Are we in the application directory?
+	// Are we in the application's copilot directory already?
 	inCopilotDir := filepath.Base(ws.workingDir) == CopilotDirName
 	if inCopilotDir {
 		ws.copilotDir = ws.workingDir
 		return ws.copilotDir, nil
 	}
 
+	// We might be in the application directory or in a subdirectory of the application
+	// directory that contains the "copilot" directory.
+	//
+	// Keep on searching the parent directories for that copilot directory (though only
+	// up to a finite limit, to avoid infinite recursion!)
 	searchingDir := ws.workingDir
 	for try := 0; try < maximumParentDirsToSearch; try++ {
 		currentDirectoryPath := filepath.Join(searchingDir, CopilotDirName)
