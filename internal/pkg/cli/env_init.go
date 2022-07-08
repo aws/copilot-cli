@@ -172,6 +172,7 @@ type initEnvOpts struct {
 	selApp         appSelector
 	appCFN         appResourcesGetter
 	manifestWriter environmentManifestWriter
+	wsRelativizer  wsPathRelativizer
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 
@@ -215,6 +216,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		selApp:         selector.NewAppEnvSelector(prompt.New(), store),
 		appCFN:         deploycfn.New(defaultSession),
 		manifestWriter: ws,
+		wsRelativizer:  ws,
 
 		wsAppName: tryReadingAppName(),
 	}, nil
@@ -843,7 +845,7 @@ func (o *initEnvOpts) writeManifest() (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = relPath(manifestPath)
+	manifestPath, err = o.wsRelativizer.RelCwd(manifestPath)
 	if err != nil {
 		return "", err
 	}

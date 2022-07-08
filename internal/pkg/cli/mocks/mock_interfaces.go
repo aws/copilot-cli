@@ -2353,6 +2353,59 @@ func (mr *MockwsPipelineManifestReaderMockRecorder) ReadPipelineManifest(path in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineManifestReader)(nil).ReadPipelineManifest), path)
 }
 
+// MockwsPathRelativizer is a mock of wsPathRelativizer interface.
+type MockwsPathRelativizer struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsPathRelativizerMockRecorder
+}
+
+// MockwsPathRelativizerMockRecorder is the mock recorder for MockwsPathRelativizer.
+type MockwsPathRelativizerMockRecorder struct {
+	mock *MockwsPathRelativizer
+}
+
+// NewMockwsPathRelativizer creates a new mock instance.
+func NewMockwsPathRelativizer(ctrl *gomock.Controller) *MockwsPathRelativizer {
+	mock := &MockwsPathRelativizer{ctrl: ctrl}
+	mock.recorder = &MockwsPathRelativizerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsPathRelativizer) EXPECT() *MockwsPathRelativizerMockRecorder {
+	return m.recorder
+}
+
+// RelCwd mocks base method.
+func (m *MockwsPathRelativizer) RelCwd(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelCwd", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RelCwd indicates an expected call of RelCwd.
+func (mr *MockwsPathRelativizerMockRecorder) RelCwd(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelCwd", reflect.TypeOf((*MockwsPathRelativizer)(nil).RelCwd), path)
+}
+
+// RelWsRoot mocks base method.
+func (m *MockwsPathRelativizer) RelWsRoot(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelWsRoot", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RelWsRoot indicates an expected call of RelWsRoot.
+func (mr *MockwsPathRelativizerMockRecorder) RelWsRoot(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelWsRoot", reflect.TypeOf((*MockwsPathRelativizer)(nil).RelWsRoot), path)
+}
+
 // MockwsPipelineIniter is a mock of wsPipelineIniter interface.
 type MockwsPipelineIniter struct {
 	ctrl     *gomock.Controller
@@ -3121,6 +3174,21 @@ func (m *MockwsAppManager) RelCwd(path string) (string, error) {
 func (mr *MockwsAppManagerMockRecorder) RelCwd(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelCwd", reflect.TypeOf((*MockwsAppManager)(nil).RelCwd), path)
+}
+
+// RelWsRoot mocks base method.
+func (m *MockwsAppManager) RelWsRoot(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelWsRoot", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RelWsRoot indicates an expected call of RelWsRoot.
+func (mr *MockwsAppManagerMockRecorder) RelWsRoot(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelWsRoot", reflect.TypeOf((*MockwsAppManager)(nil).RelWsRoot), path)
 }
 
 // Summary mocks base method.
