@@ -178,13 +178,11 @@ type Source struct {
 
 // Build defines the build project to build and test image.
 type Build struct {
-	Image            string           `yaml:"image"`
-	Buildspec        string           `yaml:"buildspec,omitempty"`
-	AdditionalPolicy AdditionalPolicy `yaml:"additional_policy,omitempty"`
-}
-
-type AdditionalPolicy struct {
-	Document *yaml.Node `yaml:"PolicyDocument,omitempty"`
+	Image            string `yaml:"image"`
+	Buildspec        string `yaml:"buildspec,omitempty"`
+	AdditionalPolicy struct {
+		Document yaml.Node `yaml:"PolicyDocument,omitempty"`
+	} `yaml:"additional_policy,omitempty"`
 }
 
 // PipelineStage represents a stage in the pipeline manifest

@@ -81,10 +81,10 @@ type CreatePipelineInput struct {
 // to build and test Docker image.
 type Build struct {
 	// The URI that identifies the Docker image to use for this build project.
-	Image            string
-	EnvironmentType  string
-	BuildspecPath    string
-	AdditionalPolicy string
+	Image                    string
+	EnvironmentType          string
+	BuildspecPath            string
+	AdditionalPolicyDocument string
 }
 
 // Init populates the fields in Build by parsing the manifest file's "build" section.
@@ -102,11 +102,11 @@ func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) error {
 		environmentType = "ARM_CONTAINER"
 	}
 	if mfBuild != nil && !mfBuild.AdditionalPolicy.Document.IsZero() {
-		additionalPolicy, err := yaml.Marshal(&mfBuild.AdditionalPolicy)
+		additionalPolicy, err := yaml.Marshal(&mfBuild.AdditionalPolicy.Document)
 		if err != nil {
 			return fmt.Errorf("marshal pipeline manifest to embed in template: %v", err)
 		}
-		b.AdditionalPolicy = string(additionalPolicy)
+		b.AdditionalPolicyDocument = strings.TrimSpace(string(additionalPolicy))
 	}
 	b.Image = image
 	b.EnvironmentType = environmentType

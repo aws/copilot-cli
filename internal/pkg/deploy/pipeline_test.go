@@ -5,7 +5,6 @@ package deploy
 
 import (
 	"errors"
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"testing"
 
@@ -206,23 +205,17 @@ func TestPipelineBuild_Init(t *testing.T) {
 		defaultEnvType = "LINUX_CONTAINER"
 	)
 	yamlNode := yaml.Node{}
-	additionalPolicy := []byte(`
-PolicyDocument:
+	policyDocument := []byte(`
   Statement:
     Action: '*'
     Effect: Allow
-    Resource: "*"
+    Resource: '*'
   Version: 2012-10-17`)
 
-	if err := yaml.Unmarshal(additionalPolicy, &yamlNode); err != nil {
-		t.Errorf("printing errpr:  %v", err)
-		fmt.Println("printing error", err)
+	if err := yaml.Unmarshal(policyDocument, &yamlNode); err != nil {
+		t.Errorf("unmarshal error:  %v", err)
 	}
-	b, err := yaml.Marshal(&yamlNode)
-	if err != nil {
-		t.Errorf("printing err:%v", err)
-	}
-	fmt.Printf("nodeStr: %s\n", string(b))
+
 	testCases := map[string]struct {
 		mfBuild       *manifest.Build
 		mfDirPath     string
@@ -260,19 +253,33 @@ PolicyDocument:
 				BuildspecPath:   "some/path",
 			},
 		},
+		"additional policy is not empty": {
+			mfBuild: &manifest.Build{
+				Image:     "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				Buildspec: "some/path",
+				AdditionalPolicy: struct {
+					Document yaml.Node `yaml:"PolicyDocument,omitempty"`
+				}{
+					Document: yamlNode,
+				},
+			},
+			expectedBuild: Build{
+				Image:                    "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				EnvironmentType:          "ARM_CONTAINER",
+				BuildspecPath:            "some/path",
+				AdditionalPolicyDocument: "Statement:\n    Action: '*'\n    Effect: Allow\n    Resource: '*'\nVersion: 2012-10-17",
+			},
+		},
 		"additional policy is empty": {
 			mfBuild: &manifest.Build{
 				Image:     "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
 				Buildspec: "some/path",
-				AdditionalPolicy: manifest.AdditionalPolicy{
-					Document: &yamlNode,
-				},
 			},
 			expectedBuild: Build{
-				Image:            "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
-				EnvironmentType:  "ARM_CONTAINER",
-				BuildspecPath:    "some/path",
-				AdditionalPolicy: "",
+				Image:                    "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				EnvironmentType:          "ARM_CONTAINER",
+				BuildspecPath:            "some/path",
+				AdditionalPolicyDocument: "",
 			},
 		},
 		"by default convert legacy manifest path to buildspec path": {
