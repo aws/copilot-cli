@@ -140,34 +140,22 @@ var _ = Describe("App With Domain", func() {
 			wg.Add(2)
 			go func() {
 				defer wg.Done()
-				for {
-					content, err := cli.EnvDeploy(&client.EnvDeployRequest{
-						AppName: appName,
-						Name:    "test",
-					})
-					if err == nil {
-						break
-					}
-					if !isStackSetOperationInProgress(content) {
-						fatalErrors <- err
-					}
-					time.Sleep(waitingInterval)
+				_, err := cli.EnvDeploy(&client.EnvDeployRequest{
+					AppName: appName,
+					Name:    "test",
+				})
+				if err != nil {
+					fatalErrors <- err
 				}
 			}()
 			go func() {
 				defer wg.Done()
-				for {
-					content, err := cli.EnvDeploy(&client.EnvDeployRequest{
-						AppName: appName,
-						Name:    "prod",
-					})
-					if err == nil {
-						break
-					}
-					if !isStackSetOperationInProgress(content) {
-						fatalErrors <- err
-					}
-					time.Sleep(waitingInterval)
+				_, err := cli.EnvDeploy(&client.EnvDeployRequest{
+					AppName: appName,
+					Name:    "prod",
+				})
+				if err != nil {
+					fatalErrors <- err
 				}
 			}()
 			go func() {
