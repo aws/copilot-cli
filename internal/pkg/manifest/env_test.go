@@ -856,12 +856,6 @@ func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
 			},
 			wanted: true,
 		},
-		// "enabled via struct": {
-		// 	in: environmentCDNConfig{
-		// 		CDNConfig: AdvancedCDNConfig{},
-		// 	},
-		// 	wanted: true,
-		// },
 		"not enabled because empty": {
 			in:     environmentCDNConfig{},
 			wanted: false,

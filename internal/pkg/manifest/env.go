@@ -113,7 +113,7 @@ func (cfg *environmentCDNConfig) IsEmpty() bool {
 	return cfg.Enabled == nil && cfg.CDNConfig.IsEmpty()
 }
 
-// IsEmpty returns whether AdvancedCDNConfig is empty.
+// IsEmpty is a no-op for advancedCDNConfig.
 func (cfg *advancedCDNConfig) IsEmpty() bool {
 	return true
 }
@@ -132,10 +132,8 @@ func (cfg *environmentCDNConfig) CDNEnabled() bool {
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&cfg.CDNConfig); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
 			return err
 		}
 	}

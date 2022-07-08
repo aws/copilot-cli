@@ -307,7 +307,7 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 		return nil
 	}
 
-	return &template.CDNConfig{}
+	return nil // return &template.CDNConfig{} when feature is ready
 }
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
