@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -86,6 +87,7 @@ type environmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
 	Observability environmentObservability `yaml:"observability,omitempty,flow"`
 	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty,flow"`
+	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
 type environmentNetworkConfig struct {
@@ -96,6 +98,55 @@ type environmentVPCConfig struct {
 	ID      *string              `yaml:"id"`
 	CIDR    *IPNet               `yaml:"cidr"`
 	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
+}
+
+type environmentCDNConfig struct {
+	Enabled   *bool
+	CDNConfig advancedCDNConfig // mutually exclusive with Enabled
+}
+
+// advancedCDNConfig represents an advanced configuration for a Content Delivery Network.
+type advancedCDNConfig struct{}
+
+// IsEmpty returns whether environmentCDNConfig is empty.
+func (cfg *environmentCDNConfig) IsEmpty() bool {
+	return cfg.Enabled == nil && cfg.CDNConfig.IsEmpty()
+}
+
+// IsEmpty is a no-op for advancedCDNConfig.
+func (cfg *advancedCDNConfig) IsEmpty() bool {
+	return true
+}
+
+// CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
+func (cfg *environmentCDNConfig) CDNEnabled() bool {
+	if !cfg.CDNConfig.IsEmpty() {
+		return true
+	}
+
+	return aws.BoolValue(cfg.Enabled)
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the environmentCDNConfig
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&cfg.CDNConfig); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+
+	if !cfg.CDNConfig.IsEmpty() {
+		// Successfully unmarshalled CDNConfig fields, return
+		return nil
+	}
+
+	if err := value.Decode(&cfg.Enabled); err != nil {
+		return errors.New(`unable to unmarshal into bool or composite-style map`)
+	}
+	return nil
 }
 
 // IsEmpty returns true if vpc is not configured.

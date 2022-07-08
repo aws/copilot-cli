@@ -57,6 +57,9 @@ Conditions:
     !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
 {{include "bootstrap-resources" . | indent 2}}
+{{- if .CDNConfig}}
+{{include "cdn-resources" . | indent 2}}
+{{- end}}
 {{- if not .VPCConfig.Imported}}
 {{include "vpc-resources" .VPCConfig.Managed | indent 2}}
 {{include "nat-gateways" .VPCConfig.Managed | indent 2}}
