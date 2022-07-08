@@ -7,6 +7,7 @@ package cloudformation_test
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
@@ -381,7 +383,6 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	identity := identity.New(sess)
 	s3ManagerClient := s3manager.NewUploader(sess)
 	s3Client := awss3.New(sess)
-	uploader := template.New()
 	iamClient := iam.New(sess)
 	id, err := identity.Get()
 	require.NoError(t, err)
@@ -481,9 +482,12 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	})
 
 	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {
-		urls, err := uploader.UploadEnvironmentCustomResources(func(key string, objects ...awss3.NamedBinary) (string, error) {
-			return s3Client.ZipAndUpload(bucketName, key, objects...)
-		})
+		crs, err := customresource.Env(template.New())
+		require.NoError(t, err)
+		urls, err := customresource.Upload(func(key string, dat io.Reader) (url string, err error) {
+			return s3Client.Upload(bucketName, key, dat)
+		}, crs)
+		require.NoError(t, err)
 		environmentToDeploy.CustomResourcesURLs = urls
 		environmentToDeploy.ArtifactBucketKeyARN = "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
 		environmentToDeploy.ArtifactBucketARN = fmt.Sprintf("arn:aws:s3:::%s", bucketName)
