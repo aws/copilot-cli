@@ -68,7 +68,7 @@ type packageSvcOpts struct {
 	stackWriter          io.Writer
 	paramsWriter         io.Writer
 	addonsWriter         io.Writer
-	runner               runner
+	runner               execRunner
 	sessProvider         *sessions.Provider
 	sel                  wsSelector
 	unmarshal            func([]byte) (manifest.WorkloadManifest, error)
@@ -125,6 +125,11 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 	if err != nil {
 		return nil, err
 	}
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
+	}
+
 	var deployer workloadTemplateGenerator
 	in := clideploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
@@ -133,6 +138,7 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 		Env:             targetEnv,
 		ImageTag:        o.tag,
 		Mft:             o.appliedManifest,
+		RawMft:          raw,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
@@ -406,7 +412,7 @@ func (o *packageSvcOpts) getTargetEnv() (*config.Environment, error) {
 
 // RecommendActions suggests recommended actions before the packaged template is used for deployment.
 func (o *packageSvcOpts) RecommendActions() error {
-	return validateManifestCompatibilityWithEnv(o.appliedManifest.(manifest.WorkloadManifest), o.envName, o.envFeaturesDescriber)
+	return validateManifestCompatibilityWithEnv(o.appliedManifest, o.envName, o.envFeaturesDescriber)
 }
 
 func contains(s string, items []string) bool {

@@ -49,7 +49,7 @@ type deploySvcOpts struct {
 	ws                   wsWlDirReader
 	unmarshal            func([]byte) (manifest.WorkloadManifest, error)
 	newInterpolator      func(app, env string) interpolator
-	cmd                  runner
+	cmd                  execRunner
 	sessProvider         *sessions.Provider
 	newSvcDeployer       func() (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
@@ -107,6 +107,10 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, err
 	}
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
+	}
 	var deployer workloadDeployer
 	in := clideploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
@@ -115,6 +119,7 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		Env:             o.targetEnv,
 		ImageTag:        o.imageTag,
 		Mft:             o.appliedManifest,
+		RawMft:          raw,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
