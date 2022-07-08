@@ -62,19 +62,6 @@ var _ = Describe("Multiple Service App", func() {
 		It("env init should succeed", func() {
 			Expect(testEnvInitErr).NotTo(HaveOccurred())
 		})
-
-		It("should create environment manifest", func() {
-			Expect("./copilot/environments/test/manifest.yml").Should(BeAnExistingFile())
-		})
-
-		It("should show only bootstrap resources in env show", func() {
-			envShowOutput, envShowError := cli.EnvShow(&client.EnvShowRequest{
-				AppName: appName,
-				EnvName: "test",
-			})
-			Expect(envShowError).NotTo(HaveOccurred())
-			Expect(len(envShowOutput.Resources)).To(Equal(2)) // Contains only bootstrap resources - two IAM roles.
-		})
 	})
 
 	Context("when deploying the environment", func() {

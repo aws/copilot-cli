@@ -121,28 +121,6 @@ var _ = Describe("pipeline flow", func() {
 				Expect(envs["test"].Account).NotTo(Equal(envs["prod"].Account))
 			}
 		})
-
-		It("should create environment manifests", func() {
-			Expect("./copilot/environments/test/manifest.yml").Should(BeAnExistingFile())
-			Expect("./copilot/environments/prod/manifest.yml").Should(BeAnExistingFile())
-		})
-
-		It("should show only bootstrap resources in env show", func() {
-			testEnvShowOutput, testEnvShowError := copilot.EnvShow(&client.EnvShowRequest{
-				AppName: appName,
-				EnvName: "test",
-			})
-			prodEnvShowOutput, prodEnvShowError := copilot.EnvShow(&client.EnvShowRequest{
-				AppName: appName,
-				EnvName: "prod",
-			})
-			Expect(testEnvShowError).NotTo(HaveOccurred())
-			Expect(prodEnvShowError).NotTo(HaveOccurred())
-
-			// Contains only bootstrap resources - two IAM roles.
-			Expect(len(testEnvShowOutput.Resources)).To(Equal(2))
-			Expect(len(prodEnvShowOutput.Resources)).To(Equal(2))
-		})
 	})
 
 	Context("when deploying the environments", func() {
