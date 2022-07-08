@@ -3,8 +3,8 @@
 #  https://aws.github.io/copilot-cli/docs/manifest/environment/
 
 # Your environment name will be used in naming your resources like VPC, cluster, etc.
-Name: {{.Name}}
-Type: {{.Type}}
+name: {{.Name}}
+type: {{.Type}}
 
 # Import your own VPC and subnets or configure how they should be created.
 {{- if .Network.VPC.IsEmpty}}

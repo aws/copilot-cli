@@ -388,7 +388,7 @@ Resources:
         Status: ENABLED
       Encrypted: true
       FileSystemPolicy:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Id: CopilotEFSPolicy
         Statement:
           - Sid: AllowIAMFromTaggedRoles

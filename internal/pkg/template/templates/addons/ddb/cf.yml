@@ -43,7 +43,7 @@ Resources:
         - Grants CRUD access to the Dynamo DB table ${Table}
         - { Table: !Ref {{logicalIDSafe .Name}} }
       PolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Sid: DDBActions
             Effect: Allow

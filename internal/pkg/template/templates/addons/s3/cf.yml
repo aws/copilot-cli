@@ -30,7 +30,7 @@ Resources:
     DeletionPolicy: Retain
     Properties:
       PolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Sid: ForceHTTPS
             Effect: Deny
@@ -53,7 +53,7 @@ Resources:
         - Grants CRUD access to the S3 bucket ${Bucket}
         - { Bucket: !Ref {{logicalIDSafe .Name}}Bucket }
       PolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Sid: S3ObjectActions
             Effect: Allow
