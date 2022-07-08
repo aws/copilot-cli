@@ -8,51 +8,12 @@ import (
 	reflect "reflect"
 
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	gomock "github.com/golang/mock/gomock"
 )
-
-// MockcustomResourcesUploader is a mock of customResourcesUploader interface.
-type MockcustomResourcesUploader struct {
-	ctrl     *gomock.Controller
-	recorder *MockcustomResourcesUploaderMockRecorder
-}
-
-// MockcustomResourcesUploaderMockRecorder is the mock recorder for MockcustomResourcesUploader.
-type MockcustomResourcesUploaderMockRecorder struct {
-	mock *MockcustomResourcesUploader
-}
-
-// NewMockcustomResourcesUploader creates a new mock instance.
-func NewMockcustomResourcesUploader(ctrl *gomock.Controller) *MockcustomResourcesUploader {
-	mock := &MockcustomResourcesUploader{ctrl: ctrl}
-	mock.recorder = &MockcustomResourcesUploaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockcustomResourcesUploader) EXPECT() *MockcustomResourcesUploaderMockRecorder {
-	return m.recorder
-}
-
-// UploadEnvironmentCustomResources mocks base method.
-func (m *MockcustomResourcesUploader) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadEnvironmentCustomResources", upload)
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UploadEnvironmentCustomResources indicates an expected call of UploadEnvironmentCustomResources.
-func (mr *MockcustomResourcesUploaderMockRecorder) UploadEnvironmentCustomResources(upload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadEnvironmentCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadEnvironmentCustomResources), upload)
-}
 
 // MockappResourcesGetter is a mock of appResourcesGetter interface.
 type MockappResourcesGetter struct {
@@ -132,4 +93,42 @@ func (mr *MockenvironmentDeployerMockRecorder) UpdateAndRenderEnvironment(out, e
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{out, env}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).UpdateAndRenderEnvironment), varargs...)
+}
+
+// MockprefixListGetter is a mock of prefixListGetter interface.
+type MockprefixListGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockprefixListGetterMockRecorder
+}
+
+// MockprefixListGetterMockRecorder is the mock recorder for MockprefixListGetter.
+type MockprefixListGetterMockRecorder struct {
+	mock *MockprefixListGetter
+}
+
+// NewMockprefixListGetter creates a new mock instance.
+func NewMockprefixListGetter(ctrl *gomock.Controller) *MockprefixListGetter {
+	mock := &MockprefixListGetter{ctrl: ctrl}
+	mock.recorder = &MockprefixListGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockprefixListGetter) EXPECT() *MockprefixListGetterMockRecorder {
+	return m.recorder
+}
+
+// CloudFrontManagedPrefixListID mocks base method.
+func (m *MockprefixListGetter) CloudFrontManagedPrefixListID() (*string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloudFrontManagedPrefixListID")
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CloudFrontManagedPrefixListID indicates an expected call of CloudFrontManagedPrefixListID.
+func (mr *MockprefixListGetterMockRecorder) CloudFrontManagedPrefixListID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloudFrontManagedPrefixListID", reflect.TypeOf((*MockprefixListGetter)(nil).CloudFrontManagedPrefixListID))
 }
