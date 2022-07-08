@@ -19,7 +19,6 @@ var appName string
 var vpcStackName string
 var vpcStackTemplatePath string
 var vpcImport client.EnvInitRequestVPCImport
-var vpcConfig client.EnvInitRequestVPCConfig
 var timeNow = time.Now().Unix()
 
 const svcName = "backend"
