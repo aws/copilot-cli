@@ -12,7 +12,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"gopkg.in/yaml.v3"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -73,24 +72,11 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 
 // Template returns the environment CloudFormation template.
 func (e *EnvStackConfig) Template() (string, error) {
-	crs, err := convertCustomResources(e.in.LambdaURLs)
+	crs, err := convertCustomResources(e.in.CustomResourcesURLs)
 	if err != nil {
 		return "", err
 	}
 
-	// TODO(Lou1415926): remove all these after we are able to migrate to the new upload workflow.
-	bucket, dnsCertValidator, err := s3.ParseURL(e.in.CustomResourcesURLs[template.DNSCertValidatorFileName])
-	if err != nil {
-		return "", err
-	}
-	_, dnsDelegation, err := s3.ParseURL(e.in.CustomResourcesURLs[template.DNSDelegationFileName])
-	if err != nil {
-		return "", err
-	}
-	_, customDomain, err := s3.ParseURL(e.in.CustomResourcesURLs[template.CustomDomainFileName])
-	if err != nil {
-		return "", err
-	}
 	var mft string
 	if e.in.Mft != nil {
 		out, err := yaml.Marshal(e.in.Mft)
@@ -103,10 +89,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 		AppName:                   e.in.App.Name,
 		EnvName:                   e.in.Name,
 		CustomResources:           crs,
-		DNSCertValidatorLambda:    dnsCertValidator,
-		DNSDelegationLambda:       dnsDelegation,
-		CustomDomainLambda:        customDomain,
-		ScriptBucketName:          bucket,
 		ArtifactBucketARN:         e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN:      e.in.ArtifactBucketKeyARN,
 		PublicFacingPrefixListIDs: e.in.PrefixListIDs,

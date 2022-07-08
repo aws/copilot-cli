@@ -944,15 +944,14 @@ func TestInitEnvOpts_Ask(t *testing.T) {
 }
 
 type initEnvExecuteMocks struct {
-	store             *mocks.Mockstore
-	deployer          *mocks.Mockdeployer
-	identity          *mocks.MockidentityService
-	progress          *mocks.Mockprogress
-	iam               *mocks.MockroleManager
-	cfn               *mocks.MockstackExistChecker
-	appCFN            *mocks.MockappResourcesGetter
-	resourcesUploader *mocks.MockcustomResourcesUploader
-	manifestWriter    *mocks.MockenvironmentManifestWriter
+	store          *mocks.Mockstore
+	deployer       *mocks.Mockdeployer
+	identity       *mocks.MockidentityService
+	progress       *mocks.Mockprogress
+	iam            *mocks.MockroleManager
+	cfn            *mocks.MockstackExistChecker
+	appCFN         *mocks.MockappResourcesGetter
+	manifestWriter *mocks.MockenvironmentManifestWriter
 }
 
 func TestInitEnvOpts_Execute(t *testing.T) {
@@ -1239,15 +1238,14 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &initEnvExecuteMocks{
-				store:             mocks.NewMockstore(ctrl),
-				deployer:          mocks.NewMockdeployer(ctrl),
-				identity:          mocks.NewMockidentityService(ctrl),
-				progress:          mocks.NewMockprogress(ctrl),
-				iam:               mocks.NewMockroleManager(ctrl),
-				cfn:               mocks.NewMockstackExistChecker(ctrl),
-				appCFN:            mocks.NewMockappResourcesGetter(ctrl),
-				resourcesUploader: mocks.NewMockcustomResourcesUploader(ctrl),
-				manifestWriter:    mocks.NewMockenvironmentManifestWriter(ctrl),
+				store:          mocks.NewMockstore(ctrl),
+				deployer:       mocks.NewMockdeployer(ctrl),
+				identity:       mocks.NewMockidentityService(ctrl),
+				progress:       mocks.NewMockprogress(ctrl),
+				iam:            mocks.NewMockroleManager(ctrl),
+				cfn:            mocks.NewMockstackExistChecker(ctrl),
+				appCFN:         mocks.NewMockappResourcesGetter(ctrl),
+				manifestWriter: mocks.NewMockenvironmentManifestWriter(ctrl),
 			}
 			tc.setupMocks(m)
 			provider := sessions.ImmutableProvider()
@@ -1261,20 +1259,16 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 						EnableContainerInsights: tc.enableContainerInsights,
 					},
 				},
-				store:       m.store,
-				envDeployer: m.deployer,
-				appDeployer: m.deployer,
-				identity:    m.identity,
-				envIdentity: m.identity,
-				iam:         m.iam,
-				cfn:         m.cfn,
-				prog:        m.progress,
-				sess:        sess,
-				appCFN:      m.appCFN,
-				uploader:    m.resourcesUploader,
-				newS3: func(region string) (uploader, error) {
-					return mocks.NewMockuploader(ctrl), nil
-				},
+				store:          m.store,
+				envDeployer:    m.deployer,
+				appDeployer:    m.deployer,
+				identity:       m.identity,
+				envIdentity:    m.identity,
+				iam:            m.iam,
+				cfn:            m.cfn,
+				prog:           m.progress,
+				sess:           sess,
+				appCFN:         m.appCFN,
 				manifestWriter: m.manifestWriter,
 			}
 

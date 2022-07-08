@@ -30,8 +30,7 @@ type CreateEnvironmentInput struct {
 	ArtifactBucketKeyARN string            // ARN of the KMS key used to encrypt the contents in the regional application bucket.
 
 	// Runtime configurations.
-	CustomResourcesURLs map[string]string // Deprecated: Remove this in favor of LambdaURLs. Environment custom resource script S3 object URLs.
-	LambdaURLs          map[string]string // TODO(efekarakus): rename this field to CustomResourcesURLs when we can swap the implementation.
+	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// User inputs.
 	ImportVPCConfig    *config.ImportVPC // Optional configuration if users have an existing VPC.
