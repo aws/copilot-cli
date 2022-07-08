@@ -556,6 +556,38 @@ func TestSubnetsConfiguration_Validate(t *testing.T) {
 	}
 }
 
+func TestCDNConfiguration_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in          environmentCDNConfig
+		wantedError error
+	}{
+		"valid if empty": {
+			in: environmentCDNConfig{},
+		},
+		"valid if bool specified": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(false),
+			},
+		},
+		"valid if advanced config configured correctly": {
+			in: environmentCDNConfig{
+				CDNConfig: advancedCDNConfig{},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.in.Validate()
+			if tc.wantedError != nil {
+				require.Error(t, gotErr)
+				require.EqualError(t, tc.wantedError, gotErr.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
 func TestSubnetConfiguration_Validate(t *testing.T) {
 	mockCIDR := IPNet("10.0.0.0/24")
 	testCases := map[string]struct {

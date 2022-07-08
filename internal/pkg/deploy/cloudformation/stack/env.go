@@ -115,6 +115,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		CustomInternalALBSubnets: e.internalALBSubnets(),
 		AllowVPCIngress:          e.in.AllowVPCIngress, // TODO(jwh): fetch AllowVPCIngress from Manifest or SSM.
 		Telemetry:                e.telemetryConfig(),
+		CDNConfig:                e.cdnConfig(),
 
 		Version:            e.in.Version,
 		LatestVersion:      deploy.LatestEnvTemplateVersion,
@@ -294,6 +295,10 @@ func (e *BootstrapEnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.En
 		ManagerRoleARN:   stackOutputs[envOutputManagerRoleKey],
 		ExecutionRoleARN: stackOutputs[envOutputCFNExecutionRoleARN],
 	}, nil
+}
+
+func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
+	return nil // no-op - return &template.CDNConfig{} when feature is ready
 }
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {

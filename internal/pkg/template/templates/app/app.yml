@@ -33,7 +33,7 @@ Resources:
     Properties:
       RoleName: !Ref AdminRoleName
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -44,7 +44,7 @@ Resources:
       Policies:
         - PolicyName: AssumeRole-AWSCloudFormationStackSetExecutionRole
           PolicyDocument:
-            Version: 2012-10-17
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -56,7 +56,7 @@ Resources:
     Properties:
       RoleName: !Ref ExecutionRoleName
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -67,7 +67,7 @@ Resources:
       Policies:
       - PolicyName: ExecutionRolePolicy
         PolicyDocument:
-          Version: "2012-10-17"
+          Version: '2012-10-17'
           Statement:
               - Sid: StackSetRequiredPermissions
                 Effect: Allow
@@ -109,7 +109,7 @@ Resources:
     Properties:
       RoleName: !Ref DNSDelegationRoleName
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -128,7 +128,7 @@ Resources:
       Policies:
       - PolicyName: DNSDelegationPolicy
         PolicyDocument:
-          Version: "2012-10-17"
+          Version: '2012-10-17'
           Statement:
               - Sid: HostedZoneReadRecords
                 Effect: Allow
