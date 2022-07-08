@@ -29,16 +29,16 @@ type Environment struct {
 
 // EnvironmentProps contains properties for creating a new environment manifest.
 type EnvironmentProps struct {
-	Name          string
-	CustomizedEnv *config.CustomizeEnv
-	Telemetry     *config.Telemetry
+	Name         string
+	CustomConfig *config.CustomizeEnv
+	Telemetry    *config.Telemetry
 }
 
 // NewEnvironment creates a new environment manifest object.
 func NewEnvironment(props *EnvironmentProps) *Environment {
 	return FromEnvConfig(&config.Environment{
 		Name:         props.Name,
-		CustomConfig: props.CustomizedEnv,
+		CustomConfig: props.CustomConfig,
 		Telemetry:    props.Telemetry,
 	}, template.New())
 }
