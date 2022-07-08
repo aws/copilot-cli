@@ -364,7 +364,10 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return(resources, nil),
 					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
-						Return([]string{"jobs.test.phonetool.internal"}, nil),
+						Return([]string{"jobs.test.phonetool.internal", "1234.us-west-2.internal.aws.com"}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputInternalLoadBalancerDNSName: "1234.us-west-2.internal.aws.com",
+					}, nil),
 				)
 			},
 			wantedURI: "http://jobs.test.phonetool.internal/mySvc",

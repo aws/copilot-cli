@@ -19,7 +19,7 @@ func TestEnvironment_Validate(t *testing.T) {
 	}{
 		"malformed network": {
 			in: Environment{
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							ID:   stringP("vpc-123"),
@@ -51,11 +51,11 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 	mockPrivateSubnet1CIDR := IPNet("10.0.3.0/24")
 	mockPrivateSubnet2CIDR := IPNet("10.0.4.0/24")
 	testCases := map[string]struct {
-		in          EnvironmentConfig
+		in          environmentConfig
 		wantedError string
 	}{
 		"error if internal ALB subnet placement specified with adjusted vpc": {
-			in: EnvironmentConfig{
+			in: environmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						CIDR: ipNetP("apple cider"),
@@ -93,7 +93,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 			wantedError: "in order to specify internal ALB subnet placement, subnets must be imported",
 		},
 		"error if subnets specified for internal ALB placement don't exist": {
-			in: EnvironmentConfig{
+			in: environmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						ID: aws.String("mockID"),
@@ -114,7 +114,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 			wantedError: "subnet(s) specified for internal ALB placement not imported",
 		},
 		"valid case with internal ALB placement": {
-			in: EnvironmentConfig{
+			in: environmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						ID: aws.String("mockID"),
@@ -549,6 +549,38 @@ func TestSubnetsConfiguration_Validate(t *testing.T) {
 			if tc.wantedErrorMsgPrefix != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestCDNConfiguration_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in          environmentCDNConfig
+		wantedError error
+	}{
+		"valid if empty": {
+			in: environmentCDNConfig{},
+		},
+		"valid if bool specified": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(false),
+			},
+		},
+		"valid if advanced config configured correctly": {
+			in: environmentCDNConfig{
+				CDNConfig: advancedCDNConfig{},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.in.Validate()
+			if tc.wantedError != nil {
+				require.Error(t, gotErr)
+				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
 				require.NoError(t, gotErr)
 			}

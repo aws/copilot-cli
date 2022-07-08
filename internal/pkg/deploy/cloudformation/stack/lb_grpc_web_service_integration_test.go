@@ -55,16 +55,17 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 		v, ok := envMft.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
+		envConfig := &manifest.Environment{
+			Workload: manifest.Workload{
+				Name: &tc.envName,
+			},
+		}
+		envConfig.HTTPConfig.Public.Certificates = []string{"mockCertARN"}
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-			App: &config.Application{Name: appName},
-			Env: &config.Environment{
-				Name: tc.envName,
-				CustomConfig: &config.CustomizeEnv{
-					ImportCertARNs: []string{"mockCertARN"},
-				},
-			},
-			Manifest: v,
+			App:         &config.Application{Name: appName},
+			EnvManifest: envConfig,
+			Manifest:    v,
 			RuntimeConfig: stack.RuntimeConfig{
 				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 				AccountID:                "123456789123",

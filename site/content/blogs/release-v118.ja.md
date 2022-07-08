@@ -13,11 +13,11 @@ The AWS Copilot コアチームは、Copilot v1.18 リリースを発表しま�
 
 Copilot v1.18 では、いくつかの新機能提供と改善が行われました:
 
-* **証明書のインポート:** `copilot env init --import-cert-arns` を実行すると、検証済みの ACM 証明書を Environment のロードバランサーリスナーにインポートできるようになりました。[詳細はこちら](#%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%81%AE%E3%82%A4%E3%83%B3%E3%83%9D%E3%83%BC%E3%83%88)をご覧ください。
-* **Pipeline での順序付け:** 継続的デリバリーの Pipeline において、Service や Job がデプロイされる順番を制御できるようになりました。[詳細はこちら](#pipeline-%E3%81%AB%E3%81%8A%E3%81%91%E3%82%8B%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%AE%E9%A0%86%E5%BA%8F%E3%82%92%E5%88%B6%E5%BE%A1%E3%81%99%E3%82%8B)をご覧ください。
-* **Pipeline の追加改善:** デプロイ順序の他に、Pipeline にデプロイする Service や Job を制限したり、Pipeline にカスタム CloudFormation スタックをデプロイすることができるようになりました。[詳細はこちら](#pipeline-%E3%81%AE%E8%BF%BD%E5%8A%A0%E6%94%B9%E5%96%84)をご覧ください。
-* **再デプロイの迅速化を実現する "recreate" 戦略:** "recreate" デプロイ戦略を指定することで、ECS が新しいタスクを開始する前に Service 内の古いタスクを停止するようになりました。[詳細はこちら](#%E5%86%8D%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%82%92%E5%8A%A0%E9%80%9F%E3%81%95%E3%81%9B%E3%82%8B-recreate-%E6%88%A6%E7%95%A5)をご覧ください。
-* **Load Balanced Web Service、Worker Service、Backend Service のトレース:** ECS タスクから AWS X-Ray にトレースを収集して出力するため、Manifest に `observability.tracing` の設定を導入し、[AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) のサイドカーコンテナを追加しています。[詳細はこちら](#load-balanced-web-serviceworker-servicebackend-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9)をご覧ください。
+* **証明書のインポート:** `copilot env init --import-cert-arns` を実行すると、検証済みの ACM 証明書を Environment のロードバランサーリスナーにインポートできるようになりました。[詳細はこちら](#certificate-import)をご覧ください。
+* **Pipeline での順序付け:** 継続的デリバリーの Pipeline において、Service や Job がデプロイされる順番を制御できるようになりました。[詳細はこちら](#controlling-order-of-deployments-in-a-pipeline)をご覧ください。
+* **Pipeline の追加改善:** デプロイ順序の他に、Pipeline にデプロイする Service や Job を制限したり、Pipeline にカスタム CloudFormation スタックをデプロイすることができるようになりました。[詳細はこちら](#additional-pipeline-improvements)をご覧ください。
+* **再デプロイの迅速化を実現する "recreate" 戦略:** "recreate" デプロイ戦略を指定することで、ECS が新しいタスクを開始する前に Service 内の古いタスクを停止するようになりました。[詳細はこちら](#recreate-strategy-for-faster-redeployments)をご覧ください。
+* **Load Balanced Web Service、Worker Service、Backend Service のトレース:** ECS タスクから AWS X-Ray にトレースを収集して出力するため、Manifest に `observability.tracing` の設定を導入し、[AWS Distro for OpenTelemetry Collector](https://github.com/aws-observability/aws-otel-collector) のサイドカーコンテナを追加しています。[詳細はこちら](#tracing-for-load-balanced-web-service-worker-service-and-backend-service)をご覧ください。
 
 ## AWS Copilot とは?
 
@@ -29,6 +29,7 @@ Copilot は、さまざまなタイプのマイクロサービスの作成と運
 
 より詳細な AWS Copilot の紹介については、[Overview](../docs/concepts/overview.ja.md) を確認してください。
 
+<a id="certificate-import"></a>
 ## 証明書のインポート
 _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 
@@ -90,6 +91,7 @@ http:
 ```
 これで、あなたの Service は独自の証明書を使用して HTTPS が有効になり、`https://v1.example.com` からアクセスできるようになりました!
 
+<a id="controlling-order-of-deployments-in-a-pipeline"></a>
 ## Pipeline におけるデプロイの順序を制御する
 _Contributed by [Efe Karakus](https://github.com/efekarakus/)_
 
@@ -141,6 +143,7 @@ stages:
 上記の Manifest では、`orders` と `warehouse` のService を `frontend` よりも先にデプロイすることを宣言しています。これは、下流の Service が受け入れる準備が整う前にクライアントが新しい API リクエストを送信できないようにするためです。Copilot はスタックをどの順番でデプロイすべきかを判断し、その結果、CodePipeline は次のようになります。
 ![Rendered ordered pipeline](../assets/images/pipeline-ordered.png)
 
+<a id="additional-pipeline-improvements"></a>
 ### Pipeline の追加改善
 その他にも、新しい `deployments` フィールドに付随するいくつかの機能強化があります。
 1. monorepos で、Pipeline にデプロイする Service や Job を設定することができるようになりました。例えば、Pipeline で `orders` のマイクロサービスだけをデプロイするように制限することができます。
@@ -168,6 +171,7 @@ stages:
    ```
    最後のステップは、`copilot/templates` の下にあるファイルを `infrastructure/` にコピーするために `cp -r copilot/templates infrastructure/` で、`template_path` と `template_config` フィールドが既存のファイルを指すように、copilot が生成する buildspec を変更することです。
 
+<a id="recreate-strategy-for-faster-redeployments"></a>
 ## 再デプロイを加速させる "recreate" 戦略
 _Contributed by [Parag Bhingre](https://github.com/paragbhingre/)_
 
@@ -183,6 +187,7 @@ deployment:
 
 Copilot は、新しいタスクを起動する前に古いタスクを停止するように、[minimumHealthyPercent と maximumPercent](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/APIReference/API_DeploymentConfiguration.html) をそれぞれ `0` と `100` に設定します （デフォルトは `100` と `200` です）。
 
+<a id="tracing-for-load-balanced-web-service-worker-service-and-backend-service"></a>
 ## Load Balanced Web Service、Worker Service、Backend Service のトレース
 _Contributed by [Danny Randall](https://github.com/dannyrandall/)_
 

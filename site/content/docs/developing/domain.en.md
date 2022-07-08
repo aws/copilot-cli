@@ -81,8 +81,9 @@ If you own a domain outside of Route53 or for compliance reasons want to use an 
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
-Then, in your service's manifest, you can either  
-1. specify the ID of the [hosted zone](../manifest/lb-web-service.en.md#http-hosted-zone) into which Copilot should insert the A record:
+Then, in your service's manifest, you can either:
+
+1. Specify the ID of the [`hosted zone`](../manifest/lb-web-service.en.md#http-hosted-zone) into which Copilot should insert the A record:
 ``` yaml
 # in copilot/{service name}/manifest.yml
 http:
@@ -90,7 +91,7 @@ http:
   alias: example.aws
   hosted_zone: Z0873220N255IR3MTNR4
 ```
-or 2. deploy the service without the `hosted_zone` field, then manually add the DNS of the Application Load Balancer (ALB) created in that environment as an A record where your alias domain is hosted.
+2. Deploy the service without the `hosted_zone` field, then manually add the DNS name of the Application Load Balancer (ALB) created in that environment as an A record where your alias domain is hosted.
 
 We have [an example](../../blogs/release-v118.en.md#certificate-import) of Option 2 in our blog posts.
 

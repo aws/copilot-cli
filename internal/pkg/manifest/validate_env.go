@@ -19,14 +19,14 @@ var (
 
 // Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
-	if err := e.EnvironmentConfig.Validate(); err != nil {
+	if err := e.environmentConfig.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if EnvironmentConfig is configured correctly.
-func (e EnvironmentConfig) Validate() error {
+// Validate returns nil if environmentConfig is configured correctly.
+func (e environmentConfig) Validate() error {
 	if err := e.Network.Validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
@@ -189,8 +189,8 @@ func (cfg environmentHTTPConfig) Validate() error {
 }
 
 // Validate returns nil if publicHTTPConfig is configured correctly.
-func (o publicHTTPConfig) Validate() error {
-	for idx, certARN := range o.Certificates {
+func (cfg publicHTTPConfig) Validate() error {
+	for idx, certARN := range cfg.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
@@ -199,8 +199,8 @@ func (o publicHTTPConfig) Validate() error {
 }
 
 // Validate returns nil if privateHTTPConfig is configured correctly.
-func (o privateHTTPConfig) Validate() error {
-	for idx, certARN := range o.Certificates {
+func (cfg privateHTTPConfig) Validate() error {
+	for idx, certARN := range cfg.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
@@ -208,7 +208,20 @@ func (o privateHTTPConfig) Validate() error {
 	return nil
 }
 
-func (c EnvironmentConfig) validateInternalALBSubnets() error {
+// Validate returns nil if environmentCDNConfig is configured correctly.
+func (cfg environmentCDNConfig) Validate() error {
+	if cfg.CDNConfig.IsEmpty() {
+		return nil
+	}
+	return cfg.CDNConfig.Validate()
+}
+
+// Validate is a no-op for AdvancedCDNConfig.
+func (cfg advancedCDNConfig) Validate() error {
+	return nil
+}
+
+func (c environmentConfig) validateInternalALBSubnets() error {
 	isImported := make(map[string]bool)
 	for _, placementSubnet := range c.HTTPConfig.Private.InternalALBSubnets {
 		for _, subnet := range append(c.Network.VPC.Subnets.Private, c.Network.VPC.Subnets.Public...) {
