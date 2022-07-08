@@ -113,6 +113,12 @@ var _ = Describe("Customized Env", func() {
 			Expect(sharedEnvInitErr).NotTo(HaveOccurred())
 		})
 
+		It("should create environment manifests", func() {
+			Expect("./copilot/environments/test/manifest.yml").Should(BeAnExistingFile())
+			Expect("./copilot/environments/prod/manifest.yml").Should(BeAnExistingFile())
+			Expect("./copilot/environments/shared/manifest.yml").Should(BeAnExistingFile())
+		})
+
 		It("env ls should list all three envs", func() {
 			envListOutput, err := cli.EnvList(appName)
 			Expect(err).NotTo(HaveOccurred())
@@ -132,6 +138,62 @@ var _ = Describe("Customized Env", func() {
 
 			Expect(envs["prod"]).NotTo(BeNil())
 			Expect(envs["prod"].Prod).To(BeTrue())
+		})
+
+		It("should show only bootstrap resources in env show", func() {
+			testEnvShowOutput, testEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "test",
+			})
+			prodEnvShowOutput, prodEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "prod",
+			})
+			sharedEnvShowOutput, sharedEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "shared",
+			})
+			Expect(testEnvShowError).NotTo(HaveOccurred())
+			Expect(prodEnvShowError).NotTo(HaveOccurred())
+			Expect(sharedEnvShowError).NotTo(HaveOccurred())
+
+			Expect(testEnvShowOutput.Environment.Name).To(Equal("test"))
+			Expect(testEnvShowOutput.Environment.App).To(Equal(appName))
+			Expect(prodEnvShowOutput.Environment.Name).To(Equal("prod"))
+			Expect(prodEnvShowOutput.Environment.App).To(Equal(appName))
+			Expect(sharedEnvShowOutput.Environment.Name).To(Equal("shared"))
+			Expect(sharedEnvShowOutput.Environment.App).To(Equal(appName))
+
+			// Contains only bootstrap resources - two IAM roles.
+			Expect(len(testEnvShowOutput.Resources)).To(Equal(2))
+			Expect(len(prodEnvShowOutput.Resources)).To(Equal(2))
+			Expect(len(sharedEnvShowOutput.Resources)).To(Equal(2))
+		})
+	})
+
+	Context("when deploying the environments", func() {
+		var (
+			testEnvDeployErr, prodEnvDeployErr, sharedEnvDeployErr error
+		)
+		BeforeAll(func() {
+			_, testEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "test",
+			})
+			_, prodEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "prod",
+			})
+			_, sharedEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "shared",
+			})
+		})
+
+		It("should succeed", func() {
+			Expect(testEnvDeployErr).NotTo(HaveOccurred())
+			Expect(prodEnvDeployErr).NotTo(HaveOccurred())
+			Expect(sharedEnvDeployErr).NotTo(HaveOccurred())
 		})
 	})
 

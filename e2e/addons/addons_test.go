@@ -44,7 +44,7 @@ var _ = Describe("addons flow", func() {
 		})
 	})
 
-	Context("when creating a new environment", func() {
+	Context("when adding a new environment", func() {
 		var (
 			testEnvInitErr error
 		)
@@ -57,8 +57,35 @@ var _ = Describe("addons flow", func() {
 			})
 		})
 
-		It("env init should succeed", func() {
+		It("should succeed", func() {
 			Expect(testEnvInitErr).NotTo(HaveOccurred())
+		})
+
+		It("should create environment manifest", func() {
+			Expect("./copilot/environments/test/manifest.yml").Should(BeAnExistingFile())
+		})
+
+		It("should show only bootstrap resources in env show", func() {
+			envShowOutput, envShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "test",
+			})
+			Expect(envShowError).NotTo(HaveOccurred())
+			Expect(len(envShowOutput.Resources)).To(Equal(2)) // Contains only bootstrap resources - two IAM roles.
+		})
+	})
+
+	Context("when deploying the environment", func() {
+		var envDeployErr error
+		BeforeAll(func() {
+			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "test",
+			})
+		})
+
+		It("should succeed", func() {
+			Expect(envDeployErr).NotTo(HaveOccurred())
 		})
 	})
 
@@ -262,6 +289,7 @@ var _ = Describe("addons flow", func() {
 			Expect("./copilot").Should(BeADirectory())
 			Expect("./copilot/hello/addons").Should(BeADirectory())
 			Expect("./copilot/hello/manifest.yml").Should(BeAnExistingFile())
+			Expect("./copilot/environments/test/manifest.yml").Should(BeAnExistingFile())
 			Expect("./copilot/.workspace").ShouldNot(BeAnExistingFile())
 
 			// Need to recreate the app for AfterSuite testing.

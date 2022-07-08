@@ -48,10 +48,10 @@ var _ = Describe("App With Domain", func() {
 		})
 	})
 
-	Context("when creating new environments", func() {
+	Context("when adding new environments", func() {
 		fatalErrors := make(chan error)
 		wgDone := make(chan bool)
-		It("env init should succeed for creating test and prod environments", func() {
+		It("env init should succeed for adding test and prod environments", func() {
 			var wg sync.WaitGroup
 			wg.Add(2)
 			go func() {
@@ -80,6 +80,86 @@ var _ = Describe("App With Domain", func() {
 						EnvName: "prod",
 						Profile: prodEnvironmentProfile,
 						Prod:    false,
+					})
+					if err == nil {
+						break
+					}
+					if !isStackSetOperationInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			go func() {
+				wg.Wait()
+				close(wgDone)
+				close(fatalErrors)
+			}()
+
+			select {
+			case <-wgDone:
+			case err := <-fatalErrors:
+				Expect(err).NotTo(HaveOccurred())
+			}
+		})
+
+		It("should create environment manifests", func() {
+			Expect("./copilot/environments/test/manifest.yml").Should(BeAnExistingFile())
+			Expect("./copilot/environments/prod/manifest.yml").Should(BeAnExistingFile())
+		})
+
+		It("should show both environments in env ls", func() {
+			envList, envListError := cli.EnvList(appName)
+			Expect(envListError).NotTo(HaveOccurred())
+			Expect(len(envList.Envs)).To(Equal(2))
+		})
+
+		It("should show only bootstrap resources in env show", func() {
+			testEnvShowOutput, testEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "test",
+			})
+			prodEnvShowOutput, prodEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "prod",
+			})
+			Expect(testEnvShowError).NotTo(HaveOccurred())
+			Expect(prodEnvShowError).NotTo(HaveOccurred())
+
+			// Contains only bootstrap resources - two IAM roles.
+			Expect(len(testEnvShowOutput.Resources)).To(Equal(2))
+			Expect(len(prodEnvShowOutput.Resources)).To(Equal(2))
+		})
+	})
+
+	Context("when deploying the environments", func() {
+		fatalErrors := make(chan error)
+		wgDone := make(chan bool)
+		It("env deploy should succeed for deploying test and prod environments", func() {
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.EnvDeploy(&client.EnvDeployRequest{
+						AppName: appName,
+						Name:    "test",
+					})
+					if err == nil {
+						break
+					}
+					if !isStackSetOperationInProgress(content) {
+						fatalErrors <- err
+					}
+					time.Sleep(waitingInterval)
+				}
+			}()
+			go func() {
+				defer wg.Done()
+				for {
+					content, err := cli.EnvDeploy(&client.EnvDeployRequest{
+						AppName: appName,
+						Name:    "prod",
 					})
 					if err == nil {
 						break

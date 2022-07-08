@@ -68,7 +68,7 @@ var _ = Describe("pipeline flow", func() {
 		})
 	})
 
-	Context("when creating a new environment", func() {
+	Context("when adding a new environment", func() {
 		It("test env init should succeed", func() {
 			_, err := copilot.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
@@ -100,6 +100,48 @@ var _ = Describe("pipeline flow", func() {
 
 			Expect(envs["test"]).NotTo(BeNil())
 			Expect(envs["prod"]).NotTo(BeNil())
+		})
+		It("should create environment manifest", func() {
+			Expect("./copilot/environments/test/manifest.yml").Should(BeAnExistingFile())
+			Expect("./copilot/environments/prod/manifest.yml").Should(BeAnExistingFile())
+		})
+		It("should show only bootstrap resources in env show", func() {
+			testEnvShowOutput, testEnvShowError := copilot.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "test",
+			})
+			prodEnvShowOutput, prodEnvShowError := copilot.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "prod",
+			})
+			Expect(testEnvShowError).NotTo(HaveOccurred())
+			Expect(prodEnvShowError).NotTo(HaveOccurred())
+
+			Expect(testEnvShowOutput.Environment.Name).To(Equal("test"))
+			Expect(testEnvShowOutput.Environment.App).To(Equal(appName))
+			Expect(prodEnvShowOutput.Environment.Name).To(Equal("prod"))
+			Expect(prodEnvShowOutput.Environment.App).To(Equal(appName))
+
+			// Contains only bootstrap resources - two IAM roles.
+			Expect(len(testEnvShowOutput.Resources)).To(Equal(2))
+			Expect(len(prodEnvShowOutput.Resources)).To(Equal(2))
+		})
+	})
+
+	Context("when deploying the environments", func() {
+		It("test env deploy should succeed", func() {
+			_, err := copilot.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "test",
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("prod env deploy should succeed", func() {
+			_, err := copilot.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "prod",
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 

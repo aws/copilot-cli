@@ -47,7 +47,7 @@ var _ = Describe("exec flow", func() {
 		})
 	})
 
-	Context("when creating a new environment", func() {
+	Context("when adding a new environment", func() {
 		var (
 			testEnvInitErr error
 		)
@@ -62,6 +62,33 @@ var _ = Describe("exec flow", func() {
 
 		It("env init should succeed", func() {
 			Expect(testEnvInitErr).NotTo(HaveOccurred())
+		})
+
+		It("should create environment manifest", func() {
+			Expect(fmt.Sprintf("./copilot/environments/%s/manifest.yml", envName)).Should(BeAnExistingFile())
+		})
+
+		It("should show only bootstrap resources in env show", func() {
+			envShowOutput, envShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: envName,
+			})
+			Expect(envShowError).NotTo(HaveOccurred())
+			Expect(len(envShowOutput.Resources)).To(Equal(2)) // Contains only bootstrap resources - two IAM roles.
+		})
+	})
+
+	Context("when deploying the environment", func() {
+		var envDeployErr error
+		BeforeAll(func() {
+			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    envName,
+			})
+		})
+
+		It("should succeed", func() {
+			Expect(envDeployErr).NotTo(HaveOccurred())
 		})
 	})
 

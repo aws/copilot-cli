@@ -82,7 +82,7 @@ var _ = Describe("pipeline flow", func() {
 		})
 	})
 
-	Context("when creating a new environment", func() {
+	Context("when adding a new environment", func() {
 		It("test env init should succeed", func() {
 			_, err := copilot.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
@@ -99,6 +99,7 @@ var _ = Describe("pipeline flow", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
+
 		It("env ls should list both envs", func() {
 			out, err := copilot.EnvList(appName)
 			Expect(err).NotTo(HaveOccurred())
@@ -119,6 +120,45 @@ var _ = Describe("pipeline flow", func() {
 				Expect(envs["test"].Region).NotTo(Equal(envs["prod"].Region))
 				Expect(envs["test"].Account).NotTo(Equal(envs["prod"].Account))
 			}
+		})
+
+		It("should create environment manifests", func() {
+			Expect("./copilot/environments/test/manifest.yml").Should(BeAnExistingFile())
+			Expect("./copilot/environments/prod/manifest.yml").Should(BeAnExistingFile())
+		})
+
+		It("should show only bootstrap resources in env show", func() {
+			testEnvShowOutput, testEnvShowError := copilot.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "test",
+			})
+			prodEnvShowOutput, prodEnvShowError := copilot.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "prod",
+			})
+			Expect(testEnvShowError).NotTo(HaveOccurred())
+			Expect(prodEnvShowError).NotTo(HaveOccurred())
+
+			// Contains only bootstrap resources - two IAM roles.
+			Expect(len(testEnvShowOutput.Resources)).To(Equal(2))
+			Expect(len(prodEnvShowOutput.Resources)).To(Equal(2))
+		})
+	})
+
+	Context("when deploying the environments", func() {
+		It("test env deploy should succeed", func() {
+			_, err := copilot.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "test",
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("prod env deploy should succeed", func() {
+			_, err := copilot.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "prod",
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
