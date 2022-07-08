@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -90,7 +91,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			setupMocks: func(m initSvcMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
-			wantedErr: errors.New("open hello/Dockerfile: file does not exist"),
+			wantedErr: errors.New("open " + filepath.FromSlash("hello/Dockerfile") + ": file does not exist"),
 		},
 		"fail if both no-subscribe and subscribe are set": {
 			inAppName:       "phonetool",
