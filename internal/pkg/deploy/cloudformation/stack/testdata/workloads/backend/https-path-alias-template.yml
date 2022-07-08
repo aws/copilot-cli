@@ -326,7 +326,7 @@ Resources:
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: [example.com, foobar.com, v1.foobar.com]
+            Values: ["example.com", "foobar.com", "v1.foobar.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If
@@ -347,7 +347,7 @@ Resources:
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: [example.com, foobar.com, v1.foobar.com]
+            Values: ["example.com", "foobar.com", "v1.foobar.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If

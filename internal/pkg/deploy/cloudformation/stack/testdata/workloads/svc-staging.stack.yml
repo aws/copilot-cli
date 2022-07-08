@@ -427,7 +427,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: [example.com]
+            Values: ["example.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If
@@ -448,7 +448,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: [example.com]
+            Values: ["example.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If

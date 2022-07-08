@@ -76,7 +76,7 @@ HTTPListenerRuleWithDomain:
 {{- if .Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice .Aliases }}
+          Values: {{ fmtSlice (quoteSlice .Aliases) }}
 {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
@@ -124,7 +124,7 @@ HTTPSListenerRule:
 {{- if .Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice .Aliases }}
+          Values: {{ fmtSlice (quoteSlice .Aliases) }}
 {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
