@@ -171,7 +171,6 @@ type initEnvOpts struct {
 	selCreds       credsSelector
 	selApp         appSelector
 	appCFN         appResourcesGetter
-	newS3          func(string) (uploader, error)
 	manifestWriter environmentManifestWriter
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
