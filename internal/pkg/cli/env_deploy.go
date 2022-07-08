@@ -39,7 +39,7 @@ type deployEnvOpts struct {
 	// Dependencies to execute.
 	ws              wsEnvironmentReader
 	identity        identityService
-	newInterpolator func(string, string) interpolator
+	newInterpolator func(app, env string) interpolator
 	newEnvDeployer  func() (envDeployer, error)
 
 	// Cached variables.
