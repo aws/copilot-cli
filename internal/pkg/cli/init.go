@@ -423,7 +423,7 @@ func (o *initOpts) deployEnv() error {
 	}
 	log.Successf("Provisioned bootstrap resources for environment %s.\n", defaultEnvironmentName)
 	if deployEnvCmd, ok := o.deployEnvCmd.(*deployEnvOpts); ok {
-		// Set the application name from app init to the env init command.
+		// Set the application name from app init to the env deploy command.
 		deployEnvCmd.appName = *o.appName
 	}
 
