@@ -105,6 +105,11 @@ func QuoteSliceFunc(elems []string) []string {
 	return quotedElems
 }
 
+// QuoteStringFunc places quotation marks around a string.
+func QuoteStringFunc(s string) string {
+	return strconv.Quote(s)
+}
+
 // generateMountPointJSON turns a list of MountPoint objects into a JSON string:
 // `{"myEFSVolume": "/var/www", "myEBSVolume": "/usr/data"}`
 // This function must be called on an array of correctly constructed MountPoint objects.

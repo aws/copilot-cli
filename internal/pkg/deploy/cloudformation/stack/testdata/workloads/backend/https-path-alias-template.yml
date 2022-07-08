@@ -278,12 +278,12 @@ Resources:
       HostedZoneId: mockHostedZone1
       Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone mockHostedZone1"
       RecordSets:
-        - Name: foobar.com
+        - Name: "foobar.com"
           Type: A
           AliasTarget:
             HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
             DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
-        - Name: v1.foobar.com
+        - Name: "*.foobar.com"
           Type: A
           AliasTarget:
             HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
@@ -296,7 +296,7 @@ Resources:
       HostedZoneId: mockHostedZone2
       Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone mockHostedZone2"
       RecordSets:
-        - Name: example.com
+        - Name: "example.com"
           Type: A
           AliasTarget:
             HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
@@ -326,7 +326,7 @@ Resources:
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: ["example.com", "foobar.com", "v1.foobar.com"]
+            Values: ["example.com", "foobar.com", "*.foobar.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If
@@ -347,7 +347,7 @@ Resources:
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: ["example.com", "foobar.com", "v1.foobar.com"]
+            Values: ["example.com", "foobar.com", "*.foobar.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If

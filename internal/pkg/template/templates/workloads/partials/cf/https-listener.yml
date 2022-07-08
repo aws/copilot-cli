@@ -31,7 +31,7 @@ LoadBalancerDNSAlias{{$hostedZoneID}}:
     Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone {{$hostedZoneID}}"
     RecordSets:
     {{- range $alias := $aliases}}
-      - Name: {{$alias}}
+      - Name: {{quote $alias}}
         Type: A
         AliasTarget:
           {{- if eq $.WorkloadType "Backend Service"}}

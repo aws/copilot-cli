@@ -611,6 +611,7 @@ func withSvcParsingFuncs() ParseOption {
 			"hasSecrets":           hasSecrets,
 			"fmtSlice":             FmtSliceFunc,
 			"quoteSlice":           QuoteSliceFunc,
+			"quote":                QuoteStringFunc,
 			"randomUUID":           randomUUIDFunc,
 			"jsonMountPoints":      generateMountPointJSON,
 			"jsonSNSTopics":        generateSNSJSON,

@@ -397,7 +397,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       HostedZoneId: mockHostedZone
       Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone mockHostedZone"
       RecordSets:
-        - Name: example.com
+        - Name: "example.com"
           Type: A
           AliasTarget:
             HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
