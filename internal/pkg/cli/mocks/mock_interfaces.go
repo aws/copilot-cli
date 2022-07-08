@@ -3070,6 +3070,21 @@ func (mr *MockwsAppManagerMockRecorder) Create(appName interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockwsAppManager)(nil).Create), appName)
 }
 
+// RelCwd mocks base method.
+func (m *MockwsAppManager) RelCwd(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RelCwd", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RelCwd indicates an expected call of RelCwd.
+func (mr *MockwsAppManagerMockRecorder) RelCwd(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelCwd", reflect.TypeOf((*MockwsAppManager)(nil).RelCwd), path)
+}
+
 // Summary mocks base method.
 func (m *MockwsAppManager) Summary() (*workspace.Summary, error) {
 	m.ctrl.T.Helper()

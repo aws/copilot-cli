@@ -308,6 +308,7 @@ type wsPipelineGetter interface {
 type wsAppManager interface {
 	Create(appName string) error
 	Summary() (*workspace.Summary, error)
+	RelCwd(path string) (string, error)
 }
 
 type wsAddonManager interface {
