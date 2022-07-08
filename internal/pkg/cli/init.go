@@ -156,9 +156,8 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	}
 	deployEnvCmd := &deployEnvOpts{
 		deployEnvVars: deployEnvVars{
-			appName:      vars.appName,
-			name:         defaultEnvironmentName,
-			isProduction: false,
+			appName: vars.appName,
+			name:    defaultEnvironmentName,
 		},
 		store:             configStore,
 		sessionProvider:   sessProvider,
