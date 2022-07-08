@@ -82,6 +82,13 @@ func New() (*Workspace, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Make sure the working directory is an absolute path, most of the functions here assume that it is (and that
+	// the derived copilotDir is absolute as well)
+	workingDir, err = filepath.Abs(workingDir)
+	if err != nil {
+		return nil, err
+	}
+
 	ws := Workspace{
 		workingDir: workingDir,
 		fs:         fsUtils,
@@ -506,19 +513,27 @@ func (ws *Workspace) Path() (string, error) {
 }
 
 // RelWsRoot returns the path relative to the workspace root.
+// The input path is allowed to be either relative to the current
+// working directory or absolute.
 //
 // This is useful for storing a file path in configuration.
 //
 // Prefer RelCwd for displaying paths to users.
-func (ws *Workspace) RelWsRoot(fullPath string) (string, error) {
+func (ws *Workspace) RelWsRoot(path string) (string, error) {
 	copiDir, err := ws.copilotDirPath()
 	if err != nil {
 		return "", fmt.Errorf("get path to Copilot dir: %w", err)
+	}
+	fullPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("make path absolute: %w", err)
 	}
 	return filepath.Rel(filepath.Dir(copiDir), fullPath)
 }
 
 // RelCwd returns the path relative to the current working directory.
+// The input path is allowed to be either relative to the current
+// working directory or absolute.
 //
 // This is useful when displaying a file path to the user.
 //
@@ -527,6 +542,12 @@ func (ws *Workspace) RelWsRoot(fullPath string) (string, error) {
 // these functions have the same behavior, which can be a dangerous
 // source of false assumptions because that is not guaranteed!
 func (ws *Workspace) RelCwd(fullPath string) (string, error) {
+	if !filepath.IsAbs(fullPath) {
+		// A non-absolute path must be relative to the current working
+		// directory, so just clean it and give it back.
+		return filepath.Clean(fullPath), nil
+	}
+
 	return filepath.Rel(ws.workingDir, fullPath)
 }
 

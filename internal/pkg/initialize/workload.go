@@ -7,8 +7,6 @@ package initialize
 import (
 	"encoding"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -53,7 +51,7 @@ type WorkloadAdder interface {
 
 // Workspace contains the methods needed to manipulate a Copilot workspace.
 type Workspace interface {
-	Path() (string, error)
+	RelWsRoot(path string) (string, error)
 	WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
 	WriteServiceManifest(marshaler encoding.BinaryMarshaler, serviceName string) (string, error)
 }
@@ -135,7 +133,7 @@ func (w *WorkloadInitializer) addWlToStore(wl *config.Workload, wlType string) e
 
 func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 	if props.DockerfilePath != "" {
-		path, err := relativeDockerfilePath(w.Ws, props.DockerfilePath)
+		path, err := w.Ws.RelWsRoot(props.DockerfilePath)
 		if err != nil {
 			return "", err
 		}
@@ -156,7 +154,7 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = relPath(manifestPath)
+	manifestPath, err = w.Ws.RelWsRoot(manifestPath)
 	if err != nil {
 		return "", err
 	}
@@ -187,7 +185,7 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 
 func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 	if props.DockerfilePath != "" {
-		path, err := relativeDockerfilePath(w.Ws, props.DockerfilePath)
+		path, err := w.Ws.RelWsRoot(props.DockerfilePath)
 		if err != nil {
 			return "", err
 		}
@@ -215,7 +213,7 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = relPath(manifestPath)
+	manifestPath, err = w.Ws.RelWsRoot(manifestPath)
 	if err != nil {
 		return "", err
 	}
@@ -373,34 +371,4 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 		Platform:    i.Platform,
 		Topics:      i.Topics,
 	}), nil
-}
-
-// relativeDockerfilePath returns the path from the workspace root to the Dockerfile.
-func relativeDockerfilePath(ws Workspace, path string) (string, error) {
-	wsRoot, err := ws.Path()
-	if err != nil {
-		return "", fmt.Errorf("get workspace path: %w", err)
-	}
-	absDfPath, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("get absolute path: %v", err)
-	}
-	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
-	if err != nil {
-		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
-	}
-	return relDfPath, nil
-}
-
-// relPath returns the path relative to the current working directory.
-func relPath(fullPath string) (string, error) {
-	wkdir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("get working directory: %w", err)
-	}
-	path, err := filepath.Rel(wkdir, fullPath)
-	if err != nil {
-		return "", fmt.Errorf("get relative path of file: %w", err)
-	}
-	return path, nil
 }
