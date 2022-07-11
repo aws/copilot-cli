@@ -129,11 +129,7 @@ func (d *envDeployer) prefixLists(in *DeployEnvironmentInput) ([]string, error) 
 
 func (d *envDeployer) cfManagedPrefixListId(in *DeployEnvironmentInput) (*string, error) {
 	// Check if ingress is allowed from cloudfront
-	if in.Manifest != nil {
-		if !aws.BoolValue(in.Manifest.HTTPConfig.Public.LimitToCFIngress) {
-			return nil, nil
-		}
-	} else {
+	if in.Manifest == nil || !aws.BoolValue(in.Manifest.HTTPConfig.Public.Ingress.CDNIngress) {
 		return nil, nil
 	}
 

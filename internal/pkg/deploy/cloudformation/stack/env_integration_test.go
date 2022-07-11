@@ -32,9 +32,11 @@ name: test
 type: Environment
 # Create the public ALB with certificates attached.
 # All these comments should be deleted.
+cdn: true
 http:
   public:
-    restrict_alb_ingress_to_cf: false
+    ingress:
+      from_cdn: true
     certificates:
       - cert-1
       - cert-2
@@ -49,6 +51,7 @@ observability:
 						Name:                "demo",
 					},
 					Name:                 "test",
+					PrefixListIDs:        []string{"pl-mockid"},
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					CustomResourcesURLs: map[string]string{

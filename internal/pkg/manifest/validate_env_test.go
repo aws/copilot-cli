@@ -99,7 +99,9 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 				},
 				HTTPConfig: EnvironmentHTTPConfig{
 					Public: PublicHTTPConfig{
-						LimitToCFIngress: aws.Bool(true),
+						Ingress: Ingress{
+							CDNIngress: aws.Bool(true),
+						},
 					},
 				},
 			},

@@ -158,12 +158,24 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				EnvironmentConfig: manifest.EnvironmentConfig{
 					HTTPConfig: manifest.EnvironmentHTTPConfig{
 						Public: manifest.PublicHTTPConfig{
-							LimitToCFIngress: aws.Bool(true),
+							Ingress: manifest.Ingress{
+								CDNIngress: aws.Bool(true),
+							},
 						},
 					},
 				},
 			},
 			wantedError: fmt.Errorf("retrieve CloudFront managed prefix list id: some error"),
+		},
+		"prefix list not retrieved when manifest not present": {
+			setUpMocks: func(m *deployEnvironmentMock) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return(aws.String("mockPrefixListID"), nil).Times(0)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			inManifest: nil,
 		},
 		"fail to deploy environment": {
 			setUpMocks: func(m *deployEnvironmentMock) {

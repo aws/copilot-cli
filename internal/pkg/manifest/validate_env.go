@@ -37,7 +37,7 @@ func (e EnvironmentConfig) Validate() error {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
 
-	if aws.BoolValue(e.HTTPConfig.Public.LimitToCFIngress) && !e.CDNConfig.CDNEnabled() {
+	if aws.BoolValue(e.HTTPConfig.Public.Ingress.CDNIngress) && !e.CDNConfig.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
 
@@ -199,7 +199,7 @@ func (cfg PublicHTTPConfig) Validate() error {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
-	return nil
+	return cfg.Ingress.Validate()
 }
 
 // Validate returns nil if privateHTTPConfig is configured correctly.
@@ -218,6 +218,11 @@ func (cfg environmentCDNConfig) Validate() error {
 		return nil
 	}
 	return cfg.CDNConfig.Validate()
+}
+
+// Validate is a no-op for Ingress.
+func (i Ingress) Validate() error {
+	return nil
 }
 
 // Validate is a no-op for AdvancedCDNConfig.

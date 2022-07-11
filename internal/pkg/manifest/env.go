@@ -299,7 +299,7 @@ func (o *environmentObservability) loadObsConfig(tele *config.Telemetry) {
 	o.ContainerInsights = &tele.EnableContainerInsights
 }
 
-// EnvironmentHTTPConfig defines the configuration settings for an environment group's HTTP connections
+// EnvironmentHTTPConfig defines the configuration settings for an environment group's HTTP connections.
 type EnvironmentHTTPConfig struct {
 	Public  PublicHTTPConfig  `yaml:"public,omitempty"`
 	Private privateHTTPConfig `yaml:"private,omitempty"`
@@ -322,14 +322,25 @@ func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	cfg.Public.Certificates = env.ImportCertARNs
 }
 
+// PublicHTTPConfig represents the configuration settings for an environment public ALB.
 type PublicHTTPConfig struct {
-	LimitToCFIngress *bool    `yaml:"restrict_alb_ingress_to_cf"`
-	Certificates     []string `yaml:"certificates,omitempty"`
+	Ingress      Ingress  `yaml:"ingress"`
+	Certificates []string `yaml:"certificates,omitempty"`
+}
+
+// Ingress represents allowed ingress traffic from specified fields.
+type Ingress struct {
+	CDNIngress *bool `yaml:"from_cdn"`
+}
+
+// IsEmpty returns true if there is are no specified fields for ingress.
+func (i Ingress) IsEmpty() bool {
+	return i.CDNIngress == nil
 }
 
 // IsEmpty returns true if there is no customization to the public ALB.
 func (cfg PublicHTTPConfig) IsEmpty() bool {
-	return len(cfg.Certificates) == 0 && cfg.LimitToCFIngress == nil
+	return len(cfg.Certificates) == 0 && cfg.Ingress.IsEmpty()
 }
 
 type privateHTTPConfig struct {

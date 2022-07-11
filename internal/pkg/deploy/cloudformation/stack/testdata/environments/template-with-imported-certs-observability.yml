@@ -6,7 +6,8 @@ Metadata:
     name: test
     type: Environment
     observability: {container_insights: true}
-    http: {public: {restrict_alb_ingress_to_cf: false, certificates: [cert-1, cert-2]}}
+    http: {public: {ingress: {from_cdn: true}, certificates: [cert-1, cert-2]}}
+    cdn: {enabled: true, cdnconfig: {}}
 
 Parameters:
   AppName:
@@ -261,8 +262,8 @@ Resources:
     Properties:
       GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow from anyone on port 80
+        - SourcePrefixListId: pl-mockid
+          Description: Allow ingress from prefix list pl-mockid on port 80
           FromPort: 80
           IpProtocol: tcp
           ToPort: 80
@@ -278,8 +279,8 @@ Resources:
     Properties:
       GroupDescription: HTTPS access to the public facing load balancer
       SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          Description: Allow from anyone on port 443
+        - SourcePrefixListId: pl-mockid
+          Description: Allow ingress from prefix list pl-mockid on port 443
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
