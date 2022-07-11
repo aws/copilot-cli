@@ -235,8 +235,12 @@ func (cfg *environmentVPCConfig) ImportedVPC() *template.ImportVPC {
 
 // ManagedVPC returns configurations that configure VPC resources if there is any.
 func (cfg *environmentVPCConfig) ManagedVPC() *template.ManagedVPC {
-	// NOTE: In a managed VPC, #pub = #priv = #az.
-	// Either the VPC isn't configured, or everything need to be explicitly configured.
+	// ASSUMPTION: If the VPC is configured, both pub and private are explicitly configured.
+	// az is optional. However, if it's configured, it is configured for all subnets.
+	// In summary:
+	// 0 = #pub = #priv = #azs (not managed)
+	// #pub = #priv, #azs = 0 (managed, without configured azs)
+	// #pub = #priv = #azs (managed, all configured)
 	if !cfg.managedVPCCustomized() {
 		return nil
 	}
@@ -247,16 +251,19 @@ func (cfg *environmentVPCConfig) ManagedVPC() *template.ManagedVPC {
 	// NOTE: sort based on `az`s to preserve the mappings between azs and public subnets, private subnets.
 	// For example, if we have two subnets defined: public-subnet-1 ~ us-east-1a, and private-subnet-1 ~ us-east-1a.
 	// We want to make sure that public-subnet-1, us-east-1a and private-subnet-1 are all at index 0 of in perspective lists.
-	sort.Slice(cfg.Subnets.Public, func(i, j int) bool {
+	sort.SliceStable(cfg.Subnets.Public, func(i, j int) bool {
 		return aws.StringValue(cfg.Subnets.Public[i].AZ) < aws.StringValue(cfg.Subnets.Public[j].AZ)
 	})
-	sort.Slice(cfg.Subnets.Private, func(i, j int) bool {
+	sort.SliceStable(cfg.Subnets.Private, func(i, j int) bool {
 		return aws.StringValue(cfg.Subnets.Private[i].AZ) < aws.StringValue(cfg.Subnets.Private[j].AZ)
 	})
 	for idx, subnet := range cfg.Subnets.Public {
 		publicSubnetCIDRs[idx] = aws.StringValue((*string)(subnet.CIDR))
 		privateSubnetCIDRs[idx] = aws.StringValue((*string)(cfg.Subnets.Private[idx].CIDR))
 		azs[idx] = aws.StringValue(subnet.AZ)
+	}
+	if azs[0] == "" {
+		azs = nil
 	}
 	return &template.ManagedVPC{
 		CIDR:               aws.StringValue((*string)(cfg.CIDR)),
