@@ -30,7 +30,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -172,8 +171,6 @@ type initEnvOpts struct {
 	selCreds       credsSelector
 	selApp         appSelector
 	appCFN         appResourcesGetter
-	newS3          func(string) (uploader, error)
-	uploader       customResourcesUploader
 	manifestWriter environmentManifestWriter
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
@@ -215,16 +212,8 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			Profile: cfg,
 			Prompt:  prompter,
 		},
-		selApp:   selector.NewAppEnvSelector(prompt.New(), store),
-		uploader: template.New(),
-		appCFN:   deploycfn.New(defaultSession),
-		newS3: func(region string) (uploader, error) {
-			sess, err := sessProvider.DefaultWithRegion(region)
-			if err != nil {
-				return nil, err
-			}
-			return s3.New(sess), nil
-		},
+		selApp:         selector.NewAppEnvSelector(prompt.New(), store),
+		appCFN:         deploycfn.New(defaultSession),
 		manifestWriter: ws,
 
 		wsAppName: tryReadingAppName(),
