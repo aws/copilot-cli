@@ -5,7 +5,6 @@ package cli
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -91,8 +90,8 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			stackWriter:      os.Stdout,
 			unmarshal:        manifest.UnmarshalWorkload,
 			newInterpolator:  newManifestInterpolator,
-			paramsWriter:     ioutil.Discard,
-			addonsWriter:     ioutil.Discard,
+			paramsWriter:     discardFile{},
+			addonsWriter:     discardFile{},
 			fs:               &afero.Afero{Fs: afero.NewOsFs()},
 			sessProvider:     sessProvider,
 			newTplGenerator:  newWkldTplGenerator,

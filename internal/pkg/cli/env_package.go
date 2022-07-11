@@ -163,10 +163,10 @@ func (o *packageEnvOpts) Execute() error {
 	if err := o.setWriters(); err != nil {
 		return err
 	}
-	if err := o.write(o.tplWriter, res.Template); err != nil {
+	if err := o.writeAndClose(o.tplWriter, res.Template); err != nil {
 		return err
 	}
-	return o.write(o.paramsWriter, res.Parameters)
+	return o.writeAndClose(o.paramsWriter, res.Parameters)
 }
 
 func (o *packageEnvOpts) getAppCfg() (*config.Application, error) {
@@ -235,7 +235,7 @@ func (o *packageEnvOpts) setWriters() error {
 	return nil
 }
 
-func (o *packageEnvOpts) write(wc io.WriteCloser, dat string) error {
+func (o *packageEnvOpts) writeAndClose(wc io.WriteCloser, dat string) error {
 	if _, err := wc.Write([]byte(dat)); err != nil {
 		return err
 	}

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -65,9 +64,9 @@ type packageSvcOpts struct {
 	ws                   wsWlDirReader
 	fs                   afero.Fs
 	store                store
-	stackWriter          io.Writer
-	paramsWriter         io.Writer
-	addonsWriter         io.Writer
+	stackWriter          io.WriteCloser
+	paramsWriter         io.WriteCloser
+	addonsWriter         io.WriteCloser
 	runner               execRunner
 	sessProvider         *sessions.Provider
 	sel                  wsSelector
@@ -107,8 +106,8 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		runner:           exec.NewCmd(),
 		sel:              selector.NewLocalWorkloadSelector(prompter, store, ws),
 		stackWriter:      os.Stdout,
-		paramsWriter:     ioutil.Discard,
-		addonsWriter:     ioutil.Discard,
+		paramsWriter:     discardFile{},
+		addonsWriter:     discardFile{},
 		newInterpolator:  newManifestInterpolator,
 		sessProvider:     sessProvider,
 		newTplGenerator:  newWkldTplGenerator,
@@ -204,10 +203,10 @@ func (o *packageSvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	if _, err = o.stackWriter.Write([]byte(svcTemplates.stack)); err != nil {
+	if err := o.writeAndClose(o.stackWriter, svcTemplates.stack); err != nil {
 		return err
 	}
-	if _, err = o.paramsWriter.Write([]byte(svcTemplates.configuration)); err != nil {
+	if err := o.writeAndClose(o.paramsWriter, svcTemplates.configuration); err != nil {
 		return err
 	}
 	addonsTemplate, err := o.getAddonsTemplate()
@@ -225,8 +224,7 @@ func (o *packageSvcOpts) Execute() error {
 			return err
 		}
 	}
-	_, err = o.addonsWriter.Write([]byte(addonsTemplate))
-	return err
+	return o.writeAndClose(o.addonsWriter, addonsTemplate)
 }
 
 func (o *packageSvcOpts) validateOrAskSvcName() error {
@@ -408,6 +406,13 @@ func (o *packageSvcOpts) getTargetEnv() (*config.Environment, error) {
 	}
 	o.targetEnv = env
 	return o.targetEnv, nil
+}
+
+func (o *packageSvcOpts) writeAndClose(wc io.WriteCloser, dat string) error {
+	if _, err := wc.Write([]byte(dat)); err != nil {
+		return err
+	}
+	return wc.Close()
 }
 
 // RecommendActions suggests recommended actions before the packaged template is used for deployment.
