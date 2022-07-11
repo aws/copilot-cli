@@ -662,3 +662,8 @@ type envDeployer interface {
 	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
 	UploadArtifacts() (map[string]string, error)
 }
+
+type envPackager interface {
+	GenerateCloudFormationTemplate(in *clideploy.DeployEnvironmentInput) (*clideploy.GenerateCloudFormationTemplateOutput, error)
+	UploadArtifacts() (map[string]string, error)
+}

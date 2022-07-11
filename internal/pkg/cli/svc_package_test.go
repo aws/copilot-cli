@@ -6,6 +6,7 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"io"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -142,6 +143,18 @@ type svcPackageExecuteMock struct {
 	mft                  *mockWorkloadMft
 }
 
+type mockWriteCloser struct {
+	w io.Writer
+}
+
+func (wc mockWriteCloser) Write(p []byte) (n int, err error) {
+	return wc.w.Write(p)
+}
+
+func (wc mockWriteCloser) Close() error {
+	return nil
+}
+
 func TestPackageSvcOpts_Execute(t *testing.T) {
 	const (
 		mockARN    = "mockARN"
@@ -256,9 +269,9 @@ count: 1`
 			opts := &packageSvcOpts{
 				packageSvcVars: tc.inVars,
 
-				stackWriter:  stackBuf,
-				paramsWriter: paramsBuf,
-				addonsWriter: addonsBuf,
+				stackWriter:  mockWriteCloser{w: stackBuf},
+				paramsWriter: mockWriteCloser{w: paramsBuf},
+				addonsWriter: mockWriteCloser{w: addonsBuf},
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
 					return m.mft, nil
 				},
