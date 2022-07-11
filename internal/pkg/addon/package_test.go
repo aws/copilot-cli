@@ -2,11 +2,15 @@ package addon
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -24,33 +28,46 @@ func TestPackage(t *testing.T) {
 		wsPath = "/"
 		bucket = "mockBucket"
 	)
-	defaultFS := func() afero.Fs {
-		fs := afero.NewMemMapFs()
-		fs.Mkdir("/lambda", 0644)
-		f, _ := fs.Create("/lambda/index.js")
-		defer f.Close()
-		f.Write([]byte(`exports.handler = function(event, context) {}`))
-		return fs
-	}
+
+	lambdaZipHash := sha256.New()
+	indexZipHash := sha256.New()
+	indexFileHash := sha256.New()
+
+	// build default fs
+	fs := afero.NewMemMapFs()
+	fs.Mkdir("/lambda", 0644)
+
+	f, _ := fs.Create("/lambda/index.js")
+	defer f.Close()
+	info, _ := f.Stat()
+	io.MultiWriter(lambdaZipHash, indexZipHash).Write([]byte("index.js " + info.Mode().String()))
+	io.MultiWriter(f, lambdaZipHash, indexZipHash, indexFileHash).Write([]byte(`exports.handler = function(event, context) {}`))
+
+	f2, _ := fs.Create("/lambda/test.js")
+	info, _ = f2.Stat()
+	lambdaZipHash.Write([]byte("test.js " + info.Mode().String()))
+
+	lambdaZipS3Path := artifactpath.AddonArtifact(wlName, hex.EncodeToString(lambdaZipHash.Sum(nil)))
+	indexZipS3Path := artifactpath.AddonArtifact(wlName, hex.EncodeToString(indexZipHash.Sum(nil)))
+	indexFileS3Path := artifactpath.AddonArtifact(wlName, hex.EncodeToString(indexFileHash.Sum(nil)))
+
 	tests := map[string]struct {
 		inTemplate  string
 		outTemplate string
-		fs          func() afero.Fs
 		setupMocks  func(m addonMocks)
 	}{
-		"lambda": {
-			fs: defaultFS,
+		"AWS::Lambda::Function, zipped file": {
 			setupMocks: func(m addonMocks) {
-				m.uploader.EXPECT().Upload(bucket, gomock.Any(), gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+				m.uploader.EXPECT().Upload(bucket, indexZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
 			},
 			inTemplate: `
 Resources:
-  HelloWorldFunctionFile:
+  Test:
     Metadata:
       "testKey": "testValue"
     Type: AWS::Lambda::Function
     Properties:
-      Code: lambda/
+      Code: lambda/index.js
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -59,7 +76,7 @@ Resources:
 `,
 			outTemplate: `
 Resources:
-  HelloWorldFunctionFile:
+  Test:
     Metadata:
       "testKey": "testValue"
     Type: AWS::Lambda::Function
@@ -72,6 +89,109 @@ Resources:
       MemorySize: 512
       Role: !GetAtt "HelloWorldRole.Arn"
       Runtime: nodejs12.x
+`,
+		},
+		"AWS::Glue::Job, non-zipped file": {
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+			},
+			inTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "testKey": "testValue"
+    Type: AWS::Glue::Job
+    Properties:
+      Command:
+        ScriptLocation: lambda/index.js
+`,
+			outTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "testKey": "testValue"
+    Type: AWS::Glue::Job
+    Properties:
+      Command:
+        ScriptLocation: s3://mockBucket/asdf
+`,
+		},
+		"AWS::CodeCommit::Repository, directory without slash": {
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+			},
+			inTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "testKey": "testValue"
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      Code:
+        S3: lambda
+`,
+			outTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "testKey": "testValue"
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      Code:
+        S3:
+          Bucket: mockBucket
+          Key: asdf
+`,
+		},
+		"AWS::ApiGateway::RestApi, directory with slash": {
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+			},
+			inTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "testKey": "testValue"
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      BodyS3Location: lambda/
+`,
+			outTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "testKey": "testValue"
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      BodyS3Location:
+        Bucket: mockBucket
+        Key: asdf
+`,
+		},
+		"AWS::AppSync::Resolver, multiple replacements in one resource": {
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "hjkl"), nil)
+			},
+			inTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "testKey": "testValue"
+    Type: AWS::AppSync::Resolver
+    Properties:
+      RequestMappingTemplateS3Location: lambda
+      ResponseMappingTemplateS3Location: lambda/index.js
+`,
+			outTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "testKey": "testValue"
+    Type: AWS::AppSync::Resolver
+    Properties:
+      RequestMappingTemplateS3Location: s3://mockBucket/asdf
+      ResponseMappingTemplateS3Location: s3://mockBucket/hjkl
 `,
 		},
 	}
@@ -92,7 +212,7 @@ Resources:
 				wsPath:   wsPath,
 				Uploader: mocks.uploader,
 				ws:       mocks.ws,
-				fs:       &afero.Afero{Fs: tc.fs()},
+				fs:       &afero.Afero{Fs: fs},
 				Bucket:   bucket,
 			}
 

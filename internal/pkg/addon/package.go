@@ -22,7 +22,7 @@ type uploader interface {
 }
 
 type transformInfo struct {
-	Property           string
+	Property           []string
 	BucketNameProperty string
 	ObjectKeyProperty  string
 
@@ -32,14 +32,14 @@ type transformInfo struct {
 var transformInfoFor = map[string][]transformInfo{
 	"AWS::ApiGateway::RestApi": {
 		{
-			Property:           "BodyS3Location",
+			Property:           []string{"BodyS3Location"},
 			BucketNameProperty: "Bucket",
 			ObjectKeyProperty:  "Key",
 		},
 	},
 	"AWS::Lambda::Function": {
 		{
-			Property:           "Code",
+			Property:           []string{"Code"},
 			BucketNameProperty: "S3Bucket",
 			ObjectKeyProperty:  "S3Key",
 			ForceZip:           true,
@@ -47,7 +47,7 @@ var transformInfoFor = map[string][]transformInfo{
 	},
 	"AWS::Lambda::LayerVersion": {
 		{
-			Property:           "Content",
+			Property:           []string{"Content"},
 			BucketNameProperty: "S3Bucket",
 			ObjectKeyProperty:  "S3Key",
 			ForceZip:           true,
@@ -55,52 +55,52 @@ var transformInfoFor = map[string][]transformInfo{
 	},
 	"AWS::AppSync::GraphQLSchema": {
 		{
-			Property: "DefinitionS3Location",
+			Property: []string{"DefinitionS3Location"},
 		},
 	},
 	"AWS::AppSync::Resolver": {
 		{
-			Property: "RequestMappingTemplateS3Location",
+			Property: []string{"RequestMappingTemplateS3Location"},
 		},
 		{
-			Property: "ResponseMappingTemplateS3Location",
+			Property: []string{"ResponseMappingTemplateS3Location"},
 		},
 	},
 	"AWS::AppSync::FunctionConfiguration": {
 		{
-			Property: "RequestMappingTemplateS3Location",
+			Property: []string{"RequestMappingTemplateS3Location"},
 		},
 		{
-			Property: "ResponseMappingTemplateS3Location",
+			Property: []string{"ResponseMappingTemplateS3Location"},
 		},
 	},
 	"AWS::ElasticBeanstalk::ApplicationVersion": {
 		{
-			Property:           "SourceBundle",
+			Property:           []string{"SourceBundle"},
 			BucketNameProperty: "S3Bucket",
 			ObjectKeyProperty:  "S3Key",
 		},
 	},
 	"AWS::CloudFormation::Stack": { // TODO look at this one, has extra logic
 		{
-			Property: "TemplateURL",
+			Property: []string{"TemplateURL"},
 		},
 	},
 	"AWS::Glue::Job": {
 		{
-			Property: "Command.ScriptLocation", // TODO...support nested :sob:
+			Property: []string{"Command", "ScriptLocation"},
 		},
 	},
 	"AWS::StepFunctions::StateMachine": {
 		{
-			Property:           "DefinitionS3Location",
+			Property:           []string{"DefinitionS3Location"},
 			BucketNameProperty: "Bucket",
 			ObjectKeyProperty:  "Key",
 		},
 	},
-	"AWS::CodeCommit::Repository": { // TODO idk what this one's deal is, seems nested though
+	"AWS::CodeCommit::Repository": {
 		{
-			Property:           "Code.S3",
+			Property:           []string{"Code", "S3"},
 			BucketNameProperty: "Bucket",
 			ObjectKeyProperty:  "Key",
 			ForceZip:           true,
@@ -141,10 +141,19 @@ func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) 
 }
 
 func (a *Addons) transformProperty(properties *yaml.Node, tr transformInfo) error {
-	props := mappingNode(properties)
-	node, ok := props[tr.Property]
-	if !ok || node.Kind != yaml.ScalarNode {
-		// only transorm if the property is preset and a scalar node
+	mapNode := mappingNode(properties)
+	var node *yaml.Node
+	for i, key := range tr.Property {
+		var ok bool
+		node, ok = mapNode[key]
+		if !ok || (i+1 != len(tr.Property) && node.Kind != yaml.MappingNode) {
+			return nil // no error if the property doesn't exist
+		}
+		mapNode = mappingNode(node)
+	}
+
+	if node == nil || node.Kind != yaml.ScalarNode {
+		// only transform if the node is a scalar node
 		return nil
 	}
 
