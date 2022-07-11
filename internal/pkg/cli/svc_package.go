@@ -434,8 +434,8 @@ func buildSvcPackageCmd() *cobra.Command {
 	vars := packageSvcVars{}
 	cmd := &cobra.Command{
 		Use:   "package",
-		Short: "Prints the AWS CloudFormation template of a service.",
-		Long:  `Prints the CloudFormation template used to deploy a service to an environment.`,
+		Short: "Print the AWS CloudFormation template of a service.",
+		Long:  `Print the CloudFormation template used to deploy a service to an environment.`,
 		Example: `
   Print the CloudFormation template for the "frontend" service parametrized for the "test" environment.
   /code $ copilot svc package -n frontend -e test

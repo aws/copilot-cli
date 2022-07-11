@@ -247,8 +247,8 @@ func buildEnvPkgCmd() *cobra.Command {
 	vars := packageEnvVars{}
 	cmd := &cobra.Command{
 		Use:   "package",
-		Short: "Prints the AWS CloudFormation template of an environment.",
-		Long:  `Prints the CloudFormation stack template and configuration used to deploy an environment.`,
+		Short: "Print the AWS CloudFormation template of an environment.",
+		Long:  `Print the CloudFormation stack template and configuration used to deploy an environment.`,
 		Example: `
   Print the CloudFormation template for the "prod" environment.
   /code $ copilot env package -n prod --upload-assets
