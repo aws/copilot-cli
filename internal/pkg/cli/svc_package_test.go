@@ -144,8 +144,7 @@ type svcPackageExecuteMock struct {
 }
 
 type mockWriteCloser struct {
-	w        io.Writer
-	isClosed bool
+	w io.Writer
 }
 
 func (wc mockWriteCloser) Write(p []byte) (n int, err error) {
@@ -153,7 +152,6 @@ func (wc mockWriteCloser) Write(p []byte) (n int, err error) {
 }
 
 func (wc mockWriteCloser) Close() error {
-	wc.isClosed = true
 	return nil
 }
 
