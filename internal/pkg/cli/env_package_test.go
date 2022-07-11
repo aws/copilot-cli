@@ -283,13 +283,13 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				}
 			},
 			wantedFS: func(t *testing.T, fs afero.Fs) {
-				f, err := fs.Open("infrastructure/env-test.yml")
+				f, err := fs.Open("infrastructure/test.env.yml")
 				require.NoError(t, err)
 				actual, err := io.ReadAll(f)
 				require.NoError(t, err)
 				require.Equal(t, []byte("template"), actual)
 
-				f, err = fs.Open("infrastructure/env-test.params.json")
+				f, err = fs.Open("infrastructure/test.env.params.json")
 				require.NoError(t, err)
 				actual, err = io.ReadAll(f)
 				require.NoError(t, err)

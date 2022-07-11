@@ -219,12 +219,12 @@ func (o *packageEnvOpts) setWriters() error {
 		return fmt.Errorf("create directory %q: %w", o.outputDir, err)
 	}
 
-	path := filepath.Join(o.outputDir, fmt.Sprintf("env-%s.yml", o.envName))
+	path := filepath.Join(o.outputDir, fmt.Sprintf("%s.env.yml", o.envName))
 	tplFile, err := o.fs.Create(path)
 	if err != nil {
 		return fmt.Errorf("create file at %q: %w", path, err)
 	}
-	path = filepath.Join(o.outputDir, fmt.Sprintf("env-%s.params.json", o.envName))
+	path = filepath.Join(o.outputDir, fmt.Sprintf("%s.env.params.json", o.envName))
 	paramsFile, err := o.fs.Create(path)
 	if err != nil {
 		return fmt.Errorf("create file at %q: %w", path, err)
@@ -257,7 +257,7 @@ func buildEnvPkgCmd() *cobra.Command {
   /startcodeblock
   $ copilot env package -n test --output-dir ./infrastructure --upload-assets
   $ ls ./infrastructure
-  env-test.stack.yml      env-test.params.json
+  test.env.yml      test.env.params.json
   /endcodeblock`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newPackageEnvOpts(vars)
