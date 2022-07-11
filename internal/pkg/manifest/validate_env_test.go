@@ -326,7 +326,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New(`validate "subnets": public[1] must include "cidr" and "az" fields if the vpc is configured`),
+			wantedErr: errors.New(`validate "subnets": public[1] must include "cidr" if the vpc is configured`),
 		},
 		"error if configuring vpc while azs do not match between private and public subnets": {
 			in: environmentVPCConfig{
@@ -443,7 +443,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 				},
 			},
 		},
-		"succeed on managed vpc": {
+		"succeed on managed vpc that is fully adjusted ": {
 			in: environmentVPCConfig{
 				CIDR: &mockVPCCIDR,
 				Subnets: subnetsConfiguration{
@@ -473,6 +473,35 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 						{
 							CIDR: &mockPrivateSubnet3CIDR,
 							AZ:   aws.String("us-east-2c"),
+						},
+					},
+				},
+			},
+		},
+		"succeed on managed vpc that does not adjust az": {
+			in: environmentVPCConfig{
+				CIDR: &mockVPCCIDR,
+				Subnets: subnetsConfiguration{
+					Public: []subnetConfiguration{
+						{
+							CIDR: &mockPublicSubnet1CIDR,
+						},
+						{
+							CIDR: &mockPublicSubnet2CIDR,
+						},
+						{
+							CIDR: &mockPublicSubnet3CIDR,
+						},
+					},
+					Private: []subnetConfiguration{
+						{
+							CIDR: &mockPrivateSubnet1CIDR,
+						},
+						{
+							CIDR: &mockPrivateSubnet2CIDR,
+						},
+						{
+							CIDR: &mockPrivateSubnet3CIDR,
 						},
 					},
 				},

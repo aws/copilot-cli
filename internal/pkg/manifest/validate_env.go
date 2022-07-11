@@ -104,28 +104,34 @@ func (cfg environmentVPCConfig) validateManagedVPC() error {
 	)
 	var exists = struct{}{}
 	for idx, subnet := range cfg.Subnets.Public {
-		if aws.StringValue((*string)(subnet.CIDR)) == "" || aws.StringValue(subnet.AZ) == "" {
-			return fmt.Errorf(`validate "subnets": public[%d] must include "cidr" and "az" fields if the vpc is configured`, idx)
+		if aws.StringValue((*string)(subnet.CIDR)) == "" {
+			return fmt.Errorf(`validate "subnets": public[%d] must include "cidr" if the vpc is configured`, idx)
 		}
 		publicCIDRs[aws.StringValue((*string)(subnet.CIDR))] = exists
-		publicAZs[aws.StringValue(subnet.AZ)] = exists
+		if aws.StringValue(subnet.AZ) != "" {
+			publicAZs[aws.StringValue(subnet.AZ)] = exists
+		}
 	}
 	for idx, subnet := range cfg.Subnets.Private {
-		if aws.StringValue((*string)(subnet.CIDR)) == "" || aws.StringValue(subnet.AZ) == "" {
-			return fmt.Errorf(`validate "subnets": private[%d] must include "cidr" and "az" fields if the vpc is configured`, idx)
+		if aws.StringValue((*string)(subnet.CIDR)) == "" {
+			return fmt.Errorf(`validate "subnets": private[%d] must include "cidr" if the vpc is configured`, idx)
 		}
 		privateCIDRs[aws.StringValue((*string)(subnet.CIDR))] = exists
-		privateAZs[aws.StringValue(subnet.AZ)] = exists
-	}
-	if len(publicAZs) != len(privateAZs) {
-		return fmt.Errorf(`validate "subnets": %w`, errAZsNotEqual)
-	}
-	for k := range publicAZs {
-		if _, ok := privateAZs[k]; !ok {
-			return fmt.Errorf(`validate "subnets": %w`, errAZsNotEqual)
+		if aws.StringValue(subnet.AZ) != "" {
+			privateAZs[aws.StringValue(subnet.AZ)] = exists
 		}
 	}
+	// NOTE: the following are constraints on az:
+	// 1. #az = 0, or #az = #public_subnets = #private_subnets.
+	// 2. set(az_for_public) = set(az_for_private).
+	// 3, If configured at all, the number of AZ must be >= 2.
+	if !areSetsEqual(publicAZs, privateAZs) {
+		return fmt.Errorf(`validate "subnets": %w`, errAZsNotEqual)
+	}
 	numAZs := len(publicAZs)
+	if numAZs == 0 {
+		return nil
+	}
 	if numAZs < minAZs {
 		return fmt.Errorf(`validate "subnets": require at least %d availability zones`, minAZs)
 	}
@@ -234,4 +240,16 @@ func (c environmentConfig) validateInternalALBSubnets() error {
 		return fmt.Errorf("subnet(s) specified for internal ALB placement not imported")
 	}
 	return nil
+}
+
+func areSetsEqual[T comparable](a map[T]struct{}, b map[T]struct{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k := range a {
+		if _, ok := b[k]; !ok {
+			return false
+		}
+	}
+	return true
 }
