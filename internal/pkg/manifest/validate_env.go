@@ -65,10 +65,14 @@ func (cfg environmentVPCConfig) Validate() error {
 		return fmt.Errorf(`validate "subnets": %w`, err)
 	}
 	if cfg.imported() {
-		return cfg.validateImportedVPC()
+		if err := cfg.validateImportedVPC(); err != nil {
+			return fmt.Errorf(`validate "subnets" for an imported VPC: %w`, err)
+		}
 	}
 	if cfg.managedVPCCustomized() {
-		return cfg.validateManagedVPC()
+		if err := cfg.validateManagedVPC(); err != nil {
+			return fmt.Errorf(`validate "subnets" for an adjusted VPC: %w`, err)
+		}
 	}
 	return nil
 }
@@ -76,21 +80,25 @@ func (cfg environmentVPCConfig) Validate() error {
 func (cfg environmentVPCConfig) validateImportedVPC() error {
 	for idx, subnet := range cfg.Subnets.Public {
 		if aws.StringValue(subnet.SubnetID) == "" {
-			return fmt.Errorf(`validate "subnets": public[%d] must include "id" field if the vpc is imported`, idx)
+			return fmt.Errorf(`validate public[%d]: %w`, idx, &errFieldMustBeSpecified{
+				missingField: "id",
+			})
 		}
 	}
 	for idx, subnet := range cfg.Subnets.Private {
 		if aws.StringValue(subnet.SubnetID) == "" {
-			return fmt.Errorf(`validate "subnets": private[%d] must include "id" field if the vpc is imported`, idx)
+			return fmt.Errorf(`validate private[%d]: %w`, idx, &errFieldMustBeSpecified{
+				missingField: "id",
+			})
 		}
 	}
 	switch {
 	case len(cfg.Subnets.Private)+len(cfg.Subnets.Public) <= 0:
-		return errors.New(`validate "subnets": VPC must have subnets in order to proceed with environment creation`)
+		return errors.New(`VPC must have subnets in order to proceed with environment creation`)
 	case len(cfg.Subnets.Public) == 1:
-		return errors.New(`validate "subnets": validate "public": at least two public subnets must be imported to enable Load Balancing`)
+		return errors.New(`validate "public": at least two public subnets must be imported to enable Load Balancing`)
 	case len(cfg.Subnets.Private) == 1:
-		return errors.New(`validate "subnets": validate "private": at least two private subnets must be imported`)
+		return errors.New(`validate "private": at least two private subnets must be imported`)
 	}
 	return nil
 }
@@ -105,7 +113,9 @@ func (cfg environmentVPCConfig) validateManagedVPC() error {
 	var exists = struct{}{}
 	for idx, subnet := range cfg.Subnets.Public {
 		if aws.StringValue((*string)(subnet.CIDR)) == "" {
-			return fmt.Errorf(`validate "subnets": public[%d] must include "cidr" if the vpc is configured`, idx)
+			return fmt.Errorf(`validate public[%d]: %w`, idx, &errFieldMustBeSpecified{
+				missingField: "cidr",
+			})
 		}
 		publicCIDRs[aws.StringValue((*string)(subnet.CIDR))] = exists
 		if aws.StringValue(subnet.AZ) != "" {
@@ -114,7 +124,9 @@ func (cfg environmentVPCConfig) validateManagedVPC() error {
 	}
 	for idx, subnet := range cfg.Subnets.Private {
 		if aws.StringValue((*string)(subnet.CIDR)) == "" {
-			return fmt.Errorf(`validate "subnets": private[%d] must include "cidr" if the vpc is configured`, idx)
+			return fmt.Errorf(`validate private[%d]: %w`, idx, &errFieldMustBeSpecified{
+				missingField: "cidr",
+			})
 		}
 		privateCIDRs[aws.StringValue((*string)(subnet.CIDR))] = exists
 		if aws.StringValue(subnet.AZ) != "" {
@@ -126,20 +138,20 @@ func (cfg environmentVPCConfig) validateManagedVPC() error {
 	// 2. set(az_for_public) = set(az_for_private).
 	// 3, If configured at all, the number of AZ must be >= 2.
 	if !areSetsEqual(publicAZs, privateAZs) {
-		return fmt.Errorf(`validate "subnets": %w`, errAZsNotEqual)
+		return errAZsNotEqual
 	}
 	numAZs := len(publicAZs)
 	if numAZs == 0 {
 		return nil
 	}
 	if numAZs < minAZs {
-		return fmt.Errorf(`validate "subnets": require at least %d availability zones`, minAZs)
+		return fmt.Errorf(`require at least %d availability zones`, minAZs)
 	}
 	if len(publicCIDRs) != numAZs {
-		return fmt.Errorf(`validate "subnets": validate "public": number of public subnet CIDRs (%d) does not match number of AZs (%d)`, len(publicCIDRs), len(publicAZs))
+		return fmt.Errorf(`validate "public": number of public subnet CIDRs (%d) does not match number of AZs (%d)`, len(publicCIDRs), len(publicAZs))
 	}
 	if len(privateCIDRs) != numAZs {
-		return fmt.Errorf(`validate "subnets": validate "private": number of private subnet CIDRs (%d) does not match number of AZs (%d)`, len(privateCIDRs), len(publicAZs))
+		return fmt.Errorf(`validate "private": number of private subnet CIDRs (%d) does not match number of AZs (%d)`, len(privateCIDRs), len(publicAZs))
 	}
 	return nil
 }
