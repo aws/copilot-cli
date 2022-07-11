@@ -140,7 +140,10 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 					packageEnvVars: packageEnvVars{
 						envName: "test",
 					},
-					ws:     ws,
+					ws: ws,
+					newInterpolator: func(_, _ string) interpolator {
+						return nil
+					},
 					envCfg: &config.Environment{Name: "test"},
 				}
 			},

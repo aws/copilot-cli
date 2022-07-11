@@ -149,12 +149,11 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			appName: vars.appName,
 			name:    defaultEnvironmentName,
 		},
-		store:             configStore,
-		sessionProvider:   sessProvider,
-		ws:                ws,
-		identity:          id,
-		newInterpolator:   newManifestInterpolator,
-		unmarshalManifest: manifest.UnmarshalEnvironment,
+		store:           configStore,
+		sessionProvider: sessProvider,
+		ws:              ws,
+		identity:        id,
+		newInterpolator: newManifestInterpolator,
 	}
 	deployEnvCmd.newEnvDeployer = func() (envDeployer, error) {
 		return newEnvDeployer(deployEnvCmd)

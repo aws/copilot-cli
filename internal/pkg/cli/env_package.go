@@ -132,7 +132,7 @@ func (o *packageEnvOpts) Ask() error {
 
 // Execute prints the CloudFormation configuration for the environment.
 func (o *packageEnvOpts) Execute() error {
-	mft, err := o.environmentManifest()
+	mft, err := environmentManifest(o.envName, o.ws, o.newInterpolator(o.appName, o.envName))
 	if err != nil {
 		return err
 	}
@@ -209,29 +209,6 @@ func (o *packageEnvOpts) validateOrAskEnvName() error {
 	}
 	o.envName = name
 	return nil
-}
-
-func (o *packageEnvOpts) environmentManifest() (*manifest.Environment, error) {
-	envCfg, err := o.getEnvCfg()
-	if err != nil {
-		return nil, err
-	}
-	raw, err := o.ws.ReadEnvironmentManifest(envCfg.Name)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest for environment %q: %w", envCfg.Name, err)
-	}
-	interpolated, err := o.newInterpolator(o.appName, o.envName).Interpolate(string(raw))
-	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %q manifest: %w", o.envName, err)
-	}
-	mft, err := manifest.UnmarshalEnvironment([]byte(interpolated))
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal environment manifest for %q: %w", envCfg.Name, err)
-	}
-	if err := mft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate environment manifest for %q: %w", envCfg.Name, err)
-	}
-	return mft, nil
 }
 
 func (o *packageEnvOpts) setWriters() error {

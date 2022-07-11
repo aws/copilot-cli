@@ -45,9 +45,6 @@ type deployEnvOpts struct {
 	// Cached variables.
 	targetApp *config.Application
 	targetEnv *config.Environment
-
-	// Functions to facilitate testing.
-	unmarshalManifest func(in []byte) (*manifest.Environment, error)
 }
 
 func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
@@ -71,8 +68,6 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 		ws:              ws,
 		identity:        identity.New(defaultSess),
 		newInterpolator: newManifestInterpolator,
-
-		unmarshalManifest: manifest.UnmarshalEnvironment,
 	}
 	opts.newEnvDeployer = func() (envDeployer, error) {
 		return newEnvDeployer(opts)
@@ -115,7 +110,7 @@ func (o *deployEnvOpts) Ask() error {
 
 // Execute deploys an environment given a manifest.
 func (o *deployEnvOpts) Execute() error {
-	mft, err := o.environmentManifest()
+	mft, err := environmentManifest(o.name, o.ws, o.newInterpolator(o.appName, o.name))
 	if err != nil {
 		return err
 	}
@@ -141,25 +136,21 @@ func (o *deployEnvOpts) Execute() error {
 	return nil
 }
 
-func (o *deployEnvOpts) environmentManifest() (*manifest.Environment, error) {
-	targetEnv, err := o.cachedTargetEnv()
+func environmentManifest(envName string, ws wsEnvironmentReader, transformer interpolator) (*manifest.Environment, error) {
+	raw, err := ws.ReadEnvironmentManifest(envName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read manifest for environment %q: %w", envName, err)
 	}
-	raw, err := o.ws.ReadEnvironmentManifest(targetEnv.Name)
+	interpolated, err := transformer.Interpolate(string(raw))
 	if err != nil {
-		return nil, fmt.Errorf("read manifest for environment %s: %w", targetEnv.Name, err)
+		return nil, fmt.Errorf("interpolate environment variables for %q manifest: %w", envName, err)
 	}
-	interpolated, err := o.newInterpolator(o.appName, targetEnv.Name).Interpolate(string(raw))
+	mft, err := manifest.UnmarshalEnvironment([]byte(interpolated))
 	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", targetEnv.Name, err)
-	}
-	mft, err := o.unmarshalManifest([]byte(interpolated))
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal environment manifest for %s: %w", targetEnv.Name, err)
+		return nil, fmt.Errorf("unmarshal environment manifest for %q: %w", envName, err)
 	}
 	if err := mft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate environment manifest for %s: %w", targetEnv.Name, err)
+		return nil, fmt.Errorf("validate environment manifest for %q: %w", envName, err)
 	}
 	return mft, nil
 }
