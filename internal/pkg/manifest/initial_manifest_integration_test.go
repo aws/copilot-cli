@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -329,6 +330,84 @@ func TestEnvironment_InitialManifestIntegration(t *testing.T) {
 
 			// THEN
 			require.Equal(t, string(wantedBytes), string(tpl))
+		})
+	}
+}
+
+func TestPipelineManifest_InitialManifest_Integration(t *testing.T) {
+	testCases := map[string]struct {
+		inProvider Provider
+		inStages   []PipelineStage
+
+		wantedTestData string
+		wantedError    error
+	}{
+		"basic pipeline manifest": {
+			inProvider: &githubProvider{
+				properties: &GitHubProperties{
+					RepositoryURL: "mock-url",
+					Branch:        "main",
+				},
+			},
+			inStages: []PipelineStage{
+				{
+					Name: "test",
+				},
+				{
+					Name: "prod",
+				},
+			},
+			wantedTestData: "pipeline-basic.yml",
+		},
+		"environment pipeline manifest with template configurations": {
+			inProvider: &githubProvider{
+				properties: &GitHubProperties{
+					RepositoryURL: "mock-url",
+					Branch:        "main",
+				},
+			},
+			inStages: []PipelineStage{
+				{
+					Name: "test",
+					Deployments: Deployments{
+						"deploy-env": &Deployment{
+							TemplatePath:   "infrastructure/test.env.yml",
+							TemplateConfig: "infrastructure/test.env.params.json",
+						},
+					},
+				},
+				{
+					Name: "prod",
+					Deployments: Deployments{
+						"deploy-env": &Deployment{
+							TemplatePath:   "infrastructure/prod.env.yml",
+							TemplateConfig: "infrastructure/prod.env.params.json",
+						},
+					},
+				},
+			},
+			wantedTestData: "pipeline-environment.yml",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			path := filepath.Join("testdata", tc.wantedTestData)
+			wantedBytes, err := ioutil.ReadFile(path)
+			require.NoError(t, err)
+
+			manifest, err := NewPipeline("mock-pipeline", tc.inProvider, tc.inStages)
+			require.NoError(t, err)
+
+			// WHEN
+			b, err := manifest.MarshalBinary()
+
+			// THEN
+			require.Equal(t, string(wantedBytes), string(b))
+			require.NoError(t, err)
 		})
 	}
 }
