@@ -246,7 +246,7 @@ func (cfg *environmentVPCConfig) ManagedVPC() *template.ManagedVPC {
 	}
 	publicSubnetCIDRs := make([]string, len(cfg.Subnets.Public))
 	privateSubnetCIDRs := make([]string, len(cfg.Subnets.Public))
-	azs := make([]string, len(cfg.Subnets.Public))
+	var azs []string
 
 	// NOTE: sort based on `az`s to preserve the mappings between azs and public subnets, private subnets.
 	// For example, if we have two subnets defined: public-subnet-1 ~ us-east-1a, and private-subnet-1 ~ us-east-1a.
@@ -260,10 +260,9 @@ func (cfg *environmentVPCConfig) ManagedVPC() *template.ManagedVPC {
 	for idx, subnet := range cfg.Subnets.Public {
 		publicSubnetCIDRs[idx] = aws.StringValue((*string)(subnet.CIDR))
 		privateSubnetCIDRs[idx] = aws.StringValue((*string)(cfg.Subnets.Private[idx].CIDR))
-		azs[idx] = aws.StringValue(subnet.AZ)
-	}
-	if azs[0] == "" {
-		azs = nil
+		if az := aws.StringValue(subnet.AZ); az != "" {
+			azs = append(azs, az)
+		}
 	}
 	return &template.ManagedVPC{
 		CIDR:               aws.StringValue((*string)(cfg.CIDR)),
