@@ -30,16 +30,17 @@ type deployEnvOpts struct {
 	deployEnvVars
 
 	// Dependencies.
-	store store
+	store           store
+	sessionProvider *sessions.Provider
 
 	// Dependencies to ask.
 	sel wsEnvironmentSelector
 
 	// Dependencies to execute.
-	ws             wsEnvironmentReader
-	identity       identityService
-	interpolator   interpolator
-	newEnvDeployer func() (envDeployer, error)
+	ws              wsEnvironmentReader
+	identity        identityService
+	newInterpolator func(app, env string) interpolator
+	newEnvDeployer  func() (envDeployer, error)
 
 	// Cached variables.
 	targetApp *config.Application
@@ -63,31 +64,36 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 	opts := &deployEnvOpts{
 		deployEnvVars: vars,
 
-		store: store,
-		sel:   selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
+		store:           store,
+		sessionProvider: sessProvider,
+		sel:             selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
 
-		ws:           ws,
-		identity:     identity.New(defaultSess),
-		interpolator: manifest.NewInterpolator(vars.appName, vars.name),
+		ws:              ws,
+		identity:        identity.New(defaultSess),
+		newInterpolator: newManifestInterpolator,
 
 		unmarshalManifest: manifest.UnmarshalEnvironment,
 	}
 	opts.newEnvDeployer = func() (envDeployer, error) {
-		app, err := opts.cachedTargetApp()
-		if err != nil {
-			return nil, err
-		}
-		env, err := opts.cachedTargetEnv()
-		if err != nil {
-			return nil, err
-		}
-		return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
-			App:             app,
-			Env:             env,
-			SessionProvider: sessProvider,
-		})
+		return newEnvDeployer(opts)
 	}
 	return opts, nil
+}
+
+func newEnvDeployer(opts *deployEnvOpts) (envDeployer, error) {
+	app, err := opts.cachedTargetApp()
+	if err != nil {
+		return nil, err
+	}
+	env, err := opts.cachedTargetEnv()
+	if err != nil {
+		return nil, err
+	}
+	return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
+		App:             app,
+		Env:             env,
+		SessionProvider: opts.sessionProvider,
+	})
 }
 
 // Validate is a no-op for this command.
@@ -144,7 +150,7 @@ func (o *deployEnvOpts) environmentManifest() (*manifest.Environment, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest for environment %s: %w", targetEnv.Name, err)
 	}
-	interpolated, err := o.interpolator.Interpolate(string(raw))
+	interpolated, err := o.newInterpolator(o.appName, targetEnv.Name).Interpolate(string(raw))
 	if err != nil {
 		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", targetEnv.Name, err)
 	}
