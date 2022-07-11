@@ -18,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	cmdtemplate "github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -26,7 +25,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -142,15 +140,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prompt:      prompt,
 		identity:    id,
 		appCFN:      cloudformation.New(defaultSess),
-		uploader:    template.New(),
-		newS3: func(region string) (uploader, error) {
-			sess, err := sessProvider.DefaultWithRegion(region)
-			if err != nil {
-				return nil, err
-			}
-			return s3.New(sess), nil
-		},
-		manifestWriter: ws,
 
 		sess: defaultSess,
 	}
