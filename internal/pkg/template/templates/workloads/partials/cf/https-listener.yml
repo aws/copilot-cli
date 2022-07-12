@@ -31,7 +31,7 @@ LoadBalancerDNSAlias{{$hostedZoneID}}:
     Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone {{$hostedZoneID}}"
     RecordSets:
     {{- range $alias := $aliases}}
-      - Name: {{$alias}}
+      - Name: {{quote $alias}}
         Type: A
         AliasTarget:
           {{- if eq $.WorkloadType "Backend Service"}}
@@ -51,6 +51,7 @@ HTTPSRulePriorityAction:
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
+    RulePath: !Ref RulePath
     {{- if eq .WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
@@ -75,7 +76,7 @@ HTTPListenerRuleWithDomain:
 {{- if .Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice .Aliases }}
+          Values: {{ fmtSlice (quoteSlice .Aliases) }}
 {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
@@ -123,7 +124,7 @@ HTTPSListenerRule:
 {{- if .Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice .Aliases }}
+          Values: {{ fmtSlice (quoteSlice .Aliases) }}
 {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:

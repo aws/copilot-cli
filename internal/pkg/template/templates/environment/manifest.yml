@@ -1,0 +1,77 @@
+# The manifest for the "{{.Name}}" environment.
+# Read the full specification for the "{{.Type}}" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/environment/
+
+# Your environment name will be used in naming your resources like VPC, cluster, etc.
+name: {{.Name}}
+type: {{.Type}}
+
+# Import your own VPC and subnets or configure how they should be created.
+{{- if .Network.VPC.IsEmpty}}
+# network:
+#   vpc:
+#     id:
+{{- else}}
+network:
+  {{- $vpc := .Network.VPC}}
+  vpc:
+    {{- if $vpc.ID}}
+    id: {{$vpc.ID}}
+    {{- else if $vpc.CIDR }}
+    cidr: {{$vpc.CIDR }}
+    {{- end }}
+    {{- if not $vpc.Subnets.IsEmpty}}{{- $subnets := $vpc.Subnets}}
+    subnets:
+      {{- if $subnets.Public}}
+      public:
+        {{- range $subnet := $subnets.Public}}
+        - {{- if $subnet.SubnetID}} id: {{$subnet.SubnetID}} 
+          {{- else if $subnet.CIDR}} cidr: {{$subnet.CIDR}}
+          {{if $subnet.AZ -}} az: {{$subnet.AZ}} {{- end}}
+          {{- end}}{{/* if $subnet.SubnetID */}}
+        {{- end}}{{/* range $subnet := $subnets.Public */}}
+      {{- end}}{{/* if $subnets.Public */}}
+      {{- if $subnets.Private}}
+      private:
+        {{- range $subnet := $subnets.Private}}
+        - {{- if $subnet.SubnetID}} id: {{$subnet.SubnetID}} 
+          {{- else if $subnet.CIDR}} cidr: {{$subnet.CIDR}}
+          {{if $subnet.AZ -}} az: {{$subnet.AZ}} {{- end}}
+          {{- end}}{{/* if $subnet.SubnetID */}}
+        {{- end}}{{/* range $subnet := $subnets.Private */}}
+      {{- end}}{{/* if $subnets.Private */}}
+    {{- end}}{{/* if not $vpc.Subnets.IsEmpty */}}
+{{- end}}{{/* if .Network.VPC.IsEmpty */}}
+
+# Configure the load balancers in your environment, once created.
+{{- if .HTTPConfig.IsEmpty}}
+# http:
+#   public:
+#   private:
+{{- else}}
+http:
+  {{- if not .HTTPConfig.Public.IsEmpty}}{{$publicHTTP := .HTTPConfig.Public}}
+  public:
+    {{- if $publicHTTP.Certificates}}
+    certificates: {{fmtStringSlice $publicHTTP.Certificates}}
+    {{- end}}
+  {{- end}}
+  {{- if not .HTTPConfig.Private.IsEmpty}}{{$privateHTTP := .HTTPConfig.Private}}
+  private:
+    {{- if $privateHTTP.Certificates}}
+    certificates: {{fmtStringSlice $privateHTTP.Certificates}}
+    {{- end}}
+    {{- if $privateHTTP.InternalALBSubnets}}
+    subnets: {{$privateHTTP.InternalALBSubnets}}
+    {{- end}}
+  {{- end}}
+{{- end}}
+
+# Configure observability for your environment resources.
+{{- if not .Observability.ContainerInsights}}
+# observability:
+#   container_insights: true
+{{- else}}
+observability:
+  container_insights: {{.Observability.ContainerInsights}}
+{{- end}}

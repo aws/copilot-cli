@@ -61,7 +61,7 @@ observability:
 			}(),
 			wantedFileName: "template-with-imported-certs-observability.yml",
 		},
-
+    
 		"generate template with embedded manifest file with custom security groups added by te customer": {
 			input: func() *deploy.CreateEnvironmentInput {
 				var mft manifest.Environment
@@ -111,8 +111,8 @@ network:
 
 			wantedFileName: "template-with-custom-security-group.yml",
 		},
+    
 		"generate template with custom resources": {
-
 			input: func() *deploy.CreateEnvironmentInput {
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(`

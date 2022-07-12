@@ -458,7 +458,7 @@ func (p Pipeline) Validate() error {
 // Validate returns nil if deployments are configured correctly.
 func (d Deployments) Validate() error {
 	names := make(map[string]bool)
-	for name, _ := range d {
+	for name := range d {
 		names[name] = true
 	}
 
@@ -1245,6 +1245,9 @@ func (v vpcConfig) Validate() error {
 	if err := v.Placement.Validate(); err != nil {
 		return fmt.Errorf(`validate "placement": %w`, err)
 	}
+	if err := v.SecurityGroups.Validate(); err != nil {
+		return fmt.Errorf(`validate "security_groups": %w`, err)
+	}
 	return nil
 }
 
@@ -1275,6 +1278,19 @@ func (p PlacementString) Validate() error {
 		}
 	}
 	return fmt.Errorf(`"placement" %s must be one of %s`, string(p), strings.Join(subnetPlacements, ", "))
+}
+
+// Validate is a no-op for SecurityGroupsIDsOrConfig.
+func (s SecurityGroupsIDsOrConfig) Validate() error {
+	if s.isEmpty() {
+		return nil
+	}
+	return s.AdvancedConfig.Validate()
+}
+
+// Validate is a no-op for SecurityGroupsConfig.
+func (SecurityGroupsConfig) Validate() error {
+	return nil
 }
 
 // Validate returns nil if AppRunnerInstanceConfig is configured correctly.

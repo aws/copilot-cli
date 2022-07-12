@@ -128,39 +128,36 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 	}{
 		"fail to read manifest": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
-				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return(nil, errors.New("some error"))
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return(nil, errors.New("some error"))
 			},
-			wantedErr: errors.New("read manifest for environment mockEnv: some error"),
+			wantedErr: errors.New(`read manifest for environment "mockEnv": some error`),
 		},
 		"fail to interpolate manifest": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
-				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return([]byte("mock manifest"), nil)
-				m.interpolator.EXPECT().Interpolate("mock manifest").Return("", errors.New("some error"))
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("", errors.New("some error"))
 			},
-			wantedErr: errors.New("interpolate environment variables for mockEnv manifest: some error"),
+			wantedErr: errors.New(`interpolate environment variables for "mockEnv" manifest: some error`),
 		},
 		"fail to unmarshal manifest": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
-				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return([]byte("mock manifest"), nil)
-				m.interpolator.EXPECT().Interpolate("mock manifest").Return("mock interpolated manifest", nil)
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("failing manifest format", nil)
 			},
-			unmarshalManifest: func(_ []byte) (*manifest.Environment, error) {
-				return nil, errors.New("some error")
-			},
-			wantedErr: errors.New("unmarshal environment manifest for mockEnv: some error"),
+			wantedErr: errors.New(`unmarshal environment manifest for "mockEnv"`),
 		},
 		"fail to get caller identity": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
-				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return([]byte("mock manifest"), nil)
-				m.interpolator.EXPECT().Interpolate("mock manifest").Return("mock interpolated manifest", nil)
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{}, errors.New("some error"))
 			},
 			wantedErr: errors.New("get identity: some error"),
 		},
 		"fail to upload manifest": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
-				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return([]byte("mock manifest"), nil)
-				m.interpolator.EXPECT().Interpolate("mock manifest").Return("mock interpolated manifest", nil)
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "mockRootUserARN",
 				}, nil)
@@ -170,8 +167,8 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		},
 		"fail to deploy the environment": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
-				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return([]byte("mock manifest"), nil)
-				m.interpolator.EXPECT().Interpolate("mock manifest").Return("mock interpolated manifest", nil)
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "mockRootUserARN",
 				}, nil)
@@ -186,8 +183,8 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 		},
 		"success": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
-				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return([]byte("mock manifest"), nil)
-				m.interpolator.EXPECT().Interpolate("mock manifest").Return("mock interpolated manifest", nil)
+				m.ws.EXPECT().ReadEnvironmentManifest("mockEnv").Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
+				m.interpolator.EXPECT().Interpolate("name: mockEnv\ntype: Environment\n").Return("name: mockEnv\ntype: Environment\n", nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "mockRootUserARN",
 				}, nil)
@@ -202,6 +199,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 					require.Equal(t, in.Manifest, &manifest.Environment{
 						Workload: manifest.Workload{
 							Name: aws.String("mockEnv"),
+							Type: aws.String("Environment"),
 						},
 					})
 					return nil
@@ -224,29 +222,21 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				deployEnvVars: deployEnvVars{
 					name: "mockEnv",
 				},
-				ws:           m.ws,
-				deployer:     m.deployer,
-				identity:     m.identity,
-				interpolator: m.interpolator,
+				ws:       m.ws,
+				identity: m.identity,
+				newEnvDeployer: func() (envDeployer, error) {
+					return m.deployer, nil
+				},
+				newInterpolator: func(s string, s2 string) interpolator {
+					return m.interpolator
+				},
 				targetEnv: &config.Environment{
 					Name: "mockEnv",
 				},
-				unmarshalManifest: func() func(in []byte) (*manifest.Environment, error) {
-					if tc.unmarshalManifest != nil {
-						return tc.unmarshalManifest
-					}
-					return func(_ []byte) (*manifest.Environment, error) {
-						return &manifest.Environment{
-							Workload: manifest.Workload{
-								Name: aws.String("mockEnv"),
-							},
-						}, nil
-					}
-				}(),
 			}
 			err := opts.Execute()
 			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
+				require.Contains(t, err.Error(), tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
 			}

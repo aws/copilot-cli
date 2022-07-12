@@ -59,8 +59,8 @@ func TestResumeSvcOpts_Ask(t *testing.T) {
 				)
 				m.sel.EXPECT().DeployedService(fmt.Sprintf(svcResumeSvcNamePrompt, testAppName), svcResumeSvcNameHelpPrompt, "phonetool", gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: "test",
-						Svc: "api",
+						Env:  "test",
+						Name: "api",
 					}, nil) // Let prompter handles the case when svc(env) is definite.
 			},
 			wantedApp: testAppName,
@@ -78,8 +78,8 @@ func TestResumeSvcOpts_Ask(t *testing.T) {
 				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 				m.sel.EXPECT().DeployedService(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: testEnvName,
-						Svc: testSvcName,
+						Env:  testEnvName,
+						Name: testSvcName,
 					}, nil).AnyTimes()
 			},
 			wantedApp: testAppName,
@@ -105,8 +105,8 @@ func TestResumeSvcOpts_Ask(t *testing.T) {
 				m.sel.EXPECT().DeployedService("Which service of phonetool would you like to resume?",
 					svcResumeSvcNameHelpPrompt, testAppName, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(&selector.DeployedService{
-						Env: testEnvName,
-						Svc: testSvcName,
+						Env:  testEnvName,
+						Name: testSvcName,
 					}, nil)
 			},
 			wantedApp: testAppName,

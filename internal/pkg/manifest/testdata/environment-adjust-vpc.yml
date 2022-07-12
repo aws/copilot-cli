@@ -1,0 +1,32 @@
+# The manifest for the "test" environment.
+# Read the full specification for the "Environment" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/environment/
+
+# Your environment name will be used in naming your resources like VPC, cluster, etc.
+name: test
+type: Environment
+
+# Import your own VPC and subnets or configure how they should be created.
+network:
+  vpc:
+    cidr: mock-cidr-0
+    subnets:
+      public:
+        - cidr: mock-cidr-1
+          az: mock-az-1
+        - cidr: mock-cidr-2
+          az: mock-az-2
+      private:
+        - cidr: mock-cidr-3
+          az: mock-az-1
+        - cidr: mock-cidr-4
+          az: mock-az-2
+
+# Configure the load balancers in your environment, once created.
+http:
+  public:
+    certificates: [mock-cert-1, mock-cert-2]
+
+# Configure observability for your environment resources.
+observability:
+  container_insights: false

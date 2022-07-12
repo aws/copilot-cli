@@ -117,11 +117,12 @@ type location interface {
 // wkld represents a generic containerized workload.
 // A workload can be a long-running service, an ephemeral task, or a periodic task.
 type wkld struct {
-	name  string
-	env   string
-	app   string
-	rc    RuntimeConfig
-	image location
+	name        string
+	env         string
+	app         string
+	rc          RuntimeConfig
+	image       location
+	rawManifest []byte // Content of the manifest file without any transformations.
 
 	parser template.Parser
 	addons addons

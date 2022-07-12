@@ -696,7 +696,11 @@ func (o *runTaskOpts) generateCommand() error {
 	if err != nil {
 		return err
 	}
-	log.Infoln(command.CLIString())
+	cliString, err := command.CLIString()
+	if err != nil {
+		return err
+	}
+	log.Infoln(cliString)
 	return nil
 }
 

@@ -1,5 +1,4 @@
-//go:build integration || localintegration || temporary
-// +build integration localintegration temporary
+//go:build integration || localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -79,11 +78,15 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 		require.True(t, ok)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
-
+		envConfig := &manifest.Environment{
+			Workload: manifest.Workload{
+				Name: &tc.envName,
+			},
+		}
 		serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-			App:      &config.Application{Name: appName, Domain: "example.com"},
-			Env:      &config.Environment{Name: tc.envName},
-			Manifest: v,
+			App:         &config.Application{Name: appName, Domain: "example.com"},
+			EnvManifest: envConfig,
+			Manifest:    v,
 			RuntimeConfig: stack.RuntimeConfig{
 				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 				AccountID:                "123456789123",

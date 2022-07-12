@@ -2,6 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a request driven web service on AWS App Runner.
+{{- if .SerializedManifest }}
+Metadata:
+  Manifest: |
+{{indent 4 .SerializedManifest}}
+{{- end }}
 Parameters:
   AppName:
     Type: String
@@ -185,7 +190,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           -
             Effect: Allow

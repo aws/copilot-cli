@@ -4,7 +4,10 @@
 package sessions
 
 import (
+	"context"
 	"errors"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions/mocks"
+	"github.com/golang/mock/gomock"
 	"os"
 	"testing"
 
@@ -171,6 +174,13 @@ func TestProvider_FromProfile(t *testing.T) {
 	})
 
 	t.Run("region information present", func(t *testing.T) {
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		m := mocks.NewMocksessionValidator(ctrl)
+		m.EXPECT().ValidateCredentials(gomock.Any()).Return(credentials.Value{}, nil)
+
 		ogRegion := os.Getenv("AWS_REGION")
 		defer func() {
 			err := restoreEnvVar("AWS_REGION", ogRegion)
@@ -183,11 +193,46 @@ func TestProvider_FromProfile(t *testing.T) {
 		require.NoError(t, err)
 
 		// WHEN
-		sess, err := ImmutableProvider().FromProfile("walk-like-an-egyptian")
+		provider := &Provider{
+			sessionValidator: m,
+		}
+
+		sess, err := provider.FromProfile("walk-like-an-egyptian")
 
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, "us-west-2", *sess.Config.Region)
+	})
+
+	t.Run("session credentials are incorrect", func(t *testing.T) {
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		m := mocks.NewMocksessionValidator(ctrl)
+		m.EXPECT().ValidateCredentials(gomock.Any()).Return(credentials.Value{}, context.DeadlineExceeded)
+
+		ogRegion := os.Getenv("AWS_REGION")
+		defer func() {
+			err := restoreEnvVar("AWS_REGION", ogRegion)
+			require.NoError(t, err)
+		}()
+
+		// Since "walk-like-an-egyptian" is (very likely) a non-existent profile, whether the region information
+		// is missing depends on whether the `AWS_REGION` environment variable is set.
+		err := os.Setenv("AWS_REGION", "us-west-2")
+		require.NoError(t, err)
+
+		// WHEN
+		provider := &Provider{
+			sessionValidator: m,
+		}
+
+		sess, err := provider.FromProfile("walk-like-an-egyptian")
+
+		// THEN
+		require.EqualError(t, err, "context deadline exceeded")
+		require.Nil(t, sess)
 	})
 }
 

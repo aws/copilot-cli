@@ -184,7 +184,7 @@ type templater interface {
 	Template() (string, error)
 }
 
-type runner interface {
+type execRunner interface {
 	Run(name string, args []string, options ...exec.CmdOption) error
 }
 
@@ -224,12 +224,21 @@ type describer interface {
 	Describe() (describe.HumanJSONStringer, error)
 }
 
+type workloadDescriber interface {
+	describer
+	Manifest(string) ([]byte, error)
+}
+
 type wsFileDeleter interface {
 	DeleteWorkspaceFile() error
 }
 
 type manifestReader interface {
 	ReadWorkloadManifest(name string) (workspace.WorkloadManifest, error)
+}
+
+type environmentManifestWriter interface {
+	WriteEnvironmentManifest(encoding.BinaryMarshaler, string) (string, error)
 }
 
 type workspacePathGetter interface {
@@ -484,7 +493,8 @@ type configSelector interface {
 
 type deploySelector interface {
 	appSelector
-	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedServiceOpts) (*selector.DeployedService, error)
+	DeployedService(prompt, help string, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedService, error)
+	DeployedJob(prompt, help string, app string, opts ...selector.GetDeployedWorkloadOpts) (*selector.DeployedJob, error)
 }
 
 type pipelineEnvSelector interface {
@@ -617,7 +627,7 @@ type publicIPGetter interface {
 }
 
 type cliStringer interface {
-	CLIString() string
+	CLIString() (string, error)
 }
 
 type secretPutter interface {
@@ -644,7 +654,16 @@ type workloadTemplateGenerator interface {
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
 }
 
+type runner interface {
+	Run() error
+}
+
 type envDeployer interface {
 	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
+	UploadArtifacts() (map[string]string, error)
+}
+
+type envPackager interface {
+	GenerateCloudFormationTemplate(in *clideploy.DeployEnvironmentInput) (*clideploy.GenerateCloudFormationTemplateOutput, error)
 	UploadArtifacts() (map[string]string, error)
 }

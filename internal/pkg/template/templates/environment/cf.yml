@@ -3,9 +3,9 @@
 Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
   Version: {{ .LatestVersion }}
-{{- if .Manifest }}
+{{- if .SerializedManifest }}
   Manifest: |
-{{indent 4 .Manifest}}
+{{indent 4 .SerializedManifest}}
 {{- end}}
 Parameters:
   AppName:
@@ -56,6 +56,10 @@ Conditions:
   HasAliases:
     !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
+{{include "bootstrap-resources" . | indent 2}}
+{{- if .CDNConfig}}
+{{include "cdn-resources" . | indent 2}}
+{{- end}}
 {{- if not .VPCConfig.Imported}}
 {{include "vpc-resources" .VPCConfig.Managed | indent 2}}
 {{include "nat-gateways" .VPCConfig.Managed | indent 2}}
@@ -400,7 +404,7 @@ Resources:
         Status: ENABLED
       Encrypted: true
       FileSystemPolicy:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Id: CopilotEFSPolicy
         Statement:
           - Sid: AllowIAMFromTaggedRoles
@@ -473,8 +477,6 @@ Resources:
         - !Ref EFSSecurityGroup
 {{- end}}
 {{- end}}
-{{include "cfn-execution-role" . | indent 2}}
-{{include "environment-manager-role" . | indent 2}}
 {{- if not .PublicImportedCertARNs}}
 {{include "custom-resources-role" . | indent 2}}
   EnvironmentHostedZone:

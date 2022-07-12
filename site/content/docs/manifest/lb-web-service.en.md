@@ -38,8 +38,15 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         memory: 512
         count:
           range: 1-10
+          cooldown:
+            in: 30s
+            out: 60s
           cpu_percentage: 70
-          memory_percentage: 80
+          memory_percentage:
+            value: 80
+            cooldown:
+              in: 80s
+              out: 160s
           requests: 10000
           response_time: 2s
         exec: true
@@ -166,8 +173,15 @@ Alternatively, you can specify a map for setting up autoscaling:
 ```yaml
 count:
   range: 1-10
+  cooldown:
+    in: 30s
+    out: 60s
   cpu_percentage: 70
-  memory_percentage: 80
+  memory_percentage:
+    value: 80
+    cooldown:
+      in: 80s
+      out: 160s
   requests: 10000
   response_time: 2s
 ```
@@ -192,25 +206,43 @@ count:
 
 This will set your range as 1-10 as above, but will place the first two copies of your service on dedicated Fargate capacity. If your service scales to 3 or higher, the third and any additional copies will be placed on Spot until the maximum is reached.
 
-<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>  
+<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
 The minimum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>  
+<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
 The maximum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>  
+<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
 The desired count at which you wish to start placing your service using Fargate Spot capacity providers.
 
-<span class="parent-field">count.</span><a id="count-cpu-percentage" href="#count-cpu-percentage" class="field">`cpu_percentage`</a> <span class="type">Integer</span>  
+<span class="parent-field">count.</span><a id="count-cooldown" href="#count-cooldown" class="field">`cooldown`</a> <span class="type">Map</span>
+Cooldown scaling fields that are used as the default cooldown for all autoscaling fields specified.
+
+<span class="parent-field">count.cooldown.</span><a id="count-cooldown-in" href="#count-cooldown-in" class="field">`in`</a> <span class="type">Duration</span>
+The cooldown time for autoscaling fields to scale up the service.
+
+<span class="parent-field">count.cooldown.</span><a id="count-cooldown-out" href="#count-cooldown-out" class="field">`out`</a> <span class="type">Duration</span>
+The cooldown time for autoscaling fields to scale down the service.
+
+The following options `cpu_percentage`, `memory_percentage`, `requests` and `response_time` are autoscaling fields for `count` which can be defined either as the value of the field, or as a Map containing advanced information about the field's `value` and `cooldown`:
+```yaml
+value: 50
+cooldown:
+  in: 30s
+  out: 60s
+```
+The cooldown specified here will override the default cooldown.
+
+<span class="parent-field">count.</span><a id="count-cpu-percentage" href="#count-cpu-percentage" class="field">`cpu_percentage`</a> <span class="type">Integer or Map</span>
 Scale up or down based on the average CPU your service should maintain.
 
-<span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>  
+<span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer or Map</span>
 Scale up or down based on the average memory your service should maintain.
 
-<span class="parent-field">count.</span><a id="requests" href="#count-requests" class="field">`requests`</a> <span class="type">Integer</span>  
+<span class="parent-field">count.</span><a id="requests" href="#count-requests" class="field">`requests`</a> <span class="type">Integer or Map</span>
 Scale up or down based on the request count handled per task.
 
-<span class="parent-field">count.</span><a id="response-time" href="#count-response-time" class="field">`response_time`</a> <span class="type">Duration</span>  
+<span class="parent-field">count.</span><a id="response-time" href="#count-response-time" class="field">`response_time`</a> <span class="type">Duration or Map</span>
 Scale up or down based on the service average response time.
 
 {% include 'exec.en.md' %}
