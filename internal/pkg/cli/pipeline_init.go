@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
+	"github.com/aws/copilot-cli/internal/pkg/utils"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -72,6 +73,13 @@ const (
 	fmtBBRepoURL = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName"
 )
 
+const (
+	pipelineTypeWorkloads    = "Workloads"
+	pipelineTypeEnvironments = "Environments"
+)
+
+var pipelineTypes = []string{pipelineTypeWorkloads, pipelineTypeEnvironments}
+
 var (
 	// Filled in via the -ldflags flag at compile time to support pipeline buildspec CLI pulling.
 	binaryS3BucketPath string
@@ -89,6 +97,7 @@ type initPipelineVars struct {
 	repoURL           string
 	repoBranch        string
 	githubAccessToken string
+	typ               string
 }
 
 type initPipelineOpts struct {
@@ -189,6 +198,10 @@ func (o *initPipelineOpts) Ask() error {
 	}
 
 	if err := o.askOrValidatePipelineName(); err != nil {
+		return err
+	}
+
+	if err := o.askOrValidatePipelineType(); err != nil {
 		return err
 	}
 
@@ -315,6 +328,35 @@ func (o *initPipelineOpts) askPipelineName() error {
 	}
 
 	o.name = name
+	return nil
+}
+
+func (o *initPipelineOpts) askOrValidatePipelineType() error {
+	if o.typ != "" {
+		for _, typ := range pipelineTypes {
+			if o.typ == typ {
+				return nil
+			}
+		}
+		return fmt.Errorf("invalid pipeline type %q; must be one of %s", o.typ, english.WordSeries(utils.QuoteStringSlice(pipelineTypes), "or"))
+	}
+
+	typ, err := o.prompt.SelectOption("What type of continuous delivery pipeline is this?",
+		"A pipeline can be set up to deploy either your workloads or your environments",
+		[]prompt.Option{
+			{
+				Value: pipelineTypeWorkloads,
+				Hint:  "Deploy the workloads in your workspace",
+			},
+			{
+				Value: pipelineTypeEnvironments,
+				Hint:  "Deploy the environments in your workspace",
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("prompt for pipeline type: %w", err)
+	}
+	o.typ = typ
 	return nil
 }
 
@@ -817,6 +859,6 @@ func buildPipelineInitCmd() *cobra.Command {
 	_ = cmd.Flags().MarkHidden(githubAccessTokenFlag)
 	cmd.Flags().StringVarP(&vars.repoBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&vars.environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
-
+	cmd.Flags().StringVar(&vars.typ, pipelineTypeFlag, "", pipelineTypeFlagDescription)
 	return cmd
 }

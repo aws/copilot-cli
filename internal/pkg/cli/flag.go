@@ -47,15 +47,18 @@ const (
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
 	resourcesFlag         = "resources"
+
 	githubURLFlag         = "github-url"
 	repoURLFlag           = "url"
 	githubAccessTokenFlag = "github-access-token"
 	gitBranchFlag         = "git-branch"
 	envsFlag              = "environments"
-	domainNameFlag        = "domain"
-	localFlag             = "local"
-	deleteSecretFlag      = "delete-secret"
-	svcPortFlag           = "port"
+	pipelineTypeFlag      = "pipeline-type"
+
+	domainNameFlag   = "domain"
+	localFlag        = "local"
+	deleteSecretFlag = "delete-secret"
+	svcPortFlag      = "port"
 
 	noSubscriptionFlag  = "no-subscribe"
 	subscribeTopicsFlag = "subscribe-topics"
@@ -237,6 +240,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
+	pipelineTypeFlagDescription      = `The type of pipeline. Must be either "Workloads" or "Environments".`
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	envResourcesFlagDescription      = "Optional. Show the resources in your environment."
 	svcResourcesFlagDescription      = "Optional. Show the resources in your service."
