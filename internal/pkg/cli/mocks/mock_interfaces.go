@@ -3166,36 +3166,6 @@ func (mr *MockcustomResourcesUploaderMockRecorder) UploadEnvironmentCustomResour
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadEnvironmentCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadEnvironmentCustomResources), upload)
 }
 
-// UploadNetworkLoadBalancedWebServiceCustomResources mocks base method.
-func (m *MockcustomResourcesUploader) UploadNetworkLoadBalancedWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadNetworkLoadBalancedWebServiceCustomResources", upload)
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UploadNetworkLoadBalancedWebServiceCustomResources indicates an expected call of UploadNetworkLoadBalancedWebServiceCustomResources.
-func (mr *MockcustomResourcesUploaderMockRecorder) UploadNetworkLoadBalancedWebServiceCustomResources(upload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadNetworkLoadBalancedWebServiceCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadNetworkLoadBalancedWebServiceCustomResources), upload)
-}
-
-// UploadRequestDrivenWebServiceCustomResources mocks base method.
-func (m *MockcustomResourcesUploader) UploadRequestDrivenWebServiceCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadRequestDrivenWebServiceCustomResources", upload)
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UploadRequestDrivenWebServiceCustomResources indicates an expected call of UploadRequestDrivenWebServiceCustomResources.
-func (mr *MockcustomResourcesUploaderMockRecorder) UploadRequestDrivenWebServiceCustomResources(upload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadRequestDrivenWebServiceCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadRequestDrivenWebServiceCustomResources), upload)
-}
-
 // MockbucketEmptier is a mock of bucketEmptier interface.
 type MockbucketEmptier struct {
 	ctrl     *gomock.Controller
@@ -3877,6 +3847,20 @@ func (m *MocktaskRunner) EXPECT() *MocktaskRunnerMockRecorder {
 	return m.recorder
 }
 
+// CheckNonZeroExitCode mocks base method.
+func (m *MocktaskRunner) CheckNonZeroExitCode(arg0 []*task.Task) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckNonZeroExitCode", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckNonZeroExitCode indicates an expected call of CheckNonZeroExitCode.
+func (mr *MocktaskRunnerMockRecorder) CheckNonZeroExitCode(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckNonZeroExitCode", reflect.TypeOf((*MocktaskRunner)(nil).CheckNonZeroExitCode), arg0)
+}
+
 // Run mocks base method.
 func (m *MocktaskRunner) Run() ([]*task.Task, error) {
 	m.ctrl.T.Helper()
@@ -3890,20 +3874,6 @@ func (m *MocktaskRunner) Run() ([]*task.Task, error) {
 func (mr *MocktaskRunnerMockRecorder) Run() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MocktaskRunner)(nil).Run))
-}
-
-// CheckNonZeroExitCode mocks base method.
-func (m *MocktaskRunner) CheckNonZeroExitCode(tasks []*task.Task) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckNonZeroExitCode", tasks)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CheckNonZeroExitCode indicates an expected call of CheckNonZeroExitCode.
-func (mr *MocktaskRunnerMockRecorder) CheckNonZeroExitCode(tasks []*task.Task) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckNonZeroExitCode", reflect.TypeOf((*MocktaskRunner)(nil).CheckNonZeroExitCode), tasks)
 }
 
 // MockdefaultClusterGetter is a mock of defaultClusterGetter interface.
@@ -6729,6 +6699,20 @@ func (m *MockworkloadDeployer) EXPECT() *MockworkloadDeployerMockRecorder {
 	return m.recorder
 }
 
+// AddonBuilder mocks base method.
+func (m *MockworkloadDeployer) AddonBuilder() deploy.StackBuilder {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddonBuilder")
+	ret0, _ := ret[0].(deploy.StackBuilder)
+	return ret0
+}
+
+// AddonBuilder indicates an expected call of AddonBuilder.
+func (mr *MockworkloadDeployerMockRecorder) AddonBuilder() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonBuilder", reflect.TypeOf((*MockworkloadDeployer)(nil).AddonBuilder))
+}
+
 // DeployWorkload mocks base method.
 func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (deploy.ActionRecommender, error) {
 	m.ctrl.T.Helper()
@@ -6795,6 +6779,20 @@ func NewMockworkloadTemplateGenerator(ctrl *gomock.Controller) *MockworkloadTemp
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockworkloadTemplateGenerator) EXPECT() *MockworkloadTemplateGeneratorMockRecorder {
 	return m.recorder
+}
+
+// AddonBuilder mocks base method.
+func (m *MockworkloadTemplateGenerator) AddonBuilder() deploy.StackBuilder {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddonBuilder")
+	ret0, _ := ret[0].(deploy.StackBuilder)
+	return ret0
+}
+
+// AddonBuilder indicates an expected call of AddonBuilder.
+func (mr *MockworkloadTemplateGeneratorMockRecorder) AddonBuilder() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonBuilder", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).AddonBuilder))
 }
 
 // GenerateCloudFormationTemplate mocks base method.

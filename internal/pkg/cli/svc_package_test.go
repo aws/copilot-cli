@@ -263,12 +263,7 @@ count: 1`
 					return m.mft, nil
 				},
 				rootUserARN: mockARN,
-
-				ws: m.ws,
-				initAddonsClient: func(opts *packageSvcOpts) error {
-					opts.addonsClient = m.addons
-					return nil
-				},
+				ws:          m.ws,
 				newInterpolator: func(_, _ string) interpolator {
 					return m.interpolator
 				},

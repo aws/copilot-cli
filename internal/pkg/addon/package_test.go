@@ -210,10 +210,10 @@ Resources:
 			a := &Addons{
 				wlName:   wlName,
 				wsPath:   wsPath,
-				Uploader: mocks.uploader,
+				uploader: mocks.uploader,
 				ws:       mocks.ws,
 				fs:       &afero.Afero{Fs: fs},
-				Bucket:   bucket,
+				bucket:   bucket,
 			}
 
 			tmpl := newCFNTemplate("merged")
