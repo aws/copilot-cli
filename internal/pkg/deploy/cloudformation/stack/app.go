@@ -44,7 +44,7 @@ type AppStackConfig struct {
 type AppRegionalResources struct {
 	Region         string            // The region these resources are in.
 	KMSKeyARN      string            // A KMS Key ARN for encrypting Pipeline artifacts.
-	S3Bucket       string            // S3 bucket for Pipeline artifacts.
+	S3Bucket       string            // A bucket used for any Copilot artifacts that must be stored in S3 (pipelines, env files, etc)
 	RepositoryURLs map[string]string // The image repository URLs by service name.
 }
 
@@ -54,13 +54,16 @@ const (
 	appAdminRoleParamName         = "AdminRoleName"
 	appExecutionRoleParamName     = "ExecutionRoleName"
 	appDNSDelegationRoleParamName = "DNSDelegationRoleName"
-	appOutputKMSKey               = "KMSKeyARN"
-	appOutputS3Bucket             = "PipelineBucket"
-	appOutputECRRepoPrefix        = "ECRRepo"
-	appDNSDelegatedAccountsKey    = "AppDNSDelegatedAccounts"
-	appDomainNameKey              = "AppDomainName"
-	appDomainHostedZoneIDKey      = "AppDomainHostedZoneID"
-	appNameKey                    = "AppName"
+	// Linked to AppRegionalResources.KMSKeyARN
+	appOutputKMSKey = "KMSKeyARN"
+	// Linked to AppRegionalResources.S3Bucket
+	appOutputS3Bucket = "PipelineBucket"
+	// Linked to AppRegionalResources.RepositoryURLs
+	appOutputECRRepoPrefix     = "ECRRepo"
+	appDNSDelegatedAccountsKey = "AppDNSDelegatedAccounts"
+	appDomainNameKey           = "AppDomainName"
+	appDomainHostedZoneIDKey   = "AppDomainHostedZoneID"
+	appNameKey                 = "AppName"
 
 	// arn:${partition}:iam::${account}:role/${roleName}
 	fmtStackSetAdminRoleARN = "arn:%s:iam::%s:role/%s"

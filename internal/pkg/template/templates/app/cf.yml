@@ -119,7 +119,7 @@ Outputs:
     Export:
       Name: {{$app}}-ArtifactKey
   PipelineBucket:
-    Description: Bucket used for CodePipeline to stage resources in.
+    Description: "A bucket used for any Copilot artifacts that must be stored in S3 (pipelines, env files, etc)"
     Value: !Ref PipelineBuiltArtifactBucket
 {{- range $service := $services}} 
   ECRRepo{{logicalIDSafe $service}}:
