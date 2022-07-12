@@ -184,7 +184,7 @@ func TestPackageJobOpts_Ask(t *testing.T) {
 
 			mockSelector := mocks.NewMockwsSelector(ctrl)
 			mockPrompt := mocks.NewMockprompter(ctrl)
-			mockRunner := mocks.NewMockrunner(ctrl)
+			mockRunner := mocks.NewMockexecRunner(ctrl)
 
 			tc.expectSelector(mockSelector)
 			tc.expectPrompt(mockPrompt)

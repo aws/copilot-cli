@@ -68,7 +68,7 @@ var _ = Describe("pipeline flow", func() {
 		})
 	})
 
-	Context("when creating a new environment", func() {
+	Context("when adding a new environment", func() {
 		It("test env init should succeed", func() {
 			_, err := copilot.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
@@ -100,6 +100,23 @@ var _ = Describe("pipeline flow", func() {
 
 			Expect(envs["test"]).NotTo(BeNil())
 			Expect(envs["prod"]).NotTo(BeNil())
+		})
+	})
+
+	Context("when deploying the environments", func() {
+		It("test env deploy should succeed", func() {
+			_, err := copilot.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "test",
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("prod env deploy should succeed", func() {
+			_, err := copilot.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "prod",
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 

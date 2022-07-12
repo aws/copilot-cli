@@ -72,7 +72,7 @@ Resources:
                 - Grants CRUD access to MyTable
                 - {Table: !Ref MyTable}
             PolicyDocument:
-                Version: 2012-10-17
+                Version: '2012-10-17'
                 Statement:
                     - Sid: DDBActions
                       Effect: Allow
@@ -115,7 +115,7 @@ Resources:
                 - Grants CRUD access to MyBucket
                 - {Bucket: !Ref MyBucket}
             PolicyDocument:
-                Version: 2012-10-17
+                Version: '2012-10-17'
                 Statement:
                     - Sid: S3ObjectActions
                       Effect: Allow

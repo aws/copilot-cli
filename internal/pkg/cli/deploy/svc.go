@@ -163,6 +163,7 @@ type workloadDeployer struct {
 	imageTag      string
 	resources     *stack.AppRegionalResources
 	mft           interface{}
+	rawMft        []byte
 	workspacePath string
 
 	// Dependencies.
@@ -207,7 +208,8 @@ type WorkloadDeployerInput struct {
 	App               *config.Application
 	Env               *config.Environment
 	ImageTag          string
-	Mft               interface{}
+	Mft               interface{} // Interpolated, applied, and unmarshaled manifest.
+	RawMft            []byte      // Content of the manifest file without any transformations.
 	UploadAddonAssets bool
 }
 
@@ -280,7 +282,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		envSess:                  envSession,
 		store:                    store,
 
-		mft: in.Mft,
+		mft:    in.Mft,
+		rawMft: in.RawMft,
 	}, nil
 }
 
@@ -1042,6 +1045,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		App:           d.app,
 		EnvManifest:   envConfig,
 		Manifest:      d.lbMft,
+		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 		RootUserARN:   in.RootUserARN,
 		Addons:        d.addons,
@@ -1074,6 +1078,7 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		App:           d.app,
 		EnvManifest:   envConfig,
 		Manifest:      d.backendMft,
+		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 		Addons:        d.addons,
 	})
@@ -1103,15 +1108,16 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		log.Errorf(rdwsAliasUsedWithoutDomainFriendlyText)
 		return nil, errors.New("alias specified when application is not associated with a domain")
 	}
-	appInfo := deploy.AppInformation{
-		Name:                d.app.Name,
-		Domain:              d.app.Domain,
-		AccountPrincipalARN: in.RootUserARN,
-	}
+
 	conf, err := stack.NewRequestDrivenWebService(stack.RequestDrivenWebServiceConfig{
-		App:           appInfo,
-		EnvName:       d.env.Name,
+		App: deploy.AppInformation{
+			Name:                d.app.Name,
+			Domain:              d.app.Domain,
+			AccountPrincipalARN: in.RootUserARN,
+		},
+		Env:           d.env.Name,
 		Manifest:      d.rdwsMft,
+		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 		Addons:        d.addons,
 	})
@@ -1168,9 +1174,10 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 		return nil, err
 	}
 	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
-		AppName:       d.app.Name,
-		EnvName:       d.env.Name,
+		App:           d.app.Name,
+		Env:           d.env.Name,
 		Manifest:      d.wsMft,
+		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 		Addons:        d.addons,
 	})
@@ -1198,9 +1205,10 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 		return nil, err
 	}
 	conf, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
-		AppName:       d.app.Name,
-		EnvName:       d.env.Name,
+		App:           d.app.Name,
+		Env:           d.env.Name,
 		Manifest:      d.jobMft,
+		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 		Addons:        d.addons,
 	})

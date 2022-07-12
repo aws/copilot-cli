@@ -10,7 +10,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 )
 
-func describeGitChanges(r runner) (string, error) {
+func describeGitChanges(r execRunner) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if err := r.Run("git", []string{"describe", "--always"}, exec.Stdout(&stdout), exec.Stderr(&stderr)); err != nil {
@@ -20,7 +20,7 @@ func describeGitChanges(r runner) (string, error) {
 	return strings.TrimSpace(stdout.String()), nil
 }
 
-func hasUncommitedGitChanges(r runner) (bool, error) {
+func hasUncommitedGitChanges(r execRunner) (bool, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	if err := r.Run("git", []string{"status", "--porcelain"}, exec.Stdout(&stdout), exec.Stderr(&stderr)); err != nil {
@@ -33,7 +33,7 @@ func hasUncommitedGitChanges(r runner) (bool, error) {
 // If the user provided their own tag, then just use that.
 // If there is a clean git commit with no local changes, then return the git commit id.
 // Otherwise, returns the empty string.
-func imageTagFromGit(r runner, userTag string) string {
+func imageTagFromGit(r execRunner, userTag string) string {
 	if userTag != "" {
 		return userTag
 	}

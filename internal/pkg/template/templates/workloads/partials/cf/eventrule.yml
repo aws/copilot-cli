@@ -18,6 +18,7 @@ RuleRole:
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
+      Version: '2012-10-17'
       Statement:
       - Effect: Allow
         Principal:
@@ -26,6 +27,7 @@ RuleRole:
     Policies:
     - PolicyName: EventRulePolicy
       PolicyDocument:
+        Version: '2012-10-17'
         Statement:
         - Effect: Allow
           Action: states:StartExecution

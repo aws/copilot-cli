@@ -6,6 +6,7 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"io"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -115,7 +116,7 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 				sel:    m.sel,
 				store:  m.store,
 				ws:     m.ws,
-				runner: mocks.NewMockrunner(ctrl),
+				runner: mocks.NewMockexecRunner(ctrl),
 			}
 
 			// WHEN
@@ -141,6 +142,18 @@ type svcPackageExecuteMock struct {
 	addons               *clideploymocks.MockStackBuilder
 	envFeaturesDescriber *mocks.MockversionCompatibilityChecker
 	mft                  *mockWorkloadMft
+}
+
+type mockWriteCloser struct {
+	w io.Writer
+}
+
+func (wc mockWriteCloser) Write(p []byte) (n int, err error) {
+	return wc.w.Write(p)
+}
+
+func (wc mockWriteCloser) Close() error {
+	return nil
 }
 
 func TestPackageSvcOpts_Execute(t *testing.T) {
@@ -258,9 +271,9 @@ count: 1`
 			opts := &packageSvcOpts{
 				packageSvcVars: tc.inVars,
 
-				stackWriter:  stackBuf,
-				paramsWriter: paramsBuf,
-				addonsWriter: addonsBuf,
+				stackWriter:  mockWriteCloser{w: stackBuf},
+				paramsWriter: mockWriteCloser{w: paramsBuf},
+				addonsWriter: mockWriteCloser{w: addonsBuf},
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
 					return m.mft, nil
 				},

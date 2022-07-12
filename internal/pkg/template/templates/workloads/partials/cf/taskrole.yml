@@ -6,6 +6,7 @@ TaskRole:
     ManagedPolicyArns:{{range $managedPolicy := .NestedStack.PolicyOutputs}}
       - Fn::GetAtt: [{{$stackName}}, Outputs.{{$managedPolicy}}]{{end}}{{end}}{{end}}
     AssumeRolePolicyDocument:
+      Version: '2012-10-17'
       Statement:
         - Effect: Allow
           Principal:

@@ -88,33 +88,36 @@ func (e errDurationInvalid) Error() string {
 	return fmt.Sprintf("parse duration: %v", e.reason)
 }
 
+// ScheduledJobConfig contains data required to initialize a scheduled job stack.
 type ScheduledJobConfig struct {
-	AppName       string
-	EnvName       string
+	App           string
+	Env           string
 	Manifest      *manifest.ScheduledJob
+	RawManifest   []byte
 	RuntimeConfig RuntimeConfig
 	Addons        addons
 }
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
-func NewScheduledJob(conf ScheduledJobConfig) (*ScheduledJob, error) {
+func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 	parser := template.New()
 	return &ScheduledJob{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(conf.Manifest.Name),
-				env:    conf.EnvName,
-				app:    conf.AppName,
-				rc:     conf.RuntimeConfig,
-				image:  conf.Manifest.ImageConfig.Image,
-				parser: parser,
-				addons: conf.Addons,
+				name:        aws.StringValue(cfg.Manifest.Name),
+				env:         cfg.Env,
+				app:         cfg.App,
+				rc:          cfg.RuntimeConfig,
+				image:       cfg.Manifest.ImageConfig.Image,
+				rawManifest: cfg.RawManifest,
+				parser:      parser,
+				addons:      cfg.Addons,
 			},
-			logRetention:        conf.Manifest.Logging.Retention,
-			tc:                  conf.Manifest.TaskConfig,
+			logRetention:        cfg.Manifest.Logging.Retention,
+			tc:                  cfg.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest: conf.Manifest,
+		manifest: cfg.Manifest,
 		parser:   parser,
 	}, nil
 }
@@ -159,6 +162,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	}
 
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
+		SerializedManifest:       string(j.rawManifest),
 		Variables:                j.manifest.Variables,
 		Secrets:                  convertSecrets(j.manifest.Secrets),
 		WorkloadType:             manifest.ScheduledJobType,

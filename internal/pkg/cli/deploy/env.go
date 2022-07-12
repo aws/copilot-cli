@@ -25,10 +25,6 @@ import (
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
-type customResourcesUploader interface {
-	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
-}
-
 type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
 }
@@ -44,7 +40,6 @@ type envDeployer struct {
 	// Dependencies.
 	appCFN appResourcesGetter
 	// Dependencies to upload artifacts.
-	uploader   customResourcesUploader // Deprecated: after legacy is removed.
 	templateFS template.Reader
 	s3         uploader
 	// Dependencies to deploy an environment.
@@ -52,9 +47,6 @@ type envDeployer struct {
 
 	// Cached variables.
 	appRegionalResources *stack.AppRegionalResources
-
-	// Feature flags.
-	uploadCustomResourceFlag bool
 }
 
 // NewEnvDeployerInput contains information needd to construct an environment deployer.
@@ -84,7 +76,6 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 
 		appCFN:     deploycfn.New(defaultSession),
 		templateFS: template.New(),
-		uploader:   template.New(),
 		s3:         s3.New(envRegionSession),
 
 		envDeployer: deploycfn.New(envManagerSession),
@@ -97,21 +88,7 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	if d.uploadCustomResourceFlag {
-		return d.uploadCustomResources(resources.S3Bucket)
-	}
-	return d.legacyUploadCustomResources(resources.S3Bucket)
-}
-
-func (d *envDeployer) legacyUploadCustomResources(bucket string) (map[string]string, error) {
-	urls, err := d.uploader.UploadEnvironmentCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return d.s3.ZipAndUpload(bucket, key, objects...)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", bucket, err)
-	}
-	return urls, nil
+	return d.uploadCustomResources(resources.S3Bucket)
 }
 
 func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, error) {
@@ -133,6 +110,11 @@ type DeployEnvironmentInput struct {
 	RootUserARN         string
 	CustomResourcesURLs map[string]string
 	Manifest            *manifest.Environment
+}
+
+// GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
+func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput) (*GenerateCloudFormationTemplateOutput, error) {
+	return &GenerateCloudFormationTemplateOutput{}, nil
 }
 
 // DeployEnvironment deploys an environment using CloudFormation.

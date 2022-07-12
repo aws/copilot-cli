@@ -32,7 +32,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 		App: &config.Application{Name: appName},
 		EnvManifest: &manifest.Environment{
 			Workload: manifest.Workload{
-				Name: &tc.envName,
+				Name: &envName,
 			},
 		},
 		Manifest: v,
@@ -72,10 +72,15 @@ func TestScheduledJob_Validate(t *testing.T) {
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.ScheduledJob)
 	require.True(t, ok)
-	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{
-		ServiceDiscoveryEndpoint: "test.app.local",
-		CustomResourcesURL: map[string]string{
-			"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
+	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
+		App:      appName,
+		Env:      envName,
+		Manifest: v,
+		RuntimeConfig: stack.RuntimeConfig{
+			ServiceDiscoveryEndpoint: "test.app.local",
+			CustomResourcesURL: map[string]string{
+				"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
+			},
 		},
 	})
 

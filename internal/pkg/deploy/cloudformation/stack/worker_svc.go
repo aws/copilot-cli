@@ -28,32 +28,34 @@ type WorkerService struct {
 }
 
 type WorkerServiceConfig struct {
-	AppName       string
-	EnvName       string
+	App           string
+	Env           string
 	Manifest      *manifest.WorkerService
+	RawManifest   []byte
 	RuntimeConfig RuntimeConfig
 	Addons        addons
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
-func NewWorkerService(conf WorkerServiceConfig) (*WorkerService, error) {
+func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 	parser := template.New()
 	return &WorkerService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(conf.Manifest.Name),
-				env:    conf.EnvName,
-				app:    conf.AppName,
-				rc:     conf.RuntimeConfig,
-				image:  conf.Manifest.ImageConfig.Image,
-				parser: parser,
-				addons: conf.Addons,
+				name:        aws.StringValue(cfg.Manifest.Name),
+				env:         cfg.Env,
+				app:         cfg.App,
+				rc:          cfg.RuntimeConfig,
+				image:       cfg.Manifest.ImageConfig.Image,
+				rawManifest: cfg.RawManifest,
+				parser:      parser,
+				addons:      cfg.Addons,
 			},
-			logRetention:        conf.Manifest.Logging.Retention,
-			tc:                  conf.Manifest.TaskConfig,
+			logRetention:        cfg.Manifest.Logging.Retention,
+			tc:                  cfg.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest: conf.Manifest,
+		manifest: cfg.Manifest,
 		parser:   parser,
 	}, nil
 }
@@ -108,9 +110,11 @@ func (s *WorkerService) Template() (string, error) {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
-		AppName:                  s.app,
-		EnvName:                  s.env,
-		WorkloadName:             s.name,
+		AppName:            s.app,
+		EnvName:            s.env,
+		WorkloadName:       s.name,
+		SerializedManifest: string(s.rawManifest),
+
 		Variables:                s.manifest.WorkerServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.WorkerServiceConfig.Secrets),
 		NestedStack:              addonsOutputs,

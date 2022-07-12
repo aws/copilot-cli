@@ -97,7 +97,7 @@ type initPipelineOpts struct {
 	workspace      wsPipelineIniter
 	secretsmanager secretsManager
 	parser         template.Parser
-	runner         runner
+	runner         execRunner
 	sessProvider   sessionProvider
 	cfnClient      appResourcesGetter
 	store          store

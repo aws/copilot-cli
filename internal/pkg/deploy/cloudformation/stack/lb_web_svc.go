@@ -57,6 +57,7 @@ type LoadBalancedWebServiceConfig struct {
 	App           *config.Application
 	EnvManifest   *manifest.Environment
 	Manifest      *manifest.LoadBalancedWebService
+	RawManifest   []byte // Content of the manifest file without any transformations.
 	RuntimeConfig RuntimeConfig
 	RootUserARN   string
 	Addons        addons
@@ -89,13 +90,14 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	s := &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(conf.Manifest.Name),
-				env:    aws.StringValue(conf.EnvManifest.Name),
-				app:    conf.App.Name,
-				rc:     conf.RuntimeConfig,
-				image:  conf.Manifest.ImageConfig.Image,
-				parser: parser,
-				addons: conf.Addons,
+				name:        aws.StringValue(conf.Manifest.Name),
+				env:         aws.StringValue(conf.EnvManifest.Name),
+				app:         conf.App.Name,
+				rc:          conf.RuntimeConfig,
+				image:       conf.Manifest.ImageConfig.Image,
+				rawManifest: conf.RawManifest,
+				parser:      parser,
+				addons:      conf.Addons,
 			},
 			logRetention:        conf.Manifest.Logging.Retention,
 			tc:                  conf.Manifest.TaskConfig,
@@ -192,9 +194,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", err
 	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
-		AppName:                  s.app,
-		EnvName:                  s.env,
-		WorkloadName:             s.name,
+		AppName:            s.app,
+		EnvName:            s.env,
+		WorkloadName:       s.name,
+		SerializedManifest: string(s.rawManifest),
+
 		Variables:                s.manifest.TaskConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:                  aliases,

@@ -37,10 +37,12 @@ type BackendService struct {
 	parser backendSvcReadParser
 }
 
+// BackendServiceConfig contains data required to initialize a backend service stack.
 type BackendServiceConfig struct {
 	App           *config.Application
 	EnvManifest   *manifest.Environment
 	Manifest      *manifest.BackendService
+	RawManifest   []byte // Content of the manifest file without any transformations.
 	RuntimeConfig RuntimeConfig
 	Addons        addons
 }
@@ -51,13 +53,14 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 	b := &BackendService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(conf.Manifest.Name),
-				env:    aws.StringValue(conf.EnvManifest.Name),
-				app:    conf.App.Name,
-				rc:     conf.RuntimeConfig,
-				image:  conf.Manifest.ImageConfig.Image,
-				parser: parser,
-				addons: conf.Addons,
+				name:        aws.StringValue(conf.Manifest.Name),
+				env:         aws.StringValue(conf.EnvManifest.Name),
+				app:         conf.App.Name,
+				rc:          conf.RuntimeConfig,
+				image:       conf.Manifest.ImageConfig.Image,
+				rawManifest: conf.RawManifest,
+				parser:      parser,
+				addons:      conf.Addons,
 			},
 			logRetention:        conf.Manifest.Logging.Retention,
 			tc:                  conf.Manifest.TaskConfig,
@@ -141,9 +144,11 @@ func (s *BackendService) Template() (string, error) {
 	}
 
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
-		AppName:                  s.app,
-		EnvName:                  s.env,
-		WorkloadName:             s.name,
+		AppName:            s.app,
+		EnvName:            s.env,
+		WorkloadName:       s.name,
+		SerializedManifest: string(s.rawManifest),
+
 		Variables:                s.manifest.BackendServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
 		Aliases:                  aliases,

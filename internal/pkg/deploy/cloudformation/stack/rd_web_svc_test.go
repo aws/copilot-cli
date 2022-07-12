@@ -112,7 +112,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 
 			stack, err := NewRequestDrivenWebService(RequestDrivenWebServiceConfig{
 				App:           tc.input.appInfo,
-				EnvName:       tc.input.env,
+				Env:           tc.input.env,
 				Manifest:      tc.input.mft,
 				RuntimeConfig: tc.input.rc,
 				Addons:        addons,

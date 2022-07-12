@@ -26,49 +26,6 @@ type showEnvMocks struct {
 	sel       *mocks.MockconfigSelector
 }
 
-func TestEnvShow_Validate(t *testing.T) {
-	testCases := map[string]struct {
-		inVars showEnvVars
-
-		wantedError error
-	}{
-		"should error when --manifest and --json are used together": {
-			inVars: showEnvVars{
-				shouldOutputManifest: true,
-				shouldOutputJSON:     true,
-			},
-			wantedError: errors.New("--manifest and --json cannot be specified together"),
-		},
-		"should error when --manifest and --resources are used together": {
-			inVars: showEnvVars{
-				shouldOutputManifest:  true,
-				shouldOutputResources: true,
-			},
-			wantedError: errors.New("--manifest and --resources cannot be specified together"),
-		},
-		"should not error by default": {},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-
-			showEnvs := &showEnvOpts{
-				showEnvVars: tc.inVars,
-			}
-
-			// WHEN
-			err := showEnvs.Validate()
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestEnvShow_Ask(t *testing.T) {
 	mockErr := errors.New("some error")
 	testCases := map[string]struct {

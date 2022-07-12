@@ -40,11 +40,28 @@ func h2(text string) string {
 
 func code(text string) string {
 	lines := strings.Split(text, "\n")
+
+	var startCodeBlockIdx, codeBlockPadding int
 	for i, line := range lines {
 		if strings.HasPrefix(strings.TrimSpace(line), "/code ") {
 			codeIndex := strings.Index(line, "/code ")
 			lines[i] = line[:codeIndex] +
 				termcolor.HighlightCode(strings.ReplaceAll(line[codeIndex:], "/code ", ""))
+		}
+		if strings.HasPrefix(strings.TrimSpace(line), "/startcodeblock") {
+			startCodeBlockIdx = i
+			codeBlockPadding = strings.Index(line, "/startcodeblock")
+		}
+		if strings.HasPrefix(strings.TrimSpace(line), "/endcodeblock") {
+			colored := termcolor.HighlightCodeBlock(strings.Join(lines[startCodeBlockIdx+1:i], "\n"))
+			coloredLines := strings.Split(colored, "\n")
+			for j, val := range coloredLines {
+				padding := ""
+				if j == 0 || j == len(coloredLines)-1 {
+					padding = strings.Repeat(" ", codeBlockPadding)
+				}
+				lines[startCodeBlockIdx+j] = padding + val
+			}
 		}
 	}
 	return strings.Join(lines, "\n")

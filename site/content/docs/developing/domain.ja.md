@@ -11,13 +11,13 @@ Copilot では、Load Balanced Web Service にカスタムドメインを使用�
     Application のドメインをアップデートしたい場合 ([#3045](https://github.com/aws/copilot-cli/issues/3045)) 、新しいドメインを関連付けるために `--domain` を使用して新しい Application を作成する前に、`copilot app delete` を実行して古い Application を削除する必要があります。
 
 ## Load Balanced Web Service
-[Application](../concepts/applications.en.md#追加のアプリケーション設定)で説明したように、 `copilot app init` を実行するときに Application のドメイン名を設定できます。 [Load Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service) をデプロイすると以下のようなドメイン名を使ってアクセスできるようになります。
+[Application](../concepts/applications.ja.md#追加のアプリケーション設定)で説明したように、 `copilot app init` を実行するときに Application のドメイン名を設定できます。 [Load Balanced Web Service](../concepts/services.ja.md#load-balanced-web-service) をデプロイすると以下のようなドメイン名を使ってアクセスできるようになります。
 
 
 
 ### Application に関連するルートドメインを使用する
 
-[Application](../concepts/applications.en.md#追加のアプリケーション設定)で説明したように、 `copilot app init --domain` を実行するときに Application のドメイン名を設定できます。
+[Application](../concepts/applications.ja.md#追加のアプリケーション設定)で説明したように、 `copilot app init --domain` を実行するときに Application のドメイン名を設定できます。
 
 **Service のデフォルトのドメイン名**
 
@@ -84,9 +84,19 @@ Route53 以外のドメインを所有している場合や、コンプライア
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
-Environment に Service をデプロイした後、その Environment に作成した ALB （Application Load Balancer） の DNS を、エイリアスのドメインがホストされている場所に A レコードとして追加してください。
+Service の Manifest において、次のどちらかを行います。
 
-ブログ記事にも[例](../../blogs/release-v118.ja.md#%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%81%AE%E3%82%A4%E3%83%B3%E3%83%9D%E3%83%BC%E3%83%88)を掲載しています。
+1. Copilot が A レコードを追加する[ホストゾーン](../manifest/lb-web-service.ja.md#http-hosted-zone)のIDを指定する
+``` yaml
+# in copilot/{service name}/manifest.yml
+http:
+  path: '/'
+  alias: example.aws
+  hosted_zone: Z0873220N255IR3MTNR4
+```
+2. `hosted_zone` フィールドを指定せずに Service をデプロイし、 その Environment に作成した ALB （Application Load Balancer） の DNS を、エイリアスのドメインがホストされている場所に A レコードとして手動で追加してください。
+
+ブログ記事にも 2 つ目の[例](../../blogs/release-v118.ja.md#certificate-import)を掲載しています。
 
 ## Request-Driven Web Service
 Request-Driven Web Service に[カスタムドメイン](https://docs.aws.amazon.com/ja_jp/apprunner/latest/dg/manage-custom-domains.html)を追加もできます。Load Balanced Web Service と同様に、Manifest の [`alias`](../manifest/rd-web-service.en.md#http-alias) フィールドを変更することで追加できます。

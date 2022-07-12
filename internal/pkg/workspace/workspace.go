@@ -392,6 +392,16 @@ func (ws *Workspace) WritePipelineManifest(marshaler encoding.BinaryMarshaler, n
 	return ws.write(data, pipelinesDirName, name, manifestFileName)
 }
 
+// WriteEnvironmentManifest writes the environment manifest under the copilot/environments/{name}/ directory.
+// If successful returns the full path of the file, otherwise returns an empty string and the error.
+func (ws *Workspace) WriteEnvironmentManifest(marshaler encoding.BinaryMarshaler, name string) (string, error) {
+	data, err := marshaler.MarshalBinary()
+	if err != nil {
+		return "", fmt.Errorf("marshal environment manifest to binary: %w", err)
+	}
+	return ws.write(data, environmentsDirName, name, manifestFileName)
+}
+
 // DeleteWorkspaceFile removes the .workspace file under copilot/ directory.
 // This will be called during app delete, we do not want to delete any other generated files.
 func (ws *Workspace) DeleteWorkspaceFile() error {

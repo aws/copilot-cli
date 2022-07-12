@@ -52,34 +52,37 @@ type RequestDrivenWebService struct {
 	parser requestDrivenWebSvcReadParser
 }
 
+// RequestDrivenWebServiceConfig contains data required to initialize a request-driven web service stack.
 type RequestDrivenWebServiceConfig struct {
 	App           deploy.AppInformation
-	EnvName       string
+	Env           string
 	Manifest      *manifest.RequestDrivenWebService
+	RawManifest   []byte
 	RuntimeConfig RuntimeConfig
 	Addons        addons
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
-func NewRequestDrivenWebService(conf RequestDrivenWebServiceConfig) (*RequestDrivenWebService, error) {
+func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDrivenWebService, error) {
 	parser := template.New()
 	return &RequestDrivenWebService{
 		appRunnerWkld: &appRunnerWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(conf.Manifest.Name),
-				env:    conf.EnvName,
-				app:    conf.App.Name,
-				rc:     conf.RuntimeConfig,
-				image:  conf.Manifest.ImageConfig.Image,
-				addons: conf.Addons,
-				parser: parser,
+				name:        aws.StringValue(cfg.Manifest.Name),
+				env:         cfg.Env,
+				app:         cfg.App.Name,
+				rc:          cfg.RuntimeConfig,
+				image:       cfg.Manifest.ImageConfig.Image,
+				rawManifest: cfg.RawManifest,
+				addons:      cfg.Addons,
+				parser:      parser,
 			},
-			instanceConfig:    conf.Manifest.InstanceConfig,
-			imageConfig:       conf.Manifest.ImageConfig,
-			healthCheckConfig: conf.Manifest.HealthCheckConfiguration,
+			instanceConfig:    cfg.Manifest.InstanceConfig,
+			imageConfig:       cfg.Manifest.ImageConfig,
+			healthCheckConfig: cfg.Manifest.HealthCheckConfiguration,
 		},
-		app:      conf.App,
-		manifest: conf.Manifest,
+		app:      cfg.App,
+		manifest: cfg.Manifest,
 		parser:   parser,
 	}, nil
 }
@@ -109,9 +112,11 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
 	content, err := s.parser.ParseRequestDrivenWebService(template.WorkloadOpts{
-		AppName:              s.wkld.app,
-		EnvName:              s.env,
-		WorkloadName:         s.name,
+		AppName:            s.wkld.app,
+		EnvName:            s.env,
+		WorkloadName:       s.name,
+		SerializedManifest: string(s.rawManifest),
+
 		Variables:            s.manifest.Variables,
 		StartCommand:         s.manifest.StartCommand,
 		Tags:                 s.manifest.Tags,
