@@ -93,7 +93,7 @@ func TestSecretInitOpts_Validate(t *testing.T) {
 		"invalid input file name": {
 			inInputFilePath: "weird/path/to/secrets",
 			setupMocks:      func(m secretInitMocks) {},
-			wantedError:     errors.New("open " + filepath.FromSlash("weird/path/to/secrets") + ": file does not exist"),
+			wantedError:     fmt.Errorf("open %s: file does not exist", filepath.FromSlash("weird/path/to/secrets")),
 		},
 		"error if input file name is specified with name": {
 			inName:          "db-password",
