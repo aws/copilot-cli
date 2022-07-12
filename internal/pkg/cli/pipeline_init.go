@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -234,9 +235,17 @@ func (o *initPipelineOpts) Execute() error {
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
 	log.Infoln()
-	if err := o.createPipelineManifest(); err != nil {
-		return err
+	switch o.typ {
+	case pipelineTypeWorkloads:
+		if err := o.createWorkloadsPipelineManifest(); err != nil {
+			return err
+		}
+	case pipelineTypeEnvironments:
+		if err := o.createEnvironmentsPipelineManifest(); err != nil {
+			return err
+		}
 	}
+
 	log.Infoln()
 	if err := o.createBuildspec(); err != nil {
 		return err
@@ -652,21 +661,39 @@ func (o *initPipelineOpts) storeGitHubAccessToken() error {
 	return nil
 }
 
-func (o *initPipelineOpts) createPipelineManifest() error {
-	provider, err := o.pipelineProvider()
-	if err != nil {
-		return err
-	}
-
+func (o *initPipelineOpts) createWorkloadsPipelineManifest() error {
 	var stages []manifest.PipelineStage
 	for _, env := range o.envConfigs {
-
 		stage := manifest.PipelineStage{
 			Name: env.Name,
 		}
 		stages = append(stages, stage)
 	}
+	return o.createPipelineManifest(stages)
+}
 
+func (o *initPipelineOpts) createEnvironmentsPipelineManifest() error {
+	var stages []manifest.PipelineStage
+	for _, env := range o.envConfigs {
+		stage := manifest.PipelineStage{
+			Name: env.Name,
+			Deployments: manifest.Deployments{
+				"deploy-env": &manifest.Deployment{
+					TemplatePath:   path.Join(deploy.DefaultPipelineArtifactsDir, fmt.Sprintf(envCFNTemplateNameFmt, env.Name)),
+					TemplateConfig: path.Join(deploy.DefaultPipelineArtifactsDir, fmt.Sprintf(envCFNTemplateConfigurationNameFmt, env.Name)),
+				},
+			},
+		}
+		stages = append(stages, stage)
+	}
+	return o.createPipelineManifest(stages)
+}
+
+func (o *initPipelineOpts) createPipelineManifest(stages []manifest.PipelineStage) error {
+	provider, err := o.pipelineProvider()
+	if err != nil {
+		return err
+	}
 	manifest, err := manifest.NewPipeline(o.name, provider, stages)
 	if err != nil {
 		return fmt.Errorf("generate a pipeline manifest: %w", err)
@@ -687,15 +714,12 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		return err
 	}
 
-	manifestMsgFmt := "Wrote the pipeline manifest for %s at '%s'\n"
 	if manifestExists {
-		manifestMsgFmt = `Pipeline manifest file for %s already exists at %s, skipping writing it.
+		log.Infof(`Pipeline manifest file for %s already exists at %s, skipping writing it.
 Previously set repository URL, branch, and environment stages will remain.
-`
-		log.Infof(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
-
+`, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
 	} else {
-		log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
+		log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
 	}
 	log.Debug(`The manifest contains configurations for your pipeline.
 Update the file to add stages, change the tracked branch, add test commands or manual approval actions.

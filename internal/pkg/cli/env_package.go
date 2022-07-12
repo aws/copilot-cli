@@ -29,6 +29,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	envCFNTemplateNameFmt              = "%s.env.yml"
+	envCFNTemplateConfigurationNameFmt = "%s.env.params.json"
+)
+
 type packageEnvVars struct {
 	envName      string
 	appName      string
@@ -219,12 +224,12 @@ func (o *packageEnvOpts) setWriters() error {
 		return fmt.Errorf("create directory %q: %w", o.outputDir, err)
 	}
 
-	path := filepath.Join(o.outputDir, fmt.Sprintf("%s.env.yml", o.envName))
+	path := filepath.Join(o.outputDir, fmt.Sprintf(envCFNTemplateNameFmt, o.envName))
 	tplFile, err := o.fs.Create(path)
 	if err != nil {
 		return fmt.Errorf("create file at %q: %w", path, err)
 	}
-	path = filepath.Join(o.outputDir, fmt.Sprintf("%s.env.params.json", o.envName))
+	path = filepath.Join(o.outputDir, fmt.Sprintf(envCFNTemplateConfigurationNameFmt, o.envName))
 	paramsFile, err := o.fs.Create(path)
 	if err != nil {
 		return fmt.Errorf("create file at %q: %w", path, err)

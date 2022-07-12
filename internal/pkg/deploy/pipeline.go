@@ -34,7 +34,7 @@ const (
 	defaultPipelineBuildImage      = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 	defaultPipelineEnvironmentType = "LINUX_CONTAINER"
 
-	defaultPipelineArtifactsDir = "infrastructure"
+	DefaultPipelineArtifactsDir = "infrastructure"
 )
 
 var (
@@ -676,7 +676,7 @@ func (a *DeployAction) TemplatePath() string {
 	}
 
 	// Use path.Join instead of filepath to join with "/" instead of OS-specific file separators.
-	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateNameFormat, a.name, a.envName))
+	return path.Join(DefaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateNameFormat, a.name, a.envName))
 }
 
 // TemplateConfigPath returns the path of the CloudFormation template config file generated during the build phase.
@@ -686,7 +686,7 @@ func (a *DeployAction) TemplateConfigPath() string {
 	}
 
 	// Use path.Join instead of filepath to join with "/" instead of OS-specific file separators.
-	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat, a.name, a.envName))
+	return path.Join(DefaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat, a.name, a.envName))
 }
 
 // RunOrder returns the order in which the action should run.

@@ -487,6 +487,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		inRepoURL      string
 		inBranch       string
 		inAppName      string
+		inType         string
 
 		setupMocks func(m pipelineInitMocks)
 		buffer     bytes.Buffer
@@ -495,6 +496,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 	}{
 		"creates secret and writes manifest and buildspec for GHV1 provider": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -525,8 +527,9 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"writes manifest and buildspec for GH(v2) provider": {
+		"writes workloads pipeline manifest and buildspec for GH(v2) provider": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -555,8 +558,9 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"writes manifest and buildspec for CC provider": {
+		"writes workloads pipeline manifest and buildspec for CC provider": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -590,8 +594,9 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			expectedError: nil,
 		},
-		"writes manifest and buildspec for BB provider": {
+		"writes workloads pipeline manifest and buildspec for BB provider": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -620,8 +625,40 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			},
 			expectedError: nil,
 		},
+		"writes environments pipeline manifest for GH(v2) provider": {
+			inName: wantedName,
+			inType: pipelineTypeEnvironments,
+			inEnvConfigs: []*config.Environment{
+				{
+					Name: "test",
+				},
+			},
+			inRepoURL: "git@github.com:badgoose/goose.git",
+			inAppName: "badgoose",
+			setupMocks: func(m pipelineInitMocks) {
+				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
+				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedRelativePath, nil)
+				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
+					Buffer: bytes.NewBufferString("hello"),
+				}, nil)
+				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
+					Name: "badgoose",
+				}, nil)
+				m.cfnClient.EXPECT().GetRegionalAppResources(&config.Application{
+					Name: "badgoose",
+				}).Return([]*stack.AppRegionalResources{
+					{
+						Region:   "us-west-2",
+						S3Bucket: "gooseBucket",
+					},
+				}, nil)
+			},
+			expectedError: nil,
+		},
 		"does not return an error if secret already exists": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -655,6 +692,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		},
 		"returns an error if can't write manifest": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -671,6 +709,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		},
 		"returns an error if application cannot be retrieved": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -689,6 +728,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		},
 		"returns an error if can't get regional application resources": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -712,6 +752,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		},
 		"returns an error if buildspec cannot be parsed": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -742,6 +783,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		},
 		"does not return an error if buildspec and manifest already exists": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -774,6 +816,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 		},
 		"returns an error if can't write buildspec": {
 			inName: wantedName,
+			inType: pipelineTypeWorkloads,
 			inEnvConfigs: []*config.Environment{
 				{
 					Name: "test",
@@ -833,6 +876,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					appName:           tc.inAppName,
 					repoBranch:        tc.inBranch,
 					repoURL:           tc.inRepoURL,
+					typ:               tc.inType,
 				},
 				workspace:      mocks.workspace,
 				secretsmanager: mocks.secretsmanager,
