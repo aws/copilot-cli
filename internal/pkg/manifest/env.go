@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -86,6 +87,7 @@ type environmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
 	Observability environmentObservability `yaml:"observability,omitempty,flow"`
 	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty,flow"`
+	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
 type environmentNetworkConfig struct {
@@ -96,6 +98,55 @@ type environmentVPCConfig struct {
 	ID      *string              `yaml:"id"`
 	CIDR    *IPNet               `yaml:"cidr"`
 	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
+}
+
+type environmentCDNConfig struct {
+	Enabled   *bool
+	CDNConfig advancedCDNConfig // mutually exclusive with Enabled
+}
+
+// advancedCDNConfig represents an advanced configuration for a Content Delivery Network.
+type advancedCDNConfig struct{}
+
+// IsEmpty returns whether environmentCDNConfig is empty.
+func (cfg *environmentCDNConfig) IsEmpty() bool {
+	return cfg.Enabled == nil && cfg.CDNConfig.IsEmpty()
+}
+
+// IsEmpty is a no-op for advancedCDNConfig.
+func (cfg *advancedCDNConfig) IsEmpty() bool {
+	return true
+}
+
+// CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
+func (cfg *environmentCDNConfig) CDNEnabled() bool {
+	if !cfg.CDNConfig.IsEmpty() {
+		return true
+	}
+
+	return aws.BoolValue(cfg.Enabled)
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the environmentCDNConfig
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&cfg.CDNConfig); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+
+	if !cfg.CDNConfig.IsEmpty() {
+		// Successfully unmarshalled CDNConfig fields, return
+		return nil
+	}
+
+	if err := value.Decode(&cfg.Enabled); err != nil {
+		return errors.New(`unable to unmarshal into bool or composite-style map`)
+	}
+	return nil
 }
 
 // IsEmpty returns true if vpc is not configured.
@@ -184,28 +235,34 @@ func (cfg *environmentVPCConfig) ImportedVPC() *template.ImportVPC {
 
 // ManagedVPC returns configurations that configure VPC resources if there is any.
 func (cfg *environmentVPCConfig) ManagedVPC() *template.ManagedVPC {
-	// NOTE: In a managed VPC, #pub = #priv = #az.
-	// Either the VPC isn't configured, or everything need to be explicitly configured.
+	// ASSUMPTION: If the VPC is configured, both pub and private are explicitly configured.
+	// az is optional. However, if it's configured, it is configured for all subnets.
+	// In summary:
+	// 0 = #pub = #priv = #azs (not managed)
+	// #pub = #priv, #azs = 0 (managed, without configured azs)
+	// #pub = #priv = #azs (managed, all configured)
 	if !cfg.managedVPCCustomized() {
 		return nil
 	}
 	publicSubnetCIDRs := make([]string, len(cfg.Subnets.Public))
 	privateSubnetCIDRs := make([]string, len(cfg.Subnets.Public))
-	azs := make([]string, len(cfg.Subnets.Public))
+	var azs []string
 
 	// NOTE: sort based on `az`s to preserve the mappings between azs and public subnets, private subnets.
 	// For example, if we have two subnets defined: public-subnet-1 ~ us-east-1a, and private-subnet-1 ~ us-east-1a.
 	// We want to make sure that public-subnet-1, us-east-1a and private-subnet-1 are all at index 0 of in perspective lists.
-	sort.Slice(cfg.Subnets.Public, func(i, j int) bool {
+	sort.SliceStable(cfg.Subnets.Public, func(i, j int) bool {
 		return aws.StringValue(cfg.Subnets.Public[i].AZ) < aws.StringValue(cfg.Subnets.Public[j].AZ)
 	})
-	sort.Slice(cfg.Subnets.Private, func(i, j int) bool {
+	sort.SliceStable(cfg.Subnets.Private, func(i, j int) bool {
 		return aws.StringValue(cfg.Subnets.Private[i].AZ) < aws.StringValue(cfg.Subnets.Private[j].AZ)
 	})
 	for idx, subnet := range cfg.Subnets.Public {
 		publicSubnetCIDRs[idx] = aws.StringValue((*string)(subnet.CIDR))
 		privateSubnetCIDRs[idx] = aws.StringValue((*string)(cfg.Subnets.Private[idx].CIDR))
-		azs[idx] = aws.StringValue(subnet.AZ)
+		if az := aws.StringValue(subnet.AZ); az != "" {
+			azs = append(azs, az)
+		}
 	}
 	return &template.ManagedVPC{
 		CIDR:               aws.StringValue((*string)(cfg.CIDR)),

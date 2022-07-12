@@ -402,6 +402,24 @@ observability:
 				},
 			},
 		},
+		"unmarshal with content delivery network bool": {
+			inContent: `name: prod
+type: Environment
+
+cdn: true
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				environmentConfig: environmentConfig{
+					CDNConfig: environmentCDNConfig{
+						Enabled: aws.Bool(true),
+					},
+				},
+			},
+		},
 		"unmarshal with http": {
 			inContent: `name: prod
 type: Environment
@@ -652,6 +670,40 @@ func TestEnvironmentVPCConfig_ManagedVPC(t *testing.T) {
 				PrivateSubnetCIDRs: []string{string(mockPrivateSubnet1CIDR), string(mockPrivateSubnet2CIDR), string(mockPrivateSubnet3CIDR)},
 			},
 		},
+		"managed vpc without explicitly configured azs": {
+			inVPCConfig: environmentVPCConfig{
+				CIDR: &mockVPCCIDR,
+				Subnets: subnetsConfiguration{
+					Public: []subnetConfiguration{
+						{
+							CIDR: &mockPublicSubnet1CIDR,
+						},
+						{
+							CIDR: &mockPublicSubnet3CIDR,
+						},
+						{
+							CIDR: &mockPublicSubnet2CIDR,
+						},
+					},
+					Private: []subnetConfiguration{
+						{
+							CIDR: &mockPrivateSubnet2CIDR,
+						},
+						{
+							CIDR: &mockPrivateSubnet1CIDR,
+						},
+						{
+							CIDR: &mockPrivateSubnet3CIDR,
+						},
+					},
+				},
+			},
+			wanted: &template.ManagedVPC{
+				CIDR:               string(mockVPCCIDR),
+				PublicSubnetCIDRs:  []string{string(mockPublicSubnet1CIDR), string(mockPublicSubnet3CIDR), string(mockPublicSubnet2CIDR)},
+				PrivateSubnetCIDRs: []string{string(mockPrivateSubnet2CIDR), string(mockPrivateSubnet1CIDR), string(mockPrivateSubnet3CIDR)},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -797,6 +849,62 @@ func TestEnvironmentObservability_IsEmpty(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentCDNConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentCDNConfig
+		wanted bool
+	}{
+		"empty": {
+			in:     environmentCDNConfig{},
+			wanted: true,
+		},
+		"not empty": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(false),
+			},
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentCDNConfig
+		wanted bool
+	}{
+		"enabled via bool": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(true),
+			},
+			wanted: true,
+		},
+		"not enabled because empty": {
+			in:     environmentCDNConfig{},
+			wanted: false,
+		},
+		"not enabled via bool": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(false),
+			},
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.CDNEnabled()
 			require.Equal(t, tc.wanted, got)
 		})
 	}

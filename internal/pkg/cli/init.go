@@ -5,8 +5,10 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -16,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	cmdtemplate "github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -24,7 +25,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/initialize"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -73,6 +73,7 @@ type initOpts struct {
 	initAppCmd   actionCommand
 	initWlCmd    actionCommand
 	initEnvCmd   actionCommand
+	deployEnvCmd cmd
 	deploySvcCmd actionCommand
 	deployJobCmd actionCommand
 
@@ -133,22 +134,29 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			name:         defaultEnvironmentName,
 			isProduction: false,
 		},
-		store:       configStore,
-		appDeployer: deployer,
-		prog:        spin,
-		prompt:      prompt,
-		identity:    id,
-		appCFN:      cloudformation.New(defaultSess),
-		uploader:    template.New(),
-		newS3: func(region string) (uploader, error) {
-			sess, err := sessProvider.DefaultWithRegion(region)
-			if err != nil {
-				return nil, err
-			}
-			return s3.New(sess), nil
-		},
+		store:          configStore,
+		appDeployer:    deployer,
+		prog:           spin,
+		prompt:         prompt,
+		identity:       id,
+		appCFN:         cloudformation.New(defaultSess),
+		manifestWriter: ws,
 
 		sess: defaultSess,
+	}
+	deployEnvCmd := &deployEnvOpts{
+		deployEnvVars: deployEnvVars{
+			appName: vars.appName,
+			name:    defaultEnvironmentName,
+		},
+		store:           configStore,
+		sessionProvider: sessProvider,
+		ws:              ws,
+		identity:        id,
+		newInterpolator: newManifestInterpolator,
+	}
+	deployEnvCmd.newEnvDeployer = func() (envDeployer, error) {
+		return newEnvDeployer(deployEnvCmd)
 	}
 
 	deploySvcCmd := &deploySvcOpts{
@@ -196,6 +204,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 
 		initAppCmd:   initAppCmd,
 		initEnvCmd:   initEnvCmd,
+		deployEnvCmd: deployEnvCmd,
 		deploySvcCmd: deploySvcCmd,
 		deployJobCmd: deployJobCmd,
 
@@ -398,7 +407,22 @@ func (o *initOpts) deployEnv() error {
 	}
 
 	log.Infoln()
-	return o.initEnvCmd.Execute()
+	if err := o.initEnvCmd.Execute(); err != nil {
+		return err
+	}
+	log.Successf("Provisioned bootstrap resources for environment %s.\n", defaultEnvironmentName)
+	if deployEnvCmd, ok := o.deployEnvCmd.(*deployEnvOpts); ok {
+		// Set the application name from app init to the env deploy command.
+		deployEnvCmd.appName = *o.appName
+	}
+
+	if err := o.deployEnvCmd.Execute(); err != nil {
+		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
+		if !errors.As(err, &errEmptyChangeSet) {
+			return err
+		}
+	}
+	return nil
 }
 
 func (o *initOpts) deploySvc() error {
