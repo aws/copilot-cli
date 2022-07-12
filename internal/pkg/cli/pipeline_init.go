@@ -100,7 +100,7 @@ type initPipelineVars struct {
 	repoURL           string
 	repoBranch        string
 	githubAccessToken string
-	typ               string
+	pipelineType      string
 }
 
 type initPipelineOpts struct {
@@ -237,7 +237,7 @@ func (o *initPipelineOpts) Execute() error {
 	//   - stage names (environments)
 	//   - enable/disable transition to prod envs
 	log.Infoln()
-	switch o.typ {
+	switch o.pipelineType {
 	case pipelineTypeWorkloads:
 		if err := o.createWorkloadsPipelineManifest(); err != nil {
 			return err
@@ -249,7 +249,7 @@ func (o *initPipelineOpts) Execute() error {
 	}
 
 	log.Infoln()
-	switch o.typ {
+	switch o.pipelineType {
 	case pipelineTypeWorkloads:
 		if err := o.createBuildspec(workloadsPipelineBuildspecTemplatePath); err != nil {
 			return err
@@ -355,13 +355,13 @@ func (o *initPipelineOpts) askPipelineName() error {
 }
 
 func (o *initPipelineOpts) askOrValidatePipelineType() error {
-	if o.typ != "" {
+	if o.pipelineType != "" {
 		for _, typ := range pipelineTypes {
-			if o.typ == typ {
+			if o.pipelineType == typ {
 				return nil
 			}
 		}
-		return fmt.Errorf("invalid pipeline type %q; must be one of %s", o.typ, english.WordSeries(utils.QuoteStringSlice(pipelineTypes), "or"))
+		return fmt.Errorf("invalid pipeline type %q; must be one of %s", o.pipelineType, english.WordSeries(utils.QuoteStringSlice(pipelineTypes), "or"))
 	}
 
 	typ, err := o.prompt.SelectOption("What type of continuous delivery pipeline is this?",
@@ -379,7 +379,7 @@ func (o *initPipelineOpts) askOrValidatePipelineType() error {
 	if err != nil {
 		return fmt.Errorf("prompt for pipeline type: %w", err)
 	}
-	o.typ = typ
+	o.pipelineType = typ
 	return nil
 }
 
@@ -891,6 +891,6 @@ func buildPipelineInitCmd() *cobra.Command {
 	_ = cmd.Flags().MarkHidden(githubAccessTokenFlag)
 	cmd.Flags().StringVarP(&vars.repoBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&vars.environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
-	cmd.Flags().StringVar(&vars.typ, pipelineTypeFlag, "", pipelineTypeFlagDescription)
+	cmd.Flags().StringVar(&vars.pipelineType, pipelineTypeFlag, "", pipelineTypeFlagDescription)
 	return cmd
 }
