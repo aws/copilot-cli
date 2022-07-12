@@ -13,9 +13,12 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -73,7 +76,7 @@ func TestRDWS_Template(t *testing.T) {
 				AccountID: "123456789123",
 				Region:    "us-west-2",
 			},
-			Addons:      addons,
+			Addons: addons,
 		})
 		require.NoError(t, err, "create rdws serializer")
 		actualTemplate, err := serializer.Template()

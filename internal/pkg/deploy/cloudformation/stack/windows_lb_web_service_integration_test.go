@@ -13,8 +13,11 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
+	"github.com/golang/mock/gomock"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -29,6 +32,13 @@ const (
 )
 
 func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	addons := mocks.NewMockaddons(ctrl)
+	addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
+	addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
 	path := filepath.Join("testdata", "workloads", windowsSvcManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
@@ -55,6 +65,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 			Region:                   "us-west-2",
 			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 		},
+		Addons: addons,
 	})
 
 	tpl, err := serializer.Template()
