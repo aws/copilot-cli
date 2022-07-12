@@ -29,6 +29,8 @@ type transformInfo struct {
 	ForceZip bool
 }
 
+// TODO(dnrnd) AWS::Include.Location
+// TODO(dnrnd) AWS::CloudFormation::Stack check if valid cf template before upload, recursivly replace anything
 var transformInfoFor = map[string][]transformInfo{
 	"AWS::ApiGateway::RestApi": {
 		{
@@ -81,13 +83,6 @@ var transformInfoFor = map[string][]transformInfo{
 			ObjectKeyProperty:  "S3Key",
 		},
 	},
-	// python version will check if the provided uri is a valid cf template before upload
-	// and then also replace and upload anything in it before uploading (<-- TODO verify replace)
-	"AWS::CloudFormation::Stack": {
-		{
-			Property: []string{"TemplateURL"},
-		},
-	},
 	"AWS::Glue::Job": {
 		{
 			Property: []string{"Command", "ScriptLocation"},
@@ -110,8 +105,6 @@ var transformInfoFor = map[string][]transformInfo{
 	},
 }
 
-// TODO a flag to not do this on svc package
-// TODO(dnrnd) AWS::Include.Location
 func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) {
 	resources := mappingNode(&tmpl.Resources)
 
@@ -207,12 +200,11 @@ func (a *Addons) uploadAddonAsset(path string, forceZip bool) (string, error) {
 		return "", fmt.Errorf("create asset: %w", err)
 	}
 
-	// TODO copy sam logic for logging
 	s3Path := artifactpath.AddonArtifact(a.wlName, asset.hash)
 
-	url, err := a.Uploader.Upload(a.Bucket, s3Path, asset.data)
+	url, err := a.uploader.Upload(a.bucket, s3Path, asset.data)
 	if err != nil {
-		return "", fmt.Errorf("upload %s to s3 bucket %s: %w", path, a.Bucket, err)
+		return "", fmt.Errorf("upload %s to s3 bucket %s: %w", path, a.bucket, err)
 	}
 
 	return url, nil
@@ -223,7 +215,9 @@ type asset struct {
 	hash string
 }
 
-// zipAsset TODO...
+// zipAsset creates an asset from the directory or file specified by root
+// where the data is the compressed zip archive, and the hash is
+// a hash of each of the file names, permissions, content.
 func (a *Addons) zipAsset(root string) (asset, error) {
 	buf := &bytes.Buffer{}
 	z := zip.NewWriter(buf)
@@ -280,7 +274,9 @@ func (a *Addons) zipAsset(root string) (asset, error) {
 	}, nil
 }
 
-// fileAsset TODO...
+// fileAsset creates an asset from the file specified by path.
+// The data is the content of the file, and the hash is the
+// a hash of the file content.
 func (a *Addons) fileAsset(path string) (asset, error) {
 	hash := sha256.New()
 	buf := &bytes.Buffer{}

@@ -109,12 +109,13 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	}
 	var deployer workloadDeployer
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider: o.sessProvider,
-		Name:            o.name,
-		App:             targetApp,
-		Env:             o.targetEnv,
-		ImageTag:        o.imageTag,
-		Mft:             o.appliedManifest,
+		SessionProvider:   o.sessProvider,
+		Name:              o.name,
+		App:               targetApp,
+		Env:               o.targetEnv,
+		ImageTag:          o.imageTag,
+		Mft:               o.appliedManifest,
+		UploadAddonAssets: true,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:

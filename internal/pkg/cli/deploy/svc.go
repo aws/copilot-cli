@@ -104,6 +104,11 @@ type templater interface {
 	Template() (string, error)
 }
 
+type StackBuilder interface {
+	templater
+	Parameters() (string, error)
+}
+
 type stackSerializer interface {
 	templater
 	SerializedParameters() (string, error)
@@ -163,7 +168,7 @@ type workloadDeployer struct {
 	// Dependencies.
 	fs                 fileReader
 	s3Client           uploader
-	templater          templater
+	addons             StackBuilder
 	imageBuilderPusher imageBuilderPusher
 	deployer           serviceDeployer
 	endpointGetter     endpointGetter
@@ -197,12 +202,13 @@ func (d *workloadDeployer) cachedEnvironmentConfig() (*manifest.Environment, err
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
 type WorkloadDeployerInput struct {
-	SessionProvider *sessions.Provider
-	Name            string
-	App             *config.Application
-	Env             *config.Environment
-	ImageTag        string
-	Mft             interface{}
+	SessionProvider   *sessions.Provider
+	Name              string
+	App               *config.Application
+	Env               *config.Environment
+	ImageTag          string
+	Mft               interface{}
+	UploadAddonAssets bool
 }
 
 // NewWorkloadDeployer is the constructor for workloadDeployer.
@@ -235,12 +241,11 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
 	}
 	s3Client := s3.New(envSession)
-	addonsSvc, err := addon.New(in.Name)
+	addonsSvc, err := addon.New(in.Name, resources.S3Bucket, s3Client)
 	if err != nil {
 		return nil, fmt.Errorf("initiate addons service: %w", err)
 	}
-	addonsSvc.Uploader = s3Client
-	addonsSvc.Bucket = resources.S3Bucket
+	addonsSvc.UploadAssets = in.UploadAddonAssets
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
 	imageBuilderPusher := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
@@ -262,7 +267,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		workspacePath:      workspacePath,
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
 		s3Client:           s3Client,
-		templater:          addonsSvc,
+		addons:             addonsSvc,
 		imageBuilderPusher: imageBuilderPusher,
 		deployer:           cloudformation.New(envSession),
 		endpointGetter:     envDescriber,
@@ -277,6 +282,10 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 
 		mft: in.Mft,
 	}, nil
+}
+
+func (w *workloadDeployer) AddonBuilder() StackBuilder {
+	return w.addons
 }
 
 type svcDeployer struct {
@@ -889,7 +898,7 @@ func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) 
 	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
 		fs:        d.fs,
 		uploader:  d.s3Client,
-		templater: d.templater,
+		templater: d.addons,
 	})
 	if err != nil {
 		return nil, err
@@ -1035,6 +1044,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		Manifest:      d.lbMft,
 		RuntimeConfig: *rc,
 		RootUserARN:   in.RootUserARN,
+		Addons:        d.addons,
 	}, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1065,6 +1075,7 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		EnvManifest:   envConfig,
 		Manifest:      d.backendMft,
 		RuntimeConfig: *rc,
+		Addons:        d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1097,7 +1108,13 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		Domain:              d.app.Domain,
 		AccountPrincipalARN: in.RootUserARN,
 	}
-	conf, err := stack.NewRequestDrivenWebService(d.rdwsMft, d.env.Name, appInfo, *rc)
+	conf, err := stack.NewRequestDrivenWebService(stack.RequestDrivenWebServiceConfig{
+		App:           appInfo,
+		EnvName:       d.env.Name,
+		Manifest:      d.rdwsMft,
+		RuntimeConfig: *rc,
+		Addons:        d.addons,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
@@ -1150,7 +1167,13 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 	if err = validateTopicsExist(subs, topicARNs, d.app.Name, d.env.Name); err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewWorkerService(d.wsMft, d.env.Name, d.app.Name, *rc)
+	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
+		AppName:       d.app.Name,
+		EnvName:       d.env.Name,
+		Manifest:      d.wsMft,
+		RuntimeConfig: *rc,
+		Addons:        d.addons,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
@@ -1174,7 +1197,13 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 	if err != nil {
 		return nil, err
 	}
-	conf, err := stack.NewScheduledJob(d.jobMft, d.env.Name, d.app.Name, *rc)
+	conf, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
+		AppName:       d.app.Name,
+		EnvName:       d.env.Name,
+		Manifest:      d.jobMft,
+		RuntimeConfig: *rc,
+		Addons:        d.addons,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}

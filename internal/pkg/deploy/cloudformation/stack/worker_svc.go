@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -28,31 +27,34 @@ type WorkerService struct {
 	parser workerSvcReadParser
 }
 
+type WorkerServiceConfig struct {
+	AppName       string
+	EnvName       string
+	Manifest      *manifest.WorkerService
+	RuntimeConfig RuntimeConfig
+	Addons        addons
+}
+
 // NewWorkerService creates a new WorkerService stack from a manifest file.
-func NewWorkerService(mft *manifest.WorkerService, env, app string, rc RuntimeConfig) (*WorkerService, error) {
+func NewWorkerService(conf WorkerServiceConfig) (*WorkerService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name))
-	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
-	}
 	return &WorkerService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(mft.Name),
-				env:    env,
-				app:    app,
-				rc:     rc,
-				image:  mft.ImageConfig.Image,
+				name:   aws.StringValue(conf.Manifest.Name),
+				env:    conf.EnvName,
+				app:    conf.AppName,
+				rc:     conf.RuntimeConfig,
+				image:  conf.Manifest.ImageConfig.Image,
 				parser: parser,
-				addons: addons,
+				addons: conf.Addons,
 			},
-			logRetention:        mft.Logging.Retention,
-			tc:                  mft.TaskConfig,
+			logRetention:        conf.Manifest.Logging.Retention,
+			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest: mft,
-
-		parser: parser,
+		manifest: conf.Manifest,
+		parser:   parser,
 	}, nil
 }
 

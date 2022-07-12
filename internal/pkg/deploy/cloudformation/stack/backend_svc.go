@@ -10,7 +10,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -43,15 +42,11 @@ type BackendServiceConfig struct {
 	EnvManifest   *manifest.Environment
 	Manifest      *manifest.BackendService
 	RuntimeConfig RuntimeConfig
+	Addons        addons
 }
 
 // NewBackendService creates a new BackendService stack from a manifest file.
 func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
-	addons, err := addon.New(aws.StringValue(conf.Manifest.Name))
-	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
-	}
-
 	parser := template.New()
 	b := &BackendService{
 		ecsWkld: &ecsWkld{
@@ -62,7 +57,7 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 				rc:     conf.RuntimeConfig,
 				image:  conf.Manifest.ImageConfig.Image,
 				parser: parser,
-				addons: addons,
+				addons: conf.Addons,
 			},
 			logRetention:        conf.Manifest.Logging.Retention,
 			tc:                  conf.Manifest.TaskConfig,

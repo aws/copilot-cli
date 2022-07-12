@@ -35,15 +35,6 @@ const (
 	svcPackageEnvNamePrompt = "Which environment would you like to package this stack for?"
 )
 
-var initPackageAddonsClient = func(o *packageSvcOpts) error {
-	addonsClient, err := addon.New(o.name)
-	if err != nil {
-		return fmt.Errorf("new addons client: %w", err)
-	}
-	o.addonsClient = addonsClient
-	return nil
-}
-
 type packageSvcVars struct {
 	name         string
 	envName      string
@@ -60,8 +51,6 @@ type packageSvcOpts struct {
 	packageSvcVars
 
 	// Interfaces to interact with dependencies.
-	addonsClient         templater
-	initAddonsClient     func(*packageSvcOpts) error // Overridden in tests.
 	ws                   wsWlDirReader
 	fs                   afero.Fs
 	store                store
@@ -98,20 +87,19 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
 	opts := &packageSvcOpts{
-		packageSvcVars:   vars,
-		initAddonsClient: initPackageAddonsClient,
-		store:            store,
-		ws:               ws,
-		fs:               &afero.Afero{Fs: afero.NewOsFs()},
-		unmarshal:        manifest.UnmarshalWorkload,
-		runner:           exec.NewCmd(),
-		sel:              selector.NewLocalWorkloadSelector(prompter, store, ws),
-		stackWriter:      os.Stdout,
-		paramsWriter:     ioutil.Discard,
-		addonsWriter:     ioutil.Discard,
-		newInterpolator:  newManifestInterpolator,
-		sessProvider:     sessProvider,
-		newTplGenerator:  newWkldTplGenerator,
+		packageSvcVars:  vars,
+		store:           store,
+		ws:              ws,
+		fs:              &afero.Afero{Fs: afero.NewOsFs()},
+		unmarshal:       manifest.UnmarshalWorkload,
+		runner:          exec.NewCmd(),
+		sel:             selector.NewLocalWorkloadSelector(prompter, store, ws),
+		stackWriter:     os.Stdout,
+		paramsWriter:    ioutil.Discard,
+		addonsWriter:    ioutil.Discard,
+		newInterpolator: newManifestInterpolator,
+		sessProvider:    sessProvider,
+		newTplGenerator: newWkldTplGenerator,
 	}
 	return opts, nil
 }
@@ -127,12 +115,13 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 	}
 	var deployer workloadTemplateGenerator
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider: o.sessProvider,
-		Name:            o.name,
-		App:             targetApp,
-		Env:             targetEnv,
-		ImageTag:        o.tag,
-		Mft:             o.appliedManifest,
+		SessionProvider:   o.sessProvider,
+		Name:              o.name,
+		App:               targetApp,
+		Env:               targetEnv,
+		ImageTag:          o.tag,
+		Mft:               o.appliedManifest,
+		UploadAddonAssets: o.uploadAssets,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
@@ -194,7 +183,11 @@ func (o *packageSvcOpts) Execute() error {
 	if err != nil {
 		return nil
 	}
-	svcTemplates, err := o.getSvcTemplates(targetEnv)
+	generator, err := o.getTplGenerator(targetEnv)
+	if err != nil {
+		return err
+	}
+	svcTemplates, err := o.getSvcTemplates(generator)
 	if err != nil {
 		return err
 	}
@@ -204,13 +197,14 @@ func (o *packageSvcOpts) Execute() error {
 	if _, err = o.paramsWriter.Write([]byte(svcTemplates.configuration)); err != nil {
 		return err
 	}
-	addonsTemplate, err := o.getAddonsTemplate()
-	// return nil if addons not found.
-	var notFoundErr *addon.ErrAddonsNotFound
-	if errors.As(err, &notFoundErr) {
-		return nil
-	}
+	addonsTemplate, err := generator.AddonBuilder().Template()
 	if err != nil {
+		// return nil if addons not found.
+		var notFoundErr *addon.ErrAddonsNotFound
+		if errors.As(err, &notFoundErr) {
+			return nil
+		}
+
 		return fmt.Errorf("retrieve addons template: %w", err)
 	}
 	// Addons template won't show up without setting --output-dir flag.
@@ -257,13 +251,6 @@ func (o *packageSvcOpts) validateOrAskEnvName() error {
 	return nil
 }
 
-func (o *packageSvcOpts) getAddonsTemplate() (string, error) {
-	if err := o.initAddonsClient(o); err != nil {
-		return "", err
-	}
-	return o.addonsClient.Template()
-}
-
 func (o *packageSvcOpts) configureClients() error {
 	o.tag = imageTagFromGit(o.runner, o.tag) // Best effort assign git tag.
 	// client to retrieve an application's resources created with CloudFormation.
@@ -295,8 +282,7 @@ type wkldCfnTemplates struct {
 	configuration string
 }
 
-// getSvcTemplates returns the CloudFormation stack's template and its parameters for the service.
-func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTemplates, error) {
+func (o *packageSvcOpts) getTplGenerator(env *config.Environment) (workloadTemplateGenerator, error) {
 	mft, err := workloadManifest(&workloadManifestInput{
 		name:         o.name,
 		appName:      o.appName,
@@ -313,6 +299,11 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	if err != nil {
 		return nil, err
 	}
+	return generator, nil
+}
+
+// getSvcTemplates returns the CloudFormation stack's template and its parameters for the service.
+func (o *packageSvcOpts) getSvcTemplates(generator workloadTemplateGenerator) (*wkldCfnTemplates, error) {
 	targetApp, err := o.getTargetApp()
 	if err != nil {
 		return nil, err

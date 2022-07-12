@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -46,14 +47,19 @@ type Addons struct {
 	ws     workspaceReader
 	fs     *afero.Afero
 
-	template string
 	wsPath   string
-	Uploader uploader
-	Bucket   string
+	uploader uploader
+	bucket   string
+
+	templateOnce sync.Once
+	templateStr  string
+	templateErr  error
+
+	UploadAssets bool
 }
 
 // New creates an Addons object given a workload name.
-func New(wlName string) (*Addons, error) {
+func New(wlName, bucket string, uploader uploader) (*Addons, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
@@ -63,11 +69,13 @@ func New(wlName string) (*Addons, error) {
 		return nil, fmt.Errorf("get workspace path: %w", err)
 	}
 	return &Addons{
-		wlName: wlName,
-		parser: template.New(),
-		fs:     &afero.Afero{Fs: afero.NewOsFs()},
-		ws:     ws,
-		wsPath: wsPath,
+		wlName:   wlName,
+		parser:   template.New(),
+		fs:       &afero.Afero{Fs: afero.NewOsFs()},
+		ws:       ws,
+		wsPath:   wsPath,
+		bucket:   bucket,
+		uploader: uploader,
 	}, nil
 }
 
@@ -77,10 +85,14 @@ func New(wlName string) (*Addons, error) {
 // If the addons directory doesn't exist, it returns the empty string and
 // ErrAddonsDirNotExist.
 func (a *Addons) Template() (string, error) {
-	if a.template != "" {
-		return a.template, nil
-	}
+	a.templateOnce.Do(func() {
+		a.templateStr, a.templateErr = a.template()
+	})
 
+	return a.templateStr, a.templateErr
+}
+
+func (a *Addons) template() (string, error) {
 	fnames, err := a.ws.ReadAddonsDir(a.wlName)
 	if err != nil {
 		return "", &ErrAddonsNotFound{
@@ -111,8 +123,7 @@ func (a *Addons) Template() (string, error) {
 		}
 	}
 
-	// TODO respect uploadAssets flag?
-	if a.Uploader != nil { // TODO do better lol
+	if a.UploadAssets {
 		mergedTemplate, err = a.packageLocalArtifacts(mergedTemplate)
 		if err != nil {
 			return "", fmt.Errorf("package local artifacts: %w", err)
@@ -124,8 +135,6 @@ func (a *Addons) Template() (string, error) {
 		return "", fmt.Errorf("marshal merged addons template: %w", err)
 	}
 
-	// TODO something better than this...?
-	a.template = string(out)
 	return string(out), nil
 }
 

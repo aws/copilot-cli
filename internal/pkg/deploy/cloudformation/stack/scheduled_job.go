@@ -13,7 +13,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -89,31 +88,34 @@ func (e errDurationInvalid) Error() string {
 	return fmt.Sprintf("parse duration: %v", e.reason)
 }
 
+type ScheduledJobConfig struct {
+	AppName       string
+	EnvName       string
+	Manifest      *manifest.ScheduledJob
+	RuntimeConfig RuntimeConfig
+	Addons        addons
+}
+
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
-func NewScheduledJob(mft *manifest.ScheduledJob, env, app string, rc RuntimeConfig) (*ScheduledJob, error) {
+func NewScheduledJob(conf ScheduledJobConfig) (*ScheduledJob, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name))
-	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
-	}
 	return &ScheduledJob{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(mft.Name),
-				env:    env,
-				app:    app,
-				rc:     rc,
-				image:  mft.ImageConfig.Image,
+				name:   aws.StringValue(conf.Manifest.Name),
+				env:    conf.EnvName,
+				app:    conf.AppName,
+				rc:     conf.RuntimeConfig,
+				image:  conf.Manifest.ImageConfig.Image,
 				parser: parser,
-				addons: addons,
+				addons: conf.Addons,
 			},
-			logRetention:        mft.Logging.Retention,
-			tc:                  mft.TaskConfig,
+			logRetention:        conf.Manifest.Logging.Retention,
+			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
-		manifest: mft,
-
-		parser: parser,
+		manifest: conf.Manifest,
+		parser:   parser,
 	}, nil
 }
 

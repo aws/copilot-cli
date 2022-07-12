@@ -10,7 +10,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -53,30 +52,34 @@ type RequestDrivenWebService struct {
 	parser requestDrivenWebSvcReadParser
 }
 
+type RequestDrivenWebServiceConfig struct {
+	App           deploy.AppInformation
+	EnvName       string
+	Manifest      *manifest.RequestDrivenWebService
+	RuntimeConfig RuntimeConfig
+	Addons        addons
+}
+
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
-func NewRequestDrivenWebService(mft *manifest.RequestDrivenWebService, env string, app deploy.AppInformation, rc RuntimeConfig) (*RequestDrivenWebService, error) {
+func NewRequestDrivenWebService(conf RequestDrivenWebServiceConfig) (*RequestDrivenWebService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(mft.Name))
-	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
-	}
 	return &RequestDrivenWebService{
 		appRunnerWkld: &appRunnerWkld{
 			wkld: &wkld{
-				name:   aws.StringValue(mft.Name),
-				env:    env,
-				app:    app.Name,
-				rc:     rc,
-				image:  mft.ImageConfig.Image,
-				addons: addons,
+				name:   aws.StringValue(conf.Manifest.Name),
+				env:    conf.EnvName,
+				app:    conf.App.Name,
+				rc:     conf.RuntimeConfig,
+				image:  conf.Manifest.ImageConfig.Image,
+				addons: conf.Addons,
 				parser: parser,
 			},
-			instanceConfig:    mft.InstanceConfig,
-			imageConfig:       mft.ImageConfig,
-			healthCheckConfig: mft.HealthCheckConfiguration,
+			instanceConfig:    conf.Manifest.InstanceConfig,
+			imageConfig:       conf.Manifest.ImageConfig,
+			healthCheckConfig: conf.Manifest.HealthCheckConfiguration,
 		},
-		app:      app,
-		manifest: mft,
+		app:      conf.App,
+		manifest: conf.Manifest,
 		parser:   parser,
 	}, nil
 }

@@ -10,7 +10,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -60,16 +59,13 @@ type LoadBalancedWebServiceConfig struct {
 	Manifest      *manifest.LoadBalancedWebService
 	RuntimeConfig RuntimeConfig
 	RootUserARN   string
+	Addons        addons
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
 func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	opts ...LoadBalancedWebServiceOption) (*LoadBalancedWebService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(conf.Manifest.Name))
-	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
-	}
 	var dnsDelegationEnabled, httpsEnabled bool
 	var appInfo deploy.AppInformation
 
@@ -99,7 +95,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				rc:     conf.RuntimeConfig,
 				image:  conf.Manifest.ImageConfig.Image,
 				parser: parser,
-				addons: addons,
+				addons: conf.Addons,
 			},
 			logRetention:        conf.Manifest.Logging.Retention,
 			tc:                  conf.Manifest.TaskConfig,
