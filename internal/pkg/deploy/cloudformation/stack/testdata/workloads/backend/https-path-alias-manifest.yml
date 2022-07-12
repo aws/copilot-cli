@@ -7,7 +7,7 @@ http:
     - name: example.com
       hosted_zone: mockHostedZone2
     - name: foobar.com
-    - name: v1.foobar.com
+    - name: "*.foobar.com"
   hosted_zone: mockHostedZone1
 
 image:

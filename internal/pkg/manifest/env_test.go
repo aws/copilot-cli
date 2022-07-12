@@ -602,6 +602,40 @@ func TestEnvironmentVPCConfig_ManagedVPC(t *testing.T) {
 				PrivateSubnetCIDRs: []string{string(mockPrivateSubnet1CIDR), string(mockPrivateSubnet2CIDR), string(mockPrivateSubnet3CIDR)},
 			},
 		},
+		"managed vpc without explicitly configured azs": {
+			inVPCConfig: environmentVPCConfig{
+				CIDR: &mockVPCCIDR,
+				Subnets: subnetsConfiguration{
+					Public: []subnetConfiguration{
+						{
+							CIDR: &mockPublicSubnet1CIDR,
+						},
+						{
+							CIDR: &mockPublicSubnet3CIDR,
+						},
+						{
+							CIDR: &mockPublicSubnet2CIDR,
+						},
+					},
+					Private: []subnetConfiguration{
+						{
+							CIDR: &mockPrivateSubnet2CIDR,
+						},
+						{
+							CIDR: &mockPrivateSubnet1CIDR,
+						},
+						{
+							CIDR: &mockPrivateSubnet3CIDR,
+						},
+					},
+				},
+			},
+			wanted: &template.ManagedVPC{
+				CIDR:               string(mockVPCCIDR),
+				PublicSubnetCIDRs:  []string{string(mockPublicSubnet1CIDR), string(mockPublicSubnet3CIDR), string(mockPublicSubnet2CIDR)},
+				PrivateSubnetCIDRs: []string{string(mockPrivateSubnet2CIDR), string(mockPrivateSubnet1CIDR), string(mockPrivateSubnet3CIDR)},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
