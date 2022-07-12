@@ -58,9 +58,11 @@ Please enter full repository URL, e.g., "https://github.com/myCompany/myRepo", o
 )
 
 const (
-	buildspecTemplatePath = "cicd/buildspec.yml"
-	fmtPipelineStackName  = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
-	defaultBranch         = deploy.DefaultPipelineBranch
+	workloadsPipelineBuildspecTemplatePath    = "cicd/buildspec.yml"
+	environmentsPipelineBuildspecTemplatePath = "cicd/env/buildspec.yml"
+
+	fmtPipelineStackName = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
+	defaultBranch        = deploy.DefaultPipelineBranch
 	// For a GitHub repository.
 	githubURL     = "github.com"
 	fmtGHRepoURL  = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
@@ -247,8 +249,20 @@ func (o *initPipelineOpts) Execute() error {
 	}
 
 	log.Infoln()
-	if err := o.createBuildspec(); err != nil {
-		return err
+	switch o.typ {
+	case pipelineTypeWorkloads:
+		if err := o.createBuildspec(workloadsPipelineBuildspecTemplatePath); err != nil {
+			return err
+		}
+		log.Debug(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
+Update the "build" phase to unit test your services before pushing the images.
+`)
+	case pipelineTypeEnvironments:
+		if err := o.createBuildspec(environmentsPipelineBuildspecTemplatePath); err != nil {
+			return err
+		}
+		log.Debug(`The buildspec contains the commands to generate CloudFormation templates for your environments.
+`)
 	}
 	return nil
 }
@@ -727,12 +741,12 @@ Update the file to add stages, change the tracked branch, add test commands or m
 	return nil
 }
 
-func (o *initPipelineOpts) createBuildspec() error {
+func (o *initPipelineOpts) createBuildspec(buildSpecTemplatePath string) error {
 	artifactBuckets, err := o.artifactBuckets()
 	if err != nil {
 		return err
 	}
-	content, err := o.parser.Parse(buildspecTemplatePath, struct {
+	content, err := o.parser.Parse(buildSpecTemplatePath, struct {
 		BinaryS3BucketPath string
 		Version            string
 		ManifestPath       string
@@ -760,19 +774,13 @@ func (o *initPipelineOpts) createBuildspec() error {
 	if err != nil {
 		return err
 	}
-	buildspecMsgFmt := "Wrote the buildspec for the pipeline's build stage at '%s'\n"
 	if buildspecExists {
-		buildspecMsgFmt = `Buildspec file for pipeline already exists at %s, skipping writing it.
+		log.Infof(`Buildspec file for pipeline already exists at %s, skipping writing it.
 Previously set config will remain.
-`
-		log.Infof(buildspecMsgFmt, color.HighlightResource(buildspecPath))
-	} else {
-		log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
+`, color.HighlightResource(buildspecPath))
+		return nil
 	}
-	log.Debug(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
-Update the "build" phase to unit test your services before pushing the images.
-`)
-
+	log.Successf("Wrote the buildspec for the pipeline's build stage at '%s'\n", color.HighlightResource(buildspecPath))
 	return nil
 }
 
