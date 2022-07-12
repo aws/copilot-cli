@@ -154,7 +154,7 @@ func (o *deployJobOpts) Execute() error {
 		return err
 	}
 	o.appliedManifest = mft
-	if err := validateManifestCompatibilityWithEnv(mft, o.envName, o.envFeaturesDescriber); err != nil {
+	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
 	}
 	deployer, err := o.newJobDeployer()

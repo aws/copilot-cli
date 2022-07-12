@@ -235,7 +235,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
 				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 			},
-			wantedError: fmt.Errorf(`environment "prod-iad" is not on a version that supports the "mockFeature3" feature`),
+			wantedError: fmt.Errorf(`environment "prod-iad" is on version "v1.mock" which does not support the "mockFeature3" feature`),
 		},
 		"error if failed to upload artifacts": {
 			mock: func(m *deployMocks) {
