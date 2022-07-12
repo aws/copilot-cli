@@ -271,8 +271,7 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 	return params, nil
 }
 
-// SerializedParameters returns the CloudFormation stack's parameters serialized
-// to a YAML document annotated with comments for readability to users.
+// SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
 func (s *BackendService) SerializedParameters() (string, error) {
 	return serializeTemplateConfig(s.wkld.parser, s)
 }

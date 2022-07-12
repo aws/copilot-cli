@@ -157,8 +157,7 @@ func (c *AppStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	}, nil
 }
 
-// SerializedParameters returns the CloudFormation stack's parameters serialized
-// to a YAML document annotated with comments for readability to users.
+// SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
 func (s *AppStackConfig) SerializedParameters() (string, error) {
 	// No-op for now.
 	return "", nil

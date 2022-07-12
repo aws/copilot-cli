@@ -8,17 +8,16 @@ import (
 	"io"
 	"os"
 
-	"github.com/aws/copilot-cli/internal/pkg/template"
-
-	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
-
+	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -31,6 +30,7 @@ type appResourcesGetter interface {
 
 type environmentDeployer interface {
 	UpdateAndRenderEnvironment(out termprogress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error
+	EnvironmentParameters(app, env string) ([]*awscfn.Parameter, error)
 }
 
 type envDeployer struct {
@@ -43,7 +43,7 @@ type envDeployer struct {
 	// Dependencies to deploy an environment.
 	appCFN             appResourcesGetter
 	envDeployer        environmentDeployer
-	newStackSerializer func(input *deploy.CreateEnvironmentInput) stackSerializer
+	newStackSerializer func(input *deploy.CreateEnvironmentInput, prevParams []*awscfn.Parameter) stackSerializer
 
 	// Cached variables.
 	appRegionalResources *stack.AppRegionalResources
@@ -79,8 +79,8 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 
 		appCFN:      deploycfn.New(defaultSession),
 		envDeployer: deploycfn.New(envManagerSession),
-		newStackSerializer: func(in *deploy.CreateEnvironmentInput) stackSerializer {
-			return stack.NewEnvStackConfig(in)
+		newStackSerializer: func(in *deploy.CreateEnvironmentInput, oldParams []*awscfn.Parameter) stackSerializer {
+			return stack.NewEnvConfigFromExistingStack(in, oldParams)
 		},
 	}, nil
 }
@@ -121,7 +121,11 @@ func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput)
 	if err != nil {
 		return nil, err
 	}
-	stack := d.newStackSerializer(stackInput)
+	oldParams, err := d.envDeployer.EnvironmentParameters(d.app.Name, d.env.Name)
+	if err != nil {
+		return nil, fmt.Errorf("describe environment stack parameters: %w", err)
+	}
+	stack := d.newStackSerializer(stackInput, oldParams)
 	tpl, err := stack.Template()
 	if err != nil {
 		return nil, fmt.Errorf("generate stack template: %w", err)
