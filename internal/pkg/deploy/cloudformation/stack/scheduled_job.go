@@ -226,7 +226,7 @@ func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability.
 func (j *ScheduledJob) SerializedParameters() (string, error) {
-	return j.templateConfiguration(j)
+	return serializeTemplateConfig(j.wkld.parser, j)
 }
 
 // awsSchedule converts the Schedule string to the format required by Cloudwatch Events

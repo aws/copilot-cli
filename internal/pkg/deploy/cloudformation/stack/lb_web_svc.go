@@ -339,5 +339,5 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
 func (s *LoadBalancedWebService) SerializedParameters() (string, error) {
-	return s.templateConfiguration(s)
+	return serializeTemplateConfig(s.wkld.parser, s)
 }
