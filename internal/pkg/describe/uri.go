@@ -228,8 +228,12 @@ func (d *albDescriber) envDNSName(path string) (albURI, error) {
 	if err != nil {
 		return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
 	}
+	dnsName := []string{envOutputs[d.envDNSNameKey]}
+	if cfURI, ok := envOutputs[envCloudFrontDomainName]; ok {
+		dnsName = append(dnsName, cfURI)
+	}
 	return albURI{
-		DNSNames: []string{envOutputs[d.envDNSNameKey]},
+		DNSNames: dnsName,
 		Path:     path,
 	}, nil
 }

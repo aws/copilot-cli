@@ -642,3 +642,12 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+{{- if .CDNConfig}}
+  CloudFrontDomainName:
+    Condition: CreateALB
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Description: The domain name of an associated Cloud Front Distribution.
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDomainName
+{{- end}}
+
