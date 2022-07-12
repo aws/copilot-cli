@@ -30,7 +30,7 @@ type transformInfo struct {
 }
 
 // TODO(dnrnd) AWS::Include.Location
-// TODO(dnrnd) AWS::CloudFormation::Stack check if valid cf template before upload, recursivly replace anything
+// TODO(dnrnd) AWS::CloudFormation::Stack
 var transformInfoFor = map[string][]transformInfo{
 	"AWS::ApiGateway::RestApi": {
 		{
@@ -200,7 +200,7 @@ func (a *Addons) uploadAddonAsset(path string, forceZip bool) (string, error) {
 		return "", fmt.Errorf("create asset: %w", err)
 	}
 
-	s3Path := artifactpath.AddonArtifact(a.wlName, asset.hash)
+	s3Path := artifactpath.AddonAsset(a.wlName, asset.hash)
 
 	url, err := a.uploader.Upload(a.bucket, s3Path, asset.data)
 	if err != nil {
@@ -237,7 +237,7 @@ func (a *Addons) zipAsset(root string) (asset, error) {
 		switch {
 		case err != nil:
 			return fmt.Errorf("rel: %w", err)
-		case fname == ".": // TODO best way to check equality?
+		case fname == ".":
 			fname = info.Name()
 		}
 

@@ -31,10 +31,9 @@ func Addons(key string, content []byte) string {
 	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, key, fmt.Sprintf("%x.yml", sha256.Sum256(content)))
 }
 
-// AddonArtifact returns the path to store addon artifact files with sha256 of the content.
+// AddonAsset returns the path to store an addon asset file.
 // Example: manual/addons/addonKey/assets/hash.
-// TODO for artifcacts from addons
-func AddonArtifact(addonKey, hash string) string {
+func AddonAsset(addonKey, hash string) string {
 	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, addonKey, s3ArtifactAddonAssetDirName, hash)
 }
 

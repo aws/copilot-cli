@@ -33,7 +33,6 @@ func TestPackage(t *testing.T) {
 	indexZipHash := sha256.New()
 	indexFileHash := sha256.New()
 
-	// build default fs
 	fs := afero.NewMemMapFs()
 	fs.Mkdir("/lambda", 0644)
 
@@ -47,9 +46,9 @@ func TestPackage(t *testing.T) {
 	info, _ = f2.Stat()
 	lambdaZipHash.Write([]byte("test.js " + info.Mode().String()))
 
-	lambdaZipS3Path := artifactpath.AddonArtifact(wlName, hex.EncodeToString(lambdaZipHash.Sum(nil)))
-	indexZipS3Path := artifactpath.AddonArtifact(wlName, hex.EncodeToString(indexZipHash.Sum(nil)))
-	indexFileS3Path := artifactpath.AddonArtifact(wlName, hex.EncodeToString(indexFileHash.Sum(nil)))
+	lambdaZipS3Path := artifactpath.AddonAsset(wlName, hex.EncodeToString(lambdaZipHash.Sum(nil)))
+	indexZipS3Path := artifactpath.AddonAsset(wlName, hex.EncodeToString(indexZipHash.Sum(nil)))
+	indexFileS3Path := artifactpath.AddonAsset(wlName, hex.EncodeToString(indexFileHash.Sum(nil)))
 
 	tests := map[string]struct {
 		inTemplate  string
