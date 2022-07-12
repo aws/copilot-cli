@@ -76,9 +76,21 @@ var _ = Describe("Isolated", func() {
 				CustomizedEnv: true,
 			})
 		})
-
 		It("env init should succeed for 'private' env", func() {
 			Expect(testEnvInitErr).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("when deploying the environment", func() {
+		var privateEnvDeployErr error
+		BeforeAll(func() {
+			_, privateEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    envName,
+			})
+		})
+		It("should succeed", func() {
+			Expect(privateEnvDeployErr).NotTo(HaveOccurred())
 		})
 		It("env ls should list private env", func() {
 			envListOutput, err := cli.EnvList(appName)
@@ -153,6 +165,7 @@ var _ = Describe("Isolated", func() {
 			Expect(svc.Configs[0].CPU).To(Equal("256"))
 			Expect(svc.Configs[0].Memory).To(Equal("512"))
 			Expect(svc.Configs[0].Port).To(Equal("80"))
+			Expect(svc.Routes[0].URL).To(ContainSubstring(fmt.Sprintf("http://%s.%s.%s.internal", svcName, envName, appName)))
 		})
 	})
 
