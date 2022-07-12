@@ -5,11 +5,12 @@ package stack
 
 import (
 	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"gopkg.in/yaml.v3"
+	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -98,6 +99,12 @@ func (e *EnvStackConfig) Template() (string, error) {
 		}
 		mft = string(out)
 	}
+
+	securityGroupConfig, err := getSecurityGroupConfig(e.in.Mft)
+	if err != nil {
+		return "", err
+	}
+
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:                  e.in.App.Name,
 		EnvName:                  e.in.Name,
@@ -114,10 +121,10 @@ func (e *EnvStackConfig) Template() (string, error) {
 		CustomInternalALBSubnets: e.internalALBSubnets(),
 		AllowVPCIngress:          e.in.AllowVPCIngress, // TODO(jwh): fetch AllowVPCIngress from Manifest or SSM.
 		Telemetry:                e.telemetryConfig(),
-
-		Version:       e.in.Version,
-		LatestVersion: deploy.LatestEnvTemplateVersion,
-		Manifest:      mft,
+		SecurityGroupConfig:      securityGroupConfig,
+		Version:                  e.in.Version,
+		LatestVersion:            deploy.LatestEnvTemplateVersion,
+		Manifest:                 mft,
 	}, template.WithFuncs(map[string]interface{}{
 		"inc":      template.IncFunc,
 		"fmtSlice": template.FmtSliceFunc,
@@ -126,6 +133,30 @@ func (e *EnvStackConfig) Template() (string, error) {
 		return "", err
 	}
 	return content.String(), nil
+}
+
+func getSecurityGroupConfig(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {
+	var ingress string
+	if mft != nil && !mft.Network.VPC.SecurityGroupConfig.Ingress.IsZero() {
+		out, err := yaml.Marshal(mft.Network.VPC.SecurityGroupConfig.Ingress)
+		if err != nil {
+			return &template.SecurityGroupConfig{}, fmt.Errorf("marshal security group from environment manifest to embed in template: %v", err)
+		}
+		ingress = strings.TrimSpace(string(out))
+	}
+
+	var egress string
+	if mft != nil && !mft.Network.VPC.SecurityGroupConfig.Egress.IsZero() {
+		out, err := yaml.Marshal(mft.Network.VPC.SecurityGroupConfig.Egress)
+		if err != nil {
+			return &template.SecurityGroupConfig{}, fmt.Errorf("marshal security group from environment manifest to embed in template: %v", err)
+		}
+		egress = strings.TrimSpace(string(out))
+	}
+	return &template.SecurityGroupConfig{
+		Ingress: ingress,
+		Egress:  egress,
+	}, nil
 }
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {

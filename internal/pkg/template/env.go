@@ -91,14 +91,20 @@ type EnvOpts struct {
 	CustomInternalALBSubnets []string
 	AllowVPCIngress          bool
 	Telemetry                *Telemetry
-
-	LatestVersion string
-	Manifest      string // Serialized manifest used to render the environment template.
+	SecurityGroupConfig      *SecurityGroupConfig
+	LatestVersion            string
+	Manifest                 string // Serialized manifest used to render the environment template.
 }
 
 type VPCConfig struct {
 	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
 	Managed  ManagedVPC
+}
+
+// SecurityGroupConfig holds the fields to import security group config
+type SecurityGroupConfig struct {
+	Ingress string
+	Egress  string
 }
 
 // ImportVPC holds the fields to import VPC resources.

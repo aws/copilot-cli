@@ -148,6 +148,22 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
+{{- if and .SecurityGroupConfig .SecurityGroupConfig.Ingress }}
+  CustomEnvSecurityGroupIngressRule:
+    Metadata:
+      'aws:copilot:description': 'A custom inbound rule defined by the customer'
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+{{.SecurityGroupConfig.Ingress | indent 6}}
+{{- end }}
+{{- if and .SecurityGroupConfig .SecurityGroupConfig.Egress }}
+  CustomEnvSecurityGroupEgressRule:
+    Metadata:
+      'aws:copilot:description': 'A custom outbound rule defined by the customer'
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+{{.SecurityGroupConfig.Egress | indent 6}}
+{{- end }}
   EnvironmentSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateALB

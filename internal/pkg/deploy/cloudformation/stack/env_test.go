@@ -58,6 +58,7 @@ func TestEnv_Template(t *testing.T) {
 								Key:    "mockkey4",
 							},
 						},
+						SecurityGroupConfig: &template.SecurityGroupConfig{},
 					}, data)
 					return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
 				})

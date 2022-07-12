@@ -64,9 +64,13 @@ type environmentNetworkConfig struct {
 }
 
 type environmentVPCConfig struct {
-	ID      *string              `yaml:"id"`
-	CIDR    *IPNet               `yaml:"cidr"`
-	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
+	ID                  *string              `yaml:"id"`
+	CIDR                *IPNet               `yaml:"cidr"`
+	Subnets             subnetsConfiguration `yaml:"subnets,omitempty"`
+	SecurityGroupConfig struct {
+		Ingress yaml.Node `yaml:"ingress"`
+		Egress  yaml.Node `yaml:"egress"`
+	} `yaml:"security_group"`
 }
 
 func (cfg *environmentVPCConfig) loadVPCConfig(env *config.CustomizeEnv) {

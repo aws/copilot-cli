@@ -63,6 +63,55 @@ observability:
 			}(),
 			wantedFileName: "template-with-imported-certs-observability.yml",
 		},
+
+		"generate template with embedded manifest file with custom security groups added by te customer": {
+			input: func() *deploy.CreateEnvironmentInput {
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(`
+name: test
+type: Environment
+# Create the public ALB with certificates attached.
+# All these comments should be deleted.
+http:
+  public:
+    certificates:
+      - cert-1
+      - cert-2
+observability:
+    container_insights: true # Enable container insights.
+network:
+  vpc:
+    security_group:
+      ingress:
+        ip_protocol: tcp
+        from_port: 0
+        to_port: 65535
+      egress:
+        ip_protocol: tcp
+        from_port: 0
+        to_port: 65535
+`), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						template.DNSCertValidatorFileName: "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						template.DNSDelegationFileName:    "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						template.CustomDomainFileName:     "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+					},
+					AllowVPCIngress: true,
+					Mft:             &mft,
+				}
+			}(),
+			wantedFileName: "template-with-custom-security-group.yml",
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
