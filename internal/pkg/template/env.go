@@ -107,8 +107,8 @@ type EnvOpts struct {
 	LatestVersion            string
 	Manifest                 string // Serialized manifest used to render the environment template.
 
-	CDNConfig *CDNConfig // If nil, no cdn is to be used
-	SerializedManifest string // Serialized manifest used to render the environment template.
+	CDNConfig          *CDNConfig // If nil, no cdn is to be used
+	SerializedManifest string     // Serialized manifest used to render the environment template.
 }
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.
@@ -153,7 +153,7 @@ func (t *Template) ParseEnv(data *EnvOpts, options ...ParseOption) (*Content, er
 	}
 	for _, templateName := range envCFSubTemplateNames {
 		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtEnvCFSubTemplatePath, templateName), options...)
-https://github.com/aws/copilot-cli/pull/3749/conflict?name=internal%252Fpkg%252Fdeploy%252Fcloudformation%252Fstack%252Fenv_integration_test.go&ancestor_oid=4af22fda307f52cacb90040c9cdc16f07b7d6c06&base_oid=1749cb2b6c200a86a5e0a1b05bb2cf8805f81a08&head_oid=ace0a8055b962d7a4833f7e1cd7877ab5d4268bd		if err != nil {
+		if err != nil {
 			return nil, err
 		}
 		_, err = tpl.AddParseTree(templateName, nestedTpl.Tree)
