@@ -15,9 +15,12 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/golang/mock/gomock"
 
 	"github.com/stretchr/testify/require"
 )
@@ -42,6 +45,13 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 	for name, tc := range testCases {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		addons := mocks.NewMockaddons(ctrl)
+		addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
+		addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
 		interpolated, err := manifest.NewInterpolator(appName, tc.envName).Interpolate(string(manifestBytes))
 		require.NoError(t, err)
 		mft, err := manifest.UnmarshalWorkload([]byte(interpolated))
@@ -71,6 +81,7 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 				AccountID:                "123456789123",
 				Region:                   "us-west-2",
 			},
+			Addons: addons,
 		})
 
 		tpl, err := serializer.Template()
