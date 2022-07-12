@@ -81,7 +81,9 @@ var transformInfoFor = map[string][]transformInfo{
 			ObjectKeyProperty:  "S3Key",
 		},
 	},
-	"AWS::CloudFormation::Stack": { // TODO look at this one, has extra logic
+	// python version will check if the provided uri is a valid cf template before upload
+	// and then also replace and upload anything in it before uploading (<-- TODO verify replace)
+	"AWS::CloudFormation::Stack": {
 		{
 			Property: []string{"TemplateURL"},
 		},
