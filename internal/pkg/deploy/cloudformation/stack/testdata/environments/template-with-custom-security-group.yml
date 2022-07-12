@@ -498,7 +498,7 @@ Resources:
         Status: ENABLED
       Encrypted: true
       FileSystemPolicy:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Id: CopilotEFSPolicy
         Statement:
           - Sid: AllowIAMFromTaggedRoles
@@ -567,7 +567,6 @@ Resources:
       'aws:copilot:description': 'An IAM Role for AWS CloudFormation to manage resources'
     DeletionPolicy: Retain
     Type: AWS::IAM::Role
-    DependsOn: VPC
     Properties:
       RoleName: !Sub ${AWS::StackName}-CFNExecutionRole
       AssumeRolePolicyDocument:
@@ -685,6 +684,12 @@ Resources:
                   StringEquals:
                     'aws:ResourceTag/copilot-application': !Sub '${AppName}'
                     'aws:ResourceTag/copilot-environment': !Sub '${EnvironmentName}'
+              - Sid: StartStateMachine
+                Effect: Allow
+                Action:
+                  - "states:StartExecution"
+                Resource:
+                  - !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
               - Sid: CloudFormation
                 Effect: Allow
                 Action: [
