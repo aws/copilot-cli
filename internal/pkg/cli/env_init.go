@@ -172,13 +172,13 @@ type initEnvOpts struct {
 	selApp         appSelector
 	appCFN         appResourcesGetter
 	manifestWriter environmentManifestWriter
-	wsRelativizer  wsPathRelativizer
+	pathDisplayer  pathDisplayer
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 
 	// Cached variables.
-	wsAppName string
-	mftPath   string
+	wsAppName        string
+	mftDisplayedPath string
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
@@ -192,6 +192,11 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("read named profiles: %w", err)
+	}
+
+	pathDisplayer, err := NewCwdPathDisplayer()
+	if err != nil {
+		return nil, err
 	}
 
 	prompter := prompt.New()
@@ -216,7 +221,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		selApp:         selector.NewAppEnvSelector(prompt.New(), store),
 		appCFN:         deploycfn.New(defaultSession),
 		manifestWriter: ws,
-		wsRelativizer:  ws,
+		pathDisplayer:  pathDisplayer,
 
 		wsAppName: tryReadingAppName(),
 	}, nil
@@ -272,11 +277,11 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 1. Write environment manifest.
-	mftPath, err := o.writeManifest()
+	mftDisplayedPath, err := o.writeManifest()
 	if err != nil {
 		return err
 	}
-	o.mftPath = mftPath
+	o.mftDisplayedPath = mftDisplayedPath
 
 	// 2. Perform DNS delegation from app to env.
 	if app.Domain != "" {
@@ -322,7 +327,7 @@ func (o *initEnvOpts) Execute() error {
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initEnvOpts) RecommendActions() error {
 	logRecommendedActions([]string{
-		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.mftPath)),
+		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.mftDisplayedPath)),
 		fmt.Sprintf("Run %s to deploy your environment.",
 			color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", o.name))),
 	})
@@ -818,6 +823,7 @@ func (o *initEnvOpts) tryDeletingEnvRoles(app, env string) {
 	}
 }
 
+// writeManifest
 func (o *initEnvOpts) writeManifest() (string, error) {
 	customizedEnv := &config.CustomizeEnv{
 		ImportVPC:                   o.importVPCConfig(),
@@ -845,7 +851,7 @@ func (o *initEnvOpts) writeManifest() (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = o.wsRelativizer.RelCwd(manifestPath)
+	manifestPath, err = o.pathDisplayer.DisplayPath(manifestPath)
 	if err != nil {
 		return "", err
 	}

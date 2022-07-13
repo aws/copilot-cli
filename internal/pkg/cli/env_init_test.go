@@ -952,7 +952,7 @@ type initEnvExecuteMocks struct {
 	cfn            *mocks.MockstackExistChecker
 	appCFN         *mocks.MockappResourcesGetter
 	manifestWriter *mocks.MockenvironmentManifestWriter
-	wsRelativizer  *mocks.MockwsPathRelativizer
+	pathDisplayer  *mocks.MockpathDisplayer
 }
 
 func TestInitEnvOpts_Execute(t *testing.T) {
@@ -989,7 +989,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
-				m.wsRelativizer.EXPECT().RelCwd("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
+				m.pathDisplayer.EXPECT().DisplayPath("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
 				m.iam.EXPECT().CreateECSServiceLinkedRole().Return(nil)
 				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
 				m.progress.EXPECT().Stop(log.Serrorf(fmtAddEnvToAppFailed, "1234", "us-west-2", "phonetool"))
@@ -1007,7 +1007,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
-				m.wsRelativizer.EXPECT().RelCwd("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
+				m.pathDisplayer.EXPECT().DisplayPath("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
 				m.iam.EXPECT().CreateECSServiceLinkedRole().Return(nil)
 				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
 				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
@@ -1021,7 +1021,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			setupMocks: func(m *initEnvExecuteMocks) {
 				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
-				m.wsRelativizer.EXPECT().RelCwd("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
+				m.pathDisplayer.EXPECT().DisplayPath("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
 				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
 				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
@@ -1057,7 +1057,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.store.EXPECT().CreateEnvironment(gomock.Any()).Return(errors.New("some create error"))
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
-				m.wsRelativizer.EXPECT().RelCwd("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
+				m.pathDisplayer.EXPECT().DisplayPath("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
 				m.iam.EXPECT().CreateECSServiceLinkedRole().Return(nil)
 				m.iam.EXPECT().ListRoleTags(gomock.Any()).
 					Return(nil, errors.New("does not exist")).AnyTimes()
@@ -1091,7 +1091,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}).Return(nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
-				m.wsRelativizer.EXPECT().RelCwd("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
+				m.pathDisplayer.EXPECT().DisplayPath("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
 				m.iam.EXPECT().CreateECSServiceLinkedRole().Return(nil)
 				m.iam.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-CFNExecutionRole")).Return(nil, errors.New("does not exist"))
 				m.iam.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-EnvManagerRole")).Return(nil, errors.New("does not exist"))
@@ -1125,7 +1125,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("", &workspace.ErrFileExists{
 					FileName: "/environments/test/manifest.yml",
 				})
-				m.wsRelativizer.EXPECT().RelCwd("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
+				m.pathDisplayer.EXPECT().DisplayPath("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
 				m.iam.EXPECT().CreateECSServiceLinkedRole().Return(nil)
 				m.iam.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-CFNExecutionRole")).Return(nil, errors.New("does not exist"))
 				m.iam.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-EnvManagerRole")).Return(nil, errors.New("does not exist"))
@@ -1157,7 +1157,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}).Return(nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
-				m.wsRelativizer.EXPECT().RelCwd("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
+				m.pathDisplayer.EXPECT().DisplayPath("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
 				m.iam.EXPECT().CreateECSServiceLinkedRole().Return(nil)
 				// Don't attempt to delete any roles since an environment stack already exists.
 				m.iam.EXPECT().ListRoleTags(gomock.Any()).Times(0)
@@ -1192,7 +1192,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool", AccountID: "1234", Domain: "amazon.com"}, nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "4567"}, nil).Times(1)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
-				m.wsRelativizer.EXPECT().RelCwd("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
+				m.pathDisplayer.EXPECT().DisplayPath("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
 				m.progress.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
 				m.progress.EXPECT().Stop(log.Serrorf(fmtDNSDelegationFailed, "4567"))
 				m.deployer.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(errors.New("some error"))
@@ -1211,7 +1211,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				}).Return(nil)
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "4567"}, nil).Times(2)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
-				m.wsRelativizer.EXPECT().RelCwd("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
+				m.pathDisplayer.EXPECT().DisplayPath("/environments/test/manifest.yml").Return("copilot/environments/test/manifest.yml", nil)
 				m.iam.EXPECT().CreateECSServiceLinkedRole().Return(nil)
 				m.iam.EXPECT().ListRoleTags(gomock.Any()).
 					Return(nil, errors.New("does not exist")).AnyTimes()
@@ -1256,7 +1256,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				cfn:            mocks.NewMockstackExistChecker(ctrl),
 				appCFN:         mocks.NewMockappResourcesGetter(ctrl),
 				manifestWriter: mocks.NewMockenvironmentManifestWriter(ctrl),
-				wsRelativizer:  mocks.NewMockwsPathRelativizer(ctrl),
+				pathDisplayer:  mocks.NewMockpathDisplayer(ctrl),
 			}
 			tc.setupMocks(m)
 			provider := sessions.ImmutableProvider()
@@ -1281,7 +1281,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				sess:           sess,
 				appCFN:         m.appCFN,
 				manifestWriter: m.manifestWriter,
-				wsRelativizer:  m.wsRelativizer,
+				pathDisplayer:  m.pathDisplayer,
 			}
 
 			// WHEN
