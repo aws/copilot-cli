@@ -40,6 +40,7 @@ type CreateEnvironmentInput struct {
 	AllowVPCIngress    bool              // Optional configuration to allow access to internal ALB from ports 80/443.
 	Telemetry          *config.Telemetry // Optional observability and monitoring configuration.
 	Mft                *manifest.Environment
+	ForceUpdate        bool
 
 	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
 }

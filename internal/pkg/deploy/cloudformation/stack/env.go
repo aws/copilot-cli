@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -18,15 +19,16 @@ import (
 
 type envReadParser interface {
 	template.ReadParser
-	ParseEnv(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
+	ParseEnv(data *template.EnvOpts) (*template.Content, error)
 	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
 }
 
 // EnvStackConfig is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type EnvStackConfig struct {
-	in     *deploy.CreateEnvironmentInput
-	parser envReadParser
+	in                *deploy.CreateEnvironmentInput
+	PrevForceUpdateID string
+	parser            envReadParser
 }
 
 const (
@@ -70,6 +72,15 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 	}
 }
 
+// NewEnvConfigFromExistingStack returns a CloudFormation stack configuration for updating an environment.
+func NewEnvConfigFromExistingStack(in *deploy.CreateEnvironmentInput, prevForceUpdateID string) *EnvStackConfig {
+	return &EnvStackConfig{
+		in:                in,
+		PrevForceUpdateID: prevForceUpdateID,
+		parser:            template.New(),
+	}
+}
+
 // Template returns the environment CloudFormation template.
 func (e *EnvStackConfig) Template() (string, error) {
 	crs, err := convertCustomResources(e.in.CustomResourcesURLs)
@@ -84,6 +95,15 @@ func (e *EnvStackConfig) Template() (string, error) {
 			return "", fmt.Errorf("marshal environment manifest to embed in template: %v", err)
 		}
 		mft = string(out)
+	}
+
+	forceUpdateID := e.PrevForceUpdateID
+	if e.in.ForceUpdate {
+		id, err := uuid.NewRandom()
+		if err != nil {
+			return "", fmt.Errorf("generate uuid for a forced update: %s", err)
+		}
+		forceUpdateID = id.String()
 	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:                  e.in.App.Name,
@@ -102,11 +122,8 @@ func (e *EnvStackConfig) Template() (string, error) {
 		Version:            e.in.Version,
 		LatestVersion:      deploy.LatestEnvTemplateVersion,
 		SerializedManifest: mft,
-	}, template.WithFuncs(map[string]interface{}{
-		"inc":      template.IncFunc,
-		"fmtSlice": template.FmtSliceFunc,
-		"quote":    strconv.Quote,
-	}))
+		ForceUpdateID:      forceUpdateID,
+	})
 	if err != nil {
 		return "", err
 	}

@@ -28,7 +28,7 @@ func TestEnv_Template(t *testing.T) {
 		"should return template body when present": {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
 				m := mocks.NewMockenvReadParser(ctrl)
-				m.EXPECT().ParseEnv(gomock.Any(), gomock.Any()).DoAndReturn(func(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error) {
+				m.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
 					require.Equal(t, &template.EnvOpts{
 						AppName: "project",
 						EnvName: "env",
