@@ -15,9 +15,9 @@ func buildEnvUpgradeCmd() *cobra.Command {
 	var all bool
 	cmd := &cobra.Command{
 		Use:   "upgrade",
-		Short: "Upgrades the template of an environment to the latest version.",
+		Short: "Deprecated. Upgrades the template of an environment to the latest version.",
 		Long: `Deprecated. Use "copilot env deploy" instead.
-This command is now a no op. Used to upgrade the template of an environment stack to the latest version.
+This command is now a no op. Upgrades the template of an environment stack to the latest version.
 `,
 		Hidden: true,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
