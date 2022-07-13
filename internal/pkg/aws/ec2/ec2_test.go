@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -19,11 +18,11 @@ import (
 var (
 	inAppEnvFilters = []Filter{
 		{
-			Name:   fmt.Sprintf(TagFilterName, deploy.AppTagKey),
+			Name:   fmt.Sprintf(FmtTagFilter, "copilot-application"),
 			Values: []string{"my-app"},
 		},
 		{
-			Name:   fmt.Sprintf(TagFilterName, deploy.EnvTagKey),
+			Name:   fmt.Sprintf(FmtTagFilter, "copilot-environment"),
 			Values: []string{"my-env"},
 		},
 	}
@@ -801,6 +800,17 @@ func TestEC2_SubnetIDs(t *testing.T) {
 				}).Return(nil, errors.New("error describing subnets"))
 			},
 			wantedError: fmt.Errorf("describe subnets: error describing subnets"),
+		},
+		"cannot get any subnets": {
+			inFilter: inAppEnvFilters,
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
+					Filters: toEC2Filter(inAppEnvFilters),
+				}).Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []*ec2.Subnet{},
+				}, nil)
+			},
+			wantedError: fmt.Errorf("cannot find any subnets"),
 		},
 		"successfully get subnets": {
 			inFilter: inAppEnvFilters,
