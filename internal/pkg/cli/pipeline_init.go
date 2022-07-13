@@ -890,6 +890,6 @@ func buildPipelineInitCmd() *cobra.Command {
 	_ = cmd.Flags().MarkHidden(githubAccessTokenFlag)
 	cmd.Flags().StringVarP(&vars.repoBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&vars.environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
-	cmd.Flags().StringVar(&vars.pipelineType, pipelineTypeFlag, "", pipelineTypeFlagDescription)
+	cmd.Flags().StringVarP(&vars.pipelineType, pipelineTypeFlag, pipelineTypeShort, "", pipelineTypeFlagDescription)
 	return cmd
 }

@@ -141,6 +141,7 @@ const (
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
+	pipelineTypeShort          = "p"
 
 	scheduleFlagShort = "s"
 )
