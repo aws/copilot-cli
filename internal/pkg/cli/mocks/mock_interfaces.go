@@ -2353,6 +2353,44 @@ func (mr *MockwsPipelineManifestReaderMockRecorder) ReadPipelineManifest(path in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineManifestReader)(nil).ReadPipelineManifest), path)
 }
 
+// MockpathDisplayer is a mock of pathDisplayer interface.
+type MockpathDisplayer struct {
+	ctrl     *gomock.Controller
+	recorder *MockpathDisplayerMockRecorder
+}
+
+// MockpathDisplayerMockRecorder is the mock recorder for MockpathDisplayer.
+type MockpathDisplayerMockRecorder struct {
+	mock *MockpathDisplayer
+}
+
+// NewMockpathDisplayer creates a new mock instance.
+func NewMockpathDisplayer(ctrl *gomock.Controller) *MockpathDisplayer {
+	mock := &MockpathDisplayer{ctrl: ctrl}
+	mock.recorder = &MockpathDisplayerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockpathDisplayer) EXPECT() *MockpathDisplayerMockRecorder {
+	return m.recorder
+}
+
+// DisplayPath mocks base method.
+func (m *MockpathDisplayer) DisplayPath(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DisplayPath", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DisplayPath indicates an expected call of DisplayPath.
+func (mr *MockpathDisplayerMockRecorder) DisplayPath(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisplayPath", reflect.TypeOf((*MockpathDisplayer)(nil).DisplayPath), path)
+}
+
 // MockwsPathRelativizer is a mock of wsPathRelativizer interface.
 type MockwsPathRelativizer struct {
 	ctrl     *gomock.Controller

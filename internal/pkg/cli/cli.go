@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/dustin/go-humanize/english"
@@ -124,4 +125,27 @@ func indentListItem(multiline string) string {
 		prefixedLines = append(prefixedLines, fmt.Sprintf("%s%s", prefix, line))
 	}
 	return strings.Join(prefixedLines, "\n")
+}
+
+// CwdPathDisplayer displays paths to the user relative to their current working directory.
+type CwdPathDisplayer struct {
+	workingDir string
+}
+
+func NewCwdPathDisplayer() (*CwdPathDisplayer, error) {
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	return &CwdPathDisplayer{workingDir: workingDir}, nil
+}
+
+func (d *CwdPathDisplayer) DisplayPath(fullPath string) (string, error) {
+	if !filepath.IsAbs(fullPath) {
+		// A non-absolute path must be relative to the current working
+		// directory, so just clean it and give it back.
+		return filepath.Clean(fullPath), nil
+	}
+
+	return filepath.Rel(d.workingDir, fullPath)
 }
