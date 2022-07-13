@@ -721,34 +721,6 @@ func (o *initPipelineOpts) storeGitHubAccessToken() error {
 	return nil
 }
 
-func (o *initPipelineOpts) createWorkloadsPipelineManifest() error {
-	var stages []manifest.PipelineStage
-	for _, env := range o.envConfigs {
-		stage := manifest.PipelineStage{
-			Name: env.Name,
-		}
-		stages = append(stages, stage)
-	}
-	return o.createPipelineManifest(stages)
-}
-
-func (o *initPipelineOpts) createEnvironmentsPipelineManifest() error {
-	var stages []manifest.PipelineStage
-	for _, env := range o.envConfigs {
-		stage := manifest.PipelineStage{
-			Name: env.Name,
-			Deployments: manifest.Deployments{
-				"deploy-env": &manifest.Deployment{
-					TemplatePath:   path.Join(deploy.DefaultPipelineArtifactsDir, fmt.Sprintf(envCFNTemplateNameFmt, env.Name)),
-					TemplateConfig: path.Join(deploy.DefaultPipelineArtifactsDir, fmt.Sprintf(envCFNTemplateConfigurationNameFmt, env.Name)),
-				},
-			},
-		}
-		stages = append(stages, stage)
-	}
-	return o.createPipelineManifest(stages)
-}
-
 func (o *initPipelineOpts) createPipelineManifest(stages []manifest.PipelineStage) error {
 	provider, err := o.pipelineProvider()
 	if err != nil {
