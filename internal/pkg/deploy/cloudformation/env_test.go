@@ -459,7 +459,7 @@ func TestCloudFormation_ForceUpdateID(t *testing.T) {
 				m.EXPECT().Describe("phonetool-test").Return(&cloudformation.StackDescription{
 					Outputs: []*awscfn.Output{
 						{
-							OutputKey:   aws.String(template.DeploymentControllerOutputName),
+							OutputKey:   aws.String(template.LastForceDeployIDOutputName),
 							OutputValue: aws.String("mockForceUpdateID"),
 						},
 					},

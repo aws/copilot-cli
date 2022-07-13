@@ -128,7 +128,7 @@ func (cf CloudFormation) ForceUpdateOutputID(app, env string) (string, error) {
 		return "", err
 	}
 	for _, output := range stackDescr.Outputs {
-		if aws.StringValue(output.OutputKey) == template.DeploymentControllerOutputName {
+		if aws.StringValue(output.OutputKey) == template.LastForceDeployIDOutputName {
 			return aws.StringValue(output.OutputValue), nil
 		}
 	}

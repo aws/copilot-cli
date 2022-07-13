@@ -24,8 +24,8 @@ const (
 	InternalALBFeatureName = "InternalALBWorkloads"
 )
 
-// DeploymentControllerOutputName is the logical ID of the deployment controller output.
-const DeploymentControllerOutputName = "DeploymentController"
+// LastForceDeployIDOutputName is the logical ID of the deployment controller output.
+const LastForceDeployIDOutputName = "LastForceDeployID"
 
 var friendlyEnvFeatureName = map[string]string{
 	ALBFeatureName:         "ALB",
