@@ -79,7 +79,7 @@ type errInvalidAutoscalingFieldsWithWkldType struct {
 
 func (e *errInvalidAutoscalingFieldsWithWkldType) Error() string {
 	return fmt.Sprintf("autoscaling %v %v %v invalid with workload type %v", english.PluralWord(len(e.invalidFields), "field", "fields"),
-		english.WordSeries(e.invalidFields, "and"), english.PluralWord(len(e.invalidFields), "is", "are"), e.workloadType)
+		english.WordSeries(template.QuoteSliceFunc(e.invalidFields), "and"), english.PluralWord(len(e.invalidFields), "is", "are"), e.workloadType)
 }
 
 type errFieldMutualExclusive struct {
