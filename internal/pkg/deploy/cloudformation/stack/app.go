@@ -54,9 +54,9 @@ const (
 	appAdminRoleParamName         = "AdminRoleName"
 	appExecutionRoleParamName     = "ExecutionRoleName"
 	appDNSDelegationRoleParamName = "DNSDelegationRoleName"
-	appOutputKMSKey               = "KMSKeyARN"      // Linked to AppRegionalResources.KMSKeyARN.
-	appOutputS3Bucket             = "PipelineBucket" // Linked to AppRegionalResources.S3Bucket.
-	appOutputECRRepoPrefix        = "ECRRepo"        // Linked to AppRegionalResources.RepositoryURLs.
+	appOutputKMSKey               = "KMSKeyARN"      // Name of the CloudFormation Output that holds the KMS Key ARN to encrypt artifact buckets.
+	appOutputS3Bucket             = "PipelineBucket" // Name of the CloudFormation Output that holds the Artifact Bucket ARN for any artifacts that must be stored in S3.
+	appOutputECRRepoPrefix        = "ECRRepo"        // Name of the CloudFormation Output that holds the ECR image repository URL for each service.
 	appDNSDelegatedAccountsKey    = "AppDNSDelegatedAccounts"
 	appDomainNameKey              = "AppDomainName"
 	appDomainHostedZoneIDKey      = "AppDomainHostedZoneID"
