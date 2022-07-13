@@ -92,6 +92,21 @@ func (mr *MockenvironmentDeployerMockRecorder) EnvironmentParameters(app, env in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentParameters", reflect.TypeOf((*MockenvironmentDeployer)(nil).EnvironmentParameters), app, env)
 }
 
+// ForceUpdateOutputID mocks base method.
+func (m *MockenvironmentDeployer) ForceUpdateOutputID(app, env string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForceUpdateOutputID", app, env)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ForceUpdateOutputID indicates an expected call of ForceUpdateOutputID.
+func (mr *MockenvironmentDeployerMockRecorder) ForceUpdateOutputID(app, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForceUpdateOutputID", reflect.TypeOf((*MockenvironmentDeployer)(nil).ForceUpdateOutputID), app, env)
+}
+
 // UpdateAndRenderEnvironment mocks base method.
 func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation0.StackOption) error {
 	m.ctrl.T.Helper()

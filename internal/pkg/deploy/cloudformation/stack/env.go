@@ -76,9 +76,10 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 // NewEnvConfigFromExistingStack returns a CloudFormation stack configuration for updating an environment.
 func NewEnvConfigFromExistingStack(in *deploy.CreateEnvironmentInput, prevForceUpdateID string, prevParams []*cloudformation.Parameter) *EnvStackConfig {
 	return &EnvStackConfig{
-		in:         in,
-		prevParams: prevParams,
-		parser:     template.New(),
+		in:                in,
+		prevParams:        prevParams,
+		PrevForceUpdateID: prevForceUpdateID,
+		parser:            template.New(),
 	}
 }
 

@@ -45,7 +45,7 @@ func (cf CloudFormation) CreateAndRenderEnvironment(out progress.FileWriter, env
 
 // UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
 func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
-	v, err := cf.forceUpdateOutputID(env.App.Name, env.Name)
+	v, err := cf.ForceUpdateOutputID(env.App.Name, env.Name)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,8 @@ func (cf CloudFormation) EnvironmentTemplate(appName, envName string) (string, e
 	return cf.cfnClient.TemplateBody(stackName)
 }
 
-func (cf CloudFormation) forceUpdateOutputID(app, env string) (string, error) {
+// ForceUpdateOutputID returns the environment stack's last force update ID.
+func (cf CloudFormation) ForceUpdateOutputID(app, env string) (string, error) {
 	stackDescr, err := cf.waitAndDescribeStack(stack.NameForEnv(app, env))
 	if err != nil {
 		return "", err

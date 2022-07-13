@@ -155,12 +155,23 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 			},
 			wantedError: errors.New("describe environment stack parameters: some error"),
 		},
+		"fail to get existing force update ID": {
+			setUpMocks: func(m *deployEnvironmentMock) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Return(&stack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("retrieve environment stack force update ID: some error"),
+		},
 		"fail to generate stack template": {
 			setUpMocks: func(m *deployEnvironmentMock) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
 				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.stack.EXPECT().Template().Return("", errors.New("some error"))
 			},
 			wantedError: errors.New("generate stack template: some error"),
@@ -171,6 +182,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 					S3Bucket: "mockS3Bucket",
 				}, nil)
 				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.stack.EXPECT().Template().Return("", nil)
 				m.stack.EXPECT().SerializedParameters().Return("", errors.New("some error"))
 			},
@@ -182,6 +194,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 					S3Bucket: "mockS3Bucket",
 				}, nil)
 				m.envDeployer.EXPECT().EnvironmentParameters(mockAppName, mockEnvName).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.stack.EXPECT().Template().Return("aloo", nil)
 				m.stack.EXPECT().SerializedParameters().Return("gobi", nil)
 			},
@@ -209,7 +222,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				},
 				appCFN:      m.appCFN,
 				envDeployer: m.envDeployer,
-				newStackSerializer: func(_ *deploy.CreateEnvironmentInput, _ []*awscfn.Parameter) stackSerializer {
+				newStackSerializer: func(_ *deploy.CreateEnvironmentInput, _ string, _ []*awscfn.Parameter) stackSerializer {
 					return m.stack
 				},
 			}
