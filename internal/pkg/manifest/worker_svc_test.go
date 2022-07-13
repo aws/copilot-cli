@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -140,77 +138,9 @@ func TestNewWorkerSvc(t *testing.T) {
 	}
 }
 
-func TestWorkerSvc_MarshalBinary(t *testing.T) {
-	testCases := map[string]struct {
-		inProps WorkerServiceProps
-
-		wantedTestdata string
-	}{
-		"without subscribe": {
-			inProps: WorkerServiceProps{
-				WorkloadProps: WorkloadProps{
-					Name:       "testers",
-					Dockerfile: "./testers/Dockerfile",
-				},
-				Platform: PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs: PlatformArgs{
-						OSFamily: nil,
-						Arch:     nil,
-					},
-				},
-			},
-			wantedTestdata: "worker-svc-nosubscribe.yml",
-		},
-		"with subscribe": {
-			inProps: WorkerServiceProps{
-				WorkloadProps: WorkloadProps{
-					Name:       "testers",
-					Dockerfile: "./testers/Dockerfile",
-				},
-				Platform: PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs: PlatformArgs{
-						OSFamily: nil,
-						Arch:     nil,
-					},
-				},
-				Topics: []TopicSubscription{
-					{
-						Name:    aws.String("testTopic"),
-						Service: aws.String("service4TestTopic"),
-					},
-					{
-						Name:    aws.String("testTopic2"),
-						Service: aws.String("service4TestTopic2"),
-					},
-				},
-			},
-			wantedTestdata: "worker-svc-subscribe.yml",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			path := filepath.Join("testdata", tc.wantedTestdata)
-			wantedBytes, err := ioutil.ReadFile(path)
-			require.NoError(t, err)
-			manifest := NewWorkerService(tc.inProps)
-
-			// WHEN
-			tpl, err := manifest.MarshalBinary()
-			require.NoError(t, err)
-
-			// THEN
-			require.Equal(t, string(wantedBytes), string(tpl))
-		})
-	}
-}
-
 func TestWorkerSvc_ApplyEnv(t *testing.T) {
 	perc := Percentage(70)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	mockWorkerServiceWithNoEnvironments := WorkerService{
@@ -1019,7 +949,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	mockRange := IntRangeBand("1-10")
 	perc := Percentage(70)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	testCases := map[string]struct {

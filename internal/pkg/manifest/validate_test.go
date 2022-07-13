@@ -280,7 +280,9 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								Requests: aws.Int(3),
+								Requests: ScalingConfigOrT[int]{
+									Value: aws.Int(3),
+								},
 							},
 						},
 					},
@@ -303,7 +305,9 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 					TaskConfig: TaskConfig{
 						Count: Count{
 							AdvancedCount: AdvancedCount{
-								ResponseTime: durationp(10 * time.Second),
+								ResponseTime: ScalingConfigOrT[time.Duration]{
+									Value: durationp(10 * time.Second),
+								},
 							},
 						},
 					},
@@ -551,7 +555,9 @@ func TestBackendService_Validate(t *testing.T) {
 						Count: Count{
 							AdvancedCount: AdvancedCount{
 								workloadType: BackendServiceType,
-								Requests:     aws.Int(128),
+								Requests: ScalingConfigOrT[int]{
+									Value: aws.Int(128),
+								},
 							},
 						},
 					},
@@ -1331,6 +1337,19 @@ func TestRoutingRule_Validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `"alias" must be specified if "hosted_zone" is specified`,
 		},
+		"error if one of alias is not valid": {
+			RoutingRule: RoutingRuleConfiguration{
+				Path: stringP("/"),
+				Alias: Alias{
+					AdvancedAliases: []AdvancedAlias{
+						{
+							HostedZone: aws.String("mockHostedZone"),
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "alias":`,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -1408,6 +1427,20 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`validate "port": invalid protocol TCP_udp; valid protocols include TCP and TLS`),
 		},
+		"error if hosted zone is set": {
+			nlb: NetworkLoadBalancerConfiguration{
+				Port: aws.String("443/tcp"),
+				Aliases: Alias{
+					AdvancedAliases: []AdvancedAlias{
+						{
+							Alias:      aws.String("mockAlias"),
+							HostedZone: aws.String("mockHostedZone"),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`"hosted_zone" is not supported for Network Load Balancer`),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -1424,6 +1457,31 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 				return
 			}
 			require.NoError(t, gotErr)
+		})
+	}
+}
+
+func TestAdvancedAlias_Validate(t *testing.T) {
+	testCases := map[string]struct {
+		in     AdvancedAlias
+		wanted error
+	}{
+		"should return an error if name is not specified": {
+			in: AdvancedAlias{
+				HostedZone: aws.String("ABCD123"),
+			},
+			wanted: errors.New(`"name" must be specified`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := tc.in.Validate()
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
@@ -1453,7 +1511,7 @@ func TestIPNet_Validate(t *testing.T) {
 
 func TestTaskConfig_Validate(t *testing.T) {
 	perc := Percentage(70)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	testCases := map[string]struct {
@@ -1596,7 +1654,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 	}
 }
 
-func TestResource_Validate(t *testing.T) {
+func TestScalingConfigOrT_Validate(t *testing.T) {
 
 	var (
 		time = 60 * time.Second
@@ -1604,19 +1662,19 @@ func TestResource_Validate(t *testing.T) {
 	)
 
 	testCases := map[string]struct {
-		Resource ScalingConfigOrPercentage
+		ScalingConfig ScalingConfigOrT[Percentage]
 
 		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
 		"valid if only value is specified": {
-			Resource: ScalingConfigOrPercentage{
+			ScalingConfig: ScalingConfigOrT[Percentage]{
 				Value: &perc,
 			},
 		},
 		"valid if only scaling config is specified": {
-			Resource: ScalingConfigOrPercentage{
-				ScalingConfig: AdvancedScalingConfig{
+			ScalingConfig: ScalingConfigOrT[Percentage]{
+				ScalingConfig: AdvancedScalingConfig[Percentage]{
 					Value: &perc,
 					Cooldown: Cooldown{
 						ScaleInCooldown:  &time,
@@ -1629,7 +1687,7 @@ func TestResource_Validate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.Resource.Validate()
+			gotErr := tc.ScalingConfig.Validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1650,17 +1708,17 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		perc        = Percentage(70)
 		invalidPerc = Percentage(-1)
 		timeMinute  = time.Second * 60
-		mockConfig  = ScalingConfigOrPercentage{
+		mockConfig  = ScalingConfigOrT[Percentage]{
 			Value: &perc,
 		}
-		invalidConfig = ScalingConfigOrPercentage{
+		invalidConfig = ScalingConfigOrT[Percentage]{
 			Value: &invalidPerc,
 		}
 		mockCooldown = Cooldown{
 			ScaleInCooldown: &timeMinute,
 		}
-		mockAdvancedInvConfig = ScalingConfigOrPercentage{
-			ScalingConfig: AdvancedScalingConfig{
+		mockAdvancedInvConfig = ScalingConfigOrT[Percentage]{
+			ScalingConfig: AdvancedScalingConfig[Percentage]{
 				Value:    &invalidPerc,
 				Cooldown: mockCooldown,
 			},
@@ -1731,7 +1789,9 @@ func TestAdvancedCount_Validate(t *testing.T) {
 		},
 		"error if range is missing when autoscaling fields are set for Load Balanced Web Service": {
 			AdvancedCount: AdvancedCount{
-				Requests:     aws.Int(123),
+				Requests: ScalingConfigOrT[int]{
+					Value: aws.Int(123),
+				},
 				workloadType: LoadBalancedWebServiceType,
 			},
 			wantedError: fmt.Errorf(`"range" must be specified if "cpu_percentage", "memory_percentage", "requests" or "response_time" are specified`),

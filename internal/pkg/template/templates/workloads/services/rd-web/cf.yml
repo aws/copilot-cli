@@ -2,6 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation template that represents a request driven web service on AWS App Runner.
+{{- if .SerializedManifest }}
+Metadata:
+  Manifest: |
+{{indent 4 .SerializedManifest}}
+{{- end }}
 Parameters:
   AppName:
     Type: String
@@ -154,9 +159,11 @@ Resources:
   CustomDomainFunction:
     Type: AWS::Lambda::Function
     Properties:
+      {{- with $cr := index .CustomResources "CustomDomainFunction" }}
       Code:
-        S3Bucket: {{ .ScriptBucketName }}
-        S3Key: {{ .CustomDomainLambda }}
+        S3Bucket: {{$cr.Bucket}}
+        S3Key: {{$cr.Key}}
+      {{- end }}
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -183,7 +190,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           -
             Effect: Allow
@@ -213,7 +220,7 @@ Resources:
 {{- end }}
 {{include "publish" . | indent 2}}
 
-{{- if ne .EnvControllerLambda ""}}
+{{- if gt (len (envControllerParams .)) 0}}
 {{include "env-controller" . | indent 2}}
 {{- end}}
 

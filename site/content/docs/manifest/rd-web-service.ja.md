@@ -151,6 +151,8 @@ Service からの Egress トラフィックをルーティングする VPC 内�
 この項目が 'private' の場合、App Runner サービスは VPC のプライベートサブネットを経由して Egress トラフィックをルーティングします。
 Copilot で生成された VPC を使用する場合、Copilot はインターネット接続用の NAT Gateway を Environment に自動的に追加します。 ([VPC の料金](https://aws.amazon.com/jp/vpc/pricing/)をご覧ください。) また、`copilot env init` を実行する際に、NAT ゲートウェイを持つ既存の VPC や、分離されたワークロードのための VPC エンドポイントをインポートすることも可能です。詳しくは、[Environment のリソースをカスタマイズする](../developing/custom-environment-resources.ja.md)をご覧ください。
 
+{% include 'observability.ja.md' %}
+
 <div class="separator"></div>
 
 <a id="command" href="#command" class="field">`command`</a> <span class="type">String</span>

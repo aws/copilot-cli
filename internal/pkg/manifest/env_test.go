@@ -37,7 +37,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							CIDR: ipNetP("10.0.0.0/16"),
@@ -94,7 +94,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							CIDR: ipNetP("10.0.0.0/16"),
@@ -144,7 +144,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							ID: stringP("vpc-3f139646"),
@@ -194,7 +194,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							Subnets: subnetsConfiguration{
@@ -231,7 +231,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					HTTPConfig: environmentHTTPConfig{
 						Public: publicHTTPConfig{
 							Certificates: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
@@ -258,7 +258,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							Subnets: subnetsConfiguration{
@@ -297,7 +297,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					Observability: environmentObservability{
 						ContainerInsights: aws.Bool(false),
 					},
@@ -350,7 +350,7 @@ network:
 					Name: aws.String("test"),
 					Type: aws.String("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							CIDR: &mockVPCCIDR,
@@ -393,9 +393,27 @@ observability:
 					Name: aws.String("prod"),
 					Type: aws.String("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					Observability: environmentObservability{
 						ContainerInsights: aws.Bool(true),
+					},
+				},
+			},
+		},
+		"unmarshal with content delivery network bool": {
+			inContent: `name: prod
+type: Environment
+
+cdn: true
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				environmentConfig: environmentConfig{
+					CDNConfig: environmentCDNConfig{
+						Enabled: aws.Bool(true),
 					},
 				},
 			},
@@ -415,7 +433,7 @@ http:
 					Name: aws.String("prod"),
 					Type: aws.String("Environment"),
 				},
-				EnvironmentConfig: EnvironmentConfig{
+				environmentConfig: environmentConfig{
 					HTTPConfig: environmentHTTPConfig{
 						Public: publicHTTPConfig{
 							Certificates: []string{"cert-1", "cert-2"},
@@ -584,10 +602,160 @@ func TestEnvironmentVPCConfig_ManagedVPC(t *testing.T) {
 				PrivateSubnetCIDRs: []string{string(mockPrivateSubnet1CIDR), string(mockPrivateSubnet2CIDR), string(mockPrivateSubnet3CIDR)},
 			},
 		},
+		"managed vpc without explicitly configured azs": {
+			inVPCConfig: environmentVPCConfig{
+				CIDR: &mockVPCCIDR,
+				Subnets: subnetsConfiguration{
+					Public: []subnetConfiguration{
+						{
+							CIDR: &mockPublicSubnet1CIDR,
+						},
+						{
+							CIDR: &mockPublicSubnet3CIDR,
+						},
+						{
+							CIDR: &mockPublicSubnet2CIDR,
+						},
+					},
+					Private: []subnetConfiguration{
+						{
+							CIDR: &mockPrivateSubnet2CIDR,
+						},
+						{
+							CIDR: &mockPrivateSubnet1CIDR,
+						},
+						{
+							CIDR: &mockPrivateSubnet3CIDR,
+						},
+					},
+				},
+			},
+			wanted: &template.ManagedVPC{
+				CIDR:               string(mockVPCCIDR),
+				PublicSubnetCIDRs:  []string{string(mockPublicSubnet1CIDR), string(mockPublicSubnet3CIDR), string(mockPublicSubnet2CIDR)},
+				PrivateSubnetCIDRs: []string{string(mockPrivateSubnet2CIDR), string(mockPrivateSubnet1CIDR), string(mockPrivateSubnet3CIDR)},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got := tc.inVPCConfig.ManagedVPC()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentVPCConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentVPCConfig
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: environmentVPCConfig{
+				ID: aws.String("mock-vpc-id"),
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestSubnetsConfiguration_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     subnetsConfiguration
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: subnetsConfiguration{
+				Public: []subnetConfiguration{
+					{
+						SubnetID: aws.String("mock-subnet-id"),
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentHTTPConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentHTTPConfig
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: environmentHTTPConfig{
+				Public: publicHTTPConfig{
+					Certificates: []string{"mock-cert"},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestPublicHTTPConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     publicHTTPConfig
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: publicHTTPConfig{
+				Certificates: []string{"mock-cert-1"},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestPrivateHTTPConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     privateHTTPConfig
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: privateHTTPConfig{
+				InternalALBSubnets: []string{"mock-subnet-1"},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
 			require.Equal(t, tc.wanted, got)
 		})
 	}
@@ -613,6 +781,62 @@ func TestEnvironmentObservability_IsEmpty(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentCDNConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentCDNConfig
+		wanted bool
+	}{
+		"empty": {
+			in:     environmentCDNConfig{},
+			wanted: true,
+		},
+		"not empty": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(false),
+			},
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
+	testCases := map[string]struct {
+		in     environmentCDNConfig
+		wanted bool
+	}{
+		"enabled via bool": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(true),
+			},
+			wanted: true,
+		},
+		"not enabled because empty": {
+			in:     environmentCDNConfig{},
+			wanted: false,
+		},
+		"not enabled via bool": {
+			in: environmentCDNConfig{
+				Enabled: aws.Bool(false),
+			},
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.CDNEnabled()
 			require.Equal(t, tc.wanted, got)
 		})
 	}

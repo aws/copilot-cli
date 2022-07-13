@@ -1,5 +1,5 @@
 # app init
-```bash
+```console
 $ copilot app init [name] [flags]
 ```
 
@@ -14,7 +14,7 @@ $ copilot app init [name] [flags]
 ## フラグ
 Copilot CLI における全てのコマンドと同じ様に、必要なフラグを指定しなかった場合、必要な情報を全て入力する様に求められます。
 フラグを指定して情報を指定すると、プロンプトをスキップできます。
-```bash
+```
       --domain string                  Optional. Your existing custom domain name.
   -h, --help                           help for init
       --resource-tags stringToString   Optional. Labels with a key and value separated by commas.
@@ -29,15 +29,15 @@ Copilot CLI における全てのコマンドと同じ様に、必要なフラ�
 
 ## 実行例
 "my-app"という名前の新しい Application を作成します。
-```bash
+```console
 $ copilot app init my-app
 ```
 Route 53 に登録済みの既存ドメイン名を利用して新しい Application を作成します。
-```bash
+```console
 $ copilot app init --domain example.com
 ```
 リソースタグを指定して新しい Application を作成します。
-```bash
+```console
 $ copilot app init --resource-tags department=MyDept,team=MyTeam
 ```
 ## 出力例

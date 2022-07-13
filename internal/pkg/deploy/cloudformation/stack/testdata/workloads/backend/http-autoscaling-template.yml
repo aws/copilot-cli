@@ -110,6 +110,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -129,7 +130,7 @@ Resources:
               ],
             ]
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: "Allow"
                 Action:
@@ -172,7 +173,7 @@ Resources:
                 ],
               ]
             PolicyDocument:
-              Version: "2012-10-17"
+              Version: '2012-10-17'
               Statement:
                 - Effect: "Allow"
                   Action:
@@ -204,6 +205,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -212,7 +214,7 @@ Resources:
       Policies:
         - PolicyName: "DenyIAMExceptTaggedRoles"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: "Deny"
                 Action: "iam:*"
@@ -227,7 +229,7 @@ Resources:
                     "iam:ResourceTag/copilot-environment": !Sub "${EnvName}"
         - PolicyName: "ExecuteCommand"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: "Allow"
                 Action:
@@ -283,8 +285,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          desiredCountGenerator
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
@@ -296,7 +298,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -310,7 +312,7 @@ Resources:
       Policies:
         - PolicyName: "DelegateDesiredCountAccess"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Sid: ECS
                 Effect: Allow
@@ -340,6 +342,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -453,8 +456,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          albRulePriorityGenerator
+        S3Bucket:
+        S3Key:
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
@@ -466,7 +469,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -480,18 +483,35 @@ Resources:
       Policies:
         - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
                   - elasticloadbalancing:DescribeRules
                 Resource: "*"
+  LoadBalancerInternalDNSAlias:
+    Metadata:
+      "aws:copilot:description": "Alias for http-autoscaling.my-env.my-app.internal to the internal load balancer"
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      Comment: !Sub "Load balancer alias for service ${WorkloadName}"
+      HostedZoneId: !GetAtt EnvControllerAction.InternalWorkloadsHostedZone
+      RecordSets:
+        - Type: A
+          AliasTarget:
+            HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
+            DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
+          Name: !Join
+            - "."
+            - - !Ref WorkloadName
+              - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
   HTTPRulePriorityAction:
     Metadata:
       "aws:copilot:description": "A custom resource assigning priority for HTTP listener rules"
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
+      RulePath: !Ref RulePath
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
   HTTPListenerRule:
     Metadata:
@@ -502,6 +522,14 @@ Resources:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
       Conditions:
+        - Field: "host-header"
+          HostHeaderConfig:
+            Values:
+              - !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
+              - !Join
+                - "."
+                - - !Ref WorkloadName
+                  - !GetAtt EnvControllerAction.InternalWorkloadsHostedZoneName
         - Field: "path-pattern"
           PathPatternConfig:
             Values: !If
@@ -510,10 +538,7 @@ Resources:
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-      Priority: !If
-        - IsDefaultRootPath
-        - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-        - !GetAtt HTTPRulePriorityAction.Priority
+      Priority: !GetAtt HTTPRulePriorityAction.Priority
   AddonsStack:
     Metadata:
       "aws:copilot:description": "An Addons CloudFormation Stack for your additional AWS resources"
@@ -539,8 +564,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          envController
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -552,7 +577,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -564,7 +589,7 @@ Resources:
       Policies:
         - PolicyName: "EnvControllerStackUpdate"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -577,7 +602,7 @@ Resources:
                     "cloudformation:ResourceTag/copilot-environment": !Sub "${EnvName}"
         - PolicyName: "EnvControllerRolePass"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:

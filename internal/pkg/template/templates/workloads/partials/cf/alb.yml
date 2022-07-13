@@ -41,9 +41,11 @@ TargetGroup:
 RulePriorityFunction:
   Type: AWS::Lambda::Function
   Properties:
+    {{- with $cr := index .CustomResources "RulePriorityFunction" }}
     Code:
-      ZipFile: |
-        {{.RulePriorityLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end }}
     Handler: "index.nextAvailableRulePriorityHandler"
     Timeout: 600
     MemorySize: 512
@@ -56,7 +58,7 @@ RulePriorityFunctionRole:
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
-      Version: 2012-10-17
+      Version: '2012-10-17'
       Statement:
         - Effect: Allow
           Principal:
@@ -70,7 +72,7 @@ RulePriorityFunctionRole:
     Policies:
       - PolicyName: "RulePriorityGeneratorAccess"
         PolicyDocument:
-          Version: "2012-10-17"
+          Version: '2012-10-17'
           Statement:
             - Effect: Allow
               Action:

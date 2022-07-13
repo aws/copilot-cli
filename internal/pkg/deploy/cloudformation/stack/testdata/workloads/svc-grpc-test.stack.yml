@@ -117,6 +117,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -183,6 +184,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -248,8 +250,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockDynamicDesiredCountZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 600
       MemorySize: 512
@@ -261,7 +263,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -305,6 +307,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -353,8 +356,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockEnvControllerZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -366,7 +369,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -463,8 +466,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockRulePriorityZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
@@ -476,7 +479,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -490,7 +493,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Policies:
         - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -502,6 +505,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
+      RulePath: !Ref RulePath
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
   HTTPListenerRuleWithDomain:
     Metadata:
@@ -520,7 +524,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: [example.com]
+            Values: ["example.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If
@@ -541,7 +545,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: [example.com]
+            Values: ["example.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If

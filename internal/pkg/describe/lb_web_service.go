@@ -28,15 +28,16 @@ import (
 )
 
 const (
-	envOutputPublicLoadBalancerDNSName = "PublicLoadBalancerDNSName"
-	envOutputSubdomain                 = "EnvironmentSubdomain"
-	svcParamHTTPSEnabled               = "HTTPSEnabled"
+	envOutputPublicLoadBalancerDNSName   = "PublicLoadBalancerDNSName"
+	envOutputInternalLoadBalancerDNSName = "InternalLoadBalancerDNSName"
+	envOutputSubdomain                   = "EnvironmentSubdomain"
 
-	svcStackResourceALBTargetGroupLogicalID       = "TargetGroup"
-	svcStackResourceNLBTargetGroupLogicalID       = "NLBTargetGroup"
-	svcStackResourceHTTPSListenerRuleLogicalID    = "HTTPSListenerRule"
-	svcStackResourceHTTPSListenerRuleResourceType = "AWS::ElasticLoadBalancingV2::ListenerRule"
-	svcOutputPublicNLBDNSName                     = "PublicNetworkLoadBalancerDNSName"
+	svcStackResourceALBTargetGroupLogicalID    = "TargetGroup"
+	svcStackResourceNLBTargetGroupLogicalID    = "NLBTargetGroup"
+	svcStackResourceHTTPSListenerRuleLogicalID = "HTTPSListenerRule"
+	svcStackResourceHTTPListenerRuleLogicalID  = "HTTPListenerRule"
+	svcStackResourceListenerRuleResourceType   = "AWS::ElasticLoadBalancingV2::ListenerRule"
+	svcOutputPublicNLBDNSName                  = "PublicNetworkLoadBalancerDNSName"
 )
 
 type envDescriber interface {
@@ -134,13 +135,13 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		webServiceURI, err := d.URI(env)
+		uri, err := d.URI(env)
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service URI: %w", err)
 		}
 		routes = append(routes, &WebServiceRoute{
 			Environment: env,
-			URL:         webServiceURI,
+			URL:         uri.URI,
 		})
 		containerPlatform, err := svcDescr.Platform()
 		if err != nil {
@@ -212,6 +213,16 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 		environments: environments,
 	}, nil
+}
+
+// Manifest returns the contents of the manifest used to deploy a load balanced web service stack.
+// If the Manifest metadata doesn't exist in the stack template, then returns ErrManifestNotFoundInTemplate.
+func (d *LBWebServiceDescriber) Manifest(env string) ([]byte, error) {
+	cfn, err := d.initECSServiceDescribers(env)
+	if err != nil {
+		return nil, err
+	}
+	return cfn.Manifest()
 }
 
 type secret struct {

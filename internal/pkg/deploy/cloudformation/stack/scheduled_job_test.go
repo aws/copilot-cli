@@ -55,22 +55,24 @@ func TestScheduledJob_Template(t *testing.T) {
 		"render template without addons successfully": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseScheduledJob(gomock.Eq(template.WorkloadOpts{
-					WorkloadType:       manifest.ScheduledJobType,
-					ScheduleExpression: "cron(0 0 * * ? *)",
-					StateMachine: &template.StateMachineOpts{
-						Timeout: aws.Int(5400),
-						Retries: aws.Int(3),
-					},
-					Network: template.NetworkOpts{
-						AssignPublicIP: template.EnablePublicIP,
-						SubnetsType:    template.PublicSubnetsPlacement,
-					},
-					EntryPoint:          []string{"/bin/echo", "hello"},
-					Command:             []string{"world"},
-					EnvControllerLambda: "something",
-				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+				m.EXPECT().ParseScheduledJob(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						WorkloadType:       manifest.ScheduledJobType,
+						ScheduleExpression: "cron(0 0 * * ? *)",
+						StateMachine: &template.StateMachineOpts{
+							Timeout: aws.Int(5400),
+							Retries: aws.Int(3),
+						},
+						Network: template.NetworkOpts{
+							AssignPublicIP: template.EnablePublicIP,
+							SubnetsType:    template.PublicSubnetsPlacement,
+						},
+						EntryPoint:      []string{"/bin/echo", "hello"},
+						Command:         []string{"world"},
+						CustomResources: make(map[string]template.S3ObjectLocation),
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
 				j.parser = m
 				j.wkld.addons = addons
@@ -80,30 +82,32 @@ func TestScheduledJob_Template(t *testing.T) {
 		"render template with addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
-				m.EXPECT().ParseScheduledJob(gomock.Eq(template.WorkloadOpts{
-					WorkloadType: manifest.ScheduledJobType,
-					NestedStack: &template.WorkloadNestedStackOpts{
-						StackName:       addon.StackName,
-						VariableOutputs: []string{"Hello"},
-						SecretOutputs:   []string{"MySecretArn"},
-						PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
-					},
-					AddonsExtraParams: `ServiceName: !GetAtt Service.Name
+				m.EXPECT().ParseScheduledJob(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
+					require.Equal(t, template.WorkloadOpts{
+						WorkloadType: manifest.ScheduledJobType,
+						NestedStack: &template.WorkloadNestedStackOpts{
+							StackName:       addon.StackName,
+							VariableOutputs: []string{"Hello"},
+							SecretOutputs:   []string{"MySecretArn"},
+							PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
+						},
+						AddonsExtraParams: `ServiceName: !GetAtt Service.Name
 DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
-					ScheduleExpression: "cron(0 0 * * ? *)",
-					StateMachine: &template.StateMachineOpts{
-						Timeout: aws.Int(5400),
-						Retries: aws.Int(3),
-					},
-					Network: template.NetworkOpts{
-						AssignPublicIP: template.EnablePublicIP,
-						SubnetsType:    template.PublicSubnetsPlacement,
-					},
-					EntryPoint:          []string{"/bin/echo", "hello"},
-					Command:             []string{"world"},
-					EnvControllerLambda: "something",
-				})).Return(&template.Content{Buffer: bytes.NewBufferString("template")}, nil)
+						ScheduleExpression: "cron(0 0 * * ? *)",
+						StateMachine: &template.StateMachineOpts{
+							Timeout: aws.Int(5400),
+							Retries: aws.Int(3),
+						},
+						Network: template.NetworkOpts{
+							AssignPublicIP: template.EnablePublicIP,
+							SubnetsType:    template.PublicSubnetsPlacement,
+						},
+						EntryPoint:      []string{"/bin/echo", "hello"},
+						Command:         []string{"world"},
+						CustomResources: make(map[string]template.S3ObjectLocation),
+					}, actual)
+					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+				})
 				addons := mockAddons{
 					tpl: `Resources:
   AdditionalResourcesPolicy:
@@ -140,9 +144,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 		},
 		"error parsing addons": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
-				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				addons := mockAddons{tplErr: errors.New("some error")}
-				j.parser = m
 				j.wkld.addons = addons
 			},
 			wantedError: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testScheduledJobManifest.Name), errors.New("some error")),
@@ -150,7 +152,6 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 		"template parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
-				m.EXPECT().Read(envControllerPath).Return(&template.Content{Buffer: bytes.NewBufferString("something")}, nil)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).Return(nil, errors.New("some error"))
 				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
 				j.parser = m

@@ -11,7 +11,7 @@
 ## Why?
 <!-- textlint-enable ja-technical-writing/no-exclamation-question-mark -->
 
-ソフトウェアリリースについての哲学的すぎる話はしませんが、果たしてリリースパイプラインを持つ意味とはなんでしょうか？`copilot deploy` コマンドを使えば手元のコンピューターから ECS へ直接デプロイできるのに、なぜわざわざ仲介する仕組みを挟むのでしょうか？良い質問です。あるアプリケーションにとっては、手動での `deploy` で十分なこともあるでしょう。一方で、例えば複数の Environment やあるいは自動テストが追加されていきリリースパイプラインが複雑化してくると、その退屈な作業を何らかの仕組みにオフロードしたくなるでしょう。２つの Service が２つの(例えばテスト環境と本番環境のような) Environment 内にそれぞれあるとして、それらに対してテスト環境へのデプロイ後のインテグレーションテストを手で実施することは驚くほどに面倒な作業になります。
+ソフトウェアリリースについての哲学的すぎる話はしませんが、果たしてリリースパイプラインを持つ意味とはなんでしょうか？`copilot deploy` コマンドを使えば手元のコンピューターから Amazon ECS on AWS Fargate へ直接デプロイできるのに、なぜわざわざ仲介する仕組みを挟むのでしょうか？良い質問です。あるアプリケーションにとっては、手動での `deploy` で十分なこともあるでしょう。一方で、例えば複数の Environment やあるいは自動テストが追加されていきリリースパイプラインが複雑化してくると、その退屈な作業を何らかの仕組みにオフロードしたくなるでしょう。２つの Service が２つの(例えばテスト環境と本番環境のような) Environment 内にそれぞれあるとして、それらに対してテスト環境へのデプロイ後のインテグレーションテストを手で実施することは驚くほどに面倒な作業になります。
 
 <!-- textlint-disable ja-technical-writing/ja-no-mixed-period -->
 CodePipeline のような自動化されたリリースツールは、あなたのリリース作業を管理可能なものにする手助けをしてくれます。たとえリリース作業自体がそれほど複雑なものではなかったとしても、`git push` さえすれば変更を自動的にデプロイできる体験は、ちょっとした魔法のように感じますよね 🌈
@@ -32,7 +32,7 @@ Copilot を使って CodePipeline のセットアップを済ませたら、あ�
 
 CodePipeline についてより深く学びたい場合は、[CodePipeline のドキュメント](https://docs.aws.amazon.com/ja_jp/codepipeline/latest/userguide/welcome-introducing.html)も参考にしてください。
 
-## 3ステップで作る Pipeline
+## 3 ステップで作る Pipeline
 Pipeline の作成に必要な手順は３つです。
 
 1. 最初に Pipeline の作成準備と設定を実施します。
@@ -53,7 +53,7 @@ $ copilot pipeline deploy
 
 ## ステップ・バイ・ステップで見る Pipeline のセットアップ
 
-### ステップ1: Pipeline の設定
+### ステップ 1: Pipeline の設定
 
 Pipeline の設定はワークスペースのレベルで作成されます。もしワークスペース内にある Service が１つの場合、Pipeline はその Service についてのみ実行されます。もしワークスペース内に複数の Service がある場合、Pipeline はそれら全てをビルドします。Pipeline のセットアップを始めるには、Service (あるいは Service 群)がある Application のワークスペースのディレクトリに `cd` コマンドなどで入り、次のコマンドを実行します。
 
@@ -69,7 +69,7 @@ Pipeline の設定はワークスペースのレベルで作成されます。�
 
 * __Tracking branch__: リポジトリを選択すると、 Copilot は現在のローカルブランチをパイプラインを利用するブランチとして指定します。これはステップ 2 で変更できます。
 
-### ステップ2: Pipeline 用 Manifest ファイルの更新 (オプション)
+### ステップ 2: Pipeline 用 Manifest ファイルの更新 (オプション)
 
 Service はシンプルな Manifest ファイルを持ちます。同様に、Pipeline にも Manifest があります。`pipeline init` コマンドを実行すると、`copilot/pipelines/[your pipeline name]` ディレクトリ内に `manifest.yml` と `buildspec.yml` という２つのファイルが作成されます。`manifest.yml` の中は次のような感じになっているはずです。 (ここでは "api-frontend" という Service が "test" と "prod" の２つの Environment にデプロイされるものと仮定しましょう)
 
@@ -113,7 +113,7 @@ stages:
 
 よくあるケースとしては、新たなデプロイ先の Environment を増やしたいときや、Pipeline がトラックするブランチを変更したい際にこのファイルを更新することになるでしょう。あるいはもしすでに CodeStar Connections に接続済みのリポジトリがあり、Copilot で新たに作成するのではなく既存のものを利用したい場合には、その接続名を記述することになります。また、Pipeline Manifest はデプロイの手動承認を設定したり、デプロイ後に自動テストを実行したりしたい場合の設定を記述する場所でもあります。(本ページ下部の "テストの追加" もご覧ください)
 
-### ステップ3: Buildspec ファイルの更新 (オプション)
+### ステップ 3: Buildspec ファイルの更新 (オプション)
 
 `pipeline init` コマンドでは、`manifest.yml` と一緒に `buildspec.yml` も `copilot/pipelines/[your pipeline name]` ディレクトリ内に作成されます。この `buldspec.yml` にはビルドとコンテナイメージのプッシュに関する指示が記述されています。もし `docker build` と一緒にユニットテストやスタイルチェックのような追加のコマンドを実行したい場合は、buildspec の `build` フェーズにそれらのコマンドを追加してください。
 
@@ -125,11 +125,11 @@ build:
   buildspec:
 ```
 
-### ステップ4: リポジトリに生成されたファイルをプッシュする
+### ステップ 4: リポジトリに生成されたファイルをプッシュする
 
 `manifest.yml`、`buildspec.yml`、そして `.workspace` ファイルが作成されたので、これらをリポジトリに追加しましょう。`copilot/` ディレクトリ以下に含まれたこれらのファイルが、Pipeline が `build` ステージを正しく実行するために必要となります。
 
-### ステップ5: Pipeline の作成
+### ステップ 5: Pipeline の作成
 
 ここからが楽しいパートです！次のコマンドを実行しましょう！
 
@@ -139,10 +139,20 @@ build:
 
 ![処理が完了した CodePipeline の様子](https://user-images.githubusercontent.com/828419/71861318-c7083980-30aa-11ea-80bb-4bea25bf5d04.png)
 
-<!-- textlint-disable ja-technical-writing/no-exclamation-question-mark -->
 !!! info
-<!-- textlint-enable ja-technical-writing/no-exclamation-question-mark -->
     もしあなたが GitHub あるいは Bitbucket リポジトリを利用する場合、Copilot は [CodeStar Connections](https://docs.aws.amazon.com/ja_jp/dtconsole/latest/userguide/welcome-connections.html) を利用してリポジトリとの接続を作成する手助けをします。この過程で GitHub や Bitbucket のアカウントに AWS がアクセスするための認証アプリケーションをインストールする必要があります (e.g. GitHub の場合、"AWS Connector for GitHub")。Copilot と AWS マネジメントコンソールのガイダンスにしたがってこのステップを進めてください。
+
+### ステップ 6: Pipeline の Copilot バージョンを管理する (オプション)
+
+Pipeline を作成した後、`buildspec.yml` の以下の行を最新バージョンに更新することで、Pipeline で使用する Copilot のバージョンを管理できます。
+
+```yaml
+...
+      # Copilot Linux バイナリをダウンロードします
+      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.16.0
+      - mv ./copilot-linux-v1.16.0 ./copilot-linux
+...
+```
 
 ## テストの追加
 

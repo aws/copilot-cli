@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -307,7 +306,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 type deleteSvcMocks struct {
 	store          *mocks.Mockstore
 	secretsmanager *mocks.MocksecretsManager
-	sessProvider   *sessions.Provider
+	sessProvider   *mocks.MocksessionProvider
 	appCFN         *mocks.MocksvcRemoverFromApp
 	spinner        *mocks.Mockprogress
 	svcCFN         *mocks.MockwlDeleter
@@ -348,10 +347,15 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().ListEnvironments(gomock.Eq(mockAppName)).Times(1).Return(mockEnvs, nil),
+
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteStart, mockSvcName, mockEnvName)),
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteComplete, mockSvcName, mockEnvName)),
+
+					mocks.sessProvider.EXPECT().DefaultWithRegion(gomock.Any()).Return(&session.Session{}, nil),
+
 					// emptyECRRepos
 					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
 
@@ -378,6 +382,8 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
+
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteStart, mockSvcName, mockEnvName)),
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
@@ -403,6 +409,8 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
+
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteStart, mockSvcName, mockEnvName)),
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(testError),
@@ -421,7 +429,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			// GIVEN
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
-			mockSession := sessions.ImmutableProvider()
+			mockSession := mocks.NewMocksessionProvider(ctrl)
 			mockAppCFN := mocks.NewMocksvcRemoverFromApp(ctrl)
 			mockSvcCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)

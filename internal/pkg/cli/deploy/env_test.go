@@ -6,7 +6,11 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"io"
+	"strings"
 	"testing"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
@@ -19,9 +23,8 @@ import (
 )
 
 type uploadArtifactsMock struct {
-	uploader *mocks.MockcustomResourcesUploader
-	appCFN   *mocks.MockappResourcesGetter
-	s3       *mocks.Mockuploader
+	appCFN *mocks.MockappResourcesGetter
+	s3     *mocks.Mockuploader
 }
 
 func TestEnvDeployer_UploadArtifacts(t *testing.T) {
@@ -52,21 +55,31 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
-				m.uploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(nil, fmt.Errorf("some error"))
+				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Any(), gomock.Any()).AnyTimes().Return("", fmt.Errorf("some error"))
 			},
-			wantedError: errors.New("upload custom resources to bucket mockS3Bucket: some error"),
+			wantedError: errors.New("upload custom resources to bucket mockS3Bucket"),
 		},
 		"success with URL returned": {
 			setUpMocks: func(m *uploadArtifactsMock) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
-				m.uploader.EXPECT().UploadEnvironmentCustomResources(gomock.Any()).Return(map[string]string{
-					"mockResource": "mockURL",
-				}, nil)
+				crs, err := customresource.Env(fakeTemplateFS())
+				require.NoError(t, err)
+
+				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
+					for _, cr := range crs {
+						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+							return "", nil
+						}
+					}
+					return "", errors.New("did not match any custom resource")
+				}).Times(len(crs))
 			},
 			wantedOut: map[string]string{
-				"mockResource": "mockURL",
+				"CertificateValidationFunction": "",
+				"CustomDomainFunction":          "",
+				"DNSDelegationFunction":         "",
 			},
 		},
 	}
@@ -77,9 +90,8 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &uploadArtifactsMock{
-				uploader: mocks.NewMockcustomResourcesUploader(ctrl),
-				appCFN:   mocks.NewMockappResourcesGetter(ctrl),
-				s3:       mocks.NewMockuploader(ctrl),
+				appCFN: mocks.NewMockappResourcesGetter(ctrl),
+				s3:     mocks.NewMockuploader(ctrl),
 			}
 			tc.setUpMocks(m)
 
@@ -89,14 +101,14 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 					ManagerRoleARN: mockManagerRoleARN,
 					Region:         mockEnvRegion,
 				},
-				uploader: m.uploader,
-				appCFN:   m.appCFN,
-				s3:       m.s3,
+				appCFN:     m.appCFN,
+				s3:         m.s3,
+				templateFS: fakeTemplateFS(),
 			}
 
 			got, gotErr := d.UploadArtifacts()
 			if tc.wantedError != nil {
-				require.EqualError(t, gotErr, tc.wantedError.Error())
+				require.Contains(t, gotErr.Error(), tc.wantedError.Error())
 			} else {
 				require.NoError(t, gotErr)
 				require.Equal(t, tc.wantedOut, got)

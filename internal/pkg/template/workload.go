@@ -6,6 +6,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"text/template"
 
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -324,16 +325,30 @@ type CapacityProviderStrategy struct {
 	CapacityProvider string
 }
 
+// Cooldown holds configuration needed for autoscaling cooldown fields.
+type Cooldown struct {
+	ScaleInCooldown  *float64
+	ScaleOutCooldown *float64
+}
+
 // AutoscalingOpts holds configuration that's needed for Auto Scaling.
 type AutoscalingOpts struct {
-	MinCapacity  *int
-	MaxCapacity  *int
-	CPU          *float64
-	Memory       *float64
-	Requests     *float64
-	ResponseTime *float64
-	QueueDelay   *AutoscalingQueueDelayOpts
+	MinCapacity        *int
+	MaxCapacity        *int
+	CPU                *float64
+	Memory             *float64
+	Requests           *float64
+	ResponseTime       *float64
+	CPUCooldown        Cooldown
+	MemCooldown        Cooldown
+	ReqCooldown        Cooldown
+	RespTimeCooldown   Cooldown
+	QueueDelayCooldown Cooldown
+	QueueDelay         *AutoscalingQueueDelayOpts
 }
+
+// AliasesForHostedZone maps hosted zone IDs to aliases that belong to it.
+type AliasesForHostedZone map[string][]string
 
 // AutoscalingQueueDelayOpts holds configuration to scale SQS queues.
 type AutoscalingQueueDelayOpts struct {
@@ -421,8 +436,9 @@ type NetworkOpts struct {
 	SecurityGroups []string
 	AssignPublicIP string
 	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
-	SubnetsType string
-	SubnetIDs   []string
+	SubnetsType              string
+	SubnetIDs                []string
+	DenyDefaultSecurityGroup bool
 }
 
 // RuntimePlatformOpts holds configuration needed for Platform configuration.
@@ -456,8 +472,19 @@ func (p RuntimePlatformOpts) isEmpty() bool {
 	return p.OS == "" && p.Arch == ""
 }
 
+// S3ObjectLocation represents an object stored in an S3 bucket.
+type S3ObjectLocation struct {
+	Bucket string // Name of the bucket.
+	Key    string // Key of the object.
+}
+
 // WorkloadOpts holds optional data that can be provided to enable features in a workload stack template.
 type WorkloadOpts struct {
+	AppName            string
+	EnvName            string
+	WorkloadName       string
+	SerializedManifest string // Raw manifest file used to deploy the workload.
+
 	// Additional options that are common between **all** workload templates.
 	Variables                map[string]string
 	Secrets                  map[string]Secret
@@ -485,7 +512,8 @@ type WorkloadOpts struct {
 	ServiceDiscoveryEndpoint string
 	HTTPVersion              *string
 	ALBEnabled               bool
-	HostedZoneID             *string
+	HostedZoneAliases        AliasesForHostedZone
+	CredentialsParameter     string
 
 	// Additional options for service templates.
 	WorkloadType            string
@@ -496,14 +524,8 @@ type WorkloadOpts struct {
 	NLB                     *NetworkLoadBalancer
 	DeploymentConfiguration DeploymentConfigurationOpts
 
-	// Lambda functions.
-	RulePriorityLambda             string
-	DesiredCountLambda             string
-	EnvControllerLambda            string
-	CredentialsParameter           string
-	BacklogPerTaskCalculatorLambda string
-	NLBCertValidatorFunctionLambda string
-	NLBCustomDomainFunctionLambda  string
+	// Custom Resources backed by Lambda functions.
+	CustomResources map[string]S3ObjectLocation
 
 	// Additional options for job templates.
 	ScheduleExpression string
@@ -516,8 +538,6 @@ type WorkloadOpts struct {
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
-	ScriptBucketName     *string
-	CustomDomainLambda   *string
 	AWSSDKLayer          *string
 	AppDNSDelegationRole *string
 	AppDNSName           *string
@@ -592,6 +612,7 @@ func withSvcParsingFuncs() ParseOption {
 			"hasSecrets":           hasSecrets,
 			"fmtSlice":             FmtSliceFunc,
 			"quoteSlice":           QuoteSliceFunc,
+			"quote":                strconv.Quote,
 			"randomUUID":           randomUUIDFunc,
 			"jsonMountPoints":      generateMountPointJSON,
 			"jsonSNSTopics":        generateSNSJSON,

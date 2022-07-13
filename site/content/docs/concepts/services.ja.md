@@ -29,7 +29,7 @@ Service のタイプを選択すると、Copilot は Dockerfile 内で記述さ�
 
 AWS App Runner を利用する Service で、受け付けるトラフィックに応じてオートスケールし、トラフィックがない場合は設定された最低インスタンス数までスケールダウンします。リクエスト量の大きな変化や恒常的な少ないリクエスト量が見込まれる HTTP サービスにとってもよりコスト効率の高い選択肢です。
 ECS とは異なり、 App Runner サービスはデフォルトでは VPC とは接続されていません。 Egress トラフィックを VPC 経由でルーティングするには、
-マニフェスト内の[`network`](../manifest/rd-web-service.ja.md#network)フィールドを設定します。
+Manifest 内の[`network`](../manifest/rd-web-service.ja.md#network)フィールドを設定します。
 
 #### Load Balanced Web Service
 
@@ -46,7 +46,7 @@ Application Load Balancer は Environment レベルのリソースであり、En
 ### Backend Service
 
 VPC 外部からアクセスさせる必要はないが、Application 内の他の Service からはアクセスできる必要があるという場合は、 __Backend Service__ を
-作りましょう。Copilot は AWS Fargate で実行される ECS サービスを作成しますが、インターネットに向けて開放されたエンドポイントを作成することはありません。
+作りましょう。Copilot は AWS Fargate で実行される ECS サービスを作成しますが、インターネットに向けて開放されたエンドポイントを作成することはありません。内部ロードバランサーを利用する Backend Service について知りたい場合は、[こちら](../developing/internal-albs.ja.md)を確認してください。
 
 ![backend-service-infra](https://user-images.githubusercontent.com/879348/86046929-e8673400-ba02-11ea-8676-addd6042e517.png)
 

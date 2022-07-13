@@ -23,10 +23,6 @@ func (r *RoutingRuleConfigOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
 
-func (r *RoutingRuleConfigOrBool) isEmpty() bool {
-	return r.Enabled == nil && r.RoutingRuleConfiguration.IsEmpty()
-}
-
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
 func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
@@ -93,38 +89,75 @@ func ipNetP(s string) *IPNet {
 	return &ip
 }
 
+// AdvancedAlias represents advanced alias configuration.
+type AdvancedAlias struct {
+	Alias      *string `yaml:"name"`
+	HostedZone *string `yaml:"hosted_zone"`
+}
+
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
-// can either be of type string or type slice of string.
-type Alias stringSliceOrString
+// can either be of type advancedAlias slice or type stringSliceOrString.
+type Alias struct {
+	AdvancedAliases     []AdvancedAlias
+	StringSliceOrString stringSliceOrString
+}
 
 // IsEmpty returns empty if Alias is empty.
-func (e *Alias) IsEmpty() bool {
-	return e.String == nil && e.StringSlice == nil
+func (a *Alias) IsEmpty() bool {
+	return len(a.AdvancedAliases) == 0 && a.StringSliceOrString.isEmpty()
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Alias
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (e *Alias) UnmarshalYAML(value *yaml.Node) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), value); err != nil {
+func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&a.AdvancedAliases); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+
+	if len(a.AdvancedAliases) != 0 {
+		// Unmarshaled successfully to s.StringSlice, unset s.String, and return.
+		a.StringSliceOrString = stringSliceOrString{}
+		return nil
+	}
+	if err := unmarshalYAMLToStringSliceOrString(&a.StringSliceOrString, value); err != nil {
 		return errUnmarshalAlias
 	}
 	return nil
 }
 
-// ToStringSlice converts an Alias to a slice of string using shell-style rules.
-func (e *Alias) ToStringSlice() ([]string, error) {
-	out, err := toStringSlice((*stringSliceOrString)(e))
+// ToStringSlice converts an Alias to a slice of string.
+func (a *Alias) ToStringSlice() ([]string, error) {
+	if len(a.AdvancedAliases) != 0 {
+		aliases := make([]string, len(a.AdvancedAliases))
+		for i, advancedAlias := range a.AdvancedAliases {
+			aliases[i] = aws.StringValue(advancedAlias.Alias)
+		}
+		return aliases, nil
+	}
+	aliases, err := toStringSlice(&a.StringSliceOrString)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	return aliases, nil
 }
 
 // ToString converts an Alias to a string.
-func (e *Alias) ToString() string {
-	if e.String != nil {
-		return aws.StringValue(e.String)
+func (a *Alias) ToString() string {
+	if len(a.AdvancedAliases) != 0 {
+		aliases := make([]string, len(a.AdvancedAliases))
+		for i, advancedAlias := range a.AdvancedAliases {
+			aliases[i] = aws.StringValue(advancedAlias.Alias)
+		}
+		return strings.Join(aliases, ",")
 	}
-	return strings.Join(e.StringSlice, ",")
+	if a.StringSliceOrString.String != nil {
+		return aws.StringValue(a.StringSliceOrString.String)
+	}
+	return strings.Join(a.StringSliceOrString.StringSlice, ",")
 }

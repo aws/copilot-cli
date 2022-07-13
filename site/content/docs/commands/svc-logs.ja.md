@@ -1,5 +1,5 @@
 # svc logs
-```bash
+```console
 $ copilot svc logs
 ```
 
@@ -9,7 +9,7 @@ $ copilot svc logs
 
 ## フラグ
 
-```bash
+```
   -a, --app string          Name of the application.
       --end-time string     Optional. Only return logs before a specific date (RFC3339).
                             Defaults to all logs. Only one of end-time / follow may be used.
@@ -30,18 +30,18 @@ $ copilot svc logs
 
 "test" Environment の "my-svc" Service のログを表示します。
 
-```bash
+```console
 $ copilot svc logs -n my-svc -e test
 ```
 
 過去 1 時間のログを表示します。
 
-```bash
+```console
 $ copilot svc logs --since 1h
 ```
 
 2006-01-02T15:04:05 から 2006-01-02T15:05:05 までのログを表示します。
 
-```bash
+```console
 $ copilot svc logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00
 ```

@@ -88,6 +88,21 @@ func (mr *MockecsClientMockRecorder) DefaultCluster() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultCluster", reflect.TypeOf((*MockecsClient)(nil).DefaultCluster))
 }
 
+// DescribeTasks mocks base method.
+func (m *MockecsClient) DescribeTasks(cluster string, taskARNs []string) ([]*ecs.Task, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeTasks", cluster, taskARNs)
+	ret0, _ := ret[0].([]*ecs.Task)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeTasks indicates an expected call of DescribeTasks.
+func (mr *MockecsClientMockRecorder) DescribeTasks(cluster, taskARNs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTasks", reflect.TypeOf((*MockecsClient)(nil).DescribeTasks), cluster, taskARNs)
+}
+
 // NetworkConfiguration mocks base method.
 func (m *MockecsClient) NetworkConfiguration(cluster, serviceName string) (*ecs.NetworkConfiguration, error) {
 	m.ctrl.T.Helper()

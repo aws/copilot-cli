@@ -17,9 +17,11 @@ DynamicDesiredCountAction:
 DynamicDesiredCountFunction:
   Type: AWS::Lambda::Function
   Properties:
+    {{- with $cr := index .CustomResources "DynamicDesiredCountFunction" }}
     Code:
-      ZipFile: |
-        {{.DesiredCountLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end }}
     Handler: "index.handler"
     Timeout: 600
     MemorySize: 512
@@ -32,7 +34,7 @@ DynamicDesiredCountFunctionRole:
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
-      Version: 2012-10-17
+      Version: '2012-10-17'
       Statement:
         - Effect: Allow
           Principal:
@@ -78,6 +80,7 @@ AutoScalingRole:
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
+      Version: '2012-10-17'
       Statement:
         - Effect: Allow
           Principal:
@@ -113,8 +116,16 @@ AutoScalingPolicyECSServiceAverageCPUUtilization:
     TargetTrackingScalingPolicyConfiguration:
       PredefinedMetricSpecification:
         PredefinedMetricType: ECSServiceAverageCPUUtilization
+      {{- if .Autoscaling.CPUCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{.Autoscaling.CPUCooldown.ScaleInCooldown}}
+      {{- else}}
       ScaleInCooldown: 120
+      {{- end}}
+      {{- if .Autoscaling.CPUCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{.Autoscaling.CPUCooldown.ScaleOutCooldown}}
+      {{- else}}
       ScaleOutCooldown: 60
+      {{- end}}
       TargetValue: {{.Autoscaling.CPU}}
 {{- end}}
 {{if .Autoscaling.Memory}}
@@ -127,8 +138,16 @@ AutoScalingPolicyECSServiceAverageMemoryUtilization:
     TargetTrackingScalingPolicyConfiguration:
       PredefinedMetricSpecification:
         PredefinedMetricType: ECSServiceAverageMemoryUtilization
+      {{- if .Autoscaling.MemCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{.Autoscaling.MemCooldown.ScaleInCooldown}}
+      {{- else}}
       ScaleInCooldown: 120
+      {{- end}}
+      {{- if .Autoscaling.MemCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{.Autoscaling.MemCooldown.ScaleOutCooldown}}
+      {{- else}}
       ScaleOutCooldown: 60
+      {{- end}}
       TargetValue: {{.Autoscaling.Memory}}
 {{- end}}
 {{- if .Autoscaling.QueueDelay }}
@@ -148,9 +167,11 @@ BacklogPerTaskCalculatorFunction:
     'aws:copilot:description': "A Lambda function to emit BacklogPerTask metrics to CloudWatch"
   Type: AWS::Lambda::Function
   Properties:
+    {{- with $cr := index .CustomResources "BacklogPerTaskCalculatorFunction" }}
     Code:
-      ZipFile: |
-        {{.BacklogPerTaskCalculatorLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end }}
     Handler: "index.handler"
     Timeout: 600
     MemorySize: 512
@@ -181,7 +202,7 @@ BacklogPerTaskCalculatorRole:
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
-      Version: 2012-10-17
+      Version: '2012-10-17'
       Statement:
         - Effect: Allow
           Principal:
@@ -247,6 +268,7 @@ PermissionToInvokeBacklogPerTaskCalculatorLambda:
     SourceArn: !GetAtt BacklogPerTaskScheduledRule.Arn
 
 {{- $acceptableBacklog := .Autoscaling.QueueDelay.AcceptableBacklogPerTask }}
+{{- $queueDelayCooldown := .Autoscaling.QueueDelayCooldown }}
 
 AutoScalingPolicyEventsQueue:
   Metadata:
@@ -257,8 +279,16 @@ AutoScalingPolicyEventsQueue:
     PolicyType: TargetTrackingScaling
     ScalingTargetId: !Ref AutoScalingTarget
     TargetTrackingScalingPolicyConfiguration:
+      {{- if $queueDelayCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{$queueDelayCooldown.ScaleInCooldown}}
+      {{- else}}
       ScaleInCooldown: 120
+      {{- end}}
+      {{- if $queueDelayCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{$queueDelayCooldown.ScaleOutCooldown}}
+      {{- else}}
       ScaleOutCooldown: 60
+      {{- end}}
       CustomizedMetricSpecification:
         Namespace: !Sub '${AppName}-${EnvName}-${WorkloadName}'
         MetricName: BacklogPerTask
@@ -281,8 +311,16 @@ AutoScalingPolicy{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}Ev
     PolicyType: TargetTrackingScaling
     ScalingTargetId: !Ref AutoScalingTarget
     TargetTrackingScalingPolicyConfiguration:
+      {{- if $queueDelayCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{$queueDelayCooldown.ScaleInCooldown}}
+      {{- else}}
       ScaleInCooldown: 120
+      {{- end}}
+      {{- if $queueDelayCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{$queueDelayCooldown.ScaleOutCooldown}}
+      {{- else}}
       ScaleOutCooldown: 60
+      {{- end}}
       CustomizedMetricSpecification:
         Namespace: !Sub '${AppName}-${EnvName}-${WorkloadName}'
         MetricName: BacklogPerTask
@@ -319,8 +357,16 @@ AutoScalingPolicyALBSumRequestCountPerTarget:
         MetricName: RequestCountPerTarget
         Namespace: AWS/ApplicationELB
         Statistic: Sum
+      {{- if .Autoscaling.ReqCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{.Autoscaling.ReqCooldown.ScaleInCooldown}}
+      {{- else}}
       ScaleInCooldown: 120
+      {{- end}}
+      {{- if .Autoscaling.ReqCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{.Autoscaling.ReqCooldown.ScaleOutCooldown}}
+      {{- else}}
       ScaleOutCooldown: 60
+      {{- end}}
       TargetValue: {{.Autoscaling.Requests}}
 {{- end}}
 
@@ -345,7 +391,15 @@ AutoScalingPolicyALBAverageResponseTime:
         MetricName: TargetResponseTime
         Namespace: AWS/ApplicationELB
         Statistic: Average
+      {{- if .Autoscaling.RespTimeCooldown.ScaleInCooldown}}
+      ScaleInCooldown: {{.Autoscaling.RespTimeCooldown.ScaleInCooldown}}
+      {{- else}}
       ScaleInCooldown: 120
+      {{- end}}
+      {{- if .Autoscaling.RespTimeCooldown.ScaleOutCooldown}}
+      ScaleOutCooldown: {{.Autoscaling.RespTimeCooldown.ScaleOutCooldown}}
+      {{- else}}
       ScaleOutCooldown: 60
+      {{- end}}
       TargetValue: {{.Autoscaling.ResponseTime}}
 {{- end}}

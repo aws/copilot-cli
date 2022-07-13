@@ -3,7 +3,12 @@ type: Backend Service
 
 http:
   path: https-path-alias-path
-  alias: example.com
+  alias:
+    - name: example.com
+      hosted_zone: mockHostedZone2
+    - name: foobar.com
+    - name: "*.foobar.com"
+  hosted_zone: mockHostedZone1
 
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build

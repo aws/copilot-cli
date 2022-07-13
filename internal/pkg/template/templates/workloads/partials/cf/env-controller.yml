@@ -6,7 +6,7 @@ EnvControllerAction:
     ServiceToken: !GetAtt EnvControllerFunction.Arn
     Workload: !Ref WorkloadName
 {{- if and (not .UseImportedCerts) (.Aliases)}}
-    Aliases: {{ fmtSlice .Aliases }}
+    Aliases: {{ fmtSlice (quoteSlice .Aliases) }}
 {{- end}}
     EnvStack: !Sub '${AppName}-${EnvName}'
     Parameters: {{ envControllerParams . }}
@@ -14,9 +14,11 @@ EnvControllerAction:
 EnvControllerFunction:
   Type: AWS::Lambda::Function
   Properties:
+    {{- with $cr := index .CustomResources "EnvControllerFunction" }}
     Code:
-      ZipFile: |
-        {{.EnvControllerLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end }}
     Handler: "index.handler"
     Timeout: 900
     MemorySize: 512
@@ -29,7 +31,7 @@ EnvControllerRole:
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
-      Version: 2012-10-17
+      Version: '2012-10-17'
       Statement:
         -
           Effect: Allow

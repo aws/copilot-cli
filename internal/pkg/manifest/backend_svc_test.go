@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -182,65 +180,6 @@ func TestNewBackendSvc(t *testing.T) {
 	}
 }
 
-func TestBackendSvc_MarshalBinary(t *testing.T) {
-	testCases := map[string]struct {
-		inProps BackendServiceProps
-
-		wantedTestdata string
-	}{
-		"without healthcheck and port": {
-			inProps: BackendServiceProps{
-				WorkloadProps: WorkloadProps{
-					Name:       "subscribers",
-					Dockerfile: "./subscribers/Dockerfile",
-				},
-				Platform: PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs: PlatformArgs{
-						OSFamily: nil,
-						Arch:     nil,
-					},
-				},
-			},
-			wantedTestdata: "backend-svc-nohealthcheck.yml",
-		},
-		"with custom healthcheck command": {
-			inProps: BackendServiceProps{
-				WorkloadProps: WorkloadProps{
-					Name:  "subscribers",
-					Image: "flask-sample",
-				},
-				HealthCheck: ContainerHealthCheck{
-					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
-					Interval:    durationp(6 * time.Second),
-					Retries:     aws.Int(0),
-					Timeout:     durationp(20 * time.Second),
-					StartPeriod: durationp(15 * time.Second),
-				},
-				Port: 8080,
-			},
-			wantedTestdata: "backend-svc-customhealthcheck.yml",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			path := filepath.Join("testdata", tc.wantedTestdata)
-			wantedBytes, err := ioutil.ReadFile(path)
-			require.NoError(t, err)
-			manifest := NewBackendService(tc.inProps)
-
-			// WHEN
-			tpl, err := manifest.MarshalBinary()
-			require.NoError(t, err)
-
-			// THEN
-			require.Equal(t, string(wantedBytes), string(tpl))
-		})
-	}
-}
-
 func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
 	testCases := map[string]struct {
 		mft    func(svc *BackendService)
@@ -400,7 +339,7 @@ func TestBackendService_Publish(t *testing.T) {
 
 func TestBackendSvc_ApplyEnv(t *testing.T) {
 	perc := Percentage(70)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	mockBackendServiceWithNoEnvironments := BackendService{
@@ -838,7 +777,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 	mockRange := IntRangeBand("1-10")
 	perc := Percentage(80)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	testCases := map[string]struct {

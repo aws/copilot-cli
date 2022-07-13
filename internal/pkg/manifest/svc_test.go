@@ -16,7 +16,7 @@ import (
 
 func TestUnmarshalSvc(t *testing.T) {
 	perc := Percentage(70)
-	mockConfig := ScalingConfigOrPercentage{
+	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
 	}
 	testCases := map[string]struct {
@@ -101,9 +101,12 @@ environments:
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
 								Alias: Alias{
-									StringSlice: []string{
-										"foobar.com",
-										"v1.foobar.com",
+									AdvancedAliases: []AdvancedAlias{},
+									StringSliceOrString: stringSliceOrString{
+										StringSlice: []string{
+											"foobar.com",
+											"v1.foobar.com",
+										},
 									},
 								},
 								Path:            aws.String("svc"),
@@ -400,10 +403,11 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 	var (
 		perc               = Percentage(70)
 		timeMinute         = 60 * time.Second
-		mockResponseTime   = 500 * time.Millisecond
+		reqNum             = 1000
+		responseTime       = 500 * time.Millisecond
 		mockRange          = IntRangeBand("1-10")
-		mockAdvancedConfig = ScalingConfigOrPercentage{
-			ScalingConfig: AdvancedScalingConfig{
+		mockAdvancedConfig = ScalingConfigOrT[Percentage]{
+			ScalingConfig: AdvancedScalingConfig[Percentage]{
 				Value: &perc,
 				Cooldown: Cooldown{
 					ScaleInCooldown:  &timeMinute,
@@ -411,12 +415,18 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				},
 			},
 		}
-		mockConfig = ScalingConfigOrPercentage{
+		mockConfig = ScalingConfigOrT[Percentage]{
 			Value: &perc,
 		}
 		mockCooldown = Cooldown{
 			ScaleInCooldown:  &timeMinute,
 			ScaleOutCooldown: &timeMinute,
+		}
+		mockRequests = ScalingConfigOrT[int]{
+			Value: &reqNum,
+		}
+		mockResponseTime = ScalingConfigOrT[time.Duration]{
+			Value: &responseTime,
 		}
 	)
 
@@ -450,8 +460,8 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 					Range:        Range{Value: &mockRange},
 					CPU:          mockAdvancedConfig,
 					Memory:       mockConfig,
-					Requests:     aws.Int(1000),
-					ResponseTime: &mockResponseTime,
+					Requests:     mockRequests,
+					ResponseTime: mockResponseTime,
 				},
 			},
 		},

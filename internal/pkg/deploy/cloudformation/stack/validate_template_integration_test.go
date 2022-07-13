@@ -29,8 +29,12 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	v, ok := mft.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-		App:      &config.Application{Name: appName},
-		Env:      &config.Environment{Name: envName},
+		App: &config.Application{Name: appName},
+		EnvManifest: &manifest.Environment{
+			Workload: manifest.Workload{
+				Name: &envName,
+			},
+		},
 		Manifest: v,
 		RuntimeConfig: stack.RuntimeConfig{
 			Image: &stack.ECRImage{
@@ -38,6 +42,11 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 				ImageTag: imageTag,
 			},
 			ServiceDiscoveryEndpoint: "test.app.local",
+			CustomResourcesURL: map[string]string{
+				"EnvControllerFunction":       "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
+				"DynamicDesiredCountFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
+				"RulePriorityFunction":        "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
+			},
 		},
 	})
 	require.NoError(t, err)
@@ -63,8 +72,16 @@ func TestScheduledJob_Validate(t *testing.T) {
 	require.NoError(t, err)
 	v, ok := mft.(*manifest.ScheduledJob)
 	require.True(t, ok)
-	serializer, err := stack.NewScheduledJob(v, envName, appName, stack.RuntimeConfig{
-		ServiceDiscoveryEndpoint: "test.app.local",
+	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
+		App:      appName,
+		Env:      envName,
+		Manifest: v,
+		RuntimeConfig: stack.RuntimeConfig{
+			ServiceDiscoveryEndpoint: "test.app.local",
+			CustomResourcesURL: map[string]string{
+				"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
+			},
+		},
 	})
 
 	tpl, err := serializer.Template()

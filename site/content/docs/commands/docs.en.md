@@ -1,5 +1,5 @@
 # docs
-```bash
+```console
 $ copilot docs [flags]
 ```
 
@@ -9,6 +9,6 @@ $ copilot docs [flags]
 
 ## What are the flags?
 
-```bash
+```
   -h, --help         help for docs
 ```

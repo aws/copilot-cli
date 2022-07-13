@@ -81,9 +81,19 @@ If you own a domain outside of Route53 or for compliance reasons want to use an 
 $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012
 ```
 
-After deploying a service to that environment, add the DNS of the Application Load Balancer (ALB) created in the environment as an A record to where your alias domain is hosted.
+Then, in your service's manifest, you can either:
 
-We also have [an example](../../blogs/release-v118.en.md#certificate-import) in our blog posts.
+1. Specify the ID of the [`hosted zone`](../manifest/lb-web-service.en.md#http-hosted-zone) into which Copilot should insert the A record:
+``` yaml
+# in copilot/{service name}/manifest.yml
+http:
+  path: '/'
+  alias: example.aws
+  hosted_zone: Z0873220N255IR3MTNR4
+```
+2. Deploy the service without the `hosted_zone` field, then manually add the DNS name of the Application Load Balancer (ALB) created in that environment as an A record where your alias domain is hosted.
+
+We have [an example](../../blogs/release-v118.en.md#certificate-import) of Option 2 in our blog posts.
 
 ## Request-Driven Web Service
 You can also add a [custom domain](https://docs.aws.amazon.com/apprunner/latest/dg/manage-custom-domains.html) for your request-driven web service.
@@ -98,7 +108,7 @@ http:
 Likewise, your application should have been associated with the domain (e.g. `example.aws`) in order for your Request-Driven Web Service to use it.
 
 !!!info
-    For now, we support only 1-level subdomain such as `web.example.aws`.
+    For now, we support only one-level subdomains such as `web.example.aws`.
 
     Environment-level domains (e.g. `web.${envName}.${appName}.example.aws`), application-level domains (e.g. `web.${appName}.example.aws`),
     or root domains (i.e. `example.aws`) are not supported yet. This also means that your subdomain shouldn't collide with your application name.

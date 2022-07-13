@@ -6,6 +6,7 @@ package manifest
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/imdario/mergo"
 )
@@ -18,19 +19,24 @@ var defaultTransformers = []mergo.Transformers{
 	basicTransformer{},
 	imageTransformer{},
 	buildArgsOrStringTransformer{},
+	aliasTransformer{},
 	stringSliceOrStringTransformer{},
 	platformArgsOrStringTransformer{},
+	securityGroupsIDsOrConfigTransformer{},
 	placementArgOrStringTransformer{},
 	healthCheckArgsOrStringTransformer{},
 	countTransformer{},
 	advancedCountTransformer{},
-	scalingConfigOrPercentageTransformer{},
+	scalingConfigOrTTransformer[Percentage]{},
+	scalingConfigOrTTransformer[int]{},
+	scalingConfigOrTTransformer[time.Duration]{},
 	rangeTransformer{},
 	efsConfigOrBoolTransformer{},
 	efsVolumeConfigurationTransformer{},
 	sqsQueueOrBoolTransformer{},
 	routingRuleConfigOrBoolTransformer{},
 	secretTransformer{},
+	environmentCDNConfigTransformer{},
 }
 
 // See a complete list of `reflect.Kind` here: https://pkg.go.dev/reflect#Kind.
@@ -99,9 +105,36 @@ func (t buildArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst, sr
 	}
 }
 
+type aliasTransformer struct{}
+
+// Transformer returns custom merge logic for Alias's fields.
+func (t aliasTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Alias{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct := dst.Convert(reflect.TypeOf(Alias{})).Interface().(Alias)
+		srcStruct := src.Convert(reflect.TypeOf(Alias{})).Interface().(Alias)
+
+		if len(srcStruct.AdvancedAliases) != 0 {
+			dstStruct.StringSliceOrString = stringSliceOrString{}
+		}
+
+		if !srcStruct.StringSliceOrString.isEmpty() {
+			dstStruct.AdvancedAliases = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct).Convert(typ))
+		}
+		return nil
+	}
+}
+
 type stringSliceOrStringTransformer struct{}
 
-// Transformer returns custom merge logic for stringSliceOrStringTransformer's fields.
+// Transformer returns custom merge logic for stringSliceOrString's fields.
 func (t stringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if !typ.ConvertibleTo(reflect.TypeOf(stringSliceOrString{})) {
 		return nil
@@ -143,6 +176,32 @@ func (t platformArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst,
 
 		if !srcStruct.PlatformArgs.isEmpty() {
 			dstStruct.PlatformString = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type securityGroupsIDsOrConfigTransformer struct{}
+
+// Transformer returns custom merge logic for SecurityGroupsIDsOrConfig's fields.
+func (s securityGroupsIDsOrConfigTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(SecurityGroupsIDsOrConfig{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(SecurityGroupsIDsOrConfig), src.Interface().(SecurityGroupsIDsOrConfig)
+
+		if !srcStruct.AdvancedConfig.isEmpty() {
+			dstStruct.IDs = nil
+		}
+
+		if srcStruct.IDs != nil {
+			dstStruct.AdvancedConfig = SecurityGroupsConfig{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.
@@ -256,23 +315,23 @@ func (t advancedCountTransformer) Transformer(typ reflect.Type) func(dst, src re
 	}
 }
 
-type scalingConfigOrPercentageTransformer struct{}
+type scalingConfigOrTTransformer[T ~int | time.Duration] struct{}
 
 // Transformer returns custom merge logic for ScalingConfigOrPercentage's fields.
-func (t scalingConfigOrPercentageTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(ScalingConfigOrPercentage{}) {
+func (t scalingConfigOrTTransformer[T]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(ScalingConfigOrT[T]{}) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(ScalingConfigOrPercentage), src.Interface().(ScalingConfigOrPercentage)
+		dstStruct, srcStruct := dst.Interface().(ScalingConfigOrT[T]), src.Interface().(ScalingConfigOrT[T])
 
 		if !srcStruct.ScalingConfig.IsEmpty() {
 			dstStruct.Value = nil
 		}
 
 		if srcStruct.Value != nil {
-			dstStruct.ScalingConfig = AdvancedScalingConfig{}
+			dstStruct.ScalingConfig = AdvancedScalingConfig[T]{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.
@@ -423,6 +482,32 @@ func (t secretTransformer) Transformer(typ reflect.Type) func(dst, src reflect.V
 
 		if srcStruct.from != nil {
 			dstStruct.fromSecretsManager = secretsManagerSecret{}
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type environmentCDNConfigTransformer struct{}
+
+// Transformer returns custom merge logic for environmentCDNConfig's fields.
+func (t environmentCDNConfigTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(environmentCDNConfig{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(environmentCDNConfig), src.Interface().(environmentCDNConfig)
+
+		if !srcStruct.CDNConfig.IsEmpty() {
+			dstStruct.Enabled = nil
+		}
+
+		if srcStruct.Enabled != nil {
+			dstStruct.CDNConfig = advancedCDNConfig{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

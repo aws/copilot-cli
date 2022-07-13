@@ -1,8 +1,6 @@
 以下は `'Backend Service'` Manifest で利用できるすべてのプロパティのリストです。[Copilot Service の概念](../concepts/services.ja.md)説明のページも合わせてご覧ください。
 
-<!-- textlint-disable ja-technical-writing/no-exclamation-question-mark, ja-technical-writing/ja-no-mixed-period -->
 ???+ note "api service のサンプル Manifest"
-<!-- textlint-enable ja-technical-writing/no-exclamation-question-mark, ja-technical-writing/ja-no-mixed-period -->
 
     ```yaml
         # Service 名はロググループや ECS サービスなどのリソースの命名に利用されます。
@@ -68,6 +66,62 @@ Service 名。
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
 Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md#backend-service) はインターネット側からはアクセスできませんが、[サービス検出](../developing/service-discovery.ja.md)の利用により他の Service からはアクセスできます。
+
+<div class="separator"></div>
+
+<a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
+http セクションは Service と内部 Application Load Balancer の連携に関するパラメーターを含みます。
+
+<span class="parent-field">http.</span><a id="http-path" href="#http-path" class="field">`path`</a> <span class="type">String</span>  
+このパスに対するリクエストが Service に転送されます。各 Load Balanced Web Service は、ユニークなパスでリッスンする必要があります。
+
+{% include 'http-healthcheck.ja.md' %}
+
+<span class="parent-field">http.</span><a id="http-deregistration-delay" href="#http-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
+登録解除時にターゲットがクライアントとの接続を閉じるのを待つ時間を指定します。デフォルトでは 60 秒です。この値を大きくするとターゲットが安全に接続を閉じるための時間を確保できますが、新バージョンのデプロイに必要となる時間が長くなります。範囲は 0 〜 3600 です。
+
+<span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
+Service 
+サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサからのリクエストを受け取れます。
+
+<span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
+スティッキーセッションの有効化、あるいは無効化を指定します。
+
+<span class="parent-field">http.</span><a id="http-allowed-source-ips" href="#http-allowed-source-ips" class="field">`allowed_source_ips`</a> <span class="type">Array of Strings</span>  
+Service へのアクセスを許可する CIDR IP アドレスのリストを指定します。
+```yaml
+http:
+  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+```
+
+<span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String or Array of Strings or Array of Maps</span>  
+Service の HTTPS ドメインエイリアス。
+```yaml
+# String version.
+http:
+  alias: example.com
+# Alternatively, as an array of strings.
+http:
+  alias: ["example.com", "v1.example.com"]
+# Alternatively, as an array of maps.
+http:
+  alias:
+    - name: example.com
+      hosted_zone: Z0873220N255IR3MTNR4
+    - name: v1.example.com
+      hosted_zone: AN0THE9H05TED20NEID
+```
+<span class="parent-field">http.</span><a id="http-hosted-zone" href="#http-hosted-zone" class="field">`hosted_zone`</a> <span class="type">String</span>  
+既存のプライベートホストゾーンの ID。内部ロードバランサーの作成後に、 Copilot がエイリアスレコードを挿入し、エイリアス名を LB の DNS 名にマッピングします。 `alias` と共に使用します。
+```yaml
+http:
+  alias: example.com
+  hosted_zone: Z0873220N255IR3MTNR4
+# Also see http.alias array of maps example, above.
+```
+<span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
+HTTP(S) プロトコルのバージョン。 `'grpc'`、 `'http1'`、または `'http2'` を指定します。省略した場合は、`'http1'` が利用されます。 
+gRPC を利用する場合は、Application にドメインが関連付けられていなければなりません。
 
 {% include 'image-config-with-port.ja.md' %}
 
@@ -141,7 +195,15 @@ Service が保つべき平均 CPU 使用率を指定し、それによってス�
 <span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>  
 Service が保つべき平均メモリ使用率を指定し、それによってスケールアップ・ダウンします。
 
+<span class="parent-field">count.</span><a id="requests" href="#count-requests" class="field">`requests`</a> <span class="type">Integer</span>
+タスクで処理されるリクエスト数に応じて、スケールアップ・ダウンします。
+
+<span class="parent-field">count.</span><a id="response-time" href="#count-response-time" class="field">`response_time`</a> <span class="type">Duration</span>
+Service の平均レスポンス時間に応じて、スケールアップ・ダウンします。
+
 {% include 'exec.ja.md' %}
+
+{% include 'deployment.ja.md' %}
 
 {% include 'entrypoint.ja.md' %}
 
@@ -158,6 +220,8 @@ Service が保つべき平均メモリ使用率を指定し、それによって
 {% include 'publish.ja.md' %}
 
 {% include 'logging.ja.md' %}
+
+{% include 'observability.ja.md' %}
 
 {% include 'taskdef-overrides.ja.md' %}
 

@@ -32,13 +32,15 @@ $ copilot env init
 
 各 Environment はそれぞれがマルチ AZ 構成の VPC を持ちます。VPC は Environment のネットワーク上の境界であり、VPC 内に入ってくるあるいは出ていくトラフィックを許可する、またはブロックするものとして機能します。Copilot は VPC を２つのアベイラビリティゾーンにまたがって作成します。[AWS best practices](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-best-practices.html)に従い、各 AZ はパブリックとプライベートサブネットがあります。 デフォルトでは、Service はパブリックサブネットで起動します。ただし、セキュリティのために、Environment 内の他のサービスからのアクセスのみに制限されています。ECS タスクはパブリックサブネットに配置され、NAT ゲートウエイを必要としないインターネットへのアクセスを許可することでコストを管理するのに役立ちます。
 
-ワークロードサブネットの配置はマニフェスト内の[`network.vpc.placement`](../manifest/lb-web-service.ja.md#network-vpc-placement)フィールドで変更できます。
+ワークロードサブネットの配置は Manifest 内の[`network.vpc.placement`](../manifest/lb-web-service.ja.md#network-vpc-placement)フィールドで変更できます。
 
 ### ロードバランサーと DNS
 
-"Load Balanced Web Service" タイプの Service を作ると、Copilot は Application Load Balancer を作成します。同一 Environment 内にデプロイされたすべての "Load Balanced Web Service" タイプの Service は、Service 固有のリスナーを作成してこの Application Load Balancer を共有します。ロードバランサーは VPC 内の各 Service と通信できるようにセットアップされます。
+Load Balanced Web Service または、Manifest に `http` フィールドを記載した Backend Service を作ると、Copilot は Environment 内の負荷分散する Service で共有される Application Load Balancer を作成します。Load Balanced Web Service の ALB は、インターネットからアクセス可能です。それに対して、Backend Service の ALB は内部向けです。Load Balancer は VPC 内の他の Copilot Service と通信可能です。
 
 所有するドメイン名を Route 53 に登録するよう、Application 作成時にオプションとして設定できます。ドメイン名の利用が設定されている場合、Copilot は各 Environment の作成時に `environment-name.app-name.your-domain.com` のような形でサブドメインを登録し、ACM を通して発行した証明書を Application Load Balancer に設定します。これにより Service が HTTPS を利用できるようになります。
+
+Manifest で [`http`](../manifest/backend-service.ja.md#http)フィールドが設定された Backend Service が Environment 内にデプロイされる場合、内部 ALB が作成されます。HTTPS のエンドポイントを利用する場合は、`copilot env init` を実行する際に、[`--import-cert-arns`](../commands/env-init.ja.md#what-are-the-flags) フラグを使用してください。そして、 プライベートサブネットのみの VPC をインポートします。内部 ALB に関する詳細は[こちら](../developing/internal-albs.ja.md)を確認してください。
 
 ## Environment のカスタマイズ
 

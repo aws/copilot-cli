@@ -58,8 +58,8 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          Abracadabra
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -72,7 +72,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           -
             Effect: Allow
@@ -213,6 +213,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -278,6 +279,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -334,6 +336,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
         - Effect: Allow
           Principal:
@@ -342,6 +345,7 @@ Resources:
       Policies:
       - PolicyName: EventRulePolicy
         PolicyDocument:
+          Version: '2012-10-17'
           Statement:
           - Effect: Allow
             Action: states:StartExecution
@@ -424,7 +428,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
         - Effect: Allow
           Principal:
@@ -433,6 +437,7 @@ Resources:
       Policies:
       - PolicyName: StateMachine
         PolicyDocument:
+          Version: '2012-10-17'
           Statement:
           - Effect: Allow
             Action: iam:PassRole

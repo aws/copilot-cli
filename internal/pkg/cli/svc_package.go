@@ -7,19 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/aws/aws-sdk-go/service/ssm"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
-
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
@@ -62,25 +59,26 @@ type packageSvcOpts struct {
 	packageSvcVars
 
 	// Interfaces to interact with dependencies.
-	addonsClient     templater
-	initAddonsClient func(*packageSvcOpts) error // Overridden in tests.
-	ws               wsWlDirReader
-	fs               afero.Fs
-	store            store
-	stackWriter      io.Writer
-	paramsWriter     io.Writer
-	addonsWriter     io.Writer
-	runner           runner
-	sessProvider     *sessions.Provider
-	sel              wsSelector
-	unmarshal        func([]byte) (manifest.WorkloadManifest, error)
-	newInterpolator  func(app, env string) interpolator
-	newTplGenerator  func(*packageSvcOpts) (workloadTemplateGenerator, error)
+	addonsClient         templater
+	initAddonsClient     func(*packageSvcOpts) error // Overridden in tests.
+	ws                   wsWlDirReader
+	fs                   afero.Fs
+	store                store
+	stackWriter          io.WriteCloser
+	paramsWriter         io.WriteCloser
+	addonsWriter         io.WriteCloser
+	runner               execRunner
+	sessProvider         *sessions.Provider
+	sel                  wsSelector
+	unmarshal            func([]byte) (manifest.WorkloadManifest, error)
+	newInterpolator      func(app, env string) interpolator
+	newTplGenerator      func(*packageSvcOpts) (workloadTemplateGenerator, error)
+	envFeaturesDescriber versionCompatibilityChecker
 
 	// cached variables
 	targetApp       *config.Application
 	targetEnv       *config.Environment
-	appliedManifest interface{}
+	appliedManifest manifest.WorkloadManifest
 	rootUserARN     string
 }
 
@@ -108,8 +106,8 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		runner:           exec.NewCmd(),
 		sel:              selector.NewLocalWorkloadSelector(prompter, store, ws),
 		stackWriter:      os.Stdout,
-		paramsWriter:     ioutil.Discard,
-		addonsWriter:     ioutil.Discard,
+		paramsWriter:     discardFile{},
+		addonsWriter:     discardFile{},
 		newInterpolator:  newManifestInterpolator,
 		sessProvider:     sessProvider,
 		newTplGenerator:  newWkldTplGenerator,
@@ -126,6 +124,11 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 	if err != nil {
 		return nil, err
 	}
+	raw, err := o.ws.ReadWorkloadManifest(o.name)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
+	}
+
 	var deployer workloadTemplateGenerator
 	in := clideploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
@@ -134,10 +137,11 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 		Env:             targetEnv,
 		ImageTag:        o.tag,
 		Mft:             o.appliedManifest,
+		RawMft:          raw,
 	}
 	switch t := o.appliedManifest.(type) {
 	case *manifest.LoadBalancedWebService:
-		deployer, err = clideploy.NewLBDeployer(&in)
+		deployer, err = clideploy.NewLBWSDeployer(&in)
 	case *manifest.BackendService:
 		deployer, err = clideploy.NewBackendDeployer(&in)
 	case *manifest.RequestDrivenWebService:
@@ -195,14 +199,14 @@ func (o *packageSvcOpts) Execute() error {
 	if err != nil {
 		return nil
 	}
-	appTemplates, err := o.getSvcTemplates(targetEnv)
+	svcTemplates, err := o.getSvcTemplates(targetEnv)
 	if err != nil {
 		return err
 	}
-	if _, err = o.stackWriter.Write([]byte(appTemplates.stack)); err != nil {
+	if err := o.writeAndClose(o.stackWriter, svcTemplates.stack); err != nil {
 		return err
 	}
-	if _, err = o.paramsWriter.Write([]byte(appTemplates.configuration)); err != nil {
+	if err := o.writeAndClose(o.paramsWriter, svcTemplates.configuration); err != nil {
 		return err
 	}
 	addonsTemplate, err := o.getAddonsTemplate()
@@ -220,8 +224,7 @@ func (o *packageSvcOpts) Execute() error {
 			return err
 		}
 	}
-	_, err = o.addonsWriter.Write([]byte(addonsTemplate))
-	return err
+	return o.writeAndClose(o.addonsWriter, addonsTemplate)
 }
 
 func (o *packageSvcOpts) validateOrAskSvcName() error {
@@ -279,6 +282,15 @@ func (o *packageSvcOpts) configureClients() error {
 	}
 	o.rootUserARN = caller.RootUserARN
 
+	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         o.appName,
+		Env:         o.envName,
+		ConfigStore: o.store,
+	})
+	if err != nil {
+		return err
+	}
+	o.envFeaturesDescriber = envDescriber
 	return nil
 }
 
@@ -305,12 +317,12 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	if err != nil {
 		return nil, err
 	}
-	uploadOut := clideploy.UploadArtifactsOutput{
-		ImageDigest: aws.String(""),
-	}
 	targetApp, err := o.getTargetApp()
 	if err != nil {
 		return nil, err
+	}
+	uploadOut := clideploy.UploadArtifactsOutput{
+		ImageDigest: aws.String(""),
 	}
 	if o.uploadAssets {
 		out, err := generator.UploadArtifacts()
@@ -321,11 +333,12 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 	}
 	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
-			RootUserARN: o.rootUserARN,
-			Tags:        targetApp.Tags,
-			ImageDigest: uploadOut.ImageDigest,
-			EnvFileARN:  uploadOut.EnvFileARN,
-			AddonsURL:   uploadOut.AddonsURL,
+			RootUserARN:        o.rootUserARN,
+			Tags:               targetApp.Tags,
+			ImageDigest:        uploadOut.ImageDigest,
+			EnvFileARN:         uploadOut.EnvFileARN,
+			AddonsURL:          uploadOut.AddonsURL,
+			CustomResourceURLs: uploadOut.CustomResourceURLs,
 		},
 	})
 	if err != nil {
@@ -395,9 +408,16 @@ func (o *packageSvcOpts) getTargetEnv() (*config.Environment, error) {
 	return o.targetEnv, nil
 }
 
-// RecommendActions is a no-op for this command.
+func (o *packageSvcOpts) writeAndClose(wc io.WriteCloser, dat string) error {
+	if _, err := wc.Write([]byte(dat)); err != nil {
+		return err
+	}
+	return wc.Close()
+}
+
+// RecommendActions suggests recommended actions before the packaged template is used for deployment.
 func (o *packageSvcOpts) RecommendActions() error {
-	return nil
+	return validateManifestCompatibilityWithEnv(o.appliedManifest, o.envName, o.envFeaturesDescriber)
 }
 
 func contains(s string, items []string) bool {
@@ -414,16 +434,18 @@ func buildSvcPackageCmd() *cobra.Command {
 	vars := packageSvcVars{}
 	cmd := &cobra.Command{
 		Use:   "package",
-		Short: "Prints the AWS CloudFormation template of a service.",
-		Long:  `Prints the CloudFormation template used to deploy a service to an environment.`,
+		Short: "Print the AWS CloudFormation template of a service.",
+		Long:  `Print the CloudFormation template used to deploy a service to an environment.`,
 		Example: `
   Print the CloudFormation template for the "frontend" service parametrized for the "test" environment.
   /code $ copilot svc package -n frontend -e test
 
-  Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of printing.
-  /code $ copilot svc package -n frontend -e test --output-dir ./infrastructure
-  /code $ ls ./infrastructure
-  /code frontend-test.stack.yml      frontend-test.params.yml`,
+  Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of stdout.
+  /startcodeblock
+  $ copilot svc package -n frontend -e test --output-dir ./infrastructure
+  $ ls ./infrastructure
+  frontend-test.stack.yml      frontend-test.params.json
+  /endcodeblock`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newPackageSvcOpts(vars)
 			if err != nil {

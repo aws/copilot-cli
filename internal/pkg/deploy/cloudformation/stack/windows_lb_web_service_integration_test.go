@@ -11,12 +11,10 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -45,8 +43,12 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 
 	svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", envName, appName)
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-		App:      &config.Application{Name: appName},
-		Env:      &config.Environment{Name: envName},
+		App: &config.Application{Name: appName},
+		EnvManifest: &manifest.Environment{
+			Workload: manifest.Workload{
+				Name: &envName,
+			},
+		},
 		Manifest: v,
 		RuntimeConfig: stack.RuntimeConfig{
 			AccountID:                "123456789123",
@@ -59,24 +61,10 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 	require.NoError(t, err, "template should render")
 	regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids
 
-	parser := template.New()
-	envController, err := parser.Read(envControllerPath)
-	require.NoError(t, err)
-	envControllerZipFile := envController.String()
-	rulePriority, err := parser.Read(rulePriorityPath)
-	require.NoError(t, err)
-	rulePriorityZipFile := rulePriority.String()
-
 	t.Run("CF template should be equal", func(t *testing.T) {
 		actualBytes := []byte(tpl)
 		// Cut random GUID from template.
 		actualBytes = regExpGUID.ReplaceAll(actualBytes, []byte("RandomGUID"))
-		actualString := string(actualBytes)
-		// Cut out zip file for more readable output
-		actualString = strings.ReplaceAll(actualString, envControllerZipFile, "mockEnvControllerZipFile")
-		actualString = strings.ReplaceAll(actualString, rulePriorityZipFile, "mockRulePriorityZipFile")
-
-		actualBytes = []byte(actualString)
 		mActual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
 

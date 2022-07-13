@@ -71,10 +71,11 @@ const (
 // RuntimeConfig represents configuration that's defined outside of the manifest file
 // that is needed to create a CloudFormation stack.
 type RuntimeConfig struct {
-	Image             *ECRImage         // Optional. Image location in an ECR repository.
-	AddonsTemplateURL string            // Optional. S3 object URL for the addons template.
-	EnvFileARN        string            // Optional. S3 object ARN for the env file.
-	AdditionalTags    map[string]string // AdditionalTags are labels applied to resources in the workload stack.
+	Image              *ECRImage         // Optional. Image location in an ECR repository.
+	AddonsTemplateURL  string            // Optional. S3 object URL for the addons template.
+	EnvFileARN         string            // Optional. S3 object ARN for the env file.
+	AdditionalTags     map[string]string // AdditionalTags are labels applied to resources in the workload stack.
+	CustomResourcesURL map[string]string // Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// The target environment metadata.
 	ServiceDiscoveryEndpoint string // Endpoint for the service discovery namespace in the environment.
@@ -116,11 +117,12 @@ type location interface {
 // wkld represents a generic containerized workload.
 // A workload can be a long-running service, an ephemeral task, or a periodic task.
 type wkld struct {
-	name  string
-	env   string
-	app   string
-	rc    RuntimeConfig
-	image location
+	name        string
+	env         string
+	app         string
+	rc          RuntimeConfig
+	image       location
+	rawManifest []byte // Content of the manifest file without any transformations.
 
 	parser template.Parser
 	addons addons

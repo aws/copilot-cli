@@ -108,6 +108,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -174,6 +175,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -226,8 +228,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockEnvControllerZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
@@ -239,7 +241,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -334,8 +336,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        ZipFile: |
-          mockRulePriorityZipFile
+        S3Bucket:
+        S3Key:
       Handler: "index.nextAvailableRulePriorityHandler"
       Timeout: 600
       MemorySize: 512
@@ -347,7 +349,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -361,7 +363,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Policies:
         - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -373,6 +375,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: Custom::RulePriorityFunction
     Properties:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
+      RulePath: !Ref RulePath
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
   HTTPListenerRule:
     Metadata:
@@ -391,10 +394,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority: !If
-        - IsDefaultRootPath
-        - 50000 # This is the max rule priority. Since this rule evaluates true for everything, we make sure it is last
-        - !GetAtt HTTPRulePriorityAction.Priority
+      Priority: !GetAtt HTTPRulePriorityAction.Priority
   AddonsStack:
     Metadata:
       'aws:copilot:description': 'An Addons CloudFormation Stack for your additional AWS resources'

@@ -220,11 +220,11 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 	}
 	// Note: we let prompter handle the case when there is only option for user to choose from.
 	// This is naturally the case when `o.envName != "" && o.name != ""`.
-	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithSvc(o.name))
+	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithName(o.name))
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
 	}
-	o.name = deployedService.Svc
+	o.name = deployedService.Name
 	o.envName = deployedService.Env
 	return nil
 }

@@ -36,7 +36,7 @@ phases:
             do
                 bn="$(basename $artifact)"
                 echo "bn: $bn"
-                md5FileName="${{bn%.exe}}.md5"
+                md5FileName="${{bn}}.md5"
                 echo "md5FileName: $md5FileName"
                 aws s3api put-object-tagging --bucket $NEUTRAL_BUILD_RELEASE_BUCKET_NAME \
                 --key "$md5FileName" \

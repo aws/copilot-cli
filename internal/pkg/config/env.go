@@ -15,29 +15,27 @@ import (
 
 // Environment represents a deployment environment in an application.
 type Environment struct {
-	App              string        `json:"app"`                    // Name of the app this environment belongs to.
-	Name             string        `json:"name"`                   // Name of the environment, must be unique within a App.
-	Region           string        `json:"region"`                 // Name of the region this environment is stored in.
-	AccountID        string        `json:"accountID"`              // Account ID of the account this environment is stored in.
-	Prod             bool          `json:"prod"`                   // Deprecated. Whether or not this environment is a production environment.
-	RegistryURL      string        `json:"registryURL"`            // URL For ECR Registry for this environment.
-	ExecutionRoleARN string        `json:"executionRoleARN"`       // ARN used by CloudFormation to make modification to the environment stack.
-	ManagerRoleARN   string        `json:"managerRoleARN"`         // ARN for the manager role assumed to manipulate the environment and its services.
-	CustomConfig     *CustomizeEnv `json:"customConfig,omitempty"` // Custom environment configuration by users.
-	Telemetry        *Telemetry    `json:"telemetry,omitempty"`    // Optional environment telemetry features.
-}
+	App              string `json:"app"`              // Name of the app this environment belongs to.
+	Name             string `json:"name"`             // Name of the environment, must be unique within a App.
+	Region           string `json:"region"`           // Name of the region this environment is stored in.
+	AccountID        string `json:"accountID"`        // Account ID of the account this environment is stored in.
+	Prod             bool   `json:"prod"`             // Deprecated. Whether or not this environment is a production environment.
+	RegistryURL      string `json:"registryURL"`      // URL For ECR Registry for this environment.
+	ExecutionRoleARN string `json:"executionRoleARN"` // ARN used by CloudFormation to make modification to the environment stack.
+	ManagerRoleARN   string `json:"managerRoleARN"`   // ARN for the manager role assumed to manipulate the environment and its services.
 
-// HasImportedCerts return if the environment has imported certs.
-func (e *Environment) HasImportedCerts() bool {
-	return e.CustomConfig != nil && len(e.CustomConfig.ImportCertARNs) != 0
+	// Fields that store user configuration is no longer updated, but kept for retrofitting purpose.
+	CustomConfig *CustomizeEnv `json:"customConfig,omitempty"` // Deprecated. Custom environment configuration by users. This configuration is now available in the env manifest.
+	Telemetry    *Telemetry    `json:"telemetry,omitempty"`    // Deprecated. Optional environment telemetry features. This configuration is now available in the env manifest.
 }
 
 // CustomizeEnv represents the custom environment config.
 type CustomizeEnv struct {
-	ImportVPC          *ImportVPC `json:"importVPC,omitempty"`
-	VPCConfig          *AdjustVPC `json:"adjustVPC,omitempty"`
-	ImportCertARNs     []string   `json:"importCertARNs,omitempty"`
-	InternalALBSubnets []string   `json:"internalALBSubnets,omitempty"`
+	ImportVPC                   *ImportVPC `json:"importVPC,omitempty"`
+	VPCConfig                   *AdjustVPC `json:"adjustVPC,omitempty"`
+	ImportCertARNs              []string   `json:"importCertARNs,omitempty"`
+	InternalALBSubnets          []string   `json:"internalALBSubnets,omitempty"`
+	EnableInternalALBVPCIngress bool       `json:"enableInternalALBVPCIngress,omitempty"`
 }
 
 // IsEmpty returns if CustomizeEnv is an empty struct.

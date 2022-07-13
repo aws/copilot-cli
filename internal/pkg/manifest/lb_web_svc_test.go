@@ -5,8 +5,6 @@ package manifest
 
 import (
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -230,52 +228,13 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 	}
 }
 
-func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
-	testCases := map[string]struct {
-		inProps LoadBalancedWebServiceProps
-
-		wantedTestdata string
-	}{
-		"default": {
-			inProps: LoadBalancedWebServiceProps{
-				WorkloadProps: &WorkloadProps{
-					Name:       "frontend",
-					Dockerfile: "./frontend/Dockerfile",
-				},
-				Platform: PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs:   PlatformArgs{},
-				},
-			},
-			wantedTestdata: "lb-svc.yml",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			path := filepath.Join("testdata", tc.wantedTestdata)
-			wantedBytes, err := ioutil.ReadFile(path)
-			require.NoError(t, err)
-			manifest := NewLoadBalancedWebService(&tc.inProps)
-
-			// WHEN
-			tpl, err := manifest.MarshalBinary()
-			require.NoError(t, err)
-
-			// THEN
-			require.Equal(t, string(wantedBytes), string(tpl))
-		})
-	}
-}
-
 func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 	var (
 		perc       = Percentage(80)
 		mockIPNet1 = IPNet("10.1.0.0/24")
 		mockIPNet2 = IPNet("10.1.1.0/24")
 		mockRange  = IntRangeBand("1-10")
-		mockConfig = ScalingConfigOrPercentage{
+		mockConfig = ScalingConfigOrT[Percentage]{
 			Value: &perc,
 		}
 	)
@@ -465,7 +424,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroups: []string{"sg-123"},
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								IDs: []string{"sg-123"},
+							},
 						},
 					},
 				},
@@ -532,7 +493,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Network: NetworkConfig{
 							VPC: vpcConfig{
-								SecurityGroups: []string{"sg-456", "sg-789"},
+								SecurityGroups: SecurityGroupsIDsOrConfig{
+									IDs: []string{"sg-456", "sg-789"},
+								},
 							},
 						},
 					},
@@ -628,7 +591,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroups: []string{"sg-456", "sg-789"},
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								IDs: []string{"sg-456", "sg-789"},
+							},
 						},
 					},
 				},
@@ -701,7 +666,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroups: []string{"sg-456", "sg-789"},
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								IDs: []string{"sg-456", "sg-789"},
+							},
 						},
 					},
 				},
@@ -727,7 +694,60 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
-							SecurityGroups: []string{"sg-456", "sg-789"},
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								IDs: []string{"sg-456", "sg-789"},
+							},
+						},
+					},
+				},
+			},
+		},
+		"with network config overridden by security group config": {
+			in: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								AdvancedConfig: SecurityGroupsConfig{
+									SecurityGroups: []string{"sg-535", "sg-789"},
+								},
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"prod-iad": {
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								SecurityGroups: SecurityGroupsIDsOrConfig{
+									AdvancedConfig: SecurityGroupsConfig{
+										SecurityGroups: []string{"sg-456", "sg-700"},
+										DenyDefault:    aws.Bool(true),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			envToApply: "prod-iad",
+
+			wanted: &LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+							SecurityGroups: SecurityGroupsIDsOrConfig{
+								AdvancedConfig: SecurityGroupsConfig{
+									SecurityGroups: []string{"sg-456", "sg-700"},
+									DenyDefault:    aws.Bool(true),
+								},
+							},
 						},
 					},
 				},

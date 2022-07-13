@@ -20,17 +20,18 @@ LoadBalancerDNSAlias:
       AliasTarget:
         HostedZoneId: !GetAtt EnvControllerAction.PublicLoadBalancerHostedZone
         DNSName: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
-{{- else if .HostedZoneID}}
-LoadBalancerDNSAlias:
+{{- else}}
+{{- range $hostedZoneID, $aliases := .HostedZoneAliases}}
+LoadBalancerDNSAlias{{$hostedZoneID}}:
   Metadata:
-    'aws:copilot:description': 'Alias records for the application load balancer'
+    'aws:copilot:description': 'Alias records for the application load balancer in hosted zone {{$hostedZoneID}}'
   Type: AWS::Route53::RecordSetGroup
   Properties:
-    HostedZoneId: {{.HostedZoneID}}
-    Comment: !Sub "LoadBalancer alias for service ${WorkloadName}"
+    HostedZoneId: {{$hostedZoneID}}
+    Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone {{$hostedZoneID}}"
     RecordSets:
-    {{- range $alias := .Aliases}}
-      - Name: {{$alias}}
+    {{- range $alias := $aliases}}
+      - Name: {{quote $alias}}
         Type: A
         AliasTarget:
           {{- if eq $.WorkloadType "Backend Service"}}
@@ -42,6 +43,7 @@ LoadBalancerDNSAlias:
           {{- end}}
     {{- end}}
 {{- end}}
+{{- end}}
 
 HTTPSRulePriorityAction:
   Metadata:
@@ -49,6 +51,7 @@ HTTPSRulePriorityAction:
   Type: Custom::RulePriorityFunction
   Properties:
     ServiceToken: !GetAtt RulePriorityFunction.Arn
+    RulePath: !Ref RulePath
     {{- if eq .WorkloadType "Backend Service"}}
     ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
     {{- else}}
@@ -73,7 +76,7 @@ HTTPListenerRuleWithDomain:
 {{- if .Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice .Aliases }}
+          Values: {{ fmtSlice (quoteSlice .Aliases) }}
 {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
@@ -121,7 +124,7 @@ HTTPSListenerRule:
 {{- if .Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
-          Values: {{ fmtSlice .Aliases }}
+          Values: {{ fmtSlice (quoteSlice .Aliases) }}
 {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:

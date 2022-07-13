@@ -416,7 +416,7 @@ func (o *secretInitOpts) RecommendActions() error {
 	}
 
 	log.Infoln("You can refer to these secrets from your manifest file by editing the `secrets` section.")
-	log.Infoln(color.HighlightCode(secretsManifestExample))
+	log.Infoln(color.HighlightCodeBlock(secretsManifestExample))
 	return nil
 }
 

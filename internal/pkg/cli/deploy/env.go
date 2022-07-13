@@ -5,11 +5,18 @@ package deploy
 
 import (
 	"fmt"
+	"io"
 	"os"
+
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
@@ -33,13 +40,46 @@ type envDeployer struct {
 	// Dependencies.
 	appCFN appResourcesGetter
 	// Dependencies to upload artifacts.
-	uploader customResourcesUploader
-	s3       uploader
+	templateFS template.Reader
+	s3         uploader
 	// Dependencies to deploy an environment.
 	envDeployer environmentDeployer
 
 	// Cached variables.
 	appRegionalResources *stack.AppRegionalResources
+}
+
+// NewEnvDeployerInput contains information needd to construct an environment deployer.
+type NewEnvDeployerInput struct {
+	App             *config.Application
+	Env             *config.Environment
+	SessionProvider *sessions.Provider
+}
+
+// NewEnvDeployer constructs an environment deployer.
+func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
+	defaultSession, err := in.SessionProvider.Default()
+	if err != nil {
+		return nil, fmt.Errorf("get default session: %w", err)
+	}
+	envRegionSession, err := in.SessionProvider.DefaultWithRegion(in.Env.Region)
+	if err != nil {
+		return nil, fmt.Errorf("get default session in env region %s: %w", in.Env.Region, err)
+	}
+	envManagerSession, err := in.SessionProvider.FromRole(in.Env.ManagerRoleARN, in.Env.Region)
+	if err != nil {
+		return nil, fmt.Errorf("get env session: %w", err)
+	}
+	return &envDeployer{
+		app: in.App,
+		env: in.Env,
+
+		appCFN:     deploycfn.New(defaultSession),
+		templateFS: template.New(),
+		s3:         s3.New(envRegionSession),
+
+		envDeployer: deploycfn.New(envManagerSession),
+	}, nil
 }
 
 // UploadArtifacts uploads the deployment artifacts for the environment.
@@ -48,12 +88,19 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	return d.uploadCustomResources(resources.S3Bucket)
+}
 
-	urls, err := d.uploader.UploadEnvironmentCustomResources(func(key string, objects ...s3.NamedBinary) (string, error) {
-		return d.s3.ZipAndUpload(resources.S3Bucket, key, objects...)
-	})
+func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, error) {
+	crs, err := customresource.Env(d.templateFS)
 	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", resources.S3Bucket, err)
+		return nil, fmt.Errorf("read custom resources for environments: %w", err)
+	}
+	urls, err := customresource.Upload(func(key string, dat io.Reader) (url string, err error) {
+		return d.s3.Upload(bucket, key, dat)
+	}, crs)
+	if err != nil {
+		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", bucket, err)
 	}
 	return urls, nil
 }
@@ -63,6 +110,11 @@ type DeployEnvironmentInput struct {
 	RootUserARN         string
 	CustomResourcesURLs map[string]string
 	Manifest            *manifest.Environment
+}
+
+// GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
+func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput) (*GenerateCloudFormationTemplateOutput, error) {
+	return &GenerateCloudFormationTemplateOutput{}, nil
 }
 
 // DeployEnvironment deploys an environment using CloudFormation.

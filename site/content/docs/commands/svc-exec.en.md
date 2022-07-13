@@ -1,5 +1,5 @@
 # svc exec
-```
+```console
 $ copilot svc exec
 ```
 
@@ -22,13 +22,13 @@ $ copilot svc exec
 
 Start an interactive bash session with a task part of the "frontend" service.
 
-```bash
+```console
 $ copilot svc exec -a my-app -e test -n frontend
 ```
 
 Runs the 'ls' command in the task prefixed with ID "8c38184" within the "backend" service.
 
-```bash
+```console
 $ copilot svc exec -a my-app -e test --name backend --task-id 8c38184 --command "ls"
 ```
 

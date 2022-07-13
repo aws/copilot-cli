@@ -6,11 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -292,7 +292,7 @@ func TestDeleteJobOpts_Ask(t *testing.T) {
 type deleteJobMocks struct {
 	store          *mocks.Mockstore
 	secretsmanager *mocks.MocksecretsManager
-	sessProvider   *sessions.Provider
+	sessProvider   *mocks.MocksessionProvider
 	appCFN         *mocks.MockjobRemoverFromApp
 	spinner        *mocks.Mockprogress
 	jobCFN         *mocks.MockwlDeleter
@@ -334,6 +334,8 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().ListEnvironments(gomock.Eq(mockAppName)).Times(1).Return(mockEnvs, nil),
+
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
@@ -342,9 +344,10 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
 					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobTasksStopComplete, mockJobName, mockEnvName)),
+
+					mocks.sessProvider.EXPECT().DefaultWithRegion(gomock.Any()).Return(&session.Session{}, nil),
 					// emptyECRRepos
 					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
-
 					// removeJobFromApp
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobDeleteResourcesStart, mockJobName, mockAppName)),
@@ -368,6 +371,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
@@ -397,6 +401,11 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("mockRegion"),
+						},
+					}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(testError),
@@ -413,6 +422,11 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				gomock.InOrder(
 					// appEnvironments
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
+					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
+						Config: &aws.Config{
+							Region: aws.String("mockRegion"),
+						},
+					}, nil),
 					// deleteStacks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
@@ -435,7 +449,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			// GIVEN
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSecretsManager := mocks.NewMocksecretsManager(ctrl)
-			mockSession := sessions.ImmutableProvider()
+			mockSession := mocks.NewMocksessionProvider(ctrl)
 			mockAppCFN := mocks.NewMockjobRemoverFromApp(ctrl)
 			mockJobCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
