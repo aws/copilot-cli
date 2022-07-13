@@ -298,10 +298,10 @@ func (a *AdvancedCount) getInvalidFieldsSet() []string {
 			invalidFields = append(invalidFields, "queue_delay")
 		}
 	case WorkerServiceType:
-		if a.Requests != nil {
+		if !a.Requests.IsEmpty() {
 			invalidFields = append(invalidFields, "requests")
 		}
-		if a.ResponseTime != nil {
+		if !a.ResponseTime.IsEmpty() {
 			invalidFields = append(invalidFields, "response_time")
 		}
 	}
