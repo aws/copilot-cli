@@ -522,13 +522,6 @@ func (ws *Workspace) Path() (string, error) {
 	return filepath.Dir(copilotDirPath), nil
 }
 
-// RelWsRoot returns the path relative to the workspace root.
-// The input path is allowed to be either relative to the current
-// working directory or absolute.
-//
-// This is useful for storing a file path in configuration.
-//
-// Prefer RelCwd for displaying paths to users.
 func (ws *Workspace) RelWsRoot(path string) (string, error) {
 	copiDir, err := ws.copilotDirPath()
 	if err != nil {
