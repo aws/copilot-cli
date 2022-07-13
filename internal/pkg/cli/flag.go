@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
-	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 // Long flag names.
@@ -47,15 +45,18 @@ const (
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
 	resourcesFlag         = "resources"
+
 	githubURLFlag         = "github-url"
 	repoURLFlag           = "url"
 	githubAccessTokenFlag = "github-access-token"
 	gitBranchFlag         = "git-branch"
 	envsFlag              = "environments"
-	domainNameFlag        = "domain"
-	localFlag             = "local"
-	deleteSecretFlag      = "delete-secret"
-	svcPortFlag           = "port"
+	pipelineTypeFlag      = "pipeline-type"
+
+	domainNameFlag   = "domain"
+	localFlag        = "local"
+	deleteSecretFlag = "delete-secret"
+	svcPortFlag      = "port"
 
 	noSubscriptionFlag  = "no-subscribe"
 	subscribeTopicsFlag = "subscribe-topics"
@@ -140,6 +141,7 @@ const (
 	githubAccessTokenFlagShort = "t"
 	gitBranchFlagShort         = "b"
 	envsFlagShort              = "e"
+	pipelineTypeShort          = "p"
 
 	scheduleFlagShort = "s"
 )
@@ -147,7 +149,7 @@ const (
 // Descriptions for flags.
 var (
 	svcTypeFlagDescription = fmt.Sprintf(`Type of service to create. Must be one of:
-%s.`, strings.Join(template.QuoteSliceFunc(manifest.ServiceTypes()), ", "))
+%s.`, strings.Join(quoteStringSlice(manifest.ServiceTypes()), ", "))
 	imageFlagDescription = fmt.Sprintf(`The location of an existing Docker image.
 Cannot be specified with --%s or --%s.`, dockerFileFlag, dockerFileContextFlag)
 	dockerFileFlagDescription = fmt.Sprintf(`Path to the Dockerfile.
@@ -155,11 +157,11 @@ Cannot be specified with --%s.`, imageFlag)
 	dockerFileContextFlagDescription = fmt.Sprintf(`Path to the Docker build context.
 Cannot be specified with --%s.`, imageFlag)
 	storageTypeFlagDescription = fmt.Sprintf(`Type of storage to add. Must be one of:
-%s.`, strings.Join(template.QuoteSliceFunc(storageTypes), ", "))
+%s.`, strings.Join(quoteStringSlice(storageTypes), ", "))
 	jobTypeFlagDescription = fmt.Sprintf(`Type of job to create. Must be one of:
-%s.`, strings.Join(template.QuoteSliceFunc(manifest.JobTypes()), ", "))
+%s.`, strings.Join(quoteStringSlice(manifest.JobTypes()), ", "))
 	wkldTypeFlagDescription = fmt.Sprintf(`Type of job or svc to create. Must be one of:
-%s.`, strings.Join(template.QuoteSliceFunc(manifest.WorkloadTypes()), ", "))
+%s.`, strings.Join(quoteStringSlice(manifest.WorkloadTypes()), ", "))
 
 	clusterFlagDescription = fmt.Sprintf(`Optional. The short name or full ARN of the cluster to run the task in. 
 Cannot be specified with --%s, --%s or --%s.`, appFlag, envFlag, taskDefaultFlag)
@@ -237,6 +239,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	githubAccessTokenFlagDescription = "GitHub personal access token for your repository."
 	gitBranchFlagDescription         = "Branch used to trigger your pipeline."
 	pipelineEnvsFlagDescription      = "Environments to add to the pipeline."
+	pipelineTypeFlagDescription      = `The type of pipeline. Must be either "Workloads" or "Environments".`
 	domainNameFlagDescription        = "Optional. Your existing custom domain name."
 	envResourcesFlagDescription      = "Optional. Show the resources in your environment."
 	svcResourcesFlagDescription      = "Optional. Show the resources in your service."
