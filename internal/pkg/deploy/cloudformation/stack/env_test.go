@@ -72,7 +72,7 @@ func TestEnv_Template(t *testing.T) {
 			defer ctrl.Finish()
 			envStack := &EnvStackConfig{
 				in:                mockDeployEnvironmentInput(),
-				PrevForceUpdateID: "mockPreviousForceUpdateID",
+				prevForceUpdateID: "mockPreviousForceUpdateID",
 			}
 			tc.mockDependencies(ctrl, envStack)
 
