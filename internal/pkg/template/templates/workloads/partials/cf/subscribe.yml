@@ -96,7 +96,7 @@ DeadLetterPolicy:
   Properties:
     Queues: [!Ref 'DeadLetterQueue']
     PolicyDocument:
-      Version: "2012-10-17"
+      Version: '2012-10-17'
       Statement:
         - Effect: Allow
           Principal:
@@ -193,7 +193,7 @@ QueuePolicy:
   Properties:
     Queues: [!Ref '{{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue']
     PolicyDocument:
-      Version: "2012-10-17"
+      Version: '2012-10-17'
       Statement:
         - Effect: Allow
           Principal:

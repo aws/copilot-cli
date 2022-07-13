@@ -73,6 +73,12 @@ type EnvInitRequestVPCConfig struct {
 	PrivateSubnetCIDRs string
 }
 
+// EnvDeployRequest contains the parameters for calling copilot env deploy.
+type EnvDeployRequest struct {
+	AppName string
+	Name    string
+}
+
 // EnvShowRequest contains the parameters for calling copilot env show.
 type EnvShowRequest struct {
 	AppName string
@@ -594,6 +600,19 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 			"--override-az-names", opts.VPCConfig.AZs,
 			"--override-public-cidrs", opts.VPCConfig.PublicSubnetCIDRs,
 			"--override-private-cidrs", opts.VPCConfig.PrivateSubnetCIDRs)
+	}
+	return cli.exec(exec.Command(cli.path, commands...))
+}
+
+/*EnvDeploy runs:
+copilot env deploy
+	--name $n
+	--app $a
+*/
+func (cli *CLI) EnvDeploy(opts *EnvDeployRequest) (string, error) {
+	commands := []string{"env", "deploy",
+		"--name", opts.Name,
+		"--app", opts.AppName,
 	}
 	return cli.exec(exec.Command(cli.path, commands...))
 }

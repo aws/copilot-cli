@@ -24,7 +24,7 @@ import (
 
 // CreateAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
 func (cf CloudFormation) CreateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput) error {
-	cfnStack, err := cf.environmentStack(env)
+	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewBootstrapEnvStackConfig(env))
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (cf CloudFormation) CreateAndRenderEnvironment(out progress.FileWriter, env
 
 // UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
 func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
-	cfnStack, err := cf.environmentStack(env)
+	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvStackConfig(env))
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,7 @@ func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentIn
 }
 
 func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, transformParam func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter) error {
-	s, err := cf.environmentStack(in)
+	s, err := cf.toUploadedStack(in.ArtifactBucketARN, stack.NewEnvStackConfig(in))
 	if err != nil {
 		return err
 	}
@@ -221,12 +221,11 @@ func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, t
 	}
 }
 
-func (cf CloudFormation) environmentStack(env *deploy.CreateEnvironmentInput) (*cloudformation.Stack, error) {
-	bucketARN, err := arn.Parse(env.ArtifactBucketARN)
+func (cf CloudFormation) toUploadedStack(artifactBucketARN string, stackConfig StackConfiguration) (*cloudformation.Stack, error) {
+	bucketARN, err := arn.Parse(artifactBucketARN)
 	if err != nil {
 		return nil, err
 	}
-	stackConfig := stack.NewEnvStackConfig(env)
 	url, err := cf.uploadStackTemplateToS3(bucketARN.Resource, stackConfig)
 	if err != nil {
 		return nil, err
