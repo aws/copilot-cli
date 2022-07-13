@@ -23,9 +23,6 @@ import (
 
 const (
 	jobAppNamePrompt = "Which application does your job belong to?"
-
-	jobLogNamePrompt     = "Which job's logs would you like to show?"
-	jobLogNameHelpPrompt = "The logs of a deployed job will be shown."
 )
 
 type jobLogsVars struct {
@@ -36,10 +33,8 @@ type jobLogsVars struct {
 
 type jobLogsOpts struct {
 	jobLogsVars
-	wkldLogOpts
 
-	// Cached variables.
-	targetEnv *config.Environment
+	wkldLogOpts
 }
 
 func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
@@ -72,11 +67,11 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 		if err != nil {
 			return err
 		}
-		opts.logsSvc, err = logging.NewJobClient(&logging.NewJobLogsConfig{
+		opts.logsSvc, err = logging.NewServiceClient(&logging.NewServiceLogsConfig{
 			Sess: sess,
 			App:  opts.appName,
 			Env:  opts.envName,
-			Job:  opts.name,
+			Svc:  opts.name,
 		})
 		if err != nil {
 			return err
@@ -145,16 +140,15 @@ func (o *jobLogsOpts) Validate() error {
 
 // Ask asks for fields that are required but not passed in.
 func (o *jobLogsOpts) Ask() error {
-	if err := o.validateOrAskApp(); err != nil {
+	if err := o.askApp(); err != nil {
 		return err
 	}
-	return o.validateAndAskJobEnvName()
+	return nil
 }
 
-func (o *jobLogsOpts) validateOrAskApp() error {
+func (o *jobLogsOpts) askApp() error {
 	if o.appName != "" {
-		_, err := o.configStore.GetApplication(o.appName)
-		return err
+		return nil
 	}
 	app, err := o.sel.Application(jobAppNamePrompt, svcAppNameHelpPrompt)
 	if err != nil {
@@ -164,65 +158,8 @@ func (o *jobLogsOpts) validateOrAskApp() error {
 	return nil
 }
 
-func (o *jobLogsOpts) validateAndAskJobEnvName() error {
-	if o.envName != "" {
-		if _, err := o.getTargetEnv(); err != nil {
-			return err
-		}
-	}
-
-	if o.name != "" {
-		if _, err := o.configStore.GetJob(o.appName, o.name); err != nil {
-			return err
-		}
-	}
-
-	deployedJob, err := o.sel.DeployedJob(jobLogNamePrompt, jobLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithName(o.name))
-	if err != nil {
-		return fmt.Errorf("select deployed jobs for application %s: %w", o.appName, err)
-	}
-	o.name = deployedJob.Job
-	o.envName = deployedJob.Env
-	return nil
-}
-
-func (o *jobLogsOpts) getTargetEnv() (*config.Environment, error) {
-	if o.targetEnv != nil {
-		return o.targetEnv, nil
-	}
-	env, err := o.configStore.GetEnvironment(o.appName, o.envName)
-	if err != nil {
-		return nil, err
-	}
-	o.targetEnv = env
-	return o.targetEnv, nil
-}
-
 // Execute outputs logs of the job.
 func (o *jobLogsOpts) Execute() error {
-	if err := o.initLogsSvc(); err != nil {
-		return err
-	}
-	eventsWriter := logging.WriteHumanLogs
-	if o.shouldOutputJSON {
-		eventsWriter = logging.WriteJSONLogs
-	}
-
-	var limit *int64
-	if o.limit != 0 {
-		limit = aws.Int64(int64(o.limit))
-	}
-	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
-		Follow:    o.follow,
-		Limit:     limit,
-		EndTime:   o.endTime,
-		StartTime: o.startTime,
-		TaskIDs:   o.taskIDs,
-		OnEvents:  eventsWriter,
-	})
-	if err != nil {
-		return fmt.Errorf("write log events for job %s: %w", o.name, err)
-	}
 	return nil
 }
 
