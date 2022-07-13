@@ -36,7 +36,7 @@ func Test_Isolated(t *testing.T) {
 var _ = BeforeSuite(func() {
 	vpcStackName = fmt.Sprintf("e2e-isolated-vpc-stack-%d", timeNow)
 	vpcStackTemplatePath = "file://vpc.yml"
-	ecsCli, err := client.NewCLI()
+	copilot, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = ecsCli
 	aws = client.NewAWS()
