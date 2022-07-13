@@ -124,6 +124,16 @@ Resources:
           {{- end }} {{/* endif ne .Source.OutputArtifactFormat "" */}}{{- end }} {{/* endif ne .Source.ProviderName "GitHubV1" */}}
       Roles:
         - !Ref BuildProjectRole
+  {{- if .Build.AdditionalPolicyDocument }}
+  BuildProjectAdditionalPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: !Sub ${AWS::StackName}-BuildProjectAdditionalPolicy
+      PolicyDocument:
+{{.Build.AdditionalPolicyDocument | indent 8}}
+      Roles:
+        - !Ref BuildProjectRole
+ {{- end}}
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:

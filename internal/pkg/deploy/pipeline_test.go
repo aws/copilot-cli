@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"errors"
+	"gopkg.in/yaml.v3"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -203,6 +204,15 @@ func TestPipelineBuild_Init(t *testing.T) {
 		defaultImage   = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 		defaultEnvType = "LINUX_CONTAINER"
 	)
+	yamlNode := yaml.Node{}
+	policyDocument := []byte(`
+  Statement:
+    Action: '*'
+    Effect: Allow
+    Resource: '*'
+  Version: 2012-10-17`)
+
+	require.NoError(t, yaml.Unmarshal(policyDocument, &yamlNode))
 
 	testCases := map[string]struct {
 		mfBuild       *manifest.Build
@@ -239,6 +249,35 @@ func TestPipelineBuild_Init(t *testing.T) {
 				Image:           "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
 				EnvironmentType: "ARM_CONTAINER",
 				BuildspecPath:   "some/path",
+			},
+		},
+		"additional policy is not empty": {
+			mfBuild: &manifest.Build{
+				Image:     "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				Buildspec: "some/path",
+				AdditionalPolicy: struct {
+					Document yaml.Node `yaml:"PolicyDocument,omitempty"`
+				}{
+					Document: yamlNode,
+				},
+			},
+			expectedBuild: Build{
+				Image:                    "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				EnvironmentType:          "ARM_CONTAINER",
+				BuildspecPath:            "some/path",
+				AdditionalPolicyDocument: "Statement:\n    Action: '*'\n    Effect: Allow\n    Resource: '*'\nVersion: 2012-10-17",
+			},
+		},
+		"additional policy is empty": {
+			mfBuild: &manifest.Build{
+				Image:     "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				Buildspec: "some/path",
+			},
+			expectedBuild: Build{
+				Image:                    "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
+				EnvironmentType:          "ARM_CONTAINER",
+				BuildspecPath:            "some/path",
+				AdditionalPolicyDocument: "",
 			},
 		},
 		"by default convert legacy manifest path to buildspec path": {

@@ -49,16 +49,16 @@ func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, env
 	if err != nil {
 		return err
 	}
-	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvConfigFromExistingStack(env, v))
+	descr, err := cf.waitAndDescribeStack(stack.NameForEnv(env.App.Name, env.Name))
+	if err != nil {
+		return err
+	}
+	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvConfigFromExistingStack(env, v, descr.Parameters))
 	if err != nil {
 		return err
 	}
 	for _, opt := range opts {
 		opt(cfnStack)
-	}
-	descr, err := cf.waitAndDescribeStack(cfnStack.Name)
-	if err != nil {
-		return err
 	}
 	params, err := cf.transformParameters(cfnStack.Parameters, descr.Parameters, transformEnvControllerParameters)
 	if err != nil {
@@ -115,7 +115,7 @@ func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Enviro
 	return conf.ToEnv(descr.SDK())
 }
 
-// EnvironmentTemplate returns the environment's stack's template.
+// EnvironmentTemplate returns the environment stack's template.
 func (cf CloudFormation) EnvironmentTemplate(appName, envName string) (string, error) {
 	stackName := stack.NameForEnv(appName, envName)
 	return cf.cfnClient.TemplateBody(stackName)
@@ -132,6 +132,15 @@ func (cf CloudFormation) forceUpdateOutputID(app, env string) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+// EnvironmentParameters returns the environment stack's parameters.
+func (cf CloudFormation) EnvironmentParameters(appName, envName string) ([]*awscfn.Parameter, error) {
+	out, err := cf.cfnClient.Describe(stack.NameForEnv(appName, envName))
+	if err != nil {
+		return nil, err
+	}
+	return out.Parameters, nil
 }
 
 // UpdateEnvironmentTemplate updates the cloudformation stack's template body while maintaining the parameters and tags.
