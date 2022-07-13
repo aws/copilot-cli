@@ -6,6 +6,8 @@ package cli
 import (
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -16,12 +18,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/runner/jobrunner"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
-	"golang.org/x/mod/semver"
 )
 
 type jobRunVars struct {
@@ -35,6 +35,7 @@ type jobRunOpts struct {
 
 	configStore store
 	sel         configSelector
+	ws          wsEnvironmentsLister
 
 	// cached variables.
 	targetEnv    *config.Environment
@@ -52,7 +53,10 @@ func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 		return nil, err
 	}
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
 	prompter := prompt.New()
 
 	opts := &jobRunOpts{
@@ -60,6 +64,7 @@ func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 
 		configStore: configStore,
 		sel:         selector.NewConfigSelector(prompter, configStore),
+		ws:          ws,
 
 		sessProvider: sessProvider,
 	}
@@ -198,18 +203,7 @@ func (o *jobRunOpts) validateEnvCompatible() error {
 	if err != nil {
 		return err
 	}
-	version, err := envStack.Version()
-	if err != nil {
-		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", o.envName, o.appName, err)
-	}
-	if semver.Compare(version, "v1.12.0") < 0 {
-		log.Errorf(`The %q environment template must be at least on v1.12.0.
-Please run %s to upgrade the template to the latest version.
-`,
-			o.envName, color.HighlightCode(fmt.Sprintf("copilot env deploy --app %s --name %s", o.appName, o.envName)))
-		return fmt.Errorf("environment template version %q does not support running jobs", version)
-	}
-	return nil
+	return validateMinEnvVersion(o.ws, envStack, o.appName, o.envName, "v1.12.0", "job run")
 }
 
 func buildJobRunCmd() *cobra.Command {

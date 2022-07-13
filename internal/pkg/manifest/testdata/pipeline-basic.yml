@@ -1,38 +1,38 @@
-# The manifest for the "{{.Name}}" pipeline.
+# The manifest for the "mock-pipeline" pipeline.
 # This YAML file defines your pipeline: the source repository it tracks and the order of the environments to deploy to.
 # For more info: https://aws.github.io/copilot-cli/docs/manifest/pipeline/
 
 # The name of the pipeline.
-name: {{.Name}}
+name: mock-pipeline
 
 # The version of the schema used in this template.
-version: {{.Version}}
+version: 1
 
 # This section defines your source, changes to which trigger your pipeline.
 source:
   # The name of the provider that is used to store the source artifacts.
   # (i.e. GitHub, Bitbucket, CodeCommit)
-  provider: {{.Source.ProviderName}}
+  provider: GitHub
   # Additional properties that further specify the location of the artifacts.
-  properties:{{range $key, $value := .Source.Properties}}
-    {{$key}}: {{$value}}{{end}}
-    {{- if .Source.IsCodeStarConnection}}
+  properties:
+    branch: main
+    repository: mock-url
     # Optional: specify the name of an existing CodeStar Connections connection.
     # connection_name: a-connection
-    {{- end}}
-{{$length := len .Stages}}{{if gt $length 0}}
+
 # This section defines the order of the environments your pipeline will deploy to.
-stages:{{range .Stages}}
+stages:
     - # The name of the environment.
-      name: {{.Name}}
-      {{- if .Deployments}}{{range $actionName, $action := .Deployments}}
-      deployments:
-        {{$actionName}}:
-          template_path: {{$action.TemplatePath}}
-          template_config: {{$action.TemplateConfig}}
-      {{- end}}{{end}}
+      name: test
       # Optional: flag for manual approval action before deployment.
-      {{if not .RequiresApproval }}# {{end}}requires_approval: true
+      # requires_approval: true
       # Optional: use test commands to validate this stage of your build.
       # test_commands: [echo 'running tests', make test]
-{{end}}{{end}}
+
+    - # The name of the environment.
+      name: prod
+      # Optional: flag for manual approval action before deployment.
+      # requires_approval: true
+      # Optional: use test commands to validate this stage of your build.
+      # test_commands: [echo 'running tests', make test]
+

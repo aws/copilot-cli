@@ -44,7 +44,7 @@ type AppStackConfig struct {
 type AppRegionalResources struct {
 	Region         string            // The region these resources are in.
 	KMSKeyARN      string            // A KMS Key ARN for encrypting Pipeline artifacts.
-	S3Bucket       string            // S3 bucket for Pipeline artifacts.
+	S3Bucket       string            // A bucket used for any Copilot artifacts that must be stored in S3 (pipelines, env files, etc).
 	RepositoryURLs map[string]string // The image repository URLs by service name.
 }
 
@@ -54,9 +54,9 @@ const (
 	appAdminRoleParamName         = "AdminRoleName"
 	appExecutionRoleParamName     = "ExecutionRoleName"
 	appDNSDelegationRoleParamName = "DNSDelegationRoleName"
-	appOutputKMSKey               = "KMSKeyARN"
-	appOutputS3Bucket             = "PipelineBucket"
-	appOutputECRRepoPrefix        = "ECRRepo"
+	appOutputKMSKey               = "KMSKeyARN"      // Name of the CloudFormation Output that holds the KMS Key ARN to encrypt artifact buckets.
+	appOutputS3Bucket             = "PipelineBucket" // Name of the CloudFormation Output that holds the Artifact Bucket name.
+	appOutputECRRepoPrefix        = "ECRRepo"        // Prefix of the CloudFormation Output name that holds the ECR image repository ARN for each service.
 	appDNSDelegatedAccountsKey    = "AppDNSDelegatedAccounts"
 	appDomainNameKey              = "AppDomainName"
 	appDomainHostedZoneIDKey      = "AppDomainHostedZoneID"
