@@ -27,7 +27,7 @@ type envReadParser interface {
 // environment stack and to interpret the outputs from it.
 type EnvStackConfig struct {
 	in                *deploy.CreateEnvironmentInput
-	prevForceUpdateID string
+	lastForceUpdateID string
 	prevParams        []*cloudformation.Parameter
 	parser            envReadParser
 }
@@ -74,11 +74,11 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 }
 
 // NewEnvConfigFromExistingStack returns a CloudFormation stack configuration for updating an environment.
-func NewEnvConfigFromExistingStack(in *deploy.CreateEnvironmentInput, prevForceUpdateID string, prevParams []*cloudformation.Parameter) *EnvStackConfig {
+func NewEnvConfigFromExistingStack(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, prevParams []*cloudformation.Parameter) *EnvStackConfig {
 	return &EnvStackConfig{
 		in:                in,
 		prevParams:        prevParams,
-		prevForceUpdateID: prevForceUpdateID,
+		lastForceUpdateID: lastForceUpdateID,
 		parser:            template.New(),
 	}
 }
@@ -99,7 +99,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		mft = string(out)
 	}
 
-	forceUpdateID := e.prevForceUpdateID
+	forceUpdateID := e.lastForceUpdateID
 	if e.in.ForceUpdate {
 		id, err := uuid.NewRandom()
 		if err != nil {

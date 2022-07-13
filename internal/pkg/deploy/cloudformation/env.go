@@ -45,7 +45,7 @@ func (cf CloudFormation) CreateAndRenderEnvironment(out progress.FileWriter, env
 
 // UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
 func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
-	v, err := cf.ForceUpdateOutputID(env.App.Name, env.Name)
+	forceOutputID, err := cf.ForceUpdateOutputID(env.App.Name, env.Name)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, env
 	if err != nil {
 		return err
 	}
-	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvConfigFromExistingStack(env, v, descr.Parameters))
+	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvConfigFromExistingStack(env, forceOutputID, descr.Parameters))
 	if err != nil {
 		return err
 	}
