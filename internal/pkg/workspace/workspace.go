@@ -539,9 +539,14 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 	if ws.copilotDir != "" {
 		return ws.copilotDir, nil
 	}
+
 	// Are we in the application's copilot directory already?
-	inCopilotDir := filepath.Base(ws.workingDir) == CopilotDirName
-	if inCopilotDir {
+	//
+	// Note: This code checks for *any* directory named "copilot", but this might not work
+	// correctly if we're in some subdirectory of the app that the user might have happened
+	// to name "copilot". It's not clear if there's a good way to avoid that problem, though it
+	// doesn't seem to be a terribly likely issue.
+	if filepath.Base(ws.workingDir) == CopilotDirName {
 		ws.copilotDir = ws.workingDir
 		return ws.copilotDir, nil
 	}
