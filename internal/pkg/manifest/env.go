@@ -98,10 +98,12 @@ type environmentVPCConfig struct {
 	ID                  *string              `yaml:"id"`
 	CIDR                *IPNet               `yaml:"cidr"`
 	Subnets             subnetsConfiguration `yaml:"subnets,omitempty"`
-	SecurityGroupConfig struct {
-		Ingress yaml.Node `yaml:"ingress"`
-		Egress  yaml.Node `yaml:"egress"`
-	} `yaml:"security_group"`
+	SecurityGroupConfig SecurityGroupConfig  `yaml:"security_group"`
+}
+
+type SecurityGroupConfig struct {
+	Ingress yaml.Node `yaml:"ingress"`
+	Egress  yaml.Node `yaml:"egress"`
 }
 
 type environmentCDNConfig struct {
