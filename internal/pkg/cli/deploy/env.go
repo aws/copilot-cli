@@ -18,10 +18,10 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
 type appResourcesGetter interface {
@@ -29,7 +29,7 @@ type appResourcesGetter interface {
 }
 
 type environmentDeployer interface {
-	UpdateAndRenderEnvironment(out termprogress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error
+	UpdateAndRenderEnvironment(out progress.FileWriter, conf deploycfn.StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error
 	EnvironmentParameters(app, env string) ([]*awscfn.Parameter, error)
 	ForceUpdateOutputID(app, env string) (string, error)
 }
@@ -50,7 +50,7 @@ type envDeployer struct {
 	appRegionalResources *stack.AppRegionalResources
 }
 
-// NewEnvDeployerInput contains information needd to construct an environment deployer.
+// NewEnvDeployerInput contains information needed to construct an environment deployer.
 type NewEnvDeployerInput struct {
 	App             *config.Application
 	Env             *config.Environment
@@ -152,7 +152,16 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if err != nil {
 		return err
 	}
-	return d.envDeployer.UpdateAndRenderEnvironment(os.Stderr, stackInput, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
+	oldParams, err := d.envDeployer.EnvironmentParameters(d.app.Name, d.env.Name)
+	if err != nil {
+		return fmt.Errorf("describe environment stack parameters: %w", err)
+	}
+	forceUpdateID, err := d.envDeployer.ForceUpdateOutputID(d.app.Name, d.env.Name)
+	if err != nil {
+		return fmt.Errorf("retrieve environment stack force update ID: %w", err)
+	}
+	conf := stack.NewEnvConfigFromExistingStack(stackInput, forceUpdateID, oldParams)
+	return d.envDeployer.UpdateAndRenderEnvironment(os.Stderr, conf, stackInput.ArtifactBucketARN, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
 }
 
 func (d *envDeployer) getAppRegionalResources() (*stack.AppRegionalResources, error) {

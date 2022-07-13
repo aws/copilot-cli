@@ -10,7 +10,7 @@ import (
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
-	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
+	cloudformation1 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	gomock "github.com/golang/mock/gomock"
@@ -108,9 +108,9 @@ func (mr *MockenvironmentDeployerMockRecorder) ForceUpdateOutputID(app, env inte
 }
 
 // UpdateAndRenderEnvironment mocks base method.
-func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation0.StackOption) error {
+func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(out progress.FileWriter, conf cloudformation1.StackConfiguration, bucketARN string, opts ...cloudformation0.StackOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{out, env}
+	varargs := []interface{}{out, conf, bucketARN}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -120,8 +120,8 @@ func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(out progress.FileWr
 }
 
 // UpdateAndRenderEnvironment indicates an expected call of UpdateAndRenderEnvironment.
-func (mr *MockenvironmentDeployerMockRecorder) UpdateAndRenderEnvironment(out, env interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockenvironmentDeployerMockRecorder) UpdateAndRenderEnvironment(out, conf, bucketARN interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{out, env}, opts...)
+	varargs := append([]interface{}{out, conf, bucketARN}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).UpdateAndRenderEnvironment), varargs...)
 }

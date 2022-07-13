@@ -43,28 +43,53 @@ func (cf CloudFormation) CreateAndRenderEnvironment(out progress.FileWriter, env
 	return cf.renderStackChanges(in)
 }
 
-// UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
-func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
-	forceOutputID, err := cf.ForceUpdateOutputID(env.App.Name, env.Name)
-	if err != nil {
-		return err
-	}
-	descr, err := cf.waitAndDescribeStack(stack.NameForEnv(env.App.Name, env.Name))
-	if err != nil {
-		return err
-	}
-	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvConfigFromExistingStack(env, forceOutputID, descr.Parameters))
+// UpdateAndRenderEnvironmentF updates the CloudFormation stack for an environment, and render the stack creation to out.
+func (cf CloudFormation) UpdateAndRenderEnvironmentF(out progress.FileWriter, conf StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error {
+	cfnStack, err := cf.toUploadedStack(bucketARN, conf)
 	if err != nil {
 		return err
 	}
 	for _, opt := range opts {
 		opt(cfnStack)
 	}
-	params, err := cf.transformParameters(cfnStack.Parameters, descr.Parameters, transformEnvControllerParameters)
+	in := newRenderEnvironmentInput(out, cfnStack)
+	in.createChangeSet = func() (changeSetID string, err error) {
+		spinner := progress.NewSpinner(out)
+		label := fmt.Sprintf("Proposing infrastructure changes for the %s environment.", cfnStack.Name)
+		spinner.Start(label)
+		defer stopSpinner(spinner, err, label)
+		changeSetID, err = cf.cfnClient.Update(cfnStack)
+		if err != nil {
+			return "", err
+		}
+		return changeSetID, nil
+	}
+	return cf.renderStackChanges(in)
+}
+
+// UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
+func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, conf StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error {
+	// forceOutputID, err := cf.ForceUpdateOutputID(env.App.Name, env.Name)
+	// if err != nil {
+	// 	return err
+	// }
+	// descr, err := cf.waitAndDescribeStack(stack.NameForEnv(env.App.Name, env.Name))
+	// if err != nil {
+	// 	return err
+	// }
+	// cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvConfigFromExistingStack(env, forceOutputID, descr.Parameters))
+	cfnStack, err := cf.toUploadedStack(bucketARN, conf)
 	if err != nil {
 		return err
 	}
-	cfnStack.Parameters = params
+	for _, opt := range opts {
+		opt(cfnStack)
+	}
+	// params, err := cf.transformParameters(cfnStack.Parameters, descr.Parameters, transformEnvControllerParameters)
+	// if err != nil {
+	// 	return err
+	// }
+	// cfnStack.Parameters = params
 
 	in := newRenderEnvironmentInput(out, cfnStack)
 	in.createChangeSet = func() (changeSetID string, err error) {
