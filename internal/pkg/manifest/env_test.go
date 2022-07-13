@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -458,72 +456,6 @@ http:
 				require.NoError(t, gotErr)
 				require.Equal(t, tc.wantedStruct, got)
 			}
-		})
-	}
-}
-
-func TestEnvironment_MarshalBinary(t *testing.T) {
-	testCases := map[string]struct {
-		inProps        EnvironmentProps
-		wantedTestData string
-	}{
-		"fully configured with customized vpc resources": {
-			inProps: EnvironmentProps{
-				Name: "test",
-				CustomConfig: &config.CustomizeEnv{
-					VPCConfig: &config.AdjustVPC{
-						CIDR:               "mock-cidr-0",
-						AZs:                []string{"mock-az-1", "mock-az-2"},
-						PublicSubnetCIDRs:  []string{"mock-cidr-1", "mock-cidr-2"},
-						PrivateSubnetCIDRs: []string{"mock-cidr-3", "mock-cidr-4"},
-					},
-					ImportCertARNs:     []string{"mock-cert-1", "mock-cert-2"},
-					InternalALBSubnets: []string{"mock-subnet-id-3", "mock-subnet-id-4"},
-				},
-				Telemetry: &config.Telemetry{
-					EnableContainerInsights: false,
-				},
-			},
-			wantedTestData: "environment-adjust-vpc.yml",
-		},
-		"fully configured with imported vpc resources": {
-			inProps: EnvironmentProps{
-				Name: "test",
-				CustomConfig: &config.CustomizeEnv{
-					ImportVPC: &config.ImportVPC{
-						ID:               "mock-vpc-id",
-						PublicSubnetIDs:  []string{"mock-subnet-id-1", "mock-subnet-id-2"},
-						PrivateSubnetIDs: []string{"mock-subnet-id-3", "mock-subnet-id-4"},
-					},
-					ImportCertARNs: []string{"mock-cert-1", "mock-cert-2"},
-				},
-				Telemetry: &config.Telemetry{
-					EnableContainerInsights: true,
-				},
-			},
-			wantedTestData: "environment-import-vpc.yml",
-		},
-		"basic manifest": {
-			inProps: EnvironmentProps{
-				Name: "test",
-			},
-			wantedTestData: "environment-default.yml",
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			path := filepath.Join("testdata", tc.wantedTestData)
-			wantedBytes, err := ioutil.ReadFile(path)
-			require.NoError(t, err)
-			manifest := NewEnvironment(&tc.inProps)
-
-			// WHEN
-			tpl, err := manifest.MarshalBinary()
-			require.NoError(t, err)
-
-			// THEN
-			require.Equal(t, string(wantedBytes), string(tpl))
 		})
 	}
 }
