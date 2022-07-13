@@ -332,7 +332,6 @@ type wsAppManager interface {
 }
 
 type wsAddonManager interface {
-	wsPathRelativizer
 	WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error)
 	manifestReader
 	wlLister

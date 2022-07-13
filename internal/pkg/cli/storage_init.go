@@ -167,9 +167,10 @@ type initStorageOpts struct {
 	initStorageVars
 	appName string
 
-	fs    afero.Fs
-	ws    wsAddonManager
-	store store
+	fs            afero.Fs
+	ws            wsAddonManager
+	pathDisplayer pathDisplayer
+	store         store
 
 	sel    wsSelector
 	prompt prompter
@@ -190,17 +191,23 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
+	pathDisplayer, err := NewCwdPathDisplayer()
+	if err != nil {
+		return nil, err
+	}
+
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
 	return &initStorageOpts{
 		initStorageVars: vars,
 		appName:         tryReadingAppName(),
 
-		fs:     &afero.Afero{Fs: afero.NewOsFs()},
-		store:  store,
-		ws:     ws,
-		sel:    selector.NewLocalWorkloadSelector(prompter, store, ws),
-		prompt: prompter,
+		fs:            &afero.Afero{Fs: afero.NewOsFs()},
+		store:         store,
+		ws:            ws,
+		pathDisplayer: pathDisplayer,
+		sel:           selector.NewLocalWorkloadSelector(prompter, store, ws),
+		prompt:        prompter,
 	}, nil
 }
 
@@ -617,7 +624,7 @@ func (o *initStorageOpts) Execute() error {
 			}
 			return fmt.Errorf("addon file already exists: %w", e)
 		}
-		path, err = o.ws.RelCwd(path)
+		path, err = o.pathDisplayer.DisplayPath(path)
 		if err != nil {
 			return err
 		}

@@ -3297,36 +3297,6 @@ func (mr *MockwsAddonManagerMockRecorder) ReadWorkloadManifest(name interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWorkloadManifest", reflect.TypeOf((*MockwsAddonManager)(nil).ReadWorkloadManifest), name)
 }
 
-// RelCwd mocks base method.
-func (m *MockwsAddonManager) RelCwd(path string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RelCwd", path)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RelCwd indicates an expected call of RelCwd.
-func (mr *MockwsAddonManagerMockRecorder) RelCwd(path interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelCwd", reflect.TypeOf((*MockwsAddonManager)(nil).RelCwd), path)
-}
-
-// RelWsRoot mocks base method.
-func (m *MockwsAddonManager) RelWsRoot(path string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RelWsRoot", path)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// RelWsRoot indicates an expected call of RelWsRoot.
-func (mr *MockwsAddonManagerMockRecorder) RelWsRoot(path interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RelWsRoot", reflect.TypeOf((*MockwsAddonManager)(nil).RelWsRoot), path)
-}
-
 // WriteAddon mocks base method.
 func (m *MockwsAddonManager) WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error) {
 	m.ctrl.T.Helper()
