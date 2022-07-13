@@ -332,7 +332,7 @@ func TestPackageSvcOpts_RecommendedActions(t *testing.T) {
 				m.envFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
 				m.envFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 			},
-			wantedError: errors.New("environment \"mockEnv\" is not on a version that supports the \"mockFeature3\" feature"),
+			wantedError: errors.New("environment \"mockEnv\" is on version \"v1.mock\" which does not support the \"mockFeature3\" feature"),
 		},
 	}
 	for name, tc := range testCases {
