@@ -8,6 +8,7 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -80,13 +81,14 @@ type CreatePipelineInput struct {
 // to build and test Docker image.
 type Build struct {
 	// The URI that identifies the Docker image to use for this build project.
-	Image           string
-	EnvironmentType string
-	BuildspecPath   string
+	Image                    string
+	EnvironmentType          string
+	BuildspecPath            string
+	AdditionalPolicyDocument string
 }
 
 // Init populates the fields in Build by parsing the manifest file's "build" section.
-func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) {
+func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) error {
 	image := defaultPipelineBuildImage
 	environmentType := defaultPipelineEnvironmentType
 	path := filepath.Join(mfDirPath, "buildspec.yml")
@@ -99,9 +101,18 @@ func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) {
 	if strings.Contains(image, "aarch64") {
 		environmentType = "ARM_CONTAINER"
 	}
+	if mfBuild != nil && !mfBuild.AdditionalPolicy.Document.IsZero() {
+		additionalPolicy, err := yaml.Marshal(&mfBuild.AdditionalPolicy.Document)
+		if err != nil {
+			return fmt.Errorf("marshal `additional_policy.PolicyDocument` in pipeline manifest: %v", err)
+		}
+		b.AdditionalPolicyDocument = strings.TrimSpace(string(additionalPolicy))
+	}
 	b.Image = image
 	b.EnvironmentType = environmentType
 	b.BuildspecPath = filepath.ToSlash(path) // Buildspec path must be with '/' because CloudFormation expects forward-slash separated file path.
+
+	return nil
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store

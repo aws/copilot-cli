@@ -242,7 +242,9 @@ func (o *deployPipelineOpts) Execute() error {
 		return err
 	}
 	var build deploy.Build
-	build.Init(pipeline.Build, filepath.Dir(relPath))
+	if err = build.Init(pipeline.Build, filepath.Dir(relPath)); err != nil {
+		return err
+	}
 	deployPipelineInput := &deploy.CreatePipelineInput{
 		AppName:         o.appName,
 		Name:            pipeline.Name,
