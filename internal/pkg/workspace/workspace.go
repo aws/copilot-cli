@@ -541,26 +541,6 @@ func (ws *Workspace) RelWsRoot(path string) (string, error) {
 	return filepath.Rel(filepath.Dir(copiDir), fullPath)
 }
 
-// RelCwd returns the path relative to the current working directory.
-// The input path is allowed to be either relative to the current
-// working directory or absolute.
-//
-// This is useful when displaying a file path to the user.
-//
-// You probably want to use RelWsRoot for most other cases.
-// In the common case (the user running commands from the workspace root)
-// these functions have the same behavior, which can be a dangerous
-// source of false assumptions because that is not guaranteed!
-func (ws *Workspace) RelCwd(fullPath string) (string, error) {
-	if !filepath.IsAbs(fullPath) {
-		// A non-absolute path must be relative to the current working
-		// directory, so just clean it and give it back.
-		return filepath.Clean(fullPath), nil
-	}
-
-	return filepath.Rel(ws.workingDir, fullPath)
-}
-
 // copilotDirPath tries to find the current app's copilot directory from the workspace working directory.
 func (ws *Workspace) copilotDirPath() (string, error) {
 	if ws.copilotDir != "" {
