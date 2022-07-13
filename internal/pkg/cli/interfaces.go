@@ -127,6 +127,10 @@ type environmentLister interface {
 	ListEnvironments(appName string) ([]*config.Environment, error)
 }
 
+type wsEnvironmentsLister interface {
+	ListEnvironments() ([]string, error)
+}
+
 type environmentDeleter interface {
 	DeleteEnvironment(appName, environmentName string) error
 }
@@ -288,6 +292,7 @@ type wsWlDirReader interface {
 	wsSvcReader
 	workspacePathGetter
 	wlLister
+	wsEnvironmentsLister
 	ListDockerfiles() ([]string, error)
 	Summary() (*workspace.Summary, error)
 }

@@ -1,17 +1,13 @@
 # Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: Apache-2.0
 AWSTemplateFormatVersion: '2010-09-09'
-Description: CodePipeline for {{$.AppName}}
+Description: CodePipeline for phonetool
 Resources:
-  {{- if isCodeStarConnection .Source}}
-  {{if eq .Source.ConnectionARN ""}}
   SourceConnection:
     Type: AWS::CodeStarConnections::Connection
     Properties:
-      ConnectionName: {{.Source.ConnectionName}}
-      ProviderType: {{.Source.ProviderName}}
-  {{- end}}
-  {{- end}}
+      ConnectionName: copilot-aws-phonetool
+      ProviderType: GitHub
   BuildProjectRole:
     Type: AWS::IAM::Role
     Properties:
@@ -33,12 +29,10 @@ Resources:
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-            {{- range $stage := .Stages}}
-            - Effect: Allow
-              Resource: 'arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole'
-              Action:
-              - sts:AssumeRole
-            {{- end }}
+              - Effect: Allow
+                Resource: 'arn:aws:iam::1111:role/phonetool-test-EnvManagerRole'
+                Action:
+                  - sts:AssumeRole
   BuildProjectPolicy:
     Type: AWS::IAM::Policy
     DependsOn: BuildProjectRole
@@ -54,7 +48,7 @@ Resources:
               - codebuild:UpdateReport
               - codebuild:BatchPutTestCases
               - codebuild:BatchPutCodeCoverages
-            Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/pipeline-{{$.AppName}}-*
+            Resource: !Sub arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/pipeline-phonetool-*
           - Effect: Allow
             Action:
               - s3:PutObject
@@ -63,9 +57,9 @@ Resources:
             # TODO: This might not be necessary. We may only need the bucket
             # that is in the same region as the pipeline.
             # Loop through all the artifact buckets created in the stackset
-            Resource:{{range .ArtifactBuckets}}
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
+            Resource:
+              - !Join ['', ['arn:aws:s3:::', 'fancy-bucket']]
+              - !Join ['', ['arn:aws:s3:::', 'fancy-bucket', '/*']]
           - Effect: Allow
             Action:
               # TODO: scope this down if possible
@@ -75,8 +69,8 @@ Resources:
             # Loop through all the KMS keys used to en/decrypt artifacts
             # across (cross-regional) pipeline stages, with each stage
             # backed by a (regional) S3 bucket.
-            Resource:{{range .ArtifactBuckets}}
-              - {{.KeyArn}}{{end}}
+            Resource:
+              - arn:aws:kms:us-west-2:1111:key/abcd
           - Effect: Allow
             Action:
               - logs:CreateLogGroup
@@ -103,37 +97,24 @@ Resources:
               - ecr:UploadLayerPart
               - ecr:CompleteLayerUpload
             Resource: '*'
-            Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': {{$.AppName}}}}
-          {{- if ne .Source.ProviderName "GitHubV1" }} {{- if eq .Source.OutputArtifactFormat "CODEBUILD_CLONE_REF" }}
-          # Add the policy needed to use CODEBUILD_CLONE_REF.
-          {{- if eq .Source.ProviderName "CodeCommit" }}
-          - Effect: Allow
-            Action:
-              - codecommit:GitPull
-            Resource: !Sub 'arn:${AWS::Partition}:codecommit:${AWS::Region}:${AWS::AccountId}:{{.Source.Repository}}'
-          {{- else if isCodeStarConnection .Source }}
-          - Effect: Allow
-            Action:
-              - codestar-connections:UseConnection
-            {{- if eq .Source.ConnectionARN ""}}
-            Resource: !Ref SourceConnection
-            {{- else}}
-            Resource: {{$.Source.Connection}}
-            {{- end }} {{/* endif eq .Source.ConnectionARN "" */}}
-          {{- end }} {{/* if eq .Source.ProviderName "CodeCommit" */}}
-          {{- end }} {{/* endif ne .Source.OutputArtifactFormat "" */}}{{- end }} {{/* endif ne .Source.ProviderName "GitHubV1" */}}
+            Condition: {StringEquals: {'ecr:ResourceTag/copilot-application': phonetool}}
       Roles:
         - !Ref BuildProjectRole
-  {{- if .Build.AdditionalPolicyDocument }}
   BuildProjectAdditionalPolicy:
     Type: 'AWS::IAM::Policy'
     Properties:
       PolicyName: !Sub ${AWS::StackName}-BuildProjectAdditionalPolicy
       PolicyDocument:
-{{.Build.AdditionalPolicyDocument | indent 8}}
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - codestar-connections:CreateConnection
+              - codestar-connections:DeleteConnection
+              - codestar-connections:GetConnection
+            Resource: '*'
       Roles:
         - !Ref BuildProjectRole
- {{- end}}
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
@@ -141,24 +122,19 @@ Resources:
       Description: !Sub Build for ${AWS::StackName}
       # ArtifactKey is the KMS key ID or ARN that is used with the artifact bucket
       # created in the same region as this pipeline.
-      EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
+      EncryptionKey: !ImportValue phonetool-ArtifactKey
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
         Type: CODEPIPELINE
-      {{- if eq .Build.EnvironmentType "LINUX_CONTAINER"}}
       Cache:
         Modes:
           - LOCAL_DOCKER_LAYER_CACHE
         Type: LOCAL
-      {{- else }}
-      Cache:
-        Type: "NO_CACHE"
-      {{- end }}
       Environment:
-        Type: {{.Build.EnvironmentType}}
+        Type: LINUX_CONTAINER
         ComputeType: BUILD_GENERAL1_SMALL
         PrivilegedMode: true
-        Image: {{.Build.Image}}
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
         EnvironmentVariables:
           - Name: AWS_ACCOUNT_ID
             Value: !Sub '${AWS::AccountId}'
@@ -166,7 +142,7 @@ Resources:
             Value: !Ref AWS::Partition
       Source:
         Type: CODEPIPELINE
-        BuildSpec: {{.Build.BuildspecPath}}
+        BuildSpec: buildspec.yml
       TimeoutInMinutes: 60
   PipelineRole:
     Type: AWS::IAM::Role
@@ -196,11 +172,6 @@ Resources:
               - codecommit:UploadArchive
               - codecommit:GetUploadArchiveStatus
               - codecommit:CancelUploadArchive
-{{- if eq .Source.ProviderName "CodeCommit" }}
-{{- if ne .Source.OutputArtifactFormat "" }}
-              - codecommit:GetRepository
-{{- end }}
-{{- end }}
               - iam:ListRoles
               - cloudformation:Describe*
               - cloudFormation:List*
@@ -221,7 +192,6 @@ Resources:
               - s3:GetBucketLocation
             Resource:
               - "*"
-          {{- if isCodeStarConnection .Source}}
           - Effect: Allow
             Action:
               - codestar-connections:CreateConnection
@@ -241,45 +211,36 @@ Resources:
               - codestar-connections:PassConnection
               - codestar-connections:PassedToService
             Resource:
-              {{- if eq .Source.ConnectionARN ""}}
               - !Ref SourceConnection
-              {{- else}}
-              - {{$.Source.Connection}}
-              {{- end}}
-          {{- end}}
           - Effect: Allow
             Action:
               - kms:Decrypt
               - kms:Encrypt
               - kms:GenerateDataKey
-            Resource:{{range .ArtifactBuckets}}
-              - {{.KeyArn}}{{end}}
+            Resource:
+              - arn:aws:kms:us-west-2:1111:key/abcd
           - Effect: Allow
             Action:
               - s3:PutObject
               - s3:GetBucketPolicy
               - s3:GetObject
               - s3:ListBucket
-              {{- if isCodeStarConnection .Source}}
               - s3:PutObjectAcl
               - s3:GetObjectAcl
-              {{- end}}
-            Resource:{{range .ArtifactBuckets}}
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}']]
-              - !Join ['', ['arn:aws:s3:::', '{{.BucketName}}', '/*']]{{end}}
+            Resource:
+              - !Join ['', ['arn:aws:s3:::', 'fancy-bucket']]
+              - !Join ['', ['arn:aws:s3:::', 'fancy-bucket', '/*']]
           - Effect: Allow
             Action:
               - sts:AssumeRole
-            Resource:{{range $stage := .Stages}}
-              - arn:aws:iam::{{$stage.AccountID}}:role/{{$.AppName}}-{{$stage.Name}}-EnvManagerRole{{end}}
+            Resource:
+              - arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
       Roles:
         - !Ref PipelineRole
-{{- range $index, $stage := .Stages}}
-  {{- if $stage.Test}}
-  BuildTestCommands{{logicalIDSafe $stage.Name}}:
+  BuildTestCommandstest:
     Type: AWS::CodeBuild::Project
     Properties:
-      EncryptionKey: !ImportValue {{$.AppName}}-ArtifactKey
+      EncryptionKey: !ImportValue phonetool-ArtifactKey
       ServiceRole: !GetAtt BuildProjectRole.Arn
       Artifacts:
         Type: NO_ARTIFACTS
@@ -298,125 +259,57 @@ Resources:
                   docker: 18
             build:
               commands:
-              {{- range $index, $command := $stage.Test.Commands}}
-                - {{$command}}
-              {{- end}}
-  {{- end}}
-{{- end}}
+                - echo "test"
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     DependsOn:
       - PipelineRole
       - PipelineRolePolicy
     Properties:
-      ArtifactStores:{{range .ArtifactBuckets}}
-        - Region: {{.Region}}
+      ArtifactStores:
+        - Region: us-west-2
           ArtifactStore:
             Type: S3
-            Location: {{.BucketName}}
+            Location: fancy-bucket
             EncryptionKey:
-              Id: {{.KeyArn}}
-              Type: KMS{{end}}
+              Id: arn:aws:kms:us-west-2:1111:key/abcd
+              Type: KMS
       RoleArn: !GetAtt PipelineRole.Arn
-      {{- if .IsLegacy }}
-      Name: !Ref AWS::StackName
-      {{- end }}
       Stages:
-        {{- if eq .Source.ProviderName "GitHubV1"}}
         - Name: Source
           Actions:
-            - Name: SourceCodeFor-{{$.AppName}}
-              ActionTypeId:
-                Category: Source
-                Owner: ThirdParty
-                Version: 1
-                Provider: GitHub
-              Configuration:
-                Owner: {{$.Source.Owner}}
-                Repo: {{$.Source.Repository}}
-                Branch: {{$.Source.Branch}}
-                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/dynamic-references.html#dynamic-references-secretsmanager
-                # Use the *entire* SecretString with version AWSCURRENT
-                OAuthToken: !Sub
-                  - '{{"{{"}}resolve:secretsmanager:${SecretId}{{"}}"}}'
-                  - SecretId: {{$.Source.GitHubPersonalAccessTokenSecretID}}
-              OutputArtifacts:
-                - Name: SCCheckoutArtifact
-              RunOrder: 1
-        {{- else if isCodeStarConnection .Source}}
-        - Name: Source
-          Actions:
-            - Name: SourceCodeFor-{{$.AppName}}
+            - Name: SourceCodeFor-phonetool
               ActionTypeId:
                 Category: Source
                 Owner: AWS
                 Version: 1
                 Provider: CodeStarSourceConnection
               Configuration:
-                ConnectionArn:
-                {{- if eq .Source.ConnectionARN ""}}
-                  !Ref SourceConnection
-                {{- else}}
-                  {{$.Source.Connection}}
-                {{- end}}
-                FullRepositoryId: {{$.Source.Repository}}
-                BranchName: {{$.Source.Branch}}
-                {{- if ne .Source.OutputArtifactFormat "" }}
-                OutputArtifactFormat: {{$.Source.OutputArtifactFormat}}
-                {{- end}}
+                ConnectionArn: !Ref SourceConnection
+                FullRepositoryId: aws/phonetool
+                BranchName: mainline
               OutputArtifacts:
                 - Name: SCCheckoutArtifact
               RunOrder: 1
-        {{- else if eq .Source.ProviderName "CodeCommit"}}
-        - Name: Source
-          Actions:
-            - Name: SourceCodeFor-{{$.AppName}}
-              ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Version: 1
-                Provider: CodeCommit
-              Configuration:
-                RepositoryName: {{$.Source.Repository}}
-                BranchName: {{$.Source.Branch}}
-                {{- if ne .Source.OutputArtifactFormat "" }}
-                OutputArtifactFormat: {{$.Source.OutputArtifactFormat}}
-                {{- end}}
-              OutputArtifacts:
-                - Name: SCCheckoutArtifact
-              RunOrder: 1
-        {{- end }}
         - Name: Build
           Actions:
-          - Name: Build
-            ActionTypeId:
-              Category: Build
-              Owner: AWS
-              Version: 1
-              Provider: CodeBuild
-            Configuration:
-              ProjectName: !Ref BuildProject
-            RunOrder: 1
-            InputArtifacts:
-              - Name: SCCheckoutArtifact
-            OutputArtifacts:
-              - Name: BuildOutput
-        {{- range $stage := .Stages}}
-        {{- $numDeployments := len $stage.Deployments}}{{- if gt $numDeployments 0}}
-        - Name: DeployTo-{{$stage.Name}}
-          Actions:
-            {{- if $stage.Approval }}
-            - Name: {{$stage.Approval.Name}}
+            - Name: Build
               ActionTypeId:
-                Category: Approval
+                Category: Build
                 Owner: AWS
                 Version: 1
-                Provider: Manual
-              RunOrder: {{$stage.Approval.RunOrder}}
-            {{- end}}
-            {{- range $deployment := $stage.Deployments}}
-            - Name: {{$deployment.Name}}
-              Region: {{$stage.Region}}
+                Provider: CodeBuild
+              Configuration:
+                ProjectName: !Ref BuildProject
+              RunOrder: 1
+              InputArtifacts:
+                - Name: SCCheckoutArtifact
+              OutputArtifacts:
+                - Name: BuildOutput
+        - Name: DeployTo-test
+          Actions:
+            - Name: CreateOrUpdate-api-test
+              Region: us-west-2
               ActionTypeId:
                 Category: Deploy
                 Owner: AWS
@@ -424,39 +317,27 @@ Resources:
                 Provider: CloudFormation
               Configuration:
                 ActionMode: CREATE_UPDATE
-                StackName: {{$deployment.StackName}}
+                StackName: phonetool-test-api
                 Capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM,CAPABILITY_AUTO_EXPAND
-                TemplatePath: BuildOutput::{{$deployment.TemplatePath}}
-                TemplateConfiguration: BuildOutput::{{$deployment.TemplateConfigPath}}
-                RoleArn: {{$stage.ExecRoleARN}}
+                TemplatePath: BuildOutput::infrastructure/api-test.stack.yml
+                TemplateConfiguration: BuildOutput::infrastructure/api-test.params.json
+                RoleArn: arn:aws:iam::1111:role/phonetool-test-CFNExecutionRole
               InputArtifacts:
                 - Name: BuildOutput
-              RunOrder: {{$deployment.RunOrder}}
-              RoleArn: {{$stage.EnvManagerRoleARN}}
-            {{- end}}
-            {{- if $stage.Test }}
-            - Name: {{$stage.Test.Name}}
+              RunOrder: 1
+              RoleArn: arn:aws:iam::1111:role/phonetool-test-EnvManagerRole
+            - Name: TestCommands
               ActionTypeId:
                 Category: Test
                 Owner: AWS
                 Version: 1
                 Provider: CodeBuild
               Configuration:
-                ProjectName: !Ref BuildTestCommands{{logicalIDSafe $stage.Name}}
-              RunOrder: {{$stage.Test.RunOrder}}
+                ProjectName: !Ref BuildTestCommandstest
+              RunOrder: 2
               InputArtifacts:
                 - Name: SCCheckoutArtifact
-            {{- end}}
-        {{- end}} {{/* if gt $numDeployments 0 */}}
-        {{- end}} {{/* range $stage := .Stages */}}
-{{- if isCodeStarConnection .Source}}
 Outputs:
   PipelineConnectionARN:
     Description: "ARN of CodeStar Connections connection"
-    Value:
-    {{- if eq .Source.ConnectionARN ""}}
-      !Ref SourceConnection
-    {{- else}}
-      {{$.Source.Connection}}
-    {{- end}}
-{{- end}}
+    Value: SourceConnection
