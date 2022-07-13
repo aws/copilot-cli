@@ -1742,7 +1742,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				},
 				workloadType: LoadBalancedWebServiceType,
 			},
-			wantedError: fmt.Errorf(`autoscaling field queue_delay is invalid with workload type Load Balanced Web Service`),
+			wantedError: fmt.Errorf(`autoscaling field "queue_delay" is invalid with workload type Load Balanced Web Service`),
 		},
 		"error if multiple invalid autoscaling fields set": {
 			AdvancedCount: AdvancedCount{
@@ -1762,7 +1762,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 				},
 				workloadType: WorkerServiceType,
 			},
-			wantedError: fmt.Errorf(`autoscaling fields requests and response_time are invalid with workload type Worker Service`),
+			wantedError: fmt.Errorf(`autoscaling fields "requests" and "response_time" are invalid with workload type Worker Service`),
 		},
 		"cannot have autoscaling for scheduled jobs": {
 			AdvancedCount: AdvancedCount{
