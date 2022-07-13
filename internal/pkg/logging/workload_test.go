@@ -60,7 +60,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 	mockCurrentTimestamp := time.Date(2020, 11, 23, 0, 0, 0, 0, time.UTC) // Copilot GA date :).
 	testCases := map[string]struct {
 		follow              bool
-		last                int
+		last                *int64
 		limit               *int64
 		startTime           *int64
 		jsonOutput          bool
@@ -120,7 +120,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.LogStreamPrefixFilters, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
+							require.Equal(t, param.LogStreamPrefixes, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
 							var val *int64 = nil // Explicitly mark that nil is of type *int64 otherwise require.Equal returns an error.
 							require.Equal(t, param.Limit, val)
 							require.Equal(t, param.StartTime, aws.Int64(mockCurrentTimestamp.UnixMilli()))
@@ -149,7 +149,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.LogStreamPrefixFilters, []string{"mockLogStreamPrefix/mockTaskID1"})
+							require.Equal(t, param.LogStreamPrefixes, []string{"mockLogStreamPrefix/mockTaskID1"})
 							require.Equal(t, param.Limit, aws.Int64(10))
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
@@ -169,7 +169,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/", "states"})
+							require.Equal(t, param.LogStreamPrefixes, []string{"copilot/", "states"})
 							require.Equal(t, param.Limit, aws.Int64(10))
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
@@ -183,13 +183,13 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 `,
 		},
 		"success with log stream limit set": {
-			last: 1,
+			last: aws.Int64(1),
 			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/"})
-							require.Equal(t, param.LogStreamLimit, 1)
+							require.Equal(t, param.LogStreamPrefixes, []string{"copilot/"})
+							require.Equal(t, param.LogStreamLimit, aws.Int64(1))
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events: logEvents,
