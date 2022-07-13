@@ -93,11 +93,11 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 			initLBDescriber: d.initLBDescriber,
 			envDNSNameKey:   envOutputPublicLoadBalancerDNSName,
 		}
-		albURI, err := albDescr.uri()
+		publicURI, err := albDescr.uri()
 		if err != nil {
 			return URI{}, err
 		}
-		uri.albURI = albURI
+		uri.publicURI = publicURI
 	}
 
 	if nlbEnabled {
@@ -174,15 +174,15 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 				initLBDescriber: d.initLBDescriber,
 				envDNSNameKey:   envOutputInternalLoadBalancerDNSName,
 			}
-			albURI, err := albDescr.uri()
+			publicURI, err := albDescr.uri()
 			if err != nil {
 				return URI{}, err
 			}
-			if !albURI.HTTPS && len(albURI.DNSNames) > 1 {
-				albURI = albDescr.bestEffortRemoveEnvDNSName(albURI)
+			if !publicURI.HTTPS && len(publicURI.DNSNames) > 1 {
+				publicURI = albDescr.bestEffortRemoveEnvDNSName(publicURI)
 			}
 			return URI{
-				URI:        english.OxfordWordSeries(albURI.strings(), "or"),
+				URI:        english.OxfordWordSeries(publicURI.strings(), "or"),
 				AccessType: URIAccessTypeInternal,
 			}, nil
 		}
@@ -223,25 +223,25 @@ type albDescriber struct {
 	envDNSNameKey   string
 }
 
-func (d *albDescriber) envDNSName(path string) (albURI, error) {
+func (d *albDescriber) envDNSName(path string) (publicURI, error) {
 	envOutputs, err := d.envDescriber.Outputs()
 	if err != nil {
-		return albURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
+		return publicURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
 	}
-	dnsName := []string{envOutputs[d.envDNSNameKey]}
-	if cfURI, ok := envOutputs[envCloudFrontDomainName]; ok {
-		dnsName = append(dnsName, cfURI)
+	dnsNames := []string{envOutputs[d.envDNSNameKey]}
+	if cfDNS, ok := envOutputs[envCloudFrontDomainName]; ok {
+		dnsNames = append(dnsNames, cfDNS)
 	}
-	return albURI{
-		DNSNames: dnsName,
+	return publicURI{
+		DNSNames: dnsNames,
 		Path:     path,
 	}, nil
 }
 
-func (d *albDescriber) uri() (albURI, error) {
+func (d *albDescriber) uri() (publicURI, error) {
 	svcParams, err := d.svcDescriber.Params()
 	if err != nil {
-		return albURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
+		return publicURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
 	}
 
 	path := svcParams[stack.WorkloadRulePathParamKey]
@@ -254,7 +254,7 @@ func (d *albDescriber) uri() (albURI, error) {
 
 	svcResources, err := d.svcDescriber.ServiceStackResources()
 	if err != nil {
-		return albURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
+		return publicURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
 
 	var ruleARN string
@@ -269,35 +269,35 @@ func (d *albDescriber) uri() (albURI, error) {
 
 	lbDescr, err := d.initLBDescriber(d.env)
 	if err != nil {
-		return albURI{}, nil
+		return publicURI{}, nil
 	}
 	dnsNames, err := lbDescr.ListenerRuleHostHeaders(ruleARN)
 	if err != nil {
-		return albURI{}, fmt.Errorf("get host headers for listener rule %s: %w", ruleARN, err)
+		return publicURI{}, fmt.Errorf("get host headers for listener rule %s: %w", ruleARN, err)
 	}
 	if len(dnsNames) == 0 {
 		return d.envDNSName(path)
 	}
-	return albURI{
+	return publicURI{
 		HTTPS:    httpsEnabled,
 		DNSNames: dnsNames,
 		Path:     path,
 	}, nil
 }
 
-func (d *albDescriber) bestEffortRemoveEnvDNSName(albURI albURI) albURI {
+func (d *albDescriber) bestEffortRemoveEnvDNSName(publicURI publicURI) publicURI {
 	envOutputs, err := d.envDescriber.Outputs()
 	if err != nil {
-		return albURI
+		return publicURI
 	}
 	lbDNSName := envOutputs[d.envDNSNameKey]
-	for i := range albURI.DNSNames {
-		if albURI.DNSNames[i] == lbDNSName {
-			albURI.DNSNames = append(albURI.DNSNames[:i], albURI.DNSNames[i+1:]...)
+	for i := range publicURI.DNSNames {
+		if publicURI.DNSNames[i] == lbDNSName {
+			publicURI.DNSNames = append(publicURI.DNSNames[:i], publicURI.DNSNames[i+1:]...)
 			break
 		}
 	}
-	return albURI
+	return publicURI
 }
 
 // URI returns the WebServiceURI to identify this service uniquely given an environment name.
@@ -320,11 +320,11 @@ func (d *RDWebServiceDescriber) URI(envName string) (URI, error) {
 
 // LBWebServiceURI represents the unique identifier to access a load balanced web service.
 type LBWebServiceURI struct {
-	albURI albURI
-	nlbURI nlbURI
+	publicURI publicURI
+	nlbURI    nlbURI
 }
 
-type albURI struct {
+type publicURI struct {
 	HTTPS    bool
 	DNSNames []string // The environment's subdomain if the service is served on HTTPS. Otherwise, the public application load balancer's DNS.
 	Path     string   // Empty if the service is served on HTTPS. Otherwise, the pattern used to match the service.
@@ -336,14 +336,14 @@ type nlbURI struct {
 }
 
 func (u *LBWebServiceURI) String() string {
-	uris := u.albURI.strings()
+	uris := u.publicURI.strings()
 	for _, dnsName := range u.nlbURI.DNSNames {
 		uris = append(uris, fmt.Sprintf("%s:%s", dnsName, u.nlbURI.Port))
 	}
 	return english.OxfordWordSeries(uris, "or")
 }
 
-func (u *albURI) strings() []string {
+func (u *publicURI) strings() []string {
 	var uris []string
 	for _, dnsName := range u.DNSNames {
 		protocol := "http://"

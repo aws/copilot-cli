@@ -542,7 +542,7 @@ func TestLBWebServiceURI_String(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			uri := &LBWebServiceURI{
-				albURI: albURI{
+				publicURI: publicURI{
 					DNSNames: tc.albDNSNames,
 					Path:     tc.albPath,
 					HTTPS:    tc.albHTTPS,
