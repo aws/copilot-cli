@@ -94,9 +94,9 @@ func TestWorkspace_Path(t *testing.T) {
 			tc.mockFileSystem(fs)
 
 			ws := Workspace{
-				workingDir: tc.workingDir,
-				fs:         &afero.Afero{Fs: fs},
-				copilotDir: tc.presetManifestDir,
+				workingDirAbs: tc.workingDir,
+				fs:            &afero.Afero{Fs: fs},
+				copilotDirAbs: tc.presetManifestDir,
 			}
 			workspacePath, err := ws.Path()
 			if tc.expectedError == nil {
@@ -148,8 +148,8 @@ func TestWorkspace_Summary(t *testing.T) {
 			tc.mockFileSystem(fs)
 
 			ws := Workspace{
-				workingDir: tc.workingDir,
-				fs:         &afero.Afero{Fs: fs},
+				workingDirAbs: tc.workingDir,
+				fs:            &afero.Afero{Fs: fs},
 			}
 			summary, err := ws.Summary()
 			if tc.expectedError == nil {
@@ -224,8 +224,8 @@ func TestWorkspace_Create(t *testing.T) {
 			}
 
 			ws := Workspace{
-				workingDir: tc.workingDir,
-				fs:         &afero.Afero{Fs: fs},
+				workingDirAbs: tc.workingDir,
+				fs:            &afero.Afero{Fs: fs},
 			}
 			err := ws.Create(tc.appName)
 			if tc.expectedError == nil {
@@ -340,7 +340,7 @@ type: Load Balanced Web Service`))
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
-				copilotDir: tc.copilotDir,
+				copilotDirAbs: tc.copilotDir,
 				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
@@ -434,7 +434,7 @@ type: Load Balanced Web Service`))
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
-				copilotDir: tc.copilotDir,
+				copilotDirAbs: tc.copilotDir,
 				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
@@ -496,7 +496,7 @@ type: Scheduled Job`))
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
-				copilotDir: tc.copilotDir,
+				copilotDirAbs: tc.copilotDir,
 				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
@@ -563,7 +563,7 @@ func TestWorkspace_ListEnvironments(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
-				copilotDir: tc.copilotDir,
+				copilotDirAbs: tc.copilotDir,
 				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
@@ -776,7 +776,7 @@ version: 1
 
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
-				copilotDir: tc.copilotDir,
+				copilotDirAbs: tc.copilotDir,
 				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
@@ -871,7 +871,7 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			ws := &Workspace{
-				copilotDir: tc.copilotDirPath,
+				copilotDirAbs: tc.copilotDirPath,
 				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
@@ -925,9 +925,9 @@ func TestWorkspace_WriteAddon(t *testing.T) {
 			}
 			utils.MkdirAll(filepath.Join("/", "copilot", tc.svc), 0755)
 			ws := &Workspace{
-				workingDir: "/",
-				copilotDir: "/copilot",
-				fs:         utils,
+				workingDirAbs: "/",
+				copilotDirAbs: "/copilot",
+				fs:            utils,
 			}
 
 			// WHEN
@@ -1008,7 +1008,7 @@ flavor: vanilla`),
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
-				copilotDir: mockCopilotDir,
+				copilotDirAbs: mockCopilotDir,
 				fs: &afero.Afero{
 					Fs: tc.mockFS(),
 				},
@@ -1101,7 +1101,7 @@ flavor: vanilla`),
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
-				copilotDir: "/copilot",
+				copilotDirAbs: "/copilot",
 				fs: &afero.Afero{
 					Fs: tc.mockFS(),
 				},
@@ -1171,8 +1171,8 @@ version: 0
 			// GIVEN
 			fs := tc.fs()
 			ws := &Workspace{
-				copilotDir: copilotDir,
-				fs:         &afero.Afero{Fs: fs},
+				copilotDirAbs: copilotDir,
+				fs:            &afero.Afero{Fs: fs},
 			}
 
 			// WHEN
@@ -1210,7 +1210,7 @@ func TestWorkspace_DeleteWorkspaceFile(t *testing.T) {
 			// GIVEN
 			fs := tc.fs()
 			ws := &Workspace{
-				copilotDir: tc.copilotDir,
+				copilotDirAbs: tc.copilotDir,
 				fs: &afero.Afero{
 					Fs: fs,
 				},
@@ -1294,8 +1294,8 @@ func TestWorkspace_ListDockerfiles(t *testing.T) {
 			fs := &afero.Afero{Fs: afero.NewMemMapFs()}
 			tc.mockFileSystem(fs)
 			ws := &Workspace{
-				workingDir: "/",
-				copilotDir: "copilot",
+				workingDirAbs: "/",
+				copilotDirAbs: "copilot",
 				fs: &afero.Afero{
 					Fs: fs,
 				},
@@ -1353,7 +1353,7 @@ func TestWorkspace_read(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			ws := &Workspace{
-				copilotDir: tc.copilotDir,
+				copilotDirAbs: tc.copilotDir,
 				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
@@ -1402,9 +1402,9 @@ func TestWorkspace_write(t *testing.T) {
 			utils.MkdirAll("/copilot", 0755)
 			utils.WriteFile("/copilot/manifest.yml", []byte{}, 0644)
 			ws := &Workspace{
-				workingDir: "/",
-				copilotDir: "/copilot",
-				fs:         utils,
+				workingDirAbs: "/",
+				copilotDirAbs: "/copilot",
+				fs:            utils,
 			}
 
 			// WHEN
