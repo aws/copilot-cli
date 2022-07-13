@@ -212,9 +212,7 @@ func TestPipelineBuild_Init(t *testing.T) {
     Resource: '*'
   Version: 2012-10-17`)
 
-	if err := yaml.Unmarshal(policyDocument, &yamlNode); err != nil {
-		t.Errorf("unmarshal error:  %v", err)
-	}
+	require.NoError(t, yaml.Unmarshal(policyDocument, &yamlNode))
 
 	testCases := map[string]struct {
 		mfBuild       *manifest.Build

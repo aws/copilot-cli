@@ -73,13 +73,13 @@ func TestDD_Pipeline_Template(t *testing.T) {
 	actual, err := serializer.Template()
 	require.NoError(t, err, "template should have rendered successfully")
 	actualInBytes := []byte(actual)
-	m1 := make(map[interface{}]interface{})
+	m1 := make(map[any]any)
 	require.NoError(t, yaml.Unmarshal(actualInBytes, m1))
 
 	wanted, err := ioutil.ReadFile(filepath.Join("testdata", "pipeline", pipelineStackPath))
 	require.NoError(t, err, "should be able to read expected template file")
 	wantedInBytes := []byte(wanted)
-	m2 := make(map[interface{}]interface{})
+	m2 := make(map[any]any)
 	require.NoError(t, yaml.Unmarshal(wantedInBytes, m2))
 
 	require.Equal(t, m2, m1)
