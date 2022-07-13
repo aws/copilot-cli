@@ -24,6 +24,9 @@ const (
 	InternalALBFeatureName = "InternalALBWorkloads"
 )
 
+// DeploymentControllerOutputName is the logical ID of the deployment controller output.
+const DeploymentControllerOutputName = "DeploymentController"
+
 var friendlyEnvFeatureName = map[string]string{
 	ALBFeatureName:         "ALB",
 	EFSFeatureName:         "EFS",

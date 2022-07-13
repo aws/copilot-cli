@@ -55,6 +55,7 @@ func TestEnv_Template(t *testing.T) {
 								Key:    "mockkey4",
 							},
 						},
+						ForceUpdateID: "mockPreviousForceUpdateID",
 					}, data)
 					return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
 				})
@@ -70,7 +71,8 @@ func TestEnv_Template(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			envStack := &EnvStackConfig{
-				in: mockDeployEnvironmentInput(),
+				in:                mockDeployEnvironmentInput(),
+				PrevForceUpdateID: "mockPreviousForceUpdateID",
 			}
 			tc.mockDependencies(ctrl, envStack)
 

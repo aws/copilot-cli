@@ -45,14 +45,17 @@ func (cf CloudFormation) CreateAndRenderEnvironment(out progress.FileWriter, env
 
 // UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
 func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
-	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvStackConfig(env))
+	v, err := cf.forceUpdateOutputID(env.App.Name, env.Name)
+	if err != nil {
+		return err
+	}
+	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvConfigFromExistingStack(env, v))
 	if err != nil {
 		return err
 	}
 	for _, opt := range opts {
 		opt(cfnStack)
 	}
-
 	descr, err := cf.waitAndDescribeStack(cfnStack.Name)
 	if err != nil {
 		return err
@@ -116,6 +119,19 @@ func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Enviro
 func (cf CloudFormation) EnvironmentTemplate(appName, envName string) (string, error) {
 	stackName := stack.NameForEnv(appName, envName)
 	return cf.cfnClient.TemplateBody(stackName)
+}
+
+func (cf CloudFormation) forceUpdateOutputID(app, env string) (string, error) {
+	stackDescr, err := cf.waitAndDescribeStack(stack.NameForEnv(app, env))
+	if err != nil {
+		return "", err
+	}
+	for _, output := range stackDescr.Outputs {
+		if aws.StringValue(output.OutputKey) == template.DeploymentControllerOutputName {
+			return aws.StringValue(output.OutputValue), nil
+		}
+	}
+	return "", nil
 }
 
 // UpdateEnvironmentTemplate updates the cloudformation stack's template body while maintaining the parameters and tags.
@@ -238,6 +254,9 @@ func (cf CloudFormation) toUploadedStack(artifactBucketARN string, stackConfig S
 }
 
 func (cf CloudFormation) waitAndDescribeStack(stackName string) (*cloudformation.StackDescription, error) {
+	if cf.cachedDeployedStack != nil {
+		return cf.cachedDeployedStack, nil
+	}
 	var (
 		stackDescription *cloudformation.StackDescription
 		err              error
@@ -256,6 +275,7 @@ func (cf CloudFormation) waitAndDescribeStack(stackName string) (*cloudformation
 		}
 		break
 	}
+	cf.cachedDeployedStack = stackDescription
 	return stackDescription, err
 }
 
