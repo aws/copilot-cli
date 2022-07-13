@@ -253,11 +253,12 @@ func (o *secretInitOpts) configureClientsAndUpgradeForEnvironments(secrets map[s
 		}
 	}
 
+	const minEnvVersionForSecretInit = "v1.4.0"
 	for envName := range envNames {
 		if err := o.configureClientsForEnv(envName); err != nil {
 			return err
 		}
-		if err := validateMinEnvVersion(o.ws, o.envCompatibilityChecker[envName], o.appName, envName, "v1.4.0", "secret init"); err != nil {
+		if err := validateMinEnvVersion(o.ws, o.envCompatibilityChecker[envName], o.appName, envName, minEnvVersionForSecretInit, "secret init"); err != nil {
 			return err
 		}
 	}

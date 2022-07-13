@@ -397,10 +397,9 @@ func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env v
 			if v := template.LeastVersionForFeature(f); v != "" {
 				logMsg += fmt.Sprintf(` The least environment version that supports the feature is %s.`, v)
 			}
-			var currVersion string
-			if v, err := env.Version(); err == nil {
-				logMsg += fmt.Sprintf(" Your environment is on %s.", v)
-				currVersion = v
+			currVersion, err := env.Version()
+			if err == nil {
+				logMsg += fmt.Sprintf(" Your environment is on %s.", currVersion)
 			}
 			log.Errorln(logMsg)
 			return &errFeatureIncompatibleWithEnvironment{
@@ -500,16 +499,16 @@ func (e *errFeatureIncompatibleWithEnvironment) RecommendActions() string {
 	envs, _ := e.ws.ListEnvironments() // Best effort try to detect if env manifest exists.
 	for _, env := range envs {
 		if e.envName == env {
-			return fmt.Sprintf("You can upgrade your environment template by running %s.", color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", e.envName)))
+			return fmt.Sprintf("You can upgrade the %q environment template by running %s.", e.envName, color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", e.envName)))
 		}
 	}
 	msgs := []string{
 		"You can upgrade your environment template by running:",
 		fmt.Sprintf("1. Create the directory to store your environment manifest %s.",
 			color.HighlightCode(fmt.Sprintf("mkdir -p %s", filepath.Join("copilot", "environments", e.envName)))),
-		fmt.Sprintf("2. Generate your environment manifest %s.",
+		fmt.Sprintf("2. Generate the manifest %s.",
 			color.HighlightCode(fmt.Sprintf("copilot env show -n %s --manifest > %s", e.envName, filepath.Join("copilot", "environments", e.envName, "manifest.yml")))),
-		fmt.Sprintf("3. Deploy your environment stack %s.",
+		fmt.Sprintf("3. Deploy the environment stack %s.",
 			color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", e.envName))),
 	}
 	return strings.Join(msgs, "\n")
