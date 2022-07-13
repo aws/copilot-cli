@@ -38,7 +38,7 @@ var _ = BeforeSuite(func() {
 	vpcStackTemplatePath = "file://vpc.yml"
 	copilot, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
-	cli = ecsCli
+	cli = copilot
 	aws = client.NewAWS()
 	appName = fmt.Sprintf("e2e-isolated-%d", timeNow)
 	// Create the VPC stack.
@@ -53,6 +53,8 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	// Delete VPC stack.
 	err = aws.DeleteStack(vpcStackName)
+	Expect(err).NotTo(HaveOccurred())
+	err = aws.WaitStackDeleteComplete(vpcStackName)
 	Expect(err).NotTo(HaveOccurred())
 })
 
