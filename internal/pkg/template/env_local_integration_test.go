@@ -5,6 +5,7 @@ package template
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -16,6 +17,7 @@ func TestEnv_AvailableEnvFeatures(t *testing.T) {
 	c, err := New().ParseEnv(&EnvOpts{}, WithFuncs(map[string]interface{}{
 		"inc":      IncFunc,
 		"fmtSlice": FmtSliceFunc,
+		"quote":    strconv.Quote,
 	}))
 	require.NoError(t, err)
 

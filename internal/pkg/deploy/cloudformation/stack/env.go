@@ -105,6 +105,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}, template.WithFuncs(map[string]interface{}{
 		"inc":      template.IncFunc,
 		"fmtSlice": template.FmtSliceFunc,
+		"quote":    strconv.Quote,
 	}))
 	if err != nil {
 		return "", err

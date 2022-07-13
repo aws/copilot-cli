@@ -108,6 +108,7 @@ type EnvOpts struct {
 
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
+	ForceUpdateID      string
 }
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.

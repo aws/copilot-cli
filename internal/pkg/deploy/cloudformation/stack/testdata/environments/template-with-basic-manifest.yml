@@ -1129,3 +1129,6 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  DeploymentController:
+    Value: ""
+    Description: Optionally force the stack to update when no immediate resource change is present.
