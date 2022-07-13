@@ -15,7 +15,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
-	"github.com/aws/copilot-cli/internal/pkg/utils"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -361,7 +360,7 @@ func (o *initPipelineOpts) askOrValidatePipelineType() error {
 				return nil
 			}
 		}
-		return fmt.Errorf("invalid pipeline type %q; must be one of %s", o.pipelineType, english.WordSeries(utils.QuoteStringSlice(pipelineTypes), "or"))
+		return fmt.Errorf("invalid pipeline type %q; must be one of %s", o.pipelineType, english.WordSeries(quoteStringSlice(pipelineTypes), "or"))
 	}
 
 	typ, err := o.prompt.SelectOption("What type of continuous delivery pipeline is this?",

@@ -5,8 +5,8 @@ package manifest
 
 import (
 	"fmt"
+	"strconv"
 
-	"github.com/aws/copilot-cli/internal/pkg/utils"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -64,7 +64,7 @@ func (e *errFieldMustBeSpecified) Error() string {
 	if len(e.conditionalFields) == 0 {
 		return errMsg
 	}
-	return fmt.Sprintf(`%s if %s %s specified`, errMsg, english.WordSeries(utils.QuoteStringSlice(e.conditionalFields), "or"),
+	return fmt.Sprintf(`%s if %s %s specified`, errMsg, english.WordSeries(quoteStringSlice(e.conditionalFields), "or"),
 		english.PluralWord(len(e.conditionalFields), "is", "are"))
 }
 
@@ -96,9 +96,17 @@ type errAtLeastOneFieldMustBeSpecified struct {
 }
 
 func (e *errAtLeastOneFieldMustBeSpecified) Error() string {
-	errMsg := fmt.Sprintf("must specify at least one of %s", english.WordSeries(utils.QuoteStringSlice(e.missingFields), "or"))
+	errMsg := fmt.Sprintf("must specify at least one of %s", english.WordSeries(quoteStringSlice(e.missingFields), "or"))
 	if e.conditionalField != "" {
 		errMsg = fmt.Sprintf(`%s if "%s" is specified`, errMsg, e.conditionalField)
 	}
 	return errMsg
+}
+
+func quoteStringSlice(in []string) []string {
+	quoted := make([]string, len(in))
+	for idx, str := range in {
+		quoted[idx] = strconv.Quote(str)
+	}
+	return quoted
 }
