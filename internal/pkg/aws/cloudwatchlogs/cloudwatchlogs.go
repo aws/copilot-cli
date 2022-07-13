@@ -46,11 +46,13 @@ type LogEventsOutput struct {
 // LogEventsOpts wraps the parameters to call LogEvents.
 type LogEventsOpts struct {
 	LogGroup            string
-	LogStreams          []string // If nil, retrieve logs from all log streams.
+	LogStreamPrefixes   []string // If nil, retrieve logs from all log streams.
 	Limit               *int64
 	StartTime           *int64
 	EndTime             *int64
 	StreamLastEventTime map[string]int64
+
+	LogStreamLimit *int64
 }
 
 // New returns a CloudWatchLogs configured against the input session.
@@ -60,13 +62,15 @@ func New(s *session.Session) *CloudWatchLogs {
 	}
 }
 
-// logStreams returns all name of the log streams in a log group.
-func (c *CloudWatchLogs) logStreams(logGroup string, logStreams ...string) ([]string, error) {
-	resp, err := c.client.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+// logStreams returns all name of the log streams in a log group with optional limit and prefix filters.
+func (c *CloudWatchLogs) logStreams(logGroup string, logStreamLimit *int64, logStreamPrefixes ...string) ([]string, error) {
+	describeLogStreamsInput := &cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: aws.String(logGroup),
 		Descending:   aws.Bool(true),
 		OrderBy:      aws.String(cloudwatchlogs.OrderByLastEventTime),
-	})
+		Limit:        logStreamLimit,
+	}
+	resp, err := c.client.DescribeLogStreams(describeLogStreamsInput)
 	if err != nil {
 		return nil, fmt.Errorf("describe log streams of log group %s: %w", logGroup, err)
 	}
@@ -81,8 +85,8 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreams ...string) ([]st
 		}
 		logStreamNames = append(logStreamNames, name)
 	}
-	if len(logStreams) != 0 {
-		logStreamNames = filterStringSliceByPrefix(logStreamNames, logStreams)
+	if len(logStreamPrefixes) != 0 {
+		logStreamNames = filterStringSliceByPrefix(logStreamNames, logStreamPrefixes)
 	}
 	return logStreamNames, nil
 }
@@ -91,7 +95,8 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreams ...string) ([]st
 func (c *CloudWatchLogs) LogEvents(opts LogEventsOpts) (*LogEventsOutput, error) {
 	var events []*Event
 	in := initGetLogEventsInput(opts)
-	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStreams...)
+
+	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStreamLimit, opts.LogStreamPrefixes...)
 	if err != nil {
 		return nil, err
 	}

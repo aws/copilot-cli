@@ -23,6 +23,7 @@ func TestLogEvents(t *testing.T) {
 		startTime                *int64
 		endTime                  *int64
 		limit                    *int64
+		logStreamLimit           *int64
 		lastEventTime            map[string]int64
 		mockcloudwatchlogsClient func(m *mocks.Mockapi)
 
@@ -237,6 +238,146 @@ func TestLogEvents(t *testing.T) {
 			wantLogEvents: nil,
 			wantErr:       fmt.Errorf("get log events of %s/%s: %w", "mockLogGroup", "mockLogStream", mockError),
 		},
+		"should filter out wrong prefixes": {
+			logGroupName: "mockLogGroup",
+			logStream:    []string{"copilot/"},
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+					LogGroupName: aws.String("mockLogGroup"),
+					Descending:   aws.Bool(true),
+					OrderBy:      aws.String("LastEventTime"),
+				}).Return(&cloudwatchlogs.DescribeLogStreamsOutput{
+					LogStreams: []*cloudwatchlogs.LogStream{
+						{
+							LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream"),
+						},
+						{
+							LogStreamName: aws.String("states/copilot-mockLogGroup/abcde"),
+						},
+					},
+				}, nil)
+				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
+					LogGroupName:  aws.String("mockLogGroup"),
+					LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream"),
+				}).Return(&cloudwatchlogs.GetLogEventsOutput{
+					Events: []*cloudwatchlogs.OutputLogEvent{
+						{
+							Message:   aws.String("some log"),
+							Timestamp: aws.Int64(0),
+						},
+					},
+				}, nil)
+			},
+			wantLogEvents: []*Event{
+				{
+					LogStreamName: "copilot/mockLogGroup/mockLogStream",
+					Message:       "some log",
+					Timestamp:     0,
+				},
+			},
+			wantLastEventTime: map[string]int64{
+				"copilot/mockLogGroup/mockLogStream": 0,
+			},
+			wantErr: nil,
+		},
+		"should limit log streams fetched": {
+			logGroupName:   "mockLogGroup",
+			logStreamLimit: aws.Int64(1),
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+					LogGroupName: aws.String("mockLogGroup"),
+					Descending:   aws.Bool(true),
+					OrderBy:      aws.String("LastEventTime"),
+					Limit:        aws.Int64(1),
+				}).Return(&cloudwatchlogs.DescribeLogStreamsOutput{
+					LogStreams: []*cloudwatchlogs.LogStream{
+						{
+							LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream"),
+						},
+					},
+				}, nil)
+				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
+					LogGroupName:  aws.String("mockLogGroup"),
+					LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream"),
+				}).Return(&cloudwatchlogs.GetLogEventsOutput{
+					Events: []*cloudwatchlogs.OutputLogEvent{
+						{
+							Message:   aws.String("some log"),
+							Timestamp: aws.Int64(0),
+						},
+					},
+				}, nil)
+			},
+			wantLogEvents: []*Event{
+				{
+					LogStreamName: "copilot/mockLogGroup/mockLogStream",
+					Message:       "some log",
+					Timestamp:     0,
+				},
+			},
+			wantLastEventTime: map[string]int64{
+				"copilot/mockLogGroup/mockLogStream": 0,
+			},
+			wantErr: nil,
+		},
+		"should limit log streams fetched and log events": {
+			logGroupName:   "mockLogGroup",
+			logStreamLimit: aws.Int64(2),
+			limit:          aws.Int64(1),
+			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+					LogGroupName: aws.String("mockLogGroup"),
+					Descending:   aws.Bool(true),
+					OrderBy:      aws.String("LastEventTime"),
+					Limit:        aws.Int64(2),
+				}).Return(&cloudwatchlogs.DescribeLogStreamsOutput{
+					LogStreams: []*cloudwatchlogs.LogStream{
+						{
+							LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream"),
+						},
+						{
+							LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream2"),
+						},
+					},
+				}, nil)
+				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
+					LogGroupName:  aws.String("mockLogGroup"),
+					LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream"),
+					Limit:         aws.Int64(1),
+				}).Return(&cloudwatchlogs.GetLogEventsOutput{
+					Events: []*cloudwatchlogs.OutputLogEvent{
+						{
+							Message:   aws.String("some log"),
+							Timestamp: aws.Int64(0),
+						},
+					},
+				}, nil)
+				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
+					LogGroupName:  aws.String("mockLogGroup"),
+					LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream2"),
+					Limit:         aws.Int64(1),
+				}).Return(&cloudwatchlogs.GetLogEventsOutput{
+					Events: []*cloudwatchlogs.OutputLogEvent{
+						{
+							Message:   aws.String("other log"),
+							Timestamp: aws.Int64(1),
+						},
+					},
+				}, nil)
+			},
+			wantLogEvents: []*Event{
+				{
+					LogStreamName: "copilot/mockLogGroup/mockLogStream2",
+					Message:       "other log",
+					Timestamp:     1,
+				},
+			},
+			wantLastEventTime: map[string]int64{
+				"copilot/mockLogGroup/mockLogStream2": 1,
+				"copilot/mockLogGroup/mockLogStream":  0,
+			},
+			wantErr: nil,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -255,14 +396,16 @@ func TestLogEvents(t *testing.T) {
 				LogGroup:            tc.logGroupName,
 				EndTime:             tc.endTime,
 				Limit:               tc.limit,
-				LogStreams:          tc.logStream,
+				LogStreamPrefixes:   tc.logStream,
 				StartTime:           tc.startTime,
 				StreamLastEventTime: tc.lastEventTime,
+				LogStreamLimit:      tc.logStreamLimit,
 			})
 
 			if gotErr != nil {
 				require.Equal(t, tc.wantErr, gotErr)
 			} else {
+				require.NoError(t, gotErr)
 				require.ElementsMatch(t, tc.wantLogEvents, gotLogEventsOutput.Events)
 				require.Equal(t, tc.wantLastEventTime, gotLogEventsOutput.StreamLastEventTime)
 			}
