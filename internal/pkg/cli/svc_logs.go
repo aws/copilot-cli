@@ -99,10 +99,10 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return err
 		}
-		opts.logsSvc, err = logging.NewServiceClient(&logging.NewServiceLogsConfig{
+		opts.logsSvc, err = logging.NewWorkloadClient(&logging.NewWorkloadLogsConfig{
 			App:         opts.appName,
 			Env:         opts.envName,
-			Svc:         opts.name,
+			Name:        opts.name,
 			Sess:        sess,
 			LogGroup:    opts.logGroup,
 			WkldType:    workload.Type,

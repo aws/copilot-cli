@@ -68,7 +68,7 @@ func (t *TaskClient) WriteEventsUntilStopped() error {
 		if err != nil {
 			return err
 		}
-		in.LogStreams = logStreams
+		in.LogStreamPrefixes = logStreams
 		for i := 0; i < numCWLogsCallsPerRound; i++ {
 			logEventsOutput, err := t.eventsLogger.LogEvents(in)
 			if err != nil {

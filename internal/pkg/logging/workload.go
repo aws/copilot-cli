@@ -22,20 +22,22 @@ import (
 const (
 	defaultServiceLogsLimit = 10
 
-	fmtSvclogGroupName    = "/copilot/%s-%s-%s"
-	fmtSvcLogStreamPrefix = "copilot/%s"
+	fmtWkldLogGroupName         = "/copilot/%s-%s-%s"
+	fmtWkldLogStreamPrefix      = "copilot/%s"
+	stateMachineLogStreamPrefix = "states"
 )
 
 type logGetter interface {
 	LogEvents(opts cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
-// ServiceClient retrieves the logs of an Amazon ECS or AppRunner service.
-type ServiceClient struct {
-	logGroupName        string
-	logStreamNamePrefix string
-	eventsGetter        logGetter
-	w                   io.Writer
+// WorkloadClient retrieves the logs of an Amazon ECS or AppRunner service.
+type WorkloadClient struct {
+	logGroupName            string
+	logStreamNamePrefix     string
+	eventsGetter            logGetter
+	w                       io.Writer
+	includeStateMachineLogs bool
 
 	now func() time.Time
 }
@@ -49,18 +51,22 @@ type WriteLogEventsOpts struct {
 	TaskIDs   []string
 	// OnEvents is a handler that's invoked when logs are retrieved from the service.
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
+	// LogStreamLimit is an optional parameter for jobs and tasks to speed up CW queries
+	// involving multiple log streams.
+	LogStreamLimit *int64
 }
 
-// NewServiceLogsConfig contains fields that initiates ServiceClient struct.
-type NewServiceLogsConfig struct {
-	App         string
-	Env         string
-	Svc         string
-	Sess        *session.Session
-	LogGroup    string
-	WkldType    string
-	TaskIDs     []string
-	ConfigStore describe.ConfigStoreSvc
+// NewWorkloadLogsConfig contains fields that initiates WorkloadClient struct.
+type NewWorkloadLogsConfig struct {
+	App                     string
+	Env                     string
+	Name                    string
+	Sess                    *session.Session
+	LogGroup                string
+	WkldType                string
+	TaskIDs                 []string
+	ConfigStore             describe.ConfigStoreSvc
+	IncludeStateMachineLogs bool
 }
 
 func (o WriteLogEventsOpts) limit() *int64 {
@@ -72,7 +78,15 @@ func (o WriteLogEventsOpts) limit() *int64 {
 		// https://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_GetLogEvents.html#CWL-GetLogEvents-request-limit
 		return nil
 	}
+	if o.hasLogStreamLimit() {
+		// If log stream limit is set and no log event limit is set, then set limit to maximum.
+		return nil
+	}
 	return aws.Int64(defaultServiceLogsLimit)
+}
+
+func (o WriteLogEventsOpts) hasLogStreamLimit() bool {
+	return o.LogStreamLimit != nil
 }
 
 func (o WriteLogEventsOpts) startTime(now func() time.Time) *int64 {
@@ -90,32 +104,33 @@ func (o WriteLogEventsOpts) hasTimeFilters() bool {
 	return o.Follow || o.StartTime != nil || o.EndTime != nil
 }
 
-// NewServiceClient returns a ServiceClient for the svc service under env and app.
+// NewWorkloadClient returns a WorkloadClient for the svc service under env and app.
 // The logging client is initialized from the given sess session.
-func NewServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, error) {
+func NewWorkloadClient(opts *NewWorkloadLogsConfig) (*WorkloadClient, error) {
 	if opts.WkldType == manifest.RequestDrivenWebServiceType {
 		return newAppRunnerServiceClient(opts)
 	}
-	logGroup := fmt.Sprintf(fmtSvclogGroupName, opts.App, opts.Env, opts.Svc)
+	logGroup := fmt.Sprintf(fmtWkldLogGroupName, opts.App, opts.Env, opts.Name)
 	if opts.LogGroup != "" {
 		logGroup = opts.LogGroup
 	}
-	return &ServiceClient{
-		logGroupName:        logGroup,
-		logStreamNamePrefix: fmt.Sprintf(fmtSvcLogStreamPrefix, opts.Svc),
-		eventsGetter:        cloudwatchlogs.New(opts.Sess),
-		w:                   log.OutputWriter,
-		now:                 time.Now,
+	return &WorkloadClient{
+		logGroupName:            logGroup,
+		logStreamNamePrefix:     fmt.Sprintf(fmtWkldLogStreamPrefix, opts.Name),
+		eventsGetter:            cloudwatchlogs.New(opts.Sess),
+		w:                       log.OutputWriter,
+		now:                     time.Now,
+		includeStateMachineLogs: opts.IncludeStateMachineLogs,
 	}, nil
 }
 
-func newAppRunnerServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, error) {
+func newAppRunnerServiceClient(opts *NewWorkloadLogsConfig) (*WorkloadClient, error) {
 	if opts.TaskIDs != nil {
 		return nil, fmt.Errorf("cannot use --tasks for App Runner service logs")
 	}
 	serviceDescriber, err := describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
 		App: opts.App,
-		Svc: opts.Svc,
+		Svc: opts.Name,
 
 		ConfigStore: opts.ConfigStore,
 	})
@@ -139,7 +154,7 @@ func newAppRunnerServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, erro
 			return nil, fmt.Errorf("get log group name: %w", err)
 		}
 	}
-	return &ServiceClient{
+	return &WorkloadClient{
 		logGroupName: logGroup,
 		eventsGetter: cloudwatchlogs.New(opts.Sess),
 		w:            log.OutputWriter,
@@ -148,20 +163,22 @@ func newAppRunnerServiceClient(opts *NewServiceLogsConfig) (*ServiceClient, erro
 }
 
 // WriteLogEvents writes service logs.
-func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
+func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
-		LogGroup:  s.logGroupName,
-		Limit:     opts.limit(),
-		EndTime:   opts.EndTime,
-		StartTime: opts.startTime(s.now),
+		LogGroup:            s.logGroupName,
+		Limit:               opts.limit(),
+		StartTime:           opts.startTime(s.now),
+		EndTime:             opts.EndTime,
+		StreamLastEventTime: nil,
+		LogStreamLimit:      opts.LogStreamLimit,
 	}
-	if opts.TaskIDs != nil {
-		logEventsOpts.LogStreams = s.logStreams(opts.TaskIDs)
-	}
+
+	logEventsOpts.LogStreamPrefixes = s.logStreams(opts.TaskIDs)
+
 	for {
 		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)
 		if err != nil {
-			return fmt.Errorf("get task log events for log group %s: %w", s.logGroupName, err)
+			return fmt.Errorf("get log events for log group %s: %w", s.logGroupName, err)
 		}
 		if err := opts.OnEvents(s.w, cwEventsToHumanJSONStringers(logEventsOutput.Events)); err != nil {
 			return err
@@ -178,9 +195,20 @@ func (s *ServiceClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	}
 }
 
-func (s *ServiceClient) logStreams(taskIDs []string) (logStreamName []string) {
-	for _, taskID := range taskIDs {
-		logStreamName = append(logStreamName, fmt.Sprintf("%s/%s", s.logStreamNamePrefix, taskID))
+func (s *WorkloadClient) logStreams(taskIDs []string) (logStreamPrefixes []string) {
+	// By default, we only want logs from copilot task log streams.
+	// This filters out log streams not starting with `copilot/`
+	logStreamPrefixes = []string{fmt.Sprintf(fmtWkldLogStreamPrefix, "")}
+	// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for jobs. Therefore, we
+	// need to grab all recent log streams with no prefix filtering.
+	if s.includeStateMachineLogs {
+		return append(logStreamPrefixes, stateMachineLogStreamPrefix)
+	}
+	if len(taskIDs) != 0 {
+		logStreamPrefixes = []string{}
+		for _, taskID := range taskIDs {
+			logStreamPrefixes = append(logStreamPrefixes, fmt.Sprintf("%s/%s", s.logStreamNamePrefix, taskID))
+		}
 	}
 	return
 }

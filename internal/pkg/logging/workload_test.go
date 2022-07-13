@@ -77,7 +77,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				)
 			},
 
-			wantedError: fmt.Errorf("get task log events for log group mockLogGroup: some error"),
+			wantedError: fmt.Errorf("get log events for log group mockLogGroup: some error"),
 		},
 		"success with human output": {
 			limit: mockLimit,
@@ -118,7 +118,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.LogStreams, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
+							require.Equal(t, param.LogStreamPrefixes, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
 							var val *int64 = nil // Explicitly mark that nil is of type *int64 otherwise require.Equal returns an error.
 							require.Equal(t, param.Limit, val)
 							require.Equal(t, param.StartTime, aws.Int64(mockCurrentTimestamp.UnixMilli()))
@@ -147,7 +147,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.LogStreams, []string{"mockLogStreamPrefix/mockTaskID1"})
+							require.Equal(t, param.LogStreamPrefixes, []string{"mockLogStreamPrefix/mockTaskID1"})
 							require.Equal(t, param.Limit, aws.Int64(10))
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
@@ -177,7 +177,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 			tc.setupMocks(mocks)
 
 			b := &bytes.Buffer{}
-			svcLogs := &ServiceClient{
+			svcLogs := &WorkloadClient{
 				logGroupName:        mockLogGroupName,
 				logStreamNamePrefix: mockLogStreamPrefix,
 				eventsGetter:        mocklogGetter,
@@ -250,7 +250,7 @@ instance/4e66ee07f2034a7c Server is running on port 4055
 				)
 			},
 
-			wantedError: fmt.Errorf("get task log events for log group mockLogGroup: some error"),
+			wantedError: fmt.Errorf("get log events for log group mockLogGroup: some error"),
 		},
 		"success with human output": {
 			limit: mockLimit,
@@ -298,7 +298,7 @@ instance/4e66ee07f2034a7c Server is running on port 4055
 			tc.setupMocks(mocks)
 
 			b := &bytes.Buffer{}
-			svcLogs := &ServiceClient{
+			svcLogs := &WorkloadClient{
 				logGroupName: mockLogGroupName,
 				eventsGetter: mocklogGetter,
 				w:            b,
