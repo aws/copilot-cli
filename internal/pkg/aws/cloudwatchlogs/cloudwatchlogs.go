@@ -109,8 +109,7 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreamLimit int, logStre
 func (c *CloudWatchLogs) LogEvents(opts LogEventsOpts) (*LogEventsOutput, error) {
 	var events []*Event
 	in := initGetLogEventsInput(opts)
-
-	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStreamLimit, opts.LogStreamPrefixFilters...)
+	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStreams...)
 	if err != nil {
 		return nil, err
 	}
