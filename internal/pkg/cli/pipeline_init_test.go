@@ -391,6 +391,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				store:          mocks.NewMockstore(ctrl),
 				pipelineLister: mocks.NewMockdeployedPipelineLister(ctrl),
 				workspace:      mocks.NewMockwsPipelineIniter(ctrl),
+				pathDisplayer:  mocks.NewMockpathDisplayer(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(mocks)
@@ -414,6 +415,7 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				store:          mocks.store,
 				pipelineLister: mocks.pipelineLister,
 				workspace:      mocks.workspace,
+				pathDisplayer:  mocks.pathDisplayer,
 			}
 
 			// WHEN
@@ -822,6 +824,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					repoURL:           tc.inRepoURL,
 				},
 				workspace:      mocks.workspace,
+				pathDisplayer:  mocks.pathDisplayer,
 				secretsmanager: mocks.secretsmanager,
 				parser:         mocks.parser,
 				sessProvider:   mocks.sessProvider,
