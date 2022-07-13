@@ -22,8 +22,9 @@ import (
 )
 
 type deployEnvVars struct {
-	appName string
-	name    string
+	appName        string
+	name           string
+	forceNewUpdate bool
 }
 
 type deployEnvOpts struct {
@@ -130,6 +131,7 @@ func (o *deployEnvOpts) Execute() error {
 		RootUserARN:         caller.RootUserARN,
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
+		ForceNewUpdate:      o.forceNewUpdate,
 	}); err != nil {
 		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
@@ -215,5 +217,6 @@ Deploy an environment named "test".
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 	return cmd
 }

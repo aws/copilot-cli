@@ -110,6 +110,7 @@ type DeployEnvironmentInput struct {
 	RootUserARN         string
 	CustomResourcesURLs map[string]string
 	Manifest            *manifest.Environment
+	ForceNewUpdate      bool
 }
 
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
@@ -139,6 +140,7 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
 		Mft:                  in.Manifest,
+		ForceUpdate:          in.ForceNewUpdate,
 		Version:              deploy.LatestEnvTemplateVersion,
 	}
 	return d.envDeployer.UpdateAndRenderEnvironment(os.Stderr, deployEnvInput, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
