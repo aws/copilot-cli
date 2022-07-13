@@ -51,7 +51,7 @@ type WorkloadAdder interface {
 
 // Workspace contains the methods needed to manipulate a Copilot workspace.
 type Workspace interface {
-	RelWsRoot(path string) (string, error)
+	Rel(path string) (string, error)
 	WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
 	WriteServiceManifest(marshaler encoding.BinaryMarshaler, serviceName string) (string, error)
 }
@@ -133,7 +133,7 @@ func (w *WorkloadInitializer) addWlToStore(wl *config.Workload, wlType string) e
 
 func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 	if props.DockerfilePath != "" {
-		path, err := w.Ws.RelWsRoot(props.DockerfilePath)
+		path, err := w.Ws.Rel(props.DockerfilePath)
 		if err != nil {
 			return "", err
 		}
@@ -154,7 +154,7 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = w.Ws.RelWsRoot(manifestPath)
+	manifestPath, err = w.Ws.Rel(manifestPath)
 	if err != nil {
 		return "", err
 	}
@@ -185,7 +185,7 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 
 func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 	if props.DockerfilePath != "" {
-		path, err := w.Ws.RelWsRoot(props.DockerfilePath)
+		path, err := w.Ws.Rel(props.DockerfilePath)
 		if err != nil {
 			return "", err
 		}
@@ -213,7 +213,7 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = w.Ws.RelWsRoot(manifestPath)
+	manifestPath, err = w.Ws.Rel(manifestPath)
 	if err != nil {
 		return "", err
 	}

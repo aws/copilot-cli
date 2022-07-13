@@ -263,7 +263,7 @@ type pathDisplayer interface {
 }
 
 type wsPathRelativizer interface {
-	// RelWsRoot returns the path relative to the workspace root.
+	// Rel returns the path relative to the workspace root.
 	// The input path is allowed to be either relative to the current
 	// working directory or absolute.
 	//
@@ -272,7 +272,7 @@ type wsPathRelativizer interface {
 	// Prefer another function for displaying a path to a user, as the
 	// workspace directory might be different from the current working
 	// directory.
-	RelWsRoot(path string) (string, error)
+	Rel(path string) (string, error)
 }
 
 type wsPipelineIniter interface {

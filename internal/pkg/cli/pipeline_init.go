@@ -648,7 +648,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		o.manifestPath = e.FileName
 	}
 
-	// RelWsRoot might give us a path not relative to the current working directory.
+	// Rel might give us a path not relative to the current working directory.
 	// So we want a path relative to the current working directory to display to the
 	// user.
 	manifestPathDisplay, err := o.pathDisplayer.DisplayPath(o.manifestPath)
@@ -656,7 +656,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		return err
 	}
 
-	o.manifestPath, err = o.workspace.RelWsRoot(o.manifestPath)
+	o.manifestPath, err = o.workspace.Rel(o.manifestPath)
 	if err != nil {
 		return err
 	}

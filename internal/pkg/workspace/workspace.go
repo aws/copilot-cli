@@ -522,7 +522,7 @@ func (ws *Workspace) Path() (string, error) {
 	return filepath.Dir(copilotDirPath), nil
 }
 
-func (ws *Workspace) RelWsRoot(path string) (string, error) {
+func (ws *Workspace) Rel(path string) (string, error) {
 	copiDir, err := ws.copilotDirPath()
 	if err != nil {
 		return "", fmt.Errorf("get path to Copilot dir: %w", err)

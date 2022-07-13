@@ -48,8 +48,8 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/resizer/copilot"
 				gomock.InOrder(
-					m.EXPECT().RelWsRoot("resizer/Dockerfile").Return("../Dockerfile", nil),
-					m.EXPECT().RelWsRoot("/resizer/copilot/manifest.yml").Return("manifest.yml", nil))
+					m.EXPECT().Rel("resizer/Dockerfile").Return("../Dockerfile", nil),
+					m.EXPECT().Rel("/resizer/copilot/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/copilot/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -87,7 +87,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().RelWsRoot("/resizer/manifest.yml").Return("manifest.yml", nil)
+				m.EXPECT().Rel("/resizer/manifest.yml").Return("manifest.yml", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Do(func(m *manifest.ScheduledJob, _ string) {
 					require.Equal(t, *m.Workload.Type, manifest.ScheduledJobType)
 					require.Equal(t, *m.ImageConfig.Image.Location, "mockImage")
@@ -128,7 +128,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().RelWsRoot("resizer/Dockerfile").Return("Dockerfile", nil)
+				m.EXPECT().Rel("resizer/Dockerfile").Return("Dockerfile", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.MockStore) {},
@@ -144,8 +144,8 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/copilot"
 				gomock.InOrder(
-					m.EXPECT().RelWsRoot("resizer/Dockerfile").Return("resizer/Dockerfile", nil),
-					m.EXPECT().RelWsRoot("/copilot/resizer/manifest.yml").Return("resizer/manifest.yml", nil))
+					m.EXPECT().Rel("resizer/Dockerfile").Return("resizer/Dockerfile", nil),
+					m.EXPECT().Rel("/copilot/resizer/manifest.yml").Return("resizer/manifest.yml", nil))
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/copilot/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -163,8 +163,8 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 
 			mockWriter: func(m *mocks.MockWorkspace) {
 				gomock.InOrder(
-					m.EXPECT().RelWsRoot("frontend/Dockerfile").Return("frontend/Dockerfile", nil),
-					m.EXPECT().RelWsRoot("/resizer/manifest.yml").Return("manifest.yml", nil))
+					m.EXPECT().Rel("frontend/Dockerfile").Return("frontend/Dockerfile", nil),
+					m.EXPECT().Rel("/resizer/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -192,8 +192,8 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 
 			mockWriter: func(m *mocks.MockWorkspace) {
 				gomock.InOrder(
-					m.EXPECT().RelWsRoot("resizer/Dockerfile").Return("Dockerfile", nil),
-					m.EXPECT().RelWsRoot("/resizer/manifest.yml").Return("manifest.yml", nil))
+					m.EXPECT().Rel("resizer/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/resizer/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -475,8 +475,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/frontend"
 				gomock.InOrder(
-					m.EXPECT().RelWsRoot("frontend/Dockerfile").Return("Dockerfile", nil),
-					m.EXPECT().RelWsRoot("/frontend/manifest.yml").Return("manifest.yml", nil))
+					m.EXPECT().Rel("frontend/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/frontend/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -515,7 +515,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/frontend"
-				m.EXPECT().RelWsRoot("frontend/Dockerfile").Return("Dockerfile", nil)
+				m.EXPECT().Rel("frontend/Dockerfile").Return("Dockerfile", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
 				m.EXPECT().GetApplication("app").Return(nil, errors.New("some error"))
@@ -531,7 +531,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/frontend"
-				m.EXPECT().RelWsRoot("frontend/Dockerfile").Return("Dockerfile", nil)
+				m.EXPECT().Rel("frontend/Dockerfile").Return("Dockerfile", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -553,8 +553,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/frontend"
 				gomock.InOrder(
-					m.EXPECT().RelWsRoot("frontend/Dockerfile").Return("Dockerfile", nil),
-					m.EXPECT().RelWsRoot("/frontend/manifest.yml").Return("manifest.yml", nil))
+					m.EXPECT().Rel("frontend/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/frontend/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -582,8 +582,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/frontend"
 				gomock.InOrder(
-					m.EXPECT().RelWsRoot("frontend/Dockerfile").Return("Dockerfile", nil),
-					m.EXPECT().RelWsRoot("/frontend/manifest.yml").Return("manifest.yml", nil))
+					m.EXPECT().Rel("frontend/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/frontend/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -610,7 +610,7 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/backend"
-				m.EXPECT().RelWsRoot("/backend/manifest.yml").Return("manifest.yml", nil)
+				m.EXPECT().Rel("/backend/manifest.yml").Return("manifest.yml", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
@@ -655,8 +655,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/backend"
 				gomock.InOrder(
-					m.EXPECT().RelWsRoot("backend/Dockerfile").Return("Dockerfile", nil),
-					m.EXPECT().RelWsRoot("/backend/manifest.yml").Return("manifest.yml", nil))
+					m.EXPECT().Rel("backend/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/backend/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
@@ -707,8 +707,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/backend"
 				gomock.InOrder(
-					m.EXPECT().RelWsRoot("backend/Dockerfile").Return("Dockerfile", nil),
-					m.EXPECT().RelWsRoot("/backend/manifest.yml").Return("manifest.yml", nil))
+					m.EXPECT().Rel("backend/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/backend/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
@@ -762,8 +762,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockWriter: func(m *mocks.MockWorkspace) {
 				// workspace root: "/worker"
 				gomock.InOrder(
-					m.EXPECT().RelWsRoot("worker/Dockerfile").Return("Dockerfile", nil),
-					m.EXPECT().RelWsRoot("/worker/manifest.yml").Return("manifest.yml", nil))
+					m.EXPECT().Rel("worker/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/worker/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "worker").
 					Do(func(m *manifest.WorkerService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.WorkerServiceType)

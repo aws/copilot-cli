@@ -475,7 +475,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				gomock.InOrder(
 					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().RelWsRoot(wantedManifestFile).Return(wantedManifestRelPath, nil),
+					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
 					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
@@ -508,7 +508,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				gomock.InOrder(
 					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().RelWsRoot(wantedManifestFile).Return(wantedManifestRelPath, nil),
+					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
 					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
@@ -541,7 +541,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				gomock.InOrder(
 					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().RelWsRoot(wantedManifestFile).Return(wantedManifestRelPath, nil),
+					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
 					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
@@ -579,7 +579,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				gomock.InOrder(
 					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().RelWsRoot(wantedManifestFile).Return(wantedManifestRelPath, nil),
+					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
 					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
@@ -615,7 +615,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
 				gomock.InOrder(
 					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().RelWsRoot(wantedManifestFile).Return(wantedManifestRelPath, nil),
+					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
 					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
@@ -664,7 +664,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.workspace.EXPECT().RelWsRoot(wantedManifestFile).Return(wantedManifestRelPath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(nil, errors.New("some error"))
 			},
 			expectedError: errors.New("get application badgoose: some error"),
@@ -683,7 +683,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.workspace.EXPECT().RelWsRoot(wantedManifestFile).Return(wantedManifestRelPath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
 				}, nil)
@@ -708,7 +708,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Times(0)
 				m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.workspace.EXPECT().RelWsRoot(wantedManifestFile).Return(wantedManifestRelPath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
@@ -740,7 +740,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", buildspecExistsErr)
 				gomock.InOrder(
 					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().RelWsRoot(wantedManifestFile).Return(wantedManifestRelPath, nil),
+					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
 					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
@@ -773,7 +773,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil)
-				m.workspace.EXPECT().RelWsRoot(wantedManifestFile).Return(wantedManifestRelPath, nil)
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", errors.New("some error"))
 				m.parser.EXPECT().Parse(buildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
