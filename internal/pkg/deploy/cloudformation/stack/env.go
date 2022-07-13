@@ -126,7 +126,7 @@ func getSecurityGroupConfig(mft *manifest.Environment) (*template.SecurityGroupC
 	if mft != nil && !mft.Network.VPC.SecurityGroupConfig.Ingress.IsZero() {
 		out, err := yaml.Marshal(mft.Network.VPC.SecurityGroupConfig.Ingress)
 		if err != nil {
-			return &template.SecurityGroupConfig{}, fmt.Errorf("marshal security group ingress from environment manifest to embed in template: %v", err)
+			return &template.SecurityGroupConfig{}, fmt.Errorf("marshal security group ingress from environment manifest to embed in template: %w", err)
 		}
 		ingress = strings.TrimSpace(string(out))
 	}
@@ -135,7 +135,7 @@ func getSecurityGroupConfig(mft *manifest.Environment) (*template.SecurityGroupC
 	if mft != nil && !mft.Network.VPC.SecurityGroupConfig.Egress.IsZero() {
 		out, err := yaml.Marshal(mft.Network.VPC.SecurityGroupConfig.Egress)
 		if err != nil {
-			return &template.SecurityGroupConfig{}, fmt.Errorf("marshal security group egress from environment manifest to embed in template: %v", err)
+			return &template.SecurityGroupConfig{}, fmt.Errorf("marshal security group egress from environment manifest to embed in template: %w", err)
 		}
 		egress = strings.TrimSpace(string(out))
 	}
