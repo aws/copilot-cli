@@ -368,7 +368,7 @@ func (o *initPipelineOpts) askOrValidatePipelineType() error {
 		[]prompt.Option{
 			{
 				Value: pipelineTypeWorkloads,
-				Hint:  "Deploy the workloads in your workspace",
+				Hint:  "Deploy the services or jobs in your workspace",
 			},
 			{
 				Value: pipelineTypeEnvironments,
