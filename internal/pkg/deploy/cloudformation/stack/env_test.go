@@ -95,8 +95,9 @@ func TestEnv_Parameters(t *testing.T) {
 	deploymentInputWithPrivateDNS := mockDeployEnvironmentInput()
 	deploymentInputWithPrivateDNS.ImportCertARNs = []string{"arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"}
 	testCases := map[string]struct {
-		input *deploy.CreateEnvironmentInput
-		want  []*cloudformation.Parameter
+		input     *deploy.CreateEnvironmentInput
+		oldParams []*cloudformation.Parameter
+		want      []*cloudformation.Parameter
 	}{
 		"without DNS": {
 			input: deploymentInput,
@@ -269,12 +270,144 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 			},
 		},
+		"should retain the values from EnvControllerParameters": {
+			input: deploymentInput,
+			oldParams: []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+					ParameterValue: aws.String("frontend,backend"),
+				},
+				{
+					ParameterKey:   aws.String(envParamNATWorkloadsKey),
+					ParameterValue: aws.String("backend"),
+				},
+			},
+
+			want: []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(envParamAppNameKey),
+					ParameterValue: aws.String(deploymentInput.App.Name),
+				},
+				{
+					ParameterKey:   aws.String(envParamEnvNameKey),
+					ParameterValue: aws.String(deploymentInput.Name),
+				},
+				{
+					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppDNSKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamAliasesKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+					ParameterValue: aws.String("frontend,backend"),
+				},
+				{
+					ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamNATWorkloadsKey),
+					ParameterValue: aws.String("backend"),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
+					ParameterValue: aws.String("env.project.local"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
+				},
+			},
+		},
+		"should not include old parameters that are deleted": {
+			input: deploymentInput,
+			oldParams: []*cloudformation.Parameter{
+				{
+					ParameterKey: aws.String("deprecated"),
+				},
+			},
+
+			want: []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(envParamAppNameKey),
+					ParameterValue: aws.String(deploymentInput.App.Name),
+				},
+				{
+					ParameterKey:   aws.String(envParamEnvNameKey),
+					ParameterValue: aws.String(deploymentInput.Name),
+				},
+				{
+					ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
+					ParameterValue: aws.String(deploymentInput.App.AccountPrincipalARN),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppDNSKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamAliasesKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamEFSWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamNATWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
+					ParameterValue: aws.String("env.project.local"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
+					ParameterValue: aws.String("false"),
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			env := &EnvStackConfig{
-				in: tc.input,
+				in:         tc.input,
+				prevParams: tc.oldParams,
 			}
 			params, err := env.Parameters()
 			require.NoError(t, err)

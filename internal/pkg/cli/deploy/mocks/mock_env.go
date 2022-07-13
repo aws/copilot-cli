@@ -7,7 +7,8 @@ package mocks
 import (
 	reflect "reflect"
 
-	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
+	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -76,8 +77,23 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 	return m.recorder
 }
 
+// EnvironmentParameters mocks base method.
+func (m *MockenvironmentDeployer) EnvironmentParameters(app, env string) ([]*cloudformation.Parameter, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentParameters", app, env)
+	ret0, _ := ret[0].([]*cloudformation.Parameter)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvironmentParameters indicates an expected call of EnvironmentParameters.
+func (mr *MockenvironmentDeployerMockRecorder) EnvironmentParameters(app, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentParameters", reflect.TypeOf((*MockenvironmentDeployer)(nil).EnvironmentParameters), app, env)
+}
+
 // UpdateAndRenderEnvironment mocks base method.
-func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
+func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation0.StackOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{out, env}
 	for _, a := range opts {
