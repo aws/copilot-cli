@@ -800,6 +800,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			mocks := pipelineInitMocks{
 				workspace:      mocks.NewMockwsPipelineIniter(ctrl),
+				pathDisplayer:  mocks.NewMockpathDisplayer(ctrl),
 				secretsmanager: mocks.NewMocksecretsManager(ctrl),
 				parser:         templatemocks.NewMockParser(ctrl),
 				sessProvider:   mocks.NewMocksessionProvider(ctrl),
