@@ -1744,6 +1744,26 @@ func TestAdvancedCount_Validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`autoscaling field queue_delay is invalid with workload type Load Balanced Web Service`),
 		},
+		"error if multiple invalid autoscaling fields set": {
+			AdvancedCount: AdvancedCount{
+				Range: Range{
+					Value: (*IntRangeBand)(aws.String("1-10")),
+				},
+				CPU: mockConfig,
+				QueueScaling: QueueScaling{
+					AcceptableLatency: durationp(10 * time.Second),
+					AvgProcessingTime: durationp(1 * time.Second),
+				},
+				Requests: ScalingConfigOrT[int]{
+					Value: aws.Int(10),
+				},
+				ResponseTime: ScalingConfigOrT[time.Duration]{
+					Value: &timeMinute,
+				},
+				workloadType: WorkerServiceType,
+			},
+			wantedError: fmt.Errorf(`autoscaling fields requests and response_time are invalid with workload type Worker Service`),
+		},
 		"cannot have autoscaling for scheduled jobs": {
 			AdvancedCount: AdvancedCount{
 				Spot:         aws.Int(42),

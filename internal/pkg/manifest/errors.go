@@ -6,7 +6,6 @@ package manifest
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/dustin/go-humanize/english"
 )
@@ -79,10 +78,8 @@ type errInvalidAutoscalingFieldsWithWkldType struct {
 }
 
 func (e *errInvalidAutoscalingFieldsWithWkldType) Error() string {
-	if len(e.invalidFields) == 1 {
-		return fmt.Sprintf("autoscaling field %v is invalid with workload type %v", e.invalidFields[0], e.workloadType)
-	}
-	return fmt.Sprintf("autoscaling field %v are invalid with workload type %v", strings.Join(e.invalidFields, "/"), e.workloadType)
+	return fmt.Sprintf("autoscaling %v %v %v invalid with workload type %v", english.PluralWord(len(e.invalidFields), "field", "fields"),
+		english.WordSeries(e.invalidFields, "and"), english.PluralWord(len(e.invalidFields), "is", "are"), e.workloadType)
 }
 
 type errFieldMutualExclusive struct {
