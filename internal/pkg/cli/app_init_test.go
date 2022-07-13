@@ -171,7 +171,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 			inAppName: "testname",
 			expect: func(opts *initAppOpts) {
 				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics", Path: "/test"}, nil)
-				opts.ws.(*mocks.MockwsAppManager).EXPECT().RelCwd("/test").Return("test", nil)
+				opts.pathDisplayer.(*mocks.MockpathDisplayer).EXPECT().DisplayPath("/test").Return("test", nil)
 				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Times(0)
 			},
 			wantedErr: "workspace already registered with metrics",
@@ -265,9 +265,10 @@ func TestInitAppOpts_Ask(t *testing.T) {
 				initAppVars: initAppVars{
 					name: tc.inAppName,
 				},
-				store:  mocks.NewMockstore(ctrl),
-				ws:     mocks.NewMockwsAppManager(ctrl),
-				prompt: mocks.NewMockprompter(ctrl),
+				store:         mocks.NewMockstore(ctrl),
+				ws:            mocks.NewMockwsAppManager(ctrl),
+				pathDisplayer: mocks.NewMockpathDisplayer(ctrl),
+				prompt:        mocks.NewMockprompter(ctrl),
 				isSessionFromEnvVars: func() (bool, error) {
 					return false, nil
 				},
@@ -412,6 +413,7 @@ func TestInitAppOpts_Execute(t *testing.T) {
 			defer ctrl.Finish()
 			mockstore := mocks.NewMockstore(ctrl)
 			mockWorkspace := mocks.NewMockwsAppManager(ctrl)
+			mockPathDisplayer := mocks.NewMockpathDisplayer(ctrl)
 			mockIdentityService := mocks.NewMockidentityService(ctrl)
 			mockDeployer := mocks.NewMockappDeployer(ctrl)
 			mockProgress := mocks.NewMockprogress(ctrl)
@@ -428,6 +430,7 @@ func TestInitAppOpts_Execute(t *testing.T) {
 				identity:           mockIdentityService,
 				cfn:                mockDeployer,
 				ws:                 mockWorkspace,
+				pathDisplayer:      mockPathDisplayer,
 				prog:               mockProgress,
 				cachedHostedZoneID: tc.inDomainHostedZoneID,
 			}

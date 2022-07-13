@@ -264,7 +264,6 @@ type pathDisplayer interface {
 
 type wsPathRelativizer interface {
 	RelWsRoot(path string) (string, error)
-	RelCwd(path string) (string, error)
 }
 
 type wsPipelineIniter interface {
@@ -326,7 +325,6 @@ type wsPipelineGetter interface {
 }
 
 type wsAppManager interface {
-	wsPathRelativizer
 	Create(appName string) error
 	Summary() (*workspace.Summary, error)
 }
