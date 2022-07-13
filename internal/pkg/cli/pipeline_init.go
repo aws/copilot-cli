@@ -92,6 +92,78 @@ var (
 	fmtErrInvalidPipelineProvider = "repository %s must be from a supported provider: %s"
 )
 
+type pipelineInitializer interface {
+	writeManifest() error
+	writeBuildspec() error
+}
+
+type workloadPipelineInitializer struct {
+	cmd *initPipelineOpts
+}
+
+type envPipelineInitializer struct {
+	cmd *initPipelineOpts
+}
+
+func (ini *workloadPipelineInitializer) writeManifest() error {
+	var stages []manifest.PipelineStage
+	for _, env := range ini.cmd.envConfigs {
+		stage := manifest.PipelineStage{
+			Name: env.Name,
+		}
+		stages = append(stages, stage)
+	}
+	return ini.cmd.createPipelineManifest(stages)
+}
+
+func (ini *workloadPipelineInitializer) writeBuildspec() error {
+	if err := ini.cmd.createBuildspec(workloadsPipelineBuildspecTemplatePath); err != nil {
+		return err
+	}
+	log.Debugln(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
+Update the "build" phase to unit test your services before pushing the images.`)
+	return nil
+}
+
+func (ini *envPipelineInitializer) writeManifest() error {
+	var stages []manifest.PipelineStage
+	for _, env := range ini.cmd.envConfigs {
+		stage := manifest.PipelineStage{
+			Name: env.Name,
+			Deployments: manifest.Deployments{
+				"deploy-env": &manifest.Deployment{
+					TemplatePath:   path.Join(deploy.DefaultPipelineArtifactsDir, fmt.Sprintf(envCFNTemplateNameFmt, env.Name)),
+					TemplateConfig: path.Join(deploy.DefaultPipelineArtifactsDir, fmt.Sprintf(envCFNTemplateConfigurationNameFmt, env.Name)),
+				},
+			},
+		}
+		stages = append(stages, stage)
+	}
+	return ini.cmd.createPipelineManifest(stages)
+}
+
+func (ini *envPipelineInitializer) writeBuildspec() error {
+	if err := ini.cmd.createBuildspec(environmentsPipelineBuildspecTemplatePath); err != nil {
+		return err
+	}
+	log.Debugln(`The buildspec contains the commands to generate CloudFormation templates for your environments.`)
+	return nil
+}
+
+func newPipelineInitializer(cmd *initPipelineOpts) pipelineInitializer {
+	switch cmd.pipelineType {
+	case pipelineTypeWorkloads:
+		return &workloadPipelineInitializer{
+			cmd: cmd,
+		}
+	case pipelineTypeEnvironments:
+		return &envPipelineInitializer{
+			cmd: cmd,
+		}
+	}
+	return nil
+}
+
 type initPipelineVars struct {
 	appName           string
 	name              string // Name of the pipeline
@@ -230,38 +302,13 @@ func (o *initPipelineOpts) Execute() error {
 			return err
 		}
 	}
-
-	// write manifest.yml file, populate with:
-	//   - git repo as source
-	//   - stage names (environments)
-	//   - enable/disable transition to prod envs
 	log.Infoln()
-	switch o.pipelineType {
-	case pipelineTypeWorkloads:
-		if err := o.createWorkloadsPipelineManifest(); err != nil {
-			return err
-		}
-	case pipelineTypeEnvironments:
-		if err := o.createEnvironmentsPipelineManifest(); err != nil {
-			return err
-		}
+	ini := newPipelineInitializer(o)
+	if err := ini.writeManifest(); err != nil {
+		return err
 	}
-
-	log.Infoln()
-	switch o.pipelineType {
-	case pipelineTypeWorkloads:
-		if err := o.createBuildspec(workloadsPipelineBuildspecTemplatePath); err != nil {
-			return err
-		}
-		log.Debug(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
-Update the "build" phase to unit test your services before pushing the images.
-`)
-	case pipelineTypeEnvironments:
-		if err := o.createBuildspec(environmentsPipelineBuildspecTemplatePath); err != nil {
-			return err
-		}
-		log.Debug(`The buildspec contains the commands to generate CloudFormation templates for your environments.
-`)
+	if err := ini.writeBuildspec(); err != nil {
+		return err
 	}
 	return nil
 }
