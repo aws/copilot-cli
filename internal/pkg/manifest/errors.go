@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/dustin/go-humanize/english"
 )
 
@@ -66,6 +67,16 @@ func (e *errFieldMustBeSpecified) Error() string {
 	}
 	return fmt.Sprintf(`%s if %s %s specified`, errMsg, english.WordSeries(quoteStringSlice(e.conditionalFields), "or"),
 		english.PluralWord(len(e.conditionalFields), "is", "are"))
+}
+
+type errInvalidAutoscalingFieldsWithWkldType struct {
+	invalidFields []string
+	workloadType  string
+}
+
+func (e *errInvalidAutoscalingFieldsWithWkldType) Error() string {
+	return fmt.Sprintf("autoscaling %v %v %v invalid with workload type %v", english.PluralWord(len(e.invalidFields), "field", "fields"),
+		english.WordSeries(template.QuoteSliceFunc(e.invalidFields), "and"), english.PluralWord(len(e.invalidFields), "is", "are"), e.workloadType)
 }
 
 type errFieldMutualExclusive struct {

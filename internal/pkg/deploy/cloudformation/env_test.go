@@ -383,6 +383,69 @@ func TestCloudFormation_EnvironmentTemplate(t *testing.T) {
 	}
 }
 
+func TestCloudFormation_EnvironmentParameters(t *testing.T) {
+	testCases := map[string]struct {
+		inAppName string
+		inEnvName string
+		inClient  func(ctrl *gomock.Controller) *mocks.MockcfnClient
+
+		wantedParams []*awscfn.Parameter
+		wantedErr    error
+	}{
+		"should return stack parameters from a stack description": {
+			inAppName: "phonetool",
+			inEnvName: "test",
+			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe("phonetool-test").Return(&cloudformation.StackDescription{
+					Parameters: []*awscfn.Parameter{
+						{
+							ParameterKey:   aws.String("name"),
+							ParameterValue: aws.String("test"),
+						},
+					},
+				}, nil)
+				return m
+			},
+
+			wantedParams: []*awscfn.Parameter{
+				{
+					ParameterKey:   aws.String("name"),
+					ParameterValue: aws.String("test"),
+				},
+			},
+		},
+		"should return the error as is from a failed stack description": {
+			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe(gomock.Any()).Return(nil, errors.New("some error"))
+				return m
+			},
+			wantedErr: errors.New("some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cf := &CloudFormation{
+				cfnClient: tc.inClient(ctrl),
+			}
+
+			// WHEN
+			actual, err := cf.EnvironmentParameters(tc.inAppName, tc.inEnvName)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.ElementsMatch(t, tc.wantedParams, actual)
+			}
+		})
+	}
+}
+
 func TestCloudFormation_UpdateEnvironmentTemplate(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName      string
