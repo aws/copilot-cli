@@ -95,6 +95,7 @@ type initPipelineOpts struct {
 	initPipelineVars
 	// Interfaces to interact with dependencies.
 	workspace      wsPipelineIniter
+	pathDisplayer  pathDisplayer
 	secretsmanager secretsManager
 	parser         template.Parser
 	runner         execRunner
@@ -132,6 +133,11 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
+	pathDisplayer, err := NewCwdPathDisplayer()
+	if err != nil {
+		return nil, err
+	}
+
 	p := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline init"))
 	defaultSession, err := p.Default()
 	if err != nil {
@@ -149,6 +155,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	return &initPipelineOpts{
 		initPipelineVars: vars,
 		workspace:        ws,
+		pathDisplayer:    pathDisplayer,
 		secretsmanager:   secretsmanager.New(defaultSession),
 		parser:           template.New(),
 		sessProvider:     p,
@@ -644,7 +651,7 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 	// RelWsRoot might give us a path not relative to the current working directory.
 	// So we want a path relative to the current working directory to display to the
 	// user.
-	manifestPathRel, err := o.workspace.RelCwd(o.manifestPath)
+	manifestPathDisplay, err := o.pathDisplayer.DisplayPath(o.manifestPath)
 	if err != nil {
 		return err
 	}
@@ -659,10 +666,10 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		manifestMsgFmt = `Pipeline manifest file for %s already exists at %s, skipping writing it.
 Previously set repository URL, branch, and environment stages will remain.
 `
-		log.Infof(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPathRel))
+		log.Infof(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPathDisplay))
 
 	} else {
-		log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPathRel))
+		log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPathDisplay))
 	}
 	log.Debug(`The manifest contains configurations for your pipeline.
 Update the file to add stages, change the tracked branch, add test commands or manual approval actions.
@@ -699,7 +706,7 @@ func (o *initPipelineOpts) createBuildspec() error {
 		buildspecExists = true
 		buildspecPath = e.FileName
 	}
-	buildspecPath, err = o.workspace.RelCwd(buildspecPath)
+	buildspecPath, err = o.pathDisplayer.DisplayPath(buildspecPath)
 	if err != nil {
 		return err
 	}
