@@ -823,7 +823,6 @@ func (o *initEnvOpts) tryDeletingEnvRoles(app, env string) {
 	}
 }
 
-// writeManifest
 func (o *initEnvOpts) writeManifest() (string, error) {
 	customizedEnv := &config.CustomizeEnv{
 		ImportVPC:                   o.importVPCConfig(),
