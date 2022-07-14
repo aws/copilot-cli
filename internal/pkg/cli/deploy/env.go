@@ -80,8 +80,8 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 
 		appCFN:      deploycfn.New(defaultSession),
 		envDeployer: deploycfn.New(envManagerSession),
-		newStackSerializer: func(in *deploy.CreateEnvironmentInput, oldForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
-			return stack.NewEnvConfigFromExistingStack(in, oldForceUpdateID, oldParams)
+		newStackSerializer: func(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
+			return stack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
 		},
 	}, nil
 }
@@ -127,11 +127,11 @@ func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput)
 	if err != nil {
 		return nil, fmt.Errorf("describe environment stack parameters: %w", err)
 	}
-	forceUpdateID, err := d.envDeployer.ForceUpdateOutputID(d.app.Name, d.env.Name)
+	lastForceUpdateID, err := d.envDeployer.ForceUpdateOutputID(d.app.Name, d.env.Name)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve environment stack force update ID: %w", err)
 	}
-	stack := d.newStackSerializer(stackInput, forceUpdateID, oldParams)
+	stack := d.newStackSerializer(stackInput, lastForceUpdateID, oldParams)
 	tpl, err := stack.Template()
 	if err != nil {
 		return nil, fmt.Errorf("generate stack template: %w", err)
@@ -156,11 +156,11 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if err != nil {
 		return fmt.Errorf("describe environment stack parameters: %w", err)
 	}
-	forceUpdateID, err := d.envDeployer.ForceUpdateOutputID(d.app.Name, d.env.Name)
+	lastForceUpdateID, err := d.envDeployer.ForceUpdateOutputID(d.app.Name, d.env.Name)
 	if err != nil {
 		return fmt.Errorf("retrieve environment stack force update ID: %w", err)
 	}
-	conf := stack.NewEnvConfigFromExistingStack(stackInput, forceUpdateID, oldParams)
+	conf := stack.NewEnvConfigFromExistingStack(stackInput, lastForceUpdateID, oldParams)
 	return d.envDeployer.UpdateAndRenderEnvironment(os.Stderr, conf, stackInput.ArtifactBucketARN, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
 }
 
