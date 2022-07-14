@@ -131,7 +131,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           testSvcName,
 			skipConfirmation: true,
 			setUpMocks: func(m *svcDeleteAskMocks) {
-				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return(testAppName, nil)
+				m.sel.EXPECT().Application(svcAppNamePrompt, wkldAppNameHelpPrompt).Return(testAppName, nil)
 				m.store.EXPECT().GetApplication(gomock.Any()).Times(0)
 				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 			},

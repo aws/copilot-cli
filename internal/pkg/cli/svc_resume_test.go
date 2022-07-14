@@ -72,7 +72,7 @@ func TestResumeSvcOpts_Ask(t *testing.T) {
 			inputSvc:         testSvcName,
 			skipConfirmation: true,
 			setupMocks: func(m svcResumeAskMock) {
-				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("phonetool", nil)
+				m.sel.EXPECT().Application(svcAppNamePrompt, wkldAppNameHelpPrompt).Return("phonetool", nil)
 				m.store.EXPECT().GetApplication(gomock.Any()).Times(0)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
@@ -89,7 +89,7 @@ func TestResumeSvcOpts_Ask(t *testing.T) {
 		"errors if failed to select application": {
 			skipConfirmation: true,
 			setupMocks: func(m svcResumeAskMock) {
-				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error"))
+				m.sel.EXPECT().Application(svcAppNamePrompt, wkldAppNameHelpPrompt).Return("", errors.New("some error"))
 			},
 			wantedError: fmt.Errorf("select application: some error"),
 		},

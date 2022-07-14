@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	svcAppNamePrompt     = "Which application does your service belong to?"
-	svcAppNameHelpPrompt = "An application groups all of your services and jobs together."
+	svcAppNamePrompt      = "Which application does your service belong to?"
+	wkldAppNameHelpPrompt = "An application groups all of your services and jobs together."
 )
 
 // tryReadingAppName retrieves the application's name from the workspace if it exists and returns it.

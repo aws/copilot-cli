@@ -36,6 +36,7 @@ const (
 	stackOutputDirFlag    = "output-dir"
 	uploadAssetsFlag      = "upload-assets"
 	limitFlag             = "limit"
+	lastFlag              = "last"
 	followFlag            = "follow"
 	sinceFlag             = "since"
 	startTimeFlag         = "start-time"
@@ -226,6 +227,8 @@ Uploaded asset locations are filled in the template configuration.`
 
 	limitFlagDescription = `Optional. The maximum number of log events returned. Default is 10
 unless any time filtering flags are set.`
+	lastFlagDescription = `Optional. The number of executions of the scheduled job for which
+logs should be shown.`
 	followFlagDescription = "Optional. Specifies if the logs should be streamed."
 	sinceFlagDescription  = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
 Defaults to all logs. Only one of start-time / since may be used.`
