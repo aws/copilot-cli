@@ -5,7 +5,6 @@ Metadata:
   Manifest: |
     name: test
     type: Environment
-
 Parameters:
   AppName:
     Type: String

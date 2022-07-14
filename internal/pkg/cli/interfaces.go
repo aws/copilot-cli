@@ -5,7 +5,6 @@ package cli
 
 import (
 	"encoding"
-	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -125,6 +123,10 @@ type environmentGetter interface {
 
 type environmentLister interface {
 	ListEnvironments(appName string) ([]*config.Environment, error)
+}
+
+type wsEnvironmentsLister interface {
+	ListEnvironments() ([]string, error)
 }
 
 type environmentDeleter interface {
@@ -288,6 +290,7 @@ type wsWlDirReader interface {
 	wsSvcReader
 	workspacePathGetter
 	wlLister
+	wsEnvironmentsLister
 	ListDockerfiles() ([]string, error)
 	Summary() (*workspace.Summary, error)
 }
@@ -316,15 +319,6 @@ type wsAddonManager interface {
 	WriteAddon(f encoding.BinaryMarshaler, svc, name string) (string, error)
 	manifestReader
 	wlLister
-}
-
-type uploader interface {
-	Upload(bucket, key string, data io.Reader) (string, error)
-	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
-}
-
-type customResourcesUploader interface {
-	UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error)
 }
 
 type bucketEmptier interface {
@@ -435,24 +429,6 @@ type versionCompatibilityChecker interface {
 
 type versionGetter interface {
 	Version() (string, error)
-}
-
-type envTemplater interface {
-	EnvironmentTemplate(appName, envName string) (string, error)
-}
-
-type envUpgrader interface {
-	UpgradeEnvironment(in *deploy.CreateEnvironmentInput) error
-}
-
-type legacyEnvUpgrader interface {
-	UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentInput, lbWebServices ...string) error
-	envTemplater
-}
-
-type envTemplateUpgrader interface {
-	envUpgrader
-	legacyEnvUpgrader
 }
 
 type appUpgrader interface {
