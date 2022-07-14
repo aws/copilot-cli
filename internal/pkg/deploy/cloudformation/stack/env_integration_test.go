@@ -62,7 +62,7 @@ observability:
 			wantedFileName: "template-with-imported-certs-observability.yml",
 		},
 
-		"generate template with embedded manifest file with custom security groups rules added by te customer": {
+		"generate template with embedded manifest file with custom security groups rules added by the customer": {
 			input: func() *deploy.CreateEnvironmentInput {
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(`
