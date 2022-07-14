@@ -113,6 +113,7 @@ type DeployEnvironmentInput struct {
 	RootUserARN         string
 	CustomResourcesURLs map[string]string
 	Manifest            *manifest.Environment
+	RawManifest         []byte
 }
 
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
@@ -184,6 +185,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
 		Mft:                  in.Manifest,
+		RawMft:               in.RawManifest,
 		Version:              deploy.LatestEnvTemplateVersion,
 	}, nil
 }

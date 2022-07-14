@@ -22,25 +22,27 @@ source:
 
 # This section defines the order of the environments your pipeline will deploy to.
 stages:
-    - # The name of the environment.
-      name: test
-      deployments:
-        deploy-env:
-          template_path: infrastructure/test.env.yml
-          template_config: infrastructure/test.env.params.json
-      # Optional: flag for manual approval action before deployment.
-      # requires_approval: true
-      # Optional: use test commands to validate this stage of your build.
-      # test_commands: [echo 'running tests', make test]
+  - # The name of the environment.
+    name: test
+    deployments:
+      deploy-env:
+        template_path: infrastructure/test.env.yml
+        template_config: infrastructure/test.env.params.json
+        stack_name: app-test
+    # Optional: flag for manual approval action before deployment.
+    # requires_approval: true
+    # Optional: use test commands to validate this stage of your build.
+    # test_commands: [echo 'running tests', make test]
 
-    - # The name of the environment.
-      name: prod
-      deployments:
-        deploy-env:
-          template_path: infrastructure/prod.env.yml
-          template_config: infrastructure/prod.env.params.json
-      # Optional: flag for manual approval action before deployment.
-      # requires_approval: true
-      # Optional: use test commands to validate this stage of your build.
-      # test_commands: [echo 'running tests', make test]
+  - # The name of the environment.
+    name: prod
+    deployments:
+      deploy-env:
+        template_path: infrastructure/prod.env.yml
+        template_config: infrastructure/prod.env.params.json
+        stack_name: app-prod
+    # Optional: flag for manual approval action before deployment.
+    # requires_approval: true
+    # Optional: use test commands to validate this stage of your build.
+    # test_commands: [echo 'running tests', make test]
 
