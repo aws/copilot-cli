@@ -229,6 +229,7 @@ var _ = Describe("pipeline flow", func() {
 				URL:          repoURL,
 				GitBranch:    "prod",
 				Environments: []string{"prod"},
+				Type:         "Workloads",
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
