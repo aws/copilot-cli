@@ -27,7 +27,7 @@ const (
 	taskTaskRoleParamKey       = "TaskRole"
 	taskCommandParamKey        = "Command"
 	taskEntryPointParamKey     = "EntryPoint"
-	taskEnvFileARN             = "EnvFileARN"
+	taskEnvFileARNParamKey     = "EnvFileARN"
 	taskOSParamKey             = "OS"
 	taskArchParamKey           = "Arch"
 
@@ -117,7 +117,7 @@ func (t *taskStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterValue: aws.String(strings.Join(t.EntryPoint, ",")),
 		},
 		{
-			ParameterKey:   aws.String(taskEnvFileARN),
+			ParameterKey:   aws.String(taskEnvFileARNParamKey),
 			ParameterValue: aws.String(t.EnvFileARN),
 		},
 		{

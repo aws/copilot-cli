@@ -108,7 +108,7 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 			ParameterValue: aws.String("exec,some command"),
 		},
 		{
-			ParameterKey:   aws.String(taskEnvFileARN),
+			ParameterKey:   aws.String(taskEnvFileARNParamKey),
 			ParameterValue: aws.String("arn:aws:s3:::somebucket/manual/1638391936/env"),
 		},
 		{
