@@ -91,7 +91,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 			svcDescriber:    svcDescr,
 			envDescriber:    envDescr,
 			initLBDescriber: d.initLBDescriber,
-			envDNSNameKey:   envOutputPublicLoadBalancerDNSName,
+			envDNSTypeKey:   envOutputPublicLoadBalancerDNSName,
 		}
 		publicURI, err := albDescr.uri()
 		if err != nil {
@@ -172,7 +172,7 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 				svcDescriber:    svcDescr,
 				envDescriber:    envDescr,
 				initLBDescriber: d.initLBDescriber,
-				envDNSNameKey:   envOutputInternalLoadBalancerDNSName,
+				envDNSTypeKey:   envOutputInternalLoadBalancerDNSName,
 			}
 			publicURI, err := albDescr.uri()
 			if err != nil {
@@ -220,7 +220,7 @@ type albDescriber struct {
 	svcDescriber    ecsDescriber
 	envDescriber    envDescriber
 	initLBDescriber func(string) (lbDescriber, error)
-	envDNSNameKey   string
+	envDNSTypeKey   string
 }
 
 func (d *albDescriber) envDNSName(path string) (publicURI, error) {
@@ -228,8 +228,8 @@ func (d *albDescriber) envDNSName(path string) (publicURI, error) {
 	if err != nil {
 		return publicURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
 	}
-	dnsNames := []string{envOutputs[d.envDNSNameKey]}
-	if cfDNS, ok := envOutputs[envCloudFrontDomainName]; ok {
+	dnsNames := []string{envOutputs[d.envDNSTypeKey]}
+	if cfDNS, ok := envOutputs[envOutputCloudFrontDomainName]; ok {
 		dnsNames = append(dnsNames, cfDNS)
 	}
 	return publicURI{
@@ -248,7 +248,7 @@ func (d *albDescriber) uri() (publicURI, error) {
 	httpsEnabled := svcParams[stack.WorkloadHTTPSParamKey] == "true"
 
 	// public load balancers use the env DNS name if https is not enabled
-	if d.envDNSNameKey == envOutputPublicLoadBalancerDNSName && !httpsEnabled {
+	if d.envDNSTypeKey == envOutputPublicLoadBalancerDNSName && !httpsEnabled {
 		return d.envDNSName(path)
 	}
 
@@ -290,7 +290,7 @@ func (d *albDescriber) bestEffortRemoveEnvDNSName(publicURI publicURI) publicURI
 	if err != nil {
 		return publicURI
 	}
-	lbDNSName := envOutputs[d.envDNSNameKey]
+	lbDNSName := envOutputs[d.envDNSTypeKey]
 	for i := range publicURI.DNSNames {
 		if publicURI.DNSNames[i] == lbDNSName {
 			publicURI.DNSNames = append(publicURI.DNSNames[:i], publicURI.DNSNames[i+1:]...)
@@ -326,7 +326,7 @@ type LBWebServiceURI struct {
 
 type publicURI struct {
 	HTTPS    bool
-	DNSNames []string // The environment's subdomain if the service is served on HTTPS. Otherwise, the public application load balancer's DNS.
+	DNSNames []string // The environment's subdomain if the service is served on HTTPS. Otherwise, the public application load balancer's access point.
 	Path     string   // Empty if the service is served on HTTPS. Otherwise, the pattern used to match the service.
 }
 
