@@ -6,9 +6,7 @@ package cloudformation
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -139,95 +137,6 @@ func (cf CloudFormation) UpdateEnvironmentTemplate(appName, envName, templateBod
 	s.Tags = descr.Tags
 	s.RoleARN = aws.String(cfnExecRoleARN)
 	return cf.cfnClient.UpdateAndWait(s)
-}
-
-// UpgradeEnvironment updates an environment stack's template to a newer version.
-func (cf CloudFormation) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) error {
-	return cf.upgradeEnvironment(in, func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
-		// If a parameter exists in both the new template and the old template, use its previous value.
-		// Otherwise, keep the parameter untouched.
-		if old == nil { // The ParamKey doesn't exist in the old stack, use the new value.
-			return &new
-		}
-		// Use existing parameter values.
-		return &awscfn.Parameter{
-			ParameterKey:     new.ParameterKey,
-			UsePreviousValue: aws.Bool(true),
-		}
-	})
-}
-
-// UpgradeLegacyEnvironment updates a legacy environment stack to a newer version.
-//
-// UpgradeEnvironment and UpgradeLegacyEnvironment are separate methods because the legacy cloudformation stack has the
-// "IncludePublicLoadBalancer" parameter which has been deprecated in favor of the "ALBWorkloads".
-// UpgradeLegacyEnvironment does the necessary transformation to use the "ALBWorkloads" parameter instead.
-func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentInput, lbWebServices ...string) error {
-	return cf.upgradeEnvironment(in, func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
-		// If a parameter exists in both the new template and the old template, use its previous value.
-		// Otherwise, if the parameter is `EnvParamALBWorkloadsKey` (currently "ALBWorkloads"), assign it a parameter value.
-		// Otherwise, keep the parameter untouched.
-		if aws.StringValue(new.ParameterKey) == stack.EnvParamALBWorkloadsKey {
-			return &awscfn.Parameter{
-				ParameterKey:   aws.String(stack.EnvParamALBWorkloadsKey),
-				ParameterValue: aws.String(strings.Join(lbWebServices, ",")),
-			}
-		}
-		if old == nil {
-			return &new // The ParamKey doesn't exist in the old stack, use the new value.
-		}
-		return &awscfn.Parameter{
-			ParameterKey:     new.ParameterKey,
-			UsePreviousValue: aws.Bool(true),
-		}
-	})
-}
-
-func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, transformParam func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter) error {
-	s, err := cf.toUploadedStack(in.ArtifactBucketARN, stack.NewEnvStackConfig(in))
-	if err != nil {
-		return err
-	}
-
-	for {
-		var (
-			descr *cloudformation.StackDescription
-			err   error
-		)
-		descr, err = cf.waitAndDescribeStack(s.Name)
-		if err != nil {
-			return err
-		}
-
-		params, err := cf.transformParameters(s.Parameters, descr.Parameters, transformParam)
-		if err != nil {
-			return err
-		}
-		s.Parameters = params
-
-		// Keep the tags of the stack.
-		s.Tags = descr.Tags
-
-		// Apply a service role if provided.
-		if in.CFNServiceRoleARN != "" {
-			s.RoleARN = aws.String(in.CFNServiceRoleARN)
-		}
-
-		// Attempt to update the stack template.
-		err = cf.cfnClient.UpdateAndWait(s)
-		if err == nil { // Success.
-			return nil
-		}
-		if retryable := isRetryableUpdateError(s.Name, err); retryable {
-			continue
-		}
-		// The changes are already applied, nothing to do. Exit successfully.
-		var emptyChangeSet *cloudformation.ErrChangeSetEmpty
-		if errors.As(err, &emptyChangeSet) {
-			return nil
-		}
-		return fmt.Errorf("update and wait for stack %s: %w", s.Name, err)
-	}
 }
 
 func (cf CloudFormation) toUploadedStack(artifactBucketARN string, stackConfig StackConfiguration) (*cloudformation.Stack, error) {
