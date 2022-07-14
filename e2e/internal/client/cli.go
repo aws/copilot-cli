@@ -73,6 +73,12 @@ type EnvInitRequestVPCConfig struct {
 	PrivateSubnetCIDRs string
 }
 
+// EnvDeployRequest contains the parameters for calling copilot env deploy.
+type EnvDeployRequest struct {
+	AppName string
+	Name    string
+}
+
 // EnvShowRequest contains the parameters for calling copilot env show.
 type EnvShowRequest struct {
 	AppName string
@@ -220,6 +226,7 @@ type PipelineInitInput struct {
 	URL          string
 	GitBranch    string
 	Environments []string
+	Type         string
 }
 
 // PipelineDeployInput contains the parameters for calling copilot pipeline deploy.
@@ -598,6 +605,19 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 	return cli.exec(exec.Command(cli.path, commands...))
 }
 
+/*EnvDeploy runs:
+copilot env deploy
+	--name $n
+	--app $a
+*/
+func (cli *CLI) EnvDeploy(opts *EnvDeployRequest) (string, error) {
+	commands := []string{"env", "deploy",
+		"--name", opts.Name,
+		"--app", opts.AppName,
+	}
+	return cli.exec(exec.Command(cli.path, commands...))
+}
+
 /*EnvShow runs:
 copilot env show
 	--app $a
@@ -686,6 +706,7 @@ func (cli *CLI) PipelineInit(opts PipelineInitInput) (string, error) {
 		"--url", opts.URL,
 		"--git-branch", opts.GitBranch,
 		"--environments", strings.Join(opts.Environments, ","),
+		"--pipeline-type", opts.Type,
 	}
 
 	return cli.exec(exec.Command(cli.path, args...))

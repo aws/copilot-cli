@@ -180,17 +180,17 @@ type templateConfigurer interface {
 	Tags() []*cloudformation.Tag
 }
 
-func (w *wkld) templateConfiguration(tc templateConfigurer) (string, error) {
-	params, err := tc.Parameters()
+func serializeTemplateConfig(parser template.Parser, stack templateConfigurer) (string, error) {
+	params, err := stack.Parameters()
 	if err != nil {
 		return "", err
 	}
-	doc, err := w.parser.Parse(wkldParamsTemplatePath, struct {
+	doc, err := parser.Parse(wkldParamsTemplatePath, struct {
 		Parameters []*cloudformation.Parameter
 		Tags       []*cloudformation.Tag
 	}{
 		Parameters: params,
-		Tags:       tc.Tags(),
+		Tags:       stack.Tags(),
 	}, template.WithFuncs(map[string]interface{}{
 		"inc": template.IncFunc,
 	}))

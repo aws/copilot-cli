@@ -7,9 +7,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -56,9 +59,11 @@ Please enter full repository URL, e.g., "https://github.com/myCompany/myRepo", o
 )
 
 const (
-	buildspecTemplatePath = "cicd/buildspec.yml"
-	fmtPipelineStackName  = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
-	defaultBranch         = deploy.DefaultPipelineBranch
+	workloadsPipelineBuildspecTemplatePath    = "cicd/buildspec.yml"
+	environmentsPipelineBuildspecTemplatePath = "cicd/env/buildspec.yml"
+
+	fmtPipelineStackName = "pipeline-%s-%s" // Ex: "pipeline-appName-repoName"
+	defaultBranch        = deploy.DefaultPipelineBranch
 	// For a GitHub repository.
 	githubURL     = "github.com"
 	fmtGHRepoURL  = "https://%s/%s/%s"   // Ex: "https://github.com/repoOwner/repoName"
@@ -72,6 +77,13 @@ const (
 	fmtBBRepoURL = "https://%s/%s/%s" // Ex: "https://bitbucket.org/repoOwner/repoName"
 )
 
+const (
+	pipelineTypeWorkloads    = "Workloads"
+	pipelineTypeEnvironments = "Environments"
+)
+
+var pipelineTypes = []string{pipelineTypeWorkloads, pipelineTypeEnvironments}
+
 var (
 	// Filled in via the -ldflags flag at compile time to support pipeline buildspec CLI pulling.
 	binaryS3BucketPath string
@@ -82,6 +94,79 @@ var (
 	fmtErrInvalidPipelineProvider = "repository %s must be from a supported provider: %s"
 )
 
+type pipelineInitializer interface {
+	writeManifest() error
+	writeBuildspec() error
+}
+
+type workloadPipelineInitializer struct {
+	cmd *initPipelineOpts
+}
+
+type envPipelineInitializer struct {
+	cmd *initPipelineOpts
+}
+
+func (ini *workloadPipelineInitializer) writeManifest() error {
+	var stages []manifest.PipelineStage
+	for _, env := range ini.cmd.envConfigs {
+		stage := manifest.PipelineStage{
+			Name: env.Name,
+		}
+		stages = append(stages, stage)
+	}
+	return ini.cmd.createPipelineManifest(stages)
+}
+
+func (ini *workloadPipelineInitializer) writeBuildspec() error {
+	if err := ini.cmd.createBuildspec(workloadsPipelineBuildspecTemplatePath); err != nil {
+		return err
+	}
+	log.Debugln(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
+Update the "build" phase to unit test your services before pushing the images.`)
+	return nil
+}
+
+func (ini *envPipelineInitializer) writeManifest() error {
+	var stages []manifest.PipelineStage
+	for _, env := range ini.cmd.envConfigs {
+		stage := manifest.PipelineStage{
+			Name: env.Name,
+			Deployments: manifest.Deployments{
+				"deploy-env": &manifest.Deployment{
+					TemplatePath:   path.Join(deploy.DefaultPipelineArtifactsDir, fmt.Sprintf(envCFNTemplateNameFmt, env.Name)),
+					TemplateConfig: path.Join(deploy.DefaultPipelineArtifactsDir, fmt.Sprintf(envCFNTemplateConfigurationNameFmt, env.Name)),
+					StackName:      stack.NameForEnv(ini.cmd.appName, env.Name),
+				},
+			},
+		}
+		stages = append(stages, stage)
+	}
+	return ini.cmd.createPipelineManifest(stages)
+}
+
+func (ini *envPipelineInitializer) writeBuildspec() error {
+	if err := ini.cmd.createBuildspec(environmentsPipelineBuildspecTemplatePath); err != nil {
+		return err
+	}
+	log.Debugln(`The buildspec contains the commands to generate CloudFormation templates for your environments.`)
+	return nil
+}
+
+func newPipelineInitializer(cmd *initPipelineOpts) pipelineInitializer {
+	switch cmd.pipelineType {
+	case pipelineTypeWorkloads:
+		return &workloadPipelineInitializer{
+			cmd: cmd,
+		}
+	case pipelineTypeEnvironments:
+		return &envPipelineInitializer{
+			cmd: cmd,
+		}
+	}
+	return nil
+}
+
 type initPipelineVars struct {
 	appName           string
 	name              string // Name of the pipeline
@@ -89,6 +174,7 @@ type initPipelineVars struct {
 	repoURL           string
 	repoBranch        string
 	githubAccessToken string
+	pipelineType      string
 }
 
 type initPipelineOpts struct {
@@ -199,6 +285,10 @@ func (o *initPipelineOpts) Ask() error {
 		return err
 	}
 
+	if err := o.askOrValidatePipelineType(); err != nil {
+		return err
+	}
+
 	if err := o.validateDuplicatePipeline(); err != nil {
 		return err
 	}
@@ -222,17 +312,12 @@ func (o *initPipelineOpts) Execute() error {
 			return err
 		}
 	}
-
-	// write manifest.yml file, populate with:
-	//   - git repo as source
-	//   - stage names (environments)
-	//   - enable/disable transition to prod envs
 	log.Infoln()
-	if err := o.createPipelineManifest(); err != nil {
+	ini := newPipelineInitializer(o)
+	if err := ini.writeManifest(); err != nil {
 		return err
 	}
-	log.Infoln()
-	if err := o.createBuildspec(); err != nil {
+	if err := ini.writeBuildspec(); err != nil {
 		return err
 	}
 	return nil
@@ -322,6 +407,35 @@ func (o *initPipelineOpts) askPipelineName() error {
 	}
 
 	o.name = name
+	return nil
+}
+
+func (o *initPipelineOpts) askOrValidatePipelineType() error {
+	if o.pipelineType != "" {
+		for _, typ := range pipelineTypes {
+			if o.pipelineType == typ {
+				return nil
+			}
+		}
+		return fmt.Errorf("invalid pipeline type %q; must be one of %s", o.pipelineType, english.WordSeries(quoteStringSlice(pipelineTypes), "or"))
+	}
+
+	typ, err := o.prompt.SelectOption("What type of continuous delivery pipeline is this?",
+		"A pipeline can be set up to deploy either your workloads or your environments",
+		[]prompt.Option{
+			{
+				Value: pipelineTypeWorkloads,
+				Hint:  "Deploy the services or jobs in your workspace",
+			},
+			{
+				Value: pipelineTypeEnvironments,
+				Hint:  "Deploy the environments in your workspace",
+			},
+		})
+	if err != nil {
+		return fmt.Errorf("prompt for pipeline type: %w", err)
+	}
+	o.pipelineType = typ
 	return nil
 }
 
@@ -617,21 +731,11 @@ func (o *initPipelineOpts) storeGitHubAccessToken() error {
 	return nil
 }
 
-func (o *initPipelineOpts) createPipelineManifest() error {
+func (o *initPipelineOpts) createPipelineManifest(stages []manifest.PipelineStage) error {
 	provider, err := o.pipelineProvider()
 	if err != nil {
 		return err
 	}
-
-	var stages []manifest.PipelineStage
-	for _, env := range o.envConfigs {
-
-		stage := manifest.PipelineStage{
-			Name: env.Name,
-		}
-		stages = append(stages, stage)
-	}
-
 	manifest, err := manifest.NewPipeline(o.name, provider, stages)
 	if err != nil {
 		return fmt.Errorf("generate a pipeline manifest: %w", err)
@@ -661,15 +765,12 @@ func (o *initPipelineOpts) createPipelineManifest() error {
 		return err
 	}
 
-	manifestMsgFmt := "Wrote the pipeline manifest for %s at '%s'\n"
 	if manifestExists {
-		manifestMsgFmt = `Pipeline manifest file for %s already exists at %s, skipping writing it.
+		log.Infof(`Pipeline manifest file for %s already exists at %s, skipping writing it.
 Previously set repository URL, branch, and environment stages will remain.
-`
-		log.Infof(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPathDisplay))
-
+`, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPathDisplay))
 	} else {
-		log.Successf(manifestMsgFmt, color.HighlightUserInput(o.repoName), color.HighlightResource(manifestPathDisplay))
+		log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPathDisplay))
 	}
 	log.Debug(`The manifest contains configurations for your pipeline.
 Update the file to add stages, change the tracked branch, add test commands or manual approval actions.
@@ -677,12 +778,12 @@ Update the file to add stages, change the tracked branch, add test commands or m
 	return nil
 }
 
-func (o *initPipelineOpts) createBuildspec() error {
+func (o *initPipelineOpts) createBuildspec(buildSpecTemplatePath string) error {
 	artifactBuckets, err := o.artifactBuckets()
 	if err != nil {
 		return err
 	}
-	content, err := o.parser.Parse(buildspecTemplatePath, struct {
+	content, err := o.parser.Parse(buildSpecTemplatePath, struct {
 		BinaryS3BucketPath string
 		Version            string
 		ManifestPath       string
@@ -710,19 +811,13 @@ func (o *initPipelineOpts) createBuildspec() error {
 	if err != nil {
 		return err
 	}
-	buildspecMsgFmt := "Wrote the buildspec for the pipeline's build stage at '%s'\n"
 	if buildspecExists {
-		buildspecMsgFmt = `Buildspec file for pipeline already exists at %s, skipping writing it.
+		log.Infof(`Buildspec file for pipeline already exists at %s, skipping writing it.
 Previously set config will remain.
-`
-		log.Infof(buildspecMsgFmt, color.HighlightResource(buildspecPath))
-	} else {
-		log.Successf(buildspecMsgFmt, color.HighlightResource(buildspecPath))
+`, color.HighlightResource(buildspecPath))
+		return nil
 	}
-	log.Debug(`The buildspec contains the commands to push your container images, and generate CloudFormation templates.
-Update the "build" phase to unit test your services before pushing the images.
-`)
-
+	log.Successf("Wrote the buildspec for the pipeline's build stage at '%s'\n", color.HighlightResource(buildspecPath))
 	return nil
 }
 
@@ -833,6 +928,6 @@ func buildPipelineInitCmd() *cobra.Command {
 	_ = cmd.Flags().MarkHidden(githubAccessTokenFlag)
 	cmd.Flags().StringVarP(&vars.repoBranch, gitBranchFlag, gitBranchFlagShort, "", gitBranchFlagDescription)
 	cmd.Flags().StringSliceVarP(&vars.environments, envsFlag, envsFlagShort, []string{}, pipelineEnvsFlagDescription)
-
+	cmd.Flags().StringVarP(&vars.pipelineType, pipelineTypeFlag, pipelineTypeShort, "", pipelineTypeFlagDescription)
 	return cmd
 }

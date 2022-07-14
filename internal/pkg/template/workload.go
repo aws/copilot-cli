@@ -6,6 +6,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"text/template"
 
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
@@ -611,6 +612,7 @@ func withSvcParsingFuncs() ParseOption {
 			"hasSecrets":           hasSecrets,
 			"fmtSlice":             FmtSliceFunc,
 			"quoteSlice":           QuoteSliceFunc,
+			"quote":                strconv.Quote,
 			"randomUUID":           randomUUIDFunc,
 			"jsonMountPoints":      generateMountPointJSON,
 			"jsonSNSTopics":        generateSNSJSON,

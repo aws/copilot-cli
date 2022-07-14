@@ -6,7 +6,6 @@ package mocks
 
 import (
 	encoding "encoding"
-	io "io"
 	reflect "reflect"
 
 	session "github.com/aws/aws-sdk-go/aws/session"
@@ -14,7 +13,6 @@ import (
 	codepipeline "github.com/aws/copilot-cli/internal/pkg/aws/codepipeline"
 	ec2 "github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	ecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	secretsmanager "github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 	ssm "github.com/aws/copilot-cli/internal/pkg/aws/ssm"
 	deploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
@@ -909,6 +907,44 @@ func (m *MockenvironmentLister) ListEnvironments(appName string) ([]*config.Envi
 func (mr *MockenvironmentListerMockRecorder) ListEnvironments(appName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockenvironmentLister)(nil).ListEnvironments), appName)
+}
+
+// MockwsEnvironmentsLister is a mock of wsEnvironmentsLister interface.
+type MockwsEnvironmentsLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockwsEnvironmentsListerMockRecorder
+}
+
+// MockwsEnvironmentsListerMockRecorder is the mock recorder for MockwsEnvironmentsLister.
+type MockwsEnvironmentsListerMockRecorder struct {
+	mock *MockwsEnvironmentsLister
+}
+
+// NewMockwsEnvironmentsLister creates a new mock instance.
+func NewMockwsEnvironmentsLister(ctrl *gomock.Controller) *MockwsEnvironmentsLister {
+	mock := &MockwsEnvironmentsLister{ctrl: ctrl}
+	mock.recorder = &MockwsEnvironmentsListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockwsEnvironmentsLister) EXPECT() *MockwsEnvironmentsListerMockRecorder {
+	return m.recorder
+}
+
+// ListEnvironments mocks base method.
+func (m *MockwsEnvironmentsLister) ListEnvironments() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEnvironments")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEnvironments indicates an expected call of ListEnvironments.
+func (mr *MockwsEnvironmentsListerMockRecorder) ListEnvironments() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockwsEnvironmentsLister)(nil).ListEnvironments))
 }
 
 // MockenvironmentDeleter is a mock of environmentDeleter interface.
@@ -2838,6 +2874,21 @@ func (mr *MockwsWlDirReaderMockRecorder) ListDockerfiles() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MockwsWlDirReader)(nil).ListDockerfiles))
 }
 
+// ListEnvironments mocks base method.
+func (m *MockwsWlDirReader) ListEnvironments() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEnvironments")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEnvironments indicates an expected call of ListEnvironments.
+func (mr *MockwsWlDirReaderMockRecorder) ListEnvironments() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockwsWlDirReader)(nil).ListEnvironments))
+}
+
 // ListJobs mocks base method.
 func (m *MockwsWlDirReader) ListJobs() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -3235,102 +3286,6 @@ func (m *MockwsAddonManager) WriteAddon(f encoding.BinaryMarshaler, svc, name st
 func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, name)
-}
-
-// Mockuploader is a mock of uploader interface.
-type Mockuploader struct {
-	ctrl     *gomock.Controller
-	recorder *MockuploaderMockRecorder
-}
-
-// MockuploaderMockRecorder is the mock recorder for Mockuploader.
-type MockuploaderMockRecorder struct {
-	mock *Mockuploader
-}
-
-// NewMockuploader creates a new mock instance.
-func NewMockuploader(ctrl *gomock.Controller) *Mockuploader {
-	mock := &Mockuploader{ctrl: ctrl}
-	mock.recorder = &MockuploaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Mockuploader) EXPECT() *MockuploaderMockRecorder {
-	return m.recorder
-}
-
-// Upload mocks base method.
-func (m *Mockuploader) Upload(bucket, key string, data io.Reader) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Upload", bucket, key, data)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Upload indicates an expected call of Upload.
-func (mr *MockuploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mockuploader)(nil).Upload), bucket, key, data)
-}
-
-// ZipAndUpload mocks base method.
-func (m *Mockuploader) ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{bucket, key}
-	for _, a := range files {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ZipAndUpload", varargs...)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ZipAndUpload indicates an expected call of ZipAndUpload.
-func (mr *MockuploaderMockRecorder) ZipAndUpload(bucket, key interface{}, files ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{bucket, key}, files...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ZipAndUpload", reflect.TypeOf((*Mockuploader)(nil).ZipAndUpload), varargs...)
-}
-
-// MockcustomResourcesUploader is a mock of customResourcesUploader interface.
-type MockcustomResourcesUploader struct {
-	ctrl     *gomock.Controller
-	recorder *MockcustomResourcesUploaderMockRecorder
-}
-
-// MockcustomResourcesUploaderMockRecorder is the mock recorder for MockcustomResourcesUploader.
-type MockcustomResourcesUploaderMockRecorder struct {
-	mock *MockcustomResourcesUploader
-}
-
-// NewMockcustomResourcesUploader creates a new mock instance.
-func NewMockcustomResourcesUploader(ctrl *gomock.Controller) *MockcustomResourcesUploader {
-	mock := &MockcustomResourcesUploader{ctrl: ctrl}
-	mock.recorder = &MockcustomResourcesUploaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockcustomResourcesUploader) EXPECT() *MockcustomResourcesUploaderMockRecorder {
-	return m.recorder
-}
-
-// UploadEnvironmentCustomResources mocks base method.
-func (m *MockcustomResourcesUploader) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadEnvironmentCustomResources", upload)
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UploadEnvironmentCustomResources indicates an expected call of UploadEnvironmentCustomResources.
-func (mr *MockcustomResourcesUploaderMockRecorder) UploadEnvironmentCustomResources(upload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadEnvironmentCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadEnvironmentCustomResources), upload)
 }
 
 // MockbucketEmptier is a mock of bucketEmptier interface.
@@ -4699,209 +4654,6 @@ func (m *MockversionGetter) Version() (string, error) {
 func (mr *MockversionGetterMockRecorder) Version() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Version", reflect.TypeOf((*MockversionGetter)(nil).Version))
-}
-
-// MockenvTemplater is a mock of envTemplater interface.
-type MockenvTemplater struct {
-	ctrl     *gomock.Controller
-	recorder *MockenvTemplaterMockRecorder
-}
-
-// MockenvTemplaterMockRecorder is the mock recorder for MockenvTemplater.
-type MockenvTemplaterMockRecorder struct {
-	mock *MockenvTemplater
-}
-
-// NewMockenvTemplater creates a new mock instance.
-func NewMockenvTemplater(ctrl *gomock.Controller) *MockenvTemplater {
-	mock := &MockenvTemplater{ctrl: ctrl}
-	mock.recorder = &MockenvTemplaterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockenvTemplater) EXPECT() *MockenvTemplaterMockRecorder {
-	return m.recorder
-}
-
-// EnvironmentTemplate mocks base method.
-func (m *MockenvTemplater) EnvironmentTemplate(appName, envName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvironmentTemplate indicates an expected call of EnvironmentTemplate.
-func (mr *MockenvTemplaterMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*MockenvTemplater)(nil).EnvironmentTemplate), appName, envName)
-}
-
-// MockenvUpgrader is a mock of envUpgrader interface.
-type MockenvUpgrader struct {
-	ctrl     *gomock.Controller
-	recorder *MockenvUpgraderMockRecorder
-}
-
-// MockenvUpgraderMockRecorder is the mock recorder for MockenvUpgrader.
-type MockenvUpgraderMockRecorder struct {
-	mock *MockenvUpgrader
-}
-
-// NewMockenvUpgrader creates a new mock instance.
-func NewMockenvUpgrader(ctrl *gomock.Controller) *MockenvUpgrader {
-	mock := &MockenvUpgrader{ctrl: ctrl}
-	mock.recorder = &MockenvUpgraderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockenvUpgrader) EXPECT() *MockenvUpgraderMockRecorder {
-	return m.recorder
-}
-
-// UpgradeEnvironment mocks base method.
-func (m *MockenvUpgrader) UpgradeEnvironment(in *deploy0.CreateEnvironmentInput) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpgradeEnvironment", in)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpgradeEnvironment indicates an expected call of UpgradeEnvironment.
-func (mr *MockenvUpgraderMockRecorder) UpgradeEnvironment(in interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeEnvironment", reflect.TypeOf((*MockenvUpgrader)(nil).UpgradeEnvironment), in)
-}
-
-// MocklegacyEnvUpgrader is a mock of legacyEnvUpgrader interface.
-type MocklegacyEnvUpgrader struct {
-	ctrl     *gomock.Controller
-	recorder *MocklegacyEnvUpgraderMockRecorder
-}
-
-// MocklegacyEnvUpgraderMockRecorder is the mock recorder for MocklegacyEnvUpgrader.
-type MocklegacyEnvUpgraderMockRecorder struct {
-	mock *MocklegacyEnvUpgrader
-}
-
-// NewMocklegacyEnvUpgrader creates a new mock instance.
-func NewMocklegacyEnvUpgrader(ctrl *gomock.Controller) *MocklegacyEnvUpgrader {
-	mock := &MocklegacyEnvUpgrader{ctrl: ctrl}
-	mock.recorder = &MocklegacyEnvUpgraderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MocklegacyEnvUpgrader) EXPECT() *MocklegacyEnvUpgraderMockRecorder {
-	return m.recorder
-}
-
-// EnvironmentTemplate mocks base method.
-func (m *MocklegacyEnvUpgrader) EnvironmentTemplate(appName, envName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvironmentTemplate indicates an expected call of EnvironmentTemplate.
-func (mr *MocklegacyEnvUpgraderMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*MocklegacyEnvUpgrader)(nil).EnvironmentTemplate), appName, envName)
-}
-
-// UpgradeLegacyEnvironment mocks base method.
-func (m *MocklegacyEnvUpgrader) UpgradeLegacyEnvironment(in *deploy0.CreateEnvironmentInput, lbWebServices ...string) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{in}
-	for _, a := range lbWebServices {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpgradeLegacyEnvironment", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpgradeLegacyEnvironment indicates an expected call of UpgradeLegacyEnvironment.
-func (mr *MocklegacyEnvUpgraderMockRecorder) UpgradeLegacyEnvironment(in interface{}, lbWebServices ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{in}, lbWebServices...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeLegacyEnvironment", reflect.TypeOf((*MocklegacyEnvUpgrader)(nil).UpgradeLegacyEnvironment), varargs...)
-}
-
-// MockenvTemplateUpgrader is a mock of envTemplateUpgrader interface.
-type MockenvTemplateUpgrader struct {
-	ctrl     *gomock.Controller
-	recorder *MockenvTemplateUpgraderMockRecorder
-}
-
-// MockenvTemplateUpgraderMockRecorder is the mock recorder for MockenvTemplateUpgrader.
-type MockenvTemplateUpgraderMockRecorder struct {
-	mock *MockenvTemplateUpgrader
-}
-
-// NewMockenvTemplateUpgrader creates a new mock instance.
-func NewMockenvTemplateUpgrader(ctrl *gomock.Controller) *MockenvTemplateUpgrader {
-	mock := &MockenvTemplateUpgrader{ctrl: ctrl}
-	mock.recorder = &MockenvTemplateUpgraderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockenvTemplateUpgrader) EXPECT() *MockenvTemplateUpgraderMockRecorder {
-	return m.recorder
-}
-
-// EnvironmentTemplate mocks base method.
-func (m *MockenvTemplateUpgrader) EnvironmentTemplate(appName, envName string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentTemplate", appName, envName)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// EnvironmentTemplate indicates an expected call of EnvironmentTemplate.
-func (mr *MockenvTemplateUpgraderMockRecorder) EnvironmentTemplate(appName, envName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentTemplate", reflect.TypeOf((*MockenvTemplateUpgrader)(nil).EnvironmentTemplate), appName, envName)
-}
-
-// UpgradeEnvironment mocks base method.
-func (m *MockenvTemplateUpgrader) UpgradeEnvironment(in *deploy0.CreateEnvironmentInput) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpgradeEnvironment", in)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpgradeEnvironment indicates an expected call of UpgradeEnvironment.
-func (mr *MockenvTemplateUpgraderMockRecorder) UpgradeEnvironment(in interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeEnvironment", reflect.TypeOf((*MockenvTemplateUpgrader)(nil).UpgradeEnvironment), in)
-}
-
-// UpgradeLegacyEnvironment mocks base method.
-func (m *MockenvTemplateUpgrader) UpgradeLegacyEnvironment(in *deploy0.CreateEnvironmentInput, lbWebServices ...string) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{in}
-	for _, a := range lbWebServices {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "UpgradeLegacyEnvironment", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpgradeLegacyEnvironment indicates an expected call of UpgradeLegacyEnvironment.
-func (mr *MockenvTemplateUpgraderMockRecorder) UpgradeLegacyEnvironment(in interface{}, lbWebServices ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{in}, lbWebServices...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeLegacyEnvironment", reflect.TypeOf((*MockenvTemplateUpgrader)(nil).UpgradeLegacyEnvironment), varargs...)
 }
 
 // MockappUpgrader is a mock of appUpgrader interface.
@@ -7072,4 +6824,57 @@ func (m *MockenvDeployer) UploadArtifacts() (map[string]string, error) {
 func (mr *MockenvDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockenvDeployer)(nil).UploadArtifacts))
+}
+
+// MockenvPackager is a mock of envPackager interface.
+type MockenvPackager struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvPackagerMockRecorder
+}
+
+// MockenvPackagerMockRecorder is the mock recorder for MockenvPackager.
+type MockenvPackagerMockRecorder struct {
+	mock *MockenvPackager
+}
+
+// NewMockenvPackager creates a new mock instance.
+func NewMockenvPackager(ctrl *gomock.Controller) *MockenvPackager {
+	mock := &MockenvPackager{ctrl: ctrl}
+	mock.recorder = &MockenvPackagerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockenvPackager) EXPECT() *MockenvPackagerMockRecorder {
+	return m.recorder
+}
+
+// GenerateCloudFormationTemplate mocks base method.
+func (m *MockenvPackager) GenerateCloudFormationTemplate(in *deploy.DeployEnvironmentInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GenerateCloudFormationTemplate", in)
+	ret0, _ := ret[0].(*deploy.GenerateCloudFormationTemplateOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GenerateCloudFormationTemplate indicates an expected call of GenerateCloudFormationTemplate.
+func (mr *MockenvPackagerMockRecorder) GenerateCloudFormationTemplate(in interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCloudFormationTemplate", reflect.TypeOf((*MockenvPackager)(nil).GenerateCloudFormationTemplate), in)
+}
+
+// UploadArtifacts mocks base method.
+func (m *MockenvPackager) UploadArtifacts() (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadArtifacts")
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadArtifacts indicates an expected call of UploadArtifacts.
+func (mr *MockenvPackagerMockRecorder) UploadArtifacts() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockenvPackager)(nil).UploadArtifacts))
 }

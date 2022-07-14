@@ -7,52 +7,14 @@ package mocks
 import (
 	reflect "reflect"
 
-	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
+	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	gomock "github.com/golang/mock/gomock"
 )
-
-// MockcustomResourcesUploader is a mock of customResourcesUploader interface.
-type MockcustomResourcesUploader struct {
-	ctrl     *gomock.Controller
-	recorder *MockcustomResourcesUploaderMockRecorder
-}
-
-// MockcustomResourcesUploaderMockRecorder is the mock recorder for MockcustomResourcesUploader.
-type MockcustomResourcesUploaderMockRecorder struct {
-	mock *MockcustomResourcesUploader
-}
-
-// NewMockcustomResourcesUploader creates a new mock instance.
-func NewMockcustomResourcesUploader(ctrl *gomock.Controller) *MockcustomResourcesUploader {
-	mock := &MockcustomResourcesUploader{ctrl: ctrl}
-	mock.recorder = &MockcustomResourcesUploaderMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockcustomResourcesUploader) EXPECT() *MockcustomResourcesUploaderMockRecorder {
-	return m.recorder
-}
-
-// UploadEnvironmentCustomResources mocks base method.
-func (m *MockcustomResourcesUploader) UploadEnvironmentCustomResources(upload s3.CompressAndUploadFunc) (map[string]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UploadEnvironmentCustomResources", upload)
-	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UploadEnvironmentCustomResources indicates an expected call of UploadEnvironmentCustomResources.
-func (mr *MockcustomResourcesUploaderMockRecorder) UploadEnvironmentCustomResources(upload interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadEnvironmentCustomResources", reflect.TypeOf((*MockcustomResourcesUploader)(nil).UploadEnvironmentCustomResources), upload)
-}
 
 // MockappResourcesGetter is a mock of appResourcesGetter interface.
 type MockappResourcesGetter struct {
@@ -115,8 +77,23 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 	return m.recorder
 }
 
+// EnvironmentParameters mocks base method.
+func (m *MockenvironmentDeployer) EnvironmentParameters(app, env string) ([]*cloudformation.Parameter, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvironmentParameters", app, env)
+	ret0, _ := ret[0].([]*cloudformation.Parameter)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnvironmentParameters indicates an expected call of EnvironmentParameters.
+func (mr *MockenvironmentDeployerMockRecorder) EnvironmentParameters(app, env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentParameters", reflect.TypeOf((*MockenvironmentDeployer)(nil).EnvironmentParameters), app, env)
+}
+
 // UpdateAndRenderEnvironment mocks base method.
-func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
+func (m *MockenvironmentDeployer) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation0.StackOption) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{out, env}
 	for _, a := range opts {

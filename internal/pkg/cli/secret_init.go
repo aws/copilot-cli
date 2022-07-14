@@ -9,6 +9,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -61,19 +65,16 @@ type secretInitVars struct {
 
 type secretInitOpts struct {
 	secretInitVars
-
-	secretValues map[string]map[string]string
-
-	store store
-	fs    afero.Fs
-
-	prompter prompter
-	selector appSelector
-
 	shouldShowOverwriteHint bool
+	secretValues            map[string]map[string]string
 
-	envUpgradeCMDs map[string]actionCommand
-	secretPutters  map[string]secretPutter
+	store                   store
+	fs                      afero.Fs
+	prompter                prompter
+	selector                appSelector
+	ws                      wsEnvironmentsLister
+	envCompatibilityChecker map[string]versionCompatibilityChecker
+	secretPutters           map[string]secretPutter
 
 	configureClientsForEnv func(envName string) error
 	readFile               func() ([]byte, error)
@@ -85,6 +86,10 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
 
 	store := config.NewSSMStore(identity.New(defaultSession), awsssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 	prompter := prompt.New()
@@ -92,23 +97,25 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 		secretInitVars: vars,
 		store:          store,
 		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+		ws:             ws,
 
-		envUpgradeCMDs: make(map[string]actionCommand),
-		secretPutters:  make(map[string]secretPutter),
+		envCompatibilityChecker: make(map[string]versionCompatibilityChecker),
+		secretPutters:           make(map[string]secretPutter),
 
 		prompter: prompter,
 		selector: selector.NewAppEnvSelector(prompter, store),
 	}
 
 	opts.configureClientsForEnv = func(envName string) error {
-		cmd, err := newEnvUpgradeOpts(envUpgradeVars{
-			appName: opts.appName,
-			name:    envName,
+		checker, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         opts.appName,
+			Env:         envName,
+			ConfigStore: opts.store,
 		})
 		if err != nil {
-			return fmt.Errorf("new env upgrade command: %v", err)
+			return fmt.Errorf("new environment compatibility checker: %v", err)
 		}
-		opts.envUpgradeCMDs[envName] = cmd
+		opts.envCompatibilityChecker[envName] = checker
 
 		env, err := opts.targetEnv(envName)
 		if err != nil {
@@ -246,12 +253,13 @@ func (o *secretInitOpts) configureClientsAndUpgradeForEnvironments(secrets map[s
 		}
 	}
 
+	const minEnvVersionForSecretInit = "v1.4.0"
 	for envName := range envNames {
 		if err := o.configureClientsForEnv(envName); err != nil {
 			return err
 		}
-		if err := o.envUpgradeCMDs[envName].Execute(); err != nil {
-			return fmt.Errorf(`execute "env upgrade --app %s --name %s": %v`, o.appName, envName, err)
+		if err := validateMinEnvVersion(o.ws, o.envCompatibilityChecker[envName], o.appName, envName, minEnvVersionForSecretInit, "secret init"); err != nil {
+			return err
 		}
 	}
 	return nil

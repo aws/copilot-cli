@@ -219,7 +219,7 @@ func TestJobRun_Execute(t *testing.T) {
 				m.EXPECT().Version().Return("v1.11.0", nil)
 				return m
 			},
-			wantedError: errors.New(`environment template version "v1.11.0" does not support running jobs`),
+			wantedError: errors.New(`environment "test" is on version "v1.11.0" which does not support the "job run" feature`),
 		},
 	}
 

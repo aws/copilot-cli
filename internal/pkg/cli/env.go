@@ -4,10 +4,29 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/aws/copilot-cli/cmd/copilot/template"
 	"github.com/aws/copilot-cli/internal/pkg/cli/group"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/semver"
 )
+
+func validateMinEnvVersion(ws wsEnvironmentsLister, checker versionCompatibilityChecker, app, env, minWantedVersion, friendlyFeatureName string) error {
+	version, err := checker.Version()
+	if err != nil {
+		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", env, app, err)
+	}
+	if semver.Compare(version, minWantedVersion) < 0 {
+		return &errFeatureIncompatibleWithEnvironment{
+			ws:             ws,
+			missingFeature: friendlyFeatureName,
+			envName:        env,
+			curVersion:     version,
+		}
+	}
+	return nil
+}
 
 // BuildEnvCmd is the top level command for environments.
 func BuildEnvCmd() *cobra.Command {
@@ -25,6 +44,7 @@ Environments are deployment stages shared between services.`,
 	cmd.AddCommand(buildEnvShowCmd())
 	cmd.AddCommand(buildEnvUpgradeCmd())
 	cmd.AddCommand(buildEnvDeployCmd())
+	cmd.AddCommand(buildEnvPkgCmd())
 	cmd.SetUsageTemplate(template.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.Develop,

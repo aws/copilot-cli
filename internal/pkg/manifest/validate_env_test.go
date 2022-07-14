@@ -232,14 +232,14 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New(`validate "subnets": public[0] must include "id" field if the vpc is imported`),
+			wantedErr: errors.New(`validate "subnets" for an imported VPC: validate public[0]: "id" must be specified`),
 		},
 		"error if importing vpc while no subnet is imported": {
 			in: environmentVPCConfig{
 				ID:      aws.String("vpc-1234"),
 				Subnets: subnetsConfiguration{},
 			},
-			wantedErr: errors.New(`validate "subnets": VPC must have subnets in order to proceed with environment creation`),
+			wantedErr: errors.New(`validate "subnets" for an imported VPC: VPC must have subnets in order to proceed with environment creation`),
 		},
 		"error if importing vpc while only one private subnet is imported": {
 			in: environmentVPCConfig{
@@ -260,7 +260,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New(`validate "subnets": validate "public": at least two public subnets must be imported to enable Load Balancing`),
+			wantedErr: errors.New(`validate "subnets" for an imported VPC: validate "public": at least two public subnets must be imported to enable Load Balancing`),
 		},
 		"error if importing vpc while only one public subnet is imported": {
 			in: environmentVPCConfig{
@@ -281,7 +281,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New(`validate "subnets": validate "private": at least two private subnets must be imported`),
+			wantedErr: errors.New(`validate "subnets" for an imported VPC: validate "private": at least two private subnets must be imported`),
 		},
 		"error if configuring vpc without enough azs": {
 			in: environmentVPCConfig{
@@ -309,7 +309,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New(`validate "subnets": require at least 2 availability zones`),
+			wantedErr: errors.New(`validate "subnets" for an adjusted VPC: require at least 2 availability zones`),
 		},
 		"error if configuring vpc while some subnets are imported": {
 			in: environmentVPCConfig{
@@ -326,7 +326,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New(`validate "subnets": public[1] must include "cidr" and "az" fields if the vpc is configured`),
+			wantedErr: errors.New(`validate "subnets" for an adjusted VPC: validate public[1]: "cidr" must be specified`),
 		},
 		"error if configuring vpc while azs do not match between private and public subnets": {
 			in: environmentVPCConfig{
@@ -354,7 +354,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New("validate \"subnets\": public subnets and private subnets do not span the same availability zones"),
+			wantedErr: errors.New("validate \"subnets\" for an adjusted VPC: public subnets and private subnets do not span the same availability zones"),
 		},
 		"error if configuring vpc while the number of public subnet CIDR does not match the number of azs": {
 			in: environmentVPCConfig{
@@ -386,7 +386,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New(`validate "subnets": validate "public": number of public subnet CIDRs (3) does not match number of AZs (2)`),
+			wantedErr: errors.New(`validate "subnets" for an adjusted VPC: validate "public": number of public subnet CIDRs (3) does not match number of AZs (2)`),
 		},
 		"error if configuring vpc while the number of private subnet CIDR does not match the number of azs": {
 			in: environmentVPCConfig{
@@ -418,7 +418,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErr: errors.New(`validate "subnets": validate "private": number of private subnet CIDRs (3) does not match number of AZs (2)`),
+			wantedErr: errors.New(`validate "subnets" for an adjusted VPC: validate "private": number of private subnet CIDRs (3) does not match number of AZs (2)`),
 		},
 		"succeed on imported vpc": {
 			in: environmentVPCConfig{
@@ -443,7 +443,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 				},
 			},
 		},
-		"succeed on managed vpc": {
+		"succeed on managed vpc that is fully adjusted ": {
 			in: environmentVPCConfig{
 				CIDR: &mockVPCCIDR,
 				Subnets: subnetsConfiguration{
@@ -473,6 +473,35 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 						{
 							CIDR: &mockPrivateSubnet3CIDR,
 							AZ:   aws.String("us-east-2c"),
+						},
+					},
+				},
+			},
+		},
+		"succeed on managed vpc that does not adjust az": {
+			in: environmentVPCConfig{
+				CIDR: &mockVPCCIDR,
+				Subnets: subnetsConfiguration{
+					Public: []subnetConfiguration{
+						{
+							CIDR: &mockPublicSubnet1CIDR,
+						},
+						{
+							CIDR: &mockPublicSubnet2CIDR,
+						},
+						{
+							CIDR: &mockPublicSubnet3CIDR,
+						},
+					},
+					Private: []subnetConfiguration{
+						{
+							CIDR: &mockPrivateSubnet1CIDR,
+						},
+						{
+							CIDR: &mockPrivateSubnet2CIDR,
+						},
+						{
+							CIDR: &mockPrivateSubnet3CIDR,
 						},
 					},
 				},

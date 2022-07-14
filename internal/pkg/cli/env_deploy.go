@@ -30,23 +30,21 @@ type deployEnvOpts struct {
 	deployEnvVars
 
 	// Dependencies.
-	store store
+	store           store
+	sessionProvider *sessions.Provider
 
 	// Dependencies to ask.
 	sel wsEnvironmentSelector
 
 	// Dependencies to execute.
-	ws             wsEnvironmentReader
-	identity       identityService
-	interpolator   interpolator
-	newEnvDeployer func() (envDeployer, error)
+	ws              wsEnvironmentReader
+	identity        identityService
+	newInterpolator func(app, env string) interpolator
+	newEnvDeployer  func() (envDeployer, error)
 
 	// Cached variables.
 	targetApp *config.Application
 	targetEnv *config.Environment
-
-	// Functions to facilitate testing.
-	unmarshalManifest func(in []byte) (*manifest.Environment, error)
 }
 
 func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
@@ -63,31 +61,34 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 	opts := &deployEnvOpts{
 		deployEnvVars: vars,
 
-		store: store,
-		sel:   selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
+		store:           store,
+		sessionProvider: sessProvider,
+		sel:             selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
 
-		ws:           ws,
-		identity:     identity.New(defaultSess),
-		interpolator: manifest.NewInterpolator(vars.appName, vars.name),
-
-		unmarshalManifest: manifest.UnmarshalEnvironment,
+		ws:              ws,
+		identity:        identity.New(defaultSess),
+		newInterpolator: newManifestInterpolator,
 	}
 	opts.newEnvDeployer = func() (envDeployer, error) {
-		app, err := opts.cachedTargetApp()
-		if err != nil {
-			return nil, err
-		}
-		env, err := opts.cachedTargetEnv()
-		if err != nil {
-			return nil, err
-		}
-		return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
-			App:             app,
-			Env:             env,
-			SessionProvider: sessProvider,
-		})
+		return newEnvDeployer(opts)
 	}
 	return opts, nil
+}
+
+func newEnvDeployer(opts *deployEnvOpts) (envDeployer, error) {
+	app, err := opts.cachedTargetApp()
+	if err != nil {
+		return nil, err
+	}
+	env, err := opts.cachedTargetEnv()
+	if err != nil {
+		return nil, err
+	}
+	return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
+		App:             app,
+		Env:             env,
+		SessionProvider: opts.sessionProvider,
+	})
 }
 
 // Validate is a no-op for this command.
@@ -109,7 +110,11 @@ func (o *deployEnvOpts) Ask() error {
 
 // Execute deploys an environment given a manifest.
 func (o *deployEnvOpts) Execute() error {
-	mft, err := o.environmentManifest()
+	rawMft, err := o.ws.ReadEnvironmentManifest(o.name)
+	if err != nil {
+		return fmt.Errorf("read manifest for environment %q: %w", o.name, err)
+	}
+	mft, err := environmentManifest(o.name, rawMft, o.newInterpolator(o.appName, o.name))
 	if err != nil {
 		return err
 	}
@@ -129,31 +134,24 @@ func (o *deployEnvOpts) Execute() error {
 		RootUserARN:         caller.RootUserARN,
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
+		RawManifest:         rawMft,
 	}); err != nil {
 		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
 	return nil
 }
 
-func (o *deployEnvOpts) environmentManifest() (*manifest.Environment, error) {
-	targetEnv, err := o.cachedTargetEnv()
+func environmentManifest(envName string, rawMft []byte, transformer interpolator) (*manifest.Environment, error) {
+	interpolated, err := transformer.Interpolate(string(rawMft))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("interpolate environment variables for %q manifest: %w", envName, err)
 	}
-	raw, err := o.ws.ReadEnvironmentManifest(targetEnv.Name)
+	mft, err := manifest.UnmarshalEnvironment([]byte(interpolated))
 	if err != nil {
-		return nil, fmt.Errorf("read manifest for environment %s: %w", targetEnv.Name, err)
-	}
-	interpolated, err := o.interpolator.Interpolate(string(raw))
-	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", targetEnv.Name, err)
-	}
-	mft, err := o.unmarshalManifest([]byte(interpolated))
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal environment manifest for %s: %w", targetEnv.Name, err)
+		return nil, fmt.Errorf("unmarshal environment manifest for %q: %w", envName, err)
 	}
 	if err := mft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate environment manifest for %s: %w", targetEnv.Name, err)
+		return nil, fmt.Errorf("validate environment manifest for %q: %w", envName, err)
 	}
 	return mft, nil
 }
@@ -167,7 +165,7 @@ func (o *deployEnvOpts) validateOrAskEnvName() error {
 		}
 		return nil
 	}
-	name, err := o.sel.LocalEnvironment("Select an environment in your workspace", "")
+	name, err := o.sel.LocalEnvironment("Select an environment manifest from your workspace", "")
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}
@@ -207,7 +205,6 @@ func buildEnvDeployCmd() *cobra.Command {
 		Example: `
 Deploy an environment named "test".
 /code $copilot env deploy --name test`,
-		Hidden: true,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newEnvDeployOpts(vars)
 			if err != nil {
