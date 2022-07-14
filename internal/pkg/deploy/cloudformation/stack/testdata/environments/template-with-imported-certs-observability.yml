@@ -1004,4 +1004,4 @@ Outputs:
       Name: !Sub ${AWS::StackName}-FilesystemID
   LastForceDeployID:
     Value: ""
-    Description: Optionally force the stack to update when no immediate resource change is present.
+    Description: Optionally force the template to update when no immediate resource change is present.
