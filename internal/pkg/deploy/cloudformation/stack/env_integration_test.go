@@ -6,7 +6,6 @@
 package stack_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -103,7 +102,6 @@ type: Environment`
 			envStack := stack.NewEnvStackConfig(tc.input)
 			actual, err := envStack.Template()
 			require.NoError(t, err, "serialize template")
-			fmt.Println(actual)
 			actualObj := make(map[any]any)
 			require.NoError(t, yaml.Unmarshal([]byte(actual), actualObj))
 			actualMetadata := actualObj["Metadata"].(map[string]any) // We remove the Version from the expected template, as the latest env version always changes.
