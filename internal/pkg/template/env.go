@@ -104,11 +104,11 @@ type EnvOpts struct {
 	AllowVPCIngress          bool
 	Telemetry                *Telemetry
 	SecurityGroupConfig      *SecurityGroupConfig
-	LatestVersion            string
-	Manifest                 string // Serialized manifest used to render the environment template.
 
-	CDNConfig          *CDNConfig // If nil, no cdn is to be used
-	SerializedManifest string     // Serialized manifest used to render the environment template.
+	CDNConfig *CDNConfig // If nil, no cdn is to be used
+
+	LatestVersion      string
+	SerializedManifest string // Serialized manifest used to render the environment template.
 }
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.

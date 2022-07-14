@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"gopkg.in/yaml.v3"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"

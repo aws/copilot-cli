@@ -64,19 +64,16 @@ observability:
 
 		"generate template with embedded manifest file with custom security groups rules added by the customer": {
 			input: func() *deploy.CreateEnvironmentInput {
-				var mft manifest.Environment
-				err := yaml.Unmarshal([]byte(`
-name: test
+				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
-# All these comments should be deleted.
 http:
   public:
     certificates:
       - cert-1
       - cert-2
 observability:
-    container_insights: true # Enable container insights.
+  container_insights: true # Enable container insights.
 network:
   vpc:
     security_group:
@@ -87,8 +84,9 @@ network:
       egress:
         ip_protocol: tcp
         from_port: 0
-        to_port: 65535`), &mft)
-
+        to_port: 65535`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
 				return &deploy.CreateEnvironmentInput{
 					Version: "1.x",
@@ -106,6 +104,7 @@ network:
 					},
 					AllowVPCIngress: true,
 					Mft:             &mft,
+					RawMft:          []byte(rawMft),
 				}
 			}(),
 

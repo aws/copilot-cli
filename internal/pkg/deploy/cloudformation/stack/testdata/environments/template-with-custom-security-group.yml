@@ -2,13 +2,28 @@
 # SPDX-License-Identifier: MIT-0
 Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
-  Manifest: |
-    name: test
-    type: Environment
-    network: {vpc: {id: null, cidr: null, security_group: {ingress: {ip_protocol: tcp, from_port: 0, to_port: 65535}, egress: {ip_protocol: tcp, from_port: 0, to_port: 65535}}}}
-    observability: {container_insights: true}
-    http: {public: {certificates: [cert-1, cert-2]}}
-
+    Manifest: |
+      name: test
+      type: Environment
+      # Create the public ALB with certificates attached.
+      http:
+        public:
+          certificates:
+            - cert-1
+            - cert-2
+      observability:
+        container_insights: true # Enable container insights.
+      network:
+        vpc:
+          security_group:
+            ingress:
+              ip_protocol: tcp
+              from_port: 0
+              to_port: 65535
+            egress:
+              ip_protocol: tcp
+              from_port: 0
+              to_port: 65535
 Parameters:
   AppName:
     Type: String
