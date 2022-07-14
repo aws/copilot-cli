@@ -6,7 +6,7 @@ Metadata:
     name: test
     type: Environment
     observability: {container_insights: true}
-    http: {public: {certificates: [cert-1, cert-2]}}
+    http: {public: {certificates: [cert-1, cert-2]}, private: {security_groups: {allow_vpc_ingress: true}}}
 
 Parameters:
   AppName:

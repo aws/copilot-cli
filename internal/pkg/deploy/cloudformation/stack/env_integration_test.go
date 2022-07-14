@@ -37,6 +37,9 @@ http:
     certificates:
       - cert-1
       - cert-2
+  private:
+    security_groups:
+      allow_vpc_ingress: true
 observability:
     container_insights: true # Enable container insights.
 `), &mft)
@@ -55,8 +58,7 @@ observability:
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					AllowVPCIngress: true,
-					Mft:             &mft,
+					Mft: &mft,
 				}
 			}(),
 			wantedFileName: "template-with-imported-certs-observability.yml",
@@ -83,8 +85,7 @@ type: Environment
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					AllowVPCIngress: true,
-					Mft:             &mft,
+					Mft: &mft,
 				}
 			}(),
 			wantedFileName: "template-with-basic-manifest.yml",
