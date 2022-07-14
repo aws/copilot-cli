@@ -115,7 +115,7 @@ HTTPListenerRuleWithDomain:
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPRulePriorityAction.Priority # Same priority as HTTPS Listener
+    Priority: !GetAtt HTTPRulePriorityAction.Priority
 
 HTTPSListenerRule:
   Metadata:
