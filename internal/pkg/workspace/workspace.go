@@ -78,7 +78,6 @@ func New() (*Workspace, error) {
 	fsUtils := &afero.Afero{Fs: fs}
 	logger := log.Infof
 
-	// note: Getwd returns an absolute path.
 	workingDirAbs, err := os.Getwd()
 	if err != nil {
 		return nil, err
