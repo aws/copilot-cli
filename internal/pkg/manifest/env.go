@@ -84,9 +84,9 @@ func (e *Environment) MarshalBinary() ([]byte, error) {
 }
 
 type environmentConfig struct {
-	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
-	Observability environmentObservability `yaml:"observability,omitempty,flow"`
-	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty,flow"`
+	Network       environmentNetworkConfig `yaml:"network,omitempty"`
+	Observability environmentObservability `yaml:"observability,omitempty"`
+	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty"`
 	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
@@ -289,9 +289,9 @@ func (cs subnetsConfiguration) IsEmpty() bool {
 }
 
 type subnetConfiguration struct {
-	SubnetID *string `yaml:"id"`
-	CIDR     *IPNet  `yaml:"cidr"`
-	AZ       *string `yaml:"az"`
+	SubnetID *string `yaml:"id,omitempty"`
+	CIDR     *IPNet  `yaml:"cidr,omitempty"`
+	AZ       *string `yaml:"az,omitempty"`
 }
 
 type environmentObservability struct {
