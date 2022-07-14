@@ -752,10 +752,7 @@ func (o *initPipelineOpts) createPipelineManifest(stages []manifest.PipelineStag
 		o.manifestPath = e.FileName
 	}
 
-	// Rel might give us a path not relative to the current working directory.
-	// So we want a path relative to the current working directory to display to the
-	// user.
-	manifestPathDisplay, err := o.pathDisplayer.DisplayPath(o.manifestPath)
+	mftPath, err := o.pathDisplayer.DisplayPath(o.manifestPath)
 	if err != nil {
 		return err
 	}
@@ -768,9 +765,9 @@ func (o *initPipelineOpts) createPipelineManifest(stages []manifest.PipelineStag
 	if manifestExists {
 		log.Infof(`Pipeline manifest file for %s already exists at %s, skipping writing it.
 Previously set repository URL, branch, and environment stages will remain.
-`, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPathDisplay))
+`, color.HighlightUserInput(o.repoName), color.HighlightResource(mftPath))
 	} else {
-		log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPathDisplay))
+		log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(o.repoName), color.HighlightResource(mftPath))
 	}
 	log.Debug(`The manifest contains configurations for your pipeline.
 Update the file to add stages, change the tracked branch, add test commands or manual approval actions.
