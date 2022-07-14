@@ -4,10 +4,12 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
@@ -133,6 +135,13 @@ func (o *deployEnvOpts) Execute() error {
 		Manifest:            mft,
 		ForceNewUpdate:      o.forceNewUpdate,
 	}); err != nil {
+		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
+		if errors.As(err, &errEmptyChangeSet) {
+			log.Errorf(`It seems like your update does not introduce immediate resource changes. 
+This may because the resources being modified are not created yet until deemed necessary by the services in your environment.
+In this case, you can try %s. This will deploy the modified template, even if there is no immediate changes.
+`, color.HighlightCode("copilot env deploy --force"))
+		}
 		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
 	return nil
