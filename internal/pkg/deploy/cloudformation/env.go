@@ -272,7 +272,7 @@ func (cf CloudFormation) waitAndDescribeStack(stackName string) (*cloudformation
 		break
 	}
 	cf.cachedDeployedStack = stackDescription
-	return stackDescription, err
+	return cf.cachedDeployedStack, err
 }
 
 // transformParameters removes or transforms each of the current parameters and does not add any new parameters.
@@ -303,29 +303,4 @@ func (cf CloudFormation) transformParameters(
 		}
 	}
 	return params, nil
-}
-
-// transformEnvControllerParameters transforms a parameter such that it uses its previous value if:
-// 1. The parameter exists in the old template.
-// 2. The parameter is env-controller managed.
-// Otherwise, it returns the parameter untouched.
-func transformEnvControllerParameters(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
-	if old == nil { // The ParamKey doesn't exist in the old stack, use the new value.
-		return &new
-	}
-
-	var (
-		isEnvControllerManaged = make(map[string]struct{})
-		exists                 = struct{}{}
-	)
-	for _, f := range template.AvailableEnvFeatures() {
-		isEnvControllerManaged[f] = exists
-	}
-	if _, ok := isEnvControllerManaged[aws.StringValue(new.ParameterKey)]; !ok {
-		return &new
-	}
-	return &awscfn.Parameter{
-		ParameterKey:     new.ParameterKey,
-		UsePreviousValue: aws.Bool(true),
-	}
 }
