@@ -69,15 +69,6 @@ func (cf CloudFormation) UpdateAndRenderEnvironmentF(out progress.FileWriter, co
 
 // UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
 func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, conf StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error {
-	// forceOutputID, err := cf.ForceUpdateOutputID(env.App.Name, env.Name)
-	// if err != nil {
-	// 	return err
-	// }
-	// descr, err := cf.waitAndDescribeStack(stack.NameForEnv(env.App.Name, env.Name))
-	// if err != nil {
-	// 	return err
-	// }
-	// cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvConfigFromExistingStack(env, forceOutputID, descr.Parameters))
 	cfnStack, err := cf.toUploadedStack(bucketARN, conf)
 	if err != nil {
 		return err
@@ -85,12 +76,6 @@ func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, con
 	for _, opt := range opts {
 		opt(cfnStack)
 	}
-	// params, err := cf.transformParameters(cfnStack.Parameters, descr.Parameters, transformEnvControllerParameters)
-	// if err != nil {
-	// 	return err
-	// }
-	// cfnStack.Parameters = params
-
 	in := newRenderEnvironmentInput(out, cfnStack)
 	in.createChangeSet = func() (changeSetID string, err error) {
 		spinner := progress.NewSpinner(out)
