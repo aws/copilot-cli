@@ -172,8 +172,7 @@ func (s *WorkerService) Parameters() ([]*cloudformation.Parameter, error) {
 	}), nil
 }
 
-// SerializedParameters returns the CloudFormation stack's parameters serialized
-// to a YAML document annotated with comments for readability to users.
+// SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
 func (s *WorkerService) SerializedParameters() (string, error) {
-	return s.templateConfiguration(s)
+	return serializeTemplateConfig(s.wkld.parser, s)
 }

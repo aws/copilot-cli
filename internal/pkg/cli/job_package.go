@@ -5,7 +5,6 @@ package cli
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -91,8 +90,8 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			stackWriter:      os.Stdout,
 			unmarshal:        manifest.UnmarshalWorkload,
 			newInterpolator:  newManifestInterpolator,
-			paramsWriter:     ioutil.Discard,
-			addonsWriter:     ioutil.Discard,
+			paramsWriter:     discardFile{},
+			addonsWriter:     discardFile{},
 			fs:               &afero.Afero{Fs: afero.NewOsFs()},
 			sessProvider:     sessProvider,
 			newTplGenerator:  newWkldTplGenerator,
@@ -176,16 +175,18 @@ func buildJobPackageCmd() *cobra.Command {
 	vars := packageJobVars{}
 	cmd := &cobra.Command{
 		Use:   "package",
-		Short: "Prints the AWS CloudFormation template of a job.",
-		Long:  `Prints the CloudFormation template used to deploy a job to an environment.`,
+		Short: "Print the AWS CloudFormation template of a job.",
+		Long:  `Print the CloudFormation template used to deploy a job to an environment.`,
 		Example: `
   Print the CloudFormation template for the "report-generator" job parametrized for the "test" environment.
   /code $ copilot job package -n report-generator -e test
 
   Write the CloudFormation stack and configuration to a "infrastructure/" sub-directory instead of printing.
-  /code $ copilot job package -n report-generator -e test --output-dir ./infrastructure
-  /code $ ls ./infrastructure
-  /code report-generator-test.stack.yml      report-generator-test.params.yml`,
+  /startcodeblock
+  $ copilot job package -n report-generator -e test --output-dir ./infrastructure
+  $ ls ./infrastructure
+  report-generator-test.stack.yml      report-generator-test.params.yml
+  /endcodeblock`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newPackageJobOpts(vars)
 			if err != nil {

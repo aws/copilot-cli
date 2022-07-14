@@ -23,7 +23,7 @@ var _ = Describe("Task", func() {
 		})
 	})
 
-	Context("when creating a new environment", func() {
+	Context("when adding a new environment", func() {
 		var (
 			err error
 		)
@@ -38,6 +38,20 @@ var _ = Describe("Task", func() {
 
 		It("env init should succeed", func() {
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("when deploying the environment", func() {
+		var envDeployErr error
+		BeforeAll(func() {
+			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    envName,
+			})
+		})
+
+		It("should succeed", func() {
+			Expect(envDeployErr).NotTo(HaveOccurred())
 		})
 	})
 

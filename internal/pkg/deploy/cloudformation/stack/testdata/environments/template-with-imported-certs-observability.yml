@@ -5,10 +5,18 @@ Metadata:
   Manifest: |
     name: test
     type: Environment
-    observability: {container_insights: true}
-    http: {public: {ingress: {from_cdn: true}, certificates: [cert-1, cert-2]}}
-    cdn: {enabled: true, cdnconfig: {}}
-
+    # Create the public ALB with certificates attached.
+    cdn: true
+    http:
+      public:
+        security_group:
+          ingress:
+            from_cdn: true
+        certificates:
+          - cert-1
+          - cert-2
+    observability:
+      container_insights: true # Enable container insights.
 Parameters:
   AppName:
     Type: String
