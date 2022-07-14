@@ -2427,31 +2427,31 @@ func (mr *MockpathDisplayerMockRecorder) DisplayPath(path interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisplayPath", reflect.TypeOf((*MockpathDisplayer)(nil).DisplayPath), path)
 }
 
-// MockwsPathRelativizer is a mock of wsPathRelativizer interface.
-type MockwsPathRelativizer struct {
+// MockrelPath is a mock of relPath interface.
+type MockrelPath struct {
 	ctrl     *gomock.Controller
-	recorder *MockwsPathRelativizerMockRecorder
+	recorder *MockrelPathMockRecorder
 }
 
-// MockwsPathRelativizerMockRecorder is the mock recorder for MockwsPathRelativizer.
-type MockwsPathRelativizerMockRecorder struct {
-	mock *MockwsPathRelativizer
+// MockrelPathMockRecorder is the mock recorder for MockrelPath.
+type MockrelPathMockRecorder struct {
+	mock *MockrelPath
 }
 
-// NewMockwsPathRelativizer creates a new mock instance.
-func NewMockwsPathRelativizer(ctrl *gomock.Controller) *MockwsPathRelativizer {
-	mock := &MockwsPathRelativizer{ctrl: ctrl}
-	mock.recorder = &MockwsPathRelativizerMockRecorder{mock}
+// NewMockrelPath creates a new mock instance.
+func NewMockrelPath(ctrl *gomock.Controller) *MockrelPath {
+	mock := &MockrelPath{ctrl: ctrl}
+	mock.recorder = &MockrelPathMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockwsPathRelativizer) EXPECT() *MockwsPathRelativizerMockRecorder {
+func (m *MockrelPath) EXPECT() *MockrelPathMockRecorder {
 	return m.recorder
 }
 
 // Rel mocks base method.
-func (m *MockwsPathRelativizer) Rel(path string) (string, error) {
+func (m *MockrelPath) Rel(path string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Rel", path)
 	ret0, _ := ret[0].(string)
@@ -2460,9 +2460,9 @@ func (m *MockwsPathRelativizer) Rel(path string) (string, error) {
 }
 
 // Rel indicates an expected call of Rel.
-func (mr *MockwsPathRelativizerMockRecorder) Rel(path interface{}) *gomock.Call {
+func (mr *MockrelPathMockRecorder) Rel(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockwsPathRelativizer)(nil).Rel), path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockrelPath)(nil).Rel), path)
 }
 
 // MockwsPipelineIniter is a mock of wsPipelineIniter interface.

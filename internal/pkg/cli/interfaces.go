@@ -264,21 +264,16 @@ type pathDisplayer interface {
 	DisplayPath(path string) (string, error)
 }
 
-type wsPathRelativizer interface {
-	// Rel returns the path relative to the workspace root.
-	// The input path is allowed to be either relative to the current
-	// working directory or absolute.
+type relPath interface {
+	// Rel returns the path relative from the object's root path to the target path.
 	//
-	// This is useful for storing a file path in configuration.
-	//
-	// Prefer another function for displaying a path to a user, as the
-	// workspace directory might be different from the current working
-	// directory.
+	// Unlike filepath.Rel, the input path is allowed to be either relative to the
+	// current working directory or absolute.
 	Rel(path string) (string, error)
 }
 
 type wsPipelineIniter interface {
-	wsPathRelativizer
+	relPath
 	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error)
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error)
 	ListPipelines() ([]workspace.PipelineManifest, error)
@@ -327,7 +322,7 @@ type wsEnvironmentReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
-	wsPathRelativizer
+	relPath
 }
 
 type wsPipelineGetter interface {
