@@ -277,11 +277,11 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 1. Write environment manifest.
-	mftDisplayedPath, err := o.writeManifest()
+	path, err := o.writeManifest()
 	if err != nil {
 		return err
 	}
-	o.mftDisplayedPath = mftDisplayedPath
+	o.mftDisplayedPath = path
 
 	// 2. Perform DNS delegation from app to env.
 	if app.Domain != "" {
