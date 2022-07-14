@@ -10,8 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"gopkg.in/yaml.v3"
-
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -87,14 +85,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 		return "", err
 	}
 
-	var mft string
-	if e.in.Mft != nil {
-		out, err := yaml.Marshal(e.in.Mft)
-		if err != nil {
-			return "", fmt.Errorf("marshal environment manifest to embed in template: %v", err)
-		}
-		mft = string(out)
-	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:                  e.in.App.Name,
 		EnvName:                  e.in.Name,
@@ -111,7 +101,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 
 		Version:            e.in.Version,
 		LatestVersion:      deploy.LatestEnvTemplateVersion,
-		SerializedManifest: mft,
+		SerializedManifest: string(e.in.RawMft),
 	}, template.WithFuncs(map[string]interface{}{
 		"inc":      template.IncFunc,
 		"fmtSlice": template.FmtSliceFunc,
