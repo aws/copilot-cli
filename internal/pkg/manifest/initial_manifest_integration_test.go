@@ -373,6 +373,7 @@ func TestPipelineManifest_InitialManifest_Integration(t *testing.T) {
 						"deploy-env": &Deployment{
 							TemplatePath:   "infrastructure/test.env.yml",
 							TemplateConfig: "infrastructure/test.env.params.json",
+							StackName:      "app-test",
 						},
 					},
 				},
@@ -382,6 +383,7 @@ func TestPipelineManifest_InitialManifest_Integration(t *testing.T) {
 						"deploy-env": &Deployment{
 							TemplatePath:   "infrastructure/prod.env.yml",
 							TemplateConfig: "infrastructure/prod.env.params.json",
+							StackName:      "app-prod",
 						},
 					},
 				},
