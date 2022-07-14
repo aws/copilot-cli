@@ -191,33 +191,3 @@ func (cf CloudFormation) cachedStack(stackName string) (*cloudformation.StackDes
 	cf.cachedDeployedStack = stackDescr
 	return cf.cachedDeployedStack, nil
 }
-
-// transformParameters removes or transforms each of the current parameters and does not add any new parameters.
-// This means that parameters that exist only in the old template are left out.
-// The parameter`transform` is a function that transform a parameter, given its value in the new template and the old template.
-// If `old` is `nil`, the parameter does not exist in the old template.
-// `transform` should return `nil` if caller intends to delete the parameter.
-func (cf CloudFormation) transformParameters(
-	currParams []*awscfn.Parameter,
-	oldParams []*awscfn.Parameter,
-	transform func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter) ([]*awscfn.Parameter, error) {
-
-	// Make a map out of `currParams` and out of `oldParams`.
-	curr := make(map[string]awscfn.Parameter)
-	for _, p := range currParams {
-		curr[aws.StringValue(p.ParameterKey)] = *p
-	}
-	old := make(map[string]*awscfn.Parameter)
-	for _, p := range oldParams {
-		old[aws.StringValue(p.ParameterKey)] = p
-	}
-
-	// Remove or transform each of the current parameters.
-	var params []*awscfn.Parameter
-	for k, p := range curr {
-		if transformed := transform(p, old[k]); transformed != nil {
-			params = append(params, transformed)
-		}
-	}
-	return params, nil
-}
