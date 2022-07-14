@@ -427,6 +427,9 @@ http:
         certificates:
             - cert-1
             - cert-2
+    private:
+        security_groups:
+            allow_vpc_ingress: false
 `,
 			wantedStruct: &Environment{
 				Workload: Workload{
@@ -437,6 +440,11 @@ http:
 					HTTPConfig: environmentHTTPConfig{
 						Public: publicHTTPConfig{
 							Certificates: []string{"cert-1", "cert-2"},
+						},
+						Private: privateHTTPConfig{
+							SecurityGroupsConfig: securityGroupsConfig{
+								AllowVPCIngress: aws.Bool(false),
+							},
 						},
 					},
 				},

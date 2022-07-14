@@ -336,11 +336,20 @@ func (cfg publicHTTPConfig) IsEmpty() bool {
 }
 
 type privateHTTPConfig struct {
-	InternalALBSubnets []string `yaml:"subnets,omitempty"`
-	Certificates       []string `yaml:"certificates,omitempty"`
+	InternalALBSubnets   []string             `yaml:"subnets,omitempty"`
+	Certificates         []string             `yaml:"certificates,omitempty"`
+	SecurityGroupsConfig securityGroupsConfig `yaml:"security_groups,omitempty"`
 }
 
 // IsEmpty returns true if there is no customization to the internal ALB.
 func (cfg privateHTTPConfig) IsEmpty() bool {
-	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0
+	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0 && cfg.SecurityGroupsConfig.isEmpty()
+}
+
+type securityGroupsConfig struct {
+	AllowVPCIngress *bool `yaml:"allow_vpc_ingress"`
+}
+
+func (cfg securityGroupsConfig) isEmpty() bool {
+	return cfg.AllowVPCIngress == nil
 }
