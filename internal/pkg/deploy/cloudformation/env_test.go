@@ -416,12 +416,14 @@ func TestCloudFormation_EnvironmentParameters(t *testing.T) {
 			},
 		},
 		"should return the error as is from a failed stack description": {
+			inAppName: "phonetool",
+			inEnvName: "test",
 			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().Describe(gomock.Any()).Return(nil, errors.New("some error"))
 				return m
 			},
-			wantedErr: errors.New("some error"),
+			wantedErr: errors.New("describe stack phonetool-test: some error"),
 		},
 	}
 

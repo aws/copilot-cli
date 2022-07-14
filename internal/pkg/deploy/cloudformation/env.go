@@ -109,7 +109,7 @@ func (cf CloudFormation) EnvironmentTemplate(appName, envName string) (string, e
 
 // ForceUpdateOutputID returns the environment stack's last force update ID.
 func (cf CloudFormation) ForceUpdateOutputID(app, env string) (string, error) {
-	stackDescr, err := cf.waitAndDescribeStack(stack.NameForEnv(app, env))
+	stackDescr, err := cf.cachedStack(stack.NameForEnv(app, env))
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +123,7 @@ func (cf CloudFormation) ForceUpdateOutputID(app, env string) (string, error) {
 
 // EnvironmentParameters returns the environment stack's parameters.
 func (cf CloudFormation) EnvironmentParameters(appName, envName string) ([]*awscfn.Parameter, error) {
-	out, err := cf.cfnClient.Describe(stack.NameForEnv(appName, envName))
+	out, err := cf.cachedStack(stack.NameForEnv(appName, envName))
 	if err != nil {
 		return nil, err
 	}
@@ -250,9 +250,6 @@ func (cf CloudFormation) toUploadedStack(artifactBucketARN string, stackConfig S
 }
 
 func (cf CloudFormation) waitAndDescribeStack(stackName string) (*cloudformation.StackDescription, error) {
-	if cf.cachedDeployedStack != nil {
-		return cf.cachedDeployedStack, nil
-	}
 	var (
 		stackDescription *cloudformation.StackDescription
 		err              error
@@ -271,8 +268,19 @@ func (cf CloudFormation) waitAndDescribeStack(stackName string) (*cloudformation
 		}
 		break
 	}
-	cf.cachedDeployedStack = stackDescription
-	return cf.cachedDeployedStack, err
+	return stackDescription, err
+}
+
+func (cf CloudFormation) cachedStack(stackName string) (*cloudformation.StackDescription, error) {
+	if cf.cachedDeployedStack != nil {
+		return cf.cachedDeployedStack, nil
+	}
+	stackDescr, err := cf.waitAndDescribeStack(stackName)
+	if err != nil {
+		return nil, err
+	}
+	cf.cachedDeployedStack = stackDescr
+	return cf.cachedDeployedStack, nil
 }
 
 // transformParameters removes or transforms each of the current parameters and does not add any new parameters.
