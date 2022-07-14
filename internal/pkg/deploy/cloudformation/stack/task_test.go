@@ -108,6 +108,10 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 			ParameterValue: aws.String("exec,some command"),
 		},
 		{
+			ParameterKey:   aws.String(taskEnvFileARN),
+			ParameterValue: aws.String("arn:aws:s3:::somebucket/manual/1638391936/env"),
+		},
+		{
 			ParameterKey:   aws.String(taskOSParamKey),
 			ParameterValue: aws.String(""),
 		},
@@ -124,6 +128,7 @@ func TestTaskStackConfig_Parameters(t *testing.T) {
 
 		Image:      "7456.dkr.ecr.us-east-2.amazonaws.com/my-task:0.1",
 		TaskRole:   "task-role",
+		EnvFileARN: "arn:aws:s3:::somebucket/manual/1638391936/env",
 		Command:    []string{"echo hooray"},
 		EntryPoint: []string{"exec", "some command"},
 	}
