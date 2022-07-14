@@ -95,8 +95,8 @@ type environmentNetworkConfig struct {
 }
 
 type environmentVPCConfig struct {
-	ID                  *string              `yaml:"id"`
-	CIDR                *IPNet               `yaml:"cidr"`
+	ID                  *string              `yaml:"id,omitempty"`
+	CIDR                *IPNet               `yaml:"cidr,omitempty"`
 	Subnets             subnetsConfiguration `yaml:"subnets,omitempty"`
 	SecurityGroupConfig SecurityGroupConfig  `yaml:"security_group"`
 }
