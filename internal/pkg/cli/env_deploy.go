@@ -205,7 +205,6 @@ func buildEnvDeployCmd() *cobra.Command {
 		Example: `
 Deploy an environment named "test".
 /code $copilot env deploy --name test`,
-		Hidden: true,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newEnvDeployOpts(vars)
 			if err != nil {
