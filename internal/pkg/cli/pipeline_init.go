@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
@@ -134,6 +136,7 @@ func (ini *envPipelineInitializer) writeManifest() error {
 				"deploy-env": &manifest.Deployment{
 					TemplatePath:   path.Join(deploy.DefaultPipelineArtifactsDir, fmt.Sprintf(envCFNTemplateNameFmt, env.Name)),
 					TemplateConfig: path.Join(deploy.DefaultPipelineArtifactsDir, fmt.Sprintf(envCFNTemplateConfigurationNameFmt, env.Name)),
+					StackName:      stack.NameForEnv(ini.cmd.appName, env.Name),
 				},
 			},
 		}
