@@ -113,7 +113,11 @@ func (o *deployEnvOpts) Ask() error {
 
 // Execute deploys an environment given a manifest.
 func (o *deployEnvOpts) Execute() error {
-	mft, err := environmentManifest(o.name, o.ws, o.newInterpolator(o.appName, o.name))
+	rawMft, err := o.ws.ReadEnvironmentManifest(o.name)
+	if err != nil {
+		return fmt.Errorf("read manifest for environment %q: %w", o.name, err)
+	}
+	mft, err := environmentManifest(o.name, rawMft, o.newInterpolator(o.appName, o.name))
 	if err != nil {
 		return err
 	}
@@ -134,6 +138,7 @@ func (o *deployEnvOpts) Execute() error {
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
 		ForceNewUpdate:      o.forceNewUpdate,
+		RawManifest:         rawMft,
 	}); err != nil {
 		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 		if errors.As(err, &errEmptyChangeSet) {
@@ -147,12 +152,8 @@ In this case, you can try %s. This will deploy the modified template, even if th
 	return nil
 }
 
-func environmentManifest(envName string, ws wsEnvironmentReader, transformer interpolator) (*manifest.Environment, error) {
-	raw, err := ws.ReadEnvironmentManifest(envName)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest for environment %q: %w", envName, err)
-	}
-	interpolated, err := transformer.Interpolate(string(raw))
+func environmentManifest(envName string, rawMft []byte, transformer interpolator) (*manifest.Environment, error) {
+	interpolated, err := transformer.Interpolate(string(rawMft))
 	if err != nil {
 		return nil, fmt.Errorf("interpolate environment variables for %q manifest: %w", envName, err)
 	}
@@ -215,7 +216,6 @@ func buildEnvDeployCmd() *cobra.Command {
 		Example: `
 Deploy an environment named "test".
 /code $copilot env deploy --name test`,
-		Hidden: true,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newEnvDeployOpts(vars)
 			if err != nil {

@@ -10,11 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
-
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/google/uuid"
 )
 
 type envReadParser interface {
@@ -89,16 +87,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	var mft string
-	if e.in.Mft != nil {
-		out, err := yaml.Marshal(e.in.Mft)
-		if err != nil {
-			return "", fmt.Errorf("marshal environment manifest to embed in template: %v", err)
-		}
-		mft = string(out)
-	}
-
 	forceUpdateID := e.lastForceUpdateID
 	if e.in.ForceUpdate {
 		id, err := uuid.NewRandom()
@@ -123,7 +111,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 
 		Version:            e.in.Version,
 		LatestVersion:      deploy.LatestEnvTemplateVersion,
-		SerializedManifest: mft,
+		SerializedManifest: string(e.in.RawMft),
 		ForceUpdateID:      forceUpdateID,
 	})
 	if err != nil {

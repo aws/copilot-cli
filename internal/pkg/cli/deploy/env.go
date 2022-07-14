@@ -115,6 +115,7 @@ type DeployEnvironmentInput struct {
 	CustomResourcesURLs map[string]string
 	Manifest            *manifest.Environment
 	ForceNewUpdate      bool
+	RawManifest         []byte
 }
 
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
@@ -200,6 +201,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
 		Mft:                  in.Manifest,
 		ForceUpdate:          in.ForceNewUpdate,
+		RawMft:               in.RawManifest,
 		Version:              deploy.LatestEnvTemplateVersion,
 	}, nil
 }
