@@ -45,14 +45,14 @@ type LogEventsOutput struct {
 
 // LogEventsOpts wraps the parameters to call LogEvents.
 type LogEventsOpts struct {
-	LogGroup            string
-	LogStreamPrefixes   []string // If nil, retrieve logs from all log streams.
-	Limit               *int64
-	StartTime           *int64
-	EndTime             *int64
-	StreamLastEventTime map[string]int64
+	LogGroup               string
+	LogStreamPrefixFilters []string // If nil, retrieve logs from all log streams.
+	Limit                  *int64
+	StartTime              *int64
+	EndTime                *int64
+	StreamLastEventTime    map[string]int64
 
-	LogStreamLimit *int64
+	LogStreamLimit int
 }
 
 // New returns a CloudWatchLogs configured against the input session.
@@ -63,32 +63,46 @@ func New(s *session.Session) *CloudWatchLogs {
 }
 
 // logStreams returns all name of the log streams in a log group with optional limit and prefix filters.
-func (c *CloudWatchLogs) logStreams(logGroup string, logStreamLimit *int64, logStreamPrefixes ...string) ([]string, error) {
-	describeLogStreamsInput := &cloudwatchlogs.DescribeLogStreamsInput{
-		LogGroupName: aws.String(logGroup),
-		Descending:   aws.Bool(true),
-		OrderBy:      aws.String(cloudwatchlogs.OrderByLastEventTime),
-		Limit:        logStreamLimit,
-	}
-	resp, err := c.client.DescribeLogStreams(describeLogStreamsInput)
-	if err != nil {
-		return nil, fmt.Errorf("describe log streams of log group %s: %w", logGroup, err)
-	}
-	if len(resp.LogStreams) == 0 {
-		return nil, fmt.Errorf("no log stream found in log group %s", logGroup)
-	}
+func (c *CloudWatchLogs) logStreams(logGroup string, logStreamLimit int, logStreamPrefixes ...string) ([]string, error) {
 	var logStreamNames []string
-	for _, logStream := range resp.LogStreams {
-		name := aws.StringValue(logStream.LogStreamName)
-		if name == "" {
-			continue
+	logStreamsResp := &cloudwatchlogs.DescribeLogStreamsOutput{}
+	for {
+		var err error
+		logStreamsResp, err = c.client.DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
+			LogGroupName: aws.String(logGroup),
+			Descending:   aws.Bool(true),
+			OrderBy:      aws.String(cloudwatchlogs.OrderByLastEventTime),
+			NextToken:    logStreamsResp.NextToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("describe log streams of log group %s: %w", logGroup, err)
 		}
-		logStreamNames = append(logStreamNames, name)
+		if len(logStreamsResp.LogStreams) == 0 {
+			return nil, fmt.Errorf("no log stream found in log group %s", logGroup)
+		}
+
+		var streams []string
+		for _, logStream := range logStreamsResp.LogStreams {
+			name := aws.StringValue(logStream.LogStreamName)
+			if name == "" {
+				continue
+			}
+			streams = append(streams, name)
+		}
+		if len(logStreamPrefixes) != 0 {
+			logStreamNames = append(logStreamNames, filterStringSliceByPrefix(streams, logStreamPrefixes)...)
+		} else {
+			logStreamNames = append(logStreamNames, streams...)
+		}
+		if len(logStreamNames) > logStreamLimit {
+			break
+		}
+		if token := logStreamsResp.NextToken; aws.StringValue(token) == "" {
+			break
+		}
 	}
-	if len(logStreamPrefixes) != 0 {
-		logStreamNames = filterStringSliceByPrefix(logStreamNames, logStreamPrefixes)
-	}
-	return logStreamNames, nil
+
+	return truncateStreams(logStreamLimit, logStreamNames), nil
 }
 
 // LogEvents returns an array of Cloudwatch Logs events.
@@ -96,7 +110,7 @@ func (c *CloudWatchLogs) LogEvents(opts LogEventsOpts) (*LogEventsOutput, error)
 	var events []*Event
 	in := initGetLogEventsInput(opts)
 
-	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStreamLimit, opts.LogStreamPrefixes...)
+	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStreamLimit, opts.LogStreamPrefixFilters...)
 	if err != nil {
 		return nil, err
 	}
@@ -150,6 +164,13 @@ func truncateEvents(limit int, events []*Event) []*Event {
 		return events
 	}
 	return events[len(events)-limit:] // Only grab the last N elements where N = limit
+}
+
+func truncateStreams(limit int, streams []string) []string {
+	if len(streams) <= limit {
+		return streams
+	}
+	return streams[:len(streams)-limit]
 }
 
 func initGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput {

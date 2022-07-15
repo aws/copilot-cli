@@ -23,7 +23,7 @@ func TestLogEvents(t *testing.T) {
 		startTime                *int64
 		endTime                  *int64
 		limit                    *int64
-		logStreamLimit           *int64
+		logStreamLimit           int
 		lastEventTime            map[string]int64
 		mockcloudwatchlogsClient func(m *mocks.Mockapi)
 
@@ -282,61 +282,27 @@ func TestLogEvents(t *testing.T) {
 		},
 		"should limit log streams fetched": {
 			logGroupName:   "mockLogGroup",
-			logStreamLimit: aws.Int64(1),
-			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
-				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
-					LogGroupName: aws.String("mockLogGroup"),
-					Descending:   aws.Bool(true),
-					OrderBy:      aws.String("LastEventTime"),
-					Limit:        aws.Int64(1),
-				}).Return(&cloudwatchlogs.DescribeLogStreamsOutput{
-					LogStreams: []*cloudwatchlogs.LogStream{
-						{
-							LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream"),
-						},
-					},
-				}, nil)
-				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
-					LogGroupName:  aws.String("mockLogGroup"),
-					LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream"),
-				}).Return(&cloudwatchlogs.GetLogEventsOutput{
-					Events: []*cloudwatchlogs.OutputLogEvent{
-						{
-							Message:   aws.String("some log"),
-							Timestamp: aws.Int64(0),
-						},
-					},
-				}, nil)
-			},
-			wantLogEvents: []*Event{
-				{
-					LogStreamName: "copilot/mockLogGroup/mockLogStream",
-					Message:       "some log",
-					Timestamp:     0,
-				},
-			},
-			wantLastEventTime: map[string]int64{
-				"copilot/mockLogGroup/mockLogStream": 0,
-			},
-			wantErr: nil,
-		},
-		"should limit log streams fetched and log events": {
-			logGroupName:   "mockLogGroup",
-			logStreamLimit: aws.Int64(2),
+			logStreamLimit: 2,
 			limit:          aws.Int64(1),
+			logStream:      []string{"copilot/"},
 			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
 					Descending:   aws.Bool(true),
 					OrderBy:      aws.String("LastEventTime"),
-					Limit:        aws.Int64(2),
 				}).Return(&cloudwatchlogs.DescribeLogStreamsOutput{
 					LogStreams: []*cloudwatchlogs.LogStream{
 						{
-							LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream"),
+							LogStreamName:      aws.String("copilot/mockLogGroup/mockLogStream"),
+							LastEventTimestamp: aws.Int64(5),
 						},
 						{
-							LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream2"),
+							LogStreamName:      aws.String("states/abcde"),
+							LastEventTimestamp: aws.Int64(3),
+						},
+						{
+							LogStreamName:      aws.String("copilot/mockLogGroup/mockLogStream2"),
+							LastEventTimestamp: aws.Int64(1),
 						},
 					},
 				}, nil)
@@ -348,7 +314,7 @@ func TestLogEvents(t *testing.T) {
 					Events: []*cloudwatchlogs.OutputLogEvent{
 						{
 							Message:   aws.String("some log"),
-							Timestamp: aws.Int64(0),
+							Timestamp: aws.Int64(5),
 						},
 					},
 				}, nil)
@@ -367,14 +333,14 @@ func TestLogEvents(t *testing.T) {
 			},
 			wantLogEvents: []*Event{
 				{
-					LogStreamName: "copilot/mockLogGroup/mockLogStream2",
-					Message:       "other log",
-					Timestamp:     1,
+					LogStreamName: "copilot/mockLogGroup/mockLogStream",
+					Timestamp:     5,
+					Message:       "some log",
 				},
 			},
 			wantLastEventTime: map[string]int64{
+				"copilot/mockLogGroup/mockLogStream":  5,
 				"copilot/mockLogGroup/mockLogStream2": 1,
-				"copilot/mockLogGroup/mockLogStream":  0,
 			},
 			wantErr: nil,
 		},
@@ -393,13 +359,13 @@ func TestLogEvents(t *testing.T) {
 				client: mockcloudwatchlogsClient,
 			}
 			gotLogEventsOutput, gotErr := service.LogEvents(LogEventsOpts{
-				LogGroup:            tc.logGroupName,
-				EndTime:             tc.endTime,
-				Limit:               tc.limit,
-				LogStreamPrefixes:   tc.logStream,
-				StartTime:           tc.startTime,
-				StreamLastEventTime: tc.lastEventTime,
-				LogStreamLimit:      tc.logStreamLimit,
+				LogGroup:               tc.logGroupName,
+				EndTime:                tc.endTime,
+				Limit:                  tc.limit,
+				LogStreamPrefixFilters: tc.logStream,
+				StartTime:              tc.startTime,
+				StreamLastEventTime:    tc.lastEventTime,
+				LogStreamLimit:         tc.logStreamLimit,
 			})
 
 			if gotErr != nil {

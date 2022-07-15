@@ -53,7 +53,7 @@ type WriteLogEventsOpts struct {
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
 	// LogStreamLimit is an optional parameter for jobs and tasks to speed up CW queries
 	// involving multiple log streams.
-	LogStreamLimit *int64
+	LogStreamLimit int
 }
 
 // NewWorkloadLogsConfig contains fields that initiates WorkloadClient struct.
@@ -86,7 +86,7 @@ func (o WriteLogEventsOpts) limit() *int64 {
 }
 
 func (o WriteLogEventsOpts) hasLogStreamLimit() bool {
-	return o.LogStreamLimit != nil
+	return o.LogStreamLimit != 0
 }
 
 func (o WriteLogEventsOpts) startTime(now func() time.Time) *int64 {
@@ -173,7 +173,7 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 		LogStreamLimit:      opts.LogStreamLimit,
 	}
 
-	logEventsOpts.LogStreamPrefixes = s.logStreams(opts.TaskIDs)
+	logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs)
 
 	for {
 		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)

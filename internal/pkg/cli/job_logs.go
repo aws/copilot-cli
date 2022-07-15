@@ -25,7 +25,7 @@ const (
 	jobAppNamePrompt = "Which application does your job belong to?"
 
 	jobLogNamePrompt     = "Which job's logs would you like to show?"
-	jobLogNameHelpPrompt = "The logs of a deployed job will be shown."
+	jobLogNameHelpPrompt = "The logs of the indicated deployed job will be shown."
 )
 
 type jobLogsVars struct {

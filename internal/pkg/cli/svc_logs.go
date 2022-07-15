@@ -25,7 +25,7 @@ import (
 
 const (
 	svcLogNamePrompt     = "Which service's logs would you like to show?"
-	svcLogNameHelpPrompt = "The logs of a deployed service will be shown."
+	svcLogNameHelpPrompt = "The logs of the indicated deployed service will be shown."
 
 	cwGetLogEventsLimitMin = 1
 	cwGetLogEventsLimitMax = 10000
