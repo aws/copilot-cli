@@ -10,13 +10,13 @@ image_height: '851'
 # AWS Copilot v1.20: To Environment Manifests and Beyond!
 
 The AWS Copilot core team is announcing the Copilot v1.20 release.  
-Special thanks to [@gautam-nutalapati](https://github.com/gautam-nutalapati), [@codekitchen](https://github.com/codekitchen), [@kangere](https://github.com/kangere/) who contributed to this release.
+Special thanks to [@gautam-nutalapati](https://github.com/gautam-nutalapati), [@codekitchen](https://github.com/codekitchen), and [@kangere](https://github.com/kangere/) who contributed to this release.
 Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 300 people online and over 2.3k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.20 brings several new features and improvements:
 
-* **Environment manifests**: You can now create and update environments with a [manifest file](../docs/manifest/environment.en.md) providing all the benefits of infrastructure as code to environments. 
+* **Environment manifests**: You can now create and update environments with a [manifest file](../docs/manifest/environment.en.md) bringing all the benefits of infrastructure as code to environments. 
    [See detailed walkthrough](#environment-manifest) for how to migrate your existing environments.
 
 
@@ -36,7 +36,7 @@ Prior to v1.20, clients could not update their environments with additional conf
 with a domain, users would need to run `env init --name copy --import-cert-arns` to create a new environment with certificates and then tear down the old one.
 Starting with this release, users can modify their environments using the [manifest](../docs/manifest/environment.en.md) without having
 to recreate them.  
-Moving forward new environment configurations will only be surfaced via the `manifest.yml` file instead of flags in the `env init` command.
+Moving forward new environment resources will be configured with the `manifest.yml` file instead of flags in the `env init` command.
 
 ### Walkthrough
 **[1\]** `copilot env init` **no longer** immediately deploys an environment in your account. Instead, the command 
@@ -108,7 +108,7 @@ To create a [manifest.yml](../docs/manifest/environment.en.md) file for existing
 introduced a new `--manifest` flag to `copilot env show`.  
 In this example, we'll generate a manifest file for an existing `"prod"` environment.
 
-**[1\]** First, in my current git repository or in a new one, I create the mandatory directory
+**[1\]** First, in your current git repository or in a new one, create the mandatory directory
 structure for environment manifests.
 
 ???+ example "Directory structure for prod"
@@ -139,7 +139,6 @@ services or jobs.
 **[1\]** Once a [manifest file is created](#migrating-existing-environments), you can run the existing `copilot pipeline init` 
 command to create a pipeline [`manifest.yml`](../docs/manifest/pipeline.en.md) file to describe deployment stages, and a 
 `buildspec.yml` used in the "Build" stage to generate the CloudFormation configuration files.
-
 
 ??? example "Create pipeline manifest and buildspec"
 
