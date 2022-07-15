@@ -18,7 +18,7 @@ Copilot v1.20 brings several new features and improvements:
 
 * **Environment manifests**: You can now create and update environments with a [manifest file](../docs/manifest/environment.en.md) bringing all the benefits of infrastructure as code to environments. 
    [See detailed walkthrough](#environment-manifest) for how to migrate your existing environments.
-
+* **Autoscaling Cooldown Support**: You can now specify [autoscaling cooldowns](#autoscaling-cooldown-support) in the service manifest.
 
 ???+ note "What’s AWS Copilot?"
 
@@ -168,7 +168,7 @@ A small addition to our service manifests: the ability to configure autoscaling 
 For `Load Balanced`, `Backend`, and `Worker` Services, you can now configure this for their corresponding autoscaling fields.
 
 To configure the cooldown field, your service needs some extra fields to allow the scaling to begin.
-First it needs a `range` of the number of ECS clusters your service can run, and then it needs at least one autoscaling field such as `cpu_percentage` to set a target which the service will scale to meet.
+First it needs a `range` of the number of ECS clusters your service can run, and then it needs at least one autoscaling field such as `cpu_percentage` to set a target the service will scale to meet.
 
 ??? example "Using general autoscaling cooldowns"
 
@@ -181,7 +181,7 @@ First it needs a `range` of the number of ECS clusters your service can run, and
       cpu_percentage: 50
     ```
 
-This also gives you the option to specify the cooldowns for an individual field.
+You also have the option to specify the cooldowns for an individual field.
 Here we specify that we want the field `requests` to use our specified 30 second cooldown, where `cpu_percentage` will use the general cooldown of 2 minutes.
 By default however the cooldown period will always have a scale in time of 2 minutes, and a scale out time of 1 minute.
 
