@@ -18,7 +18,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -289,10 +288,13 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
+				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return(aws.String("mockPrefixListID"), nil).Times(0)
-				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			inManifest: nil,
+		},
 		"fail to get existing parameters": {
 			setUpMocks: func(m *deployEnvironmentMock) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Return(&stack.AppRegionalResources{
