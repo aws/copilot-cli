@@ -4,10 +4,12 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
@@ -22,8 +24,9 @@ import (
 )
 
 type deployEnvVars struct {
-	appName string
-	name    string
+	appName        string
+	name           string
+	forceNewUpdate bool
 }
 
 type deployEnvOpts struct {
@@ -110,7 +113,11 @@ func (o *deployEnvOpts) Ask() error {
 
 // Execute deploys an environment given a manifest.
 func (o *deployEnvOpts) Execute() error {
-	mft, err := environmentManifest(o.name, o.ws, o.newInterpolator(o.appName, o.name))
+	rawMft, err := o.ws.ReadEnvironmentManifest(o.name)
+	if err != nil {
+		return fmt.Errorf("read manifest for environment %q: %w", o.name, err)
+	}
+	mft, err := environmentManifest(o.name, rawMft, o.newInterpolator(o.appName, o.name))
 	if err != nil {
 		return err
 	}
@@ -130,18 +137,25 @@ func (o *deployEnvOpts) Execute() error {
 		RootUserARN:         caller.RootUserARN,
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
+		ForceNewUpdate:      o.forceNewUpdate,
+		RawManifest:         rawMft,
 	}); err != nil {
+		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
+		if errors.As(err, &errEmptyChangeSet) {
+			log.Errorf(`Your update does not introduce immediate resource changes. 
+This may be because the resources are not created until they are deemed 
+necessary by a service deployment.
+
+In this case, you can run %s to push a modified template, even if there are no immediate changes.
+`, color.HighlightCode("copilot env deploy --force"))
+		}
 		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
 	return nil
 }
 
-func environmentManifest(envName string, ws wsEnvironmentReader, transformer interpolator) (*manifest.Environment, error) {
-	raw, err := ws.ReadEnvironmentManifest(envName)
-	if err != nil {
-		return nil, fmt.Errorf("read manifest for environment %q: %w", envName, err)
-	}
-	interpolated, err := transformer.Interpolate(string(raw))
+func environmentManifest(envName string, rawMft []byte, transformer interpolator) (*manifest.Environment, error) {
+	interpolated, err := transformer.Interpolate(string(rawMft))
 	if err != nil {
 		return nil, fmt.Errorf("interpolate environment variables for %q manifest: %w", envName, err)
 	}
@@ -204,7 +218,6 @@ func buildEnvDeployCmd() *cobra.Command {
 		Example: `
 Deploy an environment named "test".
 /code $copilot env deploy --name test`,
-		Hidden: true,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newEnvDeployOpts(vars)
 			if err != nil {
@@ -215,5 +228,6 @@ Deploy an environment named "test".
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
 	return cmd
 }
