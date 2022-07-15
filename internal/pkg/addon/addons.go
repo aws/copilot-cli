@@ -121,7 +121,7 @@ func (a *Addons) template() (string, error) {
 	if a.UploadAssets {
 		mergedTemplate, err = a.packageLocalArtifacts(mergedTemplate)
 		if err != nil {
-			return "", fmt.Errorf("package local artifacts: %w", err)
+			return "", fmt.Errorf("package local artifacts: %s", err)
 		}
 	}
 
