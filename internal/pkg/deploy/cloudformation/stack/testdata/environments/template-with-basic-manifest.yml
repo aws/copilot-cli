@@ -1120,7 +1120,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
@@ -1128,3 +1128,6 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  LastForceDeployID:
+    Value: ""
+    Description: Optionally force the template to update when no immediate resource change is present.
