@@ -35,10 +35,11 @@ const (
 )
 
 type packageEnvVars struct {
-	envName      string
-	appName      string
-	outputDir    string
-	uploadAssets bool
+	envName        string
+	appName        string
+	outputDir      string
+	uploadAssets   bool
+	forceNewUpdate bool
 }
 
 type discardFile struct{}
@@ -166,6 +167,7 @@ func (o *packageEnvOpts) Execute() error {
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
 		RawManifest:         rawMft,
+		ForceNewUpdate:      o.forceNewUpdate,
 	})
 	if err != nil {
 		return fmt.Errorf("generate CloudFormation template from environment %q manifest: %v", o.envName, err)
@@ -281,5 +283,6 @@ func buildEnvPkgCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
 	return cmd
 }

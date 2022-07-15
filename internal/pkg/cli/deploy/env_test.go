@@ -11,13 +11,11 @@ import (
 	"testing"
 
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
-	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -118,9 +116,9 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 }
 
 type deployEnvironmentMock struct {
-	appCFN      *mocks.MockappResourcesGetter
-	envDeployer *mocks.MockenvironmentDeployer
-	stack       *mocks.MockstackSerializer
+	appCFN          *mocks.MockappResourcesGetter
+	envDeployer     *mocks.MockenvironmentDeployer
+	stackSerializer *mocks.MockstackSerializer
 }
 
 func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
@@ -155,13 +153,24 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 			},
 			wantedError: errors.New("describe environment stack parameters: some error"),
 		},
+		"fail to get existing force update ID": {
+			setUpMocks: func(m *deployEnvironmentMock) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Return(&stack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("retrieve environment stack force update ID: some error"),
+		},
 		"fail to generate stack template": {
 			setUpMocks: func(m *deployEnvironmentMock) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
 				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
-				m.stack.EXPECT().Template().Return("", errors.New("some error"))
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
+				m.stackSerializer.EXPECT().Template().Return("", errors.New("some error"))
 			},
 			wantedError: errors.New("generate stack template: some error"),
 		},
@@ -171,8 +180,9 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 					S3Bucket: "mockS3Bucket",
 				}, nil)
 				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
-				m.stack.EXPECT().Template().Return("", nil)
-				m.stack.EXPECT().SerializedParameters().Return("", errors.New("some error"))
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
+				m.stackSerializer.EXPECT().Template().Return("", nil)
+				m.stackSerializer.EXPECT().SerializedParameters().Return("", errors.New("some error"))
 			},
 			wantedError: errors.New("generate stack template parameters: some error"),
 		},
@@ -182,8 +192,9 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 					S3Bucket: "mockS3Bucket",
 				}, nil)
 				m.envDeployer.EXPECT().EnvironmentParameters(mockAppName, mockEnvName).Return(nil, nil)
-				m.stack.EXPECT().Template().Return("aloo", nil)
-				m.stack.EXPECT().SerializedParameters().Return("gobi", nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
+				m.stackSerializer.EXPECT().Template().Return("aloo", nil)
+				m.stackSerializer.EXPECT().SerializedParameters().Return("gobi", nil)
 			},
 
 			wantedTemplate: "aloo",
@@ -196,9 +207,9 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployEnvironmentMock{
-				appCFN:      mocks.NewMockappResourcesGetter(ctrl),
-				envDeployer: mocks.NewMockenvironmentDeployer(ctrl),
-				stack:       mocks.NewMockstackSerializer(ctrl),
+				appCFN:          mocks.NewMockappResourcesGetter(ctrl),
+				envDeployer:     mocks.NewMockenvironmentDeployer(ctrl),
+				stackSerializer: mocks.NewMockstackSerializer(ctrl),
 			}
 			tc.setUpMocks(m)
 			d := envDeployer{
@@ -209,8 +220,8 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				},
 				appCFN:      m.appCFN,
 				envDeployer: m.envDeployer,
-				newStackSerializer: func(_ *deploy.CreateEnvironmentInput, _ []*awscfn.Parameter) stackSerializer {
-					return m.stack
+				newStackSerializer: func(_ *deploy.CreateEnvironmentInput, _ string, _ []*awscfn.Parameter) stackSerializer {
+					return m.stackSerializer
 				},
 			}
 			actual, err := d.GenerateCloudFormationTemplate(&DeployEnvironmentInput{})
@@ -246,12 +257,33 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("get app resources in region %s: some error", mockEnvRegion),
 		},
+		"fail to get existing parameters": {
+			setUpMocks: func(m *deployEnvironmentMock) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Return(&stack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("describe environment stack parameters: some error"),
+		},
+		"fail to get existing force update ID": {
+			setUpMocks: func(m *deployEnvironmentMock) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(gomock.Any(), gomock.Any()).Return(&stack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("retrieve environment stack force update ID: some error"),
+		},
 		"fail to deploy environment": {
 			setUpMocks: func(m *deployEnvironmentMock) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
-				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
+				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
 			wantedError: errors.New("some error"),
 		},
@@ -260,16 +292,9 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
-				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-					func(_ progress.FileWriter, in *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
-						require.Equal(t, mockEnvName, in.Name)
-						require.Equal(t, mockAppName, in.App.Name)
-						require.Equal(t, map[string]string{
-							"mockResource": "mockURL",
-						}, in.CustomResourcesURLs)
-						require.Equal(t, deploy.LatestEnvTemplateVersion, in.Version)
-						return nil
-					})
+				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 	}
