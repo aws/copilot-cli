@@ -24,14 +24,56 @@ type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
 }
 
+// transformInfo defines how to package a particular property in a cloudformation resource.
+// There are two ways replacements occur. Given a resource configuration like:
+//  MyResource:
+//    Type: AWS::Resource::Type
+//    Properties:
+//      <Property>: file/path
+//
+// Without BucketNameProprty and ObjectKeyProperty, `file/path` is directly replaced with
+// the S3 location the contents were uploaded to, resulting in this:
+//  MyResource:
+//    Type: AWS::Resource::Type
+//    Properties:
+//      <Property>: s3://bucket/hash
+//
+// If BucketNameProperty and ObjectKeyProperty are set, the value of <Property> is changed to a map
+// with BucketNameProperty and ObjectKeyProperty as the keys.
+//  MyResource:
+//    Type: AWS::Resource::Type
+//    Properties:
+//      <Property>:
+//        <BucketNameProperty>: bucket
+//        <ObjectKeyProperty>: hash
 type transformInfo struct {
-	Property           []string
-	BucketNameProperty string
-	ObjectKeyProperty  string
+	// Property is the key in a cloudformation resource's 'Properties' map to be packaged.
+	// Nested properties are represented by multiple keys in the slice, so the field
+	//  Properties:
+	//    Code:
+	//      S3: ./file-name
+	// is represented by []string{"Code", "S3"}.
+	Property []string
 
+	// BucketNameProperty represents the key in a submap of Property, created
+	// after uploading an asset to S3. If this and ObjectKeyProperty are empty,
+	// a submap will not be created and an S3 location URI will replace value of Property.
+	BucketNameProperty string
+
+	// ObjectKeyProperty represents the key in a submap of Property, created
+	// after uploading an asset to S3. If this and BucketNameProperty are empty,
+	// a submap will not be created and an S3 location URI will replace value of Property.
+	ObjectKeyProperty string
+
+	// ForceZip will force a zip file to be created even if the given file URI
+	// points to a file. Directories are always zipped.
 	ForceZip bool
 }
 
+// transformInfoFor maps CloudFormation resource types to information
+// about how to transform their configuration. Some resources support
+// packaging multiple properties, so they have multiple transformInfos.
+//
 // TODO(dnrnd) AWS::Include.Location
 // TODO(dnrnd) AWS::CloudFormation::Stack
 var transformInfoFor = map[string][]transformInfo{
@@ -111,31 +153,43 @@ var transformInfoFor = map[string][]transformInfo{
 func (a *Addons) packageLocalArtifacts(tmpl *cfnTemplate) (*cfnTemplate, error) {
 	resources := mappingNode(&tmpl.Resources)
 
-	for name := range resources {
-		res := mappingNode(resources[name])
-		typeNode, ok := res["Type"]
-		if !ok || typeNode.Kind != yaml.ScalarNode {
-			continue
-		}
-
-		propsNode, ok := res["Properties"]
-		if !ok || propsNode.Kind != yaml.MappingNode {
-			continue
-		}
-
-		transforms, ok := transformInfoFor[typeNode.Value]
+	for name, node := range resources {
+		resType := yamlMapGet(node, "Type").Value
+		transforms, ok := transformInfoFor[resType]
 		if !ok {
 			continue
 		}
 
+		props := yamlMapGet(node, "Properties")
 		for _, tr := range transforms {
-			if err := a.transformProperty(propsNode, tr); err != nil {
+			if err := a.transformProperty(props, tr); err != nil {
 				return nil, fmt.Errorf("transform property %s property for %s: %w", name, tr.Property, err)
 			}
 		}
 	}
 
 	return tmpl, nil
+}
+
+// yamlMapGet parses node as a yaml map and searches key. If found,
+// it returns the value node of key. If node is not a yaml MappingNode
+// or key is not in the map, a zero value yaml.Node is returned, not a nil value,
+// to make nesting easier and avoid panics.
+//
+// If you need access many values from yaml map, consider mappingNode() instead, as
+// this will iterate through keys in the map each time vs a constant lookup.
+func yamlMapGet(node *yaml.Node, key string) *yaml.Node {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return &yaml.Node{}
+	}
+
+	for i := 0; i < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
+	}
+
+	return &yaml.Node{}
 }
 
 func (a *Addons) transformProperty(properties *yaml.Node, tr transformInfo) error {
@@ -155,62 +209,79 @@ func (a *Addons) transformProperty(properties *yaml.Node, tr transformInfo) erro
 		return nil
 	}
 
-	if strings.HasPrefix(node.Value, "s3://") || strings.HasPrefix(node.Value, "http://") || strings.HasPrefix(node.Value, "https://") {
+	if !isFilePath(node.Value) {
 		return nil
 	}
 
-	assetPath := node.Value
-	if !path.IsAbs(node.Value) {
-		assetPath = path.Join(a.wsPath, node.Value)
-	}
-
-	url, err := a.uploadAddonAsset(assetPath, tr.ForceZip)
+	obj, err := a.uploadAddonAsset(node.Value, tr.ForceZip)
 	if err != nil {
 		return fmt.Errorf("upload asset: %w", err)
 	}
 
-	bucket, key, err := s3.ParseURL(url)
-	if err != nil {
-		return fmt.Errorf("parse s3 url: %w", err)
-	}
-
-	fmt.Printf("Uploaded %s to s3 at: %s\n", assetPath, s3.Location(bucket, key))
-
 	if len(tr.BucketNameProperty) == 0 && len(tr.ObjectKeyProperty) == 0 {
-		node.Value = s3.Location(bucket, key)
+		node.Value = s3.Location(obj.Bucket, obj.Key)
 		return nil
 	}
 
 	return node.Encode(map[string]string{
-		tr.BucketNameProperty: bucket,
-		tr.ObjectKeyProperty:  key,
+		tr.BucketNameProperty: obj.Bucket,
+		tr.ObjectKeyProperty:  obj.Key,
 	})
 }
 
-func (a *Addons) uploadAddonAsset(path string, forceZip bool) (string, error) {
-	info, err := a.fs.Stat(path)
+// isFilePath returns true if the path URI doesn't have a
+// a schema indicating it's an s3 or http URI.
+func isFilePath(path string) bool {
+	if path == "" || strings.HasPrefix(path, "s3://") || strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return false
+	}
+
+	return true
+}
+
+type s3Object struct {
+	Bucket string
+	Key    string
+}
+
+func (a *Addons) uploadAddonAsset(assetPath string, forceZip bool) (s3Object, error) {
+	// make path absolute from wsPath
+	if !path.IsAbs(assetPath) {
+		assetPath = path.Join(a.wsPath, assetPath)
+	}
+
+	info, err := a.fs.Stat(assetPath)
 	if err != nil {
-		return "", err
+		return s3Object{}, err
 	}
 
 	var asset asset
 	if forceZip || info.IsDir() {
-		asset, err = a.zipAsset(path)
+		asset, err = a.zipAsset(assetPath)
 	} else {
-		asset, err = a.fileAsset(path)
+		asset, err = a.fileAsset(assetPath)
 	}
 	if err != nil {
-		return "", fmt.Errorf("create asset: %w", err)
+		return s3Object{}, fmt.Errorf("create asset: %w", err)
 	}
 
 	s3Path := artifactpath.AddonAsset(a.wlName, asset.hash)
 
 	url, err := a.uploader.Upload(a.bucket, s3Path, asset.data)
 	if err != nil {
-		return "", fmt.Errorf("upload %s to s3 bucket %s: %w", path, a.bucket, err)
+		return s3Object{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, a.bucket, err)
 	}
 
-	return url, nil
+	bucket, key, err := s3.ParseURL(url)
+	if err != nil {
+		return s3Object{}, fmt.Errorf("parse s3 url: %w", err)
+	}
+
+	fmt.Printf("Uploaded %s to s3 at: %s\n", assetPath, s3.Location(bucket, key))
+	return s3Object{
+		Bucket: bucket,
+		Key:    key,
+	}, nil
 }
 
 type asset struct {
