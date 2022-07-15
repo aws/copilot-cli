@@ -104,6 +104,8 @@ type templater interface {
 	Template() (string, error)
 }
 
+// StackBuilder represents something capable of generating a
+// CloudFormation stack template and parameters.
 type StackBuilder interface {
 	templater
 	Parameters() (string, error)
@@ -287,6 +289,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}, nil
 }
 
+// AddonBuilder returns the StackBuilder for this workload's addons.
 func (w *workloadDeployer) AddonBuilder() StackBuilder {
 	return w.addons
 }

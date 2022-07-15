@@ -170,6 +170,7 @@ func URL(region, bucket, key string) string {
 	return fmt.Sprintf("https://%s.s3.%s.amazonaws.%s/%s", bucket, region, tld, key)
 }
 
+// Location returns an S3 object location URI in the format: s3://bucket/key
 func Location(bucket, key string) string {
 	return fmt.Sprintf("s3://%s/%s", bucket, key)
 }
