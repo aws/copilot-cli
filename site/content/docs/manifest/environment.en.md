@@ -76,7 +76,7 @@ To learn more about Copilot environments, see [Environments](../concepts/environ
                 - id: 'subnet-33333'
                 - id: 'subnet-44444'
         http:
-          private: # Apply an existing certificate to your public load balancer.
+          private: # Apply an existing certificate to your private load balancer.
             certificates:
               - arn:aws:acm:${AWS_REGION}:${AWS_ACCOUNT_ID}:certificate/13245665-cv8f-adf3-j7gd-adf876af95
             subnets: ['subnet-11111', 'subnet-22222']
@@ -93,7 +93,7 @@ Must be set to `'Environment'`.
 <div class="separator"></div>
 
 <a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>  
-The network section contains parameters for importing an existing VPC or configuring the Copilot generated VPC.
+The network section contains parameters for importing an existing VPC or configuring the Copilot-generated VPC.
 
 <span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>  
 The vpc section contains parameters to configure CIDR settings and subnets.
@@ -111,6 +111,7 @@ For example, if you're importing an existing VPC:
 ```yaml
 network:
   vpc:
+    id: 'vpc-12345'
     public:
       - id: 'subnet-11111'
       - id: 'subnet-22222'
@@ -141,7 +142,8 @@ The ID of the subnet to import. This field is mutually exclusive with `cidr` and
 An IPv4 CIDR block assigned to the subnet. This field is mutually exclusive with `id`.
 
 <span class="parent-field">network.vpc.subnets.<type\>.</span><a id="network-vpc-subnets-az" href="#network-vpc-subnets-az" class="field">`az`</a> <span class="type">String</span>    
-The AZ name assigned to the subnet. This field is mutually exclusive with `id`.
+The Availability Zone name assigned to the subnet. The `az` field is optional, by default Availability Zones are assigned in alphabetical order.
+This field is mutually exclusive with `id`.
 
 <div class="separator"></div>
 
@@ -161,8 +163,8 @@ See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-exist
 Configuration for the internal load balancer.
 
 <span class="parent-field">http.private.</span><a id="http-private-certificates" href="#http-private-certificates" class="field">`certificates`</a> <span class="type">Array of Strings</span>  
-List of [private AWS Certificate Manager certificate](https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-request-private.html) ARNs.    
-By attaching private certificates to your load balancer, you can associate your Backend Services with a domain name and reach them with HTTPS.
+List of [AWS Certificate Manager certificate](https://docs.aws.amazon.com/acm/latest/userguide/gs.html) ARNs.    
+By attaching public or private certificates to your load balancer, you can associate your Backend Services with a domain name and reach them with HTTPS.
 See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-existing-validated-certificates) guide to learn more.
 
 <span class="parent-field">http.private.</span><a id="http-private-subnets" href="#http-private-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>  
