@@ -92,10 +92,20 @@ build:
           Resource: '*'
 ```
 or alternatively as JSON:
-```json
+```yaml
 build:
   additional_policy:
-    PolicyDocument: {“Statement":[{"Action":["ecr:GetAuthorizationToken"],"Effect":"Allow","Resource":"*"}],"Version":"2012-10-17"}
+    PolicyDocument: 
+      {
+        “Statement": [
+          {
+            "Action": ["ecr:GetAuthorizationToken"],
+            "Effect": "Allow",
+            "Resource": "*"
+          }
+        ],
+        "Version": "2012-10-17"
+      }
 ```
 
 <div class="separator"></div>
