@@ -110,6 +110,9 @@ type CloudFormation struct {
 	appStackSet    stackSetClient
 	s3Client       s3Client
 	region         string
+
+	// cached variables.
+	cachedDeployedStack *cloudformation.StackDescription
 }
 
 // New returns a configured CloudFormation client.

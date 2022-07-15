@@ -6,6 +6,8 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strconv"
+	"text/template"
 )
 
 const (
@@ -21,6 +23,9 @@ const (
 	NATFeatureName         = "NATWorkloads"
 	InternalALBFeatureName = "InternalALBWorkloads"
 )
+
+// LastForceDeployIDOutputName is the logical ID of the deployment controller output.
+const LastForceDeployIDOutputName = "LastForceDeployID"
 
 var friendlyEnvFeatureName = map[string]string{
 	ALBFeatureName:         "ALB",
@@ -109,6 +114,7 @@ type EnvOpts struct {
 
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
+	ForceUpdateID      string
 }
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.
@@ -140,13 +146,13 @@ type Telemetry struct {
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.
-func (t *Template) ParseEnv(data *EnvOpts, options ...ParseOption) (*Content, error) {
-	tpl, err := t.parse("base", envCFTemplatePath, options...)
+func (t *Template) ParseEnv(data *EnvOpts) (*Content, error) {
+	tpl, err := t.parse("base", envCFTemplatePath, withEnvParsingFuncs())
 	if err != nil {
 		return nil, err
 	}
 	for _, templateName := range envCFSubTemplateNames {
-		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtEnvCFSubTemplatePath, templateName), options...)
+		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtEnvCFSubTemplatePath, templateName), withEnvParsingFuncs())
 		if err != nil {
 			return nil, err
 		}
@@ -183,4 +189,14 @@ func (t *Template) ParseEnvBootstrap(data *EnvOpts, options ...ParseOption) (*Co
 		return nil, fmt.Errorf("execute environment template with data %v: %w", data, err)
 	}
 	return &Content{buf}, nil
+}
+
+func withEnvParsingFuncs() ParseOption {
+	return func(t *template.Template) *template.Template {
+		return t.Funcs(map[string]interface{}{
+			"inc":      IncFunc,
+			"fmtSlice": FmtSliceFunc,
+			"quote":    strconv.Quote,
+		})
+	}
 }

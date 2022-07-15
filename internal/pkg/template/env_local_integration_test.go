@@ -13,10 +13,7 @@ import (
 )
 
 func TestEnv_AvailableEnvFeatures(t *testing.T) {
-	c, err := New().ParseEnv(&EnvOpts{}, WithFuncs(map[string]interface{}{
-		"inc":      IncFunc,
-		"fmtSlice": FmtSliceFunc,
-	}))
+	c, err := New().ParseEnv(&EnvOpts{})
 	require.NoError(t, err)
 
 	tmpl := struct {
