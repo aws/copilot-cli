@@ -163,6 +163,43 @@ command to create a pipeline [`manifest.yml`](../docs/manifest/pipeline.en.md) f
     ✔ Successfully deployed pipeline: env-pipeline
     ```
 
+## Autoscaling Cooldown Support
+A small addition to our service manifests: the ability to configure autoscaling cooldown periods.
+For `Load Balanced`, `Backend`, and `Worker` Services, you can now configure this for their corresponding autoscaling fields.
+
+To configure the cooldown field, your service needs some extra fields to allow the scaling to begin.
+First it needs a `range` of the number of ECS clusters your service can run, and then it needs at least one autoscaling field such as `cpu_percentage` to set a target which the service will scale to meet.
+
+??? example "Using general autoscaling cooldowns"
+
+    ```
+    count:
+      range: 1-10
+      cooldown:
+        in: 30s
+        out: 30s
+      cpu_percentage: 50
+    ```
+
+This also gives you the option to specify the cooldowns for an individual field.
+Here we specify that we want the field `requests` to use our specified 30 second cooldown, where `cpu_percentage` will use the general cooldown of 2 minutes.
+By default however the cooldown period will always have a scale in time of 2 minutes, and a scale out time of 1 minute.
+
+??? example "Using specific autoscaling cooldowns"
+
+    ```
+    count:
+      range: 1-10
+      cooldown:
+        in: 2m
+        out: 2m
+      cpu_percentage: 50
+      requests:
+        value: 10
+        cooldown:
+          in: 30s
+          out: 30s
+    ```
 ## What’s next?
 
 Download the new Copilot CLI version by following the link below and leave your feedback on [GitHub](https://github.com/aws/copilot-cli/) or our [Community Chat](https://gitter.im/aws/copilot-cli):
