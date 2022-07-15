@@ -10,7 +10,7 @@ $ copilot pipeline show [flags]
 ```
 -a, --app string    Name of the application.
 -h, --help          help for show
-    --json          Optional. Outputs in JSON format.
+    --json          Optional. Output in JSON format.
 -n, --name string   Name of the pipeline.
     --resources     Optional. Show the resources in your pipeline.
 ```
