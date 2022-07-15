@@ -165,10 +165,8 @@ command to create a pipeline [`manifest.yml`](../docs/manifest/pipeline.en.md) f
 
 ## Autoscaling Cooldown Support
 A small addition to our service manifests: the ability to configure autoscaling cooldown periods.
-For `Load Balanced`, `Backend`, and `Worker` Services, you can now configure this for their corresponding autoscaling fields.
-
-To configure the cooldown field, your service needs some extra fields to allow the scaling to begin.
-First it needs a `range` of the number of ECS clusters your service can run, and then it needs at least one autoscaling field such as `cpu_percentage` to set a target the service will scale to meet.
+For `Load Balanced`, `Backend`, and `Worker` Services, you can now configure their autoscaling fields under `count` to have custom cooldown periods.
+Previously, each scaling metric such as `cpu_percentage` has a set in cooldown of 120 secs and out cooldown of 60 seconds. Now you can set a global cooldown period:
 
 ??? example "Using general autoscaling cooldowns"
 
@@ -181,9 +179,7 @@ First it needs a `range` of the number of ECS clusters your service can run, and
       cpu_percentage: 50
     ```
 
-You also have the option to specify the cooldowns for an individual field.
-Here we specify that we want the field `requests` to use our specified 30 second cooldown, where `cpu_percentage` will use the general cooldown of 2 minutes.
-By default however the cooldown period will always have a scale in time of 2 minutes, and a scale out time of 1 minute.
+Alternatively, you can set individual cooldowns that override the general ones:
 
 ??? example "Using specific autoscaling cooldowns"
 
