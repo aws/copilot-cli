@@ -96,8 +96,8 @@ type environmentNetworkConfig struct {
 }
 
 type environmentVPCConfig struct {
-	ID      *string              `yaml:"id"`
-	CIDR    *IPNet               `yaml:"cidr"`
+	ID      *string              `yaml:"id,omitempty"`
+	CIDR    *IPNet               `yaml:"cidr,omitempty"`
 	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
 }
 
@@ -284,9 +284,9 @@ func (cs subnetsConfiguration) IsEmpty() bool {
 }
 
 type subnetConfiguration struct {
-	SubnetID *string `yaml:"id"`
-	CIDR     *IPNet  `yaml:"cidr"`
-	AZ       *string `yaml:"az"`
+	SubnetID *string `yaml:"id,omitempty"`
+	CIDR     *IPNet  `yaml:"cidr,omitempty"`
+	AZ       *string `yaml:"az,omitempty"`
 }
 
 type environmentObservability struct {
