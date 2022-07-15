@@ -55,23 +55,18 @@ func (mr *MockenvReadParserMockRecorder) Parse(path, data interface{}, options .
 }
 
 // ParseEnv mocks base method.
-func (m *MockenvReadParser) ParseEnv(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error) {
+func (m *MockenvReadParser) ParseEnv(data *template.EnvOpts) (*template.Content, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{data}
-	for _, a := range options {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ParseEnv", varargs...)
+	ret := m.ctrl.Call(m, "ParseEnv", data)
 	ret0, _ := ret[0].(*template.Content)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ParseEnv indicates an expected call of ParseEnv.
-func (mr *MockenvReadParserMockRecorder) ParseEnv(data interface{}, options ...interface{}) *gomock.Call {
+func (mr *MockenvReadParserMockRecorder) ParseEnv(data interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{data}, options...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseEnv", reflect.TypeOf((*MockenvReadParser)(nil).ParseEnv), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseEnv", reflect.TypeOf((*MockenvReadParser)(nil).ParseEnv), data)
 }
 
 // ParseEnvBootstrap mocks base method.
