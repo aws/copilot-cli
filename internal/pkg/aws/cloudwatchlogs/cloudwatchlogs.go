@@ -94,7 +94,7 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreamLimit int, logStre
 		} else {
 			logStreamNames = append(logStreamNames, streams...)
 		}
-		if len(logStreamNames) > logStreamLimit {
+		if len(logStreamNames) >= logStreamLimit {
 			break
 		}
 		if token := logStreamsResp.NextToken; aws.StringValue(token) == "" {
