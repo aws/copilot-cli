@@ -58,7 +58,7 @@ HTTPSRulePriorityAction:
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
 
-HTTPRulePriorityAction:
+HTTPRuleWithDomainPriorityAction:
   Metadata:
     'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
   Type: Custom::RulePriorityFunction
@@ -115,7 +115,7 @@ HTTPListenerRuleWithDomain:
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
     {{- end}}
-    Priority: !GetAtt HTTPRulePriorityAction.Priority
+    Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
 
 HTTPSListenerRule:
   Metadata:

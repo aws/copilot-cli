@@ -350,6 +350,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Properties:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
+      Aliases: ["example.com"]
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters: [ALBWorkloads, Aliases]
   EnvControllerFunction:
@@ -508,7 +509,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       RulePath: !Ref RulePath
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
   
-  HTTPRulePriorityAction:
+  HTTPRuleWithDomainPriorityAction:
     Metadata:
       'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
     Type: Custom::RulePriorityFunction
@@ -543,7 +544,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority: !GetAtt HTTPRulePriorityAction.Priority # Same priority as HTTPS Listener
+      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority # Same priority as HTTPS Listener
   HTTPSListenerRule:
     Metadata:
       'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
