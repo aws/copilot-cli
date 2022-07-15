@@ -195,19 +195,20 @@ Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
 )
 
 const (
-	appFlagDescription        = "Name of the application."
-	envFlagDescription        = "Name of the environment."
-	svcFlagDescription        = "Name of the service."
-	jobFlagDescription        = "Name of the job."
-	workloadFlagDescription   = "Name of the service or job."
-	nameFlagDescription       = "Name of the service, job, or task group."
-	pipelineFlagDescription   = "Name of the pipeline."
-	profileFlagDescription    = "Name of the profile."
-	yesFlagDescription        = "Skips confirmation prompt."
-	execYesFlagDescription    = "Optional. Whether to update the Session Manager Plugin."
-	jsonFlagDescription       = "Optional. Outputs in JSON format."
-	forceFlagDescription      = "Optional. Force a new service deployment using the existing image."
-	noRollbackFlagDescription = `Optional. Disable automatic stack 
+	appFlagDescription            = "Name of the application."
+	envFlagDescription            = "Name of the environment."
+	svcFlagDescription            = "Name of the service."
+	jobFlagDescription            = "Name of the job."
+	workloadFlagDescription       = "Name of the service or job."
+	nameFlagDescription           = "Name of the service, job, or task group."
+	pipelineFlagDescription       = "Name of the pipeline."
+	profileFlagDescription        = "Name of the profile."
+	yesFlagDescription            = "Skips confirmation prompt."
+	execYesFlagDescription        = "Optional. Whether to update the Session Manager Plugin."
+	jsonFlagDescription           = "Optional. Outputs in JSON format."
+	forceFlagDescription          = "Optional. Force a new service deployment using the existing image."
+	forceEnvDeployFlagDescription = "Optional. Force update the environment stack template."
+	noRollbackFlagDescription     = `Optional. Disable automatic stack 
 rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`

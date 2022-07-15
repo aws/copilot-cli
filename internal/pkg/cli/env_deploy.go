@@ -4,10 +4,12 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
@@ -22,8 +24,9 @@ import (
 )
 
 type deployEnvVars struct {
-	appName string
-	name    string
+	appName        string
+	name           string
+	forceNewUpdate bool
 }
 
 type deployEnvOpts struct {
@@ -134,8 +137,18 @@ func (o *deployEnvOpts) Execute() error {
 		RootUserARN:         caller.RootUserARN,
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
+		ForceNewUpdate:      o.forceNewUpdate,
 		RawManifest:         rawMft,
 	}); err != nil {
+		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
+		if errors.As(err, &errEmptyChangeSet) {
+			log.Errorf(`Your update does not introduce immediate resource changes. 
+This may be because the resources are not created until they are deemed 
+necessary by a service deployment.
+
+In this case, you can run %s to push a modified template, even if there are no immediate changes.
+`, color.HighlightCode("copilot env deploy --force"))
+		}
 		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
 	return nil
@@ -215,5 +228,6 @@ Deploy an environment named "test".
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
 	return cmd
 }

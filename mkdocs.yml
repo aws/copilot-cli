@@ -40,6 +40,7 @@ nav:
     - Manifest:
       - Overview: docs/manifest/overview.en.md
       - Backend Service: docs/manifest/backend-service.en.md
+      - Environment: docs/manifest/environment.en.md
       - Load Balanced Web Service: docs/manifest/lb-web-service.en.md
       - Request-Driven Web Service: docs/manifest/rd-web-service.en.md
       - Scheduled Job: docs/manifest/scheduled-job.en.md
