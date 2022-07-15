@@ -17,8 +17,8 @@ const updateStackWaiter = {
 const AliasParamKey = "Aliases";
 
 // Per the doc at https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/crpg-ref-responses.html
-// The size of the response body should not exceed 4096 bytes.
-// Therefore, we should ignore any outputs that we don't need. g
+// the size of the response body should not exceed 4096 bytes.
+// Therefore, we should ignore any outputs that we don't need.
 let ignoredEnvOutputs = new Set(["EnabledFeatures", "LastForceDeployID"]);
 
 /**
