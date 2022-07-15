@@ -6,6 +6,7 @@ package mocks
 
 import (
 	encoding "encoding"
+	io "io"
 	reflect "reflect"
 
 	session "github.com/aws/aws-sdk-go/aws/session"
@@ -3227,6 +3228,44 @@ func (mr *MockwsAddonManagerMockRecorder) WriteAddon(f, svc, name interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteAddon", reflect.TypeOf((*MockwsAddonManager)(nil).WriteAddon), f, svc, name)
 }
 
+// Mockuploader is a mock of uploader interface.
+type Mockuploader struct {
+	ctrl     *gomock.Controller
+	recorder *MockuploaderMockRecorder
+}
+
+// MockuploaderMockRecorder is the mock recorder for Mockuploader.
+type MockuploaderMockRecorder struct {
+	mock *Mockuploader
+}
+
+// NewMockuploader creates a new mock instance.
+func NewMockuploader(ctrl *gomock.Controller) *Mockuploader {
+	mock := &Mockuploader{ctrl: ctrl}
+	mock.recorder = &MockuploaderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockuploader) EXPECT() *MockuploaderMockRecorder {
+	return m.recorder
+}
+
+// Upload mocks base method.
+func (m *Mockuploader) Upload(bucket, key string, data io.Reader) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upload", bucket, key, data)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Upload indicates an expected call of Upload.
+func (mr *MockuploaderMockRecorder) Upload(bucket, key, data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*Mockuploader)(nil).Upload), bucket, key, data)
+}
+
 // MockbucketEmptier is a mock of bucketEmptier interface.
 type MockbucketEmptier struct {
 	ctrl     *gomock.Controller
@@ -3814,6 +3853,20 @@ func (m *MocktaskDeployer) EXPECT() *MocktaskDeployerMockRecorder {
 	return m.recorder
 }
 
+// AddPipelineResourcesToApp mocks base method.
+func (m *MocktaskDeployer) AddPipelineResourcesToApp(app *config.Application, region string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddPipelineResourcesToApp", app, region)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddPipelineResourcesToApp indicates an expected call of AddPipelineResourcesToApp.
+func (mr *MocktaskDeployerMockRecorder) AddPipelineResourcesToApp(app, region interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPipelineResourcesToApp", reflect.TypeOf((*MocktaskDeployer)(nil).AddPipelineResourcesToApp), app, region)
+}
+
 // DeployTask mocks base method.
 func (m *MocktaskDeployer) DeployTask(out progress.FileWriter, input *deploy0.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
@@ -3831,6 +3884,36 @@ func (mr *MocktaskDeployerMockRecorder) DeployTask(out, input interface{}, opts 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{out, input}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
+}
+
+// GetAppResourcesByRegion mocks base method.
+func (m *MocktaskDeployer) GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAppResourcesByRegion", app, region)
+	ret0, _ := ret[0].(*stack.AppRegionalResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAppResourcesByRegion indicates an expected call of GetAppResourcesByRegion.
+func (mr *MocktaskDeployerMockRecorder) GetAppResourcesByRegion(app, region interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAppResourcesByRegion", reflect.TypeOf((*MocktaskDeployer)(nil).GetAppResourcesByRegion), app, region)
+}
+
+// GetRegionalAppResources mocks base method.
+func (m *MocktaskDeployer) GetRegionalAppResources(app *config.Application) ([]*stack.AppRegionalResources, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRegionalAppResources", app)
+	ret0, _ := ret[0].([]*stack.AppRegionalResources)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRegionalAppResources indicates an expected call of GetRegionalAppResources.
+func (mr *MocktaskDeployerMockRecorder) GetRegionalAppResources(app interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegionalAppResources", reflect.TypeOf((*MocktaskDeployer)(nil).GetRegionalAppResources), app)
 }
 
 // MocktaskStackManager is a mock of taskStackManager interface.
