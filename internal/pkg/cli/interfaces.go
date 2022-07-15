@@ -182,10 +182,6 @@ type logEventsWriter interface {
 	WriteLogEvents(opts logging.WriteLogEventsOpts) error
 }
 
-type templater interface {
-	Template() (string, error)
-}
-
 type execRunner interface {
 	Run(name string, args []string, options ...exec.CmdOption) error
 }
