@@ -17,13 +17,16 @@ Metadata:
         vpc:
           security_group:
             ingress:
-              ip_protocol: tcp
-              from_port: 0
-              to_port: 65535
+              - IpProtocol: tcp
+                FromPort: 0
+                ToPort: 65535
+              - IpProtocol: tcp
+                FromPort: 1
+                ToPort: 6
             egress:
-              ip_protocol: tcp
-              from_port: 0
-              to_port: 65535
+              - IpProtocol: tcp
+                FromPort: 0
+                ToPort: 65535
 Parameters:
   AppName:
     Type: String
@@ -313,22 +316,17 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
-  CustomEnvSecurityGroupIngressRule:
-    Metadata:
-      'aws:copilot:description': 'A custom inbound rule defined by the customer'
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      ip_protocol: tcp
-      from_port: 0
-      to_port: 65535
-  CustomEnvSecurityGroupEgressRule:
-    Metadata:
-      'aws:copilot:description': 'A custom outbound rule defined by the customer'
-    Type: AWS::EC2::SecurityGroupEgress
-    Properties:
-      ip_protocol: tcp
-      from_port: 0
-      to_port: 65535
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+        - IpProtocol: tcp
+          FromPort: 1
+          ToPort: 6
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
   EnvironmentSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateALB

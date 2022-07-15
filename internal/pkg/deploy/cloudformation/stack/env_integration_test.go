@@ -78,13 +78,16 @@ network:
   vpc:
     security_group:
       ingress:
-        ip_protocol: tcp
-        from_port: 0
-        to_port: 65535
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+        - IpProtocol: tcp
+          FromPort: 1
+          ToPort: 6
       egress:
-        ip_protocol: tcp
-        from_port: 0
-        to_port: 65535`
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535`
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
