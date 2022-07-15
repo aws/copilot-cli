@@ -32,7 +32,7 @@ func TestLogEvents(t *testing.T) {
 	}{
 		"should get log stream name and return log events": {
 			logGroupName: "mockLogGroup",
-			logStream:    []string{"copilot/mockLogGroup/good"},
+			logStream:    []string{"copilot/mockLogGroup/foo", "copilot/mockLogGroup/bar"},
 			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
 					LogGroupName: aws.String("mockLogGroup"),
@@ -41,20 +41,20 @@ func TestLogEvents(t *testing.T) {
 				}).Return(&cloudwatchlogs.DescribeLogStreamsOutput{
 					LogStreams: []*cloudwatchlogs.LogStream{
 						{
-							LogStreamName: aws.String("copilot/mockLogGroup/goodLogStream1"),
+							LogStreamName: aws.String("copilot/mockLogGroup/fooLogStream"),
 						},
 						{
-							LogStreamName: aws.String("copilot/mockLogGroup/goodLogStream2"),
+							LogStreamName: aws.String("copilot/mockLogGroup/barLogStream"),
 						},
 						{
-							LogStreamName: aws.String("copilot/mockLogGroup/badLogStream1"),
+							LogStreamName: aws.String("copilot/mockLogGroup/booLogStream"),
 						},
 					},
 				}, nil)
 
 				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
 					LogGroupName:  aws.String("mockLogGroup"),
-					LogStreamName: aws.String("copilot/mockLogGroup/goodLogStream1"),
+					LogStreamName: aws.String("copilot/mockLogGroup/fooLogStream"),
 				}).Return(&cloudwatchlogs.GetLogEventsOutput{
 					Events: []*cloudwatchlogs.OutputLogEvent{
 						{
@@ -66,7 +66,7 @@ func TestLogEvents(t *testing.T) {
 
 				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
 					LogGroupName:  aws.String("mockLogGroup"),
-					LogStreamName: aws.String("copilot/mockLogGroup/goodLogStream2"),
+					LogStreamName: aws.String("copilot/mockLogGroup/barLogStream"),
 				}).Return(&cloudwatchlogs.GetLogEventsOutput{
 					Events: []*cloudwatchlogs.OutputLogEvent{
 						{
@@ -79,19 +79,19 @@ func TestLogEvents(t *testing.T) {
 
 			wantLogEvents: []*Event{
 				{
-					LogStreamName: "copilot/mockLogGroup/goodLogStream2",
+					LogStreamName: "copilot/mockLogGroup/barLogStream",
 					Message:       "other log",
 					Timestamp:     0,
 				},
 				{
-					LogStreamName: "copilot/mockLogGroup/goodLogStream1",
+					LogStreamName: "copilot/mockLogGroup/fooLogStream",
 					Message:       "some log",
 					Timestamp:     1,
 				},
 			},
 			wantLastEventTime: map[string]int64{
-				"copilot/mockLogGroup/goodLogStream1": 1,
-				"copilot/mockLogGroup/goodLogStream2": 0,
+				"copilot/mockLogGroup/fooLogStream": 1,
+				"copilot/mockLogGroup/barLogStream": 0,
 			},
 			wantErr: nil,
 		},

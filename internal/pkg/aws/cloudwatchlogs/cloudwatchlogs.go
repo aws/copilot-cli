@@ -7,7 +7,6 @@ package cloudwatchlogs
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -158,17 +157,48 @@ func initGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput
 
 // Example: if the prefixes is []string{"a"} and all is []string{"a", "b", "ab"}
 // then it returns []string{"a", "ab"}.
-func filterStringSliceByPrefix(all, prefixes []string) (res []string) {
-	m := make(map[string]bool)
-	for _, candidate := range all {
-		for _, prefix := range prefixes {
-			if strings.HasPrefix(candidate, prefix) {
-				m[candidate] = true
+func filterStringSliceByPrefix(all, prefixes []string) []string {
+	trie := buildTrie(prefixes)
+	var matches []string
+	for _, str := range all {
+		node := trie
+		for _, char := range str {
+			val, ok := node.children[char]
+			if !ok {
+				break
 			}
+			if val.hasPrefix {
+				matches = append(matches, str)
+				break
+			}
+			node = val
 		}
 	}
-	for k := range m {
-		res = append(res, k)
+	return matches
+}
+
+type trieNode struct {
+	children  map[rune]*trieNode
+	hasPrefix bool
+}
+
+func newTrieNode() *trieNode {
+	return &trieNode{
+		children: make(map[rune]*trieNode),
 	}
-	return
+}
+
+func buildTrie(strs []string) *trieNode {
+	root := newTrieNode()
+	for _, str := range strs {
+		node := root
+		for _, char := range str {
+			if _, ok := node.children[char]; !ok {
+				node.children[char] = newTrieNode()
+			}
+			node = node.children[char]
+		}
+		node.hasPrefix = true
+	}
+	return root
 }
