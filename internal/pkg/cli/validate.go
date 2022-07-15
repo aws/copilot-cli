@@ -22,7 +22,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
 var (
@@ -790,7 +789,7 @@ func validatePubSubName(name string) error {
 }
 
 func prettify(inputStrings []string) string {
-	prettyTypes := template.QuoteSliceFunc(inputStrings)
+	prettyTypes := quoteStringSlice(inputStrings)
 	return strings.Join(prettyTypes, ", ")
 }
 

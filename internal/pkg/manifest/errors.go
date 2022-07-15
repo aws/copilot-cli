@@ -65,11 +65,7 @@ func (e *errFieldMustBeSpecified) Error() string {
 	if len(e.conditionalFields) == 0 {
 		return errMsg
 	}
-	quoted := make([]string, len(e.conditionalFields))
-	for i, f := range e.conditionalFields {
-		quoted[i] = strconv.Quote(f)
-	}
-	return fmt.Sprintf(`%s if %s %s specified`, errMsg, english.WordSeries(quoted, "or"),
+	return fmt.Sprintf(`%s if %s %s specified`, errMsg, english.WordSeries(quoteStringSlice(e.conditionalFields), "or"),
 		english.PluralWord(len(e.conditionalFields), "is", "are"))
 }
 
@@ -111,13 +107,17 @@ type errAtLeastOneFieldMustBeSpecified struct {
 }
 
 func (e *errAtLeastOneFieldMustBeSpecified) Error() string {
-	quotedFields := make([]string, len(e.missingFields))
-	for i, f := range e.missingFields {
-		quotedFields[i] = strconv.Quote(f)
-	}
-	errMsg := fmt.Sprintf("must specify at least one of %s", english.WordSeries(quotedFields, "or"))
+	errMsg := fmt.Sprintf("must specify at least one of %s", english.WordSeries(quoteStringSlice(e.missingFields), "or"))
 	if e.conditionalField != "" {
 		errMsg = fmt.Sprintf(`%s if "%s" is specified`, errMsg, e.conditionalField)
 	}
 	return errMsg
+}
+
+func quoteStringSlice(in []string) []string {
+	quoted := make([]string, len(in))
+	for idx, str := range in {
+		quoted[idx] = strconv.Quote(str)
+	}
+	return quoted
 }

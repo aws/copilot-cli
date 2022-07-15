@@ -29,11 +29,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	envCFNTemplateNameFmt              = "%s.env.yml"
+	envCFNTemplateConfigurationNameFmt = "%s.env.params.json"
+)
+
 type packageEnvVars struct {
-	envName      string
-	appName      string
-	outputDir    string
-	uploadAssets bool
+	envName        string
+	appName        string
+	outputDir      string
+	uploadAssets   bool
+	forceNewUpdate bool
 }
 
 type discardFile struct{}
@@ -132,7 +138,11 @@ func (o *packageEnvOpts) Ask() error {
 
 // Execute prints the CloudFormation configuration for the environment.
 func (o *packageEnvOpts) Execute() error {
-	mft, err := environmentManifest(o.envName, o.ws, o.newInterpolator(o.appName, o.envName))
+	rawMft, err := o.ws.ReadEnvironmentManifest(o.envName)
+	if err != nil {
+		return fmt.Errorf("read manifest for environment %q: %w", o.envName, err)
+	}
+	mft, err := environmentManifest(o.envName, rawMft, o.newInterpolator(o.appName, o.envName))
 	if err != nil {
 		return err
 	}
@@ -156,6 +166,8 @@ func (o *packageEnvOpts) Execute() error {
 		RootUserARN:         principal.RootUserARN,
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
+		RawManifest:         rawMft,
+		ForceNewUpdate:      o.forceNewUpdate,
 	})
 	if err != nil {
 		return fmt.Errorf("generate CloudFormation template from environment %q manifest: %v", o.envName, err)
@@ -219,12 +231,12 @@ func (o *packageEnvOpts) setWriters() error {
 		return fmt.Errorf("create directory %q: %w", o.outputDir, err)
 	}
 
-	path := filepath.Join(o.outputDir, fmt.Sprintf("%s.env.yml", o.envName))
+	path := filepath.Join(o.outputDir, fmt.Sprintf(envCFNTemplateNameFmt, o.envName))
 	tplFile, err := o.fs.Create(path)
 	if err != nil {
 		return fmt.Errorf("create file at %q: %w", path, err)
 	}
-	path = filepath.Join(o.outputDir, fmt.Sprintf("%s.env.params.json", o.envName))
+	path = filepath.Join(o.outputDir, fmt.Sprintf(envCFNTemplateConfigurationNameFmt, o.envName))
 	paramsFile, err := o.fs.Create(path)
 	if err != nil {
 		return fmt.Errorf("create file at %q: %w", path, err)
@@ -271,5 +283,6 @@ func buildEnvPkgCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVar(&vars.outputDir, stackOutputDirFlag, "", stackOutputDirFlagDescription)
 	cmd.Flags().BoolVar(&vars.uploadAssets, uploadAssetsFlag, false, uploadAssetsFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
 	return cmd
 }

@@ -27,9 +27,6 @@ import (
 
 const (
 	svcManifestPath = "svc-manifest.yml"
-
-	dynamicDesiredCountPath = "custom-resources/desired-count-delegation.js"
-	rulePriorityPath        = "custom-resources/alb-rule-priority-generator.js"
 )
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
