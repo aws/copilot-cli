@@ -85,7 +85,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 
 	var uri LBWebServiceURI
 	if albEnabled {
-		albOrCfDescr := &albOrCfDescriber{
+		albOrCdnDescr := &albOrCdnDescriber{
 			svc:              d.svc,
 			env:              envName,
 			svcDescriber:     svcDescr,
@@ -93,7 +93,7 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 			initLBDescriber:  d.initLBDescriber,
 			albCfnOutputName: envOutputPublicLoadBalancerDNSName,
 		}
-		publicURI, err := albOrCfDescr.uri()
+		publicURI, err := albOrCdnDescr.uri()
 		if err != nil {
 			return URI{}, err
 		}
@@ -166,7 +166,7 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	}
 	for _, res := range resources {
 		if res.LogicalID == svcStackResourceALBTargetGroupLogicalID {
-			albOrCfDescr := &albOrCfDescriber{
+			albOrCdnDescr := &albOrCdnDescriber{
 				svc:              d.svc,
 				env:              envName,
 				svcDescriber:     svcDescr,
@@ -174,12 +174,12 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 				initLBDescriber:  d.initLBDescriber,
 				albCfnOutputName: envOutputInternalLoadBalancerDNSName,
 			}
-			privateURI, err := albOrCfDescr.uri()
+			privateURI, err := albOrCdnDescr.uri()
 			if err != nil {
 				return URI{}, err
 			}
 			if !privateURI.HTTPS && len(privateURI.DNSNames) > 1 {
-				privateURI = albOrCfDescr.bestEffortRemoveEnvDNSName(privateURI)
+				privateURI = albOrCdnDescr.bestEffortRemoveEnvDNSName(privateURI)
 			}
 			return URI{
 				URI:        english.OxfordWordSeries(privateURI.strings(), "or"),
@@ -214,7 +214,7 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	}, nil
 }
 
-type albOrCfDescriber struct {
+type albOrCdnDescriber struct {
 	svc              string
 	env              string
 	svcDescriber     ecsDescriber
@@ -223,7 +223,7 @@ type albOrCfDescriber struct {
 	albCfnOutputName string // The DNS name for the public or private ALB.
 }
 
-func (d *albOrCfDescriber) envDNSName(path string) (accessURI, error) {
+func (d *albOrCdnDescriber) envDNSName(path string) (accessURI, error) {
 	envOutputs, err := d.envDescriber.Outputs()
 	if err != nil {
 		return accessURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
@@ -238,7 +238,7 @@ func (d *albOrCfDescriber) envDNSName(path string) (accessURI, error) {
 	}, nil
 }
 
-func (d *albOrCfDescriber) uri() (accessURI, error) {
+func (d *albOrCdnDescriber) uri() (accessURI, error) {
 	svcParams, err := d.svcDescriber.Params()
 	if err != nil {
 		return accessURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
@@ -285,7 +285,7 @@ func (d *albOrCfDescriber) uri() (accessURI, error) {
 	}, nil
 }
 
-func (d *albOrCfDescriber) bestEffortRemoveEnvDNSName(accessURI accessURI) accessURI {
+func (d *albOrCdnDescriber) bestEffortRemoveEnvDNSName(accessURI accessURI) accessURI {
 	envOutputs, err := d.envDescriber.Outputs()
 	if err != nil {
 		return accessURI
