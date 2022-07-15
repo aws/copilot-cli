@@ -22,6 +22,7 @@ const (
 	EFSFeatureName         = "EFSWorkloads"
 	NATFeatureName         = "NATWorkloads"
 	InternalALBFeatureName = "InternalALBWorkloads"
+	AliasesFeatureName     = "Aliases"
 )
 
 // LastForceDeployIDOutputName is the logical ID of the deployment controller output.
@@ -32,6 +33,7 @@ var friendlyEnvFeatureName = map[string]string{
 	EFSFeatureName:         "EFS",
 	NATFeatureName:         "NAT Gateway",
 	InternalALBFeatureName: "Internal ALB",
+	AliasesFeatureName:     "Aliases",
 }
 
 var leastVersionForFeature = map[string]string{
@@ -39,11 +41,12 @@ var leastVersionForFeature = map[string]string{
 	EFSFeatureName:         "v1.3.0",
 	NATFeatureName:         "v1.3.0",
 	InternalALBFeatureName: "v1.10.0",
+	AliasesFeatureName:     "v1.4.0",
 }
 
 // AvailableEnvFeatures returns a list of the latest available feature, named after their corresponding parameter names.
 func AvailableEnvFeatures() []string {
-	return []string{ALBFeatureName, EFSFeatureName, NATFeatureName, InternalALBFeatureName}
+	return []string{ALBFeatureName, EFSFeatureName, NATFeatureName, InternalALBFeatureName, AliasesFeatureName}
 }
 
 // FriendlyEnvFeatureName returns a user-friendly feature name given a env-controller managed parameter name.
