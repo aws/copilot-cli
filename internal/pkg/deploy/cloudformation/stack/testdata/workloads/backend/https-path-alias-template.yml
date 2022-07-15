@@ -310,7 +310,7 @@ Resources:
       RulePath: !Ref RulePath
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
   
-  HTTPRulePriorityAction:
+  HTTPRuleWithDomainPriorityAction:
     Metadata:
       'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
     Type: Custom::RulePriorityFunction
@@ -345,7 +345,7 @@ Resources:
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-      Priority: !GetAtt HTTPRulePriorityAction.Priority # Same priority as HTTPS Listener
+      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority # Same priority as HTTPS Listener
   HTTPSListenerRule:
     Metadata:
       'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
@@ -424,6 +424,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
+      Aliases: ["example.com", "foobar.com", "*.foobar.com"]
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters: [InternalALBWorkloads]
   EnvControllerFunction:
