@@ -347,9 +347,17 @@ func (cfg privateHTTPConfig) IsEmpty() bool {
 }
 
 type securityGroupsConfig struct {
-	AllowVPCIngress *bool `yaml:"allow_vpc_ingress"`
+	Ingress ingress `yaml:"Ingress"`
 }
 
 func (cfg securityGroupsConfig) isEmpty() bool {
-	return cfg.AllowVPCIngress == nil
+	return cfg.Ingress.isEmpty()
+}
+
+type ingress struct {
+	VPCIngress *bool `yaml:"from_vpc"`
+}
+
+func (i ingress) isEmpty() bool {
+	return i.VPCIngress == nil
 }

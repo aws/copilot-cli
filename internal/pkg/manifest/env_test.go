@@ -429,7 +429,8 @@ http:
             - cert-2
     private:
         security_groups:
-            allow_vpc_ingress: false
+            Ingress:
+                from_vpc: false
 `,
 			wantedStruct: &Environment{
 				Workload: Workload{
@@ -443,7 +444,9 @@ http:
 						},
 						Private: privateHTTPConfig{
 							SecurityGroupsConfig: securityGroupsConfig{
-								AllowVPCIngress: aws.Bool(false),
+								Ingress: ingress{
+									VPCIngress: aws.Bool(false),
+								},
 							},
 						},
 					},
