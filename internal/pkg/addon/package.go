@@ -193,18 +193,12 @@ func yamlMapGet(node *yaml.Node, key string) *yaml.Node {
 }
 
 func (a *Addons) transformProperty(properties *yaml.Node, tr transformInfo) error {
-	mapNode := mappingNode(properties)
-	var node *yaml.Node
-	for i, key := range tr.Property {
-		var ok bool
-		node, ok = mapNode[key]
-		if !ok || (i+1 != len(tr.Property) && node.Kind != yaml.MappingNode) {
-			return nil // no error if the property doesn't exist
-		}
-		mapNode = mappingNode(node)
+	node := properties
+	for _, key := range tr.Property {
+		node = yamlMapGet(node, key)
 	}
 
-	if node == nil || node.Kind != yaml.ScalarNode {
+	if node.IsZero() || node.Kind != yaml.ScalarNode {
 		// only transform if the node is a scalar node
 		return nil
 	}
