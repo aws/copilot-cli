@@ -6,6 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -180,6 +182,21 @@ func (o *deployEnvOpts) validateOrAskEnvName() error {
 	}
 	name, err := o.sel.LocalEnvironment("Select an environment manifest from your workspace", "")
 	if err != nil {
+		var pathErr *os.PathError
+		if errors.As(err, &pathErr) || errors.Is(err, selector.ErrLocalEnvsNotFound) {
+			name := "example"
+			dir := filepath.Join("copilot", "environments", name)
+			log.Infof(`It looks like there are no environment manifests in your workspace.
+To create a new manifest for an %q environment, please run:
+1. Create the directories to store the manifest file:
+   %s
+2. Generate and write the manifest file:
+   %s
+`,
+				name,
+				color.HighlightCode(fmt.Sprintf("mkdir -p %s", dir)),
+				color.HighlightCode(fmt.Sprintf("copilot env show -n %s --manifest > %s", name, filepath.Join(dir, "manifest.yml"))))
+		}
 		return fmt.Errorf("select environment: %w", err)
 	}
 	o.name = name

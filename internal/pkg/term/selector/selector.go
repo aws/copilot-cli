@@ -819,7 +819,7 @@ func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (wl string
 	}
 	filteredEnvNames := filterEnvsByName(envs, wsEnvNames)
 	if len(filteredEnvNames) == 0 {
-		return "", errors.New("no environments found")
+		return "", ErrLocalEnvsNotFound
 	}
 	if len(filteredEnvNames) == 1 {
 		log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(filteredEnvNames[0]))
