@@ -156,11 +156,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	}
 	snsSel := selector.NewDeploySelect(prompter, store, deployStore)
 
+	pathDisp, err := NewCwdPathDisplayer()
+	if err != nil {
+		return nil, err
+	}
+
 	initSvc := &initialize.WorkloadInitializer{
 		Store:    store,
 		Ws:       ws,
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
+		PathDisp: pathDisp,
 	}
 	opts := &initSvcOpts{
 		initSvcVars:  vars,

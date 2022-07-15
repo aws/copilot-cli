@@ -114,6 +114,10 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	if err != nil {
 		return nil, err
 	}
+	pathDisplayer, err := NewCwdPathDisplayer()
+	if err != nil {
+		return nil, err
+	}
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
 			name: vars.appName,
@@ -213,7 +217,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prompt: prompt,
 
 		setupWorkloadInit: func(o *initOpts, wkldType string) error {
-			wlInitializer := &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer}
+			wlInitializer := &initialize.WorkloadInitializer{Store: configStore, Ws: ws, Prog: spin, Deployer: deployer, PathDisp: pathDisplayer}
 			wkldVars := initWkldVars{
 				appName:        *o.appName,
 				wkldType:       wkldType,

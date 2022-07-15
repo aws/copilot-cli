@@ -62,6 +62,11 @@ type Prog interface {
 	Stop(label string)
 }
 
+// PathDisplayer presents paths in a user-friendly form.
+type PathDisplayer interface {
+	DisplayPath(path string) (string, error)
+}
+
 // WorkloadProps contains the information needed to represent a Workload (job or service).
 type WorkloadProps struct {
 	App            string
@@ -97,6 +102,7 @@ type WorkloadInitializer struct {
 	Deployer WorkloadAdder
 	Ws       Workspace
 	Prog     Prog
+	PathDisp PathDisplayer
 }
 
 // Service writes the service manifest, creates an ECR repository, and adds the service to SSM.
@@ -154,15 +160,13 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = w.Ws.Rel(manifestPath)
-	if err != nil {
-		return "", err
-	}
 	manifestMsgFmt := "Wrote the manifest for %s %s at %s\n"
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for %s %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, jobWlType, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
+
+	path, err := w.PathDisp.DisplayPath(manifestPath)
+	log.Successf(manifestMsgFmt, jobWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 	var sched = props.Schedule
 	if props.Schedule == "" {
 		sched = "None"
@@ -180,7 +184,12 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return manifestPath, nil
+
+	path, err = w.Ws.Rel(manifestPath)
+	if err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
@@ -213,15 +222,14 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = w.Ws.Rel(manifestPath)
-	if err != nil {
-		return "", err
-	}
+
 	manifestMsgFmt := "Wrote the manifest for %s %s at %s\n"
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for %s %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, svcWlType, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
+
+	path, err := w.PathDisp.DisplayPath(manifestPath)
+	log.Successf(manifestMsgFmt, svcWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 
 	helpText := "Your manifest contains configurations like your container size and port."
 	if props.Port != 0 {
@@ -234,7 +242,12 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return manifestPath, nil
+
+	path, err = w.Ws.Rel(manifestPath)
+	if err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 func (w *WorkloadInitializer) addSvcToAppAndSSM(app *config.Application, props WorkloadProps) error {
