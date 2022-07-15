@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -51,9 +50,8 @@ type Addons struct {
 	uploader uploader
 	bucket   string
 
-	templateOnce sync.Once
-	templateStr  string
-	templateErr  error
+	cachedTemplate    string
+	cachedTemplateErr error
 
 	UploadAssets bool
 }
@@ -85,11 +83,8 @@ func New(wlName, bucket string, uploader uploader) (*Addons, error) {
 // If the addons directory doesn't exist, it returns the empty string and
 // ErrAddonsDirNotExist.
 func (a *Addons) Template() (string, error) {
-	a.templateOnce.Do(func() {
-		a.templateStr, a.templateErr = a.template()
-	})
-
-	return a.templateStr, a.templateErr
+	a.cachedTemplate, a.cachedTemplateErr = a.template()
+	return a.cachedTemplate, a.cachedTemplateErr
 }
 
 func (a *Addons) template() (string, error) {
