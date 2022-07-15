@@ -132,7 +132,7 @@ func (d *envDeployer) prefixLists(in *DeployEnvironmentInput) ([]string, error) 
 
 func (d *envDeployer) cfManagedPrefixListId(in *DeployEnvironmentInput) (*string, error) {
 	// Check if ingress is allowed from cloudfront
-	if in.Manifest == nil || !aws.BoolValue(in.Manifest.HTTPConfig.Public.Ingress.CDNIngress) {
+	if in.Manifest == nil || !aws.BoolValue(in.Manifest.HTTPConfig.Public.SecurityGroupConfig.Ingress.CDNIngress) {
 		return nil, nil
 	}
 
@@ -208,7 +208,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 	if err != nil {
 		return nil, err
 	}
-	prefixListIDs, err := d.prefixLists(in)
+	cidrPrefixListIDs, err := d.prefixLists(in)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +223,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		CustomResourcesURLs:  in.CustomResourcesURLs,
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
-		PrefixListIDs:        prefixListIDs,
+		CIDRPrefixListIDs:    cidrPrefixListIDs,
 		Mft:                  in.Manifest,
 		RawMft:               in.RawManifest,
 		Version:              deploy.LatestEnvTemplateVersion,

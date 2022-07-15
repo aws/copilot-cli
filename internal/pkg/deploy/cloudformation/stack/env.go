@@ -86,19 +86,19 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}
 
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
-		AppName:                   e.in.App.Name,
-		EnvName:                   e.in.Name,
-		CustomResources:           crs,
-		ArtifactBucketARN:         e.in.ArtifactBucketARN,
-		ArtifactBucketKeyARN:      e.in.ArtifactBucketKeyARN,
-		PublicFacingPrefixListIDs: e.in.PrefixListIDs,
-		PublicImportedCertARNs:    e.importPublicCertARNs(),
-		PrivateImportedCertARNs:   e.importPrivateCertARNs(),
-		VPCConfig:                 e.vpcConfig(),
-		CustomInternalALBSubnets:  e.internalALBSubnets(),
-		AllowVPCIngress:           e.in.AllowVPCIngress, // TODO(jwh): fetch AllowVPCIngress from Manifest or SSM.
-		Telemetry:                 e.telemetryConfig(),
-		CDNConfig:                 e.cdnConfig(),
+		AppName:                       e.in.App.Name,
+		EnvName:                       e.in.Name,
+		CustomResources:               crs,
+		ArtifactBucketARN:             e.in.ArtifactBucketARN,
+		ArtifactBucketKeyARN:          e.in.ArtifactBucketKeyARN,
+		PublicFacingCIDRPrefixListIDs: e.in.CIDRPrefixListIDs,
+		PublicImportedCertARNs:        e.importPublicCertARNs(),
+		PrivateImportedCertARNs:       e.importPrivateCertARNs(),
+		VPCConfig:                     e.vpcConfig(),
+		CustomInternalALBSubnets:      e.internalALBSubnets(),
+		AllowVPCIngress:               e.in.AllowVPCIngress, // TODO(jwh): fetch AllowVPCIngress from Manifest or SSM.
+		Telemetry:                     e.telemetryConfig(),
+		CDNConfig:                     e.cdnConfig(),
 
 		Version:            e.in.Version,
 		LatestVersion:      deploy.LatestEnvTemplateVersion,

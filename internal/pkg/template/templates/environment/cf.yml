@@ -104,8 +104,8 @@ Resources:
     Properties:
       GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if .PublicFacingPrefixListIDs}}
-        {{- range $id := .PublicFacingPrefixListIDs}}
+        {{- if .PublicFacingCIDRPrefixListIDs}}
+        {{- range $id := .PublicFacingCIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 80
           FromPort: 80
@@ -130,13 +130,13 @@ Resources:
   PublicHTTPSLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTPS traffic'
-    Condition: CreateALB
+    Condition: ExportHTTPSListener
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: HTTPS access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if .PublicFacingPrefixListIDs}}
-        {{- range $id := .PublicFacingPrefixListIDs}}
+        {{- if .PublicFacingCIDRPrefixListIDs}}
+        {{- range $id := .PublicFacingCIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 443
           FromPort: 443
@@ -198,7 +198,7 @@ Resources:
       SourceSecurityGroupId: !Ref PublicHTTPLoadBalancerSecurityGroup
   EnvironmentHTTPSSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateALB
+    Condition: ExportHTTPSListener
     Properties:
       Description: HTTPS ingress from the public ALB
       GroupId: !Ref EnvironmentSecurityGroup
@@ -260,7 +260,9 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internet-facing
-      SecurityGroups: [ !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId,  !GetAtt PublicHTTPSLoadBalancerSecurityGroup.GroupId]
+      SecurityGroups: 
+        - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId
+        - !If [ExportHTTPSListener, !GetAtt PublicHTTPSLoadBalancerSecurityGroup.GroupId, !Ref "AWS::NoValue"]
 {{- if .VPCConfig.Imported}}
       Subnets: [ {{range $id := .VPCConfig.Imported.PublicSubnetIDs}}{{$id}}, {{end}} ]
 {{- else}}

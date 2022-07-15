@@ -37,7 +37,7 @@ func (e EnvironmentConfig) Validate() error {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
 
-	if aws.BoolValue(e.HTTPConfig.Public.Ingress.CDNIngress) && !e.CDNConfig.CDNEnabled() {
+	if aws.BoolValue(e.HTTPConfig.Public.SecurityGroupConfig.Ingress.CDNIngress) && !e.CDNConfig.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
 
@@ -217,6 +217,11 @@ func (cfg PublicHTTPConfig) Validate() error {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
+	return cfg.SecurityGroupConfig.Validate()
+}
+
+// Validate returns nil if ALBSecurityGroupsConfig is configured correctly.
+func (cfg ALBSecurityGroupsConfig) Validate() error {
 	return cfg.Ingress.Validate()
 }
 

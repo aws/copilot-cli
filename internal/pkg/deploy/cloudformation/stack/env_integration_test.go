@@ -51,7 +51,7 @@ observability:
 						Name:                "demo",
 					},
 					Name:                 "test",
-					PrefixListIDs:        []string{"pl-mockid"},
+					CIDRPrefixListIDs:    []string{"pl-mockid"},
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					CustomResourcesURLs: map[string]string{

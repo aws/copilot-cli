@@ -328,15 +328,24 @@ func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	cfg.Public.Certificates = env.ImportCertARNs
 }
 
+// ALBSecurityGroupsConfig represents security group configuration settings for an ALB.
+type ALBSecurityGroupsConfig struct {
+	Ingress Ingress `yaml:"ingress"`
+}
+
+func (cfg ALBSecurityGroupsConfig) IsEmpty() bool {
+	return cfg.Ingress.IsEmpty()
+}
+
 // PublicHTTPConfig represents the configuration settings for an environment public ALB.
 type PublicHTTPConfig struct {
-	Ingress      Ingress  `yaml:"ingress"`
-	Certificates []string `yaml:"certificates,omitempty"`
+	SecurityGroupConfig ALBSecurityGroupsConfig `yaml:"security_groups,omitempty"`
+	Certificates        []string                `yaml:"certificates,omitempty"`
 }
 
 // Ingress represents allowed ingress traffic from specified fields.
 type Ingress struct {
-	CDNIngress *bool `yaml:"from_cdn"`
+	CDNIngress *bool `yaml:"restrict_from_cdn"`
 }
 
 // IsEmpty returns true if there is are no specified fields for ingress.
@@ -346,7 +355,7 @@ func (i Ingress) IsEmpty() bool {
 
 // IsEmpty returns true if there is no customization to the public ALB.
 func (cfg PublicHTTPConfig) IsEmpty() bool {
-	return len(cfg.Certificates) == 0 && cfg.Ingress.IsEmpty()
+	return len(cfg.Certificates) == 0 && cfg.SecurityGroupConfig.IsEmpty()
 }
 
 type privateHTTPConfig struct {

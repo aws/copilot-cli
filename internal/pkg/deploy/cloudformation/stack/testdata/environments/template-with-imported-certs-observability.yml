@@ -282,7 +282,7 @@ Resources:
   PublicHTTPSLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTPS traffic'
-    Condition: CreateALB
+    Condition: ExportHTTPSListener
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: HTTPS access to the public facing load balancer
@@ -328,7 +328,7 @@ Resources:
       SourceSecurityGroupId: !Ref PublicHTTPLoadBalancerSecurityGroup
   EnvironmentHTTPSSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateALB
+    Condition: ExportHTTPSListener
     Properties:
       Description: HTTPS ingress from the public ALB
       GroupId: !Ref EnvironmentSecurityGroup
@@ -388,7 +388,9 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internet-facing
-      SecurityGroups: [ !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId,  !GetAtt PublicHTTPSLoadBalancerSecurityGroup.GroupId]
+      SecurityGroups: 
+        - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId
+        - !If [ExportHTTPSListener, !GetAtt PublicHTTPSLoadBalancerSecurityGroup.GroupId, !Ref "AWS::NoValue"]
       Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2,  ]
       Type: application
   # Assign a dummy target group that with no real services as targets, so that we can create

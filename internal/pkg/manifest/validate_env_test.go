@@ -99,8 +99,10 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 				},
 				HTTPConfig: EnvironmentHTTPConfig{
 					Public: PublicHTTPConfig{
-						Ingress: Ingress{
-							CDNIngress: aws.Bool(true),
+						SecurityGroupConfig: ALBSecurityGroupsConfig{
+							Ingress: Ingress{
+								CDNIngress: aws.Bool(true),
+							},
 						},
 					},
 				},
