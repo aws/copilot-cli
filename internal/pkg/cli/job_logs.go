@@ -147,10 +147,6 @@ func (o *jobLogsOpts) Validate() error {
 		return fmt.Errorf("--limit %d is out-of-bounds, value must be between %d and %d", o.limit, cwGetLogEventsLimitMin, cwGetLogEventsLimitMax)
 	}
 
-	// Return early here since if --last isn't set, we don't need to worry about limiting the log streams returned.
-	if o.last == 0 {
-		return nil
-	}
 	return nil
 }
 
