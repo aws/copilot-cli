@@ -16,6 +16,8 @@ const updateStackWaiter = {
 
 const AliasParamKey = "Aliases";
 
+let ignoredEnvOutputs = new Set(["EnabledFeatures", "LastForceDeployID"]);
+
 /**
  * Upload a CloudFormation response object to S3.
  *
@@ -308,7 +310,9 @@ const updateAliases = function (cfnAliases, workload, aliases) {
 const getExportedValues = function (stack) {
   const exportedValues = {};
   stack.Outputs.forEach((output) => {
-    exportedValues[output.OutputKey] = output.OutputValue;
+    if (!ignoredEnvOutputs.has(output.OutputKey)) {
+      exportedValues[output.OutputKey] = output.OutputValue;
+    }
   });
   return exportedValues;
 };
