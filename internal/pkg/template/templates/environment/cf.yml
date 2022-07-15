@@ -53,8 +53,9 @@ Conditions:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
-  HasAliases:
-    !Not [!Equals [ !Ref Aliases, "" ]]
+  ManagedAliases: !And
+    - !Condition DelegateDNS
+    - !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
 {{include "bootstrap-resources" . | indent 2}}
 {{- if .CDNConfig}}
@@ -642,3 +643,6 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  LastForceDeployID:
+    Value: {{quote .ForceUpdateID}}
+    Description: Optionally force the template to update when no immediate resource change is present.
