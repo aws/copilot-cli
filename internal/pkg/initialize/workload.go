@@ -166,6 +166,9 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 	}
 
 	path, err := w.PathDisp.DisplayPath(manifestPath)
+	if err != nil {
+		return "", err
+	}
 	log.Successf(manifestMsgFmt, jobWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 	var sched = props.Schedule
 	if props.Schedule == "" {
@@ -229,6 +232,9 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 	}
 
 	path, err := w.PathDisp.DisplayPath(manifestPath)
+	if err != nil {
+		return "", err
+	}
 	log.Successf(manifestMsgFmt, svcWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 
 	helpText := "Your manifest contains configurations like your container size and port."
