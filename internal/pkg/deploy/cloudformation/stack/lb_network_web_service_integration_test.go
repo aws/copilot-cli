@@ -24,9 +24,6 @@ import (
 
 const (
 	nlbSvcManifestPath = "svc-nlb-manifest.yml"
-
-	nlbCustomDomainPath  = "custom-resources/nlb-custom-domain.js"
-	nlbCertValidatorPath = "custom-resources/nlb-cert-validator.js"
 )
 
 func TestNetworkLoadBalancedWebService_Template(t *testing.T) {

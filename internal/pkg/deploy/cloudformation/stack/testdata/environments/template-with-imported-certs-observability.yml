@@ -5,9 +5,14 @@ Metadata:
   Manifest: |
     name: test
     type: Environment
-    observability: {container_insights: true}
-    http: {public: {certificates: [cert-1, cert-2]}}
-
+    # Create the public ALB with certificates attached.
+    http:
+      public:
+        certificates:
+          - cert-1
+          - cert-2
+    observability:
+      container_insights: true # Enable container insights.
 Parameters:
   AppName:
     Type: String
@@ -989,7 +994,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
