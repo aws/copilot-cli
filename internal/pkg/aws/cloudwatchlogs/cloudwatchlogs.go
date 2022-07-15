@@ -94,7 +94,7 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreamLimit int, logStre
 		} else {
 			logStreamNames = append(logStreamNames, streams...)
 		}
-		if len(logStreamNames) >= logStreamLimit {
+		if logStreamLimit != 0 && len(logStreamNames) >= logStreamLimit {
 			break
 		}
 		if token := logStreamsResp.NextToken; aws.StringValue(token) == "" {
@@ -167,10 +167,10 @@ func truncateEvents(limit int, events []*Event) []*Event {
 }
 
 func truncateStreams(limit int, streams []string) []string {
-	if len(streams) <= limit {
+	if limit == 0 || len(streams) <= limit {
 		return streams
 	}
-	return streams[:len(streams)-limit]
+	return streams[:limit]
 }
 
 func initGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput {
