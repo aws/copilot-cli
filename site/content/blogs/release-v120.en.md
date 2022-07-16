@@ -24,6 +24,7 @@ Copilot v1.20 brings several new features and improvements:
   [(#3692)](https://github.com/aws/copilot-cli/pull/3692)
 * **Deny default security group**: Add an option `deny_default` to `security_groups` in service manifests to remove the EnvironmentSecurityGroup ingress that is applied by default.
   [(#3682)](https://github.com/aws/copilot-cli/pull/3682)
+* **Predictable aliases for Backend Services with an ALB**: If you don't specify an alias for your Backend Services that have an internal ALB configured, they will now be reachable with the host name `svc.env.app.internal` instead of the default ALB host name. ([#3668](https://github.com/aws/copilot-cli/pull/3668))
 
 ???+ note "What’s AWS Copilot?"
 
