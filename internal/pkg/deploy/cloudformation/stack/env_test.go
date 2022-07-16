@@ -56,6 +56,9 @@ func TestEnv_Template(t *testing.T) {
 								Key:    "mockkey4",
 							},
 						},
+						Telemetry: &template.Telemetry{
+							EnableContainerInsights: false,
+						},
 						SerializedManifest: "name: env\ntype: Environment\n",
 						ForceUpdateID:      "mockPreviousForceUpdateID",
 					}, data)
@@ -679,5 +682,8 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 				Type: aws.String("Environment"),
 			},
 		},
+		RawMft: []byte(`name: env
+type: Environment
+`),
 	}
 }

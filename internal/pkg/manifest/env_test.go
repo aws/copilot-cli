@@ -278,6 +278,11 @@ func TestFromEnvConfig(t *testing.T) {
 						Private: privateHTTPConfig{
 							InternalALBSubnets: []string{"subnet2"},
 							Certificates:       []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+							SecurityGroupsConfig: securityGroupsConfig{
+								Ingress: ingress{
+									VPCIngress: aws.Bool(false),
+								},
+							},
 						},
 					},
 				},
