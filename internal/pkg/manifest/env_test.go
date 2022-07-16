@@ -434,7 +434,7 @@ http:
             - cert-2
     private:
         security_groups:
-            Ingress:
+            ingress:
                 from_vpc: false
 `,
 			wantedStruct: &Environment{

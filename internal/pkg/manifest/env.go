@@ -349,7 +349,7 @@ func (cfg privateHTTPConfig) IsEmpty() bool {
 }
 
 type securityGroupsConfig struct {
-	Ingress ingress `yaml:"Ingress"`
+	Ingress ingress `yaml:"ingress"`
 }
 
 func (cfg securityGroupsConfig) isEmpty() bool {

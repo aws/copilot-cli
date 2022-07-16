@@ -37,7 +37,8 @@ http:
       - cert-2
   private:
     security_groups:
-      allow_vpc_ingress: true
+      ingress:
+        from_vpc: true
 observability:
   container_insights: true # Enable container insights.`
 				var mft manifest.Environment

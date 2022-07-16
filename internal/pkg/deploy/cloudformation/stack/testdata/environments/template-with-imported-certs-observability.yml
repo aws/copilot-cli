@@ -4,7 +4,7 @@ Description: CloudFormation environment template for infrastructure shared among
 Metadata:
   Manifest: |
     name: test
-    type: Environmentg
+    type: Environment
     # Create the public ALB with certificates attached.
     http:
       public:
