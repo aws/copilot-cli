@@ -18,7 +18,7 @@ Copilot v1.20 brings several new features and improvements:
 
 * **Environment manifests**: You can now create and update environments with a [manifest file](../docs/manifest/environment.en.md) bringing all the benefits of infrastructure as code to environments. 
    [See detailed walkthrough](#environment-manifest) for how to migrate your existing environments.
-* **Predictable aliases for Backend Services with an ALB**: If you don't specify an alias for your Backend Services that have an internal ALB configured, they will now be reachable with the host name `svc.env.app.internal` instead of the default ALB host name.
+* **Predictable aliases for Backend Services with an ALB**: If you don't specify an alias for your Backend Services that have an internal ALB configured, they will now be reachable with the host name `svc.env.app.internal` instead of the default ALB host name. ([#3668](https://github.com/aws/copilot-cli/pull/3668))
 
 ???+ note "What’s AWS Copilot?"
 
