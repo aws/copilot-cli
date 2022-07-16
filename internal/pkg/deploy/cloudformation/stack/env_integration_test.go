@@ -8,6 +8,7 @@ package stack_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -26,12 +27,9 @@ func TestEnvStack_Template(t *testing.T) {
 	}{
 		"generate template with embedded manifest file with container insights and imported certificates": {
 			input: func() *deploy.CreateEnvironmentInput {
-				var mft manifest.Environment
-				err := yaml.Unmarshal([]byte(`
-name: test
+				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
-# All these comments should be deleted.
 http:
   public:
     certificates:
@@ -41,8 +39,9 @@ http:
     security_groups:
       allow_vpc_ingress: true
 observability:
-    container_insights: true # Enable container insights.
-`), &mft)
+  container_insights: true # Enable container insights.`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
 				return &deploy.CreateEnvironmentInput{
 					Version: "1.x",
@@ -58,18 +57,18 @@ observability:
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					Mft: &mft,
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
 				}
 			}(),
 			wantedFileName: "template-with-imported-certs-observability.yml",
 		},
 		"generate template with custom resources": {
 			input: func() *deploy.CreateEnvironmentInput {
+				rawMft := `name: test
+type: Environment`
 				var mft manifest.Environment
-				err := yaml.Unmarshal([]byte(`
-name: test
-type: Environment
-`), &mft)
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
 				return &deploy.CreateEnvironmentInput{
 					Version: "1.x",
@@ -85,7 +84,8 @@ type: Environment
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					Mft: &mft,
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
 				}
 			}(),
 			wantedFileName: "template-with-basic-manifest.yml",
@@ -107,6 +107,9 @@ type: Environment
 			require.NoError(t, yaml.Unmarshal([]byte(actual), actualObj))
 			actualMetadata := actualObj["Metadata"].(map[string]any) // We remove the Version from the expected template, as the latest env version always changes.
 			delete(actualMetadata, "Version")
+			// Strip new lines when comparing outputs.
+			actualObj["Metadata"].(map[string]any)["Manifest"] = strings.TrimSpace(actualObj["Metadata"].(map[string]any)["Manifest"].(string))
+			wantedObj["Metadata"].(map[string]any)["Manifest"] = strings.TrimSpace(wantedObj["Metadata"].(map[string]any)["Manifest"].(string))
 
 			// THEN
 			require.Equal(t, wantedObj, actualObj)

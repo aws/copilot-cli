@@ -226,6 +226,7 @@ type PipelineInitInput struct {
 	URL          string
 	GitBranch    string
 	Environments []string
+	Type         string
 }
 
 // PipelineDeployInput contains the parameters for calling copilot pipeline deploy.
@@ -705,6 +706,7 @@ func (cli *CLI) PipelineInit(opts PipelineInitInput) (string, error) {
 		"--url", opts.URL,
 		"--git-branch", opts.GitBranch,
 		"--environments", strings.Join(opts.Environments, ","),
+		"--pipeline-type", opts.Type,
 	}
 
 	return cli.exec(exec.Command(cli.path, args...))
