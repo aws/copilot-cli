@@ -250,7 +250,7 @@ var _ = Describe("App Runner", func() {
 				Since:   "1h",
 			})
 			return svcLogs, svcLogsErr
-		}, "60s", "10s").ShouldNot(BeEmpty())
+		}, "120s", "10s").ShouldNot(BeEmpty())
 
 		for _, logLine := range svcLogs {
 			Expect(logLine.Message).NotTo(Equal(""))
