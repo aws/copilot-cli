@@ -18,11 +18,11 @@ Copilot v1.20 brings several new features and improvements:
 
 * **Environment manifests**: You can now create and update environments with a [manifest file](../docs/manifest/environment.en.md) bringing all the benefits of infrastructure as code to environments. 
    [See detailed walkthrough](#environment-manifest) for how to migrate your existing environments.
-* **Additional policy to build role**: You can now specify additional policy for CodeBuild Build Project Role through pipeline manifest field `additional_policy`.
+* **Additional policy to build role**: You can now specify an additional policy for the CodeBuild Build Project Role through the pipeline manifest field `additional_policy`.
   [See detailed walkthrough](../docs/manifest/pipeline.en.md) for how to specify an additional policy document to add to the build project role. [(#3709)](https://github.com/aws/copilot-cli/pull/3709)
-* **`job run`**: Command now can be used to execute scheduled jobs.
+* **Invoke a scheduled job**: You can now execute an existing scheduled job ad hoc using the new `copilot job run` command.
   [(#3692)](https://github.com/aws/copilot-cli/pull/3692)
-* **Deny default sec group**: This change adds option to deny EnvironmentSecurityGroup which is applied by default on copilot service
+* **Deny default security group**: Add an option `deny_default` to `security_groups` in service manifests to remove the EnvironmentSecurityGroup ingress that is applied by default.
   [(#3682)](https://github.com/aws/copilot-cli/pull/3682)
 
 ???+ note "What’s AWS Copilot?"
