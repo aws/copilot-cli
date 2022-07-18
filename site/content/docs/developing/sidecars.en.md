@@ -38,7 +38,7 @@ http:
   path: 'api'
   healthcheck: '/api/health-check'
   # Target container for Load Balancer is our sidecar 'nginx', instead of the service container.
-  targetContainer: 'nginx'
+  target_container: 'nginx'
 
 cpu: 256
 memory: 512

@@ -10,7 +10,7 @@ $ copilot pipeline status [flags]
 ```
 -a, --app string    Name of the application.
 -h, --help          help for status
-    --json          Optional. Outputs in JSON format.
+    --json          Optional. Output in JSON format.
 -n, --name string   Name of the pipeline.
 ```
 

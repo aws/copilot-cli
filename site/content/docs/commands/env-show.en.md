@@ -17,7 +17,8 @@ You can optionally pass in a `--resources` flag which will include the AWS resou
 ```
 -a, --app string    Name of the application.
 -h, --help          help for show
-    --json          Optional. Outputs in JSON format.
+    --json          Optional. Output in JSON format.
+    --manifest      Optional. Output the manifest file used for the deployment.
 -n, --name string   Name of the environment.
     --resources     Optional. Show the resources in your environment.
 ```
