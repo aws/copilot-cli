@@ -296,6 +296,7 @@ type wsWlDirReader interface {
 }
 
 type wsEnvironmentReader interface {
+	wsEnvironmentsLister
 	ReadEnvironmentManifest(mftDirName string) (workspace.EnvironmentManifest, error)
 }
 

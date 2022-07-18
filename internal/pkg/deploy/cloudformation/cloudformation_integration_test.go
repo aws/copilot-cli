@@ -615,6 +615,9 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 					output.OutputValue,
 					"EnvironmentSecurityGroup value should not be nil")
 			},
+			"LastForceDeployID": func(output *awsCF.Output) {
+				require.Equal(t, lastForceUpdateID, aws.StringValue(output.OutputValue), "last force update id does not change by default")
+			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),
 			"There should have been %d output values - instead there were %d. The value of the CF stack was %s",

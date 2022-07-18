@@ -11,6 +11,10 @@ Metadata:
         certificates:
           - cert-1
           - cert-2
+      private:
+        security_groups:
+          ingress:
+            from_vpc: true
     observability:
       container_insights: true # Enable container insights.
 Parameters:
