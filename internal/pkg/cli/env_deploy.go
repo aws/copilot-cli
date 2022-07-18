@@ -233,7 +233,7 @@ func (o *deployEnvOpts) cachedTargetApp() (*config.Application, error) {
 func (o *deployEnvOpts) logManifestSuggestion(envName string) {
 	dir := filepath.Join("copilot", "environments", envName)
 	log.Infof(`It looks like there are no environment manifests in your workspace.
-To create a new manifest for an %q environment, please run:
+To create a new manifest for an environment %q, please run:
 1. Create the directories to store the manifest file:
    %s
 2. Generate and write the manifest file:
