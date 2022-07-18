@@ -225,7 +225,6 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				now: func() time.Time {
 					return mockCurrentTimestamp
 				},
-				includeStateMachineLogs: tc.includeStateMachine,
 			}
 
 			// WHEN
@@ -240,6 +239,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				StartTime:      tc.startTime,
 				OnEvents:       logWriter,
 				LogStreamLimit: tc.last,
+				IncludeStateMachineLogs: tc.includeStateMachine,
 			})
 
 			// THEN
