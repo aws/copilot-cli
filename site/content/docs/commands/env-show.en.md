@@ -25,7 +25,11 @@ You can optionally pass in a `--resources` flag which will include the AWS resou
 You can use the `--json` flag if you'd like to programmatically parse the results.
 
 ## Examples
-Shows info about the environment "test".
+Print configuration for the "test" environment.
 ```console
 $ copilot env show -n test
+```
+Print manifest file for deploying the "prod" environment.
+```console
+$ copilot env show -n prod --manifest
 ```

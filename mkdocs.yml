@@ -69,6 +69,7 @@ nav:
         - app upgrade: docs/commands/app-upgrade.en.md
         - app delete: docs/commands/app-delete.en.md
         - env init: docs/commands/env-init.en.md
+        - env package: docs/commands/env-package.en.md
         - env delete: docs/commands/env-delete.en.md
         - job init: docs/commands/job-init.en.md
         - job package: docs/commands/job-package.en.md
@@ -92,6 +93,7 @@ nav:
         - env ls: docs/commands/env-ls.en.md
         - env show: docs/commands/env-show.en.md
         - job ls: docs/commands/job-ls.en.md
+        - job run: docs/commands/job-run.en.md
         - svc ls: docs/commands/svc-ls.en.md
         - svc show: docs/commands/svc-show.en.md
         - svc status: docs/commands/svc-status.en.md
@@ -117,6 +119,7 @@ nav:
         - env delete: docs/commands/env-delete.en.md
         - env init: docs/commands/env-init.en.md
         - env ls: docs/commands/env-ls.en.md
+        - env package: docs/commands/env-package.en.md
         - env show: docs/commands/env-show.en.md
         - init: docs/commands/init.en.md
         - job delete: docs/commands/job-delete.en.md
@@ -124,6 +127,7 @@ nav:
         - job init: docs/commands/job-init.en.md
         - job ls: docs/commands/job-ls.en.md
         - job package: docs/commands/job-package.en.md
+        - job run: docs/commands/job-run.en.md
         - pipeline delete: docs/commands/pipeline-delete.en.md
         - pipeline deploy: docs/commands/pipeline-deploy.en.md
         - pipeline init: docs/commands/pipeline-init.en.md

@@ -12,6 +12,7 @@ Generally, the steps involved in task run are:
 2. Build and push the image to ECR
 3. Create or update your ECS task definition
 4. Run and wait for the tasks to start
+5. If the tasks exit with a non-zero exit code, then forward the exit code.
 
 !!!info
     1. Tasks with the same group name share the same set of resources, including the CloudFormation stack, ECR repository, CloudWatch log group and task definition.
