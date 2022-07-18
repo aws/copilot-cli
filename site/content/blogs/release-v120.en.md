@@ -18,6 +18,7 @@ Copilot v1.20 brings several new features and improvements:
 
 * **Environment manifests**: You can now create and update environments with a [manifest file](../docs/manifest/environment.en.md) bringing all the benefits of infrastructure as code to environments. 
    [See detailed walkthrough](#environment-manifest) for how to migrate your existing environments.
+* **Autoscaling Cooldown Support**: You can now specify [autoscaling cooldowns](#autoscaling-cooldown-support) in the service manifest.
 * **Additional policy to build role**: You can now specify an additional policy for the CodeBuild Build Project Role through the pipeline manifest field `additional_policy`.
   [See detailed walkthrough](../docs/manifest/pipeline.en.md) for how to specify an additional policy document to add to the build project role. [(#3709)](https://github.com/aws/copilot-cli/pull/3709)
 * **Invoke a scheduled job**: You can now execute an existing scheduled job ad hoc using the new `copilot job run` command.
@@ -169,6 +170,39 @@ command to create a pipeline [`manifest.yml`](../docs/manifest/pipeline.en.md) f
     ✔ Successfully deployed pipeline: env-pipeline
     ```
 
+## Autoscaling Cooldown Support
+A small addition to our service manifests: the ability to configure autoscaling cooldown periods.
+For `Load Balanced`, `Backend`, and `Worker` Services, you can now configure their autoscaling fields under `count` to have custom cooldown periods.
+Previously, each scaling metric such as `cpu_percentage` had a fixed 'in' cooldown of 120 secs and 'out' cooldown of 60 seconds. Now, you can set a global cooldown period:
+
+??? example "Using general autoscaling cooldowns"
+
+    ```
+    count:
+      range: 1-10
+      cooldown:
+        in: 30s
+        out: 30s
+      cpu_percentage: 50
+    ```
+
+Alternatively, you can set individual cooldowns that override the general ones:
+
+??? example "Using specific autoscaling cooldowns"
+
+    ```
+    count:
+      range: 1-10
+      cooldown:
+        in: 2m
+        out: 2m
+      cpu_percentage: 50
+      requests:
+        value: 10
+        cooldown:
+          in: 30s
+          out: 30s
+    ```
 ## What’s next?
 
 Download the new Copilot CLI version by following the link below and leave your feedback on [GitHub](https://github.com/aws/copilot-cli/) or our [Community Chat](https://gitter.im/aws/copilot-cli):
