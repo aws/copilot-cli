@@ -6,6 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -171,6 +173,30 @@ func environmentManifest(envName string, rawMft []byte, transformer interpolator
 
 func (o *deployEnvOpts) validateOrAskEnvName() error {
 	if o.name != "" {
+		return o.validateEnvName()
+	}
+	name, err := o.sel.LocalEnvironment("Select an environment manifest from your workspace", "")
+	if err != nil {
+		var pathErr *os.PathError
+		if errors.As(err, &pathErr) || errors.Is(err, selector.ErrLocalEnvsNotFound) {
+			o.logManifestSuggestion("example")
+		}
+		return fmt.Errorf("select environment: %w", err)
+	}
+	o.name = name
+	return nil
+}
+
+func (o *deployEnvOpts) validateEnvName() error {
+	localEnvs, err := o.ws.ListEnvironments()
+	if err != nil {
+		o.logManifestSuggestion(o.name)
+		return fmt.Errorf("list environments in workspace: %w", err)
+	}
+	for _, localEnv := range localEnvs {
+		if o.name != localEnv {
+			continue
+		}
 		if _, err := o.cachedTargetEnv(); err != nil {
 			log.Errorf("It seems like environment %s is not added in application %s yet. Have you run %s?\n",
 				o.name, o.appName, color.HighlightCode("copilot env init"))
@@ -178,12 +204,8 @@ func (o *deployEnvOpts) validateOrAskEnvName() error {
 		}
 		return nil
 	}
-	name, err := o.sel.LocalEnvironment("Select an environment manifest from your workspace", "")
-	if err != nil {
-		return fmt.Errorf("select environment: %w", err)
-	}
-	o.name = name
-	return nil
+	o.logManifestSuggestion(o.name)
+	return fmt.Errorf("environment manifest for %q is not found", o.name)
 }
 
 func (o *deployEnvOpts) cachedTargetEnv() (*config.Environment, error) {
@@ -206,6 +228,20 @@ func (o *deployEnvOpts) cachedTargetApp() (*config.Application, error) {
 		o.targetApp = app
 	}
 	return o.targetApp, nil
+}
+
+func (o *deployEnvOpts) logManifestSuggestion(envName string) {
+	dir := filepath.Join("copilot", "environments", envName)
+	log.Infof(`It looks like there are no environment manifests in your workspace.
+To create a new manifest for an environment %q, please run:
+1. Create the directories to store the manifest file:
+   %s
+2. Generate and write the manifest file:
+   %s
+`,
+		envName,
+		color.HighlightCode(fmt.Sprintf("mkdir -p %s", dir)),
+		color.HighlightCode(fmt.Sprintf("copilot env show -n %s --manifest > %s", envName, filepath.Join(dir, "manifest.yml"))))
 }
 
 // buildEnvDeployCmd builds the command for deploying an environment given a manifest.
