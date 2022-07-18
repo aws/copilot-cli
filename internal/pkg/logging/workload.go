@@ -173,7 +173,7 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 		LogStreamLimit:      opts.LogStreamLimit,
 	}
 
-	if opts.TaskIDs != nil {
+	if s.logStreamNamePrefix != "" {
 		logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs)
 	}
 
