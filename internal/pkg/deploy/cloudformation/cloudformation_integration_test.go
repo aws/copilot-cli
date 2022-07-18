@@ -26,6 +26,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
@@ -493,7 +494,14 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		environmentToDeploy.ArtifactBucketARN = fmt.Sprintf("arn:aws:s3:::%s", bucketName)
 
 		// Deploy the environment and wait for it to be complete.
-		require.NoError(t, deployer.UpdateAndRenderEnvironment(os.Stderr, &environmentToDeploy))
+		oldParams, err := deployer.EnvironmentParameters(environmentToDeploy.App.Name, environmentToDeploy.Name)
+		require.NoError(t, err)
+		lastForceUpdateID, err := deployer.ForceUpdateOutputID(environmentToDeploy.App.Name, environmentToDeploy.Name)
+		require.NoError(t, err)
+		conf := stack.NewEnvConfigFromExistingStack(&environmentToDeploy, lastForceUpdateID, oldParams)
+
+		// Deploy the environment and wait for it to be complete.
+		require.NoError(t, deployer.UpdateAndRenderEnvironment(os.Stderr, conf, environmentToDeploy.ArtifactBucketARN))
 
 		// Ensure that the updated stack still exists.
 		output, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
