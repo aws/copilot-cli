@@ -332,11 +332,11 @@ func TestJobLogs_Execute(t *testing.T) {
 		wantedError error
 	}{
 		"success": {
-			inputJob:  "mockJob",
-			endTime:   mockEndTime,
-			startTime: mockStartTime,
-			limit:     10,
-			last:      4,
+			inputJob:            "mockJob",
+			endTime:             mockEndTime,
+			startTime:           mockStartTime,
+			limit:               10,
+			last:                4,
 			includeStateMachine: true,
 
 			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
@@ -346,6 +346,7 @@ func TestJobLogs_Execute(t *testing.T) {
 					require.Equal(t, param.EndTime, &mockEndTime)
 					require.Equal(t, param.StartTime, &mockStartTime)
 					require.Equal(t, param.Limit, &mockLimit)
+					require.Equal(t, param.IncludeStateMachineLogs, true)
 				}).Return(nil)
 
 				return m
@@ -354,22 +355,21 @@ func TestJobLogs_Execute(t *testing.T) {
 			wantedError: nil,
 		},
 		"success with no execution limit set": {
-			inputJob: "mockJob",
+			inputJob:            "mockJob",
 			includeStateMachine: true,
 			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
 				m := mocks.NewMocklogEventsWriter(ctrl)
 				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
 					require.Equal(t, param.LogStreamLimit, 2)
-					require.Equal(t, param.EndTime, &mockEndTime)
-					require.Equal(t, param.StartTime, &mockStartTime)
-					require.Equal(t, param.Limit, &mockLimit)
+					require.Equal(t, param.Limit, mockNilLimit)
+					require.Equal(t, param.IncludeStateMachineLogs, true)
 				}).Return(nil)
 
 				return m
 			},
 
 			wantedError: nil,
-		}
+		},
 		"success with no limit set": {
 			inputJob:  "mockJob",
 			endTime:   mockEndTime,
@@ -421,7 +421,7 @@ func TestJobLogs_Execute(t *testing.T) {
 						taskIDs: tc.taskIDs,
 					},
 					includeStateMachineLogs: tc.includeStateMachine,
-					last: tc.last,
+					last:                    tc.last,
 				},
 				wkldLogOpts: wkldLogOpts{
 					startTime:   &tc.startTime,
@@ -429,7 +429,6 @@ func TestJobLogs_Execute(t *testing.T) {
 					initLogsSvc: func() error { return nil },
 					logsSvc:     tc.mocklogsSvc(ctrl),
 				},
-
 			}
 
 			// WHEN

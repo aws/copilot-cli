@@ -76,14 +76,13 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 			return err
 		}
 		opts.logsSvc, err = logging.NewWorkloadClient(&logging.NewWorkloadLogsConfig{
-			Sess:                    sess,
-			App:                     opts.appName,
-			Env:                     opts.envName,
-			Name:                    opts.name,
-			LogGroup:                opts.logGroup,
-			TaskIDs:                 opts.taskIDs,
-			ConfigStore:             configStore,
-			IncludeStateMachineLogs: opts.includeStateMachineLogs,
+			Sess:        sess,
+			App:         opts.appName,
+			Env:         opts.envName,
+			Name:        opts.name,
+			LogGroup:    opts.logGroup,
+			TaskIDs:     opts.taskIDs,
+			ConfigStore: configStore,
 		})
 		if err != nil {
 			return err
@@ -179,18 +178,18 @@ func (o *jobLogsOpts) Execute() error {
 	}
 
 	if o.includeStateMachineLogs {
-		// Make sure to allow cloudwatchlogs to grab extra log streams to accommodate the state machines.
 		logStreamLimit *= 2
 	}
 
 	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
-		Follow:         o.follow,
-		Limit:          limit,
-		EndTime:        o.endTime,
-		StartTime:      o.startTime,
-		TaskIDs:        o.taskIDs,
-		OnEvents:       eventsWriter,
-		LogStreamLimit: logStreamLimit,
+		Follow:                  o.follow,
+		Limit:                   limit,
+		EndTime:                 o.endTime,
+		StartTime:               o.startTime,
+		TaskIDs:                 o.taskIDs,
+		OnEvents:                eventsWriter,
+		LogStreamLimit:          logStreamLimit,
+		IncludeStateMachineLogs: o.includeStateMachineLogs,
 	})
 	if err != nil {
 		return fmt.Errorf("write log events for job %s: %w", o.name, err)
