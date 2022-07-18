@@ -24,6 +24,26 @@ network:
 <span class="parent-field">network.vpc.placement.</span><a id="network-vpc-placement-subnets" href="#network-vpc-placement-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>  
 A list of subnet IDs where Copilot launches ECS tasks.
 
-<span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>  
-Additional security group IDs associated with your tasks. Copilot always includes a security group so containers within your environment
-can communicate with each other.
+<span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings or Map</span>  
+Additional security group IDs associated with your tasks. 
+```yaml
+network:
+  vpc:
+    security_groups: [sg-0001, sg-0002]
+```
+Copilot includes a security group so containers within your environment can communicate with each other. To disable 
+the default security group, you can specify the Map form:
+```yaml
+network:
+  vpc:
+    security_groups:
+      deny_default: true
+      groups: [sg-0001, sg-0002]
+```
+
+<span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-deny-default" href="#network-vpc-security-groups-deny-default" class="field">`deny_default`</a> <span class="type">Boolean</span>  
+Disable the default security group that allows ingress from all services in your environment.
+
+<span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-groups" href="#network-vpc-security-groups-groups" class="field">`groups`</a> <span class="type">Array of Strings</span>    
+Additional security group IDs associated with your tasks.
+
