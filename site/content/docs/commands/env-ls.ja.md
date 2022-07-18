@@ -9,7 +9,7 @@ $ copilot env ls [flags]
 ## フラグ
 ```
 -h, --help          help for ls
-    --json          Optional. Outputs in JSON format.
+    --json          Optional. Output in JSON format.
 -a, --app string    Name of the application.
 ```
 結果をプログラムでパースしたい場合 `--json` フラグを利用することができます。
