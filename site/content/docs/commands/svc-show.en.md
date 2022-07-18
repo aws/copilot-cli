@@ -12,10 +12,11 @@ $ copilot svc show
 ```
 -a, --app string        Name of the application.
 -h, --help              help for show
-    --json              Optional. Outputs in JSON format.
-    --manifest string   Optional. Output the manifest file used for the deployment.
+    --json              Optional. Output in JSON format.
+    --manifest string   Optional. Name of the environment in which the service was deployed;
+                        output the manifest file used for that deployment.
 -n, --name string       Name of the service.
-    --resources         Optional. Show the resources in your service.
+      --resources         Optional. Show the resources in your service.
 ```
 
 ## Examples

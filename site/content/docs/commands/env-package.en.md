@@ -9,12 +9,12 @@ $ copilot env package [flags]
 ## What are the flags?
 ```console
 -a, --app string          Name of the application.
-  --force               Optional. Force update the environment stack template.
+    --force               Optional. Force update the environment stack template.
 -h, --help                help for package
 -n, --name string         Name of the environment.
-  --output-dir string   Optional. Writes the stack template and template configuration to a directory.
-  --upload-assets       Optional. Whether to upload assets (container images, Lambda functions, etc.).
-                        Uploaded asset locations are filled in the template configuration.
+    --output-dir string    Optional. Writes the stack template and template configuration to a directory.
+    --upload-assets        Optional. Whether to upload assets (container images, Lambda functions, etc.).
+                           Uploaded asset locations are filled in the template configuration.
 ```
 
 ## Examples
