@@ -12,7 +12,7 @@ $ copilot svc ls
 ```
   -a, --app string   Name of the application.
   -h, --help         help for ls
-      --json         Optional. Outputs in JSON format.
+      --json         Optional. Output in JSON format.
       --local        Only show services in the workspace.
 ```
 
