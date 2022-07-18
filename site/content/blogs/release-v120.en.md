@@ -166,7 +166,7 @@ command to create a pipeline [`manifest.yml`](../docs/manifest/pipeline.en.md) f
 ## Autoscaling Cooldown Support
 A small addition to our service manifests: the ability to configure autoscaling cooldown periods.
 For `Load Balanced`, `Backend`, and `Worker` Services, you can now configure their autoscaling fields under `count` to have custom cooldown periods.
-Previously, each scaling metric such as `cpu_percentage` has a set in cooldown of 120 secs and out cooldown of 60 seconds. Now you can set a global cooldown period:
+Previously, each scaling metric such as `cpu_percentage` had a fixed 'in' cooldown of 120 secs and 'out' cooldown of 60 seconds. Now, you can set a global cooldown period:
 
 ??? example "Using general autoscaling cooldowns"
 
