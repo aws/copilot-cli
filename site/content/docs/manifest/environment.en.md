@@ -171,10 +171,10 @@ See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-exist
 The subnet IDs to place the internal load balancer in.
 
 <span class="parent-field">http.private.</span><a id="http-private-security-groups" href="#http-private-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
-Additional security groups to add to the internal load balancer.
+Configure security groups to add to the internal load balancer.
 
 <span class="parent-field">http.private.security_groups</span><a id="http-private-security-groups-ingress" href="#http-private-security-groups-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
-Additional ingress rules to allow for the internal load balancer.
+Ingress rules to allow for the internal load balancer.  
 ```yaml
 http:
   private:
@@ -185,7 +185,6 @@ http:
 
 <span class="parent-field">http.private.security_groups.ingress.</span><a id="http-private-security-groups-ingress-from-vpc" href="#http-private-security-groups-ingress-from-vpc" class="field">`from_vpc`</a> <span class="type">Boolean</span>    
 Enable traffic from within the VPC to the internal load balancer.
-
 
 <div class="separator"></div>
 
