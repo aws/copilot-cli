@@ -18,6 +18,7 @@ import (
 )
 
 type deployEnvAskMocks struct {
+	ws    *mocks.MockwsEnvironmentReader
 	sel   *mocks.MockwsEnvironmentSelector
 	store *mocks.Mockstore
 }
@@ -46,11 +47,30 @@ func TestDeployEnvOpts_Ask(t *testing.T) {
 			},
 			wantedError: errNoAppInWorkspace,
 		},
+		"fail to list environments in local workspace": {
+			inAppName: "mockApp",
+			inName:    "mockEnv",
+			setUpMocks: func(m *deployEnvAskMocks) {
+				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
+				m.ws.EXPECT().ListEnvironments().Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("list environments in workspace: some error"),
+		},
+		"fail to find local environment manifest workspace": {
+			inAppName: "mockApp",
+			inName:    "mockEnv",
+			setUpMocks: func(m *deployEnvAskMocks) {
+				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
+				m.ws.EXPECT().ListEnvironments().Return([]string{"otherEnv"}, nil)
+			},
+			wantedError: errors.New(`environment manifest for "mockEnv" is not found`),
+		},
 		"fail to retrieve env from store when validating env": {
 			inAppName: "mockApp",
 			inName:    "mockEnv",
 			setUpMocks: func(m *deployEnvAskMocks) {
 				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
+				m.ws.EXPECT().ListEnvironments().Return([]string{"mockEnv"}, nil)
 				m.store.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(nil, errors.New("some error"))
 			},
 			wantedError: errors.New("get environment mockEnv in application mockApp: some error"),
@@ -69,6 +89,7 @@ func TestDeployEnvOpts_Ask(t *testing.T) {
 			inName:    "mockEnv",
 			setUpMocks: func(m *deployEnvAskMocks) {
 				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
+				m.ws.EXPECT().ListEnvironments().Return([]string{"mockEnv"}, nil)
 				m.store.EXPECT().GetEnvironment("mockApp", "mockEnv").Return(&config.Environment{}, nil)
 				m.sel.EXPECT().LocalEnvironment(gomock.Any(), gomock.Any()).Times(0)
 			},
@@ -79,6 +100,7 @@ func TestDeployEnvOpts_Ask(t *testing.T) {
 			setUpMocks: func(m *deployEnvAskMocks) {
 				m.store.EXPECT().GetApplication("mockApp").Return(&config.Application{}, nil)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.ws.EXPECT().ListEnvironments().Times(0)
 				m.sel.EXPECT().LocalEnvironment(gomock.Any(), gomock.Any()).Return("mockEnv", nil)
 			},
 			wantedEnvName: "mockEnv",
@@ -90,6 +112,7 @@ func TestDeployEnvOpts_Ask(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			m := &deployEnvAskMocks{
+				ws:    mocks.NewMockwsEnvironmentReader(ctrl),
 				sel:   mocks.NewMockwsEnvironmentSelector(ctrl),
 				store: mocks.NewMockstore(ctrl),
 			}
@@ -99,6 +122,7 @@ func TestDeployEnvOpts_Ask(t *testing.T) {
 					appName: tc.inAppName,
 					name:    tc.inName,
 				},
+				ws:    m.ws,
 				sel:   m.sel,
 				store: m.store,
 			}

@@ -318,9 +318,11 @@ func (cfg *environmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	if env.IsEmpty() {
 		return
 	}
+
 	if env.ImportVPC != nil && len(env.ImportVPC.PublicSubnetIDs) == 0 {
 		cfg.Private.InternalALBSubnets = env.InternalALBSubnets
 		cfg.Private.Certificates = env.ImportCertARNs
+		cfg.Private.SecurityGroupsConfig.Ingress.VPCIngress = aws.Bool(env.EnableInternalALBVPCIngress)
 		return
 	}
 	cfg.Public.Certificates = env.ImportCertARNs
@@ -336,11 +338,28 @@ func (cfg publicHTTPConfig) IsEmpty() bool {
 }
 
 type privateHTTPConfig struct {
-	InternalALBSubnets []string `yaml:"subnets,omitempty"`
-	Certificates       []string `yaml:"certificates,omitempty"`
+	InternalALBSubnets   []string             `yaml:"subnets,omitempty"`
+	Certificates         []string             `yaml:"certificates,omitempty"`
+	SecurityGroupsConfig securityGroupsConfig `yaml:"security_groups,omitempty"`
 }
 
 // IsEmpty returns true if there is no customization to the internal ALB.
 func (cfg privateHTTPConfig) IsEmpty() bool {
-	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0
+	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0 && cfg.SecurityGroupsConfig.isEmpty()
+}
+
+type securityGroupsConfig struct {
+	Ingress ingress `yaml:"ingress"`
+}
+
+func (cfg securityGroupsConfig) isEmpty() bool {
+	return cfg.Ingress.isEmpty()
+}
+
+type ingress struct {
+	VPCIngress *bool `yaml:"from_vpc"`
+}
+
+func (i ingress) isEmpty() bool {
+	return i.VPCIngress == nil
 }
