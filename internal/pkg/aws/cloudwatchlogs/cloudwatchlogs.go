@@ -101,8 +101,10 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreamLimit int, logStre
 			break
 		}
 	}
+	logStreamNames = truncateStreams(logStreamLimit, logStreamNames)
 
-	return truncateStreams(logStreamLimit, logStreamNames), nil
+	// Make sure that the streams are returned with the latest events last so they're printed to terminal in chronological order.
+	return reverseStreams(logStreamNames), nil
 }
 
 // LogEvents returns an array of Cloudwatch Logs events.
@@ -172,6 +174,15 @@ func truncateStreams(limit int, streams []string) []string {
 	return streams[:limit]
 }
 
+func reverseStreams(streams []string) []string {
+	n := len(streams)
+	res := make([]string, n)
+	for i := 0; i < n; i++ {
+		res[i] = streams[n-1-i]
+	}
+	return res
+}
+
 func initGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput {
 	return &cloudwatchlogs.GetLogEventsInput{
 		LogGroupName: aws.String(opts.LogGroup),
@@ -184,16 +195,13 @@ func initGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput
 // Example: if the prefixes is []string{"a"} and all is []string{"a", "b", "ab"}
 // then it returns []string{"a", "ab"}.
 func filterStringSliceByPrefix(all, prefixes []string) (res []string) {
-	m := make(map[string]bool)
 	for _, candidate := range all {
 		for _, prefix := range prefixes {
 			if strings.HasPrefix(candidate, prefix) {
-				m[candidate] = true
+				res = append(res, candidate)
+				break
 			}
 		}
-	}
-	for k := range m {
-		res = append(res, k)
 	}
 	return
 }

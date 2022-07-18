@@ -283,7 +283,7 @@ func TestLogEvents(t *testing.T) {
 		"should limit log streams fetched": {
 			logGroupName:   "mockLogGroup",
 			logStreamLimit: 2,
-			limit:          aws.Int64(1),
+			limit:          aws.Int64(2),
 			logStream:      []string{"copilot/"},
 			mockcloudwatchlogsClient: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeLogStreams(&cloudwatchlogs.DescribeLogStreamsInput{
@@ -297,11 +297,15 @@ func TestLogEvents(t *testing.T) {
 							LastEventTimestamp: aws.Int64(5),
 						},
 						{
+							LogStreamName:      aws.String("copilot/mockLogGroup/mockLogStream2"),
+							LastEventTimestamp: aws.Int64(4),
+						},
+						{
 							LogStreamName:      aws.String("states/abcde"),
 							LastEventTimestamp: aws.Int64(3),
 						},
 						{
-							LogStreamName:      aws.String("copilot/mockLogGroup/mockLogStream2"),
+							LogStreamName:      aws.String("copilot/mockLogGroup/mockLogStream3"),
 							LastEventTimestamp: aws.Int64(1),
 						},
 					},
@@ -309,7 +313,7 @@ func TestLogEvents(t *testing.T) {
 				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
 					LogGroupName:  aws.String("mockLogGroup"),
 					LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream"),
-					Limit:         aws.Int64(1),
+					Limit:         aws.Int64(2),
 				}).Return(&cloudwatchlogs.GetLogEventsOutput{
 					Events: []*cloudwatchlogs.OutputLogEvent{
 						{
@@ -321,12 +325,16 @@ func TestLogEvents(t *testing.T) {
 				m.EXPECT().GetLogEvents(&cloudwatchlogs.GetLogEventsInput{
 					LogGroupName:  aws.String("mockLogGroup"),
 					LogStreamName: aws.String("copilot/mockLogGroup/mockLogStream2"),
-					Limit:         aws.Int64(1),
+					Limit:         aws.Int64(2),
 				}).Return(&cloudwatchlogs.GetLogEventsOutput{
 					Events: []*cloudwatchlogs.OutputLogEvent{
 						{
 							Message:   aws.String("other log"),
 							Timestamp: aws.Int64(1),
+						},
+						{
+							Message:   aws.String("important log"),
+							Timestamp: aws.Int64(4),
 						},
 					},
 				}, nil)
@@ -337,10 +345,15 @@ func TestLogEvents(t *testing.T) {
 					Timestamp:     5,
 					Message:       "some log",
 				},
+				{
+					LogStreamName: "copilot/mockLogGroup/mockLogStream2",
+					Timestamp:     4,
+					Message:       "important log",
+				},
 			},
 			wantLastEventTime: map[string]int64{
 				"copilot/mockLogGroup/mockLogStream":  5,
-				"copilot/mockLogGroup/mockLogStream2": 1,
+				"copilot/mockLogGroup/mockLogStream2": 4,
 			},
 			wantErr: nil,
 		},
