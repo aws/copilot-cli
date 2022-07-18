@@ -417,7 +417,7 @@ func (o *packageSvcOpts) writeAndClose(wc io.WriteCloser, dat string) error {
 
 // RecommendActions suggests recommended actions before the packaged template is used for deployment.
 func (o *packageSvcOpts) RecommendActions() error {
-	return validateManifestCompatibilityWithEnv(o.appliedManifest, o.envName, o.envFeaturesDescriber)
+	return validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, o.appliedManifest, o.envName)
 }
 
 func contains(s string, items []string) bool {

@@ -6,9 +6,7 @@ package cloudformation
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -44,25 +42,14 @@ func (cf CloudFormation) CreateAndRenderEnvironment(out progress.FileWriter, env
 }
 
 // UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
-func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, env *deploy.CreateEnvironmentInput, opts ...cloudformation.StackOption) error {
-	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewEnvStackConfig(env))
+func (cf CloudFormation) UpdateAndRenderEnvironment(out progress.FileWriter, conf StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error {
+	cfnStack, err := cf.toUploadedStack(bucketARN, conf)
 	if err != nil {
 		return err
 	}
 	for _, opt := range opts {
 		opt(cfnStack)
 	}
-
-	descr, err := cf.waitAndDescribeStack(cfnStack.Name)
-	if err != nil {
-		return err
-	}
-	params, err := cf.transformParameters(cfnStack.Parameters, descr.Parameters, transformEnvControllerParameters)
-	if err != nil {
-		return err
-	}
-	cfnStack.Parameters = params
-
 	in := newRenderEnvironmentInput(out, cfnStack)
 	in.createChangeSet = func() (changeSetID string, err error) {
 		spinner := progress.NewSpinner(out)
@@ -112,10 +99,33 @@ func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Enviro
 	return conf.ToEnv(descr.SDK())
 }
 
-// EnvironmentTemplate returns the environment's stack's template.
+// EnvironmentTemplate returns the environment stack's template.
 func (cf CloudFormation) EnvironmentTemplate(appName, envName string) (string, error) {
 	stackName := stack.NameForEnv(appName, envName)
 	return cf.cfnClient.TemplateBody(stackName)
+}
+
+// ForceUpdateOutputID returns the environment stack's last force update ID.
+func (cf CloudFormation) ForceUpdateOutputID(app, env string) (string, error) {
+	stackDescr, err := cf.cachedStack(stack.NameForEnv(app, env))
+	if err != nil {
+		return "", err
+	}
+	for _, output := range stackDescr.Outputs {
+		if aws.StringValue(output.OutputKey) == template.LastForceDeployIDOutputName {
+			return aws.StringValue(output.OutputValue), nil
+		}
+	}
+	return "", nil
+}
+
+// EnvironmentParameters returns the environment stack's parameters.
+func (cf CloudFormation) EnvironmentParameters(appName, envName string) ([]*awscfn.Parameter, error) {
+	out, err := cf.cachedStack(stack.NameForEnv(appName, envName))
+	if err != nil {
+		return nil, err
+	}
+	return out.Parameters, nil
 }
 
 // UpdateEnvironmentTemplate updates the cloudformation stack's template body while maintaining the parameters and tags.
@@ -130,95 +140,6 @@ func (cf CloudFormation) UpdateEnvironmentTemplate(appName, envName, templateBod
 	s.Tags = descr.Tags
 	s.RoleARN = aws.String(cfnExecRoleARN)
 	return cf.cfnClient.UpdateAndWait(s)
-}
-
-// UpgradeEnvironment updates an environment stack's template to a newer version.
-func (cf CloudFormation) UpgradeEnvironment(in *deploy.CreateEnvironmentInput) error {
-	return cf.upgradeEnvironment(in, func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
-		// If a parameter exists in both the new template and the old template, use its previous value.
-		// Otherwise, keep the parameter untouched.
-		if old == nil { // The ParamKey doesn't exist in the old stack, use the new value.
-			return &new
-		}
-		// Use existing parameter values.
-		return &awscfn.Parameter{
-			ParameterKey:     new.ParameterKey,
-			UsePreviousValue: aws.Bool(true),
-		}
-	})
-}
-
-// UpgradeLegacyEnvironment updates a legacy environment stack to a newer version.
-//
-// UpgradeEnvironment and UpgradeLegacyEnvironment are separate methods because the legacy cloudformation stack has the
-// "IncludePublicLoadBalancer" parameter which has been deprecated in favor of the "ALBWorkloads".
-// UpgradeLegacyEnvironment does the necessary transformation to use the "ALBWorkloads" parameter instead.
-func (cf CloudFormation) UpgradeLegacyEnvironment(in *deploy.CreateEnvironmentInput, lbWebServices ...string) error {
-	return cf.upgradeEnvironment(in, func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
-		// If a parameter exists in both the new template and the old template, use its previous value.
-		// Otherwise, if the parameter is `EnvParamALBWorkloadsKey` (currently "ALBWorkloads"), assign it a parameter value.
-		// Otherwise, keep the parameter untouched.
-		if aws.StringValue(new.ParameterKey) == stack.EnvParamALBWorkloadsKey {
-			return &awscfn.Parameter{
-				ParameterKey:   aws.String(stack.EnvParamALBWorkloadsKey),
-				ParameterValue: aws.String(strings.Join(lbWebServices, ",")),
-			}
-		}
-		if old == nil {
-			return &new // The ParamKey doesn't exist in the old stack, use the new value.
-		}
-		return &awscfn.Parameter{
-			ParameterKey:     new.ParameterKey,
-			UsePreviousValue: aws.Bool(true),
-		}
-	})
-}
-
-func (cf CloudFormation) upgradeEnvironment(in *deploy.CreateEnvironmentInput, transformParam func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter) error {
-	s, err := cf.toUploadedStack(in.ArtifactBucketARN, stack.NewEnvStackConfig(in))
-	if err != nil {
-		return err
-	}
-
-	for {
-		var (
-			descr *cloudformation.StackDescription
-			err   error
-		)
-		descr, err = cf.waitAndDescribeStack(s.Name)
-		if err != nil {
-			return err
-		}
-
-		params, err := cf.transformParameters(s.Parameters, descr.Parameters, transformParam)
-		if err != nil {
-			return err
-		}
-		s.Parameters = params
-
-		// Keep the tags of the stack.
-		s.Tags = descr.Tags
-
-		// Apply a service role if provided.
-		if in.CFNServiceRoleARN != "" {
-			s.RoleARN = aws.String(in.CFNServiceRoleARN)
-		}
-
-		// Attempt to update the stack template.
-		err = cf.cfnClient.UpdateAndWait(s)
-		if err == nil { // Success.
-			return nil
-		}
-		if retryable := isRetryableUpdateError(s.Name, err); retryable {
-			continue
-		}
-		// The changes are already applied, nothing to do. Exit successfully.
-		var emptyChangeSet *cloudformation.ErrChangeSetEmpty
-		if errors.As(err, &emptyChangeSet) {
-			return nil
-		}
-		return fmt.Errorf("update and wait for stack %s: %w", s.Name, err)
-	}
 }
 
 func (cf CloudFormation) toUploadedStack(artifactBucketARN string, stackConfig StackConfiguration) (*cloudformation.Stack, error) {
@@ -259,57 +180,14 @@ func (cf CloudFormation) waitAndDescribeStack(stackName string) (*cloudformation
 	return stackDescription, err
 }
 
-// transformParameters removes or transforms each of the current parameters and does not add any new parameters.
-// This means that parameters that exist only in the old template are left out.
-// The parameter`transform` is a function that transform a parameter, given its value in the new template and the old template.
-// If `old` is `nil`, the parameter does not exist in the old template.
-// `transform` should return `nil` if caller intends to delete the parameter.
-func (cf CloudFormation) transformParameters(
-	currParams []*awscfn.Parameter,
-	oldParams []*awscfn.Parameter,
-	transform func(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter) ([]*awscfn.Parameter, error) {
-
-	// Make a map out of `currParams` and out of `oldParams`.
-	curr := make(map[string]awscfn.Parameter)
-	for _, p := range currParams {
-		curr[aws.StringValue(p.ParameterKey)] = *p
+func (cf CloudFormation) cachedStack(stackName string) (*cloudformation.StackDescription, error) {
+	if cf.cachedDeployedStack != nil {
+		return cf.cachedDeployedStack, nil
 	}
-	old := make(map[string]*awscfn.Parameter)
-	for _, p := range oldParams {
-		old[aws.StringValue(p.ParameterKey)] = p
+	stackDescr, err := cf.waitAndDescribeStack(stackName)
+	if err != nil {
+		return nil, err
 	}
-
-	// Remove or transform each of the current parameters.
-	var params []*awscfn.Parameter
-	for k, p := range curr {
-		if transformed := transform(p, old[k]); transformed != nil {
-			params = append(params, transformed)
-		}
-	}
-	return params, nil
-}
-
-// transformEnvControllerParameters transforms a parameter such that it uses its previous value if:
-// 1. The parameter exists in the old template.
-// 2. The parameter is env-controller managed.
-// Otherwise, it returns the parameter untouched.
-func transformEnvControllerParameters(new awscfn.Parameter, old *awscfn.Parameter) *awscfn.Parameter {
-	if old == nil { // The ParamKey doesn't exist in the old stack, use the new value.
-		return &new
-	}
-
-	var (
-		isEnvControllerManaged = make(map[string]struct{})
-		exists                 = struct{}{}
-	)
-	for _, f := range template.AvailableEnvFeatures() {
-		isEnvControllerManaged[f] = exists
-	}
-	if _, ok := isEnvControllerManaged[aws.StringValue(new.ParameterKey)]; !ok {
-		return &new
-	}
-	return &awscfn.Parameter{
-		ParameterKey:     new.ParameterKey,
-		UsePreviousValue: aws.Bool(true),
-	}
+	cf.cachedDeployedStack = stackDescr
+	return cf.cachedDeployedStack, nil
 }

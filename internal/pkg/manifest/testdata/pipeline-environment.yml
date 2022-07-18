@@ -1,0 +1,48 @@
+# The manifest for the "mock-pipeline" pipeline.
+# This YAML file defines your pipeline: the source repository it tracks and the order of the environments to deploy to.
+# For more info: https://aws.github.io/copilot-cli/docs/manifest/pipeline/
+
+# The name of the pipeline.
+name: mock-pipeline
+
+# The version of the schema used in this template.
+version: 1
+
+# This section defines your source, changes to which trigger your pipeline.
+source:
+  # The name of the provider that is used to store the source artifacts.
+  # (i.e. GitHub, Bitbucket, CodeCommit)
+  provider: GitHub
+  # Additional properties that further specify the location of the artifacts.
+  properties:
+    branch: main
+    repository: mock-url
+    # Optional: specify the name of an existing CodeStar Connections connection.
+    # connection_name: a-connection
+
+# This section defines the order of the environments your pipeline will deploy to.
+stages:
+  - # The name of the environment.
+    name: test
+    deployments:
+      deploy-env:
+        template_path: infrastructure/test.env.yml
+        template_config: infrastructure/test.env.params.json
+        stack_name: app-test
+    # Optional: flag for manual approval action before deployment.
+    # requires_approval: true
+    # Optional: use test commands to validate this stage of your build.
+    # test_commands: [echo 'running tests', make test]
+
+  - # The name of the environment.
+    name: prod
+    deployments:
+      deploy-env:
+        template_path: infrastructure/prod.env.yml
+        template_config: infrastructure/prod.env.params.json
+        stack_name: app-prod
+    # Optional: flag for manual approval action before deployment.
+    # requires_approval: true
+    # Optional: use test commands to validate this stage of your build.
+    # test_commands: [echo 'running tests', make test]
+

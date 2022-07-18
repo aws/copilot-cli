@@ -285,6 +285,29 @@ func (a *AdvancedCount) hasScalingFieldsSet() bool {
 	}
 }
 
+func (a *AdvancedCount) getInvalidFieldsSet() []string {
+	var invalidFields []string
+
+	switch a.workloadType {
+	case LoadBalancedWebServiceType:
+		if !a.QueueScaling.IsEmpty() {
+			invalidFields = append(invalidFields, "queue_delay")
+		}
+	case BackendServiceType:
+		if !a.QueueScaling.IsEmpty() {
+			invalidFields = append(invalidFields, "queue_delay")
+		}
+	case WorkerServiceType:
+		if !a.Requests.IsEmpty() {
+			invalidFields = append(invalidFields, "requests")
+		}
+		if !a.ResponseTime.IsEmpty() {
+			invalidFields = append(invalidFields, "response_time")
+		}
+	}
+	return invalidFields
+}
+
 func (a *AdvancedCount) unsetAutoscaling() {
 	a.Range = Range{}
 	a.Cooldown = Cooldown{}
