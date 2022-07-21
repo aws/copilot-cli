@@ -16,6 +16,11 @@ const updateStackWaiter = {
 
 const AliasParamKey = "Aliases";
 
+// Per the doc at https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/crpg-ref-responses.html
+// the size of the response body should not exceed 4096 bytes.
+// Therefore, we should ignore any outputs that we don't need.
+let ignoredEnvOutputs = new Set(["EnabledFeatures", "LastForceDeployID"]);
+
 /**
  * Upload a CloudFormation response object to S3.
  *
@@ -308,6 +313,9 @@ const updateAliases = function (cfnAliases, workload, aliases) {
 const getExportedValues = function (stack) {
   const exportedValues = {};
   stack.Outputs.forEach((output) => {
+    if (ignoredEnvOutputs.has(output.OutputKey)) {
+      return
+    }
     exportedValues[output.OutputKey] = output.OutputValue;
   });
   return exportedValues;

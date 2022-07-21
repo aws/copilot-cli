@@ -39,6 +39,10 @@ http:
     certificates:
       - cert-1
       - cert-2
+  private:
+    security_groups:
+      ingress:
+        from_vpc: true
 observability:
   container_insights: true # Enable container insights.`
 				var mft manifest.Environment
@@ -59,9 +63,8 @@ observability:
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					AllowVPCIngress: true,
-					Mft:             &mft,
-					RawMft:          []byte(rawMft),
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
 				}
 			}(),
 			wantedFileName: "template-with-imported-certs-observability.yml",
@@ -87,9 +90,8 @@ type: Environment`
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					AllowVPCIngress: true,
-					Mft:             &mft,
-					RawMft:          []byte(rawMft),
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
 				}
 			}(),
 			wantedFileName: "template-with-basic-manifest.yml",

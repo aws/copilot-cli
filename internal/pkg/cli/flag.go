@@ -205,7 +205,7 @@ const (
 	profileFlagDescription        = "Name of the profile."
 	yesFlagDescription            = "Skips confirmation prompt."
 	execYesFlagDescription        = "Optional. Whether to update the Session Manager Plugin."
-	jsonFlagDescription           = "Optional. Outputs in JSON format."
+	jsonFlagDescription           = "Optional. Output in JSON format."
 	forceFlagDescription          = "Optional. Force a new service deployment using the existing image."
 	forceEnvDeployFlagDescription = "Optional. Force update the environment stack template."
 	noRollbackFlagDescription     = `Optional. Disable automatic stack 
@@ -213,6 +213,8 @@ rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
 	manifestFlagDescription = "Optional. Output the manifest file used for the deployment."
+	svcManifestFlagDescription = `Optional. Name of the environment in which the service was deployed;
+output the manifest file used for that deployment.`
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.

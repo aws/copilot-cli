@@ -245,7 +245,7 @@ func buildSvcShowCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.svcName, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputJSON, jsonFlag, false, jsonFlagDescription)
 	cmd.Flags().BoolVar(&vars.shouldOutputResources, resourcesFlag, false, svcResourcesFlagDescription)
-	cmd.Flags().StringVar(&vars.outputManifestForEnv, manifestFlag, "", manifestFlagDescription)
+	cmd.Flags().StringVar(&vars.outputManifestForEnv, manifestFlag, "", svcManifestFlagDescription)
 
 	cmd.MarkFlagsMutuallyExclusive(jsonFlag, manifestFlag)
 	cmd.MarkFlagsMutuallyExclusive(resourcesFlag, manifestFlag)

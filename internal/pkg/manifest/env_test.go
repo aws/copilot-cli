@@ -278,6 +278,11 @@ func TestFromEnvConfig(t *testing.T) {
 						Private: privateHTTPConfig{
 							InternalALBSubnets: []string{"subnet2"},
 							Certificates:       []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+							SecurityGroupsConfig: securityGroupsConfig{
+								Ingress: ingress{
+									VPCIngress: aws.Bool(false),
+								},
+							},
 						},
 					},
 				},
@@ -427,6 +432,10 @@ http:
         certificates:
             - cert-1
             - cert-2
+    private:
+        security_groups:
+            ingress:
+                from_vpc: false
 `,
 			wantedStruct: &Environment{
 				Workload: Workload{
@@ -437,6 +446,13 @@ http:
 					HTTPConfig: EnvironmentHTTPConfig{
 						Public: PublicHTTPConfig{
 							Certificates: []string{"cert-1", "cert-2"},
+						},
+						Private: privateHTTPConfig{
+							SecurityGroupsConfig: securityGroupsConfig{
+								Ingress: ingress{
+									VPCIngress: aws.Bool(false),
+								},
+							},
 						},
 					},
 				},

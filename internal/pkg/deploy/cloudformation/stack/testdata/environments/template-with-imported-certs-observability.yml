@@ -15,6 +15,10 @@ Metadata:
         certificates:
           - cert-1
           - cert-2
+      private:
+        security_groups:
+          ingress:
+            from_vpc: true
     observability:
       container_insights: true # Enable container insights.
 Parameters:
@@ -63,8 +67,9 @@ Conditions:
     !Not [!Equals [ !Ref InternalALBWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
-  HasAliases:
-    !Not [!Equals [ !Ref Aliases, "" ]]
+  ManagedAliases: !And
+    - !Condition DelegateDNS
+    - !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
   VPC:
     Metadata:
