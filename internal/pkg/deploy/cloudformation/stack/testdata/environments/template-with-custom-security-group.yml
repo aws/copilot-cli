@@ -2,31 +2,31 @@
 # SPDX-License-Identifier: MIT-0
 Description: CloudFormation environment template for infrastructure shared among Copilot workloads.
 Metadata:
-    Manifest: |
-      name: test
-      type: Environment
-      # Create the public ALB with certificates attached.
-      http:
-        public:
-          certificates:
-            - cert-1
-            - cert-2
-      observability:
-        container_insights: true # Enable container insights.
-      network:
-        vpc:
-          security_group:
-            ingress:
-              - IpProtocol: tcp
-                FromPort: 0
-                ToPort: 65535
-              - IpProtocol: tcp
-                FromPort: 1
-                ToPort: 6
-            egress:
-              - IpProtocol: tcp
-                FromPort: 0
-                ToPort: 65535
+  Manifest: |
+    name: test
+    type: Environment
+    # Create the public ALB with certificates attached.
+    http:
+      public:
+        certificates:
+          - cert-1
+          - cert-2
+    observability:
+      container_insights: true # Enable container insights.
+    network:
+      vpc:
+        security_group:
+          ingress:
+            - IpProtocol: tcp
+              FromPort: 0
+              ToPort: 65535
+            - IpProtocol: tcp
+              FromPort: 1
+              ToPort: 6
+          egress:
+            - IpProtocol: tcp
+              FromPort: 0
+              ToPort: 65535
 Parameters:
   AppName:
     Type: String
@@ -73,8 +73,9 @@ Conditions:
     !Not [!Equals [ !Ref InternalALBWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
-  HasAliases:
-    !Not [!Equals [ !Ref Aliases, "" ]]
+  ManagedAliases: !And
+    - !Condition DelegateDNS
+    - !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
   VPC:
     Metadata:
@@ -358,30 +359,6 @@ Resources:
       GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-  InternalLoadBalancerSecurityGroupIngressFromHttp:
-    Metadata:
-      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80 within the VPC'
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateInternalALB
-    Properties:
-      Description: Allow from within the VPC on port 80
-      CidrIp: 0.0.0.0/0
-      FromPort: 80
-      ToPort: 80
-      IpProtocol: tcp
-      GroupId: !Ref InternalLoadBalancerSecurityGroup
-  InternalLoadBalancerSecurityGroupIngressFromHttps:
-    Metadata:
-      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 443 within the VPC'
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: ExportInternalHTTPSListener
-    Properties:
-      Description: Allow from within the VPC on port 443
-      CidrIp: 0.0.0.0/0
-      FromPort: 443
-      ToPort: 443
-      IpProtocol: tcp
-      GroupId: !Ref InternalLoadBalancerSecurityGroup
   PublicLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'
@@ -1019,7 +996,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
@@ -1027,3 +1004,6 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  LastForceDeployID:
+    Value: ""
+    Description: Optionally force the template to update when no immediate resource change is present.

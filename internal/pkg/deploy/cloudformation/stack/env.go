@@ -94,6 +94,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 	securityGroupConfig, err := getSecurityGroupConfig(e.in.Mft)
 	if err != nil {
 		return "", err
+	}
 	forceUpdateID := e.lastForceUpdateID
 	if e.in.ForceUpdate {
 		id, err := uuid.NewRandom()
