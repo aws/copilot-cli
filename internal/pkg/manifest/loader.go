@@ -34,7 +34,7 @@ func newDynamicWorkloadManifest(mft workloadManifest) *DynamicWorkloadManifest {
 }
 
 // Manifest returns the manifest content.
-func (s *DynamicWorkloadManifest) Manifest() interface{} {
+func (s *DynamicWorkloadManifest) Manifest() any {
 	return s.mft
 }
 

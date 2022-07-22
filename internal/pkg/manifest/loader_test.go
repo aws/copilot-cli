@@ -20,11 +20,15 @@ type dynamicManifestMock struct {
 	mockSubnetGetter *mocks.MocksubnetIDsGetter
 }
 
-func TestDynamicWorkloadManifest_Load(t *testing.T) {
+func newMockMftWithTags() workloadManifest {
 	mockMftWithTags := newDefaultBackendService()
 	mockMftWithTags.Network.VPC.Placement.Subnets.FromTags = Tags{"foo": StringSliceOrString{
 		String: aws.String("bar"),
 	}}
+	return mockMftWithTags
+}
+
+func TestDynamicWorkloadManifest_Load(t *testing.T) {
 	mockMft := newDefaultBackendService()
 	testCases := map[string]struct {
 		inMft workloadManifest
@@ -35,7 +39,7 @@ func TestDynamicWorkloadManifest_Load(t *testing.T) {
 		wantedError     error
 	}{
 		"error if fail to get subnet IDs from tags": {
-			inMft: mockMftWithTags,
+			inMft: newMockMftWithTags(),
 
 			setupMocks: func(m dynamicManifestMock) {
 				m.mockSubnetGetter.EXPECT().SubnetIDs(gomock.Any()).Return(nil, errors.New("some error"))
@@ -44,7 +48,7 @@ func TestDynamicWorkloadManifest_Load(t *testing.T) {
 			wantedError: fmt.Errorf("get subnet IDs: some error"),
 		},
 		"success with subnet IDs from tags": {
-			inMft: mockMftWithTags,
+			inMft: newMockMftWithTags(),
 
 			setupMocks: func(m dynamicManifestMock) {
 				m.mockSubnetGetter.EXPECT().SubnetIDs(ec2.FilterForTags("foo", "bar")).Return([]string{"id1", "id2"}, nil)
