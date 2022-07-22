@@ -182,7 +182,7 @@ func initGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput
 }
 
 // Example: if the prefixes is []string{"a"} and all is []string{"a", "b", "ab"}
-// then it returns []string{"a", "ab"}.
+// then it returns []string{"a", "ab"}. Empty string prefixes are not supported.
 func filterStringSliceByPrefix(all, prefixes []string) []string {
 	trie := buildTrie(prefixes)
 	var matches []string
@@ -227,14 +227,14 @@ func buildTrie(strs []string) trie {
 func (t *trie) isPrefixOf(str string) bool {
 	node := t.root
 	for _, char := range str {
-		val, ok := node.children[char]
+		child, ok := node.children[char]
 		if !ok {
 			return false
 		}
-		if val.hasWord {
+		if child.hasWord {
 			return true
 		}
-		node = val
+		node = child
 	}
 	return false
 }
