@@ -17,11 +17,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type serviceLogsMocks struct {
+type workloadLogsMocks struct {
 	logGetter *mocks.MocklogGetter
 }
 
-func TestServiceClient_WriteLogEvents(t *testing.T) {
+func TestWorkloadClient_WriteLogEvents(t *testing.T) {
 	const (
 		mockLogGroupName     = "mockLogGroup"
 		mockLogStreamPrefix  = "mockLogStreamPrefix"
@@ -59,29 +59,31 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 	mockStartTime := aws.Int64(123456789)
 	mockCurrentTimestamp := time.Date(2020, 11, 23, 0, 0, 0, 0, time.UTC) // Copilot GA date :).
 	testCases := map[string]struct {
-		follow     bool
-		limit      *int64
-		startTime  *int64
-		jsonOutput bool
-		taskIDs    []string
-		setupMocks func(mocks serviceLogsMocks)
+		follow              bool
+		last                int
+		limit               *int64
+		startTime           *int64
+		jsonOutput          bool
+		taskIDs             []string
+		includeStateMachine bool
+		setupMocks          func(mocks workloadLogsMocks)
 
 		wantedError   error
 		wantedContent string
 	}{
 		"failed to get task log events": {
-			setupMocks: func(m serviceLogsMocks) {
+			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Return(nil, errors.New("some error")),
 				)
 			},
 
-			wantedError: fmt.Errorf("get task log events for log group mockLogGroup: some error"),
+			wantedError: fmt.Errorf("get log events for log group mockLogGroup: some error"),
 		},
 		"success with human output": {
 			limit: mockLimit,
-			setupMocks: func(m serviceLogsMocks) {
+			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
@@ -97,7 +99,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		"success with json output": {
 			jsonOutput: true,
 			startTime:  mockStartTime,
-			setupMocks: func(m serviceLogsMocks) {
+			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
@@ -114,11 +116,11 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		"success with follow flag": {
 			follow:  true,
 			taskIDs: []string{"mockTaskID1", "mockTaskID2"},
-			setupMocks: func(m serviceLogsMocks) {
+			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.LogStreams, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
+							require.Equal(t, param.LogStreamPrefixFilters, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
 							var val *int64 = nil // Explicitly mark that nil is of type *int64 otherwise require.Equal returns an error.
 							require.Equal(t, param.Limit, val)
 							require.Equal(t, param.StartTime, aws.Int64(mockCurrentTimestamp.UnixMilli()))
@@ -143,11 +145,11 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 		},
 		"success with no filtering": {
 			taskIDs: []string{"mockTaskID1"},
-			setupMocks: func(m serviceLogsMocks) {
+			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.LogStreams, []string{"mockLogStreamPrefix/mockTaskID1"})
+							require.Equal(t, param.LogStreamPrefixFilters, []string{"mockLogStreamPrefix/mockTaskID1"})
 							require.Equal(t, param.Limit, aws.Int64(10))
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
@@ -156,6 +158,44 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 				)
 			},
 
+			wantedContent: `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
+`,
+		},
+		"success with state machine included": {
+			includeStateMachine: true,
+			setupMocks: func(m workloadLogsMocks) {
+				gomock.InOrder(
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/", "states"})
+							require.Equal(t, param.Limit, aws.Int64(10))
+						}).
+						Return(&cloudwatchlogs.LogEventsOutput{
+							Events: logEvents,
+						}, nil),
+				)
+			},
+			wantedContent: `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
+`,
+		},
+		"success with log stream limit set": {
+			last: 1,
+			setupMocks: func(m workloadLogsMocks) {
+				gomock.InOrder(
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/"})
+							require.Equal(t, param.LogStreamLimit, 1)
+						}).
+						Return(&cloudwatchlogs.LogEventsOutput{
+							Events: logEvents,
+						}, nil),
+				)
+			},
 			wantedContent: `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
@@ -170,14 +210,14 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 
 			mocklogGetter := mocks.NewMocklogGetter(ctrl)
 
-			mocks := serviceLogsMocks{
+			mocks := workloadLogsMocks{
 				logGetter: mocklogGetter,
 			}
 
 			tc.setupMocks(mocks)
 
 			b := &bytes.Buffer{}
-			svcLogs := &ServiceClient{
+			svcLogs := &WorkloadClient{
 				logGroupName:        mockLogGroupName,
 				logStreamNamePrefix: mockLogStreamPrefix,
 				eventsGetter:        mocklogGetter,
@@ -185,6 +225,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				now: func() time.Time {
 					return mockCurrentTimestamp
 				},
+				includeStateMachineLogs: tc.includeStateMachine,
 			}
 
 			// WHEN
@@ -193,11 +234,12 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				logWriter = WriteJSONLogs
 			}
 			err := svcLogs.WriteLogEvents(WriteLogEventsOpts{
-				Follow:    tc.follow,
-				TaskIDs:   tc.taskIDs,
-				Limit:     tc.limit,
-				StartTime: tc.startTime,
-				OnEvents:  logWriter,
+				Follow:         tc.follow,
+				TaskIDs:        tc.taskIDs,
+				Limit:          tc.limit,
+				StartTime:      tc.startTime,
+				OnEvents:       logWriter,
+				LogStreamLimit: tc.last,
 			})
 
 			// THEN
@@ -237,24 +279,24 @@ instance/4e66ee07f2034a7c Server is running on port 4055
 		limit      *int64
 		startTime  *int64
 		jsonOutput bool
-		setupMocks func(mocks serviceLogsMocks)
+		setupMocks func(mocks workloadLogsMocks)
 
 		wantedError   error
 		wantedContent string
 	}{
 		"failed to get log events": {
-			setupMocks: func(m serviceLogsMocks) {
+			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Return(nil, errors.New("some error")),
 				)
 			},
 
-			wantedError: fmt.Errorf("get task log events for log group mockLogGroup: some error"),
+			wantedError: fmt.Errorf("get log events for log group mockLogGroup: some error"),
 		},
 		"success with human output": {
 			limit: mockLimit,
-			setupMocks: func(m serviceLogsMocks) {
+			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
@@ -269,7 +311,7 @@ instance/4e66ee07f2034a7c Server is running on port 4055
 		"success with json output": {
 			jsonOutput: true,
 			startTime:  mockStartTime,
-			setupMocks: func(m serviceLogsMocks) {
+			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
@@ -291,14 +333,14 @@ instance/4e66ee07f2034a7c Server is running on port 4055
 
 			mocklogGetter := mocks.NewMocklogGetter(ctrl)
 
-			mocks := serviceLogsMocks{
+			mocks := workloadLogsMocks{
 				logGetter: mocklogGetter,
 			}
 
 			tc.setupMocks(mocks)
 
 			b := &bytes.Buffer{}
-			svcLogs := &ServiceClient{
+			svcLogs := &WorkloadClient{
 				logGroupName: mockLogGroupName,
 				eventsGetter: mocklogGetter,
 				w:            b,

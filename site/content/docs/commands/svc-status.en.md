@@ -11,7 +11,7 @@ $ copilot svc status
   -a, --app string    Name of the application.
   -e, --env string    Name of the environment.
   -h, --help          help for status
-      --json          Optional. Outputs in JSON format.
+      --json          Optional. Output in JSON format.
   -n, --name string   Name of the service.
 ```
 

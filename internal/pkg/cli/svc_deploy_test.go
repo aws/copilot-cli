@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
@@ -345,6 +346,14 @@ func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, e
 }
 
 func (m *mockWorkloadMft) Validate() error {
+	return nil
+}
+
+func (m *mockWorkloadMft) Load(sess *session.Session) error {
+	return nil
+}
+
+func (m *mockWorkloadMft) Manifest() interface{} {
 	return nil
 }
 

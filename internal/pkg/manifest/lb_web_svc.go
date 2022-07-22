@@ -153,8 +153,7 @@ func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
-func (s *LoadBalancedWebService) RequiredEnvironmentFeatures() []string {
+func (s *LoadBalancedWebService) requiredEnvironmentFeatures() []string {
 	var features []string
 	if !s.RoutingRule.Disabled() {
 		features = append(features, template.ALBFeatureName)
@@ -190,9 +189,11 @@ func (s *LoadBalancedWebService) EnvFile() string {
 	return aws.StringValue(s.TaskConfig.EnvFile)
 }
 
-// ApplyEnv returns the service manifest with environment overrides.
-// If the environment passed in does not have any overrides then it returns itself.
-func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, error) {
+func (s *LoadBalancedWebService) subnets() *SubnetListOrArgs {
+	return &s.Network.VPC.Placement.Subnets
+}
+
+func (s LoadBalancedWebService) applyEnv(envName string) (workloadManifest, error) {
 	overrideConfig, ok := s.Environments[envName]
 	if !ok {
 		return &s, nil
@@ -212,7 +213,6 @@ func (s LoadBalancedWebService) ApplyEnv(envName string) (WorkloadManifest, erro
 			return nil, err
 		}
 	}
-
 	s.Environments = nil
 	return &s, nil
 }

@@ -671,15 +671,16 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 	if placement.IsEmpty() {
 		return opts
 	}
-	if placement.PlacementString == nil {
-		opts.AssignPublicIP = template.DisablePublicIP
-		opts.SubnetIDs = placement.PlacementArgs.Subnets
+	if placement.PlacementString != nil {
+		if *placement.PlacementString == manifest.PrivateSubnetPlacement {
+			opts.AssignPublicIP = template.DisablePublicIP
+		}
+		opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
 		return opts
 	}
-	if *placement.PlacementString == manifest.PrivateSubnetPlacement {
-		opts.AssignPublicIP = template.DisablePublicIP
-	}
-	opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
+	opts.AssignPublicIP = template.DisablePublicIP
+	opts.SubnetsType = ""
+	opts.SubnetIDs = placement.PlacementArgs.Subnets.IDs
 	return opts
 }
 
@@ -692,11 +693,11 @@ func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkCon
 	if placement.IsEmpty() {
 		return opts
 	}
-	if placement.PlacementString == nil {
-		opts.SubnetIDs = placement.PlacementArgs.Subnets
+	if placement.PlacementString != nil {
+		opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
 		return opts
 	}
-	opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
+	opts.SubnetIDs = placement.PlacementArgs.Subnets.IDs
 	return opts
 }
 

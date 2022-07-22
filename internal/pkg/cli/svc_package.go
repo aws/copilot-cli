@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -78,6 +79,7 @@ type packageSvcOpts struct {
 	// cached variables
 	targetApp       *config.Application
 	targetEnv       *config.Environment
+	envSess         *session.Session
 	appliedManifest manifest.WorkloadManifest
 	rootUserARN     string
 }
@@ -136,10 +138,10 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 		App:             targetApp,
 		Env:             targetEnv,
 		ImageTag:        o.tag,
-		Mft:             o.appliedManifest,
+		Mft:             o.appliedManifest.Manifest(),
 		RawMft:          raw,
 	}
-	switch t := o.appliedManifest.(type) {
+	switch t := o.appliedManifest.Manifest().(type) {
 	case *manifest.LoadBalancedWebService:
 		deployer, err = clideploy.NewLBWSDeployer(&in)
 	case *manifest.BackendService:
@@ -275,6 +277,15 @@ func (o *packageSvcOpts) configureClients() error {
 	if err != nil {
 		return fmt.Errorf("create default session: %w", err)
 	}
+	targetEnv, err := o.getTargetEnv()
+	if err != nil {
+		return err
+	}
+	envSess, err := o.sessProvider.FromRole(targetEnv.ManagerRoleARN, targetEnv.Region)
+	if err != nil {
+		return err
+	}
+	o.envSess = envSess
 	// client to retrieve caller identity.
 	caller, err := identity.New(defaultSess).Get()
 	if err != nil {
@@ -308,6 +319,7 @@ func (o *packageSvcOpts) getSvcTemplates(env *config.Environment) (*wkldCfnTempl
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
 		unmarshal:    o.unmarshal,
+		sess:         o.envSess,
 	})
 	if err != nil {
 		return nil, err

@@ -9,7 +9,7 @@ $ copilot env ls [flags]
 ## What are the flags?
 ```
 -h, --help          help for ls
-    --json          Optional. Outputs in JSON format.
+    --json          Optional. Output in JSON format.
 -a, --app string    Name of the application.
 ```
 You can use the `--json` flag if you'd like to programmatically parse the results.

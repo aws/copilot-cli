@@ -51,8 +51,9 @@ Conditions:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
-  HasAliases:
-    !Not [!Equals [ !Ref Aliases, "" ]]
+  ManagedAliases: !And
+    - !Condition DelegateDNS
+    - !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
   # The CloudformationExecutionRole definition must be immediately followed with DeletionPolicy: Retain.
   # See #1533.
@@ -644,30 +645,6 @@ Resources:
       GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-  InternalLoadBalancerSecurityGroupIngressFromHttp:
-    Metadata:
-      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80 within the VPC'
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateInternalALB
-    Properties:
-      Description: Allow from within the VPC on port 80
-      CidrIp: 0.0.0.0/0
-      FromPort: 80
-      ToPort: 80
-      IpProtocol: tcp
-      GroupId: !Ref InternalLoadBalancerSecurityGroup
-  InternalLoadBalancerSecurityGroupIngressFromHttps:
-    Metadata:
-      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 443 within the VPC'
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: ExportInternalHTTPSListener
-    Properties:
-      Description: Allow from within the VPC on port 443
-      CidrIp: 0.0.0.0/0
-      FromPort: 443
-      ToPort: 443
-      IpProtocol: tcp
-      GroupId: !Ref InternalLoadBalancerSecurityGroup
   PublicLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'
@@ -917,7 +894,7 @@ Resources:
       Runtime: nodejs12.x
   
   CustomDomainFunction:
-    Condition: HasAliases
+    Condition: ManagedAliases
     Type: AWS::Lambda::Function
     Properties:
       Code:
@@ -978,7 +955,7 @@ Resources:
   CustomDomainAction:
     Metadata:
       'aws:copilot:description': 'Add an A-record to the hosted zone for the domain alias'
-    Condition: HasAliases
+    Condition: ManagedAliases
     Type: Custom::CustomDomainFunction
     Properties:
       ServiceToken: !GetAtt CustomDomainFunction.Arn
@@ -1120,7 +1097,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
@@ -1128,3 +1105,6 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  LastForceDeployID:
+    Value: ""
+    Description: Optionally force the template to update when no immediate resource change is present.

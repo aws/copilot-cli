@@ -60,7 +60,7 @@ func TestApplyEnv_Bool(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)
@@ -187,7 +187,7 @@ func TestApplyEnv_Int(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)
@@ -237,7 +237,7 @@ func TestApplyEnv_UInt16(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)
@@ -287,7 +287,7 @@ func TestApplyEnv_Int64(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)
@@ -404,7 +404,7 @@ func TestApplyEnv_Uint32(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)
@@ -460,7 +460,7 @@ func TestApplyEnv_Duration(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)
@@ -510,7 +510,7 @@ func TestApplyEnv_String(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)
@@ -560,7 +560,7 @@ func TestApplyEnv_StringSlice(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)
@@ -636,7 +636,7 @@ func TestApplyEnv_StructSlice(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)
@@ -708,7 +708,7 @@ func TestApplyEnv_MapToString(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)
@@ -881,7 +881,7 @@ func TestApplyEnv_MapToPStruct(t *testing.T) {
 			tc.inSvc(&inSvc)
 			tc.wanted(&wantedSvc)
 
-			got, err := inSvc.ApplyEnv("test")
+			got, err := inSvc.applyEnv("test")
 
 			require.NoError(t, err)
 			require.Equal(t, &wantedSvc, got)

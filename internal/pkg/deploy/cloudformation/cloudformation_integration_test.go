@@ -26,7 +26,9 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
@@ -491,9 +493,22 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		environmentToDeploy.CustomResourcesURLs = urls
 		environmentToDeploy.ArtifactBucketKeyARN = "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
 		environmentToDeploy.ArtifactBucketARN = fmt.Sprintf("arn:aws:s3:::%s", bucketName)
+		environmentToDeploy.Mft = &manifest.Environment{
+			Workload: manifest.Workload{
+				Name: aws.String(envName),
+				Type: aws.String("Environment"),
+			},
+		}
 
 		// Deploy the environment and wait for it to be complete.
-		require.NoError(t, deployer.UpdateAndRenderEnvironment(os.Stderr, &environmentToDeploy))
+		oldParams, err := deployer.EnvironmentParameters(environmentToDeploy.App.Name, environmentToDeploy.Name)
+		require.NoError(t, err)
+		lastForceUpdateID, err := deployer.ForceUpdateOutputID(environmentToDeploy.App.Name, environmentToDeploy.Name)
+		require.NoError(t, err)
+		conf := stack.NewEnvConfigFromExistingStack(&environmentToDeploy, lastForceUpdateID, oldParams)
+
+		// Deploy the environment and wait for it to be complete.
+		require.NoError(t, deployer.UpdateAndRenderEnvironment(os.Stderr, conf, environmentToDeploy.ArtifactBucketARN))
 
 		// Ensure that the updated stack still exists.
 		output, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
@@ -505,7 +520,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		deployedStack := output.Stacks[0]
 		expectedResultsForKey := map[string]func(*awsCF.Output){
 			"EnabledFeatures": func(output *awsCF.Output) {
-				require.Equal(t, ",,,", aws.StringValue(output.OutputValue), "no env features enabled by default")
+				require.Equal(t, ",,,,", aws.StringValue(output.OutputValue), "no env features enabled by default")
 			},
 			"EnvironmentManagerRoleARN": func(output *awsCF.Output) {
 				require.Equal(t,
@@ -606,6 +621,9 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 				require.NotNil(t,
 					output.OutputValue,
 					"EnvironmentSecurityGroup value should not be nil")
+			},
+			"LastForceDeployID": func(output *awsCF.Output) {
+				require.Equal(t, lastForceUpdateID, aws.StringValue(output.OutputValue), "last force update id does not change by default")
 			},
 		}
 		require.True(t, len(deployedStack.Outputs) == len(expectedResultsForKey),

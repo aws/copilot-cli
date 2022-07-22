@@ -2926,6 +2926,21 @@ func (m *MockwsEnvironmentReader) EXPECT() *MockwsEnvironmentReaderMockRecorder 
 	return m.recorder
 }
 
+// ListEnvironments mocks base method.
+func (m *MockwsEnvironmentReader) ListEnvironments() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEnvironments")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEnvironments indicates an expected call of ListEnvironments.
+func (mr *MockwsEnvironmentReaderMockRecorder) ListEnvironments() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnvironments", reflect.TypeOf((*MockwsEnvironmentReader)(nil).ListEnvironments))
+}
+
 // ReadEnvironmentManifest mocks base method.
 func (m *MockwsEnvironmentReader) ReadEnvironmentManifest(mftDirName string) (workspace.EnvironmentManifest, error) {
 	m.ctrl.T.Helper()
