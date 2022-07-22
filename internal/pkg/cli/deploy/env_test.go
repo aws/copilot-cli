@@ -266,7 +266,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
-				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return(nil, errors.New("some error"))
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return("", errors.New("some error"))
 			},
 			inManifest: &manifest.Environment{
 				EnvironmentConfig: manifest.EnvironmentConfig{
@@ -292,7 +292,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				}, nil)
 				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
 				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
-				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return(aws.String("mockPrefixListID"), nil).Times(0)
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return("mockPrefixListID", nil).Times(0)
 				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			inManifest: nil,
@@ -321,7 +321,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
-				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return(aws.String("mockPrefixListID"), nil).Times(0)
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return("mockPrefixListID", nil).Times(0)
 				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
 				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
@@ -333,7 +333,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
-				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return(aws.String("mockPrefixListID"), nil).Times(0)
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return("mockPrefixListID", nil).Times(0)
 				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
 				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)

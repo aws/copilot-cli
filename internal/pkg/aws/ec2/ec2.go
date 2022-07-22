@@ -459,24 +459,24 @@ func (c *EC2) managedPrefixList(prefixListName string) (*ec2.DescribeManagedPref
 }
 
 // CloudFrontManagedPrefixListID returns the PrefixListId of the associated cloudfront prefix list as a *string.
-func (c *EC2) CloudFrontManagedPrefixListID() (*string, error) {
+func (c *EC2) CloudFrontManagedPrefixListID() (string, error) {
 	prefixListsOutput, err := c.managedPrefixList(cloudFrontPrefixListName)
 
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	var ids []*string
+	var ids []string
 	for _, v := range prefixListsOutput.PrefixLists {
-		ids = append(ids, v.PrefixListId)
+		ids = append(ids, *v.PrefixListId)
 	}
 
 	if len(ids) == 0 {
-		return nil, fmt.Errorf("cannot find any prefix list with name: %s", cloudFrontPrefixListName)
+		return "", fmt.Errorf("cannot find any prefix list with name: %s", cloudFrontPrefixListName)
 	}
 
 	if len(ids) > 1 {
-		return nil, fmt.Errorf("found more than one prefix list with the name %s: %v", cloudFrontPrefixListName, ids)
+		return "", fmt.Errorf("found more than one prefix list with the name %s: %v", cloudFrontPrefixListName, ids)
 	}
 
 	return ids[0], nil

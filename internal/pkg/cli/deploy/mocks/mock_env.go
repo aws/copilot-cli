@@ -150,10 +150,10 @@ func (m *MockprefixListGetter) EXPECT() *MockprefixListGetterMockRecorder {
 }
 
 // CloudFrontManagedPrefixListID mocks base method.
-func (m *MockprefixListGetter) CloudFrontManagedPrefixListID() (*string, error) {
+func (m *MockprefixListGetter) CloudFrontManagedPrefixListID() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloudFrontManagedPrefixListID")
-	ret0, _ := ret[0].(*string)
+	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

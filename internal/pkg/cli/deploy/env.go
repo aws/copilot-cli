@@ -37,7 +37,7 @@ type environmentDeployer interface {
 }
 
 type prefixListGetter interface {
-	CloudFrontManagedPrefixListID() (*string, error)
+	CloudFrontManagedPrefixListID() (string, error)
 }
 
 type envDeployer struct {
@@ -120,26 +120,22 @@ func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, e
 func (d *envDeployer) prefixLists(in *DeployEnvironmentInput) ([]string, error) {
 	var prefixListIDs []string
 
-	cfManagedPrefixListId, err := d.cfManagedPrefixListId(in)
-	if err != nil {
-		return nil, err
-	}
-	if cfManagedPrefixListId != nil {
-		prefixListIDs = append(prefixListIDs, *cfManagedPrefixListId)
+	// Check if ingress is allowed from cloudfront
+	if in.Manifest != nil && aws.BoolValue(in.Manifest.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress) {
+		cfManagedPrefixListId, err := d.cfManagedPrefixListId(in)
+		if err != nil {
+			return nil, err
+		}
+		prefixListIDs = append(prefixListIDs, cfManagedPrefixListId)
 	}
 
 	return prefixListIDs, nil
 }
 
-func (d *envDeployer) cfManagedPrefixListId(in *DeployEnvironmentInput) (*string, error) {
-	// Check if ingress is allowed from cloudfront
-	if in.Manifest == nil || !aws.BoolValue(in.Manifest.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress) {
-		return nil, nil
-	}
-
+func (d *envDeployer) cfManagedPrefixListId(in *DeployEnvironmentInput) (string, error) {
 	id, err := d.ec2.CloudFrontManagedPrefixListID()
 	if err != nil {
-		return nil, fmt.Errorf("retrieve CloudFront managed prefix list id: %s", err)
+		return "", fmt.Errorf("retrieve CloudFront managed prefix list id: %s", err)
 	}
 
 	return id, nil
