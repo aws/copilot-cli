@@ -187,25 +187,16 @@ func filterStringSliceByPrefix(all, prefixes []string) []string {
 	trie := buildTrie(prefixes)
 	var matches []string
 	for _, str := range all {
-		node := trie
-		for _, char := range str {
-			val, ok := node.children[char]
-			if !ok {
-				break
-			}
-			if val.hasPrefix {
-				matches = append(matches, str)
-				break
-			}
-			node = val
+		if trie.isPrefixOf(str) {
+			matches = append(matches, str)
 		}
 	}
 	return matches
 }
 
 type trieNode struct {
-	children  map[rune]*trieNode
-	hasPrefix bool
+	children map[rune]*trieNode
+	hasWord  bool
 }
 
 func newTrieNode() *trieNode {
@@ -214,7 +205,11 @@ func newTrieNode() *trieNode {
 	}
 }
 
-func buildTrie(strs []string) *trieNode {
+type trie struct {
+	root *trieNode
+}
+
+func buildTrie(strs []string) trie {
 	root := newTrieNode()
 	for _, str := range strs {
 		node := root
@@ -224,7 +219,22 @@ func buildTrie(strs []string) *trieNode {
 			}
 			node = node.children[char]
 		}
-		node.hasPrefix = true
+		node.hasWord = true
 	}
-	return root
+	return trie{root: root}
+}
+
+func (t *trie) isPrefixOf(str string) bool {
+	node := t.root
+	for _, char := range str {
+		val, ok := node.children[char]
+		if !ok {
+			return false
+		}
+		if val.hasWord {
+			return true
+		}
+		node = val
+	}
+	return false
 }
