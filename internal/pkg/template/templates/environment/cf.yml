@@ -643,6 +643,12 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+{{- if .CDNConfig}}
+  CloudFrontDomainName:
+    Condition: CreateALB
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Description: The domain name of an associated Cloud Front Distribution.
+{{- end}}
   LastForceDeployID:
     Value: {{quote .ForceUpdateID}}
     Description: Optionally force the template to update when no immediate resource change is present.
