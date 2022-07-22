@@ -66,7 +66,7 @@ type deploySvcOpts struct {
 	targetEnv       *config.Environment
 	envSess         *session.Session
 	svcType         string
-	appliedManifest interface{}
+	appliedManifest manifest.WorkloadManifest
 	rootUserARN     string
 	deployRecs      clideploy.ActionRecommender
 }
@@ -115,6 +115,7 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
+	content := o.appliedManifest.Manifest()
 	var deployer workloadDeployer
 	in := clideploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
@@ -122,10 +123,10 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		App:             targetApp,
 		Env:             o.targetEnv,
 		ImageTag:        o.imageTag,
-		Mft:             o.appliedManifest,
+		Mft:             content,
 		RawMft:          raw,
 	}
-	switch t := o.appliedManifest.(type) {
+	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:
 		deployer, err = clideploy.NewLBWSDeployer(&in)
 	case *manifest.BackendService:

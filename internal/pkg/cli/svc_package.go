@@ -130,7 +130,7 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
-
+	content := o.appliedManifest.Manifest()
 	var deployer workloadTemplateGenerator
 	in := clideploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
@@ -138,10 +138,10 @@ func newWkldTplGenerator(o *packageSvcOpts) (workloadTemplateGenerator, error) {
 		App:             targetApp,
 		Env:             targetEnv,
 		ImageTag:        o.tag,
-		Mft:             o.appliedManifest.Manifest(),
+		Mft:             content,
 		RawMft:          raw,
 	}
-	switch t := o.appliedManifest.Manifest().(type) {
+	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:
 		deployer, err = clideploy.NewLBWSDeployer(&in)
 	case *manifest.BackendService:
