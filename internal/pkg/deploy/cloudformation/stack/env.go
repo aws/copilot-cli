@@ -5,13 +5,10 @@ package stack
 
 import (
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"gopkg.in/yaml.v3"
-	"strings"
-
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -90,11 +87,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	securityGroupConfig, err := getSecurityGroupConfig(e.in.Mft)
-	if err != nil {
-		return "", err
-	}
 	forceUpdateID := e.lastForceUpdateID
 	if e.in.ForceUpdate {
 		id, err := uuid.NewRandom()
@@ -115,7 +107,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 		CustomInternalALBSubnets: e.internalALBSubnets(),
 		AllowVPCIngress:          aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
 		Telemetry:                e.telemetryConfig(),
-		SecurityGroupConfig:      securityGroupConfig,
 		CDNConfig:                e.cdnConfig(),
 
 		Version:            e.in.Version,
@@ -127,30 +118,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 		return "", err
 	}
 	return content.String(), nil
-}
-
-func getSecurityGroupConfig(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {
-	var ingress string
-	if mft != nil && !mft.Network.VPC.SecurityGroupConfig.Ingress.IsZero() {
-		out, err := yaml.Marshal(mft.Network.VPC.SecurityGroupConfig.Ingress)
-		if err != nil {
-			return &template.SecurityGroupConfig{}, fmt.Errorf("marshal security group ingress from environment manifest to embed in template: %w", err)
-		}
-		ingress = strings.TrimSpace(string(out))
-	}
-
-	var egress string
-	if mft != nil && !mft.Network.VPC.SecurityGroupConfig.Egress.IsZero() {
-		out, err := yaml.Marshal(mft.Network.VPC.SecurityGroupConfig.Egress)
-		if err != nil {
-			return &template.SecurityGroupConfig{}, fmt.Errorf("marshal security group egress from environment manifest to embed in template: %w", err)
-		}
-		egress = strings.TrimSpace(string(out))
-	}
-	return &template.SecurityGroupConfig{
-		Ingress: ingress,
-		Egress:  egress,
-	}, nil
 }
 
 // Parameters returns the parameters to be passed into an environment CloudFormation template.
