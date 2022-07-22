@@ -351,7 +351,13 @@ func (e *BootstrapEnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.En
 }
 
 func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
-	return nil // no-op - return &template.CDNConfig{} when feature is ready
+	if e.in.Mft == nil {
+		return nil
+	}
+	if !e.in.Mft.CDNConfig.CDNEnabled() {
+		return nil
+	}
+	return &template.CDNConfig{}
 }
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
