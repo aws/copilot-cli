@@ -105,12 +105,13 @@ type EnvOpts struct {
 	ArtifactBucketARN    string
 	ArtifactBucketKeyARN string
 
-	VPCConfig                VPCConfig
-	PublicImportedCertARNs   []string
-	PrivateImportedCertARNs  []string
-	CustomInternalALBSubnets []string
-	AllowVPCIngress          bool
-	Telemetry                *Telemetry
+	VPCConfig                     VPCConfig
+	PublicFacingCIDRPrefixListIDs []string
+	PublicImportedCertARNs        []string
+	PrivateImportedCertARNs       []string
+	CustomInternalALBSubnets      []string
+	AllowVPCIngress               bool
+	Telemetry                     *Telemetry
 
 	CDNConfig *CDNConfig // If nil, no cdn is to be used
 

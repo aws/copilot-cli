@@ -228,7 +228,10 @@ func (d *uriDescriber) envDNSName(path string) (accessURI, error) {
 	if err != nil {
 		return accessURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
 	}
-	dnsNames := []string{envOutputs[d.albCFNOutputName]}
+	dnsNames := []string{}
+	if accessible, ok := envOutputs[envOutputPublicALBAccessible]; ok && accessible == "true" {
+		dnsNames = append(dnsNames, envOutputs[d.albCFNOutputName])
+	}
 	if cfDNS, ok := envOutputs[envOutputCloudFrontDomainName]; ok {
 		dnsNames = append(dnsNames, cfDNS)
 	}

@@ -96,18 +96,19 @@ func (e *EnvStackConfig) Template() (string, error) {
 		forceUpdateID = id.String()
 	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
-		AppName:                  e.in.App.Name,
-		EnvName:                  e.in.Name,
-		CustomResources:          crs,
-		ArtifactBucketARN:        e.in.ArtifactBucketARN,
-		ArtifactBucketKeyARN:     e.in.ArtifactBucketKeyARN,
-		PublicImportedCertARNs:   e.importPublicCertARNs(),
-		PrivateImportedCertARNs:  e.importPrivateCertARNs(),
-		VPCConfig:                e.vpcConfig(),
-		CustomInternalALBSubnets: e.internalALBSubnets(),
-		AllowVPCIngress:          aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
-		Telemetry:                e.telemetryConfig(),
-		CDNConfig:                e.cdnConfig(),
+		AppName:                       e.in.App.Name,
+		EnvName:                       e.in.Name,
+		CustomResources:               crs,
+		ArtifactBucketARN:             e.in.ArtifactBucketARN,
+		ArtifactBucketKeyARN:          e.in.ArtifactBucketKeyARN,
+		PublicFacingCIDRPrefixListIDs: e.in.CIDRPrefixListIDs,
+		PublicImportedCertARNs:        e.importPublicCertARNs(),
+		PrivateImportedCertARNs:       e.importPrivateCertARNs(),
+		VPCConfig:                     e.vpcConfig(),
+		CustomInternalALBSubnets:      e.internalALBSubnets(),
+		AllowVPCIngress:               aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
+		Telemetry:                     e.telemetryConfig(),
+		CDNConfig:                     e.cdnConfig(),
 
 		Version:            e.in.Version,
 		LatestVersion:      deploy.LatestEnvTemplateVersion,
@@ -350,7 +351,13 @@ func (e *BootstrapEnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.En
 }
 
 func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
-	return nil // no-op - return &template.CDNConfig{} when feature is ready
+	if e.in.Mft == nil {
+		return nil
+	}
+	if !e.in.Mft.CDNConfig.CDNEnabled() {
+		return nil
+	}
+	return &template.CDNConfig{}
 }
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {

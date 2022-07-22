@@ -10,12 +10,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -116,9 +118,10 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 }
 
 type deployEnvironmentMock struct {
-	appCFN          *mocks.MockappResourcesGetter
-	envDeployer     *mocks.MockenvironmentDeployer
-	stackSerializer *mocks.MockstackSerializer
+	appCFN           *mocks.MockappResourcesGetter
+	envDeployer      *mocks.MockenvironmentDeployer
+	stackSerializer  *mocks.MockstackSerializer
+	prefixListGetter *mocks.MockprefixListGetter
 }
 
 func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
@@ -248,6 +251,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 	}
 	testCases := map[string]struct {
 		setUpMocks  func(m *deployEnvironmentMock)
+		inManifest  *manifest.Environment
 		wantedError error
 	}{
 		"fail to get app resources by region": {
@@ -256,6 +260,42 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 					Return(nil, errors.New("some error"))
 			},
 			wantedError: fmt.Errorf("get app resources in region %s: some error", mockEnvRegion),
+		},
+		"fail to get prefix list id": {
+			setUpMocks: func(m *deployEnvironmentMock) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return("", errors.New("some error"))
+			},
+			inManifest: &manifest.Environment{
+				EnvironmentConfig: manifest.EnvironmentConfig{
+					HTTPConfig: manifest.EnvironmentHTTPConfig{
+						Public: manifest.PublicHTTPConfig{
+							SecurityGroupConfig: manifest.ALBSecurityGroupsConfig{
+								Ingress: manifest.Ingress{
+									RestrictiveIngress: manifest.RestrictiveIngress{
+										CDNIngress: aws.Bool(true),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf("retrieve CloudFront managed prefix list id: some error"),
+		},
+		"prefix list not retrieved when manifest not present": {
+			setUpMocks: func(m *deployEnvironmentMock) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return("mockPrefixListID", nil).Times(0)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			inManifest: nil,
 		},
 		"fail to get existing parameters": {
 			setUpMocks: func(m *deployEnvironmentMock) {
@@ -281,6 +321,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return("mockPrefixListID", nil).Times(0)
 				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
 				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
@@ -292,6 +333,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&stack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
 				}, nil)
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return("mockPrefixListID", nil).Times(0)
 				m.envDeployer.EXPECT().EnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
 				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
 				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -304,8 +346,9 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &deployEnvironmentMock{
-				appCFN:      mocks.NewMockappResourcesGetter(ctrl),
-				envDeployer: mocks.NewMockenvironmentDeployer(ctrl),
+				appCFN:           mocks.NewMockappResourcesGetter(ctrl),
+				envDeployer:      mocks.NewMockenvironmentDeployer(ctrl),
+				prefixListGetter: mocks.NewMockprefixListGetter(ctrl),
 			}
 			tc.setUpMocks(m)
 			d := envDeployer{
@@ -317,12 +360,14 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				},
 				appCFN:      m.appCFN,
 				envDeployer: m.envDeployer,
+				ec2:         m.prefixListGetter,
 			}
 			mockIn := &DeployEnvironmentInput{
 				RootUserARN: "mockRootUserARN",
 				CustomResourcesURLs: map[string]string{
 					"mockResource": "mockURL",
 				},
+				Manifest: tc.inManifest,
 			}
 			gotErr := d.DeployEnvironment(mockIn)
 			if tc.wantedError != nil {

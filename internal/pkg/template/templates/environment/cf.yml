@@ -97,24 +97,60 @@ Resources:
           Value: disabled
           {{- end}}
 {{- end}}
-  PublicLoadBalancerSecurityGroup:
+  PublicHTTPLoadBalancerSecurityGroup:
     Metadata:
-      'aws:copilot:description': 'A security group for your load balancer allowing HTTP and HTTPS traffic'
+      'aws:copilot:description': 'A security group for your load balancer allowing HTTP traffic'
     Condition: CreateALB
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Access to the public facing load balancer
+      GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
+        {{- if .PublicFacingCIDRPrefixListIDs}}
+        {{- range $id := .PublicFacingCIDRPrefixListIDs}}
+        - SourcePrefixListId: {{$id}}
+          Description: Allow ingress from prefix list {{$id}} on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        {{- end}}
+        {{- else}}
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 80
           FromPort: 80
           IpProtocol: tcp
           ToPort: 80
+        {{- end}}
+{{- if .VPCConfig.Imported}}
+      VpcId: {{.VPCConfig.Imported.ID}}
+{{- else}}
+      VpcId: !Ref VPC
+{{- end}}
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+  PublicHTTPSLoadBalancerSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your load balancer allowing HTTPS traffic'
+    Condition: ExportHTTPSListener
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTPS access to the public facing load balancer
+      SecurityGroupIngress:
+        {{- if .PublicFacingCIDRPrefixListIDs}}
+        {{- range $id := .PublicFacingCIDRPrefixListIDs}}
+        - SourcePrefixListId: {{$id}}
+          Description: Allow ingress from prefix list {{$id}} on port 443
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        {{- end}}
+        {{- else}}
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 443
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
+        {{- end}}
 {{- if .VPCConfig.Imported}}
       VpcId: {{.VPCConfig.Imported.ID}}
 {{- else}}
@@ -153,14 +189,22 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
-  EnvironmentSecurityGroupIngressFromPublicALB:
+  EnvironmentHTTPSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateALB
     Properties:
-      Description: Ingress from the public ALB
+      Description: HTTP ingress from the public ALB
       GroupId: !Ref EnvironmentSecurityGroup
       IpProtocol: -1
-      SourceSecurityGroupId: !Ref PublicLoadBalancerSecurityGroup
+      SourceSecurityGroupId: !Ref PublicHTTPLoadBalancerSecurityGroup
+  EnvironmentHTTPSSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: ExportHTTPSListener
+    Properties:
+      Description: HTTPS ingress from the public ALB
+      GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref PublicHTTPSLoadBalancerSecurityGroup
   EnvironmentSecurityGroupIngressFromInternalALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateInternalALB
@@ -217,7 +261,9 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internet-facing
-      SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
+      SecurityGroups: 
+        - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId
+        - !If [ExportHTTPSListener, !GetAtt PublicHTTPSLoadBalancerSecurityGroup.GroupId, !Ref "AWS::NoValue"]
 {{- if .VPCConfig.Imported}}
       Subnets: [ {{range $id := .VPCConfig.Imported.PublicSubnetIDs}}{{$id}}, {{end}} ]
 {{- else}}
@@ -648,6 +694,15 @@ Outputs:
     Condition: CreateALB
     Value: !GetAtt CloudFrontDistribution.DomainName
     Description: The domain name of an associated Cloud Front Distribution.
+{{- end}}
+{{- if .PublicFacingCIDRPrefixListIDs}}
+  PublicALBAccessible:
+    Condition: CreateALB
+    Value: false
+{{- else}}
+  PublicALBAccessible:
+    Condition: CreateALB
+    Value: true
 {{- end}}
   LastForceDeployID:
     Value: {{quote .ForceUpdateID}}
