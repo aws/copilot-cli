@@ -150,7 +150,9 @@ If using gRPC, please note that a domain must be associated with your applicatio
 
 <div class="separator"></div>
 
-<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>  
+<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>
+The number of tasks that your service should maintain.
+
 If you specify a number:
 ```yaml
 count: 5
@@ -206,13 +208,13 @@ count:
 
 This will set your range as 1-10 as above, but will place the first two copies of your service on dedicated Fargate capacity. If your service scales to 3 or higher, the third and any additional copies will be placed on Spot until the maximum is reached.
 
-<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
 The minimum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
 The maximum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
 The desired count at which you wish to start placing your service using Fargate Spot capacity providers.
 
 <span class="parent-field">count.</span><a id="count-cooldown" href="#count-cooldown" class="field">`cooldown`</a> <span class="type">Map</span>
