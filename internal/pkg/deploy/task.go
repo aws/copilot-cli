@@ -25,6 +25,7 @@ type CreateTaskResourcesInput struct {
 	Command               []string
 	EntryPoint            []string
 	EnvVars               map[string]string
+	EnvFileARN            string
 	SSMParamSecrets       map[string]string
 	SecretsManagerSecrets map[string]string
 

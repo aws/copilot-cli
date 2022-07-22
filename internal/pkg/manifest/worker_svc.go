@@ -36,6 +36,10 @@ func (s *WorkerService) Publish() []Topic {
 	return s.WorkerServiceConfig.PublishConfig.Topics
 }
 
+func (s *WorkerService) subnets() *SubnetListOrArgs {
+	return &s.Network.VPC.Placement.Subnets
+}
+
 // WorkerServiceConfig holds the configuration that can be overridden per environments.
 type WorkerServiceConfig struct {
 	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
@@ -191,9 +195,7 @@ func (s *WorkerService) Subscriptions() []TopicSubscription {
 	return s.Subscribe.Topics
 }
 
-// ApplyEnv returns the service manifest with environment overrides.
-// If the environment passed in does not have any overrides then it returns itself.
-func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
+func (s WorkerService) applyEnv(envName string) (workloadManifest, error) {
 	overrideConfig, ok := s.Environments[envName]
 	if !ok {
 		return &s, nil
@@ -217,8 +219,7 @@ func (s WorkerService) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &s, nil
 }
 
-// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
-func (s *WorkerService) RequiredEnvironmentFeatures() []string {
+func (s *WorkerService) requiredEnvironmentFeatures() []string {
 	var features []string
 	features = append(features, s.Network.requiredEnvFeatures()...)
 	features = append(features, s.Storage.requiredEnvFeatures()...)

@@ -53,8 +53,9 @@ Conditions:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
-  HasAliases:
-    !Not [!Equals [ !Ref Aliases, "" ]]
+  ManagedAliases: !And
+    - !Condition DelegateDNS
+    - !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
 {{include "bootstrap-resources" . | indent 2}}
 {{- if .CDNConfig}}

@@ -19,6 +19,8 @@ Parameters:
     Type: CommaDelimitedList
   EntryPoint:
     Type: CommaDelimitedList
+  EnvFileARN:
+    Type: String
   OS:
     Type: String
   Arch:
@@ -33,6 +35,8 @@ Conditions:
     !Not [!Equals [ !Join ["", !Ref Command], ""]]
   HasEntryPoint:
     !Not [ !Equals [ !Join [ "", !Ref EntryPoint ], "" ] ]
+  HasEnvFile:
+    !Not [!Equals [!Ref EnvFileARN, ""]]
   HasCustomPlatform:
     !Not [!Equals [!Ref OS, ""]]
 Resources:
@@ -47,6 +51,12 @@ Resources:
         -
           Image: !Ref ContainerImage
           EntryPoint: !If [HasEntryPoint, !Ref EntryPoint, !Ref "AWS::NoValue"]
+          EnvironmentFiles:
+            - !If
+              - HasEnvFile
+              - Type: "s3"
+                Value: !Ref EnvFileARN
+              - !Ref "AWS::NoValue"
           Command: !If [HasCommand, !Ref Command, !Ref "AWS::NoValue"]
           LogConfiguration:
             LogDriver: awslogs
@@ -90,9 +100,46 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
-
-      {{- if or .SSMParamSecrets .SecretsManagerSecrets}}
       Policies:
+        - !If
+          # Optional IAM permission required by ECS task def env file
+          # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/taskdef-envfiles.html#taskdef-envfiles-iam
+          # Example EnvFileARN: arn:aws:s3:::stackset-demo-infrastruc-pipelinebuiltartifactbuc-11dj7ctf52wyf/manual/1638391936/env
+          - HasEnvFile
+          - PolicyName:
+              !Join [
+                "",
+                [
+                  !Ref TaskName,
+                  GetEnvFilePolicy,
+                ],
+              ]
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: "Allow"
+                  Action:
+                    - "s3:GetObject"
+                  Resource:
+                    - !Ref EnvFileARN
+                - Effect: "Allow"
+                  Action:
+                    - "s3:GetBucketLocation"
+                  Resource:
+                    - !Join
+                      - ""
+                      - - "arn:"
+                        - !Ref AWS::Partition
+                        - ":s3:::"
+                        - !Select [
+                          0,
+                          !Split [
+                            "/",
+                            !Select [ 5, !Split [ ":", !Ref EnvFileARN ] ],
+                          ],
+                        ]
+          - !Ref AWS::NoValue
+      {{- if or .SSMParamSecrets .SecretsManagerSecrets}}
       {{- if and .App .Env }}
         - PolicyName: 'PullSecrets'
           PolicyDocument:

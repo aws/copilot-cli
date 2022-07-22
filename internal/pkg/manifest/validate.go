@@ -60,6 +60,11 @@ var (
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
+// Validate returns nil if DynamicLoadBalancedWebService is configured correctly.
+func (l *DynamicWorkloadManifest) Validate() error {
+	return l.mft.Validate()
+}
+
 // Validate returns nil if LoadBalancedWebService is configured correctly.
 func (l LoadBalancedWebService) Validate() error {
 	var err error
@@ -725,8 +730,8 @@ func (a AdvancedAlias) Validate() error {
 	return nil
 }
 
-// Validate is a no-op for stringSliceOrString.
-func (stringSliceOrString) Validate() error {
+// Validate is a no-op for StringSliceOrString.
+func (StringSliceOrString) Validate() error {
 	return nil
 }
 
@@ -1271,8 +1276,29 @@ func (p PlacementArgOrString) Validate() error {
 	return p.PlacementArgs.Validate()
 }
 
-// Validate is a no-op for PlacementArgs.
+// Validate returns nil if PlacementArgs is configured correctly.
 func (p PlacementArgs) Validate() error {
+	if !p.Subnets.isEmpty() {
+		return p.Subnets.Validate()
+	}
+	return nil
+}
+
+// Validate returns nil if SubnetArgs is configured correctly.
+func (s SubnetArgs) Validate() error {
+	if s.isEmpty() {
+		return nil
+	}
+	return s.FromTags.Validate()
+}
+
+// Validate returns nil if Tags is configured correctly.
+func (t Tags) Validate() error {
+	for _, v := range t {
+		if err := v.Validate(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

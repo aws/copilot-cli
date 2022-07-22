@@ -30,17 +30,15 @@ func TestScheduledJob_Template(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", jobManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
-
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)
-
 	envMft, err := mft.ApplyEnv(envName)
 	require.NoError(t, err)
-
 	err = envMft.Validate()
 	require.NoError(t, err)
+	content := envMft.Manifest()
 
-	v, ok := envMft.(*manifest.ScheduledJob)
+	v, ok := content.(*manifest.ScheduledJob)
 	require.True(t, ok)
 
 	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{

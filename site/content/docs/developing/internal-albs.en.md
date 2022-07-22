@@ -4,10 +4,17 @@ By default, the ALBs created for environments with Load Balanced Web Services ar
 
 ## Environment
 
-The internal load balancer is an environment-level resource, to be shared among other permitted services. When you run `copilot env init`, you can import some specific resources to support the ALB. For services with `https` capability, use the [`--import-cert-arns`](../commands/env-init.en.md#what-are-the-flags) flag to import the ARNs of your existing private certificates. If you'd like your ALB to receive ingress traffic within the environment VPC, use the [`--internal-alb-allow-vpc-ingress`](../commands/env-init.en.md#what-are-the-flags) flag; otherwise, by default, access to the internal ALB will be limited to only Copilot-created services within the environment.
+The internal load balancer is an environment-level resource, to be shared among other permitted services.
+To enable HTTPS for your load balancer, modify the [environment manifest](../manifest/environment.en.md#http-private) to 
+import the ARNs of your existing certificates.
 
-!!!info
-    Today, Copilot will associate imported certs with an internal ALB *only if* the environment's VPC has no public subnets; otherwise, they will be associated with the default internet-facing load balancer. When initiating your environment, you may use the `--import-vpc-id` and `--import-private-subnets` flags to pass in your VPC and subnet IDs along with `--import-cert-arns`. For a more managed experience, you may use just the `--import-cert-arns` flag with `copilot env init`, then follow the prompts to import your existing VPC resources, opting out of importing public subnets. (Copilot's env config will soon have increased flexibility...stay tuned!)
+If there are no certificates applied to the load balancer, Copilot will associate the load balancer with the 
+`http://{env name}.{app name}.internal` endpoint and the individual services are reachable at `http://{service name}.{env name}.{app name}.internal`.
+```go
+// To reach the "api" service behind the internal load balancer
+endpoint := fmt.Sprintf("http://api.%s.%s.internal", os.Getenv("COPILOT_ENVIRONMENT_NAME"), os.Getenv("COPILOT_APPLICATION_NAME"))
+resp, err := http.Get(endpoint)
+```
 
 ## Service
 

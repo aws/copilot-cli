@@ -16,7 +16,7 @@ $ copilot svc logs
   -e, --env string          Name of the environment.
       --follow              Optional. Specifies if the logs should be streamed.
   -h, --help                help for logs
-      --json                Optional. Outputs in JSON format.
+      --json                Optional. Output in JSON format.
       --limit int           Optional. The maximum number of log events returned. (default 10)
   -n, --name string         Name of the service.
       --since duration      Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.

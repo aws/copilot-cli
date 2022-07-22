@@ -12,7 +12,7 @@ $ copilot svc show
 ```
   -a, --app string    Name of the application.
   -h, --help          help for show
-      --json          Optional. Outputs in JSON format.
+      --json          Optional. Output in JSON format.
   -n, --name string   Name of the service.
       --resources     Optional. Show the resources in your service.
 ```

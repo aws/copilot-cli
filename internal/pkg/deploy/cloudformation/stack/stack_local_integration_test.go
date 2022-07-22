@@ -38,7 +38,9 @@ func Test_Stack_Local_Integration(t *testing.T) {
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(wantedManifestBytes)
 	require.NoError(t, err)
-	v, ok := mft.(*manifest.LoadBalancedWebService)
+	content := mft.Manifest()
+
+	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
 
 	envConfig := &manifest.Environment{
