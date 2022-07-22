@@ -981,6 +981,7 @@ func (o *runTaskOpts) deploy() error {
 	return o.deployer.DeployTask(os.Stderr, input, deployOpts...)
 }
 
+// deployEnvFileIfNeeded uploads the env file if needed, ensures that an S3 bucket is available, and returns the ARN of uploaded file.
 func (o *runTaskOpts) deployEnvFileIfNeeded() (string, error) {
 	if o.envFile == "" {
 		return "", nil
@@ -1019,6 +1020,7 @@ func (o *runTaskOpts) deployEnvFileIfNeeded() (string, error) {
 	return envFileARN, nil
 }
 
+// pushEnvFileToS3 reads an env file from disk, uploads it to a unique path, and then returns the ARN of the env file.
 func (o *runTaskOpts) pushEnvFileToS3(app *config.Application, region string) (string, error) {
 	resources, err := o.deployer.GetAppResourcesByRegion(app, region)
 	if err != nil {
