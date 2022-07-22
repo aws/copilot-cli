@@ -931,7 +931,6 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 type deployRDSvcMocks struct {
 	mockVersionGetter  *mocks.MockversionGetter
 	mockEndpointGetter *mocks.MockendpointGetter
-	mockUploader       *mocks.MockcustomResourcesUploader
 }
 
 func TestSvcDeployOpts_rdWebServiceStackConfiguration(t *testing.T) {

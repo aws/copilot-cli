@@ -181,15 +181,13 @@ type ConfigSelector struct {
 // LocalWorkloadSelector is an application and environment selector, but can also choose a service from the workspace.
 type LocalWorkloadSelector struct {
 	*ConfigSelector
-	ws      workspaceRetriever
-	appName string
+	ws workspaceRetriever
 }
 
 // LocalEnvironmentSelector is an application and environment selector, but can also choose an environment from the workspace.
 type LocalEnvironmentSelector struct {
 	*AppEnvSelector
-	ws      workspaceRetriever
-	appName string
+	ws workspaceRetriever
 }
 
 // WorkspaceSelector selects from local workspace.
@@ -821,7 +819,7 @@ func (s *LocalEnvironmentSelector) LocalEnvironment(msg, help string) (wl string
 	}
 	filteredEnvNames := filterEnvsByName(envs, wsEnvNames)
 	if len(filteredEnvNames) == 0 {
-		return "", errors.New("no environments found")
+		return "", ErrLocalEnvsNotFound
 	}
 	if len(filteredEnvNames) == 1 {
 		log.Infof("Only found one environment, defaulting to: %s\n", color.HighlightUserInput(filteredEnvNames[0]))

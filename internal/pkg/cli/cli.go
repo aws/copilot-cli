@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/dustin/go-humanize/english"
@@ -138,4 +139,12 @@ func indentListItem(multiline string) string {
 		prefixedLines = append(prefixedLines, fmt.Sprintf("%s%s", prefix, line))
 	}
 	return strings.Join(prefixedLines, "\n")
+}
+
+func quoteStringSlice(in []string) []string {
+	quoted := make([]string, len(in))
+	for idx, str := range in {
+		quoted[idx] = strconv.Quote(str)
+	}
+	return quoted
 }

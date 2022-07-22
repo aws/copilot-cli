@@ -1,5 +1,4 @@
-//go:build integration || localintegration || temporary
-// +build integration localintegration temporary
+//go:build integration || localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -25,9 +24,6 @@ import (
 
 const (
 	nlbSvcManifestPath = "svc-nlb-manifest.yml"
-
-	nlbCustomDomainPath  = "custom-resources/nlb-custom-domain.js"
-	nlbCertValidatorPath = "custom-resources/nlb-cert-validator.js"
 )
 
 func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
@@ -71,11 +67,11 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 		require.NoError(t, err)
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
-
 		err = envMft.Validate()
 		require.NoError(t, err)
+		content := envMft.Manifest()
 
-		v, ok := envMft.(*manifest.LoadBalancedWebService)
+		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)

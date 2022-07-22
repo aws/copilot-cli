@@ -5,8 +5,8 @@ EnvControllerAction:
   Properties:
     ServiceToken: !GetAtt EnvControllerFunction.Arn
     Workload: !Ref WorkloadName
-{{- if and (not .UseImportedCerts) (.Aliases)}}
-    Aliases: {{ fmtSlice .Aliases }}
+{{- if .Aliases}}
+    Aliases: {{ fmtSlice (quoteSlice .Aliases) }}
 {{- end}}
     EnvStack: !Sub '${AppName}-${EnvName}'
     Parameters: {{ envControllerParams . }}
@@ -31,7 +31,7 @@ EnvControllerRole:
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
-      Version: 2012-10-17
+      Version: '2012-10-17'
       Statement:
         -
           Effect: Allow

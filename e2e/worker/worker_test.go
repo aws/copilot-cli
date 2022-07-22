@@ -37,12 +37,22 @@ var _ = Describe("Worker Service E2E Test", func() {
 		})
 	})
 
-	Context("create an environment", func() {
+	Context("add an environment", func() {
 		It("env init should succeed", func() {
 			_, err := cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: envName,
 				Profile: "default",
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("when deploying the environment", func() {
+		It("env deploy should succeed", func() {
+			_, err := cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    envName,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})

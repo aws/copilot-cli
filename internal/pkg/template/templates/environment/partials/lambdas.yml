@@ -2,9 +2,11 @@ CertificateValidationFunction:
   Type: AWS::Lambda::Function
   Condition: DelegateDNS
   Properties:
+    {{- with $cr := index .CustomResources "CertificateValidationFunction" }}
     Code:
-      S3Bucket: {{.ScriptBucketName}}
-      S3Key: {{.DNSCertValidatorLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end}}
     Handler: "index.certificateRequestHandler"
     Timeout: 900
     MemorySize: 512
@@ -12,12 +14,14 @@ CertificateValidationFunction:
     Runtime: nodejs12.x
 
 CustomDomainFunction:
-  Condition: HasAliases
+  Condition: ManagedAliases
   Type: AWS::Lambda::Function
   Properties:
+    {{- with $cr := index .CustomResources "CustomDomainFunction" }}
     Code:
-      S3Bucket: {{.ScriptBucketName}}
-      S3Key: {{.CustomDomainLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end}}
     Handler: "index.handler"
     Timeout: 600
     MemorySize: 512
@@ -28,9 +32,11 @@ DNSDelegationFunction:
   Type: AWS::Lambda::Function
   Condition: DelegateDNS
   Properties:
+    {{- with $cr := index .CustomResources "DNSDelegationFunction" }}
     Code:
-      S3Bucket: {{.ScriptBucketName}}
-      S3Key: {{.DNSDelegationLambda}}
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end}}
     Handler: "index.domainDelegationHandler"
     Timeout: 600
     MemorySize: 512

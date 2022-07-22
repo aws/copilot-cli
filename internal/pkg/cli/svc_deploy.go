@@ -5,8 +5,11 @@ package cli
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
@@ -61,6 +64,7 @@ type deploySvcOpts struct {
 	// cached variables
 	targetApp       *config.Application
 	targetEnv       *config.Environment
+	envSess         *session.Session
 	svcType         string
 	appliedManifest interface{}
 	rootUserARN     string
@@ -183,12 +187,13 @@ func (o *deploySvcOpts) Execute() error {
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
 		unmarshal:    o.unmarshal,
+		sess:         o.envSess,
 	})
 	if err != nil {
 		return err
 	}
 	o.appliedManifest = mft
-	if err := validateManifestCompatibilityWithEnv(mft, o.envName, o.envFeaturesDescriber); err != nil {
+	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
 	}
 	deployer, err := o.newSvcDeployer()
@@ -325,6 +330,11 @@ func (o *deploySvcOpts) configureClients() error {
 	if err != nil {
 		return fmt.Errorf("create default session: %w", err)
 	}
+	envSess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+	if err != nil {
+		return err
+	}
+	o.envSess = envSess
 
 	// client to retrieve caller identity.
 	caller, err := identity.New(defaultSess).Get()
@@ -351,6 +361,7 @@ type workloadManifestInput struct {
 	envName      string
 	ws           wsWlDirReader
 	interpolator interpolator
+	sess         *session.Session
 	unmarshal    func([]byte) (manifest.WorkloadManifest, error)
 }
 
@@ -369,15 +380,18 @@ func workloadManifest(in *workloadManifestInput) (manifest.WorkloadManifest, err
 	}
 	envMft, err := mft.ApplyEnv(in.envName)
 	if err != nil {
-		return nil, fmt.Errorf("apply environment %s override: %s", in.envName, err)
+		return nil, fmt.Errorf("apply environment %s override: %w", in.envName, err)
 	}
 	if err := envMft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate manifest against environment %s: %s", in.envName, err)
+		return nil, fmt.Errorf("validate manifest against environment %q: %w", in.envName, err)
+	}
+	if err := envMft.Load(in.sess); err != nil {
+		return nil, fmt.Errorf("load dynamic content: %w", err)
 	}
 	return envMft, nil
 }
 
-func validateManifestCompatibilityWithEnv(mft manifest.WorkloadManifest, envName string, env versionCompatibilityChecker) error {
+func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env versionCompatibilityChecker, mft manifest.WorkloadManifest, envName string) error {
 	availableFeatures, err := env.AvailableFeatures()
 	if err != nil {
 		return fmt.Errorf("get available features of the %s environment stack: %w", envName, err)
@@ -395,13 +409,16 @@ func validateManifestCompatibilityWithEnv(mft manifest.WorkloadManifest, envName
 			if v := template.LeastVersionForFeature(f); v != "" {
 				logMsg += fmt.Sprintf(` The least environment version that supports the feature is %s.`, v)
 			}
-			if currVersion, err := env.Version(); err == nil {
+			currVersion, err := env.Version()
+			if err == nil {
 				logMsg += fmt.Sprintf(" Your environment is on %s.", currVersion)
 			}
 			log.Errorln(logMsg)
-			return &errManifestIncompatibleWithEnvironment{
+			return &errFeatureIncompatibleWithEnvironment{
+				ws:             ws,
 				missingFeature: f,
 				envName:        envName,
+				curVersion:     currVersion,
 			}
 		}
 	}
@@ -474,19 +491,40 @@ func (o *deploySvcOpts) getTargetApp() (*config.Application, error) {
 	return o.targetApp, nil
 }
 
-type errManifestIncompatibleWithEnvironment struct {
+type errFeatureIncompatibleWithEnvironment struct {
+	ws             wsEnvironmentsLister
 	missingFeature string
 	envName        string
+	curVersion     string
 }
 
-func (e *errManifestIncompatibleWithEnvironment) Error() string {
-	return fmt.Sprintf("environment %q is not on a version that supports the %q feature", e.envName, template.FriendlyEnvFeatureName(e.missingFeature))
+func (e *errFeatureIncompatibleWithEnvironment) Error() string {
+	if e.curVersion == "" {
+		return fmt.Sprintf("environment %q is not on a version that supports the %q feature", e.envName, template.FriendlyEnvFeatureName(e.missingFeature))
+	}
+	return fmt.Sprintf("environment %q is on version %q which does not support the %q feature", e.envName, e.curVersion, template.FriendlyEnvFeatureName(e.missingFeature))
 }
 
 // RecommendActions returns recommended actions to be taken after the error.
 // Implements main.actionRecommender interface.
-func (e *errManifestIncompatibleWithEnvironment) RecommendActions() string {
-	return fmt.Sprintf("You can upgrade your environment template by running %s.\n", color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", e.envName)))
+func (e *errFeatureIncompatibleWithEnvironment) RecommendActions() string {
+	envs, _ := e.ws.ListEnvironments() // Best effort try to detect if env manifest exists.
+	for _, env := range envs {
+		if e.envName == env {
+			return fmt.Sprintf("You can upgrade the %q environment template by running %s.", e.envName, color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", e.envName)))
+		}
+	}
+	msgs := []string{
+		"You can upgrade your environment template by running:",
+		fmt.Sprintf("1. Create the directory to store your environment manifest %s.",
+			color.HighlightCode(fmt.Sprintf("mkdir -p %s", filepath.Join("copilot", "environments", e.envName)))),
+		fmt.Sprintf("2. Generate the manifest %s.",
+			color.HighlightCode(fmt.Sprintf("copilot env show -n %s --manifest > %s", e.envName, filepath.Join("copilot", "environments", e.envName, "manifest.yml")))),
+		fmt.Sprintf("3. Deploy the environment stack %s.",
+			color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", e.envName))),
+	}
+	return strings.Join(msgs, "\n")
+
 }
 
 // buildSvcDeployCmd builds the `svc deploy` subcommand.

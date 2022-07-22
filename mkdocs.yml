@@ -40,6 +40,7 @@ nav:
     - Manifest:
       - Overview: docs/manifest/overview.en.md
       - Backend Service: docs/manifest/backend-service.en.md
+      - Environment: docs/manifest/environment.en.md
       - Load Balanced Web Service: docs/manifest/lb-web-service.en.md
       - Request-Driven Web Service: docs/manifest/rd-web-service.en.md
       - Scheduled Job: docs/manifest/scheduled-job.en.md
@@ -68,6 +69,7 @@ nav:
         - app upgrade: docs/commands/app-upgrade.en.md
         - app delete: docs/commands/app-delete.en.md
         - env init: docs/commands/env-init.en.md
+        - env package: docs/commands/env-package.en.md
         - env delete: docs/commands/env-delete.en.md
         - job init: docs/commands/job-init.en.md
         - job package: docs/commands/job-package.en.md
@@ -91,6 +93,7 @@ nav:
         - env ls: docs/commands/env-ls.en.md
         - env show: docs/commands/env-show.en.md
         - job ls: docs/commands/job-ls.en.md
+        - job run: docs/commands/job-run.en.md
         - svc ls: docs/commands/svc-ls.en.md
         - svc show: docs/commands/svc-show.en.md
         - svc status: docs/commands/svc-status.en.md
@@ -116,6 +119,7 @@ nav:
         - env delete: docs/commands/env-delete.en.md
         - env init: docs/commands/env-init.en.md
         - env ls: docs/commands/env-ls.en.md
+        - env package: docs/commands/env-package.en.md
         - env show: docs/commands/env-show.en.md
         - init: docs/commands/init.en.md
         - job delete: docs/commands/job-delete.en.md
@@ -123,6 +127,7 @@ nav:
         - job init: docs/commands/job-init.en.md
         - job ls: docs/commands/job-ls.en.md
         - job package: docs/commands/job-package.en.md
+        - job run: docs/commands/job-run.en.md
         - pipeline delete: docs/commands/pipeline-delete.en.md
         - pipeline deploy: docs/commands/pipeline-deploy.en.md
         - pipeline init: docs/commands/pipeline-init.en.md
@@ -147,6 +152,7 @@ nav:
         - task run: docs/commands/task-run.en.md
         - version: docs/commands/version.en.md
   - Blogs:
+      - Release v1.20: blogs/release-v120.en.md
       - AWS App Runner VPC: blogs/apprunner-vpc.en.md
       - Release v1.19: blogs/release-v119.en.md
       - Release v1.18: blogs/release-v118.en.md

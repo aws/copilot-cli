@@ -5,8 +5,6 @@ package manifest
 
 import (
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -226,45 +224,6 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Interval, rr.HealthCheck.HealthCheckArgs.Interval)
 				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Timeout, rr.HealthCheck.HealthCheckArgs.Timeout)
 			}
-		})
-	}
-}
-
-func TestLoadBalancedWebService_MarshalBinary(t *testing.T) {
-	testCases := map[string]struct {
-		inProps LoadBalancedWebServiceProps
-
-		wantedTestdata string
-	}{
-		"default": {
-			inProps: LoadBalancedWebServiceProps{
-				WorkloadProps: &WorkloadProps{
-					Name:       "frontend",
-					Dockerfile: "./frontend/Dockerfile",
-				},
-				Platform: PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs:   PlatformArgs{},
-				},
-			},
-			wantedTestdata: "lb-svc.yml",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			path := filepath.Join("testdata", tc.wantedTestdata)
-			wantedBytes, err := ioutil.ReadFile(path)
-			require.NoError(t, err)
-			manifest := NewLoadBalancedWebService(&tc.inProps)
-
-			// WHEN
-			tpl, err := manifest.MarshalBinary()
-			require.NoError(t, err)
-
-			// THEN
-			require.Equal(t, string(wantedBytes), string(tpl))
 		})
 	}
 }
@@ -1351,7 +1310,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			conf, _ := tc.in.ApplyEnv(tc.envToApply)
+			conf, _ := tc.in.applyEnv(tc.envToApply)
 
 			// THEN
 			require.Equal(t, tc.wanted, conf, "returned configuration should have overrides from the environment")
@@ -1602,7 +1561,7 @@ func TestLoadBalancedWebService_RequiredEnvironmentFeatures(t *testing.T) {
 				},
 			}
 			tc.mft(&inSvc)
-			got := inSvc.RequiredEnvironmentFeatures()
+			got := inSvc.requiredEnvironmentFeatures()
 			require.Equal(t, tc.wanted, got)
 		})
 	}

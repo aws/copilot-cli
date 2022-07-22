@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"io/ioutil"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -182,65 +180,6 @@ func TestNewBackendSvc(t *testing.T) {
 	}
 }
 
-func TestBackendSvc_MarshalBinary(t *testing.T) {
-	testCases := map[string]struct {
-		inProps BackendServiceProps
-
-		wantedTestdata string
-	}{
-		"without healthcheck and port": {
-			inProps: BackendServiceProps{
-				WorkloadProps: WorkloadProps{
-					Name:       "subscribers",
-					Dockerfile: "./subscribers/Dockerfile",
-				},
-				Platform: PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs: PlatformArgs{
-						OSFamily: nil,
-						Arch:     nil,
-					},
-				},
-			},
-			wantedTestdata: "backend-svc-nohealthcheck.yml",
-		},
-		"with custom healthcheck command": {
-			inProps: BackendServiceProps{
-				WorkloadProps: WorkloadProps{
-					Name:  "subscribers",
-					Image: "flask-sample",
-				},
-				HealthCheck: ContainerHealthCheck{
-					Command:     []string{"CMD-SHELL", "curl -f http://localhost:8080 || exit 1"},
-					Interval:    durationp(6 * time.Second),
-					Retries:     aws.Int(0),
-					Timeout:     durationp(20 * time.Second),
-					StartPeriod: durationp(15 * time.Second),
-				},
-				Port: 8080,
-			},
-			wantedTestdata: "backend-svc-customhealthcheck.yml",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			path := filepath.Join("testdata", tc.wantedTestdata)
-			wantedBytes, err := ioutil.ReadFile(path)
-			require.NoError(t, err)
-			manifest := NewBackendService(tc.inProps)
-
-			// WHEN
-			tpl, err := manifest.MarshalBinary()
-			require.NoError(t, err)
-
-			// THEN
-			require.Equal(t, string(wantedBytes), string(tpl))
-		})
-	}
-}
-
 func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
 	testCases := map[string]struct {
 		mft    func(svc *BackendService)
@@ -315,7 +254,7 @@ func TestBackendService_RequiredEnvironmentFeatures(t *testing.T) {
 				},
 			}
 			tc.mft(&inSvc)
-			got := inSvc.RequiredEnvironmentFeatures()
+			got := inSvc.requiredEnvironmentFeatures()
 			require.Equal(t, tc.wanted, got)
 		})
 	}
@@ -825,7 +764,7 @@ func TestBackendSvc_ApplyEnv(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, _ := tc.svc.ApplyEnv(tc.inEnvName)
+			got, _ := tc.svc.applyEnv(tc.inEnvName)
 
 			// Should override properly.
 			require.Equal(t, tc.wanted, got)
@@ -991,7 +930,7 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			actual, _ := svc.ApplyEnv("test")
+			actual, _ := svc.applyEnv("test")
 
 			// THEN
 			require.Equal(t, tc.expected, actual)

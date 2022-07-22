@@ -581,7 +581,7 @@ func TestRequestDrivenWebService_ApplyEnv(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			conf, _ := tc.in.ApplyEnv(tc.envToApply)
+			conf, _ := tc.in.applyEnv(tc.envToApply)
 
 			// THEN
 			require.Equal(t, tc.wanted, conf, "returned configuration should have overrides from the environment")
@@ -619,7 +619,7 @@ func TestRequestDrivenWebService_RequiredEnvironmentFeatures(t *testing.T) {
 				},
 			}
 			tc.mft(&inSvc)
-			got := inSvc.RequiredEnvironmentFeatures()
+			got := inSvc.requiredEnvironmentFeatures()
 			require.Equal(t, tc.wanted, got)
 		})
 	}

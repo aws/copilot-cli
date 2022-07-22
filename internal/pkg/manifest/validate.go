@@ -60,6 +60,11 @@ var (
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
 )
 
+// Validate returns nil if DynamicLoadBalancedWebService is configured correctly.
+func (l *DynamicWorkloadManifest) Validate() error {
+	return l.mft.Validate()
+}
+
 // Validate returns nil if LoadBalancedWebService is configured correctly.
 func (l LoadBalancedWebService) Validate() error {
 	var err error
@@ -458,7 +463,7 @@ func (p Pipeline) Validate() error {
 // Validate returns nil if deployments are configured correctly.
 func (d Deployments) Validate() error {
 	names := make(map[string]bool)
-	for name, _ := range d {
+	for name := range d {
 		names[name] = true
 	}
 
@@ -725,8 +730,8 @@ func (a AdvancedAlias) Validate() error {
 	return nil
 }
 
-// Validate is a no-op for stringSliceOrString.
-func (stringSliceOrString) Validate() error {
+// Validate is a no-op for StringSliceOrString.
+func (StringSliceOrString) Validate() error {
 	return nil
 }
 
@@ -875,6 +880,15 @@ func (a AdvancedCount) Validate() error {
 	if len(a.validScalingFields()) == 0 {
 		return fmt.Errorf("cannot have autoscaling options for workloads of type '%s'", a.workloadType)
 	}
+
+	// Validate if incorrect autoscaling fields are set
+	if fields := a.getInvalidFieldsSet(); fields != nil {
+		return &errInvalidAutoscalingFieldsWithWkldType{
+			invalidFields: fields,
+			workloadType:  a.workloadType,
+		}
+	}
+
 	// Validate spot and remaining autoscaling fields.
 	if a.Spot != nil && a.hasAutoscaling() {
 		return &errFieldMutualExclusive{
@@ -1262,8 +1276,29 @@ func (p PlacementArgOrString) Validate() error {
 	return p.PlacementArgs.Validate()
 }
 
-// Validate is a no-op for PlacementArgs.
+// Validate returns nil if PlacementArgs is configured correctly.
 func (p PlacementArgs) Validate() error {
+	if !p.Subnets.isEmpty() {
+		return p.Subnets.Validate()
+	}
+	return nil
+}
+
+// Validate returns nil if SubnetArgs is configured correctly.
+func (s SubnetArgs) Validate() error {
+	if s.isEmpty() {
+		return nil
+	}
+	return s.FromTags.Validate()
+}
+
+// Validate returns nil if Tags is configured correctly.
+func (t Tags) Validate() error {
+	for _, v := range t {
+		if err := v.Validate(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

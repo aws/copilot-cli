@@ -77,6 +77,37 @@ The URI that identifies the Docker image to use for this build project. As of no
 <span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>
 Optional. The URI that identifies a buildspec to use for this build project. By default, Copilot will generate one for you, located at `copilot/pipelines/[your pipeline name]/buildspec.yml`.
 
+<span class="parent-field">build.</span><a id="build-additional-policy" href="#build-additional-policy" class="field">`additional_policy.`</a><a id="policy-document" href="#policy-document" class="field">`PolicyDocument`</a> <span class="type">Map</span>
+Optional. Specify an additional policy document to add to the build project role.
+The additional policy document can be specified in a map in YAML, for example:
+```yaml
+build:
+  additional_policy:
+    PolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        - Effect: Allow
+          Action:
+            - ecr:GetAuthorizationToken
+          Resource: '*'
+```
+or alternatively as JSON:
+```yaml
+build:
+  additional_policy:
+    PolicyDocument: 
+      {
+        “Statement": [
+          {
+            "Action": ["ecr:GetAuthorizationToken"],
+            "Effect": "Allow",
+            "Resource": "*"
+          }
+        ],
+        "Version": "2012-10-17"
+      }
+```
+
 <div class="separator"></div>
 
 <a id="stages" href="#stages" class="field">`stages`</a> <span class="type">Array of Maps</span>  

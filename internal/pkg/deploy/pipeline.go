@@ -8,6 +8,7 @@ package deploy
 import (
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -34,7 +35,7 @@ const (
 	defaultPipelineBuildImage      = "aws/codebuild/amazonlinux2-x86_64-standard:3.0"
 	defaultPipelineEnvironmentType = "LINUX_CONTAINER"
 
-	defaultPipelineArtifactsDir = "infrastructure"
+	DefaultPipelineArtifactsDir = "infrastructure"
 )
 
 var (
@@ -80,13 +81,14 @@ type CreatePipelineInput struct {
 // to build and test Docker image.
 type Build struct {
 	// The URI that identifies the Docker image to use for this build project.
-	Image           string
-	EnvironmentType string
-	BuildspecPath   string
+	Image                    string
+	EnvironmentType          string
+	BuildspecPath            string
+	AdditionalPolicyDocument string
 }
 
 // Init populates the fields in Build by parsing the manifest file's "build" section.
-func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) {
+func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) error {
 	image := defaultPipelineBuildImage
 	environmentType := defaultPipelineEnvironmentType
 	path := filepath.Join(mfDirPath, "buildspec.yml")
@@ -99,9 +101,18 @@ func (b *Build) Init(mfBuild *manifest.Build, mfDirPath string) {
 	if strings.Contains(image, "aarch64") {
 		environmentType = "ARM_CONTAINER"
 	}
+	if mfBuild != nil && !mfBuild.AdditionalPolicy.Document.IsZero() {
+		additionalPolicy, err := yaml.Marshal(&mfBuild.AdditionalPolicy.Document)
+		if err != nil {
+			return fmt.Errorf("marshal `additional_policy.PolicyDocument` in pipeline manifest: %v", err)
+		}
+		b.AdditionalPolicyDocument = strings.TrimSpace(string(additionalPolicy))
+	}
 	b.Image = image
 	b.EnvironmentType = environmentType
 	b.BuildspecPath = filepath.ToSlash(path) // Buildspec path must be with '/' because CloudFormation expects forward-slash separated file path.
+
+	return nil
 }
 
 // ArtifactBucket represents an S3 bucket used by the CodePipeline to store
@@ -590,7 +601,7 @@ func (stg *PipelineStage) Deployments() ([]DeployAction, error) {
 
 func (stg *PipelineStage) buildDeploymentsGraph() *graph.Graph[string] {
 	var names []string
-	for name, _ := range stg.deployments {
+	for name := range stg.deployments {
 		names = append(names, name)
 	}
 	digraph := graph.New(names...)
@@ -676,7 +687,7 @@ func (a *DeployAction) TemplatePath() string {
 	}
 
 	// Use path.Join instead of filepath to join with "/" instead of OS-specific file separators.
-	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateNameFormat, a.name, a.envName))
+	return path.Join(DefaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateNameFormat, a.name, a.envName))
 }
 
 // TemplateConfigPath returns the path of the CloudFormation template config file generated during the build phase.
@@ -686,7 +697,7 @@ func (a *DeployAction) TemplateConfigPath() string {
 	}
 
 	// Use path.Join instead of filepath to join with "/" instead of OS-specific file separators.
-	return path.Join(defaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat, a.name, a.envName))
+	return path.Join(DefaultPipelineArtifactsDir, fmt.Sprintf(WorkloadCfnTemplateConfigurationNameFormat, a.name, a.envName))
 }
 
 // RunOrder returns the order in which the action should run.

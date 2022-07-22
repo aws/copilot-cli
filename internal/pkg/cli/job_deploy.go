@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 
@@ -44,6 +45,7 @@ type deployJobOpts struct {
 	// cached variables
 	targetApp       *config.Application
 	targetEnv       *config.Environment
+	envSess         *session.Session
 	appliedManifest interface{}
 	rootUserARN     string
 }
@@ -149,12 +151,13 @@ func (o *deployJobOpts) Execute() error {
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
 		unmarshal:    o.unmarshal,
+		sess:         o.envSess,
 	})
 	if err != nil {
 		return err
 	}
 	o.appliedManifest = mft
-	if err := validateManifestCompatibilityWithEnv(mft, o.envName, o.envFeaturesDescriber); err != nil {
+	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
 	}
 	deployer, err := o.newJobDeployer()
@@ -220,6 +223,11 @@ func (o *deployJobOpts) configureClients() error {
 	if err != nil {
 		return fmt.Errorf("create default session: %w", err)
 	}
+	envSess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+	if err != nil {
+		return err
+	}
+	o.envSess = envSess
 
 	// client to retrieve caller identity.
 	caller, err := identity.New(defaultSess).Get()

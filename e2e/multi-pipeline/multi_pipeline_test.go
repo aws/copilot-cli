@@ -82,7 +82,7 @@ var _ = Describe("pipeline flow", func() {
 		})
 	})
 
-	Context("when creating a new environment", func() {
+	Context("when adding a new environment", func() {
 		It("test env init should succeed", func() {
 			_, err := copilot.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
@@ -99,6 +99,7 @@ var _ = Describe("pipeline flow", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
+
 		It("env ls should list both envs", func() {
 			out, err := copilot.EnvList(appName)
 			Expect(err).NotTo(HaveOccurred())
@@ -119,6 +120,23 @@ var _ = Describe("pipeline flow", func() {
 				Expect(envs["test"].Region).NotTo(Equal(envs["prod"].Region))
 				Expect(envs["test"].Account).NotTo(Equal(envs["prod"].Account))
 			}
+		})
+	})
+
+	Context("when deploying the environments", func() {
+		It("test env deploy should succeed", func() {
+			_, err := copilot.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "test",
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("prod env deploy should succeed", func() {
+			_, err := copilot.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "prod",
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
@@ -169,6 +187,7 @@ var _ = Describe("pipeline flow", func() {
 				URL:          repoURL,
 				GitBranch:    "test",
 				Environments: []string{"test"},
+				Type:         "Workloads",
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -211,6 +230,7 @@ var _ = Describe("pipeline flow", func() {
 				URL:          repoURL,
 				GitBranch:    "prod",
 				Environments: []string{"prod"},
+				Type:         "Workloads",
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})

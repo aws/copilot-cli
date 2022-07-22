@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
@@ -179,7 +180,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 			},
 
-			wantedError: fmt.Errorf(`environment "prod-iad" is not on a version that supports the "mockFeature3" feature`),
+			wantedError: fmt.Errorf(`environment "prod-iad" is on version "v1.mock" which does not support the "mockFeature3" feature`),
 		},
 		"error if failed to upload artifacts": {
 			mock: func(m *deployMocks) {
@@ -269,6 +270,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 }
 
 type checkEnvironmentCompatibilityMocks struct {
+	ws                              *mocks.MockwsEnvironmentsLister
 	versionFeatureGetter            *mocks.MockversionCompatibilityChecker
 	requiredEnvironmentFeaturesFunc func() []string
 }
@@ -296,7 +298,7 @@ func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 					return []string{template.InternalALBFeatureName}
 				}
 			},
-			wantedError: errors.New(`environment "mockEnv" is not on a version that supports the "Internal ALB" feature`),
+			wantedError: errors.New(`environment "mockEnv" is on version "mockVersion" which does not support the "Internal ALB" feature`),
 		},
 		"compatible": {
 			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
@@ -315,6 +317,7 @@ func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 
 			m := &checkEnvironmentCompatibilityMocks{
 				versionFeatureGetter: mocks.NewMockversionCompatibilityChecker(ctrl),
+				ws:                   mocks.NewMockwsEnvironmentsLister(ctrl),
 			}
 			tc.setupMock(m)
 			mockManifest := &mockWorkloadMft{
@@ -322,7 +325,7 @@ func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 			}
 
 			// WHEN
-			err := validateManifestCompatibilityWithEnv(mockManifest, "mockEnv", m.versionFeatureGetter)
+			err := validateWorkloadManifestCompatibilityWithEnv(m.ws, m.versionFeatureGetter, mockManifest, "mockEnv")
 
 			// THEN
 			if tc.wantedError == nil {
@@ -343,6 +346,14 @@ func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, e
 }
 
 func (m *mockWorkloadMft) Validate() error {
+	return nil
+}
+
+func (m *mockWorkloadMft) Load(sess *session.Session) error {
+	return nil
+}
+
+func (m *mockWorkloadMft) Manifest() interface{} {
 	return nil
 }
 

@@ -1,5 +1,4 @@
-//go:build localintegration
-// +build localintegration
+//go:build integration || localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -48,11 +47,11 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 		require.NoError(t, err)
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
-
 		err = envMft.Validate()
 		require.NoError(t, err)
+		content := envMft.Manifest()
 
-		v, ok := envMft.(*manifest.LoadBalancedWebService)
+		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
 		envConfig := &manifest.Environment{

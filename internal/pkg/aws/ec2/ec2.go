@@ -18,8 +18,9 @@ const (
 	internetGatewayIDPrefix  = "igw-"
 	cloudFrontPrefixListName = "com.amazonaws.global.cloudfront.origin-facing"
 
-	// TagFilterName is the filter name format for tag filters
-	TagFilterName = "tag:%s"
+	// FmtTagFilter is the filter name format for tag filters
+	FmtTagFilter = "tag:%s"
+	tagKeyFilter = "tag-key"
 )
 
 var (
@@ -48,6 +49,17 @@ type Filter struct {
 	Name string
 	// Value of the filter.
 	Values []string
+}
+
+// FilterForTags takes a key and optional values to construct an EC2 filter.
+func FilterForTags(key string, values ...string) Filter {
+	if len(values) == 0 {
+		return Filter{Name: tagKeyFilter, Values: []string{key}}
+	}
+	return Filter{
+		Name:   fmt.Sprintf(FmtTagFilter, key),
+		Values: values,
+	}
 }
 
 // EC2 wraps an AWS EC2 client.
@@ -322,7 +334,6 @@ func (c *EC2) subnets(filters ...Filter) ([]*ec2.Subnet, error) {
 		return nil, fmt.Errorf("describe subnets: %w", err)
 	}
 	subnets = append(subnets, response.Subnets...)
-
 	for response.NextToken != nil {
 		response, err = c.client.DescribeSubnets(&ec2.DescribeSubnetsInput{
 			Filters:   inputFilters,
@@ -333,7 +344,9 @@ func (c *EC2) subnets(filters ...Filter) ([]*ec2.Subnet, error) {
 		}
 		subnets = append(subnets, response.Subnets...)
 	}
-
+	if len(subnets) == 0 {
+		return nil, fmt.Errorf("cannot find any subnets")
+	}
 	return subnets, nil
 }
 

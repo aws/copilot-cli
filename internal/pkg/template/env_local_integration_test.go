@@ -5,22 +5,21 @@ package template
 
 import (
 	"fmt"
-	"strings"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
+var featureRegexp = regexp.MustCompile(`\$\{(\w+)}`) // E.g. match ${ALB} and ${EFS}.
+
 func TestEnv_AvailableEnvFeatures(t *testing.T) {
-	c, err := New().ParseEnv(&EnvOpts{}, WithFuncs(map[string]interface{}{
-		"inc":      IncFunc,
-		"fmtSlice": FmtSliceFunc,
-	}))
+	c, err := New().ParseEnv(&EnvOpts{})
 	require.NoError(t, err)
 
 	tmpl := struct {
-		Params map[string]interface{} `yaml:"Parameters"`
+		Outputs map[string]interface{} `yaml:"Outputs"`
 	}{}
 	b, err := c.MarshalBinary()
 	require.NoError(t, err)
@@ -28,15 +27,16 @@ func TestEnv_AvailableEnvFeatures(t *testing.T) {
 	err = yaml.Unmarshal(b, &tmpl)
 	require.NoError(t, err)
 
+	enabledFeaturesOutput := tmpl.Outputs["EnabledFeatures"].(map[string]interface{})
+	enabledFeatures := enabledFeaturesOutput["Value"].(string)
+
 	var exists struct{}
 	featuresSet := make(map[string]struct{})
 	for _, f := range AvailableEnvFeatures() {
 		featuresSet[f] = exists
 	}
-	for paramName, _ := range tmpl.Params {
-		if !strings.HasSuffix(paramName, "Workloads") {
-			continue
-		}
+	for _, match := range featureRegexp.FindAllStringSubmatch(enabledFeatures, -1) {
+		paramName := match[1]
 		_, ok := featuresSet[paramName]
 		require.True(t, ok, fmt.Sprintf("env-controller managed feature %s should be added as an available feature", paramName))
 

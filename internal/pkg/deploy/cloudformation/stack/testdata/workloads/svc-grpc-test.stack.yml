@@ -117,6 +117,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -183,6 +184,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -261,7 +263,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -305,6 +307,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -347,6 +350,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Properties:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
+      Aliases: ["example.com"]
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters: [ALBWorkloads, Aliases]
   EnvControllerFunction:
@@ -366,7 +370,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -476,7 +480,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -490,7 +494,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Policies:
         - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -504,6 +508,16 @@ Resources: # If a bucket URL is specified, that means the template exists.
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: !Ref RulePath
       ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
+  
+  HTTPRuleWithDomainPriorityAction:
+    Metadata:
+      'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
+    Type: Custom::RulePriorityFunction
+    Properties:
+      ServiceToken: !GetAtt RulePriorityFunction.Arn
+      RulePath: !Ref RulePath
+      ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
+  
   HTTPListenerRuleWithDomain:
     Metadata:
       'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
@@ -521,7 +535,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: [example.com]
+            Values: ["example.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If
@@ -530,7 +544,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.HTTPListenerArn
-      Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
+      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority # Same priority as HTTPS Listener
   HTTPSListenerRule:
     Metadata:
       'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
@@ -542,7 +556,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: [example.com]
+            Values: ["example.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If

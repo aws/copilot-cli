@@ -38,7 +38,7 @@ http:
   path: 'api'
   healthcheck: '/api/health-check'
   # Target container for Load Balancer is our sidecar 'nginx', instead of the service container.
-  targetContainer: 'nginx'
+  target_container: 'nginx'
 
 cpu: 256
 memory: 512
@@ -121,7 +121,7 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Sid: CopyOfAWSXRayDaemonWriteAccess
             Effect: Allow
@@ -193,7 +193,7 @@ Resources:
     Type: AWS::IAM::ManagedPolicy
     Properties:
       PolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
         - Effect: Allow
           Action:

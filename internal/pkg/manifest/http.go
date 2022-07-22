@@ -23,10 +23,6 @@ func (r *RoutingRuleConfigOrBool) Disabled() bool {
 	return r.Enabled != nil && !aws.BoolValue(r.Enabled)
 }
 
-func (r *RoutingRuleConfigOrBool) isEmpty() bool {
-	return r.Enabled == nil && r.RoutingRuleConfiguration.IsEmpty()
-}
-
 // UnmarshalYAML implements the yaml(v3) interface. It allows https routing rule to be specified as a
 // bool or a struct alternately.
 func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
@@ -99,15 +95,11 @@ type AdvancedAlias struct {
 	HostedZone *string `yaml:"hosted_zone"`
 }
 
-func (a *AdvancedAlias) isEmpty() bool {
-	return a.Alias == nil && a.HostedZone == nil
-}
-
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
-// can either be of type advancedAlias slice or type stringSliceOrString.
+// can either be of type advancedAlias slice or type StringSliceOrString.
 type Alias struct {
 	AdvancedAliases     []AdvancedAlias
-	StringSliceOrString stringSliceOrString
+	StringSliceOrString StringSliceOrString
 }
 
 // IsEmpty returns empty if Alias is empty.
@@ -130,7 +122,7 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 
 	if len(a.AdvancedAliases) != 0 {
 		// Unmarshaled successfully to s.StringSlice, unset s.String, and return.
-		a.StringSliceOrString = stringSliceOrString{}
+		a.StringSliceOrString = StringSliceOrString{}
 		return nil
 	}
 	if err := unmarshalYAMLToStringSliceOrString(&a.StringSliceOrString, value); err != nil {

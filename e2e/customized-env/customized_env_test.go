@@ -15,6 +15,8 @@ import (
 	"github.com/aws/copilot-cli/e2e/internal/client"
 )
 
+const resourceTypeVPC = "AWS::EC2::VPC"
+
 var _ = Describe("Customized Env", func() {
 	Context("when creating a new app", func() {
 		var appInitErr error
@@ -113,6 +115,12 @@ var _ = Describe("Customized Env", func() {
 			Expect(sharedEnvInitErr).NotTo(HaveOccurred())
 		})
 
+		It("should create environment manifests", func() {
+			Expect("./copilot/environments/test/manifest.yml").Should(BeAnExistingFile())
+			Expect("./copilot/environments/prod/manifest.yml").Should(BeAnExistingFile())
+			Expect("./copilot/environments/shared/manifest.yml").Should(BeAnExistingFile())
+		})
+
 		It("env ls should list all three envs", func() {
 			envListOutput, err := cli.EnvList(appName)
 			Expect(err).NotTo(HaveOccurred())
@@ -132,6 +140,102 @@ var _ = Describe("Customized Env", func() {
 
 			Expect(envs["prod"]).NotTo(BeNil())
 			Expect(envs["prod"].Prod).To(BeTrue())
+		})
+
+		It("should show only bootstrap resources in env show", func() {
+			testEnvShowOutput, testEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "test",
+			})
+			prodEnvShowOutput, prodEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "prod",
+			})
+			sharedEnvShowOutput, sharedEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "shared",
+			})
+			Expect(testEnvShowError).NotTo(HaveOccurred())
+			Expect(prodEnvShowError).NotTo(HaveOccurred())
+			Expect(sharedEnvShowError).NotTo(HaveOccurred())
+
+			Expect(testEnvShowOutput.Environment.Name).To(Equal("test"))
+			Expect(testEnvShowOutput.Environment.App).To(Equal(appName))
+			Expect(prodEnvShowOutput.Environment.Name).To(Equal("prod"))
+			Expect(prodEnvShowOutput.Environment.App).To(Equal(appName))
+			Expect(sharedEnvShowOutput.Environment.Name).To(Equal("shared"))
+			Expect(sharedEnvShowOutput.Environment.App).To(Equal(appName))
+
+			// Contains only bootstrap resources - two IAM roles.
+			Expect(len(testEnvShowOutput.Resources)).To(Equal(2))
+			Expect(len(prodEnvShowOutput.Resources)).To(Equal(2))
+			Expect(len(sharedEnvShowOutput.Resources)).To(Equal(2))
+		})
+	})
+
+	Context("when deploying the environments", func() {
+		var (
+			testEnvDeployErr, prodEnvDeployErr, sharedEnvDeployErr error
+		)
+		BeforeAll(func() {
+			_, testEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "test",
+			})
+			_, prodEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "prod",
+			})
+			_, sharedEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "shared",
+			})
+		})
+
+		It("should succeed", func() {
+			Expect(testEnvDeployErr).NotTo(HaveOccurred())
+			Expect(prodEnvDeployErr).NotTo(HaveOccurred())
+			Expect(sharedEnvDeployErr).NotTo(HaveOccurred())
+		})
+
+		It("should show correct resources in env show", func() {
+			testEnvShowOutput, testEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "test",
+			})
+			Expect(testEnvShowError).NotTo(HaveOccurred())
+			// Test environment imports VPC resources. Therefore, resource of type "AWS::EC2::VPC" is not expected.
+			Expect(len(testEnvShowOutput.Resources)).To(BeNumerically(">", 2))
+			for _, resource := range testEnvShowOutput.Resources {
+				Expect(resource["type"]).NotTo(Equal(resourceTypeVPC))
+			}
+
+			prodEnvShowOutput, prodEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "prod",
+			})
+			Expect(prodEnvShowError).NotTo(HaveOccurred())
+			// Prod environment adjusts VPC resources. Therefore, resource of type "AWS::EC2::VPC" is expected.
+			Expect(len(prodEnvShowOutput.Resources)).To(BeNumerically(">", 2))
+			var prodEnvHasVPCResource bool
+			for _, resource := range prodEnvShowOutput.Resources {
+				if resource["type"] == resourceTypeVPC {
+					prodEnvHasVPCResource = true
+					break
+				}
+			}
+			Expect(prodEnvHasVPCResource).To(BeTrue())
+
+			sharedEnvShowOutput, sharedEnvShowError := cli.EnvShow(&client.EnvShowRequest{
+				AppName: appName,
+				EnvName: "shared",
+			})
+			Expect(sharedEnvShowError).NotTo(HaveOccurred())
+			// Shared environment imports VPC resources. Therefore, resource of type "AWS::EC2::VPC" is not expected.
+			Expect(len(sharedEnvShowOutput.Resources)).To(BeNumerically(">", 2))
+			for _, resource := range sharedEnvShowOutput.Resources {
+				Expect(resource["type"]).NotTo(Equal(resourceTypeVPC))
+			}
 		})
 	})
 

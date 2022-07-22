@@ -100,6 +100,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -166,6 +167,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -248,7 +250,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -262,7 +264,7 @@ Resources:
       Policies:
         - PolicyName: "RulePriorityGeneratorAccess"
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -276,12 +278,12 @@ Resources:
       HostedZoneId: mockHostedZone1
       Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone mockHostedZone1"
       RecordSets:
-        - Name: foobar.com
+        - Name: "foobar.com"
           Type: A
           AliasTarget:
             HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
             DNSName: !GetAtt EnvControllerAction.InternalLoadBalancerDNSName
-        - Name: v1.foobar.com
+        - Name: "*.foobar.com"
           Type: A
           AliasTarget:
             HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
@@ -294,7 +296,7 @@ Resources:
       HostedZoneId: mockHostedZone2
       Comment: !Sub "LoadBalancer aliases for service ${WorkloadName} in hosted zone mockHostedZone2"
       RecordSets:
-        - Name: example.com
+        - Name: "example.com"
           Type: A
           AliasTarget:
             HostedZoneId: !GetAtt EnvControllerAction.InternalLoadBalancerHostedZone
@@ -307,6 +309,16 @@ Resources:
       ServiceToken: !GetAtt RulePriorityFunction.Arn
       RulePath: !Ref RulePath
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPSListenerArn
+  
+  HTTPRuleWithDomainPriorityAction:
+    Metadata:
+      'aws:copilot:description': 'A custom resource assigning priority for HTTP listener rules'
+    Type: Custom::RulePriorityFunction
+    Properties:
+      ServiceToken: !GetAtt RulePriorityFunction.Arn
+      RulePath: !Ref RulePath
+      ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
+
   HTTPListenerRuleWithDomain:
     Metadata:
       'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
@@ -324,7 +336,7 @@ Resources:
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: [example.com, foobar.com, v1.foobar.com]
+            Values: ["example.com", "foobar.com", "*.foobar.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If
@@ -333,7 +345,7 @@ Resources:
               - - !Sub "/${RulePath}"
                 - !Sub "/${RulePath}/*"
       ListenerArn: !GetAtt EnvControllerAction.InternalHTTPListenerArn
-      Priority: !GetAtt HTTPSRulePriorityAction.Priority # Same priority as HTTPS Listener
+      Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority # Same priority as HTTPS Listener
   HTTPSListenerRule:
     Metadata:
       'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
@@ -345,7 +357,7 @@ Resources:
       Conditions:
         - Field: 'host-header'
           HostHeaderConfig:
-            Values: [example.com, foobar.com, v1.foobar.com]
+            Values: ["example.com", "foobar.com", "*.foobar.com"]
         - Field: 'path-pattern'
           PathPatternConfig:
             Values: !If
@@ -412,6 +424,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt EnvControllerFunction.Arn
       Workload: !Ref WorkloadName
+      Aliases: ["example.com", "foobar.com", "*.foobar.com"]
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters: [InternalALBWorkloads]
   EnvControllerFunction:
@@ -431,7 +444,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: 2012-10-17
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:

@@ -4,10 +4,14 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
@@ -22,32 +26,30 @@ import (
 )
 
 type deployEnvVars struct {
-	appName      string
-	name         string
-	isProduction bool
+	appName        string
+	name           string
+	forceNewUpdate bool
 }
 
 type deployEnvOpts struct {
 	deployEnvVars
 
 	// Dependencies.
-	store store
+	store           store
+	sessionProvider *sessions.Provider
 
 	// Dependencies to ask.
 	sel wsEnvironmentSelector
 
 	// Dependencies to execute.
-	ws             wsEnvironmentReader
-	identity       identityService
-	interpolator   interpolator
-	newEnvDeployer func() (envDeployer, error)
+	ws              wsEnvironmentReader
+	identity        identityService
+	newInterpolator func(app, env string) interpolator
+	newEnvDeployer  func() (envDeployer, error)
 
 	// Cached variables.
 	targetApp *config.Application
 	targetEnv *config.Environment
-
-	// Functions to facilitate testing.
-	unmarshalManifest func(in []byte) (*manifest.Environment, error)
 }
 
 func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
@@ -64,31 +66,34 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 	opts := &deployEnvOpts{
 		deployEnvVars: vars,
 
-		store: store,
-		sel:   selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
+		store:           store,
+		sessionProvider: sessProvider,
+		sel:             selector.NewLocalEnvironmentSelector(prompt.New(), store, ws),
 
-		ws:           ws,
-		identity:     identity.New(defaultSess),
-		interpolator: manifest.NewInterpolator(vars.appName, vars.name),
-
-		unmarshalManifest: manifest.UnmarshalEnvironment,
+		ws:              ws,
+		identity:        identity.New(defaultSess),
+		newInterpolator: newManifestInterpolator,
 	}
 	opts.newEnvDeployer = func() (envDeployer, error) {
-		app, err := opts.cachedTargetApp()
-		if err != nil {
-			return nil, err
-		}
-		env, err := opts.cachedTargetEnv()
-		if err != nil {
-			return nil, err
-		}
-		return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
-			App:             app,
-			Env:             env,
-			SessionProvider: sessProvider,
-		})
+		return newEnvDeployer(opts)
 	}
 	return opts, nil
+}
+
+func newEnvDeployer(opts *deployEnvOpts) (envDeployer, error) {
+	app, err := opts.cachedTargetApp()
+	if err != nil {
+		return nil, err
+	}
+	env, err := opts.cachedTargetEnv()
+	if err != nil {
+		return nil, err
+	}
+	return deploy.NewEnvDeployer(&deploy.NewEnvDeployerInput{
+		App:             app,
+		Env:             env,
+		SessionProvider: opts.sessionProvider,
+	})
 }
 
 // Validate is a no-op for this command.
@@ -110,7 +115,11 @@ func (o *deployEnvOpts) Ask() error {
 
 // Execute deploys an environment given a manifest.
 func (o *deployEnvOpts) Execute() error {
-	mft, err := o.environmentManifest()
+	rawMft, err := o.ws.ReadEnvironmentManifest(o.name)
+	if err != nil {
+		return fmt.Errorf("read manifest for environment %q: %w", o.name, err)
+	}
+	mft, err := environmentManifest(o.name, rawMft, o.newInterpolator(o.appName, o.name))
 	if err != nil {
 		return err
 	}
@@ -130,37 +139,64 @@ func (o *deployEnvOpts) Execute() error {
 		RootUserARN:         caller.RootUserARN,
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
+		ForceNewUpdate:      o.forceNewUpdate,
+		RawManifest:         rawMft,
 	}); err != nil {
+		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
+		if errors.As(err, &errEmptyChangeSet) {
+			log.Errorf(`Your update does not introduce immediate resource changes. 
+This may be because the resources are not created until they are deemed 
+necessary by a service deployment.
+
+In this case, you can run %s to push a modified template, even if there are no immediate changes.
+`, color.HighlightCode("copilot env deploy --force"))
+		}
 		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
 	return nil
 }
 
-func (o *deployEnvOpts) environmentManifest() (*manifest.Environment, error) {
-	targetEnv, err := o.cachedTargetEnv()
+func environmentManifest(envName string, rawMft []byte, transformer interpolator) (*manifest.Environment, error) {
+	interpolated, err := transformer.Interpolate(string(rawMft))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("interpolate environment variables for %q manifest: %w", envName, err)
 	}
-	raw, err := o.ws.ReadEnvironmentManifest(targetEnv.Name)
+	mft, err := manifest.UnmarshalEnvironment([]byte(interpolated))
 	if err != nil {
-		return nil, fmt.Errorf("read manifest for environment %s: %w", targetEnv.Name, err)
-	}
-	interpolated, err := o.interpolator.Interpolate(string(raw))
-	if err != nil {
-		return nil, fmt.Errorf("interpolate environment variables for %s manifest: %w", targetEnv.Name, err)
-	}
-	mft, err := o.unmarshalManifest([]byte(interpolated))
-	if err != nil {
-		return nil, fmt.Errorf("unmarshal environment manifest for %s: %w", targetEnv.Name, err)
+		return nil, fmt.Errorf("unmarshal environment manifest for %q: %w", envName, err)
 	}
 	if err := mft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate environment manifest for %s: %w", targetEnv.Name, err)
+		return nil, fmt.Errorf("validate environment manifest for %q: %w", envName, err)
 	}
 	return mft, nil
 }
 
 func (o *deployEnvOpts) validateOrAskEnvName() error {
 	if o.name != "" {
+		return o.validateEnvName()
+	}
+	name, err := o.sel.LocalEnvironment("Select an environment manifest from your workspace", "")
+	if err != nil {
+		var pathErr *os.PathError
+		if errors.As(err, &pathErr) || errors.Is(err, selector.ErrLocalEnvsNotFound) {
+			o.logManifestSuggestion("example")
+		}
+		return fmt.Errorf("select environment: %w", err)
+	}
+	o.name = name
+	return nil
+}
+
+func (o *deployEnvOpts) validateEnvName() error {
+	localEnvs, err := o.ws.ListEnvironments()
+	if err != nil {
+		o.logManifestSuggestion(o.name)
+		return fmt.Errorf("list environments in workspace: %w", err)
+	}
+	for _, localEnv := range localEnvs {
+		if o.name != localEnv {
+			continue
+		}
 		if _, err := o.cachedTargetEnv(); err != nil {
 			log.Errorf("It seems like environment %s is not added in application %s yet. Have you run %s?\n",
 				o.name, o.appName, color.HighlightCode("copilot env init"))
@@ -168,12 +204,8 @@ func (o *deployEnvOpts) validateOrAskEnvName() error {
 		}
 		return nil
 	}
-	name, err := o.sel.LocalEnvironment("Select an environment in your workspace", "")
-	if err != nil {
-		return fmt.Errorf("select environment: %w", err)
-	}
-	o.name = name
-	return nil
+	o.logManifestSuggestion(o.name)
+	return fmt.Errorf("environment manifest for %q is not found", o.name)
 }
 
 func (o *deployEnvOpts) cachedTargetEnv() (*config.Environment, error) {
@@ -198,6 +230,20 @@ func (o *deployEnvOpts) cachedTargetApp() (*config.Application, error) {
 	return o.targetApp, nil
 }
 
+func (o *deployEnvOpts) logManifestSuggestion(envName string) {
+	dir := filepath.Join("copilot", "environments", envName)
+	log.Infof(`It looks like there are no environment manifests in your workspace.
+To create a new manifest for an environment %q, please run:
+1. Create the directories to store the manifest file:
+   %s
+2. Generate and write the manifest file:
+   %s
+`,
+		envName,
+		color.HighlightCode(fmt.Sprintf("mkdir -p %s", dir)),
+		color.HighlightCode(fmt.Sprintf("copilot env show -n %s --manifest > %s", envName, filepath.Join(dir, "manifest.yml"))))
+}
+
 // buildEnvDeployCmd builds the command for deploying an environment given a manifest.
 func buildEnvDeployCmd() *cobra.Command {
 	vars := deployEnvVars{}
@@ -208,7 +254,6 @@ func buildEnvDeployCmd() *cobra.Command {
 		Example: `
 Deploy an environment named "test".
 /code $copilot env deploy --name test`,
-		Hidden: true,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newEnvDeployOpts(vars)
 			if err != nil {
@@ -219,5 +264,6 @@ Deploy an environment named "test".
 	}
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
+	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
 	return cmd
 }

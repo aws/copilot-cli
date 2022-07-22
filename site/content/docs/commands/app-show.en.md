@@ -11,7 +11,7 @@ $ copilot app show [flags]
 
 ```
 -h, --help          help for show
-    --json          Optional. Outputs in JSON format.
+    --json          Optional. Output in JSON format.
 -n, --name string   Name of the application.
 ```
 

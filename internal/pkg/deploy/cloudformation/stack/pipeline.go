@@ -50,8 +50,7 @@ func (p *pipelineStackConfig) Template() (string, error) {
 	return content.String(), nil
 }
 
-// SerializedParameters returns the CloudFormation stack's parameters serialized
-// to a YAML document annotated with comments for readability to users.
+// SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
 func (s *pipelineStackConfig) SerializedParameters() (string, error) {
 	// No-op for now.
 	return "", nil

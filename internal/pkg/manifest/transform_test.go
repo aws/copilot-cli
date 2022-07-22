@@ -296,7 +296,7 @@ func TestAliasTransformer_Transformer(t *testing.T) {
 				}
 			},
 			override: func(a *Alias) {
-				a.StringSliceOrString = stringSliceOrString{
+				a.StringSliceOrString = StringSliceOrString{
 					StringSlice: []string{"mock", "string", "slice"},
 				}
 			},
@@ -306,7 +306,7 @@ func TestAliasTransformer_Transformer(t *testing.T) {
 		},
 		"StringSliceOrString set to empty if advanced alias is not nil": {
 			original: func(a *Alias) {
-				a.StringSliceOrString = stringSliceOrString{
+				a.StringSliceOrString = StringSliceOrString{
 					StringSlice: []string{"mock", "string", "slice"},
 				}
 			},
@@ -351,29 +351,29 @@ func TestAliasTransformer_Transformer(t *testing.T) {
 
 func TestStringSliceOrStringTransformer_Transformer(t *testing.T) {
 	testCases := map[string]struct {
-		original func(s *stringSliceOrString)
-		override func(s *stringSliceOrString)
-		wanted   func(s *stringSliceOrString)
+		original func(s *StringSliceOrString)
+		override func(s *StringSliceOrString)
+		wanted   func(s *StringSliceOrString)
 	}{
 		"string set to empty if string slice is not nil": {
-			original: func(s *stringSliceOrString) {
+			original: func(s *StringSliceOrString) {
 				s.String = aws.String("mockString")
 			},
-			override: func(s *stringSliceOrString) {
+			override: func(s *StringSliceOrString) {
 				s.StringSlice = []string{"mock", "string", "slice"}
 			},
-			wanted: func(s *stringSliceOrString) {
+			wanted: func(s *StringSliceOrString) {
 				s.StringSlice = []string{"mock", "string", "slice"}
 			},
 		},
 		"string slice set to empty if string is not nil": {
-			original: func(s *stringSliceOrString) {
+			original: func(s *StringSliceOrString) {
 				s.StringSlice = []string{"mock", "string", "slice"}
 			},
-			override: func(s *stringSliceOrString) {
+			override: func(s *StringSliceOrString) {
 				s.String = aws.String("mockString")
 			},
-			wanted: func(s *stringSliceOrString) {
+			wanted: func(s *StringSliceOrString) {
 				s.String = aws.String("mockString")
 			},
 		},
@@ -381,7 +381,7 @@ func TestStringSliceOrStringTransformer_Transformer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var dst, override, wanted stringSliceOrString
+			var dst, override, wanted StringSliceOrString
 
 			tc.original(&dst)
 			tc.override(&override)
@@ -392,7 +392,7 @@ func TestStringSliceOrStringTransformer_Transformer(t *testing.T) {
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(stringSliceOrStringTransformer{}))
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(StringSliceOrStringTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)
@@ -476,19 +476,25 @@ func TestPlacementArgsOrStringTransformer_Transformer(t *testing.T) {
 			},
 			override: func(p *PlacementArgOrString) {
 				p.PlacementArgs = PlacementArgs{
-					Subnets: []string{"id1"},
+					Subnets: SubnetListOrArgs{
+						IDs: []string{"id1"},
+					},
 				}
 			},
 			wanted: func(p *PlacementArgOrString) {
 				p.PlacementArgs = PlacementArgs{
-					Subnets: []string{"id1"},
+					Subnets: SubnetListOrArgs{
+						IDs: []string{"id1"},
+					},
 				}
 			},
 		},
 		"args set to empty if string is not nil": {
 			original: func(p *PlacementArgOrString) {
 				p.PlacementArgs = PlacementArgs{
-					Subnets: []string{"id1"},
+					Subnets: SubnetListOrArgs{
+						IDs: []string{"id1"},
+					},
 				}
 			},
 			override: func(p *PlacementArgOrString) {
@@ -514,6 +520,70 @@ func TestPlacementArgsOrStringTransformer_Transformer(t *testing.T) {
 
 			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(placementArgOrStringTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}
+
+func TestSubnetListOrArgsTransformer_Transformer(t *testing.T) {
+	mockSubnetIDs := []string{"id1", "id2"}
+	mockSubnetFromTags := map[string]StringSliceOrString{
+		"foo": {
+			String: aws.String("bar"),
+		},
+	}
+	testCases := map[string]struct {
+		original func(p *SubnetListOrArgs)
+		override func(p *SubnetListOrArgs)
+		wanted   func(p *SubnetListOrArgs)
+	}{
+		"string slice set to empty if args is not nil": {
+			original: func(s *SubnetListOrArgs) {
+				s.IDs = mockSubnetIDs
+			},
+			override: func(s *SubnetListOrArgs) {
+				s.SubnetArgs = SubnetArgs{
+					FromTags: mockSubnetFromTags,
+				}
+			},
+			wanted: func(s *SubnetListOrArgs) {
+				s.SubnetArgs = SubnetArgs{
+					FromTags: mockSubnetFromTags,
+				}
+			},
+		},
+		"args set to empty if string is not nil": {
+			original: func(s *SubnetListOrArgs) {
+				s.SubnetArgs = SubnetArgs{
+					FromTags: mockSubnetFromTags,
+				}
+			},
+			override: func(s *SubnetListOrArgs) {
+				s.IDs = mockSubnetIDs
+			},
+			wanted: func(s *SubnetListOrArgs) {
+				s.IDs = mockSubnetIDs
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted SubnetListOrArgs
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(subnetListOrArgsTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)
@@ -1117,6 +1187,47 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 
 			// Use custom transformer.
 			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(secretTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}
+
+func TestEnvironmentCDNConfigTransformer_Transformer(t *testing.T) {
+	testCases := map[string]struct {
+		original func(cfg *environmentCDNConfig)
+		override func(cfg *environmentCDNConfig)
+		wanted   func(cfg *environmentCDNConfig)
+	}{
+		"cdnconfig set to empty if enabled is not nil": {
+			original: func(cfg *environmentCDNConfig) {
+				cfg.CDNConfig = advancedCDNConfig{} // Need to update with advanced fields when AdvancedCDNConfig struct is not empty
+			},
+			override: func(cfg *environmentCDNConfig) {
+				cfg.Enabled = aws.Bool(true)
+			},
+			wanted: func(cfg *environmentCDNConfig) {
+				cfg.Enabled = aws.Bool(true)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted environmentCDNConfig
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(environmentCDNConfigTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)
