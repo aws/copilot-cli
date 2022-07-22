@@ -111,6 +111,7 @@ type EnvOpts struct {
 	CustomInternalALBSubnets []string
 	AllowVPCIngress          bool
 	Telemetry                *Telemetry
+	SecurityGroupConfig      *SecurityGroupConfig
 
 	CDNConfig *CDNConfig // If nil, no cdn is to be used
 
@@ -125,6 +126,12 @@ type CDNConfig struct{}
 type VPCConfig struct {
 	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
 	Managed  ManagedVPC
+}
+
+// SecurityGroupConfig holds the fields to import security group config
+type SecurityGroupConfig struct {
+	Ingress string
+	Egress  string
 }
 
 // ImportVPC holds the fields to import VPC resources.

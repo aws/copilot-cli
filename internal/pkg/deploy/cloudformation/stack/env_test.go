@@ -56,6 +56,7 @@ func TestEnv_Template(t *testing.T) {
 								Key:    "mockkey4",
 							},
 						},
+						SecurityGroupConfig: &template.SecurityGroupConfig{},
 						Telemetry: &template.Telemetry{
 							EnableContainerInsights: false,
 						},

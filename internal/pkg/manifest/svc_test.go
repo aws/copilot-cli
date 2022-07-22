@@ -102,7 +102,7 @@ environments:
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
 								Alias: Alias{
 									AdvancedAliases: []AdvancedAlias{},
-									StringSliceOrString: stringSliceOrString{
+									StringSliceOrString: StringSliceOrString{
 										StringSlice: []string{
 											"foobar.com",
 											"v1.foobar.com",
@@ -393,7 +393,7 @@ type: 'OH NO'
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
 				require.NoError(t, err)
-				tc.requireCorrectValues(t, m)
+				tc.requireCorrectValues(t, m.Manifest())
 			}
 		})
 	}

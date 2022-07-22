@@ -936,7 +936,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got, _ := tc.svc.ApplyEnv(tc.inEnvName)
+			got, _ := tc.svc.applyEnv(tc.inEnvName)
 
 			// Should override properly.
 			require.Equal(t, tc.wanted, got)
@@ -1102,7 +1102,7 @@ func TestWorkerSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			actual, _ := svc.ApplyEnv("test")
+			actual, _ := svc.applyEnv("test")
 
 			// THEN
 			require.Equal(t, tc.expected, actual)
@@ -1261,7 +1261,7 @@ func TestWorkerService_RequiredEnvironmentFeatures(t *testing.T) {
 				},
 			}
 			tc.mft(&inSvc)
-			got := inSvc.RequiredEnvironmentFeatures()
+			got := inSvc.requiredEnvironmentFeatures()
 			require.Equal(t, tc.wanted, got)
 		})
 	}

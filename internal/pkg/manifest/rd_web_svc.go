@@ -22,6 +22,10 @@ type RequestDrivenWebService struct {
 	parser template.Parser
 }
 
+func (s *RequestDrivenWebService) subnets() *SubnetListOrArgs {
+	return &s.Network.VPC.Placement.Subnets
+}
+
 // RequestDrivenWebServiceConfig holds the configuration that can be overridden per environments.
 type RequestDrivenWebServiceConfig struct {
 	RequestDrivenWebServiceHttpConfig `yaml:"http,flow"`
@@ -146,9 +150,7 @@ func (s *RequestDrivenWebService) BuildArgs(wsRoot string) *DockerBuildArgs {
 	return s.ImageConfig.Image.BuildConfig(wsRoot)
 }
 
-// ApplyEnv returns the service manifest with environment overrides.
-// If the environment passed in does not have any overrides then it returns itself.
-func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, error) {
+func (s RequestDrivenWebService) applyEnv(envName string) (workloadManifest, error) {
 	overrideConfig, ok := s.Environments[envName]
 	if !ok {
 		return &s, nil
@@ -162,13 +164,11 @@ func (s RequestDrivenWebService) ApplyEnv(envName string) (WorkloadManifest, err
 			return nil, err
 		}
 	}
-
 	s.Environments = nil
 	return &s, nil
 }
 
-// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
-func (s *RequestDrivenWebService) RequiredEnvironmentFeatures() []string {
+func (s *RequestDrivenWebService) requiredEnvironmentFeatures() []string {
 	var features []string
 	features = append(features, s.Network.requiredEnvFeatures()...)
 	return features
