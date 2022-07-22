@@ -578,19 +578,19 @@ func TestEnvDescriber_Features(t *testing.T) {
 			setupMock: func(m *envDescriberMocks) {
 				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
 					Parameters: map[string]string{
-						"AppName":                  "mock-app",
-						"EnvironmentName":          "mock-env",
-						"ToolsAccountPrincipalARN": "mock-arn",
-						"AppDNSName":               "mock-dns",
-						"AppDNSDelegationRole":     "mock-role",
-						"Aliases":                  "",
-						template.ALBFeatureName:    "workload1,workload2",
-						template.EFSFeatureName:    "",
-						template.NATFeatureName:    "",
+						"AppName":                   "mock-app",
+						"EnvironmentName":           "mock-env",
+						"ToolsAccountPrincipalARN":  "mock-arn",
+						"AppDNSName":                "mock-dns",
+						"AppDNSDelegationRole":      "mock-role",
+						template.ALBFeatureName:     "workload1,workload2",
+						template.EFSFeatureName:     "",
+						template.NATFeatureName:     "",
+						template.AliasesFeatureName: "",
 					},
 				}, nil)
 			},
-			wanted: []string{template.ALBFeatureName, template.EFSFeatureName, template.NATFeatureName},
+			wanted: []string{template.ALBFeatureName, template.EFSFeatureName, template.NATFeatureName, template.AliasesFeatureName},
 		},
 		"return up-to-date features": {
 			setupMock: func(m *envDescriberMocks) {
@@ -600,7 +600,6 @@ func TestEnvDescriber_Features(t *testing.T) {
 					"ToolsAccountPrincipalARN": "mock-arn",
 					"AppDNSName":               "mock-dns",
 					"AppDNSDelegationRole":     "mock-role",
-					"Aliases":                  "",
 				}
 				for _, f := range template.AvailableEnvFeatures() {
 					mockParams[f] = ""

@@ -373,6 +373,17 @@ func TestPlacementArgOrString_UnmarshalYAML(t *testing.T) {
   archie: leg64`),
 			wantedError: errUnmarshalPlacementOpts,
 		},
+		"success": {
+			inContent: []byte(`placement:
+  subnets: ["id1", "id2"]`),
+			wantedStruct: PlacementArgOrString{
+				PlacementArgs: PlacementArgs{
+					Subnets: SubnetListOrArgs{
+						IDs: []string{"id1", "id2"},
+					},
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -384,6 +395,60 @@ func TestPlacementArgOrString_UnmarshalYAML(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedStruct.PlacementString, v.Placement.PlacementString)
 				require.Equal(t, tc.wantedStruct.PlacementArgs.Subnets, v.Placement.PlacementArgs.Subnets)
+			}
+		})
+	}
+}
+
+func TestSubnetListOrArgs_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct SubnetListOrArgs
+		wantedError  error
+	}{
+		"returns error if both string slice and args specified": {
+			inContent: []byte(`subnets: ["id1", "id2"]
+  from_tags:
+    - foo: bar`),
+
+			wantedError: errors.New("yaml: line 1: did not find expected key"),
+		},
+		"error if unmarshalable": {
+			inContent: []byte(`subnets:
+  ohess: linus
+  archie: leg64`),
+			wantedError: errUnmarshalSubnetsOpts,
+		},
+		"success with string slice": {
+			inContent: []byte(`subnets: ["id1", "id2"]`),
+			wantedStruct: SubnetListOrArgs{
+				IDs: []string{"id1", "id2"},
+			},
+		},
+		"success with args": {
+			inContent: []byte(`subnets:
+  from_tags:
+    foo: bar`),
+			wantedStruct: SubnetListOrArgs{
+				SubnetArgs: SubnetArgs{
+					FromTags: map[string]StringSliceOrString{
+						"foo": {String: aws.String("bar")},
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			v := PlacementArgs{}
+			err := yaml.Unmarshal(tc.inContent, &v)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedStruct.IDs, v.Subnets.IDs)
+				require.Equal(t, tc.wantedStruct.FromTags, v.Subnets.FromTags)
 			}
 		})
 	}

@@ -44,7 +44,7 @@ type validator interface {
 func Test_ValidateAudit(t *testing.T) {
 	// Audit workload manifests.
 	testCases := map[string]struct {
-		mft manifest.WorkloadManifest
+		mft interface{}
 	}{
 		"backend service": {
 			mft: &manifest.BackendService{},

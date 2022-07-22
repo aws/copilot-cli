@@ -11,6 +11,7 @@ import (
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -80,12 +81,14 @@ func TestCloudFormation_EnvironmentParameters(t *testing.T) {
 			},
 		},
 		"should return the error as is from a failed stack description": {
+			inAppName: "phonetool",
+			inEnvName: "test",
 			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
 				m.EXPECT().Describe(gomock.Any()).Return(nil, errors.New("some error"))
 				return m
 			},
-			wantedErr: errors.New("some error"),
+			wantedErr: errors.New("describe stack phonetool-test: some error"),
 		},
 	}
 
@@ -105,6 +108,59 @@ func TestCloudFormation_EnvironmentParameters(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.ElementsMatch(t, tc.wantedParams, actual)
+			}
+		})
+	}
+}
+
+func TestCloudFormation_ForceUpdateID(t *testing.T) {
+	testCases := map[string]struct {
+		inClient func(ctrl *gomock.Controller) *mocks.MockcfnClient
+
+		wanted    string
+		wantedErr error
+	}{
+		"should return stack parameters from a stack description": {
+			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe("phonetool-test").Return(&cloudformation.StackDescription{
+					Outputs: []*awscfn.Output{
+						{
+							OutputKey:   aws.String(template.LastForceDeployIDOutputName),
+							OutputValue: aws.String("mockForceUpdateID"),
+						},
+					},
+				}, nil)
+				return m
+			},
+			wanted: "mockForceUpdateID",
+		},
+		"error describing the stack": {
+			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Describe(gomock.Any()).Return(nil, errors.New("some error"))
+				return m
+			},
+			wantedErr: errors.New("describe stack phonetool-test: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			cf := &CloudFormation{
+				cfnClient: tc.inClient(ctrl),
+			}
+
+			// WHEN
+			actual, err := cf.ForceUpdateOutputID("phonetool", "test")
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, actual)
 			}
 		})
 	}
