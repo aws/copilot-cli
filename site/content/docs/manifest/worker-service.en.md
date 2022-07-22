@@ -138,7 +138,9 @@ Optional. Specify SQS queue configuration for the topic. If specified as `true`,
 
 <div class="separator"></div>
 
-<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>  
+<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>
+The number of tasks that your service should maintain.
+
 If you specify a number:
 ```yaml
 count: 5
