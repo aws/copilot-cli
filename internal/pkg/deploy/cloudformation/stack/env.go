@@ -105,7 +105,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		PrivateImportedCertARNs:  e.importPrivateCertARNs(),
 		VPCConfig:                e.vpcConfig(),
 		CustomInternalALBSubnets: e.internalALBSubnets(),
-		AllowVPCIngress:          e.in.AllowVPCIngress, // TODO(jwh): fetch AllowVPCIngress from Manifest or SSM.
+		AllowVPCIngress:          aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
 		Telemetry:                e.telemetryConfig(),
 		CDNConfig:                e.cdnConfig(),
 

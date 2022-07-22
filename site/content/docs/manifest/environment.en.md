@@ -167,8 +167,24 @@ List of [AWS Certificate Manager certificate](https://docs.aws.amazon.com/acm/la
 By attaching public or private certificates to your load balancer, you can associate your Backend Services with a domain name and reach them with HTTPS.
 See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-existing-validated-certificates) guide to learn more about how to redeploy services using [`http.alias`](./backend-service.en.md#http-alias).
 
-<span class="parent-field">http.private.</span><a id="http-private-subnets" href="#http-private-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>  
+<span class="parent-field">http.private.</span><a id="http-private-subnets" href="#http-private-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>   
 The subnet IDs to place the internal load balancer in.
+
+<span class="parent-field">http.private.</span><a id="http-private-security-groups" href="#http-private-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
+Configure security groups to add to the internal load balancer.
+
+<span class="parent-field">http.private.security_groups</span><a id="http-private-security-groups-ingress" href="#http-private-security-groups-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
+Ingress rules to allow for the internal load balancer.  
+```yaml
+http:
+  private:
+    security_groups:
+      ingress: # Enable incoming traffic within the VPC to the internal load balancer.
+        from_vpc: true
+```
+
+<span class="parent-field">http.private.security_groups.ingress.</span><a id="http-private-security-groups-ingress-from-vpc" href="#http-private-security-groups-ingress-from-vpc" class="field">`from_vpc`</a> <span class="type">Boolean</span>    
+Enable traffic from within the VPC to the internal load balancer.
 
 <div class="separator"></div>
 

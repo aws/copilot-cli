@@ -14,7 +14,7 @@ CertificateValidationFunction:
     Runtime: nodejs12.x
 
 CustomDomainFunction:
-  Condition: HasAliases
+  Condition: ManagedAliases
   Type: AWS::Lambda::Function
   Properties:
     {{- with $cr := index .CustomResources "CustomDomainFunction" }}
