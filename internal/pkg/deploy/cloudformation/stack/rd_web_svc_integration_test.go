@@ -13,6 +13,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -44,6 +45,8 @@ func TestRDWS_Template(t *testing.T) {
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err, "apply test env to manifest")
 		err = envMft.Validate()
+		require.NoError(t, err)
+		err = envMft.Load(session.New())
 		require.NoError(t, err)
 		content := envMft.Manifest()
 
