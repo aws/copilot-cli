@@ -223,6 +223,9 @@ func (cfg privateHTTPConfig) validate() error {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
+	if err := cfg.SecurityGroupsConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "security_groups: %w`, err)
+	}
 	return nil
 }
 

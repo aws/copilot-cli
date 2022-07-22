@@ -809,6 +809,11 @@ func (t TaskConfig) validate() error {
 	if err = t.Storage.validate(); err != nil {
 		return fmt.Errorf(`validate "storage": %w`, err)
 	}
+	for _, v := range t.Secrets {
+		if err := v.validate(); err != nil {
+			return fmt.Errorf(`validate "secret": %w`, err)
+		}
+	}
 	if t.EnvFile != nil {
 		envFile := aws.StringValue(t.EnvFile)
 		if filepath.Ext(envFile) != envFileExt {

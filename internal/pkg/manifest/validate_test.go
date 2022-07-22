@@ -2772,7 +2772,7 @@ func TestOverrideRule_validate(t *testing.T) {
 	}
 }
 
-func TestvalidateLoadBalancerTarget(t *testing.T) {
+func TestValidateLoadBalancerTarget(t *testing.T) {
 	testCases := map[string]struct {
 		in     validateTargetContainerOpts
 		wanted error
@@ -2828,7 +2828,7 @@ func TestvalidateLoadBalancerTarget(t *testing.T) {
 	}
 }
 
-func TestvalidateContainerDeps(t *testing.T) {
+func TestValidateContainerDeps(t *testing.T) {
 	testCases := map[string]struct {
 		in     validateDependenciesOpts
 		wanted error
@@ -2967,7 +2967,7 @@ func TestvalidateContainerDeps(t *testing.T) {
 	}
 }
 
-func TestvalidateWindows(t *testing.T) {
+func TestValidateWindows(t *testing.T) {
 	testCases := map[string]struct {
 		in          validateWindowsOpts
 		wantedError error
@@ -3005,7 +3005,7 @@ func TestvalidateWindows(t *testing.T) {
 	}
 }
 
-func TestvalidateARM(t *testing.T) {
+func TestValidateARM(t *testing.T) {
 	testCases := map[string]struct {
 		in          validateARMOpts
 		wantedError error
