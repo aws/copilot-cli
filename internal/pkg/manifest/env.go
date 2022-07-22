@@ -357,7 +357,7 @@ type RestrictiveIngress struct {
 	CDNIngress *bool `yaml:"cdn"`
 }
 
-// IsEmpty returns true if there are no specified fields for ingress.
+// IsEmpty returns true if there are no specified fields for restrictive ingress.
 func (i RestrictiveIngress) IsEmpty() bool {
 	return i.CDNIngress == nil
 }
