@@ -85,15 +85,15 @@ func (d *LBWebServiceDescriber) URI(envName string) (URI, error) {
 
 	var uri LBWebServiceURI
 	if albEnabled {
-		albOrCdnDescr := &albOrCdnDescriber{
+		uriDescr := &uriDescriber{
 			svc:              d.svc,
 			env:              envName,
 			svcDescriber:     svcDescr,
 			envDescriber:     envDescr,
 			initLBDescriber:  d.initLBDescriber,
-			albCfnOutputName: envOutputPublicLoadBalancerDNSName,
+			albCFNOutputName: envOutputPublicLoadBalancerDNSName,
 		}
-		publicURI, err := albOrCdnDescr.uri()
+		publicURI, err := uriDescr.uri()
 		if err != nil {
 			return URI{}, err
 		}
@@ -166,20 +166,20 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	}
 	for _, res := range resources {
 		if res.LogicalID == svcStackResourceALBTargetGroupLogicalID {
-			albOrCdnDescr := &albOrCdnDescriber{
+			uriDescr := &uriDescriber{
 				svc:              d.svc,
 				env:              envName,
 				svcDescriber:     svcDescr,
 				envDescriber:     envDescr,
 				initLBDescriber:  d.initLBDescriber,
-				albCfnOutputName: envOutputInternalLoadBalancerDNSName,
+				albCFNOutputName: envOutputInternalLoadBalancerDNSName,
 			}
-			privateURI, err := albOrCdnDescr.uri()
+			privateURI, err := uriDescr.uri()
 			if err != nil {
 				return URI{}, err
 			}
 			if !privateURI.HTTPS && len(privateURI.DNSNames) > 1 {
-				privateURI = albOrCdnDescr.bestEffortRemoveEnvDNSName(privateURI)
+				privateURI = uriDescr.bestEffortRemoveEnvDNSName(privateURI)
 			}
 			return URI{
 				URI:        english.OxfordWordSeries(privateURI.strings(), "or"),
@@ -214,21 +214,21 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	}, nil
 }
 
-type albOrCdnDescriber struct {
+type uriDescriber struct {
 	svc              string
 	env              string
 	svcDescriber     ecsDescriber
 	envDescriber     envDescriber
 	initLBDescriber  func(string) (lbDescriber, error)
-	albCfnOutputName string // The DNS name for the public or private ALB.
+	albCFNOutputName string // The DNS name for the public or private ALB.
 }
 
-func (d *albOrCdnDescriber) envDNSName(path string) (accessURI, error) {
+func (d *uriDescriber) envDNSName(path string) (accessURI, error) {
 	envOutputs, err := d.envDescriber.Outputs()
 	if err != nil {
 		return accessURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
 	}
-	dnsNames := []string{envOutputs[d.albCfnOutputName]}
+	dnsNames := []string{envOutputs[d.albCFNOutputName]}
 	if cfDNS, ok := envOutputs[envOutputCloudFrontDomainName]; ok {
 		dnsNames = append(dnsNames, cfDNS)
 	}
@@ -238,7 +238,7 @@ func (d *albOrCdnDescriber) envDNSName(path string) (accessURI, error) {
 	}, nil
 }
 
-func (d *albOrCdnDescriber) uri() (accessURI, error) {
+func (d *uriDescriber) uri() (accessURI, error) {
 	svcParams, err := d.svcDescriber.Params()
 	if err != nil {
 		return accessURI{}, fmt.Errorf("get stack parameters for service %s: %w", d.svc, err)
@@ -248,7 +248,7 @@ func (d *albOrCdnDescriber) uri() (accessURI, error) {
 	httpsEnabled := svcParams[stack.WorkloadHTTPSParamKey] == "true"
 
 	// public load balancers use the env DNS name if https is not enabled
-	if d.albCfnOutputName == envOutputPublicLoadBalancerDNSName && !httpsEnabled {
+	if d.albCFNOutputName == envOutputPublicLoadBalancerDNSName && !httpsEnabled {
 		return d.envDNSName(path)
 	}
 
@@ -285,12 +285,12 @@ func (d *albOrCdnDescriber) uri() (accessURI, error) {
 	}, nil
 }
 
-func (d *albOrCdnDescriber) bestEffortRemoveEnvDNSName(accessURI accessURI) accessURI {
+func (d *uriDescriber) bestEffortRemoveEnvDNSName(accessURI accessURI) accessURI {
 	envOutputs, err := d.envDescriber.Outputs()
 	if err != nil {
 		return accessURI
 	}
-	lbDNSName := envOutputs[d.albCfnOutputName]
+	lbDNSName := envOutputs[d.albCFNOutputName]
 	for i := range accessURI.DNSNames {
 		if accessURI.DNSNames[i] == lbDNSName {
 			accessURI.DNSNames = append(accessURI.DNSNames[:i], accessURI.DNSNames[i+1:]...)
