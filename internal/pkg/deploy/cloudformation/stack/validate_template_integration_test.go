@@ -26,7 +26,8 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(wantedManifestBytes)
 	require.NoError(t, err)
-	v, ok := mft.(*manifest.LoadBalancedWebService)
+	content := mft.Manifest()
+	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App: &config.Application{Name: appName},
@@ -70,7 +71,8 @@ func TestScheduledJob_Validate(t *testing.T) {
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)
-	v, ok := mft.(*manifest.ScheduledJob)
+	content := mft.Manifest()
+	v, ok := content.(*manifest.ScheduledJob)
 	require.True(t, ok)
 	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
 		App:      appName,

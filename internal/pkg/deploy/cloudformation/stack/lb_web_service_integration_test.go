@@ -67,11 +67,11 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		require.NoError(t, err)
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
-
 		err = envMft.Validate()
 		require.NoError(t, err)
+		content := envMft.Manifest()
 
-		v, ok := envMft.(*manifest.LoadBalancedWebService)
+		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)

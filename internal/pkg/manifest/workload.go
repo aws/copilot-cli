@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 
@@ -41,6 +43,7 @@ var (
 	errUnmarshalPlatformOpts      = errors.New("unable to unmarshal platform field into string or compose-style map")
 	errUnmarshalSecurityGroupOpts = errors.New(`unable to unmarshal "security_groups" field into slice of strings or compose-style map`)
 	errUnmarshalPlacementOpts     = errors.New("unable to unmarshal placement field into string or compose-style map")
+	errUnmarshalSubnetsOpts       = errors.New("unable to unmarshal subnets field into string slice or compose-style map")
 	errUnmarshalCountOpts         = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts         = errors.New(`unable to unmarshal "range" field`)
 
@@ -60,21 +63,27 @@ type WorkloadManifest interface {
 	ApplyEnv(envName string) (WorkloadManifest, error)
 	Validate() error
 	RequiredEnvironmentFeatures() []string
+	Load(sess *session.Session) error
+	Manifest() interface{}
+}
+
+type workloadManifest interface {
+	Validate() error
+	applyEnv(envName string) (workloadManifest, error)
+	requiredEnvironmentFeatures() []string
+	subnets() *SubnetListOrArgs
 }
 
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
 // If an error occurs during deserialization, then returns the error.
 // If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
 func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
-	type manifest interface {
-		WorkloadManifest
-	}
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
 		return nil, fmt.Errorf("unmarshal to workload manifest: %w", err)
 	}
 	typeVal := aws.StringValue(am.Type)
-	var m manifest
+	var m workloadManifest
 	switch typeVal {
 	case LoadBalancedWebServiceType:
 		m = newDefaultLoadBalancedWebService()
@@ -92,7 +101,7 @@ func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
 	if err := yaml.Unmarshal(in, m); err != nil {
 		return nil, fmt.Errorf("unmarshal manifest for %s: %w", typeVal, err)
 	}
-	return m, nil
+	return newDynamicWorkloadManifest(m), nil
 }
 
 // WorkloadProps contains properties for creating a new workload manifest.
@@ -223,17 +232,17 @@ type ImageOverride struct {
 
 // EntryPointOverride is a custom type which supports unmarshalling "entrypoint" yaml which
 // can either be of type string or type slice of string.
-type EntryPointOverride stringSliceOrString
+type EntryPointOverride StringSliceOrString
 
 // CommandOverride is a custom type which supports unmarshalling "command" yaml which
 // can either be of type string or type slice of string.
-type CommandOverride stringSliceOrString
+type CommandOverride StringSliceOrString
 
 // UnmarshalYAML overrides the default YAML unmarshalling logic for the EntryPointOverride
 // struct, allowing it to perform more complex unmarshalling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (e *EntryPointOverride) UnmarshalYAML(value *yaml.Node) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(e), value); err != nil {
+	if err := unmarshalYAMLToStringSliceOrString((*StringSliceOrString)(e), value); err != nil {
 		return errUnmarshalEntryPoint
 	}
 	return nil
@@ -241,7 +250,7 @@ func (e *EntryPointOverride) UnmarshalYAML(value *yaml.Node) error {
 
 // ToStringSlice converts an EntryPointOverride to a slice of string using shell-style rules.
 func (e *EntryPointOverride) ToStringSlice() ([]string, error) {
-	out, err := toStringSlice((*stringSliceOrString)(e))
+	out, err := toStringSlice((*StringSliceOrString)(e))
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +261,7 @@ func (e *EntryPointOverride) ToStringSlice() ([]string, error) {
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (c *CommandOverride) UnmarshalYAML(value *yaml.Node) error {
-	if err := unmarshalYAMLToStringSliceOrString((*stringSliceOrString)(c), value); err != nil {
+	if err := unmarshalYAMLToStringSliceOrString((*StringSliceOrString)(c), value); err != nil {
 		return errUnmarshalCommand
 	}
 	return nil
@@ -260,28 +269,37 @@ func (c *CommandOverride) UnmarshalYAML(value *yaml.Node) error {
 
 // ToStringSlice converts an CommandOverride to a slice of string using shell-style rules.
 func (c *CommandOverride) ToStringSlice() ([]string, error) {
-	out, err := toStringSlice((*stringSliceOrString)(c))
+	out, err := toStringSlice((*StringSliceOrString)(c))
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-type stringSliceOrString struct {
+// StringSliceOrString is a custom type that can either be of type string or type slice of string.
+type StringSliceOrString struct {
 	String      *string
 	StringSlice []string
 }
 
-func (s *stringSliceOrString) isEmpty() bool {
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the StringSliceOrString
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (s *StringSliceOrString) UnmarshalYAML(value *yaml.Node) error {
+	if err := unmarshalYAMLToStringSliceOrString(s, value); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *StringSliceOrString) isEmpty() bool {
 	return s.String == nil && len(s.StringSlice) == 0
 }
 
-func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, value *yaml.Node) error {
+func unmarshalYAMLToStringSliceOrString(s *StringSliceOrString, value *yaml.Node) error {
 	if err := value.Decode(&s.StringSlice); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
 			return err
 		}
 	}
@@ -295,7 +313,7 @@ func unmarshalYAMLToStringSliceOrString(s *stringSliceOrString, value *yaml.Node
 	return value.Decode(&s.String)
 }
 
-func toStringSlice(s *stringSliceOrString) ([]string, error) {
+func toStringSlice(s *StringSliceOrString) ([]string, error) {
 	if s.StringSlice != nil {
 		return s.StringSlice, nil
 	}
@@ -331,10 +349,8 @@ func (b *BuildArgsOrString) isEmpty() bool {
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (b *BuildArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&b.BuildArgs); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
 			return err
 		}
 	}
@@ -402,6 +418,9 @@ type PlacementArgOrString struct {
 	PlacementArgs
 }
 
+// PlacementString represents what types of subnets (public or private subnets) to place tasks.
+type PlacementString string
+
 // IsEmpty returns empty if the struct has all zero members.
 func (p *PlacementArgOrString) IsEmpty() bool {
 	return p.PlacementString == nil && p.PlacementArgs.isEmpty()
@@ -412,10 +431,8 @@ func (p *PlacementArgOrString) IsEmpty() bool {
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (p *PlacementArgOrString) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&p.PlacementArgs); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
 			return err
 		}
 	}
@@ -430,17 +447,87 @@ func (p *PlacementArgOrString) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// PlacementArgs represents what subnets to place tasks.
+// PlacementArgs represents where to place tasks.
 type PlacementArgs struct {
-	Subnets []string `yaml:"subnets"`
+	Subnets SubnetListOrArgs `yaml:"subnets"`
 }
 
 func (p *PlacementArgs) isEmpty() bool {
-	return p.Subnets == nil || len(p.Subnets) == 0
+	return p.Subnets.isEmpty()
 }
 
-// PlacementString represents what types of subnets (public or private subnets) to place tasks.
-type PlacementString string
+// SubnetListOrArgs represents what subnets to place tasks. It supports unmarshalling
+// yaml which can either be of type SubnetArgs or a list of strings.
+type SubnetListOrArgs struct {
+	IDs []string
+	SubnetArgs
+}
+
+func (s *SubnetListOrArgs) isEmpty() bool {
+	return len(s.IDs) == 0 && s.SubnetArgs.isEmpty()
+}
+
+type dynamicSubnets struct {
+	cfg    *SubnetListOrArgs
+	client subnetIDsGetter
+}
+
+// Load populates the subnet's IDs field if the client is using tags.
+func (dyn *dynamicSubnets) load() error {
+	if dyn.cfg == nil || dyn.cfg.isEmpty() {
+		return nil
+	}
+	if len(dyn.cfg.IDs) > 0 {
+		return nil
+	}
+	var filters []ec2.Filter
+	for k, v := range dyn.cfg.FromTags {
+		values := v.StringSlice
+		if v.String != nil {
+			values = []string{aws.StringValue(v.String)}
+		}
+		filters = append(filters, ec2.FilterForTags(k, values...))
+	}
+	ids, err := dyn.client.SubnetIDs(filters...)
+	if err != nil {
+		return fmt.Errorf("get subnet IDs: %w", err)
+	}
+	dyn.cfg.IDs = ids
+	return nil
+}
+
+// Tags represents the aws tags which take string as key and slice of string as values.
+type Tags map[string]StringSliceOrString
+
+// SubnetArgs represents what subnets to place tasks.
+type SubnetArgs struct {
+	FromTags Tags `yaml:"from_tags"`
+}
+
+func (s *SubnetArgs) isEmpty() bool {
+	return len(s.FromTags) == 0
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the SubnetListOrArgs
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (s *SubnetListOrArgs) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&s.SubnetArgs); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+	if !s.SubnetArgs.isEmpty() {
+		// Unmarshaled successfully to s.SubnetArgs, unset s.Subnets, and return.
+		s.IDs = nil
+		return nil
+	}
+	if err := value.Decode(&s.IDs); err != nil {
+		return errUnmarshalSubnetsOpts
+	}
+	return nil
+}
 
 // SecurityGroupsIDsOrConfig represents security groups attached to task. It supports unmarshalling
 // yaml which can either be of type SecurityGroupsConfig or a list of strings.
@@ -469,10 +556,8 @@ func (s *SecurityGroupsConfig) isEmpty() bool {
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (s *SecurityGroupsIDsOrConfig) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&s.AdvancedConfig); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
 			return err
 		}
 	}
@@ -529,10 +614,8 @@ type PlatformArgsOrString struct {
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (p *PlatformArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&p.PlatformArgs); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
 			return err
 		}
 	}

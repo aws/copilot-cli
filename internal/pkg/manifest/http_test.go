@@ -60,7 +60,7 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
 		"Alias specified in string": {
 			inContent: []byte(`alias: foobar.com`),
 			wantedStruct: Alias{
-				StringSliceOrString: stringSliceOrString{
+				StringSliceOrString: StringSliceOrString{
 					String: aws.String("foobar.com"),
 				},
 			},
@@ -70,7 +70,7 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
   - example.com
   - v1.example.com`),
 			wantedStruct: Alias{
-				StringSliceOrString: stringSliceOrString{
+				StringSliceOrString: StringSliceOrString{
 					StringSlice: []string{"example.com", "v1.example.com"},
 				},
 				AdvancedAliases: []AdvancedAlias{},
@@ -97,7 +97,7 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
 			inContent: []byte(`alias:
   foo: bar`),
 			wantedStruct: Alias{
-				StringSliceOrString: stringSliceOrString{},
+				StringSliceOrString: StringSliceOrString{},
 				AdvancedAliases:     []AdvancedAlias{},
 			},
 			wantedError: errUnmarshalAlias,
@@ -108,7 +108,7 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			r := RoutingRuleConfiguration{
 				Alias: Alias{
-					StringSliceOrString: stringSliceOrString{
+					StringSliceOrString: StringSliceOrString{
 						String: aws.String("wrong"),
 					},
 				},
@@ -138,7 +138,7 @@ func TestAlias_IsEmpty(t *testing.T) {
 		},
 		"non empty alias": {
 			in: Alias{
-				StringSliceOrString: stringSliceOrString{
+				StringSliceOrString: StringSliceOrString{
 					String: aws.String("alias test"),
 				},
 			},
@@ -163,7 +163,7 @@ func TestAlias_ToString(t *testing.T) {
 	}{
 		"alias using string": {
 			inAlias: Alias{
-				StringSliceOrString: stringSliceOrString{
+				StringSliceOrString: StringSliceOrString{
 					String: stringP("example.com"),
 				},
 			},
@@ -171,7 +171,7 @@ func TestAlias_ToString(t *testing.T) {
 		},
 		"alias using string slice": {
 			inAlias: Alias{
-				StringSliceOrString: stringSliceOrString{
+				StringSliceOrString: StringSliceOrString{
 					StringSlice: []string{"example.com", "v1.example.com"},
 				},
 			},
@@ -209,7 +209,7 @@ func TestAlias_ToStringSlice(t *testing.T) {
 	}{
 		"alias using string": {
 			inAlias: Alias{
-				StringSliceOrString: stringSliceOrString{
+				StringSliceOrString: StringSliceOrString{
 					String: stringP("example.com"),
 				},
 			},
@@ -217,7 +217,7 @@ func TestAlias_ToStringSlice(t *testing.T) {
 		},
 		"alias using string slice": {
 			inAlias: Alias{
-				StringSliceOrString: stringSliceOrString{
+				StringSliceOrString: StringSliceOrString{
 					StringSlice: []string{"example.com", "v1.example.com"},
 				},
 			},
