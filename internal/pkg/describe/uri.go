@@ -179,7 +179,7 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 				return URI{}, err
 			}
 			if !privateURI.HTTPS && len(privateURI.DNSNames) > 1 {
-				privateURI = uriDescr.bestEffortRemoveEnvDNSName(privateURI)
+				privateURI = uriDescr.bestEffortRemoveALBDNSName(privateURI)
 			}
 			return URI{
 				URI:        english.OxfordWordSeries(privateURI.strings(), "or"),
@@ -285,7 +285,7 @@ func (d *uriDescriber) uri() (accessURI, error) {
 	}, nil
 }
 
-func (d *uriDescriber) bestEffortRemoveEnvDNSName(accessURI accessURI) accessURI {
+func (d *uriDescriber) bestEffortRemoveALBDNSName(accessURI accessURI) accessURI {
 	envOutputs, err := d.envDescriber.Outputs()
 	if err != nil {
 		return accessURI
