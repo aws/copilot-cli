@@ -153,14 +153,6 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
-{{- if and .SecurityGroupConfig .SecurityGroupConfig.Ingress }}
-      SecurityGroupIngress:
-{{.SecurityGroupConfig.Ingress | indent 8}}
-{{- end }}
-{{- if and .SecurityGroupConfig .SecurityGroupConfig.Egress }}
-      SecurityGroupEgress:
-{{.SecurityGroupConfig.Egress | indent 8}}
-{{- end }}
   EnvironmentSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateALB
