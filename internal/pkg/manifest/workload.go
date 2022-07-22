@@ -68,7 +68,7 @@ type WorkloadManifest interface {
 }
 
 type workloadManifest interface {
-	Validate() error
+	validate() error
 	applyEnv(envName string) (workloadManifest, error)
 	requiredEnvironmentFeatures() []string
 	subnets() *SubnetListOrArgs
