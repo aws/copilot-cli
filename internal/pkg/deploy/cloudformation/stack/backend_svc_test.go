@@ -542,9 +542,10 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			paramsBytes, err := ioutil.ReadFile(tc.ParamsPath)
 			require.NoError(t, err)
 
-			mft, err := manifest.UnmarshalWorkload([]byte(manifestBytes))
+			dynamicMft, err := manifest.UnmarshalWorkload([]byte(manifestBytes))
 			require.NoError(t, err)
-			require.NoError(t, mft.Validate())
+			require.NoError(t, dynamicMft.Validate())
+			mft := dynamicMft.Manifest()
 
 			envConfig := &manifest.Environment{
 				Workload: manifest.Workload{
