@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -101,7 +102,9 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 					Public: PublicHTTPConfig{
 						SecurityGroupConfig: ALBSecurityGroupsConfig{
 							Ingress: Ingress{
-								CDNIngress: aws.Bool(true),
+								RestrictiveIngress: RestrictiveIngress{
+									CDNIngress: aws.Bool(true),
+								},
 							},
 						},
 					},
@@ -701,6 +704,7 @@ func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
 	testCases := map[string]struct {
 		in                   EnvironmentHTTPConfig
 		wantedErrorMsgPrefix string
+		wantedError          error
 	}{
 		"malformed public certificate": {
 			in: EnvironmentHTTPConfig{
@@ -732,6 +736,32 @@ func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
 				},
 			},
 		},
+		"public http config with invalid security group ingress": {
+			in: EnvironmentHTTPConfig{
+				Public: PublicHTTPConfig{
+					SecurityGroupConfig: ALBSecurityGroupsConfig{
+						Ingress: Ingress{
+							VPCIngress: aws.Bool(true),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "public": a public load balancer already allows vpc ingress`),
+		},
+		"private http config with invalid security group ingress": {
+			in: EnvironmentHTTPConfig{
+				Private: privateHTTPConfig{
+					SecurityGroupsConfig: securityGroupsConfig{
+						Ingress: Ingress{
+							RestrictiveIngress: RestrictiveIngress{
+								CDNIngress: aws.Bool(true),
+							},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "private": an internal load balancer cannot have restrictive ingress fields`),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -739,6 +769,9 @@ func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
 			if tc.wantedErrorMsgPrefix != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+			} else if tc.wantedError != nil {
+				require.Error(t, gotErr)
+				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
 				require.NoError(t, gotErr)
 			}

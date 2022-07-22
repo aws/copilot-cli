@@ -347,13 +347,24 @@ type PublicHTTPConfig struct {
 
 // Ingress represents allowed ingress traffic from specified fields.
 type Ingress struct {
-	CDNIngress *bool `yaml:"restrict_to_cdn"`
-	VPCIngress *bool `yaml:"allow_from_vpc"`
+	RestrictiveIngress RestrictiveIngress `yaml:"restrict_to"`
+	VPCIngress         *bool              `yaml:"from_vpc"`
 }
 
-// IsEmpty returns true if there is are no specified fields for ingress.
-func (i Ingress) IsEmpty() bool {
+// RestrictiveIngress represents ingress fields which restrict
+// default behavior of allowing all public ingress.
+type RestrictiveIngress struct {
+	CDNIngress *bool `yaml:"cdn"`
+}
+
+// IsEmpty returns true if there are no specified fields for ingress.
+func (i RestrictiveIngress) IsEmpty() bool {
 	return i.CDNIngress == nil
+}
+
+// IsEmpty returns true if there are no specified fields for ingress.
+func (i Ingress) IsEmpty() bool {
+	return i.VPCIngress == nil && i.RestrictiveIngress.IsEmpty()
 }
 
 // IsEmpty returns true if there is no customization to the public ALB.

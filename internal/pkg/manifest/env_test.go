@@ -435,7 +435,7 @@ http:
     private:
         security_groups:
             ingress:
-                allow_from_vpc: false
+                from_vpc: false
 `,
 			wantedStruct: &Environment{
 				Workload: Workload{

@@ -37,7 +37,7 @@ func (e EnvironmentConfig) Validate() error {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
 
-	if aws.BoolValue(e.HTTPConfig.Public.SecurityGroupConfig.Ingress.CDNIngress) && !e.CDNConfig.CDNEnabled() {
+	if aws.BoolValue(e.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress) && !e.CDNConfig.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
 
@@ -217,6 +217,9 @@ func (cfg PublicHTTPConfig) Validate() error {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
+	if cfg.SecurityGroupConfig.Ingress.VPCIngress != nil {
+		return fmt.Errorf("a public load balancer already allows vpc ingress")
+	}
 	return cfg.SecurityGroupConfig.Validate()
 }
 
@@ -231,6 +234,9 @@ func (cfg privateHTTPConfig) Validate() error {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
+	}
+	if !cfg.SecurityGroupsConfig.Ingress.RestrictiveIngress.IsEmpty() {
+		return fmt.Errorf("an internal load balancer cannot have restrictive ingress fields")
 	}
 	return nil
 }
@@ -248,8 +254,13 @@ func (cfg environmentCDNConfig) Validate() error {
 	return cfg.CDNConfig.Validate()
 }
 
-// Validate is a no-op for Ingress.
+// Validate returns nil if Ingress is configured correctly.
 func (i Ingress) Validate() error {
+	return i.RestrictiveIngress.Validate()
+}
+
+// Validate is a no-op for RestrictiveIngress.
+func (i RestrictiveIngress) Validate() error {
 	return nil
 }
 

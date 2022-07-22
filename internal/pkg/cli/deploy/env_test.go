@@ -274,7 +274,9 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 						Public: manifest.PublicHTTPConfig{
 							SecurityGroupConfig: manifest.ALBSecurityGroupsConfig{
 								Ingress: manifest.Ingress{
-									CDNIngress: aws.Bool(true),
+									RestrictiveIngress: manifest.RestrictiveIngress{
+										CDNIngress: aws.Bool(true),
+									},
 								},
 							},
 						},
