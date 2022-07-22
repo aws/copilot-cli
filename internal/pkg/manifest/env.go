@@ -347,7 +347,8 @@ type PublicHTTPConfig struct {
 
 // Ingress represents allowed ingress traffic from specified fields.
 type Ingress struct {
-	CDNIngress *bool `yaml:"restrict_from_cdn"`
+	CDNIngress *bool `yaml:"restrict_to_cdn"`
+	VPCIngress *bool `yaml:"allow_from_vpc"`
 }
 
 // IsEmpty returns true if there is are no specified fields for ingress.
@@ -372,17 +373,9 @@ func (cfg privateHTTPConfig) IsEmpty() bool {
 }
 
 type securityGroupsConfig struct {
-	Ingress ingress `yaml:"ingress"`
+	Ingress Ingress `yaml:"ingress"`
 }
 
 func (cfg securityGroupsConfig) isEmpty() bool {
-	return cfg.Ingress.isEmpty()
-}
-
-type ingress struct {
-	VPCIngress *bool `yaml:"from_vpc"`
-}
-
-func (i ingress) isEmpty() bool {
-	return i.VPCIngress == nil
+	return cfg.Ingress.IsEmpty()
 }

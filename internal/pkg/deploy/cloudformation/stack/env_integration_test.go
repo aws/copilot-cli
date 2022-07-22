@@ -35,14 +35,14 @@ http:
   public:
     security_group:
       ingress:
-        from_cdn: true
+        restrict_to_cdn: true
     certificates:
       - cert-1
       - cert-2
   private:
     security_groups:
       ingress:
-        from_vpc: true
+        allow_from_vpc: true
 observability:
   container_insights: true # Enable container insights.`
 				var mft manifest.Environment

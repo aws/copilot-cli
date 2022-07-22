@@ -235,6 +235,11 @@ func (cfg privateHTTPConfig) Validate() error {
 	return nil
 }
 
+// Validate returns nil if securityGroupsConfig is configured correctly.
+func (cfg securityGroupsConfig) Validate() error {
+	return cfg.Ingress.Validate()
+}
+
 // Validate returns nil if environmentCDNConfig is configured correctly.
 func (cfg environmentCDNConfig) Validate() error {
 	if cfg.CDNConfig.IsEmpty() {
