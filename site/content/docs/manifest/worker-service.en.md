@@ -95,13 +95,13 @@ If specified, creates a dead letter queue and a redrive policy which routes mess
 <span class="parent-field">subscribe.</span><a id="subscribe-topics" href="#subscribe-topics" class="field">`topics`</a> <span class="type">Array of `topic`s</span>  
 Contains information about which SNS topics the worker service should subscribe to.
 
-<span class="parent-field">subscribe.topics.topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
+<span class="parent-field">subscribe.topics.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
 Required. The name of the SNS topic to subscribe to.
 
-<span class="parent-field">subscribe.topics.topic.</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>  
+<span class="parent-field">subscribe.topics.</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>  
 Required. The service this SNS topic is exposed by. Together with the topic name, this uniquely identifies an SNS topic in the copilot environment.
 
-<span class="parent-field">subscribe.topics.topic.</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
+<span class="parent-field">subscribe.topics.</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
 Optional. Specify a SNS subscription filter policy to evaluate incoming message attributes against the policy.  
 The filter policy can be specified in JSON, for example:
 ```json
@@ -125,7 +125,7 @@ filter_policy:
 ```
 For additional information on how to write filter policies, see the [SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html).
 
-<span class="parent-field">subscribe.topics.topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>  
+<span class="parent-field">subscribe.topics.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>  
 Optional. Specify SQS queue configuration for the topic. If specified as `true`, the queue will be created  with default configuration. Specify this field as a map for customization of certain attributes for this topic-specific queue.
 
 {% include 'image-config.en.md' %}
