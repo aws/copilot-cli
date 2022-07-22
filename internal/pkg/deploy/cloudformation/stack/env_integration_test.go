@@ -33,7 +33,7 @@ type: Environment
 cdn: true
 http:
   public:
-    security_group:
+    security_groups:
       ingress:
         restrict_to:
           cdn: true
