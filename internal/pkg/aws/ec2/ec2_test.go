@@ -41,6 +41,33 @@ var (
 	}
 )
 
+func TestEC2_FilterForTags(t *testing.T) {
+	testCases := map[string]struct {
+		inValues []string
+		wanted   Filter
+	}{
+		"with no values": {
+			wanted: Filter{
+				Name:   "tag-key",
+				Values: []string{"mockKey"},
+			},
+		},
+		"with values": {
+			inValues: []string{"foo", "bar"},
+			wanted: Filter{
+				Name:   "tag:mockKey",
+				Values: []string{"foo", "bar"},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			filter := FilterForTags("mockKey", tc.inValues...)
+			require.Equal(t, tc.wanted, filter)
+		})
+	}
+}
+
 func TestEC2_extractResource(t *testing.T) {
 	testCases := map[string]struct {
 		displayString  string

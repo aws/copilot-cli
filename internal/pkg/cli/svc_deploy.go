@@ -383,7 +383,7 @@ func workloadManifest(in *workloadManifestInput) (manifest.WorkloadManifest, err
 		return nil, fmt.Errorf("apply environment %s override: %w", in.envName, err)
 	}
 	if err := envMft.Validate(); err != nil {
-		return nil, fmt.Errorf("validate manifest against environment %s: %w", in.envName, err)
+		return nil, fmt.Errorf("validate manifest against environment %q: %w", in.envName, err)
 	}
 	if err := envMft.Load(in.sess); err != nil {
 		return nil, fmt.Errorf("load dynamic content: %w", err)
