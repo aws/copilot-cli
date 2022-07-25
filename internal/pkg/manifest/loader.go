@@ -40,7 +40,7 @@ func (s *DynamicWorkloadManifest) Manifest() any {
 
 // ApplyEnv returns the workload manifest with environment overrides.
 // If the environment passed in does not have any overrides then it returns itself.
-func (s DynamicWorkloadManifest) ApplyEnv(envName string) (WorkloadManifest, error) {
+func (s DynamicWorkloadManifest) ApplyEnv(envName string) (DynamicWorkload, error) {
 	mft, err := s.mft.applyEnv(envName)
 	if err != nil {
 		return nil, err

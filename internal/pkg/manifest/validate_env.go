@@ -19,21 +19,21 @@ var (
 
 // Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
-	if err := e.environmentConfig.Validate(); err != nil {
+	if err := e.environmentConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if environmentConfig is configured correctly.
-func (e environmentConfig) Validate() error {
-	if err := e.Network.Validate(); err != nil {
+// validate returns nil if environmentConfig is configured correctly.
+func (e environmentConfig) validate() error {
+	if err := e.Network.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
-	if err := e.Observability.Validate(); err != nil {
+	if err := e.Observability.validate(); err != nil {
 		return fmt.Errorf(`validate "observability": %w`, err)
 	}
-	if err := e.HTTPConfig.Validate(); err != nil {
+	if err := e.HTTPConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
 
@@ -48,20 +48,20 @@ func (e environmentConfig) Validate() error {
 	return nil
 }
 
-// Validate returns nil if environmentNetworkConfig is configured correctly.
-func (n environmentNetworkConfig) Validate() error {
-	if err := n.VPC.Validate(); err != nil {
+// validate returns nil if environmentNetworkConfig is configured correctly.
+func (n environmentNetworkConfig) validate() error {
+	if err := n.VPC.validate(); err != nil {
 		return fmt.Errorf(`validate "vpc": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if environmentVPCConfig is configured correctly.
-func (cfg environmentVPCConfig) Validate() error {
+// validate returns nil if environmentVPCConfig is configured correctly.
+func (cfg environmentVPCConfig) validate() error {
 	if cfg.imported() && cfg.managedVPCCustomized() {
 		return errors.New(`cannot import VPC resources (with "id" fields) and customize VPC resources (with "cidr" and "az" fields) at the same time`)
 	}
-	if err := cfg.Subnets.Validate(); err != nil {
+	if err := cfg.Subnets.validate(); err != nil {
 		return fmt.Errorf(`validate "subnets": %w`, err)
 	}
 	if cfg.imported() {
@@ -156,23 +156,23 @@ func (cfg environmentVPCConfig) validateManagedVPC() error {
 	return nil
 }
 
-// Validate returns nil if subnetsConfiguration is configured correctly.
-func (cs subnetsConfiguration) Validate() error {
+// validate returns nil if subnetsConfiguration is configured correctly.
+func (cs subnetsConfiguration) validate() error {
 	for idx, subnet := range cs.Public {
-		if err := subnet.Validate(); err != nil {
+		if err := subnet.validate(); err != nil {
 			return fmt.Errorf(`validate "public[%d]": %w`, idx, err)
 		}
 	}
 	for idx, subnet := range cs.Private {
-		if err := subnet.Validate(); err != nil {
+		if err := subnet.validate(); err != nil {
 			return fmt.Errorf(`validate "private[%d]": %w`, idx, err)
 		}
 	}
 	return nil
 }
 
-// Validate returns nil if subnetConfiguration is configured correctly.
-func (c subnetConfiguration) Validate() error {
+// validate returns nil if subnetConfiguration is configured correctly.
+func (c subnetConfiguration) validate() error {
 	if c.SubnetID != nil && c.CIDR != nil {
 		return &errFieldMutualExclusive{
 			firstField:  "id",
@@ -190,24 +190,24 @@ func (c subnetConfiguration) Validate() error {
 	return nil
 }
 
-// Validate returns nil if environmentObservability is configured correctly.
-func (o environmentObservability) Validate() error {
+// validate returns nil if environmentObservability is configured correctly.
+func (o environmentObservability) validate() error {
 	return nil
 }
 
-// Validate returns nil if environmentHTTPConfig is configured correctly.
-func (cfg environmentHTTPConfig) Validate() error {
-	if err := cfg.Public.Validate(); err != nil {
+// validate returns nil if environmentHTTPConfig is configured correctly.
+func (cfg environmentHTTPConfig) validate() error {
+	if err := cfg.Public.validate(); err != nil {
 		return fmt.Errorf(`validate "public": %w`, err)
 	}
-	if err := cfg.Private.Validate(); err != nil {
+	if err := cfg.Private.validate(); err != nil {
 		return fmt.Errorf(`validate "private": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if publicHTTPConfig is configured correctly.
-func (cfg publicHTTPConfig) Validate() error {
+// validate returns nil if publicHTTPConfig is configured correctly.
+func (cfg publicHTTPConfig) validate() error {
 	for idx, certARN := range cfg.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
@@ -216,26 +216,45 @@ func (cfg publicHTTPConfig) Validate() error {
 	return nil
 }
 
-// Validate returns nil if privateHTTPConfig is configured correctly.
-func (cfg privateHTTPConfig) Validate() error {
+// validate returns nil if privateHTTPConfig is configured correctly.
+func (cfg privateHTTPConfig) validate() error {
 	for idx, certARN := range cfg.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
+	if err := cfg.SecurityGroupsConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "security_groups: %w`, err)
+	}
 	return nil
 }
 
-// Validate returns nil if environmentCDNConfig is configured correctly.
-func (cfg environmentCDNConfig) Validate() error {
+// validate returns nil if securityGroupsConfig is configured correctly.
+func (s securityGroupsConfig) validate() error {
+	if s.isEmpty() {
+		return nil
+	}
+	return s.Ingress.validate()
+}
+
+// validate returns nil if ingress is configured correctly.
+func (i ingress) validate() error {
+	if i.isEmpty() {
+		return nil
+	}
+	return nil
+}
+
+// validate returns nil if environmentCDNConfig is configured correctly.
+func (cfg environmentCDNConfig) validate() error {
 	if cfg.CDNConfig.IsEmpty() {
 		return nil
 	}
-	return cfg.CDNConfig.Validate()
+	return cfg.CDNConfig.validate()
 }
 
-// Validate is a no-op for AdvancedCDNConfig.
-func (cfg advancedCDNConfig) Validate() error {
+// validate is a no-op for advancedCDNConfig.
+func (cfg advancedCDNConfig) validate() error {
 	return nil
 }
 

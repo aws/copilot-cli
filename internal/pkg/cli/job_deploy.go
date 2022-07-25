@@ -34,7 +34,7 @@ type deployJobOpts struct {
 
 	store                store
 	ws                   wsWlDirReader
-	unmarshal            func(in []byte) (manifest.WorkloadManifest, error)
+	unmarshal            func(in []byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
 	cmd                  execRunner
 	sessProvider         *sessions.Provider
@@ -46,7 +46,7 @@ type deployJobOpts struct {
 	targetApp       *config.Application
 	targetEnv       *config.Environment
 	envSess         *session.Session
-	appliedManifest interface{}
+	appliedManifest manifest.DynamicWorkload
 	rootUserARN     string
 }
 
@@ -86,17 +86,18 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
+	content := o.appliedManifest.Manifest()
 	in := deploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
 		Name:            o.name,
 		App:             o.targetApp,
 		Env:             o.targetEnv,
 		ImageTag:        o.imageTag,
-		Mft:             o.appliedManifest,
+		Mft:             content,
 		RawMft:          raw,
 	}
 	var deployer workloadDeployer
-	switch t := o.appliedManifest.(type) {
+	switch t := content.(type) {
 	case *manifest.ScheduledJob:
 		deployer, err = deploy.NewJobDeployer(&in)
 	default:
