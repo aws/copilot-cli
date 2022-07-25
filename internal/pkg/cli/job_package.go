@@ -84,7 +84,6 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 				uploadAssets: o.uploadAssets,
 			},
 			runner:           o.runner,
-			initAddonsClient: initPackageAddonsClient,
 			ws:               ws,
 			store:            o.store,
 			stackWriter:      os.Stdout,

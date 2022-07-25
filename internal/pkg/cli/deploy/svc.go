@@ -1048,6 +1048,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 		RootUserARN:   in.RootUserARN,
+		Addons:        d.addons,
 	}, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1117,6 +1118,7 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		Manifest:      d.rdwsMft,
 		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
+		Addons:        d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1176,6 +1178,7 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 		Manifest:      d.wsMft,
 		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
+		Addons:        d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1206,6 +1209,7 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 		Manifest:      d.jobMft,
 		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
+		Addons:        d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
