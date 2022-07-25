@@ -62,7 +62,7 @@ func Test_ValidateAudit(t *testing.T) {
 	// Audit environment manifest.
 	t.Run("environment manifest", func(t *testing.T) {
 		env := &Environment{}
-		err := isValid(reflect.ValueOf(env.environmentConfig).Type())
+		err := isValid(reflect.ValueOf(env.EnvironmentConfig).Type())
 		require.NoError(t, err)
 	})
 }

@@ -19,15 +19,15 @@ var (
 
 // Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
-	if err := e.EnvironmentConfig.Validate(); err != nil {
+	if err := e.EnvironmentConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if EnvironmentConfig is configured correctly.
-func (e EnvironmentConfig) Validate() error {
-	if err := e.Network.Validate(); err != nil {
+// validate returns nil if EnvironmentConfig is configured correctly.
+func (e EnvironmentConfig) validate() error {
+	if err := e.Network.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	if err := e.Observability.validate(); err != nil {
@@ -199,9 +199,9 @@ func (o environmentObservability) validate() error {
 	return nil
 }
 
-// Validate returns nil if EnvironmentHTTPConfig is configured correctly.
-func (cfg EnvironmentHTTPConfig) Validate() error {
-	if err := cfg.Public.Validate(); err != nil {
+// validate returns nil if EnvironmentHTTPConfig is configured correctly.
+func (cfg EnvironmentHTTPConfig) validate() error {
+	if err := cfg.Public.validate(); err != nil {
 		return fmt.Errorf(`validate "public": %w`, err)
 	}
 	if err := cfg.Private.validate(); err != nil {
@@ -210,8 +210,8 @@ func (cfg EnvironmentHTTPConfig) Validate() error {
 	return nil
 }
 
-// Validate returns nil if PublicHTTPConfig is configured correctly.
-func (cfg PublicHTTPConfig) Validate() error {
+// validate returns nil if PublicHTTPConfig is configured correctly.
+func (cfg PublicHTTPConfig) validate() error {
 	for idx, certARN := range cfg.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
@@ -220,12 +220,12 @@ func (cfg PublicHTTPConfig) Validate() error {
 	if cfg.SecurityGroupConfig.Ingress.VPCIngress != nil {
 		return fmt.Errorf("a public load balancer already allows vpc ingress")
 	}
-	return cfg.SecurityGroupConfig.Validate()
+	return cfg.SecurityGroupConfig.validate()
 }
 
-// Validate returns nil if ALBSecurityGroupsConfig is configured correctly.
-func (cfg ALBSecurityGroupsConfig) Validate() error {
-	return cfg.Ingress.Validate()
+// validate returns nil if ALBSecurityGroupsConfig is configured correctly.
+func (cfg ALBSecurityGroupsConfig) validate() error {
+	return cfg.Ingress.validate()
 }
 
 // validate returns nil if privateHTTPConfig is configured correctly.
@@ -237,41 +237,41 @@ func (cfg privateHTTPConfig) validate() error {
 	}
 	if !cfg.SecurityGroupsConfig.Ingress.RestrictiveIngress.IsEmpty() {
 		return fmt.Errorf("an internal load balancer cannot have restrictive ingress fields")
-  }
+	}
 	if err := cfg.SecurityGroupsConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "security_groups: %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if securityGroupsConfig is configured correctly.
-func (cfg securityGroupsConfig) Validate() error {
-	if s.isEmpty() {
+// validate returns nil if securityGroupsConfig is configured correctly.
+func (cfg securityGroupsConfig) validate() error {
+	if cfg.isEmpty() {
 		return nil
 	}
-	return s.Ingress.Validate()
+	return cfg.Ingress.validate()
 }
 
-// Validate returns nil if environmentCDNConfig is configured correctly.
-func (cfg environmentCDNConfig) Validate() error {
+// validate returns nil if environmentCDNConfig is configured correctly.
+func (cfg environmentCDNConfig) validate() error {
 	if cfg.CDNConfig.IsEmpty() {
 		return nil
 	}
 	return cfg.CDNConfig.validate()
 }
 
-// Validate returns nil if Ingress is configured correctly.
-func (i Ingress) Validate() error {
-	return i.RestrictiveIngress.Validate()
+// validate returns nil if Ingress is configured correctly.
+func (i Ingress) validate() error {
+	return i.RestrictiveIngress.validate()
 }
 
-// Validate is a no-op for RestrictiveIngress.
-func (i RestrictiveIngress) Validate() error {
+// validate is a no-op for RestrictiveIngress.
+func (i RestrictiveIngress) validate() error {
 	return nil
 }
 
-// Validate is a no-op for AdvancedCDNConfig.
-func (cfg advancedCDNConfig) Validate() error {
+// validate is a no-op for AdvancedCDNConfig.
+func (cfg advancedCDNConfig) validate() error {
 	return nil
 }
 
