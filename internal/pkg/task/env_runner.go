@@ -23,8 +23,8 @@ const (
 
 // Names for tag filters
 var (
-	FmtTagFilterForApp = fmt.Sprintf(ec2.FmtTagFilter, deploy.AppTagKey)
-	FmtTagFilterForEnv = fmt.Sprintf(ec2.FmtTagFilter, deploy.EnvTagKey)
+	fmtTagFilterForApp = fmt.Sprintf(ec2.FmtTagFilter, deploy.AppTagKey)
+	fmtTagFilterForEnv = fmt.Sprintf(ec2.FmtTagFilter, deploy.EnvTagKey)
 )
 
 // EnvRunner can run an Amazon ECS task in the VPC and the cluster of an environment.
@@ -116,11 +116,11 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 func (r *EnvRunner) filtersForVPCFromAppEnv() []ec2.Filter {
 	return []ec2.Filter{
 		{
-			Name:   FmtTagFilterForEnv,
+			Name:   fmtTagFilterForEnv,
 			Values: []string{r.Env},
 		},
 		{
-			Name:   FmtTagFilterForApp,
+			Name:   fmtTagFilterForApp,
 			Values: []string{r.App},
 		},
 	}
