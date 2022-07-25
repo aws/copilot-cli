@@ -96,10 +96,10 @@ type AdvancedAlias struct {
 }
 
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
-// can either be of type advancedAlias slice or type stringSliceOrString.
+// can either be of type advancedAlias slice or type StringSliceOrString.
 type Alias struct {
 	AdvancedAliases     []AdvancedAlias
-	StringSliceOrString stringSliceOrString
+	StringSliceOrString StringSliceOrString
 }
 
 // IsEmpty returns empty if Alias is empty.
@@ -122,7 +122,7 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 
 	if len(a.AdvancedAliases) != 0 {
 		// Unmarshaled successfully to s.StringSlice, unset s.String, and return.
-		a.StringSliceOrString = stringSliceOrString{}
+		a.StringSliceOrString = StringSliceOrString{}
 		return nil
 	}
 	if err := unmarshalYAMLToStringSliceOrString(&a.StringSliceOrString, value); err != nil {

@@ -287,7 +287,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			actualManifest, actualErr := tc.inputManifest.ApplyEnv(tc.inputEnv)
+			actualManifest, actualErr := tc.inputManifest.applyEnv(tc.inputEnv)
 
 			// THEN
 			if tc.wantedErr != nil {
@@ -366,7 +366,7 @@ func TestScheduledJob_RequiredEnvironmentFeatures(t *testing.T) {
 				},
 			}
 			tc.mft(&inSvc)
-			got := inSvc.RequiredEnvironmentFeatures()
+			got := inSvc.requiredEnvironmentFeatures()
 			require.Equal(t, tc.wanted, got)
 		})
 	}

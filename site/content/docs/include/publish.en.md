@@ -23,5 +23,5 @@ List of [`topic`](#publish-topics-topic) objects.
 <span class="parent-field">publish.topics.</span><a id="publish-topics-topic" href="#publish-topics-topic" class="field">`topic`</a> <span class="type">Map</span>  
 Holds configuration for a single SNS topic.
 
-<span class="parent-field">topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
+<span class="parent-field">publish.topics.topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
 Required. The name of the SNS topic. Must contain only upper and lowercase letters, numbers, hyphens, and underscores.
