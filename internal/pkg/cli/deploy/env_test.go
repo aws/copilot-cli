@@ -358,9 +358,9 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 					ManagerRoleARN: mockManagerRoleARN,
 					Region:         mockEnvRegion,
 				},
-				appCFN:      m.appCFN,
-				envDeployer: m.envDeployer,
-				ec2:         m.prefixListGetter,
+				appCFN:           m.appCFN,
+				envDeployer:      m.envDeployer,
+				prefixListGetter: m.prefixListGetter,
 			}
 			mockIn := &DeployEnvironmentInput{
 				RootUserARN: "mockRootUserARN",

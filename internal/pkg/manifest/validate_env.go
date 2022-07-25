@@ -37,7 +37,7 @@ func (e EnvironmentConfig) Validate() error {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
 
-	if aws.BoolValue(e.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress) && !e.CDNConfig.CDNEnabled() {
+	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
 
