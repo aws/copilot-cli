@@ -216,7 +216,7 @@ count: 1`
 					Parameters: "myparams",
 				}, nil)
 				m.interpolator.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
-				m.generator.EXPECT().AddonStackBuilder().Return(m.addons)
+				m.generator.EXPECT().AddonsStackBuilder().Return(m.addons)
 				m.addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
 			},
 			wantedStack:  "mystack",
@@ -233,7 +233,7 @@ count: 1`
 			setupMocks: func(m *svcPackageExecuteMock) {
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(rdwsMft), nil)
 				m.interpolator.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
-				m.generator.EXPECT().AddonStackBuilder().Return(m.addons)
+				m.generator.EXPECT().AddonsStackBuilder().Return(m.addons)
 				m.addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
 				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
@@ -279,7 +279,7 @@ count: 1`
 					return m.mft, nil
 				},
 				rootUserARN: mockARN,
-				ws: m.ws,
+				ws:          m.ws,
 				newInterpolator: func(_, _ string) interpolator {
 					return m.interpolator
 				},
