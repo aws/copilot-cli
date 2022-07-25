@@ -34,7 +34,7 @@ type deployJobOpts struct {
 
 	store                store
 	ws                   wsWlDirReader
-	unmarshal            func(in []byte) (manifest.WorkloadManifest, error)
+	unmarshal            func(in []byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
 	cmd                  execRunner
 	sessProvider         *sessions.Provider
@@ -46,7 +46,7 @@ type deployJobOpts struct {
 	targetApp       *config.Application
 	targetEnv       *config.Environment
 	envSess         *session.Session
-	appliedManifest manifest.WorkloadManifest
+	appliedManifest manifest.DynamicWorkload
 	rootUserARN     string
 }
 

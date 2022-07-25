@@ -50,7 +50,7 @@ type deploySvcOpts struct {
 
 	store                store
 	ws                   wsWlDirReader
-	unmarshal            func([]byte) (manifest.WorkloadManifest, error)
+	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
 	cmd                  execRunner
 	sessProvider         *sessions.Provider
@@ -66,7 +66,7 @@ type deploySvcOpts struct {
 	targetEnv       *config.Environment
 	envSess         *session.Session
 	svcType         string
-	appliedManifest manifest.WorkloadManifest
+	appliedManifest manifest.DynamicWorkload
 	rootUserARN     string
 	deployRecs      clideploy.ActionRecommender
 }
@@ -363,10 +363,10 @@ type workloadManifestInput struct {
 	ws           wsWlDirReader
 	interpolator interpolator
 	sess         *session.Session
-	unmarshal    func([]byte) (manifest.WorkloadManifest, error)
+	unmarshal    func([]byte) (manifest.DynamicWorkload, error)
 }
 
-func workloadManifest(in *workloadManifestInput) (manifest.WorkloadManifest, error) {
+func workloadManifest(in *workloadManifestInput) (manifest.DynamicWorkload, error) {
 	raw, err := in.ws.ReadWorkloadManifest(in.name)
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", in.name, err)
@@ -392,7 +392,7 @@ func workloadManifest(in *workloadManifestInput) (manifest.WorkloadManifest, err
 	return envMft, nil
 }
 
-func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env versionCompatibilityChecker, mft manifest.WorkloadManifest, envName string) error {
+func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env versionCompatibilityChecker, mft manifest.DynamicWorkload, envName string) error {
 	availableFeatures, err := env.AvailableFeatures()
 	if err != nil {
 		return fmt.Errorf("get available features of the %s environment stack: %w", envName, err)

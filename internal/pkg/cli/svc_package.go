@@ -71,7 +71,7 @@ type packageSvcOpts struct {
 	runner               execRunner
 	sessProvider         *sessions.Provider
 	sel                  wsSelector
-	unmarshal            func([]byte) (manifest.WorkloadManifest, error)
+	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
 	newTplGenerator      func(*packageSvcOpts) (workloadTemplateGenerator, error)
 	envFeaturesDescriber versionCompatibilityChecker
@@ -80,7 +80,7 @@ type packageSvcOpts struct {
 	targetApp       *config.Application
 	targetEnv       *config.Environment
 	envSess         *session.Session
-	appliedManifest manifest.WorkloadManifest
+	appliedManifest manifest.DynamicWorkload
 	rootUserARN     string
 }
 

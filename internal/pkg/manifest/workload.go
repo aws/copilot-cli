@@ -58,9 +58,9 @@ func WorkloadTypes() []string {
 	return append(ServiceTypes(), JobTypes()...)
 }
 
-// WorkloadManifest represents a workload manifest.
-type WorkloadManifest interface {
-	ApplyEnv(envName string) (WorkloadManifest, error)
+// DynamicWorkload represents a dynamically populated workload.
+type DynamicWorkload interface {
+	ApplyEnv(envName string) (DynamicWorkload, error)
 	Validate() error
 	RequiredEnvironmentFeatures() []string
 	Load(sess *session.Session) error
@@ -77,7 +77,7 @@ type workloadManifest interface {
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
 // If an error occurs during deserialization, then returns the error.
 // If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
-func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
+func UnmarshalWorkload(in []byte) (DynamicWorkload, error) {
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
 		return nil, fmt.Errorf("unmarshal to workload manifest: %w", err)
@@ -242,7 +242,7 @@ type EntryPointOverride stringSliceOrShellString
 type CommandOverride stringSliceOrShellString
 
 // UnmarshalYAML overrides the default YAML unmarshalling logic for the EntryPointOverride
-// struct, allowing it to perform more complex unmarshalling behavior.
+// struct, allowing it to be unmarshalled into a string slice or a string.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (e *EntryPointOverride) UnmarshalYAML(value *yaml.Node) error {
 	if err := (*StringSliceOrString)(e).UnmarshalYAML(value); err != nil {
@@ -559,7 +559,7 @@ func (s *SecurityGroupsConfig) isEmpty() bool {
 }
 
 // UnmarshalYAML overrides the default YAML unmarshalling logic for the SecurityGroupsIDsOrConfig
-// struct, allowing it to perform more complex unmarshalling behavior.
+// struct, allowing it to be unmarshalled into a string slice or a string.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (s *SecurityGroupsIDsOrConfig) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&s.AdvancedConfig); err != nil {

@@ -248,7 +248,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 					return m.mockInterpolator
 				},
 				ws: m.mockWsReader,
-				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
+				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mockMft, nil
 				},
 				envFeaturesDescriber: m.mockEnvFeaturesDescriber,
@@ -341,7 +341,7 @@ type mockWorkloadMft struct {
 	mockRequiredEnvironmentFeatures func() []string
 }
 
-func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, error) {
+func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.DynamicWorkload, error) {
 	return m, nil
 }
 
