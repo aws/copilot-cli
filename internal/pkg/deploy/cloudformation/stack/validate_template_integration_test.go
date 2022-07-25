@@ -13,14 +13,24 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAutoscalingIntegration_Validate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	addons := mocks.NewMockaddons(ctrl)
+	addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
+	addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
 	path := filepath.Join("testdata", "stacklocal", autoScalingManifestPath)
 	wantedManifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
@@ -49,6 +59,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 				"RulePriorityFunction":        "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
 			},
 		},
+		Addons: addons,
 	})
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
@@ -66,6 +77,13 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 }
 
 func TestScheduledJob_Validate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	addons := mocks.NewMockaddons(ctrl)
+	addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
+	addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
 	path := filepath.Join("testdata", "workloads", jobManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
@@ -84,6 +102,7 @@ func TestScheduledJob_Validate(t *testing.T) {
 				"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
 			},
 		},
+		Addons: addons,
 	})
 
 	tpl, err := serializer.Template()

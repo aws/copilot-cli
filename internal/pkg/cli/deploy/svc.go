@@ -104,6 +104,13 @@ type templater interface {
 	Template() (string, error)
 }
 
+// StackBuilder represents something capable of generating a
+// CloudFormation stack template and parameters.
+type StackBuilder interface {
+	templater
+	Parameters() (string, error)
+}
+
 type stackSerializer interface {
 	templater
 	SerializedParameters() (string, error)
@@ -164,7 +171,7 @@ type workloadDeployer struct {
 	// Dependencies.
 	fs                 fileReader
 	s3Client           uploader
-	templater          templater
+	addons             StackBuilder
 	imageBuilderPusher imageBuilderPusher
 	deployer           serviceDeployer
 	endpointGetter     endpointGetter
@@ -207,7 +214,7 @@ type WorkloadDeployerInput struct {
 	RawMft          []byte      // Content of the manifest file without any transformations.
 }
 
-// NewWorkloadDeployer is the constructor for workloadDeployer.
+// newWorkloadDeployer is the constructor for workloadDeployer.
 func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	ws, err := workspace.New()
 	if err != nil {
@@ -261,7 +268,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		workspacePath:      workspacePath,
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
 		s3Client:           s3.New(envSession),
-		templater:          addonsSvc,
+		addons:             addonsSvc,
 		imageBuilderPusher: imageBuilderPusher,
 		deployer:           cloudformation.New(envSession),
 		endpointGetter:     envDescriber,
@@ -277,6 +284,11 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		mft:    in.Mft,
 		rawMft: in.RawMft,
 	}, nil
+}
+
+// AddonStackBuilder returns the StackBuilder for this workload's addons.
+func (w *workloadDeployer) AddonStackBuilder() StackBuilder {
+	return w.addons
 }
 
 type svcDeployer struct {
@@ -889,7 +901,7 @@ func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) 
 	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
 		fs:        d.fs,
 		uploader:  d.s3Client,
-		templater: d.templater,
+		templater: d.addons,
 	})
 	if err != nil {
 		return nil, err

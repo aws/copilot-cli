@@ -1704,44 +1704,6 @@ func (mr *MocklogEventsWriterMockRecorder) WriteLogEvents(opts interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteLogEvents", reflect.TypeOf((*MocklogEventsWriter)(nil).WriteLogEvents), opts)
 }
 
-// Mocktemplater is a mock of templater interface.
-type Mocktemplater struct {
-	ctrl     *gomock.Controller
-	recorder *MocktemplaterMockRecorder
-}
-
-// MocktemplaterMockRecorder is the mock recorder for Mocktemplater.
-type MocktemplaterMockRecorder struct {
-	mock *Mocktemplater
-}
-
-// NewMocktemplater creates a new mock instance.
-func NewMocktemplater(ctrl *gomock.Controller) *Mocktemplater {
-	mock := &Mocktemplater{ctrl: ctrl}
-	mock.recorder = &MocktemplaterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Mocktemplater) EXPECT() *MocktemplaterMockRecorder {
-	return m.recorder
-}
-
-// Template mocks base method.
-func (m *Mocktemplater) Template() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Template")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Template indicates an expected call of Template.
-func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
-}
-
 // MockexecRunner is a mock of execRunner interface.
 type MockexecRunner struct {
 	ctrl     *gomock.Controller
@@ -6578,6 +6540,20 @@ func (m *MockworkloadDeployer) EXPECT() *MockworkloadDeployerMockRecorder {
 	return m.recorder
 }
 
+// AddonStackBuilder mocks base method.
+func (m *MockworkloadDeployer) AddonStackBuilder() deploy.StackBuilder {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddonStackBuilder")
+	ret0, _ := ret[0].(deploy.StackBuilder)
+	return ret0
+}
+
+// AddonStackBuilder indicates an expected call of AddonStackBuilder.
+func (mr *MockworkloadDeployerMockRecorder) AddonStackBuilder() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonStackBuilder", reflect.TypeOf((*MockworkloadDeployer)(nil).AddonStackBuilder))
+}
+
 // DeployWorkload mocks base method.
 func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (deploy.ActionRecommender, error) {
 	m.ctrl.T.Helper()
@@ -6644,6 +6620,20 @@ func NewMockworkloadTemplateGenerator(ctrl *gomock.Controller) *MockworkloadTemp
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockworkloadTemplateGenerator) EXPECT() *MockworkloadTemplateGeneratorMockRecorder {
 	return m.recorder
+}
+
+// AddonStackBuilder mocks base method.
+func (m *MockworkloadTemplateGenerator) AddonStackBuilder() deploy.StackBuilder {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddonStackBuilder")
+	ret0, _ := ret[0].(deploy.StackBuilder)
+	return ret0
+}
+
+// AddonStackBuilder indicates an expected call of AddonStackBuilder.
+func (mr *MockworkloadTemplateGeneratorMockRecorder) AddonStackBuilder() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonStackBuilder", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).AddonStackBuilder))
 }
 
 // GenerateCloudFormationTemplate mocks base method.

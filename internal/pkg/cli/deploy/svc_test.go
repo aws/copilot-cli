@@ -394,7 +394,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					buildRequired: tc.inBuildRequired,
 				},
 
-				templater:          m.mockTemplater,
+				addons:             m.mockTemplater,
 				fs:                 m.mockFileReader,
 				s3Client:           m.mockUploader,
 				imageBuilderPusher: m.mockImageBuilderPusher,

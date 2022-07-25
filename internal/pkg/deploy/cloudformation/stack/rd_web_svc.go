@@ -10,7 +10,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
@@ -61,15 +60,12 @@ type RequestDrivenWebServiceConfig struct {
 	RawManifest []byte
 
 	RuntimeConfig RuntimeConfig
+	Addons        addons
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.
 func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDrivenWebService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(cfg.Manifest.Name))
-	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
-	}
 	return &RequestDrivenWebService{
 		appRunnerWkld: &appRunnerWkld{
 			wkld: &wkld{
@@ -79,7 +75,7 @@ func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDriv
 				rc:          cfg.RuntimeConfig,
 				image:       cfg.Manifest.ImageConfig.Image,
 				rawManifest: cfg.RawManifest,
-				addons:      addons,
+				addons:      cfg.Addons,
 				parser:      parser,
 			},
 			instanceConfig:    cfg.Manifest.InstanceConfig,
