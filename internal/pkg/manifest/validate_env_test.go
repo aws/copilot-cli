@@ -45,7 +45,7 @@ func TestEnvironment_Validate(t *testing.T) {
 	}
 }
 
-func TestEnvironmentConfig_Validate(t *testing.T) {
+func TestEnvironmentConfig_validate(t *testing.T) {
 	mockPublicSubnet1CIDR := IPNet("10.0.0.0/24")
 	mockPublicSubnet2CIDR := IPNet("10.0.1.0/24")
 	mockPrivateSubnet1CIDR := IPNet("10.0.3.0/24")
@@ -140,7 +140,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedError != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedError)
@@ -151,7 +151,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestEnvironmentNetworkConfig_Validate(t *testing.T) {
+func TestEnvironmentNetworkConfig_validate(t *testing.T) {
 	mockVPCCIDR := IPNet("10.0.0.0/16")
 	testCases := map[string]struct {
 		in                   environmentNetworkConfig
@@ -170,7 +170,7 @@ func TestEnvironmentNetworkConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedErrorMsgPrefix != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
@@ -181,7 +181,7 @@ func TestEnvironmentNetworkConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestEnvironmentVPCConfig_Validate(t *testing.T) {
+func TestEnvironmentVPCConfig_validate(t *testing.T) {
 	var (
 		mockVPCCIDR            = IPNet("10.0.0.0/16")
 		mockPublicSubnet1CIDR  = IPNet("10.0.0.0/24")
@@ -511,7 +511,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedErr == nil && tc.wantedErrorMsgPrefix == "" {
 				require.NoError(t, gotErr)
 			}
@@ -526,7 +526,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestSubnetsConfiguration_Validate(t *testing.T) {
+func TestSubnetsConfiguration_validate(t *testing.T) {
 	var (
 		mockPublicSubnet1CIDR  = IPNet("10.0.0.0/24")
 		mockPrivateSubnet1CIDR = IPNet("10.0.3.0/24")
@@ -574,7 +574,7 @@ func TestSubnetsConfiguration_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedErrorMsgPrefix != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
@@ -585,7 +585,7 @@ func TestSubnetsConfiguration_Validate(t *testing.T) {
 	}
 }
 
-func TestCDNConfiguration_Validate(t *testing.T) {
+func TestCDNConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in          environmentCDNConfig
 		wantedError error
@@ -606,7 +606,7 @@ func TestCDNConfiguration_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedError != nil {
 				require.Error(t, gotErr)
 				require.EqualError(t, tc.wantedError, gotErr.Error())
@@ -617,7 +617,7 @@ func TestCDNConfiguration_Validate(t *testing.T) {
 	}
 }
 
-func TestSubnetConfiguration_Validate(t *testing.T) {
+func TestSubnetConfiguration_validate(t *testing.T) {
 	mockCIDR := IPNet("10.0.0.0/24")
 	testCases := map[string]struct {
 		in          subnetConfiguration
@@ -669,7 +669,7 @@ func TestSubnetConfiguration_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedError != nil {
 				require.Error(t, gotErr)
 				require.EqualError(t, tc.wantedError, gotErr.Error())
@@ -680,7 +680,7 @@ func TestSubnetConfiguration_Validate(t *testing.T) {
 	}
 }
 
-func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
+func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in                   environmentHTTPConfig
 		wantedErrorMsgPrefix string
@@ -718,7 +718,7 @@ func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedErrorMsgPrefix != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
