@@ -10,6 +10,7 @@ import (
 
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -34,13 +35,18 @@ type environmentDeployer interface {
 	ForceUpdateOutputID(app, env string) (string, error)
 }
 
+type prefixListGetter interface {
+	CloudFrontManagedPrefixListID() (string, error)
+}
+
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
 
 	// Dependencies to upload artifacts.
-	templateFS template.Reader
-	s3         uploader
+	templateFS       template.Reader
+	s3               uploader
+	prefixListGetter prefixListGetter
 	// Dependencies to deploy an environment.
 	appCFN             appResourcesGetter
 	envDeployer        environmentDeployer
@@ -75,8 +81,9 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		app: in.App,
 		env: in.Env,
 
-		templateFS: template.New(),
-		s3:         s3.New(envRegionSession),
+		templateFS:       template.New(),
+		s3:               s3.New(envRegionSession),
+		prefixListGetter: ec2.New(envRegionSession),
 
 		appCFN:      deploycfn.New(defaultSession),
 		envDeployer: deploycfn.New(envManagerSession),
@@ -107,6 +114,31 @@ func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, e
 		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", bucket, err)
 	}
 	return urls, nil
+}
+
+func (d *envDeployer) cidrPrefixLists(in *DeployEnvironmentInput) ([]string, error) {
+	var cidrPrefixListIDs []string
+
+	// Check if ingress is allowed from cloudfront
+	if in.Manifest == nil || !in.Manifest.IsIngressRestrictedToCDN() {
+		return nil, nil
+	}
+	cfManagedPrefixListID, err := d.cfManagedPrefixListID()
+	if err != nil {
+		return nil, err
+	}
+	cidrPrefixListIDs = append(cidrPrefixListIDs, cfManagedPrefixListID)
+
+	return cidrPrefixListIDs, nil
+}
+
+func (d *envDeployer) cfManagedPrefixListID() (string, error) {
+	id, err := d.prefixListGetter.CloudFrontManagedPrefixListID()
+	if err != nil {
+		return "", fmt.Errorf("retrieve CloudFront managed prefix list id: %w", err)
+	}
+
+	return id, nil
 }
 
 // DeployEnvironmentInput contains information used to deploy the environment.
@@ -188,6 +220,10 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 	if err != nil {
 		return nil, err
 	}
+	cidrPrefixListIDs, err := d.cidrPrefixLists(in)
+	if err != nil {
+		return nil, err
+	}
 	return &deploy.CreateEnvironmentInput{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
@@ -199,6 +235,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		CustomResourcesURLs:  in.CustomResourcesURLs,
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
+		CIDRPrefixListIDs:    cidrPrefixListIDs,
 		Mft:                  in.Manifest,
 		ForceUpdate:          in.ForceNewUpdate,
 		RawMft:               in.RawManifest,
