@@ -102,9 +102,47 @@ type environmentNetworkConfig struct {
 }
 
 type environmentVPCConfig struct {
-	ID      *string              `yaml:"id,omitempty"`
-	CIDR    *IPNet               `yaml:"cidr,omitempty"`
-	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
+	ID                  *string              `yaml:"id,omitempty"`
+	CIDR                *IPNet               `yaml:"cidr,omitempty"`
+	Subnets             subnetsConfiguration `yaml:"subnets,omitempty"`
+	SecurityGroupConfig securityGroupConfig  `yaml:"security_group,omitempty"`
+}
+
+type securityGroupConfig struct {
+	Ingress []securityGroupRules `yaml:"ingress,omitempty"`
+	Egress  []securityGroupRules `yaml:"egress,omitempty"`
+}
+
+// IsEmpty returns true if there is no security group rule defined.
+func (sgc securityGroupConfig) IsEmpty() bool {
+	return len(sgc.Ingress) == 0 && len(sgc.Egress) == 0
+}
+
+type securityGroupRules struct {
+	CidrIp     string `yaml:"cidr"`
+	FromPort   int    `yaml:"from_port"`
+	IpProtocol string `yaml:"ip_protocol"`
+	ToPort     int    `yaml:"to_port"`
+}
+
+//IsValid checks for valid security group config.
+func (sgc securityGroupConfig) IsValid() bool {
+	for _, ingress := range sgc.Ingress {
+		if ingress.IsEmpty() {
+			return true
+		}
+	}
+	for _, egress := range sgc.Egress {
+		if egress.IsEmpty() {
+			return true
+		}
+	}
+	return false
+}
+
+//IsEmpty checks for required parameters in the security group rules.
+func (sgr securityGroupRules) IsEmpty() bool {
+	return sgr.CidrIp == "" || sgr.IpProtocol == ""
 }
 
 type environmentCDNConfig struct {

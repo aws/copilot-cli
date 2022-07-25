@@ -113,6 +113,8 @@ type EnvOpts struct {
 	AllowVPCIngress               bool
 	Telemetry                     *Telemetry
 
+	SecurityGroupConfig *SecurityGroupConfig
+
 	CDNConfig *CDNConfig // If nil, no cdn is to be used
 
 	LatestVersion      string
@@ -146,6 +148,19 @@ type ManagedVPC struct {
 // Telemetry represents optional observability and monitoring configuration.
 type Telemetry struct {
 	EnableContainerInsights bool
+}
+
+// SecurityGroupConfig holds the fields to import security group config
+type SecurityGroupConfig struct {
+	Ingress []SecurityGroupRules
+	Egress  []SecurityGroupRules
+}
+
+type SecurityGroupRules struct {
+	CidrIp     string
+	FromPort   int
+	IpProtocol string
+	ToPort     int
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.
