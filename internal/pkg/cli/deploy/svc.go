@@ -286,8 +286,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}, nil
 }
 
-// AddonStackBuilder returns the StackBuilder for this workload's addons.
-func (w *workloadDeployer) AddonStackBuilder() StackBuilder {
+// AddonsStackBuilder returns the StackBuilder for this workload's addons.
+func (w *workloadDeployer) AddonsStackBuilder() StackBuilder {
 	return w.addons
 }
 
@@ -1080,6 +1080,7 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		Manifest:      d.backendMft,
 		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
+		Addons:        d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)

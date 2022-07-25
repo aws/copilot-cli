@@ -619,14 +619,14 @@ type workloadDeployer interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
 	IsServiceAvailableInRegion(region string) (bool, error)
-	AddonStackBuilder() clideploy.StackBuilder
+	AddonsStackBuilder() clideploy.StackBuilder
 }
 
 type workloadTemplateGenerator interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
-	AddonStackBuilder() clideploy.StackBuilder
+	AddonsStackBuilder() clideploy.StackBuilder
 }
 
 type runner interface {
