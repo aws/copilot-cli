@@ -1,5 +1,4 @@
 //go:build integration || localintegration
-// +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -14,8 +13,11 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/golang/mock/gomock"
 
 	"github.com/stretchr/testify/require"
 )
@@ -27,6 +29,13 @@ const (
 )
 
 func TestWorkerService_Template(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	addons := mocks.NewMockaddons(ctrl)
+	addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
+	addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
 	path := filepath.Join("testdata", "workloads", workerManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
@@ -51,6 +60,7 @@ func TestWorkerService_Template(t *testing.T) {
 			AccountID:                "123456789123",
 			Region:                   "us-west-2",
 		},
+		Addons: addons,
 	})
 
 	tpl, err := serializer.Template()

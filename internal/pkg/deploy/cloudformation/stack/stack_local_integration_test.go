@@ -1,5 +1,4 @@
 //go:build integration || localintegration
-// +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -11,9 +10,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,6 +35,13 @@ func Test_Stack_Local_Integration(t *testing.T) {
 		wantedAutoScalingCFNParameterPath = "cf.params.json"
 		wantedOverrideCFNTemplatePath     = "override-cf.yml"
 	)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	addons := mocks.NewMockaddons(ctrl)
+	addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
+	addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
 	path := filepath.Join("testdata", "stacklocal", autoScalingManifestPath)
 	wantedManifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
@@ -59,6 +68,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 				ImageTag: imageTag,
 			},
 		},
+		Addons: addons,
 	})
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
