@@ -19,25 +19,25 @@ var (
 
 // Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
-	if err := e.EnvironmentConfig.Validate(); err != nil {
+	if err := e.EnvironmentConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if EnvironmentConfig is configured correctly.
-func (e EnvironmentConfig) Validate() error {
-	if err := e.Network.Validate(); err != nil {
+// validate returns nil if EnvironmentConfig is configured correctly.
+func (e EnvironmentConfig) validate() error {
+	if err := e.Network.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
 	}
-	if err := e.Observability.Validate(); err != nil {
+	if err := e.Observability.validate(); err != nil {
 		return fmt.Errorf(`validate "observability": %w`, err)
 	}
-	if err := e.HTTPConfig.Validate(); err != nil {
+	if err := e.HTTPConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
 
-	if aws.BoolValue(e.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress) && !e.CDNConfig.CDNEnabled() {
+	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
 
@@ -52,20 +52,20 @@ func (e EnvironmentConfig) Validate() error {
 	return nil
 }
 
-// Validate returns nil if environmentNetworkConfig is configured correctly.
-func (n environmentNetworkConfig) Validate() error {
-	if err := n.VPC.Validate(); err != nil {
+// validate returns nil if environmentNetworkConfig is configured correctly.
+func (n environmentNetworkConfig) validate() error {
+	if err := n.VPC.validate(); err != nil {
 		return fmt.Errorf(`validate "vpc": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if environmentVPCConfig is configured correctly.
-func (cfg environmentVPCConfig) Validate() error {
+// validate returns nil if environmentVPCConfig is configured correctly.
+func (cfg environmentVPCConfig) validate() error {
 	if cfg.imported() && cfg.managedVPCCustomized() {
 		return errors.New(`cannot import VPC resources (with "id" fields) and customize VPC resources (with "cidr" and "az" fields) at the same time`)
 	}
-	if err := cfg.Subnets.Validate(); err != nil {
+	if err := cfg.Subnets.validate(); err != nil {
 		return fmt.Errorf(`validate "subnets": %w`, err)
 	}
 	if cfg.imported() {
@@ -160,23 +160,23 @@ func (cfg environmentVPCConfig) validateManagedVPC() error {
 	return nil
 }
 
-// Validate returns nil if subnetsConfiguration is configured correctly.
-func (cs subnetsConfiguration) Validate() error {
+// validate returns nil if subnetsConfiguration is configured correctly.
+func (cs subnetsConfiguration) validate() error {
 	for idx, subnet := range cs.Public {
-		if err := subnet.Validate(); err != nil {
+		if err := subnet.validate(); err != nil {
 			return fmt.Errorf(`validate "public[%d]": %w`, idx, err)
 		}
 	}
 	for idx, subnet := range cs.Private {
-		if err := subnet.Validate(); err != nil {
+		if err := subnet.validate(); err != nil {
 			return fmt.Errorf(`validate "private[%d]": %w`, idx, err)
 		}
 	}
 	return nil
 }
 
-// Validate returns nil if subnetConfiguration is configured correctly.
-func (c subnetConfiguration) Validate() error {
+// validate returns nil if subnetConfiguration is configured correctly.
+func (c subnetConfiguration) validate() error {
 	if c.SubnetID != nil && c.CIDR != nil {
 		return &errFieldMutualExclusive{
 			firstField:  "id",
@@ -194,24 +194,24 @@ func (c subnetConfiguration) Validate() error {
 	return nil
 }
 
-// Validate returns nil if environmentObservability is configured correctly.
-func (o environmentObservability) Validate() error {
+// validate returns nil if environmentObservability is configured correctly.
+func (o environmentObservability) validate() error {
 	return nil
 }
 
-// Validate returns nil if EnvironmentHTTPConfig is configured correctly.
-func (cfg EnvironmentHTTPConfig) Validate() error {
-	if err := cfg.Public.Validate(); err != nil {
+// validate returns nil if EnvironmentHTTPConfig is configured correctly.
+func (cfg EnvironmentHTTPConfig) validate() error {
+	if err := cfg.Public.validate(); err != nil {
 		return fmt.Errorf(`validate "public": %w`, err)
 	}
-	if err := cfg.Private.Validate(); err != nil {
+	if err := cfg.Private.validate(); err != nil {
 		return fmt.Errorf(`validate "private": %w`, err)
 	}
 	return nil
 }
 
-// Validate returns nil if PublicHTTPConfig is configured correctly.
-func (cfg PublicHTTPConfig) Validate() error {
+// validate returns nil if PublicHTTPConfig is configured correctly.
+func (cfg PublicHTTPConfig) validate() error {
 	for idx, certARN := range cfg.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
@@ -220,16 +220,16 @@ func (cfg PublicHTTPConfig) Validate() error {
 	if cfg.SecurityGroupConfig.Ingress.VPCIngress != nil {
 		return fmt.Errorf("a public load balancer already allows vpc ingress")
 	}
-	return cfg.SecurityGroupConfig.Validate()
+	return cfg.SecurityGroupConfig.validate()
 }
 
-// Validate returns nil if ALBSecurityGroupsConfig is configured correctly.
-func (cfg ALBSecurityGroupsConfig) Validate() error {
-	return cfg.Ingress.Validate()
+// validate returns nil if ALBSecurityGroupsConfig is configured correctly.
+func (cfg ALBSecurityGroupsConfig) validate() error {
+	return cfg.Ingress.validate()
 }
 
-// Validate returns nil if privateHTTPConfig is configured correctly.
-func (cfg privateHTTPConfig) Validate() error {
+// validate returns nil if privateHTTPConfig is configured correctly.
+func (cfg privateHTTPConfig) validate() error {
 	for idx, certARN := range cfg.Certificates {
 		if _, err := arn.Parse(certARN); err != nil {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
@@ -238,34 +238,40 @@ func (cfg privateHTTPConfig) Validate() error {
 	if !cfg.SecurityGroupsConfig.Ingress.RestrictiveIngress.IsEmpty() {
 		return fmt.Errorf("an internal load balancer cannot have restrictive ingress fields")
 	}
+	if err := cfg.SecurityGroupsConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "security_groups: %w`, err)
+	}
 	return nil
 }
 
-// Validate returns nil if securityGroupsConfig is configured correctly.
-func (cfg securityGroupsConfig) Validate() error {
-	return cfg.Ingress.Validate()
+// validate returns nil if securityGroupsConfig is configured correctly.
+func (cfg securityGroupsConfig) validate() error {
+	if cfg.isEmpty() {
+		return nil
+	}
+	return cfg.Ingress.validate()
 }
 
-// Validate returns nil if environmentCDNConfig is configured correctly.
-func (cfg environmentCDNConfig) Validate() error {
+// validate returns nil if environmentCDNConfig is configured correctly.
+func (cfg environmentCDNConfig) validate() error {
 	if cfg.CDNConfig.IsEmpty() {
 		return nil
 	}
-	return cfg.CDNConfig.Validate()
+	return cfg.CDNConfig.validate()
 }
 
-// Validate returns nil if Ingress is configured correctly.
-func (i Ingress) Validate() error {
-	return i.RestrictiveIngress.Validate()
+// validate returns nil if Ingress is configured correctly.
+func (i Ingress) validate() error {
+	return i.RestrictiveIngress.validate()
 }
 
-// Validate is a no-op for RestrictiveIngress.
-func (i RestrictiveIngress) Validate() error {
+// validate is a no-op for RestrictiveIngress.
+func (i RestrictiveIngress) validate() error {
 	return nil
 }
 
-// Validate is a no-op for AdvancedCDNConfig.
-func (cfg advancedCDNConfig) Validate() error {
+// validate is a no-op for AdvancedCDNConfig.
+func (cfg advancedCDNConfig) validate() error {
 	return nil
 }
 

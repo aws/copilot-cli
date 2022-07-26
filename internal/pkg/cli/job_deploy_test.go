@@ -303,7 +303,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 				newInterpolator: func(app, env string) interpolator {
 					return m.mockInterpolator
 				},
-				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
+				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mockMft, nil
 				},
 				envFeaturesDescriber: m.mockEnvFeaturesDescriber,

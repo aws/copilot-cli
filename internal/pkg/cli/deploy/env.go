@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -45,9 +44,9 @@ type envDeployer struct {
 	env *config.Environment
 
 	// Dependencies to upload artifacts.
-	templateFS template.Reader
-	s3         uploader
-	ec2        prefixListGetter
+	templateFS       template.Reader
+	s3               uploader
+	prefixListGetter prefixListGetter
 	// Dependencies to deploy an environment.
 	appCFN             appResourcesGetter
 	envDeployer        environmentDeployer
@@ -82,9 +81,9 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		app: in.App,
 		env: in.Env,
 
-		templateFS: template.New(),
-		s3:         s3.New(envRegionSession),
-		ec2:        ec2.New(envRegionSession),
+		templateFS:       template.New(),
+		s3:               s3.New(envRegionSession),
+		prefixListGetter: ec2.New(envRegionSession),
 
 		appCFN:      deploycfn.New(defaultSession),
 		envDeployer: deploycfn.New(envManagerSession),
@@ -117,25 +116,26 @@ func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, e
 	return urls, nil
 }
 
-func (d *envDeployer) prefixLists(in *DeployEnvironmentInput) ([]string, error) {
-	var prefixListIDs []string
+func (d *envDeployer) cidrPrefixLists(in *DeployEnvironmentInput) ([]string, error) {
+	var cidrPrefixListIDs []string
 
 	// Check if ingress is allowed from cloudfront
-	if in.Manifest != nil && aws.BoolValue(in.Manifest.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress) {
-		cfManagedPrefixListId, err := d.cfManagedPrefixListId(in)
-		if err != nil {
-			return nil, err
-		}
-		prefixListIDs = append(prefixListIDs, cfManagedPrefixListId)
+	if in.Manifest == nil || !in.Manifest.IsIngressRestrictedToCDN() {
+		return nil, nil
 	}
+	cfManagedPrefixListID, err := d.cfManagedPrefixListID()
+	if err != nil {
+		return nil, err
+	}
+	cidrPrefixListIDs = append(cidrPrefixListIDs, cfManagedPrefixListID)
 
-	return prefixListIDs, nil
+	return cidrPrefixListIDs, nil
 }
 
-func (d *envDeployer) cfManagedPrefixListId(in *DeployEnvironmentInput) (string, error) {
-	id, err := d.ec2.CloudFrontManagedPrefixListID()
+func (d *envDeployer) cfManagedPrefixListID() (string, error) {
+	id, err := d.prefixListGetter.CloudFrontManagedPrefixListID()
 	if err != nil {
-		return "", fmt.Errorf("retrieve CloudFront managed prefix list id: %s", err)
+		return "", fmt.Errorf("retrieve CloudFront managed prefix list id: %w", err)
 	}
 
 	return id, nil
@@ -220,7 +220,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 	if err != nil {
 		return nil, err
 	}
-	cidrPrefixListIDs, err := d.prefixLists(in)
+	cidrPrefixListIDs, err := d.cidrPrefixLists(in)
 	if err != nil {
 		return nil, err
 	}

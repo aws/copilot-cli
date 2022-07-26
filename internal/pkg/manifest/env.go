@@ -91,6 +91,12 @@ type EnvironmentConfig struct {
 	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
+// IsIngressRestrictedToCDN returns whether or not an environment has its
+// Public Load Balancer ingress restricted to a Content Delivery Network.
+func (mft *EnvironmentConfig) IsIngressRestrictedToCDN() bool {
+	return aws.BoolValue(mft.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress)
+}
+
 type environmentNetworkConfig struct {
 	VPC environmentVPCConfig `yaml:"vpc,omitempty"`
 }
@@ -330,6 +336,12 @@ func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	cfg.Public.Certificates = env.ImportCertARNs
 }
 
+// PublicHTTPConfig represents the configuration settings for an environment public ALB.
+type PublicHTTPConfig struct {
+	SecurityGroupConfig ALBSecurityGroupsConfig `yaml:"security_groups,omitempty"`
+	Certificates        []string                `yaml:"certificates,omitempty"`
+}
+
 // ALBSecurityGroupsConfig represents security group configuration settings for an ALB.
 type ALBSecurityGroupsConfig struct {
 	Ingress Ingress `yaml:"ingress"`
@@ -337,12 +349,6 @@ type ALBSecurityGroupsConfig struct {
 
 func (cfg ALBSecurityGroupsConfig) IsEmpty() bool {
 	return cfg.Ingress.IsEmpty()
-}
-
-// PublicHTTPConfig represents the configuration settings for an environment public ALB.
-type PublicHTTPConfig struct {
-	SecurityGroupConfig ALBSecurityGroupsConfig `yaml:"security_groups,omitempty"`
-	Certificates        []string                `yaml:"certificates,omitempty"`
 }
 
 // Ingress represents allowed ingress traffic from specified fields.
