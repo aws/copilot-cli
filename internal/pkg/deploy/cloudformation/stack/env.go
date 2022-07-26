@@ -96,18 +96,16 @@ func (e *EnvStackConfig) Template() (string, error) {
 		forceUpdateID = id.String()
 	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
-		AppName:                  e.in.App.Name,
-		EnvName:                  e.in.Name,
-		CustomResources:          crs,
-		ArtifactBucketARN:        e.in.ArtifactBucketARN,
-		ArtifactBucketKeyARN:     e.in.ArtifactBucketKeyARN,
-		PublicImportedCertARNs:   e.importPublicCertARNs(),
-		PrivateImportedCertARNs:  e.importPrivateCertARNs(),
-		VPCConfig:                e.vpcConfig(),
-		CustomInternalALBSubnets: e.internalALBSubnets(),
-		AllowVPCIngress:          aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
-		Telemetry:                e.telemetryConfig(),
-		CDNConfig:                e.cdnConfig(),
+		AppName:              e.in.App.Name,
+		EnvName:              e.in.Name,
+		CustomResources:      crs,
+		ArtifactBucketARN:    e.in.ArtifactBucketARN,
+		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
+		VPCConfig:            e.vpcConfig(),
+		PublicHTTPConfig:     e.publicHTTPConfig(),
+		PrivateHTTPConfig:    e.privateHTTPConfig(),
+		Telemetry:            e.telemetryConfig(),
+		CDNConfig:            e.cdnConfig(),
 
 		Version:            e.in.Version,
 		LatestVersion:      deploy.LatestEnvTemplateVersion,
@@ -353,10 +351,25 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 	return nil // no-op - return &template.CDNConfig{} when feature is ready
 }
 
+func (e *EnvStackConfig) publicHTTPConfig() template.HTTPConfig {
+	return template.HTTPConfig{
+		CIDRPrefixListIDs: e.in.CIDRPrefixListIDs,
+		ImportedCertARNs:  e.importPublicCertARNs(),
+	}
+}
+
+func (e *EnvStackConfig) privateHTTPConfig() template.HTTPConfig {
+	return template.HTTPConfig{
+		ImportedCertARNs: e.importPrivateCertARNs(),
+		CustomALBSubnets: e.internalALBSubnets(),
+	}
+}
+
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
 	return template.VPCConfig{
-		Imported: e.importVPC(),
-		Managed:  e.managedVPC(),
+		Imported:        e.importVPC(),
+		Managed:         e.managedVPC(),
+		AllowVPCIngress: aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
 	}
 }
 

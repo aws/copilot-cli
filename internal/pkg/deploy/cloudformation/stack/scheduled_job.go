@@ -13,7 +13,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -96,15 +95,12 @@ type ScheduledJobConfig struct {
 	Manifest      *manifest.ScheduledJob
 	RawManifest   []byte
 	RuntimeConfig RuntimeConfig
+	Addons        addons
 }
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
 func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(cfg.Manifest.Name))
-	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
-	}
 	return &ScheduledJob{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -115,7 +111,7 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 				image:       cfg.Manifest.ImageConfig.Image,
 				rawManifest: cfg.RawManifest,
 				parser:      parser,
-				addons:      addons,
+				addons:      cfg.Addons,
 			},
 			logRetention:        cfg.Manifest.Logging.Retention,
 			tc:                  cfg.Manifest.TaskConfig,
