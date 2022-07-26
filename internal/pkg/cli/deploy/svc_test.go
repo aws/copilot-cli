@@ -44,7 +44,7 @@ type deployMocks struct {
 	mockSNSTopicsLister        *mocks.MocksnsTopicsLister
 	mockServiceDeployer        *mocks.MockserviceDeployer
 	mockServiceForceUpdater    *mocks.MockserviceForceUpdater
-	mockAddons                 *mocks.MockStackBuilder
+	mockAddons                 *mocks.MockstackBuilder
 	mockUploader               *mocks.Mockuploader
 	mockVersionGetter          *mocks.MockversionGetter
 	mockFileReader             *mocks.MockfileReader

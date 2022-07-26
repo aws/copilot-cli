@@ -203,7 +203,7 @@ func (o *packageSvcOpts) Execute() error {
 	if err := o.writeAndClose(o.paramsWriter, svcTemplates.configuration); err != nil {
 		return err
 	}
-	addonsTemplate, err := generator.AddonsStackBuilder().Template()
+	addonsTemplate, err := generator.AddonsTemplate()
 	if err != nil {
 		// return nil if addons not found.
 		var notFoundErr *addon.ErrAddonsNotFound

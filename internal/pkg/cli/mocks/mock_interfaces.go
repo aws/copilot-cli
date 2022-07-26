@@ -6540,20 +6540,6 @@ func (m *MockworkloadDeployer) EXPECT() *MockworkloadDeployerMockRecorder {
 	return m.recorder
 }
 
-// AddonsStackBuilder mocks base method.
-func (m *MockworkloadDeployer) AddonsStackBuilder() deploy.StackBuilder {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddonsStackBuilder")
-	ret0, _ := ret[0].(deploy.StackBuilder)
-	return ret0
-}
-
-// AddonsStackBuilder indicates an expected call of AddonsStackBuilder.
-func (mr *MockworkloadDeployerMockRecorder) AddonsStackBuilder() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsStackBuilder", reflect.TypeOf((*MockworkloadDeployer)(nil).AddonsStackBuilder))
-}
-
 // DeployWorkload mocks base method.
 func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (deploy.ActionRecommender, error) {
 	m.ctrl.T.Helper()
@@ -6622,18 +6608,19 @@ func (m *MockworkloadTemplateGenerator) EXPECT() *MockworkloadTemplateGeneratorM
 	return m.recorder
 }
 
-// AddonsStackBuilder mocks base method.
-func (m *MockworkloadTemplateGenerator) AddonsStackBuilder() deploy.StackBuilder {
+// AddonsTemplate mocks base method.
+func (m *MockworkloadTemplateGenerator) AddonsTemplate() (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddonsStackBuilder")
-	ret0, _ := ret[0].(deploy.StackBuilder)
-	return ret0
+	ret := m.ctrl.Call(m, "AddonsTemplate")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// AddonsStackBuilder indicates an expected call of AddonsStackBuilder.
-func (mr *MockworkloadTemplateGeneratorMockRecorder) AddonsStackBuilder() *gomock.Call {
+// AddonsTemplate indicates an expected call of AddonsTemplate.
+func (mr *MockworkloadTemplateGeneratorMockRecorder) AddonsTemplate() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsStackBuilder", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).AddonsStackBuilder))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsTemplate", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).AddonsTemplate))
 }
 
 // GenerateCloudFormationTemplate mocks base method.

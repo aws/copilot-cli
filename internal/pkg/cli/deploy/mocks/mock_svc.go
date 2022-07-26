@@ -190,31 +190,31 @@ func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
 }
 
-// MockStackBuilder is a mock of StackBuilder interface.
-type MockStackBuilder struct {
+// MockstackBuilder is a mock of stackBuilder interface.
+type MockstackBuilder struct {
 	ctrl     *gomock.Controller
-	recorder *MockStackBuilderMockRecorder
+	recorder *MockstackBuilderMockRecorder
 }
 
-// MockStackBuilderMockRecorder is the mock recorder for MockStackBuilder.
-type MockStackBuilderMockRecorder struct {
-	mock *MockStackBuilder
+// MockstackBuilderMockRecorder is the mock recorder for MockstackBuilder.
+type MockstackBuilderMockRecorder struct {
+	mock *MockstackBuilder
 }
 
-// NewMockStackBuilder creates a new mock instance.
-func NewMockStackBuilder(ctrl *gomock.Controller) *MockStackBuilder {
-	mock := &MockStackBuilder{ctrl: ctrl}
-	mock.recorder = &MockStackBuilderMockRecorder{mock}
+// NewMockstackBuilder creates a new mock instance.
+func NewMockstackBuilder(ctrl *gomock.Controller) *MockstackBuilder {
+	mock := &MockstackBuilder{ctrl: ctrl}
+	mock.recorder = &MockstackBuilderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockStackBuilder) EXPECT() *MockStackBuilderMockRecorder {
+func (m *MockstackBuilder) EXPECT() *MockstackBuilderMockRecorder {
 	return m.recorder
 }
 
 // Parameters mocks base method.
-func (m *MockStackBuilder) Parameters() (string, error) {
+func (m *MockstackBuilder) Parameters() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Parameters")
 	ret0, _ := ret[0].(string)
@@ -223,13 +223,13 @@ func (m *MockStackBuilder) Parameters() (string, error) {
 }
 
 // Parameters indicates an expected call of Parameters.
-func (mr *MockStackBuilderMockRecorder) Parameters() *gomock.Call {
+func (mr *MockstackBuilderMockRecorder) Parameters() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*MockStackBuilder)(nil).Parameters))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*MockstackBuilder)(nil).Parameters))
 }
 
 // Template mocks base method.
-func (m *MockStackBuilder) Template() (string, error) {
+func (m *MockstackBuilder) Template() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Template")
 	ret0, _ := ret[0].(string)
@@ -238,9 +238,9 @@ func (m *MockStackBuilder) Template() (string, error) {
 }
 
 // Template indicates an expected call of Template.
-func (mr *MockStackBuilderMockRecorder) Template() *gomock.Call {
+func (mr *MockstackBuilderMockRecorder) Template() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockStackBuilder)(nil).Template))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockstackBuilder)(nil).Template))
 }
 
 // MockstackSerializer is a mock of stackSerializer interface.

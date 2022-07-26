@@ -15,7 +15,6 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
-	clideploymocks "github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -139,7 +138,6 @@ type svcPackageExecuteMock struct {
 	ws                   *mocks.MockwsWlDirReader
 	generator            *mocks.MockworkloadTemplateGenerator
 	interpolator         *mocks.Mockinterpolator
-	addons               *clideploymocks.MockStackBuilder
 	envFeaturesDescriber *mocks.MockversionCompatibilityChecker
 	mft                  *mockWorkloadMft
 }
@@ -216,8 +214,7 @@ count: 1`
 					Parameters: "myparams",
 				}, nil)
 				m.interpolator.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
-				m.generator.EXPECT().AddonsStackBuilder().Return(m.addons)
-				m.addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.generator.EXPECT().AddonsTemplate().Return("", &addon.ErrAddonsNotFound{})
 			},
 			wantedStack:  "mystack",
 			wantedParams: "myparams",
@@ -233,8 +230,7 @@ count: 1`
 			setupMocks: func(m *svcPackageExecuteMock) {
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(rdwsMft), nil)
 				m.interpolator.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
-				m.generator.EXPECT().AddonsStackBuilder().Return(m.addons)
-				m.addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.generator.EXPECT().AddonsTemplate().Return("", &addon.ErrAddonsNotFound{})
 				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						ImageDigest: aws.String(""),
@@ -265,7 +261,6 @@ count: 1`
 				ws:                   mocks.NewMockwsWlDirReader(ctrl),
 				generator:            mocks.NewMockworkloadTemplateGenerator(ctrl),
 				interpolator:         mocks.NewMockinterpolator(ctrl),
-				addons:               clideploymocks.NewMockStackBuilder(ctrl),
 				envFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			tc.setupMocks(m)

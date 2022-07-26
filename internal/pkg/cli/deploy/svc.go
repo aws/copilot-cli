@@ -104,9 +104,7 @@ type templater interface {
 	Template() (string, error)
 }
 
-// StackBuilder represents something capable of generating a
-// CloudFormation stack template and parameters.
-type StackBuilder interface {
+type stackBuilder interface {
 	templater
 	Parameters() (string, error)
 }
@@ -171,7 +169,7 @@ type workloadDeployer struct {
 	// Dependencies.
 	fs                 fileReader
 	s3Client           uploader
-	addons             StackBuilder
+	addons             stackBuilder
 	imageBuilderPusher imageBuilderPusher
 	deployer           serviceDeployer
 	endpointGetter     endpointGetter
@@ -286,9 +284,9 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}, nil
 }
 
-// AddonsStackBuilder returns the StackBuilder for this workload's addons.
-func (w *workloadDeployer) AddonsStackBuilder() StackBuilder {
-	return w.addons
+// Addons returns this workloads AddonsTemplate.
+func (w *workloadDeployer) AddonsTemplate() (string, error) {
+	return w.addons.Template()
 }
 
 type svcDeployer struct {
