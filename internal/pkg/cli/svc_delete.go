@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/cli/delete"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
@@ -275,28 +276,15 @@ func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
 	return nil
 }
 
-// This is to make mocking easier in unit tests
 func (o *deleteSvcOpts) emptyECRRepos(envs []*config.Environment) error {
-	var uniqueRegions []string
-	for _, env := range envs {
-		if !contains(env.Region, uniqueRegions) {
-			uniqueRegions = append(uniqueRegions, env.Region)
-		}
+	e := delete.ECREmptier{
+		AppName:         o.appName,
+		WorkloadName:    o.name,
+		Environments:    envs,
+		SessionProvider: o.sess,
 	}
 
-	// TODO: centralized ECR repo name
-	repoName := fmt.Sprintf("%s/%s", o.appName, o.name)
-	for _, region := range uniqueRegions {
-		sess, err := o.sess.DefaultWithRegion(region)
-		if err != nil {
-			return err
-		}
-		client := o.getECR(sess)
-		if err := client.ClearRepository(repoName); err != nil {
-			return err
-		}
-	}
-	return nil
+	return e.EmptyRepos()
 }
 
 func (o *deleteSvcOpts) removeSvcFromApp() error {
