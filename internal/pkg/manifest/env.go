@@ -85,10 +85,11 @@ func (e *Environment) MarshalBinary() ([]byte, error) {
 
 // EnvironmentConfig defines the configuration settings for an environment manifest
 type EnvironmentConfig struct {
-	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
-	Observability environmentObservability `yaml:"observability,omitempty,flow"`
-	HTTPConfig    EnvironmentHTTPConfig    `yaml:"http,omitempty,flow"`
-	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
+	Network             environmentNetworkConfig `yaml:"network,omitempty,flow"`
+	Observability       environmentObservability `yaml:"observability,omitempty,flow"`
+	HTTPConfig          EnvironmentHTTPConfig    `yaml:"http,omitempty,flow"`
+	CDNConfig           environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
+	SecurityGroupConfig securityGroupConfig      `yaml:"security_group,omitempty"`
 }
 
 // IsIngressRestrictedToCDN returns whether or not an environment has its
@@ -102,10 +103,9 @@ type environmentNetworkConfig struct {
 }
 
 type environmentVPCConfig struct {
-	ID                  *string              `yaml:"id,omitempty"`
-	CIDR                *IPNet               `yaml:"cidr,omitempty"`
-	Subnets             subnetsConfiguration `yaml:"subnets,omitempty"`
-	SecurityGroupConfig securityGroupConfig  `yaml:"security_group,omitempty"`
+	ID      *string              `yaml:"id,omitempty"`
+	CIDR    *IPNet               `yaml:"cidr,omitempty"`
+	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
 }
 
 type securityGroupConfig struct {
@@ -125,26 +125,11 @@ type securityGroupRule struct {
 	ToPort     int    `yaml:"to_port"`
 }
 
-//IsValid checks for valid security group config.
-func (cfg securityGroupConfig) IsValid() bool {
-	for _, ingress := range cfg.Ingress {
-		if ingress.IsEmpty() {
-			return false
-		}
-	}
-	for _, egress := range cfg.Egress {
-		if egress.IsEmpty() {
-			return false
-		}
-	}
-	return true
-}
-
 // EnvSecurityGroup returns the security group config if the user has set any values.
 // If there is no env security group settings, then returns nil and false.
 func (cfg *EnvironmentConfig) EnvSecurityGroup() (*securityGroupConfig, bool) {
-	if isEmpty := cfg.Network.VPC.SecurityGroupConfig.IsEmpty(); !isEmpty {
-		return &cfg.Network.VPC.SecurityGroupConfig, true
+	if isEmpty := cfg.SecurityGroupConfig.IsEmpty(); !isEmpty {
+		return &cfg.SecurityGroupConfig, true
 	}
 	return nil, false
 }

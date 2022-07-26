@@ -93,6 +93,34 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			},
 			wantedError: "in order to specify internal ALB subnet placement, subnets must be imported",
 		},
+		"error if invalid security group config": {
+			in: EnvironmentConfig{
+				SecurityGroupConfig: securityGroupConfig{
+					Ingress: []securityGroupRule{
+						{
+							IpProtocol: "tcp",
+							ToPort:     80,
+							FromPort:   80,
+						},
+					},
+				},
+			},
+			wantedError: "validate \"security_group\": security group config is invalid",
+		},
+		"valid security group config": {
+			in: EnvironmentConfig{
+				SecurityGroupConfig: securityGroupConfig{
+					Ingress: []securityGroupRule{
+						{
+							CidrIP:     "0.0.0.0",
+							IpProtocol: "tcp",
+							ToPort:     80,
+							FromPort:   80,
+						},
+					},
+				},
+			},
+		},
 		"error if security group ingress is limited to a cdn distribution not enabled": {
 			in: EnvironmentConfig{
 				CDNConfig: environmentCDNConfig{

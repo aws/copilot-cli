@@ -36,7 +36,20 @@ func (e EnvironmentConfig) validate() error {
 	if err := e.HTTPConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
+	if err := e.SecurityGroupConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "security_group": %w`, err)
+	}
 
+	for _, ingress := range e.SecurityGroupConfig.Ingress {
+		if err := ingress.validate(); err != nil {
+			return err
+		}
+	}
+	for _, egress := range e.SecurityGroupConfig.Egress {
+		if err := egress.validate(); err != nil {
+			return err
+		}
+	}
 	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
@@ -68,19 +81,6 @@ func (cfg environmentVPCConfig) validate() error {
 	if err := cfg.Subnets.validate(); err != nil {
 		return fmt.Errorf(`validate "subnets": %w`, err)
 	}
-	if err := cfg.SecurityGroupConfig.validate(); err != nil {
-		return fmt.Errorf(`validate "security group rules": %w`, err)
-	}
-	for _, ingress := range cfg.SecurityGroupConfig.Ingress {
-		if err := ingress.validate(); err != nil {
-			return err
-		}
-	}
-	for _, egress := range cfg.SecurityGroupConfig.Egress {
-		if err := egress.validate(); err != nil {
-			return err
-		}
-	}
 	if cfg.imported() {
 		if err := cfg.validateImportedVPC(); err != nil {
 			return fmt.Errorf(`validate "subnets" for an imported VPC: %w`, err)
@@ -101,8 +101,15 @@ func (cfg securityGroupRule) validate() error {
 
 // Validate returns nil if securityGroupConfig is configured correctly.
 func (cfg securityGroupConfig) validate() error {
-	if !cfg.IsValid() {
-		return fmt.Errorf(`security group config is invalid`)
+	for _, ingress := range cfg.Ingress {
+		if ingress.IsEmpty() {
+			return fmt.Errorf(`security group config is invalid`)
+		}
+	}
+	for _, egress := range cfg.Egress {
+		if egress.IsEmpty() {
+			return fmt.Errorf(`security group config is invalid`)
+		}
 	}
 	return nil
 }

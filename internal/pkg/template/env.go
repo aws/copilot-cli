@@ -113,7 +113,8 @@ type EnvOpts struct {
 	AllowVPCIngress               bool
 	Telemetry                     *Telemetry
 
-	CDNConfig *CDNConfig // If nil, no cdn is to be used
+	CDNConfig           *CDNConfig // If nil, no cdn is to be used
+	SecurityGroupConfig SecurityGroupConfig
 
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
@@ -124,9 +125,8 @@ type EnvOpts struct {
 type CDNConfig struct{}
 
 type VPCConfig struct {
-	Imported            *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
-	Managed             ManagedVPC
-	SecurityGroupConfig SecurityGroupConfig
+	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
+	Managed  ManagedVPC
 }
 
 // ImportVPC holds the fields to import VPC resources.

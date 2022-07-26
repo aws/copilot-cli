@@ -13,11 +13,9 @@ Metadata:
           - cert-2
     observability:
       container_insights: true # Enable container insights.
-    network:
-      vpc:
-        security_group:
-          ingress:
-          egress:
+    security_group:
+      ingress:
+      egress:
 Parameters:
   AppName:
     Type: String

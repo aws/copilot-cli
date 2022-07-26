@@ -111,16 +111,15 @@ func (e *EnvStackConfig) Template() (string, error) {
 		AllowVPCIngress:               aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
 		Telemetry:                     e.telemetryConfig(),
 		CDNConfig:                     e.cdnConfig(),
-
-		Version:            e.in.Version,
-		LatestVersion:      deploy.LatestEnvTemplateVersion,
-		SerializedManifest: string(e.in.RawMft),
-		ForceUpdateID:      forceUpdateID,
+		SecurityGroupConfig:           convertEnvSecurityGroupCfg(e.in.Mft),
+		Version:                       e.in.Version,
+		LatestVersion:                 deploy.LatestEnvTemplateVersion,
+		SerializedManifest:            string(e.in.RawMft),
+		ForceUpdateID:                 forceUpdateID,
 	})
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("printing cfn", content.String())
 	return content.String(), nil
 }
 
@@ -359,9 +358,8 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
 	return template.VPCConfig{
-		Imported:            e.importVPC(),
-		Managed:             e.managedVPC(),
-		SecurityGroupConfig: convertEnvSecurityGroupCfg(e.in.Mft),
+		Imported: e.importVPC(),
+		Managed:  e.managedVPC(),
 	}
 }
 
