@@ -155,7 +155,7 @@ type SecurityGroupConfig struct {
 	Egress  []SecurityGroupRule
 }
 
-// SecurityGroupRules holds the fields to import security group rules
+// SecurityGroupRule holds the fields to import security group rule
 type SecurityGroupRule struct {
 	CidrIP     string
 	FromPort   int

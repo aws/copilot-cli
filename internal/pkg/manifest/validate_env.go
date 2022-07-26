@@ -84,7 +84,7 @@ func (cfg environmentVPCConfig) validate() error {
 	return nil
 }
 
-// validate is a no-op for securityGroupRules.
+// validate is a no-op for securityGroupRule.
 func (cfg securityGroupRule) validate() error {
 	//no-op
 	return nil
