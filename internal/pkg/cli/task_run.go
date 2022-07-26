@@ -1047,8 +1047,7 @@ func (o *runTaskOpts) pushEnvFileToS3(app *config.Application, region string) (s
 	if err != nil {
 		return "", err
 	}
-	envFileARN := s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key))
-	return envFileARN, nil
+	return s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key)), nil
 }
 
 func (o *runTaskOpts) validateAppName() error {
