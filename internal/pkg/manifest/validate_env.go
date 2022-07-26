@@ -102,13 +102,13 @@ func (cfg securityGroupRule) validate() error {
 // Validate returns nil if securityGroupConfig is configured correctly.
 func (cfg securityGroupConfig) validate() error {
 	for _, ingress := range cfg.Ingress {
-		if ingress.IsEmpty() {
-			return fmt.Errorf(`security group config is invalid`)
+		if err := ingress.Validate(); err != nil {
+			return err
 		}
 	}
 	for _, egress := range cfg.Egress {
-		if egress.IsEmpty() {
-			return fmt.Errorf(`security group config is invalid`)
+		if err := egress.Validate(); err != nil {
+			return err
 		}
 	}
 	return nil

@@ -108,7 +108,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		PrivateHTTPConfig:    e.privateHTTPConfig(),
 		Telemetry:            e.telemetryConfig(),
 		CDNConfig:            e.cdnConfig(),
-    SecurityGroupConfig:           convertEnvSecurityGroupCfg(e.in.Mft),
+		SecurityGroupConfig:  convertEnvSecurityGroupCfg(e.in.Mft),
 
 		Version:            e.in.Version,
 		LatestVersion:      deploy.LatestEnvTemplateVersion,

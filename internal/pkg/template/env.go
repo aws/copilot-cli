@@ -105,12 +105,12 @@ type EnvOpts struct {
 	ArtifactBucketARN    string
 	ArtifactBucketKeyARN string
 
-	VPCConfig         VPCConfig
-	PublicHTTPConfig  HTTPConfig
-	PrivateHTTPConfig HTTPConfig
-	Telemetry         *Telemetry
-	CDNConfig         *CDNConfig
-  SecurityGroupConfig SecurityGroupConfig
+	VPCConfig           VPCConfig
+	PublicHTTPConfig    HTTPConfig
+	PrivateHTTPConfig   HTTPConfig
+	Telemetry           *Telemetry
+	CDNConfig           *CDNConfig
+	SecurityGroupConfig SecurityGroupConfig
 
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
@@ -146,6 +146,8 @@ type ManagedVPC struct {
 	AZs                []string
 	PublicSubnetCIDRs  []string
 	PrivateSubnetCIDRs []string
+}
+
 // Telemetry represents optional observability and monitoring configuration.
 type Telemetry struct {
 	EnableContainerInsights bool

@@ -105,7 +105,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: "validate \"security_group\": security group config is invalid",
+			wantedError: "validate \"security_group\": cidr field is required",
 		},
 		"valid security group config": {
 			in: EnvironmentConfig{
