@@ -1,7 +1,7 @@
 List of all available properties for a `'Environment'` manifest.  
 To learn more about Copilot environments, see [Environments](../concepts/environments.en.md) concept page.
 
-???+ note "Common sample environment manifests"
+???+ note "Sample environment manifests"
 
     === "Basic"
 
