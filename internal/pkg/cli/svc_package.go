@@ -292,7 +292,7 @@ func (o *packageSvcOpts) configureClients() error {
 	return nil
 }
 
-type wkldCfnTemplates struct {
+type cfnStackConfig struct {
 	template   string
 	parameters string
 }
@@ -318,7 +318,7 @@ func (o *packageSvcOpts) getStackGenerator(env *config.Environment) (workloadSta
 }
 
 // getWorkloadStack returns the CloudFormation stack's template and its parameters for the service.
-func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*wkldCfnTemplates, error) {
+func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cfnStackConfig, error) {
 	targetApp, err := o.getTargetApp()
 	if err != nil {
 		return nil, err
@@ -346,10 +346,9 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*wk
 	if err != nil {
 		return nil, fmt.Errorf("generate workload %s template against environment %s: %w", o.name, o.envName, err)
 	}
-	return &wkldCfnTemplates{
-			template:   output.Template,
-			parameters: output.Parameters},
-		nil
+	return &cfnStackConfig{
+		template:   output.Template,
+		parameters: output.Parameters}, nil
 }
 
 // setOutputFileWriters creates the output directory, and updates the template and param writers to file writers in the directory.
