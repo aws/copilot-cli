@@ -5,8 +5,8 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
     === "Basic"
 
         ```yaml
-            name: frontend
-            type: Load Balanced Web Service
+            name: 'frontend'
+            type: 'Load Balanced Web Service'
     
             image:
               build: './frontend/Dockerfile'
@@ -32,8 +32,8 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
     === "With a domain"
 
         ```yaml
-            name: frontend
-            type: Load Balanced Web Service
+            name: 'frontend'
+            type: 'Load Balanced Web Service'
     
             image:
               build: './frontend/Dockerfile'
@@ -55,8 +55,8 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
 
         ```yaml
         # For example, we might want to warm up our Java service before accepting external traffic.
-        name: frontend
-        type: Load Balanced Web Service
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
 
         image:
           build:
@@ -93,8 +93,8 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
     === "Autoscaling"
 
         ```yaml
-        name: frontend
-        type: Load Balanced Web Service
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
 
         http:
           path: '/'
@@ -117,8 +117,8 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
     === "Event-driven"
 
         ```yaml
-        name: orders
-        type: Load Balanced Web Service
+        name: 'orders'
+        type: 'Load Balanced Web Service'
 
         image:
           build: Dockerfile
@@ -138,8 +138,8 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
     === "Network Load Balancer"
 
         ```yaml
-        name: frontend
-        type: Load Balanced Web Service
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
 
         image:
           build: Dockerfile
@@ -164,8 +164,8 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
     === "Shared file system"
 
         ```yaml
-        name: frontend
-        type: Load Balanced Web Service
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
 
         image:
           build: Dockerfile
