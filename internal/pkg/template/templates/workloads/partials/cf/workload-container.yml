@@ -29,17 +29,18 @@
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
   PortMappings:
     - ContainerPort: !Ref ContainerPort
-{{- if .NLB}}
-  {{if ne .NLB.Listener.TargetPort .NLB.MainContainerPort}} {{/*No need to add additional port if the target port is the same as image port*/}}
-    - ContainerPort: {{.NLB.Listener.TargetPort}}
-      {{- if eq .NLB.Listener.Protocol "UDP" }}
+{{- if .NLB}} {{ $nlbListener := .NLB.Listener }} 
+  {{- if and (eq $nlbListener.TargetContainer .WorkloadName) (ne $nlbListener.TargetPort .NLB.MainContainerPort)}}
+  {{/*No need to add additional port if the target port is the same as image port*/}}
+    - ContainerPort: {{$nlbListener.TargetPort}}
+      {{- if eq $nlbListener.Protocol "UDP" }}
       Protocol: udp
       {{- else }}
       Protocol: tcp
       {{- end }}
   {{- end}}
 {{- end}}
-{{- end}}
+{{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
 {{- if eq .WorkloadType "Backend Service"}}
   PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
 {{- end}}
