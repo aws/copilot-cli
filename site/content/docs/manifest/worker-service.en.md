@@ -1,24 +1,26 @@
 List of all available properties for a `'Worker Service'` manifest. To learn about Copilot services, see the [Services](../concepts/services.en.md) concept page.
 
-???+ note "Sample manifest for a worker service"
+???+ note "Sample worker service manifests"
 
-    ```yaml
-        # Your service name will be used in naming your resources like log groups, ECS services, etc.
-        name: orders-worker
+    === "Single queue"
+
+        ```yaml
+        # Collect messages from multiple topics published from other services to a single SQS queue.
+        name: cost-analyzer
         type: Worker Service
 
         image:
-          build: ./orders/Dockerfile
+          build: ./cost-analyzer/Dockerfile
 
         subscribe:
           topics:
-            - name: events
-              service: api
+            - name: products
+              service: orders
               filter_policy:
                 event:
                 - anything-but: order_cancelled
-            - name: events
-              service: fe
+            - name: inventory
+              service: warehouse
           queue:
             retention: 96h
             timeout: 30s
@@ -27,27 +29,70 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
 
         cpu: 256
         memory: 512
-        count: 1
+        count: 3
         exec: true
 
-        variables:
-          LOG_LEVEL: info
-        env_file: log.env
         secrets:
-          GITHUB_TOKEN: GITHUB_TOKEN
+          DB:
+            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+        ```
 
-        # You can override any of the values defined above by environment.
-        environments:
-          production:
-            count:
-              range:
-                min: 1
-                max: 50
-                spot_from: 26
-              queue_delay:
-                acceptable_latency: 1m
-                msg_processing_time: 250ms
-    ```
+    === "Spot autoscaling"
+
+        ```yaml
+        # Burst to Fargate Spot tasks if capacity is available.
+        name: cost-analyzer
+        type: Worker Service
+
+        image:
+          build: ./cost-analyzer/Dockerfile
+
+        subscribe:
+          topics:
+            - name: products
+              service: orders
+            - name: inventory
+              service: warehouse
+
+        cpu: 256
+        memory: 512
+        count:
+          range:
+            min: 1
+            max: 10
+            spot_from: 2
+          queue_delay: # Ensure messages are processed within 10mins assuming a single message takes 250ms to process.
+            acceptable_latency: 10m
+            msg_processing_time: 250ms
+        exec: true
+        ```
+
+    === "Separate queues"
+
+        ```yaml
+        # Assign individual queues to each topic.
+        name: cost-analyzer
+        type: Worker Service
+
+        image:
+          build: ./cost-analyzer/Dockerfile
+
+        subscribe:
+          topics:
+            - name: products
+              service: orders
+              queue:
+                retention: 5d
+                timeout: 1h
+                dead_letter:
+                  tries: 3
+            - name: inventory
+              service: warehouse
+              queue:
+                retention: 1d
+                timeout: 5m
+        count: 1
+        ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.
