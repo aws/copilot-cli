@@ -602,6 +602,7 @@ func (o *runTaskOpts) Ask() error {
 	if o.generateCommandTarget != "" {
 		return nil
 	}
+
 	if o.shouldPromptForAppEnv() {
 		if err := o.askAppName(); err != nil {
 			return err
@@ -609,7 +610,12 @@ func (o *runTaskOpts) Ask() error {
 		if err := o.askEnvName(); err != nil {
 			return err
 		}
+	} else if o.envFile != "" {
+		if err := o.askAppName(); err != nil {
+			return fmt.Errorf("no S3 bucket available to hold environment file %s specified in --%s: %w", o.envFile, envFileFlag, err)
+		}
 	}
+
 	if len(o.secrets) > 0 {
 		if err := o.confirmSecretsAccess(); err != nil {
 			return err
