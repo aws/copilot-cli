@@ -15,9 +15,12 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/golang/mock/gomock"
 
 	"github.com/stretchr/testify/require"
 )
@@ -61,6 +64,13 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 	for name, tc := range testCases {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		addons := mocks.NewMockaddons(ctrl)
+		addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
+		addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
 		interpolated, err := manifest.NewInterpolator(appName, tc.envName).Interpolate(string(manifestBytes))
 		require.NoError(t, err)
 		mft, err := manifest.UnmarshalWorkload([]byte(interpolated))
@@ -90,6 +100,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 				Region:                   "us-west-2",
 			},
 			RootUserARN: "arn:aws:iam::123456789123:root",
+			Addons:      addons,
 		}, stack.WithNLB([]string{"10.0.0.0/24", "10.1.0.0/24"}))
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")

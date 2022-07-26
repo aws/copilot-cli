@@ -1,5 +1,4 @@
 //go:build integration || localintegration
-// +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -13,9 +12,12 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,6 +43,13 @@ func TestRDWS_Template(t *testing.T) {
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err, "unmarshal manifest file")
 	for _, tc := range testCases {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		addons := mocks.NewMockaddons(ctrl)
+		addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
+		addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err, "apply test env to manifest")
 		err = envMft.Validate()
@@ -65,6 +74,7 @@ func TestRDWS_Template(t *testing.T) {
 				AccountID: "123456789123",
 				Region:    "us-west-2",
 			},
+			Addons: addons,
 		})
 		require.NoError(t, err, "create rdws serializer")
 		actualTemplate, err := serializer.Template()
