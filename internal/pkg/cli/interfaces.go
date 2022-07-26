@@ -358,7 +358,6 @@ type pipelineDeployer interface {
 	DeletePipeline(pipeline deploy.Pipeline) error
 	AddPipelineResourcesToApp(app *config.Application, region string) error
 	appResourcesGetter
-	// TODO: Add StreamPipelineCreation method
 }
 
 type appDeployer interface {
