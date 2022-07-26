@@ -310,11 +310,7 @@ func (o *packageSvcOpts) getStackGenerator(env *config.Environment) (workloadSta
 		return nil, err
 	}
 	o.appliedManifest = mft
-	generator, err := o.newStackGenerator(o)
-	if err != nil {
-		return nil, err
-	}
-	return generator, nil
+	return o.newStackGenerator(o)
 }
 
 // getWorkloadStack returns the CloudFormation stack's template and its parameters for the service.
