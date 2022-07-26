@@ -92,7 +92,7 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 	},
 	"AWS::CloudFormation::Stack": {
 		{
-			// This implementation does not recursivly package
+			// This implementation does not recursively package
 			// the local template pointed to by TemplateURL.
 			Property: []string{"TemplateURL"},
 		},
