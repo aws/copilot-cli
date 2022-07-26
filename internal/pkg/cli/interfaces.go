@@ -347,8 +347,8 @@ type jobRemoverFromApp interface {
 	RemoveJobFromApp(app *config.Application, jobName string) error
 }
 
-type imageRemover interface {
-	ClearRepository(repoName string) error // implemented by ECR Service
+type imageRepoEmptier interface {
+	EmptyRepo() error
 }
 
 type pipelineDeployer interface {

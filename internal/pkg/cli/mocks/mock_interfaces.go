@@ -3470,41 +3470,41 @@ func (mr *MockjobRemoverFromAppMockRecorder) RemoveJobFromApp(app, jobName inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveJobFromApp", reflect.TypeOf((*MockjobRemoverFromApp)(nil).RemoveJobFromApp), app, jobName)
 }
 
-// MockimageRemover is a mock of imageRemover interface.
-type MockimageRemover struct {
+// MockimageRepoEmptier is a mock of imageRepoEmptier interface.
+type MockimageRepoEmptier struct {
 	ctrl     *gomock.Controller
-	recorder *MockimageRemoverMockRecorder
+	recorder *MockimageRepoEmptierMockRecorder
 }
 
-// MockimageRemoverMockRecorder is the mock recorder for MockimageRemover.
-type MockimageRemoverMockRecorder struct {
-	mock *MockimageRemover
+// MockimageRepoEmptierMockRecorder is the mock recorder for MockimageRepoEmptier.
+type MockimageRepoEmptierMockRecorder struct {
+	mock *MockimageRepoEmptier
 }
 
-// NewMockimageRemover creates a new mock instance.
-func NewMockimageRemover(ctrl *gomock.Controller) *MockimageRemover {
-	mock := &MockimageRemover{ctrl: ctrl}
-	mock.recorder = &MockimageRemoverMockRecorder{mock}
+// NewMockimageRepoEmptier creates a new mock instance.
+func NewMockimageRepoEmptier(ctrl *gomock.Controller) *MockimageRepoEmptier {
+	mock := &MockimageRepoEmptier{ctrl: ctrl}
+	mock.recorder = &MockimageRepoEmptierMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockimageRemover) EXPECT() *MockimageRemoverMockRecorder {
+func (m *MockimageRepoEmptier) EXPECT() *MockimageRepoEmptierMockRecorder {
 	return m.recorder
 }
 
-// ClearRepository mocks base method.
-func (m *MockimageRemover) ClearRepository(repoName string) error {
+// EmptyRepo mocks base method.
+func (m *MockimageRepoEmptier) EmptyRepo() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClearRepository", repoName)
+	ret := m.ctrl.Call(m, "EmptyRepo")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ClearRepository indicates an expected call of ClearRepository.
-func (mr *MockimageRemoverMockRecorder) ClearRepository(repoName interface{}) *gomock.Call {
+// EmptyRepo indicates an expected call of EmptyRepo.
+func (mr *MockimageRepoEmptierMockRecorder) EmptyRepo() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearRepository", reflect.TypeOf((*MockimageRemover)(nil).ClearRepository), repoName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmptyRepo", reflect.TypeOf((*MockimageRepoEmptier)(nil).EmptyRepo))
 }
 
 // MockpipelineDeployer is a mock of pipelineDeployer interface.

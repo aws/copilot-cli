@@ -17,7 +17,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 
 	awssession "github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -61,14 +60,14 @@ type deleteSvcOpts struct {
 	deleteSvcVars
 
 	// Interfaces to dependencies.
-	store     store
-	sess      sessionProvider
-	spinner   progress
-	prompt    prompter
-	sel       configSelector
-	appCFN    svcRemoverFromApp
-	getSvcCFN func(session *awssession.Session) wlDeleter
-	getECR    func(session *awssession.Session) imageRemover
+	store               store
+	sess                sessionProvider
+	spinner             progress
+	prompt              prompter
+	sel                 configSelector
+	appCFN              svcRemoverFromApp
+	getSvcCFN           func(session *awssession.Session) wlDeleter
+	newImageRepoEmptier func(envs []*config.Environment) imageRepoEmptier
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
@@ -92,8 +91,13 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		getSvcCFN: func(session *awssession.Session) wlDeleter {
 			return cloudformation.New(session)
 		},
-		getECR: func(session *awssession.Session) imageRemover {
-			return ecr.New(session)
+		newImageRepoEmptier: func(envs []*config.Environment) imageRepoEmptier {
+			return &delete.ECREmptier{
+				AppName:         vars.appName,
+				WorkloadName:    vars.name,
+				Environments:    envs,
+				SessionProvider: sessProvider,
+			}
 		},
 	}, nil
 }
@@ -179,7 +183,7 @@ func (o *deleteSvcOpts) Execute() error {
 		return nil
 	}
 
-	if err := o.emptyECRRepos(envs); err != nil {
+	if err := o.emptyECRRepo(envs); err != nil {
 		return err
 	}
 	if err := o.removeSvcFromApp(); err != nil {
@@ -276,15 +280,8 @@ func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
 	return nil
 }
 
-func (o *deleteSvcOpts) emptyECRRepos(envs []*config.Environment) error {
-	e := delete.ECREmptier{
-		AppName:         o.appName,
-		WorkloadName:    o.name,
-		Environments:    envs,
-		SessionProvider: o.sess,
-	}
-
-	return e.EmptyRepos()
+func (o *deleteSvcOpts) emptyECRRepo(envs []*config.Environment) error {
+	return o.newImageRepoEmptier(envs).EmptyRepo()
 }
 
 func (o *deleteSvcOpts) removeSvcFromApp() error {

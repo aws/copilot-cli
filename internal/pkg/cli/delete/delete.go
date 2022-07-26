@@ -31,7 +31,7 @@ func (e *ECREmptier) defaultNewImageRemover(sess *session.Session) imageRemover 
 	return ecr.New(sess)
 }
 
-func (e *ECREmptier) EmptyRepos() error {
+func (e *ECREmptier) EmptyRepo() error {
 	if e.newImageRemover == nil {
 		e.newImageRemover = e.defaultNewImageRemover
 	}

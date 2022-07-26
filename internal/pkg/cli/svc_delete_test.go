@@ -459,12 +459,12 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					name:    test.inSvcName,
 					envName: test.inEnvName,
 				},
-				store:     mockstore,
-				sess:      mockSession,
-				spinner:   mockSpinner,
-				appCFN:    mockAppCFN,
-				getSvcCFN: mockGetSvcCFN,
-				getECR:    mockGetImageRemover,
+				store:               mockstore,
+				sess:                mockSession,
+				spinner:             mockSpinner,
+				appCFN:              mockAppCFN,
+				getSvcCFN:           mockGetSvcCFN,
+				newImageRepoEmptier: mockGetImageRemover,
 			}
 
 			// WHEN
