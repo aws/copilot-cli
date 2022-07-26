@@ -30,7 +30,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
 
-	addons, err := addon.New(aws.StringValue(v.Name), "", nil)
+	addons, err := addon.New(aws.StringValue(v.Name))
 	require.NoError(t, err)
 
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{

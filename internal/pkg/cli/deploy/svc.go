@@ -242,12 +242,18 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
 	}
+
 	s3Client := s3.New(envSession)
-	addonsSvc, err := addon.New(in.Name, resources.S3Bucket, s3Client)
+	var addonsSvc stackBuilder
+	if in.UploadAddonAssets {
+		addonsSvc, err = addon.NewPackager(in.Name, resources.S3Bucket, s3Client)
+	} else {
+		addonsSvc, err = addon.New(in.Name)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("initiate addons service: %w", err)
 	}
-	addonsSvc.UploadAssets = in.UploadAddonAssets
+
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
 	imageBuilderPusher := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])

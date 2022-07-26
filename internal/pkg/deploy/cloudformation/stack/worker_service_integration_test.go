@@ -42,7 +42,7 @@ func TestWorkerService_Template(t *testing.T) {
 	v, ok := content.(*manifest.WorkerService)
 	require.True(t, ok)
 
-	addons, err := addon.New(aws.StringValue(v.Name), "", nil)
+	addons, err := addon.New(aws.StringValue(v.Name))
 	require.NoError(t, err)
 
 	serializer, err := stack.NewWorkerService(stack.WorkerServiceConfig{

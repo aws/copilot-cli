@@ -56,7 +56,7 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
-		addons, err := addon.New(aws.StringValue(v.Name), "", nil)
+		addons, err := addon.New(aws.StringValue(v.Name))
 		require.NoError(t, err)
 
 		envConfig := &manifest.Environment{
