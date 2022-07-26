@@ -695,6 +695,13 @@ Outputs:
     Value: !GetAtt CloudFrontDistribution.DomainName
     Description: The domain name of an associated Cloud Front Distribution.
 {{- end}}
+  PublicALBAccessible:
+    Condition: CreateALB
+{{- if .PublicHTTPConfig.CIDRPrefixListIDs}}
+    Value: false
+{{- else}}
+    Value: true
+{{- end}}
   LastForceDeployID:
     Value: {{quote .ForceUpdateID}}
     Description: Optionally force the template to update when no immediate resource change is present.
