@@ -109,40 +109,49 @@ type environmentVPCConfig struct {
 }
 
 type securityGroupConfig struct {
-	Ingress []securityGroupRules `yaml:"ingress,omitempty"`
-	Egress  []securityGroupRules `yaml:"egress,omitempty"`
+	Ingress []securityGroupRule `yaml:"ingress,omitempty"`
+	Egress  []securityGroupRule `yaml:"egress,omitempty"`
 }
 
 // IsEmpty returns true if there is no security group rule defined.
-func (sgc securityGroupConfig) IsEmpty() bool {
-	return len(sgc.Ingress) == 0 && len(sgc.Egress) == 0
+func (cfg securityGroupConfig) IsEmpty() bool {
+	return len(cfg.Ingress) == 0 && len(cfg.Egress) == 0
 }
 
-type securityGroupRules struct {
-	CidrIp     string `yaml:"cidr"`
+type securityGroupRule struct {
+	CidrIP     string `yaml:"cidr"`
 	FromPort   int    `yaml:"from_port"`
 	IpProtocol string `yaml:"ip_protocol"`
 	ToPort     int    `yaml:"to_port"`
 }
 
 //IsValid checks for valid security group config.
-func (sgc securityGroupConfig) IsValid() bool {
-	for _, ingress := range sgc.Ingress {
+func (cfg securityGroupConfig) IsValid() bool {
+	for _, ingress := range cfg.Ingress {
 		if ingress.IsEmpty() {
-			return true
+			return false
 		}
 	}
-	for _, egress := range sgc.Egress {
+	for _, egress := range cfg.Egress {
 		if egress.IsEmpty() {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
+}
+
+// EnvSecurityGroup returns the security group config if the user has set any values.
+// If there is no env security group settings, then returns nil and false.
+func (cfg *EnvironmentConfig) EnvSecurityGroup() (*securityGroupConfig, bool) {
+	if isEmpty := cfg.Network.VPC.SecurityGroupConfig.IsEmpty(); !isEmpty {
+		return &cfg.Network.VPC.SecurityGroupConfig, true
+	}
+	return nil, false
 }
 
 //IsEmpty checks for required parameters in the security group rules.
-func (sgr securityGroupRules) IsEmpty() bool {
-	return sgr.CidrIp == "" || sgr.IpProtocol == ""
+func (cfg securityGroupRule) IsEmpty() bool {
+	return cfg.CidrIP == "" || cfg.IpProtocol == ""
 }
 
 type environmentCDNConfig struct {

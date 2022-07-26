@@ -113,8 +113,6 @@ type EnvOpts struct {
 	AllowVPCIngress               bool
 	Telemetry                     *Telemetry
 
-	SecurityGroupConfig *SecurityGroupConfig
-
 	CDNConfig *CDNConfig // If nil, no cdn is to be used
 
 	LatestVersion      string
@@ -126,8 +124,9 @@ type EnvOpts struct {
 type CDNConfig struct{}
 
 type VPCConfig struct {
-	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
-	Managed  ManagedVPC
+	Imported            *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
+	Managed             ManagedVPC
+	SecurityGroupConfig SecurityGroupConfig
 }
 
 // ImportVPC holds the fields to import VPC resources.
@@ -152,12 +151,13 @@ type Telemetry struct {
 
 // SecurityGroupConfig holds the fields to import security group config
 type SecurityGroupConfig struct {
-	Ingress []SecurityGroupRules
-	Egress  []SecurityGroupRules
+	Ingress []SecurityGroupRule
+	Egress  []SecurityGroupRule
 }
 
-type SecurityGroupRules struct {
-	CidrIp     string
+// SecurityGroupRules holds the fields to import security group rules
+type SecurityGroupRule struct {
+	CidrIP     string
 	FromPort   int
 	IpProtocol string
 	ToPort     int

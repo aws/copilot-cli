@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/google/uuid"
 )
@@ -95,7 +94,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 		}
 		forceUpdateID = id.String()
 	}
-	securityGroupConfig, err := getSecurityGroupConfig(e.in.Mft)
 	if err != nil {
 		return "", err
 	}
@@ -112,7 +110,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 		CustomInternalALBSubnets:      e.internalALBSubnets(),
 		AllowVPCIngress:               aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
 		Telemetry:                     e.telemetryConfig(),
-		SecurityGroupConfig:           securityGroupConfig,
 		CDNConfig:                     e.cdnConfig(),
 
 		Version:            e.in.Version,
@@ -123,6 +120,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	fmt.Println("printing cfn", content.String())
 	return content.String(), nil
 }
 
@@ -196,36 +194,6 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	// If we're creating a stack configuration for an existing environment stack, ensure the previous env controller
 	// managed parameters are using the previous value.
 	return e.transformParameters(currParams, e.prevParams, transformEnvControllerParameters)
-}
-
-func getSecurityGroupConfig(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {
-	if mft != nil && !mft.Network.VPC.SecurityGroupConfig.IsEmpty() {
-		if !mft.Network.VPC.SecurityGroupConfig.IsValid() {
-			var ingress = make([]template.SecurityGroupRules, len(mft.Network.VPC.SecurityGroupConfig.Ingress))
-			var egress = make([]template.SecurityGroupRules, len(mft.Network.VPC.SecurityGroupConfig.Egress))
-			for idx, ingressValue := range mft.Network.VPC.SecurityGroupConfig.Ingress {
-				ingress[idx].IpProtocol = ingressValue.IpProtocol
-				ingress[idx].CidrIp = ingressValue.CidrIp
-				ingress[idx].ToPort = ingressValue.ToPort
-				ingress[idx].FromPort = ingressValue.FromPort
-			}
-			for idx, egressValue := range mft.Network.VPC.SecurityGroupConfig.Egress {
-				egress[idx].IpProtocol = egressValue.IpProtocol
-				egress[idx].CidrIp = egressValue.CidrIp
-				egress[idx].ToPort = egressValue.ToPort
-				egress[idx].FromPort = egressValue.FromPort
-			}
-
-			return &template.SecurityGroupConfig{
-				Ingress: ingress,
-				Egress:  egress,
-			}, nil
-		} else {
-			return &template.SecurityGroupConfig{}, fmt.Errorf("security group config is invalid")
-		}
-	} else {
-		return &template.SecurityGroupConfig{}, nil
-	}
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
@@ -391,8 +359,9 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 
 func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
 	return template.VPCConfig{
-		Imported: e.importVPC(),
-		Managed:  e.managedVPC(),
+		Imported:            e.importVPC(),
+		Managed:             e.managedVPC(),
+		SecurityGroupConfig: convertEnvSecurityGroupCfg(e.in.Mft),
 	}
 }
 

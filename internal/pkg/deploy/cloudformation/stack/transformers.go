@@ -354,6 +354,31 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
+func convertEnvSecurityGroupCfg(mft *manifest.Environment) template.SecurityGroupConfig {
+	securityGroupConfig, isSecurityConfigSet := mft.EnvSecurityGroup()
+	if isSecurityConfigSet {
+		var ingress = make([]template.SecurityGroupRule, len(securityGroupConfig.Ingress))
+		var egress = make([]template.SecurityGroupRule, len(securityGroupConfig.Egress))
+		for idx, ingressValue := range securityGroupConfig.Ingress {
+			ingress[idx].IpProtocol = ingressValue.IpProtocol
+			ingress[idx].CidrIP = ingressValue.CidrIP
+			ingress[idx].ToPort = ingressValue.ToPort
+			ingress[idx].FromPort = ingressValue.FromPort
+		}
+		for idx, egressValue := range securityGroupConfig.Egress {
+			egress[idx].IpProtocol = egressValue.IpProtocol
+			egress[idx].CidrIP = egressValue.CidrIP
+			egress[idx].ToPort = egressValue.ToPort
+			egress[idx].FromPort = egressValue.FromPort
+		}
+		return template.SecurityGroupConfig{
+			Ingress: ingress,
+			Egress:  egress,
+		}
+	}
+	return template.SecurityGroupConfig{}
+}
+
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
 	nlbConfig := s.manifest.NLBConfig
 	if nlbConfig.IsEmpty() {

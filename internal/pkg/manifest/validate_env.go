@@ -68,6 +68,9 @@ func (cfg environmentVPCConfig) validate() error {
 	if err := cfg.Subnets.validate(); err != nil {
 		return fmt.Errorf(`validate "subnets": %w`, err)
 	}
+	if err := cfg.SecurityGroupConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "security group rules": %w`, err)
+	}
 	if cfg.imported() {
 		if err := cfg.validateImportedVPC(); err != nil {
 			return fmt.Errorf(`validate "subnets" for an imported VPC: %w`, err)
@@ -81,15 +84,17 @@ func (cfg environmentVPCConfig) validate() error {
 	return nil
 }
 
-// validate returns true if there is no security group rule defined.
-func (cfg securityGroupRules) validate() error {
+// validate is a no-op for securityGroupRules.
+func (cfg securityGroupRule) validate() error {
 	//no-op
 	return nil
 }
 
-// validate returns true if there is no security group rule defined.
+// Validate returns nil if securityGroupConfig is configured correctly.
 func (cfg securityGroupConfig) validate() error {
-	//no-op
+	if !cfg.IsValid() {
+		return fmt.Errorf(`security group config is invalid`)
+	}
 	return nil
 }
 

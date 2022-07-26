@@ -189,20 +189,24 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
-{{- if and .SecurityGroupConfig .SecurityGroupConfig.Ingress }}
-      SecurityGroupIngress: {{range $ind, $securityRule := .SecurityGroupConfig.Ingress}}
+{{- if (gt (len .VPCConfig.SecurityGroupConfig.Ingress) 0)}}
+      SecurityGroupIngress:
+      {{range $ind, $securityRule := .VPCConfig.SecurityGroupConfig.Ingress}}
         - IpProtocol: {{$securityRule.IpProtocol}}
           FromPort: {{$securityRule.FromPort}}
           ToPort: {{$securityRule.ToPort}}
-          CidrIp: {{$securityRule.CidrIp}}
-{{end }}{{- end}}
-{{- if and .SecurityGroupConfig .SecurityGroupConfig.Egress }}
-      SecurityGroupEgress: {{range $ind, $securityRule := .SecurityGroupConfig.Egress}}
+          CidrIp: {{$securityRule.CidrIP}}
+      {{end }}
+{{- end}}
+  {{- if (gt (len .VPCConfig.SecurityGroupConfig.Egress) 0)}}
+      SecurityGroupEgress:
+      {{range $ind, $securityRule := .VPCConfig.SecurityGroupConfig.Egress}}
         - IpProtocol: {{$securityRule.IpProtocol}}
           FromPort: {{$securityRule.FromPort}}
           ToPort: {{$securityRule.ToPort}}
-          CidrIp: {{$securityRule.CidrIp}}
-{{end }}{{- end}}
+          CidrIp: {{$securityRule.CidrIP}}
+      {{end }}
+{{- end}}
   EnvironmentHTTPSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateALB
