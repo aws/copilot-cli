@@ -76,7 +76,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
-		addons, err := addon.New(aws.StringValue(v.Name))
+		addons, err := addon.New(aws.StringValue(v.Name), "", nil)
 		require.NoError(t, err)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)

@@ -42,7 +42,7 @@ func TestScheduledJob_Template(t *testing.T) {
 	v, ok := content.(*manifest.ScheduledJob)
 	require.True(t, ok)
 
-	addons, err := addon.New(aws.StringValue(v.Name))
+	addons, err := addon.New(aws.StringValue(v.Name), "", nil)
 	require.NoError(t, err)
 
 	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{

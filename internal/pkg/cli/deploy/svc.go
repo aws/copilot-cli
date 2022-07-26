@@ -203,13 +203,14 @@ func (d *workloadDeployer) cachedEnvironmentConfig() (*manifest.Environment, err
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
 type WorkloadDeployerInput struct {
-	SessionProvider *sessions.Provider
-	Name            string
-	App             *config.Application
-	Env             *config.Environment
-	ImageTag        string
-	Mft             interface{} // Interpolated, applied, and unmarshaled manifest.
-	RawMft          []byte      // Content of the manifest file without any transformations.
+	SessionProvider   *sessions.Provider
+	Name              string
+	App               *config.Application
+	Env               *config.Environment
+	ImageTag          string
+	Mft               interface{} // Interpolated, applied, and unmarshaled manifest.
+	RawMft            []byte      // Content of the manifest file without any transformations.
+	UploadAddonAssets bool
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -241,10 +242,12 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
 	}
-	addonsSvc, err := addon.New(in.Name)
+	s3Client := s3.New(envSession)
+	addonsSvc, err := addon.New(in.Name, resources.S3Bucket, s3Client)
 	if err != nil {
 		return nil, fmt.Errorf("initiate addons service: %w", err)
 	}
+	addonsSvc.UploadAssets = in.UploadAddonAssets
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
 	imageBuilderPusher := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
@@ -265,7 +268,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		resources:          resources,
 		workspacePath:      workspacePath,
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
-		s3Client:           s3.New(envSession),
+		s3Client:           s3Client,
 		addons:             addonsSvc,
 		imageBuilderPusher: imageBuilderPusher,
 		deployer:           cloudformation.New(envSession),

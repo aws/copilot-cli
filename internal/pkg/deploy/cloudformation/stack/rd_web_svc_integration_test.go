@@ -51,7 +51,7 @@ func TestRDWS_Template(t *testing.T) {
 		v, ok := content.(*manifest.RequestDrivenWebService)
 		require.True(t, ok)
 
-		addons, err := addon.New(aws.StringValue(v.Name))
+		addons, err := addon.New(aws.StringValue(v.Name), "", nil)
 		require.NoError(t, err)
 
 		// Read wanted stack template.

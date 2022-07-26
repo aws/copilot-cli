@@ -46,18 +46,25 @@ type Addons struct {
 
 	cachedTemplate    string
 	cachedTemplateErr error
+
+	bucket   string
+	uploader uploader
+
+	UploadAssets bool
 }
 
 // New creates an Addons object given a workload name.
-func New(wlName string) (*Addons, error) {
+func New(wlName string, bucket string, uploader uploader) (*Addons, error) {
 	ws, err := workspace.New()
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
 	return &Addons{
-		wlName: wlName,
-		parser: template.New(),
-		ws:     ws,
+		wlName:   wlName,
+		parser:   template.New(),
+		ws:       ws,
+		bucket:   bucket,
+		uploader: uploader,
 	}, nil
 }
 
@@ -103,6 +110,13 @@ func (a *Addons) template() (string, error) {
 		}
 		if err := mergedTemplate.merge(tpl); err != nil {
 			return "", err
+		}
+	}
+
+	if a.UploadAssets {
+		mergedTemplate, err = a.packageTemplate(mergedTemplate)
+		if err != nil {
+			return "", fmt.Errorf("package local artifacts: %s", err)
 		}
 	}
 

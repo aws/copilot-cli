@@ -45,7 +45,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
 
-	addons, err := addon.New(aws.StringValue(v.Name))
+	addons, err := addon.New(aws.StringValue(v.Name), "", nil)
 	require.NoError(t, err)
 
 	envConfig := &manifest.Environment{
