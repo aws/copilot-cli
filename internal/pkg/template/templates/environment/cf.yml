@@ -105,8 +105,8 @@ Resources:
     Properties:
       GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if .PublicFacingCIDRPrefixListIDs}}
-        {{- range $id := .PublicFacingCIDRPrefixListIDs}}
+        {{- if .PublicHTTPConfig.CIDRPrefixListIDs}}
+        {{- range $id := .PublicHTTPConfig.CIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 80
           FromPort: 80
@@ -136,8 +136,8 @@ Resources:
     Properties:
       GroupDescription: HTTPS access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if .PublicFacingCIDRPrefixListIDs}}
-        {{- range $id := .PublicFacingCIDRPrefixListIDs}}
+        {{- if .PublicHTTPConfig.CIDRPrefixListIDs}}
+        {{- range $id := .PublicHTTPConfig.CIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 443
           FromPort: 443
@@ -246,7 +246,7 @@ Resources:
       GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-{{- if .AllowVPCIngress }}
+{{- if .VPCConfig.AllowVPCIngress }}
   InternalLoadBalancerSecurityGroupIngressFromHttp:
     Metadata:
       'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80 within the VPC'
@@ -328,8 +328,8 @@ Resources:
     Condition: ExportHTTPSListener
     Properties:
       Certificates:
-{{- if .PublicImportedCertARNs}}
-        - CertificateArn: {{index .PublicImportedCertARNs 0}}
+{{- if .PublicHTTPConfig.ImportedCertARNs}}
+        - CertificateArn: {{index .PublicHTTPConfig.ImportedCertARNs 0}}
 {{- else}}
         - CertificateArn: !Ref HTTPSCert
 {{- end}}
@@ -339,7 +339,7 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
-{{- range $ind, $arn := .PublicImportedCertARNs}}
+{{- range $ind, $arn := .PublicHTTPConfig.ImportedCertARNs}}
 {{- if gt $ind 0}}
   HTTPSImportCertificate{{inc $ind}}:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
@@ -358,8 +358,8 @@ Resources:
     Properties:
       Scheme: internal
       SecurityGroups: [ !GetAtt InternalLoadBalancerSecurityGroup.GroupId ]
-{{- if .CustomInternalALBSubnets}}
-      Subnets: {{fmtSlice .CustomInternalALBSubnets}}
+{{- if .PrivateHTTPConfig.CustomALBSubnets}}
+      Subnets: {{fmtSlice .PrivateHTTPConfig.CustomALBSubnets}}
 {{- else if .VPCConfig.Imported}}
       Subnets: {{fmtSlice .VPCConfig.Imported.PrivateSubnetIDs}}
 {{- else}}
@@ -405,9 +405,9 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Condition: ExportInternalHTTPSListener
     Properties:
-{{- if .PrivateImportedCertARNs}}
+{{- if .PrivateHTTPConfig.ImportedCertARNs}}
       Certificates:
-        - CertificateArn: {{index .PrivateImportedCertARNs 0}}
+        - CertificateArn: {{index .PrivateHTTPConfig.ImportedCertARNs 0}}
 {{- end}}
       DefaultActions:
         - TargetGroupArn: !Ref DefaultInternalHTTPTargetGroup
@@ -415,7 +415,7 @@ Resources:
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 443
       Protocol: HTTPS
-{{- range $ind, $arn := .PrivateImportedCertARNs}}
+{{- range $ind, $arn := .PrivateHTTPConfig.ImportedCertARNs}}
 {{- if gt $ind 0}}
   InternalHTTPSImportCertificate{{inc $ind}}:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
@@ -426,7 +426,7 @@ Resources:
         - CertificateArn: {{$arn}}
 {{- end}}
 {{- end}}
-  {{- if not .PrivateImportedCertARNs}}
+  {{- if not .PrivateHTTPConfig.ImportedCertARNs}}
   InternalWorkloadsHostedZone:
     Metadata:
       'aws:copilot:description': 'A hosted zone named {{.EnvName}}.{{.AppName}}.internal for backends behind a private load balancer'
@@ -526,7 +526,7 @@ Resources:
         - !Ref EFSSecurityGroup
 {{- end}}
 {{- end}}
-{{- if not .PublicImportedCertARNs}}
+{{- if not .PublicHTTPConfig.ImportedCertARNs}}
 {{include "custom-resources-role" . | indent 2}}
   EnvironmentHostedZone:
     Metadata:
@@ -643,7 +643,7 @@ Outputs:
     Value: !GetAtt InternalLoadBalancer.CanonicalHostedZoneID
     Export:
       Name: !Sub ${AWS::StackName}-InternalLoadBalancerCanonicalHostedZoneID
-  {{- if not .PrivateImportedCertARNs}}
+  {{- if not .PrivateHTTPConfig.ImportedCertARNs}}
   InternalWorkloadsHostedZone:
     Condition: CreateInternalALB
     Value: !GetAtt InternalWorkloadsHostedZone.Id
@@ -684,7 +684,7 @@ Outputs:
     Description: The role to be assumed by the Cloudformation service when it deploys application infrastructure.
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
-{{- if not .PublicImportedCertARNs}}
+{{- if not .PublicHTTPConfig.ImportedCertARNs}}
   EnvironmentHostedZone:
     Condition: DelegateDNS
     Value: !Ref EnvironmentHostedZone
