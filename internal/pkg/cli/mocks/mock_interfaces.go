@@ -1704,44 +1704,6 @@ func (mr *MocklogEventsWriterMockRecorder) WriteLogEvents(opts interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteLogEvents", reflect.TypeOf((*MocklogEventsWriter)(nil).WriteLogEvents), opts)
 }
 
-// Mocktemplater is a mock of templater interface.
-type Mocktemplater struct {
-	ctrl     *gomock.Controller
-	recorder *MocktemplaterMockRecorder
-}
-
-// MocktemplaterMockRecorder is the mock recorder for Mocktemplater.
-type MocktemplaterMockRecorder struct {
-	mock *Mocktemplater
-}
-
-// NewMocktemplater creates a new mock instance.
-func NewMocktemplater(ctrl *gomock.Controller) *Mocktemplater {
-	mock := &Mocktemplater{ctrl: ctrl}
-	mock.recorder = &MocktemplaterMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Mocktemplater) EXPECT() *MocktemplaterMockRecorder {
-	return m.recorder
-}
-
-// Template mocks base method.
-func (m *Mocktemplater) Template() (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Template")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Template indicates an expected call of Template.
-func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
-}
-
 // MockexecRunner is a mock of execRunner interface.
 type MockexecRunner struct {
 	ctrl     *gomock.Controller
@@ -6644,6 +6606,21 @@ func NewMockworkloadTemplateGenerator(ctrl *gomock.Controller) *MockworkloadTemp
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockworkloadTemplateGenerator) EXPECT() *MockworkloadTemplateGeneratorMockRecorder {
 	return m.recorder
+}
+
+// AddonsTemplate mocks base method.
+func (m *MockworkloadTemplateGenerator) AddonsTemplate() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddonsTemplate")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddonsTemplate indicates an expected call of AddonsTemplate.
+func (mr *MockworkloadTemplateGeneratorMockRecorder) AddonsTemplate() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsTemplate", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).AddonsTemplate))
 }
 
 // GenerateCloudFormationTemplate mocks base method.
