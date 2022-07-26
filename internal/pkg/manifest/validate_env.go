@@ -81,6 +81,18 @@ func (cfg environmentVPCConfig) validate() error {
 	return nil
 }
 
+// validate returns true if there is no security group rule defined.
+func (cfg securityGroupRules) validate() error {
+	//no-op
+	return nil
+}
+
+// validate returns true if there is no security group rule defined.
+func (cfg securityGroupConfig) validate() error {
+	//no-op
+	return nil
+}
+
 func (cfg environmentVPCConfig) validateImportedVPC() error {
 	for idx, subnet := range cfg.Subnets.Public {
 		if aws.StringValue(subnet.SubnetID) == "" {
