@@ -224,11 +224,12 @@ type uriDescriber struct {
 }
 
 func (d *uriDescriber) envDNSName(path string) (accessURI, error) {
+	var dnsNames []string
+
 	envOutputs, err := d.envDescriber.Outputs()
 	if err != nil {
 		return accessURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
 	}
-	dnsNames := []string{}
 	if accessible, ok := envOutputs[envOutputPublicALBAccessible]; ok && accessible == "true" {
 		dnsNames = append(dnsNames, envOutputs[d.albCFNOutputName])
 	}
