@@ -279,7 +279,9 @@ Must be either "MySQL" or "PostgreSQL".`
 	taskRoleFlagDescription      = "Optional. The ARN of the role for the task to use."
 	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
 	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated by commas."
-	envFileFlagDescription       = "Optional. A path to an environment variable (.env) file with each line being of the form of VARIABLE=VALUE. Values specified with --env-vars take precedence over --env-file."
+	envFileFlagDescription       = `Optional. A path to an environment variable (.env) file. 
+Each line should be of the form of VARIABLE=VALUE. 
+Values specified with --env-vars take precedence over --env-file.`
 	secretsFlagDescription       = "Optional. Secrets to inject into the container. Specified by key=value separated by commas."
 	runCommandFlagDescription    = `Optional. The command that is passed to "docker run" to override the default command.`
 	entrypointFlagDescription    = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`
