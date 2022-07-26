@@ -70,11 +70,12 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 			wantedStackName: "phonetool-test-frontend",
 		},
 		"longer than 128 characters": {
-			inSvcName: "whatisthishorriblylongservicenamethatcantfitintocloudformationwhatarewesupposedaboutthisaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			inSvcName: "whatisthishorriblylongservicenamethatcantfitintocloudformationhowarewesupposedtogoaboutthisaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+
 			inEnvName: "test",
 			inAppName: "phonetool",
 
-			wantedStackName: "phonetool-test-whatisthishorriblylongservicenamethatcantfitintocloudformationwhatarewesupposedaboutthisaaaaaaaaaaaaaaaaaaaaa",
+			wantedStackName: "phonetool-test-whatisthishorriblylongservicenamethatcantfitintocloudformationhowarewesupposedtogoaboutthisaaaaaaaaaaaaaaaaaaaaaa",
 		},
 	}
 
