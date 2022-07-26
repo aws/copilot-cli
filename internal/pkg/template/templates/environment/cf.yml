@@ -695,13 +695,11 @@ Outputs:
     Value: !GetAtt CloudFrontDistribution.DomainName
     Description: The domain name of an associated Cloud Front Distribution.
 {{- end}}
-{{- if .PublicFacingCIDRPrefixListIDs}}
   PublicALBAccessible:
     Condition: CreateALB
+{{- if .PublicHTTPConfig.CIDRPrefixListIDs}}
     Value: false
 {{- else}}
-  PublicALBAccessible:
-    Condition: CreateALB
     Value: true
 {{- end}}
   LastForceDeployID:
