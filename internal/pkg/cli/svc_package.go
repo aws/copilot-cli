@@ -305,6 +305,7 @@ func (o *packageSvcOpts) getStackGenerator(env *config.Environment) (workloadSta
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
 		unmarshal:    o.unmarshal,
+		sess:         o.envSess,
 	})
 	if err != nil {
 		return nil, err
