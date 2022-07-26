@@ -267,9 +267,9 @@ count: 1`
 			opts := &packageSvcOpts{
 				packageSvcVars: tc.inVars,
 
-				stackWriter:  mockWriteCloser{w: stackBuf},
-				paramsWriter: mockWriteCloser{w: paramsBuf},
-				addonsWriter: mockWriteCloser{w: addonsBuf},
+				templateWriter: mockWriteCloser{w: stackBuf},
+				paramsWriter:   mockWriteCloser{w: paramsBuf},
+				addonsWriter:   mockWriteCloser{w: addonsBuf},
 				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
 					return m.mft, nil
 				},
@@ -278,7 +278,7 @@ count: 1`
 				newInterpolator: func(_, _ string) interpolator {
 					return m.interpolator
 				},
-				newTplGenerator: func(_ *packageSvcOpts) (workloadTemplateGenerator, error) {
+				newStackGenerator: func(_ *packageSvcOpts) (workloadStackGenerator, error) {
 					return m.generator, nil
 				},
 				envFeaturesDescriber: m.envFeaturesDescriber,
