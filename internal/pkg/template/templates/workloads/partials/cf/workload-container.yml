@@ -33,11 +33,7 @@
   {{- if and (eq $nlbListener.TargetContainer .WorkloadName) (ne $nlbListener.TargetPort .NLB.MainContainerPort)}}
   {{/*No need to add additional port if the target port is the same as image port*/}}
     - ContainerPort: {{$nlbListener.TargetPort}}
-      {{- if eq $nlbListener.Protocol "UDP" }}
-      Protocol: udp
-      {{- else }}
-      Protocol: tcp
-      {{- end }}
+      Protocol: {{if eq $nlbListener.Protocol "UDP"}}udp{{else}}tcp{{end}}
   {{- end}}
 {{- end}}
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
