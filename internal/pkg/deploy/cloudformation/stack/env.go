@@ -94,9 +94,6 @@ func (e *EnvStackConfig) Template() (string, error) {
 		}
 		forceUpdateID = id.String()
 	}
-	if err != nil {
-		return "", err
-	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:              e.in.App.Name,
 		EnvName:              e.in.Name,

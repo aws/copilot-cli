@@ -134,17 +134,6 @@ func (cfg *EnvironmentConfig) EnvSecurityGroup() (*securityGroupConfig, bool) {
 	return nil, false
 }
 
-//Validate checks for required parameters in the security group rules.
-func (cfg securityGroupRule) Validate() error {
-	if cfg.CidrIP == "" {
-		return fmt.Errorf(`cidr field is required`)
-	}
-	if cfg.IpProtocol == "" {
-		return fmt.Errorf(`ip_protocol field is required`)
-	}
-	return nil
-}
-
 type environmentCDNConfig struct {
 	Enabled   *bool
 	CDNConfig advancedCDNConfig // mutually exclusive with Enabled
