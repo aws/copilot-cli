@@ -929,8 +929,7 @@ func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput
 		return "", fmt.Errorf("read env file %s: %w", path, err)
 	}
 	reader := bytes.NewReader(content)
-	// use filepath.Base to prevent cryptic errors in the ecs agent for paths like "..\magic.env"
-	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.EnvFiles(filepath.Base(path), content), reader)
+	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.EnvFiles(path, content), reader)
 	if err != nil {
 		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", path, d.resources.S3Bucket, err)
 	}

@@ -1034,8 +1034,7 @@ func (o *runTaskOpts) pushEnvFileToS3(app *config.Application, region string) (s
 	reader := bytes.NewReader(content)
 
 	uploader := o.configureUploader(o.sess)
-	// use filepath.Base to prevent cryptic errors in the ecs agent for paths like "..\magic.env"
-	url, err := uploader.Upload(resources.S3Bucket, artifactpath.EnvFiles(filepath.Base(o.envFile), content), reader)
+	url, err := uploader.Upload(resources.S3Bucket, artifactpath.EnvFiles(o.envFile, content), reader)
 	if err != nil {
 		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", o.envFile, resources.S3Bucket, err)
 	}
