@@ -71,6 +71,16 @@ func (cfg environmentVPCConfig) validate() error {
 	if err := cfg.SecurityGroupConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "security group rules": %w`, err)
 	}
+	for _, ingress := range cfg.SecurityGroupConfig.Ingress {
+		if err := ingress.validate(); err != nil {
+			return err
+		}
+	}
+	for _, egress := range cfg.SecurityGroupConfig.Egress {
+		if err := egress.validate(); err != nil {
+			return err
+		}
+	}
 	if cfg.imported() {
 		if err := cfg.validateImportedVPC(); err != nil {
 			return fmt.Errorf(`validate "subnets" for an imported VPC: %w`, err)
@@ -86,7 +96,6 @@ func (cfg environmentVPCConfig) validate() error {
 
 // validate is a no-op for securityGroupRule.
 func (cfg securityGroupRule) validate() error {
-	//no-op
 	return nil
 }
 
