@@ -94,7 +94,6 @@ func (p *Pipeline) JSONString() (string, error) {
 // HumanString returns the stringified Pipeline struct with human readable format.
 func (p *Pipeline) HumanString() string {
 	var b bytes.Buffer
-	// TODO tweak the spacing
 	writer := tabwriter.NewWriter(&b, minCellWidth, tabWidth, cellPaddingWidth, paddingChar, noAdditionalFormatting)
 	fmt.Fprint(writer, color.Bold.Sprint("About\n\n"))
 	writer.Flush()
