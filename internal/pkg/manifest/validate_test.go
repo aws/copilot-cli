@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadBalancedWebService_Validate(t *testing.T) {
+func TestLoadBalancedWebService_validate(t *testing.T) {
 	testImageConfig := ImageWithPortAndHealthcheck{
 		ImageWithPort: ImageWithPort{
 			Image: Image{
@@ -344,7 +344,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.lbConfig.Validate()
+			gotErr := tc.lbConfig.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -360,7 +360,7 @@ func TestLoadBalancedWebService_Validate(t *testing.T) {
 	}
 }
 
-func TestBackendService_Validate(t *testing.T) {
+func TestBackendService_validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheckAndOptionalPort{
 		ImageWithOptionalPort: ImageWithOptionalPort{
 			Image: Image{
@@ -568,7 +568,7 @@ func TestBackendService_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -584,7 +584,7 @@ func TestBackendService_Validate(t *testing.T) {
 	}
 }
 
-func TestRequestDrivenWebService_Validate(t *testing.T) {
+func TestRequestDrivenWebService_validate(t *testing.T) {
 	testCases := map[string]struct {
 		config RequestDrivenWebService
 
@@ -711,7 +711,7 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
 				return
@@ -726,7 +726,7 @@ func TestRequestDrivenWebService_Validate(t *testing.T) {
 	}
 }
 
-func TestWorkerService_Validate(t *testing.T) {
+func TestWorkerService_validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheck{
 		Image: Image{
 			Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
@@ -916,7 +916,7 @@ func TestWorkerService_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -932,7 +932,7 @@ func TestWorkerService_Validate(t *testing.T) {
 	}
 }
 
-func TestScheduledJob_Validate(t *testing.T) {
+func TestScheduledJob_validate(t *testing.T) {
 	testImageConfig := ImageWithHealthcheck{
 		Image: Image{
 			Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
@@ -1088,7 +1088,7 @@ func TestScheduledJob_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1104,7 +1104,7 @@ func TestScheduledJob_Validate(t *testing.T) {
 	}
 }
 
-func TestPipelineManifest_Validate(t *testing.T) {
+func TestPipelineManifest_validate(t *testing.T) {
 	testCases := map[string]struct {
 		Pipeline Pipeline
 
@@ -1151,7 +1151,7 @@ func TestPipelineManifest_Validate(t *testing.T) {
 	}
 }
 
-func TestDeployments_Validate(t *testing.T) {
+func TestDeployments_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     Deployments
 		wanted error
@@ -1176,7 +1176,7 @@ func TestDeployments_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			actual := tc.in.Validate()
+			actual := tc.in.validate()
 
 			if tc.wanted == nil {
 				require.NoError(t, actual)
@@ -1187,7 +1187,7 @@ func TestDeployments_Validate(t *testing.T) {
 	}
 }
 
-func TestImageWithPort_Validate(t *testing.T) {
+func TestImageWithPort_validate(t *testing.T) {
 	testCases := map[string]struct {
 		ImageWithPort ImageWithPort
 
@@ -1204,7 +1204,7 @@ func TestImageWithPort_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.ImageWithPort.Validate()
+			gotErr := tc.ImageWithPort.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1215,7 +1215,7 @@ func TestImageWithPort_Validate(t *testing.T) {
 	}
 }
 
-func TestImage_Validate(t *testing.T) {
+func TestImage_validate(t *testing.T) {
 	testCases := map[string]struct {
 		Image Image
 
@@ -1247,7 +1247,7 @@ func TestImage_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.Image.Validate()
+			gotErr := tc.Image.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1263,7 +1263,7 @@ func TestImage_Validate(t *testing.T) {
 	}
 }
 
-func TestDependsOn_Validate(t *testing.T) {
+func TestDependsOn_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     DependsOn
 		wanted error
@@ -1277,7 +1277,7 @@ func TestDependsOn_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -1288,7 +1288,7 @@ func TestDependsOn_Validate(t *testing.T) {
 	}
 }
 
-func TestRoutingRule_Validate(t *testing.T) {
+func TestRoutingRule_validate(t *testing.T) {
 	testCases := map[string]struct {
 		RoutingRule RoutingRuleConfiguration
 
@@ -1353,7 +1353,7 @@ func TestRoutingRule_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.RoutingRule.Validate()
+			gotErr := tc.RoutingRule.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1369,7 +1369,7 @@ func TestRoutingRule_Validate(t *testing.T) {
 	}
 }
 
-func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
+func TestNetworkLoadBalancerConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
 		nlb NetworkLoadBalancerConfiguration
 
@@ -1445,7 +1445,7 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.nlb.Validate()
+			gotErr := tc.nlb.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1461,7 +1461,7 @@ func TestNetworkLoadBalancerConfiguration_Validate(t *testing.T) {
 	}
 }
 
-func TestAdvancedAlias_Validate(t *testing.T) {
+func TestAdvancedAlias_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     AdvancedAlias
 		wanted error
@@ -1475,7 +1475,7 @@ func TestAdvancedAlias_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -1486,7 +1486,7 @@ func TestAdvancedAlias_Validate(t *testing.T) {
 	}
 }
 
-func TestIPNet_Validate(t *testing.T) {
+func TestIPNet_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     IPNet
 		wanted error
@@ -1498,7 +1498,7 @@ func TestIPNet_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -1509,7 +1509,7 @@ func TestIPNet_Validate(t *testing.T) {
 	}
 }
 
-func TestTaskConfig_Validate(t *testing.T) {
+func TestTaskConfig_validate(t *testing.T) {
 	perc := Percentage(70)
 	mockConfig := ScalingConfigOrT[Percentage]{
 		Value: &perc,
@@ -1565,7 +1565,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.TaskConfig.Validate()
+			gotErr := tc.TaskConfig.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1581,7 +1581,7 @@ func TestTaskConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestPlatformArgsOrString_Validate(t *testing.T) {
+func TestPlatformArgsOrString_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     PlatformArgsOrString
 		wanted error
@@ -1643,7 +1643,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -1654,7 +1654,7 @@ func TestPlatformArgsOrString_Validate(t *testing.T) {
 	}
 }
 
-func TestScalingConfigOrT_Validate(t *testing.T) {
+func TestScalingConfigOrT_validate(t *testing.T) {
 
 	var (
 		time = 60 * time.Second
@@ -1687,7 +1687,7 @@ func TestScalingConfigOrT_Validate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.ScalingConfig.Validate()
+			gotErr := tc.ScalingConfig.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1703,7 +1703,7 @@ func TestScalingConfigOrT_Validate(t *testing.T) {
 	}
 }
 
-func TestAdvancedCount_Validate(t *testing.T) {
+func TestAdvancedCount_validate(t *testing.T) {
 	var (
 		perc        = Percentage(70)
 		invalidPerc = Percentage(-1)
@@ -1928,7 +1928,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.AdvancedCount.Validate()
+			gotErr := tc.AdvancedCount.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -1944,7 +1944,7 @@ func TestAdvancedCount_Validate(t *testing.T) {
 	}
 }
 
-func TestPercentage_Validate(t *testing.T) {
+func TestPercentage_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     Percentage
 		wanted error
@@ -1956,7 +1956,7 @@ func TestPercentage_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -1967,7 +1967,7 @@ func TestPercentage_Validate(t *testing.T) {
 	}
 }
 
-func TestQueueScaling_Validate(t *testing.T) {
+func TestQueueScaling_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     QueueScaling
 		wanted error
@@ -2001,7 +2001,7 @@ func TestQueueScaling_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -2012,7 +2012,7 @@ func TestQueueScaling_Validate(t *testing.T) {
 	}
 }
 
-func TestIntRangeBand_Validate(t *testing.T) {
+func TestIntRangeBand_validate(t *testing.T) {
 	testCases := map[string]struct {
 		IntRangeBand IntRangeBand
 
@@ -2029,7 +2029,7 @@ func TestIntRangeBand_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.IntRangeBand.Validate()
+			gotErr := tc.IntRangeBand.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -2040,7 +2040,7 @@ func TestIntRangeBand_Validate(t *testing.T) {
 	}
 }
 
-func TestRangeConfig_Validate(t *testing.T) {
+func TestRangeConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		RangeConfig RangeConfig
 
@@ -2062,7 +2062,7 @@ func TestRangeConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.RangeConfig.Validate()
+			gotErr := tc.RangeConfig.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -2073,7 +2073,7 @@ func TestRangeConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestStorage_Validate(t *testing.T) {
+func TestStorage_validate(t *testing.T) {
 	testCases := map[string]struct {
 		Storage Storage
 
@@ -2156,7 +2156,7 @@ func TestStorage_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.Storage.Validate()
+			gotErr := tc.Storage.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -2172,7 +2172,7 @@ func TestStorage_Validate(t *testing.T) {
 	}
 }
 
-func TestVolume_Validate(t *testing.T) {
+func TestVolume_validate(t *testing.T) {
 	testCases := map[string]struct {
 		Volume Volume
 
@@ -2192,7 +2192,7 @@ func TestVolume_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.Volume.Validate()
+			gotErr := tc.Volume.validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -2203,7 +2203,7 @@ func TestVolume_Validate(t *testing.T) {
 	}
 }
 
-func TestEFSVolumeConfiguration_Validate(t *testing.T) {
+func TestEFSVolumeConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
 		EFSVolumeConfiguration EFSVolumeConfiguration
 
@@ -2253,7 +2253,7 @@ func TestEFSVolumeConfiguration_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.EFSVolumeConfiguration.Validate()
+			gotErr := tc.EFSVolumeConfiguration.validate()
 
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
@@ -2264,7 +2264,7 @@ func TestEFSVolumeConfiguration_Validate(t *testing.T) {
 	}
 }
 
-func TestSidecarConfig_Validate(t *testing.T) {
+func TestSidecarConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		config SidecarConfig
 
@@ -2289,7 +2289,7 @@ func TestSidecarConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -2300,7 +2300,7 @@ func TestSidecarConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestSidecarMountPoint_Validate(t *testing.T) {
+func TestSidecarMountPoint_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     SidecarMountPoint
 		wanted error
@@ -2312,7 +2312,7 @@ func TestSidecarMountPoint_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -2323,7 +2323,7 @@ func TestSidecarMountPoint_Validate(t *testing.T) {
 	}
 }
 
-func TestMountPointOpts_Validate(t *testing.T) {
+func TestMountPointOpts_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     MountPointOpts
 		wanted error
@@ -2341,7 +2341,7 @@ func TestMountPointOpts_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -2352,7 +2352,7 @@ func TestMountPointOpts_Validate(t *testing.T) {
 	}
 }
 
-func TestNetworkConfig_Validate(t *testing.T) {
+func TestNetworkConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		config NetworkConfig
 
@@ -2371,7 +2371,7 @@ func TestNetworkConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -2382,7 +2382,7 @@ func TestNetworkConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestRequestDrivenWebServiceNetworkConfig_Validate(t *testing.T) {
+func TestRequestDrivenWebServiceNetworkConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		config RequestDrivenWebServiceNetworkConfig
 
@@ -2401,7 +2401,7 @@ func TestRequestDrivenWebServiceNetworkConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -2412,7 +2412,7 @@ func TestRequestDrivenWebServiceNetworkConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestRdwsVpcConfig_Validate(t *testing.T) {
+func TestRdwsVpcConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		config rdwsVpcConfig
 
@@ -2429,7 +2429,7 @@ func TestRdwsVpcConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -2440,7 +2440,7 @@ func TestRdwsVpcConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestVpcConfig_Validate(t *testing.T) {
+func TestVpcConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		config vpcConfig
 
@@ -2457,7 +2457,7 @@ func TestVpcConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -2468,7 +2468,7 @@ func TestVpcConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestPlacementString_Validate(t *testing.T) {
+func TestPlacementString_validate(t *testing.T) {
 	mockEmptyPlacement := PlacementString("")
 	mockInvalidPlacement := PlacementString("external")
 	testCases := map[string]struct {
@@ -2486,7 +2486,7 @@ func TestPlacementString_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -2497,7 +2497,7 @@ func TestPlacementString_Validate(t *testing.T) {
 	}
 }
 
-func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
+func TestAppRunnerInstanceConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		config            AppRunnerInstanceConfig
 		wantedErrorPrefix string
@@ -2554,7 +2554,7 @@ func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -2567,7 +2567,7 @@ func TestAppRunnerInstanceConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestObservability_Validate(t *testing.T) {
+func TestObservability_validate(t *testing.T) {
 	testCases := map[string]struct {
 		config            Observability
 		wantedErrorPrefix string
@@ -2589,7 +2589,7 @@ func TestObservability_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.NotNil(t, gotErr)
@@ -2601,7 +2601,7 @@ func TestObservability_Validate(t *testing.T) {
 	}
 }
 
-func TestJobTriggerConfig_Validate(t *testing.T) {
+func TestJobTriggerConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     *JobTriggerConfig
 		wanted error
@@ -2613,7 +2613,7 @@ func TestJobTriggerConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -2624,7 +2624,7 @@ func TestJobTriggerConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestPublishConfig_Validate(t *testing.T) {
+func TestPublishConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		config PublishConfig
 
@@ -2641,7 +2641,7 @@ func TestPublishConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -2652,7 +2652,7 @@ func TestPublishConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestTopic_Validate(t *testing.T) {
+func TestTopic_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     Topic
 		wanted error
@@ -2670,7 +2670,7 @@ func TestTopic_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -2681,7 +2681,7 @@ func TestTopic_Validate(t *testing.T) {
 	}
 }
 
-func TestSubscribeConfig_Validate(t *testing.T) {
+func TestSubscribeConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
 		config SubscribeConfig
 
@@ -2700,7 +2700,7 @@ func TestSubscribeConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.config.Validate()
+			gotErr := tc.config.validate()
 
 			if tc.wantedErrorPrefix != "" {
 				require.Contains(t, gotErr.Error(), tc.wantedErrorPrefix)
@@ -2711,7 +2711,7 @@ func TestSubscribeConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestTopicSubscription_Validate(t *testing.T) {
+func TestTopicSubscription_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     TopicSubscription
 		wanted error
@@ -2736,7 +2736,7 @@ func TestTopicSubscription_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -2747,7 +2747,7 @@ func TestTopicSubscription_Validate(t *testing.T) {
 	}
 }
 
-func TestOverrideRule_Validate(t *testing.T) {
+func TestOverrideRule_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in     OverrideRule
 		wanted error
@@ -2761,7 +2761,7 @@ func TestOverrideRule_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := tc.in.Validate()
+			err := tc.in.validate()
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
@@ -3042,7 +3042,7 @@ func TestValidateARM(t *testing.T) {
 	}
 }
 
-func TestDeploymentConfiguration_Validate(t *testing.T) {
+func TestDeploymentConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
 		deployConfig DeploymentConfiguration
 		wanted       string
@@ -3069,7 +3069,7 @@ func TestDeploymentConfiguration_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.deployConfig.Validate()
+			gotErr := tc.deployConfig.validate()
 
 			if tc.wanted != "" {
 				require.NotNil(t, gotErr)

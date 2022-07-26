@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -19,7 +20,7 @@ func TestEnvironment_Validate(t *testing.T) {
 	}{
 		"malformed network": {
 			in: Environment{
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							ID:   stringP("vpc-123"),
@@ -45,17 +46,17 @@ func TestEnvironment_Validate(t *testing.T) {
 	}
 }
 
-func TestEnvironmentConfig_Validate(t *testing.T) {
+func TestEnvironmentConfig_validate(t *testing.T) {
 	mockPublicSubnet1CIDR := IPNet("10.0.0.0/24")
 	mockPublicSubnet2CIDR := IPNet("10.0.1.0/24")
 	mockPrivateSubnet1CIDR := IPNet("10.0.3.0/24")
 	mockPrivateSubnet2CIDR := IPNet("10.0.4.0/24")
 	testCases := map[string]struct {
-		in          environmentConfig
+		in          EnvironmentConfig
 		wantedError string
 	}{
 		"error if internal ALB subnet placement specified with adjusted vpc": {
-			in: environmentConfig{
+			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						CIDR: ipNetP("apple cider"),
@@ -84,7 +85,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 					},
 				},
 
-				HTTPConfig: environmentHTTPConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
 					Private: privateHTTPConfig{
 						InternalALBSubnets: []string{"mockSubnet"},
 					},
@@ -92,8 +93,27 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 			},
 			wantedError: "in order to specify internal ALB subnet placement, subnets must be imported",
 		},
+		"error if security group ingress is limited to a cdn distribution not enabled": {
+			in: EnvironmentConfig{
+				CDNConfig: environmentCDNConfig{
+					Enabled: aws.Bool(false),
+				},
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						SecurityGroupConfig: ALBSecurityGroupsConfig{
+							Ingress: Ingress{
+								RestrictiveIngress: RestrictiveIngress{
+									CDNIngress: aws.Bool(true),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: "CDN must be enabled to limit security group ingress to CloudFront",
+		},
 		"error if subnets specified for internal ALB placement don't exist": {
-			in: environmentConfig{
+			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						ID: aws.String("mockID"),
@@ -105,7 +125,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 						},
 					},
 				},
-				HTTPConfig: environmentHTTPConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
 					Private: privateHTTPConfig{
 						InternalALBSubnets: []string{"nonexistentSubnet"},
 					},
@@ -114,7 +134,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 			wantedError: "subnet(s) specified for internal ALB placement not imported",
 		},
 		"valid case with internal ALB placement": {
-			in: environmentConfig{
+			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						ID: aws.String("mockID"),
@@ -130,7 +150,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 						},
 					},
 				},
-				HTTPConfig: environmentHTTPConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
 					Private: privateHTTPConfig{
 						InternalALBSubnets: []string{"existentSubnet", "anotherExistentSubnet"},
 					},
@@ -140,7 +160,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedError != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedError)
@@ -151,7 +171,7 @@ func TestEnvironmentConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestEnvironmentNetworkConfig_Validate(t *testing.T) {
+func TestEnvironmentNetworkConfig_validate(t *testing.T) {
 	mockVPCCIDR := IPNet("10.0.0.0/16")
 	testCases := map[string]struct {
 		in                   environmentNetworkConfig
@@ -170,7 +190,7 @@ func TestEnvironmentNetworkConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedErrorMsgPrefix != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
@@ -181,7 +201,7 @@ func TestEnvironmentNetworkConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestEnvironmentVPCConfig_Validate(t *testing.T) {
+func TestEnvironmentVPCConfig_validate(t *testing.T) {
 	var (
 		mockVPCCIDR            = IPNet("10.0.0.0/16")
 		mockPublicSubnet1CIDR  = IPNet("10.0.0.0/24")
@@ -511,7 +531,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedErr == nil && tc.wantedErrorMsgPrefix == "" {
 				require.NoError(t, gotErr)
 			}
@@ -526,7 +546,7 @@ func TestEnvironmentVPCConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestSubnetsConfiguration_Validate(t *testing.T) {
+func TestSubnetsConfiguration_validate(t *testing.T) {
 	var (
 		mockPublicSubnet1CIDR  = IPNet("10.0.0.0/24")
 		mockPrivateSubnet1CIDR = IPNet("10.0.3.0/24")
@@ -574,7 +594,7 @@ func TestSubnetsConfiguration_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedErrorMsgPrefix != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
@@ -585,7 +605,7 @@ func TestSubnetsConfiguration_Validate(t *testing.T) {
 	}
 }
 
-func TestCDNConfiguration_Validate(t *testing.T) {
+func TestCDNConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in          environmentCDNConfig
 		wantedError error
@@ -606,7 +626,7 @@ func TestCDNConfiguration_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedError != nil {
 				require.Error(t, gotErr)
 				require.EqualError(t, tc.wantedError, gotErr.Error())
@@ -617,7 +637,7 @@ func TestCDNConfiguration_Validate(t *testing.T) {
 	}
 }
 
-func TestSubnetConfiguration_Validate(t *testing.T) {
+func TestSubnetConfiguration_validate(t *testing.T) {
 	mockCIDR := IPNet("10.0.0.0/24")
 	testCases := map[string]struct {
 		in          subnetConfiguration
@@ -669,7 +689,7 @@ func TestSubnetConfiguration_Validate(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedError != nil {
 				require.Error(t, gotErr)
 				require.EqualError(t, tc.wantedError, gotErr.Error())
@@ -680,21 +700,22 @@ func TestSubnetConfiguration_Validate(t *testing.T) {
 	}
 }
 
-func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
+func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 	testCases := map[string]struct {
-		in                   environmentHTTPConfig
+		in                   EnvironmentHTTPConfig
 		wantedErrorMsgPrefix string
+		wantedError          error
 	}{
 		"malformed public certificate": {
-			in: environmentHTTPConfig{
-				Public: publicHTTPConfig{
+			in: EnvironmentHTTPConfig{
+				Public: PublicHTTPConfig{
 					Certificates: []string{"arn:aws:weird-little-arn"},
 				},
 			},
 			wantedErrorMsgPrefix: `parse "certificates[0]": `,
 		},
 		"malformed private certificate": {
-			in: environmentHTTPConfig{
+			in: EnvironmentHTTPConfig{
 				Private: privateHTTPConfig{
 					Certificates: []string{"arn:aws:weird-little-arn"},
 				},
@@ -702,26 +723,55 @@ func TestEnvironmentHTTPConfig_Validate(t *testing.T) {
 			wantedErrorMsgPrefix: `parse "certificates[0]": `,
 		},
 		"success with public cert": {
-			in: environmentHTTPConfig{
-				Public: publicHTTPConfig{
+			in: EnvironmentHTTPConfig{
+				Public: PublicHTTPConfig{
 					Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
 				},
 			},
 		},
 		"success with private cert": {
-			in: environmentHTTPConfig{
+			in: EnvironmentHTTPConfig{
 				Private: privateHTTPConfig{
 					Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
 				},
 			},
 		},
+		"public http config with invalid security group ingress": {
+			in: EnvironmentHTTPConfig{
+				Public: PublicHTTPConfig{
+					SecurityGroupConfig: ALBSecurityGroupsConfig{
+						Ingress: Ingress{
+							VPCIngress: aws.Bool(true),
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "public": a public load balancer already allows vpc ingress`),
+		},
+		"private http config with invalid security group ingress": {
+			in: EnvironmentHTTPConfig{
+				Private: privateHTTPConfig{
+					SecurityGroupsConfig: securityGroupsConfig{
+						Ingress: Ingress{
+							RestrictiveIngress: RestrictiveIngress{
+								CDNIngress: aws.Bool(true),
+							},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "private": an internal load balancer cannot have restrictive ingress fields`),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			gotErr := tc.in.Validate()
+			gotErr := tc.in.validate()
 			if tc.wantedErrorMsgPrefix != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+			} else if tc.wantedError != nil {
+				require.Error(t, gotErr)
+				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
 				require.NoError(t, gotErr)
 			}

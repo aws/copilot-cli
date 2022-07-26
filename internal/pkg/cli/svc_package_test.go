@@ -270,7 +270,7 @@ count: 1`
 				templateWriter: mockWriteCloser{w: stackBuf},
 				paramsWriter:   mockWriteCloser{w: paramsBuf},
 				addonsWriter:   mockWriteCloser{w: addonsBuf},
-				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
+				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mft, nil
 				},
 				rootUserARN: mockARN,

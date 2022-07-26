@@ -368,7 +368,7 @@ func TestEC2_CloudFrontManagedPrefixListId(t *testing.T) {
 
 		wantedError          error
 		wantedErrorMsgPrefix string
-		wantedId             *string
+		wantedId             string
 	}{
 		"query returns error": {
 			mockEC2Client: func(m *mocks.Mockapi) {
@@ -418,7 +418,7 @@ func TestEC2_CloudFrontManagedPrefixListId(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedId: aws.String(mockPrefixListId),
+			wantedId: mockPrefixListId,
 		},
 	}
 
