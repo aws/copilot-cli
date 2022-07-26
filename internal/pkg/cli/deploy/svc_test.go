@@ -371,7 +371,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 
 			m := &deployMocks{
 				mockUploader:           mocks.NewMockuploader(ctrl),
-				mockAddons:             mocks.NewMockStackBuilder(ctrl),
+				mockAddons:             mocks.NewMockstackBuilder(ctrl),
 				mockImageBuilderPusher: mocks.NewMockimageBuilderPusher(ctrl),
 				mockFileReader:         mocks.NewMockfileReader(ctrl),
 			}
