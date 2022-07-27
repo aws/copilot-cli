@@ -1,0 +1,26 @@
+# https://github.com/marketplace/actions/close-stale-issues
+name: "Stale issues"
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v5
+        with:
+          # issue configuration
+          stale-issue-message: "This issue is stale because it has been open 120 days with no activity. Remove the stale label or add a comment or this will be closed in 14 days."
+          days-before-issue-stale: 60
+          days-before-issue-close: 14
+          stale-issue-label: "stale"
+          any-of-issue-labels: "pending/question"
+
+          # pr configuration (disabled)
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
