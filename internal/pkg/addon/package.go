@@ -62,6 +62,10 @@ type packagePropertyConfig struct {
 	ForceZip bool
 }
 
+func (p *packagePropertyConfig) isStringReplacement() bool {
+	return len(p.BucketNameProperty) > 0 || len(p.ObjectKeyProperty) > 0
+}
+
 // resourcePackageConfig maps a CloudFormation resource type to configuration
 // for how to transform it's properties.
 //
@@ -238,7 +242,7 @@ func (a *Addons) packageProperty(resourceProperties *yaml.Node, pkgCfg packagePr
 		return fmt.Errorf("upload asset: %w", err)
 	}
 
-	if len(pkgCfg.BucketNameProperty) == 0 && len(pkgCfg.ObjectKeyProperty) == 0 {
+	if pkgCfg.isStringReplacement() {
 		target.Value = s3.Location(obj.Bucket, obj.Key)
 		return nil
 	}
