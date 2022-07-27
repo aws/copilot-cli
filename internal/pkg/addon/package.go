@@ -23,7 +23,7 @@ type uploader interface {
 //    Properties:
 //      <Property>: file/path
 //
-// Without BucketNameProprty and ObjectKeyProperty, `file/path` is directly replaced with
+// Without BucketNameProperty and ObjectKeyProperty, `file/path` is directly replaced with
 // the S3 location the contents were uploaded to, resulting in this:
 //  MyResource:
 //    Type: AWS::Resource::Type
@@ -57,13 +57,17 @@ type packagePropertyConfig struct {
 	// a submap will not be created and an S3 location URI will replace value of Property.
 	ObjectKeyProperty string
 
-	// ForceZip will force a zip file to be created even if the given file URI
+	// ForceZip will force a zip file to be created even if the given file path
 	// points to a file. Directories are always zipped.
 	ForceZip bool
 }
 
 // resourcePackageConfig maps a CloudFormation resource type to configuration
 // for how to transform it's properties.
+//
+// This list of resources should stay in sync with
+// https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html,
+// other than the AWS::Serverless resources, which are not supported in Copilot.
 //
 // TODO(dnrnd) AWS::Include.Location
 var resourcePackageConfig = map[string][]packagePropertyConfig{
@@ -160,7 +164,7 @@ func (a *Addons) packageTemplate(tmpl *cfnTemplate) (*cfnTemplate, error) {
 		props := yamlMapGet(node, "Properties")
 		for _, conf := range confs {
 			if err := a.packageProperty(props, conf); err != nil {
-				return nil, fmt.Errorf("transform property %s property for %s: %w", name, conf.Property, err)
+				return nil, fmt.Errorf("package property %q of %q: %w", strings.Join(conf.Property, "."), name, err)
 			}
 		}
 	}
@@ -189,34 +193,34 @@ func yamlMapGet(node *yaml.Node, key string) *yaml.Node {
 	return &yaml.Node{}
 }
 
-func (a *Addons) packageProperty(properties *yaml.Node, conf packagePropertyConfig) error {
-	node := properties
-	for _, key := range conf.Property {
-		node = yamlMapGet(node, key)
+func (a *Addons) packageProperty(resourceProperties *yaml.Node, pkgCfg packagePropertyConfig) error {
+	target := resourceProperties
+	for _, key := range pkgCfg.Property {
+		target = yamlMapGet(target, key)
 	}
 
-	if node.IsZero() || node.Kind != yaml.ScalarNode {
+	if target.IsZero() || target.Kind != yaml.ScalarNode {
 		// only transform if the node is a scalar node
 		return nil
 	}
 
-	if !isFilePath(node.Value) {
+	if !isFilePath(target.Value) {
 		return nil
 	}
 
-	obj, err := a.uploadAddonAsset(node.Value, conf.ForceZip)
+	obj, err := a.uploadAddonAsset(target.Value, pkgCfg.ForceZip)
 	if err != nil {
 		return fmt.Errorf("upload asset: %w", err)
 	}
 
-	if len(conf.BucketNameProperty) == 0 && len(conf.ObjectKeyProperty) == 0 {
-		node.Value = s3.Location(obj.Bucket, obj.Key)
+	if len(pkgCfg.BucketNameProperty) == 0 && len(pkgCfg.ObjectKeyProperty) == 0 {
+		target.Value = s3.Location(obj.Bucket, obj.Key)
 		return nil
 	}
 
-	return node.Encode(map[string]string{
-		conf.BucketNameProperty: obj.Bucket,
-		conf.ObjectKeyProperty:  obj.Key,
+	return target.Encode(map[string]string{
+		pkgCfg.BucketNameProperty: obj.Bucket,
+		pkgCfg.ObjectKeyProperty:  obj.Key,
 	})
 }
 
