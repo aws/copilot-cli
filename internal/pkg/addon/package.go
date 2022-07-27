@@ -63,7 +63,7 @@ type packagePropertyConfig struct {
 }
 
 func (p *packagePropertyConfig) isStringReplacement() bool {
-	return len(p.BucketNameProperty) > 0 || len(p.ObjectKeyProperty) > 0
+	return len(p.BucketNameProperty) == 0 && len(p.ObjectKeyProperty) == 0
 }
 
 // resourcePackageConfig maps a CloudFormation resource type to configuration
