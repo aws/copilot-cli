@@ -342,6 +342,15 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 		ManagerRoleARN: mockManagerARN,
 	}
 
+	mockSess := &session.Session{
+		Config: &aws.Config{
+			Region: aws.String("mockRegion"),
+		},
+	}
+	mockRegionSet := map[string]struct{}{
+		aws.StringValue(mockSess.Config.Region): {},
+	}
+
 	mockAppEnvTask := &deploy.TaskStackInfo{
 		App:     mockApp,
 		Env:     mockEnvName,
@@ -351,9 +360,6 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 	}
 	mockDefaultTask := deploy.TaskStackInfo{
 		StackName: mockTaskStackName,
-	}
-	mockRegionSet := map[string]struct{}{
-		mockEnv.Region: {},
 	}
 	mockError := errors.New("some error")
 
@@ -373,12 +379,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			inName: mockTaskName,
 
 			setupMocks: func(m deleteTaskMocks) {
-				m.sess.EXPECT().FromRole(mockEnv.ManagerRoleARN, mockEnv.Region).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("mockRegion"),
-					},
-				}, nil)
-				m.sess.EXPECT().DefaultWithRegion("mockRegion").Return(&session.Session{}, nil)
+				m.sess.EXPECT().FromRole(mockEnv.ManagerRoleARN, mockEnv.Region).Return(mockSess, nil)
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
@@ -400,7 +401,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 
 			setupMocks: func(m deleteTaskMocks) {
 				gomock.InOrder(
-					m.sess.EXPECT().Default().Return(&session.Session{}, nil),
+					m.sess.EXPECT().Default().Return(mockSess, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecs.EXPECT().StopDefaultClusterTasks(mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
@@ -435,12 +436,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			wantedErr: errors.New("delete stack for task hide-snacks: some error"),
 
 			setupMocks: func(m deleteTaskMocks) {
-				m.sess.EXPECT().FromRole(mockEnv.ManagerRoleARN, mockEnv.Region).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("mockRegion"),
-					},
-				}, nil)
-				m.sess.EXPECT().DefaultWithRegion("mockRegion").Return(&session.Session{}, nil)
+				m.sess.EXPECT().FromRole(mockEnv.ManagerRoleARN, mockEnv.Region).Return(mockSess, nil)
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
@@ -463,12 +459,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 
 			setupMocks: func(m deleteTaskMocks) {
 				mockErrStackNotFound := awscfn.ErrStackNotFound{}
-				m.sess.EXPECT().FromRole(mockEnv.ManagerRoleARN, mockEnv.Region).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("mockRegion"),
-					},
-				}, nil)
-				m.sess.EXPECT().DefaultWithRegion("mockRegion").Return(&session.Session{}, nil)
+				m.sess.EXPECT().FromRole(mockEnv.ManagerRoleARN, mockEnv.Region).Return(mockSess, nil)
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
@@ -489,19 +480,14 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			wantedErr: errors.New("clear ECR repository for task hide-snacks: some error"),
 
 			setupMocks: func(m deleteTaskMocks) {
-				m.sess.EXPECT().FromRole(mockEnv.ManagerRoleARN, mockEnv.Region).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("mockRegion"),
-					},
-				}, nil)
-				m.sess.EXPECT().DefaultWithRegion("mockRegion").Return(&session.Session{}, nil)
+				m.sess.EXPECT().FromRole(mockEnv.ManagerRoleARN, mockEnv.Region).Return(mockSess, nil)
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecr.EXPECT().EmptyRepo(mockTaskRepoName, mockRegionSet).Return(nil),
+					m.ecr.EXPECT().EmptyRepo(mockTaskRepoName, mockRegionSet).Return(mockError),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
 			},
@@ -535,12 +521,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			wantedErr: errors.New("some error"),
 
 			setupMocks: func(m deleteTaskMocks) {
-				m.sess.EXPECT().FromRole(mockEnv.ManagerRoleARN, mockEnv.Region).Return(&session.Session{
-					Config: &aws.Config{
-						Region: aws.String("mockRegion"),
-					},
-				}, nil)
-				m.sess.EXPECT().DefaultWithRegion("mockRegion").Return(&session.Session{}, nil)
+				m.sess.EXPECT().FromRole(mockEnv.ManagerRoleARN, mockEnv.Region).Return(mockSess, nil)
 				gomock.InOrder(
 					m.store.EXPECT().GetEnvironment(mockApp, mockEnvName).Return(mockEnv, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),

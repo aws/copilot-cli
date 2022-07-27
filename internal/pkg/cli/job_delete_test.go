@@ -346,7 +346,6 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobTasksStopComplete, mockJobName, mockEnvName)),
 
-					mocks.sessProvider.EXPECT().DefaultWithRegion(gomock.Any()).Return(&session.Session{}, nil),
 					// emptyECRRepos
 					mocks.ecr.EXPECT().EmptyRepo(mockRepo, regionSet(mockEnvs)).Return(nil),
 					// removeJobFromApp

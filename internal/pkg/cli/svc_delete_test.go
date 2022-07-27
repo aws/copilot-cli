@@ -354,8 +354,6 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteComplete, mockSvcName, mockEnvName)),
 
-					mocks.sessProvider.EXPECT().DefaultWithRegion(gomock.Any()).Return(&session.Session{}, nil),
-
 					// emptyECRRepos
 					mocks.ecr.EXPECT().EmptyRepo(mockRepo, regionSet(mockEnvs)).Return(nil),
 
