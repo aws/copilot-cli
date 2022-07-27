@@ -94,11 +94,16 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 			ForceZip:           true,
 		},
 	},
-	"AWS::CloudFormation::Stack": {
+	"AWS::Serverless::Function": {
 		{
-			// This implementation does not recursively package
-			// the local template pointed to by TemplateURL.
-			Property: []string{"TemplateURL"},
+			Property: []string{"CodeUri"},
+			ForceZip: true,
+		},
+	},
+	"AWS::Serverless::LayerVersion": {
+		{
+			Property: []string{"ContentUri"},
+			ForceZip: true,
 		},
 	},
 	"AWS::AppSync::GraphQLSchema": {
@@ -122,11 +127,23 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 			Property: []string{"ResponseMappingTemplateS3Location"},
 		},
 	},
+	"AWS::Serverless::Api": {
+		{
+			Property: []string{"DefinitionUri"},
+		},
+	},
 	"AWS::ElasticBeanstalk::ApplicationVersion": {
 		{
 			Property:           []string{"SourceBundle"},
 			BucketNameProperty: "S3Bucket",
 			ObjectKeyProperty:  "S3Key",
+		},
+	},
+	"AWS::CloudFormation::Stack": {
+		{
+			// This implementation does not recursively package
+			// the local template pointed to by TemplateURL.
+			Property: []string{"TemplateURL"},
 		},
 	},
 	"AWS::Glue::Job": {
@@ -139,6 +156,14 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 			Property:           []string{"DefinitionS3Location"},
 			BucketNameProperty: "Bucket",
 			ObjectKeyProperty:  "Key",
+		},
+	},
+	"AWS::Serverless::StateMachine": {
+		{
+			Property:           []string{"DefinitionUri"},
+			BucketNameProperty: "Bucket",
+			ObjectKeyProperty:  "Key",
+			ForceZip:           true,
 		},
 	},
 	"AWS::CodeCommit::Repository": {
