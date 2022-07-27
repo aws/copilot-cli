@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *"
-
 permissions:
   issues: write
 
@@ -15,7 +14,7 @@ jobs:
       - uses: actions/stale@v5
         with:
           # issue configuration
-          stale-issue-message: "This issue is stale because it has been open 120 days with no activity. Remove the stale label or add a comment or this will be closed in 14 days."
+          stale-issue-message: "This issue is stale because it has been open 60 days with no activity. Remove the stale label or add a comment or this will be closed in 14 days."
           days-before-issue-stale: 60
           days-before-issue-close: 14
           stale-issue-label: "stale"
