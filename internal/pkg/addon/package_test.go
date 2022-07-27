@@ -14,8 +14,6 @@ import (
 )
 
 type addonMocks struct {
-	// uploader *mocks.Mockuploader
-	// ws *mocks.MockworkspaceReader
 }
 
 func TestPackage(t *testing.T) {
@@ -173,7 +171,7 @@ Resources:
 			err := yaml.Unmarshal([]byte(tc.inTemplate), tmpl)
 			require.NoError(t, err)
 
-			require.NoError(t, tmpl.packageTemplate(a))
+			require.NoError(t, tmpl.pkg(a))
 
 			buf := &bytes.Buffer{}
 			enc := yaml.NewEncoder(buf)

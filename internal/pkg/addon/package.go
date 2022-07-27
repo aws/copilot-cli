@@ -110,6 +110,11 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 			ForceZip: true,
 		},
 	},
+	"AWS::Serverless::Application": {
+		{
+			Property: []string{"Location"},
+		},
+	},
 	"AWS::AppSync::GraphQLSchema": {
 		{
 			Property: []string{"DefinitionS3Location"},
@@ -167,7 +172,6 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 			Property:           []string{"DefinitionUri"},
 			BucketNameProperty: "Bucket",
 			ObjectKeyProperty:  "Key",
-			ForceZip:           true,
 		},
 	},
 	"AWS::CodeCommit::Repository": {
@@ -180,7 +184,7 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 	},
 }
 
-func (t *cfnTemplate) packageTemplate(a *Addons) error {
+func (t *cfnTemplate) pkg(a *Addons) error {
 	resources := mappingNode(&t.Resources)
 
 	for name, node := range resources {

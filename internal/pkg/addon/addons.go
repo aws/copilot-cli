@@ -124,7 +124,7 @@ func (a *Addons) template() (string, error) {
 	}
 
 	if a.uploader != nil {
-		if err := mergedTemplate.packageTemplate(a); err != nil {
+		if err := mergedTemplate.pkg(a); err != nil {
 			return "", fmt.Errorf("package local artifacts: %s", err)
 		}
 	}
