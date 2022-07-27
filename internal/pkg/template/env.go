@@ -105,26 +105,31 @@ type EnvOpts struct {
 	ArtifactBucketARN    string
 	ArtifactBucketKeyARN string
 
-	VPCConfig                VPCConfig
-	PublicImportedCertARNs   []string
-	PrivateImportedCertARNs  []string
-	CustomInternalALBSubnets []string
-	AllowVPCIngress          bool
-	Telemetry                *Telemetry
-
-	CDNConfig *CDNConfig // If nil, no cdn is to be used
+	VPCConfig         VPCConfig
+	PublicHTTPConfig  HTTPConfig
+	PrivateHTTPConfig HTTPConfig
+	Telemetry         *Telemetry
+	CDNConfig         *CDNConfig
 
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
 	ForceUpdateID      string
 }
 
+// HTTPConfig represents configuration for a Load Balancer.
+type HTTPConfig struct {
+	CIDRPrefixListIDs []string
+	ImportedCertARNs  []string
+	CustomALBSubnets  []string
+}
+
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.
 type CDNConfig struct{}
 
 type VPCConfig struct {
-	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
-	Managed  ManagedVPC
+	Imported        *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
+	Managed         ManagedVPC
+	AllowVPCIngress bool
 }
 
 // ImportVPC holds the fields to import VPC resources.

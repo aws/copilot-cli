@@ -95,13 +95,13 @@ If specified, creates a dead letter queue and a redrive policy which routes mess
 <span class="parent-field">subscribe.</span><a id="subscribe-topics" href="#subscribe-topics" class="field">`topics`</a> <span class="type">Array of `topic`s</span>  
 Contains information about which SNS topics the worker service should subscribe to.
 
-<span class="parent-field">topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
+<span class="parent-field">subscribe.topics.topic</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
 Required. The name of the SNS topic to subscribe to.
 
-<span class="parent-field">topic.</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>  
+<span class="parent-field">subscribe.topics.topic</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>  
 Required. The service this SNS topic is exposed by. Together with the topic name, this uniquely identifies an SNS topic in the copilot environment.
 
-<span class="parent-field">topic.</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
+<span class="parent-field">subscribe.topics.topic</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
 Optional. Specify a SNS subscription filter policy to evaluate incoming message attributes against the policy.  
 The filter policy can be specified in JSON, for example:
 ```json
@@ -125,7 +125,7 @@ filter_policy:
 ```
 For additional information on how to write filter policies, see the [SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html).
 
-<span class="parent-field">topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>  
+<span class="parent-field">subscribe.topics.topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>  
 Optional. Specify SQS queue configuration for the topic. If specified as `true`, the queue will be created  with default configuration. Specify this field as a map for customization of certain attributes for this topic-specific queue.
 
 {% include 'image-config.en.md' %}
@@ -138,7 +138,9 @@ Optional. Specify SQS queue configuration for the topic. If specified as `true`,
 
 <div class="separator"></div>
 
-<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>  
+<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>
+The number of tasks that your service should maintain.
+
 If you specify a number:
 ```yaml
 count: 5
@@ -195,13 +197,13 @@ count:
 
 This will set your range as 1-10 as above, but will place the first two copies of your service on dedicated Fargate capacity. If your service scales to 3 or higher, the third and any additional copies will be placed on Spot until the maximum is reached.
 
-<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
 The minimum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
 The maximum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
 The desired count at which you wish to start placing your service using Fargate Spot capacity providers.
 
 <span class="parent-field">count.</span><a id="count-cooldown" href="#count-cooldown" class="field">`cooldown`</a> <span class="type">Map</span>

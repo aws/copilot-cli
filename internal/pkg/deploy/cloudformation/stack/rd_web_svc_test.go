@@ -108,11 +108,14 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			addons := mocks.NewMockaddons(ctrl)
+
 			stack, err := NewRequestDrivenWebService(RequestDrivenWebServiceConfig{
 				App:           tc.input.appInfo,
 				Env:           tc.input.env,
 				Manifest:      tc.input.mft,
 				RuntimeConfig: tc.input.rc,
+				Addons:        addons,
 			})
 
 			require.Equal(t, tc.wantedError, err)

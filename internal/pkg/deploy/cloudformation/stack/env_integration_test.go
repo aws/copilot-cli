@@ -30,8 +30,13 @@ func TestEnvStack_Template(t *testing.T) {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
+cdn: true
 http:
   public:
+    security_groups:
+      ingress:
+        restrict_to:
+          cdn: true
     certificates:
       - cert-1
       - cert-2
@@ -51,6 +56,7 @@ observability:
 						Name:                "demo",
 					},
 					Name:                 "test",
+					CIDRPrefixListIDs:    []string{"pl-mockid"},
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					CustomResourcesURLs: map[string]string{

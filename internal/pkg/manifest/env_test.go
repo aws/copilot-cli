@@ -37,7 +37,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							CIDR: ipNetP("10.0.0.0/16"),
@@ -94,7 +94,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							CIDR: ipNetP("10.0.0.0/16"),
@@ -144,7 +144,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							ID: stringP("vpc-3f139646"),
@@ -194,7 +194,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							Subnets: subnetsConfiguration{
@@ -209,8 +209,8 @@ func TestFromEnvConfig(t *testing.T) {
 							},
 						},
 					},
-					HTTPConfig: environmentHTTPConfig{
-						Public: publicHTTPConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
 							Certificates: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
 						},
 					},
@@ -231,9 +231,9 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				environmentConfig: environmentConfig{
-					HTTPConfig: environmentHTTPConfig{
-						Public: publicHTTPConfig{
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
 							Certificates: []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
 						},
 					},
@@ -258,7 +258,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							Subnets: subnetsConfiguration{
@@ -274,12 +274,12 @@ func TestFromEnvConfig(t *testing.T) {
 							},
 						},
 					},
-					HTTPConfig: environmentHTTPConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
 						Private: privateHTTPConfig{
 							InternalALBSubnets: []string{"subnet2"},
 							Certificates:       []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
 							SecurityGroupsConfig: securityGroupsConfig{
-								Ingress: ingress{
+								Ingress: Ingress{
 									VPCIngress: aws.Bool(false),
 								},
 							},
@@ -302,7 +302,7 @@ func TestFromEnvConfig(t *testing.T) {
 					Name: stringP("test"),
 					Type: stringP("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Observability: environmentObservability{
 						ContainerInsights: aws.Bool(false),
 					},
@@ -355,7 +355,7 @@ network:
 					Name: aws.String("test"),
 					Type: aws.String("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Network: environmentNetworkConfig{
 						VPC: environmentVPCConfig{
 							CIDR: &mockVPCCIDR,
@@ -398,7 +398,7 @@ observability:
 					Name: aws.String("prod"),
 					Type: aws.String("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					Observability: environmentObservability{
 						ContainerInsights: aws.Bool(true),
 					},
@@ -416,7 +416,7 @@ cdn: true
 					Name: aws.String("prod"),
 					Type: aws.String("Environment"),
 				},
-				environmentConfig: environmentConfig{
+				EnvironmentConfig: EnvironmentConfig{
 					CDNConfig: environmentCDNConfig{
 						Enabled: aws.Bool(true),
 					},
@@ -442,14 +442,14 @@ http:
 					Name: aws.String("prod"),
 					Type: aws.String("Environment"),
 				},
-				environmentConfig: environmentConfig{
-					HTTPConfig: environmentHTTPConfig{
-						Public: publicHTTPConfig{
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
 							Certificates: []string{"cert-1", "cert-2"},
 						},
 						Private: privateHTTPConfig{
 							SecurityGroupsConfig: securityGroupsConfig{
-								Ingress: ingress{
+								Ingress: Ingress{
 									VPCIngress: aws.Bool(false),
 								},
 							},
@@ -711,15 +711,15 @@ func TestSubnetsConfiguration_IsEmpty(t *testing.T) {
 
 func TestEnvironmentHTTPConfig_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
-		in     environmentHTTPConfig
+		in     EnvironmentHTTPConfig
 		wanted bool
 	}{
 		"empty": {
 			wanted: true,
 		},
 		"not empty": {
-			in: environmentHTTPConfig{
-				Public: publicHTTPConfig{
+			in: EnvironmentHTTPConfig{
+				Public: PublicHTTPConfig{
 					Certificates: []string{"mock-cert"},
 				},
 			},
@@ -735,14 +735,14 @@ func TestEnvironmentHTTPConfig_IsEmpty(t *testing.T) {
 
 func TestPublicHTTPConfig_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
-		in     publicHTTPConfig
+		in     PublicHTTPConfig
 		wanted bool
 	}{
 		"empty": {
 			wanted: true,
 		},
 		"not empty": {
-			in: publicHTTPConfig{
+			in: PublicHTTPConfig{
 				Certificates: []string{"mock-cert-1"},
 			},
 		},
