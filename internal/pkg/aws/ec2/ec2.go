@@ -135,7 +135,6 @@ func extractResource(label string) (*Resource, error) {
 		return nil, fmt.Errorf("extract resource ID from string: %s", label)
 	}
 	splitResource := strings.SplitN(label, " ", 2)
-	// TODO: switch to regex to make more robust
 	var name string
 	if len(splitResource) == 2 {
 		name = strings.Trim(splitResource[1], "()")
