@@ -310,7 +310,7 @@ type deleteSvcMocks struct {
 	appCFN         *mocks.MocksvcRemoverFromApp
 	spinner        *mocks.Mockprogress
 	svcCFN         *mocks.MockwlDeleter
-	ecr            *mocks.MockimageRemover
+	ecr            *mocks.MockimageRepoEmptier
 }
 
 func TestDeleteSvcOpts_Execute(t *testing.T) {
@@ -357,7 +357,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.sessProvider.EXPECT().DefaultWithRegion(gomock.Any()).Return(&session.Session{}, nil),
 
 					// emptyECRRepos
-					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
+					mocks.ecr.EXPECT().EmptyRepo(mockRepo, regionSet(mockEnvs)).Return(nil),
 
 					// removeSvcFromApp
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
@@ -390,7 +390,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteComplete, mockSvcName, mockEnvName)),
 
 					// It should **not** emptyECRRepos
-					mocks.ecr.EXPECT().ClearRepository(gomock.Any()).Return(nil).Times(0),
+					mocks.ecr.EXPECT().EmptyRepo(gomock.Any(), gomock.Any()).Return(nil).Times(0),
 
 					// It should **not** removeSvcFromApp
 					mocks.appCFN.EXPECT().RemoveServiceFromApp(gomock.Any(), gomock.Any()).Return(nil).Times(0),
@@ -433,14 +433,11 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 			mockAppCFN := mocks.NewMocksvcRemoverFromApp(ctrl)
 			mockSvcCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
-			mockImageRemover := mocks.NewMockimageRemover(ctrl)
+			mockImageRepoEmptier := mocks.NewMockimageRepoEmptier(ctrl)
 			mockGetSvcCFN := func(_ *session.Session) wlDeleter {
 				return mockSvcCFN
 			}
 
-			mockGetImageRemover := func(_ *session.Session) imageRemover {
-				return mockImageRemover
-			}
 			mocks := deleteSvcMocks{
 				store:          mockstore,
 				secretsmanager: mockSecretsManager,
@@ -448,7 +445,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 				appCFN:         mockAppCFN,
 				spinner:        mockSpinner,
 				svcCFN:         mockSvcCFN,
-				ecr:            mockImageRemover,
+				ecr:            mockImageRepoEmptier,
 			}
 
 			test.setupMocks(mocks)
@@ -459,12 +456,12 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 					name:    test.inSvcName,
 					envName: test.inEnvName,
 				},
-				store:               mockstore,
-				sess:                mockSession,
-				spinner:             mockSpinner,
-				appCFN:              mockAppCFN,
-				getSvcCFN:           mockGetSvcCFN,
-				newImageRepoEmptier: mockGetImageRemover,
+				store:            mockstore,
+				sess:             mockSession,
+				spinner:          mockSpinner,
+				appCFN:           mockAppCFN,
+				imageRepoEmptier: mockImageRepoEmptier,
+				getSvcCFN:        mockGetSvcCFN,
 			}
 
 			// WHEN

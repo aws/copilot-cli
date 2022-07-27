@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -66,15 +65,15 @@ type deleteJobOpts struct {
 	deleteJobVars
 
 	// Interfaces to dependencies.
-	store           store
-	prompt          prompter
-	sel             configSelector
-	sess            sessionProvider
-	spinner         progress
-	appCFN          jobRemoverFromApp
-	newWlDeleter    func(sess *session.Session) wlDeleter
-	newImageRemover func(sess *session.Session) imageRemover
-	newTaskStopper  func(sess *session.Session) taskStopper
+	store            store
+	prompt           prompter
+	sel              configSelector
+	sess             sessionProvider
+	spinner          progress
+	appCFN           jobRemoverFromApp
+	imageRepoEmptier imageRepoEmptier
+	newWlDeleter     func(sess *session.Session) wlDeleter
+	newTaskStopper   func(sess *session.Session) taskStopper
 }
 
 func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
@@ -97,8 +96,8 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		newWlDeleter: func(session *session.Session) wlDeleter {
 			return cloudformation.New(session)
 		},
-		newImageRemover: func(session *session.Session) imageRemover {
-			return ecr.New(session)
+		imageRepoEmptier: &delete.ECREmptier{
+			SessionProvider: provider,
 		},
 		newTaskStopper: func(session *session.Session) taskStopper {
 			return ecs.New(session)
@@ -302,15 +301,17 @@ func (o *deleteJobOpts) needsAppCleanup() bool {
 	return o.envName == ""
 }
 
-func (o *deleteJobOpts) emptyECRRepos(envs []*config.Environment) error {
-	e := delete.ECREmptier{
-		AppName:         o.appName,
-		WorkloadName:    o.name,
-		Environments:    envs,
-		SessionProvider: o.sess,
+// regionSet returns a set of the regions found in envs.
+func regionSet(envs []*config.Environment) map[string]struct{} {
+	regions := make(map[string]struct{})
+	for i := range envs {
+		regions[envs[i].Region] = struct{}{}
 	}
+	return regions
+}
 
-	return e.EmptyRepos()
+func (o *deleteJobOpts) emptyECRRepos(envs []*config.Environment) error {
+	return o.imageRepoEmptier.EmptyRepo(o.appName+"/"+o.name, regionSet(envs))
 }
 
 func (o *deleteJobOpts) removeJobFromApp() error {

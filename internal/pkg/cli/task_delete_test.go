@@ -322,7 +322,7 @@ func TestDeleteTaskOpts_Ask(t *testing.T) {
 type deleteTaskMocks struct {
 	store   *mocks.Mockstore
 	sess    *mocks.MocksessionProvider
-	ecr     *mocks.MockimageRemover
+	ecr     *mocks.MockimageRepoEmptier
 	ecs     *mocks.MocktaskStopper
 	cfn     *mocks.MocktaskStackManager
 	spinner *mocks.Mockprogress
@@ -351,6 +351,9 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 	}
 	mockDefaultTask := deploy.TaskStackInfo{
 		StackName: mockTaskStackName,
+	}
+	mockRegionSet := map[string]struct{}{
+		mockEnv.Region: {},
 	}
 	mockError := errors.New("some error")
 
@@ -382,7 +385,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.ecr.EXPECT().EmptyRepo(mockTaskRepoName, mockRegionSet).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
@@ -402,7 +405,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.ecs.EXPECT().StopDefaultClusterTasks(mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.ecr.EXPECT().EmptyRepo(mockTaskRepoName, mockRegionSet).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(&mockDefaultTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
@@ -444,7 +447,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.ecr.EXPECT().EmptyRepo(mockTaskRepoName, mockRegionSet).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
@@ -472,7 +475,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.ecr.EXPECT().EmptyRepo(mockTaskRepoName, mockRegionSet).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(nil, &mockErrStackNotFound),
 				)
@@ -498,7 +501,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(mockError),
+					m.ecr.EXPECT().EmptyRepo(mockTaskRepoName, mockRegionSet).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
 			},
@@ -544,7 +547,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.ecs.EXPECT().StopOneOffTasks(mockApp, mockEnvName, mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.ecr.EXPECT().EmptyRepo(mockTaskRepoName, mockRegionSet).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(nil, mockError),
 				)
@@ -574,16 +577,12 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 
 			// GIVEN
 			mockstore := mocks.NewMockstore(ctrl)
-			mockECR := mocks.NewMockimageRemover(ctrl)
+			mockImageRepoEmptier := mocks.NewMockimageRepoEmptier(ctrl)
 			mockCFN := mocks.NewMocktaskStackManager(ctrl)
 			mockECS := mocks.NewMocktaskStopper(ctrl)
-			//mockSession := sessions.NewProvider()
 			mockSession := mocks.NewMocksessionProvider(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
 
-			mockGetECR := func(_ *session.Session) imageRemover {
-				return mockECR
-			}
 			mockGetECS := func(_ *session.Session) taskStopper {
 				return mockECS
 			}
@@ -594,7 +593,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			mocks := deleteTaskMocks{
 				store:   mockstore,
 				sess:    mockSession,
-				ecr:     mockECR,
+				ecr:     mockImageRepoEmptier,
 				ecs:     mockECS,
 				cfn:     mockCFN,
 				spinner: mockSpinner,
@@ -609,11 +608,11 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					name:           tc.inName,
 					defaultCluster: tc.inDefault,
 				},
-				store:    mockstore,
-				provider: mockSession,
-				spinner:  mockSpinner,
+				store:            mockstore,
+				provider:         mockSession,
+				spinner:          mockSpinner,
+				imageRepoEmptier: mockImageRepoEmptier,
 
-				newImageRemover: mockGetECR,
 				newStackManager: mockGetCFN,
 				newTaskStopper:  mockGetECS,
 			}

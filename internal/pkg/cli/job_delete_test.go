@@ -6,8 +6,9 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 
@@ -296,7 +297,7 @@ type deleteJobMocks struct {
 	appCFN         *mocks.MockjobRemoverFromApp
 	spinner        *mocks.Mockprogress
 	jobCFN         *mocks.MockwlDeleter
-	ecr            *mocks.MockimageRemover
+	ecr            *mocks.MockimageRepoEmptier
 	ecs            *mocks.MocktaskStopper
 }
 
@@ -347,7 +348,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 
 					mocks.sessProvider.EXPECT().DefaultWithRegion(gomock.Any()).Return(&session.Session{}, nil),
 					// emptyECRRepos
-					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
+					mocks.ecr.EXPECT().EmptyRepo(mockRepo, regionSet(mockEnvs)).Return(nil),
 					// removeJobFromApp
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobDeleteResourcesStart, mockJobName, mockAppName)),
@@ -382,7 +383,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobTasksStopComplete, mockJobName, mockEnvName)),
 
 					// It should **not** emptyECRRepos
-					mocks.ecr.EXPECT().ClearRepository(gomock.Any()).Return(nil).Times(0),
+					mocks.ecr.EXPECT().EmptyRepo(gomock.Any(), gomock.Any()).Return(nil).Times(0),
 
 					// It should **not** removeJobFromApp
 					mocks.appCFN.EXPECT().RemoveJobFromApp(gomock.Any(), gomock.Any()).Return(nil).Times(0),
@@ -453,13 +454,10 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 			mockAppCFN := mocks.NewMockjobRemoverFromApp(ctrl)
 			mockJobCFN := mocks.NewMockwlDeleter(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
-			mockImageRemover := mocks.NewMockimageRemover(ctrl)
+			mockImageRepoEmptier := mocks.NewMockimageRepoEmptier(ctrl)
 			mockTaskStopper := mocks.NewMocktaskStopper(ctrl)
 			mockGetJobCFN := func(_ *session.Session) wlDeleter {
 				return mockJobCFN
-			}
-			mockGetImageRemover := func(_ *session.Session) imageRemover {
-				return mockImageRemover
 			}
 			mockNewTaskStopper := func(_ *session.Session) taskStopper {
 				return mockTaskStopper
@@ -472,7 +470,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 				appCFN:         mockAppCFN,
 				spinner:        mockSpinner,
 				jobCFN:         mockJobCFN,
-				ecr:            mockImageRemover,
+				ecr:            mockImageRepoEmptier,
 				ecs:            mockTaskStopper,
 			}
 
@@ -484,13 +482,13 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					name:    test.inJobName,
 					envName: test.inEnvName,
 				},
-				store:           mockstore,
-				sess:            mockSession,
-				spinner:         mockSpinner,
-				appCFN:          mockAppCFN,
-				newWlDeleter:    mockGetJobCFN,
-				newImageRemover: mockGetImageRemover,
-				newTaskStopper:  mockNewTaskStopper,
+				store:            mockstore,
+				sess:             mockSession,
+				spinner:          mockSpinner,
+				appCFN:           mockAppCFN,
+				imageRepoEmptier: mockImageRepoEmptier,
+				newWlDeleter:     mockGetJobCFN,
+				newTaskStopper:   mockNewTaskStopper,
 			}
 
 			// WHEN

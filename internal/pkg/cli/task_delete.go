@@ -9,11 +9,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/cli/delete"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/aws/ecr"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -52,16 +52,16 @@ type deleteTaskOpts struct {
 	deleteTaskVars
 
 	// Dependencies to interact with other modules
-	store    store
-	prompt   prompter
-	spinner  progress
-	provider sessionProvider
-	sel      wsSelector
+	store            store
+	prompt           prompter
+	spinner          progress
+	provider         sessionProvider
+	sel              wsSelector
+	imageRepoEmptier imageRepoEmptier
 
 	// Generators for env-specific clients
 	newTaskSel      func(session *session.Session) cfTaskSelector
 	newTaskStopper  func(session *session.Session) taskStopper
-	newImageRemover func(session *session.Session) imageRemover
 	newStackManager func(session *session.Session) taskStackManager
 
 	// Cached variables
@@ -91,6 +91,9 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 		prompt:   prompter,
 		provider: sessProvider,
 		sel:      selector.NewLocalWorkloadSelector(prompter, store, ws),
+		imageRepoEmptier: &delete.ECREmptier{
+			SessionProvider: sessProvider,
+		},
 		newTaskSel: func(session *session.Session) cfTaskSelector {
 			cfn := cloudformation.New(session)
 			return selector.NewCFTaskSelect(prompter, store, cfn)
@@ -100,9 +103,6 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 		},
 		newStackManager: func(session *session.Session) taskStackManager {
 			return cloudformation.New(session)
-		},
-		newImageRemover: func(session *session.Session) imageRemover {
-			return ecr.New(session)
 		},
 	}, nil
 }
@@ -364,30 +364,18 @@ func (o *deleteTaskOpts) stopTasks() error {
 }
 
 func (o *deleteTaskOpts) clearECRRepository() error {
-	// ECR Deletion happens from the default profile in app delete. We can do it here too by getting
-	// a default session in whichever region we're deleting from.
-	var defaultSess *session.Session
-	var err error
-	defaultSess, err = o.getSession()
+	sess, err := o.getSession()
 	if err != nil {
 		return err
 	}
-	if !o.defaultCluster {
-		regionalSession, err := o.getSession()
-		if err != nil {
-			return err
-		}
-		defaultSess, err = o.provider.DefaultWithRegion(aws.StringValue(regionalSession.Config.Region))
-		if err != nil {
-			return fmt.Errorf("get default session for ECR deletion: %s", err)
-		}
-	}
-	// Best effort to construct ECR repo name.
-	ecrRepoName := fmt.Sprintf(deploy.FmtTaskECRRepoName, o.name)
 
+	region := map[string]struct{}{
+		aws.StringValue(sess.Config.Region): {},
+	}
+
+	repo := fmt.Sprintf(deploy.FmtTaskECRRepoName, o.name)
 	o.spinner.Start(fmt.Sprintf("Emptying ECR repository for task %s.", color.HighlightUserInput(o.name)))
-	err = o.newImageRemover(defaultSess).ClearRepository(ecrRepoName)
-	if err != nil {
+	if err := o.imageRepoEmptier.EmptyRepo(repo, region); err != nil {
 		o.spinner.Stop(log.Serrorln("Error emptying ECR repository."))
 		return fmt.Errorf("clear ECR repository for task %s: %w", o.name, err)
 	}

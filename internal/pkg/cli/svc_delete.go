@@ -60,14 +60,14 @@ type deleteSvcOpts struct {
 	deleteSvcVars
 
 	// Interfaces to dependencies.
-	store               store
-	sess                sessionProvider
-	spinner             progress
-	prompt              prompter
-	sel                 configSelector
-	appCFN              svcRemoverFromApp
-	getSvcCFN           func(session *awssession.Session) wlDeleter
-	newImageRepoEmptier func(envs []*config.Environment) imageRepoEmptier
+	store            store
+	sess             sessionProvider
+	spinner          progress
+	prompt           prompter
+	sel              configSelector
+	appCFN           svcRemoverFromApp
+	imageRepoEmptier imageRepoEmptier
+	getSvcCFN        func(session *awssession.Session) wlDeleter
 }
 
 func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
@@ -88,16 +88,11 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		sess:    sessProvider,
 		sel:     selector.NewConfigSelector(prompter, store),
 		appCFN:  cloudformation.New(defaultSession),
+		imageRepoEmptier: &delete.ECREmptier{
+			SessionProvider: sessProvider,
+		},
 		getSvcCFN: func(session *awssession.Session) wlDeleter {
 			return cloudformation.New(session)
-		},
-		newImageRepoEmptier: func(envs []*config.Environment) imageRepoEmptier {
-			return &delete.ECREmptier{
-				AppName:         vars.appName,
-				WorkloadName:    vars.name,
-				Environments:    envs,
-				SessionProvider: sessProvider,
-			}
 		},
 	}, nil
 }
@@ -281,7 +276,7 @@ func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
 }
 
 func (o *deleteSvcOpts) emptyECRRepo(envs []*config.Environment) error {
-	return o.newImageRepoEmptier(envs).EmptyRepo()
+	return o.imageRepoEmptier.EmptyRepo(o.appName+"/"+o.name, regionSet(envs))
 }
 
 func (o *deleteSvcOpts) removeSvcFromApp() error {

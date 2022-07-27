@@ -348,7 +348,7 @@ type jobRemoverFromApp interface {
 }
 
 type imageRepoEmptier interface {
-	EmptyRepo() error
+	EmptyRepo(repo string, regions map[string]struct{}) error
 }
 
 type pipelineDeployer interface {
