@@ -176,8 +176,8 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 	},
 }
 
-func (a *Addons) packageTemplate(tmpl *cfnTemplate) (*cfnTemplate, error) {
-	resources := mappingNode(&tmpl.Resources)
+func (t *cfnTemplate) packageTemplate(a *Addons) error {
+	resources := mappingNode(&t.Resources)
 
 	for name, node := range resources {
 		resType := yamlMapGet(node, "Type").Value
@@ -189,12 +189,12 @@ func (a *Addons) packageTemplate(tmpl *cfnTemplate) (*cfnTemplate, error) {
 		props := yamlMapGet(node, "Properties")
 		for _, conf := range confs {
 			if err := a.packageProperty(props, conf); err != nil {
-				return nil, fmt.Errorf("package property %q of %q: %w", strings.Join(conf.Property, "."), name, err)
+				return fmt.Errorf("package property %q of %q: %w", strings.Join(conf.Property, "."), name, err)
 			}
 		}
 	}
 
-	return tmpl, nil
+	return nil
 }
 
 // yamlMapGet parses node as a yaml map and searches key. If found,

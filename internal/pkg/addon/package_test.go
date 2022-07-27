@@ -173,14 +173,13 @@ Resources:
 			err := yaml.Unmarshal([]byte(tc.inTemplate), tmpl)
 			require.NoError(t, err)
 
-			packaged, err := a.packageTemplate(tmpl)
-			require.NoError(t, err)
+			require.NoError(t, tmpl.packageTemplate(a))
 
 			buf := &bytes.Buffer{}
 			enc := yaml.NewEncoder(buf)
 			enc.SetIndent(2)
 
-			require.NoError(t, enc.Encode(packaged))
+			require.NoError(t, enc.Encode(tmpl))
 			require.Equal(t, strings.TrimSpace(tc.outTemplate), strings.TrimSpace(buf.String()))
 		})
 	}
