@@ -56,7 +56,6 @@ func (s *SecretsManager) CreateSecret(secretName, secretString string) (string, 
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			if aerr.Code() == secretsmanager.ErrCodeResourceExistsException {
-				// TODO update secret if value provided?
 				return "", &ErrSecretAlreadyExists{
 					secretName: secretName,
 					parentErr:  err,
