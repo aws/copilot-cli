@@ -206,7 +206,6 @@ type Deployment struct {
 
 // NewPipeline returns a pipeline manifest object.
 func NewPipeline(pipelineName string, provider Provider, stages []PipelineStage) (*Pipeline, error) {
-	// TODO: #221 Do more validations
 	if len(stages) == 0 {
 		return nil, fmt.Errorf("a pipeline %s can not be created without a deployment stage",
 			pipelineName)
