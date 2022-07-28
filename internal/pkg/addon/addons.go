@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,6 +50,8 @@ type Addons struct {
 
 	bucket   string
 	uploader uploader
+	wsPath   string
+	fs       *afero.Afero
 }
 
 // New creates an Addons struct given a workload name.
@@ -57,10 +60,15 @@ func New(wlName string) (*Addons, error) {
 	if err != nil {
 		return nil, fmt.Errorf("workspace cannot be created: %w", err)
 	}
+	wsPath, err := ws.Path()
+	if err != nil {
+		return nil, fmt.Errorf("get workspace path: %w", err)
+	}
 	return &Addons{
 		wlName: wlName,
 		parser: template.New(),
 		ws:     ws,
+		wsPath: wsPath,
 	}, nil
 }
 
@@ -75,6 +83,9 @@ func NewPackager(wlName string, bucket string, uploader uploader) (*Addons, erro
 
 	addons.bucket = bucket
 	addons.uploader = uploader
+	addons.fs = &afero.Afero{
+		Fs: afero.NewOsFs(),
+	}
 	return addons, nil
 }
 

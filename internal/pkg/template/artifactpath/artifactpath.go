@@ -11,12 +11,13 @@ import (
 )
 
 const (
-	s3ArtifactDirName         = "manual"
-	s3TemplateDirName         = "templates"
-	s3ArtifactAddonsDirName   = "addons"
-	s3ArtifactEnvFilesDirName = "env-files"
-	s3ScriptsDirName          = "scripts"
-	s3CustomResourcesDirName  = "custom-resources"
+	s3ArtifactDirName           = "manual"
+	s3TemplateDirName           = "templates"
+	s3ArtifactAddonsDirName     = "addons"
+	s3ArtifactAddonAssetDirName = "assets"
+	s3ArtifactEnvFilesDirName   = "env-files"
+	s3ScriptsDirName            = "scripts"
+	s3CustomResourcesDirName    = "custom-resources"
 )
 
 // MkdirSHA256 prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
@@ -28,6 +29,12 @@ func MkdirSHA256(key string, content []byte) string {
 // Example: manual/addons/key/sha.yml.
 func Addons(key string, content []byte) string {
 	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, key, fmt.Sprintf("%x.yml", sha256.Sum256(content)))
+}
+
+// AddonAsset returns the path to store an addon asset file.
+// Example: manual/addons/addonKey/assets/hash.
+func AddonAsset(addonKey, hash string) string {
+	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, addonKey, s3ArtifactAddonAssetDirName, hash)
 }
 
 // CFNTemplate returns the path to store cloudformation templates with sha256 of the content.
