@@ -99,13 +99,13 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 					Ingress: []securityGroupRule{
 						{
 							IpProtocol: "tcp",
-							ToPort:     80,
-							FromPort:   80,
+							ToPort:     aws.Int(80),
+							FromPort:   aws.Int(80),
 						},
 					},
 				},
 			},
-			wantedError: "validate \"security_group\": cidr field is required",
+			wantedError: "validate \"security_group\": validate ingress[0]: \"cidr\" must be specified",
 		},
 		"valid security group config": {
 			in: EnvironmentConfig{
@@ -114,8 +114,21 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 						{
 							CidrIP:     "0.0.0.0",
 							IpProtocol: "tcp",
-							ToPort:     80,
-							FromPort:   80,
+							ToPort:     aws.Int(80),
+							FromPort:   aws.Int(80),
+						},
+					},
+				},
+			},
+		},
+		"valid security group config without FromPort": {
+			in: EnvironmentConfig{
+				SecurityGroupConfig: securityGroupConfig{
+					Ingress: []securityGroupRule{
+						{
+							CidrIP:     "0.0.0.0",
+							IpProtocol: "tcp",
+							ToPort:     aws.Int(80),
 						},
 					},
 				},

@@ -95,7 +95,6 @@ security_group:
       cidr: 0.0.0.0
   egress:
     - ip_protocol: tcp
-      from_port: 0
       to_port: 65535
       cidr: 0.0.0.0`
 				var mft manifest.Environment

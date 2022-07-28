@@ -86,24 +86,28 @@ func (cfg environmentVPCConfig) validate() error {
 // validate returns nil if securityGroupRule has all the required parameters set.
 func (cfg securityGroupRule) validate() error {
 	if cfg.CidrIP == "" {
-		return fmt.Errorf(`cidr field is required`)
+		return fmt.Errorf(`cidr`)
 	}
 	if cfg.IpProtocol == "" {
-		return fmt.Errorf(`ip_protocol field is required`)
+		return fmt.Errorf(`ip_protocol`)
 	}
 	return nil
 }
 
 // validate returns nil if securityGroupConfig is configured correctly.
 func (cfg securityGroupConfig) validate() error {
-	for _, ingress := range cfg.Ingress {
+	for idx, ingress := range cfg.Ingress {
 		if err := ingress.validate(); err != nil {
-			return err
+			return fmt.Errorf(`validate ingress[%d]: %w`, idx, &errFieldMustBeSpecified{
+				missingField: err.Error(),
+			})
 		}
 	}
-	for _, egress := range cfg.Egress {
+	for idx, egress := range cfg.Egress {
 		if err := egress.validate(); err != nil {
-			return err
+			return fmt.Errorf(`validate egress[%d]: %w`, idx, &errFieldMustBeSpecified{
+				missingField: err.Error(),
+			})
 		}
 	}
 	return nil

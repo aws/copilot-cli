@@ -113,22 +113,31 @@ type securityGroupConfig struct {
 	Egress  []securityGroupRule `yaml:"egress,omitempty"`
 }
 
-// IsEmpty returns true if there is no security group rule defined.
-func (cfg securityGroupConfig) IsEmpty() bool {
+func (cfg securityGroupConfig) isEmpty() bool {
 	return len(cfg.Ingress) == 0 && len(cfg.Egress) == 0
 }
 
 type securityGroupRule struct {
 	CidrIP     string `yaml:"cidr"`
-	FromPort   int    `yaml:"from_port"`
+	FromPort   *int   `yaml:"from_port"`
 	IpProtocol string `yaml:"ip_protocol"`
-	ToPort     int    `yaml:"to_port"`
+	ToPort     *int   `yaml:"to_port"`
+}
+
+// IsToPortEmpty checks if ToPort is empty
+func (cfg securityGroupRule) IsToPortEmpty() bool {
+	return cfg.ToPort == nil
+}
+
+// IsFromPortEmpty checks if FromPort is empty
+func (cfg securityGroupRule) IsFromPortEmpty() bool {
+	return cfg.FromPort == nil
 }
 
 // EnvSecurityGroup returns the security group config if the user has set any values.
 // If there is no env security group settings, then returns nil and false.
 func (cfg *EnvironmentConfig) EnvSecurityGroup() (*securityGroupConfig, bool) {
-	if isEmpty := cfg.SecurityGroupConfig.IsEmpty(); !isEmpty {
+	if isEmpty := cfg.SecurityGroupConfig.isEmpty(); !isEmpty {
 		return &cfg.SecurityGroupConfig, true
 	}
 	return nil, false

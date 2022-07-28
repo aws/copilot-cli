@@ -52,6 +52,11 @@ const (
 	maxPercentDefault         = 200
 )
 
+const (
+	toPortValue   = 0
+	fromPortValue = 65535
+)
+
 var (
 	taskDefOverrideRulePrefixes = []string{"Resources", "TaskDefinition", "Properties"}
 	subnetPlacementForTemplate  = map[manifest.PlacementString]string{
@@ -356,27 +361,43 @@ type networkLoadBalancerConfig struct {
 
 func convertEnvSecurityGroupCfg(mft *manifest.Environment) template.SecurityGroupConfig {
 	securityGroupConfig, isSecurityConfigSet := mft.EnvSecurityGroup()
-	if isSecurityConfigSet {
-		var ingress = make([]template.SecurityGroupRule, len(securityGroupConfig.Ingress))
-		var egress = make([]template.SecurityGroupRule, len(securityGroupConfig.Egress))
-		for idx, ingressValue := range securityGroupConfig.Ingress {
-			ingress[idx].IpProtocol = ingressValue.IpProtocol
-			ingress[idx].CidrIP = ingressValue.CidrIP
-			ingress[idx].ToPort = ingressValue.ToPort
-			ingress[idx].FromPort = ingressValue.FromPort
+	if !isSecurityConfigSet {
+		return template.SecurityGroupConfig{}
+	}
+	var ingress = make([]template.SecurityGroupRule, len(securityGroupConfig.Ingress))
+	var egress = make([]template.SecurityGroupRule, len(securityGroupConfig.Egress))
+	for idx, ingressValue := range securityGroupConfig.Ingress {
+		ingress[idx].IpProtocol = ingressValue.IpProtocol
+		ingress[idx].CidrIP = ingressValue.CidrIP
+		if ingressValue.IsToPortEmpty() {
+			ingress[idx].ToPort = toPortValue
+		} else {
+			ingress[idx].ToPort = *ingressValue.ToPort
 		}
-		for idx, egressValue := range securityGroupConfig.Egress {
-			egress[idx].IpProtocol = egressValue.IpProtocol
-			egress[idx].CidrIP = egressValue.CidrIP
-			egress[idx].ToPort = egressValue.ToPort
-			egress[idx].FromPort = egressValue.FromPort
-		}
-		return template.SecurityGroupConfig{
-			Ingress: ingress,
-			Egress:  egress,
+		if ingressValue.IsFromPortEmpty() {
+			ingress[idx].FromPort = fromPortValue
+		} else {
+			ingress[idx].FromPort = *ingressValue.FromPort
 		}
 	}
-	return template.SecurityGroupConfig{}
+	for idx, egressValue := range securityGroupConfig.Egress {
+		egress[idx].IpProtocol = egressValue.IpProtocol
+		egress[idx].CidrIP = egressValue.CidrIP
+		if egressValue.IsToPortEmpty() {
+			egress[idx].ToPort = toPortValue
+		} else {
+			egress[idx].ToPort = *egressValue.ToPort
+		}
+		if egressValue.IsFromPortEmpty() {
+			egress[idx].FromPort = fromPortValue
+		} else {
+			egress[idx].FromPort = *egressValue.FromPort
+		}
+	}
+	return template.SecurityGroupConfig{
+		Ingress: ingress,
+		Egress:  egress,
+	}
 }
 
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {

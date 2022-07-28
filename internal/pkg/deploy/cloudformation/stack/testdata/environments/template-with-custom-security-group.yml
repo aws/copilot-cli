@@ -25,7 +25,6 @@ Metadata:
           cidr: 0.0.0.0
       egress:
         - ip_protocol: tcp
-          from_port: 0
           to_port: 65535
           cidr: 0.0.0.0
 Parameters:
@@ -341,7 +340,7 @@ Resources:
           ToPort: 6
       SecurityGroupEgress:
         - CidrIp: "0.0.0.0"
-          FromPort: 0
+          FromPort: 65535
           IpProtocol: tcp
           ToPort: 65535
   EnvironmentSecurityGroupIngressFromInternalALB:
