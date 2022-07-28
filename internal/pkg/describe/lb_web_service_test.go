@@ -25,14 +25,15 @@ type lbWebSvcDescriberMocks struct {
 
 func TestLBWebServiceDescriber_Describe(t *testing.T) {
 	const (
-		testApp          = "phonetool"
-		testEnv          = "test"
-		testSvc          = "jobs"
-		testEnvLBDNSName = "abc.us-west-1.elb.amazonaws.com"
-		testSvcPath      = "*"
-		prodEnv          = "prod"
-		prodEnvLBDNSName = "abc.us-west-1.elb.amazonaws.com"
-		prodSvcPath      = "*"
+		testApp           = "phonetool"
+		testEnv           = "test"
+		testSvc           = "jobs"
+		testEnvLBDNSName  = "abc.us-west-1.elb.amazonaws.com"
+		testSvcPath       = "*"
+		testALBAccessible = "true"
+		prodEnv           = "prod"
+		prodEnvLBDNSName  = "abc.us-west-1.elb.amazonaws.com"
+		prodSvcPath       = "*"
 	)
 	mockParams := map[string]string{
 		cfnstack.WorkloadContainerPortParamKey: "80",
@@ -266,6 +267,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputPublicALBAccessible:       testALBAccessible,
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -295,6 +297,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					m.ecsDescriber.EXPECT().Params().Return(mockProdParams, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputPublicALBAccessible:       testALBAccessible,
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",

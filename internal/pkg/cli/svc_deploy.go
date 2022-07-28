@@ -118,13 +118,14 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	content := o.appliedManifest.Manifest()
 	var deployer workloadDeployer
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider: o.sessProvider,
-		Name:            o.name,
-		App:             targetApp,
-		Env:             o.targetEnv,
-		ImageTag:        o.imageTag,
-		Mft:             content,
-		RawMft:          raw,
+		SessionProvider:   o.sessProvider,
+		Name:              o.name,
+		App:               targetApp,
+		Env:               o.targetEnv,
+		ImageTag:          o.imageTag,
+		Mft:               content,
+		RawMft:            raw,
+		UploadAddonAssets: false, // TODO(dnrnd): change to true to enable packaging addons
 	}
 	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:
