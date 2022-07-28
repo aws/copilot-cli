@@ -1,9 +1,8 @@
 List of all available properties for a `'Scheduled Job'` manifest. To learn about Copilot jobs, see the [Jobs](../concepts/jobs.en.md) concept page.
 
-???+ note "Sample manifest for a report generator cronjob"
+???+ note "Sample scheduled job manifest"
 
     ```yaml
-        # Your job name will be used in naming your resources like log groups, ECS Tasks, etc.
         name: report-generator
         type: Scheduled Job
     
@@ -15,7 +14,6 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
         timeout: 1h
     
         image:
-          # Path to your service's Dockerfile.
           build: ./Dockerfile
     
         variables:
@@ -27,7 +25,7 @@ List of all available properties for a `'Scheduled Job'` manifest. To learn abou
         # You can override any of the values defined above by environment.
         environments:
           prod:
-            cpu: 2048               # Larger CPU value for prod environment
+            cpu: 2048
             memory: 4096
     ```
 
