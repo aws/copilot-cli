@@ -183,10 +183,6 @@ type logEventsWriter interface {
 	WriteLogEvents(opts logging.WriteLogEventsOpts) error
 }
 
-type templater interface {
-	Template() (string, error)
-}
-
 type execRunner interface {
 	Run(name string, args []string, options ...exec.CmdOption) error
 }
@@ -631,10 +627,11 @@ type workloadDeployer interface {
 	IsServiceAvailableInRegion(region string) (bool, error)
 }
 
-type workloadTemplateGenerator interface {
+type workloadStackGenerator interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
+	AddonsTemplate() (string, error)
 }
 
 type runner interface {

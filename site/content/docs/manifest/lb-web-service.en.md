@@ -1,76 +1,201 @@
 List of all available properties for a `'Load Balanced Web Service'` manifest. To learn about Copilot services, see the [Services](../concepts/services.en.md) concept page.
 
-???+ note "Sample manifest for a frontend service"
+???+ note "Sample internet-facing service manifests"
 
-    ```yaml
-        # Your service name will be used in naming your resources like log groups, ECS services, etc.
-        name: frontend
-        type: Load Balanced Web Service
+    === "Basic"
 
-        # Distribute traffic to your service.
+        ```yaml
+            name: 'frontend'
+            type: 'Load Balanced Web Service'
+    
+            image:
+              build: './frontend/Dockerfile'
+              port: 8080
+    
+            http:
+              path: '/'
+              healthcheck: '/_healthcheck'
+    
+            cpu: 256
+            memory: 512
+            count: 3
+            exec: true
+    
+            variables:
+              LOG_LEVEL: info
+            secrets:
+              GITHUB_TOKEN: GITHUB_TOKEN
+              DB_SECRET:
+                secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+        ```
+
+    === "With a domain"
+
+        ```yaml
+            name: 'frontend'
+            type: 'Load Balanced Web Service'
+    
+            image:
+              build: './frontend/Dockerfile'
+              port: 8080
+    
+            http:
+              path: '/'
+              alias: 'example.com'
+
+            environments:
+              qa:
+                http:
+                  alias: # The "qa" environment imported a certificate.
+                    - name: 'qa.example.com'
+                      hosted_zone: Z0873220N255IR3MTNR4
+        ```
+
+    === "Larger containers"
+
+        ```yaml
+        # For example, we might want to warm up our Java service before accepting external traffic.
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build:
+            dockerfile: './frontend/Dockerfile'
+            context: './frontend'
+          port: 80
+
         http:
           path: '/'
           healthcheck:
-            path: '/_healthcheck'
+            path: '/_deephealthcheck'
             port: 8080
             success_codes: '200,301'
-            healthy_threshold: 3
+            healthy_threshold: 4
             unhealthy_threshold: 2
             interval: 15s
             timeout: 10s
-            grace_period: 45s
-          deregistration_delay: 5s
-          stickiness: false
+            grace_period: 2m
+          deregistration_delay: 50s
+          stickiness: true
           allowed_source_ips: ["10.24.34.0/23"]
-          alias: example.com
 
-        nlb:
-          port: 443/tls
+        cpu: 2048
+        memory: 4096
+        count: 3
+        storage:
+          ephemeral: 100
 
-        # Configuration for your containers and service.
+        network:
+          vpc:
+            placement: 'private'
+        ```
+
+    === "Autoscaling"
+
+        ```yaml
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        http:
+          path: '/'
         image:
-          build:
-            dockerfile: ./frontend/Dockerfile
-            context: ./frontend
+          location: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/frontend:latest
           port: 80
 
-        cpu: 256
-        memory: 512
+        cpu: 512
+        memory: 1024
         count:
-          range: 1-10
+          range: 1-10 
           cooldown:
-            in: 30s
-            out: 60s
+            in: 60s
+            out: 30s
           cpu_percentage: 70
-          memory_percentage:
-            value: 80
-            cooldown:
-              in: 80s
-              out: 160s
-          requests: 10000
+          requests: 30
           response_time: 2s
-        exec: true
+        ```
+
+    === "Event-driven"
+
+        ```yaml
+        # See https://aws.github.io/copilot-cli/docs/developing/publish-subscribe/
+        name: 'orders'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: Dockerfile
+          port: 80
+        http:
+          path: '/'
+          alias: 'orders.example.com'
 
         variables:
-          LOG_LEVEL: info
-        env_file: log.env
-        secrets:
-          GITHUB_TOKEN: GITHUB_TOKEN
+          DDB_TABLE_NAME: 'orders'
 
-        # You can override any of the values defined above by environment.
-        environments:
-          test:
-            count:
-              range:
-                min: 1
-                max: 10
-                spot_from: 2
-          staging:
-            count:
-              spot: 2
-          production:
-            count: 2
-    ```
+        publish:
+          topics:
+            - name: 'products'
+        ```
+
+    === "Network Load Balancer"
+
+        ```yaml
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: Dockerfile
+          port: 8080
+
+        http: false
+        nlb:
+          alias: 'example.com'
+          port: 80/tcp
+          target_container: envoy
+
+        network:
+          vpc:
+            placement: 'private'
+
+        sidecars:
+          envoy:
+            port: 80
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/envoy:latest
+        ```
+
+    === "Shared file system"
+
+        ```yaml
+        # See http://localhost:8000/copilot-cli/docs/developing/storage/#file-systems
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: Dockerfile
+          port: 80
+          depends_on:
+            bootstrap: success
+        
+        http:
+          path: '/'
+
+        storage:
+          volumes:
+            wp:
+              path: /bitnami/wordpress
+              read_only: false
+              efs: true
+
+        # Hydrate the file system with some content using the bootstrap container.
+        sidecars:
+          bootstrap:
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/bootstrap:v1.0.0
+            essential: false
+            mount_points:
+              - source_volume: wp
+                path: /bitnami/wordpress
+                read_only: false
+        ```
+
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.

@@ -14,6 +14,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -54,6 +56,9 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
+		addons, err := addon.New(aws.StringValue(v.Name))
+		require.NoError(t, err)
+
 		envConfig := &manifest.Environment{
 			Workload: manifest.Workload{
 				Name: &tc.envName,
@@ -70,6 +75,7 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 				AccountID:                "123456789123",
 				Region:                   "us-west-2",
 			},
+			Addons: addons,
 		})
 
 		tpl, err := serializer.Template()

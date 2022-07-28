@@ -1,5 +1,4 @@
 //go:build integration || localintegration
-// +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -14,6 +13,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
@@ -41,6 +42,9 @@ func TestWorkerService_Template(t *testing.T) {
 	v, ok := content.(*manifest.WorkerService)
 	require.True(t, ok)
 
+	addons, err := addon.New(aws.StringValue(v.Name))
+	require.NoError(t, err)
+
 	serializer, err := stack.NewWorkerService(stack.WorkerServiceConfig{
 		App:         appName,
 		Env:         envName,
@@ -51,6 +55,7 @@ func TestWorkerService_Template(t *testing.T) {
 			AccountID:                "123456789123",
 			Region:                   "us-west-2",
 		},
+		Addons: addons,
 	})
 
 	tpl, err := serializer.Template()

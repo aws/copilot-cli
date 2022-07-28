@@ -1,5 +1,4 @@
 //go:build integration || localintegration
-// +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -13,6 +12,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"gopkg.in/yaml.v3"
@@ -43,6 +44,9 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.True(t, ok)
 
+	addons, err := addon.New(aws.StringValue(v.Name))
+	require.NoError(t, err)
+
 	svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", envName, appName)
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App: &config.Application{Name: appName},
@@ -57,6 +61,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 			Region:                   "us-west-2",
 			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 		},
+		Addons: addons,
 	})
 
 	tpl, err := serializer.Template()

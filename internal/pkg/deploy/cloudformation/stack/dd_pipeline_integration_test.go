@@ -1,5 +1,4 @@
 //go:build integration || localintegration
-// +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -7,7 +6,6 @@
 package stack_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -26,7 +24,7 @@ const (
 	pipelineStackPath    = "dd_stack_template.yaml"
 )
 
-// TestBB_Pipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
+// TestDD_Pipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
 func TestDD_Pipeline_Template(t *testing.T) {
 	path := filepath.Join("testdata", "pipeline", pipelineManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
@@ -38,7 +36,7 @@ func TestDD_Pipeline_Template(t *testing.T) {
 	var build deploy.Build
 
 	if err = build.Init(pipelineMft.Build, ""); err != nil {
-		fmt.Errorf("primting err: %v", err)
+		t.Errorf("build init: %v", err)
 	}
 
 	source, _, err := deploy.PipelineSourceFromManifest(pipelineMft.Source)

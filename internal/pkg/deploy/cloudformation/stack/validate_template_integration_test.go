@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -13,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -29,6 +29,10 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	content := mft.Manifest()
 	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
+
+	addons, err := addon.New(aws.StringValue(v.Name))
+	require.NoError(t, err)
+
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App: &config.Application{Name: appName},
 		EnvManifest: &manifest.Environment{
@@ -49,6 +53,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 				"RulePriorityFunction":        "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
 			},
 		},
+		Addons: addons,
 	})
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
@@ -74,6 +79,10 @@ func TestScheduledJob_Validate(t *testing.T) {
 	content := mft.Manifest()
 	v, ok := content.(*manifest.ScheduledJob)
 	require.True(t, ok)
+
+	addons, err := addon.New(aws.StringValue(v.Name))
+	require.NoError(t, err)
+
 	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
 		App:      appName,
 		Env:      envName,
@@ -84,6 +93,7 @@ func TestScheduledJob_Validate(t *testing.T) {
 				"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
 			},
 		},
+		Addons: addons,
 	})
 
 	tpl, err := serializer.Template()

@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"gopkg.in/yaml.v3"
@@ -74,6 +76,9 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
+		addons, err := addon.New(aws.StringValue(v.Name))
+		require.NoError(t, err)
+
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		envConfig := &manifest.Environment{
 			Workload: manifest.Workload{
@@ -90,6 +95,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				AccountID:                "123456789123",
 				Region:                   "us-west-2",
 			},
+			Addons: addons,
 		})
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")

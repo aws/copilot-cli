@@ -43,9 +43,15 @@ type Addons struct {
 
 	parser template.Parser
 	ws     workspaceReader
+
+	cachedTemplate    string
+	cachedTemplateErr error
+
+	bucket   string
+	uploader uploader
 }
 
-// New creates an Addons object given a workload name.
+// New creates an Addons struct given a workload name.
 func New(wlName string) (*Addons, error) {
 	ws, err := workspace.New()
 	if err != nil {
@@ -58,12 +64,35 @@ func New(wlName string) (*Addons, error) {
 	}, nil
 }
 
+// NewPackager creates an Addons struct that will package local artifacts when
+// generating the addons template.
+// See https://docs.aws.amazon.com/cli/latest/reference/cloudformation/package.html for more details.
+func NewPackager(wlName string, bucket string, uploader uploader) (*Addons, error) {
+	addons, err := New(wlName)
+	if err != nil {
+		return nil, err
+	}
+
+	addons.bucket = bucket
+	addons.uploader = uploader
+	return addons, nil
+}
+
 // Template merges CloudFormation templates under the "addons/" directory of a workload
 // into a single CloudFormation template and returns it.
 //
 // If the addons directory doesn't exist, it returns the empty string and
 // ErrAddonsDirNotExist.
 func (a *Addons) Template() (string, error) {
+	if a.cachedTemplate != "" || a.cachedTemplateErr != nil {
+		return a.cachedTemplate, a.cachedTemplateErr
+	}
+
+	a.cachedTemplate, a.cachedTemplateErr = a.template()
+	return a.cachedTemplate, a.cachedTemplateErr
+}
+
+func (a *Addons) template() (string, error) {
 	fnames, err := a.ws.ReadAddonsDir(a.wlName)
 	if err != nil {
 		return "", &ErrAddonsNotFound{
@@ -93,10 +122,18 @@ func (a *Addons) Template() (string, error) {
 			return "", err
 		}
 	}
+
+	if a.uploader != nil {
+		if err := mergedTemplate.pkg(a); err != nil {
+			return "", fmt.Errorf("package local artifacts: %s", err)
+		}
+	}
+
 	out, err := yaml.Marshal(mergedTemplate)
 	if err != nil {
 		return "", fmt.Errorf("marshal merged addons template: %w", err)
 	}
+
 	return string(out), nil
 }
 

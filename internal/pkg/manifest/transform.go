@@ -20,7 +20,7 @@ var defaultTransformers = []mergo.Transformers{
 	imageTransformer{},
 	buildArgsOrStringTransformer{},
 	aliasTransformer{},
-	StringSliceOrStringTransformer{},
+	stringSliceOrStringTransformer{},
 	platformArgsOrStringTransformer{},
 	securityGroupsIDsOrConfigTransformer{},
 	placementArgOrStringTransformer{},
@@ -133,10 +133,10 @@ func (t aliasTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Va
 	}
 }
 
-type StringSliceOrStringTransformer struct{}
+type stringSliceOrStringTransformer struct{}
 
 // Transformer returns custom merge logic for StringSliceOrString's fields.
-func (t StringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+func (t stringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if !typ.ConvertibleTo(reflect.TypeOf(StringSliceOrString{})) {
 		return nil
 	}
