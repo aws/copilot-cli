@@ -349,8 +349,13 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 		RoleARN: mockManagerARN,
 
 		StackName: mockTaskStackName,
+		S3Bucket:  "arn:aws:s3:::bucket",
 	}
 	mockDefaultTask := deploy.TaskStackInfo{
+		StackName: mockTaskStackName,
+		S3Bucket:  "arn:aws:s3:::bucket",
+	}
+	mockDefaultTaskNoBucket := deploy.TaskStackInfo{
 		StackName: mockTaskStackName,
 	}
 	mockError := errors.New("some error")
@@ -414,6 +419,26 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.cfn.EXPECT().DeleteTask(mockDefaultTask).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+				)
+			},
+		},
+		"success with default cluster and no S3 bucket": {
+			inDefault: true,
+			inName:    mockTaskName,
+
+			setupMocks: func(m deleteTaskMocks) {
+				gomock.InOrder(
+					m.sess.EXPECT().Default().Return(&session.Session{}, nil),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecs.EXPECT().StopDefaultClusterTasks(mockTaskName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(&mockDefaultTaskNoBucket, nil),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.cfn.EXPECT().DeleteTask(mockDefaultTaskNoBucket).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
 			},

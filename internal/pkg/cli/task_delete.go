@@ -450,8 +450,10 @@ func (o *deleteTaskOpts) deleteStack() error {
 		// Stack does not exist; skip deleting it.
 		return nil
 	}
-	if err := o.emptyS3Bucket(info); err != nil {
-		return err
+	if info.S3Bucket != "" {
+		if err := o.emptyS3Bucket(info); err != nil {
+			return err
+		}
 	}
 	o.spinner.Start(fmt.Sprintf("Deleting CloudFormation stack for task %s.", color.HighlightUserInput(o.name)))
 	err = o.newStackManager(sess).DeleteTask(*info)
