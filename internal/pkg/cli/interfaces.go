@@ -382,8 +382,7 @@ type appResourcesGetter interface {
 
 type taskDeployer interface {
 	DeployTask(out termprogress.FileWriter, input *deploy.CreateTaskResourcesInput, opts ...awscloudformation.StackOption) error
-	AddPipelineResourcesToApp(app *config.Application, region string) error
-	appResourcesGetter
+	GetTaskStack(taskName string) (*deploy.TaskStackInfo, error)
 }
 
 type taskStackManager interface {

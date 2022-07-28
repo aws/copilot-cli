@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"path/filepath"
 	"testing"
 
@@ -1017,9 +1016,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				afero.WriteFile(fs, "magic.env", []byte("SOMETHING=VALUE"), 0644)
 			},
 			setupMocks: func(m runTaskMocks) {
-				app := &config.Application{
-					Name: "my-app",
-				}
 				region := "us-east-35"
 
 				m.provider.EXPECT().Default().Return(&session.Session{
@@ -1029,11 +1025,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
-				m.store.EXPECT().GetApplication("my-app").Return(app, nil)
-				m.deployer.EXPECT().AddPipelineResourcesToApp(app, region).Return(nil)
-				m.deployer.EXPECT().GetAppResourcesByRegion(app, region).Return(&stack.AppRegionalResources{
-					S3Bucket: "arn:aws:s3:::bigbucket"}, nil)
-
+				info := deploy.TaskStackInfo{S3Bucket: "arn:aws:s3:::bigbucket"}
+				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(&info, nil)
 				key := "manual/env-files/magic.env/4963d64294508aa3fa103ccac5ad1537944c577d469608ddccad09b6f79b6406.env"
 				arn := "arn:aws:s3:::bigbucket/" + key
 				m.uploader.EXPECT().Upload("arn:aws:s3:::bigbucket", key,
@@ -1047,9 +1040,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			inEnvFile: "sadness.env",
 			inApp:     "my-app",
 			setupMocks: func(m runTaskMocks) {
-				app := &config.Application{
-					Name: "my-app",
-				}
 				region := "us-east-35"
 
 				m.provider.EXPECT().Default().Return(&session.Session{
@@ -1059,12 +1049,11 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
-				m.store.EXPECT().GetApplication("my-app").Return(app, nil)
-				m.deployer.EXPECT().AddPipelineResourcesToApp(app, region).Return(nil)
-				m.deployer.EXPECT().GetAppResourcesByRegion(app, region).Return(&stack.AppRegionalResources{
-					S3Bucket: "arn:aws:s3:::bigbucket"}, nil)
+				info := deploy.TaskStackInfo{S3Bucket: "arn:aws:s3:::bigbucket"}
+				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(&info, nil)
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			wantedError: errors.New("provision resources for task my-task: deploy env file sadness.env: read env file sadness.env: open sadness.env: file does not exist"),
+			wantedError: errors.New("deploy env file sadness.env: read env file sadness.env: open sadness.env: file does not exist"),
 		},
 		"env file pipeline resource add fail": {
 			inEnvFile: "testdir/../magic.env",
@@ -1074,11 +1063,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				afero.WriteFile(fs, "magic.env", []byte("SOMETHING=VALUE"), 0644)
 			},
 			setupMocks: func(m runTaskMocks) {
-				app := &config.Application{
-					Name: "my-app",
-				}
 				region := "us-east-35"
 
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil)
 				m.provider.EXPECT().Default().Return(&session.Session{
 					Config: &aws.Config{
 						// uh oh, new leaked region
@@ -1086,10 +1073,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
-				m.store.EXPECT().GetApplication("my-app").Return(app, nil)
-				m.deployer.EXPECT().AddPipelineResourcesToApp(app, region).Return(errors.New("hull breach in sector 3"))
+				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(nil, errors.New("hull breach in sector 3"))
 			},
-			wantedError: errors.New("provision resources for task my-task: deploy env file testdir/../magic.env: add env file bucket to application my-app in us-east-35: hull breach in sector 3"),
+			wantedError: errors.New("deploy env file testdir/../magic.env: deploy env file: hull breach in sector 3"),
 		},
 		"env file s3 upload failure": {
 			inEnvFile: "testdir/../magic.env",
@@ -1099,11 +1085,9 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				afero.WriteFile(fs, "magic.env", []byte("SOMETHING=VALUE"), 0644)
 			},
 			setupMocks: func(m runTaskMocks) {
-				app := &config.Application{
-					Name: "my-app",
-				}
 				region := "us-east-35"
 
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil)
 				m.provider.EXPECT().Default().Return(&session.Session{
 					Config: &aws.Config{
 						// uh oh, new leaked region
@@ -1111,10 +1095,8 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
-				m.store.EXPECT().GetApplication("my-app").Return(app, nil)
-				m.deployer.EXPECT().AddPipelineResourcesToApp(app, region).Return(nil)
-				m.deployer.EXPECT().GetAppResourcesByRegion(app, region).Return(&stack.AppRegionalResources{
-					S3Bucket: "arn:aws:s3:::bigbucket"}, nil)
+				info := deploy.TaskStackInfo{S3Bucket: "arn:aws:s3:::bigbucket"}
+				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(&info, nil)
 
 				key := "manual/env-files/magic.env/4963d64294508aa3fa103ccac5ad1537944c577d469608ddccad09b6f79b6406.env"
 				arn := "arn:aws:s3:::bigbucket/" + key
@@ -1122,7 +1104,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					bytes.NewReader([]byte("SOMETHING=VALUE"))).Return(arn, errors.New("out of floppy disks"))
 
 			},
-			wantedError: errors.New("provision resources for task my-task: deploy env file testdir/../magic.env: put env file testdir/../magic.env artifact to bucket arn:aws:s3:::bigbucket: out of floppy disks"),
+			wantedError: errors.New("deploy env file testdir/../magic.env: put env file testdir/../magic.env artifact to bucket arn:aws:s3:::bigbucket: out of floppy disks"),
 		},
 	}
 

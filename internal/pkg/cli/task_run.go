@@ -677,6 +677,18 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
+	update := false
+
+	if o.envFile != "" {
+		envFileARN, err := o.deployEnvFile()
+		if err != nil {
+			return fmt.Errorf("deploy env file %s: %w", o.envFile, err)
+		}
+		o.envFileARN = envFileARN
+
+		update = true
+	}
+
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
 		if err := o.buildAndPushImage(); err != nil {
@@ -692,6 +704,10 @@ func (o *runTaskOpts) Execute() error {
 			return fmt.Errorf("get ECR repository URI: %w", err)
 		}
 		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
+		update = true
+	}
+
+	if update {
 		if err := o.updateTaskResources(); err != nil {
 			return err
 		}
@@ -954,11 +970,6 @@ func (o *runTaskOpts) deploy() error {
 		return fmt.Errorf("split command %s into tokens using shell-style rules: %w", o.command, err)
 	}
 
-	envFileARN, err := o.deployEnvFileIfNeeded()
-	if err != nil {
-		return fmt.Errorf("deploy env file %s: %w", o.envFile, err)
-	}
-
 	input := &deploy.CreateTaskResourcesInput{
 		Name:                  o.groupName,
 		CPU:                   o.cpu,
@@ -969,7 +980,7 @@ func (o *runTaskOpts) deploy() error {
 		Command:               command,
 		EntryPoint:            entrypoint,
 		EnvVars:               o.envVars,
-		EnvFileARN:            envFileARN,
+		EnvFileARN:            o.envFileARN,
 		SSMParamSecrets:       ssmParamSecrets,
 		SecretsManagerSecrets: secretsManagerSecrets,
 		OS:                    o.os,
@@ -982,51 +993,30 @@ func (o *runTaskOpts) deploy() error {
 }
 
 // deployEnvFileIfNeeded uploads the env file if needed, ensures that an S3 bucket is available, and returns the ARN of uploaded file.
-func (o *runTaskOpts) deployEnvFileIfNeeded() (string, error) {
+func (o *runTaskOpts) deployEnvFile() (string, error) {
 	if o.envFile == "" {
 		return "", nil
 	}
 
-	if o.envFileARN != "" {
-		return o.envFileARN, nil
-	}
-
-	region := aws.StringValue(o.sess.Config.Region)
-
-	app, err := o.store.GetApplication(o.appName)
+	info, err := o.deployer.GetTaskStack(o.groupName)
 	if err != nil {
-		return "", fmt.Errorf("get application from store: %w", err)
+		return "", fmt.Errorf("deploy env file: %w", err)
 	}
-
-	// bootstrap S3 bucket
-	o.spinner.Start(fmt.Sprintf(fmtTaskRunResourcesStart, color.HighlightUserInput(o.appName)))
-	err = o.deployer.AddPipelineResourcesToApp(app, region)
-	if err != nil {
-		o.spinner.Stop(log.Serrorf(fmtTaskRunResourcesFailed, color.HighlightUserInput(o.appName)))
-		return "", fmt.Errorf("add env file bucket to application %s in %s: %w", o.appName, region, err)
-	}
-	o.spinner.Stop(log.Ssuccessf(fmtTaskRunResourcesComplete, color.HighlightUserInput(o.appName)))
 
 	// push env file
 	o.spinner.Start(fmt.Sprintf(fmtTaskRunEnvUploadStart, color.HighlightUserInput(o.envFile)))
-	envFileARN, err := o.pushEnvFileToS3(app, region)
+	envFileARN, err := o.pushEnvFileToS3(info.S3Bucket)
 	if err != nil {
 		o.spinner.Stop(log.Serrorf(fmtTaskRunEnvUploadFailed, color.HighlightUserInput(o.envFile)))
 		return "", err
 	}
 	o.spinner.Stop(log.Ssuccessf(fmtTaskRunEnvUploadComplete, color.HighlightUserInput(o.envFile)))
 
-	o.envFileARN = envFileARN
 	return envFileARN, nil
 }
 
 // pushEnvFileToS3 reads an env file from disk, uploads it to a unique path, and then returns the ARN of the env file.
-func (o *runTaskOpts) pushEnvFileToS3(app *config.Application, region string) (string, error) {
-	resources, err := o.deployer.GetAppResourcesByRegion(app, region)
-	if err != nil {
-		return "", fmt.Errorf("get app regional resources: %w", err)
-	}
-
+func (o *runTaskOpts) pushEnvFileToS3(bucket string) (string, error) {
 	content, err := afero.ReadFile(o.fs, o.envFile)
 	if err != nil {
 		return "", fmt.Errorf("read env file %s: %w", o.envFile, err)
@@ -1034,9 +1024,9 @@ func (o *runTaskOpts) pushEnvFileToS3(app *config.Application, region string) (s
 	reader := bytes.NewReader(content)
 
 	uploader := o.configureUploader(o.sess)
-	url, err := uploader.Upload(resources.S3Bucket, artifactpath.EnvFiles(o.envFile, content), reader)
+	url, err := uploader.Upload(bucket, artifactpath.EnvFiles(o.envFile, content), reader)
 	if err != nil {
-		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", o.envFile, resources.S3Bucket, err)
+		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", o.envFile, bucket, err)
 	}
 	bucket, key, err := s3.ParseURL(url)
 	if err != nil {
