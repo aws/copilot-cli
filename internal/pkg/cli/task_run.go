@@ -65,10 +65,6 @@ const (
 const (
 	envFileExt = ".env"
 
-	fmtTaskRunResourcesStart    = "Creating an S3 Bucket to store your env files for: %s"
-	fmtTaskRunResourcesFailed   = "Failed to create an S3 Bucket to store your env files for: %s\n"
-	fmtTaskRunResourcesComplete = "Successfully created an S3 Bucket to store your env files for: %s\n"
-
 	fmtTaskRunEnvUploadStart    = "Uploading env file to S3: %s"
 	fmtTaskRunEnvUploadFailed   = "Failed to upload your env file to S3: %s\n"
 	fmtTaskRunEnvUploadComplete = "Successfully uploaded your env file to S3: %s\n"
