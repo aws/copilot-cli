@@ -46,9 +46,12 @@ type Addons struct {
 
 	cachedTemplate    string
 	cachedTemplateErr error
+
+	bucket   string
+	uploader uploader
 }
 
-// New creates an Addons object given a workload name.
+// New creates an Addons struct given a workload name.
 func New(wlName string) (*Addons, error) {
 	ws, err := workspace.New()
 	if err != nil {
@@ -59,6 +62,20 @@ func New(wlName string) (*Addons, error) {
 		parser: template.New(),
 		ws:     ws,
 	}, nil
+}
+
+// NewPackager creates an Addons struct that will package local artifacts when
+// generating the addons template.
+// See https://docs.aws.amazon.com/cli/latest/reference/cloudformation/package.html for more details.
+func NewPackager(wlName string, bucket string, uploader uploader) (*Addons, error) {
+	addons, err := New(wlName)
+	if err != nil {
+		return nil, err
+	}
+
+	addons.bucket = bucket
+	addons.uploader = uploader
+	return addons, nil
 }
 
 // Template merges CloudFormation templates under the "addons/" directory of a workload
@@ -103,6 +120,12 @@ func (a *Addons) template() (string, error) {
 		}
 		if err := mergedTemplate.merge(tpl); err != nil {
 			return "", err
+		}
+	}
+
+	if a.uploader != nil {
+		if err := mergedTemplate.pkg(a); err != nil {
+			return "", fmt.Errorf("package local artifacts: %s", err)
 		}
 	}
 
