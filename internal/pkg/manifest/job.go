@@ -35,6 +35,10 @@ type ScheduledJob struct {
 	parser template.Parser
 }
 
+func (s *ScheduledJob) subnets() *SubnetListOrArgs {
+	return &s.Network.VPC.Placement.Subnets
+}
+
 // ScheduledJobConfig holds the configuration for a scheduled job
 type ScheduledJobConfig struct {
 	ImageConfig             ImageWithHealthcheck `yaml:"image,flow"`
@@ -102,8 +106,7 @@ func (j *ScheduledJob) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// ApplyEnv returns the manifest with environment overrides.
-func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
+func (j ScheduledJob) applyEnv(envName string) (workloadManifest, error) {
 	overrideConfig, ok := j.Environments[envName]
 	if !ok {
 		return &j, nil
@@ -122,8 +125,7 @@ func (j ScheduledJob) ApplyEnv(envName string) (WorkloadManifest, error) {
 	return &j, nil
 }
 
-// RequiredEnvironmentFeatures returns environment features that are required for this manfiest.
-func (s *ScheduledJob) RequiredEnvironmentFeatures() []string {
+func (s *ScheduledJob) requiredEnvironmentFeatures() []string {
 	var features []string
 	features = append(features, s.Network.requiredEnvFeatures()...)
 	features = append(features, s.Storage.requiredEnvFeatures()...)

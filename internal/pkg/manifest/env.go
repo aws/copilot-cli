@@ -23,7 +23,7 @@ var environmentManifestPath = "environment/manifest.yml"
 // Environment is the manifest configuration for an environment.
 type Environment struct {
 	Workload          `yaml:",inline"`
-	environmentConfig `yaml:",inline"`
+	EnvironmentConfig `yaml:",inline"`
 
 	parser template.Parser
 }
@@ -49,7 +49,7 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 	var vpc environmentVPCConfig
 	vpc.loadVPCConfig(cfg.CustomConfig)
 
-	var http environmentHTTPConfig
+	var http EnvironmentHTTPConfig
 	http.loadLBConfig(cfg.CustomConfig)
 
 	var obs environmentObservability
@@ -60,7 +60,7 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 			Name: stringP(cfg.Name),
 			Type: stringP(EnvironmentManifestType),
 		},
-		environmentConfig: environmentConfig{
+		EnvironmentConfig: EnvironmentConfig{
 			Network: environmentNetworkConfig{
 				VPC: vpc,
 			},
@@ -83,11 +83,18 @@ func (e *Environment) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-type environmentConfig struct {
-	Network       environmentNetworkConfig `yaml:"network,omitempty"`
-	Observability environmentObservability `yaml:"observability,omitempty"`
-	HTTPConfig    environmentHTTPConfig    `yaml:"http,omitempty"`
+// EnvironmentConfig defines the configuration settings for an environment manifest
+type EnvironmentConfig struct {
+	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
+	Observability environmentObservability `yaml:"observability,omitempty,flow"`
+	HTTPConfig    EnvironmentHTTPConfig    `yaml:"http,omitempty,flow"`
 	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
+}
+
+// IsIngressRestrictedToCDN returns whether or not an environment has its
+// Public Load Balancer ingress restricted to a Content Delivery Network.
+func (mft *EnvironmentConfig) IsIngressRestrictedToCDN() bool {
+	return aws.BoolValue(mft.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress)
 }
 
 type environmentNetworkConfig struct {
@@ -304,43 +311,88 @@ func (o *environmentObservability) loadObsConfig(tele *config.Telemetry) {
 	o.ContainerInsights = &tele.EnableContainerInsights
 }
 
-type environmentHTTPConfig struct {
-	Public  publicHTTPConfig  `yaml:"public,omitempty"`
+// EnvironmentHTTPConfig defines the configuration settings for an environment group's HTTP connections.
+type EnvironmentHTTPConfig struct {
+	Public  PublicHTTPConfig  `yaml:"public,omitempty"`
 	Private privateHTTPConfig `yaml:"private,omitempty"`
 }
 
 // IsEmpty returns true if neither the public ALB nor the internal ALB is configured.
-func (cfg environmentHTTPConfig) IsEmpty() bool {
+func (cfg EnvironmentHTTPConfig) IsEmpty() bool {
 	return cfg.Public.IsEmpty() && cfg.Private.IsEmpty()
 }
 
-func (cfg *environmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
+func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	if env.IsEmpty() {
 		return
 	}
+
 	if env.ImportVPC != nil && len(env.ImportVPC.PublicSubnetIDs) == 0 {
 		cfg.Private.InternalALBSubnets = env.InternalALBSubnets
 		cfg.Private.Certificates = env.ImportCertARNs
+		cfg.Private.SecurityGroupsConfig.Ingress.VPCIngress = aws.Bool(env.EnableInternalALBVPCIngress)
 		return
 	}
 	cfg.Public.Certificates = env.ImportCertARNs
 }
 
-type publicHTTPConfig struct {
-	Certificates []string `yaml:"certificates,omitempty"`
+// PublicHTTPConfig represents the configuration settings for an environment public ALB.
+type PublicHTTPConfig struct {
+	SecurityGroupConfig ALBSecurityGroupsConfig `yaml:"security_groups,omitempty"`
+	Certificates        []string                `yaml:"certificates,omitempty"`
+}
+
+// ALBSecurityGroupsConfig represents security group configuration settings for an ALB.
+type ALBSecurityGroupsConfig struct {
+	Ingress Ingress `yaml:"ingress"`
+}
+
+func (cfg ALBSecurityGroupsConfig) IsEmpty() bool {
+	return cfg.Ingress.IsEmpty()
+}
+
+// Ingress represents allowed ingress traffic from specified fields.
+type Ingress struct {
+	RestrictiveIngress RestrictiveIngress `yaml:"restrict_to"`
+	VPCIngress         *bool              `yaml:"from_vpc"`
+}
+
+// RestrictiveIngress represents ingress fields which restrict
+// default behavior of allowing all public ingress.
+type RestrictiveIngress struct {
+	CDNIngress *bool `yaml:"cdn"`
+}
+
+// IsEmpty returns true if there are no specified fields for restrictive ingress.
+func (i RestrictiveIngress) IsEmpty() bool {
+	return i.CDNIngress == nil
+}
+
+// IsEmpty returns true if there are no specified fields for ingress.
+func (i Ingress) IsEmpty() bool {
+	return i.VPCIngress == nil && i.RestrictiveIngress.IsEmpty()
 }
 
 // IsEmpty returns true if there is no customization to the public ALB.
-func (cfg publicHTTPConfig) IsEmpty() bool {
-	return len(cfg.Certificates) == 0
+func (cfg PublicHTTPConfig) IsEmpty() bool {
+	return len(cfg.Certificates) == 0 && cfg.SecurityGroupConfig.IsEmpty()
 }
 
 type privateHTTPConfig struct {
-	InternalALBSubnets []string `yaml:"subnets,omitempty"`
-	Certificates       []string `yaml:"certificates,omitempty"`
+	InternalALBSubnets   []string             `yaml:"subnets,omitempty"`
+	Certificates         []string             `yaml:"certificates,omitempty"`
+	SecurityGroupsConfig securityGroupsConfig `yaml:"security_groups,omitempty"`
 }
 
 // IsEmpty returns true if there is no customization to the internal ALB.
 func (cfg privateHTTPConfig) IsEmpty() bool {
-	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0
+	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0 && cfg.SecurityGroupsConfig.isEmpty()
+}
+
+type securityGroupsConfig struct {
+	Ingress Ingress `yaml:"ingress"`
+}
+
+func (cfg securityGroupsConfig) isEmpty() bool {
+	return cfg.Ingress.IsEmpty()
 }

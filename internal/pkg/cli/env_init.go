@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -635,11 +636,18 @@ func (o *initEnvOpts) askAZs() ([]string, error) {
 func (o *initEnvOpts) validateDuplicateEnv() error {
 	_, err := o.store.GetEnvironment(o.appName, o.name)
 	if err == nil {
-		log.Errorf(`It seems like you are trying to init an environment that already exists.
-To recreate the environment, please run:
+		dir := filepath.Join("copilot", "environments", o.name)
+		log.Infof(`It seems like you are trying to init an environment that already exists.
+To generate a manifest for the environment:
+1. %s
+2. %s
+
+Alternatively, to recreate the environment:
 1. %s
 2. And then %s
 `,
+			color.HighlightCode(fmt.Sprintf("mkdir -p %s", dir)),
+			color.HighlightCode(fmt.Sprintf("copilot env show -n %s --manifest > %s", o.name, filepath.Join(dir, "manifest.yml"))),
 			color.HighlightCode(fmt.Sprintf("copilot env delete --name %s", o.name)),
 			color.HighlightCode(fmt.Sprintf("copilot env init --name %s", o.name)))
 		return fmt.Errorf("environment %s already exists", color.HighlightUserInput(o.name))

@@ -190,6 +190,59 @@ func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
 }
 
+// MockstackBuilder is a mock of stackBuilder interface.
+type MockstackBuilder struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackBuilderMockRecorder
+}
+
+// MockstackBuilderMockRecorder is the mock recorder for MockstackBuilder.
+type MockstackBuilderMockRecorder struct {
+	mock *MockstackBuilder
+}
+
+// NewMockstackBuilder creates a new mock instance.
+func NewMockstackBuilder(ctrl *gomock.Controller) *MockstackBuilder {
+	mock := &MockstackBuilder{ctrl: ctrl}
+	mock.recorder = &MockstackBuilderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackBuilder) EXPECT() *MockstackBuilderMockRecorder {
+	return m.recorder
+}
+
+// Parameters mocks base method.
+func (m *MockstackBuilder) Parameters() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Parameters")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Parameters indicates an expected call of Parameters.
+func (mr *MockstackBuilderMockRecorder) Parameters() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*MockstackBuilder)(nil).Parameters))
+}
+
+// Template mocks base method.
+func (m *MockstackBuilder) Template() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template.
+func (mr *MockstackBuilderMockRecorder) Template() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockstackBuilder)(nil).Template))
+}
+
 // MockstackSerializer is a mock of stackSerializer interface.
 type MockstackSerializer struct {
 	ctrl     *gomock.Controller

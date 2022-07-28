@@ -78,8 +78,7 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	return content.Bytes(), nil
 }
 
-// RequiredEnvironmentFeatures returns environment features that are required for this manifest.
-func (s *BackendService) RequiredEnvironmentFeatures() []string {
+func (s *BackendService) requiredEnvironmentFeatures() []string {
 	var features []string
 	if !s.RoutingRule.IsEmpty() {
 		features = append(features, template.InternalALBFeatureName)
@@ -119,9 +118,11 @@ func (s *BackendService) EnvFile() string {
 	return aws.StringValue(s.TaskConfig.EnvFile)
 }
 
-// ApplyEnv returns the service manifest with environment overrides.
-// If the environment passed in does not have any overrides then it returns itself.
-func (s BackendService) ApplyEnv(envName string) (WorkloadManifest, error) {
+func (s *BackendService) subnets() *SubnetListOrArgs {
+	return &s.Network.VPC.Placement.Subnets
+}
+
+func (s BackendService) applyEnv(envName string) (workloadManifest, error) {
 	overrideConfig, ok := s.Environments[envName]
 	if !ok {
 		return &s, nil

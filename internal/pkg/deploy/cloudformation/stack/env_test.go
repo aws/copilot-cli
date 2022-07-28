@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -28,12 +29,12 @@ func TestEnv_Template(t *testing.T) {
 		"should return template body when present": {
 			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
 				m := mocks.NewMockenvReadParser(ctrl)
-				m.EXPECT().ParseEnv(gomock.Any(), gomock.Any()).DoAndReturn(func(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error) {
+				m.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
 					require.Equal(t, &template.EnvOpts{
 						AppName: "project",
 						EnvName: "env",
 						VPCConfig: template.VPCConfig{
-							Imported: &template.ImportVPC{},
+							Imported: nil,
 							Managed: template.ManagedVPC{
 								CIDR:               DefaultVPCCIDR,
 								PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
@@ -55,6 +56,11 @@ func TestEnv_Template(t *testing.T) {
 								Key:    "mockkey4",
 							},
 						},
+						Telemetry: &template.Telemetry{
+							EnableContainerInsights: false,
+						},
+						SerializedManifest: "name: env\ntype: Environment\n",
+						ForceUpdateID:      "mockPreviousForceUpdateID",
 					}, data)
 					return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
 				})
@@ -70,7 +76,8 @@ func TestEnv_Template(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			envStack := &EnvStackConfig{
-				in: mockDeployEnvironmentInput(),
+				in:                mockDeployEnvironmentInput(),
+				lastForceUpdateID: "mockPreviousForceUpdateID",
 			}
 			tc.mockDependencies(ctrl, envStack)
 
@@ -93,7 +100,7 @@ func TestEnv_Parameters(t *testing.T) {
 	deploymentInputWithDNS := mockDeployEnvironmentInput()
 	deploymentInputWithDNS.App.Domain = "ecs.aws"
 	deploymentInputWithPrivateDNS := mockDeployEnvironmentInput()
-	deploymentInputWithPrivateDNS.ImportCertARNs = []string{"arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"}
+	deploymentInputWithPrivateDNS.Mft.HTTPConfig.Private.Certificates = []string{"arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"}
 	testCases := map[string]struct {
 		input     *deploy.CreateEnvironmentInput
 		oldParams []*cloudformation.Parameter
@@ -669,6 +676,14 @@ func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
 			"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey2",
 			"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/mockkey4",
 		},
-		ImportVPCConfig: &config.ImportVPC{},
+		Mft: &manifest.Environment{
+			Workload: manifest.Workload{
+				Name: aws.String("env"),
+				Type: aws.String("Environment"),
+			},
+		},
+		RawMft: []byte(`name: env
+type: Environment
+`),
 	}
 }

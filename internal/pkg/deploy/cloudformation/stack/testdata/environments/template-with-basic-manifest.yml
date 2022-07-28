@@ -51,8 +51,9 @@ Conditions:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
-  HasAliases:
-    !Not [!Equals [ !Ref Aliases, "" ]]
+  ManagedAliases: !And
+    - !Condition DelegateDNS
+    - !Not [!Equals [ !Ref Aliases, "" ]]
 Resources:
   # The CloudformationExecutionRole definition must be immediately followed with DeletionPolicy: Retain.
   # See #1533.
@@ -569,19 +570,31 @@ Resources:
       ClusterSettings:
         - Name: containerInsights
           Value: disabled
-  PublicLoadBalancerSecurityGroup:
+  PublicHTTPLoadBalancerSecurityGroup:
     Metadata:
-      'aws:copilot:description': 'A security group for your load balancer allowing HTTP and HTTPS traffic'
+      'aws:copilot:description': 'A security group for your load balancer allowing HTTP traffic'
     Condition: CreateALB
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Access to the public facing load balancer
+      GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 80
           FromPort: 80
           IpProtocol: tcp
           ToPort: 80
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+  PublicHTTPSLoadBalancerSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your load balancer allowing HTTPS traffic'
+    Condition: ExportHTTPSListener
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTPS access to the public facing load balancer
+      SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 443
           FromPort: 443
@@ -613,14 +626,22 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
-  EnvironmentSecurityGroupIngressFromPublicALB:
+  EnvironmentHTTPSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateALB
     Properties:
-      Description: Ingress from the public ALB
+      Description: HTTP ingress from the public ALB
       GroupId: !Ref EnvironmentSecurityGroup
       IpProtocol: -1
-      SourceSecurityGroupId: !Ref PublicLoadBalancerSecurityGroup
+      SourceSecurityGroupId: !Ref PublicHTTPLoadBalancerSecurityGroup
+  EnvironmentHTTPSSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: ExportHTTPSListener
+    Properties:
+      Description: HTTPS ingress from the public ALB
+      GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref PublicHTTPSLoadBalancerSecurityGroup
   EnvironmentSecurityGroupIngressFromInternalALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateInternalALB
@@ -644,30 +665,6 @@ Resources:
       GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-  InternalLoadBalancerSecurityGroupIngressFromHttp:
-    Metadata:
-      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80 within the VPC'
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateInternalALB
-    Properties:
-      Description: Allow from within the VPC on port 80
-      CidrIp: 0.0.0.0/0
-      FromPort: 80
-      ToPort: 80
-      IpProtocol: tcp
-      GroupId: !Ref InternalLoadBalancerSecurityGroup
-  InternalLoadBalancerSecurityGroupIngressFromHttps:
-    Metadata:
-      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 443 within the VPC'
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: ExportInternalHTTPSListener
-    Properties:
-      Description: Allow from within the VPC on port 443
-      CidrIp: 0.0.0.0/0
-      FromPort: 443
-      ToPort: 443
-      IpProtocol: tcp
-      GroupId: !Ref InternalLoadBalancerSecurityGroup
   PublicLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'
@@ -675,7 +672,9 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internet-facing
-      SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
+      SecurityGroups: 
+        - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId
+        - !If [ExportHTTPSListener, !GetAtt PublicHTTPSLoadBalancerSecurityGroup.GroupId, !Ref "AWS::NoValue"]
       Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2,  ]
       Type: application
   # Assign a dummy target group that with no real services as targets, so that we can create
@@ -917,7 +916,7 @@ Resources:
       Runtime: nodejs12.x
   
   CustomDomainFunction:
-    Condition: HasAliases
+    Condition: ManagedAliases
     Type: AWS::Lambda::Function
     Properties:
       Code:
@@ -978,7 +977,7 @@ Resources:
   CustomDomainAction:
     Metadata:
       'aws:copilot:description': 'Add an A-record to the hosted zone for the domain alias'
-    Condition: HasAliases
+    Condition: ManagedAliases
     Type: Custom::CustomDomainFunction
     Properties:
       ServiceToken: !GetAtt CustomDomainFunction.Arn
@@ -1120,7 +1119,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
@@ -1128,3 +1127,9 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  PublicALBAccessible:
+    Condition: CreateALB
+    Value: true
+  LastForceDeployID:
+    Value: ""
+    Description: Optionally force the template to update when no immediate resource change is present.

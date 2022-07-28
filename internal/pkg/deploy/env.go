@@ -38,9 +38,11 @@ type CreateEnvironmentInput struct {
 	ImportCertARNs     []string              // Optional configuration if users want to import certificates.
 	InternalALBSubnets []string              // Optional configuration if users want to specify internal ALB placement.
 	AllowVPCIngress    bool                  // Optional configuration to allow access to internal ALB from ports 80/443.
+	CIDRPrefixListIDs  []string              // Optional configuration to specify public security group ingress based on prefix lists.
 	Telemetry          *config.Telemetry     // Optional observability and monitoring configuration.
 	Mft                *manifest.Environment // Unmarshaled and interpolated manifest object.
 	RawMft             []byte                // Content of the environment manifest without any modifications.
+	ForceUpdate        bool
 
 	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
 }

@@ -6,6 +6,8 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"strconv"
+	"text/template"
 )
 
 const (
@@ -20,13 +22,18 @@ const (
 	EFSFeatureName         = "EFSWorkloads"
 	NATFeatureName         = "NATWorkloads"
 	InternalALBFeatureName = "InternalALBWorkloads"
+	AliasesFeatureName     = "Aliases"
 )
+
+// LastForceDeployIDOutputName is the logical ID of the deployment controller output.
+const LastForceDeployIDOutputName = "LastForceDeployID"
 
 var friendlyEnvFeatureName = map[string]string{
 	ALBFeatureName:         "ALB",
 	EFSFeatureName:         "EFS",
 	NATFeatureName:         "NAT Gateway",
 	InternalALBFeatureName: "Internal ALB",
+	AliasesFeatureName:     "Aliases",
 }
 
 var leastVersionForFeature = map[string]string{
@@ -34,11 +41,12 @@ var leastVersionForFeature = map[string]string{
 	EFSFeatureName:         "v1.3.0",
 	NATFeatureName:         "v1.3.0",
 	InternalALBFeatureName: "v1.10.0",
+	AliasesFeatureName:     "v1.4.0",
 }
 
 // AvailableEnvFeatures returns a list of the latest available feature, named after their corresponding parameter names.
 func AvailableEnvFeatures() []string {
-	return []string{ALBFeatureName, EFSFeatureName, NATFeatureName, InternalALBFeatureName}
+	return []string{ALBFeatureName, EFSFeatureName, NATFeatureName, InternalALBFeatureName, AliasesFeatureName}
 }
 
 // FriendlyEnvFeatureName returns a user-friendly feature name given a env-controller managed parameter name.
@@ -97,25 +105,31 @@ type EnvOpts struct {
 	ArtifactBucketARN    string
 	ArtifactBucketKeyARN string
 
-	VPCConfig                VPCConfig
-	PublicImportedCertARNs   []string
-	PrivateImportedCertARNs  []string
-	CustomInternalALBSubnets []string
-	AllowVPCIngress          bool
-	Telemetry                *Telemetry
-
-	CDNConfig *CDNConfig // If nil, no cdn is to be used
+	VPCConfig         VPCConfig
+	PublicHTTPConfig  HTTPConfig
+	PrivateHTTPConfig HTTPConfig
+	Telemetry         *Telemetry
+	CDNConfig         *CDNConfig
 
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
+	ForceUpdateID      string
+}
+
+// HTTPConfig represents configuration for a Load Balancer.
+type HTTPConfig struct {
+	CIDRPrefixListIDs []string
+	ImportedCertARNs  []string
+	CustomALBSubnets  []string
 }
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.
 type CDNConfig struct{}
 
 type VPCConfig struct {
-	Imported *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
-	Managed  ManagedVPC
+	Imported        *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
+	Managed         ManagedVPC
+	AllowVPCIngress bool
 }
 
 // ImportVPC holds the fields to import VPC resources.
@@ -139,13 +153,13 @@ type Telemetry struct {
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.
-func (t *Template) ParseEnv(data *EnvOpts, options ...ParseOption) (*Content, error) {
-	tpl, err := t.parse("base", envCFTemplatePath, options...)
+func (t *Template) ParseEnv(data *EnvOpts) (*Content, error) {
+	tpl, err := t.parse("base", envCFTemplatePath, withEnvParsingFuncs())
 	if err != nil {
 		return nil, err
 	}
 	for _, templateName := range envCFSubTemplateNames {
-		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtEnvCFSubTemplatePath, templateName), options...)
+		nestedTpl, err := t.parse(templateName, fmt.Sprintf(fmtEnvCFSubTemplatePath, templateName), withEnvParsingFuncs())
 		if err != nil {
 			return nil, err
 		}
@@ -182,4 +196,14 @@ func (t *Template) ParseEnvBootstrap(data *EnvOpts, options ...ParseOption) (*Co
 		return nil, fmt.Errorf("execute environment template with data %v: %w", data, err)
 	}
 	return &Content{buf}, nil
+}
+
+func withEnvParsingFuncs() ParseOption {
+	return func(t *template.Template) *template.Template {
+		return t.Funcs(map[string]interface{}{
+			"inc":      IncFunc,
+			"fmtSlice": FmtSliceFunc,
+			"quote":    strconv.Quote,
+		})
+	}
 }

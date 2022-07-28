@@ -1,31 +1,91 @@
 List of all available properties for a Copilot pipeline manifest. To learn more about pipelines, see the [Pipelines](../concepts/pipelines.en.md) concept page.
 
-???+ note "Sample manifest for a pipeline triggered from a GitHub repo"
+???+ note "Sample continuous delivery pipeline manifests"
 
-    ```yaml
-        name: frontend
+    === "Release workloads"
+        ```yaml
+        # The "app-pipeline" will deploy all the services and jobs in the user/repo
+        # to the "test" and "prod" environments.
+        name: app-pipeline
     
         source:
           provider: GitHub
           properties:
             branch: main
-            repository: https://github.com/<user>/frontend
+            repository: https://github.com/user/repo
             # Optional: specify the name of an existing CodeStar Connections connection.
-            connection_name: a-connection
+            # connection_name: a-connection
     
         build:
           image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+          # additional_policy: # Add additional permissions while building your container images and templates.
+    
+        stages: 
+          - # By default all workloads are deployed concurrently within a stage.
+            name: test
+            test_commands:
+              - make integ-test
+              - echo "woo! Tests passed"
+          -
+            name: prod
+            requires_approval: true
+        ```
+
+    === "Control order of deployments"
+
+        ```yaml
+        # Alternatively, you can control the order of stack deployments in a stage. 
+        # See https://aws.github.io/copilot-cli/blogs/release-v118/#controlling-order-of-deployments-in-a-pipeline
+        name: app-pipeline
+    
+        source:
+          provider: Bitbucket
+          properties:
+            branch: main
+            repository:  https://bitbucket.org/user/repo
     
         stages:
-            -
-              name: test
-              test_commands:
-                - make test
-                - echo "woo! Tests passed"
-            -
-              name: prod
-              requires_approval: true
-    ```
+          - name: test
+            deployments:
+              orders:
+              warehouse:
+              frontend:
+                depends_on: [orders, warehouse]
+          - name: prod
+            require_approval: true
+            deployments:
+              orders:
+              warehouse:
+              frontend:
+                depends_on: [orders, warehouse]
+        ```
+
+    === "Release environments"
+
+        ```yaml
+        # Environment manifests changes can also be released with a pipeline.
+        name: env-pipeline
+    
+        source:
+          provider: CodeCommit
+          properties:
+            branch: main
+            repository: https://git-codecommit.us-east-2.amazonaws.com/v1/repos/MyDemoRepo
+    
+        stages:
+          - name: test
+            deployments:
+              deploy-env:
+                template_path: infrastructure/test.env.yml
+                template_config: infrastructure/test.env.params.json
+                stack_name: app-test
+          - name: prod
+            deployments:
+              deploy-prod:
+                template_path: infrastructure/prod.env.yml
+                template_config: infrastructure/prod.env.params.json
+                stack_name: app-prod
+        ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your pipeline.
@@ -76,6 +136,37 @@ The URI that identifies the Docker image to use for this build project. As of no
 
 <span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>
 Optional. The URI that identifies a buildspec to use for this build project. By default, Copilot will generate one for you, located at `copilot/pipelines/[your pipeline name]/buildspec.yml`.
+
+<span class="parent-field">build.</span><a id="build-additional-policy" href="#build-additional-policy" class="field">`additional_policy.`</a><a id="policy-document" href="#policy-document" class="field">`PolicyDocument`</a> <span class="type">Map</span>
+Optional. Specify an additional policy document to add to the build project role.
+The additional policy document can be specified in a map in YAML, for example:
+```yaml
+build:
+  additional_policy:
+    PolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        - Effect: Allow
+          Action:
+            - ecr:GetAuthorizationToken
+          Resource: '*'
+```
+or alternatively as JSON:
+```yaml
+build:
+  additional_policy:
+    PolicyDocument: 
+      {
+        “Statement": [
+          {
+            "Action": ["ecr:GetAuthorizationToken"],
+            "Effect": "Allow",
+            "Resource": "*"
+          }
+        ],
+        "Version": "2012-10-17"
+      }
+```
 
 <div class="separator"></div>
 

@@ -96,10 +96,10 @@ type AdvancedAlias struct {
 }
 
 // Alias is a custom type which supports unmarshaling "http.alias" yaml which
-// can either be of type advancedAlias slice or type stringSliceOrString.
+// can either be of type advancedAlias slice or type StringSliceOrString.
 type Alias struct {
 	AdvancedAliases     []AdvancedAlias
-	StringSliceOrString stringSliceOrString
+	StringSliceOrString StringSliceOrString
 }
 
 // IsEmpty returns empty if Alias is empty.
@@ -122,10 +122,10 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 
 	if len(a.AdvancedAliases) != 0 {
 		// Unmarshaled successfully to s.StringSlice, unset s.String, and return.
-		a.StringSliceOrString = stringSliceOrString{}
+		a.StringSliceOrString = StringSliceOrString{}
 		return nil
 	}
-	if err := unmarshalYAMLToStringSliceOrString(&a.StringSliceOrString, value); err != nil {
+	if err := a.StringSliceOrString.UnmarshalYAML(value); err != nil {
 		return errUnmarshalAlias
 	}
 	return nil
@@ -133,16 +133,12 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 
 // ToStringSlice converts an Alias to a slice of string.
 func (a *Alias) ToStringSlice() ([]string, error) {
-	if len(a.AdvancedAliases) != 0 {
-		aliases := make([]string, len(a.AdvancedAliases))
-		for i, advancedAlias := range a.AdvancedAliases {
-			aliases[i] = aws.StringValue(advancedAlias.Alias)
-		}
-		return aliases, nil
+	if len(a.AdvancedAliases) == 0 {
+		return a.StringSliceOrString.toStringSlice(), nil
 	}
-	aliases, err := toStringSlice(&a.StringSliceOrString)
-	if err != nil {
-		return nil, err
+	aliases := make([]string, len(a.AdvancedAliases))
+	for i, advancedAlias := range a.AdvancedAliases {
+		aliases[i] = aws.StringValue(advancedAlias.Alias)
 	}
 	return aliases, nil
 }

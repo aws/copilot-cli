@@ -25,11 +25,11 @@ func TestEnvRunner_Run(t *testing.T) {
 
 	filtersForSubnetID := []ec2.Filter{
 		{
-			Name:   tagFilterNameForEnv,
+			Name:   fmtTagFilterForEnv,
 			Values: []string{inEnv},
 		},
 		{
-			Name:   tagFilterNameForApp,
+			Name:   fmtTagFilterForApp,
 			Values: []string{inApp},
 		},
 	}

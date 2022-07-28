@@ -31,6 +31,8 @@ const (
 	envOutputPublicLoadBalancerDNSName   = "PublicLoadBalancerDNSName"
 	envOutputInternalLoadBalancerDNSName = "InternalLoadBalancerDNSName"
 	envOutputSubdomain                   = "EnvironmentSubdomain"
+	envOutputCloudFrontDomainName        = "CloudFrontDomainName"
+	envOutputPublicALBAccessible         = "PublicALBAccessible"
 
 	svcStackResourceALBTargetGroupLogicalID    = "TargetGroup"
 	svcStackResourceNLBTargetGroupLogicalID    = "NLBTargetGroup"

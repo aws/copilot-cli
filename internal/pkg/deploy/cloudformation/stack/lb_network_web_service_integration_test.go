@@ -15,6 +15,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -24,9 +26,6 @@ import (
 
 const (
 	nlbSvcManifestPath = "svc-nlb-manifest.yml"
-
-	nlbCustomDomainPath  = "custom-resources/nlb-custom-domain.js"
-	nlbCertValidatorPath = "custom-resources/nlb-cert-validator.js"
 )
 
 func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
@@ -70,12 +69,15 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 		require.NoError(t, err)
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
-
 		err = envMft.Validate()
 		require.NoError(t, err)
+		content := envMft.Manifest()
 
-		v, ok := envMft.(*manifest.LoadBalancedWebService)
+		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
+
+		addons, err := addon.New(aws.StringValue(v.Name))
+		require.NoError(t, err)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		envConfig := &manifest.Environment{
@@ -93,6 +95,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 				Region:                   "us-west-2",
 			},
 			RootUserARN: "arn:aws:iam::123456789123:root",
+			Addons:      addons,
 		}, stack.WithNLB([]string{"10.0.0.0/24", "10.1.0.0/24"}))
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")

@@ -1,5 +1,4 @@
 //go:build integration || localintegration
-// +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -13,6 +12,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -30,18 +31,19 @@ func TestScheduledJob_Template(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", jobManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
-
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)
-
 	envMft, err := mft.ApplyEnv(envName)
 	require.NoError(t, err)
-
 	err = envMft.Validate()
 	require.NoError(t, err)
+	content := envMft.Manifest()
 
-	v, ok := envMft.(*manifest.ScheduledJob)
+	v, ok := content.(*manifest.ScheduledJob)
 	require.True(t, ok)
+
+	addons, err := addon.New(aws.StringValue(v.Name))
+	require.NoError(t, err)
 
 	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
 		App:      appName,
@@ -50,6 +52,7 @@ func TestScheduledJob_Template(t *testing.T) {
 		RuntimeConfig: stack.RuntimeConfig{
 			ServiceDiscoveryEndpoint: "test.my-app.local",
 		},
+		Addons: addons,
 	})
 
 	tpl, err := serializer.Template()

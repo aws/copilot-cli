@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"gopkg.in/yaml.v3"
@@ -24,9 +26,6 @@ import (
 
 const (
 	svcManifestPath = "svc-manifest.yml"
-
-	dynamicDesiredCountPath = "custom-resources/desired-count-delegation.js"
-	rulePriorityPath        = "custom-resources/alb-rule-priority-generator.js"
 )
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
@@ -70,12 +69,15 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		require.NoError(t, err)
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
-
 		err = envMft.Validate()
 		require.NoError(t, err)
+		content := envMft.Manifest()
 
-		v, ok := envMft.(*manifest.LoadBalancedWebService)
+		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
+
+		addons, err := addon.New(aws.StringValue(v.Name))
+		require.NoError(t, err)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		envConfig := &manifest.Environment{
@@ -93,6 +95,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				AccountID:                "123456789123",
 				Region:                   "us-west-2",
 			},
+			Addons: addons,
 		})
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
