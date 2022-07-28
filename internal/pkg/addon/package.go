@@ -39,13 +39,13 @@ type uploader interface {
 //        <BucketNameProperty>: bucket
 //        <ObjectKeyProperty>: hash
 type packagePropertyConfig struct {
-	// Property is the key in a cloudformation resource's 'Properties' map to be packaged.
+	// PropertyPath is the key in a cloudformation resource's 'Properties' map to be packaged.
 	// Nested properties are represented by multiple keys in the slice, so the field
 	//  Properties:
 	//    Code:
 	//      S3: ./file-name
 	// is represented by []string{"Code", "S3"}.
-	Property []string
+	PropertyPath []string
 
 	// BucketNameProperty represents the key in a submap of Property, created
 	// after uploading an asset to S3. If this and ObjectKeyProperty are empty,
@@ -77,14 +77,14 @@ func (p *packagePropertyConfig) isStringReplacement() bool {
 var resourcePackageConfig = map[string][]packagePropertyConfig{
 	"AWS::ApiGateway::RestApi": {
 		{
-			Property:           []string{"BodyS3Location"},
+			PropertyPath:       []string{"BodyS3Location"},
 			BucketNameProperty: "Bucket",
 			ObjectKeyProperty:  "Key",
 		},
 	},
 	"AWS::Lambda::Function": {
 		{
-			Property:           []string{"Code"},
+			PropertyPath:       []string{"Code"},
 			BucketNameProperty: "S3Bucket",
 			ObjectKeyProperty:  "S3Key",
 			ForceZip:           true,
@@ -92,7 +92,7 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 	},
 	"AWS::Lambda::LayerVersion": {
 		{
-			Property:           []string{"Content"},
+			PropertyPath:       []string{"Content"},
 			BucketNameProperty: "S3Bucket",
 			ObjectKeyProperty:  "S3Key",
 			ForceZip:           true,
@@ -100,50 +100,50 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 	},
 	"AWS::Serverless::Function": {
 		{
-			Property: []string{"CodeUri"},
-			ForceZip: true,
+			PropertyPath: []string{"CodeUri"},
+			ForceZip:     true,
 		},
 	},
 	"AWS::Serverless::LayerVersion": {
 		{
-			Property: []string{"ContentUri"},
-			ForceZip: true,
+			PropertyPath: []string{"ContentUri"},
+			ForceZip:     true,
 		},
 	},
 	"AWS::Serverless::Application": {
 		{
-			Property: []string{"Location"},
+			PropertyPath: []string{"Location"},
 		},
 	},
 	"AWS::AppSync::GraphQLSchema": {
 		{
-			Property: []string{"DefinitionS3Location"},
+			PropertyPath: []string{"DefinitionS3Location"},
 		},
 	},
 	"AWS::AppSync::Resolver": {
 		{
-			Property: []string{"RequestMappingTemplateS3Location"},
+			PropertyPath: []string{"RequestMappingTemplateS3Location"},
 		},
 		{
-			Property: []string{"ResponseMappingTemplateS3Location"},
+			PropertyPath: []string{"ResponseMappingTemplateS3Location"},
 		},
 	},
 	"AWS::AppSync::FunctionConfiguration": {
 		{
-			Property: []string{"RequestMappingTemplateS3Location"},
+			PropertyPath: []string{"RequestMappingTemplateS3Location"},
 		},
 		{
-			Property: []string{"ResponseMappingTemplateS3Location"},
+			PropertyPath: []string{"ResponseMappingTemplateS3Location"},
 		},
 	},
 	"AWS::Serverless::Api": {
 		{
-			Property: []string{"DefinitionUri"},
+			PropertyPath: []string{"DefinitionUri"},
 		},
 	},
 	"AWS::ElasticBeanstalk::ApplicationVersion": {
 		{
-			Property:           []string{"SourceBundle"},
+			PropertyPath:       []string{"SourceBundle"},
 			BucketNameProperty: "S3Bucket",
 			ObjectKeyProperty:  "S3Key",
 		},
@@ -152,31 +152,31 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 		{
 			// This implementation does not recursively package
 			// the local template pointed to by TemplateURL.
-			Property: []string{"TemplateURL"},
+			PropertyPath: []string{"TemplateURL"},
 		},
 	},
 	"AWS::Glue::Job": {
 		{
-			Property: []string{"Command", "ScriptLocation"},
+			PropertyPath: []string{"Command", "ScriptLocation"},
 		},
 	},
 	"AWS::StepFunctions::StateMachine": {
 		{
-			Property:           []string{"DefinitionS3Location"},
+			PropertyPath:       []string{"DefinitionS3Location"},
 			BucketNameProperty: "Bucket",
 			ObjectKeyProperty:  "Key",
 		},
 	},
 	"AWS::Serverless::StateMachine": {
 		{
-			Property:           []string{"DefinitionUri"},
+			PropertyPath:       []string{"DefinitionUri"},
 			BucketNameProperty: "Bucket",
 			ObjectKeyProperty:  "Key",
 		},
 	},
 	"AWS::CodeCommit::Repository": {
 		{
-			Property:           []string{"Code", "S3"},
+			PropertyPath:       []string{"Code", "S3"},
 			BucketNameProperty: "Bucket",
 			ObjectKeyProperty:  "Key",
 			ForceZip:           true,
@@ -197,7 +197,7 @@ func (t *cfnTemplate) pkg(a *Addons) error {
 		props := yamlMapGet(node, "Properties")
 		for _, conf := range confs {
 			if err := a.packageProperty(props, conf); err != nil {
-				return fmt.Errorf("package property %q of %q: %w", strings.Join(conf.Property, "."), name, err)
+				return fmt.Errorf("package property %q of %q: %w", strings.Join(conf.PropertyPath, "."), name, err)
 			}
 		}
 	}
@@ -228,7 +228,7 @@ func yamlMapGet(node *yaml.Node, key string) *yaml.Node {
 
 func (a *Addons) packageProperty(resourceProperties *yaml.Node, pkgCfg packagePropertyConfig) error {
 	target := resourceProperties
-	for _, key := range pkgCfg.Property {
+	for _, key := range pkgCfg.PropertyPath {
 		target = yamlMapGet(target, key)
 	}
 
