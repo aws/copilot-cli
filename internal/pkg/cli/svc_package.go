@@ -122,13 +122,14 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	content := o.appliedManifest.Manifest()
 	var deployer workloadStackGenerator
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider: o.sessProvider,
-		Name:            o.name,
-		App:             targetApp,
-		Env:             targetEnv,
-		ImageTag:        o.tag,
-		Mft:             content,
-		RawMft:          raw,
+		SessionProvider:   o.sessProvider,
+		Name:              o.name,
+		App:               targetApp,
+		Env:               targetEnv,
+		ImageTag:          o.tag,
+		Mft:               content,
+		RawMft:            raw,
+		UploadAddonAssets: o.uploadAssets && false, // TODO(dnrnd): remove to enable packaging addons
 	}
 	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:
@@ -311,11 +312,7 @@ func (o *packageSvcOpts) getStackGenerator(env *config.Environment) (workloadSta
 		return nil, err
 	}
 	o.appliedManifest = mft
-	generator, err := o.newStackGenerator(o)
-	if err != nil {
-		return nil, err
-	}
-	return generator, nil
+	return o.newStackGenerator(o)
 }
 
 // getWorkloadStack returns the CloudFormation stack's template and its parameters for the service.
