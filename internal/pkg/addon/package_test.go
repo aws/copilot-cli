@@ -100,7 +100,7 @@ Resources:
 		},
 		"AWS::Glue::Job, non-zipped file": {
 			setupMocks: func(m addonMocks) {
-				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-east-2", bucket, "asdf"), nil)
 			},
 			inTemplate: `
 Resources:
@@ -125,7 +125,7 @@ Resources:
 		},
 		"AWS::CodeCommit::Repository, directory without slash": {
 			setupMocks: func(m addonMocks) {
-				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("ap-northeast-1", bucket, "asdf"), nil)
 			},
 			inTemplate: `
 Resources:
@@ -152,7 +152,7 @@ Resources:
 		},
 		"AWS::ApiGateway::RestApi, directory with slash": {
 			setupMocks: func(m addonMocks) {
-				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("eu-west-1", bucket, "asdf"), nil)
 			},
 			inTemplate: `
 Resources:
@@ -177,8 +177,8 @@ Resources:
 		},
 		"AWS::AppSync::Resolver, multiple replacements in one resource": {
 			setupMocks: func(m addonMocks) {
-				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
-				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "hjkl"), nil)
+				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("ca-central-1", bucket, "asdf"), nil)
+				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("ca-central-1", bucket, "hjkl"), nil)
 			},
 			inTemplate: `
 Resources:
