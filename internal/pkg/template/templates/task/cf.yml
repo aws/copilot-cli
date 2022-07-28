@@ -267,6 +267,14 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          # .env files are only needed on the initial RunTask call and are not needed after that.
+          # This prevents them from piling up (hopefully it does not take 1 day to build the docker image).
+          - Id: DeleteEnvFilesRule
+            Status: Enabled
+            Prefix: 'manual/env-files'
+            ExpirationInDays: 1
   S3BucketPolicy:
     Metadata:
       'aws:copilot:description': 'A policy to allow file uploads to the S3 bucket'
