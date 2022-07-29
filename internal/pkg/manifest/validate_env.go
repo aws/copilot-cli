@@ -6,6 +6,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -36,7 +37,7 @@ func (e EnvironmentConfig) validate() error {
 	if err := e.HTTPConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
-	if err := e.SecurityGroupConfig.validate(); err != nil {
+	if err := e.Network.VPC.SecurityGroupConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "security_group": %w`, err)
 	}
 	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
@@ -84,12 +85,32 @@ func (cfg environmentVPCConfig) validate() error {
 }
 
 // validate returns nil if securityGroupRule has all the required parameters set.
-func (cfg securityGroupRule) validate() error {
+func (cfg SecurityGroupRule) validate() error {
 	if cfg.CidrIP == "" {
 		return fmt.Errorf(`cidr`)
 	}
 	if cfg.IpProtocol == "" {
 		return fmt.Errorf(`ip_protocol`)
+	}
+	return cfg.PortsConfig.validate()
+}
+
+// validate if ports are set.
+func (cfg PortsConfig) validate() error {
+	if cfg.IsEmpty() {
+		return fmt.Errorf(`ports`)
+	}
+	if !cfg.Ports.IsEmpty() {
+		return cfg.Ports.validate()
+	}
+	return nil
+}
+
+// validate checks if PortsRangeBand is set correctly.
+func (str PortsRangeBand) validate() error {
+	ports := strings.Split(string(str), "-")
+	if len(ports) != 2 {
+		return fmt.Errorf("invalid ports value %s. Should be in format of ${from_port}-${to_port}", string(str))
 	}
 	return nil
 }

@@ -83,20 +83,20 @@ http:
       - cert-2
 observability:
   container_insights: true # Enable container insights.
-security_group:
-  ingress:
-    - ip_protocol: tcp
-      from_port: 0
-      to_port: 65535
-      cidr: 0.0.0.0
-    - ip_protocol: tcp
-      from_port: 1
-      to_port: 6
-      cidr: 0.0.0.0
-  egress:
-    - ip_protocol: tcp
-      to_port: 65535
-      cidr: 0.0.0.0`
+network:
+  vpc:
+    security_group:
+      ingress:
+        - ip_protocol: tcp
+          ports: 10
+          cidr: 0.0.0.0
+        - ip_protocol: tcp
+          ports: 1-10
+          cidr: 0.0.0.0
+      egress:
+        - ip_protocol: tcp
+          ports: 0-65535
+          cidr: 0.0.0.0`
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)

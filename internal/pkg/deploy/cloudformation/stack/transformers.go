@@ -359,45 +359,50 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
-func convertEnvSecurityGroupCfg(mft *manifest.Environment) template.SecurityGroupConfig {
+func getPortValues(cfg manifest.SecurityGroupRule) (fromPort int, toPort int, err error) {
+	if cfg.PortsConfig.Ports.IsEmpty() {
+		toPort = *cfg.PortsConfig.Port
+		fromPort = *cfg.PortsConfig.Port
+	} else {
+		fromPort, toPort, err = cfg.PortsConfig.Ports.Parse()
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+	return fromPort, toPort, nil
+}
+
+func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {
 	securityGroupConfig, isSecurityConfigSet := mft.EnvSecurityGroup()
 	if !isSecurityConfigSet {
-		return template.SecurityGroupConfig{}
+		return nil, nil
 	}
 	var ingress = make([]template.SecurityGroupRule, len(securityGroupConfig.Ingress))
 	var egress = make([]template.SecurityGroupRule, len(securityGroupConfig.Egress))
 	for idx, ingressValue := range securityGroupConfig.Ingress {
 		ingress[idx].IpProtocol = ingressValue.IpProtocol
 		ingress[idx].CidrIP = ingressValue.CidrIP
-		if ingressValue.IsToPortEmpty() {
-			ingress[idx].ToPort = toPortValue
+		if fromPort, toPort, err := getPortValues(ingressValue); err != nil {
+			return nil, err
 		} else {
-			ingress[idx].ToPort = *ingressValue.ToPort
-		}
-		if ingressValue.IsFromPortEmpty() {
-			ingress[idx].FromPort = fromPortValue
-		} else {
-			ingress[idx].FromPort = *ingressValue.FromPort
+			ingress[idx].ToPort = toPort
+			ingress[idx].FromPort = fromPort
 		}
 	}
 	for idx, egressValue := range securityGroupConfig.Egress {
 		egress[idx].IpProtocol = egressValue.IpProtocol
 		egress[idx].CidrIP = egressValue.CidrIP
-		if egressValue.IsToPortEmpty() {
-			egress[idx].ToPort = toPortValue
+		if fromPort, toPort, err := getPortValues(egressValue); err != nil {
+			return nil, err
 		} else {
-			egress[idx].ToPort = *egressValue.ToPort
-		}
-		if egressValue.IsFromPortEmpty() {
-			egress[idx].FromPort = fromPortValue
-		} else {
-			egress[idx].FromPort = *egressValue.FromPort
+			egress[idx].ToPort = toPort
+			egress[idx].FromPort = fromPort
 		}
 	}
-	return template.SecurityGroupConfig{
+	return &template.SecurityGroupConfig{
 		Ingress: ingress,
 		Egress:  egress,
-	}
+	}, nil
 }
 
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {

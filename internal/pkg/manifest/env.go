@@ -6,9 +6,10 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"sort"
-
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -19,6 +20,12 @@ import (
 const EnvironmentManifestType = "Environment"
 
 var environmentManifestPath = "environment/manifest.yml"
+
+// Error definitions.
+var (
+	errUnmarshalPortsConfig          = errors.New(`unable to unmarshal ports field into int or a range`)
+	errUnmarshalEnvironmentCDNConfig = errors.New(`unable to unmarshal cdn field into bool or composite-style map`)
+)
 
 // Environment is the manifest configuration for an environment.
 type Environment struct {
@@ -85,11 +92,10 @@ func (e *Environment) MarshalBinary() ([]byte, error) {
 
 // EnvironmentConfig defines the configuration settings for an environment manifest
 type EnvironmentConfig struct {
-	Network             environmentNetworkConfig `yaml:"network,omitempty,flow"`
-	Observability       environmentObservability `yaml:"observability,omitempty,flow"`
-	HTTPConfig          EnvironmentHTTPConfig    `yaml:"http,omitempty,flow"`
-	CDNConfig           environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
-	SecurityGroupConfig securityGroupConfig      `yaml:"security_group,omitempty"`
+	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
+	Observability environmentObservability `yaml:"observability,omitempty,flow"`
+	HTTPConfig    EnvironmentHTTPConfig    `yaml:"http,omitempty,flow"`
+	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
 // IsIngressRestrictedToCDN returns whether or not an environment has its
@@ -103,42 +109,96 @@ type environmentNetworkConfig struct {
 }
 
 type environmentVPCConfig struct {
-	ID      *string              `yaml:"id,omitempty"`
-	CIDR    *IPNet               `yaml:"cidr,omitempty"`
-	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
+	ID                  *string              `yaml:"id,omitempty"`
+	CIDR                *IPNet               `yaml:"cidr,omitempty"`
+	Subnets             subnetsConfiguration `yaml:"subnets,omitempty"`
+	SecurityGroupConfig securityGroupConfig  `yaml:"security_group,omitempty"`
 }
 
 type securityGroupConfig struct {
-	Ingress []securityGroupRule `yaml:"ingress,omitempty"`
-	Egress  []securityGroupRule `yaml:"egress,omitempty"`
+	Ingress []SecurityGroupRule `yaml:"ingress,omitempty"`
+	Egress  []SecurityGroupRule `yaml:"egress,omitempty"`
 }
 
 func (cfg securityGroupConfig) isEmpty() bool {
 	return len(cfg.Ingress) == 0 && len(cfg.Egress) == 0
 }
 
-type securityGroupRule struct {
-	CidrIP     string `yaml:"cidr"`
-	FromPort   *int   `yaml:"from_port"`
-	IpProtocol string `yaml:"ip_protocol"`
-	ToPort     *int   `yaml:"to_port"`
+// SecurityGroupRule holds the security group ingress and egress configs
+type SecurityGroupRule struct {
+	CidrIP      string      `yaml:"cidr"`
+	PortsConfig PortsConfig `yaml:"ports"`
+	IpProtocol  string      `yaml:"ip_protocol"`
 }
 
-// IsToPortEmpty checks if ToPort is empty
-func (cfg securityGroupRule) IsToPortEmpty() bool {
-	return cfg.ToPort == nil
+// Ports is a custom type which supports unmarshaling yaml which
+// can either be of type int or type PortsRangeBand.
+type PortsConfig struct {
+	Port  *int            // 0 is a valid value, so we want the default value to be nil.
+	Ports *PortsRangeBand // Mutually exclusive with port.
 }
 
-// IsFromPortEmpty checks if FromPort is empty
-func (cfg securityGroupRule) IsFromPortEmpty() bool {
-	return cfg.FromPort == nil
+// PortsRangeBand is a number range with to and from port values.
+type PortsRangeBand string
+
+// Parse parses Ports string and returns the from and to port values.
+// For example: 1-100 returns	1 and 100.
+func (str PortsRangeBand) Parse() (fromPort int, toPort int, err error) {
+	ports := strings.Split(string(str), "-")
+	fromPort, err = strconv.Atoi(ports[0])
+	if err != nil {
+		return 0, 0, fmt.Errorf("cannot convert from_port value %s to integer", ports[0])
+	}
+	toPort, err = strconv.Atoi(ports[1])
+	if err != nil {
+		return 0, 0, fmt.Errorf("cannot convert to_port value %s to integer", ports[1])
+	}
+	return fromPort, toPort, nil
+}
+
+// IsEmpty returns whether PortsRangeBand is empty.
+func (cfg *PortsRangeBand) IsEmpty() bool {
+	return cfg == nil
+}
+
+// IsEmpty returns whether PortsConfig is empty.
+func (cfg *PortsConfig) IsEmpty() bool {
+	return cfg.Port == nil && cfg.Ports == nil
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the Ports
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (cfg *PortsConfig) UnmarshalYAML(value *yaml.Node) error {
+	_, err := strconv.Atoi(value.Value) // detmines if input is integer? if err then we decode range values
+	if err != nil {
+		if err := value.Decode(&cfg.Ports); err != nil {
+			switch err.(type) {
+			case *yaml.TypeError:
+				break
+			default:
+				return err
+			}
+		}
+	}
+
+	if !cfg.Ports.IsEmpty() {
+		// Successfully unmarshalled Ports fields and unset port field, return
+		cfg.Port = nil
+		return nil
+	}
+
+	if err := value.Decode(&cfg.Port); err != nil {
+		return errUnmarshalPortsConfig
+	}
+	return nil
 }
 
 // EnvSecurityGroup returns the security group config if the user has set any values.
 // If there is no env security group settings, then returns nil and false.
 func (cfg *EnvironmentConfig) EnvSecurityGroup() (*securityGroupConfig, bool) {
-	if isEmpty := cfg.SecurityGroupConfig.isEmpty(); !isEmpty {
-		return &cfg.SecurityGroupConfig, true
+	if isEmpty := cfg.Network.VPC.SecurityGroupConfig.isEmpty(); !isEmpty {
+		return &cfg.Network.VPC.SecurityGroupConfig, true
 	}
 	return nil, false
 }
@@ -187,7 +247,7 @@ func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	if err := value.Decode(&cfg.Enabled); err != nil {
-		return errors.New(`unable to unmarshal into bool or composite-style map`)
+		return errUnmarshalEnvironmentCDNConfig
 	}
 	return nil
 }

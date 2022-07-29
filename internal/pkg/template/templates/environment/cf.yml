@@ -189,18 +189,18 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
-{{- if (gt (len .SecurityGroupConfig.Ingress) 0)}}
+{{- if and .VPCConfig.SecurityGroupConfig (gt (len .VPCConfig.SecurityGroupConfig.Ingress) 0)}}
       SecurityGroupIngress:
-      {{range $securityRule := .SecurityGroupConfig.Ingress}}
+      {{range $securityRule := .VPCConfig.SecurityGroupConfig.Ingress}}
         - IpProtocol: {{$securityRule.IpProtocol}}
           FromPort: {{$securityRule.FromPort}}
           ToPort: {{$securityRule.ToPort}}
           CidrIp: {{$securityRule.CidrIP}}
       {{end }}
 {{- end}}
-  {{- if (gt (len .SecurityGroupConfig.Egress) 0)}}
+  {{- if and .VPCConfig.SecurityGroupConfig (gt (len .VPCConfig.SecurityGroupConfig.Egress) 0)}}
       SecurityGroupEgress:
-      {{range $securityRule := .SecurityGroupConfig.Egress}}
+      {{range $securityRule := .VPCConfig.SecurityGroupConfig.Egress}}
         - IpProtocol: {{$securityRule.IpProtocol}}
           FromPort: {{$securityRule.FromPort}}
           ToPort: {{$securityRule.ToPort}}

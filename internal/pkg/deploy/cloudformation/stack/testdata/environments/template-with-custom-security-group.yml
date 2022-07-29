@@ -13,20 +13,20 @@ Metadata:
           - cert-2
     observability:
       container_insights: true # Enable container insights.
-    security_group:
-      ingress:
-        - ip_protocol: tcp
-          from_port: 0
-          to_port: 65535
-          cidr: 0.0.0.0
-        - ip_protocol: tcp
-          from_port: 1
-          to_port: 6
-          cidr: 0.0.0.0
-      egress:
-        - ip_protocol: tcp
-          to_port: 65535
-          cidr: 0.0.0.0
+    network:
+      vpc:
+        security_group:
+          ingress:
+            - ip_protocol: tcp
+              ports: 10
+              cidr: 0.0.0.0
+            - ip_protocol: tcp
+              ports: 1-10
+              cidr: 0.0.0.0
+          egress:
+            - ip_protocol: tcp
+              ports: 0-65535
+              cidr: 0.0.0.0
 Parameters:
   AppName:
     Type: String
@@ -331,16 +331,16 @@ Resources:
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
       SecurityGroupIngress:
         - CidrIp: "0.0.0.0"
-          FromPort: 0
+          FromPort: 10
           IpProtocol: tcp
-          ToPort: 65535
+          ToPort: 10
         - CidrIp: "0.0.0.0"
           FromPort: 1
           IpProtocol: tcp
-          ToPort: 6
+          ToPort: 10
       SecurityGroupEgress:
         - CidrIp: "0.0.0.0"
-          FromPort: 65535
+          FromPort: 0
           IpProtocol: tcp
           ToPort: 65535
   EnvironmentSecurityGroupIngressFromInternalALB:

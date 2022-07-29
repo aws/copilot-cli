@@ -95,12 +95,17 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 		},
 		"error if invalid security group config": {
 			in: EnvironmentConfig{
-				SecurityGroupConfig: securityGroupConfig{
-					Ingress: []securityGroupRule{
-						{
-							IpProtocol: "tcp",
-							ToPort:     aws.Int(80),
-							FromPort:   aws.Int(80),
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []SecurityGroupRule{
+								{
+									IpProtocol: "tcp",
+									PortsConfig: PortsConfig{
+										Port: aws.Int(80),
+									},
+								},
+							},
 						},
 					},
 				},
@@ -109,30 +114,59 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 		},
 		"valid security group config": {
 			in: EnvironmentConfig{
-				SecurityGroupConfig: securityGroupConfig{
-					Ingress: []securityGroupRule{
-						{
-							CidrIP:     "0.0.0.0",
-							IpProtocol: "tcp",
-							ToPort:     aws.Int(80),
-							FromPort:   aws.Int(80),
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []SecurityGroupRule{
+								{
+									CidrIP:     "0.0.0.0",
+									IpProtocol: "tcp",
+									PortsConfig: PortsConfig{
+										Ports: (*PortsRangeBand)(aws.String("1-10")),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 		},
-		"valid security group config without FromPort": {
+		"invalid ports value in security group config": {
 			in: EnvironmentConfig{
-				SecurityGroupConfig: securityGroupConfig{
-					Ingress: []securityGroupRule{
-						{
-							CidrIP:     "0.0.0.0",
-							IpProtocol: "tcp",
-							ToPort:     aws.Int(80),
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []SecurityGroupRule{
+								{
+									CidrIP:     "0.0.0.0",
+									IpProtocol: "tcp",
+									PortsConfig: PortsConfig{
+										Ports: (*PortsRangeBand)(aws.String("1-10-10")),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
+			wantedError: "validate \"security_group\": validate ingress[0]: \"invalid ports value 1-10-10. Should be in format of ${from_port}-${to_port}\" must be specified",
+		},
+		"valid security group config without ports": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []SecurityGroupRule{
+								{
+									CidrIP:     "0.0.0.0",
+									IpProtocol: "tcp",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"security_group\": validate ingress[0]: \"ports\" must be specified",
 		},
 		"error if security group ingress is limited to a cdn distribution not enabled": {
 			in: EnvironmentConfig{

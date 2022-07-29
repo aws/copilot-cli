@@ -105,12 +105,11 @@ type EnvOpts struct {
 	ArtifactBucketARN    string
 	ArtifactBucketKeyARN string
 
-	VPCConfig           VPCConfig
-	PublicHTTPConfig    HTTPConfig
-	PrivateHTTPConfig   HTTPConfig
-	Telemetry           *Telemetry
-	CDNConfig           *CDNConfig
-	SecurityGroupConfig SecurityGroupConfig
+	VPCConfig         VPCConfig
+	PublicHTTPConfig  HTTPConfig
+	PrivateHTTPConfig HTTPConfig
+	Telemetry         *Telemetry
+	CDNConfig         *CDNConfig
 
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
@@ -128,9 +127,10 @@ type HTTPConfig struct {
 type CDNConfig struct{}
 
 type VPCConfig struct {
-	Imported        *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
-	Managed         ManagedVPC
-	AllowVPCIngress bool
+	Imported            *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
+	Managed             ManagedVPC
+	AllowVPCIngress     bool
+	SecurityGroupConfig *SecurityGroupConfig
 }
 
 // ImportVPC holds the fields to import VPC resources.
