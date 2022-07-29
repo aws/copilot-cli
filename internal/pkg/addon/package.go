@@ -365,7 +365,7 @@ func (a *Addons) zipAsset(root string) (asset, error) {
 
 		zf, err := archive.CreateHeader(header)
 		if err != nil {
-			return fmt.Errorf("create zip file: %w", err)
+			return fmt.Errorf("create zip file %q: %w", fname, err)
 		}
 
 		// include the file name and permissions as part of the hash
