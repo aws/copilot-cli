@@ -10,12 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,12 +34,6 @@ func Test_Stack_Local_Integration(t *testing.T) {
 		wantedAutoScalingCFNParameterPath = "cf.params.json"
 		wantedOverrideCFNTemplatePath     = "override-cf.yml"
 	)
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	addons := mocks.NewMockaddons(ctrl)
-	addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
-	addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
 
 	path := filepath.Join("testdata", "stacklocal", autoScalingManifestPath)
 	wantedManifestBytes, err := ioutil.ReadFile(path)
@@ -51,6 +44,9 @@ func Test_Stack_Local_Integration(t *testing.T) {
 
 	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
+
+	addons, err := addon.New(aws.StringValue(v.Name))
+	require.NoError(t, err)
 
 	envConfig := &manifest.Environment{
 		Workload: manifest.Workload{

@@ -1127,6 +1127,9 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  PublicALBAccessible:
+    Condition: CreateALB
+    Value: true
   LastForceDeployID:
     Value: ""
     Description: Optionally force the template to update when no immediate resource change is present.

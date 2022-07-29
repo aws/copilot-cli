@@ -13,11 +13,10 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
-	"github.com/golang/mock/gomock"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -64,13 +63,6 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 	for name, tc := range testCases {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		addons := mocks.NewMockaddons(ctrl)
-		addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
-		addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
-
 		interpolated, err := manifest.NewInterpolator(appName, tc.envName).Interpolate(string(manifestBytes))
 		require.NoError(t, err)
 		mft, err := manifest.UnmarshalWorkload([]byte(interpolated))
@@ -83,6 +75,9 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 
 		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
+
+		addons, err := addon.New(aws.StringValue(v.Name))
+		require.NoError(t, err)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		envConfig := &manifest.Environment{
