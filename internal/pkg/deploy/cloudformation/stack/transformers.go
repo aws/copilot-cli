@@ -52,11 +52,6 @@ const (
 	maxPercentDefault         = 200
 )
 
-const (
-	toPortValue   = 0
-	fromPortValue = 65535
-)
-
 var (
 	taskDefOverrideRulePrefixes = []string{"Resources", "TaskDefinition", "Properties"}
 	subnetPlacementForTemplate  = map[manifest.PlacementString]string{
