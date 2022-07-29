@@ -744,6 +744,9 @@ func (o *initPipelineOpts) createPipelineManifest(stages []manifest.PipelineStag
 		manifestExists = true
 		o.manifestPath = e.FileName
 	}
+
+	mftPath := displayPath(o.manifestPath)
+
 	o.manifestPath, err = o.workspace.Rel(o.manifestPath)
 	if err != nil {
 		return err
@@ -752,9 +755,9 @@ func (o *initPipelineOpts) createPipelineManifest(stages []manifest.PipelineStag
 	if manifestExists {
 		log.Infof(`Pipeline manifest file for %s already exists at %s, skipping writing it.
 Previously set repository URL, branch, and environment stages will remain.
-`, color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
+`, color.HighlightUserInput(o.repoName), color.HighlightResource(mftPath))
 	} else {
-		log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(o.repoName), color.HighlightResource(o.manifestPath))
+		log.Successf("Wrote the pipeline manifest for %s at '%s'\n", color.HighlightUserInput(o.repoName), color.HighlightResource(mftPath))
 	}
 	log.Debug(`The manifest contains configurations for your pipeline.
 Update the file to add stages, change the tracked branch, add test commands or manual approval actions.
@@ -791,10 +794,7 @@ func (o *initPipelineOpts) createBuildspec(buildSpecTemplatePath string) error {
 		buildspecExists = true
 		buildspecPath = e.FileName
 	}
-	buildspecPath, err = relPath(buildspecPath)
-	if err != nil {
-		return err
-	}
+	buildspecPath = displayPath(buildspecPath)
 	if buildspecExists {
 		log.Infof(`Buildspec file for pipeline already exists at %s, skipping writing it.
 Previously set config will remain.

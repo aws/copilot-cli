@@ -617,10 +617,7 @@ func (o *initStorageOpts) Execute() error {
 			}
 			return fmt.Errorf("addon file already exists: %w", e)
 		}
-		path, err = relPath(path)
-		if err != nil {
-			return err
-		}
+		path = displayPath(path)
 		log.Successf("Wrote CloudFormation %s at %s\n",
 			addon.description,
 			color.HighlightResource(path),

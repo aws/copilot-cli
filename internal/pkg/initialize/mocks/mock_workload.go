@@ -182,19 +182,19 @@ func (m *MockWorkspace) EXPECT() *MockWorkspaceMockRecorder {
 	return m.recorder
 }
 
-// Path mocks base method.
-func (m *MockWorkspace) Path() (string, error) {
+// Rel mocks base method.
+func (m *MockWorkspace) Rel(path string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Path")
+	ret := m.ctrl.Call(m, "Rel", path)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Path indicates an expected call of Path.
-func (mr *MockWorkspaceMockRecorder) Path() *gomock.Call {
+// Rel indicates an expected call of Rel.
+func (mr *MockWorkspaceMockRecorder) Rel(path interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockWorkspace)(nil).Path))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockWorkspace)(nil).Rel), path)
 }
 
 // WriteJobManifest mocks base method.
