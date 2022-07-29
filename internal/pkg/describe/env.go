@@ -317,6 +317,41 @@ func (d *EnvDescriber) filterDeployedJobs() ([]*config.Workload, error) {
 	return deployedJobs, nil
 }
 
+func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
+
+	stackDescr, err := d.cfn.Describe()
+	if err != nil {
+		return err
+	}
+
+	_, ok := stackDescr.Outputs["CloudFrontDomainName"] // use a constant
+	if !ok {
+		return nil
+	}
+
+	services, err := d.deployStore.ListDeployedServices(d.app, d.env.Name)
+	if err != nil {
+		return err
+	}
+
+	if jsonOutput, ok := stackDescr.Parameters["Aliases"]; ok { // use a constant
+		var aliases *map[string]string
+		err := json.Unmarshal([]byte(jsonOutput), aliases)
+
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal \"%s\": %w", jsonOutput, err)
+		}
+
+		for _, service := range services {
+			if _, ok := (*aliases)[service]; !ok {
+				return fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified")
+			}
+		}
+	}
+
+	return nil
+}
+
 // JSONString returns the stringified EnvDescription struct with json format.
 func (e *EnvDescription) JSONString() (string, error) {
 	b, err := json.Marshal(e)
