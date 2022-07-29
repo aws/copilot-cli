@@ -142,9 +142,7 @@ func TestRender(t *testing.T) {
 		wanted.WriteString("hi\n")
 		c.Show()
 
-		//require.Equal(t, wanted.String(), actual.String(), "expected the content printed to match")
-
-		panic("a \"" + actual.String() + "\" w\"" + wanted.String() + "\"")
+		require.Equal(t, wanted.String(), actual.String(), "expected the content printed to match")
 	})
 
 }
