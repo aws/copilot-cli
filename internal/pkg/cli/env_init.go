@@ -177,8 +177,8 @@ type initEnvOpts struct {
 	sess *session.Session // Session pointing to environment's AWS account and region.
 
 	// Cached variables.
-	wsAppName string
-	mftPath   string
+	wsAppName        string
+	mftDisplayedPath string
 }
 
 func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
@@ -271,11 +271,11 @@ func (o *initEnvOpts) Execute() error {
 	}
 
 	// 1. Write environment manifest.
-	mftPath, err := o.writeManifest()
+	path, err := o.writeManifest()
 	if err != nil {
 		return err
 	}
-	o.mftPath = mftPath
+	o.mftDisplayedPath = path
 
 	// 2. Perform DNS delegation from app to env.
 	if app.Domain != "" {
@@ -321,7 +321,7 @@ func (o *initEnvOpts) Execute() error {
 // RecommendActions returns follow-up actions the user can take after successfully executing the command.
 func (o *initEnvOpts) RecommendActions() error {
 	logRecommendedActions([]string{
-		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.mftPath)),
+		fmt.Sprintf("Update your manifest %s to change the defaults.", color.HighlightResource(o.mftDisplayedPath)),
 		fmt.Sprintf("Run %s to deploy your environment.",
 			color.HighlightCode(fmt.Sprintf("copilot env deploy --name %s", o.name))),
 	})
@@ -851,10 +851,7 @@ func (o *initEnvOpts) writeManifest() (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = relPath(manifestPath)
-	if err != nil {
-		return "", err
-	}
+	manifestPath = displayPath(manifestPath)
 	manifestMsgFmt := "Wrote the manifest for environment %s at %s\n"
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for environment %s already exists at %s, skipping writing it.\n"
