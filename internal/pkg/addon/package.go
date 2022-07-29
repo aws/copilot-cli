@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -282,27 +281,25 @@ type s3Object struct {
 
 func (a *Addons) uploadAddonAsset(assetPath string, forceZip bool) (s3Object, error) {
 	// make path absolute from wsPath
-	if !path.IsAbs(assetPath) {
-		assetPath = path.Join(a.wsPath, assetPath)
+	if !filepath.IsAbs(assetPath) {
+		assetPath = filepath.Join(a.wsPath, assetPath)
 	}
 
 	info, err := a.fs.Stat(assetPath)
 	if err != nil {
-		return s3Object{}, err
+		return s3Object{}, fmt.Errorf("stat: %w", err)
 	}
 
-	var asset asset
+	getAsset := a.fileAsset
 	if forceZip || info.IsDir() {
-		asset, err = a.zipAsset(assetPath)
-	} else {
-		asset, err = a.fileAsset(assetPath)
+		getAsset = a.zipAsset
 	}
+	asset, err := getAsset(assetPath)
 	if err != nil {
 		return s3Object{}, fmt.Errorf("create asset: %w", err)
 	}
 
 	s3Path := artifactpath.AddonAsset(a.wlName, asset.hash)
-
 	url, err := a.uploader.Upload(a.bucket, s3Path, asset.data)
 	if err != nil {
 		return s3Object{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, a.bucket, err)
@@ -313,7 +310,6 @@ func (a *Addons) uploadAddonAsset(assetPath string, forceZip bool) (s3Object, er
 		return s3Object{}, fmt.Errorf("parse s3 url: %w", err)
 	}
 
-	fmt.Printf("Uploaded %s to s3 at: %s\n", assetPath, s3.Location(bucket, key))
 	return s3Object{
 		Bucket: bucket,
 		Key:    key,
@@ -327,11 +323,13 @@ type asset struct {
 
 // zipAsset creates an asset from the directory or file specified by root
 // where the data is the compressed zip archive, and the hash is
-// a hash of each files name, permission, and content.
+// a hash of each files name, permission, and content. The zip file
+// itself is not hashed to avoid a changing hash when non-relevant
+// file metadata changes, like modification time.
 func (a *Addons) zipAsset(root string) (asset, error) {
 	buf := &bytes.Buffer{}
-	z := zip.NewWriter(buf)
-	defer z.Close()
+	archive := zip.NewWriter(buf)
+	defer archive.Close()
 
 	hash := sha256.New()
 
@@ -365,7 +363,7 @@ func (a *Addons) zipAsset(root string) (asset, error) {
 		header.Name = fname
 		header.Method = zip.Deflate
 
-		zf, err := z.CreateHeader(header)
+		zf, err := archive.CreateHeader(header)
 		if err != nil {
 			return fmt.Errorf("create zip file: %w", err)
 		}

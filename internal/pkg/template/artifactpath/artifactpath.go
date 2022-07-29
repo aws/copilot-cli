@@ -32,9 +32,9 @@ func Addons(key string, content []byte) string {
 }
 
 // AddonAsset returns the path to store an addon asset file.
-// Example: manual/addons/addonKey/assets/hash.
-func AddonAsset(addonKey, hash string) string {
-	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, addonKey, s3ArtifactAddonAssetDirName, hash)
+// Example: manual/addons/frontend/assets/668e2b73ac.
+func AddonAsset(workloadName, hash string) string {
+	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, workloadName, s3ArtifactAddonAssetDirName, hash)
 }
 
 // CFNTemplate returns the path to store cloudformation templates with sha256 of the content.
