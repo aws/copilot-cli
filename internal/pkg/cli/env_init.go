@@ -173,7 +173,6 @@ type initEnvOpts struct {
 	selApp         appSelector
 	appCFN         appResourcesGetter
 	manifestWriter environmentManifestWriter
-	pathDisplayer  pathDisplayer
 
 	sess *session.Session // Session pointing to environment's AWS account and region.
 
@@ -193,11 +192,6 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 	cfg, err := profile.NewConfig()
 	if err != nil {
 		return nil, fmt.Errorf("read named profiles: %w", err)
-	}
-
-	pathDisplayer, err := NewCwdPathDisplayer()
-	if err != nil {
-		return nil, err
 	}
 
 	prompter := prompt.New()
@@ -222,7 +216,6 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		selApp:         selector.NewAppEnvSelector(prompt.New(), store),
 		appCFN:         deploycfn.New(defaultSession),
 		manifestWriter: ws,
-		pathDisplayer:  pathDisplayer,
 
 		wsAppName: tryReadingAppName(),
 	}, nil
@@ -858,10 +851,7 @@ func (o *initEnvOpts) writeManifest() (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = o.pathDisplayer.DisplayPath(manifestPath)
-	if err != nil {
-		return "", err
-	}
+	manifestPath = displayPath(manifestPath)
 	manifestMsgFmt := "Wrote the manifest for environment %s at %s\n"
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for environment %s already exists at %s, skipping writing it.\n"

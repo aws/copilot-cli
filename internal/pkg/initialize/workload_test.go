@@ -34,7 +34,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 		mockstore       func(m *mocks.MockStore)
 		mockappDeployer func(m *mocks.MockWorkloadAdder)
 		mockProg        func(m *mocks.MockProg)
-		mockPathDisp    func(m *mocks.MockPathDisplayer)
 
 		wantedErr error
 	}{
@@ -78,9 +77,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "job", "resizer"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "job", "resizer"))
 			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/resizer/copilot/manifest.yml").Return("../manifest.yml", nil)
-			},
 		},
 		"using existing image": {
 			inJobType: manifest.ScheduledJobType,
@@ -122,9 +118,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "job", "resizer"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "job", "resizer"))
 			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/resizer/manifest.yml").Return("../manifest.yml", nil)
-			},
 		},
 		"write manifest error": {
 			inJobType:        manifest.ScheduledJobType,
@@ -156,9 +149,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			mockstore: func(m *mocks.MockStore) {
 				m.EXPECT().GetApplication(gomock.Any()).Return(nil, errors.New("some error"))
 			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/copilot/resizer/manifest.yml").Return("../manifest.yml", nil)
-			},
 			wantedErr: errors.New("get application app: some error"),
 		},
 		"add job to app fails": {
@@ -186,9 +176,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/resizer/manifest.yml").Return("../manifest.yml", nil)
-			},
 			wantedErr: errors.New("add job resizer to application app: some error"),
 		},
 		"error saving app": {
@@ -215,9 +202,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 				m.EXPECT().Start(gomock.Any())
 				m.EXPECT().Stop(gomock.Any())
 			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/resizer/manifest.yml").Return("../manifest.yml", nil)
-			},
 			wantedErr: fmt.Errorf("saving job resizer: oops"),
 		},
 	}
@@ -231,7 +215,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			mockstore := mocks.NewMockStore(ctrl)
 			mockProg := mocks.NewMockProg(ctrl)
 			mockappDeployer := mocks.NewMockWorkloadAdder(ctrl)
-			mockPathDisp := mocks.NewMockPathDisplayer(ctrl)
 			if tc.mockWriter != nil {
 				tc.mockWriter(mockWriter)
 			}
@@ -244,16 +227,12 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			if tc.mockProg != nil {
 				tc.mockProg(mockProg)
 			}
-			if tc.mockPathDisp != nil {
-				tc.mockPathDisp(mockPathDisp)
-			}
 
 			initializer := &WorkloadInitializer{
 				Store:    mockstore,
 				Ws:       mockWriter,
 				Prog:     mockProg,
 				Deployer: mockappDeployer,
-				PathDisp: mockPathDisp,
 			}
 
 			initJobProps := &JobProps{
@@ -477,7 +456,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 		mockstore       func(m *mocks.MockStore)
 		mockappDeployer func(m *mocks.MockWorkloadAdder)
 		mockProg        func(m *mocks.MockProg)
-		mockPathDisp    func(m *mocks.MockPathDisplayer)
 
 		wantedErr error
 	}{
@@ -520,9 +498,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockProg: func(m *mocks.MockProg) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "frontend"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "frontend"))
-			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/frontend/manifest.yml").Return("../manifest.yml", nil)
 			},
 		},
 		"app error": {
@@ -588,9 +563,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/frontend/manifest.yml").Return("../manifest.yml", nil)
-			},
 			wantedErr: errors.New("add service frontend to application app: some error"),
 		},
 		"error saving app": {
@@ -616,9 +588,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockProg: func(m *mocks.MockProg) {
 				m.EXPECT().Start(gomock.Any())
 				m.EXPECT().Stop(gomock.Any())
-			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/frontend/manifest.yml").Return("../manifest.yml", nil)
 			},
 			wantedErr: fmt.Errorf("saving service frontend: oops"),
 		},
@@ -665,9 +634,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "backend"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
 			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/backend/manifest.yml").Return("../manifest.yml", nil)
-			},
 		},
 		"no healthcheck options": {
 			inSvcType:        manifest.BackendServiceType,
@@ -712,9 +678,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockProg: func(m *mocks.MockProg) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "backend"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
-			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/backend/manifest.yml").Return("../manifest.yml", nil)
 			},
 		},
 		"default healthcheck options": {
@@ -772,9 +735,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "backend"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
 			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/backend/manifest.yml").Return("../manifest.yml", nil)
-			},
 		},
 		"topic subscriptions enabled": {
 			inSvcType:        manifest.WorkerServiceType,
@@ -826,9 +786,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "worker"))
 				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "worker"))
 			},
-			mockPathDisp: func(m *mocks.MockPathDisplayer) {
-				m.EXPECT().DisplayPath("/worker/manifest.yml").Return("../manifest.yml", nil)
-			},
 		},
 	}
 
@@ -842,7 +799,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockstore := mocks.NewMockStore(ctrl)
 			mockappDeployer := mocks.NewMockWorkloadAdder(ctrl)
 			mockProg := mocks.NewMockProg(ctrl)
-			mockPathDisp := mocks.NewMockPathDisplayer(ctrl)
 
 			if tc.mockWriter != nil {
 				tc.mockWriter(mockWriter)
@@ -856,16 +812,12 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			if tc.mockProg != nil {
 				tc.mockProg(mockProg)
 			}
-			if tc.mockPathDisp != nil {
-				tc.mockPathDisp(mockPathDisp)
-			}
 
 			initializer := &WorkloadInitializer{
 				Store:    mockstore,
 				Ws:       mockWriter,
 				Prog:     mockProg,
 				Deployer: mockappDeployer,
-				PathDisp: mockPathDisp,
 			}
 
 			// WHEN

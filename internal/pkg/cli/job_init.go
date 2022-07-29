@@ -95,17 +95,11 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 
 	fs := &afero.Afero{Fs: afero.NewOsFs()}
 
-	pathDisp, err := NewCwdPathDisplayer()
-	if err != nil {
-		return nil, err
-	}
-
 	jobInitter := &initialize.WorkloadInitializer{
 		Store:    store,
 		Ws:       ws,
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess),
-		PathDisp: pathDisp,
 	}
 
 	prompter := prompt.New()

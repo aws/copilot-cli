@@ -247,19 +247,6 @@ type wsPipelineManifestReader interface {
 	ReadPipelineManifest(path string) (*manifest.Pipeline, error)
 }
 
-type pathDisplayer interface {
-	// DisplayPath takes any path and returns it in a form ready to be displayed to
-	// the user on the command line.
-	//
-	// No guarantees are given on the stability of the path across runs, all that is
-	// guaranteed is that the displayed path is visually pleasing & meaningful for a
-	// user.
-	//
-	// This path should not be stored in configuration files or used in any way except
-	// for being displayed to the user.
-	DisplayPath(path string) (string, error)
-}
-
 type relPath interface {
 	// Rel returns the path relative from the object's root path to the target path.
 	//

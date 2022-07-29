@@ -181,7 +181,6 @@ type initPipelineOpts struct {
 	initPipelineVars
 	// Interfaces to interact with dependencies.
 	workspace      wsPipelineIniter
-	pathDisplayer  pathDisplayer
 	secretsmanager secretsManager
 	parser         template.Parser
 	runner         execRunner
@@ -219,11 +218,6 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		return nil, fmt.Errorf("new workspace client: %w", err)
 	}
 
-	pathDisplayer, err := NewCwdPathDisplayer()
-	if err != nil {
-		return nil, err
-	}
-
 	p := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline init"))
 	defaultSession, err := p.Default()
 	if err != nil {
@@ -241,7 +235,6 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 	return &initPipelineOpts{
 		initPipelineVars: vars,
 		workspace:        ws,
-		pathDisplayer:    pathDisplayer,
 		secretsmanager:   secretsmanager.New(defaultSession),
 		parser:           template.New(),
 		sessProvider:     p,
@@ -752,10 +745,7 @@ func (o *initPipelineOpts) createPipelineManifest(stages []manifest.PipelineStag
 		o.manifestPath = e.FileName
 	}
 
-	mftPath, err := o.pathDisplayer.DisplayPath(o.manifestPath)
-	if err != nil {
-		return err
-	}
+	mftPath := displayPath(o.manifestPath)
 
 	o.manifestPath, err = o.workspace.Rel(o.manifestPath)
 	if err != nil {
@@ -804,10 +794,7 @@ func (o *initPipelineOpts) createBuildspec(buildSpecTemplatePath string) error {
 		buildspecExists = true
 		buildspecPath = e.FileName
 	}
-	buildspecPath, err = o.pathDisplayer.DisplayPath(buildspecPath)
-	if err != nil {
-		return err
-	}
+	buildspecPath = displayPath(buildspecPath)
 	if buildspecExists {
 		log.Infof(`Buildspec file for pipeline already exists at %s, skipping writing it.
 Previously set config will remain.

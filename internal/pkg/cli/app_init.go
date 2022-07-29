@@ -50,7 +50,6 @@ type initAppOpts struct {
 	route53              domainHostedZoneGetter
 	domainInfoGetter     domainInfoGetter
 	ws                   wsAppManager
-	pathDisplayer        pathDisplayer
 	cfn                  appDeployer
 	prompt               prompter
 	prog                 progress
@@ -69,11 +68,6 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
 
-	pathDisplayer, err := NewCwdPathDisplayer()
-	if err != nil {
-		return nil, err
-	}
-
 	identity := identity.New(sess)
 	return &initAppOpts{
 		initAppVars:      vars,
@@ -82,7 +76,6 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		route53:          route53.New(sess),
 		domainInfoGetter: route53.NewRoute53Domains(sess),
 		ws:               ws,
-		pathDisplayer:    pathDisplayer,
 		cfn:              cloudformation.New(sess),
 		prompt:           prompt.New(),
 		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
@@ -141,7 +134,7 @@ https://aws.github.io/copilot-cli/docs/credentials/`)
 			return nil
 		}
 		if o.name != summary.Application {
-			summaryPath, _ := o.pathDisplayer.DisplayPath(summary.Path)
+			summaryPath := displayPath(summary.Path)
 			if summaryPath == "" {
 				summaryPath = summary.Path
 			}

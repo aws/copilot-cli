@@ -26,7 +26,6 @@ import (
 
 type pipelineInitMocks struct {
 	workspace      *mocks.MockwsPipelineIniter
-	pathDisplayer  *mocks.MockpathDisplayer
 	secretsmanager *mocks.MocksecretsManager
 	parser         *templatemocks.MockParser
 	runner         *mocks.MockexecRunner
@@ -428,7 +427,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				store:          mocks.NewMockstore(ctrl),
 				pipelineLister: mocks.NewMockdeployedPipelineLister(ctrl),
 				workspace:      mocks.NewMockwsPipelineIniter(ctrl),
-				pathDisplayer:  mocks.NewMockpathDisplayer(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(mocks)
@@ -453,7 +451,6 @@ func TestInitPipelineOpts_Ask(t *testing.T) {
 				store:          mocks.store,
 				pipelineLister: mocks.pipelineLister,
 				workspace:      mocks.workspace,
-				pathDisplayer:  mocks.pathDisplayer,
 			}
 
 			// WHEN
@@ -513,10 +510,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				gomock.InOrder(
-					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -547,10 +541,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				gomock.InOrder(
-					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -581,10 +572,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				gomock.InOrder(
-					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -620,10 +608,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				gomock.InOrder(
-					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -654,10 +639,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				gomock.InOrder(
-					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(environmentsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -691,10 +673,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("", existsErr)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return(wantedBuildspecFile, nil)
-				gomock.InOrder(
-					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -743,7 +722,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
-				m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(nil, errors.New("some error"))
 			},
@@ -763,7 +741,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
-				m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
 					Name: "badgoose",
@@ -789,7 +766,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Times(0)
-				m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(nil, errors.New("some error"))
 				m.store.EXPECT().GetApplication("badgoose").Return(&config.Application{
@@ -821,10 +797,7 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return("", manifestExistsErr)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", buildspecExistsErr)
-				gomock.InOrder(
-					m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil),
-					m.pathDisplayer.EXPECT().DisplayPath(wantedBuildspecFile).Return(wantedBuildspecRelPath, nil))
+				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("hello"),
 				}, nil)
@@ -856,7 +829,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			setupMocks: func(m pipelineInitMocks) {
 				m.secretsmanager.EXPECT().CreateSecret("github-token-badgoose-goose", "hunter2").Return("some-arn", nil)
 				m.workspace.EXPECT().WritePipelineManifest(gomock.Any(), wantedName).Return(wantedManifestFile, nil)
-				m.pathDisplayer.EXPECT().DisplayPath(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.workspace.EXPECT().Rel(wantedManifestFile).Return(wantedManifestRelPath, nil)
 				m.workspace.EXPECT().WritePipelineBuildspec(gomock.Any(), wantedName).Return("", errors.New("some error"))
 				m.parser.EXPECT().Parse(workloadsPipelineBuildspecTemplatePath, gomock.Any()).Return(&template.Content{
@@ -886,7 +858,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 
 			mocks := pipelineInitMocks{
 				workspace:      mocks.NewMockwsPipelineIniter(ctrl),
-				pathDisplayer:  mocks.NewMockpathDisplayer(ctrl),
 				secretsmanager: mocks.NewMocksecretsManager(ctrl),
 				parser:         templatemocks.NewMockParser(ctrl),
 				sessProvider:   mocks.NewMocksessionProvider(ctrl),
@@ -909,7 +880,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 					pipelineType:      tc.inType,
 				},
 				workspace:      mocks.workspace,
-				pathDisplayer:  mocks.pathDisplayer,
 				secretsmanager: mocks.secretsmanager,
 				parser:         mocks.parser,
 				sessProvider:   mocks.sessProvider,

@@ -7,6 +7,8 @@ package initialize
 import (
 	"encoding"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -62,11 +64,6 @@ type Prog interface {
 	Stop(label string)
 }
 
-// PathDisplayer presents paths in a user-friendly form.
-type PathDisplayer interface {
-	DisplayPath(path string) (string, error)
-}
-
 // WorkloadProps contains the information needed to represent a Workload (job or service).
 type WorkloadProps struct {
 	App            string
@@ -102,7 +99,6 @@ type WorkloadInitializer struct {
 	Deployer WorkloadAdder
 	Ws       Workspace
 	Prog     Prog
-	PathDisp PathDisplayer
 }
 
 // Service writes the service manifest, creates an ECR repository, and adds the service to SSM.
@@ -165,10 +161,7 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 		manifestMsgFmt = "Manifest file for %s %s already exists at %s, skipping writing it.\n"
 	}
 
-	path, err := w.PathDisp.DisplayPath(manifestPath)
-	if err != nil {
-		return "", err
-	}
+	path := displayPath(manifestPath)
 	log.Successf(manifestMsgFmt, jobWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 	var sched = props.Schedule
 	if props.Schedule == "" {
@@ -231,10 +224,7 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 		manifestMsgFmt = "Manifest file for %s %s already exists at %s, skipping writing it.\n"
 	}
 
-	path, err := w.PathDisp.DisplayPath(manifestPath)
-	if err != nil {
-		return "", err
-	}
+	path := displayPath(manifestPath)
 	log.Successf(manifestMsgFmt, svcWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 
 	helpText := "Your manifest contains configurations like your container size and port."
@@ -390,4 +380,20 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 		Platform:    i.Platform,
 		Topics:      i.Topics,
 	}), nil
+}
+
+// Copy of cli.displayPath
+func displayPath(target string) string {
+	base, err := os.Getwd()
+
+	if err != nil || !filepath.IsAbs(target) {
+		return filepath.Clean(target)
+	}
+
+	rel, err := filepath.Rel(base, target)
+	if err != nil {
+		// No path from base to target available, return target as is.
+		return filepath.Clean(target)
+	}
+	return rel
 }

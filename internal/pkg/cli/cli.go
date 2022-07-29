@@ -136,25 +136,26 @@ func quoteStringSlice(in []string) []string {
 	return quoted
 }
 
-// CwdPathDisplayer displays paths to the user relative to their current working directory.
-type CwdPathDisplayer struct {
-	workingDir string
-}
+// displayPath takes any path and returns it in a form ready to be displayed to
+// the user on the command line.
+//
+// No guarantees are given on the stability of the path across runs, all that is
+// guaranteed is that the displayed path is visually pleasing & meaningful for a
+// user.
+//
+// This path should not be stored in configuration files or used in any way except
+// for being displayed to the user.
+func displayPath(target string) string {
+	base, err := os.Getwd()
 
-func NewCwdPathDisplayer() (*CwdPathDisplayer, error) {
-	workingDir, err := os.Getwd()
+	if err != nil || !filepath.IsAbs(target) {
+		return filepath.Clean(target)
+	}
+
+	rel, err := filepath.Rel(base, target)
 	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
+		// No path from base to target available, return target as is.
+		return filepath.Clean(target)
 	}
-	return &CwdPathDisplayer{workingDir: workingDir}, nil
-}
-
-func (d *CwdPathDisplayer) DisplayPath(fullPath string) (string, error) {
-	if !filepath.IsAbs(fullPath) {
-		// A non-absolute path must be relative to the current working
-		// directory, so just clean it and give it back.
-		return filepath.Clean(fullPath), nil
-	}
-
-	return filepath.Rel(d.workingDir, fullPath)
+	return rel
 }
