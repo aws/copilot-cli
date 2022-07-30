@@ -384,9 +384,12 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 
 // Copy of cli.displayPath
 func displayPath(target string) string {
-	base, err := os.Getwd()
+	if !filepath.IsAbs(target) {
+		return filepath.Clean(target)
+	}
 
-	if err != nil || !filepath.IsAbs(target) {
+	base, err := os.Getwd()
+	if err != nil {
 		return filepath.Clean(target)
 	}
 
