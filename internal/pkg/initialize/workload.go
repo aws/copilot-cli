@@ -389,7 +389,6 @@ func displayPath(target string) string {
 	}
 
 	base, err := os.Getwd()
-
 	if err != nil {
 		return filepath.Clean(target)
 	}
