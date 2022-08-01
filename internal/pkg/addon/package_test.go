@@ -215,7 +215,7 @@ Resources:
     Properties:
       Fn::Transform:
         # test comment uno
-        Name: AWS::Include
+        Name: "AWS::Include"
         Parameters:
           # test comment dos
           Location: ./lambda/index.js
@@ -235,7 +235,7 @@ Resources:
     Properties:
       Fn::Transform:
         # test comment uno
-        Name: AWS::Include
+        Name: "AWS::Include"
         Parameters:
           # test comment dos
           Location: s3://mockBucket/asdf
