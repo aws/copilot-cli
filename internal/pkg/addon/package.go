@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"gopkg.in/yaml.v3"
 )
@@ -274,12 +275,7 @@ func isFilePath(path string) bool {
 	return true
 }
 
-type s3Object struct {
-	Bucket string
-	Key    string
-}
-
-func (a *Addons) uploadAddonAsset(assetPath string, forceZip bool) (s3Object, error) {
+func (a *Addons) uploadAddonAsset(assetPath string, forceZip bool) (template.S3ObjectLocation, error) {
 	// make path absolute from wsPath
 	if !filepath.IsAbs(assetPath) {
 		assetPath = filepath.Join(a.wsPath, assetPath)
@@ -287,7 +283,7 @@ func (a *Addons) uploadAddonAsset(assetPath string, forceZip bool) (s3Object, er
 
 	info, err := a.fs.Stat(assetPath)
 	if err != nil {
-		return s3Object{}, fmt.Errorf("stat: %w", err)
+		return template.S3ObjectLocation{}, fmt.Errorf("stat: %w", err)
 	}
 
 	getAsset := a.fileAsset
@@ -296,21 +292,21 @@ func (a *Addons) uploadAddonAsset(assetPath string, forceZip bool) (s3Object, er
 	}
 	asset, err := getAsset(assetPath)
 	if err != nil {
-		return s3Object{}, fmt.Errorf("create asset: %w", err)
+		return template.S3ObjectLocation{}, fmt.Errorf("create asset: %w", err)
 	}
 
 	s3Path := artifactpath.AddonAsset(a.wlName, asset.hash)
 	url, err := a.uploader.Upload(a.bucket, s3Path, asset.data)
 	if err != nil {
-		return s3Object{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, a.bucket, err)
+		return template.S3ObjectLocation{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, a.bucket, err)
 	}
 
 	bucket, key, err := s3.ParseURL(url)
 	if err != nil {
-		return s3Object{}, fmt.Errorf("parse s3 url: %w", err)
+		return template.S3ObjectLocation{}, fmt.Errorf("parse s3 url: %w", err)
 	}
 
-	return s3Object{
+	return template.S3ObjectLocation{
 		Bucket: bucket,
 		Key:    key,
 	}, nil
@@ -345,7 +341,7 @@ func (a *Addons) zipAsset(root string) (asset, error) {
 		switch {
 		case err != nil:
 			return fmt.Errorf("rel: %w", err)
-		case fname == ".":
+		case fname == ".": // happens when root == path; when a file (not a dir) is passed to `zipAsset()`
 			fname = info.Name()
 		}
 
