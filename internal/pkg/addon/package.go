@@ -193,9 +193,14 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 }
 
 func (t *cfnTemplate) pkg(a *Addons) error {
-	resources := mappingNode(&t.Resources)
+	var err error
+	t.Resources, err = a.packageTransforms(t.Resources)
+	if err != nil {
+		return fmt.Errorf("package global artifacts: %w", err)
+	}
 
-	for name, node := range resources {
+	// package resources
+	for name, node := range mappingNode(&t.Resources) {
 		resType := yamlMapGet(node, "Type").Value
 		confs, ok := resourcePackageConfig[resType]
 		if !ok {
@@ -211,6 +216,51 @@ func (t *cfnTemplate) pkg(a *Addons) error {
 	}
 
 	return nil
+}
+
+func (a *Addons) packageTransforms(node yaml.Node) (yaml.Node, error) {
+	if node.Kind != yaml.MappingNode {
+		return node, nil
+	}
+
+	m := mappingNode(&node)
+	for key, val := range m {
+		switch {
+		case key == "Fn::Transform":
+			name := yamlMapGet(val, "Name")
+			if name.Value != "AWS::Include" {
+				continue
+			}
+
+			loc := yamlMapGet(yamlMapGet(val, "Parameters"), "Location")
+			if !isFilePath(loc.Value) {
+				continue
+			}
+
+			obj, err := a.uploadAddonAsset(loc.Value, false)
+			if err != nil {
+				return node, fmt.Errorf("upload asset: %w", err)
+			}
+
+			loc.Value = s3.Location(obj.Bucket, obj.Key)
+		case val.Kind == yaml.MappingNode:
+			vv, err := a.packageTransforms(*val)
+			if err != nil {
+				return node, err
+			}
+			m[key] = &vv
+		case val.Kind == yaml.SequenceNode:
+			for i := range val.Content {
+				vv, err := a.packageTransforms(*val.Content[i])
+				if err != nil {
+					return node, err
+				}
+				val.Content[i] = &vv
+			}
+		}
+	}
+
+	return node, nil
 }
 
 // yamlMapGet parses node as a yaml map and searches key. If found,

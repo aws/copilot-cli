@@ -78,7 +78,7 @@ Resources:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
-      Role: !GetAtt "HelloWorldRole.Arn"
+      Role: !GetAtt "TestRole.Arn"
       Runtime: nodejs12.x
 `,
 			outTemplate: `
@@ -94,7 +94,7 @@ Resources:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
-      Role: !GetAtt "HelloWorldRole.Arn"
+      Role: !GetAtt "TestRole.Arn"
       Runtime: nodejs12.x
 `,
 		},
@@ -199,6 +199,50 @@ Resources:
     Properties:
       RequestMappingTemplateS3Location: s3://mockBucket/asdf
       ResponseMappingTemplateS3Location: s3://mockBucket/hjkl
+`,
+		},
+		"Fn::Transform in lambda function": {
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "hjkl"), nil)
+			},
+			inTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "hihi": "byebye"
+    Type: AWS::Lambda::Function
+    Properties:
+      Fn::Transform:
+        Name: "AWS::Include"
+        Parameters:
+          Location: ./lambda/index.js
+      Code: lambda
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt "TestRole.Arn"
+      Runtime: nodejs12.x
+`,
+			outTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "hihi": "byebye"
+    Type: AWS::Lambda::Function
+    Properties:
+      Fn::Transform:
+        Name: "AWS::Include"
+        Parameters:
+          Location: s3://mockBucket/asdf
+      Code:
+        S3Bucket: mockBucket
+        S3Key: hjkl
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt "TestRole.Arn"
+      Runtime: nodejs12.x
 `,
 		},
 	}
