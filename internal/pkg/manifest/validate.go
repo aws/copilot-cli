@@ -1031,7 +1031,7 @@ func (r IntRangeBand) validate() error {
 	minMax := intRangeBandRegexp.FindStringSubmatch(str)
 	// Valid minMax example: ["1-2", "1", "2"]
 	if len(minMax) != 3 {
-		return fmt.Errorf("invalid range value %s. Should be in format of ${min}-${max}", str)
+		return fmt.Errorf("invalid range value %s: valid format is ${min}-${max}", str)
 	}
 	// Guaranteed by intRangeBandRegexp.
 	min, err := strconv.Atoi(minMax[1])

@@ -354,19 +354,6 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
-func getPortValues(cfg manifest.SecurityGroupRule) (fromPort int, toPort int, err error) {
-	if cfg.PortsConfig.Ports.IsEmpty() {
-		toPort = *cfg.PortsConfig.Port
-		fromPort = *cfg.PortsConfig.Port
-	} else {
-		fromPort, toPort, err = cfg.PortsConfig.Ports.Parse()
-		if err != nil {
-			return 0, 0, err
-		}
-	}
-	return fromPort, toPort, nil
-}
-
 func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {
 	securityGroupConfig, isSecurityConfigSet := mft.EnvSecurityGroup()
 	if !isSecurityConfigSet {
@@ -377,7 +364,7 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 	for idx, ingressValue := range securityGroupConfig.Ingress {
 		ingress[idx].IpProtocol = ingressValue.IpProtocol
 		ingress[idx].CidrIP = ingressValue.CidrIP
-		if fromPort, toPort, err := getPortValues(ingressValue); err != nil {
+		if fromPort, toPort, err := ingressValue.Ports(); err != nil {
 			return nil, err
 		} else {
 			ingress[idx].ToPort = toPort
@@ -387,7 +374,7 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 	for idx, egressValue := range securityGroupConfig.Egress {
 		egress[idx].IpProtocol = egressValue.IpProtocol
 		egress[idx].CidrIP = egressValue.CidrIP
-		if fromPort, toPort, err := getPortValues(egressValue); err != nil {
+		if fromPort, toPort, err := egressValue.Ports(); err != nil {
 			return nil, err
 		} else {
 			egress[idx].ToPort = toPort

@@ -149,7 +149,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: "validate \"security_group\": validate ingress[0]: \"invalid ports value 1-10-10. Should be in format of ${from_port}-${to_port}\" must be specified",
+			wantedError: "validate \"security_group\": validate ingress[0]: invalid ports value 1-10-10: valid port format is ${from_port}-${to_port}",
 		},
 		"valid security group config without ports": {
 			in: EnvironmentConfig{

@@ -87,10 +87,14 @@ func (cfg environmentVPCConfig) validate() error {
 // validate returns nil if securityGroupRule has all the required parameters set.
 func (cfg SecurityGroupRule) validate() error {
 	if cfg.CidrIP == "" {
-		return fmt.Errorf(`cidr`)
+		return &errFieldMustBeSpecified{
+			missingField: "cidr",
+		}
 	}
 	if cfg.IpProtocol == "" {
-		return fmt.Errorf(`ip_protocol`)
+		return &errFieldMustBeSpecified{
+			missingField: "ip_protocol",
+		}
 	}
 	return cfg.PortsConfig.validate()
 }
@@ -98,7 +102,9 @@ func (cfg SecurityGroupRule) validate() error {
 // validate if ports are set.
 func (cfg PortsConfig) validate() error {
 	if cfg.IsEmpty() {
-		return fmt.Errorf(`ports`)
+		return &errFieldMustBeSpecified{
+			missingField: "ports",
+		}
 	}
 	if !cfg.Ports.IsEmpty() {
 		return cfg.Ports.validate()
@@ -110,7 +116,7 @@ func (cfg PortsConfig) validate() error {
 func (str PortsRangeBand) validate() error {
 	ports := strings.Split(string(str), "-")
 	if len(ports) != 2 {
-		return fmt.Errorf("invalid ports value %s. Should be in format of ${from_port}-${to_port}", string(str))
+		return fmt.Errorf("invalid ports value %s: valid port format is ${from_port}-${to_port}", string(str))
 	}
 	return nil
 }
@@ -119,16 +125,12 @@ func (str PortsRangeBand) validate() error {
 func (cfg securityGroupConfig) validate() error {
 	for idx, ingress := range cfg.Ingress {
 		if err := ingress.validate(); err != nil {
-			return fmt.Errorf(`validate ingress[%d]: %w`, idx, &errFieldMustBeSpecified{
-				missingField: err.Error(),
-			})
+			return fmt.Errorf(`validate ingress[%d]: %w`, idx, err)
 		}
 	}
 	for idx, egress := range cfg.Egress {
 		if err := egress.validate(); err != nil {
-			return fmt.Errorf(`validate egress[%d]: %w`, idx, &errFieldMustBeSpecified{
-				missingField: err.Error(),
-			})
+			return fmt.Errorf(`validate egress[%d]: %w`, idx, err)
 		}
 	}
 	return nil
