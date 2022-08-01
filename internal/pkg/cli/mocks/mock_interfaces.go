@@ -2351,6 +2351,44 @@ func (mr *MockwsPipelineManifestReaderMockRecorder) ReadPipelineManifest(path in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineManifestReader)(nil).ReadPipelineManifest), path)
 }
 
+// MockrelPath is a mock of relPath interface.
+type MockrelPath struct {
+	ctrl     *gomock.Controller
+	recorder *MockrelPathMockRecorder
+}
+
+// MockrelPathMockRecorder is the mock recorder for MockrelPath.
+type MockrelPathMockRecorder struct {
+	mock *MockrelPath
+}
+
+// NewMockrelPath creates a new mock instance.
+func NewMockrelPath(ctrl *gomock.Controller) *MockrelPath {
+	mock := &MockrelPath{ctrl: ctrl}
+	mock.recorder = &MockrelPathMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockrelPath) EXPECT() *MockrelPathMockRecorder {
+	return m.recorder
+}
+
+// Rel mocks base method.
+func (m *MockrelPath) Rel(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rel", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Rel indicates an expected call of Rel.
+func (mr *MockrelPathMockRecorder) Rel(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockrelPath)(nil).Rel), path)
+}
+
 // MockwsPipelineIniter is a mock of wsPipelineIniter interface.
 type MockwsPipelineIniter struct {
 	ctrl     *gomock.Controller

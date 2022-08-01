@@ -170,7 +170,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 		"errors if summary exists and differs from app argument": {
 			inAppName: "testname",
 			expect: func(opts *initAppOpts) {
-				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics"}, nil)
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics", Path: "/test"}, nil)
 				opts.store.(*mocks.Mockstore).EXPECT().ListApplications().Times(0)
 			},
 			wantedErr: "workspace already registered with metrics",
