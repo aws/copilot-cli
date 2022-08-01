@@ -214,8 +214,10 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Fn::Transform:
-        Name: "AWS::Include"
+        # test comment uno
+        Name: AWS::Include
         Parameters:
+          # test comment dos
           Location: ./lambda/index.js
       Code: lambda
       Handler: "index.handler"
@@ -232,8 +234,10 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Fn::Transform:
-        Name: "AWS::Include"
+        # test comment uno
+        Name: AWS::Include
         Parameters:
+          # test comment dos
           Location: s3://mockBucket/asdf
       Code:
         S3Bucket: mockBucket

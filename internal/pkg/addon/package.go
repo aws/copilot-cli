@@ -218,6 +218,13 @@ func (t *cfnTemplate) pkg(a *Addons) error {
 	return nil
 }
 
+type fnTransformAWSInclude struct {
+	Name       string `yaml:"Name"`
+	Parameters struct {
+		Location string `yaml:"Location"`
+	} `yaml:"Parameters"`
+}
+
 func (a *Addons) packageTransforms(node yaml.Node) (yaml.Node, error) {
 	if node.Kind != yaml.MappingNode {
 		return node, nil
@@ -227,22 +234,24 @@ func (a *Addons) packageTransforms(node yaml.Node) (yaml.Node, error) {
 	for key, val := range m {
 		switch {
 		case key == "Fn::Transform":
-			name := yamlMapGet(val, "Name")
-			if name.Value != "AWS::Include" {
+			var macro fnTransformAWSInclude
+			if err := val.Decode(&macro); err != nil {
 				continue
 			}
 
-			loc := yamlMapGet(yamlMapGet(val, "Parameters"), "Location")
-			if !isFilePath(loc.Value) {
+			if macro.Name != "AWS::Include" || !isFilePath(macro.Parameters.Location) {
 				continue
 			}
 
-			obj, err := a.uploadAddonAsset(loc.Value, false)
+			obj, err := a.uploadAddonAsset(macro.Parameters.Location, false)
 			if err != nil {
 				return node, fmt.Errorf("upload asset: %w", err)
 			}
 
-			loc.Value = s3.Location(obj.Bucket, obj.Key)
+			macro.Parameters.Location = s3.Location(obj.Bucket, obj.Key)
+			if err := val.Encode(macro); err != nil {
+				return node, fmt.Errorf("encode s3 location to Fn::Transform: %w", err)
+			}
 		case val.Kind == yaml.MappingNode:
 			vv, err := a.packageTransforms(*val)
 			if err != nil {
