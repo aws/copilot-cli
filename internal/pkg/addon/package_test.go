@@ -7,13 +7,13 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/addon/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
-	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/golang/mock/gomock"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -54,9 +54,9 @@ func TestPackage(t *testing.T) {
 	info, _ = f2.Stat()
 	lambdaZipHash.Write([]byte("test.js " + info.Mode().String()))
 
-	lambdaZipS3Path := artifactpath.AddonAsset(wlName, hex.EncodeToString(lambdaZipHash.Sum(nil)))
-	indexZipS3Path := artifactpath.AddonAsset(wlName, hex.EncodeToString(indexZipHash.Sum(nil)))
-	indexFileS3Path := artifactpath.AddonAsset(wlName, hex.EncodeToString(indexFileHash.Sum(nil)))
+	lambdaZipS3Path := fmt.Sprintf("manual/addons/mock-wl/assets/%s", hex.EncodeToString(lambdaZipHash.Sum(nil)))
+	indexZipS3Path := fmt.Sprintf("manual/addons/mock-wl/assets/%s", hex.EncodeToString(indexZipHash.Sum(nil)))
+	indexFileS3Path := fmt.Sprintf("manual/addons/mock-wl/assets/%s", hex.EncodeToString(indexFileHash.Sum(nil)))
 
 	tests := map[string]struct {
 		inTemplate  string
