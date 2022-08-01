@@ -638,6 +638,122 @@ func TestEnvDescriber_Features(t *testing.T) {
 	}
 }
 
+func TestEnvDescriber_ValidateCFServiceDomainAliases(t *testing.T) {
+	const (
+		mockAppName                  = "mock-app"
+		mockEnvName                  = "mock-env"
+		mockAliasesJsonString        = `{"svc-1":["test.copilot.com"],"svc-2":["test.copilot.com"]}`
+		mockInvalidAliasesJsonString = `{"svc-1":["test.copilot.com"]}`
+	)
+	mockEnvConfig := config.Environment{
+		App:  mockAppName,
+		Name: mockEnvName,
+	}
+	mockServices := []string{"svc-1", "svc-2"}
+
+	testCases := map[string]struct {
+		setupMock func(m *envDescriberMocks)
+
+		wantedErr error
+	}{
+		"error retrieving services": {
+			setupMock: func(m *envDescriberMocks) {
+				mockParams := map[string]string{
+					"AppName":         mockAppName,
+					"EnvironmentName": mockEnvName,
+				}
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: mockParams,
+				}, nil)
+				m.deployStoreSvc.EXPECT().ListDeployedServices(mockAppName, mockEnvName).Return(nil, errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("list services: some error"),
+		},
+		"missing aliases parameter in env stack": {
+			setupMock: func(m *envDescriberMocks) {
+				mockParams := map[string]string{
+					"AppName":         mockAppName,
+					"EnvironmentName": mockEnvName,
+				}
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: mockParams,
+				}, nil)
+				m.deployStoreSvc.EXPECT().ListDeployedServices(mockAppName, mockEnvName).Return(mockServices, nil)
+			},
+			wantedErr: fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified"),
+		},
+		"error unmarshalling json string": {
+			setupMock: func(m *envDescriberMocks) {
+				mockParams := map[string]string{
+					"AppName":         mockAppName,
+					"EnvironmentName": mockEnvName,
+					"Aliases":         "mock-invalid-aliases",
+				}
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: mockParams,
+				}, nil)
+				m.deployStoreSvc.EXPECT().ListDeployedServices(mockAppName, mockEnvName).Return(mockServices, nil)
+			},
+			wantedErr: fmt.Errorf("failed to unmarshal \"mock-invalid-aliases\": invalid character 'm' looking for beginning of value"),
+		},
+		"not all valid services have an alias": {
+			setupMock: func(m *envDescriberMocks) {
+				mockParams := map[string]string{
+					"AppName":         mockAppName,
+					"EnvironmentName": mockEnvName,
+					"Aliases":         mockInvalidAliasesJsonString,
+				}
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: mockParams,
+				}, nil)
+				m.deployStoreSvc.EXPECT().ListDeployedServices(mockAppName, mockEnvName).Return(mockServices, nil)
+			},
+			wantedErr: fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified"),
+		},
+		"all valid services have an alias": {
+			setupMock: func(m *envDescriberMocks) {
+				mockParams := map[string]string{
+					"AppName":         mockAppName,
+					"EnvironmentName": mockEnvName,
+					"Aliases":         mockAliasesJsonString,
+				}
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: mockParams,
+				}, nil)
+				m.deployStoreSvc.EXPECT().ListDeployedServices(mockAppName, mockEnvName).Return(mockServices, nil)
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			m := &envDescriberMocks{
+				stackDescriber: mocks.NewMockstackDescriber(ctrl),
+				deployStoreSvc: mocks.NewMockDeployedEnvServicesLister(ctrl),
+			}
+			tc.setupMock(m)
+			d := &EnvDescriber{
+				app:         mockAppName,
+				env:         &mockEnvConfig,
+				cfn:         m.stackDescriber,
+				deployStore: m.deployStoreSvc,
+			}
+
+			// WHEN
+			err := d.ValidateCFServiceDomainAliases()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestEnvDescription_JSONString(t *testing.T) {
 	testApp := &config.Application{
 		Name: "testApp",

@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -122,6 +123,19 @@ func (o *deployEnvOpts) Execute() error {
 	mft, err := environmentManifest(o.name, rawMft, o.newInterpolator(o.appName, o.name))
 	if err != nil {
 		return err
+	}
+	if mft.CDNConfig.CDNEnabled() {
+		describer, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         o.appName,
+			Env:         o.name,
+			ConfigStore: o.store,
+		})
+		if err != nil {
+			return err
+		}
+		if err := describer.ValidateCFServiceDomainAliases(); err != nil {
+			return err
+		}
 	}
 	caller, err := o.identity.Get()
 	if err != nil {

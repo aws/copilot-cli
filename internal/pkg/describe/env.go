@@ -317,6 +317,7 @@ func (d *EnvDescriber) filterDeployedJobs() ([]*config.Workload, error) {
 	return deployedJobs, nil
 }
 
+// ValidateCFServiceDomainAliases returns error if an environment using cdn is deployed without specifying http.alias for all services
 func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
 
 	stackDescr, err := d.cfn.Describe()
@@ -324,29 +325,26 @@ func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
 		return err
 	}
 
-	_, ok := stackDescr.Outputs["CloudFrontDomainName"] // use a constant
-	if !ok {
-		return nil
-	}
-
 	services, err := d.deployStore.ListDeployedServices(d.app, d.env.Name)
 	if err != nil {
-		return err
+		return fmt.Errorf("list services: %w", err)
 	}
 
 	if jsonOutput, ok := stackDescr.Parameters["Aliases"]; ok { // use a constant
-		var aliases *map[string]string
-		err := json.Unmarshal([]byte(jsonOutput), aliases)
+		var aliases map[string][]string
+		err := json.Unmarshal([]byte(jsonOutput), &aliases)
 
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal \"%s\": %w", jsonOutput, err)
 		}
 
 		for _, service := range services {
-			if _, ok := (*aliases)[service]; !ok {
+			if _, ok := aliases[service]; !ok {
 				return fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified")
 			}
 		}
+	} else {
+		return fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified")
 	}
 
 	return nil

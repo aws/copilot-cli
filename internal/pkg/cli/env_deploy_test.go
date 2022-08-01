@@ -5,6 +5,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -142,6 +143,8 @@ type deployEnvExecuteMocks struct {
 	deployer     *mocks.MockenvDeployer
 	identity     *mocks.MockidentityService
 	interpolator *mocks.Mockinterpolator
+	describer    *mocks.MockenvDescriber
+	store        *mocks.Mockstore
 }
 
 func TestDeployEnvOpts_Execute(t *testing.T) {
@@ -169,6 +172,23 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("failing manifest format", nil)
 			},
 			wantedErr: errors.New(`unmarshal environment manifest for "mockEnv"`),
+		},
+		"fail to validate cdn": {
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\ncdn: true\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\ncdn: true\n", nil)
+				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Return(&config.Environment{
+					App:              "mockApp",
+					Name:             "mockEnv",
+					Region:           "mockRegion",
+					AccountID:        "mockId",
+					RegistryURL:      "mockURL",
+					ExecutionRoleARN: "arn:aws:iam::123456789012:role/mockApp-mockEnv-MockExecutionRole",
+					ManagerRoleARN:   "arn:aws:iam::123456789012:role/mockApp-mockEnv-MockManagerRole",
+				}, nil)
+				m.describer.EXPECT().ValidateCFServiceDomainAliases().Return(fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified"))
+			},
+			wantedErr: errors.New("all services deployed in an environment with CloudFront enabled must have http.alias specified"),
 		},
 		"fail to get caller identity": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
@@ -215,6 +235,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().UploadArtifacts().Return(map[string]string{
 					"mockResource": "mockURL",
 				}, nil)
+				m.describer.EXPECT().ValidateCFServiceDomainAliases().Return(nil).Times(0)
 				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).DoAndReturn(func(in *deploy.DeployEnvironmentInput) error {
 					require.Equal(t, in.RootUserARN, "mockRootUserARN")
 					require.Equal(t, in.CustomResourcesURLs, map[string]string{
@@ -240,6 +261,8 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				deployer:     mocks.NewMockenvDeployer(ctrl),
 				identity:     mocks.NewMockidentityService(ctrl),
 				interpolator: mocks.NewMockinterpolator(ctrl),
+				describer:    mocks.NewMockenvDescriber(ctrl),
+				store:        mocks.NewMockstore(ctrl),
 			}
 			tc.setUpMocks(m)
 			opts := deployEnvOpts{
@@ -257,6 +280,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				targetEnv: &config.Environment{
 					Name: "mockEnv",
 				},
+				store: m.store,
 			}
 			err := opts.Execute()
 			if tc.wantedErr != nil {
