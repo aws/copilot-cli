@@ -146,9 +146,12 @@ func quoteStringSlice(in []string) []string {
 // This path should not be stored in configuration files or used in any way except
 // for being displayed to the user.
 func displayPath(target string) string {
-	base, err := os.Getwd()
+	if !filepath.IsAbs(target) {
+		return filepath.Clean(target)
+	}
 
-	if err != nil || !filepath.IsAbs(target) {
+	base, err := os.Getwd()
+	if err != nil {
 		return filepath.Clean(target)
 	}
 
