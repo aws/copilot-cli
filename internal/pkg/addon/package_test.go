@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -61,6 +62,7 @@ func TestPackage(t *testing.T) {
 	tests := map[string]struct {
 		inTemplate  string
 		outTemplate string
+		pkgError    string
 		setupMocks  func(m addonMocks)
 	}{
 		"AWS::Lambda::Function, zipped file": {
@@ -344,6 +346,42 @@ Outputs:
     Value: !Ref bucket
 `,
 		},
+		"error on file not existing": {
+			inTemplate: `
+Resources:
+  Test:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: does/not/exist.js
+`,
+			pkgError: `package property "Code" of "Test": upload asset: stat: open /does/not/exist.js: file does not exist`,
+		},
+		"error on file upload error": {
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, indexZipS3Path, gomock.Any()).Return("", errors.New("mockError"))
+			},
+			inTemplate: `
+Resources:
+  Test:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: lambda/index.js
+`,
+			pkgError: `package property "Code" of "Test": upload asset: upload /lambda/index.js to s3 bucket mockBucket: mockError`,
+		},
+		"error on file not existing for Fn::Transform": {
+			inTemplate: `
+Resources:
+  Test:
+    Type: AWS::Lambda::Function
+    Properties:
+      Fn::Transform:
+        Name: "AWS::Include"
+        Parameters:
+          Location: does/not/exist.yml
+`,
+			pkgError: `package transforms: upload asset: stat: open /does/not/exist.yml: file does not exist`,
+		},
 	}
 
 	for name, tc := range tests {
@@ -373,7 +411,13 @@ Outputs:
 			err := yaml.Unmarshal([]byte(tc.inTemplate), tmpl)
 			require.NoError(t, err)
 
-			require.NoError(t, tmpl.pkg(a))
+			err = tmpl.pkg(a)
+			if tc.pkgError != "" {
+				require.EqualError(t, err, tc.pkgError)
+				return
+			}
+
+			require.NoError(t, err)
 
 			buf := &bytes.Buffer{}
 			enc := yaml.NewEncoder(buf)

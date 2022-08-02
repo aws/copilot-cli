@@ -241,7 +241,7 @@ func (a *Addons) packageTransforms(nodes ...yaml.Node) error {
 
 				obj, err := a.uploadAddonAsset(loc.Value, false)
 				if err != nil {
-					return fmt.Errorf("upload asset %q: %w", loc.Value, err)
+					return fmt.Errorf("upload asset: %w", err)
 				}
 
 				loc.Value = s3.Location(obj.Bucket, obj.Key)
