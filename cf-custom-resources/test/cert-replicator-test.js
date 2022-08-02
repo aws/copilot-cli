@@ -37,16 +37,6 @@ describe("Certificate Replicator Handler", () => {
     handler.withDefaultResponseURL(ResponseURL);
     handler.withDefaultLogGroup(LogGroup);
     handler.withDefaultLogStream(LogStream);
-    handler.withWaiter(function () {
-      // Mock waiter is merely a self-fulfilling promise
-      return {
-        promise: () => {
-          return new Promise((resolve) => {
-            resolve();
-          });
-        },
-      };
-    });
     handler.withSleep(spySleep);
     handler.withDeadlineExpired((_) => {
       return new Promise(function (resolve, reject) {});
@@ -54,7 +44,6 @@ describe("Certificate Replicator Handler", () => {
     console.log = function () {};
   });
   afterEach(() => {
-    // Restore waiters and logger
     handler.reset();
     AWS.restore();
     console.log = origLog;
@@ -117,6 +106,95 @@ describe("Certificate Replicator Handler", () => {
       });
   });
 
+  test("Create operation fails if cannot describe old certificate", () => {
+    const describeCertificateFake = sinon.fake.rejects(new Error("some error"));
+
+    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+
+    const request = nock(ResponseURL)
+      .put("/", (body) => {
+        return body.Status === "FAILED";
+      })
+      .reply(200);
+
+    return LambdaTester(handler.certificateReplicateHandler)
+      .event({
+        RequestType: "Create",
+        RequestId: testRequestId,
+        ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
+          TargetRegion: "us-east-1",
+          EnvRegion: "us-west-2",
+          CertificateArn: testCertificateArn,
+        },
+        OldResourceProperties: {},
+      })
+      .expectResolve(() => {
+        sinon.assert.calledWith(
+          describeCertificateFake,
+          sinon.match({
+            CertificateArn: testCertificateArn,
+          })
+        );
+        expect(request.isDone()).toBe(true);
+      });
+  });
+
+  test("Create operation fails if cannot request new certificate", () => {
+    const requestCertificateFake = sinon.fake.rejects(new Error("some error"));
+
+    const describeCertificateFake = sinon.stub();
+    describeCertificateFake.resolves({
+      Certificate: {
+        CertificateArn: testCertificateArn,
+        DomainName: testDomainName,
+        SubjectAlternativeNames: testSANs,
+      },
+    });
+
+    AWS.mock("ACM", "requestCertificate", requestCertificateFake);
+    AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+
+    const request = nock(ResponseURL)
+      .put("/", (body) => {
+        return body.Status === "FAILED";
+      })
+      .reply(200);
+
+    return LambdaTester(handler.certificateReplicateHandler)
+      .event({
+        RequestType: "Create",
+        RequestId: testRequestId,
+        ResourceProperties: {
+          AppName: testAppName,
+          EnvName: testEnvName,
+          TargetRegion: "us-east-1",
+          EnvRegion: "us-west-2",
+          CertificateArn: testCertificateArn,
+        },
+        OldResourceProperties: {},
+      })
+      .expectResolve(() => {
+        sinon.assert.calledWith(
+          describeCertificateFake,
+          sinon.match({
+            CertificateArn: testCertificateArn,
+          })
+        );
+        sinon.assert.calledWith(
+          requestCertificateFake,
+          sinon.match({
+            DomainName: testDomainName,
+            SubjectAlternativeNames: testSANs,
+            ValidationMethod: "DNS",
+            Tags: testCopilotTags,
+          })
+        );
+        expect(request.isDone()).toBe(true);
+      });
+  });
+
   test("Update operation requests a new certificate", () => {
     const requestCertificateFake = sinon.fake.resolves({
       CertificateArn: testCertificateArn,
@@ -131,8 +209,12 @@ describe("Certificate Replicator Handler", () => {
       },
     });
 
+    const waitForCertificateValidationFake = sinon.stub();
+    waitForCertificateValidationFake.resolves();
+
     AWS.mock("ACM", "requestCertificate", requestCertificateFake);
     AWS.mock("ACM", "describeCertificate", describeCertificateFake);
+    AWS.mock("ACM", "waitFor", waitForCertificateValidationFake);
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
@@ -167,6 +249,14 @@ describe("Certificate Replicator Handler", () => {
             SubjectAlternativeNames: testSANs,
             ValidationMethod: "DNS",
             Tags: testCopilotTags,
+          })
+        );
+        sinon.assert.calledWith(
+          waitForCertificateValidationFake,
+          "certificateValidated",
+          sinon.match({
+            $waiter: { delay: 30, maxAttempts: 19 },
+            CertificateArn: testCertificateArn,
           })
         );
         expect(request.isDone()).toBe(true);
@@ -386,7 +476,7 @@ describe("Certificate Replicator Handler", () => {
       });
   });
 
-  test("Delete operation with a maximum of 1 attempts describes the certificate once", () => {
+  test("Delete operation with a maximum of 1 attempts and proceed if ResourceNotFoundException", () => {
     handler.withMaxAttempts(1);
     const describeCertificateFake = sinon.fake.resolves({
       Certificate: {
@@ -395,7 +485,9 @@ describe("Certificate Replicator Handler", () => {
     });
     AWS.mock("ACM", "describeCertificate", describeCertificateFake);
 
-    const deleteCertificateFake = sinon.fake.resolves({});
+    let resourceNotFoundErr = new Error("some error");
+    resourceNotFoundErr.name = "ResourceNotFoundException";
+    const deleteCertificateFake = sinon.fake.rejects(resourceNotFoundErr);
     AWS.mock("ACM", "deleteCertificate", deleteCertificateFake);
 
     const request = nock(ResponseURL)

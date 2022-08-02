@@ -16,7 +16,6 @@ const defaultSleep = function (ms) {
 let defaultResponseURL;
 let defaultLogGroup;
 let defaultLogStream;
-let waiter;
 let sleep = defaultSleep;
 let maxAttempts = 10;
 
@@ -190,17 +189,6 @@ const validateCertificate = async function (certificateARN, acm) {
     .promise();
 };
 
-const acmClient = function (region) {
-  const acm = new aws.ACM({
-    region,
-  });
-  if (waiter) {
-    // Used by the test suite, since waiters aren't mockable yet
-    acm.waitFor = waiter;
-  }
-  return acm;
-};
-
 /**
  * Main certificate replicator handler, invoked by Lambda
  */
@@ -215,8 +203,8 @@ exports.certificateReplicateHandler = async function (event, context) {
   ];
   let handler = async function () {
     // Configure clients.
-    const envRegionAcm = acmClient(envRegion);
-    const targetRegionAcm = acmClient(targetRegion);
+    const envRegionAcm = new aws.ACM({ envRegion });
+    const targetRegionAcm = new aws.ACM({ targetRegion });
     switch (event.RequestType) {
       case "Create":
       case "Update":
@@ -291,13 +279,6 @@ exports.withDefaultResponseURL = function (url) {
 /**
  * @private
  */
-exports.withWaiter = function (w) {
-  waiter = w;
-};
-
-/**
- * @private
- */
 exports.withSleep = function (s) {
   sleep = s;
 };
@@ -307,7 +288,6 @@ exports.withSleep = function (s) {
  */
 exports.reset = function () {
   sleep = defaultSleep;
-  waiter = undefined;
   maxAttempts = 10;
 };
 
