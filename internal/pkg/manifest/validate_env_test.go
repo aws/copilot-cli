@@ -98,10 +98,10 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						SecurityGroupConfig: securityGroupConfig{
-							Ingress: []SecurityGroupRule{
+							Ingress: []securityGroupRule{
 								{
 									IpProtocol: "tcp",
-									PortsConfig: PortsConfig{
+									Ports: portsConfig{
 										Port: aws.Int(80),
 									},
 								},
@@ -117,11 +117,11 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						SecurityGroupConfig: securityGroupConfig{
-							Ingress: []SecurityGroupRule{
+							Ingress: []securityGroupRule{
 								{
 									CidrIP:     "0.0.0.0",
 									IpProtocol: "tcp",
-									PortsConfig: PortsConfig{
+									Ports: portsConfig{
 										Ports: (*PortsRangeBand)(aws.String("1-10")),
 									},
 								},
@@ -136,11 +136,11 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						SecurityGroupConfig: securityGroupConfig{
-							Ingress: []SecurityGroupRule{
+							Ingress: []securityGroupRule{
 								{
 									CidrIP:     "0.0.0.0",
 									IpProtocol: "tcp",
-									PortsConfig: PortsConfig{
+									Ports: portsConfig{
 										Ports: (*PortsRangeBand)(aws.String("1-10-10")),
 									},
 								},
@@ -156,7 +156,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
 						SecurityGroupConfig: securityGroupConfig{
-							Ingress: []SecurityGroupRule{
+							Ingress: []securityGroupRule{
 								{
 									CidrIP:     "0.0.0.0",
 									IpProtocol: "tcp",

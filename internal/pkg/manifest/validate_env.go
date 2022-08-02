@@ -85,7 +85,7 @@ func (cfg environmentVPCConfig) validate() error {
 }
 
 // validate returns nil if securityGroupRule has all the required parameters set.
-func (cfg SecurityGroupRule) validate() error {
+func (cfg securityGroupRule) validate() error {
 	if cfg.CidrIP == "" {
 		return &errFieldMustBeSpecified{
 			missingField: "cidr",
@@ -96,11 +96,11 @@ func (cfg SecurityGroupRule) validate() error {
 			missingField: "ip_protocol",
 		}
 	}
-	return cfg.PortsConfig.validate()
+	return cfg.Ports.validate()
 }
 
 // validate if ports are set.
-func (cfg PortsConfig) validate() error {
+func (cfg portsConfig) validate() error {
 	if cfg.IsEmpty() {
 		return &errFieldMustBeSpecified{
 			missingField: "ports",

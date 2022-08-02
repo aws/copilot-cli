@@ -364,7 +364,7 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 	for idx, ingressValue := range securityGroupConfig.Ingress {
 		ingress[idx].IpProtocol = ingressValue.IpProtocol
 		ingress[idx].CidrIP = ingressValue.CidrIP
-		if fromPort, toPort, err := ingressValue.Ports(); err != nil {
+		if fromPort, toPort, err := ingressValue.GetPorts(); err != nil {
 			return nil, err
 		} else {
 			ingress[idx].ToPort = toPort
@@ -374,7 +374,7 @@ func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGr
 	for idx, egressValue := range securityGroupConfig.Egress {
 		egress[idx].IpProtocol = egressValue.IpProtocol
 		egress[idx].CidrIP = egressValue.CidrIP
-		if fromPort, toPort, err := egressValue.Ports(); err != nil {
+		if fromPort, toPort, err := egressValue.GetPorts(); err != nil {
 			return nil, err
 		} else {
 			egress[idx].ToPort = toPort

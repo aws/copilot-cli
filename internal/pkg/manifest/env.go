@@ -116,24 +116,24 @@ type environmentVPCConfig struct {
 }
 
 type securityGroupConfig struct {
-	Ingress []SecurityGroupRule `yaml:"ingress,omitempty"`
-	Egress  []SecurityGroupRule `yaml:"egress,omitempty"`
+	Ingress []securityGroupRule `yaml:"ingress,omitempty"`
+	Egress  []securityGroupRule `yaml:"egress,omitempty"`
 }
 
 func (cfg securityGroupConfig) isEmpty() bool {
 	return len(cfg.Ingress) == 0 && len(cfg.Egress) == 0
 }
 
-// SecurityGroupRule holds the security group ingress and egress configs.
-type SecurityGroupRule struct {
-	CidrIP      string      `yaml:"cidr"`
-	PortsConfig PortsConfig `yaml:"ports"`
-	IpProtocol  string      `yaml:"ip_protocol"`
+// securityGroupRule holds the security group ingress and egress configs.
+type securityGroupRule struct {
+	CidrIP     string      `yaml:"cidr"`
+	Ports      portsConfig `yaml:"ports"`
+	IpProtocol string      `yaml:"ip_protocol"`
 }
 
-// PortsConfig represents a range of ports [from:to] inclusive.
-// The simple form allow represent from and to ports as a single value, whereas the advanced form is for different values.
-type PortsConfig struct {
+// portsConfig represents a range of ports [from:to] inclusive.
+// The simple form allow represents from and to ports as a single value, whereas the advanced form is for different values.
+type portsConfig struct {
 	Port  *int            // 0 is a valid value, so we want the default value to be nil.
 	Ports *PortsRangeBand // Mutually exclusive with port.
 }
@@ -163,22 +163,22 @@ func (cfg *PortsRangeBand) IsEmpty() bool {
 }
 
 // IsEmpty returns whether PortsConfig is empty.
-func (cfg *PortsConfig) IsEmpty() bool {
+func (cfg *portsConfig) IsEmpty() bool {
 	return cfg.Port == nil && cfg.Ports.IsEmpty()
 }
 
-// Ports returns the from and to ports of a security group rule.
-func (r SecurityGroupRule) Ports() (from, to int, err error) {
-	if r.PortsConfig.Ports.IsEmpty() {
-		return *r.PortsConfig.Port, *r.PortsConfig.Port, nil // a single value is provided for ports.
+// GetPorts returns the from and to ports of a security group rule.
+func (r securityGroupRule) GetPorts() (from, to int, err error) {
+	if r.Ports.Ports.IsEmpty() {
+		return aws.IntValue(r.Ports.Port), aws.IntValue(r.Ports.Port), nil // a single value is provided for ports.
 	}
-	return r.PortsConfig.Ports.parse()
+	return r.Ports.Ports.parse()
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Ports
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (cfg *PortsConfig) UnmarshalYAML(value *yaml.Node) error {
+func (cfg *portsConfig) UnmarshalYAML(value *yaml.Node) error {
 	_, err := strconv.Atoi(value.Value) // detmines if input is integer? if err then we decode range values
 	if err != nil {
 		if err := value.Decode(&cfg.Ports); err != nil {
