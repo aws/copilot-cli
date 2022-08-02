@@ -249,6 +249,101 @@ Resources:
       Runtime: nodejs12.x
 `,
 		},
+		"Fn::Transform nested in a yaml mapping and sequence node": {
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil).Times(2)
+			},
+			inTemplate: `
+Resources:
+  Test:
+    Type: AWS::Fake::Resource
+    Properties:
+      SequenceProperty:
+        - KeyOne: ValOne
+          KeyTwo: ValTwo
+        - Fn::Transform:
+            Name: "AWS::Include"
+            Parameters:
+              Location: ./lambda/index.js
+      MappingProperty:
+        KeyOne: ValOne
+        Fn::Transform:
+          Name: "AWS::Include"
+          Parameters:
+            Location: ./lambda/index.js
+`,
+			outTemplate: `
+Resources:
+  Test:
+    Type: AWS::Fake::Resource
+    Properties:
+      SequenceProperty:
+        - KeyOne: ValOne
+          KeyTwo: ValTwo
+        - Fn::Transform:
+            Name: "AWS::Include"
+            Parameters:
+              Location: s3://mockBucket/asdf
+      MappingProperty:
+        KeyOne: ValOne
+        Fn::Transform:
+          Name: "AWS::Include"
+          Parameters:
+            Location: s3://mockBucket/asdf
+`,
+		},
+		"Fn::Transform example from https://medium.com/swlh/using-the-cloudformation-aws-include-macro-9e3056cf75b0": {
+			setupMocks: func(m addonMocks) {
+				// m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", "chris.hare", "alb-cw-mapping.yaml"), nil)
+				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", "chris.hare", "common-tags.yaml"), nil)
+			},
+			inTemplate: `
+Parameters:
+  CreatedBy:
+    Type: String
+    Description: Email address of the person creating the resource.
+Transform:
+  Name: 'AWS::Include'
+  Parameters:
+    Location: 's3://chris.hare/alb-cw-mapping.yaml'
+Resources:
+  bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Fn::Transform:
+        Name: 'AWS::Include'
+        Parameters:
+          Location: './lambda/index.js'
+Outputs:
+  bucketDomainName:
+    Value: !GetAtt bucket.DomainName
+  bucket:
+    Value: !Ref bucket
+`,
+			outTemplate: `
+Parameters:
+  CreatedBy:
+    Type: String
+    Description: Email address of the person creating the resource.
+Transform:
+  Name: 'AWS::Include'
+  Parameters:
+    Location: 's3://chris.hare/alb-cw-mapping.yaml'
+Resources:
+  bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Fn::Transform:
+        Name: 'AWS::Include'
+        Parameters:
+          Location: 's3://chris.hare/common-tags.yaml'
+Outputs:
+  bucketDomainName:
+    Value: !GetAtt bucket.DomainName
+  bucket:
+    Value: !Ref bucket
+`,
+		},
 	}
 
 	for name, tc := range tests {

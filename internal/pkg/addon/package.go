@@ -193,8 +193,7 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 }
 
 func (t *cfnTemplate) pkg(a *Addons) error {
-	var err error
-	t.Resources, err = a.packageTransforms(t.Resources)
+	err := a.packageTransforms(t.Metadata, t.Parameters, t.Mappings, t.Conditions, t.Transform, t.Resources, t.Outputs)
 	if err != nil {
 		return fmt.Errorf("package global artifacts: %w", err)
 	}
@@ -218,49 +217,58 @@ func (t *cfnTemplate) pkg(a *Addons) error {
 	return nil
 }
 
-func (a *Addons) packageTransforms(node yaml.Node) (yaml.Node, error) {
-	if node.Kind != yaml.MappingNode {
-		return node, nil
-	}
+// packageTransforms is a recursive function that searches down node
+// for the CFN intrinsic function "Fn::Transform" with the "AWS::Include" macro.
+// If it dectects one, and "Location" is set to a local path, it'll upload
+// those files to S3. If node is a yaml map or sequence, it will
+// recursivly traverse those nodes.
+func (a *Addons) packageTransforms(nodes ...yaml.Node) error {
+	forNode := func(node yaml.Node) error {
+		if node.Kind != yaml.MappingNode {
+			return nil
+		}
 
-	m := mappingNode(&node)
-	for key, val := range m {
-		switch {
-		case key == "Fn::Transform":
-			name := yamlMapGet(val, "Name")
-			if name.Value != "AWS::Include" {
-				continue
-			}
-
-			loc := yamlMapGet(yamlMapGet(val, "Parameters"), "Location")
-			if !isFilePath(loc.Value) {
-				continue
-			}
-
-			obj, err := a.uploadAddonAsset(loc.Value, false)
-			if err != nil {
-				return node, fmt.Errorf("upload asset: %w", err)
-			}
-
-			loc.Value = s3.Location(obj.Bucket, obj.Key)
-		case val.Kind == yaml.MappingNode:
-			vv, err := a.packageTransforms(*val)
-			if err != nil {
-				return node, err
-			}
-			m[key] = &vv
-		case val.Kind == yaml.SequenceNode:
-			for i := range val.Content {
-				vv, err := a.packageTransforms(*val.Content[i])
-				if err != nil {
-					return node, err
+		for key, val := range mappingNode(&node) {
+			switch {
+			case key == "Fn::Transform":
+				name := yamlMapGet(val, "Name")
+				if name.Value != "AWS::Include" {
+					continue
 				}
-				val.Content[i] = &vv
+
+				loc := yamlMapGet(yamlMapGet(val, "Parameters"), "Location")
+				if !isFilePath(loc.Value) {
+					continue
+				}
+
+				obj, err := a.uploadAddonAsset(loc.Value, false)
+				if err != nil {
+					return fmt.Errorf("upload asset: %w", err)
+				}
+
+				loc.Value = s3.Location(obj.Bucket, obj.Key)
+			case val.Kind == yaml.MappingNode:
+				if err := a.packageTransforms(*val); err != nil {
+					return err
+				}
+			case val.Kind == yaml.SequenceNode:
+				for i := range val.Content {
+					if err := a.packageTransforms(*val.Content[i]); err != nil {
+						return err
+					}
+				}
 			}
 		}
+
+		return nil
 	}
 
-	return node, nil
+	for i := range nodes {
+		if err := forNode(nodes[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // yamlMapGet parses node as a yaml map and searches key. If found,
