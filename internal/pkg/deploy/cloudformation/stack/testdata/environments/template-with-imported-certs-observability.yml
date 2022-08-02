@@ -1057,6 +1057,9 @@ Outputs:
     Condition: CreateALB
     Value: !GetAtt CloudFrontDistribution.DomainName
     Description: The domain name of an associated Cloud Front Distribution.
+  PublicALBAccessible:
+    Condition: CreateALB
+    Value: false
   LastForceDeployID:
     Value: ""
     Description: Optionally force the template to update when no immediate resource change is present.

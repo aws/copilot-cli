@@ -53,7 +53,7 @@ type WorkloadAdder interface {
 
 // Workspace contains the methods needed to manipulate a Copilot workspace.
 type Workspace interface {
-	Path() (string, error)
+	Rel(path string) (string, error)
 	WriteJobManifest(marshaler encoding.BinaryMarshaler, jobName string) (string, error)
 	WriteServiceManifest(marshaler encoding.BinaryMarshaler, serviceName string) (string, error)
 }
@@ -135,7 +135,7 @@ func (w *WorkloadInitializer) addWlToStore(wl *config.Workload, wlType string) e
 
 func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 	if props.DockerfilePath != "" {
-		path, err := relativeDockerfilePath(w.Ws, props.DockerfilePath)
+		path, err := w.Ws.Rel(props.DockerfilePath)
 		if err != nil {
 			return "", err
 		}
@@ -156,15 +156,13 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = relPath(manifestPath)
-	if err != nil {
-		return "", err
-	}
 	manifestMsgFmt := "Wrote the manifest for %s %s at %s\n"
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for %s %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, jobWlType, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
+
+	path := displayPath(manifestPath)
+	log.Successf(manifestMsgFmt, jobWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 	var sched = props.Schedule
 	if props.Schedule == "" {
 		sched = "None"
@@ -182,12 +180,17 @@ func (w *WorkloadInitializer) initJob(props *JobProps) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return manifestPath, nil
+
+	path, err = w.Ws.Rel(manifestPath)
+	if err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 	if props.DockerfilePath != "" {
-		path, err := relativeDockerfilePath(w.Ws, props.DockerfilePath)
+		path, err := w.Ws.Rel(props.DockerfilePath)
 		if err != nil {
 			return "", err
 		}
@@ -215,15 +218,14 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 		manifestExists = true
 		manifestPath = e.FileName
 	}
-	manifestPath, err = relPath(manifestPath)
-	if err != nil {
-		return "", err
-	}
+
 	manifestMsgFmt := "Wrote the manifest for %s %s at %s\n"
 	if manifestExists {
 		manifestMsgFmt = "Manifest file for %s %s already exists at %s, skipping writing it.\n"
 	}
-	log.Successf(manifestMsgFmt, svcWlType, color.HighlightUserInput(props.Name), color.HighlightResource(manifestPath))
+
+	path := displayPath(manifestPath)
+	log.Successf(manifestMsgFmt, svcWlType, color.HighlightUserInput(props.Name), color.HighlightResource(path))
 
 	helpText := "Your manifest contains configurations like your container size and port."
 	if props.Port != 0 {
@@ -236,7 +238,12 @@ func (w *WorkloadInitializer) initService(props *ServiceProps) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return manifestPath, nil
+
+	path, err = w.Ws.Rel(manifestPath)
+	if err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 func (w *WorkloadInitializer) addSvcToAppAndSSM(app *config.Application, props WorkloadProps) error {
@@ -375,32 +382,21 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 	}), nil
 }
 
-// relativeDockerfilePath returns the path from the workspace root to the Dockerfile.
-func relativeDockerfilePath(ws Workspace, path string) (string, error) {
-	wsRoot, err := ws.Path()
-	if err != nil {
-		return "", fmt.Errorf("get workspace path: %w", err)
+// Copy of cli.displayPath
+func displayPath(target string) string {
+	if !filepath.IsAbs(target) {
+		return filepath.Clean(target)
 	}
-	absDfPath, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("get absolute path: %v", err)
-	}
-	relDfPath, err := filepath.Rel(wsRoot, absDfPath)
-	if err != nil {
-		return "", fmt.Errorf("find relative path from workspace root to Dockerfile: %v", err)
-	}
-	return relDfPath, nil
-}
 
-// relPath returns the path relative to the current working directory.
-func relPath(fullPath string) (string, error) {
-	wkdir, err := os.Getwd()
+	base, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("get working directory: %w", err)
+		return filepath.Clean(target)
 	}
-	path, err := filepath.Rel(wkdir, fullPath)
+
+	rel, err := filepath.Rel(base, target)
 	if err != nil {
-		return "", fmt.Errorf("get relative path of file: %w", err)
+		// No path from base to target available, return target as is.
+		return filepath.Clean(target)
 	}
-	return path, nil
+	return rel
 }

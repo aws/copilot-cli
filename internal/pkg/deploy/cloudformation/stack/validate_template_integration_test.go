@@ -16,20 +16,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAutoscalingIntegration_Validate(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	addons := mocks.NewMockaddons(ctrl)
-	addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
-	addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
-
 	path := filepath.Join("testdata", "stacklocal", autoScalingManifestPath)
 	wantedManifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
@@ -38,6 +29,10 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	content := mft.Manifest()
 	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
+
+	addons, err := addon.New(aws.StringValue(v.Name))
+	require.NoError(t, err)
+
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App: &config.Application{Name: appName},
 		EnvManifest: &manifest.Environment{
@@ -76,13 +71,6 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 }
 
 func TestScheduledJob_Validate(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	addons := mocks.NewMockaddons(ctrl)
-	addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
-	addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
-
 	path := filepath.Join("testdata", "workloads", jobManifestPath)
 	manifestBytes, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
@@ -91,6 +79,10 @@ func TestScheduledJob_Validate(t *testing.T) {
 	content := mft.Manifest()
 	v, ok := content.(*manifest.ScheduledJob)
 	require.True(t, ok)
+
+	addons, err := addon.New(aws.StringValue(v.Name))
+	require.NoError(t, err)
+
 	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
 		App:      appName,
 		Env:      envName,

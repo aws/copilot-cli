@@ -136,7 +136,7 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 
 type svcPackageExecuteMock struct {
 	ws                   *mocks.MockwsWlDirReader
-	generator            *mocks.MockworkloadTemplateGenerator
+	generator            *mocks.MockworkloadStackGenerator
 	interpolator         *mocks.Mockinterpolator
 	envFeaturesDescriber *mocks.MockversionCompatibilityChecker
 	mft                  *mockWorkloadMft
@@ -259,7 +259,7 @@ count: 1`
 
 			m := &svcPackageExecuteMock{
 				ws:                   mocks.NewMockwsWlDirReader(ctrl),
-				generator:            mocks.NewMockworkloadTemplateGenerator(ctrl),
+				generator:            mocks.NewMockworkloadStackGenerator(ctrl),
 				interpolator:         mocks.NewMockinterpolator(ctrl),
 				envFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
 			}

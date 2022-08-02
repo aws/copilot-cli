@@ -18,12 +18,15 @@ import (
 
 func TestLBWebServiceDescriber_URI(t *testing.T) {
 	const (
-		testApp          = "phonetool"
-		testEnv          = "test"
-		testSvc          = "jobs"
-		testEnvSubdomain = "test.phonetool.com"
-		testEnvLBDNSName = "abc.us-west-1.elb.amazonaws.com"
-		testSvcPath      = "/"
+		testApp                  = "phonetool"
+		testEnv                  = "test"
+		testSvc                  = "jobs"
+		testEnvSubdomain         = "test.phonetool.com"
+		testEnvLBDNSName         = "abc.us-west-1.elb.amazonaws.com"
+		testSvcPath              = "/"
+		testALBAccessible        = "true"
+		testALBInaccessible      = "false"
+		testCloudFrontDomainName = "test.cloudfront.com"
 
 		testNLBDNSName = "def.us-west-2.elb.amazonaws.com"
 	)
@@ -135,11 +138,54 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					}, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputPublicALBAccessible:       testALBAccessible,
 					}, nil),
 				)
 			},
 
 			wantedURI: "http://abc.us-west-1.elb.amazonaws.com/mySvc",
+		},
+		"http web service with cloudfront": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						stack.WorkloadRulePathParamKey: "mySvc",
+					}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputPublicALBAccessible:       testALBAccessible,
+						envOutputCloudFrontDomainName:      testCloudFrontDomainName,
+					}, nil),
+				)
+			},
+
+			wantedURI: "http://abc.us-west-1.elb.amazonaws.com/mySvc or http://test.cloudfront.com/mySvc",
+		},
+		"http web service with cloudfront and alb disabled": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						stack.WorkloadRulePathParamKey: "mySvc",
+					}, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+						envOutputPublicALBAccessible:       testALBInaccessible,
+						envOutputCloudFrontDomainName:      testCloudFrontDomainName,
+					}, nil),
+				)
+			},
+
+			wantedURI: "http://test.cloudfront.com/mySvc",
 		},
 		"fail to get parameters of service stack when fetching NLB uris": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {

@@ -117,6 +117,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
     === "Event-driven"
 
         ```yaml
+        # See https://aws.github.io/copilot-cli/docs/developing/publish-subscribe/
         name: 'orders'
         type: 'Load Balanced Web Service'
 
@@ -164,6 +165,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
     === "Shared file system"
 
         ```yaml
+        # See http://localhost:8000/copilot-cli/docs/developing/storage/#file-systems
         name: 'frontend'
         type: 'Load Balanced Web Service'
 

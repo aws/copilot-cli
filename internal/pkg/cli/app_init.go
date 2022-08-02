@@ -134,7 +134,7 @@ https://aws.github.io/copilot-cli/docs/credentials/`)
 			return nil
 		}
 		if o.name != summary.Application {
-			summaryPath, _ := relPath(summary.Path)
+			summaryPath := displayPath(summary.Path)
 			if summaryPath == "" {
 				summaryPath = summary.Path
 			}
