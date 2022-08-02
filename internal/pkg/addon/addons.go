@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -35,6 +36,7 @@ var (
 type workspaceReader interface {
 	ReadAddonsDir(svcName string) ([]string, error)
 	ReadAddon(svcName, fileName string) ([]byte, error)
+	Path() (string, error)
 }
 
 // Addons represents additional resources for a workload.
@@ -49,6 +51,8 @@ type Addons struct {
 
 	bucket   string
 	uploader uploader
+	wsPath   string
+	fs       *afero.Afero
 }
 
 // New creates an Addons struct given a workload name.
@@ -73,8 +77,16 @@ func NewPackager(wlName string, bucket string, uploader uploader) (*Addons, erro
 		return nil, err
 	}
 
+	addons.wsPath, err = addons.ws.Path()
+	if err != nil {
+		return nil, fmt.Errorf("get workspace path: %w", err)
+	}
+
 	addons.bucket = bucket
 	addons.uploader = uploader
+	addons.fs = &afero.Afero{
+		Fs: afero.NewOsFs(),
+	}
 	return addons, nil
 }
 
