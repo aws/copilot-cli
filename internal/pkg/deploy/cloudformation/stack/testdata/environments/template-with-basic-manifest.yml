@@ -986,8 +986,8 @@ Resources:
       Aliases: !Ref Aliases
       AppDNSRole: !Ref AppDNSDelegationRole
       DomainName: !Ref AppDNSName
-      LoadBalancerDNS: !GetAtt PublicLoadBalancer.DNSName
-      LoadBalancerHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+      PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
+      PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
 Outputs:
   VpcId:
     Value: !Ref VPC
