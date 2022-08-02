@@ -47,6 +47,7 @@ type deployEnvOpts struct {
 	identity        identityService
 	newInterpolator func(app, env string) interpolator
 	newEnvDeployer  func() (envDeployer, error)
+	newEnvDescriber func() (envDescriber, error)
 
 	// Cached variables.
 	targetApp *config.Application
@@ -77,6 +78,17 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 	}
 	opts.newEnvDeployer = func() (envDeployer, error) {
 		return newEnvDeployer(opts)
+	}
+	opts.newEnvDescriber = func() (envDescriber, error) {
+		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         opts.appName,
+			Env:         opts.name,
+			ConfigStore: opts.store,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return envDescriber, nil
 	}
 	return opts, nil
 }
@@ -124,12 +136,8 @@ func (o *deployEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	if mft.CDNConfig.CDNEnabled() {
-		describer, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-			App:         o.appName,
-			Env:         o.name,
-			ConfigStore: o.store,
-		})
+	if mft.CDNConfig.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && o.targetApp.Domain != "" {
+		describer, err := o.newEnvDescriber()
 		if err != nil {
 			return err
 		}

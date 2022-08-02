@@ -144,7 +144,6 @@ type deployEnvExecuteMocks struct {
 	identity     *mocks.MockidentityService
 	interpolator *mocks.Mockinterpolator
 	describer    *mocks.MockenvDescriber
-	store        *mocks.Mockstore
 }
 
 func TestDeployEnvOpts_Execute(t *testing.T) {
@@ -177,15 +176,6 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\ncdn: true\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\ncdn: true\n", nil)
-				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Return(&config.Environment{
-					App:              "mockApp",
-					Name:             "mockEnv",
-					Region:           "mockRegion",
-					AccountID:        "mockId",
-					RegistryURL:      "mockURL",
-					ExecutionRoleARN: "arn:aws:iam::123456789012:role/mockApp-mockEnv-MockExecutionRole",
-					ManagerRoleARN:   "arn:aws:iam::123456789012:role/mockApp-mockEnv-MockManagerRole",
-				}, nil)
 				m.describer.EXPECT().ValidateCFServiceDomainAliases().Return(fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified"))
 			},
 			wantedErr: errors.New("all services deployed in an environment with CloudFront enabled must have http.alias specified"),
@@ -262,7 +252,6 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				identity:     mocks.NewMockidentityService(ctrl),
 				interpolator: mocks.NewMockinterpolator(ctrl),
 				describer:    mocks.NewMockenvDescriber(ctrl),
-				store:        mocks.NewMockstore(ctrl),
 			}
 			tc.setUpMocks(m)
 			opts := deployEnvOpts{
@@ -277,10 +266,16 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				newInterpolator: func(s string, s2 string) interpolator {
 					return m.interpolator
 				},
+				newEnvDescriber: func() (envDescriber, error) {
+					return m.describer, nil
+				},
+				targetApp: &config.Application{
+					Name:   "mockApp",
+					Domain: "mockDomain",
+				},
 				targetEnv: &config.Environment{
 					Name: "mockEnv",
 				},
-				store: m.store,
 			}
 			err := opts.Execute()
 			if tc.wantedErr != nil {

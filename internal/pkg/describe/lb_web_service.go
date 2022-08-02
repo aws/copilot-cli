@@ -33,6 +33,8 @@ const (
 	envOutputSubdomain                   = "EnvironmentSubdomain"
 	envOutputCloudFrontDomainName        = "CloudFrontDomainName"
 
+	envParamAliases = "Aliases"
+
 	svcStackResourceALBTargetGroupLogicalID    = "TargetGroup"
 	svcStackResourceNLBTargetGroupLogicalID    = "NLBTargetGroup"
 	svcStackResourceHTTPSListenerRuleLogicalID = "HTTPSListenerRule"

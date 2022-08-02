@@ -330,7 +330,7 @@ func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
 		return fmt.Errorf("list services: %w", err)
 	}
 
-	if jsonOutput, ok := stackDescr.Parameters["Aliases"]; ok { // use a constant
+	if jsonOutput, ok := stackDescr.Parameters[envParamAliases]; ok {
 		var aliases map[string][]string
 		err := json.Unmarshal([]byte(jsonOutput), &aliases)
 
