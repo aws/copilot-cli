@@ -403,7 +403,7 @@ func (o *deleteTaskOpts) clearECRRepository() error {
 
 func (o *deleteTaskOpts) emptyS3Bucket(info *deploy.TaskStackInfo) error {
 	o.spinner.Start(fmt.Sprintf("Emptying S3 bucket for task %s.", color.HighlightUserInput(o.name)))
-	err := o.newBucketEmptier(o.session).EmptyBucket(info.S3Bucket)
+	err := o.newBucketEmptier(o.session).EmptyBucket(info.BucketName)
 	if err != nil {
 		o.spinner.Stop(log.Serrorln("Error emptying S3 bucket."))
 		return fmt.Errorf("empty S3 bucket for task %s: %w", o.name, err)
@@ -450,7 +450,7 @@ func (o *deleteTaskOpts) deleteStack() error {
 		// Stack does not exist; skip deleting it.
 		return nil
 	}
-	if info.S3Bucket != "" {
+	if info.BucketName != "" {
 		if err := o.emptyS3Bucket(info); err != nil {
 			return err
 		}

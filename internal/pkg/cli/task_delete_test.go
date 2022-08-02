@@ -348,12 +348,12 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 		Env:     mockEnvName,
 		RoleARN: mockManagerARN,
 
-		StackName: mockTaskStackName,
-		S3Bucket:  "arn:aws:s3:::bucket",
+		StackName:  mockTaskStackName,
+		BucketName: "arn:aws:s3:::bucket",
 	}
 	mockDefaultTask := deploy.TaskStackInfo{
-		StackName: mockTaskStackName,
-		S3Bucket:  "arn:aws:s3:::bucket",
+		StackName:  mockTaskStackName,
+		BucketName: "arn:aws:s3:::bucket",
 	}
 	mockDefaultTaskNoBucket := deploy.TaskStackInfo{
 		StackName: mockTaskStackName,

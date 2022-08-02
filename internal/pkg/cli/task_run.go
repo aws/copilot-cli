@@ -673,7 +673,7 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
-	update := false
+	var shouldUpdate bool
 
 	if o.envFile != "" {
 		envFileARN, err := o.deployEnvFile()
@@ -682,7 +682,7 @@ func (o *runTaskOpts) Execute() error {
 		}
 		o.envFileARN = envFileARN
 
-		update = true
+		shouldUpdate = true
 	}
 
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
@@ -700,10 +700,10 @@ func (o *runTaskOpts) Execute() error {
 			return fmt.Errorf("get ECR repository URI: %w", err)
 		}
 		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
-		update = true
+		shouldUpdate = true
 	}
 
-	if update {
+	if shouldUpdate {
 		if err := o.updateTaskResources(); err != nil {
 			return err
 		}
@@ -1001,7 +1001,7 @@ func (o *runTaskOpts) deployEnvFile() (string, error) {
 
 	// push env file
 	o.spinner.Start(fmt.Sprintf(fmtTaskRunEnvUploadStart, color.HighlightUserInput(o.envFile)))
-	envFileARN, err := o.pushEnvFileToS3(info.S3Bucket)
+	envFileARN, err := o.pushEnvFileToS3(info.BucketName)
 	if err != nil {
 		o.spinner.Stop(log.Serrorf(fmtTaskRunEnvUploadFailed, color.HighlightUserInput(o.envFile)))
 		return "", err

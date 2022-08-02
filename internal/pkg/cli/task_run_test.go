@@ -1025,7 +1025,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
-				info := deploy.TaskStackInfo{S3Bucket: "arn:aws:s3:::bigbucket"}
+				info := deploy.TaskStackInfo{BucketName: "arn:aws:s3:::bigbucket"}
 				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(&info, nil)
 				key := "manual/env-files/magic.env/4963d64294508aa3fa103ccac5ad1537944c577d469608ddccad09b6f79b6406.env"
 				arn := "arn:aws:s3:::bigbucket/" + key
@@ -1049,7 +1049,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
-				info := deploy.TaskStackInfo{S3Bucket: "arn:aws:s3:::bigbucket"}
+				info := deploy.TaskStackInfo{BucketName: "arn:aws:s3:::bigbucket"}
 				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(&info, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -1095,7 +1095,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
-				info := deploy.TaskStackInfo{S3Bucket: "arn:aws:s3:::bigbucket"}
+				info := deploy.TaskStackInfo{BucketName: "arn:aws:s3:::bigbucket"}
 				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(&info, nil)
 
 				key := "manual/env-files/magic.env/4963d64294508aa3fa103ccac5ad1537944c577d469608ddccad09b6f79b6406.env"

@@ -90,7 +90,7 @@ func (cf CloudFormation) GetTaskStack(taskName string) (*deploy.TaskStackInfo, e
 	for _, out := range desc.Outputs {
 		switch aws.StringValue(out.OutputKey) {
 		case stack.TaskOutputS3Bucket:
-			info.S3Bucket = aws.StringValue(out.OutputValue)
+			info.BucketName = aws.StringValue(out.OutputValue)
 		}
 	}
 	if !isTask {
