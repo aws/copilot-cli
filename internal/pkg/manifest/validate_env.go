@@ -220,7 +220,26 @@ func (cfg PublicHTTPConfig) validate() error {
 	if cfg.SecurityGroupConfig.Ingress.VPCIngress != nil {
 		return fmt.Errorf("a public load balancer already allows vpc ingress")
 	}
+	if err := cfg.ELBAccessLogs.validate(); err != nil {
+		return fmt.Errorf(`validate "access_logs: %w`, err)
+	}
 	return cfg.SecurityGroupConfig.validate()
+}
+
+// validate returns nil if HealthCheckArgsOrString is configured correctly.
+func (al ELBAccessLogsArgsOrbool) validate() error {
+	if al.IsEmpty() {
+		return nil
+	}
+	return al.ELBAccessLogsArgs.validate()
+}
+
+// validate returns nil if AccessLogsArgs is configured correctly.
+func (al ELBAccessLogsArgs) validate() error {
+	if al.isEmpty() {
+		return fmt.Errorf("access logs missing required fields")
+	}
+	return nil
 }
 
 // validate returns nil if ALBSecurityGroupsConfig is configured correctly.

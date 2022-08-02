@@ -44,6 +44,13 @@ const (
 	capacityProviderFargate     = "FARGATE"
 )
 
+// Default values for ELB access logs config
+const (
+	defaultInterval     = "60m"
+	defaultBucketPrefix = "ELBAccessLogs"
+	defaultCreateBucket = false
+)
+
 // MinimumHealthyPercent and MaximumPercent configurations as per deployment strategy.
 const (
 	minHealthyPercentRecreate = 0
@@ -352,6 +359,51 @@ type networkLoadBalancerConfig struct {
 	// If a domain is associated these values are not empty.
 	appDNSDelegationRole *string
 	appDNSName           *string
+}
+
+func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessLogs, error) {
+	ELBAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
+	if !isELBAccessLogsSet { //if ELB access logs configs are not defined
+		return nil, nil
+	}
+
+	if ELBAccessLogsArgs == nil { // if default ELB access logs has been defined using access_logs: true
+		return &template.ELBAccessLogs{
+			Interval:     defaultInterval,
+			BucketPrefix: defaultBucketPrefix,
+			CreateBucket: true,
+		}, nil
+	}
+
+	var bucketName, bucketPrefix, interval string
+	var createBucket bool
+
+	if ELBAccessLogsArgs.CreateBucket != nil && *ELBAccessLogsArgs.CreateBucket != false {
+		createBucket = *ELBAccessLogsArgs.CreateBucket
+	} else {
+		//todo: check if bucket exist, if bucket doesn't exist then prompt customer with a question if copilot can create a bucket on their behalf and if yes then set createBucket flag as true.
+		createBucket = defaultCreateBucket
+	}
+	if ELBAccessLogsArgs.Interval != nil {
+		interval = *ELBAccessLogsArgs.Interval
+	} else {
+		interval = defaultInterval
+	}
+	if ELBAccessLogsArgs.BucketName != nil {
+		bucketName = *ELBAccessLogsArgs.BucketName
+	}
+	if ELBAccessLogsArgs.BucketPrefix != nil {
+		bucketPrefix = *ELBAccessLogsArgs.BucketPrefix
+	} else {
+		bucketPrefix = defaultBucketPrefix
+	}
+
+	return &template.ELBAccessLogs{
+		Interval:     interval,
+		BucketName:   bucketName,
+		BucketPrefix: bucketPrefix,
+		CreateBucket: createBucket,
+	}, nil
 }
 
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {

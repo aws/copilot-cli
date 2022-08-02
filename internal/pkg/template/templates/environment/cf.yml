@@ -56,8 +56,93 @@ Conditions:
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
+{{- if and .PublicHTTPConfig.ELBAccessLogs .PublicHTTPConfig.ELBAccessLogs.CreateBucket}}
+Mappings:
+  RegionalConfigs:
+    us-east-1:
+      ELBAccountId: '127311923021'
+      ArnPrefix: 'arn:aws:'
+    us-east-2:
+      ELBAccountId: '033677994240'
+      ArnPrefix: 'arn:aws:'
+    us-west-1:
+      ELBAccountId: '027434742980'
+      ArnPrefix: 'arn:aws:'
+    us-west-2:
+      ELBAccountId: '797873946194'
+      ArnPrefix: 'arn:aws:'
+    af-south-1:
+      ELBAccountId: '098369216593'
+      ArnPrefix: 'arn:aws:'
+    ca-central-1:
+      ELBAccountId: '985666609251'
+      ArnPrefix: 'arn:aws:'
+    eu-central-1:
+      ELBAccountId: '054676820928'
+      ArnPrefix: 'arn:aws:'
+    eu-west-1:
+      ELBAccountId: '156460612806'
+      ArnPrefix: 'arn:aws:'
+    eu-west-2:
+      ELBAccountId: '652711504416'
+      ArnPrefix: 'arn:aws:'
+    eu-south-1:
+      ELBAccountId: '635631232127'
+      ArnPrefix: 'arn:aws:'
+    eu-west-3:
+      ELBAccountId: '009996457667'
+      ArnPrefix: 'arn:aws:'
+    eu-north-1:
+      ELBAccountId: '897822967062'
+      ArnPrefix: 'arn:aws:'
+    ap-east-1:
+      ELBAccountId: '754344448648'
+      ArnPrefix: 'arn:aws:'
+    ap-northeast-1:
+      ELBAccountId: '582318560864'
+      ArnPrefix: 'arn:aws:'
+    ap-northeast-2:
+      ELBAccountId: '600734575887'
+      ArnPrefix: 'arn:aws:'
+    ap-northeast-3:
+      ELBAccountId: '383597477331'
+      ArnPrefix: 'arn:aws:'
+    ap-southeast-1:
+      ELBAccountId: '114774131450'
+      ArnPrefix: 'arn:aws:'
+    ap-southeast-2:
+      ELBAccountId: '783225319266'
+      ArnPrefix: 'arn:aws:'
+    ap-southeast-3:
+      ELBAccountId: '589379963580'
+      ArnPrefix: 'arn:aws:'
+    ap-south-1:
+      ELBAccountId: '718504428378'
+      ArnPrefix: 'arn:aws:'
+    me-south-1:
+      ELBAccountId: '076674570225'
+      ArnPrefix: 'arn:aws:'
+    sa-east-1:
+      ELBAccountId: '507241528517'
+      ArnPrefix: 'arn:aws:'
+    us-gov-west-1:
+      ELBAccountId: '048591011584'
+      ArnPrefix: 'arn:aws-us-gov:'
+    us-gov-east-1:
+      ELBAccountId: '190560391635'
+      ArnPrefix: 'arn:aws-us-gov:'
+    cn-north-1:
+      ELBAccountId: '638102146993'
+      ArnPrefix: 'arn:aws:'
+    cn-northwest-1:
+      ELBAccountId: '037604701340'
+      ArnPrefix: 'arn:aws:'
+{{- end }}
 Resources:
 {{include "bootstrap-resources" . | indent 2}}
+{{- if and .PublicHTTPConfig.ELBAccessLogs .PublicHTTPConfig.ELBAccessLogs.CreateBucket}}
+{{include "s3-elb-access-logs" .PublicHTTPConfig.ELBAccessLogs | indent 2}}
+{{- end}}
 {{- if .CDNConfig}}
 {{include "cdn-resources" . | indent 2}}
 {{- end}}
@@ -260,6 +345,15 @@ Resources:
     Condition: CreateALB
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      {{- if .PublicHTTPConfig.ELBAccessLogs }}
+      LoadBalancerAttributes:
+        - Key: 'access_logs.s3.enabled'
+          Value: true
+        - Key: 'access_logs.s3.prefix'
+          Value: {{ .PublicHTTPConfig.ELBAccessLogs.BucketPrefix }}
+        - Key: 'access_logs.s3.bucket'
+          Value: !Ref ELBAccessLogsBucket
+      {{- end }}
       Scheme: internet-facing
       SecurityGroups: 
         - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId

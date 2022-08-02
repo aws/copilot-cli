@@ -1,0 +1,39 @@
+ELBAccessLogsBucketPolicy:
+  Type: AWS::S3::BucketPolicy
+  Condition: CreateALB
+  DependsOn: ELBAccessLogsBucket
+  Properties:
+    Bucket: !Ref ELBAccessLogsBucket
+    PolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Action:
+            - s3:PutObject
+          Effect: Allow
+          Resource:
+            - !Join
+              - ''
+              - - 'arn:'
+                - !Ref AWS::Partition
+                - ':s3:::'
+                - !Ref ELBAccessLogsBucket
+                - '/'
+                - {{ .BucketPrefix }}
+                - '/AWSLogs/'
+                - !Ref AWS::AccountId
+                - '/*'
+          Principal:
+            AWS: !Join [ "", [  "arn:aws:iam::", !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ELBAccountId ], ":root" ] ]
+ELBAccessLogsBucket:
+  Type: AWS::S3::Bucket
+  Condition: CreateALB
+  Properties:
+    {{- if .BucketName}}
+    BucketName: {{ .BucketName }}
+    {{- end }}
+    VersioningConfiguration:
+      Status: Enabled
+    BucketEncryption:
+      ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: AES256 

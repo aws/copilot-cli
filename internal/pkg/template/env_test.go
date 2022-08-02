@@ -24,6 +24,7 @@ func TestTemplate_ParseEnv(t *testing.T) {
 				"templates/environment/partials/vpc-resources.yml":            []byte("vpc-resources"),
 				"templates/environment/partials/nat-gateways.yml":             []byte("nat-gateways"),
 				"templates/environment/partials/bootstrap-resources.yml":      []byte("bootstrap"),
+				"templates/environment/partials/s3-elb-access-logs.yml":       []byte("s3-elb-access-logs"),
 			},
 		},
 	}

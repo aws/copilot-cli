@@ -95,6 +95,10 @@ func (e *EnvStackConfig) Template() (string, error) {
 		}
 		forceUpdateID = id.String()
 	}
+	publicHTTPConfig, err := e.publicHTTPConfig()
+	if err != nil {
+		return "", err
+	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:              e.in.App.Name,
 		EnvName:              e.in.Name,
@@ -102,7 +106,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		ArtifactBucketARN:    e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
 		VPCConfig:            e.vpcConfig(),
-		PublicHTTPConfig:     e.publicHTTPConfig(),
+		PublicHTTPConfig:     publicHTTPConfig,
 		PrivateHTTPConfig:    e.privateHTTPConfig(),
 		Telemetry:            e.telemetryConfig(),
 		CDNConfig:            e.cdnConfig(),
@@ -351,11 +355,16 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 	return nil // no-op - return &template.CDNConfig{} when feature is ready
 }
 
-func (e *EnvStackConfig) publicHTTPConfig() template.HTTPConfig {
+func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
+	ELBAccessLogsConfig, err := convertELBAccessLogsConfig(e.in.Mft)
+	if err != nil {
+		return template.HTTPConfig{}, err
+	}
 	return template.HTTPConfig{
 		CIDRPrefixListIDs: e.in.CIDRPrefixListIDs,
 		ImportedCertARNs:  e.importPublicCertARNs(),
-	}
+		ELBAccessLogs:     ELBAccessLogsConfig,
+	}, nil
 }
 
 func (e *EnvStackConfig) privateHTTPConfig() template.HTTPConfig {
