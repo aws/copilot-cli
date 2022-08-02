@@ -10,7 +10,6 @@ import (
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -67,8 +66,8 @@ func TestCloudFormation_DeployService(t *testing.T) {
 			"app": "myapp",
 		},
 	}
-	when := func(w progress.FileWriter, cf CloudFormation) error {
-		return cf.DeployService(w, serviceConfig, "mockBucket")
+	when := func(cf CloudFormation) error {
+		return cf.DeployService(serviceConfig, "mockBucket")
 	}
 
 	t.Run("returns a wrapped error if pushing to s3 bucket fails", func(t *testing.T) {

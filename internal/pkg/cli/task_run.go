@@ -213,7 +213,7 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 		if err != nil {
 			return fmt.Errorf("configure task runner: %w", err)
 		}
-		opts.deployer = cloudformation.New(opts.sess)
+		opts.deployer = cloudformation.New(opts.sess, cloudformation.WithProgressTracker(os.Stderr))
 		opts.defaultClusterGetter = awsecs.New(opts.sess)
 		opts.publicIPGetter = ec2.New(opts.sess)
 		return nil
@@ -985,7 +985,7 @@ func (o *runTaskOpts) deploy() error {
 		Env:                   o.env,
 		AdditionalTags:        o.resourceTags,
 	}
-	return o.deployer.DeployTask(os.Stderr, input, deployOpts...)
+	return o.deployer.DeployTask(input, deployOpts...)
 }
 
 // deployEnvFileIfNeeded uploads the env file if needed, ensures that an S3 bucket is available, and returns the ARN of uploaded file.

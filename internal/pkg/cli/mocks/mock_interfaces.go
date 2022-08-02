@@ -31,7 +31,6 @@ import (
 	manifest "github.com/aws/copilot-cli/internal/pkg/manifest"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
-	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -2352,6 +2351,44 @@ func (mr *MockwsPipelineManifestReaderMockRecorder) ReadPipelineManifest(path in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadPipelineManifest", reflect.TypeOf((*MockwsPipelineManifestReader)(nil).ReadPipelineManifest), path)
 }
 
+// MockrelPath is a mock of relPath interface.
+type MockrelPath struct {
+	ctrl     *gomock.Controller
+	recorder *MockrelPathMockRecorder
+}
+
+// MockrelPathMockRecorder is the mock recorder for MockrelPath.
+type MockrelPathMockRecorder struct {
+	mock *MockrelPath
+}
+
+// NewMockrelPath creates a new mock instance.
+func NewMockrelPath(ctrl *gomock.Controller) *MockrelPath {
+	mock := &MockrelPath{ctrl: ctrl}
+	mock.recorder = &MockrelPathMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockrelPath) EXPECT() *MockrelPathMockRecorder {
+	return m.recorder
+}
+
+// Rel mocks base method.
+func (m *MockrelPath) Rel(path string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Rel", path)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Rel indicates an expected call of Rel.
+func (mr *MockrelPathMockRecorder) Rel(path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rel", reflect.TypeOf((*MockrelPath)(nil).Rel), path)
+}
+
 // MockwsPipelineIniter is a mock of wsPipelineIniter interface.
 type MockwsPipelineIniter struct {
 	ctrl     *gomock.Controller
@@ -3289,17 +3326,17 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 }
 
 // CreateAndRenderEnvironment mocks base method.
-func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(out progress.FileWriter, env *deploy0.CreateEnvironmentInput) error {
+func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(env *deploy0.CreateEnvironmentInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", out, env)
+	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAndRenderEnvironment indicates an expected call of CreateAndRenderEnvironment.
-func (mr *MockenvironmentDeployerMockRecorder) CreateAndRenderEnvironment(out, env interface{}) *gomock.Call {
+func (mr *MockenvironmentDeployerMockRecorder) CreateAndRenderEnvironment(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).CreateAndRenderEnvironment), out, env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).CreateAndRenderEnvironment), env)
 }
 
 // DeleteEnvironment mocks base method.
@@ -3816,9 +3853,9 @@ func (m *MocktaskDeployer) EXPECT() *MocktaskDeployerMockRecorder {
 }
 
 // DeployTask mocks base method.
-func (m *MocktaskDeployer) DeployTask(out progress.FileWriter, input *deploy0.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
+func (m *MocktaskDeployer) DeployTask(input *deploy0.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{out, input}
+	varargs := []interface{}{input}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -3828,9 +3865,9 @@ func (m *MocktaskDeployer) DeployTask(out progress.FileWriter, input *deploy0.Cr
 }
 
 // DeployTask indicates an expected call of DeployTask.
-func (mr *MocktaskDeployerMockRecorder) DeployTask(out, input interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{out, input}, opts...)
+	varargs := append([]interface{}{input}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
 }
 
@@ -4071,17 +4108,17 @@ func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}) *g
 }
 
 // CreateAndRenderEnvironment mocks base method.
-func (m *Mockdeployer) CreateAndRenderEnvironment(out progress.FileWriter, env *deploy0.CreateEnvironmentInput) error {
+func (m *Mockdeployer) CreateAndRenderEnvironment(env *deploy0.CreateEnvironmentInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", out, env)
+	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAndRenderEnvironment indicates an expected call of CreateAndRenderEnvironment.
-func (mr *MockdeployerMockRecorder) CreateAndRenderEnvironment(out, env interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) CreateAndRenderEnvironment(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).CreateAndRenderEnvironment), out, env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).CreateAndRenderEnvironment), env)
 }
 
 // CreatePipeline mocks base method.
@@ -6639,31 +6676,31 @@ func (mr *MockworkloadDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadDeployer)(nil).UploadArtifacts))
 }
 
-// MockworkloadTemplateGenerator is a mock of workloadTemplateGenerator interface.
-type MockworkloadTemplateGenerator struct {
+// MockworkloadStackGenerator is a mock of workloadStackGenerator interface.
+type MockworkloadStackGenerator struct {
 	ctrl     *gomock.Controller
-	recorder *MockworkloadTemplateGeneratorMockRecorder
+	recorder *MockworkloadStackGeneratorMockRecorder
 }
 
-// MockworkloadTemplateGeneratorMockRecorder is the mock recorder for MockworkloadTemplateGenerator.
-type MockworkloadTemplateGeneratorMockRecorder struct {
-	mock *MockworkloadTemplateGenerator
+// MockworkloadStackGeneratorMockRecorder is the mock recorder for MockworkloadStackGenerator.
+type MockworkloadStackGeneratorMockRecorder struct {
+	mock *MockworkloadStackGenerator
 }
 
-// NewMockworkloadTemplateGenerator creates a new mock instance.
-func NewMockworkloadTemplateGenerator(ctrl *gomock.Controller) *MockworkloadTemplateGenerator {
-	mock := &MockworkloadTemplateGenerator{ctrl: ctrl}
-	mock.recorder = &MockworkloadTemplateGeneratorMockRecorder{mock}
+// NewMockworkloadStackGenerator creates a new mock instance.
+func NewMockworkloadStackGenerator(ctrl *gomock.Controller) *MockworkloadStackGenerator {
+	mock := &MockworkloadStackGenerator{ctrl: ctrl}
+	mock.recorder = &MockworkloadStackGeneratorMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockworkloadTemplateGenerator) EXPECT() *MockworkloadTemplateGeneratorMockRecorder {
+func (m *MockworkloadStackGenerator) EXPECT() *MockworkloadStackGeneratorMockRecorder {
 	return m.recorder
 }
 
 // AddonsTemplate mocks base method.
-func (m *MockworkloadTemplateGenerator) AddonsTemplate() (string, error) {
+func (m *MockworkloadStackGenerator) AddonsTemplate() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddonsTemplate")
 	ret0, _ := ret[0].(string)
@@ -6672,13 +6709,13 @@ func (m *MockworkloadTemplateGenerator) AddonsTemplate() (string, error) {
 }
 
 // AddonsTemplate indicates an expected call of AddonsTemplate.
-func (mr *MockworkloadTemplateGeneratorMockRecorder) AddonsTemplate() *gomock.Call {
+func (mr *MockworkloadStackGeneratorMockRecorder) AddonsTemplate() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsTemplate", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).AddonsTemplate))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddonsTemplate", reflect.TypeOf((*MockworkloadStackGenerator)(nil).AddonsTemplate))
 }
 
 // GenerateCloudFormationTemplate mocks base method.
-func (m *MockworkloadTemplateGenerator) GenerateCloudFormationTemplate(in *deploy.GenerateCloudFormationTemplateInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
+func (m *MockworkloadStackGenerator) GenerateCloudFormationTemplate(in *deploy.GenerateCloudFormationTemplateInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenerateCloudFormationTemplate", in)
 	ret0, _ := ret[0].(*deploy.GenerateCloudFormationTemplateOutput)
@@ -6687,13 +6724,13 @@ func (m *MockworkloadTemplateGenerator) GenerateCloudFormationTemplate(in *deplo
 }
 
 // GenerateCloudFormationTemplate indicates an expected call of GenerateCloudFormationTemplate.
-func (mr *MockworkloadTemplateGeneratorMockRecorder) GenerateCloudFormationTemplate(in interface{}) *gomock.Call {
+func (mr *MockworkloadStackGeneratorMockRecorder) GenerateCloudFormationTemplate(in interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCloudFormationTemplate", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).GenerateCloudFormationTemplate), in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateCloudFormationTemplate", reflect.TypeOf((*MockworkloadStackGenerator)(nil).GenerateCloudFormationTemplate), in)
 }
 
 // UploadArtifacts mocks base method.
-func (m *MockworkloadTemplateGenerator) UploadArtifacts() (*deploy.UploadArtifactsOutput, error) {
+func (m *MockworkloadStackGenerator) UploadArtifacts() (*deploy.UploadArtifactsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadArtifacts")
 	ret0, _ := ret[0].(*deploy.UploadArtifactsOutput)
@@ -6702,9 +6739,9 @@ func (m *MockworkloadTemplateGenerator) UploadArtifacts() (*deploy.UploadArtifac
 }
 
 // UploadArtifacts indicates an expected call of UploadArtifacts.
-func (mr *MockworkloadTemplateGeneratorMockRecorder) UploadArtifacts() *gomock.Call {
+func (mr *MockworkloadStackGeneratorMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadTemplateGenerator)(nil).UploadArtifacts))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockworkloadStackGenerator)(nil).UploadArtifacts))
 }
 
 // Mockrunner is a mock of runner interface.

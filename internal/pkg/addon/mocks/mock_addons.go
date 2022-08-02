@@ -33,6 +33,21 @@ func (m *MockworkspaceReader) EXPECT() *MockworkspaceReaderMockRecorder {
 	return m.recorder
 }
 
+// Path mocks base method.
+func (m *MockworkspaceReader) Path() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Path")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Path indicates an expected call of Path.
+func (mr *MockworkspaceReaderMockRecorder) Path() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockworkspaceReader)(nil).Path))
+}
+
 // ReadAddon mocks base method.
 func (m *MockworkspaceReader) ReadAddon(svcName, fileName string) ([]byte, error) {
 	m.ctrl.T.Helper()
