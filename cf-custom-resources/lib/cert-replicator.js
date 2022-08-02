@@ -146,7 +146,6 @@ const deleteCertificate = async function (arn, acm) {
     console.log(`Waiting for certificate ${arn} to become unused`);
 
     let inUseByResources;
-    let options;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const { Certificate } = await acm
@@ -156,21 +155,11 @@ const deleteCertificate = async function (arn, acm) {
         .promise();
 
       inUseByResources = Certificate.InUseBy || [];
-      options = Certificate.DomainValidationOptions || [];
-      let ok = false;
-      for (const option of options) {
-        if (!option.ResourceRecord) {
-          ok = false;
-          break;
-        }
-        ok = true;
-      }
-      if (!ok || inUseByResources.length) {
-        // Deleting resources can be quite slow - so just sleep 30 seconds between checks.
-        await sleep(30000);
-      } else {
+      if (!inUseByResources.length) {
         break;
       }
+      // Deleting resources can be quite slow - so just sleep 30 seconds between checks.
+      await sleep(30000);
     }
     if (inUseByResources.length) {
       throw new Error(
@@ -226,16 +215,14 @@ exports.certificateReplicateHandler = async function (event, context) {
     props.EnvRegion,
     props.CertificateArn,
   ];
-
-  const envRegionAcm = acmClient(envRegion);
-  const targetRegionAcm = acmClient(targetRegion);
-
-  try {
-    let response = {};
+  let handler = async function () {
+    // Configure clients.
+    const envRegionAcm = acmClient(envRegion);
+    const targetRegionAcm = acmClient(targetRegion);
     switch (event.RequestType) {
       case "Create":
       case "Update":
-        response = await replicateCertificate(
+        const response = await replicateCertificate(
           event.RequestId,
           props.AppName,
           props.EnvName,
@@ -256,6 +243,9 @@ exports.certificateReplicateHandler = async function (event, context) {
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
     }
+  };
+  try {
+    await Promise.race([exports.deadlineExpired(), handler()]);
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.log(`Caught error ${err}.`);
@@ -270,6 +260,27 @@ exports.certificateReplicateHandler = async function (event, context) {
       })`
     );
   }
+};
+
+/**
+ * Update parameter by adding workload to the parameter values.
+ *
+ * @param {string} requestType type of the request.
+ * @param {string} workload name of the workload.
+ * @param {string} paramValue value of the parameter.
+ *
+ * @returns {string} The updated parameter.
+ * @returns {bool} whether the parameter is modified.
+ */
+
+exports.deadlineExpired = function () {
+  return new Promise(function (resolve, reject) {
+    setTimeout(
+      reject,
+      14 * 60 * 1000 + 30 * 1000 /* 14.5 minutes*/,
+      new Error("Lambda took longer than 14.5 minutes to replicate certificate")
+    );
+  });
 };
 
 /**
@@ -321,4 +332,11 @@ exports.withDefaultLogStream = function (logStream) {
  */
 exports.withDefaultLogGroup = function (logGroup) {
   defaultLogGroup = logGroup;
+};
+
+/**
+ * @private
+ */
+exports.withDeadlineExpired = function (d) {
+  exports.deadlineExpired = d;
 };

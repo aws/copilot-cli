@@ -48,6 +48,9 @@ describe("Certificate Replicator Handler", () => {
       };
     });
     handler.withSleep(spySleep);
+    handler.withDeadlineExpired((_) => {
+      return new Promise(function (resolve, reject) {});
+    });
     console.log = function () {};
   });
   afterEach(() => {
