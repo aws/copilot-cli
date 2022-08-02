@@ -100,6 +100,25 @@ type stackSetClient interface {
 	WaitForStackSetLastOperationComplete(name string) error
 }
 
+// OptFn represents an optional configuration function for the CloudFormation client.
+type OptFn func(cfn *CloudFormation)
+
+// WithProgressTracker updates the CloudFormation client to write stack updates to a file.
+func WithProgressTracker(fw progress.FileWriter) OptFn {
+	return func(cfn *CloudFormation) {
+		cfn.console = fw
+	}
+}
+
+// discardFile represents a fake file where all Writes succeeds and are not written anywhere.
+type discardFile struct{}
+
+// Write implements the io.Writer interface and discards p.
+func (f *discardFile) Write(p []byte) (n int, err error) { return io.Discard.Write(p) }
+
+// Fd returns a dummy file descriptor value that won't get used.
+func (f *discardFile) Fd() uintptr { return 0 }
+
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
 	cfnClient      cfnClient
@@ -110,13 +129,14 @@ type CloudFormation struct {
 	appStackSet    stackSetClient
 	s3Client       s3Client
 	region         string
+	console        progress.FileWriter
 
 	// cached variables.
 	cachedDeployedStack *cloudformation.StackDescription
 }
 
 // New returns a configured CloudFormation client.
-func New(sess *session.Session) CloudFormation {
+func New(sess *session.Session, opts ...OptFn) CloudFormation {
 	client := CloudFormation{
 		cfnClient:      cloudformation.New(sess),
 		codeStarClient: codestar.New(sess),
@@ -130,6 +150,10 @@ func New(sess *session.Session) CloudFormation {
 		appStackSet: stackset.New(sess),
 		s3Client:    s3.New(sess),
 		region:      aws.StringValue(sess.Config.Region),
+		console:     new(discardFile),
+	}
+	for _, opt := range opts {
+		opt(&client)
 	}
 	return client
 }
@@ -149,7 +173,6 @@ func (cf CloudFormation) errorEvents(stackName string) ([]string, error) {
 }
 
 type renderStackChangesInput struct {
-	w                progress.FileWriter
 	stackName        string
 	stackDescription string
 	createChangeSet  func() (string, error)
@@ -157,7 +180,6 @@ type renderStackChangesInput struct {
 
 func (cf CloudFormation) newRenderWorkloadInput(w progress.FileWriter, stack *cloudformation.Stack) *renderStackChangesInput {
 	in := &renderStackChangesInput{
-		w:                w,
 		stackName:        stack.Name,
 		stackDescription: fmt.Sprintf("Creating the infrastructure for stack %s", stack.Name),
 	}
@@ -211,7 +233,7 @@ func (cf CloudFormation) renderStackChanges(in *renderStackChangesInput) error {
 		return err
 	}
 	g.Go(func() error {
-		return progress.Render(ctx, progress.NewTabbedFileWriter(in.w), renderer)
+		return progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
 	})
 	if err := g.Wait(); err != nil {
 		return err

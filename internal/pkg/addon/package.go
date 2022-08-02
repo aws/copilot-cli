@@ -4,11 +4,19 @@
 package addon
 
 import (
+	"archive/zip"
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"gopkg.in/yaml.v3"
 )
 
@@ -267,14 +275,129 @@ func isFilePath(path string) bool {
 	return true
 }
 
-type s3Object struct {
-	Bucket string
-	Key    string
+func (a *Addons) uploadAddonAsset(assetPath string, forceZip bool) (template.S3ObjectLocation, error) {
+	// make path absolute from wsPath
+	if !filepath.IsAbs(assetPath) {
+		assetPath = filepath.Join(a.wsPath, assetPath)
+	}
+
+	info, err := a.fs.Stat(assetPath)
+	if err != nil {
+		return template.S3ObjectLocation{}, fmt.Errorf("stat: %w", err)
+	}
+
+	getAsset := a.fileAsset
+	if forceZip || info.IsDir() {
+		getAsset = a.zipAsset
+	}
+	asset, err := getAsset(assetPath)
+	if err != nil {
+		return template.S3ObjectLocation{}, fmt.Errorf("create asset: %w", err)
+	}
+
+	s3Path := artifactpath.AddonAsset(a.wlName, asset.hash)
+	url, err := a.uploader.Upload(a.bucket, s3Path, asset.data)
+	if err != nil {
+		return template.S3ObjectLocation{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, a.bucket, err)
+	}
+
+	bucket, key, err := s3.ParseURL(url)
+	if err != nil {
+		return template.S3ObjectLocation{}, fmt.Errorf("parse s3 url: %w", err)
+	}
+
+	return template.S3ObjectLocation{
+		Bucket: bucket,
+		Key:    key,
+	}, nil
 }
 
-func (a *Addons) uploadAddonAsset(assetPath string, forceZip bool) (s3Object, error) {
-	return s3Object{
-		Bucket: a.bucket,
-		Key:    "TODO",
+type asset struct {
+	data io.Reader
+	hash string
+}
+
+// zipAsset creates an asset from the directory or file specified by root
+// where the data is the compressed zip archive, and the hash is
+// a hash of each files name, permission, and content. The zip file
+// itself is not hashed to avoid a changing hash when non-relevant
+// file metadata changes, like modification time.
+func (a *Addons) zipAsset(root string) (asset, error) {
+	buf := &bytes.Buffer{}
+	archive := zip.NewWriter(buf)
+	defer archive.Close()
+
+	hash := sha256.New()
+
+	if err := a.fs.Walk(root, func(path string, info fs.FileInfo, err error) error {
+		switch {
+		case err != nil:
+			return err
+		case info.IsDir():
+			return nil
+		}
+
+		fname, err := filepath.Rel(root, path)
+		switch {
+		case err != nil:
+			return fmt.Errorf("rel: %w", err)
+		case fname == ".": // happens when root == path; when a file (not a dir) is passed to `zipAsset()`
+			fname = info.Name()
+		}
+
+		f, err := a.fs.Open(path)
+		if err != nil {
+			return fmt.Errorf("open: %w", err)
+		}
+		defer f.Close()
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return fmt.Errorf("create zip file header: %w", err)
+		}
+
+		header.Name = fname
+		header.Method = zip.Deflate
+
+		zf, err := archive.CreateHeader(header)
+		if err != nil {
+			return fmt.Errorf("create zip file %q: %w", fname, err)
+		}
+
+		// include the file name and permissions as part of the hash
+		hash.Write([]byte(fmt.Sprintf("%s %s", fname, info.Mode().String())))
+		_, err = io.Copy(io.MultiWriter(zf, hash), f)
+		return err
+	}); err != nil {
+		return asset{}, err
+	}
+
+	return asset{
+		data: buf,
+		hash: hex.EncodeToString(hash.Sum(nil)),
+	}, nil
+}
+
+// fileAsset creates an asset from the file specified by path.
+// The data is the content of the file, and the hash is the
+// a hash of the file content.
+func (a *Addons) fileAsset(path string) (asset, error) {
+	hash := sha256.New()
+	buf := &bytes.Buffer{}
+
+	f, err := a.fs.Open(path)
+	if err != nil {
+		return asset{}, fmt.Errorf("open: %w", err)
+	}
+	defer f.Close()
+
+	_, err = io.Copy(io.MultiWriter(buf, hash), f)
+	if err != nil {
+		return asset{}, fmt.Errorf("copy: %w", err)
+	}
+
+	return asset{
+		data: buf,
+		hash: hex.EncodeToString(hash.Sum(nil)),
 	}, nil
 }

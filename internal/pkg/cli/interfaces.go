@@ -5,6 +5,7 @@ package cli
 
 import (
 	"encoding"
+	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -326,13 +326,17 @@ type wsAddonManager interface {
 	wlLister
 }
 
+type uploader interface {
+	Upload(bucket, key string, data io.Reader) (string, error)
+}
+
 type bucketEmptier interface {
 	EmptyBucket(bucket string) error
 }
 
 // Interfaces for deploying resources through CloudFormation. Facilitates mocking.
 type environmentDeployer interface {
-	CreateAndRenderEnvironment(out termprogress.FileWriter, env *deploy.CreateEnvironmentInput) error
+	CreateAndRenderEnvironment(env *deploy.CreateEnvironmentInput) error
 	DeleteEnvironment(appName, envName, cfnExecRoleARN string) error
 	GetEnvironment(appName, envName string) (*config.Environment, error)
 	EnvironmentTemplate(appName, envName string) (string, error)
@@ -380,7 +384,8 @@ type appResourcesGetter interface {
 }
 
 type taskDeployer interface {
-	DeployTask(out termprogress.FileWriter, input *deploy.CreateTaskResourcesInput, opts ...awscloudformation.StackOption) error
+	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...awscloudformation.StackOption) error
+	GetTaskStack(taskName string) (*deploy.TaskStackInfo, error)
 }
 
 type taskStackManager interface {
