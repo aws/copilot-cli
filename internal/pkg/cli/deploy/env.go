@@ -11,18 +11,16 @@ import (
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/term/progress"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
 type appResourcesGetter interface {
@@ -30,7 +28,7 @@ type appResourcesGetter interface {
 }
 
 type environmentDeployer interface {
-	UpdateAndRenderEnvironment(out progress.FileWriter, conf deploycfn.StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error
+	UpdateAndRenderEnvironment(conf deploycfn.StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error
 	EnvironmentParameters(app, env string) ([]*awscfn.Parameter, error)
 	ForceUpdateOutputID(app, env string) (string, error)
 }
@@ -85,8 +83,8 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		s3:               s3.New(envRegionSession),
 		prefixListGetter: ec2.New(envRegionSession),
 
-		appCFN:      deploycfn.New(defaultSession),
-		envDeployer: deploycfn.New(envManagerSession),
+		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
+		envDeployer: deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr)),
 		newStackSerializer: func(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
 			return stack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
 		},
@@ -194,7 +192,7 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 		return fmt.Errorf("retrieve environment stack force update ID: %w", err)
 	}
 	conf := stack.NewEnvConfigFromExistingStack(stackInput, lastForceUpdateID, oldParams)
-	return d.envDeployer.UpdateAndRenderEnvironment(os.Stderr, conf, stackInput.ArtifactBucketARN, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
+	return d.envDeployer.UpdateAndRenderEnvironment(conf, stackInput.ArtifactBucketARN, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
 }
 
 func (d *envDeployer) getAppRegionalResources() (*stack.AppRegionalResources, error) {
