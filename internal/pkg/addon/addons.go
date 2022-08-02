@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -35,6 +36,7 @@ var (
 type workspaceReader interface {
 	ReadAddonsDir(svcName string) ([]string, error)
 	ReadAddon(svcName, fileName string) ([]byte, error)
+	Path() (string, error)
 }
 
 // Addons represents additional resources for a workload.
@@ -46,9 +48,14 @@ type Addons struct {
 
 	cachedTemplate    string
 	cachedTemplateErr error
+
+	bucket   string
+	uploader uploader
+	wsPath   string
+	fs       *afero.Afero
 }
 
-// New creates an Addons object given a workload name.
+// New creates an Addons struct given a workload name.
 func New(wlName string) (*Addons, error) {
 	ws, err := workspace.New()
 	if err != nil {
@@ -59,6 +66,28 @@ func New(wlName string) (*Addons, error) {
 		parser: template.New(),
 		ws:     ws,
 	}, nil
+}
+
+// NewPackager creates an Addons struct that will package local artifacts when
+// generating the addons template.
+// See https://docs.aws.amazon.com/cli/latest/reference/cloudformation/package.html for more details.
+func NewPackager(wlName string, bucket string, uploader uploader) (*Addons, error) {
+	addons, err := New(wlName)
+	if err != nil {
+		return nil, err
+	}
+
+	addons.wsPath, err = addons.ws.Path()
+	if err != nil {
+		return nil, fmt.Errorf("get workspace path: %w", err)
+	}
+
+	addons.bucket = bucket
+	addons.uploader = uploader
+	addons.fs = &afero.Afero{
+		Fs: afero.NewOsFs(),
+	}
+	return addons, nil
 }
 
 // Template merges CloudFormation templates under the "addons/" directory of a workload
@@ -103,6 +132,12 @@ func (a *Addons) template() (string, error) {
 		}
 		if err := mergedTemplate.merge(tpl); err != nil {
 			return "", err
+		}
+	}
+
+	if a.uploader != nil {
+		if err := mergedTemplate.pkg(a); err != nil {
+			return "", fmt.Errorf("package local artifacts: %s", err)
 		}
 	}
 

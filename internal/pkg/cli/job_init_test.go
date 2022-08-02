@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -65,7 +66,7 @@ func TestJobInitOpts_Validate(t *testing.T) {
 			setupMocks: func(m initJobMocks) {
 				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
 			},
-			wantedErr: errors.New("open hello/Dockerfile: file does not exist"),
+			wantedErr: fmt.Errorf("open %s: file does not exist", filepath.FromSlash("hello/Dockerfile")),
 		},
 		"invalid timeout duration; incorrect format": {
 			inAppName: "phonetool",
