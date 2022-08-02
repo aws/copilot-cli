@@ -352,7 +352,7 @@ Resources:
         - Key: 'access_logs.s3.prefix'
           Value: {{ .PublicHTTPConfig.ELBAccessLogs.BucketPrefix }}
         - Key: 'access_logs.s3.bucket'
-          Value: !Ref ELBAccessLogsBucket
+          Value: {{- if eq true .PublicHTTPConfig.ELBAccessLogs.CreateBucket }} !Ref ELBAccessLogsBucket {{- else }} {{ .PublicHTTPConfig.ELBAccessLogs.BucketName }}{{- end }}
       {{- end }}
       Scheme: internet-facing
       SecurityGroups: 

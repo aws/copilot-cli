@@ -33,6 +33,7 @@ type: Environment
 cdn: true
 http:
   public:
+    access_logs: true
     security_groups:
       ingress:
         restrict_to:
@@ -69,6 +70,105 @@ observability:
 				}
 			}(),
 			wantedFileName: "template-with-imported-certs-observability.yml",
+		},
+		"generate template with embedded manifest file with advanced access logs config": {
+			input: func() *deploy.CreateEnvironmentInput {
+				rawMft := `name: test
+type: Environment
+# Create the public ALB with certificates attached.
+cdn: true
+http:
+  public:
+    access_logs:
+      bucket_name: accesslogsbucket
+      bucket_prefix: accesslogsbucketprefix
+      interval: 60m
+    security_groups:
+      ingress:
+        restrict_to:
+          cdn: true
+    certificates:
+      - cert-1
+      - cert-2
+  private:
+    security_groups:
+      ingress:
+        from_vpc: true
+observability:
+  container_insights: true # Enable container insights.`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					CIDRPrefixListIDs:    []string{"pl-mockid"},
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+					},
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
+				}
+			}(),
+			wantedFileName: "template-with-ELB-access-logs.yml",
+		},
+		"generate template with embedded manifest file with advanced access logs config with create_bucket field to true": {
+			input: func() *deploy.CreateEnvironmentInput {
+				rawMft := `name: test
+type: Environment
+# Create the public ALB with certificates attached.
+cdn: true
+http:
+  public:
+    access_logs:
+      bucket_name: accesslogsbucket
+      bucket_prefix: accesslogsbucketprefix
+      interval: 60m
+      create_bucket: true
+    security_groups:
+      ingress:
+        restrict_to:
+          cdn: true
+    certificates:
+      - cert-1
+      - cert-2
+  private:
+    security_groups:
+      ingress:
+        from_vpc: true
+observability:
+  container_insights: true # Enable container insights.`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					CIDRPrefixListIDs:    []string{"pl-mockid"},
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+					},
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
+				}
+			}(),
+			wantedFileName: "template-with-ELB-access-logs-with-create-bucket-field.yml",
 		},
 		"generate template with custom resources": {
 			input: func() *deploy.CreateEnvironmentInput {
