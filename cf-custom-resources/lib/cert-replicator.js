@@ -46,7 +46,7 @@ let report = function (
     let responseBody = JSON.stringify({
       Status: responseStatus,
       Reason: reason,
-      PhysicalResourceId: physicalResourceId || context.logStreamName,
+      PhysicalResourceId: physicalResourceId,
       StackId: event.StackId,
       RequestId: event.RequestId,
       LogicalResourceId: event.LogicalResourceId,
@@ -143,8 +143,6 @@ const replicateCertificate = async function (
  */
 const deleteCertificate = async function (arn, acm) {
   try {
-    console.log(`Waiting for certificate ${arn} to become unused`);
-
     let inUseByResources;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -163,7 +161,7 @@ const deleteCertificate = async function (arn, acm) {
     }
     if (inUseByResources.length) {
       throw new Error(
-        `Certificate still in use after checking for ${maxAttempts} attempts.`
+        `Certificate still in use by ${inUseByResources.join()} after checking for ${maxAttempts} attempts.`
       );
     }
 
