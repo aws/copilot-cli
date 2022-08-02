@@ -4,8 +4,12 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,6 +60,14 @@ const (
 	defaultDockerfilePath = "Dockerfile"
 	imageTagLatest        = "latest"
 	shortTaskIDLength     = 8
+)
+
+const (
+	envFileExt = ".env"
+
+	fmtTaskRunEnvUploadStart    = "Uploading env file to S3: %s"
+	fmtTaskRunEnvUploadFailed   = "Failed to upload your env file to S3: %s\n"
+	fmtTaskRunEnvUploadComplete = "Successfully uploaded your env file to S3: %s\n"
 )
 
 const (
@@ -112,6 +124,7 @@ type runTaskVars struct {
 	useDefaultSubnetsAndCluster bool
 
 	envVars                  map[string]string
+	envFile                  string
 	secrets                  map[string]string
 	acknowledgeSecretsAccess bool
 	command                  string
@@ -158,6 +171,7 @@ type runTaskOpts struct {
 	configureECSServiceDescriber func(session *session.Session) ecs.ECSServiceDescriber
 	configureServiceDescriber    func(session *session.Session) ecs.ServiceDescriber
 	configureJobDescriber        func(session *session.Session) ecs.JobDescriber
+	configureUploader            func(session *session.Session) uploader
 
 	// Functions to generate a task run command.
 	runTaskRequestFromECSService func(client ecs.ECSServiceDescriber, cluster, service string) (*ecs.RunTaskRequest, error)
@@ -167,6 +181,9 @@ type runTaskOpts struct {
 	// Cached variables to hold SSM Param and Secrets Manager Secrets
 	ssmParamSecrets       map[string]string
 	secretsManagerSecrets map[string]string
+
+	// Cached variable for uploaded env file ARN
+	envFileARN string
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -220,6 +237,9 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 	opts.configureJobDescriber = func(session *session.Session) ecs.JobDescriber {
 		return ecs.New(session)
+	}
+	opts.configureUploader = func(session *session.Session) uploader {
+		return s3.New(session)
 	}
 
 	opts.runTaskRequestFromECSService = ecs.RunTaskRequestFromECSService
@@ -397,6 +417,12 @@ func (o *runTaskOpts) Validate() error {
 	for _, value := range o.secrets {
 		if !isSSM(value) && !isSecretsManager(value) {
 			return fmt.Errorf("must specify a valid secrets ARN")
+		}
+	}
+
+	if o.envFile != "" {
+		if filepath.Ext(o.envFile) != envFileExt {
+			return fmt.Errorf("environment file %s specified in --%s must have a %s file extension", o.envFile, envFileFlag, envFileExt)
 		}
 	}
 
@@ -647,6 +673,18 @@ func (o *runTaskOpts) Execute() error {
 		return err
 	}
 
+	var shouldUpdate bool
+
+	if o.envFile != "" {
+		envFileARN, err := o.deployEnvFile()
+		if err != nil {
+			return fmt.Errorf("deploy env file %s: %w", o.envFile, err)
+		}
+		o.envFileARN = envFileARN
+
+		shouldUpdate = true
+	}
+
 	// NOTE: if image is not provided, then we build the image and push to ECR repo
 	if o.image == "" {
 		if err := o.buildAndPushImage(); err != nil {
@@ -662,6 +700,10 @@ func (o *runTaskOpts) Execute() error {
 			return fmt.Errorf("get ECR repository URI: %w", err)
 		}
 		o.image = fmt.Sprintf(fmtImageURI, uri, tag)
+		shouldUpdate = true
+	}
+
+	if shouldUpdate {
 		if err := o.updateTaskResources(); err != nil {
 			return err
 		}
@@ -934,6 +976,7 @@ func (o *runTaskOpts) deploy() error {
 		Command:               command,
 		EntryPoint:            entrypoint,
 		EnvVars:               o.envVars,
+		EnvFileARN:            o.envFileARN,
 		SSMParamSecrets:       ssmParamSecrets,
 		SecretsManagerSecrets: secretsManagerSecrets,
 		OS:                    o.os,
@@ -943,6 +986,54 @@ func (o *runTaskOpts) deploy() error {
 		AdditionalTags:        o.resourceTags,
 	}
 	return o.deployer.DeployTask(input, deployOpts...)
+}
+
+// deployEnvFileIfNeeded uploads the env file if needed, ensures that an S3 bucket is available, and returns the ARN of uploaded file.
+func (o *runTaskOpts) deployEnvFile() (string, error) {
+	if o.envFile == "" {
+		return "", nil
+	}
+
+	info, err := o.deployer.GetTaskStack(o.groupName)
+	if err != nil {
+		return "", fmt.Errorf("deploy env file: %w", err)
+	}
+
+	// push env file
+	o.spinner.Start(fmt.Sprintf(fmtTaskRunEnvUploadStart, color.HighlightUserInput(o.envFile)))
+	envFileARN, err := o.pushEnvFileToS3(info.BucketName)
+	if err != nil {
+		o.spinner.Stop(log.Serrorf(fmtTaskRunEnvUploadFailed, color.HighlightUserInput(o.envFile)))
+		return "", err
+	}
+	o.spinner.Stop(log.Ssuccessf(fmtTaskRunEnvUploadComplete, color.HighlightUserInput(o.envFile)))
+
+	return envFileARN, nil
+}
+
+// pushEnvFileToS3 reads an env file from disk, uploads it to a unique path, and then returns the ARN of the env file.
+func (o *runTaskOpts) pushEnvFileToS3(bucket string) (string, error) {
+	content, err := afero.ReadFile(o.fs, o.envFile)
+	if err != nil {
+		return "", fmt.Errorf("read env file %s: %w", o.envFile, err)
+	}
+	reader := bytes.NewReader(content)
+
+	uploader := o.configureUploader(o.sess)
+	url, err := uploader.Upload(bucket, artifactpath.EnvFiles(o.envFile, content), reader)
+	if err != nil {
+		return "", fmt.Errorf("put env file %s artifact to bucket %s: %w", o.envFile, bucket, err)
+	}
+	bucket, key, err := s3.ParseURL(url)
+	if err != nil {
+		return "", fmt.Errorf("parse s3 url: %w", err)
+	}
+	// The app and environment are always within the same partition.
+	partition, err := partitions.Region(aws.StringValue(o.sess.Config.Region)).Partition()
+	if err != nil {
+		return "", err
+	}
+	return s3.FormatARN(partition.ID(), fmt.Sprintf("%s/%s", bucket, key)), nil
 }
 
 func (o *runTaskOpts) validateAppName() error {
@@ -1071,6 +1162,7 @@ func BuildTaskRunCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.os, osFlag, "", osFlagDescription)
 	cmd.Flags().StringVar(&vars.arch, archFlag, "", archFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.envVars, envVarsFlag, nil, envVarsFlagDescription)
+	cmd.Flags().StringVar(&vars.envFile, envFileFlag, "", envFileFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.secrets, secretsFlag, nil, secretsFlagDescription)
 	cmd.Flags().StringVar(&vars.command, commandFlag, "", runCommandFlagDescription)
 	cmd.Flags().StringVar(&vars.entrypoint, entrypointFlag, "", entrypointFlagDescription)
@@ -1106,6 +1198,7 @@ func BuildTaskRunCmd() *cobra.Command {
 	taskFlags.AddFlag(cmd.Flags().Lookup(osFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(archFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(envVarsFlag))
+	taskFlags.AddFlag(cmd.Flags().Lookup(envFileFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(secretsFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(commandFlag))
 	taskFlags.AddFlag(cmd.Flags().Lookup(entrypointFlag))
