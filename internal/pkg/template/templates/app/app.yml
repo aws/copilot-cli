@@ -29,6 +29,8 @@ Conditions:
 
 Resources:
   AdministrationRole:
+    Metadata:
+      'aws:copilot:description': 'A StackSet admin role assumed by CloudFormation to manage regional stacks'
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Ref AdminRoleName
@@ -52,6 +54,8 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:iam::*:role/${ExecutionRoleName}'
   ExecutionRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM role to create regional ECR repositories, KMS keys, and S3 buckets'
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Ref ExecutionRoleName
@@ -104,6 +108,8 @@ Resources:
                 Resource: "*"
 
   DNSDelegationRole:
+    Metadata:
+      'aws:copilot:description': 'A DNS delegation role to allow accounts: {{join .AppDNSDelegatedAccounts ", "}} to manage your domain'
     Type: AWS::IAM::Role
     Condition: DelegateDNS
     Properties:
@@ -145,6 +151,8 @@ Resources:
                   - !Sub arn:${AWS::Partition}:route53:::hostedzone/${AppDomainHostedZoneID}
 
   AppHostedZone:
+    Metadata:
+      'aws:copilot:description': 'A hosted zone for {{.Name}}.{{.Domain}}'
     Type: AWS::Route53::HostedZone
     Condition: DelegateDNS
     Properties:
@@ -153,6 +161,8 @@ Resources:
       Name: !Sub ${AppName}.${AppDomainName}
 
   AppDomainDelegationRecordSet:
+    Metadata:
+      'aws:copilot:description': 'Add NS records to delegate responsibility to the {{.Name}}.{{.Domain}} subdomain'
     Type: AWS::Route53::RecordSet
     Condition: DelegateDNS
     Properties:
