@@ -179,25 +179,23 @@ func (r securityGroupRule) GetPorts() (from, to int, err error) {
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (cfg *portsConfig) UnmarshalYAML(value *yaml.Node) error {
-	_, err := strconv.Atoi(value.Value) // detmines if input is integer? if err then we decode range values
-	if err != nil {
-		if err := value.Decode(&cfg.Ports); err != nil {
-			switch err.(type) {
-			case *yaml.TypeError:
-				break
-			default:
-				return err
-			}
+	if err := value.Decode(&cfg.Port); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			cfg.Port = nil
+			break
+		default:
+			return err
 		}
 	}
 
-	if !cfg.Ports.IsEmpty() {
-		// Successfully unmarshalled Ports fields and unset port field, return
-		cfg.Port = nil
+	if cfg.Port != nil {
+		// Successfully unmarshalled Port field and unset Ports field, return
+		cfg.Ports = nil
 		return nil
 	}
 
-	if err := value.Decode(&cfg.Port); err != nil {
+	if err := value.Decode(&cfg.Ports); err != nil {
 		return errUnmarshalPortsConfig
 	}
 	return nil
