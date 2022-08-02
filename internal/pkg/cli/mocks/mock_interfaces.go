@@ -30,7 +30,6 @@ import (
 	manifest "github.com/aws/copilot-cli/internal/pkg/manifest"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
 	task "github.com/aws/copilot-cli/internal/pkg/task"
-	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	prompt "github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	selector "github.com/aws/copilot-cli/internal/pkg/term/selector"
 	workspace "github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -3288,17 +3287,17 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 }
 
 // CreateAndRenderEnvironment mocks base method.
-func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(out progress.FileWriter, env *deploy0.CreateEnvironmentInput) error {
+func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(env *deploy0.CreateEnvironmentInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", out, env)
+	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAndRenderEnvironment indicates an expected call of CreateAndRenderEnvironment.
-func (mr *MockenvironmentDeployerMockRecorder) CreateAndRenderEnvironment(out, env interface{}) *gomock.Call {
+func (mr *MockenvironmentDeployerMockRecorder) CreateAndRenderEnvironment(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).CreateAndRenderEnvironment), out, env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).CreateAndRenderEnvironment), env)
 }
 
 // DeleteEnvironment mocks base method.
@@ -3815,9 +3814,9 @@ func (m *MocktaskDeployer) EXPECT() *MocktaskDeployerMockRecorder {
 }
 
 // DeployTask mocks base method.
-func (m *MocktaskDeployer) DeployTask(out progress.FileWriter, input *deploy0.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
+func (m *MocktaskDeployer) DeployTask(input *deploy0.CreateTaskResourcesInput, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{out, input}
+	varargs := []interface{}{input}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -3827,9 +3826,9 @@ func (m *MocktaskDeployer) DeployTask(out progress.FileWriter, input *deploy0.Cr
 }
 
 // DeployTask indicates an expected call of DeployTask.
-func (mr *MocktaskDeployerMockRecorder) DeployTask(out, input interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MocktaskDeployerMockRecorder) DeployTask(input interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{out, input}, opts...)
+	varargs := append([]interface{}{input}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployTask", reflect.TypeOf((*MocktaskDeployer)(nil).DeployTask), varargs...)
 }
 
@@ -4055,17 +4054,17 @@ func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}) *g
 }
 
 // CreateAndRenderEnvironment mocks base method.
-func (m *Mockdeployer) CreateAndRenderEnvironment(out progress.FileWriter, env *deploy0.CreateEnvironmentInput) error {
+func (m *Mockdeployer) CreateAndRenderEnvironment(env *deploy0.CreateEnvironmentInput) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", out, env)
+	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", env)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAndRenderEnvironment indicates an expected call of CreateAndRenderEnvironment.
-func (mr *MockdeployerMockRecorder) CreateAndRenderEnvironment(out, env interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) CreateAndRenderEnvironment(env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).CreateAndRenderEnvironment), out, env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).CreateAndRenderEnvironment), env)
 }
 
 // CreatePipeline mocks base method.
