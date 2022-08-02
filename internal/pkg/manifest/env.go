@@ -6,14 +6,11 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/config"
-	"sort"
-	"strconv"
-	"strings"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
+	"sort"
 )
 
 // EnvironmentManifestType identifies that the type of manifest is environment manifest.
@@ -134,45 +131,21 @@ type securityGroupRule struct {
 // portsConfig represents a range of ports [from:to] inclusive.
 // The simple form allow represents from and to ports as a single value, whereas the advanced form is for different values.
 type portsConfig struct {
-	Port  *int            // 0 is a valid value, so we want the default value to be nil.
-	Ports *PortsRangeBand // Mutually exclusive with port.
-}
-
-// PortsRangeBand represents a range of from and to port values.
-// For example, "0-65536".
-type PortsRangeBand string
-
-// parse parses Ports string and returns the from and to port values.
-// For example: 1-100 returns	1 and 100.
-func (str PortsRangeBand) parse() (fromPort int, toPort int, err error) {
-	ports := strings.Split(string(str), "-")
-	fromPort, err = strconv.Atoi(ports[0])
-	if err != nil {
-		return 0, 0, fmt.Errorf("cannot convert from_port value %s to integer", ports[0])
-	}
-	toPort, err = strconv.Atoi(ports[1])
-	if err != nil {
-		return 0, 0, fmt.Errorf("cannot convert to_port value %s to integer", ports[1])
-	}
-	return fromPort, toPort, nil
-}
-
-// IsEmpty returns whether PortsRangeBand is empty.
-func (cfg *PortsRangeBand) IsEmpty() bool {
-	return cfg == nil || *cfg == ""
+	Port  *int          // 0 is a valid value, so we want the default value to be nil.
+	Ports *IntRangeBand // Mutually exclusive with port.
 }
 
 // IsEmpty returns whether PortsConfig is empty.
 func (cfg *portsConfig) IsEmpty() bool {
-	return cfg.Port == nil && cfg.Ports.IsEmpty()
+	return cfg.Port == nil && cfg.Ports == nil
 }
 
 // GetPorts returns the from and to ports of a security group rule.
 func (r securityGroupRule) GetPorts() (from, to int, err error) {
-	if r.Ports.Ports.IsEmpty() {
+	if r.Ports.Ports == nil {
 		return aws.IntValue(r.Ports.Port), aws.IntValue(r.Ports.Port), nil // a single value is provided for ports.
 	}
-	return r.Ports.Ports.parse()
+	return r.Ports.Ports.Parse()
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Ports

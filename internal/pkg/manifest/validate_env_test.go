@@ -122,7 +122,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 									CidrIP:     "0.0.0.0",
 									IpProtocol: "tcp",
 									Ports: portsConfig{
-										Ports: (*PortsRangeBand)(aws.String("1-10")),
+										Ports: (*IntRangeBand)(aws.String("1-10")),
 									},
 								},
 							},
@@ -141,7 +141,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 									CidrIP:     "0.0.0.0",
 									IpProtocol: "tcp",
 									Ports: portsConfig{
-										Ports: (*PortsRangeBand)(aws.String("1-10-10")),
+										Ports: (*IntRangeBand)(aws.String("1-10-10")),
 									},
 								},
 							},

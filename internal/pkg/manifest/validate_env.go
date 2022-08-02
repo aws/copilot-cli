@@ -6,10 +6,9 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"strings"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"strings"
 )
 
 var (
@@ -106,17 +105,13 @@ func (cfg portsConfig) validate() error {
 			missingField: "ports",
 		}
 	}
-	if !cfg.Ports.IsEmpty() {
-		return cfg.Ports.validate()
-	}
-	return nil
-}
-
-// validate checks if PortsRangeBand is set correctly.
-func (str PortsRangeBand) validate() error {
-	ports := strings.Split(string(str), "-")
-	if len(ports) != 2 {
-		return fmt.Errorf("invalid ports value %s: valid port format is ${from_port}-${to_port}", string(str))
+	if cfg.Ports != nil {
+		if err := cfg.Ports.validate(); err != nil {
+			if strings.Contains(err.Error(), "invalid range value") {
+				return fmt.Errorf("invalid ports value %s: valid port format is ${from_port}-${to_port}", *cfg.Ports)
+			}
+			return err
+		}
 	}
 	return nil
 }
