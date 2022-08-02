@@ -529,7 +529,7 @@ func (t environmentCDNConfigTransformer) Transformer(typ reflect.Type) func(dst,
 	return func(dst, src reflect.Value) error {
 		dstStruct, srcStruct := dst.Interface().(environmentCDNConfig), src.Interface().(environmentCDNConfig)
 
-		if !srcStruct.CDNConfig.IsEmpty() {
+		if !srcStruct.CDNConfig.isEmpty() {
 			dstStruct.Enabled = nil
 		}
 
