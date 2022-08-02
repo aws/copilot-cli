@@ -292,9 +292,9 @@ Resources:
             Location: s3://mockBucket/asdf
 `,
 		},
-		"Fn::Transform example from https://medium.com/swlh/using-the-cloudformation-aws-include-macro-9e3056cf75b0": {
+		"Fn::Transform ignores top level Transform": {
+			// example from https://medium.com/swlh/using-the-cloudformation-aws-include-macro-9e3056cf75b0
 			setupMocks: func(m addonMocks) {
-				// m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", "chris.hare", "alb-cw-mapping.yaml"), nil)
 				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", "chris.hare", "common-tags.yaml"), nil)
 			},
 			inTemplate: `

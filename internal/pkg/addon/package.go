@@ -80,8 +80,6 @@ func (p *packagePropertyConfig) isStringReplacement() bool {
 // This list of resources should stay in sync with
 // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html,
 // other than the AWS::Serverless resources, which are not supported in Copilot.
-//
-// TODO(dnrnd) AWS::Include.Location
 var resourcePackageConfig = map[string][]packagePropertyConfig{
 	"AWS::ApiGateway::RestApi": {
 		{
@@ -195,7 +193,7 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 func (t *cfnTemplate) pkg(a *Addons) error {
 	err := a.packageTransforms(t.Metadata, t.Parameters, t.Mappings, t.Conditions, t.Transform, t.Resources, t.Outputs)
 	if err != nil {
-		return fmt.Errorf("package global artifacts: %w", err)
+		return fmt.Errorf("package transforms: %w", err)
 	}
 
 	// package resources
@@ -217,10 +215,10 @@ func (t *cfnTemplate) pkg(a *Addons) error {
 	return nil
 }
 
-// packageTransforms is a recursive function that searches down node
-// for the CFN intrinsic function "Fn::Transform" with the "AWS::Include" macro.
-// If it dectects one, and "Location" is set to a local path, it'll upload
-// those files to S3. If node is a yaml map or sequence, it will
+// packageTransforms searches each node in nodes for the CFN
+// intrinsic function "Fn::Transform" with the "AWS::Include" macro. If it
+// dectects one, and the "Location" parameter is set to a local path, it'll
+// upload those files to S3. If node is a yaml map or sequence, it will
 // recursivly traverse those nodes.
 func (a *Addons) packageTransforms(nodes ...yaml.Node) error {
 	forNode := func(node yaml.Node) error {
@@ -243,7 +241,7 @@ func (a *Addons) packageTransforms(nodes ...yaml.Node) error {
 
 				obj, err := a.uploadAddonAsset(loc.Value, false)
 				if err != nil {
-					return fmt.Errorf("upload asset: %w", err)
+					return fmt.Errorf("upload asset %q: %w", loc.Value, err)
 				}
 
 				loc.Value = s3.Location(obj.Bucket, obj.Key)
