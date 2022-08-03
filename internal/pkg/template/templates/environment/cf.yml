@@ -56,7 +56,7 @@ Conditions:
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
-{{- if and .PublicHTTPConfig.ELBAccessLogs .PublicHTTPConfig.ELBAccessLogs.CreateBucket}}
+{{- if and .PublicHTTPConfig.ELBAccessLogs (not .PublicHTTPConfig.ELBAccessLogs.BucketName) }} #.PublicHTTPConfig.ELBAccessLogs.CreateBucket
 Mappings:
   RegionalConfigs:
     us-east-1:
@@ -140,7 +140,7 @@ Mappings:
 {{- end }}
 Resources:
 {{include "bootstrap-resources" . | indent 2}}
-{{- if and .PublicHTTPConfig.ELBAccessLogs .PublicHTTPConfig.ELBAccessLogs.CreateBucket}}
+{{- if and .PublicHTTPConfig.ELBAccessLogs (not .PublicHTTPConfig.ELBAccessLogs.BucketName)}} #.PublicHTTPConfig.ELBAccessLogs.CreateBucket
 {{include "s3-elb-access-logs" .PublicHTTPConfig.ELBAccessLogs | indent 2}}
 {{- end}}
 {{- if .CDNConfig}}
@@ -352,7 +352,7 @@ Resources:
         - Key: 'access_logs.s3.prefix'
           Value: {{ .PublicHTTPConfig.ELBAccessLogs.BucketPrefix }}
         - Key: 'access_logs.s3.bucket'
-          Value: {{- if eq true .PublicHTTPConfig.ELBAccessLogs.CreateBucket }} !Ref ELBAccessLogsBucket {{- else }} {{ .PublicHTTPConfig.ELBAccessLogs.BucketName }}{{- end }}
+          Value: {{- if .PublicHTTPConfig.ELBAccessLogs.BucketName }} {{ .PublicHTTPConfig.ELBAccessLogs.BucketName }}{{- else }} !Ref ELBAccessLogsBucket {{- end }}
       {{- end }}
       Scheme: internet-facing
       SecurityGroups: 

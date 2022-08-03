@@ -112,6 +112,49 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			},
 			wantedError: "CDN must be enabled to limit security group ingress to CloudFront",
 		},
+		"error if invalid elb access logs config": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						ELBAccessLogs: ELBAccessLogsArgsOrbool{
+							ELBAccessLogsArgs: ELBAccessLogsArgs{
+								Interval: aws.String("60"),
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"http config\": validate \"public\": validate \"access_logs\": \"bucket_name or bucket_prefix\" must be specified",
+		},
+		"valid elb access logs config with bucket_prefix": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						ELBAccessLogs: ELBAccessLogsArgsOrbool{
+							ELBAccessLogsArgs: ELBAccessLogsArgs{
+								Interval:     aws.String("60"),
+								BucketPrefix: aws.String("bucketPrefix"),
+							},
+						},
+					},
+				},
+			},
+		},
+		"valid elb access logs config with both bucket_prefix and bucket_name": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						ELBAccessLogs: ELBAccessLogsArgsOrbool{
+							ELBAccessLogsArgs: ELBAccessLogsArgs{
+								Interval:     aws.String("60"),
+								BucketPrefix: aws.String("bucketPrefix"),
+								BucketName:   aws.String("bucketName"),
+							},
+						},
+					},
+				},
+			},
+		},
 		"error if subnets specified for internal ALB placement don't exist": {
 			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{

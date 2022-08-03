@@ -10,10 +10,8 @@ Metadata:
     http:
       public:
         access_logs:
-          bucket_name: accesslogsbucket
           bucket_prefix: accesslogsbucketprefix
           interval: 60m
-          create_bucket: true
         security_groups:
           ingress:
             restrict_to:
@@ -421,7 +419,6 @@ Resources:
     Type: AWS::S3::Bucket
     Condition: CreateALB
     Properties:
-      BucketName: "accesslogsbucket"
       VersioningConfiguration:
         Status: Enabled
       BucketEncryption:

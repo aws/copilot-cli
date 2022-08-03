@@ -120,7 +120,7 @@ observability:
 			}(),
 			wantedFileName: "template-with-ELB-access-logs.yml",
 		},
-		"generate template with embedded manifest file with advanced access logs config with create_bucket field to true": {
+		"generate template with embedded manifest file with only bucket_prefix set": {
 			input: func() *deploy.CreateEnvironmentInput {
 				rawMft := `name: test
 type: Environment
@@ -129,10 +129,8 @@ cdn: true
 http:
   public:
     access_logs:
-      bucket_name: accesslogsbucket
       bucket_prefix: accesslogsbucketprefix
       interval: 60m
-      create_bucket: true
     security_groups:
       ingress:
         restrict_to:
@@ -168,7 +166,7 @@ observability:
 					RawMft: []byte(rawMft),
 				}
 			}(),
-			wantedFileName: "template-with-ELB-access-logs-with-create-bucket-field.yml",
+			wantedFileName: "template-with-ELB-access-logs-with-only-bucket-prefix-field.yml",
 		},
 		"generate template with custom resources": {
 			input: func() *deploy.CreateEnvironmentInput {

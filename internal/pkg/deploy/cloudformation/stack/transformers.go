@@ -367,42 +367,41 @@ func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessL
 		return nil, nil
 	}
 
+	var bucketName string
+	interval := defaultInterval
+	bucketPrefix := defaultBucketPrefix
+
 	if ELBAccessLogsArgs == nil { // if default ELB access logs has been defined using access_logs: true
 		return &template.ELBAccessLogs{
-			Interval:     defaultInterval,
-			BucketPrefix: defaultBucketPrefix,
-			CreateBucket: true,
+			Interval:     interval,
+			BucketPrefix: bucketPrefix,
+			//CreateBucket: true,
 		}, nil
 	}
 
-	var bucketName, bucketPrefix, interval string
-	var createBucket bool
+	//var createBucket bool
 
-	if ELBAccessLogsArgs.CreateBucket != nil && *ELBAccessLogsArgs.CreateBucket != false {
+	/*if ELBAccessLogsArgs.CreateBucket != nil && *ELBAccessLogsArgs.CreateBucket != false {
 		createBucket = *ELBAccessLogsArgs.CreateBucket
 	} else {
 		//todo: check if bucket exist, if bucket doesn't exist then prompt customer with a question if copilot can create a bucket on their behalf and if yes then set createBucket flag as true.
 		createBucket = defaultCreateBucket
-	}
+	}*/
 	if ELBAccessLogsArgs.Interval != nil {
-		interval = *ELBAccessLogsArgs.Interval
-	} else {
-		interval = defaultInterval
+		interval = aws.StringValue(ELBAccessLogsArgs.Interval)
 	}
 	if ELBAccessLogsArgs.BucketName != nil {
-		bucketName = *ELBAccessLogsArgs.BucketName
+		bucketName = aws.StringValue(ELBAccessLogsArgs.BucketName)
 	}
 	if ELBAccessLogsArgs.BucketPrefix != nil {
-		bucketPrefix = *ELBAccessLogsArgs.BucketPrefix
-	} else {
-		bucketPrefix = defaultBucketPrefix
+		bucketPrefix = aws.StringValue(ELBAccessLogsArgs.BucketPrefix)
 	}
 
 	return &template.ELBAccessLogs{
 		Interval:     interval,
 		BucketName:   bucketName,
 		BucketPrefix: bucketPrefix,
-		CreateBucket: createBucket,
+		//CreateBucket: createBucket,
 	}, nil
 }
 

@@ -221,7 +221,7 @@ func (cfg PublicHTTPConfig) validate() error {
 		return fmt.Errorf("a public load balancer already allows vpc ingress")
 	}
 	if err := cfg.ELBAccessLogs.validate(); err != nil {
-		return fmt.Errorf(`validate "access_logs: %w`, err)
+		return fmt.Errorf(`validate "access_logs": %w`, err)
 	}
 	return cfg.SecurityGroupConfig.validate()
 }
@@ -236,8 +236,10 @@ func (al ELBAccessLogsArgsOrbool) validate() error {
 
 // validate returns nil if AccessLogsArgs is configured correctly.
 func (al ELBAccessLogsArgs) validate() error {
-	if al.isEmpty() {
-		return fmt.Errorf("access logs missing required fields")
+	if al.BucketPrefix == nil && al.BucketName == nil {
+		return &errFieldMustBeSpecified{
+			missingField: "bucket_name or bucket_prefix",
+		}
 	}
 	return nil
 }

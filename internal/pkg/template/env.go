@@ -130,7 +130,7 @@ type ELBAccessLogs struct {
 	Interval     string
 	BucketName   string
 	BucketPrefix string
-	CreateBucket bool
+	//CreateBucket bool
 }
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.

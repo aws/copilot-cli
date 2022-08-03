@@ -385,11 +385,11 @@ type ELBAccessLogsArgs struct {
 	Interval     *string `yaml:"interval,omitempty"`
 	BucketName   *string `yaml:"bucket_name,omitempty"`
 	BucketPrefix *string `yaml:"bucket_prefix,omitempty"`
-	CreateBucket *bool   `yaml:"create_bucket,omitempty"`
+	//CreateBucket *bool   `yaml:"create_bucket,omitempty"`
 }
 
 func (al *ELBAccessLogsArgs) isEmpty() bool {
-	return al.BucketName == nil && al.BucketPrefix == nil //interval is not a required param so nil check for interval is not required
+	return al.Interval == nil && al.BucketName == nil && al.BucketPrefix == nil
 }
 
 // IsEmpty returns true if there are no access logs configuration set.
