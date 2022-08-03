@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestEraseLine is POSIX-only since the implementation in the underlying library is completely different on Windows.
 func TestEraseLine(t *testing.T) {
 	testCases := map[string]struct {
 		inWriter    func(writer io.Writer) terminal.FileWriter

@@ -55,6 +55,7 @@ Task Configuration Flags
       --count int                      Optional. The number of tasks to set up. (default 1)
       --cpu int                        Optional. The number of CPU units to reserve for each task. (default 256)
       --entrypoint string              Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.
+      --env-file string                Optional. A path to an environment variable (.env) file with each line being of the form of VARIABLE=VALUE. Values specified with --env-vars take precedence over --env-file.
       --env-vars stringToString        Optional. Environment variables specified by key=value separated by commas. (default [])
       --execution-role string          Optional. The ARN of the role that grants the container agent permission to make AWS API calls.
       --memory int                     Optional. The amount of memory to reserve in MiB for each task. (default 512)
