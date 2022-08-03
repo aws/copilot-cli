@@ -160,7 +160,7 @@ func ParseURL(url string) (bucket string, key string, err error) {
 	// <bucket>.s3-<region>.amazonaws.com and <bucket>.s3.<region>.amazonaws.com
 	split := strings.Split(parsedURL[0], ".")
 	bucketEndIdx := len(split) - 1
-	for ; bucketEndIdx >= 0; bucketEndIdx-- {
+	for ; bucketEndIdx > 0; bucketEndIdx-- {
 		if strings.HasPrefix(split[bucketEndIdx], "s3") {
 			break
 		}
