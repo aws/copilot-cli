@@ -195,20 +195,19 @@ type advancedCDNConfig struct {
 
 // IsEmpty returns whether environmentCDNConfig is empty.
 func (cfg *environmentCDNConfig) IsEmpty() bool {
-	return cfg.Enabled == nil && cfg.CDNConfig.IsEmpty()
+	return cfg.Enabled == nil && cfg.CDNConfig.isEmpty()
 }
 
 // IsEmpty is a no-op for advancedCDNConfig.
-func (cfg *advancedCDNConfig) IsEmpty() bool {
+func (cfg *advancedCDNConfig) isEmpty() bool {
 	return cfg.Certificate == nil
 }
 
 // CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
 func (cfg *environmentCDNConfig) CDNEnabled() bool {
-	if !cfg.CDNConfig.IsEmpty() {
+	if !cfg.CDNConfig.isEmpty() {
 		return true
 	}
-
 	return aws.BoolValue(cfg.Enabled)
 }
 
@@ -223,7 +222,7 @@ func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	if !cfg.CDNConfig.IsEmpty() {
+	if !cfg.CDNConfig.isEmpty() {
 		// Successfully unmarshalled CDNConfig fields, return
 		return nil
 	}
