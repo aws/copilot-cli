@@ -11,7 +11,6 @@ Metadata:
       public:
         access_logs:
           bucket_prefix: accesslogsbucketprefix
-          interval: 60m
         security_groups:
           ingress:
             restrict_to:

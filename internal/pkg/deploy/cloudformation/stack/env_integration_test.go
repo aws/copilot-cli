@@ -82,7 +82,6 @@ http:
     access_logs:
       bucket_name: accesslogsbucket
       bucket_prefix: accesslogsbucketprefix
-      interval: 60m
     security_groups:
       ingress:
         restrict_to:
@@ -130,7 +129,6 @@ http:
   public:
     access_logs:
       bucket_prefix: accesslogsbucketprefix
-      interval: 60m
     security_groups:
       ingress:
         restrict_to:
