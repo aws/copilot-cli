@@ -817,6 +817,14 @@ func TestEnvironmentCDNConfig_IsEmpty(t *testing.T) {
 			},
 			wanted: false,
 		},
+		"advanced not empty": {
+			in: environmentCDNConfig{
+				CDNConfig: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
+				},
+			},
+			wanted: false,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -835,6 +843,14 @@ func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
 		"enabled via bool": {
 			in: environmentCDNConfig{
 				Enabled: aws.Bool(true),
+			},
+			wanted: true,
+		},
+		"enabled via config": {
+			in: environmentCDNConfig{
+				CDNConfig: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
+				},
 			},
 			wanted: true,
 		},

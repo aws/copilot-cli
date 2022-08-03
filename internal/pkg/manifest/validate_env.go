@@ -6,6 +6,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 )
@@ -326,6 +327,11 @@ func (i RestrictiveIngress) validate() error {
 
 // validate is a no-op for AdvancedCDNConfig.
 func (cfg advancedCDNConfig) validate() error {
+	if cfg.Certificate != nil {
+		if _, err := arn.Parse(*cfg.Certificate); err != nil {
+			return fmt.Errorf(`parse cdn certificate: %w`, err)
+		}
+	}
 	return nil
 }
 

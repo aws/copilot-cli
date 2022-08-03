@@ -6,11 +6,12 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"sort"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
-	"sort"
 )
 
 // EnvironmentManifestType identifies that the type of manifest is environment manifest.
@@ -188,7 +189,9 @@ type environmentCDNConfig struct {
 }
 
 // advancedCDNConfig represents an advanced configuration for a Content Delivery Network.
-type advancedCDNConfig struct{}
+type advancedCDNConfig struct {
+	Certificate *string `yaml:"certificate"`
+}
 
 // IsEmpty returns whether environmentCDNConfig is empty.
 func (cfg *environmentCDNConfig) IsEmpty() bool {
@@ -197,7 +200,7 @@ func (cfg *environmentCDNConfig) IsEmpty() bool {
 
 // IsEmpty is a no-op for advancedCDNConfig.
 func (cfg *advancedCDNConfig) IsEmpty() bool {
-	return true
+	return cfg.Certificate == nil
 }
 
 // CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.

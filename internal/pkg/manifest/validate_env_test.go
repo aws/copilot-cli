@@ -682,8 +682,9 @@ func TestSubnetsConfiguration_validate(t *testing.T) {
 
 func TestCDNConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
-		in          environmentCDNConfig
-		wantedError error
+		in                   environmentCDNConfig
+		wantedError          error
+		wantedErrorMsgPrefix string
 	}{
 		"valid if empty": {
 			in: environmentCDNConfig{},
@@ -695,14 +696,27 @@ func TestCDNConfiguration_validate(t *testing.T) {
 		},
 		"valid if advanced config configured correctly": {
 			in: environmentCDNConfig{
-				CDNConfig: advancedCDNConfig{},
+				CDNConfig: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
+				},
 			},
+		},
+		"error if certificate invalid": {
+			in: environmentCDNConfig{
+				CDNConfig: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:weird-little-arn"),
+				},
+			},
+			wantedErrorMsgPrefix: "parse cdn certificate:",
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.in.validate()
-			if tc.wantedError != nil {
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+			} else if tc.wantedError != nil {
 				require.Error(t, gotErr)
 				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
