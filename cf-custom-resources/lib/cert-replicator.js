@@ -46,9 +46,7 @@ let report = function (
       Status: responseStatus,
       Reason: reason,
       PhysicalResourceId:
-        physicalResourceId ||
-        defaultLogStream ||
-        context.logStreamNamecontext.logStreamName,
+        physicalResourceId || defaultLogStream || context.logStreamName,
       StackId: event.StackId,
       RequestId: event.RequestId,
       LogicalResourceId: event.LogicalResourceId,
