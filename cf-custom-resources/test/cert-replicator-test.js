@@ -58,7 +58,8 @@ describe("Certificate Replicator Handler", () => {
         return (
           body.Status === "FAILED" &&
           body.Reason ===
-            "Unsupported request type undefined (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)"
+            "Unsupported request type undefined (Log: /aws/lambda/testLambda/2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd)" &&
+          body.PhysicalResourceId === LogStream
         );
       })
       .reply(200);

@@ -45,7 +45,10 @@ let report = function (
     let responseBody = JSON.stringify({
       Status: responseStatus,
       Reason: reason,
-      PhysicalResourceId: physicalResourceId,
+      PhysicalResourceId:
+        physicalResourceId ||
+        defaultLogStream ||
+        context.logStreamNamecontext.logStreamName,
       StackId: event.StackId,
       RequestId: event.RequestId,
       LogicalResourceId: event.LogicalResourceId,
@@ -140,7 +143,7 @@ const replicateCertificate = async function (
  */
 const deleteCertificate = async function (arn, acm) {
   try {
-    let inUseByResources;
+    let inUseByResources = [];
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       const { Certificate } = await acm
@@ -150,7 +153,7 @@ const deleteCertificate = async function (arn, acm) {
         .promise();
 
       inUseByResources = Certificate.InUseBy || [];
-      if (!inUseByResources.length) {
+      if (inUseByResources.length === 0) {
         break;
       }
       // Deleting resources can be quite slow - so just sleep 30 seconds between checks.
