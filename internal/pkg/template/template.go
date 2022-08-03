@@ -24,6 +24,7 @@ var templateFS embed.FS
 // File names under "templates/".
 const (
 	DNSCertValidatorFileName            = "dns-cert-validator"
+	CertReplicatorFileName              = "cert-replicator"
 	DNSDelegationFileName               = "dns-delegation"
 	CustomDomainFileName                = "custom-domain"
 	AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
@@ -39,6 +40,7 @@ const (
 var (
 	envCustomResourceFiles = []string{
 		DNSCertValidatorFileName,
+		CertReplicatorFileName,
 		DNSDelegationFileName,
 		CustomDomainFileName,
 	}

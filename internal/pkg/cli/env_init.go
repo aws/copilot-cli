@@ -204,7 +204,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 		initEnvVars:  vars,
 		sessProvider: sessProvider,
 		store:        store,
-		appDeployer:  deploycfn.New(defaultSession),
+		appDeployer:  deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
 		identity:     identity.New(defaultSession),
 		prog:         termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:       prompter,
@@ -214,7 +214,7 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 			Prompt:  prompter,
 		},
 		selApp:         selector.NewAppEnvSelector(prompt.New(), store),
-		appCFN:         deploycfn.New(defaultSession),
+		appCFN:         deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
 		manifestWriter: ws,
 
 		wsAppName: tryReadingAppName(),
@@ -334,7 +334,7 @@ func (o *initEnvOpts) initRuntimeClients() {
 		o.envIdentity = identity.New(o.sess)
 	}
 	if o.envDeployer == nil {
-		o.envDeployer = deploycfn.New(o.sess)
+		o.envDeployer = deploycfn.New(o.sess, deploycfn.WithProgressTracker(os.Stderr))
 	}
 	if o.cfn == nil {
 		o.cfn = cloudformation.New(o.sess)
@@ -711,7 +711,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
 		return err
 	}
-	if err := o.envDeployer.CreateAndRenderEnvironment(os.Stderr, deployEnvInput); err != nil {
+	if err := o.envDeployer.CreateAndRenderEnvironment(deployEnvInput); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.
