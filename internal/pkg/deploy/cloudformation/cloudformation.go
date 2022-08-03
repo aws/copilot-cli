@@ -172,14 +172,38 @@ func (cf CloudFormation) errorEvents(stackName string) ([]string, error) {
 	return reasons, nil
 }
 
-type renderStackChangesInput struct {
+type executeAndRenderChangeSetInput struct {
 	stackName        string
 	stackDescription string
 	createChangeSet  func() (string, error)
 }
 
-func (cf CloudFormation) newRenderWorkloadInput(w progress.FileWriter, stack *cloudformation.Stack) *renderStackChangesInput {
-	in := &renderStackChangesInput{
+func (cf CloudFormation) newCreateChangeSetInput(w progress.FileWriter, stack *cloudformation.Stack) *executeAndRenderChangeSetInput {
+	in := &executeAndRenderChangeSetInput{
+		stackName:        stack.Name,
+		stackDescription: fmt.Sprintf("Creating the infrastructure for stack %s", stack.Name),
+	}
+	in.createChangeSet = func() (changeSetID string, err error) {
+		spinner := progress.NewSpinner(w)
+		label := fmt.Sprintf("Proposing infrastructure changes for stack %s", stack.Name)
+		spinner.Start(label)
+
+		var errAlreadyExists *cloudformation.ErrStackAlreadyExists
+		changeSetID, err = cf.cfnClient.Create(stack)
+		switch {
+		case err != nil && !errors.As(err, &errAlreadyExists):
+			spinner.Stop(log.Serrorf("%s\n", label))
+			return "", cf.handleStackError(stack.Name, err)
+		default:
+			spinner.Stop(log.Ssuccessf("%s\n", label))
+			return changeSetID, err
+		}
+	}
+	return in
+}
+
+func (cf CloudFormation) newUpsertChangeSetInput(w progress.FileWriter, stack *cloudformation.Stack) *executeAndRenderChangeSetInput {
+	in := &executeAndRenderChangeSetInput{
 		stackName:        stack.Name,
 		stackDescription: fmt.Sprintf("Creating the infrastructure for stack %s", stack.Name),
 	}
@@ -219,10 +243,13 @@ func (cf CloudFormation) newRenderWorkloadInput(w progress.FileWriter, stack *cl
 	return in
 }
 
-func (cf CloudFormation) renderStackChanges(in *renderStackChangesInput) error {
+func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSetInput) error {
 	changeSetID, err := in.createChangeSet()
 	if err != nil {
 		return err
+	}
+	if _, ok := cf.console.(*discardFile); ok { // If we don't have to render skip the additional network calls.
+		return nil
 	}
 	waitCtx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
 	defer cancelWait()

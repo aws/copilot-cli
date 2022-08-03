@@ -13,7 +13,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -327,7 +326,6 @@ func TestInitAppOpts_Execute(t *testing.T) {
 				mockWorkspace.
 					EXPECT().
 					Create(gomock.Eq("myapp")).Return(nil)
-				mockProgress.EXPECT().Start(fmt.Sprintf(fmtAppInitStart, "myapp"))
 				mockDeployer.EXPECT().
 					DeployApp(&deploy.CreateAppInput{
 						Name:               "myapp",
@@ -339,7 +337,6 @@ func TestInitAppOpts_Execute(t *testing.T) {
 						},
 						Version: deploy.LatestAppTemplateVersion,
 					}).Return(nil)
-				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtAppInitComplete, "myapp"))
 			},
 		},
 		"should return error from workspace.Create": {
@@ -373,10 +370,8 @@ func TestInitAppOpts_Execute(t *testing.T) {
 				mockWorkspace.
 					EXPECT().
 					Create(gomock.Eq("myapp")).Return(nil)
-				mockProgress.EXPECT().Start(fmt.Sprintf(fmtAppInitStart, "myapp"))
 				mockDeployer.EXPECT().
 					DeployApp(gomock.Any()).Return(mockError)
-				mockProgress.EXPECT().Stop(log.Serrorf(fmtAppInitFailed, "myapp"))
 			},
 		},
 		"should return error from CreateApplication": {
@@ -397,10 +392,8 @@ func TestInitAppOpts_Execute(t *testing.T) {
 				mockWorkspace.
 					EXPECT().
 					Create(gomock.Eq("myapp")).Return(nil)
-				mockProgress.EXPECT().Start(fmt.Sprintf(fmtAppInitStart, "myapp"))
 				mockDeployer.EXPECT().
 					DeployApp(gomock.Any()).Return(nil)
-				mockProgress.EXPECT().Stop(log.Ssuccessf(fmtAppInitComplete, "myapp"))
 			},
 		},
 	}
