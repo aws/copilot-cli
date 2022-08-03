@@ -21,7 +21,7 @@ const EnvironmentManifestType = "Environment"
 var environmentManifestPath = "environment/manifest.yml"
 
 var (
-	errUnmarshalAccessLogs = errors.New(`unable to unmarshal access_logs field into bool or AccessLogsArgs struct`)
+	errUnmarshalELBAccessLogs = errors.New(`unable to unmarshal access_logs field into bool or ELB Access logs config`)
 )
 
 // Environment is the manifest configuration for an environment.
@@ -344,20 +344,20 @@ func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 type PublicHTTPConfig struct {
 	SecurityGroupConfig ALBSecurityGroupsConfig `yaml:"security_groups,omitempty"`
 	Certificates        []string                `yaml:"certificates,omitempty"`
-	ELBAccessLogs       ELBAccessLogsArgsOrbool `yaml:"access_logs,omitempty"`
+	ELBAccessLogs       ELBAccessLogsArgsOrBool `yaml:"access_logs,omitempty"`
 }
 
-// AccessLogsArgsOrbool is a custom type which supports unmarshaling yaml which
-// can either be of type bool or type AccessLogsArgs.
-type ELBAccessLogsArgsOrbool struct {
+// ELBAccessLogsArgsOrBool is a custom type which supports unmarshaling yaml which
+// can either be of type bool or type ELBAccessLogsArgs.
+type ELBAccessLogsArgsOrBool struct {
 	EnableAccessLogs  *bool
 	ELBAccessLogsArgs ELBAccessLogsArgs
 }
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the ELBAccessLogsArgsOrBool
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (al *ELBAccessLogsArgsOrbool) UnmarshalYAML(value *yaml.Node) error {
+func (al *ELBAccessLogsArgsOrBool) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&al.ELBAccessLogsArgs); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
@@ -374,7 +374,7 @@ func (al *ELBAccessLogsArgsOrbool) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	if err := value.Decode(&al.EnableAccessLogs); err != nil {
-		return errUnmarshalAccessLogs
+		return errUnmarshalELBAccessLogs
 	}
 	return nil
 }
@@ -382,18 +382,15 @@ func (al *ELBAccessLogsArgsOrbool) UnmarshalYAML(value *yaml.Node) error {
 // AccessLogsConfig holds the access logs configuration.
 // These options are specifiable under the "access_logs" field.
 type ELBAccessLogsArgs struct {
-	Interval     *string `yaml:"interval,omitempty"`
 	BucketName   *string `yaml:"bucket_name,omitempty"`
 	BucketPrefix *string `yaml:"bucket_prefix,omitempty"`
-	//CreateBucket *bool   `yaml:"create_bucket,omitempty"`
 }
 
 func (al *ELBAccessLogsArgs) isEmpty() bool {
-	return al.Interval == nil && al.BucketName == nil && al.BucketPrefix == nil
+	return al.BucketName == nil && al.BucketPrefix == nil
 }
 
-// IsEmpty returns true if there are no access logs configuration set.
-func (al *ELBAccessLogsArgsOrbool) IsEmpty() bool {
+func (al *ELBAccessLogsArgsOrBool) isEmpty() bool {
 	if al.EnableAccessLogs != nil {
 		return false
 	}
@@ -403,7 +400,7 @@ func (al *ELBAccessLogsArgsOrbool) IsEmpty() bool {
 // AccessLogs returns the access logs config if the user has set any values.
 // If there is no access logs settings, then returns nil and false.
 func (cfg *EnvironmentConfig) ELBAccessLogs() (*ELBAccessLogsArgs, bool) {
-	if isEmpty := cfg.HTTPConfig.Public.ELBAccessLogs.IsEmpty(); !isEmpty {
+	if isEmpty := cfg.HTTPConfig.Public.ELBAccessLogs.isEmpty(); !isEmpty {
 		if cfg.HTTPConfig.Public.ELBAccessLogs.EnableAccessLogs != nil {
 			return nil, true
 		} else {
@@ -446,7 +443,7 @@ func (i Ingress) IsEmpty() bool {
 
 // IsEmpty returns true if there is no customization to the public ALB.
 func (cfg PublicHTTPConfig) IsEmpty() bool {
-	return len(cfg.Certificates) == 0 && cfg.SecurityGroupConfig.IsEmpty() && cfg.ELBAccessLogs.IsEmpty()
+	return len(cfg.Certificates) == 0 && cfg.SecurityGroupConfig.IsEmpty() && cfg.ELBAccessLogs.isEmpty()
 }
 
 type privateHTTPConfig struct {

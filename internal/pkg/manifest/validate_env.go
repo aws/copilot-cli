@@ -226,21 +226,16 @@ func (cfg PublicHTTPConfig) validate() error {
 	return cfg.SecurityGroupConfig.validate()
 }
 
-// validate returns nil if HealthCheckArgsOrString is configured correctly.
-func (al ELBAccessLogsArgsOrbool) validate() error {
-	if al.IsEmpty() {
+// validate returns nil if ELBAccessLogsArgsOrBool is configured correctly.
+func (al ELBAccessLogsArgsOrBool) validate() error {
+	if al.isEmpty() {
 		return nil
 	}
 	return al.ELBAccessLogsArgs.validate()
 }
 
-// validate returns nil if AccessLogsArgs is configured correctly.
+// validate is a no-op for ELBAccessLogsArgs.
 func (al ELBAccessLogsArgs) validate() error {
-	if al.BucketPrefix == nil && al.BucketName == nil {
-		return &errFieldMustBeSpecified{
-			missingField: "bucket_name or bucket_prefix",
-		}
-	}
 	return nil
 }
 

@@ -127,10 +127,8 @@ type HTTPConfig struct {
 
 // ELBAccessLogs represents configuration for ELB access logs S3 bucket.
 type ELBAccessLogs struct {
-	Interval     string
 	BucketName   string
 	BucketPrefix string
-	//CreateBucket bool
 }
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.

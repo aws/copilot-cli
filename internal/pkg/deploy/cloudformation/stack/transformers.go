@@ -46,9 +46,7 @@ const (
 
 // Default values for ELB access logs config
 const (
-	defaultInterval     = "60m"
 	defaultBucketPrefix = "ELBAccessLogs"
-	defaultCreateBucket = false
 )
 
 // MinimumHealthyPercent and MaximumPercent configurations as per deployment strategy.
@@ -362,46 +360,29 @@ type networkLoadBalancerConfig struct {
 }
 
 func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessLogs, error) {
-	ELBAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
+	elbAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
 	if !isELBAccessLogsSet { //if ELB access logs configs are not defined
 		return nil, nil
 	}
 
 	var bucketName string
-	interval := defaultInterval
 	bucketPrefix := defaultBucketPrefix
 
-	if ELBAccessLogsArgs == nil { // if default ELB access logs has been defined using access_logs: true
+	if elbAccessLogsArgs == nil { // if default ELB access logs has been defined using access_logs: true
 		return &template.ELBAccessLogs{
-			Interval:     interval,
 			BucketPrefix: bucketPrefix,
-			//CreateBucket: true,
 		}, nil
 	}
-
-	//var createBucket bool
-
-	/*if ELBAccessLogsArgs.CreateBucket != nil && *ELBAccessLogsArgs.CreateBucket != false {
-		createBucket = *ELBAccessLogsArgs.CreateBucket
-	} else {
-		//todo: check if bucket exist, if bucket doesn't exist then prompt customer with a question if copilot can create a bucket on their behalf and if yes then set createBucket flag as true.
-		createBucket = defaultCreateBucket
-	}*/
-	if ELBAccessLogsArgs.Interval != nil {
-		interval = aws.StringValue(ELBAccessLogsArgs.Interval)
+	if elbAccessLogsArgs.BucketName != nil {
+		bucketName = aws.StringValue(elbAccessLogsArgs.BucketName)
 	}
-	if ELBAccessLogsArgs.BucketName != nil {
-		bucketName = aws.StringValue(ELBAccessLogsArgs.BucketName)
-	}
-	if ELBAccessLogsArgs.BucketPrefix != nil {
-		bucketPrefix = aws.StringValue(ELBAccessLogsArgs.BucketPrefix)
+	if elbAccessLogsArgs.BucketPrefix != nil {
+		bucketPrefix = aws.StringValue(elbAccessLogsArgs.BucketPrefix)
 	}
 
 	return &template.ELBAccessLogs{
-		Interval:     interval,
 		BucketName:   bucketName,
 		BucketPrefix: bucketPrefix,
-		//CreateBucket: createBucket,
 	}, nil
 }
 
