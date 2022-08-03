@@ -1037,7 +1037,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				)
 				m.cfn.EXPECT().Exists("phonetool-test").Return(false, nil)
 				m.deployer.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
-				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(errors.New("some deploy error"))
+				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any()).Return(errors.New("some deploy error"))
 				m.appCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
 					Return(&stack.AppRegionalResources{
 						S3Bucket: "mockBucket",
@@ -1059,7 +1059,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.cfn.EXPECT().Exists("phonetool-test").Return(false, nil)
 				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
 				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
-				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
+				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					App:       "phonetool",
 					Name:      "test",
@@ -1092,7 +1092,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.cfn.EXPECT().Exists("phonetool-test").Return(false, nil)
 				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
 				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
-				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
+				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
@@ -1125,7 +1125,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.cfn.EXPECT().Exists("phonetool-test").Return(false, nil)
 				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
 				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
-				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
+				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
 					Region:    "mars-1",
@@ -1156,7 +1156,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.cfn.EXPECT().Exists("phonetool-test").Return(true, nil)
 				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
 				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
-				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any(), &deploy.CreateEnvironmentInput{
+				m.deployer.EXPECT().CreateAndRenderEnvironment(&deploy.CreateEnvironmentInput{
 					Name: "test",
 					App: deploy.AppInformation{
 						Name:                "phonetool",
@@ -1211,7 +1211,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "4567", "us-west-2", "phonetool"))
 				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "4567", "us-west-2", "phonetool"))
 				m.deployer.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
-				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any(), gomock.Any()).Return(nil)
+				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "4567",
 					Region:    "us-west-2",

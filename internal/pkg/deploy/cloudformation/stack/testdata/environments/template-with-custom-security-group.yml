@@ -6,22 +6,27 @@ Metadata:
     name: test
     type: Environment
     # Create the public ALB with certificates attached.
-    cdn: true
     http:
       public:
-        security_groups:
-          ingress:
-            restrict_to:
-              cdn: true
         certificates:
           - cert-1
           - cert-2
-      private:
-        security_groups:
-          ingress:
-            from_vpc: true
     observability:
       container_insights: true # Enable container insights.
+    network:
+      vpc:
+        security_group:
+          ingress:
+            - ip_protocol: tcp
+              ports: 10
+              cidr: 0.0.0.0
+            - ip_protocol: tcp
+              ports: 1-10
+              cidr: 0.0.0.0
+          egress:
+            - ip_protocol: tcp
+              ports: 0-65535
+              cidr: 0.0.0.0
 Parameters:
   AppName:
     Type: String
@@ -276,8 +281,8 @@ Resources:
     Properties:
       GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
-        - SourcePrefixListId: pl-mockid
-          Description: Allow ingress from prefix list pl-mockid on port 80
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 80
           FromPort: 80
           IpProtocol: tcp
           ToPort: 80
@@ -293,8 +298,8 @@ Resources:
     Properties:
       GroupDescription: HTTPS access to the public facing load balancer
       SecurityGroupIngress:
-        - SourcePrefixListId: pl-mockid
-          Description: Allow ingress from prefix list pl-mockid on port 443
+        - CidrIp: 0.0.0.0/0
+          Description: Allow from anyone on port 443
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
@@ -324,22 +329,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
-  EnvironmentHTTPSecurityGroupIngressFromPublicALB:
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateALB
-    Properties:
-      Description: HTTP ingress from the public ALB
-      GroupId: !Ref EnvironmentSecurityGroup
-      IpProtocol: -1
-      SourceSecurityGroupId: !Ref PublicHTTPLoadBalancerSecurityGroup
-  EnvironmentHTTPSSecurityGroupIngressFromPublicALB:
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: ExportHTTPSListener
-    Properties:
-      Description: HTTPS ingress from the public ALB
-      GroupId: !Ref EnvironmentSecurityGroup
-      IpProtocol: -1
-      SourceSecurityGroupId: !Ref PublicHTTPSLoadBalancerSecurityGroup
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0"
+          FromPort: 10
+          IpProtocol: tcp
+          ToPort: 10
+        - CidrIp: "0.0.0.0"
+          FromPort: 1
+          IpProtocol: tcp
+          ToPort: 10
+      SecurityGroupEgress:
+        - CidrIp: "0.0.0.0"
+          FromPort: 0
+          IpProtocol: tcp
+          ToPort: 65535
   EnvironmentSecurityGroupIngressFromInternalALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateInternalALB
@@ -363,30 +366,6 @@ Resources:
       GroupId: !Ref InternalLoadBalancerSecurityGroup
       IpProtocol: -1
       SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-  InternalLoadBalancerSecurityGroupIngressFromHttp:
-    Metadata:
-      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 80 within the VPC'
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateInternalALB
-    Properties:
-      Description: Allow from within the VPC on port 80
-      CidrIp: 0.0.0.0/0
-      FromPort: 80
-      ToPort: 80
-      IpProtocol: tcp
-      GroupId: !Ref InternalLoadBalancerSecurityGroup
-  InternalLoadBalancerSecurityGroupIngressFromHttps:
-    Metadata:
-      'aws:copilot:description': 'An inbound rule to the internal load balancer security group for port 443 within the VPC'
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: ExportInternalHTTPSListener
-    Properties:
-      Description: Allow from within the VPC on port 443
-      CidrIp: 0.0.0.0/0
-      FromPort: 443
-      ToPort: 443
-      IpProtocol: tcp
-      GroupId: !Ref InternalLoadBalancerSecurityGroup
   PublicLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'
@@ -394,10 +373,10 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internet-facing
-      SecurityGroups: 
+      SecurityGroups:
         - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId
-        - !If [ExportHTTPSListener, !GetAtt PublicHTTPSLoadBalancerSecurityGroup.GroupId, !Ref "AWS::NoValue"]
-      Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2,  ]
+        - !If [ ExportHTTPSListener, !GetAtt PublicHTTPSLoadBalancerSecurityGroup.GroupId, !Ref "AWS::NoValue" ]
+      Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2, ]
       Type: application
   # Assign a dummy target group that with no real services as targets, so that we can create
   # the listeners for the services.
@@ -619,7 +598,22 @@ Resources:
                   - 'organizations:DescribeOrganization'
                   - 'account:ListRegions'
                 Resource: '*'
-
+  EnvironmentHTTPSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateALB
+    Properties:
+      Description: HTTP ingress from the public ALB
+      GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref PublicHTTPLoadBalancerSecurityGroup
+  EnvironmentHTTPSSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: ExportHTTPSListener
+    Properties:
+      Description: HTTPS ingress from the public ALB
+      GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref PublicHTTPSLoadBalancerSecurityGroup
   EnvironmentManagerRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role to describe resources in your environment'
@@ -1036,7 +1030,7 @@ Outputs:
       Name: !Sub ${AWS::StackName}-FilesystemID
   PublicALBAccessible:
     Condition: CreateALB
-    Value: false
+    Value: true
   LastForceDeployID:
     Value: ""
     Description: Optionally force the template to update when no immediate resource change is present.

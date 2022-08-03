@@ -17,3 +17,40 @@ CloudFrontDistribution:
             OriginProtocolPolicy: match-viewer
           DomainName: !GetAtt PublicLoadBalancer.DNSName
           Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+{{- if not .PublicHTTPConfig.ImportedCertARNs}}
+      ViewerCertificate:
+        !If
+          - DelegateDNS
+          - AcmCertificateArn: !Ref CertificateReplicator
+            MinimumProtocolVersion: TLSv1
+            SslSupportMethod:  sni-only
+          - !Ref AWS::NoValue
+
+CertificateReplicatorFunction:
+  Type: AWS::Lambda::Function
+  Condition: DelegateDNS
+  Properties:
+    {{- with $cr := index .CustomResources "CertificateReplicatorFunction" }}
+    Code:
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end}}
+    Handler: "index.certificateReplicateHandler"
+    Timeout: 900
+    MemorySize: 512
+    Role: !GetAtt 'CustomResourceRole.Arn'
+    Runtime: nodejs12.x
+    
+CertificateReplicator:
+  Metadata:
+    'aws:copilot:description': 'Replicate certificate to us-east-1'
+  Condition: DelegateDNS
+  Type: Custom::CertificateReplicatorFunction
+  Properties:
+    ServiceToken: !GetAtt CertificateReplicatorFunction.Arn
+    AppName: !Ref AppName
+    EnvName: !Ref EnvironmentName
+    TargetRegion: "us-east-1"
+    EnvRegion: !Ref AWS::Region
+    CertificateArn: !Ref HTTPSCert
+{{- end}}
