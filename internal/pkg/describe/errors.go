@@ -21,13 +21,13 @@ func (err *ErrManifestNotFoundInTemplate) Error() string {
 	return fmt.Sprintf("manifest metadata not found in template of stack %s-%s-%s", err.app, err.env, err.name)
 }
 
-type errLbWebSvcsOnCFWithoutAlias struct {
+type errLBWebSvcsOnCFWithoutAlias struct {
 	services   []string
 	aliasField string
 }
 
 // Error implements the error interface.
-func (err *errLbWebSvcsOnCFWithoutAlias) Error() string {
+func (err *errLBWebSvcsOnCFWithoutAlias) Error() string {
 	return fmt.Sprintf("%v %v must have %q specified when CloudFront is enabled", english.PluralWord(len(err.services), "service", "services"),
 		english.WordSeries(template.QuoteSliceFunc(err.services), "and"), err.aliasField)
 }
