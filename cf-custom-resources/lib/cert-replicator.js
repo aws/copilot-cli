@@ -133,8 +133,6 @@ const replicateCertificate = async function (
 
 /**
  * Deletes a certificate from AWS Certificate Manager (ACM) by its ARN.
- * Specifically, if it is the last certificate attaching to the listener, it will also remove the CNAME records
- * for validation in all the root, app, and env hosted zones in parallel.
  * If the certificate does not exist, the function will return normally.
  *
  * @param {string} arn The certificate ARN

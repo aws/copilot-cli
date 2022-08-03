@@ -29,6 +29,8 @@ describe("Certificate Replicator Handler", () => {
   ];
   const testCertificateArn =
     "arn:aws:acm:region:123456789012:certificate/12345678-1234-1234-1234-123456789012";
+  const otherCertificateArn =
+    "arn:aws:acm:region:210987654322:certificate/87654421-1234-1234-1234-210987654321";
   const spySleep = sinon.spy(function (ms) {
     return Promise.resolve();
   });
@@ -147,7 +149,7 @@ describe("Certificate Replicator Handler", () => {
     const describeCertificateFake = sinon.stub();
     describeCertificateFake.resolves({
       Certificate: {
-        CertificateArn: testCertificateArn,
+        CertificateArn: otherCertificateArn,
         DomainName: testDomainName,
         SubjectAlternativeNames: testSANs,
       },
@@ -197,13 +199,13 @@ describe("Certificate Replicator Handler", () => {
 
   test("Update operation requests a new certificate", () => {
     const requestCertificateFake = sinon.fake.resolves({
-      CertificateArn: testCertificateArn,
+      CertificateArn: otherCertificateArn,
     });
 
     const describeCertificateFake = sinon.stub();
     describeCertificateFake.resolves({
       Certificate: {
-        CertificateArn: testCertificateArn,
+        CertificateArn: otherCertificateArn,
         DomainName: testDomainName,
         SubjectAlternativeNames: testSANs,
       },
@@ -218,7 +220,10 @@ describe("Certificate Replicator Handler", () => {
 
     const request = nock(ResponseURL)
       .put("/", (body) => {
-        return body.Status === "SUCCESS";
+        return (
+          body.Status === "SUCCESS" &&
+          body.PhysicalResourceId === otherCertificateArn
+        );
       })
       .reply(200);
 
@@ -256,7 +261,7 @@ describe("Certificate Replicator Handler", () => {
           "certificateValidated",
           sinon.match({
             $waiter: { delay: 30, maxAttempts: 19 },
-            CertificateArn: testCertificateArn,
+            CertificateArn: otherCertificateArn,
           })
         );
         expect(request.isDone()).toBe(true);
