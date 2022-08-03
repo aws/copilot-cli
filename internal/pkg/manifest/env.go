@@ -156,7 +156,6 @@ func (cfg *portsConfig) UnmarshalYAML(value *yaml.Node) error {
 		switch err.(type) {
 		case *yaml.TypeError:
 			cfg.Port = nil
-			break
 		default:
 			return err
 		}
