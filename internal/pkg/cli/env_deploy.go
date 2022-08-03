@@ -136,6 +136,7 @@ func (o *deployEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	// TODO: Put into a new DynamicEnvironmentManifest struct in "manifest" package
 	if mft.CDNConfig.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && o.targetApp.Domain != "" {
 		describer, err := o.newEnvDescriber()
 		if err != nil {
