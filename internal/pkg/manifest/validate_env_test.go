@@ -93,6 +93,81 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			},
 			wantedError: "in order to specify internal ALB subnet placement, subnets must be imported",
 		},
+		"error if invalid security group config": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []securityGroupRule{
+								{
+									IpProtocol: "tcp",
+									Ports: portsConfig{
+										Port: aws.Int(80),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"security_group\": validate ingress[0]: \"cidr\" must be specified",
+		},
+		"valid security group config": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []securityGroupRule{
+								{
+									CidrIP:     "0.0.0.0",
+									IpProtocol: "tcp",
+									Ports: portsConfig{
+										Range: (*IntRangeBand)(aws.String("1-10")),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"invalid ports value in security group config": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []securityGroupRule{
+								{
+									CidrIP:     "0.0.0.0",
+									IpProtocol: "tcp",
+									Ports: portsConfig{
+										Range: (*IntRangeBand)(aws.String("1-10-10")),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"security_group\": validate ingress[0]: invalid range value 1-10-10: valid format is ${from_port}-${to_port}",
+		},
+		"valid security group config without ports": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []securityGroupRule{
+								{
+									CidrIP:     "0.0.0.0",
+									IpProtocol: "tcp",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"security_group\": validate ingress[0]: \"ports\" must be specified",
+		},
 		"error if security group ingress is limited to a cdn distribution not enabled": {
 			in: EnvironmentConfig{
 				CDNConfig: environmentCDNConfig{

@@ -6,7 +6,6 @@ package manifest
 import (
 	"errors"
 	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 )
@@ -36,7 +35,9 @@ func (e EnvironmentConfig) validate() error {
 	if err := e.HTTPConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
-
+	if err := e.Network.VPC.SecurityGroupConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "security_group": %w`, err)
+	}
 	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
@@ -76,6 +77,59 @@ func (cfg environmentVPCConfig) validate() error {
 	if cfg.managedVPCCustomized() {
 		if err := cfg.validateManagedVPC(); err != nil {
 			return fmt.Errorf(`validate "subnets" for an adjusted VPC: %w`, err)
+		}
+	}
+	return nil
+}
+
+// validate returns nil if securityGroupRule has all the required parameters set.
+func (cfg securityGroupRule) validate() error {
+	if cfg.CidrIP == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "cidr",
+		}
+	}
+	if cfg.IpProtocol == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "ip_protocol",
+		}
+	}
+	return cfg.Ports.validate()
+}
+
+// validate if ports are set.
+func (cfg portsConfig) validate() error {
+	if cfg.IsEmpty() {
+		return &errFieldMustBeSpecified{
+			missingField: "ports",
+		}
+	}
+	if cfg.Range == nil {
+		return nil
+	}
+	if err := cfg.Range.validate(); err != nil {
+		var targetErr *errInvalidRange
+		if errors.As(err, &targetErr) {
+			return &errInvalidRange{
+				value:       aws.StringValue((*string)(cfg.Range)),
+				validFormat: "${from_port}-${to_port}",
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+// validate returns nil if securityGroupConfig is configured correctly.
+func (cfg securityGroupConfig) validate() error {
+	for idx, ingress := range cfg.Ingress {
+		if err := ingress.validate(); err != nil {
+			return fmt.Errorf(`validate ingress[%d]: %w`, idx, err)
+		}
+	}
+	for idx, egress := range cfg.Egress {
+		if err := egress.validate(); err != nil {
+			return fmt.Errorf(`validate egress[%d]: %w`, idx, err)
 		}
 	}
 	return nil

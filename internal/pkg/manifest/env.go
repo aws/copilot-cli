@@ -6,19 +6,23 @@ package manifest
 import (
 	"errors"
 	"fmt"
-	"sort"
-
-	"github.com/aws/copilot-cli/internal/pkg/config"
-
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
+	"sort"
 )
 
 // EnvironmentManifestType identifies that the type of manifest is environment manifest.
 const EnvironmentManifestType = "Environment"
 
 var environmentManifestPath = "environment/manifest.yml"
+
+// Error definitions.
+var (
+	errUnmarshalPortsConfig          = errors.New(`unable to unmarshal ports field into int or a range`)
+	errUnmarshalEnvironmentCDNConfig = errors.New(`unable to unmarshal cdn field into bool or composite-style map`)
+)
 
 // Environment is the manifest configuration for an environment.
 type Environment struct {
@@ -102,9 +106,80 @@ type environmentNetworkConfig struct {
 }
 
 type environmentVPCConfig struct {
-	ID      *string              `yaml:"id,omitempty"`
-	CIDR    *IPNet               `yaml:"cidr,omitempty"`
-	Subnets subnetsConfiguration `yaml:"subnets,omitempty"`
+	ID                  *string              `yaml:"id,omitempty"`
+	CIDR                *IPNet               `yaml:"cidr,omitempty"`
+	Subnets             subnetsConfiguration `yaml:"subnets,omitempty"`
+	SecurityGroupConfig securityGroupConfig  `yaml:"security_group,omitempty"`
+}
+
+type securityGroupConfig struct {
+	Ingress []securityGroupRule `yaml:"ingress,omitempty"`
+	Egress  []securityGroupRule `yaml:"egress,omitempty"`
+}
+
+func (cfg securityGroupConfig) isEmpty() bool {
+	return len(cfg.Ingress) == 0 && len(cfg.Egress) == 0
+}
+
+// securityGroupRule holds the security group ingress and egress configs.
+type securityGroupRule struct {
+	CidrIP     string      `yaml:"cidr"`
+	Ports      portsConfig `yaml:"ports"`
+	IpProtocol string      `yaml:"ip_protocol"`
+}
+
+// portsConfig represents a range of ports [from:to] inclusive.
+// The simple form allow represents from and to ports as a single value, whereas the advanced form is for different values.
+type portsConfig struct {
+	Port  *int          // 0 is a valid value, so we want the default value to be nil.
+	Range *IntRangeBand // Mutually exclusive with port.
+}
+
+// IsEmpty returns whether PortsConfig is empty.
+func (cfg *portsConfig) IsEmpty() bool {
+	return cfg.Port == nil && cfg.Range == nil
+}
+
+// GetPorts returns the from and to ports of a security group rule.
+func (r securityGroupRule) GetPorts() (from, to int, err error) {
+	if r.Ports.Range == nil {
+		return aws.IntValue(r.Ports.Port), aws.IntValue(r.Ports.Port), nil // a single value is provided for ports.
+	}
+	return r.Ports.Range.Parse()
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the Ports
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (cfg *portsConfig) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&cfg.Port); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			cfg.Port = nil
+		default:
+			return err
+		}
+	}
+
+	if cfg.Port != nil {
+		// Successfully unmarshalled Port field and unset Ports field, return
+		cfg.Range = nil
+		return nil
+	}
+
+	if err := value.Decode(&cfg.Range); err != nil {
+		return errUnmarshalPortsConfig
+	}
+	return nil
+}
+
+// EnvSecurityGroup returns the security group config if the user has set any values.
+// If there is no env security group settings, then returns nil and false.
+func (cfg *EnvironmentConfig) EnvSecurityGroup() (*securityGroupConfig, bool) {
+	if isEmpty := cfg.Network.VPC.SecurityGroupConfig.isEmpty(); !isEmpty {
+		return &cfg.Network.VPC.SecurityGroupConfig, true
+	}
+	return nil, false
 }
 
 type environmentCDNConfig struct {
@@ -151,7 +226,7 @@ func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	if err := value.Decode(&cfg.Enabled); err != nil {
-		return errors.New(`unable to unmarshal into bool or composite-style map`)
+		return errUnmarshalEnvironmentCDNConfig
 	}
 	return nil
 }
