@@ -6,7 +6,8 @@ Metadata:
     name: test
     type: Environment
     # Create the public ALB with certificates attached.
-    cdn: true
+    cdn:
+      certificate: viewer-cert
     http:
       public:
         security_groups:
@@ -268,6 +269,29 @@ Resources:
       ClusterSettings:
         - Name: containerInsights
           Value: enabled
+  CloudFrontDistribution:
+    Metadata:
+      'aws:copilot:description': 'A CloudFront distribution for global content delivery'
+    Condition: CreateALB
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        DefaultCacheBehavior:
+          AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k
+          TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+          ViewerProtocolPolicy: allow-all # Will need to change with TLS termination and Alias usage
+        Enabled: true
+        IPV6Enabled: true
+        Origins:
+          - CustomOriginConfig:
+              OriginProtocolPolicy: match-viewer # Will need to change with TLS termination and Alias usage
+            DomainName: !GetAtt PublicLoadBalancer.DNSName
+            Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+        ViewerCertificate:
+          AcmCertificateArn: viewer-cert
+          MinimumProtocolVersion: TLSv1
+          SslSupportMethod:  sni-only
   PublicHTTPLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTP traffic'
@@ -1034,6 +1058,10 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  CloudFrontDomainName:
+    Condition: CreateALB
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Description: The domain name of an associated Cloud Front Distribution.
   PublicALBAccessible:
     Condition: CreateALB
     Value: false

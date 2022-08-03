@@ -17,6 +17,12 @@ CloudFrontDistribution:
             OriginProtocolPolicy: match-viewer # Will need to change with TLS termination and Alias usage
           DomainName: !GetAtt PublicLoadBalancer.DNSName
           Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+{{- if .CDNConfig.ViewerCertificate}}
+      ViewerCertificate:
+        AcmCertificateArn: {{.CDNConfig.ViewerCertificate}}
+        MinimumProtocolVersion: TLSv1
+        SslSupportMethod:  sni-only
+{{- else}}
 {{- if not .PublicHTTPConfig.ImportedCertARNs}}
       ViewerCertificate:
         !If
@@ -53,4 +59,5 @@ CertificateReplicator:
     TargetRegion: "us-east-1"
     EnvRegion: !Ref AWS::Region
     CertificateArn: !Ref HTTPSCert
+{{- end}}
 {{- end}}

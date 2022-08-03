@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -353,7 +354,15 @@ func (e *BootstrapEnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.En
 }
 
 func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
-	return nil // no-op - return &template.CDNConfig{} when feature is ready
+	if e.in.Mft == nil {
+		return nil
+	}
+	if !e.in.Mft.CDNConfig.CDNEnabled() {
+		return nil
+	}
+	return &template.CDNConfig{
+		ViewerCertificate: e.in.Mft.CDNConfig.CDNConfig.Certificate,
+	}
 }
 
 func (e *EnvStackConfig) publicHTTPConfig() template.HTTPConfig {
