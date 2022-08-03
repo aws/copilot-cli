@@ -135,9 +135,10 @@ type ELBAccessLogs struct {
 type CDNConfig struct{}
 
 type VPCConfig struct {
-	Imported        *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
-	Managed         ManagedVPC
-	AllowVPCIngress bool
+	Imported            *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
+	Managed             ManagedVPC
+	AllowVPCIngress     bool
+	SecurityGroupConfig *SecurityGroupConfig
 }
 
 // ImportVPC holds the fields to import VPC resources.
@@ -158,6 +159,20 @@ type ManagedVPC struct {
 // Telemetry represents optional observability and monitoring configuration.
 type Telemetry struct {
 	EnableContainerInsights bool
+}
+
+// SecurityGroupConfig holds the fields to import security group config
+type SecurityGroupConfig struct {
+	Ingress []SecurityGroupRule
+	Egress  []SecurityGroupRule
+}
+
+// SecurityGroupRule holds the fields to import security group rule
+type SecurityGroupRule struct {
+	CidrIP     string
+	FromPort   int
+	IpProtocol string
+	ToPort     int
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.

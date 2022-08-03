@@ -383,6 +383,39 @@ func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessL
 	return &template.ELBAccessLogs{
 		BucketName:   bucketName,
 		BucketPrefix: bucketPrefix,
+  }, nil
+}
+
+func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {
+	securityGroupConfig, isSecurityConfigSet := mft.EnvSecurityGroup()
+	if !isSecurityConfigSet {
+		return nil, nil
+	}
+	var ingress = make([]template.SecurityGroupRule, len(securityGroupConfig.Ingress))
+	var egress = make([]template.SecurityGroupRule, len(securityGroupConfig.Egress))
+	for idx, ingressValue := range securityGroupConfig.Ingress {
+		ingress[idx].IpProtocol = ingressValue.IpProtocol
+		ingress[idx].CidrIP = ingressValue.CidrIP
+		if fromPort, toPort, err := ingressValue.GetPorts(); err != nil {
+			return nil, err
+		} else {
+			ingress[idx].ToPort = toPort
+			ingress[idx].FromPort = fromPort
+		}
+	}
+	for idx, egressValue := range securityGroupConfig.Egress {
+		egress[idx].IpProtocol = egressValue.IpProtocol
+		egress[idx].CidrIP = egressValue.CidrIP
+		if fromPort, toPort, err := egressValue.GetPorts(); err != nil {
+			return nil, err
+		} else {
+			egress[idx].ToPort = toPort
+			egress[idx].FromPort = fromPort
+		}
+	}
+	return &template.SecurityGroupConfig{
+		Ingress: ingress,
+		Egress:  egress,
 	}, nil
 }
 

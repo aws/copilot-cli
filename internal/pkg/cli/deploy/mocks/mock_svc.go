@@ -15,7 +15,6 @@ import (
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	dockerengine "github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
-	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -472,9 +471,9 @@ func (m *MockserviceDeployer) EXPECT() *MockserviceDeployerMockRecorder {
 }
 
 // DeployService mocks base method.
-func (m *MockserviceDeployer) DeployService(out progress.FileWriter, conf cloudformation0.StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
+func (m *MockserviceDeployer) DeployService(conf cloudformation0.StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{out, conf, bucketName}
+	varargs := []interface{}{conf, bucketName}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -484,9 +483,9 @@ func (m *MockserviceDeployer) DeployService(out progress.FileWriter, conf cloudf
 }
 
 // DeployService indicates an expected call of DeployService.
-func (mr *MockserviceDeployerMockRecorder) DeployService(out, conf, bucketName interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockserviceDeployerMockRecorder) DeployService(conf, bucketName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{out, conf, bucketName}, opts...)
+	varargs := append([]interface{}{conf, bucketName}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployService", reflect.TypeOf((*MockserviceDeployer)(nil).DeployService), varargs...)
 }
 
