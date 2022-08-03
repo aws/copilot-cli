@@ -22,7 +22,7 @@ var environmentManifestPath = "environment/manifest.yml"
 var (
 	errUnmarshalPortsConfig          = errors.New(`unable to unmarshal ports field into int or a range`)
 	errUnmarshalEnvironmentCDNConfig = errors.New(`unable to unmarshal cdn field into bool or composite-style map`)
-  errUnmarshalELBAccessLogs = errors.New(`unable to unmarshal access_logs field into bool or ELB Access logs config`)
+	errUnmarshalELBAccessLogs        = errors.New(`unable to unmarshal access_logs field into bool or ELB Access logs config`)
 )
 
 // Environment is the manifest configuration for an environment.
