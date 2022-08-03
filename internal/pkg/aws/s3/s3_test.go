@@ -393,6 +393,11 @@ func TestS3_ParseURL(t *testing.T) {
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
 		},
 		"success with dots": {
+			inURL:            "https://bucket.with.dots.in.name.s3.us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
+			wantedBucketName: "bucket.with.dots.in.name",
+			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
+		},
+		"success with dots legacy URL": {
 			inURL:            "https://bucket.with.dots.in.name.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
 			wantedBucketName: "bucket.with.dots.in.name",
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
