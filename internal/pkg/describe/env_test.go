@@ -11,7 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	cfstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -425,7 +425,7 @@ func TestEnvDescriber_ServiceDiscoveryEndpoint(t *testing.T) {
 				m := mocks.NewMockstackDescriber(ctrl)
 				m.EXPECT().Describe().Return(stack.StackDescription{
 					Parameters: map[string]string{
-						cfstack.EnvParamServiceDiscoveryEndpoint: "test.phonetool.local",
+						cfnstack.EnvParamServiceDiscoveryEndpoint: "test.phonetool.local",
 					}}, nil)
 				return &EnvDescriber{
 					app: "phonetool",
@@ -440,7 +440,7 @@ func TestEnvDescriber_ServiceDiscoveryEndpoint(t *testing.T) {
 				m := mocks.NewMockstackDescriber(ctrl)
 				m.EXPECT().Describe().Return(stack.StackDescription{
 					Parameters: map[string]string{
-						cfstack.EnvParamServiceDiscoveryEndpoint: "",
+						cfnstack.EnvParamServiceDiscoveryEndpoint: "",
 					}}, nil)
 				return &EnvDescriber{
 					app: "phonetool",
@@ -642,6 +642,7 @@ func TestEnvDescriber_ValidateCFServiceDomainAliases(t *testing.T) {
 	const (
 		mockAppName                  = "mock-app"
 		mockEnvName                  = "mock-env"
+		mockALBWorkloads             = "svc-1,svc-2"
 		mockAliasesJsonString        = `{"svc-1":["test.copilot.com"],"svc-2":["test.copilot.com"]}`
 		mockInvalidAliasesJsonString = `{"svc-1":["test.copilot.com"]}`
 	)
@@ -649,14 +650,19 @@ func TestEnvDescriber_ValidateCFServiceDomainAliases(t *testing.T) {
 		App:  mockAppName,
 		Name: mockEnvName,
 	}
-	mockServices := []string{"svc-1", "svc-2"}
 
 	testCases := map[string]struct {
 		setupMock func(m *envDescriberMocks)
 
 		wantedErr error
 	}{
-		"error retrieving services": {
+		"error describing stack": {
+			setupMock: func(m *envDescriberMocks) {
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{}, errors.New("some error"))
+			},
+			wantedErr: fmt.Errorf("describe stack: some error"),
+		},
+		"no load balanced services": {
 			setupMock: func(m *envDescriberMocks) {
 				mockParams := map[string]string{
 					"AppName":         mockAppName,
@@ -665,62 +671,60 @@ func TestEnvDescriber_ValidateCFServiceDomainAliases(t *testing.T) {
 				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
 					Parameters: mockParams,
 				}, nil)
-				m.deployStoreSvc.EXPECT().ListDeployedServices(mockAppName, mockEnvName).Return(nil, errors.New("some error"))
 			},
-			wantedErr: fmt.Errorf("list services: some error"),
 		},
 		"missing aliases parameter in env stack": {
 			setupMock: func(m *envDescriberMocks) {
 				mockParams := map[string]string{
 					"AppName":         mockAppName,
 					"EnvironmentName": mockEnvName,
+					"ALBWorkloads":    mockALBWorkloads,
 				}
 				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
 					Parameters: mockParams,
 				}, nil)
-				m.deployStoreSvc.EXPECT().ListDeployedServices(mockAppName, mockEnvName).Return(mockServices, nil)
 			},
-			wantedErr: fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified"),
+			wantedErr: fmt.Errorf("cannot find %s in env stack parameter set", cfnstack.EnvParamAliasesKey),
 		},
 		"error unmarshalling json string": {
 			setupMock: func(m *envDescriberMocks) {
 				mockParams := map[string]string{
 					"AppName":         mockAppName,
 					"EnvironmentName": mockEnvName,
+					"ALBWorkloads":    mockALBWorkloads,
 					"Aliases":         "mock-invalid-aliases",
 				}
 				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
 					Parameters: mockParams,
 				}, nil)
-				m.deployStoreSvc.EXPECT().ListDeployedServices(mockAppName, mockEnvName).Return(mockServices, nil)
 			},
-			wantedErr: fmt.Errorf("failed to unmarshal \"mock-invalid-aliases\": invalid character 'm' looking for beginning of value"),
+			wantedErr: fmt.Errorf("unmarshal \"mock-invalid-aliases\": invalid character 'm' looking for beginning of value"),
 		},
 		"not all valid services have an alias": {
 			setupMock: func(m *envDescriberMocks) {
 				mockParams := map[string]string{
 					"AppName":         mockAppName,
 					"EnvironmentName": mockEnvName,
+					"ALBWorkloads":    mockALBWorkloads,
 					"Aliases":         mockInvalidAliasesJsonString,
 				}
 				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
 					Parameters: mockParams,
 				}, nil)
-				m.deployStoreSvc.EXPECT().ListDeployedServices(mockAppName, mockEnvName).Return(mockServices, nil)
 			},
-			wantedErr: fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified"),
+			wantedErr: fmt.Errorf("all lb web services deployed in an environment with CloudFront enabled must have http.alias specified"),
 		},
 		"all valid services have an alias": {
 			setupMock: func(m *envDescriberMocks) {
 				mockParams := map[string]string{
 					"AppName":         mockAppName,
 					"EnvironmentName": mockEnvName,
+					"ALBWorkloads":    mockALBWorkloads,
 					"Aliases":         mockAliasesJsonString,
 				}
 				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
 					Parameters: mockParams,
 				}, nil)
-				m.deployStoreSvc.EXPECT().ListDeployedServices(mockAppName, mockEnvName).Return(mockServices, nil)
 			},
 		},
 	}
@@ -731,7 +735,6 @@ func TestEnvDescriber_ValidateCFServiceDomainAliases(t *testing.T) {
 			defer ctrl.Finish()
 			m := &envDescriberMocks{
 				stackDescriber: mocks.NewMockstackDescriber(ctrl),
-				deployStoreSvc: mocks.NewMockDeployedEnvServicesLister(ctrl),
 			}
 			tc.setupMock(m)
 			d := &EnvDescriber{

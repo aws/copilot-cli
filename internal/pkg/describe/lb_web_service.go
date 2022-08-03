@@ -34,8 +34,6 @@ const (
 	envOutputCloudFrontDomainName        = "CloudFrontDomainName"
 	envOutputPublicALBAccessible         = "PublicALBAccessible"
 
-	envParamAliases = "Aliases"
-
 	svcStackResourceALBTargetGroupLogicalID    = "TargetGroup"
 	svcStackResourceNLBTargetGroupLogicalID    = "NLBTargetGroup"
 	svcStackResourceHTTPSListenerRuleLogicalID = "HTTPSListenerRule"

@@ -322,29 +322,29 @@ func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
 
 	stackDescr, err := d.cfn.Describe()
 	if err != nil {
-		return err
+		return fmt.Errorf("describe stack: %w", err)
 	}
 
-	services, err := d.deployStore.ListDeployedServices(d.app, d.env.Name)
+	servicesString, ok := stackDescr.Parameters[cfnstack.EnvParamALBWorkloadsKey]
+	if !ok {
+		return nil
+	}
+	services := strings.Split(servicesString, ",")
+
+	jsonOutput, ok := stackDescr.Parameters[cfnstack.EnvParamAliasesKey]
+	if !ok {
+		return fmt.Errorf("cannot find %s in env stack parameter set", cfnstack.EnvParamAliasesKey)
+	}
+
+	var aliases map[string][]string
+	err = json.Unmarshal([]byte(jsonOutput), &aliases)
 	if err != nil {
-		return fmt.Errorf("list services: %w", err)
+		return fmt.Errorf("unmarshal \"%s\": %w", jsonOutput, err)
 	}
-
-	if jsonOutput, ok := stackDescr.Parameters[envParamAliases]; ok {
-		var aliases map[string][]string
-		err := json.Unmarshal([]byte(jsonOutput), &aliases)
-
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal \"%s\": %w", jsonOutput, err)
+	for _, service := range services {
+		if _, ok := aliases[service]; !ok {
+			return fmt.Errorf("all lb web services deployed in an environment with CloudFront enabled must have http.alias specified")
 		}
-
-		for _, service := range services {
-			if _, ok := aliases[service]; !ok {
-				return fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified")
-			}
-		}
-	} else {
-		return fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified")
 	}
 
 	return nil
