@@ -191,7 +191,7 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 }
 
 func (t *cfnTemplate) pkg(a *Addons) error {
-	err := a.packageTransforms(t.Metadata, t.Parameters, t.Mappings, t.Conditions, t.Transform, t.Resources, t.Outputs)
+	err := a.packageIncludeTransforms(&t.Metadata, &t.Mappings, &t.Conditions, &t.Transform, &t.Resources, &t.Outputs)
 	if err != nil {
 		return fmt.Errorf("package transforms: %w", err)
 	}
@@ -215,18 +215,18 @@ func (t *cfnTemplate) pkg(a *Addons) error {
 	return nil
 }
 
-// packageTransforms searches each node in nodes for the CFN
+// packageIncludeTransforms searches each node in nodes for the CFN
 // intrinsic function "Fn::Transform" with the "AWS::Include" macro. If it
-// dectects one, and the "Location" parameter is set to a local path, it'll
+// detects one, and the "Location" parameter is set to a local path, it'll
 // upload those files to S3. If node is a yaml map or sequence, it will
-// recursivly traverse those nodes.
-func (a *Addons) packageTransforms(nodes ...yaml.Node) error {
-	forNode := func(node yaml.Node) error {
-		if node.Kind != yaml.MappingNode {
+// recursively traverse those nodes.
+func (a *Addons) packageIncludeTransforms(nodes ...*yaml.Node) error {
+	pkg := func(node *yaml.Node) error {
+		if node == nil || node.Kind != yaml.MappingNode {
 			return nil
 		}
 
-		for key, val := range mappingNode(&node) {
+		for key, val := range mappingNode(node) {
 			switch {
 			case key == "Fn::Transform":
 				name := yamlMapGet(val, "Name")
@@ -246,14 +246,12 @@ func (a *Addons) packageTransforms(nodes ...yaml.Node) error {
 
 				loc.Value = s3.Location(obj.Bucket, obj.Key)
 			case val.Kind == yaml.MappingNode:
-				if err := a.packageTransforms(*val); err != nil {
+				if err := a.packageIncludeTransforms(val); err != nil {
 					return err
 				}
 			case val.Kind == yaml.SequenceNode:
-				for i := range val.Content {
-					if err := a.packageTransforms(*val.Content[i]); err != nil {
-						return err
-					}
+				if err := a.packageIncludeTransforms(val.Content...); err != nil {
+					return err
 				}
 			}
 		}
@@ -262,7 +260,7 @@ func (a *Addons) packageTransforms(nodes ...yaml.Node) error {
 	}
 
 	for i := range nodes {
-		if err := forNode(nodes[i]); err != nil {
+		if err := pkg(nodes[i]); err != nil {
 			return err
 		}
 	}
