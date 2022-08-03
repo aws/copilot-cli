@@ -139,7 +139,7 @@ func (o *deployEnvOpts) Execute() error {
 	if mft.CDNConfig.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && o.targetApp.Domain != "" {
 		describer, err := o.newEnvDescriber()
 		if err != nil {
-			return err
+			return fmt.Errorf("describe env: %w", err)
 		}
 		if err := describer.ValidateCFServiceDomainAliases(); err != nil {
 			return err

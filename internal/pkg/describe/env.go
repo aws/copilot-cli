@@ -339,11 +339,17 @@ func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
 	var aliases map[string][]string
 	err = json.Unmarshal([]byte(jsonOutput), &aliases)
 	if err != nil {
-		return fmt.Errorf("unmarshal \"%s\": %w", jsonOutput, err)
+		return fmt.Errorf("unmarshal %q: %w", jsonOutput, err)
 	}
+	lbSvcsWithoutAlias := make([]string, 0)
 	for _, service := range services {
 		if _, ok := aliases[service]; !ok {
-			return fmt.Errorf("all lb web services deployed in an environment with CloudFront enabled must have http.alias specified")
+			lbSvcsWithoutAlias = append(lbSvcsWithoutAlias, service)
+		}
+	}
+	if len(lbSvcsWithoutAlias) != 0 {
+		return &errLbWebSvcsOnCFWithoutAlias{
+			services: lbSvcsWithoutAlias,
 		}
 	}
 

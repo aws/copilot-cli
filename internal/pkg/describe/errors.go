@@ -3,7 +3,12 @@
 
 package describe
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/dustin/go-humanize/english"
+)
 
 type ErrManifestNotFoundInTemplate struct {
 	app  string
@@ -14,4 +19,14 @@ type ErrManifestNotFoundInTemplate struct {
 // Error implements the error interface.
 func (err *ErrManifestNotFoundInTemplate) Error() string {
 	return fmt.Sprintf("manifest metadata not found in template of stack %s-%s-%s", err.app, err.env, err.name)
+}
+
+type errLbWebSvcsOnCFWithoutAlias struct {
+	services []string
+}
+
+// Error implements the error interface.
+func (err *errLbWebSvcsOnCFWithoutAlias) Error() string {
+	return fmt.Sprintf("%v %v must have http.alias specified when CloudFront is enabled", english.PluralWord(len(err.services), "service", "services"),
+		english.WordSeries(template.QuoteSliceFunc(err.services), "and"))
 }
