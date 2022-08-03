@@ -183,21 +183,19 @@ func (cf CloudFormation) newCreateChangeSetInput(w progress.FileWriter, stack *c
 		stackName:        stack.Name,
 		stackDescription: fmt.Sprintf("Creating the infrastructure for stack %s", stack.Name),
 	}
-	in.createChangeSet = func() (changeSetID string, err error) {
+	in.createChangeSet = func() (string, error) {
 		spinner := progress.NewSpinner(w)
 		label := fmt.Sprintf("Proposing infrastructure changes for stack %s", stack.Name)
 		spinner.Start(label)
 
 		var errAlreadyExists *cloudformation.ErrStackAlreadyExists
-		changeSetID, err = cf.cfnClient.Create(stack)
-		switch {
-		case err != nil && !errors.As(err, &errAlreadyExists):
+		changeSetID, err := cf.cfnClient.Create(stack)
+		if err != nil && !errors.As(err, &errAlreadyExists) {
 			spinner.Stop(log.Serrorf("%s\n", label))
 			return "", cf.handleStackError(stack.Name, err)
-		default:
-			spinner.Stop(log.Ssuccessf("%s\n", label))
-			return changeSetID, err
 		}
+		spinner.Stop(log.Ssuccessf("%s\n", label))
+		return changeSetID, err
 	}
 	return in
 }
