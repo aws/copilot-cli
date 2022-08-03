@@ -44,7 +44,7 @@ const (
 	capacityProviderFargate     = "FARGATE"
 )
 
-// Default values for ELB access logs config
+// Default values for ELB access logs config.
 const (
 	defaultBucketPrefix = "ELBAccessLogs"
 )
@@ -361,14 +361,14 @@ type networkLoadBalancerConfig struct {
 
 func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessLogs, error) {
 	elbAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
-	if !isELBAccessLogsSet { //if ELB access logs configs are not defined
+	if !isELBAccessLogsSet { //if ELB access logs configs are not defined.
 		return nil, nil
 	}
 
 	var bucketName string
 	bucketPrefix := defaultBucketPrefix
 
-	if elbAccessLogsArgs == nil { // if default ELB access logs has been defined using access_logs: true
+	if elbAccessLogsArgs == nil { // if default ELB access logs has been defined using access_logs: true.
 		return &template.ELBAccessLogs{
 			BucketPrefix: bucketPrefix,
 		}, nil

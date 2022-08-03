@@ -112,18 +112,6 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			},
 			wantedError: "CDN must be enabled to limit security group ingress to CloudFront",
 		},
-		/*"error if invalid elb access logs config": {
-			in: EnvironmentConfig{
-				HTTPConfig: EnvironmentHTTPConfig{
-					Public: PublicHTTPConfig{
-						ELBAccessLogs: ELBAccessLogsArgsOrBool{
-							ELBAccessLogsArgs: ELBAccessLogsArgs{},
-						},
-					},
-				},
-			},
-			wantedError: "validate \"http config\": validate \"public\": validate \"access_logs\": \"bucket_name or bucket_prefix\" must be specified",
-		},*/
 		"valid elb access logs config with bucket_prefix": {
 			in: EnvironmentConfig{
 				HTTPConfig: EnvironmentHTTPConfig{
