@@ -77,6 +77,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				}).Times(len(crs))
 			},
 			wantedOut: map[string]string{
+				"CertificateReplicatorFunction": "",
 				"CertificateValidationFunction": "",
 				"CustomDomainFunction":          "",
 				"DNSDelegationFunction":         "",

@@ -308,7 +308,7 @@ func (cfg securityGroupsConfig) validate() error {
 
 // validate returns nil if environmentCDNConfig is configured correctly.
 func (cfg environmentCDNConfig) validate() error {
-	if cfg.CDNConfig.IsEmpty() {
+	if cfg.CDNConfig.isEmpty() {
 		return nil
 	}
 	return cfg.CDNConfig.validate()

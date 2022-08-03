@@ -34,6 +34,7 @@ const (
 	customDomainFnName        = "CustomDomainFunction"
 	certValidationFnName      = "CertificateValidationFunction"
 	dnsDelegationFnName       = "DNSDelegationFunction"
+	certReplicatorFnName      = "CertificateReplicatorFunction"
 )
 
 // Function source file locations.
@@ -44,6 +45,7 @@ var (
 	customDomainAppRunnerFilePath    = path.Join(customResourcesDir, "custom-domain-app-runner.js")
 	desiredCountDelegationFilePath   = path.Join(customResourcesDir, "desired-count-delegation.js")
 	dnsCertValidationFilePath        = path.Join(customResourcesDir, "dns-cert-validator.js")
+	certReplicatorFilePath           = path.Join(customResourcesDir, "cert-replicator.js")
 	dnsDelegationFilePath            = path.Join(customResourcesDir, "dns-delegation.js")
 	envControllerFilePath            = path.Join(customResourcesDir, "env-controller.js")
 	nlbCertValidatorFilePath         = path.Join(customResourcesDir, "nlb-cert-validator.js")
@@ -149,6 +151,7 @@ func Env(fs template.Reader) ([]*CustomResource, error) {
 		certValidationFnName: dnsCertValidationFilePath,
 		customDomainFnName:   customDomainFilePath,
 		dnsDelegationFnName:  dnsDelegationFilePath,
+		certReplicatorFnName: certReplicatorFilePath,
 	})
 }
 
