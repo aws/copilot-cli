@@ -1025,13 +1025,25 @@ func (r Range) validate() error {
 	return r.Value.validate()
 }
 
+type errInvalidRange struct {
+	value       string
+	validFormat string
+}
+
+func (e *errInvalidRange) Error() string {
+	return fmt.Sprintf("invalid range value %s: valid format is %s", e.value, e.validFormat)
+}
+
 // validate returns nil if IntRangeBand is configured correctly.
 func (r IntRangeBand) validate() error {
 	str := string(r)
 	minMax := intRangeBandRegexp.FindStringSubmatch(str)
 	// Valid minMax example: ["1-2", "1", "2"]
 	if len(minMax) != 3 {
-		return fmt.Errorf("invalid range value %s: valid format is ${min}-${max}", str)
+		return &errInvalidRange{
+			value:       str,
+			validFormat: "${min}-${max}",
+		}
 	}
 	// Guaranteed by intRangeBandRegexp.
 	min, err := strconv.Atoi(minMax[1])

@@ -132,20 +132,20 @@ type securityGroupRule struct {
 // The simple form allow represents from and to ports as a single value, whereas the advanced form is for different values.
 type portsConfig struct {
 	Port  *int          // 0 is a valid value, so we want the default value to be nil.
-	Ports *IntRangeBand // Mutually exclusive with port.
+	Range *IntRangeBand // Mutually exclusive with port.
 }
 
 // IsEmpty returns whether PortsConfig is empty.
 func (cfg *portsConfig) IsEmpty() bool {
-	return cfg.Port == nil && cfg.Ports == nil
+	return cfg.Port == nil && cfg.Range == nil
 }
 
 // GetPorts returns the from and to ports of a security group rule.
 func (r securityGroupRule) GetPorts() (from, to int, err error) {
-	if r.Ports.Ports == nil {
+	if r.Ports.Range == nil {
 		return aws.IntValue(r.Ports.Port), aws.IntValue(r.Ports.Port), nil // a single value is provided for ports.
 	}
-	return r.Ports.Ports.Parse()
+	return r.Ports.Range.Parse()
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the Ports
@@ -164,11 +164,11 @@ func (cfg *portsConfig) UnmarshalYAML(value *yaml.Node) error {
 
 	if cfg.Port != nil {
 		// Successfully unmarshalled Port field and unset Ports field, return
-		cfg.Ports = nil
+		cfg.Range = nil
 		return nil
 	}
 
-	if err := value.Decode(&cfg.Ports); err != nil {
+	if err := value.Decode(&cfg.Range); err != nil {
 		return errUnmarshalPortsConfig
 	}
 	return nil

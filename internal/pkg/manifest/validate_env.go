@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"strings"
 )
 
 var (
@@ -105,13 +104,18 @@ func (cfg portsConfig) validate() error {
 			missingField: "ports",
 		}
 	}
-	if cfg.Ports != nil {
-		if err := cfg.Ports.validate(); err != nil {
-			if strings.Contains(err.Error(), "invalid range value") {
-				return fmt.Errorf("invalid ports value %s: valid port format is ${from_port}-${to_port}", *cfg.Ports)
+	if cfg.Range == nil {
+		return nil
+	}
+	if err := cfg.Range.validate(); err != nil {
+		var targetErr *errInvalidRange
+		if errors.As(err, &targetErr) {
+			return &errInvalidRange{
+				value:       aws.StringValue((*string)(cfg.Range)),
+				validFormat: "${from_port}-${to_port}",
 			}
-			return err
 		}
+		return err
 	}
 	return nil
 }

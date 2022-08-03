@@ -122,7 +122,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 									CidrIP:     "0.0.0.0",
 									IpProtocol: "tcp",
 									Ports: portsConfig{
-										Ports: (*IntRangeBand)(aws.String("1-10")),
+										Range: (*IntRangeBand)(aws.String("1-10")),
 									},
 								},
 							},
@@ -141,7 +141,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 									CidrIP:     "0.0.0.0",
 									IpProtocol: "tcp",
 									Ports: portsConfig{
-										Ports: (*IntRangeBand)(aws.String("1-10-10")),
+										Range: (*IntRangeBand)(aws.String("1-10-10")),
 									},
 								},
 							},
@@ -149,7 +149,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: "validate \"security_group\": validate ingress[0]: invalid ports value 1-10-10: valid port format is ${from_port}-${to_port}",
+			wantedError: "validate \"security_group\": validate ingress[0]: invalid range value 1-10-10: valid format is ${from_port}-${to_port}",
 		},
 		"valid security group config without ports": {
 			in: EnvironmentConfig{
