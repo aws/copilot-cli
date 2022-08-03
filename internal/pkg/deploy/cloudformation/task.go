@@ -27,7 +27,7 @@ func (cf CloudFormation) DeployTask(input *deploy.CreateTaskResourcesInput, opts
 		opt(stack)
 	}
 
-	if err := cf.renderStackChanges(cf.newRenderWorkloadInput(cf.console, stack)); err != nil {
+	if err := cf.executeAndRenderChangeSet(cf.newUpsertChangeSetInput(cf.console, stack)); err != nil {
 		var errChangeSetEmpty *cloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errChangeSetEmpty) {
 			return err

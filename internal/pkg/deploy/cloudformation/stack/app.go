@@ -92,10 +92,16 @@ func (c *AppStackConfig) Template() (string, error) {
 	content, err := c.parser.Parse(appTemplatePath, struct {
 		TemplateVersion         string
 		AppDNSDelegatedAccounts []string
+		Domain                  string
+		Name                    string
 	}{
 		c.Version,
 		c.dnsDelegationAccounts(),
-	})
+		c.DomainName,
+		c.Name,
+	}, template.WithFuncs(map[string]any{
+		"join": strings.Join,
+	}))
 	if err != nil {
 		return "", err
 	}
