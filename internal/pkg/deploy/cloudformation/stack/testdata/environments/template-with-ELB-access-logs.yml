@@ -719,7 +719,7 @@ Resources:
                 Action:
                   - "states:StartExecution"
                 Resource:
-                  - !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
+                  - !Sub "arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
               - Sid: CloudFormation
                 Effect: Allow
                 Action: [
