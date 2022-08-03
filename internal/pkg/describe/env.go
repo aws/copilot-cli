@@ -349,7 +349,8 @@ func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
 	}
 	if len(lbSvcsWithoutAlias) != 0 {
 		return &errLbWebSvcsOnCFWithoutAlias{
-			services: lbSvcsWithoutAlias,
+			services:   lbSvcsWithoutAlias,
+			aliasField: "http.alias",
 		}
 	}
 

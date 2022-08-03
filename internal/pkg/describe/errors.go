@@ -22,11 +22,12 @@ func (err *ErrManifestNotFoundInTemplate) Error() string {
 }
 
 type errLbWebSvcsOnCFWithoutAlias struct {
-	services []string
+	services   []string
+	aliasField string
 }
 
 // Error implements the error interface.
 func (err *errLbWebSvcsOnCFWithoutAlias) Error() string {
-	return fmt.Sprintf("%v %v must have http.alias specified when CloudFront is enabled", english.PluralWord(len(err.services), "service", "services"),
-		english.WordSeries(template.QuoteSliceFunc(err.services), "and"))
+	return fmt.Sprintf("%v %v must have %q specified when CloudFront is enabled", english.PluralWord(len(err.services), "service", "services"),
+		english.WordSeries(template.QuoteSliceFunc(err.services), "and"), err.aliasField)
 }

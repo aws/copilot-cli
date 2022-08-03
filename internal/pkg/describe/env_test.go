@@ -712,7 +712,7 @@ func TestEnvDescriber_ValidateCFServiceDomainAliases(t *testing.T) {
 					Parameters: mockParams,
 				}, nil)
 			},
-			wantedErr: fmt.Errorf("service \"svc-2\" must have http.alias specified when CloudFront is enabled"),
+			wantedErr: fmt.Errorf("service \"svc-2\" must have \"http.alias\" specified when CloudFront is enabled"),
 		},
 		"all valid services have an alias": {
 			setupMock: func(m *envDescriberMocks) {
