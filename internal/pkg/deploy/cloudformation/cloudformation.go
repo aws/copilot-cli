@@ -40,6 +40,11 @@ const (
 	envControllerResourceType = "Custom::EnvControllerFunction"
 )
 
+// CloudFormation's error types to compare against.
+var (
+	errNotFound *cloudformation.ErrStackNotFound
+)
+
 // StackConfiguration represents the set of methods needed to deploy a cloudformation stack.
 type StackConfiguration interface {
 	StackName() string
@@ -415,6 +420,73 @@ func (cf CloudFormation) createEnvControllerRenderer(in *envControllerRendererIn
 		EnvStackName:    envStackName,
 		EnvResources:    envResourceDescriptions,
 	}), nil
+}
+
+type renderStackInput struct {
+	group *errgroup.Group // Group of go routines.
+	ctx   context.Context // Context shared between go routines.
+
+	// Stack metadata.
+	stackName      string            // Name of the stack.
+	stackID        string            // ID of the stack.
+	description    string            // Descriptive text for the stack mutation.
+	descriptionFor map[string]string // Descriptive text for each resource in the stack.
+	startTime      time.Time         // Timestamp for when the stack mutation started.
+}
+
+func (cf CloudFormation) stackRenderer(in renderStackInput) progress.DynamicRenderer {
+	streamer := stream.NewStackStreamer(cf.cfnClient, in.stackID, in.startTime)
+	renderer := progress.ListeningStackRenderer(streamer, in.stackName, in.description, in.descriptionFor, progress.RenderOptions{})
+	in.group.Go(func() error {
+		return stream.Stream(in.ctx, streamer)
+	})
+	return renderer
+}
+
+func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn func() error) error {
+	body, err := cf.cfnClient.TemplateBody(name)
+	if err != nil {
+		if !errors.As(err, &errNotFound) {
+			return fmt.Errorf("get template body of stack %q: %w", name, err)
+		}
+		return nil // stack already deleted.
+	}
+	descriptionFor, err := cloudformation.ParseTemplateDescriptions(body)
+	if err != nil {
+		return fmt.Errorf("parse resource descriptions in template of stack %q: %w", name, err)
+	}
+
+	stack, err := cf.cfnClient.Describe(name)
+	if err != nil {
+		if !errors.As(err, &errNotFound) {
+			return fmt.Errorf("retrieve the stack ID for stack %q: %w", name, err)
+		}
+		return nil // stack already deleted.
+	}
+
+	waitCtx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
+	defer cancelWait()
+	g, ctx := errgroup.WithContext(waitCtx)
+	now := time.Now()
+	g.Go(deleteFn)
+	renderer := cf.stackRenderer(renderStackInput{
+		group:          g,
+		ctx:            ctx,
+		stackID:        aws.StringValue(stack.StackId),
+		stackName:      name,
+		description:    description,
+		descriptionFor: descriptionFor,
+		startTime:      now,
+	})
+	g.Go(func() error {
+		return progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
+	})
+	if err := g.Wait(); err != nil {
+		if !errors.As(err, &errNotFound) {
+			return err
+		}
+	}
+	return nil
 }
 
 func (cf CloudFormation) errOnFailedStack(stackName string) error {
