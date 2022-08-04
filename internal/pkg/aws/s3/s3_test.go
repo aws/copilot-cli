@@ -392,6 +392,16 @@ func TestS3_ParseURL(t *testing.T) {
 			wantedBucketName: "stackset-myapp-infrastru-pipelinebuiltartifactbuc-1nk5t9zkymh8r",
 			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
 		},
+		"success with dots": {
+			inURL:            "https://bucket.with.dots.in.name.s3.us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
+			wantedBucketName: "bucket.with.dots.in.name",
+			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
+		},
+		"success with dots legacy URL": {
+			inURL:            "https://bucket.with.dots.in.name.s3-us-west-2.amazonaws.com/scripts/dns-cert-validator/dd2278811c3",
+			wantedBucketName: "bucket.with.dots.in.name",
+			wantedKey:        "scripts/dns-cert-validator/dd2278811c3",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -402,8 +412,8 @@ func TestS3_ParseURL(t *testing.T) {
 				require.EqualError(t, gotErr, tc.wantError.Error())
 			} else {
 				require.Equal(t, gotErr, nil)
-				require.Equal(t, gotBucketName, tc.wantedBucketName)
-				require.Equal(t, gotKey, tc.wantedKey)
+				require.Equal(t, tc.wantedBucketName, gotBucketName)
+				require.Equal(t, tc.wantedKey, gotKey)
 			}
 		})
 	}
