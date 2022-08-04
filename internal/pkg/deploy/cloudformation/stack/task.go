@@ -31,6 +31,8 @@ const (
 	taskOSParamKey             = "OS"
 	taskArchParamKey           = "Arch"
 
+	TaskOutputS3Bucket = "S3Bucket"
+
 	taskLogRetentionInDays = "1"
 )
 

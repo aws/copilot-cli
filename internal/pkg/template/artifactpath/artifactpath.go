@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"path"
+	"path/filepath"
 )
 
 const (
@@ -46,7 +47,8 @@ func CFNTemplate(key string, content []byte) string {
 // EnvFiles returns the path to store an env file artifact with sha256 of the content..
 // Example: manual/env-files/key/sha.env.
 func EnvFiles(key string, content []byte) string {
-	return path.Join(s3ArtifactDirName, s3ArtifactEnvFilesDirName, key, fmt.Sprintf("%x.env", sha256.Sum256(content)))
+	// use filepath.Base to prevent cryptic errors in the ecs agent for paths like "..\magic.env"
+	return path.Join(s3ArtifactDirName, s3ArtifactEnvFilesDirName, filepath.Base(key), fmt.Sprintf("%x.env", sha256.Sum256(content)))
 }
 
 // CustomResource returns the path to store a custom resource with a sha256 of the contents of the file.

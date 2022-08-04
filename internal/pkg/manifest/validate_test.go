@@ -2020,7 +2020,7 @@ func TestIntRangeBand_validate(t *testing.T) {
 	}{
 		"error if range value is in invalid format": {
 			IntRangeBand: IntRangeBand(*aws.String("")),
-			wantedError:  fmt.Errorf("invalid range value . Should be in format of ${min}-${max}"),
+			wantedError:  fmt.Errorf("invalid range value : valid format is ${min}-${max}"),
 		},
 		"error if range min is greater than max": {
 			IntRangeBand: IntRangeBand(*aws.String("6-4")),

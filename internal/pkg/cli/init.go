@@ -7,6 +7,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
@@ -110,7 +111,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	snsSel := selector.NewDeploySelect(prompt, configStore, deployStore)
 	spin := termprogress.NewSpinner(log.DiagnosticWriter)
 	id := identity.New(defaultSess)
-	deployer := cloudformation.New(defaultSess)
+	deployer := cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +140,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		prog:           spin,
 		prompt:         prompt,
 		identity:       id,
-		appCFN:         cloudformation.New(defaultSess),
+		appCFN:         cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr)),
 		manifestWriter: ws,
 
 		sess: defaultSess,

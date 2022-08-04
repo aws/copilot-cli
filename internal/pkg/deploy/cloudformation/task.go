@@ -27,7 +27,7 @@ func (cf CloudFormation) DeployTask(input *deploy.CreateTaskResourcesInput, opts
 		opt(stack)
 	}
 
-	if err := cf.renderStackChanges(cf.newRenderWorkloadInput(cf.console, stack)); err != nil {
+	if err := cf.executeAndRenderChangeSet(cf.newUpsertChangeSetInput(cf.console, stack)); err != nil {
 		var errChangeSetEmpty *cloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errChangeSetEmpty) {
 			return err
@@ -83,6 +83,12 @@ func (cf CloudFormation) GetTaskStack(taskName string) (*deploy.TaskStackInfo, e
 			info.Env = aws.StringValue(tag.Value)
 		case deploy.TaskTagKey:
 			isTask = true
+		}
+	}
+	for _, out := range desc.Outputs {
+		switch aws.StringValue(out.OutputKey) {
+		case stack.TaskOutputS3Bucket:
+			info.BucketName = aws.StringValue(out.OutputValue)
 		}
 	}
 	if !isTask {

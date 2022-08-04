@@ -5,6 +5,7 @@ package cli
 
 import (
 	"encoding"
+	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 
@@ -325,6 +326,10 @@ type wsAddonManager interface {
 	wlLister
 }
 
+type uploader interface {
+	Upload(bucket, key string, data io.Reader) (string, error)
+}
+
 type bucketEmptier interface {
 	EmptyBucket(bucket string) error
 }
@@ -380,6 +385,7 @@ type appResourcesGetter interface {
 
 type taskDeployer interface {
 	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...awscloudformation.StackOption) error
+	GetTaskStack(taskName string) (*deploy.TaskStackInfo, error)
 }
 
 type taskStackManager interface {
