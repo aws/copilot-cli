@@ -910,7 +910,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				},
 				appVersionGetter:       m.mockVersionGetter,
 				publicCIDRBlocksGetter: m.mockPublicCIDRBlocksGetter,
-				aliasCertValidator:     m.mockValidator,
+				newAliasCertValidator: func(region *string) aliasCertValidator {
+					return m.mockValidator
+				},
 				lbMft: &manifest.LoadBalancedWebService{
 					Workload: manifest.Workload{
 						Name: aws.String(mockName),
