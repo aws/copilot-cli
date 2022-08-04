@@ -280,6 +280,7 @@ Resources:
           AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
           CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k
           TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3 # See https://go.aws/3BIE8CP
           ViewerProtocolPolicy: allow-all # Will need to change with TLS termination and Alias usage
         Enabled: true
         IPV6Enabled: true
@@ -308,7 +309,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb-http'
   PublicHTTPSLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTPS traffic'
@@ -325,7 +326,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb-https'
   InternalLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your internal load balancer allowing HTTP traffic from within the VPC'
@@ -673,6 +674,7 @@ Resources:
                 Resource:
                   - "cert-1"
                   - "cert-2"
+                  - "viewer-cert"
               - Sid: CloudwatchLogs
                 Effect: Allow
                 Action: [

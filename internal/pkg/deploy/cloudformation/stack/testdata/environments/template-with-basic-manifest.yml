@@ -586,7 +586,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb-http'
   PublicHTTPSLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTPS traffic'
@@ -603,7 +603,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb-https'
   InternalLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your internal load balancer allowing HTTP traffic from within the VPC'
