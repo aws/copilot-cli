@@ -20,7 +20,7 @@ var (
 // Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
 	if err := e.EnvironmentConfig.validate(); err != nil {
-		return fmt.Errorf(`validate "network": %w`, err)
+		return fmt.Errorf(`validate environment: %w`, err)
 	}
 	return nil
 }
@@ -43,7 +43,7 @@ func (e EnvironmentConfig) validate() error {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
 	if e.CDNConfig.CDNConfig.Certificate != nil && e.HTTPConfig.Public.Certificates == nil {
-		return errors.New("must import ALB certificates to set cdn.certificate")
+		return errors.New("must import ALB certificates to set \"cdn.certificate\"")
 	}
 
 	if e.HTTPConfig.Private.InternalALBSubnets != nil {
