@@ -1390,11 +1390,17 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	}
 	if hasImportedCerts {
 		aliases, err := d.lbMft.RoutingRule.Alias.ToStringSlice()
+		cdnCert := d.environmentConfig.CDNConfig.CDNConfig.Certificate
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
 		if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
 			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
+		}
+		if cdnCert != nil {
+			if err := d.aliasCertValidator.ValidateCertAliases(aliases, []string{*cdnCert}); err != nil {
+				return fmt.Errorf("validate aliases against the cdn imported certificate for env %s: %w", d.env.Name, err)
+			}
 		}
 		return nil
 	}

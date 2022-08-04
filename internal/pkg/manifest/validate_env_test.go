@@ -187,6 +187,16 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			},
 			wantedError: "CDN must be enabled to limit security group ingress to CloudFront",
 		},
+		"error if cdn cert specified but public certs not specified": {
+			in: EnvironmentConfig{
+				CDNConfig: environmentCDNConfig{
+					CDNConfig: advancedCDNConfig{
+						Certificate: aws.String("mockCDNCertARN"),
+					},
+				},
+			},
+			wantedError: "must import ALB certificates to set cdn.certificate",
+		},
 		"error if subnets specified for internal ALB placement don't exist": {
 			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{

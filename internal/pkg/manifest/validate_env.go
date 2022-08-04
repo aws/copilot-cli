@@ -42,6 +42,9 @@ func (e EnvironmentConfig) validate() error {
 	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
+	if e.CDNConfig.CDNConfig.Certificate != nil && e.HTTPConfig.Public.Certificates == nil {
+		return errors.New("must import ALB certificates to set cdn.certificate")
+	}
 
 	if e.HTTPConfig.Private.InternalALBSubnets != nil {
 		if !e.Network.VPC.imported() {

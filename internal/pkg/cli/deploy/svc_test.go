@@ -447,6 +447,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 	}
 	mockCertARNs := []string{"mockCertARN"}
+	mockCDNCertARN := "mockCDNCertARN"
 	mockResources := &stack.AppRegionalResources{
 		S3Bucket: mockS3Bucket,
 	}
@@ -500,6 +501,29 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			inEnvironmentConfig: func() *manifest.Environment {
 				envConfig := &manifest.Environment{}
 				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				return envConfig
+			},
+			inAliases: manifest.Alias{
+				AdvancedAliases: mockMultiAliases,
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(mockError)
+			},
+			wantErr: fmt.Errorf("validate aliases against the imported certificate for env mockEnv: some error"),
+		},
+		"fail to validate cdn certificate aliases": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-east-1",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				envConfig.CDNConfig.CDNConfig.Certificate = aws.String(mockCDNCertARN)
 				return envConfig
 			},
 			inAliases: manifest.Alias{
