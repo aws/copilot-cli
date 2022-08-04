@@ -198,7 +198,7 @@ func (cfg *environmentCDNConfig) IsEmpty() bool {
 	return cfg.Enabled == nil && cfg.CDNConfig.isEmpty()
 }
 
-// IsEmpty is a no-op for advancedCDNConfig.
+// isEmpty returns whether advancedCDNConfig is empty.
 func (cfg *advancedCDNConfig) isEmpty() bool {
 	return cfg.Certificate == nil
 }
