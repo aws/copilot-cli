@@ -176,9 +176,9 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\ncdn: true\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\ncdn: true\n", nil)
-				m.describer.EXPECT().ValidateCFServiceDomainAliases().Return(fmt.Errorf("all services deployed in an environment with CloudFront enabled must have http.alias specified"))
+				m.describer.EXPECT().ValidateCFServiceDomainAliases().Return(fmt.Errorf("mock error"))
 			},
-			wantedErr: errors.New("all services deployed in an environment with CloudFront enabled must have http.alias specified"),
+			wantedErr: errors.New("mock error"),
 		},
 		"fail to get caller identity": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
@@ -225,7 +225,6 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.deployer.EXPECT().UploadArtifacts().Return(map[string]string{
 					"mockResource": "mockURL",
 				}, nil)
-				m.describer.EXPECT().ValidateCFServiceDomainAliases().Return(nil).Times(0)
 				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).DoAndReturn(func(in *deploy.DeployEnvironmentInput) error {
 					require.Equal(t, in.RootUserARN, "mockRootUserARN")
 					require.Equal(t, in.CustomResourcesURLs, map[string]string{

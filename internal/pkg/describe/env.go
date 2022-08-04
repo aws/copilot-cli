@@ -317,9 +317,8 @@ func (d *EnvDescriber) filterDeployedJobs() ([]*config.Workload, error) {
 	return deployedJobs, nil
 }
 
-// ValidateCFServiceDomainAliases returns error if an environment using cdn is deployed without specifying http.alias for all services
+// ValidateCFServiceDomainAliases returns error if an environment using cdn is deployed without specifying http.alias for all load-balanced web services
 func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
-
 	stackDescr, err := d.cfn.Describe()
 	if err != nil {
 		return fmt.Errorf("describe stack: %w", err)
@@ -341,7 +340,7 @@ func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
 	if err != nil {
 		return fmt.Errorf("unmarshal %q: %w", jsonOutput, err)
 	}
-	lbSvcsWithoutAlias := make([]string, 0)
+	var lbSvcsWithoutAlias []string
 	for _, service := range services {
 		if _, ok := aliases[service]; !ok {
 			lbSvcsWithoutAlias = append(lbSvcsWithoutAlias, service)
