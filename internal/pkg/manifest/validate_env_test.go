@@ -195,7 +195,20 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: "must import ALB certificates to set cdn.certificate",
+			wantedError: "must import ALB certificates to set \"cdn.certificate\"",
+		},
+		"error if cdn cert not specified but public certs imported": {
+			in: EnvironmentConfig{
+				CDNConfig: environmentCDNConfig{
+					Enabled: aws.Bool(true),
+				},
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
+					},
+				},
+			},
+			wantedError: "must set \"cdn.certificate\" to import ALB certificates with CDN enabled",
 		},
 		"error if subnets specified for internal ALB placement don't exist": {
 			in: EnvironmentConfig{
