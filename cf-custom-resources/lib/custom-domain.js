@@ -81,8 +81,8 @@ let report = function (
  * it is corresponding hosted zone is not managable by Copilot.
  *
  * @param {string} aliases the custom domain aliases
- * @param {string} lbDNS DNS of the load balancer
- * @param {string} lbHostedZone Hosted Zone of the load balancer
+ * @param {string} accessDNS DNS of the public access
+ * @param {string} accessHostedZone Hosted Zone of the public access
  * @param {string} rootDnsRole the IAM role ARN that can manage domainName
  * @param {string} aliasTypes the alias type
  */
@@ -90,8 +90,8 @@ const writeCustomDomainRecord = async function (
   appRoute53,
   envRoute53,
   aliases,
-  lbDNS,
-  lbHostedZone,
+  accessDNS,
+  accessHostedZone,
   aliasTypes,
   action
 ) {
@@ -102,8 +102,8 @@ const writeCustomDomainRecord = async function (
         await writeARecord(
           envRoute53,
           alias,
-          lbDNS,
-          lbHostedZone,
+          accessDNS,
+          accessHostedZone,
           aliasType.domain,
           action
         );
@@ -112,8 +112,8 @@ const writeCustomDomainRecord = async function (
         await writeARecord(
           appRoute53,
           alias,
-          lbDNS,
-          lbHostedZone,
+          accessDNS,
+          accessHostedZone,
           aliasType.domain,
           action
         );
@@ -122,8 +122,8 @@ const writeCustomDomainRecord = async function (
         await writeARecord(
           appRoute53,
           alias,
-          lbDNS,
-          lbHostedZone,
+          accessDNS,
+          accessHostedZone,
           aliasType.domain,
           action
         );
@@ -137,8 +137,8 @@ const writeCustomDomainRecord = async function (
 const writeARecord = async function (
   route53,
   alias,
-  lbDNS,
-  lbHostedZone,
+  accessDNS,
+  accessHostedZone,
   domain,
   action
 ) {
@@ -163,8 +163,8 @@ const writeARecord = async function (
     hostedZoneId,
     action,
     alias,
-    lbDNS,
-    lbHostedZone
+    accessDNS,
+    accessHostedZone
   );
   await waitForRecordChange(route53, changeBatch.ChangeInfo.Id);
 };
@@ -211,8 +211,8 @@ exports.handler = async function (event, context) {
           appRoute53,
           envRoute53,
           aliases,
-          props.LoadBalancerDNS,
-          props.LoadBalancerHostedZone,
+          props.PublicAccessDNS,
+          props.PublicAccessHostedZone,
           aliasTypes,
           "UPSERT"
         );
@@ -222,8 +222,8 @@ exports.handler = async function (event, context) {
           appRoute53,
           envRoute53,
           aliases,
-          props.LoadBalancerDNS,
-          props.LoadBalancerHostedZone,
+          props.PublicAccessDNS,
+          props.PublicAccessHostedZone,
           aliasTypes,
           "UPSERT"
         );
@@ -239,8 +239,8 @@ exports.handler = async function (event, context) {
           appRoute53,
           envRoute53,
           aliasesToDelete,
-          props.LoadBalancerDNS,
-          props.LoadBalancerHostedZone,
+          props.PublicAccessDNS,
+          props.PublicAccessHostedZone,
           aliasTypes,
           "DELETE"
         );
@@ -250,8 +250,8 @@ exports.handler = async function (event, context) {
           appRoute53,
           envRoute53,
           aliases,
-          props.LoadBalancerDNS,
-          props.LoadBalancerHostedZone,
+          props.PublicAccessDNS,
+          props.PublicAccessHostedZone,
           aliasTypes,
           "DELETE"
         );
@@ -323,8 +323,8 @@ const updateRecords = function (
   hostedZone,
   action,
   alias,
-  lbDNS,
-  lbHostedZone
+  accessDNS,
+  accessHostedZone
 ) {
   return route53
     .changeResourceRecordSets({
@@ -336,8 +336,8 @@ const updateRecords = function (
               Name: alias,
               Type: "A",
               AliasTarget: {
-                HostedZoneId: lbHostedZone,
-                DNSName: lbDNS,
+                HostedZoneId: accessHostedZone,
+                DNSName: accessDNS,
                 EvaluateTargetHealth: true,
               },
             },
