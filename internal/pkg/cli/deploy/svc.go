@@ -366,10 +366,9 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		publicCIDRBlocksGetter: envDescriber,
 		lbMft:                  lbMft,
 		newAliasCertValidator: func(region *string) aliasCertValidator {
-			sess := svcDeployer.envSess.Copy()
-			if region != nil {
-				sess.Config.Region = region
-			}
+			sess := svcDeployer.envSess.Copy(&aws.Config{
+				Region: region,
+			})
 			return acm.New(sess)
 		},
 		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
@@ -1396,12 +1395,13 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	}
 	if hasImportedCerts {
 		aliases, err := d.lbMft.RoutingRule.Alias.ToStringSlice()
-		cdnCert := d.environmentConfig.CDNConfig.CDNConfig.Certificate
-		defaultValidator := d.newAliasCertValidator(nil)
-		cfValidator := d.newAliasCertValidator(aws.String("us-east-1")) // make us-east-1 a constant somewhere
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
+
+		cdnCert := d.environmentConfig.CDNConfig.CDNConfig.Certificate
+		defaultValidator := d.newAliasCertValidator(nil)
+		cfValidator := d.newAliasCertValidator(aws.String(envCloudFrontCertRegion))
 		if err := defaultValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
 			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
 		}
