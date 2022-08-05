@@ -535,8 +535,8 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			defer ctrl.Finish()
 
 			addons := mocks.NewMockaddons(ctrl)
-			addons.EXPECT().Parameters().Return("", &addon.ErrAddonsNotFound{})
-			addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+			addons.EXPECT().Parameters().Return("", nil)
+			addons.EXPECT().Template().Return("", nil)
 
 			// parse files
 			manifestBytes, err := ioutil.ReadFile(tc.ManifestPath)

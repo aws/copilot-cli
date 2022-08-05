@@ -79,6 +79,10 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 		addons, err := addon.New(aws.StringValue(v.Name))
 		require.NoError(t, err)
 
+		addonsStack, err := addons.Stack()
+		var notFound *addon.ErrAddonsNotFound
+		require.ErrorAs(t, err, &notFound)
+
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		envConfig := &manifest.Environment{
 			Workload: manifest.Workload{
@@ -95,7 +99,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 				Region:                   "us-west-2",
 			},
 			RootUserARN: "arn:aws:iam::123456789123:root",
-			Addons:      addons,
+			Addons:      addonsStack,
 		}, stack.WithNLB([]string{"10.0.0.0/24", "10.1.0.0/24"}))
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")

@@ -79,6 +79,10 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		addons, err := addon.New(aws.StringValue(v.Name))
 		require.NoError(t, err)
 
+		addonsStack, err := addons.Stack()
+		var notFound *addon.ErrAddonsNotFound
+		require.ErrorAs(t, err, &notFound)
+
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		envConfig := &manifest.Environment{
 			Workload: manifest.Workload{
@@ -95,7 +99,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				AccountID:                "123456789123",
 				Region:                   "us-west-2",
 			},
-			Addons: addons,
+			Addons: addonsStack,
 		})
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")

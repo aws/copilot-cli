@@ -48,6 +48,10 @@ func Test_Stack_Local_Integration(t *testing.T) {
 	addons, err := addon.New(aws.StringValue(v.Name))
 	require.NoError(t, err)
 
+	addonsStack, err := addons.Stack()
+	var notFound *addon.ErrAddonsNotFound
+	require.ErrorAs(t, err, &notFound)
+
 	envConfig := &manifest.Environment{
 		Workload: manifest.Workload{
 			Name: &envName,
@@ -64,7 +68,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 				ImageTag: imageTag,
 			},
 		},
-		Addons: addons,
+		Addons: addonsStack,
 	})
 	require.NoError(t, err)
 	tpl, err := serializer.Template()

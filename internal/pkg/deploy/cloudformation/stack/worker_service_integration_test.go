@@ -45,6 +45,10 @@ func TestWorkerService_Template(t *testing.T) {
 	addons, err := addon.New(aws.StringValue(v.Name))
 	require.NoError(t, err)
 
+	addonsStack, err := addons.Stack()
+	var notFound *addon.ErrAddonsNotFound
+	require.ErrorAs(t, err, &notFound)
+
 	serializer, err := stack.NewWorkerService(stack.WorkerServiceConfig{
 		App:         appName,
 		Env:         envName,
@@ -55,7 +59,7 @@ func TestWorkerService_Template(t *testing.T) {
 			AccountID:                "123456789123",
 			Region:                   "us-west-2",
 		},
-		Addons: addons,
+		Addons: addonsStack,
 	})
 
 	tpl, err := serializer.Template()

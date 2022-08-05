@@ -67,7 +67,7 @@ type Stack struct {
 func (a *Addons) Stack() (*Stack, error) {
 	fnames, err := a.ws.ReadAddonsDir(a.wlName)
 	if err != nil {
-		return &Stack{}, &ErrAddonsNotFound{
+		return nil, &ErrAddonsNotFound{
 			WlName:    a.wlName,
 			ParentErr: err,
 		}
@@ -90,7 +90,7 @@ func (a *Addons) Stack() (*Stack, error) {
 }
 
 func (s *Stack) Template() (string, error) {
-	if s.template == nil {
+	if s == nil || s.template == nil {
 		return "", nil
 	}
 
@@ -98,7 +98,7 @@ func (s *Stack) Template() (string, error) {
 }
 
 func (s *Stack) Parameters() (string, error) {
-	if s.parameters.IsZero() {
+	if s == nil || s.parameters.IsZero() {
 		return "", nil
 	}
 

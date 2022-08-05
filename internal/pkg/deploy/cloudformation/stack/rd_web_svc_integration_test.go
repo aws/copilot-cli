@@ -54,6 +54,10 @@ func TestRDWS_Template(t *testing.T) {
 		addons, err := addon.New(aws.StringValue(v.Name))
 		require.NoError(t, err)
 
+		addonsStack, err := addons.Stack()
+		var notFound *addon.ErrAddonsNotFound
+		require.ErrorAs(t, err, &notFound)
+
 		// Read wanted stack template.
 		wantedTemplate, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", tc.svcStackPath))
 		require.NoError(t, err, "read cloudformation stack")
@@ -69,7 +73,7 @@ func TestRDWS_Template(t *testing.T) {
 				AccountID: "123456789123",
 				Region:    "us-west-2",
 			},
-			Addons: addons,
+			Addons: addonsStack,
 		})
 		require.NoError(t, err, "create rdws serializer")
 		actualTemplate, err := serializer.Template()
