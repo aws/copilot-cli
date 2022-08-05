@@ -214,17 +214,17 @@ func (m *MockstackBuilder) EXPECT() *MockstackBuilderMockRecorder {
 }
 
 // Package mocks base method.
-func (m *MockstackBuilder) Package(o addon.PackageConfig) error {
+func (m *MockstackBuilder) Package(arg0 addon.PackageConfig) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Package", o)
+	ret := m.ctrl.Call(m, "Package", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Package indicates an expected call of Package.
-func (mr *MockstackBuilderMockRecorder) Package(o interface{}) *gomock.Call {
+func (mr *MockstackBuilderMockRecorder) Package(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Package", reflect.TypeOf((*MockstackBuilder)(nil).Package), o)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Package", reflect.TypeOf((*MockstackBuilder)(nil).Package), arg0)
 }
 
 // Parameters mocks base method.
