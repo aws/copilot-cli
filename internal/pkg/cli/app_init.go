@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -26,10 +27,6 @@ import (
 )
 
 const (
-	fmtAppInitStart    = "Creating the infrastructure to manage services and jobs under application %s."
-	fmtAppInitComplete = "Created the infrastructure to manage services and jobs under application %s.\n\n"
-	fmtAppInitFailed   = "Failed to create the infrastructure to manage services and jobs under application %s.\n\n"
-
 	fmtAppInitNamePrompt    = "What would you like to %s your application?"
 	fmtAppInitNewNamePrompt = `Ok, let's create a new application then.
   What would you like to %s your application?`
@@ -76,7 +73,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		route53:          route53.New(sess),
 		domainInfoGetter: route53.NewRoute53Domains(sess),
 		ws:               ws,
-		cfn:              cloudformation.New(sess),
+		cfn:              cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 		prompt:           prompt.New(),
 		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
 		isSessionFromEnvVars: func() (bool, error) {
@@ -183,7 +180,6 @@ func (o *initAppOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("create new workspace with application name %s: %w", o.name, err)
 	}
-	o.prog.Start(fmt.Sprintf(fmtAppInitStart, color.HighlightUserInput(o.name)))
 	var hostedZoneID string
 	if o.domainName != "" {
 		hostedZoneID, err = o.domainHostedZoneID(o.domainName)
@@ -200,10 +196,8 @@ func (o *initAppOpts) Execute() error {
 		Version:            deploy.LatestAppTemplateVersion,
 	})
 	if err != nil {
-		o.prog.Stop(log.Serrorf(fmtAppInitFailed, color.HighlightUserInput(o.name)))
 		return err
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAppInitComplete, color.HighlightUserInput(o.name)))
 
 	if err := o.store.CreateApplication(&config.Application{
 		AccountID:          caller.Account,

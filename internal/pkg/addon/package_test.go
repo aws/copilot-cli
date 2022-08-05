@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -61,6 +62,7 @@ func TestPackage(t *testing.T) {
 	tests := map[string]struct {
 		inTemplate  string
 		outTemplate string
+		pkgError    string
 		setupMocks  func(m addonMocks)
 	}{
 		"AWS::Lambda::Function, zipped file": {
@@ -78,7 +80,7 @@ Resources:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
-      Role: !GetAtt "HelloWorldRole.Arn"
+      Role: !GetAtt "TestRole.Arn"
       Runtime: nodejs12.x
 `,
 			outTemplate: `
@@ -94,7 +96,7 @@ Resources:
       Handler: "index.handler"
       Timeout: 900
       MemorySize: 512
-      Role: !GetAtt "HelloWorldRole.Arn"
+      Role: !GetAtt "TestRole.Arn"
       Runtime: nodejs12.x
 `,
 		},
@@ -201,6 +203,185 @@ Resources:
       ResponseMappingTemplateS3Location: s3://mockBucket/hjkl
 `,
 		},
+		"Fn::Transform in lambda function": {
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+				m.uploader.EXPECT().Upload(bucket, lambdaZipS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "hjkl"), nil)
+			},
+			inTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "hihi": "byebye"
+    Type: AWS::Lambda::Function
+    Properties:
+      Fn::Transform:
+        # test comment uno
+        Name: "AWS::Include"
+        Parameters:
+          # test comment dos
+          Location: ./lambda/index.js
+      Code: lambda
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt "TestRole.Arn"
+      Runtime: nodejs12.x
+`,
+			outTemplate: `
+Resources:
+  Test:
+    Metadata:
+      "hihi": "byebye"
+    Type: AWS::Lambda::Function
+    Properties:
+      Fn::Transform:
+        # test comment uno
+        Name: "AWS::Include"
+        Parameters:
+          # test comment dos
+          Location: s3://mockBucket/asdf
+      Code:
+        S3Bucket: mockBucket
+        S3Key: hjkl
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt "TestRole.Arn"
+      Runtime: nodejs12.x
+`,
+		},
+		"Fn::Transform nested in a yaml mapping and sequence node": {
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil).Times(2)
+			},
+			inTemplate: `
+Resources:
+  Test:
+    Type: AWS::Fake::Resource
+    Properties:
+      SequenceProperty:
+        - KeyOne: ValOne
+          KeyTwo: ValTwo
+        - Fn::Transform:
+            Name: "AWS::Include"
+            Parameters:
+              Location: ./lambda/index.js
+      MappingProperty:
+        KeyOne: ValOne
+        Fn::Transform:
+          Name: "AWS::Include"
+          Parameters:
+            Location: ./lambda/index.js
+`,
+			outTemplate: `
+Resources:
+  Test:
+    Type: AWS::Fake::Resource
+    Properties:
+      SequenceProperty:
+        - KeyOne: ValOne
+          KeyTwo: ValTwo
+        - Fn::Transform:
+            Name: "AWS::Include"
+            Parameters:
+              Location: s3://mockBucket/asdf
+      MappingProperty:
+        KeyOne: ValOne
+        Fn::Transform:
+          Name: "AWS::Include"
+          Parameters:
+            Location: s3://mockBucket/asdf
+`,
+		},
+		"Fn::Transform ignores top level Transform": {
+			// example from https://medium.com/swlh/using-the-cloudformation-aws-include-macro-9e3056cf75b0
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, indexFileS3Path, gomock.Any()).Return(s3.URL("us-west-2", "chris.hare", "common-tags.yaml"), nil)
+			},
+			inTemplate: `
+Parameters:
+  CreatedBy:
+    Type: String
+    Description: Email address of the person creating the resource.
+Transform:
+  Name: 'AWS::Include'
+  Parameters:
+    Location: 's3://chris.hare/alb-cw-mapping.yaml'
+Resources:
+  bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Fn::Transform:
+        Name: 'AWS::Include'
+        Parameters:
+          Location: './lambda/index.js'
+Outputs:
+  bucketDomainName:
+    Value: !GetAtt bucket.DomainName
+  bucket:
+    Value: !Ref bucket
+`,
+			outTemplate: `
+Parameters:
+  CreatedBy:
+    Type: String
+    Description: Email address of the person creating the resource.
+Transform:
+  Name: 'AWS::Include'
+  Parameters:
+    Location: 's3://chris.hare/alb-cw-mapping.yaml'
+Resources:
+  bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Fn::Transform:
+        Name: 'AWS::Include'
+        Parameters:
+          Location: 's3://chris.hare/common-tags.yaml'
+Outputs:
+  bucketDomainName:
+    Value: !GetAtt bucket.DomainName
+  bucket:
+    Value: !Ref bucket
+`,
+		},
+		"error on file not existing": {
+			inTemplate: `
+Resources:
+  Test:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: does/not/exist.js
+`,
+			pkgError: `package property "Code" of "Test": upload asset: stat: open /does/not/exist.js: file does not exist`,
+		},
+		"error on file upload error": {
+			setupMocks: func(m addonMocks) {
+				m.uploader.EXPECT().Upload(bucket, indexZipS3Path, gomock.Any()).Return("", errors.New("mockError"))
+			},
+			inTemplate: `
+Resources:
+  Test:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: lambda/index.js
+`,
+			pkgError: `package property "Code" of "Test": upload asset: upload /lambda/index.js to s3 bucket mockBucket: mockError`,
+		},
+		"error on file not existing for Fn::Transform": {
+			inTemplate: `
+Resources:
+  Test:
+    Type: AWS::Lambda::Function
+    Properties:
+      Fn::Transform:
+        Name: "AWS::Include"
+        Parameters:
+          Location: does/not/exist.yml
+`,
+			pkgError: `package transforms: upload asset: stat: open /does/not/exist.yml: file does not exist`,
+		},
 	}
 
 	for name, tc := range tests {
@@ -230,7 +411,13 @@ Resources:
 			err := yaml.Unmarshal([]byte(tc.inTemplate), tmpl)
 			require.NoError(t, err)
 
-			require.NoError(t, tmpl.pkg(a))
+			err = tmpl.pkg(a)
+			if tc.pkgError != "" {
+				require.EqualError(t, err, tc.pkgError)
+				return
+			}
+
+			require.NoError(t, err)
 
 			buf := &bytes.Buffer{}
 			enc := yaml.NewEncoder(buf)
