@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -88,7 +89,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		store:         config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region)),
 		ws:            ws,
 		sessProvider:  provider,
-		cfn:           cloudformation.New(defaultSession),
+		cfn:           cloudformation.New(defaultSession, cloudformation.WithProgressTracker(os.Stderr)),
 		prompt:        prompt.New(),
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
