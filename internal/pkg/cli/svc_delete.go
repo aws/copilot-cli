@@ -8,6 +8,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -37,9 +38,6 @@ const (
 )
 
 const (
-	fmtSvcDeleteStart             = "Deleting service %s from environment %s."
-	fmtSvcDeleteFailed            = "Failed to delete service %s from environment %s: %v.\n"
-	fmtSvcDeleteComplete          = "Deleted service %s from environment %s.\n"
 	fmtSvcDeleteResourcesStart    = "Deleting resources of service %s from application %s."
 	fmtSvcDeleteResourcesFailed   = "Failed to delete resources of service %s from application %s.\n"
 	fmtSvcDeleteResourcesComplete = "Deleted resources of service %s from application %s.\n"
@@ -87,9 +85,9 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		prompt:  prompter,
 		sess:    sessProvider,
 		sel:     selector.NewConfigSelector(prompter, store),
-		appCFN:  cloudformation.New(defaultSession),
+		appCFN:  cloudformation.New(defaultSession, cloudformation.WithProgressTracker(os.Stderr)),
 		getSvcCFN: func(session *awssession.Session) wlDeleter {
-			return cloudformation.New(session)
+			return cloudformation.New(session, cloudformation.WithProgressTracker(os.Stderr))
 		},
 		getECR: func(session *awssession.Session) imageRemover {
 			return ecr.New(session)
@@ -261,16 +259,13 @@ func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
 		}
 
 		cfClient := o.getSvcCFN(sess)
-		o.spinner.Start(fmt.Sprintf(fmtSvcDeleteStart, o.name, env.Name))
 		if err := cfClient.DeleteWorkload(deploy.DeleteWorkloadInput{
 			Name:    o.name,
 			EnvName: env.Name,
 			AppName: o.appName,
 		}); err != nil {
-			o.spinner.Stop(log.Serrorf(fmtSvcDeleteFailed, o.name, env.Name, err))
 			return fmt.Errorf("delete service: %w", err)
 		}
-		o.spinner.Stop(log.Ssuccessf(fmtSvcDeleteComplete, o.name, env.Name))
 	}
 	return nil
 }
