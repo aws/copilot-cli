@@ -76,7 +76,8 @@ var (
 		"vpc-resources",
 		"nat-gateways",
 		"bootstrap-resources",
-		"s3-elb-access-logs",
+		"elb-access-logs",
+		"mappings-regional-configs",
 	}
 )
 

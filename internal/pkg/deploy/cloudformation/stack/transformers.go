@@ -365,7 +365,6 @@ func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessL
 		return nil, nil
 	}
 
-	var bucketName string
 	bucketPrefix := defaultBucketPrefix
 
 	if elbAccessLogsArgs == nil { // if default ELB access logs has been defined using access_logs: true.
@@ -373,17 +372,14 @@ func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessL
 			BucketPrefix: bucketPrefix,
 		}, nil
 	}
-	if elbAccessLogsArgs.BucketName != nil {
-		bucketName = aws.StringValue(elbAccessLogsArgs.BucketName)
-	}
 	if elbAccessLogsArgs.BucketPrefix != nil {
 		bucketPrefix = aws.StringValue(elbAccessLogsArgs.BucketPrefix)
 	}
 
 	return &template.ELBAccessLogs{
-		BucketName:   bucketName,
+		BucketName:   aws.StringValue(elbAccessLogsArgs.BucketName),
 		BucketPrefix: bucketPrefix,
-  }, nil
+	}, nil
 }
 
 func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {

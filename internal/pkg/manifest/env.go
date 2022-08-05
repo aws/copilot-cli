@@ -472,14 +472,14 @@ func (al *ELBAccessLogsArgsOrBool) isEmpty() bool {
 // AccessLogs returns the access logs config if the user has set any values.
 // If there is no access logs settings, then returns nil and false.
 func (cfg *EnvironmentConfig) ELBAccessLogs() (*ELBAccessLogsArgs, bool) {
-	if isEmpty := cfg.HTTPConfig.Public.ELBAccessLogs.isEmpty(); !isEmpty {
-		if cfg.HTTPConfig.Public.ELBAccessLogs.EnableAccessLogs != nil {
-			return nil, true
-		} else {
-			return &cfg.HTTPConfig.Public.ELBAccessLogs.ELBAccessLogsArgs, true
-		}
+	accessLogs := cfg.HTTPConfig.Public.ELBAccessLogs
+	if accessLogs.isEmpty() {
+		return nil, false
 	}
-	return nil, false
+	if accessLogs.EnableAccessLogs != nil {
+		return nil, true
+	}
+	return &accessLogs.ELBAccessLogsArgs, true
 }
 
 // ALBSecurityGroupsConfig represents security group configuration settings for an ALB.

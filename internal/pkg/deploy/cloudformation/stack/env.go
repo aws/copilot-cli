@@ -362,14 +362,14 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 }
 
 func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
-	ELBAccessLogsConfig, err := convertELBAccessLogsConfig(e.in.Mft)
+	elbAccessLogsConfig, err := convertELBAccessLogsConfig(e.in.Mft)
 	if err != nil {
 		return template.HTTPConfig{}, err
 	}
 	return template.HTTPConfig{
 		CIDRPrefixListIDs: e.in.CIDRPrefixListIDs,
 		ImportedCertARNs:  e.importPublicCertARNs(),
-		ELBAccessLogs:     ELBAccessLogsConfig,
+		ELBAccessLogs:     elbAccessLogsConfig,
 	}, nil
 }
 

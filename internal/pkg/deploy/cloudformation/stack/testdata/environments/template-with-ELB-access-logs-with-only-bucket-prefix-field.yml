@@ -76,83 +76,57 @@ Conditions:
 Mappings:
   RegionalConfigs:
     us-east-1:
-      ELBAccountId: '127311923021'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '127311923021'
     us-east-2:
-      ELBAccountId: '033677994240'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '033677994240'
     us-west-1:
-      ELBAccountId: '027434742980'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '027434742980'
     us-west-2:
-      ELBAccountId: '797873946194'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '797873946194'
     af-south-1:
-      ELBAccountId: '098369216593'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '098369216593'
     ca-central-1:
-      ELBAccountId: '985666609251'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '985666609251'
     eu-central-1:
-      ELBAccountId: '054676820928'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '054676820928'
     eu-west-1:
-      ELBAccountId: '156460612806'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '156460612806'
     eu-west-2:
-      ELBAccountId: '652711504416'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '652711504416'
     eu-south-1:
-      ELBAccountId: '635631232127'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '635631232127'
     eu-west-3:
-      ELBAccountId: '009996457667'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '009996457667'
     eu-north-1:
-      ELBAccountId: '897822967062'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '897822967062'
     ap-east-1:
-      ELBAccountId: '754344448648'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '754344448648'
     ap-northeast-1:
-      ELBAccountId: '582318560864'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '582318560864'
     ap-northeast-2:
-      ELBAccountId: '600734575887'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '600734575887'
     ap-northeast-3:
-      ELBAccountId: '383597477331'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '383597477331'
     ap-southeast-1:
-      ELBAccountId: '114774131450'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '114774131450'
     ap-southeast-2:
-      ELBAccountId: '783225319266'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '783225319266'
     ap-southeast-3:
-      ELBAccountId: '589379963580'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '589379963580'
     ap-south-1:
-      ELBAccountId: '718504428378'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '718504428378'
     me-south-1:
-      ELBAccountId: '076674570225'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '076674570225'
     sa-east-1:
-      ELBAccountId: '507241528517'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '507241528517'
     us-gov-west-1:
-      ELBAccountId: '048591011584'
-      ArnPrefix: 'arn:aws-us-gov:'
+      ElbAccountId: '048591011584'
     us-gov-east-1:
-      ELBAccountId: '190560391635'
-      ArnPrefix: 'arn:aws-us-gov:'
+      ElbAccountId: '190560391635'
     cn-north-1:
-      ELBAccountId: '638102146993'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '638102146993'
     cn-northwest-1:
-      ELBAccountId: '037604701340'
-      ArnPrefix: 'arn:aws:'
+      ElbAccountId: '037604701340'
 Resources:
   VPC:
     Metadata:
@@ -449,7 +423,7 @@ Resources:
                   - !Ref AWS::AccountId
                   - '/*'
             Principal:
-              AWS: !Join [ "", [ "arn:aws:iam::", !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ELBAccountId ], ":root" ] ]
+              AWS: !Join [ "", [ !Ref 'arn:${AWS::Partition}:iam::', !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ELBAccountId ], ":root" ] ]
   EnvironmentHTTPSSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: ExportHTTPSListener

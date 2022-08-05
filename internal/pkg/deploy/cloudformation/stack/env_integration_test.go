@@ -33,7 +33,6 @@ type: Environment
 cdn: true
 http:
   public:
-    access_logs: true
     security_groups:
       ingress:
         restrict_to:
@@ -70,6 +69,36 @@ observability:
 				}
 			}(),
 			wantedFileName: "template-with-imported-certs-observability.yml",
+		},
+		"generate template with default access logs": {
+			input: func() *deploy.CreateEnvironmentInput {
+				rawMft := `name: test
+type: Environment
+http:
+  public:
+    access_logs: true`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+					},
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
+				}
+			}(),
+			wantedFileName: "template-with-default-access-log-config.yml",
 		},
 		"generate template with embedded manifest file with advanced access logs config": {
 			input: func() *deploy.CreateEnvironmentInput {

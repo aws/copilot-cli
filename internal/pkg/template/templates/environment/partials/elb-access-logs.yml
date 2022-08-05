@@ -17,20 +17,19 @@ ELBAccessLogsBucketPolicy:
                 - !Ref AWS::Partition
                 - ':s3:::'
                 - !Ref ELBAccessLogsBucket
+                {{- if .BucketPrefix }}
                 - '/'
-                - {{ .BucketPrefix }}
+                - {{.BucketPrefix }}
+                {{- end }}
                 - '/AWSLogs/'
                 - !Ref AWS::AccountId
                 - '/*'
           Principal:
-            AWS: !Join [ "", [  "arn:aws:iam::", !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ELBAccountId ], ":root" ] ]
+            AWS: !Join [ "", [ !Ref 'arn:${AWS::Partition}:iam::', !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ELBAccountId ], ":root" ] ]
 ELBAccessLogsBucket:
   Type: AWS::S3::Bucket
   Condition: CreateALB
   Properties:
-    {{- if .BucketName}}
-    BucketName: {{ .BucketName }}
-    {{- end }}
     VersioningConfiguration:
       Status: Enabled
     BucketEncryption:
