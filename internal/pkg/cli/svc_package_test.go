@@ -342,7 +342,7 @@ func TestPackageSvcOpts_RecommendedActions(t *testing.T) {
 					envName: "mockEnv",
 				},
 				envFeaturesDescriber: m.envFeaturesDescriber,
-				appliedManifest:      m.mft,
+				appliedDynamicMft:    m.mft,
 			}
 			got := opts.RecommendActions()
 			if tc.wantedError != nil {

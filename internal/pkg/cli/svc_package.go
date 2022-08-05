@@ -66,11 +66,11 @@ type packageSvcOpts struct {
 	envFeaturesDescriber versionCompatibilityChecker
 
 	// cached variables
-	targetApp       *config.Application
-	targetEnv       *config.Environment
-	envSess         *session.Session
-	appliedManifest manifest.DynamicWorkload
-	rootUserARN     string
+	targetApp         *config.Application
+	targetEnv         *config.Environment
+	envSess           *session.Session
+	appliedDynamicMft manifest.DynamicWorkload
+	rootUserARN       string
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
@@ -119,7 +119,7 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
 
-	content := o.appliedManifest.Manifest()
+	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadStackGenerator
 	in := clideploy.WorkloadDeployerInput{
 		SessionProvider:   o.sessProvider,
@@ -311,7 +311,7 @@ func (o *packageSvcOpts) getStackGenerator(env *config.Environment) (workloadSta
 	if err != nil {
 		return nil, err
 	}
-	o.appliedManifest = mft
+	o.appliedDynamicMft = mft
 	return o.newStackGenerator(o)
 }
 
@@ -419,7 +419,7 @@ func (o *packageSvcOpts) writeAndClose(wc io.WriteCloser, dat string) error {
 
 // RecommendActions suggests recommended actions before the packaged template is used for deployment.
 func (o *packageSvcOpts) RecommendActions() error {
-	return validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, o.appliedManifest, o.envName)
+	return validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, o.appliedDynamicMft, o.envName)
 }
 
 func contains(s string, items []string) bool {

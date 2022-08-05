@@ -43,11 +43,11 @@ type deployJobOpts struct {
 	sel                  wsSelector
 
 	// cached variables
-	targetApp       *config.Application
-	targetEnv       *config.Environment
-	envSess         *session.Session
-	appliedManifest manifest.DynamicWorkload
-	rootUserARN     string
+	targetApp         *config.Application
+	targetEnv         *config.Environment
+	envSess           *session.Session
+	appliedDynamicMft manifest.DynamicWorkload
+	rootUserARN       string
 }
 
 func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
@@ -86,7 +86,7 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
-	content := o.appliedManifest.Manifest()
+	content := o.appliedDynamicMft.Manifest()
 	in := deploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
 		Name:            o.name,
@@ -157,7 +157,7 @@ func (o *deployJobOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	o.appliedManifest = mft
+	o.appliedDynamicMft = mft
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
 	}
