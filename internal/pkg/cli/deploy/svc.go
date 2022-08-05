@@ -1401,7 +1401,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 
 		cdnCert := d.environmentConfig.CDNConfig.Config.Certificate
 		albCertValidator := d.newAliasCertValidator(nil)
-		cfCertValidator := d.newAliasCertValidator(aws.String(envCloudFrontCertRegion))
+		cfCertValidator := d.newAliasCertValidator(aws.String(manifest.EnvCloudFrontCertRegion))
 		if err := albCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
 			return fmt.Errorf("validate aliases against the imported public ALB certificate for env %s: %w", d.env.Name, err)
 		}

@@ -17,6 +17,10 @@ import (
 // EnvironmentManifestType identifies that the type of manifest is environment manifest.
 const EnvironmentManifestType = "Environment"
 
+const (
+	EnvCloudFrontCertRegion = "us-east-1"
+)
+
 var environmentManifestPath = "environment/manifest.yml"
 
 // Error definitions.

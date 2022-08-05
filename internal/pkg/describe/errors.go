@@ -28,6 +28,6 @@ type errLBWebSvcsOnCFWithoutAlias struct {
 
 // Error implements the error interface.
 func (err *errLBWebSvcsOnCFWithoutAlias) Error() string {
-	return fmt.Sprintf("%v %v must have %q specified when CloudFront is enabled", english.PluralWord(len(err.services), "service", "services"),
+	return fmt.Sprintf("%s %s must have %q specified when CloudFront is enabled", english.PluralWord(len(err.services), "service", "services"),
 		english.WordSeries(template.QuoteSliceFunc(err.services), "and"), err.aliasField)
 }

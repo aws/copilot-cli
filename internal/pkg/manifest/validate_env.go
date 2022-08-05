@@ -39,6 +39,9 @@ func (e EnvironmentConfig) validate() error {
 	if err := e.Network.VPC.SecurityGroupConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "security_group": %w`, err)
 	}
+	if err := e.CDNConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "cdn config": %w`, err)
+	}
 	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
@@ -347,8 +350,12 @@ func (i RestrictiveIngress) validate() error {
 // validate returns nil if advancedCDNConfig is configured correctly.
 func (cfg advancedCDNConfig) validate() error {
 	if cfg.Certificate != nil {
-		if _, err := arn.Parse(*cfg.Certificate); err != nil {
+		certARN, err := arn.Parse(*cfg.Certificate)
+		if err != nil {
 			return fmt.Errorf(`parse cdn certificate: %w`, err)
+		}
+		if certARN.Region != EnvCloudFrontCertRegion {
+			return fmt.Errorf(`cdn certificate must belong to region %s`, EnvCloudFrontCertRegion)
 		}
 	}
 	return nil
