@@ -106,6 +106,7 @@ type templater interface {
 type stackBuilder interface {
 	templater
 	Parameters() (string, error)
+	Package(o addon.PackageOpts) error
 }
 
 type stackSerializer interface {
@@ -202,14 +203,13 @@ func (d *workloadDeployer) cachedEnvironmentConfig() (*manifest.Environment, err
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
 type WorkloadDeployerInput struct {
-	SessionProvider   *sessions.Provider
-	Name              string
-	App               *config.Application
-	Env               *config.Environment
-	ImageTag          string
-	Mft               interface{} // Interpolated, applied, and unmarshaled manifest.
-	RawMft            []byte      // Content of the manifest file without any transformations.
-	UploadAddonAssets bool
+	SessionProvider *sessions.Provider
+	Name            string
+	App             *config.Application
+	Env             *config.Environment
+	ImageTag        string
+	Mft             interface{} // Interpolated, applied, and unmarshaled manifest.
+	RawMft          []byte      // Content of the manifest file without any transformations.
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -242,15 +242,17 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
 	}
 
-	s3Client := s3.New(envSession)
-	var addonsSvc stackBuilder
-	if in.UploadAddonAssets {
-		addonsSvc, err = addon.NewPackager(in.Name, resources.S3Bucket, s3Client)
-	} else {
-		addonsSvc, err = addon.New(in.Name)
-	}
+	addons, err := addon.New(in.Name)
 	if err != nil {
 		return nil, fmt.Errorf("initiate addons service: %w", err)
+	}
+
+	addonsStack, err := addons.Stack()
+	if err != nil {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if !errors.As(err, &notFoundErr) {
+			return nil, fmt.Errorf("parse addons stack")
+		}
 	}
 
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
@@ -273,8 +275,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		resources:          resources,
 		workspacePath:      workspacePath,
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
-		s3Client:           s3Client,
-		addons:             addonsSvc,
+		s3Client:           s3.New(envSession),
+		addons:             addonsStack,
 		imageBuilderPusher: imageBuilderPusher,
 		deployer:           cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr)),
 		endpointGetter:     envDescriber,
@@ -868,9 +870,8 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 }
 
 type uploadArtifactsToS3Input struct {
-	fs        fileReader
-	uploader  uploader
-	templater templater
+	fs       fileReader
+	uploader uploader
 }
 
 type uploadArtifactsToS3Output struct {
@@ -886,10 +887,7 @@ func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (up
 	if err != nil {
 		return uploadArtifactsToS3Output{}, err
 	}
-	addonsURL, err := d.pushAddonsTemplateToS3Bucket(&pushAddonsTemplateToS3BucketInput{
-		templater: in.templater,
-		uploader:  in.uploader,
-	})
+	addonsURL, err := d.pushAddonsTemplateToS3Bucket()
 	if err != nil {
 		return uploadArtifactsToS3Output{}, err
 	}
@@ -905,9 +903,8 @@ func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) 
 		return nil, err
 	}
 	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
-		fs:        d.fs,
-		uploader:  d.s3Client,
-		templater: d.addons,
+		fs:       d.fs,
+		uploader: d.s3Client,
 	})
 	if err != nil {
 		return nil, err
@@ -964,26 +961,36 @@ func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput
 	return envFileARN, nil
 }
 
-type pushAddonsTemplateToS3BucketInput struct {
-	templater templater
-	uploader  uploader
-}
-
-func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateToS3BucketInput) (string, error) {
-	tmpl, err := in.templater.Template()
-	if err != nil {
-		var notFoundErr *addon.ErrAddonsNotFound
-		if errors.As(err, &notFoundErr) {
-			// addons doesn't exist for service, the url is empty.
-			return "", nil
-		}
-		return "", fmt.Errorf("retrieve addons template: %w", err)
+func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
+	if d.addons == nil {
+		return "", nil
 	}
+
+	if false { // TODO remove to enable packaging addons
+		opts := addon.PackageOpts{
+			Bucket:        d.resources.S3Bucket,
+			Uploader:      d.s3Client,
+			WorkspacePath: d.workspacePath,
+			Fs: &afero.Afero{
+				Fs: afero.NewOsFs(),
+			},
+		}
+		if err := d.addons.Package(opts); err != nil {
+			return "", fmt.Errorf("package addons: %w", err)
+		}
+	}
+
+	tmpl, err := d.addons.Template()
+	if err != nil {
+		return "", fmt.Errorf("generate addons template: %w", err)
+	}
+
 	reader := strings.NewReader(tmpl)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.Addons(d.name, []byte(tmpl)), reader)
+	url, err := d.s3Client.Upload(d.resources.S3Bucket, artifactpath.Addons(d.name, []byte(tmpl)), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.resources.S3Bucket, err)
 	}
+
 	return url, nil
 }
 

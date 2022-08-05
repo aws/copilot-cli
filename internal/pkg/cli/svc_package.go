@@ -122,14 +122,13 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	content := o.appliedManifest.Manifest()
 	var deployer workloadStackGenerator
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider:   o.sessProvider,
-		Name:              o.name,
-		App:               targetApp,
-		Env:               targetEnv,
-		ImageTag:          o.tag,
-		Mft:               content,
-		RawMft:            raw,
-		UploadAddonAssets: o.uploadAssets && false, // TODO(dnrnd): remove to enable packaging addons
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             targetApp,
+		Env:             targetEnv,
+		ImageTag:        o.tag,
+		Mft:             content,
+		RawMft:          raw,
 	}
 	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:
