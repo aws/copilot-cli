@@ -30,10 +30,10 @@ func TestMultiSvcApp(t *testing.T) {
 var _ = BeforeSuite(func() {
 	var err error
 
-	toCLI, err = client.NewCLI(client.WithPath(os.Getenv("REGRESSION_TEST_TO_PATH")))
+	toCLI, err = client.NewCLI(os.Getenv("REGRESSION_TEST_TO_PATH"))
 	Expect(err).NotTo(HaveOccurred())
 
-	fromCLI, err = client.NewCLI(client.WithPath(os.Getenv("REGRESSION_TEST_FROM_PATH")))
+	fromCLI, err = client.NewCLI(os.Getenv("REGRESSION_TEST_FROM_PATH"))
 	Expect(err).NotTo(HaveOccurred())
 
 	appName = fmt.Sprintf("regression-%d", time.Now().Unix())

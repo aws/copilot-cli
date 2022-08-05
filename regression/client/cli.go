@@ -13,17 +13,8 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-type newCLIOption func(*CLI)
-
-// WithPath sets the path for a CLI.
-func WithPath(path string) newCLIOption {
-	return func(cli *CLI) {
-		cli.path = path
-	}
-}
-
 // NewCLI returns a wrapper around CLI.
-func NewCLI(options ...newCLIOption) (*CLI, error) {
+func NewCLI(path string) (*CLI, error) {
 	// These tests should be run in a dockerfile so that
 	// your file system and docker image repo isn't polluted
 	// with test data and files. Since this is going to run
@@ -32,16 +23,15 @@ func NewCLI(options ...newCLIOption) (*CLI, error) {
 	if os.Getenv("DRYRUN") == "true" {
 		cliPath = filepath.Join("..", "..", "bin", "local", "copilot")
 	}
-	cli := &CLI{
-		path: cliPath,
+	if path != "" {
+		cliPath = path
 	}
-	for _, opt := range options {
-		opt(cli)
-	}
-	if _, err := os.Stat(cli.path); err != nil {
+	if _, err := os.Stat(cliPath); err != nil {
 		return nil, err
 	}
-	return cli, nil
+	return &CLI{
+		path: cliPath,
+	}, nil
 }
 
 // CLI is a wrapper around os.execs.
