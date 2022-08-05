@@ -226,7 +226,7 @@ var _ = Describe("regression", func() {
 				err = os.Rename(fmt.Sprintf("%s/swap/main.go", svcName), fmt.Sprintf("%s/main.go", svcName))
 				Expect(err).NotTo(HaveOccurred())
 			}
-			err := os.Rename(fmt.Sprintf("query/entrypoint.sh"), fmt.Sprintf("query/swap/entrypoint.tmp"))
+			err := os.Rename("query/entrypoint.sh", "query/swap/entrypoint.tmp")
 			Expect(err).NotTo(HaveOccurred())
 			err = os.Rename("query/swap/entrypoint.sh", "query/entrypoint.sh")
 			Expect(err).NotTo(HaveOccurred())

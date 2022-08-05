@@ -49,7 +49,7 @@ var _ = AfterSuite(func() {
 		err = os.Rename(fmt.Sprintf("%s/swap/main.tmp", svcName), fmt.Sprintf("%s/main.go", svcName))
 		Expect(err).NotTo(HaveOccurred())
 	}
-	err := os.Rename(fmt.Sprintf("query/entrypoint.sh"), fmt.Sprintf("query/swap/entrypoint.sh"))
+	err = os.Rename("query/entrypoint.sh", "query/swap/entrypoint.sh")
 	Expect(err).NotTo(HaveOccurred())
 	err = os.Rename("query/swap/entrypoint.tmp", "query/entrypoint.sh")
 	Expect(err).NotTo(HaveOccurred())
