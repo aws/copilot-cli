@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	addon "github.com/aws/copilot-cli/internal/pkg/addon"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -210,6 +211,20 @@ func NewMockstackBuilder(ctrl *gomock.Controller) *MockstackBuilder {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockstackBuilder) EXPECT() *MockstackBuilderMockRecorder {
 	return m.recorder
+}
+
+// Package mocks base method.
+func (m *MockstackBuilder) Package(o addon.PackageConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Package", o)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Package indicates an expected call of Package.
+func (mr *MockstackBuilderMockRecorder) Package(o interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Package", reflect.TypeOf((*MockstackBuilder)(nil).Package), o)
 }
 
 // Parameters mocks base method.
