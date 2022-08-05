@@ -29,8 +29,8 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 	if err != nil {
 		return err
 	}
-	if err := cf.cfnClient.CreateAndWait(s); err != nil {
-		// If the stack already exists - we can move on to creating the StackSet.
+
+	if err := cf.executeAndRenderChangeSet(cf.newCreateChangeSetInput(cf.console, s)); err != nil {
 		var alreadyExists *cloudformation.ErrStackAlreadyExists
 		if !errors.As(err, &alreadyExists) {
 			return err
