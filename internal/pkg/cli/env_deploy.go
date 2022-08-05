@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -46,6 +47,7 @@ type deployEnvOpts struct {
 	identity        identityService
 	newInterpolator func(app, env string) interpolator
 	newEnvDeployer  func() (envDeployer, error)
+	newEnvDescriber func() (envDescriber, error)
 
 	// Cached variables.
 	targetApp *config.Application
@@ -76,6 +78,17 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 	}
 	opts.newEnvDeployer = func() (envDeployer, error) {
 		return newEnvDeployer(opts)
+	}
+	opts.newEnvDescriber = func() (envDescriber, error) {
+		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         opts.appName,
+			Env:         opts.name,
+			ConfigStore: opts.store,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return envDescriber, nil
 	}
 	return opts, nil
 }
@@ -122,6 +135,15 @@ func (o *deployEnvOpts) Execute() error {
 	mft, err := environmentManifest(o.name, rawMft, o.newInterpolator(o.appName, o.name))
 	if err != nil {
 		return err
+	}
+	if mft.CDNConfig.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && o.targetApp.Domain != "" {
+		describer, err := o.newEnvDescriber()
+		if err != nil {
+			return fmt.Errorf("describe env: %w", err)
+		}
+		if err := describer.ValidateCFServiceDomainAliases(); err != nil {
+			return err
+		}
 	}
 	caller, err := o.identity.Get()
 	if err != nil {

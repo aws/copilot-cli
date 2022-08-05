@@ -38,7 +38,7 @@ func (cf CloudFormation) CreateAndRenderEnvironment(env *deploy.CreateEnvironmen
 		}
 		return changeSetID, nil
 	}
-	return cf.renderStackChanges(in)
+	return cf.executeAndRenderChangeSet(in)
 }
 
 // UpdateAndRenderEnvironment updates the CloudFormation stack for an environment, and render the stack creation to out.
@@ -62,11 +62,11 @@ func (cf CloudFormation) UpdateAndRenderEnvironment(conf StackConfiguration, buc
 		}
 		return changeSetID, nil
 	}
-	return cf.renderStackChanges(in)
+	return cf.executeAndRenderChangeSet(in)
 }
 
-func newRenderEnvironmentInput(cfnStack *cloudformation.Stack) *renderStackChangesInput {
-	return &renderStackChangesInput{
+func newRenderEnvironmentInput(cfnStack *cloudformation.Stack) *executeAndRenderChangeSetInput {
+	return &executeAndRenderChangeSetInput{
 		stackName:        cfnStack.Name,
 		stackDescription: fmt.Sprintf("Creating the infrastructure for the %s environment.", cfnStack.Name),
 	}

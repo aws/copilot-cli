@@ -317,6 +317,45 @@ func (d *EnvDescriber) filterDeployedJobs() ([]*config.Workload, error) {
 	return deployedJobs, nil
 }
 
+// ValidateCFServiceDomainAliases returns error if an environment using cdn is deployed without specifying http.alias for all load-balanced web services
+func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
+	stackDescr, err := d.cfn.Describe()
+	if err != nil {
+		return fmt.Errorf("describe stack: %w", err)
+	}
+
+	servicesString, ok := stackDescr.Parameters[cfnstack.EnvParamALBWorkloadsKey]
+	if !ok {
+		return nil
+	}
+	services := strings.Split(servicesString, ",")
+
+	jsonOutput, ok := stackDescr.Parameters[cfnstack.EnvParamAliasesKey]
+	if !ok {
+		return fmt.Errorf("cannot find %s in env stack parameter set", cfnstack.EnvParamAliasesKey)
+	}
+
+	var aliases map[string][]string
+	err = json.Unmarshal([]byte(jsonOutput), &aliases)
+	if err != nil {
+		return fmt.Errorf("unmarshal %q: %w", jsonOutput, err)
+	}
+	var lbSvcsWithoutAlias []string
+	for _, service := range services {
+		if _, ok := aliases[service]; !ok {
+			lbSvcsWithoutAlias = append(lbSvcsWithoutAlias, service)
+		}
+	}
+	if len(lbSvcsWithoutAlias) != 0 {
+		return &errLBWebSvcsOnCFWithoutAlias{
+			services:   lbSvcsWithoutAlias,
+			aliasField: "http.alias",
+		}
+	}
+
+	return nil
+}
+
 // JSONString returns the stringified EnvDescription struct with json format.
 func (e *EnvDescription) JSONString() (string, error) {
 	b, err := json.Marshal(e)
