@@ -245,14 +245,19 @@ func TestAddons_Template(t *testing.T) {
 			addons := tc.mockAddons(ctrl)
 
 			// WHEN
-			actualTemplate, actualErr := addons.Template()
-
-			// THEN
+			stack, err := addons.Stack()
 			if tc.wantedErr != nil {
-				require.EqualError(t, actualErr, tc.wantedErr.Error())
+				require.EqualError(t, err, tc.wantedErr.Error())
+				return
+			}
+			require.NoError(t, err)
+
+			template, err := stack.Template()
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {
-				require.NoError(t, actualErr)
-				require.Equal(t, tc.wantedTemplate, actualTemplate)
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedTemplate, template)
 			}
 		})
 	}
@@ -283,8 +288,8 @@ func TestAddons_Parameters(t *testing.T) {
 		"returns empty string and nil if there are no parameter files under addons/": {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)
-				ws.EXPECT().ReadAddonsDir("api").
-					Return([]string{"database.yml"}, nil)
+				ws.EXPECT().ReadAddonsDir("api").Return([]string{"database.yml"}, nil)
+				ws.EXPECT().ReadAddon("api", "database.yml").Return(nil, nil)
 				return &Addons{
 					wlName: "api",
 					ws:     ws,
@@ -295,7 +300,8 @@ func TestAddons_Parameters(t *testing.T) {
 			mockAddons: func(ctrl *gomock.Controller) *Addons {
 				ws := mocks.NewMockworkspaceReader(ctrl)
 				ws.EXPECT().ReadAddonsDir("api").
-					Return([]string{"addons.parameters.yml", "addons.parameters.yaml"}, nil)
+					Return([]string{"database.yml", "addons.parameters.yml", "addons.parameters.yaml"}, nil)
+				ws.EXPECT().ReadAddon("api", "database.yml").Return(nil, nil)
 				return &Addons{
 					wlName: "api",
 					ws:     ws,
@@ -308,6 +314,7 @@ func TestAddons_Parameters(t *testing.T) {
 				ws := mocks.NewMockworkspaceReader(ctrl)
 				ws.EXPECT().ReadAddonsDir("api").
 					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
+				ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
 				ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return(nil, errors.New("some error"))
 				return &Addons{
 					wlName: "api",
@@ -321,6 +328,7 @@ func TestAddons_Parameters(t *testing.T) {
 				ws := mocks.NewMockworkspaceReader(ctrl)
 				ws.EXPECT().ReadAddonsDir("api").
 					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
+				ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
 				ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(""), nil)
 				return &Addons{
 					wlName: "api",
@@ -334,6 +342,7 @@ func TestAddons_Parameters(t *testing.T) {
 				ws := mocks.NewMockworkspaceReader(ctrl)
 				ws.EXPECT().ReadAddonsDir("api").
 					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
+				ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
 				ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(`
 Parameters:
   App: !Ref AppName
@@ -355,6 +364,7 @@ Parameters:
 				ws := mocks.NewMockworkspaceReader(ctrl)
 				ws.EXPECT().ReadAddonsDir("api").
 					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
+				ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
 				ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(`
 Parameters:
   EventsQueue: 
@@ -386,14 +396,19 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 			addons := tc.mockAddons(ctrl)
 
 			// WHEN
-			actualParams, actualErr := addons.Parameters()
-
-			// THEN
+			stack, err := addons.Stack()
 			if tc.wantedErr != "" {
-				require.EqualError(t, actualErr, tc.wantedErr)
+				require.EqualError(t, err, tc.wantedErr)
+				return
+			}
+			require.NoError(t, err)
+
+			params, err := stack.Parameters()
+			if tc.wantedErr != "" {
+				require.EqualError(t, err, tc.wantedErr)
 			} else {
-				require.NoError(t, actualErr)
-				require.Equal(t, tc.wantedParams, actualParams)
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedParams, params)
 			}
 		})
 	}
