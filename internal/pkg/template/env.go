@@ -132,6 +132,17 @@ type ELBAccessLogs struct {
 	BucketPrefix string
 }
 
+// ShouldCreateBucket returns true if copilot should create bucket on behalf of customer.
+func (elb *ELBAccessLogs) ShouldCreateBucket() bool {
+	if elb == nil {
+		return false
+	}
+	if len(elb.BucketName) > 0 {
+		return false
+	}
+	return true
+}
+
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.
 type CDNConfig struct{}
 

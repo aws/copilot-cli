@@ -56,12 +56,12 @@ Conditions:
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
-{{- if and .PublicHTTPConfig.ELBAccessLogs (not .PublicHTTPConfig.ELBAccessLogs.BucketName) }} #.PublicHTTPConfig.ELBAccessLogs.CreateBucket
+{{- if .PublicHTTPConfig.ELBAccessLogs.ShouldCreateBucket }}
 {{include "mappings-regional-configs" .}}
 {{- end }}
 Resources:
 {{include "bootstrap-resources" . | indent 2}}
-{{- if and .PublicHTTPConfig.ELBAccessLogs (not .PublicHTTPConfig.ELBAccessLogs.BucketName)}} #.PublicHTTPConfig.ELBAccessLogs.CreateBucket
+{{- if .PublicHTTPConfig.ELBAccessLogs.ShouldCreateBucket }}
 {{include "elb-access-logs" .PublicHTTPConfig.ELBAccessLogs | indent 2}}
 {{- end}}
 {{- if .CDNConfig}}
