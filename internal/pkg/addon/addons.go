@@ -152,7 +152,6 @@ func (a *Addons) template(fnames []string) (*cfnTemplate, error) {
 // parameters returns the content of user-defined additional CloudFormation Parameters
 // to pass from the parent stack to Template.
 //
-// If there is no addons/ directory defined, then returns "" and ErrAddonsNotFound.
 // If there are addons but no parameters file defined, then returns "" and nil for error.
 // If there are multiple parameters files, then returns "" and cannot define multiple parameter files error.
 // If the addons parameters use the reserved parameter names, then returns "" and a reserved parameter error.
