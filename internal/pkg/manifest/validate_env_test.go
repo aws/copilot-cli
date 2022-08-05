@@ -706,7 +706,6 @@ func TestSubnetsConfiguration_validate(t *testing.T) {
 func TestCDNConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in                   environmentCDNConfig
-		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
 		"valid if empty": {
@@ -739,9 +738,6 @@ func TestCDNConfiguration_validate(t *testing.T) {
 			if tc.wantedErrorMsgPrefix != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
-			} else if tc.wantedError != nil {
-				require.Error(t, gotErr)
-				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
 				require.NoError(t, gotErr)
 			}
