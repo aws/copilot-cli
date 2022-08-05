@@ -34,9 +34,6 @@ const (
 	deleteAppCleanResourcesStartMsg = "Cleaning up deployment resources."
 	deleteAppCleanResourcesStopMsg  = "Cleaned up deployment resources.\n"
 
-	deleteAppResourcesStartMsg = "Deleting application resources."
-	deleteAppResourcesStopMsg  = "Deleted application resources.\n"
-
 	deleteAppConfigStartMsg = "Deleting application configuration."
 	deleteAppConfigStopMsg  = "Deleted application configuration.\n"
 
@@ -342,12 +339,9 @@ func (o *deleteAppOpts) deletePipelines() error {
 }
 
 func (o *deleteAppOpts) deleteAppResources() error {
-	o.spinner.Start(deleteAppResourcesStartMsg)
 	if err := o.cfn.DeleteApp(o.name); err != nil {
-		o.spinner.Stop(log.Serrorln("Error deleting application resources."))
 		return fmt.Errorf("delete app resources: %w", err)
 	}
-	o.spinner.Stop(log.Ssuccess(deleteAppResourcesStopMsg))
 	return nil
 }
 
