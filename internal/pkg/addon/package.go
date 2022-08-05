@@ -191,7 +191,7 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 	},
 }
 
-type PackageOpts struct {
+type PackageConfig struct {
 	Bucket        string
 	Uploader      uploader
 	WorkspacePath string
@@ -202,10 +202,10 @@ type PackageOpts struct {
 
 // Package finds references to local files in Stack's template, uploads
 // the files to S3, and replaces the file path with the S3 location.
-func (s *Stack) Package(o PackageOpts) error {
-	o.wlName = s.wlName
+func (s *Stack) Package(p PackageConfig) error {
+	p.wlName = s.wlName
 
-	err := o.packageIncludeTransforms(&s.template.Metadata, &s.template.Mappings, &s.template.Conditions, &s.template.Transform, &s.template.Resources, &s.template.Outputs)
+	err := p.packageIncludeTransforms(&s.template.Metadata, &s.template.Mappings, &s.template.Conditions, &s.template.Transform, &s.template.Resources, &s.template.Outputs)
 	if err != nil {
 		return fmt.Errorf("package transforms: %w", err)
 	}
@@ -220,7 +220,7 @@ func (s *Stack) Package(o PackageOpts) error {
 
 		props := yamlMapGet(node, "Properties")
 		for _, conf := range confs {
-			if err := o.packageProperty(props, conf); err != nil {
+			if err := p.packageProperty(props, conf); err != nil {
 				return fmt.Errorf("package property %q of %q: %w", strings.Join(conf.PropertyPath, "."), name, err)
 			}
 		}
@@ -234,7 +234,7 @@ func (s *Stack) Package(o PackageOpts) error {
 // detects one, and the "Location" parameter is set to a local path, it'll
 // upload those files to S3. If node is a yaml map or sequence, it will
 // recursively traverse those nodes.
-func (o *PackageOpts) packageIncludeTransforms(nodes ...*yaml.Node) error {
+func (p *PackageConfig) packageIncludeTransforms(nodes ...*yaml.Node) error {
 	pkg := func(node *yaml.Node) error {
 		if node == nil || node.Kind != yaml.MappingNode {
 			return nil
@@ -253,18 +253,18 @@ func (o *PackageOpts) packageIncludeTransforms(nodes ...*yaml.Node) error {
 					continue
 				}
 
-				obj, err := o.uploadAddonAsset(loc.Value, false)
+				obj, err := p.uploadAddonAsset(loc.Value, false)
 				if err != nil {
 					return fmt.Errorf("upload asset: %w", err)
 				}
 
 				loc.Value = s3.Location(obj.Bucket, obj.Key)
 			case val.Kind == yaml.MappingNode:
-				if err := o.packageIncludeTransforms(val); err != nil {
+				if err := p.packageIncludeTransforms(val); err != nil {
 					return err
 				}
 			case val.Kind == yaml.SequenceNode:
-				if err := o.packageIncludeTransforms(val.Content...); err != nil {
+				if err := p.packageIncludeTransforms(val.Content...); err != nil {
 					return err
 				}
 			}
@@ -302,7 +302,7 @@ func yamlMapGet(node *yaml.Node, key string) *yaml.Node {
 	return &yaml.Node{}
 }
 
-func (o *PackageOpts) packageProperty(resourceProperties *yaml.Node, pkgCfg packagePropertyConfig) error {
+func (p *PackageConfig) packageProperty(resourceProperties *yaml.Node, pkgCfg packagePropertyConfig) error {
 	target := resourceProperties
 	for _, key := range pkgCfg.PropertyPath {
 		target = yamlMapGet(target, key)
@@ -317,7 +317,7 @@ func (o *PackageOpts) packageProperty(resourceProperties *yaml.Node, pkgCfg pack
 		return nil
 	}
 
-	obj, err := o.uploadAddonAsset(target.Value, pkgCfg.ForceZip)
+	obj, err := p.uploadAddonAsset(target.Value, pkgCfg.ForceZip)
 	if err != nil {
 		return fmt.Errorf("upload asset: %w", err)
 	}
@@ -343,30 +343,30 @@ func isFilePath(path string) bool {
 	return true
 }
 
-func (o *PackageOpts) uploadAddonAsset(assetPath string, forceZip bool) (template.S3ObjectLocation, error) {
+func (p *PackageConfig) uploadAddonAsset(assetPath string, forceZip bool) (template.S3ObjectLocation, error) {
 	// make path absolute from wsPath
 	if !filepath.IsAbs(assetPath) {
-		assetPath = filepath.Join(o.WorkspacePath, assetPath)
+		assetPath = filepath.Join(p.WorkspacePath, assetPath)
 	}
 
-	info, err := o.Fs.Stat(assetPath)
+	info, err := p.Fs.Stat(assetPath)
 	if err != nil {
 		return template.S3ObjectLocation{}, fmt.Errorf("stat: %w", err)
 	}
 
-	getAsset := o.fileAsset
+	getAsset := p.fileAsset
 	if forceZip || info.IsDir() {
-		getAsset = o.zipAsset
+		getAsset = p.zipAsset
 	}
 	asset, err := getAsset(assetPath)
 	if err != nil {
 		return template.S3ObjectLocation{}, fmt.Errorf("create asset: %w", err)
 	}
 
-	s3Path := artifactpath.AddonAsset(o.wlName, asset.hash)
-	url, err := o.Uploader.Upload(o.Bucket, s3Path, asset.data)
+	s3Path := artifactpath.AddonAsset(p.wlName, asset.hash)
+	url, err := p.Uploader.Upload(p.Bucket, s3Path, asset.data)
 	if err != nil {
-		return template.S3ObjectLocation{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, o.Bucket, err)
+		return template.S3ObjectLocation{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, p.Bucket, err)
 	}
 
 	bucket, key, err := s3.ParseURL(url)
@@ -390,14 +390,14 @@ type asset struct {
 // a hash of each files name, permission, and content. The zip file
 // itself is not hashed to avoid a changing hash when non-relevant
 // file metadata changes, like modification time.
-func (o *PackageOpts) zipAsset(root string) (asset, error) {
+func (p *PackageConfig) zipAsset(root string) (asset, error) {
 	buf := &bytes.Buffer{}
 	archive := zip.NewWriter(buf)
 	defer archive.Close()
 
 	hash := sha256.New()
 
-	if err := o.Fs.Walk(root, func(path string, info fs.FileInfo, err error) error {
+	if err := p.Fs.Walk(root, func(path string, info fs.FileInfo, err error) error {
 		switch {
 		case err != nil:
 			return err
@@ -413,7 +413,7 @@ func (o *PackageOpts) zipAsset(root string) (asset, error) {
 			fname = info.Name()
 		}
 
-		f, err := o.Fs.Open(path)
+		f, err := p.Fs.Open(path)
 		if err != nil {
 			return fmt.Errorf("open: %w", err)
 		}
@@ -449,11 +449,11 @@ func (o *PackageOpts) zipAsset(root string) (asset, error) {
 // fileAsset creates an asset from the file specified by path.
 // The data is the content of the file, and the hash is the
 // a hash of the file content.
-func (o *PackageOpts) fileAsset(path string) (asset, error) {
+func (p *PackageConfig) fileAsset(path string) (asset, error) {
 	hash := sha256.New()
 	buf := &bytes.Buffer{}
 
-	f, err := o.Fs.Open(path)
+	f, err := p.Fs.Open(path)
 	if err != nil {
 		return asset{}, fmt.Errorf("open: %w", err)
 	}

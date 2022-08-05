@@ -106,7 +106,7 @@ type templater interface {
 type stackBuilder interface {
 	templater
 	Parameters() (string, error)
-	Package(o addon.PackageOpts) error
+	Package(addon.PackageConfig) error
 }
 
 type stackSerializer interface {
@@ -967,7 +967,7 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
 	}
 
 	if false { // TODO remove to enable packaging addons
-		opts := addon.PackageOpts{
+		config := addon.PackageConfig{
 			Bucket:        d.resources.S3Bucket,
 			Uploader:      d.s3Client,
 			WorkspacePath: d.workspacePath,
@@ -975,7 +975,7 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
 				Fs: afero.NewOsFs(),
 			},
 		}
-		if err := d.addons.Package(opts); err != nil {
+		if err := d.addons.Package(config); err != nil {
 			return "", fmt.Errorf("package addons: %w", err)
 		}
 	}

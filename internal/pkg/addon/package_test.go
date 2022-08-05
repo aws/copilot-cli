@@ -403,7 +403,7 @@ Resources:
 
 			require.NoError(t, yaml.Unmarshal([]byte(tc.inTemplate), stack.template))
 
-			opts := PackageOpts{
+			config := PackageConfig{
 				Bucket:        bucket,
 				WorkspacePath: wsPath,
 				Uploader:      mocks.uploader,
@@ -411,7 +411,7 @@ Resources:
 					Fs: fs,
 				},
 			}
-			err := stack.Package(opts)
+			err := stack.Package(config)
 			if tc.pkgError != "" {
 				require.EqualError(t, err, tc.pkgError)
 				return
