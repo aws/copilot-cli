@@ -20,7 +20,7 @@ var (
 // Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
 	if err := e.EnvironmentConfig.validate(); err != nil {
-		return fmt.Errorf(`validate environment: %w`, err)
+		return err
 	}
 	return nil
 }
@@ -43,13 +43,21 @@ func (e EnvironmentConfig) validate() error {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
 	if e.CDNConfig.CDNEnabled() {
+		cdnCert := e.CDNConfig.Config.Certificate
 		if e.HTTPConfig.Public.Certificates == nil {
-			if e.CDNConfig.CDNConfig.Certificate != nil {
-				return errors.New("must import ALB certificates to set \"cdn.certificate\"")
+			if cdnCert != nil {
+				return &errFieldMustBeSpecified{
+					missingField:      "http.public.certificates",
+					conditionalFields: []string{"cdn.certificate"},
+				}
 			}
 		} else {
-			if e.CDNConfig.CDNConfig.Certificate == nil {
-				return errors.New("must set \"cdn.certificate\" to import ALB certificates with CDN enabled")
+			if cdnCert == nil {
+				return &errFieldMustBeSpecified{
+					missingField:       "cdn.certificate",
+					conditionalFields:  []string{"http.public.certificates", "cdn"},
+					allMustBeSpecified: true,
+				}
 			}
 		}
 	}
@@ -320,10 +328,10 @@ func (cfg securityGroupsConfig) validate() error {
 
 // validate returns nil if environmentCDNConfig is configured correctly.
 func (cfg environmentCDNConfig) validate() error {
-	if cfg.CDNConfig.isEmpty() {
+	if cfg.Config.isEmpty() {
 		return nil
 	}
-	return cfg.CDNConfig.validate()
+	return cfg.Config.validate()
 }
 
 // validate returns nil if Ingress is configured correctly.
@@ -336,7 +344,7 @@ func (i RestrictiveIngress) validate() error {
 	return nil
 }
 
-// validate is a no-op for AdvancedCDNConfig.
+// validate returns nil if advancedCDNConfig is configured correctly.
 func (cfg advancedCDNConfig) validate() error {
 	if cfg.Certificate != nil {
 		if _, err := arn.Parse(*cfg.Certificate); err != nil {

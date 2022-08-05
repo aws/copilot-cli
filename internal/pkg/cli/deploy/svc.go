@@ -330,7 +330,7 @@ type lbWebSvcDeployer struct {
 	publicCIDRBlocksGetter publicCIDRBlocksGetter
 	lbMft                  *manifest.LoadBalancedWebService
 	customResources        customResourcesFunc
-	newAliasCertValidator  func(region *string) aliasCertValidator
+	newAliasCertValidator  func(optionalRegion *string) aliasCertValidator
 }
 
 // NewLBWSDeployer is the constructor for lbWebSvcDeployer.
@@ -365,9 +365,9 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		appVersionGetter:       versionGetter,
 		publicCIDRBlocksGetter: envDescriber,
 		lbMft:                  lbMft,
-		newAliasCertValidator: func(region *string) aliasCertValidator {
+		newAliasCertValidator: func(optionalRegion *string) aliasCertValidator {
 			sess := svcDeployer.envSess.Copy(&aws.Config{
-				Region: region,
+				Region: optionalRegion,
 			})
 			return acm.New(sess)
 		},
@@ -1399,15 +1399,15 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
 
-		cdnCert := d.environmentConfig.CDNConfig.CDNConfig.Certificate
-		defaultValidator := d.newAliasCertValidator(nil)
-		cfValidator := d.newAliasCertValidator(aws.String(envCloudFrontCertRegion))
-		if err := defaultValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
-			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
+		cdnCert := d.environmentConfig.CDNConfig.Config.Certificate
+		albCertValidator := d.newAliasCertValidator(nil)
+		cfCertValidator := d.newAliasCertValidator(aws.String(envCloudFrontCertRegion))
+		if err := albCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
+			return fmt.Errorf("validate aliases against the imported public ALB certificate for env %s: %w", d.env.Name, err)
 		}
 		if cdnCert != nil {
-			if err := cfValidator.ValidateCertAliases(aliases, []string{*cdnCert}); err != nil {
-				return fmt.Errorf("validate aliases against the cdn imported certificate for env %s: %w", d.env.Name, err)
+			if err := cfCertValidator.ValidateCertAliases(aliases, []string{*cdnCert}); err != nil {
+				return fmt.Errorf("validate aliases against the imported CDN certificate for env %s: %w", d.env.Name, err)
 			}
 		}
 		return nil

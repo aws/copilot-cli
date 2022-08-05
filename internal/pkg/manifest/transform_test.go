@@ -1203,7 +1203,7 @@ func TestEnvironmentCDNConfigTransformer_Transformer(t *testing.T) {
 	}{
 		"cdnconfig set to empty if enabled is not nil": {
 			original: func(cfg *environmentCDNConfig) {
-				cfg.CDNConfig = advancedCDNConfig{
+				cfg.Config = advancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				}
 			},
@@ -1219,12 +1219,12 @@ func TestEnvironmentCDNConfigTransformer_Transformer(t *testing.T) {
 				cfg.Enabled = aws.Bool(true)
 			},
 			override: func(cfg *environmentCDNConfig) {
-				cfg.CDNConfig = advancedCDNConfig{
+				cfg.Config = advancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				}
 			},
 			wanted: func(cfg *environmentCDNConfig) {
-				cfg.CDNConfig = advancedCDNConfig{
+				cfg.Config = advancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				}
 			},

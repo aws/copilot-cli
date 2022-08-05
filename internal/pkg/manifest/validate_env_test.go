@@ -190,12 +190,12 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 		"error if cdn cert specified but public certs not specified": {
 			in: EnvironmentConfig{
 				CDNConfig: environmentCDNConfig{
-					CDNConfig: advancedCDNConfig{
+					Config: advancedCDNConfig{
 						Certificate: aws.String("mockCDNCertARN"),
 					},
 				},
 			},
-			wantedError: "must import ALB certificates to set \"cdn.certificate\"",
+			wantedError: "\"http.public.certificates\" must be specified if \"cdn.certificate\" is specified",
 		},
 		"error if cdn cert not specified but public certs imported": {
 			in: EnvironmentConfig{
@@ -208,7 +208,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: "must set \"cdn.certificate\" to import ALB certificates with CDN enabled",
+			wantedError: "\"cdn.certificate\" must be specified if \"http.public.certificates\" and \"cdn\" are specified",
 		},
 		"error if subnets specified for internal ALB placement don't exist": {
 			in: EnvironmentConfig{
@@ -719,14 +719,14 @@ func TestCDNConfiguration_validate(t *testing.T) {
 		},
 		"valid if advanced config configured correctly": {
 			in: environmentCDNConfig{
-				CDNConfig: advancedCDNConfig{
+				Config: advancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				},
 			},
 		},
 		"error if certificate invalid": {
 			in: environmentCDNConfig{
-				CDNConfig: advancedCDNConfig{
+				Config: advancedCDNConfig{
 					Certificate: aws.String("arn:aws:weird-little-arn"),
 				},
 			},

@@ -819,7 +819,7 @@ func TestEnvironmentCDNConfig_IsEmpty(t *testing.T) {
 		},
 		"advanced not empty": {
 			in: environmentCDNConfig{
-				CDNConfig: advancedCDNConfig{
+				Config: advancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				},
 			},
@@ -848,7 +848,7 @@ func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
 		},
 		"enabled via config": {
 			in: environmentCDNConfig{
-				CDNConfig: advancedCDNConfig{
+				Config: advancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				},
 			},
