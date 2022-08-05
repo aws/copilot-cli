@@ -499,5 +499,9 @@ func (cf CloudFormation) DeleteApp(appName string) error {
 	if err := cf.appStackSet.Delete(fmt.Sprintf("%s-infrastructure", appName)); err != nil {
 		return err
 	}
-	return cf.cfnClient.DeleteAndWait(fmt.Sprintf("%s-infrastructure-roles", appName))
+	stackName := fmt.Sprintf("%s-infrastructure-roles", appName)
+	description := fmt.Sprintf("Deleting application roles stack %s", stackName)
+	return cf.deleteAndRenderStack(stackName, description, func() error {
+		return cf.cfnClient.DeleteAndWait(stackName)
+	})
 }
