@@ -42,4 +42,15 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	_, err := toCLI.Run("app", "delete", "--yes")
 	Expect(err).NotTo(HaveOccurred())
+
+	for _, svcName := range []string{"front-end", "www", "back-end"} {
+		err := os.Rename(fmt.Sprintf("%s/main.go", svcName), fmt.Sprintf("%s/swap/main.go", svcName))
+		Expect(err).NotTo(HaveOccurred())
+		err = os.Rename(fmt.Sprintf("%s/swap/main.tmp", svcName), fmt.Sprintf("%s/main.go", svcName))
+		Expect(err).NotTo(HaveOccurred())
+	}
+	err := os.Rename(fmt.Sprintf("query/entrypoint.sh"), fmt.Sprintf("query/swap/entrypoint.sh"))
+	Expect(err).NotTo(HaveOccurred())
+	err = os.Rename("query/swap/entrypoint.tmp", "query/entrypoint.sh")
+	Expect(err).NotTo(HaveOccurred())
 })
