@@ -422,15 +422,15 @@ type PublicHTTPConfig struct {
 // ELBAccessLogsArgsOrBool is a custom type which supports unmarshaling yaml which
 // can either be of type bool or type ELBAccessLogsArgs.
 type ELBAccessLogsArgsOrBool struct {
-	EnableAccessLogs  *bool
-	ELBAccessLogsArgs ELBAccessLogsArgs
+	Enabled        *bool
+	AdvancedConfig ELBAccessLogsArgs
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the ELBAccessLogsArgsOrBool
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (al *ELBAccessLogsArgsOrBool) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&al.ELBAccessLogsArgs); err != nil {
+	if err := value.Decode(&al.AdvancedConfig); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -439,20 +439,19 @@ func (al *ELBAccessLogsArgsOrBool) UnmarshalYAML(value *yaml.Node) error {
 		}
 	}
 
-	if !al.ELBAccessLogsArgs.isEmpty() {
+	if !al.AdvancedConfig.isEmpty() {
 		// Unmarshaled successfully to al.AccessLogsArgs, reset al.EnableAccessLogs, and return.
-		al.EnableAccessLogs = nil
+		al.Enabled = nil
 		return nil
 	}
 
-	if err := value.Decode(&al.EnableAccessLogs); err != nil {
+	if err := value.Decode(&al.Enabled); err != nil {
 		return errUnmarshalELBAccessLogs
 	}
 	return nil
 }
 
 // AccessLogsConfig holds the access logs configuration.
-// These options are specifiable under the "access_logs" field.
 type ELBAccessLogsArgs struct {
 	BucketName   *string `yaml:"bucket_name,omitempty"`
 	BucketPrefix *string `yaml:"bucket_prefix,omitempty"`
@@ -463,10 +462,7 @@ func (al *ELBAccessLogsArgs) isEmpty() bool {
 }
 
 func (al *ELBAccessLogsArgsOrBool) isEmpty() bool {
-	if al.EnableAccessLogs != nil {
-		return false
-	}
-	return al.ELBAccessLogsArgs.isEmpty()
+	return al.Enabled == nil && al.AdvancedConfig.isEmpty()
 }
 
 // AccessLogs returns the access logs config if the user has set any values.
@@ -476,10 +472,10 @@ func (cfg *EnvironmentConfig) ELBAccessLogs() (*ELBAccessLogsArgs, bool) {
 	if accessLogs.isEmpty() {
 		return nil, false
 	}
-	if accessLogs.EnableAccessLogs != nil {
+	if accessLogs.Enabled != nil {
 		return nil, true
 	}
-	return &accessLogs.ELBAccessLogsArgs, true
+	return &accessLogs.AdvancedConfig, true
 }
 
 // ALBSecurityGroupsConfig represents security group configuration settings for an ALB.

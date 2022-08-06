@@ -192,7 +192,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				HTTPConfig: EnvironmentHTTPConfig{
 					Public: PublicHTTPConfig{
 						ELBAccessLogs: ELBAccessLogsArgsOrBool{
-							ELBAccessLogsArgs: ELBAccessLogsArgs{
+							AdvancedConfig: ELBAccessLogsArgs{
 								BucketPrefix: aws.String("bucketPrefix"),
 							},
 						},
@@ -205,7 +205,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				HTTPConfig: EnvironmentHTTPConfig{
 					Public: PublicHTTPConfig{
 						ELBAccessLogs: ELBAccessLogsArgsOrBool{
-							ELBAccessLogsArgs: ELBAccessLogsArgs{
+							AdvancedConfig: ELBAccessLogsArgs{
 								BucketPrefix: aws.String("bucketPrefix"),
 								BucketName:   aws.String("bucketName"),
 							},

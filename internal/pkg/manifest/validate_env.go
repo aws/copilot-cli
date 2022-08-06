@@ -285,7 +285,7 @@ func (al ELBAccessLogsArgsOrBool) validate() error {
 	if al.isEmpty() {
 		return nil
 	}
-	return al.ELBAccessLogsArgs.validate()
+	return al.AdvancedConfig.validate()
 }
 
 // validate is a no-op for ELBAccessLogsArgs.
