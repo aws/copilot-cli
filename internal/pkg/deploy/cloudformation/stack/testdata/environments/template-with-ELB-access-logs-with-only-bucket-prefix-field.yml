@@ -423,7 +423,7 @@ Resources:
                   - !Ref AWS::AccountId
                   - '/*'
             Principal:
-              AWS: !Join [ "", [ !Ref 'arn:${AWS::Partition}:iam::', !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ELBAccountId ], ":root" ] ]
+              AWS: !Join [ "", [ !Ref 'arn:${AWS::Partition}:iam::', !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ElbAccountId ], ":root" ] ]
   EnvironmentHTTPSSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: ExportHTTPSListener

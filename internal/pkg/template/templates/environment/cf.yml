@@ -57,7 +57,7 @@ Conditions:
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
 {{- if .PublicHTTPConfig.ELBAccessLogs.ShouldCreateBucket }}
-{{include "mappings-regional-configs" .}}
+{{ include "mappings-regional-configs" . }}
 {{- end }}
 Resources:
 {{include "bootstrap-resources" . | indent 2}}

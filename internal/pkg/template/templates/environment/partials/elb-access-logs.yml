@@ -25,7 +25,7 @@ ELBAccessLogsBucketPolicy:
                 - !Ref AWS::AccountId
                 - '/*'
           Principal:
-            AWS: !Join [ "", [ !Ref 'arn:${AWS::Partition}:iam::', !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ELBAccountId ], ":root" ] ]
+            AWS: !Join [ "", [ !Sub 'arn:${AWS::Partition}:iam::', !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ElbAccountId ], ":root" ] ]
 ELBAccessLogsBucket:
   Type: AWS::S3::Bucket
   Condition: CreateALB
