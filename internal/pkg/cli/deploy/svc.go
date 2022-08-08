@@ -972,7 +972,6 @@ func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput
 }
 
 func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
-	fmt.Printf("\nd.addons %#v (== nil: %v)\n", d.addons, d.addons == nil)
 	if d.addons == nil {
 		return "", nil
 	}
@@ -993,7 +992,7 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
 
 	tmpl, err := d.addons.Template()
 	if err != nil {
-		return "", fmt.Errorf("generate addons template: %w", err)
+		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
 
 	reader := strings.NewReader(tmpl)
