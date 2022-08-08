@@ -21,17 +21,34 @@ network:
       subnets: ["SubnetID1", "SubnetID2"]
 ```
 
-<span class="parent-field">network.vpc.placement.</span><a id="network-vpc-placement-subnets" href="#network-vpc-placement-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>  
-A list of subnet IDs where Copilot launches ECS tasks.
+<span class="parent-field">network.vpc.placement.</span><a id="network-vpc-placement-subnets" href="#network-vpc-placement-subnets" class="field">`subnets`</a> <span class="type">Array of Strings or Map</span>  
+When using it as a list of strings, the value should be subnet IDs where Copilot launches ECS tasks.
+
+When using it as a map, your subnets will by filtered by the given name and values pairs. Note that the filters are joined with an `AND`, and the values for each filter are joined by an `OR`. For example, both security group A with tag set `org: bi` and `type: public`, and security group B with tag set `org: bi` and `type: private` will be matched by
+
+```yaml
+network:
+  vpc:
+    placement:
+      subnets:
+        from_tags:
+          org: bi
+          type:
+            - public
+            - private
+```
+
+<span class="parent-field">network.vpc.placement.subnets</span><a id="network-vpc-placement-subnets-from-tags" href="#network-vpc-placement-subnets-from-tags" class="field">`from_tags`</a> <span class="type">Map of String and String or Array of Strings</span>  
+Filter subnets based on their tag set and return an array of subnet IDs, where Copilot launches ECS tasks.
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings or Map</span>  
-Additional security group IDs associated with your tasks. 
+Additional security group IDs associated with your tasks.
 ```yaml
 network:
   vpc:
     security_groups: [sg-0001, sg-0002]
 ```
-Copilot includes a security group so containers within your environment can communicate with each other. To disable 
+Copilot includes a security group so containers within your environment can communicate with each other. To disable
 the default security group, you can specify the Map form:
 ```yaml
 network:
@@ -46,4 +63,3 @@ Disable the default security group that allows ingress from all services in your
 
 <span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-groups" href="#network-vpc-security-groups-groups" class="field">`groups`</a> <span class="type">Array of Strings</span>    
 Additional security group IDs associated with your tasks.
-
