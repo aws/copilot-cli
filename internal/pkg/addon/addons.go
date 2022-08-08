@@ -90,7 +90,7 @@ func (a *Addons) Stack() (*Stack, error) {
 }
 
 func (s *Stack) Template() (string, error) {
-	if s == nil || s.template == nil {
+	if s.template == nil {
 		return "", nil
 	}
 
@@ -98,7 +98,7 @@ func (s *Stack) Template() (string, error) {
 }
 
 func (s *Stack) Parameters() (string, error) {
-	if s == nil || s.parameters.IsZero() {
+	if s.parameters.IsZero() {
 		return "", nil
 	}
 
