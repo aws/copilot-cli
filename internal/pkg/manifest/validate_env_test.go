@@ -738,7 +738,7 @@ func TestCDNConfiguration_validate(t *testing.T) {
 					Certificate: aws.String("arn:aws:acm:us-west-2:1111111:certificate/look-like-a-good-arn"),
 				},
 			},
-			wantedError: errors.New("cdn certificate must belong to region us-east-1"),
+			wantedError: errors.New("cdn certificate must be in region us-east-1"),
 		},
 	}
 	for name, tc := range testCases {

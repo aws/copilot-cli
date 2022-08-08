@@ -122,7 +122,7 @@ func (e *errAtLeastOneFieldMustBeSpecified) Error() string {
 type errInvalidCloudFrontRegion struct{}
 
 func (e *errInvalidCloudFrontRegion) Error() string {
-	return fmt.Sprintf(`cdn certificate must belong to region %s`, EnvCloudFrontCertRegion)
+	return fmt.Sprintf(`cdn certificate must be in region %s`, EnvCloudFrontCertRegion)
 }
 
 // RecommendActions returns recommended actions to be taken after the error.

@@ -17,9 +17,8 @@ import (
 // EnvironmentManifestType identifies that the type of manifest is environment manifest.
 const EnvironmentManifestType = "Environment"
 
-const (
-	EnvCloudFrontCertRegion = "us-east-1"
-)
+// EnvCloudFrontCertRegion identifies the region that CloudFront accepts imported certificates.
+const EnvCloudFrontCertRegion = "us-east-1"
 
 var environmentManifestPath = "environment/manifest.yml"
 

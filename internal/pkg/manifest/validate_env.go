@@ -40,7 +40,7 @@ func (e EnvironmentConfig) validate() error {
 		return fmt.Errorf(`validate "security_group": %w`, err)
 	}
 	if err := e.CDNConfig.validate(); err != nil {
-		return fmt.Errorf(`validate "cdn config": %w`, err)
+		return fmt.Errorf(`validate "cdn": %w`, err)
 	}
 	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")

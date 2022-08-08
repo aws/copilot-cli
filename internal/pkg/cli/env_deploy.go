@@ -143,7 +143,7 @@ func (o *deployEnvOpts) Execute() error {
 	if o.isManagedCDNEnabled(mft) {
 		describer, err := o.newEnvDescriber()
 		if err != nil {
-			return fmt.Errorf("new env describer: %w", err)
+			return err
 		}
 		// With managed domain, if the customer isn't using `alias` the A-records are inserted in the service stack as each service domain is unique.
 		// However, when clients enable CloudFront, they would need to update all their existing records to now point to the distribution.
