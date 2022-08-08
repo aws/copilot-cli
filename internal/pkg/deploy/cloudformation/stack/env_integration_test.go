@@ -30,7 +30,8 @@ func TestEnvStack_Template(t *testing.T) {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
-cdn: true
+cdn:
+  certificate: viewer-cert
 http:
   public:
     security_groups:

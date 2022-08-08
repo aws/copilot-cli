@@ -339,10 +339,10 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 type lbWebSvcDeployer struct {
 	*svcDeployer
 	appVersionGetter       versionGetter
-	aliasCertValidator     aliasCertValidator
 	publicCIDRBlocksGetter publicCIDRBlocksGetter
 	lbMft                  *manifest.LoadBalancedWebService
 	customResources        customResourcesFunc
+	newAliasCertValidator  func(optionalRegion *string) aliasCertValidator
 }
 
 // NewLBWSDeployer is the constructor for lbWebSvcDeployer.
@@ -377,7 +377,12 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		appVersionGetter:       versionGetter,
 		publicCIDRBlocksGetter: envDescriber,
 		lbMft:                  lbMft,
-		aliasCertValidator:     acm.New(svcDeployer.envSess),
+		newAliasCertValidator: func(optionalRegion *string) aliasCertValidator {
+			sess := svcDeployer.envSess.Copy(&aws.Config{
+				Region: optionalRegion,
+			})
+			return acm.New(sess)
+		},
 		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
 			crs, err := customresource.LBWS(fs)
 			if err != nil {
@@ -391,8 +396,8 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 type backendSvcDeployer struct {
 	*svcDeployer
 	backendMft         *manifest.BackendService
-	aliasCertValidator aliasCertValidator
 	customResources    customResourcesFunc
+	aliasCertValidator aliasCertValidator
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -1410,8 +1415,17 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
-		if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
-			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
+
+		cdnCert := d.environmentConfig.CDNConfig.Config.Certificate
+		albCertValidator := d.newAliasCertValidator(nil)
+		cfCertValidator := d.newAliasCertValidator(aws.String(envCloudFrontCertRegion))
+		if err := albCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
+			return fmt.Errorf("validate aliases against the imported public ALB certificate for env %s: %w", d.env.Name, err)
+		}
+		if cdnCert != nil {
+			if err := cfCertValidator.ValidateCertAliases(aliases, []string{*cdnCert}); err != nil {
+				return fmt.Errorf("validate aliases against the imported CDN certificate for env %s: %w", d.env.Name, err)
+			}
 		}
 		return nil
 	}

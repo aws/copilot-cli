@@ -32,6 +32,9 @@ EnvironmentManagerRole:
 {{- range $arn := .PrivateHTTPConfig.ImportedCertARNs}}
           - "{{$arn}}"
 {{- end}}
+{{- if and .CDNConfig .CDNConfig.ViewerCertificate}}
+          - "{{.CDNConfig.ViewerCertificate}}"
+{{- end}}
 {{- end}}
         - Sid: CloudwatchLogs
           Effect: Allow
