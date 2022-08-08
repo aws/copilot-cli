@@ -48,7 +48,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 	addons, err := addon.New(aws.StringValue(v.Name))
 	require.NoError(t, err)
 
-	addonsStack, err := addons.Stack()
+	_, err = addons.Stack()
 	var notFound *addon.ErrAddonsNotFound
 	require.ErrorAs(t, err, &notFound)
 
@@ -68,7 +68,6 @@ func Test_Stack_Local_Integration(t *testing.T) {
 				ImageTag: imageTag,
 			},
 		},
-		Addons: addonsStack,
 	})
 	require.NoError(t, err)
 	tpl, err := serializer.Template()

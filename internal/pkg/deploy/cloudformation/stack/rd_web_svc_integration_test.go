@@ -54,7 +54,7 @@ func TestRDWS_Template(t *testing.T) {
 		addons, err := addon.New(aws.StringValue(v.Name))
 		require.NoError(t, err)
 
-		addonsStack, err := addons.Stack()
+		_, err = addons.Stack()
 		var notFound *addon.ErrAddonsNotFound
 		require.ErrorAs(t, err, &notFound)
 
@@ -73,7 +73,6 @@ func TestRDWS_Template(t *testing.T) {
 				AccountID: "123456789123",
 				Region:    "us-west-2",
 			},
-			Addons: addonsStack,
 		})
 		require.NoError(t, err, "create rdws serializer")
 		actualTemplate, err := serializer.Template()

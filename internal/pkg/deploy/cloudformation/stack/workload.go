@@ -200,12 +200,15 @@ func serializeTemplateConfig(parser template.Parser, stack templateConfigurer) (
 }
 
 func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
-	tmpl, err := w.addons.Template()
-	if err != nil {
-		return nil, fmt.Errorf("generate addons template for %s: %w", w.name, err)
+	if w.addons == nil {
+		return nil, nil
 	}
 
-	if tmpl == "" {
+	tmpl, err := w.addons.Template()
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("generate addons template for %s: %w", w.name, err)
+	case tmpl == "":
 		return nil, nil
 	}
 
@@ -223,6 +226,10 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 }
 
 func (w *wkld) addonsParameters() (string, error) {
+	if w.addons == nil {
+		return "", nil
+	}
+
 	params, err := w.addons.Parameters()
 	if err != nil {
 		return "", fmt.Errorf("parse addons parameters for %s: %w", w.name, err)

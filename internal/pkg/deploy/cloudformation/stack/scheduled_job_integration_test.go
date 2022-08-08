@@ -45,7 +45,7 @@ func TestScheduledJob_Template(t *testing.T) {
 	addons, err := addon.New(aws.StringValue(v.Name))
 	require.NoError(t, err)
 
-	addonsStack, err := addons.Stack()
+	_, err = addons.Stack()
 	var notFound *addon.ErrAddonsNotFound
 	require.ErrorAs(t, err, &notFound)
 
@@ -56,7 +56,6 @@ func TestScheduledJob_Template(t *testing.T) {
 		RuntimeConfig: stack.RuntimeConfig{
 			ServiceDiscoveryEndpoint: "test.my-app.local",
 		},
-		Addons: addonsStack,
 	})
 
 	tpl, err := serializer.Template()

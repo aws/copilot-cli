@@ -241,18 +241,9 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
 	}
-
-	addons, err := addon.New(in.Name)
+	addons, err := getAddonsStack(in.Name)
 	if err != nil {
-		return nil, fmt.Errorf("initiate addons service: %w", err)
-	}
-
-	addonsStack, err := addons.Stack()
-	if err != nil {
-		var notFoundErr *addon.ErrAddonsNotFound
-		if !errors.As(err, &notFoundErr) {
-			return nil, fmt.Errorf("parse addons stack")
-		}
+		return nil, err
 	}
 
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
@@ -276,7 +267,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		workspacePath:      workspacePath,
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
 		s3Client:           s3.New(envSession),
-		addons:             addonsStack,
+		addons:             addons,
 		imageBuilderPusher: imageBuilderPusher,
 		deployer:           cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr)),
 		endpointGetter:     envDescriber,
@@ -292,6 +283,25 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		mft:    in.Mft,
 		rawMft: in.RawMft,
 	}, nil
+}
+
+func getAddonsStack(wlName string) (stackBuilder, error) {
+	addons, err := addon.New(wlName)
+	if err != nil {
+		return nil, fmt.Errorf("initiate addons service: %w", err)
+	}
+
+	stack, err := addons.Stack()
+	if err != nil {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if errors.As(err, &notFoundErr) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("parse addons stack: %w", err)
+	}
+
+	return stack, nil
 }
 
 // Addons returns this workloads AddonsTemplate.
@@ -962,6 +972,7 @@ func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput
 }
 
 func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
+	fmt.Printf("\nd.addons %#v (== nil: %v)\n", d.addons, d.addons == nil)
 	if d.addons == nil {
 		return "", nil
 	}

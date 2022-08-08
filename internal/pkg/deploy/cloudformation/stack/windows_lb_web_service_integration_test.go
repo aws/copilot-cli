@@ -47,7 +47,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 	addons, err := addon.New(aws.StringValue(v.Name))
 	require.NoError(t, err)
 
-	addonsStack, err := addons.Stack()
+	_, err = addons.Stack()
 	var notFound *addon.ErrAddonsNotFound
 	require.ErrorAs(t, err, &notFound)
 
@@ -65,7 +65,6 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 			Region:                   "us-west-2",
 			ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 		},
-		Addons: addonsStack,
 	})
 
 	tpl, err := serializer.Template()
