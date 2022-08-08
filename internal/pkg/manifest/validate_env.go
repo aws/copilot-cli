@@ -355,7 +355,7 @@ func (cfg advancedCDNConfig) validate() error {
 			return fmt.Errorf(`parse cdn certificate: %w`, err)
 		}
 		if certARN.Region != EnvCloudFrontCertRegion {
-			return fmt.Errorf(`cdn certificate must belong to region %s`, EnvCloudFrontCertRegion)
+			return &errInvalidCloudFrontRegion{}
 		}
 	}
 	return nil

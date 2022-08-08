@@ -119,6 +119,19 @@ func (e *errAtLeastOneFieldMustBeSpecified) Error() string {
 	return errMsg
 }
 
+type errInvalidCloudFrontRegion struct{}
+
+func (e *errInvalidCloudFrontRegion) Error() string {
+	return fmt.Sprintf(`cdn certificate must belong to region %s`, EnvCloudFrontCertRegion)
+}
+
+// RecommendActions returns recommended actions to be taken after the error.
+func (e *errInvalidCloudFrontRegion) RecommendActions() string {
+	return fmt.Sprintf(`It looks like your CloudFront certificate is in the wrong region. CloudFront only supports certificates in %s.
+We recommend creating a duplicate certificate in the %s region through AWS Certificate Manager.
+More information: https://go.aws/3BMxY4J`, EnvCloudFrontCertRegion, EnvCloudFrontCertRegion)
+}
+
 func quoteStringSlice(in []string) []string {
 	quoted := make([]string, len(in))
 	for idx, str := range in {
