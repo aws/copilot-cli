@@ -48,6 +48,7 @@ nav:
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:
       - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
+      - Package Addons: docs/developing/package-addons.en.md
       - Container Environment Variables: docs/developing/environment-variables.en.md
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Domain: docs/developing/domain.en.md
