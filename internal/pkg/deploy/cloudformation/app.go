@@ -507,7 +507,7 @@ func (cf CloudFormation) DeleteApp(appName string) error {
 	}
 	spinner.Stop(log.Ssuccessf("Deleted regional resources for application %q\n", appName))
 	stackName := fmt.Sprintf("%s-infrastructure-roles", appName)
-	description := fmt.Sprintf("Deleting application roles stack %s", stackName)
+	description := fmt.Sprintf("Delete application roles stack %s", stackName)
 	return cf.deleteAndRenderStack(stackName, description, func() error {
 		return cf.cfnClient.DeleteAndWait(stackName)
 	})

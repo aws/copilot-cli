@@ -482,7 +482,16 @@ func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn
 		startTime:      now,
 	})
 	g.Go(func() error {
-		return progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
+		w := progress.NewTabbedFileWriter(cf.console)
+		nl, err := progress.Render(ctx, w, renderer)
+		if err != nil {
+			return fmt.Errorf("render stack %q progress: %w", name, err)
+		}
+		_, err = progress.EraseAndRender(w, progress.LineRenderer(log.Ssuccess(description), 0), nl)
+		if err != nil {
+			return fmt.Errorf("erase and render stack %q progress: %w", name, err)
+		}
+		return nil
 	})
 	if err := g.Wait(); err != nil {
 		if !errors.As(err, &errNotFound) {
