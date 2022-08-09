@@ -132,7 +132,7 @@ e2e-dryrun: build # Sample command "make e2e-dryrun test=multi-env-app" to run t
 
 # Examples:
 # REGRESSION_TEST_FROM_PATH=/usr/local/bin/copilot make regression-dryrun test=multi-svc-app
-# REGRESSION_TEST_FROM_PATH=/usr/local/bin/copilot-v1.18.0 REGRESSION_TEST_FROM_PATH=/usr/local/bin/copilot-v1.19.0 make regression-dryrun test=multi-svc-app
+# REGRESSION_TEST_FROM_PATH=/usr/local/bin/copilot-v1.18.0 REGRESSION_TO_FROM_PATH=/usr/local/bin/copilot-v1.19.0 make regression-dryrun test=multi-svc-app
 .PHONY: regression-dryrun
 regression-dryrun: build
 	@echo "Install ginkgo"
