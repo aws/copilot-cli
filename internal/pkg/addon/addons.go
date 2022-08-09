@@ -35,12 +35,17 @@ type workspaceReader interface {
 	ReadAddon(svcName, fileName string) ([]byte, error)
 }
 
+// Stack represents a CloudFormation stack.
 type Stack struct {
 	template   *cfnTemplate
 	parameters yaml.Node
 	wlName     string
 }
 
+// Parse parses the 'addon/' directory for the given workload
+// and returns a Stack created by merging the CloudFormation templates
+// files found there. If no addons are found, Parse returns a nil
+// Stack and ErrAddonsNotFound.
 func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
 	fnames, err := ws.ReadAddonsDir(workloadName)
 	if err != nil {
@@ -66,6 +71,7 @@ func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
 	}, nil
 }
 
+// Template returns Stack's CloudFormation template as a yaml string.
 func (s *Stack) Template() (string, error) {
 	if s.template == nil {
 		return "", nil
@@ -74,6 +80,7 @@ func (s *Stack) Template() (string, error) {
 	return s.encode(s.template)
 }
 
+// Template returns Stack's CloudFormation parameters as a yaml string.
 func (s *Stack) Parameters() (string, error) {
 	if s.parameters.IsZero() {
 		return "", nil
@@ -82,6 +89,7 @@ func (s *Stack) Parameters() (string, error) {
 	return s.encode(s.parameters)
 }
 
+// encode encodes v as a yaml string indented with 2 spaces.
 func (s *Stack) encode(v any) (string, error) {
 	str := &strings.Builder{}
 	enc := yaml.NewEncoder(str)

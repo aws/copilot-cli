@@ -190,6 +190,7 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 	},
 }
 
+// PackageConfig contains data needed to package a Stack.
 type PackageConfig struct {
 	Bucket        string
 	Uploader      uploader
