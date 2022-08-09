@@ -309,12 +309,16 @@ func TestEnv(t *testing.T) {
 			"custom-resources/dns-delegation.js": {
 				Buffer: bytes.NewBufferString("dns delegation"),
 			},
+			"custom-resources/cert-replicator.js": {
+				Buffer: bytes.NewBufferString("cert replication"),
+			},
 		},
 	}
 	wantedPaths := map[string]string{
 		"CertificateValidationFunction": "manual/scripts/custom-resources/certificatevalidationfunction/ef49fd0cefe5525c1b98ab66614bfaebdf57dfa513a7de0d0677fc024b2f0a2b.zip",
 		"CustomDomainFunction":          "manual/scripts/custom-resources/customdomainfunction/01baf83827dca2ff7df3cdf24f6ad354b3fa4f9b7cda39b5bf91de378f81c791.zip",
 		"DNSDelegationFunction":         "manual/scripts/custom-resources/dnsdelegationfunction/17ec5f580cdb9c1d7c6b5b91decee031592547629a6bfed7cd33b9229f61ab19.zip",
+		"CertificateReplicatorFunction": "manual/scripts/custom-resources/certificatereplicatorfunction/647f83437e4736ddf2915784e13d023a7d342d162ffb42a9eec3d7c842072030.zip",
 	}
 
 	// WHEN
@@ -322,14 +326,14 @@ func TestEnv(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	require.Equal(t, fakeFS.matchCount, 3, "expected path calls do not match")
+	require.Equal(t, fakeFS.matchCount, 4, "expected path calls do not match")
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
 		actualFnNames[i] = cr.FunctionName()
 	}
 	require.ElementsMatch(t,
-		[]string{"CertificateValidationFunction", "CustomDomainFunction", "DNSDelegationFunction"},
+		[]string{"CertificateValidationFunction", "CustomDomainFunction", "DNSDelegationFunction", "CertificateReplicatorFunction"},
 		actualFnNames, "function names must match")
 
 	// ensure the zip files contain an index.js file.

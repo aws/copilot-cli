@@ -44,5 +44,10 @@ CustomDomainAction:
     Aliases: !Ref Aliases
     AppDNSRole: !Ref AppDNSDelegationRole
     DomainName: !Ref AppDNSName
-    LoadBalancerDNS: !GetAtt PublicLoadBalancer.DNSName
-    LoadBalancerHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+    {{- if .CDNConfig}}
+    PublicAccessDNS: !GetAtt CloudFrontDistribution.DomainName
+    PublicAccessHostedZone: Z2FDTNDATAQYW2 # See https://go.aws/3cPhvlX
+    {{- else}}
+    PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
+    PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+    {{- end}}

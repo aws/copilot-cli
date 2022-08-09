@@ -6,11 +6,12 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"sort"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"gopkg.in/yaml.v3"
-	"sort"
 )
 
 // EnvironmentManifestType identifies that the type of manifest is environment manifest.
@@ -184,29 +185,30 @@ func (cfg *EnvironmentConfig) EnvSecurityGroup() (*securityGroupConfig, bool) {
 }
 
 type environmentCDNConfig struct {
-	Enabled   *bool
-	CDNConfig advancedCDNConfig // mutually exclusive with Enabled
+	Enabled *bool
+	Config  advancedCDNConfig // mutually exclusive with Enabled
 }
 
 // advancedCDNConfig represents an advanced configuration for a Content Delivery Network.
-type advancedCDNConfig struct{}
+type advancedCDNConfig struct {
+	Certificate *string `yaml:"certificate"`
+}
 
 // IsEmpty returns whether environmentCDNConfig is empty.
 func (cfg *environmentCDNConfig) IsEmpty() bool {
-	return cfg.Enabled == nil && cfg.CDNConfig.IsEmpty()
+	return cfg.Enabled == nil && cfg.Config.isEmpty()
 }
 
-// IsEmpty is a no-op for advancedCDNConfig.
-func (cfg *advancedCDNConfig) IsEmpty() bool {
-	return true
+// isEmpty returns whether advancedCDNConfig is empty.
+func (cfg *advancedCDNConfig) isEmpty() bool {
+	return cfg.Certificate == nil
 }
 
 // CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
 func (cfg *environmentCDNConfig) CDNEnabled() bool {
-	if !cfg.CDNConfig.IsEmpty() {
+	if !cfg.Config.isEmpty() {
 		return true
 	}
-
 	return aws.BoolValue(cfg.Enabled)
 }
 
@@ -214,14 +216,14 @@ func (cfg *environmentCDNConfig) CDNEnabled() bool {
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&cfg.CDNConfig); err != nil {
+	if err := value.Decode(&cfg.Config); err != nil {
 		var yamlTypeErr *yaml.TypeError
 		if !errors.As(err, &yamlTypeErr) {
 			return err
 		}
 	}
 
-	if !cfg.CDNConfig.IsEmpty() {
+	if !cfg.Config.isEmpty() {
 		// Successfully unmarshalled CDNConfig fields, return
 		return nil
 	}

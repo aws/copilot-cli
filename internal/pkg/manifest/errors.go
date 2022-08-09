@@ -56,8 +56,9 @@ func (e *ErrUnknownProvider) Is(target error) bool {
 }
 
 type errFieldMustBeSpecified struct {
-	missingField      string
-	conditionalFields []string
+	missingField       string
+	conditionalFields  []string
+	allMustBeSpecified bool
 }
 
 func (e *errFieldMustBeSpecified) Error() string {
@@ -65,7 +66,11 @@ func (e *errFieldMustBeSpecified) Error() string {
 	if len(e.conditionalFields) == 0 {
 		return errMsg
 	}
-	return fmt.Sprintf(`%s if %s %s specified`, errMsg, english.WordSeries(quoteStringSlice(e.conditionalFields), "or"),
+	conjunction := "or"
+	if e.allMustBeSpecified {
+		conjunction = "and"
+	}
+	return fmt.Sprintf(`%s if %s %s specified`, errMsg, english.WordSeries(quoteStringSlice(e.conditionalFields), conjunction),
 		english.PluralWord(len(e.conditionalFields), "is", "are"))
 }
 
