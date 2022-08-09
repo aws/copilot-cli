@@ -1,3 +1,45 @@
+UniqueAliasesFunctionRole:
+  Metadata:
+    'aws:copilot:description': 'An IAM Role for the unique aliases lambda'
+  Type: AWS::IAM::Role
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Path: /
+    ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+UniqueAliasesFunction:
+  Type: AWS::Lambda::Function
+  Condition: CreateALB
+  Properties:
+    {{- with $cr := index .CustomResources "UniqueAliasesFunction" }}
+    Code:
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end}}
+    Handler: "index.uniqueAliasesHandler"
+    Timeout: 600
+    MemorySize: 512
+    Role: !GetAtt 'UniqueAliasesFunctionRole.Arn'
+    Runtime: nodejs12.x
+
+UniqueAliasesAction:
+  Metadata:
+    'aws:copilot:description': 'An action to get unique custom aliases for services in your environment'
+  Condition: CreateALB
+  Type: Custom::UniqueAliasesAction
+  Properties:
+    ServiceToken: !GetAtt UniqueAliasesFunction.Arn
+    Aliases: ${Aliases}
+
 CloudFrontDistribution:
   Metadata:
     'aws:copilot:description': 'A CloudFront distribution for global content delivery'
@@ -5,6 +47,7 @@ CloudFrontDistribution:
   Type: AWS::CloudFront::Distribution
   Properties:
     DistributionConfig:
+      Aliases: !GetAtt UniqueAliasesAction.Aliases
       DefaultCacheBehavior:
         AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
         CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k

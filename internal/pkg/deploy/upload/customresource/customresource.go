@@ -35,6 +35,7 @@ const (
 	certValidationFnName      = "CertificateValidationFunction"
 	dnsDelegationFnName       = "DNSDelegationFunction"
 	certReplicatorFnName      = "CertificateReplicatorFunction"
+	uniqueAliasesFnName       = "UniqueAliasesFunction"
 )
 
 // Function source file locations.
@@ -50,6 +51,7 @@ var (
 	envControllerFilePath            = path.Join(customResourcesDir, "env-controller.js")
 	nlbCertValidatorFilePath         = path.Join(customResourcesDir, "nlb-cert-validator.js")
 	nlbCustomDomainFilePath          = path.Join(customResourcesDir, "nlb-custom-domain.js")
+	uniqueAliasesFilePath            = path.Join(customResourcesDir, "unique-aliases.js")
 )
 
 // CustomResource represents a CloudFormation custom resource backed by a Lambda function.
@@ -152,6 +154,7 @@ func Env(fs template.Reader) ([]*CustomResource, error) {
 		customDomainFnName:   customDomainFilePath,
 		dnsDelegationFnName:  dnsDelegationFilePath,
 		certReplicatorFnName: certReplicatorFilePath,
+		uniqueAliasesFnName:  uniqueAliasesFilePath,
 	})
 }
 
