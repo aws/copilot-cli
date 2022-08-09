@@ -194,17 +194,17 @@ type PackageConfig struct {
 	Bucket        string
 	Uploader      uploader
 	WorkspacePath string
-	Fs            *afero.Afero
+	FS            afero.Fs
 
 	wlName string
 }
 
 // Package finds references to local files in Stack's template, uploads
 // the files to S3, and replaces the file path with the S3 location.
-func (s *Stack) Package(p PackageConfig) error {
-	p.wlName = s.wlName
+func (s *Stack) Package(cfg PackageConfig) error {
+	cfg.wlName = s.wlName
 
-	err := p.packageIncludeTransforms(&s.template.Metadata, &s.template.Mappings, &s.template.Conditions, &s.template.Transform, &s.template.Resources, &s.template.Outputs)
+	err := cfg.packageIncludeTransforms(&s.template.Metadata, &s.template.Mappings, &s.template.Conditions, &s.template.Transform, &s.template.Resources, &s.template.Outputs)
 	if err != nil {
 		return fmt.Errorf("package transforms: %w", err)
 	}
@@ -219,7 +219,7 @@ func (s *Stack) Package(p PackageConfig) error {
 
 		props := yamlMapGet(node, "Properties")
 		for _, conf := range confs {
-			if err := p.packageProperty(props, conf); err != nil {
+			if err := cfg.packageProperty(props, conf); err != nil {
 				return fmt.Errorf("package property %q of %q: %w", strings.Join(conf.PropertyPath, "."), name, err)
 			}
 		}
@@ -301,9 +301,9 @@ func yamlMapGet(node *yaml.Node, key string) *yaml.Node {
 	return &yaml.Node{}
 }
 
-func (p *PackageConfig) packageProperty(resourceProperties *yaml.Node, pkgCfg packagePropertyConfig) error {
+func (p *PackageConfig) packageProperty(resourceProperties *yaml.Node, propCfg packagePropertyConfig) error {
 	target := resourceProperties
-	for _, key := range pkgCfg.PropertyPath {
+	for _, key := range propCfg.PropertyPath {
 		target = yamlMapGet(target, key)
 	}
 
@@ -316,19 +316,19 @@ func (p *PackageConfig) packageProperty(resourceProperties *yaml.Node, pkgCfg pa
 		return nil
 	}
 
-	obj, err := p.uploadAddonAsset(target.Value, pkgCfg.ForceZip)
+	obj, err := p.uploadAddonAsset(target.Value, propCfg.ForceZip)
 	if err != nil {
 		return fmt.Errorf("upload asset: %w", err)
 	}
 
-	if pkgCfg.isStringReplacement() {
+	if propCfg.isStringReplacement() {
 		target.Value = s3.Location(obj.Bucket, obj.Key)
 		return nil
 	}
 
 	return target.Encode(map[string]string{
-		pkgCfg.BucketNameProperty: obj.Bucket,
-		pkgCfg.ObjectKeyProperty:  obj.Key,
+		propCfg.BucketNameProperty: obj.Bucket,
+		propCfg.ObjectKeyProperty:  obj.Key,
 	})
 }
 
@@ -348,7 +348,7 @@ func (p *PackageConfig) uploadAddonAsset(assetPath string, forceZip bool) (templ
 		assetPath = filepath.Join(p.WorkspacePath, assetPath)
 	}
 
-	info, err := p.Fs.Stat(assetPath)
+	info, err := p.FS.Stat(assetPath)
 	if err != nil {
 		return template.S3ObjectLocation{}, fmt.Errorf("stat: %w", err)
 	}
@@ -396,7 +396,7 @@ func (p *PackageConfig) zipAsset(root string) (asset, error) {
 
 	hash := sha256.New()
 
-	if err := p.Fs.Walk(root, func(path string, info fs.FileInfo, err error) error {
+	if err := afero.Walk(p.FS, root, func(path string, info fs.FileInfo, err error) error {
 		switch {
 		case err != nil:
 			return err
@@ -412,7 +412,7 @@ func (p *PackageConfig) zipAsset(root string) (asset, error) {
 			fname = info.Name()
 		}
 
-		f, err := p.Fs.Open(path)
+		f, err := p.FS.Open(path)
 		if err != nil {
 			return fmt.Errorf("open: %w", err)
 		}
@@ -452,7 +452,7 @@ func (p *PackageConfig) fileAsset(path string) (asset, error) {
 	hash := sha256.New()
 	buf := &bytes.Buffer{}
 
-	f, err := p.Fs.Open(path)
+	f, err := p.FS.Open(path)
 	if err != nil {
 		return asset{}, fmt.Errorf("open: %w", err)
 	}

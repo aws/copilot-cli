@@ -407,9 +407,7 @@ Resources:
 				Bucket:        bucket,
 				WorkspacePath: wsPath,
 				Uploader:      mocks.uploader,
-				Fs: &afero.Afero{
-					Fs: fs,
-				},
+				FS:            fs,
 			}
 			err := stack.Package(config)
 			if tc.pkgError != "" {

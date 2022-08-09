@@ -986,9 +986,7 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
 			Bucket:        d.resources.S3Bucket,
 			Uploader:      d.s3Client,
 			WorkspacePath: d.workspacePath,
-			Fs: &afero.Afero{
-				Fs: afero.NewOsFs(),
-			},
+			FS:            afero.NewOsFs(),
 		}
 		if err := d.addons.Package(config); err != nil {
 			return "", fmt.Errorf("package addons: %w", err)
