@@ -101,10 +101,9 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreamLimit int, logStre
 			break
 		}
 	}
-	logStreamNames = truncateStreams(logStreamLimit, logStreamNames)
 
 	// Make sure that the streams are returned with the latest events last so they're printed to terminal in chronological order.
-	return reverseStreams(logStreamNames), nil
+	return truncateStreams(logStreamLimit, logStreamNames), nil
 }
 
 // LogEvents returns an array of Cloudwatch Logs events.
@@ -172,15 +171,6 @@ func truncateStreams(limit int, streams []string) []string {
 		return streams
 	}
 	return streams[:limit]
-}
-
-func reverseStreams(streams []string) []string {
-	n := len(streams)
-	res := make([]string, n)
-	for i := 0; i < n; i++ {
-		res[i] = streams[n-1-i]
-	}
-	return res
 }
 
 func initGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput {
