@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -32,9 +33,6 @@ const (
 
 	deleteAppCleanResourcesStartMsg = "Cleaning up deployment resources."
 	deleteAppCleanResourcesStopMsg  = "Cleaned up deployment resources.\n"
-
-	deleteAppResourcesStartMsg = "Deleting application resources."
-	deleteAppResourcesStopMsg  = "Deleted application resources.\n"
 
 	deleteAppConfigStartMsg = "Deleting application configuration."
 	deleteAppConfigStopMsg  = "Deleted application configuration.\n"
@@ -88,7 +86,7 @@ func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
 		store:         config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region)),
 		ws:            ws,
 		sessProvider:  provider,
-		cfn:           cloudformation.New(defaultSession),
+		cfn:           cloudformation.New(defaultSession, cloudformation.WithProgressTracker(os.Stderr)),
 		prompt:        prompt.New(),
 		s3: func(session *session.Session) bucketEmptier {
 			return s3.New(session)
@@ -341,12 +339,9 @@ func (o *deleteAppOpts) deletePipelines() error {
 }
 
 func (o *deleteAppOpts) deleteAppResources() error {
-	o.spinner.Start(deleteAppResourcesStartMsg)
 	if err := o.cfn.DeleteApp(o.name); err != nil {
-		o.spinner.Stop(log.Serrorln("Error deleting application resources."))
 		return fmt.Errorf("delete app resources: %w", err)
 	}
-	o.spinner.Stop(log.Ssuccess(deleteAppResourcesStopMsg))
 	return nil
 }
 
