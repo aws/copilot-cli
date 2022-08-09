@@ -79,8 +79,7 @@ func (p *packagePropertyConfig) isStringReplacement() bool {
 // for how to transform it's properties.
 //
 // This list of resources should stay in sync with
-// https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html,
-// other than the AWS::Serverless resources, which are not supported in Copilot.
+// https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html.
 var resourcePackageConfig = map[string][]packagePropertyConfig{
 	"AWS::ApiGateway::RestApi": {
 		{
