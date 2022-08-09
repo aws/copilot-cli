@@ -17,9 +17,6 @@ import (
 // EnvironmentManifestType identifies that the type of manifest is environment manifest.
 const EnvironmentManifestType = "Environment"
 
-// EnvCloudFrontCertRegion identifies the region that CloudFront accepts imported certificates.
-const EnvCloudFrontCertRegion = "us-east-1"
-
 var environmentManifestPath = "environment/manifest.yml"
 
 // Error definitions.
@@ -207,11 +204,11 @@ func (cfg *advancedCDNConfig) isEmpty() bool {
 }
 
 // CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
-func (cfg *environmentCDNConfig) CDNEnabled() bool {
-	if !cfg.Config.isEmpty() {
+func (cfg *EnvironmentConfig) CDNEnabled() bool {
+	if !cfg.CDNConfig.Config.isEmpty() {
 		return true
 	}
-	return aws.BoolValue(cfg.Enabled)
+	return aws.BoolValue(cfg.CDNConfig.Enabled)
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the environmentCDNConfig

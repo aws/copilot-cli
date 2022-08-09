@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/acm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 
@@ -1401,7 +1402,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 
 		cdnCert := d.environmentConfig.CDNConfig.Config.Certificate
 		albCertValidator := d.newAliasCertValidator(nil)
-		cfCertValidator := d.newAliasCertValidator(aws.String(manifest.EnvCloudFrontCertRegion))
+		cfCertValidator := d.newAliasCertValidator(aws.String(cloudfront.CertRegion))
 		if err := albCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
 			return fmt.Errorf("validate aliases against the imported public ALB certificate for env %s: %w", d.env.Name, err)
 		}

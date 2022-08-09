@@ -127,7 +127,7 @@ func (o *deployEnvOpts) Ask() error {
 }
 
 func (o *deployEnvOpts) isManagedCDNEnabled(mft *manifest.Environment) bool {
-	return mft.CDNConfig.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && o.targetApp.Domain != ""
+	return mft.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && o.targetApp.Domain != ""
 }
 
 // Execute deploys an environment given a manifest.
