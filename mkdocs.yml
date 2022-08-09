@@ -49,6 +49,7 @@ nav:
     - Developing:
       - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
       - Container Environment Variables: docs/developing/environment-variables.en.md
+      - Content Delivery: docs/developing/content-delivery.en.md
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Domain: docs/developing/domain.en.md
       - Internal Load Balancers: docs/developing/internal-albs.en.md
