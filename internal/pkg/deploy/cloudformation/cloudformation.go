@@ -424,7 +424,6 @@ func (cf CloudFormation) createEnvControllerRenderer(in *envControllerRendererIn
 
 type renderStackInput struct {
 	group *errgroup.Group // Group of go routines.
-	ctx   context.Context // Context shared between go routines.
 
 	// Stack metadata.
 	stackName      string            // Name of the stack.
@@ -434,11 +433,11 @@ type renderStackInput struct {
 	startTime      time.Time         // Timestamp for when the stack mutation started.
 }
 
-func (cf CloudFormation) stackRenderer(in renderStackInput) progress.DynamicRenderer {
+func (cf CloudFormation) stackRenderer(ctx context.Context, in renderStackInput) progress.DynamicRenderer {
 	streamer := stream.NewStackStreamer(cf.cfnClient, in.stackID, in.startTime)
 	renderer := progress.ListeningStackRenderer(streamer, in.stackName, in.description, in.descriptionFor, progress.RenderOptions{})
 	in.group.Go(func() error {
-		return stream.Stream(in.ctx, streamer)
+		return stream.Stream(ctx, streamer)
 	})
 	return renderer
 }
@@ -469,9 +468,8 @@ func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn
 	g, ctx := errgroup.WithContext(waitCtx)
 	now := time.Now()
 	g.Go(deleteFn)
-	renderer := cf.stackRenderer(renderStackInput{
+	renderer := cf.stackRenderer(ctx, renderStackInput{
 		group:          g,
-		ctx:            ctx,
 		stackID:        aws.StringValue(stack.StackId),
 		stackName:      name,
 		description:    description,

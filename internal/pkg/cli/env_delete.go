@@ -40,9 +40,10 @@ const (
 	fmtRetainEnvRolesFailed   = "Failed to retain IAM roles for the %q environment\n"
 	fmtRetainEnvRolesComplete = "Retained IAM roles for the %q environment\n"
 
-	fmtDeleteEnvStart    = "Delete IAM roles and deregister environment %q from application %q."
-	fmtDeleteEnvFailed   = "Failed to deregister environment %q from application %q.\n"
-	fmtDeleteEnvComplete = "Deregistered environment %q from application %q.\n"
+	fmtDeleteEnvStart     = "Deleting IAM roles and deregistering environment %q from application %q."
+	fmtDeleteEnvIAMFailed = "Failed to delete IAM roles of environment %q from application %q.\n"
+	fmtDeleteEnvSSMFailed = "Failed to deregister environment %q from application %q.\n"
+	fmtDeleteEnvComplete  = "Deleted environment %q from application %q.\n"
 )
 
 var (
@@ -173,12 +174,12 @@ func (o *deleteEnvOpts) Execute() error {
 
 	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.name, o.appName))
 	if err := o.tryDeleteRoles(); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvIAMFailed, o.name, o.appName))
 		return err
 	}
 	// Only remove from SSM if the stack and roles were deleted. Otherwise, the command will error when re-run.
 	if err := o.deleteFromStore(); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvSSMFailed, o.name, o.appName))
 		return err
 	}
 	o.prog.Stop(log.Ssuccessf(fmtDeleteEnvComplete, o.name, o.appName))
