@@ -44,11 +44,6 @@ const (
 	capacityProviderFargate     = "FARGATE"
 )
 
-// Default values for ELB access logs config.
-const (
-	defaultBucketPrefix = "ELBAccessLogs"
-)
-
 // MinimumHealthyPercent and MaximumPercent configurations as per deployment strategy.
 const (
 	minHealthyPercentRecreate = 0
