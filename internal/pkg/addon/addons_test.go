@@ -202,12 +202,8 @@ func TestTemplate(t *testing.T) {
 			require.NoError(t, err)
 
 			template, err := stack.Template()
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedTemplate, template)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedTemplate, template)
 		})
 	}
 }
@@ -323,12 +319,8 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 			require.NoError(t, err)
 
 			params, err := stack.Parameters()
-			if tc.wantedErr != "" {
-				require.EqualError(t, err, tc.wantedErr)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedParams, params)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedParams, params)
 		})
 	}
 }
