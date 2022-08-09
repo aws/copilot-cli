@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -49,7 +50,7 @@ func Test_App_Infrastructure(t *testing.T) {
 	callerInfo, err := identity.Get()
 	require.NoError(t, err)
 	require.NoError(t, err)
-	deployer := cloudformation.New(sess)
+	deployer := cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 	cfClient := awsCF.New(sess)
 	require.NoError(t, err)
 
@@ -379,7 +380,7 @@ func Test_App_Infrastructure(t *testing.T) {
 func Test_Environment_Deployment_Integration(t *testing.T) {
 	sess, err := testSession(nil)
 	require.NoError(t, err)
-	deployer := cloudformation.New(sess)
+	deployer := cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 	cfClient := awsCF.New(sess)
 	identity := identity.New(sess)
 	s3ManagerClient := s3manager.NewUploader(sess)

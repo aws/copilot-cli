@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 )
 
 var (
@@ -39,10 +40,13 @@ func (e EnvironmentConfig) validate() error {
 	if err := e.Network.VPC.SecurityGroupConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "security_group": %w`, err)
 	}
-	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
+	if err := e.CDNConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "cdn": %w`, err)
+	}
+	if e.IsIngressRestrictedToCDN() && !e.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
-	if e.CDNConfig.CDNEnabled() {
+	if e.CDNEnabled() {
 		cdnCert := e.CDNConfig.Config.Certificate
 		if e.HTTPConfig.Public.Certificates == nil {
 			if cdnCert != nil {
@@ -346,10 +350,15 @@ func (i RestrictiveIngress) validate() error {
 
 // validate returns nil if advancedCDNConfig is configured correctly.
 func (cfg advancedCDNConfig) validate() error {
-	if cfg.Certificate != nil {
-		if _, err := arn.Parse(*cfg.Certificate); err != nil {
-			return fmt.Errorf(`parse cdn certificate: %w`, err)
-		}
+	if cfg.Certificate == nil {
+		return nil
+	}
+	certARN, err := arn.Parse(*cfg.Certificate)
+	if err != nil {
+		return fmt.Errorf(`parse cdn certificate: %w`, err)
+	}
+	if certARN.Region != cloudfront.CertRegion {
+		return &errInvalidCloudFrontRegion{}
 	}
 	return nil
 }

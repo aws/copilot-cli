@@ -700,6 +700,20 @@ func TestEnvDescriber_ValidateCFServiceDomainAliases(t *testing.T) {
 			},
 			wantedErr: fmt.Errorf("unmarshal \"mock-invalid-aliases\": invalid character 'm' looking for beginning of value"),
 		},
+		"no alb workloads have aliases parameter": {
+			setupMock: func(m *envDescriberMocks) {
+				mockParams := map[string]string{
+					"AppName":         mockAppName,
+					"EnvironmentName": mockEnvName,
+					"ALBWorkloads":    mockALBWorkloads,
+					"Aliases":         "",
+				}
+				m.stackDescriber.EXPECT().Describe().Return(stack.StackDescription{
+					Parameters: mockParams,
+				}, nil)
+			},
+			wantedErr: fmt.Errorf("services \"svc-1\" and \"svc-2\" must have \"http.alias\" specified when CloudFront is enabled"),
+		},
 		"not all valid services have an alias": {
 			setupMock: func(m *envDescriberMocks) {
 				mockParams := map[string]string{
