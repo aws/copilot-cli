@@ -197,7 +197,6 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         ```
 
 
-
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.
 
