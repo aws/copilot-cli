@@ -159,3 +159,29 @@ func TestNestedRenderOptions(t *testing.T) {
 		Padding: 2,
 	}, actual)
 }
+
+func TestEraseAndRender(t *testing.T) {
+	// GIVEN
+	wanted := new(strings.Builder)
+	file := &mockFileWriter{
+		Writer: wanted,
+	}
+	cur := cursor.NewWithWriter(file)
+	for i := 0; i < 10; i++ {
+		cursor.EraseLine(file)
+		cur.Up(1)
+	}
+	cursor.EraseLine(file)
+	wanted.WriteString("hello\n")
+
+	// WHEN
+	actual := new(strings.Builder)
+	nl, err := EraseAndRender(&mockFileWriteFlusher{
+		wrapper: actual,
+	}, &singleLineComponent{Text: "hello"}, 10) // Erase 10 lines, and then write "hello\n"
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, 1, nl, `only hello\n should have been written`)
+	require.Equal(t, wanted.String(), actual.String())
+}

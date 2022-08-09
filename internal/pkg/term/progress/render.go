@@ -52,12 +52,12 @@ func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) error 
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-r.Done():
-			if _, err := eraseAndRender(out, r, writtenLines); err != nil {
+			if _, err := EraseAndRender(out, r, writtenLines); err != nil {
 				return err
 			}
 			return nil
 		case <-time.After(renderInterval):
-			nl, err := eraseAndRender(out, r, writtenLines)
+			nl, err := EraseAndRender(out, r, writtenLines)
 			if err != nil {
 				return err
 			}
@@ -66,8 +66,8 @@ func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) error 
 	}
 }
 
-// eraseAndRender erases prevNumLines from out and then renders r.
-func eraseAndRender(out FileWriteFlusher, r Renderer, prevNumLines int) (int, error) {
+// EraseAndRender erases prevNumLines from out and then renders r.
+func EraseAndRender(out FileWriteFlusher, r Renderer, prevNumLines int) (int, error) {
 	cursor.EraseLinesAbove(out, prevNumLines)
 	if err := out.Flush(); err != nil {
 		return 0, err
