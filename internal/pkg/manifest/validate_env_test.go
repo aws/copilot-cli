@@ -213,6 +213,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 					},
 				},
 			},
+		},
 		"error if cdn cert specified but public certs not specified": {
 			in: EnvironmentConfig{
 				CDNConfig: environmentCDNConfig{
