@@ -196,6 +196,29 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
                 read_only: false
         ```
 
+    === "Content delivery network"
+
+        ```yaml
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+    
+        image:
+          build: './frontend/Dockerfile'
+          port: 8080
+    
+        http:
+          path: '/'
+          healthcheck: '/_healthcheck'
+
+        cdn: true
+    
+        cpu: 256
+        memory: 512
+        count: 3
+        exec: true
+        ```
+
+
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.
@@ -268,6 +291,8 @@ If using gRPC, please note that a domain must be associated with your applicatio
 {% include 'image-config-with-port.en.md' %}
 
 {% include 'image-healthcheck.en.md' %}
+
+{% include 'contentdelivery.en.md' %}
 
 {% include 'task-size.en.md' %}
 
