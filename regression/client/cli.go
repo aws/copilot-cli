@@ -39,6 +39,7 @@ type CLI struct {
        path string
 }
 
+// Run executes a command.
 func (cli *CLI) Run(commands ...string) (string, error) {
        return cli.exec(exec.Command(cli.path, commands...))
 }
