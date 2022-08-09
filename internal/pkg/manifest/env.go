@@ -426,6 +426,10 @@ type ELBAccessLogsArgsOrBool struct {
 	AdvancedConfig ELBAccessLogsArgs
 }
 
+func (al *ELBAccessLogsArgsOrBool) isEmpty() bool {
+	return al.Enabled == nil && al.AdvancedConfig.isEmpty()
+}
+
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the ELBAccessLogsArgsOrBool
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
@@ -459,10 +463,6 @@ type ELBAccessLogsArgs struct {
 
 func (al *ELBAccessLogsArgs) isEmpty() bool {
 	return al.BucketName == nil && al.BucketPrefix == nil
-}
-
-func (al *ELBAccessLogsArgsOrBool) isEmpty() bool {
-	return al.Enabled == nil && al.AdvancedConfig.isEmpty()
 }
 
 // AccessLogs returns the access logs config if the user has set any values.

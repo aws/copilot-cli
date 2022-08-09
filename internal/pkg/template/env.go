@@ -137,10 +137,7 @@ func (elb *ELBAccessLogs) ShouldCreateBucket() bool {
 	if elb == nil {
 		return false
 	}
-	if len(elb.BucketName) > 0 {
-		return false
-	}
-	return true
+	return len(elb.BucketName) == 0
 }
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.

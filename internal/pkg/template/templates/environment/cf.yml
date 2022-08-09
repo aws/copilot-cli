@@ -288,8 +288,10 @@ Resources:
       LoadBalancerAttributes:
         - Key: 'access_logs.s3.enabled'
           Value: true
+          {{- if .PublicHTTPConfig.ELBAccessLogs.BucketPrefix }}
         - Key: 'access_logs.s3.prefix'
           Value: {{ .PublicHTTPConfig.ELBAccessLogs.BucketPrefix }}
+          {{- end }}
         - Key: 'access_logs.s3.bucket'
           Value: {{- if .PublicHTTPConfig.ELBAccessLogs.BucketName }} {{ .PublicHTTPConfig.ELBAccessLogs.BucketName }}{{- else }} !Ref ELBAccessLogsBucket {{- end }}
       {{- end }}

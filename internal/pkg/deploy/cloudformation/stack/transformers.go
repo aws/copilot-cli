@@ -365,20 +365,13 @@ func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessL
 		return nil, nil
 	}
 
-	bucketPrefix := defaultBucketPrefix
-
 	if elbAccessLogsArgs == nil { // if default ELB access logs has been defined using access_logs: true.
-		return &template.ELBAccessLogs{
-			BucketPrefix: bucketPrefix,
-		}, nil
-	}
-	if elbAccessLogsArgs.BucketPrefix != nil {
-		bucketPrefix = aws.StringValue(elbAccessLogsArgs.BucketPrefix)
+		return &template.ELBAccessLogs{}, nil
 	}
 
 	return &template.ELBAccessLogs{
 		BucketName:   aws.StringValue(elbAccessLogsArgs.BucketName),
-		BucketPrefix: bucketPrefix,
+		BucketPrefix: aws.StringValue(elbAccessLogsArgs.BucketPrefix),
 	}, nil
 }
 
