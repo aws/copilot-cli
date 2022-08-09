@@ -22,9 +22,9 @@ network:
 ```
 
 <span class="parent-field">network.vpc.placement.</span><a id="network-vpc-placement-subnets" href="#network-vpc-placement-subnets" class="field">`subnets`</a> <span class="type">Array of Strings or Map</span>  
-When using it as a list of strings, the value should be subnet IDs where Copilot launches ECS tasks.
+As a list of strings, the subnet IDs where Copilot should launch ECS tasks.
 
-When using it as a map, your subnets will by filtered by the given name and values pairs. Note that the filters are joined with an `AND`, and the values for each filter are joined by an `OR`. For example, both security group A with tag set `org: bi` and `type: public`, and security group B with tag set `org: bi` and `type: private` will be matched by
+As a map, the name-value pairs by which to filter your subnets. Note that the filters are joined with an `AND`, and the values for each filter are joined by an `OR`. For example, both subnets with tag set `org: bi` and `type: public`, and subnets with tag set `org: bi` and `type: private` will be matched by
 
 ```yaml
 network:
@@ -39,7 +39,7 @@ network:
 ```
 
 <span class="parent-field">network.vpc.placement.subnets</span><a id="network-vpc-placement-subnets-from-tags" href="#network-vpc-placement-subnets-from-tags" class="field">`from_tags`</a> <span class="type">Map of String and String or Array of Strings</span>  
-Filter subnets based on their tag set and return an array of subnet IDs, where Copilot launches ECS tasks.
+Tag sets by which to filter subnets where Copilot should launch ECS tasks.
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings or Map</span>  
 Additional security group IDs associated with your tasks.
