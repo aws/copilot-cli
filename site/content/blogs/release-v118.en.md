@@ -23,6 +23,8 @@ Copilot v1.18 brings several new features and improvements:
 
 ## What’s AWS Copilot?
 
+Posted On: May 9, 2022
+
 The AWS Copilot CLI is a tool for developers to build, release, and operate production ready containerized applications on AWS.  
 From getting started, pushing to staging, and releasing to production, Copilot can help manage the entire lifecycle of your application development.
 At the foundation of Copilot is AWS CloudFormation, which enables you to provision infrastructure as code in a single operation.
@@ -146,7 +148,7 @@ before the downstream services are ready to accept them. Copilot figures out in 
 ![Rendered ordered pipeline](../assets/images/pipeline-ordered.png)
 ### Additional pipeline improvements
 There are a few other enhancements that come with the new `deployments` field:
-1. It is now possible for monorepos to configure which services or jobs to deploy in a pipeline. For example, I can limit 
+1. It is now possible for monorepos to configure which services or jobs to deploy in a pipeline. For example, I can limit
    the pipeline to only deploy the `orders` microservice:
    ```yaml
    deployments:
