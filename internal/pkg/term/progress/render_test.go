@@ -87,7 +87,7 @@ func TestRender(t *testing.T) {
 		}
 
 		// WHEN
-		err := Render(ctx, out, r)
+		_, err := Render(ctx, out, r)
 
 		// THEN
 		require.EqualError(t, err, ctx.Err().Error(), "expected the context to be canceled")
@@ -111,10 +111,11 @@ func TestRender(t *testing.T) {
 		}()
 
 		// WHEN
-		err := Render(context.Background(), out, r)
+		nl, err := Render(context.Background(), out, r)
 
 		// THEN
 		require.NoError(t, err)
+		require.Equal(t, 1, nl)
 
 		// We should be doing the following operations in order:
 		// 1. Hide the cursor.
