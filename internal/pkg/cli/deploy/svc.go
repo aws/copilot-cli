@@ -241,9 +241,15 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
 	}
-	addons, err := getAddonsStack(in.Name)
+
+	var addons stackBuilder
+	addons, err = addon.Parse(in.Name, ws)
 	if err != nil {
-		return nil, err
+		var notFoundErr *addon.ErrAddonsNotFound
+		if !errors.As(err, &notFoundErr) {
+			return nil, fmt.Errorf("parse addons stack: %w", err)
+		}
+		addons = nil // so that we can check for no addons with nil comparison
 	}
 
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
@@ -285,27 +291,12 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}, nil
 }
 
-func getAddonsStack(wlName string) (stackBuilder, error) {
-	addons, err := addon.New(wlName)
-	if err != nil {
-		return nil, fmt.Errorf("initiate addons service: %w", err)
-	}
-
-	stack, err := addons.Stack()
-	if err != nil {
-		var notFoundErr *addon.ErrAddonsNotFound
-		if errors.As(err, &notFoundErr) {
-			return nil, nil
-		}
-
-		return nil, fmt.Errorf("parse addons stack: %w", err)
-	}
-
-	return stack, nil
-}
-
-// Addons returns this workloads AddonsTemplate.
+// AddonsTemplate returns this workload's addon template.
 func (w *workloadDeployer) AddonsTemplate() (string, error) {
+	if w.addons == nil {
+		return "", nil
+	}
+
 	return w.addons.Template()
 }
 
