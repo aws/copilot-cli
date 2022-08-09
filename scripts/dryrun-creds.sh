@@ -5,13 +5,17 @@ import sys
 cmd = subprocess.run(['aws', 'configure', 'list-profiles'], stdout=subprocess.PIPE)
 profiles = cmd.stdout.decode('utf-8').split('\n')
 
+if len(sys.argv) < 2:
+  sys.exit('no arg passed to script, must be one of: "e2e" or "regression"')
+
 if sys.argv[1] == "e2e":
   requiredProfiles = ['e2etestenv', 'e2eprodenv']
 elif sys.argv[1] == "regression":
   requiredProfiles = ['regression']
+else:
+  sys.exit('invalid arg passed to script, must be one of: "e2e" or "regression"')
 
 for profile in requiredProfiles:
-  print(profile)
   if profile in profiles:
     continue
   print(f'Profile [{profile}] is required but does not exist. Copying your [default] access key id and secret key...')
