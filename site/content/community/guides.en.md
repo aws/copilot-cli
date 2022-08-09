@@ -45,7 +45,7 @@ Share your applications, videos, and blog posts with fellow Copilots!
 
 | Repository      | Description                          | Key features |
 | ----------- | ------------------------------------ | ------------ |
-[**Server Side Swift Guides**](https://github.com/swift-server/guides/blob/main/docs/aws-copilot-fargate-vapor-mongo.md) | Server Side Swift on AWS with Fargate, Vapor, and MongoDB Atlas deployed with Copilot | Fargate, Vapor, MongoDB, API Gateway
+[**Server Side Swift Guides**](https://www.swift.org/server/guides/deploying/aws-copilot-fargate-vapor-mongo.html) | Server Side Swift on AWS with Fargate, Vapor, and MongoDB Atlas deployed with Copilot | Fargate, Vapor, MongoDB, API Gateway
 [**github.com/kcearns/fargate-node-example**](https://github.com/kcearns/fargate-node-example) | A sample Node application that includes a pipeline. | Node, pipeline
 [**github.com/efekarakus/day2-with-copilot**](https://github.com/efekarakus/day2-with-copilot) | A REST API coffeeshop application that goes beyond the basics, demoed in the ["Container Day" video](./guides.en.md#videos), above. | `alias`, secrets, DynamoDB, Redis |
 [**github.com/bvtujo/copilot-wordpress**](https://github.com/bvtujo/copilot-wordpress) | A WordPress installation launched by AWS Copilot with step-by-step instructions and options for customization. | [EFS](../docs/developing/storage.en.md#managed-efs), MySQL RDS cluster, autoscaling |
