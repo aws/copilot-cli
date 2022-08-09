@@ -430,6 +430,7 @@ type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 	PublicCIDRBlocks() ([]string, error)
 	Manifest() ([]byte, error)
+	ValidateCFServiceDomainAliases() error
 }
 
 type versionCompatibilityChecker interface {

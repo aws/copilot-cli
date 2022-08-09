@@ -153,8 +153,20 @@ func ParseURL(url string) (bucket string, key string, err error) {
 	if len(parsedURL) != 2 {
 		return "", "", fmt.Errorf("cannot parse S3 URL %s into bucket name and key", url)
 	}
-	bucket, key = strings.Split(parsedURL[0], ".")[0], parsedURL[1]
-	return
+
+	// go through the host backwards and find the first piece that
+	// starts with 's3' - the rest of the host (to the left of 's3')
+	// is the bucket name. this is to support both URL host formats:
+	// <bucket>.s3-<region>.amazonaws.com and <bucket>.s3.<region>.amazonaws.com
+	split := strings.Split(parsedURL[0], ".")
+	bucketEndIdx := len(split) - 1
+	for ; bucketEndIdx > 0; bucketEndIdx-- {
+		if strings.HasPrefix(split[bucketEndIdx], "s3") {
+			break
+		}
+	}
+
+	return strings.Join(split[:bucketEndIdx], "."), parsedURL[1], nil
 }
 
 // URL returns a virtual-hosted–style S3 url for the object stored at key in a bucket created in the specified region.

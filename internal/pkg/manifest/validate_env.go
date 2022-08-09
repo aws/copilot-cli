@@ -6,8 +6,10 @@ package manifest
 import (
 	"errors"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 )
 
 var (
@@ -19,7 +21,7 @@ var (
 // Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
 	if err := e.EnvironmentConfig.validate(); err != nil {
-		return fmt.Errorf(`validate "network": %w`, err)
+		return err
 	}
 	return nil
 }
@@ -38,8 +40,30 @@ func (e EnvironmentConfig) validate() error {
 	if err := e.Network.VPC.SecurityGroupConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "security_group": %w`, err)
 	}
-	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
+	if err := e.CDNConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "cdn": %w`, err)
+	}
+	if e.IsIngressRestrictedToCDN() && !e.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
+	}
+	if e.CDNEnabled() {
+		cdnCert := e.CDNConfig.Config.Certificate
+		if e.HTTPConfig.Public.Certificates == nil {
+			if cdnCert != nil {
+				return &errFieldMustBeSpecified{
+					missingField:      "http.public.certificates",
+					conditionalFields: []string{"cdn.certificate"},
+				}
+			}
+		} else {
+			if cdnCert == nil {
+				return &errFieldMustBeSpecified{
+					missingField:       "cdn.certificate",
+					conditionalFields:  []string{"http.public.certificates", "cdn"},
+					allMustBeSpecified: true,
+				}
+			}
+		}
 	}
 
 	if e.HTTPConfig.Private.InternalALBSubnets != nil {
@@ -308,10 +332,10 @@ func (cfg securityGroupsConfig) validate() error {
 
 // validate returns nil if environmentCDNConfig is configured correctly.
 func (cfg environmentCDNConfig) validate() error {
-	if cfg.CDNConfig.isEmpty() {
+	if cfg.Config.isEmpty() {
 		return nil
 	}
-	return cfg.CDNConfig.validate()
+	return cfg.Config.validate()
 }
 
 // validate returns nil if Ingress is configured correctly.
@@ -324,8 +348,18 @@ func (i RestrictiveIngress) validate() error {
 	return nil
 }
 
-// validate is a no-op for AdvancedCDNConfig.
+// validate returns nil if advancedCDNConfig is configured correctly.
 func (cfg advancedCDNConfig) validate() error {
+	if cfg.Certificate == nil {
+		return nil
+	}
+	certARN, err := arn.Parse(*cfg.Certificate)
+	if err != nil {
+		return fmt.Errorf(`parse cdn certificate: %w`, err)
+	}
+	if certARN.Region != cloudfront.CertRegion {
+		return &errInvalidCloudFrontRegion{}
+	}
 	return nil
 }
 

@@ -80,8 +80,6 @@ func (p *packagePropertyConfig) isStringReplacement() bool {
 // This list of resources should stay in sync with
 // https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html,
 // other than the AWS::Serverless resources, which are not supported in Copilot.
-//
-// TODO(dnrnd) AWS::Include.Location
 var resourcePackageConfig = map[string][]packagePropertyConfig{
 	"AWS::ApiGateway::RestApi": {
 		{
@@ -193,9 +191,13 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 }
 
 func (t *cfnTemplate) pkg(a *Addons) error {
-	resources := mappingNode(&t.Resources)
+	err := a.packageIncludeTransforms(&t.Metadata, &t.Mappings, &t.Conditions, &t.Transform, &t.Resources, &t.Outputs)
+	if err != nil {
+		return fmt.Errorf("package transforms: %w", err)
+	}
 
-	for name, node := range resources {
+	// package resources
+	for name, node := range mappingNode(&t.Resources) {
 		resType := yamlMapGet(node, "Type").Value
 		confs, ok := resourcePackageConfig[resType]
 		if !ok {
@@ -210,6 +212,58 @@ func (t *cfnTemplate) pkg(a *Addons) error {
 		}
 	}
 
+	return nil
+}
+
+// packageIncludeTransforms searches each node in nodes for the CFN
+// intrinsic function "Fn::Transform" with the "AWS::Include" macro. If it
+// detects one, and the "Location" parameter is set to a local path, it'll
+// upload those files to S3. If node is a yaml map or sequence, it will
+// recursively traverse those nodes.
+func (a *Addons) packageIncludeTransforms(nodes ...*yaml.Node) error {
+	pkg := func(node *yaml.Node) error {
+		if node == nil || node.Kind != yaml.MappingNode {
+			return nil
+		}
+
+		for key, val := range mappingNode(node) {
+			switch {
+			case key == "Fn::Transform":
+				name := yamlMapGet(val, "Name")
+				if name.Value != "AWS::Include" {
+					continue
+				}
+
+				loc := yamlMapGet(yamlMapGet(val, "Parameters"), "Location")
+				if !isFilePath(loc.Value) {
+					continue
+				}
+
+				obj, err := a.uploadAddonAsset(loc.Value, false)
+				if err != nil {
+					return fmt.Errorf("upload asset: %w", err)
+				}
+
+				loc.Value = s3.Location(obj.Bucket, obj.Key)
+			case val.Kind == yaml.MappingNode:
+				if err := a.packageIncludeTransforms(val); err != nil {
+					return err
+				}
+			case val.Kind == yaml.SequenceNode:
+				if err := a.packageIncludeTransforms(val.Content...); err != nil {
+					return err
+				}
+			}
+		}
+
+		return nil
+	}
+
+	for i := range nodes {
+		if err := pkg(nodes[i]); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
