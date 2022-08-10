@@ -63,5 +63,9 @@ func (cf CloudFormation) handleStackError(stackName string, err error) error {
 
 // DeleteWorkload removes the CloudFormation stack of a deployed workload.
 func (cf CloudFormation) DeleteWorkload(in deploy.DeleteWorkloadInput) error {
-	return cf.cfnClient.DeleteAndWait(fmt.Sprintf("%s-%s-%s", in.AppName, in.EnvName, in.Name))
+	stackName := fmt.Sprintf("%s-%s-%s", in.AppName, in.EnvName, in.Name)
+	description := fmt.Sprintf("Delete stack %s", stackName)
+	return cf.deleteAndRenderStack(stackName, description, func() error {
+		return cf.cfnClient.DeleteAndWait(stackName)
+	})
 }

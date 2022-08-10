@@ -336,10 +336,13 @@ func (d *EnvDescriber) ValidateCFServiceDomainAliases() error {
 	}
 
 	var aliases map[string][]string
-	err = json.Unmarshal([]byte(jsonOutput), &aliases)
-	if err != nil {
-		return fmt.Errorf("unmarshal %q: %w", jsonOutput, err)
+	if jsonOutput != "" {
+		err = json.Unmarshal([]byte(jsonOutput), &aliases)
+		if err != nil {
+			return fmt.Errorf("unmarshal %q: %w", jsonOutput, err)
+		}
 	}
+
 	var lbSvcsWithoutAlias []string
 	for _, service := range services {
 		if _, ok := aliases[service]; !ok {

@@ -126,6 +126,10 @@ func (o *deployEnvOpts) Ask() error {
 	return o.validateOrAskEnvName()
 }
 
+func (o *deployEnvOpts) isManagedCDNEnabled(mft *manifest.Environment) bool {
+	return mft.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && o.targetApp.Domain != ""
+}
+
 // Execute deploys an environment given a manifest.
 func (o *deployEnvOpts) Execute() error {
 	rawMft, err := o.ws.ReadEnvironmentManifest(o.name)
@@ -136,11 +140,14 @@ func (o *deployEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	if mft.CDNConfig.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && o.targetApp.Domain != "" {
+	if o.isManagedCDNEnabled(mft) {
 		describer, err := o.newEnvDescriber()
 		if err != nil {
-			return fmt.Errorf("describe env: %w", err)
+			return err
 		}
+		// With managed domain, if the customer isn't using `alias` the A-records are inserted in the service stack as each service domain is unique.
+		// However, when clients enable CloudFront, they would need to update all their existing records to now point to the distribution.
+		// Hence, we force users to use `alias` and let the records be written in the environment stack instead.
 		if err := describer.ValidateCFServiceDomainAliases(); err != nil {
 			return err
 		}

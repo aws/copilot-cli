@@ -79,7 +79,7 @@ func TestScheduledJob_Template(t *testing.T) {
 					}, actual)
 					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
 				})
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -159,7 +159,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).Return(nil, errors.New("some error"))
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				j.parser = m
 				j.wkld.addons = addons
 			},

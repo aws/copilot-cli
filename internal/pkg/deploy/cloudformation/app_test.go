@@ -903,7 +903,12 @@ func TestCloudFormation_DeleteApp(t *testing.T) {
 			appName: "testApp",
 			createMock: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().DeleteAndWait("testApp-infrastructure-roles").Return(nil)
+				m.EXPECT().TemplateBody("testApp-infrastructure-roles").Return("", nil)
+				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
+					StackId: aws.String("some stack"),
+				}, nil)
+				m.EXPECT().DeleteAndWait("testApp-infrastructure-roles").Return(&cloudformation.ErrStackNotFound{})
+				m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&awscfn.DescribeStackEventsOutput{}, nil).AnyTimes()
 				return m
 			},
 			mockStackSet: func(ctrl *gomock.Controller) stackSetClient {
@@ -923,6 +928,7 @@ func TestCloudFormation_DeleteApp(t *testing.T) {
 			cf := CloudFormation{
 				cfnClient:   tc.createMock(ctrl),
 				appStackSet: tc.mockStackSet(ctrl),
+				console:     new(discardFile),
 			}
 
 			// WHEN
