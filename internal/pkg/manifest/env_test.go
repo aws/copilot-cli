@@ -386,6 +386,57 @@ network:
 				},
 			},
 		},
+		"unmarshal with enable access logs": {
+			inContent: `name: prod
+type: Environment
+
+http:
+  public:
+    access_logs: true`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
+							ELBAccessLogs: ELBAccessLogsArgsOrBool{
+								Enabled: aws.Bool(true),
+							},
+						},
+					},
+				},
+			},
+		},
+		"unmarshal with advanced access logs": {
+			inContent: `name: prod
+type: Environment
+
+http:
+  public:
+    access_logs:
+      bucket_name: testbucket
+      bucket_prefix: testprefix`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
+							ELBAccessLogs: ELBAccessLogsArgsOrBool{
+								AdvancedConfig: ELBAccessLogsArgs{
+									BucketPrefix: aws.String("testprefix"),
+									BucketName:   aws.String("testbucket"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 		"unmarshal with observability": {
 			inContent: `name: prod
 type: Environment
@@ -870,6 +921,66 @@ func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := tc.in.CDNEnabled()
 			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestEnvironmentAccessLogs_ELBAccessLogs(t *testing.T) {
+	testCases := map[string]struct {
+		in            EnvironmentConfig
+		wantedFlag    bool
+		wantedConfigs *ELBAccessLogsArgs
+	}{
+		"enabled via bool": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						ELBAccessLogs: ELBAccessLogsArgsOrBool{
+							Enabled: aws.Bool(true),
+						},
+					},
+				},
+			},
+			wantedFlag:    true,
+			wantedConfigs: nil,
+		},
+		"disabled via bool": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						ELBAccessLogs: ELBAccessLogsArgsOrBool{},
+					},
+				},
+			},
+			wantedFlag:    false,
+			wantedConfigs: nil,
+		},
+		"advanced access logs config": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						ELBAccessLogs: ELBAccessLogsArgsOrBool{
+							AdvancedConfig: ELBAccessLogsArgs{
+								BucketPrefix: aws.String("bucketprefix"),
+								BucketName:   aws.String("bucketname"),
+							},
+						},
+					},
+				},
+			},
+			wantedFlag: true,
+			wantedConfigs: &ELBAccessLogsArgs{
+				BucketName:   aws.String("bucketname"),
+				BucketPrefix: aws.String("bucketprefix"),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			elbAccessLogs, flag := tc.in.ELBAccessLogs()
+			require.Equal(t, tc.wantedFlag, flag)
+			require.Equal(t, tc.wantedConfigs, elbAccessLogs)
 		})
 	}
 }

@@ -356,11 +356,11 @@ type networkLoadBalancerConfig struct {
 
 func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessLogs, error) {
 	elbAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
-	if !isELBAccessLogsSet { //if ELB access logs configs are not defined.
+	if !isELBAccessLogsSet {
 		return nil, nil
 	}
 
-	if elbAccessLogsArgs == nil { // if default ELB access logs has been defined using access_logs: true.
+	if elbAccessLogsArgs == nil {
 		return &template.ELBAccessLogs{}, nil
 	}
 

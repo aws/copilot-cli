@@ -457,7 +457,7 @@ func (al *ELBAccessLogsArgsOrBool) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// AccessLogsConfig holds the access logs configuration.
+// ELBAccessLogsArgs holds the access logs configuration.
 type ELBAccessLogsArgs struct {
 	BucketName   *string `yaml:"bucket_name,omitempty"`
 	BucketPrefix *string `yaml:"bucket_prefix,omitempty"`
@@ -467,7 +467,7 @@ func (al *ELBAccessLogsArgs) isEmpty() bool {
 	return al.BucketName == nil && al.BucketPrefix == nil
 }
 
-// AccessLogs returns the access logs config if the user has set any values.
+// ELBAccessLogs returns the access logs config if the user has set any values.
 // If there is no access logs settings, then returns nil and false.
 func (cfg *EnvironmentConfig) ELBAccessLogs() (*ELBAccessLogsArgs, bool) {
 	accessLogs := cfg.HTTPConfig.Public.ELBAccessLogs
@@ -475,7 +475,7 @@ func (cfg *EnvironmentConfig) ELBAccessLogs() (*ELBAccessLogsArgs, bool) {
 		return nil, false
 	}
 	if accessLogs.Enabled != nil {
-		return nil, true
+		return nil, aws.BoolValue(accessLogs.Enabled)
 	}
 	return &accessLogs.AdvancedConfig, true
 }
