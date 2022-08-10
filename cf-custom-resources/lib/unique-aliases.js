@@ -3,6 +3,11 @@
 
 "use strict";
 
+// These are used for test purposes only
+let defaultResponseURL;
+let defaultLogGroup;
+let defaultLogStream;
+
 /**
  * Upload a CloudFormation response object to S3.
  *
@@ -29,7 +34,7 @@ const report = function (
     let responseBody = JSON.stringify({
       Status: responseStatus,
       Reason: reason,
-      PhysicalResourceId: physicalResourceId || context.logStreamName,
+      PhysicalResourceId: physicalResourceId,
       StackId: event.StackId,
       RequestId: event.RequestId,
       LogicalResourceId: event.LogicalResourceId,
@@ -64,11 +69,11 @@ const report = function (
 };
 
 const logGroupName = function (context) {
-  return context.logGroupName;
+  return defaultLogGroup || context.logGroupName;
 };
 
 const logStreamName = function (context) {
-  return context.logStreamName;
+  return defaultLogStream || context.logStreamName;
 };
 
 /**
@@ -85,8 +90,7 @@ const logStreamName = function (context) {
  * From the previous example, UniqueAliases would be:
  * ["svc1.com", "example.com"]
  */
-// TODO can i just call this handler?
-exports.uniqueAliasesHandler = async function (event, context) {
+exports.handler = async function (event, context) {
   const responseData = {};
   const physicalResourceId = event.PhysicalResourceId || `unique-aliases-${event.LogicalResourceId}`;
 
@@ -94,8 +98,9 @@ exports.uniqueAliasesHandler = async function (event, context) {
     switch (event.RequestType) {
       case "Create":
       case "Update":
-        const aliases = event.ResourceProperties.Aliases;
-        responseData.UniqueAliases = new Set(Object.values(aliases).flat());
+        const aliasesForService = event.ResourceProperties.Aliases;
+        const unique = new Set(Object.values(aliasesForService || {}).flat());
+        responseData.UniqueAliases = Array.from(unique).sort();
         break;
       case "Delete":
         // Do nothing on delete, since this isn't a "real" resource.
@@ -107,6 +112,27 @@ exports.uniqueAliasesHandler = async function (event, context) {
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.error(`caught error: ${err}`);
-    await report(event, context, "FAILED", physicalResourceId, null, `${err.message} (Log: ${logGroupName()}/${logStreamName()})`);
+    await report(event, context, "FAILED", physicalResourceId, null, `${err?.message} (Log: ${logGroupName()}/${logStreamName()})`);
   }
+};
+
+/**
+ * @private
+ */
+exports.withDefaultResponseURL = function (url) {
+  defaultResponseURL = url;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogStream = function (logStream) {
+  defaultLogStream = logStream;
+};
+
+/**
+ * @private
+ */
+exports.withDefaultLogGroup = function (logGroup) {
+  defaultLogGroup = logGroup;
 };

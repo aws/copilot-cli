@@ -25,7 +25,7 @@ UniqueAliasesFunction:
       S3Bucket: {{$cr.Bucket}}
       S3Key: {{$cr.Key}}
     {{- end}}
-    Handler: "index.uniqueAliasesHandler"
+    Handler: "index.handler"
     Timeout: 600
     MemorySize: 512
     Role: !GetAtt 'UniqueAliasesFunctionRole.Arn'
