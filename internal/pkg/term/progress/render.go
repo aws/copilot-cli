@@ -36,10 +36,10 @@ func NestedRenderOptions(opts RenderOptions) RenderOptions {
 	}
 }
 
-// Render renders r periodically to out.
+// Render renders r periodically to out and returns the last number of lines written to out.
 // Render stops when there the ctx is canceled or r is done listening to new events.
 // While Render is executing, the terminal cursor is hidden and updates are written in-place.
-func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) error {
+func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) (int, error) {
 	defer out.Flush() // Make sure every buffered text in out is written before exiting.
 
 	cursor := cursor.NewWithWriter(out)
@@ -50,24 +50,21 @@ func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) error 
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return writtenLines, ctx.Err()
 		case <-r.Done():
-			if _, err := eraseAndRender(out, r, writtenLines); err != nil {
-				return err
-			}
-			return nil
+			return EraseAndRender(out, r, writtenLines)
 		case <-time.After(renderInterval):
-			nl, err := eraseAndRender(out, r, writtenLines)
+			nl, err := EraseAndRender(out, r, writtenLines)
 			if err != nil {
-				return err
+				return nl, err
 			}
 			writtenLines = nl
 		}
 	}
 }
 
-// eraseAndRender erases prevNumLines from out and then renders r.
-func eraseAndRender(out FileWriteFlusher, r Renderer, prevNumLines int) (int, error) {
+// EraseAndRender erases prevNumLines from out and then renders r.
+func EraseAndRender(out FileWriteFlusher, r Renderer, prevNumLines int) (int, error) {
 	cursor.EraseLinesAbove(out, prevNumLines)
 	if err := out.Flush(); err != nil {
 		return 0, err

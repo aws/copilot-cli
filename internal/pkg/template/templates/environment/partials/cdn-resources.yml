@@ -9,14 +9,21 @@ CloudFrontDistribution:
         AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
         CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k
         TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
-        ViewerProtocolPolicy: allow-all # Will need to change with TLS termination and Alias usage
+        OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3 # See https://go.aws/3BIE8CP
+        ViewerProtocolPolicy: allow-all
       Enabled: true
       IPV6Enabled: true
       Origins:
         - CustomOriginConfig:
-            OriginProtocolPolicy: match-viewer # Will need to change with TLS termination and Alias usage
+            OriginProtocolPolicy: match-viewer
           DomainName: !GetAtt PublicLoadBalancer.DNSName
           Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+{{- if .CDNConfig.ViewerCertificate}}
+      ViewerCertificate:
+        AcmCertificateArn: {{.CDNConfig.ViewerCertificate}}
+        MinimumProtocolVersion: TLSv1
+        SslSupportMethod:  sni-only
+{{- else}}
 {{- if not .PublicHTTPConfig.ImportedCertARNs}}
       ViewerCertificate:
         !If
@@ -53,4 +60,5 @@ CertificateReplicator:
     TargetRegion: "us-east-1"
     EnvRegion: !Ref AWS::Region
     CertificateArn: !Ref HTTPSCert
+{{- end}}
 {{- end}}

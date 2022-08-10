@@ -4557,6 +4557,20 @@ func (mr *MockenvDescriberMockRecorder) PublicCIDRBlocks() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublicCIDRBlocks", reflect.TypeOf((*MockenvDescriber)(nil).PublicCIDRBlocks))
 }
 
+// ValidateCFServiceDomainAliases mocks base method.
+func (m *MockenvDescriber) ValidateCFServiceDomainAliases() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateCFServiceDomainAliases")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateCFServiceDomainAliases indicates an expected call of ValidateCFServiceDomainAliases.
+func (mr *MockenvDescriberMockRecorder) ValidateCFServiceDomainAliases() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateCFServiceDomainAliases", reflect.TypeOf((*MockenvDescriber)(nil).ValidateCFServiceDomainAliases))
+}
+
 // MockversionCompatibilityChecker is a mock of versionCompatibilityChecker interface.
 type MockversionCompatibilityChecker struct {
 	ctrl     *gomock.Controller

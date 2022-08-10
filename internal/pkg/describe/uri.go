@@ -230,7 +230,9 @@ func (d *uriDescriber) envDNSName(path string) (accessURI, error) {
 	if err != nil {
 		return accessURI{}, fmt.Errorf("get stack outputs for environment %s: %w", d.env, err)
 	}
-	if accessible, ok := envOutputs[envOutputPublicALBAccessible]; ok && accessible == "true" {
+	// Backward compatibility concern since envOutputPublicALBAccessible didn't exist before,
+	// and public ALB DNS name previously was always accessible until the introduction of envOutputPublicALBAccessible.
+	if accessible, ok := envOutputs[envOutputPublicALBAccessible]; !ok || accessible == "true" {
 		dnsNames = append(dnsNames, envOutputs[d.albCFNOutputName])
 	}
 	if cfDNS, ok := envOutputs[envOutputCloudFrontDomainName]; ok {

@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/acm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 
@@ -106,6 +107,7 @@ type templater interface {
 type stackBuilder interface {
 	templater
 	Parameters() (string, error)
+	Package(addon.PackageConfig) error
 }
 
 type stackSerializer interface {
@@ -202,14 +204,13 @@ func (d *workloadDeployer) cachedEnvironmentConfig() (*manifest.Environment, err
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
 type WorkloadDeployerInput struct {
-	SessionProvider   *sessions.Provider
-	Name              string
-	App               *config.Application
-	Env               *config.Environment
-	ImageTag          string
-	Mft               interface{} // Interpolated, applied, and unmarshaled manifest.
-	RawMft            []byte      // Content of the manifest file without any transformations.
-	UploadAddonAssets bool
+	SessionProvider *sessions.Provider
+	Name            string
+	App             *config.Application
+	Env             *config.Environment
+	ImageTag        string
+	Mft             interface{} // Interpolated, applied, and unmarshaled manifest.
+	RawMft          []byte      // Content of the manifest file without any transformations.
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -242,15 +243,14 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
 	}
 
-	s3Client := s3.New(envSession)
-	var addonsSvc stackBuilder
-	if in.UploadAddonAssets {
-		addonsSvc, err = addon.NewPackager(in.Name, resources.S3Bucket, s3Client)
-	} else {
-		addonsSvc, err = addon.New(in.Name)
-	}
+	var addons stackBuilder
+	addons, err = addon.Parse(in.Name, ws)
 	if err != nil {
-		return nil, fmt.Errorf("initiate addons service: %w", err)
+		var notFoundErr *addon.ErrAddonsNotFound
+		if !errors.As(err, &notFoundErr) {
+			return nil, fmt.Errorf("parse addons stack: %w", err)
+		}
+		addons = nil // so that we can check for no addons with nil comparison
 	}
 
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
@@ -273,8 +273,8 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		resources:          resources,
 		workspacePath:      workspacePath,
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
-		s3Client:           s3Client,
-		addons:             addonsSvc,
+		s3Client:           s3.New(envSession),
+		addons:             addons,
 		imageBuilderPusher: imageBuilderPusher,
 		deployer:           cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr)),
 		endpointGetter:     envDescriber,
@@ -292,8 +292,12 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}, nil
 }
 
-// Addons returns this workloads AddonsTemplate.
+// AddonsTemplate returns this workload's addon template.
 func (w *workloadDeployer) AddonsTemplate() (string, error) {
+	if w.addons == nil {
+		return "", nil
+	}
+
 	return w.addons.Template()
 }
 
@@ -327,10 +331,10 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 type lbWebSvcDeployer struct {
 	*svcDeployer
 	appVersionGetter       versionGetter
-	aliasCertValidator     aliasCertValidator
 	publicCIDRBlocksGetter publicCIDRBlocksGetter
 	lbMft                  *manifest.LoadBalancedWebService
 	customResources        customResourcesFunc
+	newAliasCertValidator  func(optionalRegion *string) aliasCertValidator
 }
 
 // NewLBWSDeployer is the constructor for lbWebSvcDeployer.
@@ -365,7 +369,12 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		appVersionGetter:       versionGetter,
 		publicCIDRBlocksGetter: envDescriber,
 		lbMft:                  lbMft,
-		aliasCertValidator:     acm.New(svcDeployer.envSess),
+		newAliasCertValidator: func(optionalRegion *string) aliasCertValidator {
+			sess := svcDeployer.envSess.Copy(&aws.Config{
+				Region: optionalRegion,
+			})
+			return acm.New(sess)
+		},
 		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
 			crs, err := customresource.LBWS(fs)
 			if err != nil {
@@ -379,8 +388,8 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 type backendSvcDeployer struct {
 	*svcDeployer
 	backendMft         *manifest.BackendService
-	aliasCertValidator aliasCertValidator
 	customResources    customResourcesFunc
+	aliasCertValidator aliasCertValidator
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -868,9 +877,8 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 }
 
 type uploadArtifactsToS3Input struct {
-	fs        fileReader
-	uploader  uploader
-	templater templater
+	fs       fileReader
+	uploader uploader
 }
 
 type uploadArtifactsToS3Output struct {
@@ -886,10 +894,7 @@ func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (up
 	if err != nil {
 		return uploadArtifactsToS3Output{}, err
 	}
-	addonsURL, err := d.pushAddonsTemplateToS3Bucket(&pushAddonsTemplateToS3BucketInput{
-		templater: in.templater,
-		uploader:  in.uploader,
-	})
+	addonsURL, err := d.pushAddonsTemplateToS3Bucket()
 	if err != nil {
 		return uploadArtifactsToS3Output{}, err
 	}
@@ -905,9 +910,8 @@ func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) 
 		return nil, err
 	}
 	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
-		fs:        d.fs,
-		uploader:  d.s3Client,
-		templater: d.addons,
+		fs:       d.fs,
+		uploader: d.s3Client,
 	})
 	if err != nil {
 		return nil, err
@@ -964,26 +968,32 @@ func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput
 	return envFileARN, nil
 }
 
-type pushAddonsTemplateToS3BucketInput struct {
-	templater templater
-	uploader  uploader
-}
+func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
+	if d.addons == nil {
+		return "", nil
+	}
 
-func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateToS3BucketInput) (string, error) {
-	tmpl, err := in.templater.Template()
+	config := addon.PackageConfig{
+		Bucket:        d.resources.S3Bucket,
+		Uploader:      d.s3Client,
+		WorkspacePath: d.workspacePath,
+		FS:            afero.NewOsFs(),
+	}
+	if err := d.addons.Package(config); err != nil {
+		return "", fmt.Errorf("package addons: %w", err)
+	}
+
+	tmpl, err := d.addons.Template()
 	if err != nil {
-		var notFoundErr *addon.ErrAddonsNotFound
-		if errors.As(err, &notFoundErr) {
-			// addons doesn't exist for service, the url is empty.
-			return "", nil
-		}
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
+
 	reader := strings.NewReader(tmpl)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.Addons(d.name, []byte(tmpl)), reader)
+	url, err := d.s3Client.Upload(d.resources.S3Bucket, artifactpath.Addons(d.name, []byte(tmpl)), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.resources.S3Bucket, err)
 	}
+
 	return url, nil
 }
 
@@ -1393,8 +1403,17 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
-		if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
-			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
+
+		cdnCert := d.environmentConfig.CDNConfig.Config.Certificate
+		albCertValidator := d.newAliasCertValidator(nil)
+		cfCertValidator := d.newAliasCertValidator(aws.String(cloudfront.CertRegion))
+		if err := albCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
+			return fmt.Errorf("validate aliases against the imported public ALB certificate for env %s: %w", d.env.Name, err)
+		}
+		if cdnCert != nil {
+			if err := cfCertValidator.ValidateCertAliases(aliases, []string{*cdnCert}); err != nil {
+				return fmt.Errorf("validate aliases against the imported CDN certificate for env %s: %w", d.env.Name, err)
+			}
 		}
 		return nil
 	}
