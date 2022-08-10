@@ -925,7 +925,7 @@ func TestEnvironmentCDNConfig_CDNEnabled(t *testing.T) {
 	}
 }
 
-func TestEnvironmentAccessLogs_ELBAccessLogs(t *testing.T) {
+func TestEnvironmentConfig_ELBAccessLogs(t *testing.T) {
 	testCases := map[string]struct {
 		in            EnvironmentConfig
 		wantedFlag    bool
@@ -948,7 +948,9 @@ func TestEnvironmentAccessLogs_ELBAccessLogs(t *testing.T) {
 			in: EnvironmentConfig{
 				HTTPConfig: EnvironmentHTTPConfig{
 					Public: PublicHTTPConfig{
-						ELBAccessLogs: ELBAccessLogsArgsOrBool{},
+						ELBAccessLogs: ELBAccessLogsArgsOrBool{
+							Enabled: aws.Bool(false),
+						},
 					},
 				},
 			},
