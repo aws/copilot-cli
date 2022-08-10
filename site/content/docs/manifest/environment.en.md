@@ -145,6 +145,33 @@ An IPv4 CIDR block assigned to the subnet. This field is mutually exclusive with
 The Availability Zone name assigned to the subnet. The `az` field is optional, by default Availability Zones are assigned in alphabetical order.
 This field is mutually exclusive with `id`.
 
+<span class="parent-field">network.vpc.</span><a id="network-vpc-security-group" href="#network-vpc-security-group" class="field">`security_group`</a> <span class="type">Map</span>
+Configure security group rules to add to the environment's security group.
+
+<span class="parent-field">network.vpc.security_group</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
+Ingress rules to allow for the environment's security group.
+```yaml
+network:
+  vpc:
+    security_group:
+      ingress:
+        - ip_protocol: tcp
+          ports: 0-65535  
+          cidr: 0.0.0.0/0
+```
+
+<span class="parent-field">network.vpc.security_group</span><a id="network-vpc-security-group-egress" href="#network-vpc-security-group-egress" class="field">`egress`</a> <span class="type">Map</span>  
+Egress rules to allow for the environment's security group.
+```yaml
+network:
+  vpc:
+    security_group:
+      egress:
+        - ip_protocol: tcp
+            ports: 80
+            cidr: 0.0.0.0/0
+```
+
 <div class="separator"></div>
 
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
