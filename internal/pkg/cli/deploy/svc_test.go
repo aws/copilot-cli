@@ -328,6 +328,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockAddonPath, gomock.Any()).
 					Return(mockAddonsS3URL, nil)
@@ -339,6 +340,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should return error if fail to upload to S3 bucket": {
 			inRegion: "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockAddonPath, gomock.Any()).
 					Return("", mockError)
@@ -351,8 +353,15 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 			},
 		},
-		"should fail if addons cannot be retrieved from workspace": {
+		"should fail if packaging addons fails": {
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(mockError)
+			},
+			wantErr: fmt.Errorf("package addons: %w", mockError),
+		},
+		"should fail if addons template can't be created": {
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("", mockError)
 			},
 			wantErr: fmt.Errorf("retrieve addons template: %w", mockError),
