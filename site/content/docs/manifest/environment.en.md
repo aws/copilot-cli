@@ -159,6 +159,25 @@ List of [public AWS Certificate Manager certificate](https://docs.aws.amazon.com
 By attaching public certificates to your load balancer, you can associate your Load Balanced Web Services with a domain name and reach them with HTTPS. 
 See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-existing-validated-certificates) guide to learn more about how to redeploy services using [`http.alias`](./lb-web-service.en.md#http-alias).
 
+<span class="parent-field">http.public.</span><a id="http-public-access-logs" href="#http-public-access-logs" class="field">`access_logs`</a> <span class="type">Boolean or Map</span>   
+The access_logs section allows you to enable Elastic Load Balancing access logs.   
+If you specify a boolean, Copilot will create a bucket on behalf of you and enable access logs on the Public Load Balancer which will write the logs in the Copilot created bucket.
+
+```yaml
+http:
+  public:
+    access_logs: true 
+```
+
+You can also specify access_logs as a map: in this case Copilot will enable access logs on the Public Load Balancer with the given input. 
+```yaml
+http:
+ public:
+   access_logs:
+     bucket_name: my-bucket
+     bucket_prefix: access-logs
+```
+
 <span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Map</span>  
 Configuration for the internal load balancer.
 
