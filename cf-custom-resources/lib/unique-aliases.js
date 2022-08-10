@@ -78,6 +78,8 @@ exports.uniqueAliasesHandler = function (event, context) {
     case "Create":
     case "Update":
     case "Delete":
+      // Do nothing on delete, since this isn't a "real" resource.
+      break;
     default:
       throw new Error(`Unsupported request type ${event.RequestType}`);
   }
