@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -121,8 +122,11 @@ type discardFile struct{}
 // Write implements the io.Writer interface and discards p.
 func (f *discardFile) Write(p []byte) (n int, err error) { return io.Discard.Write(p) }
 
-// Fd returns a dummy file descriptor value that won't get used.
-func (f *discardFile) Fd() uintptr { return 0 }
+// Fd returns stderr as the file descriptor.
+// The file descriptor value shouldn't matter as long as it's a valid value as all writes are gone to io.Discard.
+func (f *discardFile) Fd() uintptr {
+	return os.Stderr.Fd()
+}
 
 // CloudFormation wraps the CloudFormationAPI interface
 type CloudFormation struct {
@@ -263,7 +267,8 @@ func (cf CloudFormation) executeAndRenderChangeSet(in *executeAndRenderChangeSet
 		return err
 	}
 	g.Go(func() error {
-		return progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
+		_, err := progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
+		return err
 	})
 	if err := g.Wait(); err != nil {
 		return err
@@ -477,7 +482,16 @@ func (cf CloudFormation) deleteAndRenderStack(name, description string, deleteFn
 		startTime:      now,
 	})
 	g.Go(func() error {
-		return progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), renderer)
+		w := progress.NewTabbedFileWriter(cf.console)
+		nl, err := progress.Render(ctx, w, renderer)
+		if err != nil {
+			return fmt.Errorf("render stack %q progress: %w", name, err)
+		}
+		_, err = progress.EraseAndRender(w, progress.LineRenderer(log.Ssuccess(description), 0), nl)
+		if err != nil {
+			return fmt.Errorf("erase and render stack %q progress: %w", name, err)
+		}
+		return nil
 	})
 	if err := g.Wait(); err != nil {
 		if !errors.As(err, &errNotFound) {

@@ -75,7 +75,7 @@ func newRenderEnvironmentInput(cfnStack *cloudformation.Stack) *executeAndRender
 // DeleteEnvironment deletes the CloudFormation stack of an environment.
 func (cf CloudFormation) DeleteEnvironment(appName, envName, cfnExecRoleARN string) error {
 	stackName := stack.NameForEnv(appName, envName)
-	description := fmt.Sprintf("Deleting environment stack %s", stackName)
+	description := fmt.Sprintf("Delete environment stack %s", stackName)
 	return cf.deleteAndRenderStack(stackName, description, func() error {
 		return cf.cfnClient.DeleteAndWaitWithRoleARN(stackName, cfnExecRoleARN)
 	})
