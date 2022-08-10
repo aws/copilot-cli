@@ -197,7 +197,6 @@ Outputs:
 							HealthCheckPath: "/",
 							GracePeriod:     aws.Int64(60),
 						},
-						UseImportedCerts: true,
 						HostedZoneAliases: template.AliasesForHostedZone{
 							"mockHostedZone": []string{"mockAlias"},
 						},
@@ -242,7 +241,6 @@ Outputs:
 							SecretOutputs:   []string{"MySecretArn"},
 							PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 						},
-						UseImportedCerts: true,
 						HostedZoneAliases: template.AliasesForHostedZone{
 							"mockHostedZone": []string{"mockAlias"},
 						},

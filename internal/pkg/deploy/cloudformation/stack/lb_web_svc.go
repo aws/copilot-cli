@@ -203,7 +203,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:                  aliases,
 		HTTPSListener:            s.httpsEnabled,
-		UseImportedCerts:         s.certImported,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
