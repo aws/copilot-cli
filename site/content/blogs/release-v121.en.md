@@ -30,6 +30,18 @@ Copilot v1.21 brings several new features and improvements:
 ## Configure Environment Security Group
 
 ## `job logs`
+At long last, you can now view and follow logs for executions of your scheduled jobs. 
+You can choose how many invocations of the job to view, filter logs by specific task IDs, and choose whether to view state machine execution logs. 
+For example, you can view logs from the last 4 invocations of the job and all the state machine 
+```console
+$ copilot job logs --last 4 --include-state-machine
+
+```
+or follow the logs of a task you've just invoked with [`copilot job run`](../docs/commands/job-run.en.md):
+```console
+$ copilot job run -n my-job && copilot job logs -n my-job --follow
+
+```
 
 ## Package Addons CloudFormation Templates
 
