@@ -1,24 +1,26 @@
 List of all available properties for a `'Worker Service'` manifest. To learn about Copilot services, see the [Services](../concepts/services.en.md) concept page.
 
-???+ note "Sample manifest for a worker service"
+???+ note "Sample worker service manifests"
 
-    ```yaml
-        # Your service name will be used in naming your resources like log groups, ECS services, etc.
-        name: orders-worker
+    === "Single queue"
+
+        ```yaml
+        # Collect messages from multiple topics published from other services to a single SQS queue.
+        name: cost-analyzer
         type: Worker Service
 
         image:
-          build: ./orders/Dockerfile
+          build: ./cost-analyzer/Dockerfile
 
         subscribe:
           topics:
-            - name: events
-              service: api
+            - name: products
+              service: orders
               filter_policy:
                 event:
                 - anything-but: order_cancelled
-            - name: events
-              service: fe
+            - name: inventory
+              service: warehouse
           queue:
             retention: 96h
             timeout: 30s
@@ -27,27 +29,70 @@ List of all available properties for a `'Worker Service'` manifest. To learn abo
 
         cpu: 256
         memory: 512
-        count: 1
+        count: 3
         exec: true
 
-        variables:
-          LOG_LEVEL: info
-        env_file: log.env
         secrets:
-          GITHUB_TOKEN: GITHUB_TOKEN
+          DB:
+            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+        ```
 
-        # You can override any of the values defined above by environment.
-        environments:
-          production:
-            count:
-              range:
-                min: 1
-                max: 50
-                spot_from: 26
-              queue_delay:
-                acceptable_latency: 1m
-                msg_processing_time: 250ms
-    ```
+    === "Spot autoscaling"
+
+        ```yaml
+        # Burst to Fargate Spot tasks if capacity is available.
+        name: cost-analyzer
+        type: Worker Service
+
+        image:
+          build: ./cost-analyzer/Dockerfile
+
+        subscribe:
+          topics:
+            - name: products
+              service: orders
+            - name: inventory
+              service: warehouse
+
+        cpu: 256
+        memory: 512
+        count:
+          range:
+            min: 1
+            max: 10
+            spot_from: 2
+          queue_delay: # Ensure messages are processed within 10mins assuming a single message takes 250ms to process.
+            acceptable_latency: 10m
+            msg_processing_time: 250ms
+        exec: true
+        ```
+
+    === "Separate queues"
+
+        ```yaml
+        # Assign individual queues to each topic.
+        name: cost-analyzer
+        type: Worker Service
+
+        image:
+          build: ./cost-analyzer/Dockerfile
+
+        subscribe:
+          topics:
+            - name: products
+              service: orders
+              queue:
+                retention: 5d
+                timeout: 1h
+                dead_letter:
+                  tries: 3
+            - name: inventory
+              service: warehouse
+              queue:
+                retention: 1d
+                timeout: 5m
+        count: 1
+        ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.
@@ -95,13 +140,13 @@ If specified, creates a dead letter queue and a redrive policy which routes mess
 <span class="parent-field">subscribe.</span><a id="subscribe-topics" href="#subscribe-topics" class="field">`topics`</a> <span class="type">Array of `topic`s</span>  
 Contains information about which SNS topics the worker service should subscribe to.
 
-<span class="parent-field">topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
+<span class="parent-field">subscribe.topics.topic</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
 Required. The name of the SNS topic to subscribe to.
 
-<span class="parent-field">topic.</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>  
+<span class="parent-field">subscribe.topics.topic</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>  
 Required. The service this SNS topic is exposed by. Together with the topic name, this uniquely identifies an SNS topic in the copilot environment.
 
-<span class="parent-field">topic.</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
+<span class="parent-field">subscribe.topics.topic</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
 Optional. Specify a SNS subscription filter policy to evaluate incoming message attributes against the policy.  
 The filter policy can be specified in JSON, for example:
 ```json
@@ -125,7 +170,7 @@ filter_policy:
 ```
 For additional information on how to write filter policies, see the [SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html).
 
-<span class="parent-field">topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>  
+<span class="parent-field">subscribe.topics.topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>  
 Optional. Specify SQS queue configuration for the topic. If specified as `true`, the queue will be created  with default configuration. Specify this field as a map for customization of certain attributes for this topic-specific queue.
 
 {% include 'image-config.en.md' %}
@@ -138,7 +183,9 @@ Optional. Specify SQS queue configuration for the topic. If specified as `true`,
 
 <div class="separator"></div>
 
-<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>  
+<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>
+The number of tasks that your service should maintain.
+
 If you specify a number:
 ```yaml
 count: 5
@@ -195,13 +242,13 @@ count:
 
 This will set your range as 1-10 as above, but will place the first two copies of your service on dedicated Fargate capacity. If your service scales to 3 or higher, the third and any additional copies will be placed on Spot until the maximum is reached.
 
-<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
 The minimum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
 The maximum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
 The desired count at which you wish to start placing your service using Fargate Spot capacity providers.
 
 <span class="parent-field">count.</span><a id="count-cooldown" href="#count-cooldown" class="field">`cooldown`</a> <span class="type">Map</span>

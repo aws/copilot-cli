@@ -28,6 +28,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +50,7 @@ func Test_App_Infrastructure(t *testing.T) {
 	callerInfo, err := identity.Get()
 	require.NoError(t, err)
 	require.NoError(t, err)
-	deployer := cloudformation.New(sess)
+	deployer := cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 	cfClient := awsCF.New(sess)
 	require.NoError(t, err)
 
@@ -379,7 +380,7 @@ func Test_App_Infrastructure(t *testing.T) {
 func Test_Environment_Deployment_Integration(t *testing.T) {
 	sess, err := testSession(nil)
 	require.NoError(t, err)
-	deployer := cloudformation.New(sess)
+	deployer := cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 	cfClient := awsCF.New(sess)
 	identity := identity.New(sess)
 	s3ManagerClient := s3manager.NewUploader(sess)
@@ -436,7 +437,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		environmentToDeploy.ArtifactBucketARN = fmt.Sprintf("arn:aws:s3:::%s", bucketName)
 
 		// Deploy the environment and wait for it to be complete
-		require.NoError(t, deployer.CreateAndRenderEnvironment(os.Stderr, &environmentToDeploy))
+		require.NoError(t, deployer.CreateAndRenderEnvironment(&environmentToDeploy))
 
 		// Ensure that the new stack exists
 		output, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
@@ -492,6 +493,12 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		environmentToDeploy.CustomResourcesURLs = urls
 		environmentToDeploy.ArtifactBucketKeyARN = "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
 		environmentToDeploy.ArtifactBucketARN = fmt.Sprintf("arn:aws:s3:::%s", bucketName)
+		environmentToDeploy.Mft = &manifest.Environment{
+			Workload: manifest.Workload{
+				Name: aws.String(envName),
+				Type: aws.String("Environment"),
+			},
+		}
 
 		// Deploy the environment and wait for it to be complete.
 		oldParams, err := deployer.EnvironmentParameters(environmentToDeploy.App.Name, environmentToDeploy.Name)
@@ -501,7 +508,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		conf := stack.NewEnvConfigFromExistingStack(&environmentToDeploy, lastForceUpdateID, oldParams)
 
 		// Deploy the environment and wait for it to be complete.
-		require.NoError(t, deployer.UpdateAndRenderEnvironment(os.Stderr, conf, environmentToDeploy.ArtifactBucketARN))
+		require.NoError(t, deployer.UpdateAndRenderEnvironment(conf, environmentToDeploy.ArtifactBucketARN))
 
 		// Ensure that the updated stack still exists.
 		output, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
@@ -513,7 +520,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		deployedStack := output.Stacks[0]
 		expectedResultsForKey := map[string]func(*awsCF.Output){
 			"EnabledFeatures": func(output *awsCF.Output) {
-				require.Equal(t, ",,,", aws.StringValue(output.OutputValue), "no env features enabled by default")
+				require.Equal(t, ",,,,", aws.StringValue(output.OutputValue), "no env features enabled by default")
 			},
 			"EnvironmentManagerRoleARN": func(output *awsCF.Output) {
 				require.Equal(t,

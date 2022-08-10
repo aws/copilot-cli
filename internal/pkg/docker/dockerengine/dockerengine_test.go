@@ -52,7 +52,8 @@ func TestDockerCommand_Build(t *testing.T) {
 				mockCmd.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI,
 					"-t", mockURI + ":" + mockTag1,
-					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(mockError)
+					filepath.FromSlash("mockPath/to"),
+					"-f", "mockPath/to/mockDockerfile"}).Return(mockError)
 			},
 			wantedError: fmt.Errorf("building image: %w", mockError),
 		},
@@ -65,7 +66,7 @@ func TestDockerCommand_Build(t *testing.T) {
 
 				mockCmd.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI,
-					"-t", "mockURI:tag1", "mockPath/to",
+					"-t", "mockURI:tag1", filepath.FromSlash("mockPath/to"),
 					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
@@ -81,7 +82,7 @@ func TestDockerCommand_Build(t *testing.T) {
 				mockCmd.EXPECT().Run("docker", []string{"build",
 					"-t", mockURI,
 					"--progress", "plain",
-					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).
+					filepath.FromSlash("mockPath/to"), "-f", "mockPath/to/mockDockerfile"}).
 					Return(nil)
 			},
 		},
@@ -121,7 +122,8 @@ func TestDockerCommand_Build(t *testing.T) {
 					"-t", mockURI + ":" + mockTag1,
 					"-t", mockURI + ":" + mockTag2,
 					"-t", mockURI + ":" + mockTag3,
-					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+					filepath.FromSlash("mockPath/to"),
+					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 		"success with build args": {
@@ -138,7 +140,8 @@ func TestDockerCommand_Build(t *testing.T) {
 					"--build-arg", "GOPROXY=direct",
 					"--build-arg", "abc=def",
 					"--build-arg", "key=value",
-					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+					filepath.FromSlash("mockPath/to"),
+					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 		"runs with cache_from and target fields": {
@@ -152,7 +155,8 @@ func TestDockerCommand_Build(t *testing.T) {
 					"--cache-from", "foo/bar:latest",
 					"--cache-from", "foo/bar/baz:1.2.3",
 					"--target", "foobar",
-					"mockPath/to", "-f", "mockPath/to/mockDockerfile"}).Return(nil)
+					filepath.FromSlash("mockPath/to"),
+					"-f", "mockPath/to/mockDockerfile"}).Return(nil)
 			},
 		},
 	}

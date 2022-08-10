@@ -4,7 +4,6 @@
 package stack
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 
@@ -201,16 +200,19 @@ func serializeTemplateConfig(parser template.Parser, stack templateConfigurer) (
 }
 
 func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
-	stack, err := w.addons.Template()
-	if err != nil {
-		var notFoundErr *addon.ErrAddonsNotFound
-		if !errors.As(err, &notFoundErr) {
-			return nil, fmt.Errorf("generate addons template for %s: %w", w.name, err)
-		}
-		return nil, nil // No addons found, so there are no outputs and error.
+	if w.addons == nil {
+		return nil, nil
 	}
 
-	out, err := addon.Outputs(stack)
+	tmpl, err := w.addons.Template()
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("generate addons template for %s: %w", w.name, err)
+	case tmpl == "":
+		return nil, nil
+	}
+
+	out, err := addon.Outputs(tmpl)
 	if err != nil {
 		return nil, fmt.Errorf("get addons outputs for %s: %w", w.name, err)
 	}
@@ -224,13 +226,13 @@ func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {
 }
 
 func (w *wkld) addonsParameters() (string, error) {
+	if w.addons == nil {
+		return "", nil
+	}
+
 	params, err := w.addons.Parameters()
 	if err != nil {
-		var notFoundErr *addon.ErrAddonsNotFound
-		if !errors.As(err, &notFoundErr) {
-			return "", fmt.Errorf("parse addons parameters for %s: %w", w.name, err)
-		}
-		return "", nil
+		return "", fmt.Errorf("parse addons parameters for %s: %w", w.name, err)
 	}
 	return params, nil
 }

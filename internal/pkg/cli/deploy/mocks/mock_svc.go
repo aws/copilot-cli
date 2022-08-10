@@ -9,13 +9,13 @@ import (
 	reflect "reflect"
 	time "time"
 
+	addon "github.com/aws/copilot-cli/internal/pkg/addon"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	dockerengine "github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 	repository "github.com/aws/copilot-cli/internal/pkg/repository"
-	progress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -188,6 +188,73 @@ func (m *Mocktemplater) Template() (string, error) {
 func (mr *MocktemplaterMockRecorder) Template() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mocktemplater)(nil).Template))
+}
+
+// MockstackBuilder is a mock of stackBuilder interface.
+type MockstackBuilder struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackBuilderMockRecorder
+}
+
+// MockstackBuilderMockRecorder is the mock recorder for MockstackBuilder.
+type MockstackBuilderMockRecorder struct {
+	mock *MockstackBuilder
+}
+
+// NewMockstackBuilder creates a new mock instance.
+func NewMockstackBuilder(ctrl *gomock.Controller) *MockstackBuilder {
+	mock := &MockstackBuilder{ctrl: ctrl}
+	mock.recorder = &MockstackBuilderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackBuilder) EXPECT() *MockstackBuilderMockRecorder {
+	return m.recorder
+}
+
+// Package mocks base method.
+func (m *MockstackBuilder) Package(arg0 addon.PackageConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Package", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Package indicates an expected call of Package.
+func (mr *MockstackBuilderMockRecorder) Package(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Package", reflect.TypeOf((*MockstackBuilder)(nil).Package), arg0)
+}
+
+// Parameters mocks base method.
+func (m *MockstackBuilder) Parameters() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Parameters")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Parameters indicates an expected call of Parameters.
+func (mr *MockstackBuilderMockRecorder) Parameters() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*MockstackBuilder)(nil).Parameters))
+}
+
+// Template mocks base method.
+func (m *MockstackBuilder) Template() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Template")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Template indicates an expected call of Template.
+func (mr *MockstackBuilderMockRecorder) Template() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockstackBuilder)(nil).Template))
 }
 
 // MockstackSerializer is a mock of stackSerializer interface.
@@ -419,9 +486,9 @@ func (m *MockserviceDeployer) EXPECT() *MockserviceDeployerMockRecorder {
 }
 
 // DeployService mocks base method.
-func (m *MockserviceDeployer) DeployService(out progress.FileWriter, conf cloudformation0.StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
+func (m *MockserviceDeployer) DeployService(conf cloudformation0.StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{out, conf, bucketName}
+	varargs := []interface{}{conf, bucketName}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -431,9 +498,9 @@ func (m *MockserviceDeployer) DeployService(out progress.FileWriter, conf cloudf
 }
 
 // DeployService indicates an expected call of DeployService.
-func (mr *MockserviceDeployerMockRecorder) DeployService(out, conf, bucketName interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockserviceDeployerMockRecorder) DeployService(conf, bucketName interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{out, conf, bucketName}, opts...)
+	varargs := append([]interface{}{conf, bucketName}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployService", reflect.TypeOf((*MockserviceDeployer)(nil).DeployService), varargs...)
 }
 

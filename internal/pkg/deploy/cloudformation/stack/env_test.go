@@ -40,6 +40,7 @@ func TestEnv_Template(t *testing.T) {
 								PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
 								PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
 							},
+							SecurityGroupConfig: nil,
 						},
 						LatestVersion: deploy.LatestEnvTemplateVersion,
 						CustomResources: map[string]template.S3ObjectLocation{
@@ -59,6 +60,7 @@ func TestEnv_Template(t *testing.T) {
 						Telemetry: &template.Telemetry{
 							EnableContainerInsights: false,
 						},
+
 						SerializedManifest: "name: env\ntype: Environment\n",
 						ForceUpdateID:      "mockPreviousForceUpdateID",
 					}, data)

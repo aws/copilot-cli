@@ -1,3 +1,11 @@
+//go:build !windows
+
+// This test is not compatible with Windows because it makes POSIX-centric assumptions about terminal output.
+//
+// On Windows, these terminal features involve system calls instead of writing escape sequences, which means
+// that this test case doesn't actually test what it's trying to do on Windows and instead just makes a bunch
+// of invalid system calls, in addition to having intermittent timing issues.
+
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -79,7 +87,7 @@ func TestRender(t *testing.T) {
 		}
 
 		// WHEN
-		err := Render(ctx, out, r)
+		_, err := Render(ctx, out, r)
 
 		// THEN
 		require.EqualError(t, err, ctx.Err().Error(), "expected the context to be canceled")
@@ -103,10 +111,11 @@ func TestRender(t *testing.T) {
 		}()
 
 		// WHEN
-		err := Render(context.Background(), out, r)
+		nl, err := Render(context.Background(), out, r)
 
 		// THEN
 		require.NoError(t, err)
+		require.Equal(t, 1, nl)
 
 		// We should be doing the following operations in order:
 		// 1. Hide the cursor.
@@ -150,4 +159,30 @@ func TestNestedRenderOptions(t *testing.T) {
 	require.Equal(t, RenderOptions{
 		Padding: 2,
 	}, actual)
+}
+
+func TestEraseAndRender(t *testing.T) {
+	// GIVEN
+	wanted := new(strings.Builder)
+	file := &mockFileWriter{
+		Writer: wanted,
+	}
+	cur := cursor.NewWithWriter(file)
+	for i := 0; i < 10; i++ {
+		cursor.EraseLine(file)
+		cur.Up(1)
+	}
+	cursor.EraseLine(file)
+	wanted.WriteString("hello\n")
+
+	// WHEN
+	actual := new(strings.Builder)
+	nl, err := EraseAndRender(&mockFileWriteFlusher{
+		wrapper: actual,
+	}, &singleLineComponent{Text: "hello"}, 10) // Erase 10 lines, and then write "hello\n"
+
+	// THEN
+	require.NoError(t, err)
+	require.Equal(t, 1, nl, `only hello\n should have been written`)
+	require.Equal(t, wanted.String(), actual.String())
 }

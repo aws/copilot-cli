@@ -1,5 +1,7 @@
 # AWS Copilot v1.19: Internal Load Balancers, Subnet Placement Specification, and more
 
+Posted On: Jun 13, 2022
+
 The AWS Copilot core team is excited to announce the v1.19 release!
 Special thanks to [@gautam-nutalapati](https://github.com/gautam-nutalapati) and [@jonstacks](https://github.com/jonstacks), who contributed to this release.
 Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has nearly 300 people online,
@@ -50,7 +52,7 @@ http:
     port: 8080
 ```
 
-* **Bug fixes:** 
+* **Bug fixes:**
     * Preserve tags applied by `app init --resource-tags` when services are deleted from an application ([#3582](https://github.com/aws/copilot-cli/pull/3582))
     * Fix regression when enabling autoscaling fields for Load Balanced Web Services with Network Load Balancers ([#3578](https://github.com/aws/copilot-cli/pull/3578))
     * Enable `copilot svc exec` for Fargate Windows tasks ([#3566](https://github.com/aws/copilot-cli/pull/3566))

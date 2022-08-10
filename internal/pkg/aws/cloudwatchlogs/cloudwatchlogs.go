@@ -7,7 +7,6 @@ package cloudwatchlogs
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -102,7 +101,6 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreamLimit int, logStre
 		}
 	}
 
-	// Make sure that the streams are returned with the latest events last so they're printed to terminal in chronological order.
 	return truncateStreams(logStreamLimit, logStreamNames), nil
 }
 
@@ -110,6 +108,7 @@ func (c *CloudWatchLogs) logStreams(logGroup string, logStreamLimit int, logStre
 func (c *CloudWatchLogs) LogEvents(opts LogEventsOpts) (*LogEventsOutput, error) {
 	var events []*Event
 	in := initGetLogEventsInput(opts)
+
 	logStreams, err := c.logStreams(opts.LogGroup, opts.LogStreamLimit, opts.LogStreamPrefixFilters...)
 	if err != nil {
 		return nil, err
@@ -183,15 +182,59 @@ func initGetLogEventsInput(opts LogEventsOpts) *cloudwatchlogs.GetLogEventsInput
 }
 
 // Example: if the prefixes is []string{"a"} and all is []string{"a", "b", "ab"}
-// then it returns []string{"a", "ab"}.
-func filterStringSliceByPrefix(all, prefixes []string) (res []string) {
-	for _, candidate := range all {
-		for _, prefix := range prefixes {
-			if strings.HasPrefix(candidate, prefix) {
-				res = append(res, candidate)
-				break
-			}
+// then it returns []string{"a", "ab"}. Empty string prefixes are not supported.
+func filterStringSliceByPrefix(all, prefixes []string) []string {
+	trie := buildTrie(prefixes)
+	var matches []string
+	for _, str := range all {
+		if trie.isPrefixOf(str) {
+			matches = append(matches, str)
 		}
 	}
-	return
+	return matches
+}
+
+type trieNode struct {
+	children map[rune]*trieNode
+	hasWord  bool
+}
+
+func newTrieNode() *trieNode {
+	return &trieNode{
+		children: make(map[rune]*trieNode),
+	}
+}
+
+type trie struct {
+	root *trieNode
+}
+
+func buildTrie(strs []string) trie {
+	root := newTrieNode()
+	for _, str := range strs {
+		node := root
+		for _, char := range str {
+			if _, ok := node.children[char]; !ok {
+				node.children[char] = newTrieNode()
+			}
+			node = node.children[char]
+		}
+		node.hasWord = true
+	}
+	return trie{root: root}
+}
+
+func (t *trie) isPrefixOf(str string) bool {
+	node := t.root
+	for _, char := range str {
+		child, ok := node.children[char]
+		if !ok {
+			return false
+		}
+		if child.hasWord {
+			return true
+		}
+		node = child
+	}
+	return false
 }

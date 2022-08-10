@@ -23,8 +23,8 @@ const (
 
 // Names for tag filters
 var (
-	tagFilterNameForApp = fmt.Sprintf(ec2.TagFilterName, deploy.AppTagKey)
-	tagFilterNameForEnv = fmt.Sprintf(ec2.TagFilterName, deploy.EnvTagKey)
+	fmtTagFilterForApp = fmt.Sprintf(ec2.FmtTagFilter, deploy.AppTagKey)
+	fmtTagFilterForEnv = fmt.Sprintf(ec2.FmtTagFilter, deploy.EnvTagKey)
 )
 
 // EnvRunner can run an Amazon ECS task in the VPC and the cluster of an environment.
@@ -78,7 +78,7 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 	filters := r.filtersForVPCFromAppEnv()
 	// Use only environment security group https://github.com/aws/copilot-cli/issues/1882.
 	securityGroups, err := r.VPCGetter.SecurityGroups(append(filters, ec2.Filter{
-		Name:   fmt.Sprintf(ec2.TagFilterName, envSecurityGroupCFNLogicalIDTagKey),
+		Name:   fmt.Sprintf(ec2.FmtTagFilter, envSecurityGroupCFNLogicalIDTagKey),
 		Values: []string{envSecurityGroupCFNLogicalIDTagValue},
 	})...)
 	if err != nil {
@@ -116,11 +116,11 @@ func (r *EnvRunner) Run() ([]*Task, error) {
 func (r *EnvRunner) filtersForVPCFromAppEnv() []ec2.Filter {
 	return []ec2.Filter{
 		{
-			Name:   tagFilterNameForEnv,
+			Name:   fmtTagFilterForEnv,
 			Values: []string{r.Env},
 		},
 		{
-			Name:   tagFilterNameForApp,
+			Name:   fmtTagFilterForApp,
 			Values: []string{r.App},
 		},
 	}

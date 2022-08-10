@@ -24,6 +24,7 @@ var defaultTransformers = []mergo.Transformers{
 	platformArgsOrStringTransformer{},
 	securityGroupsIDsOrConfigTransformer{},
 	placementArgOrStringTransformer{},
+	subnetListOrArgsTransformer{},
 	healthCheckArgsOrStringTransformer{},
 	countTransformer{},
 	advancedCountTransformer{},
@@ -118,7 +119,7 @@ func (t aliasTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Va
 		srcStruct := src.Convert(reflect.TypeOf(Alias{})).Interface().(Alias)
 
 		if len(srcStruct.AdvancedAliases) != 0 {
-			dstStruct.StringSliceOrString = stringSliceOrString{}
+			dstStruct.StringSliceOrString = StringSliceOrString{}
 		}
 
 		if !srcStruct.StringSliceOrString.isEmpty() {
@@ -134,15 +135,15 @@ func (t aliasTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Va
 
 type stringSliceOrStringTransformer struct{}
 
-// Transformer returns custom merge logic for stringSliceOrString's fields.
+// Transformer returns custom merge logic for StringSliceOrString's fields.
 func (t stringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if !typ.ConvertibleTo(reflect.TypeOf(stringSliceOrString{})) {
+	if !typ.ConvertibleTo(reflect.TypeOf(StringSliceOrString{})) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct := dst.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
-		srcStruct := src.Convert(reflect.TypeOf(stringSliceOrString{})).Interface().(stringSliceOrString)
+		dstStruct := dst.Convert(reflect.TypeOf(StringSliceOrString{})).Interface().(StringSliceOrString)
+		srcStruct := src.Convert(reflect.TypeOf(StringSliceOrString{})).Interface().(StringSliceOrString)
 
 		if srcStruct.String != nil {
 			dstStruct.StringSlice = nil
@@ -228,6 +229,32 @@ func (t placementArgOrStringTransformer) Transformer(typ reflect.Type) func(dst,
 
 		if !srcStruct.PlacementArgs.isEmpty() {
 			dstStruct.PlacementString = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type subnetListOrArgsTransformer struct{}
+
+// Transformer returns custom merge logic for subnetListOrArgsTransformer's fields.
+func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(SubnetListOrArgs{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(SubnetListOrArgs), src.Interface().(SubnetListOrArgs)
+
+		if len(srcStruct.IDs) != 0 {
+			dstStruct.SubnetArgs = SubnetArgs{}
+		}
+
+		if !srcStruct.SubnetArgs.isEmpty() {
+			dstStruct.IDs = nil
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.
@@ -502,12 +529,12 @@ func (t environmentCDNConfigTransformer) Transformer(typ reflect.Type) func(dst,
 	return func(dst, src reflect.Value) error {
 		dstStruct, srcStruct := dst.Interface().(environmentCDNConfig), src.Interface().(environmentCDNConfig)
 
-		if !srcStruct.CDNConfig.IsEmpty() {
+		if !srcStruct.Config.isEmpty() {
 			dstStruct.Enabled = nil
 		}
 
 		if srcStruct.Enabled != nil {
-			dstStruct.CDNConfig = advancedCDNConfig{}
+			dstStruct.Config = advancedCDNConfig{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

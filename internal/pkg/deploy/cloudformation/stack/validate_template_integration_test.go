@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
@@ -13,10 +12,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,8 +27,17 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(wantedManifestBytes)
 	require.NoError(t, err)
-	v, ok := mft.(*manifest.LoadBalancedWebService)
+	content := mft.Manifest()
+	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
+
+	ws, err := workspace.New()
+	require.NoError(t, err)
+
+	_, err = addon.Parse(aws.StringValue(v.Name), ws)
+	var notFound *addon.ErrAddonsNotFound
+	require.ErrorAs(t, err, &notFound)
+
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App: &config.Application{Name: appName},
 		EnvManifest: &manifest.Environment{
@@ -70,8 +80,17 @@ func TestScheduledJob_Validate(t *testing.T) {
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)
-	v, ok := mft.(*manifest.ScheduledJob)
+	content := mft.Manifest()
+	v, ok := content.(*manifest.ScheduledJob)
 	require.True(t, ok)
+
+	ws, err := workspace.New()
+	require.NoError(t, err)
+
+	_, err = addon.Parse(aws.StringValue(v.Name), ws)
+	var notFound *addon.ErrAddonsNotFound
+	require.ErrorAs(t, err, &notFound)
+
 	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
 		App:      appName,
 		Env:      envName,

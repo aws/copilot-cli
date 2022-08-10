@@ -176,7 +176,7 @@ Resources:
                 Action:
                   - "states:StartExecution"
                 Resource:
-                  - !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
+                  - !Sub "arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
               - Sid: CloudFormation
                 Effect: Allow
                 Action: [
@@ -570,19 +570,31 @@ Resources:
       ClusterSettings:
         - Name: containerInsights
           Value: disabled
-  PublicLoadBalancerSecurityGroup:
+  PublicHTTPLoadBalancerSecurityGroup:
     Metadata:
-      'aws:copilot:description': 'A security group for your load balancer allowing HTTP and HTTPS traffic'
+      'aws:copilot:description': 'A security group for your load balancer allowing HTTP traffic'
     Condition: CreateALB
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Access to the public facing load balancer
+      GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 80
           FromPort: 80
           IpProtocol: tcp
           ToPort: 80
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb-http'
+  PublicHTTPSLoadBalancerSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your load balancer allowing HTTPS traffic'
+    Condition: ExportHTTPSListener
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTPS access to the public facing load balancer
+      SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 443
           FromPort: 443
@@ -591,7 +603,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb-https'
   InternalLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your internal load balancer allowing HTTP traffic from within the VPC'
@@ -614,14 +626,22 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub 'copilot-${AppName}-${EnvironmentName}-env'
-  EnvironmentSecurityGroupIngressFromPublicALB:
+  EnvironmentHTTPSecurityGroupIngressFromPublicALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateALB
     Properties:
-      Description: Ingress from the public ALB
+      Description: HTTP ingress from the public ALB
       GroupId: !Ref EnvironmentSecurityGroup
       IpProtocol: -1
-      SourceSecurityGroupId: !Ref PublicLoadBalancerSecurityGroup
+      SourceSecurityGroupId: !Ref PublicHTTPLoadBalancerSecurityGroup
+  EnvironmentHTTPSSecurityGroupIngressFromPublicALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: ExportHTTPSListener
+    Properties:
+      Description: HTTPS ingress from the public ALB
+      GroupId: !Ref EnvironmentSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref PublicHTTPSLoadBalancerSecurityGroup
   EnvironmentSecurityGroupIngressFromInternalALB:
     Type: AWS::EC2::SecurityGroupIngress
     Condition: CreateInternalALB
@@ -652,7 +672,9 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: internet-facing
-      SecurityGroups: [ !GetAtt PublicLoadBalancerSecurityGroup.GroupId ]
+      SecurityGroups: 
+        - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId
+        - !If [ExportHTTPSListener, !GetAtt PublicHTTPSLoadBalancerSecurityGroup.GroupId, !Ref "AWS::NoValue"]
       Subnets: [ !Ref PublicSubnet1, !Ref PublicSubnet2,  ]
       Type: application
   # Assign a dummy target group that with no real services as targets, so that we can create
@@ -964,8 +986,8 @@ Resources:
       Aliases: !Ref Aliases
       AppDNSRole: !Ref AppDNSDelegationRole
       DomainName: !Ref AppDNSName
-      LoadBalancerDNS: !GetAtt PublicLoadBalancer.DNSName
-      LoadBalancerHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+      PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
+      PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -1105,6 +1127,9 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  PublicALBAccessible:
+    Condition: CreateALB
+    Value: true
   LastForceDeployID:
     Value: ""
     Description: Optionally force the template to update when no immediate resource change is present.

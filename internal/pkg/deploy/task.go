@@ -25,6 +25,7 @@ type CreateTaskResourcesInput struct {
 	Command               []string
 	EntryPoint            []string
 	EnvVars               map[string]string
+	EnvFileARN            string
 	SSMParamSecrets       map[string]string
 	SecretsManagerSecrets map[string]string
 
@@ -44,6 +45,8 @@ type TaskStackInfo struct {
 	Env       string
 
 	RoleARN string
+
+	BucketName string
 }
 
 // TaskName returns the name of the one-off task. This is the same as the value of the

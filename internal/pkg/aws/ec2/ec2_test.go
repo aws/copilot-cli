@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2/mocks"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -19,11 +18,11 @@ import (
 var (
 	inAppEnvFilters = []Filter{
 		{
-			Name:   fmt.Sprintf(TagFilterName, deploy.AppTagKey),
+			Name:   fmt.Sprintf(FmtTagFilter, "copilot-application"),
 			Values: []string{"my-app"},
 		},
 		{
-			Name:   fmt.Sprintf(TagFilterName, deploy.EnvTagKey),
+			Name:   fmt.Sprintf(FmtTagFilter, "copilot-environment"),
 			Values: []string{"my-env"},
 		},
 	}
@@ -41,6 +40,33 @@ var (
 		MapPublicIpOnLaunch: aws.Bool(true),
 	}
 )
+
+func TestEC2_FilterForTags(t *testing.T) {
+	testCases := map[string]struct {
+		inValues []string
+		wanted   Filter
+	}{
+		"with no values": {
+			wanted: Filter{
+				Name:   "tag-key",
+				Values: []string{"mockKey"},
+			},
+		},
+		"with values": {
+			inValues: []string{"foo", "bar"},
+			wanted: Filter{
+				Name:   "tag:mockKey",
+				Values: []string{"foo", "bar"},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			filter := FilterForTags("mockKey", tc.inValues...)
+			require.Equal(t, tc.wanted, filter)
+		})
+	}
+}
 
 func TestEC2_extractResource(t *testing.T) {
 	testCases := map[string]struct {
@@ -342,7 +368,7 @@ func TestEC2_CloudFrontManagedPrefixListId(t *testing.T) {
 
 		wantedError          error
 		wantedErrorMsgPrefix string
-		wantedId             *string
+		wantedId             string
 	}{
 		"query returns error": {
 			mockEC2Client: func(m *mocks.Mockapi) {
@@ -392,7 +418,7 @@ func TestEC2_CloudFrontManagedPrefixListId(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantedId: aws.String(mockPrefixListId),
+			wantedId: mockPrefixListId,
 		},
 	}
 
@@ -801,6 +827,17 @@ func TestEC2_SubnetIDs(t *testing.T) {
 				}).Return(nil, errors.New("error describing subnets"))
 			},
 			wantedError: fmt.Errorf("describe subnets: error describing subnets"),
+		},
+		"cannot get any subnets": {
+			inFilter: inAppEnvFilters,
+			mockEC2Client: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeSubnets(&ec2.DescribeSubnetsInput{
+					Filters: toEC2Filter(inAppEnvFilters),
+				}).Return(&ec2.DescribeSubnetsOutput{
+					Subnets: []*ec2.Subnet{},
+				}, nil)
+			},
+			wantedError: fmt.Errorf("cannot find any subnets"),
 		},
 		"successfully get subnets": {
 			inFilter: inAppEnvFilters,

@@ -45,7 +45,13 @@ func TestScheduledJob_Template(t *testing.T) {
 		String:      nil,
 		StringSlice: []string{"world"},
 	}
-
+	testScheduledJobManifest.Network.VPC.Placement = manifest.PlacementArgOrString{
+		PlacementArgs: manifest.PlacementArgs{
+			Subnets: manifest.SubnetListOrArgs{
+				IDs: []string{"id1", "id2"},
+			},
+		},
+	}
 	testCases := map[string]struct {
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob)
 
@@ -64,8 +70,8 @@ func TestScheduledJob_Template(t *testing.T) {
 							Retries: aws.Int(3),
 						},
 						Network: template.NetworkOpts{
-							AssignPublicIP: template.EnablePublicIP,
-							SubnetsType:    template.PublicSubnetsPlacement,
+							AssignPublicIP: template.DisablePublicIP,
+							SubnetIDs:      []string{"id1", "id2"},
 						},
 						EntryPoint:      []string{"/bin/echo", "hello"},
 						Command:         []string{"world"},
@@ -73,7 +79,7 @@ func TestScheduledJob_Template(t *testing.T) {
 					}, actual)
 					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
 				})
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -99,8 +105,8 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 							Retries: aws.Int(3),
 						},
 						Network: template.NetworkOpts{
-							AssignPublicIP: template.EnablePublicIP,
-							SubnetsType:    template.PublicSubnetsPlacement,
+							AssignPublicIP: template.DisablePublicIP,
+							SubnetIDs:      []string{"id1", "id2"},
 						},
 						EntryPoint:      []string{"/bin/echo", "hello"},
 						Command:         []string{"world"},
@@ -153,7 +159,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, j *ScheduledJob) {
 				m := mocks.NewMockscheduledJobReadParser(ctrl)
 				m.EXPECT().ParseScheduledJob(gomock.Any()).Return(nil, errors.New("some error"))
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				j.parser = m
 				j.wkld.addons = addons
 			},
@@ -185,7 +191,6 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 				manifest: testScheduledJobManifest,
 			}
 			tc.mockDependencies(t, ctrl, conf)
-
 			// WHEN
 			template, err := conf.Template()
 

@@ -354,6 +354,39 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
+func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {
+	securityGroupConfig, isSecurityConfigSet := mft.EnvSecurityGroup()
+	if !isSecurityConfigSet {
+		return nil, nil
+	}
+	var ingress = make([]template.SecurityGroupRule, len(securityGroupConfig.Ingress))
+	var egress = make([]template.SecurityGroupRule, len(securityGroupConfig.Egress))
+	for idx, ingressValue := range securityGroupConfig.Ingress {
+		ingress[idx].IpProtocol = ingressValue.IpProtocol
+		ingress[idx].CidrIP = ingressValue.CidrIP
+		if fromPort, toPort, err := ingressValue.GetPorts(); err != nil {
+			return nil, err
+		} else {
+			ingress[idx].ToPort = toPort
+			ingress[idx].FromPort = fromPort
+		}
+	}
+	for idx, egressValue := range securityGroupConfig.Egress {
+		egress[idx].IpProtocol = egressValue.IpProtocol
+		egress[idx].CidrIP = egressValue.CidrIP
+		if fromPort, toPort, err := egressValue.GetPorts(); err != nil {
+			return nil, err
+		} else {
+			egress[idx].ToPort = toPort
+			egress[idx].FromPort = fromPort
+		}
+	}
+	return &template.SecurityGroupConfig{
+		Ingress: ingress,
+		Egress:  egress,
+	}, nil
+}
+
 func (s *LoadBalancedWebService) convertNetworkLoadBalancer() (networkLoadBalancerConfig, error) {
 	nlbConfig := s.manifest.NLBConfig
 	if nlbConfig.IsEmpty() {
@@ -671,15 +704,16 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 	if placement.IsEmpty() {
 		return opts
 	}
-	if placement.PlacementString == nil {
-		opts.AssignPublicIP = template.DisablePublicIP
-		opts.SubnetIDs = placement.PlacementArgs.Subnets
+	if placement.PlacementString != nil {
+		if *placement.PlacementString == manifest.PrivateSubnetPlacement {
+			opts.AssignPublicIP = template.DisablePublicIP
+		}
+		opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
 		return opts
 	}
-	if *placement.PlacementString == manifest.PrivateSubnetPlacement {
-		opts.AssignPublicIP = template.DisablePublicIP
-	}
-	opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
+	opts.AssignPublicIP = template.DisablePublicIP
+	opts.SubnetsType = ""
+	opts.SubnetIDs = placement.PlacementArgs.Subnets.IDs
 	return opts
 }
 
@@ -692,11 +726,11 @@ func convertRDWSNetworkConfig(network manifest.RequestDrivenWebServiceNetworkCon
 	if placement.IsEmpty() {
 		return opts
 	}
-	if placement.PlacementString == nil {
-		opts.SubnetIDs = placement.PlacementArgs.Subnets
+	if placement.PlacementString != nil {
+		opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
 		return opts
 	}
-	opts.SubnetsType = subnetPlacementForTemplate[*placement.PlacementString]
+	opts.SubnetIDs = placement.PlacementArgs.Subnets.IDs
 	return opts
 }
 

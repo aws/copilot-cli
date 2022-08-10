@@ -66,10 +66,10 @@ type Summary struct {
 
 // Workspace typically represents a Git repository where the user has its infrastructure-as-code files as well as source files.
 type Workspace struct {
-	workingDir string
-	copilotDir string
-	fs         *afero.Afero
-	logger     func(format string, args ...interface{})
+	workingDirAbs string
+	copilotDirAbs string
+	fs            *afero.Afero
+	logger        func(format string, args ...interface{})
 }
 
 // New returns a workspace, used for reading and writing to user's local workspace.
@@ -78,14 +78,15 @@ func New() (*Workspace, error) {
 	fsUtils := &afero.Afero{Fs: fs}
 	logger := log.Infof
 
-	workingDir, err := os.Getwd()
+	workingDirAbs, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
+
 	ws := Workspace{
-		workingDir: workingDir,
-		fs:         fsUtils,
-		logger:     logger,
+		workingDirAbs: workingDirAbs,
+		fs:            fsUtils,
+		logger:        logger,
 	}
 
 	return &ws, nil
@@ -106,7 +107,7 @@ func (ws *Workspace) Create(appName string) error {
 		if summary.Application != appName {
 			return &errHasExistingApplication{
 				existingAppName: summary.Application,
-				basePath:        ws.workingDir,
+				basePath:        ws.workingDirAbs,
 				summaryPath:     summary.Path,
 			}
 		}
@@ -515,27 +516,41 @@ func (ws *Workspace) Path() (string, error) {
 	return filepath.Dir(copilotDirPath), nil
 }
 
-// Rel returns the path relative to the workspace root.
-func (ws *Workspace) Rel(fullPath string) (string, error) {
+func (ws *Workspace) Rel(path string) (string, error) {
 	copiDir, err := ws.copilotDirPath()
 	if err != nil {
 		return "", fmt.Errorf("get path to Copilot dir: %w", err)
 	}
+	fullPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("make path absolute: %w", err)
+	}
 	return filepath.Rel(filepath.Dir(copiDir), fullPath)
 }
 
+// copilotDirPath tries to find the current app's copilot directory from the workspace working directory.
 func (ws *Workspace) copilotDirPath() (string, error) {
-	if ws.copilotDir != "" {
-		return ws.copilotDir, nil
-	}
-	// Are we in the application directory?
-	inCopilotDir := filepath.Base(ws.workingDir) == CopilotDirName
-	if inCopilotDir {
-		ws.copilotDir = ws.workingDir
-		return ws.copilotDir, nil
+	if ws.copilotDirAbs != "" {
+		return ws.copilotDirAbs, nil
 	}
 
-	searchingDir := ws.workingDir
+	// Are we in the application's copilot directory already?
+	//
+	// Note: This code checks for *any* directory named "copilot", but this might not work
+	// correctly if we're in some subdirectory of the app that the user might have happened
+	// to name "copilot". It's not clear if there's a good way to avoid that problem, though it
+	// doesn't seem to be a terribly likely issue.
+	if filepath.Base(ws.workingDirAbs) == CopilotDirName {
+		ws.copilotDirAbs = ws.workingDirAbs
+		return ws.copilotDirAbs, nil
+	}
+
+	// We might be in the application directory or in a subdirectory of the application
+	// directory that contains the "copilot" directory.
+	//
+	// Keep on searching the parent directories for that copilot directory (though only
+	// up to a finite limit, to avoid infinite recursion!)
+	searchingDir := ws.workingDirAbs
 	for try := 0; try < maximumParentDirsToSearch; try++ {
 		currentDirectoryPath := filepath.Join(searchingDir, CopilotDirName)
 		inCurrentDirPath, err := ws.fs.DirExists(currentDirectoryPath)
@@ -543,13 +558,13 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 			return "", err
 		}
 		if inCurrentDirPath {
-			ws.copilotDir = currentDirectoryPath
-			return ws.copilotDir, nil
+			ws.copilotDirAbs = currentDirectoryPath
+			return ws.copilotDirAbs, nil
 		}
 		searchingDir = filepath.Dir(searchingDir)
 	}
 	return "", &ErrWorkspaceNotFound{
-		CurrentDirectory:      ws.workingDir,
+		CurrentDirectory:      ws.workingDirAbs,
 		ManifestDirectoryName: CopilotDirName,
 		NumberOfLevelsChecked: maximumParentDirsToSearch,
 	}
@@ -602,7 +617,7 @@ func (ws *Workspace) read(elem ...string) ([]byte, error) {
 // working directory and a sub-directory level below. If an error occurs while
 // reading directories, or no Dockerfiles found returns the error.
 func (ws *Workspace) ListDockerfiles() ([]string, error) {
-	wdFiles, err := ws.fs.ReadDir(ws.workingDir)
+	wdFiles, err := ws.fs.ReadDir(ws.workingDirAbs)
 	if err != nil {
 		return nil, fmt.Errorf("read directory: %w", err)
 	}

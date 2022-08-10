@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/stretchr/testify/require"
@@ -23,8 +22,8 @@ func TestCloudFormation_DeployTask(t *testing.T) {
 	mockTask := &deploy.CreateTaskResourcesInput{
 		Name: "hello",
 	}
-	when := func(w progress.FileWriter, cf CloudFormation) error {
-		return cf.DeployTask(w, mockTask)
+	when := func(cf CloudFormation) error {
+		return cf.DeployTask(mockTask)
 	}
 
 	t.Run("returns a wrapped error if creating a change set fails", func(t *testing.T) {

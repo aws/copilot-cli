@@ -97,6 +97,9 @@ more easily and increases the chances that your feature request will be accepted
 use GitHub pull requests for this purpose. Consult GitHub Help for more
 information on using pull requests.
 
+* If you choose to submit a GitHub pull request, make sure its name conforms to
+the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) standard!
+
 ## Amazon Open Source Code of Conduct
 
 This code of conduct provides guidance on participation in Amazon-managed open source communities, and outlines the process for reporting unacceptable behavior. As an organization and community, we are committed to providing an inclusive environment for everyone. Anyone violating this code of conduct may be removed and banned from the community.

@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/acm"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 
@@ -55,7 +56,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
-	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
@@ -104,6 +104,12 @@ type templater interface {
 	Template() (string, error)
 }
 
+type stackBuilder interface {
+	templater
+	Parameters() (string, error)
+	Package(addon.PackageConfig) error
+}
+
 type stackSerializer interface {
 	templater
 	SerializedParameters() (string, error)
@@ -126,7 +132,7 @@ type snsTopicsLister interface {
 }
 
 type serviceDeployer interface {
-	DeployService(out progress.FileWriter, conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
+	DeployService(conf cloudformation.StackConfiguration, bucketName string, opts ...awscloudformation.StackOption) error
 }
 
 type serviceForceUpdater interface {
@@ -164,7 +170,7 @@ type workloadDeployer struct {
 	// Dependencies.
 	fs                 fileReader
 	s3Client           uploader
-	templater          templater
+	addons             stackBuilder
 	imageBuilderPusher imageBuilderPusher
 	deployer           serviceDeployer
 	endpointGetter     endpointGetter
@@ -207,7 +213,7 @@ type WorkloadDeployerInput struct {
 	RawMft          []byte      // Content of the manifest file without any transformations.
 }
 
-// NewWorkloadDeployer is the constructor for workloadDeployer.
+// newWorkloadDeployer is the constructor for workloadDeployer.
 func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	ws, err := workspace.New()
 	if err != nil {
@@ -232,14 +238,21 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create default session with region %s: %w", in.Env.Region, err)
 	}
-	resources, err := cloudformation.New(defaultSession).GetAppResourcesByRegion(in.App, in.Env.Region)
+	resources, err := cloudformation.New(defaultSession, cloudformation.WithProgressTracker(os.Stderr)).GetAppResourcesByRegion(in.App, in.Env.Region)
 	if err != nil {
 		return nil, fmt.Errorf("get application %s resources from region %s: %w", in.App.Name, in.Env.Region, err)
 	}
-	addonsSvc, err := addon.New(in.Name)
+
+	var addons stackBuilder
+	addons, err = addon.Parse(in.Name, ws)
 	if err != nil {
-		return nil, fmt.Errorf("initiate addons service: %w", err)
+		var notFoundErr *addon.ErrAddonsNotFound
+		if !errors.As(err, &notFoundErr) {
+			return nil, fmt.Errorf("parse addons stack: %w", err)
+		}
+		addons = nil // so that we can check for no addons with nil comparison
 	}
+
 	repoName := fmt.Sprintf("%s/%s", in.App.Name, in.Name)
 	imageBuilderPusher := repository.NewWithURI(
 		ecr.New(defaultSessEnvRegion), repoName, resources.RepositoryURLs[in.Name])
@@ -261,9 +274,9 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		workspacePath:      workspacePath,
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
 		s3Client:           s3.New(envSession),
-		templater:          addonsSvc,
+		addons:             addons,
 		imageBuilderPusher: imageBuilderPusher,
-		deployer:           cloudformation.New(envSession),
+		deployer:           cloudformation.New(envSession, cloudformation.WithProgressTracker(os.Stderr)),
 		endpointGetter:     envDescriber,
 		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
 		templateFS:         template.New(),
@@ -277,6 +290,15 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		mft:    in.Mft,
 		rawMft: in.RawMft,
 	}, nil
+}
+
+// AddonsTemplate returns this workload's addon template.
+func (w *workloadDeployer) AddonsTemplate() (string, error) {
+	if w.addons == nil {
+		return "", nil
+	}
+
+	return w.addons.Template()
 }
 
 type svcDeployer struct {
@@ -309,10 +331,10 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 type lbWebSvcDeployer struct {
 	*svcDeployer
 	appVersionGetter       versionGetter
-	aliasCertValidator     aliasCertValidator
 	publicCIDRBlocksGetter publicCIDRBlocksGetter
 	lbMft                  *manifest.LoadBalancedWebService
 	customResources        customResourcesFunc
+	newAliasCertValidator  func(optionalRegion *string) aliasCertValidator
 }
 
 // NewLBWSDeployer is the constructor for lbWebSvcDeployer.
@@ -347,7 +369,12 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 		appVersionGetter:       versionGetter,
 		publicCIDRBlocksGetter: envDescriber,
 		lbMft:                  lbMft,
-		aliasCertValidator:     acm.New(svcDeployer.envSess),
+		newAliasCertValidator: func(optionalRegion *string) aliasCertValidator {
+			sess := svcDeployer.envSess.Copy(&aws.Config{
+				Region: optionalRegion,
+			})
+			return acm.New(sess)
+		},
 		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
 			crs, err := customresource.LBWS(fs)
 			if err != nil {
@@ -361,8 +388,8 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 type backendSvcDeployer struct {
 	*svcDeployer
 	backendMft         *manifest.BackendService
-	aliasCertValidator aliasCertValidator
 	customResources    customResourcesFunc
+	aliasCertValidator aliasCertValidator
 }
 
 // IsServiceAvailableInRegion checks if service type exist in the given region.
@@ -736,7 +763,7 @@ func (d *jobDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender
 	if err != nil {
 		return nil, err
 	}
-	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
+	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
 		return nil, fmt.Errorf("deploy job: %w", err)
 	}
 	return nil, nil
@@ -766,7 +793,7 @@ func (d *svcDeployer) deploy(deployOptions Options, stackConfigOutput svcStackCo
 		opts = append(opts, awscloudformation.WithDisableRollback())
 	}
 	cmdRunAt := d.now()
-	if err := d.deployer.DeployService(os.Stderr, stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
+	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errEmptyCS) {
 			return fmt.Errorf("deploy service: %w", err)
@@ -850,9 +877,8 @@ func (d *workloadDeployer) uploadContainerImage(imgBuilderPusher imageBuilderPus
 }
 
 type uploadArtifactsToS3Input struct {
-	fs        fileReader
-	uploader  uploader
-	templater templater
+	fs       fileReader
+	uploader uploader
 }
 
 type uploadArtifactsToS3Output struct {
@@ -868,10 +894,7 @@ func (d *workloadDeployer) uploadArtifactsToS3(in *uploadArtifactsToS3Input) (up
 	if err != nil {
 		return uploadArtifactsToS3Output{}, err
 	}
-	addonsURL, err := d.pushAddonsTemplateToS3Bucket(&pushAddonsTemplateToS3BucketInput{
-		templater: in.templater,
-		uploader:  in.uploader,
-	})
+	addonsURL, err := d.pushAddonsTemplateToS3Bucket()
 	if err != nil {
 		return uploadArtifactsToS3Output{}, err
 	}
@@ -887,9 +910,8 @@ func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) 
 		return nil, err
 	}
 	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
-		fs:        d.fs,
-		uploader:  d.s3Client,
-		templater: d.templater,
+		fs:       d.fs,
+		uploader: d.s3Client,
 	})
 	if err != nil {
 		return nil, err
@@ -946,26 +968,32 @@ func (d *workloadDeployer) pushEnvFileToS3Bucket(in *pushEnvFilesToS3BucketInput
 	return envFileARN, nil
 }
 
-type pushAddonsTemplateToS3BucketInput struct {
-	templater templater
-	uploader  uploader
-}
+func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
+	if d.addons == nil {
+		return "", nil
+	}
 
-func (d *workloadDeployer) pushAddonsTemplateToS3Bucket(in *pushAddonsTemplateToS3BucketInput) (string, error) {
-	tmpl, err := in.templater.Template()
+	config := addon.PackageConfig{
+		Bucket:        d.resources.S3Bucket,
+		Uploader:      d.s3Client,
+		WorkspacePath: d.workspacePath,
+		FS:            afero.NewOsFs(),
+	}
+	if err := d.addons.Package(config); err != nil {
+		return "", fmt.Errorf("package addons: %w", err)
+	}
+
+	tmpl, err := d.addons.Template()
 	if err != nil {
-		var notFoundErr *addon.ErrAddonsNotFound
-		if errors.As(err, &notFoundErr) {
-			// addons doesn't exist for service, the url is empty.
-			return "", nil
-		}
 		return "", fmt.Errorf("retrieve addons template: %w", err)
 	}
+
 	reader := strings.NewReader(tmpl)
-	url, err := in.uploader.Upload(d.resources.S3Bucket, artifactpath.Addons(d.name, []byte(tmpl)), reader)
+	url, err := d.s3Client.Upload(d.resources.S3Bucket, artifactpath.Addons(d.name, []byte(tmpl)), reader)
 	if err != nil {
 		return "", fmt.Errorf("put addons artifact to bucket %s: %w", d.resources.S3Bucket, err)
 	}
+
 	return url, nil
 }
 
@@ -1036,6 +1064,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
 		RootUserARN:   in.RootUserARN,
+		Addons:        d.addons,
 	}, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1067,6 +1096,7 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 		Manifest:      d.backendMft,
 		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
+		Addons:        d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1105,6 +1135,7 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		Manifest:      d.rdwsMft,
 		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
+		Addons:        d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1164,6 +1195,7 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 		Manifest:      d.wsMft,
 		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
+		Addons:        d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1194,6 +1226,7 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 		Manifest:      d.jobMft,
 		RawManifest:   d.rawMft,
 		RuntimeConfig: *rc,
+		Addons:        d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1370,8 +1403,17 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
-		if err := d.aliasCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
-			return fmt.Errorf("validate aliases against the imported certificate for env %s: %w", d.env.Name, err)
+
+		cdnCert := d.environmentConfig.CDNConfig.Config.Certificate
+		albCertValidator := d.newAliasCertValidator(nil)
+		cfCertValidator := d.newAliasCertValidator(aws.String(cloudfront.CertRegion))
+		if err := albCertValidator.ValidateCertAliases(aliases, d.environmentConfig.HTTPConfig.Public.Certificates); err != nil {
+			return fmt.Errorf("validate aliases against the imported public ALB certificate for env %s: %w", d.env.Name, err)
+		}
+		if cdnCert != nil {
+			if err := cfCertValidator.ValidateCertAliases(aliases, []string{*cdnCert}); err != nil {
+				return fmt.Errorf("validate aliases against the imported CDN certificate for env %s: %w", d.env.Name, err)
+			}
 		}
 		return nil
 	}

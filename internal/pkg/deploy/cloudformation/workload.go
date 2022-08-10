@@ -10,13 +10,12 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
-	"github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
 // DeployService deploys a service stack and renders progress updates to out until the deployment is done.
 // If the service stack doesn't exist, then it creates the stack.
 // If the service stack already exists, it updates the stack.
-func (cf CloudFormation) DeployService(out progress.FileWriter, conf StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
+func (cf CloudFormation) DeployService(conf StackConfiguration, bucketName string, opts ...cloudformation.StackOption) error {
 	templateURL, err := cf.uploadStackTemplateToS3(bucketName, conf)
 	if err != nil {
 		return err
@@ -28,7 +27,7 @@ func (cf CloudFormation) DeployService(out progress.FileWriter, conf StackConfig
 	for _, opt := range opts {
 		opt(stack)
 	}
-	return cf.renderStackChanges(cf.newRenderWorkloadInput(out, stack))
+	return cf.executeAndRenderChangeSet(cf.newUpsertChangeSetInput(cf.console, stack))
 }
 
 type uploadableStack interface {
@@ -64,5 +63,9 @@ func (cf CloudFormation) handleStackError(stackName string, err error) error {
 
 // DeleteWorkload removes the CloudFormation stack of a deployed workload.
 func (cf CloudFormation) DeleteWorkload(in deploy.DeleteWorkloadInput) error {
-	return cf.cfnClient.DeleteAndWait(fmt.Sprintf("%s-%s-%s", in.AppName, in.EnvName, in.Name))
+	stackName := fmt.Sprintf("%s-%s-%s", in.AppName, in.EnvName, in.Name)
+	description := fmt.Sprintf("Delete stack %s", stackName)
+	return cf.deleteAndRenderStack(stackName, description, func() error {
+		return cf.cfnClient.DeleteAndWait(stackName)
+	})
 }

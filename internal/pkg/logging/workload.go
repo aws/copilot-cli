@@ -173,8 +173,13 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	if opts.IncludeStateMachineLogs {
 		logStreamLimit *= 2
 	}
-	logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs, opts.IncludeStateMachineLogs)
+	// TODO: there should be a separate logging client for ECS services
+	// and App Runner services. This `if` check is only ever true for ECS services.
+	if s.logStreamNamePrefix != "" {
+		logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs, opts.IncludeStateMachineLogs)
+	}
 	logEventsOpts.LogStreamLimit = logStreamLimit
+
 	for {
 		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)
 		if err != nil {

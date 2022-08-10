@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
@@ -247,7 +248,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 					return m.mockInterpolator
 				},
 				ws: m.mockWsReader,
-				unmarshal: func(b []byte) (manifest.WorkloadManifest, error) {
+				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mockMft, nil
 				},
 				envFeaturesDescriber: m.mockEnvFeaturesDescriber,
@@ -340,11 +341,19 @@ type mockWorkloadMft struct {
 	mockRequiredEnvironmentFeatures func() []string
 }
 
-func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.WorkloadManifest, error) {
+func (m *mockWorkloadMft) ApplyEnv(envName string) (manifest.DynamicWorkload, error) {
 	return m, nil
 }
 
 func (m *mockWorkloadMft) Validate() error {
+	return nil
+}
+
+func (m *mockWorkloadMft) Load(sess *session.Session) error {
+	return nil
+}
+
+func (m *mockWorkloadMft) Manifest() interface{} {
 	return nil
 }
 

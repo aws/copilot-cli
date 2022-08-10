@@ -30,8 +30,14 @@ func TestEnvStack_Template(t *testing.T) {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
+cdn:
+  certificate: viewer-cert
 http:
   public:
+    security_groups:
+      ingress:
+        restrict_to:
+          cdn: true
     certificates:
       - cert-1
       - cert-2
@@ -51,6 +57,7 @@ observability:
 						Name:                "demo",
 					},
 					Name:                 "test",
+					CIDRPrefixListIDs:    []string{"pl-mockid"},
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					CustomResourcesURLs: map[string]string{
@@ -64,6 +71,100 @@ observability:
 			}(),
 			wantedFileName: "template-with-imported-certs-observability.yml",
 		},
+
+		"generate template with embedded manifest file with custom security groups rules added by the customer": {
+			input: func() *deploy.CreateEnvironmentInput {
+				rawMft := `name: test
+type: Environment
+# Create the public ALB with certificates attached.
+http:
+  public:
+    certificates:
+      - cert-1
+      - cert-2
+observability:
+  container_insights: true # Enable container insights.
+network:
+  vpc:
+    security_group:
+      ingress:
+        - ip_protocol: tcp
+          ports: 10
+          cidr: 0.0.0.0
+        - ip_protocol: tcp
+          ports: 1-10
+          cidr: 0.0.0.0
+      egress:
+        - ip_protocol: tcp
+          ports: 0-65535
+          cidr: 0.0.0.0`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+					},
+					AllowVPCIngress: true,
+					Mft:             &mft,
+					RawMft:          []byte(rawMft),
+				}
+			}(),
+
+			wantedFileName: "template-with-custom-security-group.yml",
+		},
+
+		"generate template with embedded manifest file with empty security groups rules added by the customer": {
+			input: func() *deploy.CreateEnvironmentInput {
+				rawMft := `name: test
+type: Environment
+# Create the public ALB with certificates attached.
+http:
+  public:
+    certificates:
+      - cert-1
+      - cert-2
+observability:
+  container_insights: true # Enable container insights.
+security_group:
+  ingress:
+  egress:`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+					},
+					AllowVPCIngress: true,
+					Mft:             &mft,
+					RawMft:          []byte(rawMft),
+				}
+			}(),
+
+			wantedFileName: "template-with-custom-empty-security-group.yml",
+		},
+
 		"generate template with custom resources": {
 			input: func() *deploy.CreateEnvironmentInput {
 				rawMft := `name: test

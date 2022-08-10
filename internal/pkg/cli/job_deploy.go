@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 
@@ -33,7 +34,7 @@ type deployJobOpts struct {
 
 	store                store
 	ws                   wsWlDirReader
-	unmarshal            func(in []byte) (manifest.WorkloadManifest, error)
+	unmarshal            func(in []byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
 	cmd                  execRunner
 	sessProvider         *sessions.Provider
@@ -42,10 +43,11 @@ type deployJobOpts struct {
 	sel                  wsSelector
 
 	// cached variables
-	targetApp       *config.Application
-	targetEnv       *config.Environment
-	appliedManifest interface{}
-	rootUserARN     string
+	targetApp         *config.Application
+	targetEnv         *config.Environment
+	envSess           *session.Session
+	appliedDynamicMft manifest.DynamicWorkload
+	rootUserARN       string
 }
 
 func newJobDeployOpts(vars deployWkldVars) (*deployJobOpts, error) {
@@ -84,17 +86,18 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
+	content := o.appliedDynamicMft.Manifest()
 	in := deploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
 		Name:            o.name,
 		App:             o.targetApp,
 		Env:             o.targetEnv,
 		ImageTag:        o.imageTag,
-		Mft:             o.appliedManifest,
+		Mft:             content,
 		RawMft:          raw,
 	}
 	var deployer workloadDeployer
-	switch t := o.appliedManifest.(type) {
+	switch t := content.(type) {
 	case *manifest.ScheduledJob:
 		deployer, err = deploy.NewJobDeployer(&in)
 	default:
@@ -149,11 +152,12 @@ func (o *deployJobOpts) Execute() error {
 		interpolator: o.newInterpolator(o.appName, o.envName),
 		ws:           o.ws,
 		unmarshal:    o.unmarshal,
+		sess:         o.envSess,
 	})
 	if err != nil {
 		return err
 	}
-	o.appliedManifest = mft
+	o.appliedDynamicMft = mft
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
 	}
@@ -220,6 +224,11 @@ func (o *deployJobOpts) configureClients() error {
 	if err != nil {
 		return fmt.Errorf("create default session: %w", err)
 	}
+	envSess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+	if err != nil {
+		return err
+	}
+	o.envSess = envSess
 
 	// client to retrieve caller identity.
 	caller, err := identity.New(defaultSess).Get()

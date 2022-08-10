@@ -10,18 +10,17 @@ import (
 
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/term/progress"
-
-	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 )
 
 type appResourcesGetter interface {
@@ -29,9 +28,13 @@ type appResourcesGetter interface {
 }
 
 type environmentDeployer interface {
-	UpdateAndRenderEnvironment(out progress.FileWriter, conf deploycfn.StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error
+	UpdateAndRenderEnvironment(conf deploycfn.StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error
 	EnvironmentParameters(app, env string) ([]*awscfn.Parameter, error)
 	ForceUpdateOutputID(app, env string) (string, error)
+}
+
+type prefixListGetter interface {
+	CloudFrontManagedPrefixListID() (string, error)
 }
 
 type envDeployer struct {
@@ -39,8 +42,9 @@ type envDeployer struct {
 	env *config.Environment
 
 	// Dependencies to upload artifacts.
-	templateFS template.Reader
-	s3         uploader
+	templateFS       template.Reader
+	s3               uploader
+	prefixListGetter prefixListGetter
 	// Dependencies to deploy an environment.
 	appCFN             appResourcesGetter
 	envDeployer        environmentDeployer
@@ -75,11 +79,12 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		app: in.App,
 		env: in.Env,
 
-		templateFS: template.New(),
-		s3:         s3.New(envRegionSession),
+		templateFS:       template.New(),
+		s3:               s3.New(envRegionSession),
+		prefixListGetter: ec2.New(envRegionSession),
 
-		appCFN:      deploycfn.New(defaultSession),
-		envDeployer: deploycfn.New(envManagerSession),
+		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
+		envDeployer: deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr)),
 		newStackSerializer: func(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
 			return stack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
 		},
@@ -107,6 +112,31 @@ func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, e
 		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", bucket, err)
 	}
 	return urls, nil
+}
+
+func (d *envDeployer) cidrPrefixLists(in *DeployEnvironmentInput) ([]string, error) {
+	var cidrPrefixListIDs []string
+
+	// Check if ingress is allowed from cloudfront
+	if in.Manifest == nil || !in.Manifest.IsIngressRestrictedToCDN() {
+		return nil, nil
+	}
+	cfManagedPrefixListID, err := d.cfManagedPrefixListID()
+	if err != nil {
+		return nil, err
+	}
+	cidrPrefixListIDs = append(cidrPrefixListIDs, cfManagedPrefixListID)
+
+	return cidrPrefixListIDs, nil
+}
+
+func (d *envDeployer) cfManagedPrefixListID() (string, error) {
+	id, err := d.prefixListGetter.CloudFrontManagedPrefixListID()
+	if err != nil {
+		return "", fmt.Errorf("retrieve CloudFront managed prefix list id: %w", err)
+	}
+
+	return id, nil
 }
 
 // DeployEnvironmentInput contains information used to deploy the environment.
@@ -162,7 +192,7 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 		return fmt.Errorf("retrieve environment stack force update ID: %w", err)
 	}
 	conf := stack.NewEnvConfigFromExistingStack(stackInput, lastForceUpdateID, oldParams)
-	return d.envDeployer.UpdateAndRenderEnvironment(os.Stderr, conf, stackInput.ArtifactBucketARN, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
+	return d.envDeployer.UpdateAndRenderEnvironment(conf, stackInput.ArtifactBucketARN, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
 }
 
 func (d *envDeployer) getAppRegionalResources() (*stack.AppRegionalResources, error) {
@@ -188,6 +218,10 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 	if err != nil {
 		return nil, err
 	}
+	cidrPrefixListIDs, err := d.cidrPrefixLists(in)
+	if err != nil {
+		return nil, err
+	}
 	return &deploy.CreateEnvironmentInput{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
@@ -199,6 +233,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		CustomResourcesURLs:  in.CustomResourcesURLs,
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
+		CIDRPrefixListIDs:    cidrPrefixListIDs,
 		Mft:                  in.Manifest,
 		ForceUpdate:          in.ForceNewUpdate,
 		RawMft:               in.RawManifest,
