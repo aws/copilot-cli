@@ -128,9 +128,22 @@ e2e-dryrun: build # Sample command "make e2e-dryrun test=multi-env-app" to run t
 	@echo "Install ginkgo"
 	go install github.com/onsi/ginkgo/ginkgo@latest
 	@echo "Setup credentials"
-	./scripts/e2e-dryrun-creds.sh
+	./scripts/dryrun-creds.sh e2e
 	@echo "Run the $(test) test"
 	cd e2e/$(test) && DRYRUN=true ginkgo -v -r
+	cd -
+
+# Examples:
+# REGRESSION_TEST_FROM_PATH=/usr/local/bin/copilot make regression-dryrun test=multi-svc-app
+# REGRESSION_TEST_FROM_PATH=/usr/local/bin/copilot-v1.18.0 REGRESSION_TO_FROM_PATH=/usr/local/bin/copilot-v1.19.0 make regression-dryrun test=multi-svc-app
+.PHONY: regression-dryrun
+regression-dryrun: build
+	@echo "Install ginkgo"
+	go install github.com/onsi/ginkgo/ginkgo@latest
+	@echo "Setup credentials"
+	./scripts/dryrun-creds.sh regression
+	@echo "Run the $(test) test"
+	cd regression/$(test) && DRYRUN=true ginkgo -v -r
 	cd -
 
 .PHONY: tools
