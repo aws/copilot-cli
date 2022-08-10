@@ -28,18 +28,28 @@ func convertImageConfig(build *types.BuildConfig, imageLoc string) (manifest.Ima
 			return manifest.Image{}, nil, fmt.Errorf("convert build args: %w", err)
 		}
 
+		buildArgs := manifest.DockerBuildArgs{
+			Context:    nilIfEmpty(build.Context),
+			Dockerfile: nilIfEmpty(build.Dockerfile),
+			Args:       args,
+			Target:     nilIfEmpty(build.Target),
+			CacheFrom:  build.CacheFrom,
+		}
+
 		image.Build = manifest.BuildArgsOrString{
-			BuildArgs: manifest.DockerBuildArgs{
-				Context:    &build.Context,
-				Dockerfile: &build.Dockerfile,
-				Args:       args,
-				Target:     &build.Target,
-				CacheFrom:  build.CacheFrom,
-			},
+			BuildArgs: buildArgs,
 		}
 	}
 
 	return image, ignored, nil
+}
+
+func nilIfEmpty(s string) *string {
+	if s == "" {
+		return nil
+	} else {
+		return &s
+	}
 }
 
 // convertMappingWithEquals checks for entries with missing values and generates an error if any are found.
@@ -58,6 +68,10 @@ func convertMappingWithEquals(inArgs types.MappingWithEquals) (map[string]string
 	if badArgs != nil {
 		return nil, fmt.Errorf("some entries are missing values and require user input, "+
 			"this is not supported in Copilot: %v", badArgs)
+	}
+
+	if len(args) == 0 {
+		return nil, nil
 	}
 
 	return args, nil
