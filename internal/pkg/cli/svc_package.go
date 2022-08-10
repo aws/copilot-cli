@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -21,7 +20,6 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -122,14 +120,13 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadStackGenerator
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider:   o.sessProvider,
-		Name:              o.name,
-		App:               targetApp,
-		Env:               targetEnv,
-		ImageTag:          o.tag,
-		Mft:               content,
-		RawMft:            raw,
-		UploadAddonAssets: o.uploadAssets && false, // TODO(dnrnd): remove to enable packaging addons
+		SessionProvider: o.sessProvider,
+		Name:            o.name,
+		App:             targetApp,
+		Env:             targetEnv,
+		ImageTag:        o.tag,
+		Mft:             content,
+		RawMft:          raw,
 	}
 	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:
@@ -206,14 +203,11 @@ func (o *packageSvcOpts) Execute() error {
 		return err
 	}
 	addonsTemplate, err := gen.AddonsTemplate()
-	if err != nil {
-		// return nil if addons not found.
-		var notFoundErr *addon.ErrAddonsNotFound
-		if errors.As(err, &notFoundErr) {
-			return nil
-		}
-
+	switch {
+	case err != nil:
 		return fmt.Errorf("retrieve addons template: %w", err)
+	case addonsTemplate == "":
+		return nil
 	}
 	// Addons template won't show up without setting --output-dir flag.
 	if o.outputDir != "" {
