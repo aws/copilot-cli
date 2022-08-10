@@ -8,7 +8,7 @@ When Copilot creates a [CloudFront distribution](https://docs.aws.amazon.com/Ama
 
 ## How do I use CloudFront with my existing application?
 
-As of Copilot v1.20, your environment will be created with a manifest file, similar to a workload (service or job) manifest. In this manifest, you can specify the value `cdn: true` and then run `copilot env deploy` to enable a basic CloudFront distribution.
+Starting in Copilot v1.20, `copilot env init` creates an environment manifest file. In this manifest, you can specify the value `cdn: true` and then run `copilot env deploy` to enable a basic CloudFront distribution.
 
 ???+ note "Sample CloudFront distribution manifest setups"
 
@@ -39,7 +39,10 @@ As of Copilot v1.20, your environment will be created with a manifest file, simi
 
 ## How do I enable HTTPS traffic with CloudFront?
 
-When using HTTPS with CloudFront, specify your certificates in the `http.certificates` field of the environment manifest, just as you would for a Load Balancer. The new field `cdn.certificate` similarly enables HTTPS traffic with CloudFront. Note that this certificate may only be imported in the `us-east-1` region.
+When using HTTPS with CloudFront, specify your certificates in the `http.certificates` field of the environment manifest, just as you would for a Load Balancer. The new field `cdn.certificate` similarly enables HTTPS traffic with CloudFront. Unlike a Load Balancer, you can only import one certificate. Because of this, we recommend that you create a new certificate in the `us-east-1` region which contains CNAME records to validate each alias that your services use in that environment.
+
+!!! info
+    CloudFront only supports certificates imported in the `us-east-1` region.
 
 !!! info
     Importing a certificate for CloudFront adds an extra permission to your Environment Manager Role, allowing Copilot to use the `DescribeCertificate` [API call](https://docs.aws.amazon.com/acm/latest/APIReference/API_DescribeCertificate.html).
@@ -47,3 +50,7 @@ When using HTTPS with CloudFront, specify your certificates in the `http.certifi
 You can also let Copilot manage the certificates for you by specifying `--domain` when you create your application. When doing this, you must specify `http.alias` for all your services deployed in the CloudFront-enabled environment.
 
 With both of these setups, Copilot will provision CloudFront to use the [SSL/TLS Certificate](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-https-alternate-domain-names.html), which allows it to validate the viewer certificate, enabling an HTTPS connection.
+
+## What is ingress restriction?
+
+Ingress restriction means that you're restricting the incoming traffic to come from a certain source. With CloudFront, we use an [AWS managed prefix list](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html) which restricts the allowed traffic to a set of CIDR IP addresses associated with CloudFront edge locations. For Copilot, this means that when you specify `restrict_to.cdn: true` your Public Load Balancer is no longer fully publicy accessible, and can only be accessed through the CloudFront distribution. This is desired because a CloudFront distribution can help gaurd against security threats to your services.
