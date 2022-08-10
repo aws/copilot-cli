@@ -197,13 +197,13 @@ type PackageConfig struct {
 	WorkspacePath string
 	FS            afero.Fs
 
-	wlName string
+	workloadName string
 }
 
 // Package finds references to local files in Stack's template, uploads
 // the files to S3, and replaces the file path with the S3 location.
 func (s *Stack) Package(cfg PackageConfig) error {
-	cfg.wlName = s.wlName
+	cfg.workloadName = s.workloadName
 
 	err := cfg.packageIncludeTransforms(&s.template.Metadata, &s.template.Mappings, &s.template.Conditions, &s.template.Transform, &s.template.Resources, &s.template.Outputs)
 	if err != nil {
@@ -363,7 +363,7 @@ func (p *PackageConfig) uploadAddonAsset(assetPath string, forceZip bool) (templ
 		return template.S3ObjectLocation{}, fmt.Errorf("create asset: %w", err)
 	}
 
-	s3Path := artifactpath.AddonAsset(p.wlName, asset.hash)
+	s3Path := artifactpath.AddonAsset(p.workloadName, asset.hash)
 	url, err := p.Uploader.Upload(p.Bucket, s3Path, asset.data)
 	if err != nil {
 		return template.S3ObjectLocation{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, p.Bucket, err)
