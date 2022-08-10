@@ -1,4 +1,4 @@
-# env deploy
+# env deploy <span class="version" > added in [v1.20.0](../../blogs/release-v120.en.md) </span>
 ```console
 $ copilot env deploy
 ```
