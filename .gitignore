@@ -8,3 +8,4 @@ node_modules/
 site/node_modules/
 site/themes/docsy
 internal/pkg/template/templates/custom-resources/
+copilot/

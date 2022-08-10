@@ -35,10 +35,10 @@ UniqueAliasesAction:
   Metadata:
     'aws:copilot:description': 'An action to get unique custom aliases for services in your environment'
   Condition: CreateALB
-  Type: Custom::UniqueAliasesAction
+  Type: Custom::UniqueAliasesFunction
   Properties:
     ServiceToken: !GetAtt UniqueAliasesFunction.Arn
-    Aliases: ${Aliases}
+    Aliases: !Ref Aliases
 
 CloudFrontDistribution:
   Metadata:
@@ -47,7 +47,7 @@ CloudFrontDistribution:
   Type: AWS::CloudFront::Distribution
   Properties:
     DistributionConfig:
-      Aliases: !GetAtt UniqueAliasesAction.Aliases
+      Aliases: !GetAtt UniqueAliasesAction.UniqueAliases
       DefaultCacheBehavior:
         AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
         CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k

@@ -1,9 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-/* jshint node: true */
-/* jshint esversion: 8 */
-
 "use strict";
 
 /**
@@ -66,21 +63,50 @@ const report = function (
   });
 };
 
+const logGroupName = function (context) {
+  return context.logGroupName;
+};
+
+const logStreamName = function (context) {
+  return context.logStreamName;
+};
+
 /**
  * Main handler, invoked by Lambda
+ * 
+ * The input event.ResourceProperties.Aliases is a map of service name to
+ * it's alises. For example, it might look like this:
+ * {
+ *  "svc1": ["svc1.com", "example.com"],
+ *  "svc2": ["example.com"]
+ * }
+ * 
+ * This function returns a list of unique aliases found in that list.
+ * From the previous example, UniqueAliases would be:
+ * ["svc1.com", "example.com"]
  */
-exports.uniqueAliasesHandler = function (event, context) {
-  const physicalResourceId = event.LogicalResourceId;
+// TODO can i just call this handler?
+exports.uniqueAliasesHandler = async function (event, context) {
+  const responseData = {};
+  const physicalResourceId = event.PhysicalResourceId || `unique-aliases-${event.LogicalResourceId}`;
 
-  console.log(`Hi!!!!: ${JSON.stringify(event)}`);
+  try {
+    switch (event.RequestType) {
+      case "Create":
+      case "Update":
+        const aliases = event.ResourceProperties.Aliases;
+        responseData.UniqueAliases = new Set(Object.values(aliases).flat());
+        break;
+      case "Delete":
+        // Do nothing on delete, since this isn't a "real" resource.
+        break;
+      default:
+        throw new Error(`Unsupported request type ${event.RequestType}`);
+    }
 
-  switch (event.RequestType) {
-    case "Create":
-    case "Update":
-    case "Delete":
-      // Do nothing on delete, since this isn't a "real" resource.
-      break;
-    default:
-      throw new Error(`Unsupported request type ${event.RequestType}`);
+    await report(event, context, "SUCCESS", physicalResourceId, responseData);
+  } catch (err) {
+    console.error(`caught error: ${err}`);
+    await report(event, context, "FAILED", physicalResourceId, null, `${err.message} (Log: ${logGroupName()}/${logStreamName()})`);
   }
 };
