@@ -168,8 +168,8 @@ network:
     security_group:
       egress:
         - ip_protocol: tcp
-            ports: 80
-            cidr: 0.0.0.0/0
+          ports: 80
+          cidr: 0.0.0.0/0
 ```
 
 <div class="separator"></div>
