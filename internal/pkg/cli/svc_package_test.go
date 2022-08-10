@@ -13,7 +13,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -214,7 +213,7 @@ count: 1`
 					Parameters: "myparams",
 				}, nil)
 				m.interpolator.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
-				m.generator.EXPECT().AddonsTemplate().Return("", &addon.ErrAddonsNotFound{})
+				m.generator.EXPECT().AddonsTemplate().Return("", nil)
 			},
 			wantedStack:  "mystack",
 			wantedParams: "myparams",
@@ -230,7 +229,7 @@ count: 1`
 			setupMocks: func(m *svcPackageExecuteMock) {
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(rdwsMft), nil)
 				m.interpolator.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
-				m.generator.EXPECT().AddonsTemplate().Return("", &addon.ErrAddonsNotFound{})
+				m.generator.EXPECT().AddonsTemplate().Return("", nil)
 				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						ImageDigest: aws.String(""),
