@@ -168,10 +168,13 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 		StartTime:           opts.startTime(s.now),
 		EndTime:             opts.EndTime,
 		StreamLastEventTime: nil,
-		LogStreamLimit:      opts.LogStreamLimit,
 	}
-
+	logStreamLimit := opts.LogStreamLimit
+	if opts.IncludeStateMachineLogs {
+		logStreamLimit *= 2
+	}
 	logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs, opts.IncludeStateMachineLogs)
+	logEventsOpts.LogStreamLimit = logStreamLimit
 	for {
 		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)
 		if err != nil {

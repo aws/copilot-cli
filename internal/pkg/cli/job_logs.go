@@ -177,10 +177,6 @@ func (o *jobLogsOpts) Execute() error {
 		logStreamLimit = o.last
 	}
 
-	if o.includeStateMachineLogs {
-		logStreamLimit *= 2
-	}
-
 	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
 		Follow:                  o.follow,
 		Limit:                   limit,
@@ -278,7 +274,7 @@ func buildJobLogsCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	cmd.Flags().DurationVar(&vars.since, sinceFlag, 0, sinceFlagDescription)
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
-	cmd.Flags().IntVar(&vars.last, lastFlag, 3, lastFlagDescription)
+	cmd.Flags().IntVar(&vars.last, lastFlag, 1, lastFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	cmd.Flags().BoolVar(&vars.includeStateMachineLogs, includeStateMachineLogsFlag, false, includeStateMachineLogsFlagDescription)
 
