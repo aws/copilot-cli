@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/stretchr/testify/require"
 )
@@ -42,8 +43,12 @@ func TestWorkerService_Template(t *testing.T) {
 	v, ok := content.(*manifest.WorkerService)
 	require.True(t, ok)
 
-	addons, err := addon.New(aws.StringValue(v.Name))
+	ws, err := workspace.New()
 	require.NoError(t, err)
+
+	_, err = addon.Parse(aws.StringValue(v.Name), ws)
+	var notFound *addon.ErrAddonsNotFound
+	require.ErrorAs(t, err, &notFound)
 
 	serializer, err := stack.NewWorkerService(stack.WorkerServiceConfig{
 		App:         appName,
@@ -55,7 +60,6 @@ func TestWorkerService_Template(t *testing.T) {
 			AccountID:                "123456789123",
 			Region:                   "us-west-2",
 		},
-		Addons: addons,
 	})
 
 	tpl, err := serializer.Template()

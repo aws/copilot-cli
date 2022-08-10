@@ -6,8 +6,9 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/aws"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 
@@ -337,9 +338,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
 					// delete orphan tasks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
 					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
@@ -373,9 +372,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.store.EXPECT().GetEnvironment(mockAppName, mockEnvName).Times(1).Return(mockEnv, nil),
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
 					// delete orphan tasks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
 					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(nil),
@@ -407,9 +404,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 						},
 					}, nil),
 					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(testError),
-					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtJobStackDeleteFailed, mockJobName, mockEnvName, fmt.Errorf("delete job stack: %w", testError))),
 				)
 			},
 			wantedError: fmt.Errorf("delete job stack: %w", testError),
@@ -428,9 +423,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 						},
 					}, nil),
 					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobStackDeleteStart, mockJobName, mockEnvName)),
 					mocks.jobCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobStackDeleteComplete, mockJobName, mockEnvName)),
 					// delete orphan tasks
 					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobTasksStopStart, mockJobName, mockEnvName)),
 					mocks.ecs.EXPECT().StopWorkloadTasks(mockAppName, mockEnvName, mockJobName).Return(testError),

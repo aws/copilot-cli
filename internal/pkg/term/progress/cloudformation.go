@@ -206,6 +206,12 @@ func (c *stackComponent) Listen() {
 		}
 		c.addRenderer(ev, description)
 	}
+	// Close the done channel once all the renderers are done listening.
+	for _, r := range c.resources {
+		if dr, ok := r.(DynamicRenderer); ok {
+			<-dr.Done()
+		}
+	}
 	close(c.done)
 }
 
