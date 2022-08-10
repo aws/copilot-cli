@@ -112,7 +112,7 @@ exports.handler = async function (event, context) {
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.error(`caught error: ${err}`);
-    await report(event, context, "FAILED", physicalResourceId, null, `${err?.message} (Log: ${logGroupName()}/${logStreamName()})`);
+    await report(event, context, "FAILED", physicalResourceId, null, `${err.message} (Log: ${logGroupName()}/${logStreamName()})`);
   }
 };
 
