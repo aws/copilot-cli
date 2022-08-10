@@ -8,7 +8,7 @@ When Copilot creates a [CloudFront distribution](https://docs.aws.amazon.com/Ama
 
 ## How do I use CloudFront with my existing application?
 
-Starting in Copilot v1.20, `copilot env init` creates an environment manifest file. In this manifest, you can specify the value `cdn: true` and then run `copilot env deploy` to enable a basic CloudFront distribution.
+Starting with Copilot v1.20, `copilot env init` creates an environment manifest file. In this manifest, you can specify the value `cdn: true` and then run `copilot env deploy` to enable a basic CloudFront distribution.
 
 ???+ note "Sample CloudFront distribution manifest setups"
 
@@ -39,7 +39,7 @@ Starting in Copilot v1.20, `copilot env init` creates an environment manifest fi
 
 ## How do I enable HTTPS traffic with CloudFront?
 
-When using HTTPS with CloudFront, specify your certificates in the `http.certificates` field of the environment manifest, just as you would for a Load Balancer. The new field `cdn.certificate` similarly enables HTTPS traffic with CloudFront. Unlike a Load Balancer, you can only import one certificate. Because of this, we recommend that you create a new certificate in the `us-east-1` region which contains CNAME records to validate each alias that your services use in that environment.
+When using HTTPS with CloudFront, specify your certificates in the `cdn.certificate` field of the environment manifest, just as you would in the `http.certificates` field for a Load Balancer. Unlike for a Load Balancer, you can import only one certificate. Because of this, we recommend that you create a new certificate (in the `us-east-1` region) with CNAME records to validate each alias that your services use in that environment.
 
 !!! info
     CloudFront only supports certificates imported in the `us-east-1` region.
@@ -53,4 +53,4 @@ With both of these setups, Copilot will provision CloudFront to use the [SSL/TLS
 
 ## What is ingress restriction?
 
-Ingress restriction means that you're restricting the incoming traffic to come from a certain source. With CloudFront, we use an [AWS managed prefix list](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html) which restricts the allowed traffic to a set of CIDR IP addresses associated with CloudFront edge locations. For Copilot, this means that when you specify `restrict_to.cdn: true` your Public Load Balancer is no longer fully publicy accessible, and can only be accessed through the CloudFront distribution. This is desired because a CloudFront distribution can help gaurd against security threats to your services.
+You can restrict incoming traffic to come from a certain source. For CloudFront, Copilot uses an [AWS managed prefix list](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html) to restrict allowed traffic to a set of CIDR IP addresses associated with CloudFront edge locations. When you specify `restrict_to.cdn: true`, your Public Load Balancer is no longer fully publicly accessible, and can only be accessed through the CloudFront distribution, guarding against security threats to your services.
