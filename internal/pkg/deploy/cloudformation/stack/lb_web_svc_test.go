@@ -157,7 +157,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		"failed if hosted zone is set without imported certs": {
 			noImportedCerts: true,
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				c.wkld.addons = addons
 			},
 
@@ -221,7 +221,7 @@ Outputs:
 					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
 				})
 
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				c.parser = m
 				c.wkld.addons = addons
 			},

@@ -28,6 +28,9 @@ build: package-custom-resources compile-local package-custom-resources-clean
 .PHONY: build-e2e
 build-e2e: package-custom-resources compile-linux package-custom-resources-clean
 
+.PHONY: build-regression
+build-regression: package-custom-resources compile-linux package-custom-resources-clean
+
 .PHONY: release
 release: package-custom-resources compile-darwin compile-linux compile-windows package-custom-resources-clean
 

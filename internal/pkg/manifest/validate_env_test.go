@@ -187,6 +187,29 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			},
 			wantedError: "CDN must be enabled to limit security group ingress to CloudFront",
 		},
+		"error if cdn cert specified but public certs not specified": {
+			in: EnvironmentConfig{
+				CDNConfig: environmentCDNConfig{
+					Config: advancedCDNConfig{
+						Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
+					},
+				},
+			},
+			wantedError: "\"http.public.certificates\" must be specified if \"cdn.certificate\" is specified",
+		},
+		"error if cdn cert not specified but public certs imported": {
+			in: EnvironmentConfig{
+				CDNConfig: environmentCDNConfig{
+					Enabled: aws.Bool(true),
+				},
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
+					},
+				},
+			},
+			wantedError: "\"cdn.certificate\" must be specified if \"http.public.certificates\" and \"cdn\" are specified",
+		},
 		"error if subnets specified for internal ALB placement don't exist": {
 			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{
@@ -682,8 +705,9 @@ func TestSubnetsConfiguration_validate(t *testing.T) {
 
 func TestCDNConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
-		in          environmentCDNConfig
-		wantedError error
+		in                   environmentCDNConfig
+		wantedError          error
+		wantedErrorMsgPrefix string
 	}{
 		"valid if empty": {
 			in: environmentCDNConfig{},
@@ -695,14 +719,35 @@ func TestCDNConfiguration_validate(t *testing.T) {
 		},
 		"valid if advanced config configured correctly": {
 			in: environmentCDNConfig{
-				CDNConfig: advancedCDNConfig{},
+				Config: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
+				},
 			},
+		},
+		"error if certificate invalid": {
+			in: environmentCDNConfig{
+				Config: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:weird-little-arn"),
+				},
+			},
+			wantedErrorMsgPrefix: "parse cdn certificate:",
+		},
+		"error if certificate in invalid region": {
+			in: environmentCDNConfig{
+				Config: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:acm:us-west-2:1111111:certificate/look-like-a-good-arn"),
+				},
+			},
+			wantedError: errors.New("cdn certificate must be in region us-east-1"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.in.validate()
-			if tc.wantedError != nil {
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+			} else if tc.wantedError != nil {
 				require.Error(t, gotErr)
 				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {

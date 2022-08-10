@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,8 +31,12 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
 
-	addons, err := addon.New(aws.StringValue(v.Name))
+	ws, err := workspace.New()
 	require.NoError(t, err)
+
+	_, err = addon.Parse(aws.StringValue(v.Name), ws)
+	var notFound *addon.ErrAddonsNotFound
+	require.ErrorAs(t, err, &notFound)
 
 	serializer, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
 		App: &config.Application{Name: appName},
@@ -53,7 +58,6 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 				"RulePriorityFunction":        "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
 			},
 		},
-		Addons: addons,
 	})
 	require.NoError(t, err)
 	tpl, err := serializer.Template()
@@ -80,8 +84,12 @@ func TestScheduledJob_Validate(t *testing.T) {
 	v, ok := content.(*manifest.ScheduledJob)
 	require.True(t, ok)
 
-	addons, err := addon.New(aws.StringValue(v.Name))
+	ws, err := workspace.New()
 	require.NoError(t, err)
+
+	_, err = addon.Parse(aws.StringValue(v.Name), ws)
+	var notFound *addon.ErrAddonsNotFound
+	require.ErrorAs(t, err, &notFound)
 
 	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
 		App:      appName,
@@ -93,7 +101,6 @@ func TestScheduledJob_Validate(t *testing.T) {
 				"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
 			},
 		},
-		Addons: addons,
 	})
 
 	tpl, err := serializer.Template()

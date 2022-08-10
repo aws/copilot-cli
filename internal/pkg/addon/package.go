@@ -17,6 +17,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -78,8 +79,7 @@ func (p *packagePropertyConfig) isStringReplacement() bool {
 // for how to transform it's properties.
 //
 // This list of resources should stay in sync with
-// https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html,
-// other than the AWS::Serverless resources, which are not supported in Copilot.
+// https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html.
 var resourcePackageConfig = map[string][]packagePropertyConfig{
 	"AWS::ApiGateway::RestApi": {
 		{
@@ -190,14 +190,28 @@ var resourcePackageConfig = map[string][]packagePropertyConfig{
 	},
 }
 
-func (t *cfnTemplate) pkg(a *Addons) error {
-	err := a.packageIncludeTransforms(&t.Metadata, &t.Mappings, &t.Conditions, &t.Transform, &t.Resources, &t.Outputs)
+// PackageConfig contains data needed to package a Stack.
+type PackageConfig struct {
+	Bucket        string
+	Uploader      uploader
+	WorkspacePath string
+	FS            afero.Fs
+
+	workloadName string
+}
+
+// Package finds references to local files in Stack's template, uploads
+// the files to S3, and replaces the file path with the S3 location.
+func (s *Stack) Package(cfg PackageConfig) error {
+	cfg.workloadName = s.workloadName
+
+	err := cfg.packageIncludeTransforms(&s.template.Metadata, &s.template.Mappings, &s.template.Conditions, &s.template.Transform, &s.template.Resources, &s.template.Outputs)
 	if err != nil {
 		return fmt.Errorf("package transforms: %w", err)
 	}
 
 	// package resources
-	for name, node := range mappingNode(&t.Resources) {
+	for name, node := range mappingNode(&s.template.Resources) {
 		resType := yamlMapGet(node, "Type").Value
 		confs, ok := resourcePackageConfig[resType]
 		if !ok {
@@ -206,7 +220,7 @@ func (t *cfnTemplate) pkg(a *Addons) error {
 
 		props := yamlMapGet(node, "Properties")
 		for _, conf := range confs {
-			if err := a.packageProperty(props, conf); err != nil {
+			if err := cfg.packageProperty(props, conf); err != nil {
 				return fmt.Errorf("package property %q of %q: %w", strings.Join(conf.PropertyPath, "."), name, err)
 			}
 		}
@@ -220,7 +234,7 @@ func (t *cfnTemplate) pkg(a *Addons) error {
 // detects one, and the "Location" parameter is set to a local path, it'll
 // upload those files to S3. If node is a yaml map or sequence, it will
 // recursively traverse those nodes.
-func (a *Addons) packageIncludeTransforms(nodes ...*yaml.Node) error {
+func (p *PackageConfig) packageIncludeTransforms(nodes ...*yaml.Node) error {
 	pkg := func(node *yaml.Node) error {
 		if node == nil || node.Kind != yaml.MappingNode {
 			return nil
@@ -239,18 +253,18 @@ func (a *Addons) packageIncludeTransforms(nodes ...*yaml.Node) error {
 					continue
 				}
 
-				obj, err := a.uploadAddonAsset(loc.Value, false)
+				obj, err := p.uploadAddonAsset(loc.Value, false)
 				if err != nil {
 					return fmt.Errorf("upload asset: %w", err)
 				}
 
 				loc.Value = s3.Location(obj.Bucket, obj.Key)
 			case val.Kind == yaml.MappingNode:
-				if err := a.packageIncludeTransforms(val); err != nil {
+				if err := p.packageIncludeTransforms(val); err != nil {
 					return err
 				}
 			case val.Kind == yaml.SequenceNode:
-				if err := a.packageIncludeTransforms(val.Content...); err != nil {
+				if err := p.packageIncludeTransforms(val.Content...); err != nil {
 					return err
 				}
 			}
@@ -288,9 +302,9 @@ func yamlMapGet(node *yaml.Node, key string) *yaml.Node {
 	return &yaml.Node{}
 }
 
-func (a *Addons) packageProperty(resourceProperties *yaml.Node, pkgCfg packagePropertyConfig) error {
+func (p *PackageConfig) packageProperty(resourceProperties *yaml.Node, propCfg packagePropertyConfig) error {
 	target := resourceProperties
-	for _, key := range pkgCfg.PropertyPath {
+	for _, key := range propCfg.PropertyPath {
 		target = yamlMapGet(target, key)
 	}
 
@@ -303,19 +317,19 @@ func (a *Addons) packageProperty(resourceProperties *yaml.Node, pkgCfg packagePr
 		return nil
 	}
 
-	obj, err := a.uploadAddonAsset(target.Value, pkgCfg.ForceZip)
+	obj, err := p.uploadAddonAsset(target.Value, propCfg.ForceZip)
 	if err != nil {
 		return fmt.Errorf("upload asset: %w", err)
 	}
 
-	if pkgCfg.isStringReplacement() {
+	if propCfg.isStringReplacement() {
 		target.Value = s3.Location(obj.Bucket, obj.Key)
 		return nil
 	}
 
 	return target.Encode(map[string]string{
-		pkgCfg.BucketNameProperty: obj.Bucket,
-		pkgCfg.ObjectKeyProperty:  obj.Key,
+		propCfg.BucketNameProperty: obj.Bucket,
+		propCfg.ObjectKeyProperty:  obj.Key,
 	})
 }
 
@@ -329,30 +343,30 @@ func isFilePath(path string) bool {
 	return true
 }
 
-func (a *Addons) uploadAddonAsset(assetPath string, forceZip bool) (template.S3ObjectLocation, error) {
+func (p *PackageConfig) uploadAddonAsset(assetPath string, forceZip bool) (template.S3ObjectLocation, error) {
 	// make path absolute from wsPath
 	if !filepath.IsAbs(assetPath) {
-		assetPath = filepath.Join(a.wsPath, assetPath)
+		assetPath = filepath.Join(p.WorkspacePath, assetPath)
 	}
 
-	info, err := a.fs.Stat(assetPath)
+	info, err := p.FS.Stat(assetPath)
 	if err != nil {
 		return template.S3ObjectLocation{}, fmt.Errorf("stat: %w", err)
 	}
 
-	getAsset := a.fileAsset
+	getAsset := p.fileAsset
 	if forceZip || info.IsDir() {
-		getAsset = a.zipAsset
+		getAsset = p.zipAsset
 	}
 	asset, err := getAsset(assetPath)
 	if err != nil {
 		return template.S3ObjectLocation{}, fmt.Errorf("create asset: %w", err)
 	}
 
-	s3Path := artifactpath.AddonAsset(a.wlName, asset.hash)
-	url, err := a.uploader.Upload(a.bucket, s3Path, asset.data)
+	s3Path := artifactpath.AddonAsset(p.workloadName, asset.hash)
+	url, err := p.Uploader.Upload(p.Bucket, s3Path, asset.data)
 	if err != nil {
-		return template.S3ObjectLocation{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, a.bucket, err)
+		return template.S3ObjectLocation{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, p.Bucket, err)
 	}
 
 	bucket, key, err := s3.ParseURL(url)
@@ -376,14 +390,14 @@ type asset struct {
 // a hash of each files name, permission, and content. The zip file
 // itself is not hashed to avoid a changing hash when non-relevant
 // file metadata changes, like modification time.
-func (a *Addons) zipAsset(root string) (asset, error) {
+func (p *PackageConfig) zipAsset(root string) (asset, error) {
 	buf := &bytes.Buffer{}
 	archive := zip.NewWriter(buf)
 	defer archive.Close()
 
 	hash := sha256.New()
 
-	if err := a.fs.Walk(root, func(path string, info fs.FileInfo, err error) error {
+	if err := afero.Walk(p.FS, root, func(path string, info fs.FileInfo, err error) error {
 		switch {
 		case err != nil:
 			return err
@@ -399,7 +413,7 @@ func (a *Addons) zipAsset(root string) (asset, error) {
 			fname = info.Name()
 		}
 
-		f, err := a.fs.Open(path)
+		f, err := p.FS.Open(path)
 		if err != nil {
 			return fmt.Errorf("open: %w", err)
 		}
@@ -435,11 +449,11 @@ func (a *Addons) zipAsset(root string) (asset, error) {
 // fileAsset creates an asset from the file specified by path.
 // The data is the content of the file, and the hash is the
 // a hash of the file content.
-func (a *Addons) fileAsset(path string) (asset, error) {
+func (p *PackageConfig) fileAsset(path string) (asset, error) {
 	hash := sha256.New()
 	buf := &bytes.Buffer{}
 
-	f, err := a.fs.Open(path)
+	f, err := p.FS.Open(path)
 	if err != nil {
 		return asset{}, fmt.Errorf("open: %w", err)
 	}
