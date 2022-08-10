@@ -145,7 +145,7 @@ An IPv4 CIDR block assigned to the subnet. This field is mutually exclusive with
 The Availability Zone name assigned to the subnet. The `az` field is optional, by default Availability Zones are assigned in alphabetical order.
 This field is mutually exclusive with `id`.
 
-<span class="parent-field">network.vpc.</span><a id="network-vpc-security-group" href="#network-vpc-security-group" class="field">`security_group`</a> <span class="type">Map</span>
+<span class="parent-field">network.vpc.</span><a id="network-vpc-security-group" href="#network-vpc-security-group" class="field">`security_group`</a> <span class="type">Map</span>  
 Configure security group rules to add to the environment's security group.
 
 <span class="parent-field">network.vpc.security_group</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
