@@ -197,7 +197,7 @@ http:
 ```
 
 <span class="parent-field">http.public.security_groups.ingress.</span><a id="http-public-security-groups-ingress-restrict-to" href="#http-public-security-groups-ingress-restrict-to" class="field">`restrict_to`</a> <span class="type">Map</span>  
-Ingress rules which restrict the Public Load Balancer's traffic.
+Ingress rules to restrict the Public Load Balancer's traffic.
 
 <span class="parent-field">http.public.security_groups.ingress.restrict_to.</span><a id="http-public-security-groups-ingress-restrict-to-cdn" href="#http-public-security-groups-ingress-restrict-to-cdn" class="field">`cdn`</a> <span class="type">Boolean</span>    
 Restrict ingress traffic for the public load balancer to come from a CloudFront distribution.
