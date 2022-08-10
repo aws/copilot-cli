@@ -20,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/stretchr/testify/require"
 )
@@ -76,8 +77,12 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
-		addons, err := addon.New(aws.StringValue(v.Name))
+		ws, err := workspace.New()
 		require.NoError(t, err)
+
+		_, err = addon.Parse(aws.StringValue(v.Name), ws)
+		var notFound *addon.ErrAddonsNotFound
+		require.ErrorAs(t, err, &notFound)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		envConfig := &manifest.Environment{
@@ -95,7 +100,6 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 				Region:                   "us-west-2",
 			},
 			RootUserARN: "arn:aws:iam::123456789123:root",
-			Addons:      addons,
 		}, stack.WithNLB([]string{"10.0.0.0/24", "10.1.0.0/24"}))
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")

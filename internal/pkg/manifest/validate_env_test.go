@@ -218,7 +218,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			in: EnvironmentConfig{
 				CDNConfig: environmentCDNConfig{
 					Config: advancedCDNConfig{
-						Certificate: aws.String("mockCDNCertARN"),
+						Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 					},
 				},
 			},
@@ -733,6 +733,7 @@ func TestSubnetsConfiguration_validate(t *testing.T) {
 func TestCDNConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
 		in                   environmentCDNConfig
+		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
 		"valid if empty": {
@@ -758,6 +759,14 @@ func TestCDNConfiguration_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: "parse cdn certificate:",
 		},
+		"error if certificate in invalid region": {
+			in: environmentCDNConfig{
+				Config: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:acm:us-west-2:1111111:certificate/look-like-a-good-arn"),
+				},
+			},
+			wantedError: errors.New("cdn certificate must be in region us-east-1"),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -765,6 +774,9 @@ func TestCDNConfiguration_validate(t *testing.T) {
 			if tc.wantedErrorMsgPrefix != "" {
 				require.Error(t, gotErr)
 				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+			} else if tc.wantedError != nil {
+				require.Error(t, gotErr)
+				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {
 				require.NoError(t, gotErr)
 			}

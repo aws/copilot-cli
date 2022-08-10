@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -31,13 +32,18 @@ import (
 const (
 	envDeleteAppNameHelpPrompt = "An environment will be deleted in the selected application."
 	envDeleteNamePrompt        = "Which environment would you like to delete?"
-	fmtDeleteEnvPrompt         = "Are you sure you want to delete environment %s from application %s?"
+	fmtDeleteEnvPrompt         = "Are you sure you want to delete environment %q from application %q?"
 )
 
 const (
-	fmtDeleteEnvStart    = "Deleting environment %s from application %s."
-	fmtDeleteEnvFailed   = "Failed to delete environment %s from application %s.\n"
-	fmtDeleteEnvComplete = "Deleted environment %s from application %s.\n"
+	fmtRetainEnvRolesStart    = "Retain IAM roles before deleting the %q environment"
+	fmtRetainEnvRolesFailed   = "Failed to retain IAM roles for the %q environment\n"
+	fmtRetainEnvRolesComplete = "Retained IAM roles for the %q environment\n"
+
+	fmtDeleteEnvStart     = "Deleting IAM roles and deregistering environment %q from application %q."
+	fmtDeleteEnvIAMFailed = "Failed to delete IAM roles of environment %q from application %q.\n"
+	fmtDeleteEnvSSMFailed = "Failed to deregister environment %q from application %q.\n"
+	fmtDeleteEnvComplete  = "Deleted environment %q from application %q.\n"
 )
 
 var (
@@ -105,7 +111,7 @@ func newDeleteEnvOpts(vars deleteEnvVars) (*deleteEnvOpts, error) {
 			}
 			o.rg = resourcegroupstaggingapi.New(sess)
 			o.iam = iam.New(sess)
-			o.deployer = cloudformation.New(sess)
+			o.deployer = cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 			return nil
 		},
 	}, nil
@@ -156,22 +162,24 @@ func (o *deleteEnvOpts) Execute() error {
 		return err
 	}
 
-	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.name, o.appName))
+	o.prog.Start(fmt.Sprintf(fmtRetainEnvRolesStart, o.name))
 	if err := o.ensureRolesAreRetained(); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
+		o.prog.Stop(log.Serrorf(fmtRetainEnvRolesFailed, o.name))
 		return err
 	}
+	o.prog.Stop(log.Ssuccessf(fmtRetainEnvRolesComplete, o.name))
 	if err := o.deleteStack(); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
 		return err
 	}
+
+	o.prog.Start(fmt.Sprintf(fmtDeleteEnvStart, o.name, o.appName))
 	if err := o.tryDeleteRoles(); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvIAMFailed, o.name, o.appName))
 		return err
 	}
 	// Only remove from SSM if the stack and roles were deleted. Otherwise, the command will error when re-run.
 	if err := o.deleteFromStore(); err != nil {
-		o.prog.Stop(log.Serrorf(fmtDeleteEnvFailed, o.name, o.appName))
+		o.prog.Stop(log.Serrorf(fmtDeleteEnvSSMFailed, o.name, o.appName))
 		return err
 	}
 	o.prog.Stop(log.Ssuccessf(fmtDeleteEnvComplete, o.name, o.appName))

@@ -362,7 +362,7 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 	if e.in.Mft == nil {
 		return nil
 	}
-	if !e.in.Mft.CDNConfig.CDNEnabled() {
+	if !e.in.Mft.CDNEnabled() {
 		return nil
 	}
 	return &template.CDNConfig{
