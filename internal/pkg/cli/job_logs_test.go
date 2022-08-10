@@ -342,7 +342,7 @@ func TestJobLogs_Execute(t *testing.T) {
 			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
 				m := mocks.NewMocklogEventsWriter(ctrl)
 				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
-					require.Equal(t, param.LogStreamLimit, 8)
+					require.Equal(t, param.LogStreamLimit, 4)
 					require.Equal(t, param.EndTime, &mockEndTime)
 					require.Equal(t, param.StartTime, &mockStartTime)
 					require.Equal(t, param.Limit, &mockLimit)
@@ -360,7 +360,7 @@ func TestJobLogs_Execute(t *testing.T) {
 			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
 				m := mocks.NewMocklogEventsWriter(ctrl)
 				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
-					require.Equal(t, param.LogStreamLimit, 2)
+					require.Equal(t, param.LogStreamLimit, 1)
 					require.Equal(t, param.Limit, mockNilLimit)
 					require.Equal(t, param.IncludeStateMachineLogs, true)
 				}).Return(nil)

@@ -165,12 +165,13 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		},
 		"success with state machine included": {
 			includeStateMachine: true,
+			last:                1,
 			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
 							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/", "states"})
-							require.Equal(t, param.Limit, aws.Int64(10))
+							require.Equal(t, param.LogStreamLimit, 2)
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events: logEvents,
@@ -233,12 +234,12 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				logWriter = WriteJSONLogs
 			}
 			err := svcLogs.WriteLogEvents(WriteLogEventsOpts{
-				Follow:         tc.follow,
-				TaskIDs:        tc.taskIDs,
-				Limit:          tc.limit,
-				StartTime:      tc.startTime,
-				OnEvents:       logWriter,
-				LogStreamLimit: tc.last,
+				Follow:                  tc.follow,
+				TaskIDs:                 tc.taskIDs,
+				Limit:                   tc.limit,
+				StartTime:               tc.startTime,
+				OnEvents:                logWriter,
+				LogStreamLimit:          tc.last,
 				IncludeStateMachineLogs: tc.includeStateMachine,
 			})
 
