@@ -5,7 +5,7 @@ $ copilot job logs
 
 ## What does it do?
 
-`copilot job logs` displays the logs of a deployed service.
+`copilot job logs` displays the logs of a deployed job.
 
 ## What are the flags?
 
@@ -19,10 +19,10 @@ $ copilot job logs
       --include-state-machine   Optional. Include logs from the state machine executions.
       --json                    Optional. Output in JSON format.
       --last int                Optional. The number of executions of the scheduled job for which
-                                logs should be shown. (default 3)
+                                logs should be shown. (default 1)
       --limit int               Optional. The maximum number of log events returned. Default is 10
                                 unless any time filtering flags are set.
-  -n, --name string             Name of the service.
+  -n, --name string             Name of the job.
       --since duration          Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
                                 Defaults to all logs. Only one of start-time / since may be used.
       --start-time string       Optional. Only return logs after a specific date (RFC3339).
