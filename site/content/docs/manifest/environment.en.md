@@ -160,8 +160,8 @@ By attaching public certificates to your load balancer, you can associate your L
 See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-existing-validated-certificates) guide to learn more about how to redeploy services using [`http.alias`](./lb-web-service.en.md#http-alias).
 
 <span class="parent-field">http.public.</span><a id="http-public-access-logs" href="#http-public-access-logs" class="field">`access_logs`</a> <span class="type">Boolean or Map</span>   
-The access_logs section allows you to enable Elastic Load Balancing access logs.   
-If you specify a boolean, Copilot will create a bucket on behalf of you and enable access logs on the Public Load Balancer which will write the logs in the Copilot created bucket.
+Enable Elastic Load Balancing access logs.   
+If you specify `true`, Copilot will create an S3 bucket to which the Public Load Balancer will store access logs.
 
 ```yaml
 http:
@@ -169,7 +169,7 @@ http:
     access_logs: true 
 ```
 
-You can also specify access_logs as a map: in this case Copilot will enable access logs on the Public Load Balancer with the given input. 
+You can also specify an existing S3 bucket with a map.
 ```yaml
 http:
  public:
