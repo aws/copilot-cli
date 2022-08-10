@@ -973,16 +973,14 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
 		return "", nil
 	}
 
-	if false { // TODO remove to enable packaging addons
-		config := addon.PackageConfig{
-			Bucket:        d.resources.S3Bucket,
-			Uploader:      d.s3Client,
-			WorkspacePath: d.workspacePath,
-			FS:            afero.NewOsFs(),
-		}
-		if err := d.addons.Package(config); err != nil {
-			return "", fmt.Errorf("package addons: %w", err)
-		}
+	config := addon.PackageConfig{
+		Bucket:        d.resources.S3Bucket,
+		Uploader:      d.s3Client,
+		WorkspacePath: d.workspacePath,
+		FS:            afero.NewOsFs(),
+	}
+	if err := d.addons.Package(config); err != nil {
+		return "", fmt.Errorf("package addons: %w", err)
 	}
 
 	tmpl, err := d.addons.Template()

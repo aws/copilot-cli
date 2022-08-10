@@ -37,9 +37,9 @@ type workspaceReader interface {
 
 // Stack represents a CloudFormation stack.
 type Stack struct {
-	template   *cfnTemplate
-	parameters yaml.Node
-	wlName     string
+	template     *cfnTemplate
+	parameters   yaml.Node
+	workloadName string
 }
 
 // Parse parses the 'addon/' directory for the given workload
@@ -66,8 +66,9 @@ func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
 	}
 
 	return &Stack{
-		template:   template,
-		parameters: params,
+		template:     template,
+		parameters:   params,
+		workloadName: workloadName,
 	}, nil
 }
 

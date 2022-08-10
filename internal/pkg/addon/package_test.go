@@ -397,8 +397,8 @@ Resources:
 			}
 
 			stack := &Stack{
-				wlName:   wlName,
-				template: newCFNTemplate("merged"),
+				workloadName: wlName,
+				template:     newCFNTemplate("merged"),
 			}
 
 			require.NoError(t, yaml.Unmarshal([]byte(tc.inTemplate), stack.template))
