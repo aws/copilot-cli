@@ -55,7 +55,9 @@ Displays logs from specific task IDs
 ```console
 $ copilot job logs --tasks 709c7ea,1de57fd
 ```
-
+Displays logs in real time.
+```console
+$ copilot job logs --follow
 Displays container logs and state machine execution logs from the last execution.
 ```console
 $ copilot job logs --include-state-machine --last 1
