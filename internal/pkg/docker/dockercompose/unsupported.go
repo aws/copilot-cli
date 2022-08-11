@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package dockercompose
 
 // NOTE: This file is currently unused, it will be used in the next PR.
