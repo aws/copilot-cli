@@ -33,11 +33,10 @@ type logGetter interface {
 
 // WorkloadClient retrieves the logs of an Amazon ECS or AppRunner service.
 type WorkloadClient struct {
-	logGroupName            string
-	logStreamNamePrefix     string
-	eventsGetter            logGetter
-	w                       io.Writer
-	includeStateMachineLogs bool
+	logGroupName        string
+	logStreamNamePrefix string
+	eventsGetter        logGetter
+	w                   io.Writer
 
 	now func() time.Time
 }
@@ -53,20 +52,20 @@ type WriteLogEventsOpts struct {
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
 	// LogStreamLimit is an optional parameter for jobs and tasks to speed up CW queries
 	// involving multiple log streams.
-	LogStreamLimit int
+	LogStreamLimit          int
+	IncludeStateMachineLogs bool
 }
 
 // NewWorkloadLogsConfig contains fields that initiates WorkloadClient struct.
 type NewWorkloadLogsConfig struct {
-	App                     string
-	Env                     string
-	Name                    string
-	Sess                    *session.Session
-	LogGroup                string
-	WkldType                string
-	TaskIDs                 []string
-	ConfigStore             describe.ConfigStoreSvc
-	IncludeStateMachineLogs bool
+	App         string
+	Env         string
+	Name        string
+	Sess        *session.Session
+	LogGroup    string
+	WkldType    string
+	TaskIDs     []string
+	ConfigStore describe.ConfigStoreSvc
 }
 
 func (o WriteLogEventsOpts) limit() *int64 {
@@ -115,12 +114,11 @@ func NewWorkloadClient(opts *NewWorkloadLogsConfig) (*WorkloadClient, error) {
 		logGroup = opts.LogGroup
 	}
 	return &WorkloadClient{
-		logGroupName:            logGroup,
-		logStreamNamePrefix:     fmt.Sprintf(fmtWkldLogStreamPrefix, opts.Name),
-		eventsGetter:            cloudwatchlogs.New(opts.Sess),
-		w:                       log.OutputWriter,
-		now:                     time.Now,
-		includeStateMachineLogs: opts.IncludeStateMachineLogs,
+		logGroupName:        logGroup,
+		logStreamNamePrefix: fmt.Sprintf(fmtWkldLogStreamPrefix, opts.Name),
+		eventsGetter:        cloudwatchlogs.New(opts.Sess),
+		w:                   log.OutputWriter,
+		now:                 time.Now,
 	}, nil
 }
 
@@ -170,14 +168,17 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 		StartTime:           opts.startTime(s.now),
 		EndTime:             opts.EndTime,
 		StreamLastEventTime: nil,
-		LogStreamLimit:      opts.LogStreamLimit,
 	}
-
+	logStreamLimit := opts.LogStreamLimit
+	if opts.IncludeStateMachineLogs {
+		logStreamLimit *= 2
+	}
 	// TODO: there should be a separate logging client for ECS services
 	// and App Runner services. This `if` check is only ever true for ECS services.
 	if s.logStreamNamePrefix != "" {
-		logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs)
+		logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs, opts.IncludeStateMachineLogs)
 	}
+	logEventsOpts.LogStreamLimit = logStreamLimit
 
 	for {
 		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)
@@ -199,13 +200,13 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	}
 }
 
-func (s *WorkloadClient) logStreams(taskIDs []string) (logStreamPrefixes []string) {
+func (s *WorkloadClient) logStreams(taskIDs []string, includeStateMachineLogs bool) (logStreamPrefixes []string) {
 	// By default, we only want logs from copilot task log streams.
 	// This filters out log streams not starting with `copilot/`
 	logStreamPrefixes = []string{fmt.Sprintf(fmtWkldLogStreamPrefix, "")}
 	// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for jobs. Therefore, we
 	// need to grab all recent log streams with no prefix filtering.
-	if s.includeStateMachineLogs {
+	if includeStateMachineLogs {
 		return append(logStreamPrefixes, stateMachineLogStreamPrefix)
 	}
 	if len(taskIDs) != 0 {
