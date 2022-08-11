@@ -178,6 +178,14 @@ http:
      bucket_prefix: access-logs
 ```
 
+<span class="parent-field">http.public.access_logs</span><a id="http-public-access-logs-bucket-name" href="#http-public-access-logs-bucket-name" class="field">`bucket_name`</a> <span class="type">String</span>   
+Existing S3 bucket name 
+
+<span class="parent-field">http.public.access_logs</span><a id="http-public-access-logs-bucket-prefix" href="#http-public-access-logs-bucket-prefix" class="field">`bucket_prefix`</a> <span class="type">String</span>   
+S3 bucket prefix
+
+
+
 <span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Map</span>  
 Configuration for the internal load balancer.
 
