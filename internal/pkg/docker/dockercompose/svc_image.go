@@ -119,7 +119,10 @@ func unsupportedBuildKeys(build *types.BuildConfig) (IgnoredKeys, error) {
 	}
 
 	if build.Extensions != nil {
-		ignoredKeys = append(ignoredKeys, "build.extensions")
+		// catchall for any unrecognized key
+		for ext := range build.Extensions {
+			ignoredKeys = append(ignoredKeys, ext)
+		}
 	}
 
 	if build.Labels != nil {

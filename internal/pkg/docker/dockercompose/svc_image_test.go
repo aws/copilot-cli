@@ -84,7 +84,7 @@ func TestConvertImageConfig(t *testing.T) {
 					"tag",
 				},
 				Extensions: map[string]interface{}{
-					"test": "ext",
+					"extfield": "ext",
 				},
 			},
 			inLabels: map[string]string{
@@ -96,7 +96,7 @@ func TestConvertImageConfig(t *testing.T) {
 				"build.pull",
 				"build.isolation",
 				"build.tags",
-				"build.extensions",
+				"build.extfield",
 				"build.labels",
 			},
 			wantImage: manifest.Image{
