@@ -51,49 +51,6 @@ func convertBackendService(service *types.ServiceConfig, port uint16) (*manifest
 	return svcCfg, ignored, nil
 }
 
-func convertLBWS(service *types.ServiceConfig, port uint16) (*manifest.LoadBalancedWebServiceConfig, IgnoredKeys, error) {
-	image, ignored, err := convertImageConfig(service.Build, service.Labels, service.Image)
-	if err != nil {
-		return nil, ignored, fmt.Errorf("convert image config: %w", err)
-	}
-
-	taskCfg, err := convertTaskConfig(service)
-	if err != nil {
-		return nil, ignored, fmt.Errorf("convert task config: %w", err)
-	}
-
-	svcCfg := &manifest.LoadBalancedWebServiceConfig{
-		ImageConfig: manifest.ImageWithPortAndHealthcheck{
-			ImageWithPort: manifest.ImageWithPort{
-				Image: image,
-				Port:  &port,
-			},
-		},
-		ImageOverride: manifest.ImageOverride{
-			Command: manifest.CommandOverride{
-				StringSlice: service.Command,
-			},
-			EntryPoint: manifest.EntryPointOverride{
-				StringSlice: service.Entrypoint,
-			},
-		},
-		TaskConfig: taskCfg,
-	}
-
-	if service.HealthCheck != nil {
-		svcCfg.ImageConfig.HealthCheck = convertHealthCheckConfig(service.HealthCheck)
-		for ext := range service.HealthCheck.Extensions {
-			ignored = append(ignored, "healthcheck"+ext)
-		}
-	}
-
-	for ext := range service.Extensions {
-		ignored = append(ignored, ext)
-	}
-
-	return svcCfg, ignored, nil
-}
-
 // convertTaskConfig converts environment variables, env files, and platform strings.
 func convertTaskConfig(service *types.ServiceConfig) (manifest.TaskConfig, error) {
 	var envFile *string
