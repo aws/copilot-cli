@@ -312,8 +312,8 @@ func TestEnv(t *testing.T) {
 			"custom-resources/cert-replicator.js": {
 				Buffer: bytes.NewBufferString("cert replication"),
 			},
-			"custom-resources/unique-aliases.js": {
-				Buffer: bytes.NewBufferString("unique aliases"),
+			"custom-resources/unique-json-values.js": {
+				Buffer: bytes.NewBufferString("unique json values"),
 			},
 		},
 	}
@@ -322,7 +322,7 @@ func TestEnv(t *testing.T) {
 		"CustomDomainFunction":          "manual/scripts/custom-resources/customdomainfunction/01baf83827dca2ff7df3cdf24f6ad354b3fa4f9b7cda39b5bf91de378f81c791.zip",
 		"DNSDelegationFunction":         "manual/scripts/custom-resources/dnsdelegationfunction/17ec5f580cdb9c1d7c6b5b91decee031592547629a6bfed7cd33b9229f61ab19.zip",
 		"CertificateReplicatorFunction": "manual/scripts/custom-resources/certificatereplicatorfunction/647f83437e4736ddf2915784e13d023a7d342d162ffb42a9eec3d7c842072030.zip",
-		"UniqueAliasesFunction":         "manual/scripts/custom-resources/uniquealiasesfunction/22a287579888f9abaf4fc1ef09dbf8b895dd1b7191673c46311264371872c4b8.zip",
+		"UniqueJSONValuesFunction":      "manual/scripts/custom-resources/uniquejsonvaluesfunction/22a287579888f9abaf4fc1ef09dbf8b895dd1b7191673c46311264371872c4b8.zip",
 	}
 
 	// WHEN

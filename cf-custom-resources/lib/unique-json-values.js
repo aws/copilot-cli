@@ -97,7 +97,7 @@ exports.handler = async function (event, context) {
       case "Update":
         const aliasesForService = JSON.parse(event.ResourceProperties.Aliases || "{}");
         const unique = new Set(Object.values(aliasesForService).flat());
-        responseData.UniqueAliases = Array.from(unique).sort();
+        responseData.UniqueValues = Array.from(unique).sort();
         break;
       case "Delete":
         // Do nothing on delete, since this isn't a "real" resource.

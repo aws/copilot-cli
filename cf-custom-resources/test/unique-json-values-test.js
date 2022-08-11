@@ -82,7 +82,7 @@ describe("Unique Aliases", () => {
           .put("/", (body) => {
             return body.Status === "SUCCESS" &&
               body.PhysicalResourceId === "mockID" &&
-              JSON.stringify(body.Data.UniqueAliases) === JSON.stringify(expectedOutput);
+              JSON.stringify(body.Data.UniqueValues) === JSON.stringify(expectedOutput);
           })
           .reply(200);
 
