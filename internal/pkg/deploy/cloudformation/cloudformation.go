@@ -169,6 +169,16 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 	return client
 }
 
+// IsEmptyErr returns true if the error occurred because the cloudformation resource does not exist or does not contain any sub-resources.
+func IsEmptyErr(err error) bool {
+	type isEmpty interface {
+		IsEmpty() bool
+	}
+
+	var emptyErr isEmpty
+	return errors.As(err, &emptyErr)
+}
+
 // errorEvents returns the list of status reasons of failed resource events
 func (cf CloudFormation) errorEvents(stackName string) ([]string, error) {
 	events, err := cf.cfnClient.ErrorEvents(stackName)

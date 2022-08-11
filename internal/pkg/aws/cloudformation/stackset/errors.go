@@ -4,7 +4,6 @@
 package stackset
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -32,7 +31,8 @@ func (e *ErrStackSetNotFound) Error() string {
 	return fmt.Sprintf("stack set %q not found", e.name)
 }
 
-func (e *ErrStackSetNotFound) isEmpty() bool {
+// IsEmpty reports whether this error is occurs on an empty cloudformation resource.
+func (e *ErrStackSetNotFound) IsEmpty() bool {
 	return true
 }
 
@@ -46,18 +46,9 @@ func (e *ErrStackSetInstancesNotFound) Error() string {
 	return fmt.Sprintf("stack set %q has no instances", e.name)
 }
 
-func (e *ErrStackSetInstancesNotFound) isEmpty() bool {
+// IsEmpty reports whether this error is occurs on an empty cloudformation resource.
+func (e *ErrStackSetInstancesNotFound) IsEmpty() bool {
 	return true
-}
-
-// IsEmptyStackSetErr returns true if the error occurred because the stack set does not exist or does not contain any instances.
-func IsEmptyStackSetErr(err error) bool {
-	type isEmpty interface {
-		isEmpty() bool
-	}
-
-	var emptyErr isEmpty
-	return errors.As(err, &emptyErr)
 }
 
 // isAlreadyExistingStackSet returns true if the underlying error is a stack already exists error.

@@ -34,28 +34,3 @@ func TestErrStackSetInstancesNotFound_Error(t *testing.T) {
 
 	require.EqualError(t, err, `stack set "demo-infrastructure" has no instances`)
 }
-
-func TestIsEmptyStackSetErr(t *testing.T) {
-	testCases := map[string]struct {
-		err    error
-		wanted bool
-	}{
-		"should return true when the error is an ErrStackSetNotFound": {
-			err:    &ErrStackSetNotFound{},
-			wanted: true,
-		},
-		"should return true when the error is an ErrStackSetInstancesNotFound": {
-			err:    &ErrStackSetInstancesNotFound{},
-			wanted: true,
-		},
-		"should return false on any other error": {
-			err: errors.New("some error"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, IsEmptyStackSetErr(tc.err))
-		})
-	}
-}

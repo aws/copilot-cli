@@ -522,7 +522,7 @@ func (cf CloudFormation) DeleteApp(appName string) error {
 func (cf CloudFormation) deleteStackSetInstances(name string) error {
 	opID, err := cf.appStackSet.DeleteAllInstances(name)
 	if err != nil {
-		if stackset.IsEmptyStackSetErr(err) {
+		if IsEmptyErr(err) {
 			return nil
 		}
 		return err
