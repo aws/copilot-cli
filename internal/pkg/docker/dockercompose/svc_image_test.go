@@ -20,7 +20,7 @@ func TestConvertImageConfigNil(t *testing.T) {
 		Location: aws.String("test"),
 	}, img)
 
-	img, ignored, err = convertImageConfig(nil, nil, "")
+	_, _, err = convertImageConfig(nil, nil, "")
 	require.EqualError(t, err, "missing one of `build` or `image`")
 }
 
