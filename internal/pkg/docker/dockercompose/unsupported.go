@@ -3,10 +3,11 @@
 
 package dockercompose
 
-// NOTE: This file is currently unused, it will be used in the next PR.
+// NOTE: This file is currently unused, it will be used in the next PR. Don't mind the comments for now!
 
 type IgnoredKeys []string
 
+/*
 // ignoredServiceKeys lists out the keys on Compose services that are ignored in conversion.
 //
 // note: build keys are handled separately in convertBuildConfig
@@ -75,3 +76,4 @@ var fatalServiceKeys = map[string]string{
 	"stop_signal":       "unsupported in Copilot manifests",
 	"volumes_from":      "sharing volumes is not yet supported",
 }
+*/
