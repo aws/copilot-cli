@@ -97,6 +97,7 @@ func TestConvertImageConfig(t *testing.T) {
 				"build.isolation",
 				"build.tags",
 				"build.extensions",
+				"build.labels",
 			},
 			wantImage: manifest.Image{
 				DockerLabels: map[string]string{
