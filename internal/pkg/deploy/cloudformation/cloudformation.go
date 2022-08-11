@@ -102,8 +102,10 @@ type stackSetClient interface {
 	UpdateAndWait(name, template string, opts ...stackset.CreateOrUpdateOption) error
 	Describe(name string) (stackset.Description, error)
 	InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error)
+	DeleteAllInstances(name string) (string, error)
 	Delete(name string) error
 	WaitForStackSetLastOperationComplete(name string) error
+	WaitForOperation(name, opID string) error
 }
 
 // OptFn represents an optional configuration function for the CloudFormation client.

@@ -4,6 +4,7 @@
 package stackset
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -13,12 +14,50 @@ import (
 // ErrStackSetOutOfDate occurs when we try to read and then update a StackSet but between reading it
 // and actually updating it, someone else either started or completed an update.
 type ErrStackSetOutOfDate struct {
-	stackSetName string
-	parentErr    error
+	name      string
+	parentErr error
 }
 
 func (e *ErrStackSetOutOfDate) Error() string {
-	return fmt.Sprintf("stack set %s update was out of date (feel free to try again): %v", e.stackSetName, e.parentErr)
+	return fmt.Sprintf("stack set %q update was out of date (feel free to try again): %v", e.name, e.parentErr)
+}
+
+// ErrStackSetNotFound occurs when a stack set with the given name does not exist.
+type ErrStackSetNotFound struct {
+	name string
+}
+
+// Error implements the error interface.
+func (e *ErrStackSetNotFound) Error() string {
+	return fmt.Sprintf("stack set %q not found", e.name)
+}
+
+func (e *ErrStackSetNotFound) isEmpty() bool {
+	return true
+}
+
+// ErrStackSetInstancesNotFound occurs when a stack set operation should be applied to instances but they don't exist.
+type ErrStackSetInstancesNotFound struct {
+	name string
+}
+
+// Error implements the error interface.
+func (e *ErrStackSetInstancesNotFound) Error() string {
+	return fmt.Sprintf("stack set %q has no instances", e.name)
+}
+
+func (e *ErrStackSetInstancesNotFound) isEmpty() bool {
+	return true
+}
+
+// IsEmptyStackSetErr returns true if the error occurred because the stack set does not exist or does not contain any instances.
+func IsEmptyStackSetErr(err error) bool {
+	type isEmpty interface {
+		isEmpty() bool
+	}
+
+	var emptyErr isEmpty
+	return errors.As(err, &emptyErr)
 }
 
 // isAlreadyExistingStackSet returns true if the underlying error is a stack already exists error.
