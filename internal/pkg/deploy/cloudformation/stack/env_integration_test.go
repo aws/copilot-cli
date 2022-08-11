@@ -64,6 +64,7 @@ observability:
 						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+						"UniqueAliasesFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/unique-aliases",
 					},
 					Mft:    &mft,
 					RawMft: []byte(rawMft),
