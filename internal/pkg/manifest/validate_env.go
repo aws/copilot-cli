@@ -298,7 +298,23 @@ func (cfg PublicHTTPConfig) validate() error {
 	if cfg.SecurityGroupConfig.Ingress.VPCIngress != nil {
 		return fmt.Errorf("a public load balancer already allows vpc ingress")
 	}
+	if err := cfg.ELBAccessLogs.validate(); err != nil {
+		return fmt.Errorf(`validate "access_logs": %w`, err)
+	}
 	return cfg.SecurityGroupConfig.validate()
+}
+
+// validate returns nil if ELBAccessLogsArgsOrBool is configured correctly.
+func (al ELBAccessLogsArgsOrBool) validate() error {
+	if al.isEmpty() {
+		return nil
+	}
+	return al.AdvancedConfig.validate()
+}
+
+// validate is a no-op for ELBAccessLogsArgs.
+func (al ELBAccessLogsArgs) validate() error {
+	return nil
 }
 
 // validate returns nil if ALBSecurityGroupsConfig is configured correctly.
