@@ -252,7 +252,7 @@ func buildJobLogsCmd() *cobra.Command {
   Displays logs from the last execution of the job.
   /code $ copilot job logs --last 1
   Displays logs from specific task IDs.
-  /code $ copilot job logs --tasks 709c7eae05f947f6861b150372ddc443,1de57fd63c6a4920ac416d02add891b9
+/code $ copilot job logs --tasks 709c7ea,1de57fd
   Displays logs in real time.
   /code $ copilot job logs --follow
   Displays container logs and state machine execution logs from the last execution.
