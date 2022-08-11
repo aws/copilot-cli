@@ -35,6 +35,7 @@ type LoadBalancedWebService struct {
 	manifest               *manifest.LoadBalancedWebService
 	httpsEnabled           bool
 	certImported           bool
+	cdnEnabled             bool
 	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
@@ -105,6 +106,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 		},
 		manifest:             conf.Manifest,
 		certImported:         certImported,
+		cdnEnabled:           conf.EnvManifest.CDNEnabled(),
 		httpsEnabled:         httpsEnabled,
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,
@@ -177,6 +179,9 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	}
 	if len(aliasesFor) != 0 && !s.certImported {
 		return "", fmt.Errorf("cannot specify alias hosted zones when env certificates are managed by Copilot")
+	}
+	if len(aliasesFor) != 0 && s.cdnEnabled {
+		return "", fmt.Errorf("cannot specify alias hosted zones when cdn is enabled in environment %q", s.env)
 	}
 
 	var deregistrationDelay *int64 = aws.Int64(60)

@@ -136,6 +136,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 
 	testCases := map[string]struct {
 		noImportedCerts  bool
+		cdnEnabled       bool
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
 		wantedTemplate   string
 		wantedError      error
@@ -163,6 +164,16 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 
 			wantedTemplate: "",
 			wantedError:    fmt.Errorf("cannot specify alias hosted zones when env certificates are managed by Copilot"),
+		},
+		"failed if hosted zone is set when cdn is enabled": {
+			cdnEnabled: true,
+			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
+				addons := mockAddons{}
+				c.wkld.addons = addons
+			},
+
+			wantedTemplate: "",
+			wantedError:    fmt.Errorf(`cannot specify alias hosted zones when cdn is enabled in environment "test"`),
 		},
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
@@ -327,6 +338,7 @@ Outputs:
 					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
 				certImported: !tc.noImportedCerts,
+				cdnEnabled:   tc.cdnEnabled,
 				httpsEnabled: true,
 				manifest:     testLBWebServiceManifest,
 			}
