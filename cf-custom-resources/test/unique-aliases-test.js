@@ -110,8 +110,8 @@ describe("Unique Aliases", () => {
     "svc2": ["svc2.com"]
   }, ["svc1.com", "svc2.com"]);
 
-  aliasTest("two services with a common alias", {
-    "svc1": ["svc1.com", "example.com"],
+  aliasTest("two services, one with multiple common aliases", {
+    "svc1": ["svc1.com"],
     "svc2": ["svc2.com", "example.com"]
   }, ["example.com", "svc1.com", "svc2.com"]);
 
