@@ -42,13 +42,14 @@ type InitRequest struct {
 
 // EnvInitRequest contains the parameters for calling copilot env init.
 type EnvInitRequest struct {
-	AppName       string
-	EnvName       string
-	Profile       string
-	Prod          bool
-	CustomizedEnv bool
-	VPCImport     EnvInitRequestVPCImport
-	VPCConfig     EnvInitRequestVPCConfig
+	AppName           string
+	EnvName           string
+	Profile           string
+	Prod              bool
+	CustomizedEnv     bool
+	VPCImport         EnvInitRequestVPCImport
+	VPCConfig         EnvInitRequestVPCConfig
+	CertificateImport string
 }
 
 // EnvInitRequestVPCImport contains the parameters for configuring VPC import when
@@ -585,6 +586,9 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 		"--name", opts.EnvName,
 		"--app", opts.AppName,
 		"--profile", opts.Profile,
+	}
+	if opts.CertificateImport != "" {
+		commands = append(commands, "--import-cert-arns", opts.CertificateImport)
 	}
 	if opts.Prod {
 		commands = append(commands, "--prod")
