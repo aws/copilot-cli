@@ -43,7 +43,7 @@ a Step Function State Machine for retrying on failures, and finally an Event Rul
 
 ### Where are my job's logs?
 
-Checking your job logs is easy as well. Running `copilot job logs` will show the most recent logs of your job. You can follow your logs live with the `--follow` flag,
+Checking your job logs is easy as well. Running [`copilot job logs`](../commands/job-log.en.md) will show the most recent logs of your job. You can follow your logs live with the `--follow` flag,
 which will display logs from any new invocation of your job after you run the command.
 
 ```bash
