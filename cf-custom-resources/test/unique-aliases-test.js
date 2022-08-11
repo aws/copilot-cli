@@ -29,7 +29,6 @@ describe("Unique Aliases", () => {
   });
 
   test("Bogus operation fails", () => {
-    const bogusType = "bogus";
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return (
@@ -41,7 +40,7 @@ describe("Unique Aliases", () => {
       .reply(200);
     return LambdaTester(uniqueAliases.handler)
       .event({
-        RequestType: bogusType,
+        RequestType: "bogus",
         RequestId: testRequestId,
         ResourceProperties: {},
         LogicalResourceId: "mockID",
@@ -52,7 +51,6 @@ describe("Unique Aliases", () => {
   });
 
   test("Delete event is a no-op", () => {
-    const requestType = "Delete";
     const request = nock(ResponseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS";
@@ -60,7 +58,7 @@ describe("Unique Aliases", () => {
       .reply(200);
     return LambdaTester(uniqueAliases.handler)
       .event({
-        RequestType: requestType,
+        RequestType: "Delete",
         RequestId: testRequestId,
         ResourceProperties: {},
         LogicalResourceId: "mockID",

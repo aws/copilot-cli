@@ -76,6 +76,16 @@ const logStreamName = function (context) {
   return defaultLogStream || context.logStreamName;
 };
 
+const deadlineExpired = function () {
+  return new Promise((resolve, reject) => {
+    setTimeout(
+      reject,
+      (9 * 60 * 1000) + (30 * 1000), /* 9.5 minutes */
+      new Error("Lambda took longer than 9.5 minutes")
+    );
+  });
+};
+
 /**
  * Main handler, invoked by Lambda
  * 
@@ -94,7 +104,7 @@ exports.handler = async function (event, context) {
   const responseData = {};
   const physicalResourceId = event.PhysicalResourceId || event.LogicalResourceId;
 
-  try {
+  const handler = async function () {
     switch (event.RequestType) {
       case "Create":
       case "Update":
@@ -108,7 +118,10 @@ exports.handler = async function (event, context) {
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
     }
+  };
 
+  try {
+    await Promise.race([deadlineExpired(), handler()]);
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.error(`caught error: ${err}`);
