@@ -2,7 +2,6 @@ package dockercompose
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/compose-spec/compose-go/types"
 	"time"
@@ -80,10 +79,22 @@ func convertTaskConfig(service *types.ServiceConfig) (manifest.TaskConfig, error
 
 // convertHealthCheckConfig trivially converts a Compose container health check into its Copilot variant.
 func convertHealthCheckConfig(healthcheck *types.HealthCheckConfig) manifest.ContainerHealthCheck {
+	retries := 3
+
+	if healthcheck.Retries != nil {
+		retries = int(*healthcheck.Retries)
+	}
+
+	cmd := healthcheck.Test
+
+	if healthcheck.Disable {
+		cmd = []string{"NONE"}
+	}
+
 	return manifest.ContainerHealthCheck{
-		Command:     healthcheck.Test,
+		Command:     cmd,
 		Interval:    (*time.Duration)(healthcheck.Interval),
-		Retries:     aws.Int(int(*healthcheck.Retries)),
+		Retries:     &retries,
 		Timeout:     (*time.Duration)(healthcheck.Timeout),
 		StartPeriod: (*time.Duration)(healthcheck.StartPeriod),
 	}

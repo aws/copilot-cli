@@ -1,6 +1,7 @@
 package dockercompose
 
 import (
+	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/compose-spec/compose-go/types"
@@ -131,11 +132,146 @@ func TestConvertBackendService(t *testing.T) {
 					EnvFile: aws.String("/test.env"),
 				}},
 		},
-		// TODO: Multiple env files
-		// TODO: Env variable with missing values
-		// TODO: Platform values
-		// TODO: Healthcheck some values nil
-		// TODO: Healthcheck disable
+		"multiple env files": {
+			inSvc: types.ServiceConfig{
+				Name:  "web",
+				Image: "nginx",
+				EnvFile: []string{
+					"/envfile1.env",
+					"/envfile2.env",
+				},
+			},
+			inPort: 8080,
+
+			wantError: errors.New("convert task config: at most one env file is supported, but 2 env files were attached to this service"),
+		},
+		"env variables with missing values": {
+			inSvc: types.ServiceConfig{
+				Name:  "web",
+				Image: "nginx",
+				Environment: map[string]*string{
+					"test":  nil,
+					"test2": aws.String("value"),
+				},
+			},
+			inPort: 8080,
+
+			wantError: errors.New("convert task config: convert environment variables: some entries are missing " +
+				"values and require user input, this is not supported in Copilot: [test]"),
+		},
+		"platform windows": {
+			inSvc: types.ServiceConfig{
+				Name:     "web",
+				Image:    "nginx",
+				Platform: "windows",
+			},
+			inPort: 8080,
+
+			wantBackendSvc: manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+						},
+						Port: aws.Uint16(8080),
+					},
+				},
+				TaskConfig: manifest.TaskConfig{
+					Platform: manifest.PlatformArgsOrString{
+						PlatformString: (*manifest.PlatformString)(aws.String("windows")),
+					},
+				},
+			},
+		},
+		"partial healthcheck": {
+			inSvc: types.ServiceConfig{
+				Name: "web",
+				HealthCheck: &types.HealthCheckConfig{
+					Timeout:     &fiveSeconds,
+					StartPeriod: &threeSeconds,
+				},
+				Image: "nginx",
+			},
+			inPort: 443,
+
+			wantBackendSvc: manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+						},
+						Port: aws.Uint16(443),
+					},
+					HealthCheck: manifest.ContainerHealthCheck{
+						Retries:     aws.Int(3),
+						Timeout:     (*time.Duration)(&fiveSeconds),
+						StartPeriod: (*time.Duration)(&threeSeconds),
+					},
+				},
+			},
+		},
+		"disabled healthcheck": {
+			inSvc: types.ServiceConfig{
+				Name: "web",
+				HealthCheck: &types.HealthCheckConfig{
+					Timeout:     &fiveSeconds,
+					StartPeriod: &threeSeconds,
+					Disable:     true,
+				},
+				Image: "nginx",
+			},
+			inPort: 443,
+
+			wantBackendSvc: manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+						},
+						Port: aws.Uint16(443),
+					},
+					HealthCheck: manifest.ContainerHealthCheck{
+						Command:     []string{"NONE"},
+						Retries:     aws.Int(3),
+						Timeout:     (*time.Duration)(&fiveSeconds),
+						StartPeriod: (*time.Duration)(&threeSeconds),
+					},
+				},
+			},
+		},
+		"disabled healthcheck with cmd": {
+			inSvc: types.ServiceConfig{
+				Name: "web",
+				HealthCheck: &types.HealthCheckConfig{
+					Test: []string{
+						"CMD",
+						"/bin/echo",
+					},
+					Timeout:     &fiveSeconds,
+					StartPeriod: &threeSeconds,
+					Disable:     true,
+				},
+				Image: "nginx",
+			},
+			inPort: 443,
+
+			wantBackendSvc: manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+						},
+						Port: aws.Uint16(443),
+					},
+					HealthCheck: manifest.ContainerHealthCheck{
+						Command:     []string{"NONE"},
+						Retries:     aws.Int(3),
+						Timeout:     (*time.Duration)(&fiveSeconds),
+						StartPeriod: (*time.Duration)(&threeSeconds),
+					},
+				},
+			},
+		},
 		// TODO: Extensions fields on healthcheck, build, service
 	}
 
