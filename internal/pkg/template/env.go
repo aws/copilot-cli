@@ -114,6 +114,8 @@ type EnvOpts struct {
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
 	ForceUpdateID      string
+
+	DelegateDNS bool
 }
 
 // HTTPConfig represents configuration for a Load Balancer.

@@ -1,7 +1,9 @@
+{{- if or .CDNConfig.ViewerCertificate .DelegateDNS}}
 UniqueJSONValuesFunctionRole:
   Metadata:
     'aws:copilot:description': 'An IAM Role for the unique json values lambda'
   Type: AWS::IAM::Role
+  Condition: CreateALB
   Properties:
     AssumeRolePolicyDocument:
       Version: '2012-10-17'
@@ -39,6 +41,7 @@ UniqueAliasesAction:
   Properties:
     ServiceToken: !GetAtt UniqueJSONValuesFunction.Arn
     Aliases: !Ref Aliases
+{{- end}}
 
 CloudFrontDistribution:
   Metadata:
@@ -47,7 +50,9 @@ CloudFrontDistribution:
   Type: AWS::CloudFront::Distribution
   Properties:
     DistributionConfig:
+      {{- if or .CDNConfig.ViewerCertificate .DelegateDNS}}
       Aliases: !GetAtt UniqueAliasesAction.UniqueValues
+      {{- end}}
       DefaultCacheBehavior:
         AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
         CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k
