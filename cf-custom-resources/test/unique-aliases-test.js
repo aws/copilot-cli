@@ -85,7 +85,7 @@ describe("Unique Aliases", () => {
             RequestType: reqType,
             RequestId: testRequestId,
             ResourceProperties: {
-              Aliases: input,
+              Aliases: JSON.stringify(input), // aliases get passed as a string
             },
             LogicalResourceId: "mockID",
           })
@@ -99,7 +99,7 @@ describe("Unique Aliases", () => {
     tt(`Update/${name}`, "Update", input, expectedOutput);
   };
 
-  aliasTest("no aliases", undefined, []);
+  aliasTest("no aliases", {}, []);
 
   aliasTest("one service", {
     "svc1": ["svc1.com", "example.com"],

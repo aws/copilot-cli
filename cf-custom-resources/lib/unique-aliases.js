@@ -94,11 +94,13 @@ exports.handler = async function (event, context) {
   const responseData = {};
   const physicalResourceId = event.PhysicalResourceId || `unique-aliases-${event.LogicalResourceId}`;
 
+  console.log(`Event: ${JSON.stringify(event)}`);
+
   try {
     switch (event.RequestType) {
       case "Create":
       case "Update":
-        const aliasesForService = event.ResourceProperties.Aliases;
+        const aliasesForService = JSON.parse(event.ResourceProperties.Aliases);
         const unique = new Set(Object.values(aliasesForService || {}).flat());
         responseData.UniqueAliases = Array.from(unique).sort();
         break;
@@ -109,6 +111,7 @@ exports.handler = async function (event, context) {
         throw new Error(`Unsupported request type ${event.RequestType}`);
     }
 
+    console.log(`Response data for ${event.RequestType}: ${JSON.stringify(responseData)}`);
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.error(`caught error: ${err}`);
