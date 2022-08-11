@@ -171,6 +171,32 @@ network:
           ports: 80
           cidr: 0.0.0.0/0
 ```
+<span class="parent-field">network.vpc.security_group.</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group" class="field">`ingress`</a> <span class="type">Array of Security Group Rules</span>    
+A list of inbound security group rules.
+
+<span class="parent-field">network.vpc.security-group.</span><a id="network-vpc-security-group-egress" href="#network-vpc-security-group" class="field">`egress`</a> <span class="type">Array of Security Group Rules</span>    
+A list of outbound security group rules.
+
+
+<span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-ip-protocol" href="#network-vpc-security-group-ip-protocol" class="field">`ip_protocol`</a> <span class="type">String</span>    
+The IP protocol name.
+
+<span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-ports" href="#network-vpc-security-group-ports" class="field">`ports`</a> <span class="type">String or Integer</span>     
+You can specify FromPort and ToPort for an environment security group rule.
+
+```yaml
+ports: n-m
+```
+
+Alternatively, you can specify it as an Integer if both FromPort and ToPort is same
+
+```yaml
+ports: n
+```
+
+<span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-cidr" href="#network-vpc-security-group-cidr" class="field">`cidr`</a> <span class="type">String</span>   
+a CIDR range.
+
 
 <div class="separator"></div>
 
