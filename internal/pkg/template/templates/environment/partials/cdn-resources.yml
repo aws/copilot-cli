@@ -41,7 +41,7 @@ UniqueAliasesAction:
   Properties:
     ServiceToken: !GetAtt UniqueJSONValuesFunction.Arn
     Aliases: !Ref Aliases
-{{- end}}
+{{- end}}{{/* endif or .CDNConfig.ViewerCertificate .DelegateDNS */}}
 
 CloudFrontDistribution:
   Metadata:
