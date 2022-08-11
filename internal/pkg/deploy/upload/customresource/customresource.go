@@ -35,7 +35,7 @@ const (
 	certValidationFnName      = "CertificateValidationFunction"
 	dnsDelegationFnName       = "DNSDelegationFunction"
 	certReplicatorFnName      = "CertificateReplicatorFunction"
-	uniqueAliasesFnName       = "UniqueAliasesFunction"
+	uniqueJsonValuesFnName    = "UniqueJSONValuesFunction"
 )
 
 // Function source file locations.
@@ -150,11 +150,11 @@ func ScheduledJob(fs template.Reader) ([]*CustomResource, error) {
 // Env returns the custom resources for an environment.
 func Env(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
-		certValidationFnName: dnsCertValidationFilePath,
-		customDomainFnName:   customDomainFilePath,
-		dnsDelegationFnName:  dnsDelegationFilePath,
-		certReplicatorFnName: certReplicatorFilePath,
-		uniqueAliasesFnName:  uniqueJSONValuesFilePath,
+		certValidationFnName:   dnsCertValidationFilePath,
+		customDomainFnName:     customDomainFilePath,
+		dnsDelegationFnName:    dnsDelegationFilePath,
+		certReplicatorFnName:   certReplicatorFilePath,
+		uniqueJsonValuesFnName: uniqueJSONValuesFilePath,
 	})
 }
 

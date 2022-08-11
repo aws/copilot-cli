@@ -83,8 +83,8 @@ const deadlineExpired = function () {
  *  "svc2": ["example.com"]
  * }
  * 
- * This function returns a list of unique aliases found in that list.
- * From the previous example, UniqueAliases would be:
+ * This function returns a list of unique values found in that list.
+ * From the previous example, UniqueValues would be:
  * ["svc1.com", "example.com"]
  */
 exports.handler = async function (event, context) {

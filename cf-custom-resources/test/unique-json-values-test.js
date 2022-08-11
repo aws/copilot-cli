@@ -5,7 +5,7 @@
 
 describe("Unique Aliases", () => {
   const LambdaTester = require("lambda-tester").noVersionCheck();
-  const uniqueAliases = require("../lib/unique-aliases");
+  const uniqueJSONValues = require("../lib/unique-json-values");
   const nock = require("nock");
   const responseURL = "https://cloudwatch-response-mock.example.com/";
   const logGroup = "/aws/lambda/testLambda";
@@ -35,7 +35,7 @@ describe("Unique Aliases", () => {
         );
       })
       .reply(200);
-    return LambdaTester(uniqueAliases.handler)
+    return LambdaTester(uniqueJSONValues.handler)
       .context({
         logGroupName: logGroup,
         logStreamName: logStream
@@ -58,7 +58,7 @@ describe("Unique Aliases", () => {
         return body.Status === "SUCCESS";
       })
       .reply(200);
-    return LambdaTester(uniqueAliases.handler)
+    return LambdaTester(uniqueJSONValues.handler)
       .context({
         logGroupName: logGroup,
         logStreamName: logStream
@@ -86,7 +86,7 @@ describe("Unique Aliases", () => {
           })
           .reply(200);
 
-        return LambdaTester(uniqueAliases.handler)
+        return LambdaTester(uniqueJSONValues.handler)
           .context({
             logGroupName: logGroup,
             logStreamName: logStream

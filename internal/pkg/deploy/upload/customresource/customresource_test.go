@@ -337,7 +337,7 @@ func TestEnv(t *testing.T) {
 		actualFnNames[i] = cr.FunctionName()
 	}
 	require.ElementsMatch(t,
-		[]string{"CertificateValidationFunction", "CustomDomainFunction", "DNSDelegationFunction", "CertificateReplicatorFunction", "UniqueAliasesFunction"},
+		[]string{"CertificateValidationFunction", "CustomDomainFunction", "DNSDelegationFunction", "CertificateReplicatorFunction", "UniqueJSONValuesFunction"},
 		actualFnNames, "function names must match")
 
 	// ensure the zip files contain an index.js file.
