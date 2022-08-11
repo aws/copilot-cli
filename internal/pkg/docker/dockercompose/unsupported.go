@@ -1,11 +1,13 @@
 package dockercompose
 
+// NOTE: This file is currently unused, it will be used in the next PR.
+
 type IgnoredKeys []string
 
-// IgnoredServiceKeys lists out the keys on Compose services that are ignored in conversion.
+// ignoredServiceKeys lists out the keys on Compose services that are ignored in conversion.
 //
 // note: build keys are handled separately in convertBuildConfig
-var IgnoredServiceKeys = map[string]struct{}{
+var ignoredServiceKeys = map[string]struct{}{
 	"blkio_config":        {},
 	"cpu_count":           {},
 	"cpu_percent":         {},
@@ -46,12 +48,12 @@ var IgnoredServiceKeys = map[string]struct{}{
 	"restart":             {},
 }
 
-// FatalServiceKeys lists out the service keys that are unsupported and whose absence will
+// fatalServiceKeys lists out the service keys that are unsupported and whose absence will
 // break applications.
 //
 // note: build keys are handled separately in convertBuildConfig
 // TODO(rclinard-amzn): Handle unsupported network keys when network conversion is implemented
-var FatalServiceKeys = map[string]string{
+var fatalServiceKeys = map[string]string{
 	"credential_spec":   "",
 	"devices":           "",
 	"domainname":        "",
