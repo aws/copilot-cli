@@ -92,9 +92,7 @@ const logStreamName = function (context) {
  */
 exports.handler = async function (event, context) {
   const responseData = {};
-  const physicalResourceId = event.PhysicalResourceId || `unique-aliases-${event.LogicalResourceId}`;
-
-  console.log(`Event: ${JSON.stringify(event)}`);
+  const physicalResourceId = event.PhysicalResourceId || event.LogicalResourceId;
 
   try {
     switch (event.RequestType) {
@@ -111,7 +109,6 @@ exports.handler = async function (event, context) {
         throw new Error(`Unsupported request type ${event.RequestType}`);
     }
 
-    console.log(`Response data for ${event.RequestType}: ${JSON.stringify(responseData)}`);
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.error(`caught error: ${err}`);
