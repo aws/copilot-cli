@@ -3,42 +3,46 @@ package dockercompose
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/compose-spec/compose-go/types"
 )
 
 // convertImageConfig takes in a Compose build config & image field and returns a Copilot image manifest.
-func convertImageConfig(build *types.BuildConfig, imageLoc string) (manifest.Image, IgnoredKeys, error) {
-	ignored, err := unsupportedBuildKeys(build)
-	if err != nil {
-		return manifest.Image{}, ignored, err
-	}
-
+func convertImageConfig(build *types.BuildConfig, labels map[string]string, imageLoc string) (manifest.Image, IgnoredKeys, error) {
 	image := manifest.Image{
-		DockerLabels: build.Labels,
+		DockerLabels: labels,
 	}
 
 	// note: Compose allows both build & image to be specified, but image takes precedence.
 	//       in Copilot, however, build & image are mutually exclusive.
 	if imageLoc != "" {
-		image.Location = &imageLoc
-	} else {
-		args, err := convertMappingWithEquals(build.Args)
-		if err != nil {
-			return manifest.Image{}, nil, fmt.Errorf("convert build args: %w", err)
-		}
+		image.Location = aws.String(imageLoc)
+		return image, nil, nil
+	} else if build == nil {
+		return manifest.Image{}, nil, errors.New("missing one of `build` or `image`")
+	}
 
-		buildArgs := manifest.DockerBuildArgs{
-			Context:    nilIfEmpty(build.Context),
-			Dockerfile: nilIfEmpty(build.Dockerfile),
-			Args:       args,
-			Target:     nilIfEmpty(build.Target),
-			CacheFrom:  build.CacheFrom,
-		}
+	ignored, err := unsupportedBuildKeys(build)
+	if err != nil {
+		return manifest.Image{}, ignored, err
+	}
 
-		image.Build = manifest.BuildArgsOrString{
-			BuildArgs: buildArgs,
-		}
+	args, err := convertMappingWithEquals(build.Args)
+	if err != nil {
+		return manifest.Image{}, nil, fmt.Errorf("convert build args: %w", err)
+	}
+
+	buildArgs := manifest.DockerBuildArgs{
+		Context:    nilIfEmpty(build.Context),
+		Dockerfile: nilIfEmpty(build.Dockerfile),
+		Args:       args,
+		Target:     nilIfEmpty(build.Target),
+		CacheFrom:  build.CacheFrom,
+	}
+
+	image.Build = manifest.BuildArgsOrString{
+		BuildArgs: buildArgs,
 	}
 
 	return image, ignored, nil
@@ -116,6 +120,10 @@ func unsupportedBuildKeys(build *types.BuildConfig) (IgnoredKeys, error) {
 
 	if build.Extensions != nil {
 		ignoredKeys = append(ignoredKeys, "build.extensions")
+	}
+
+	if len(ignoredKeys) == 0 {
+		return nil, nil
 	}
 
 	return ignoredKeys, nil

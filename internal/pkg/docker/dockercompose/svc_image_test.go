@@ -9,9 +9,22 @@ import (
 	"testing"
 )
 
+func TestConvertImageConfigNil(t *testing.T) {
+	img, ignored, err := convertImageConfig(nil, nil, "test")
+	require.NoError(t, err)
+	require.Equal(t, (IgnoredKeys)(nil), ignored)
+	require.Equal(t, manifest.Image{
+		Location: aws.String("test"),
+	}, img)
+
+	img, ignored, err = convertImageConfig(nil, nil, "")
+	require.EqualError(t, err, "missing one of `build` or `image`")
+}
+
 func TestConvertImageConfig(t *testing.T) {
 	testCases := map[string]struct {
 		inBuild  types.BuildConfig
+		inLabels map[string]string
 		inImgLoc string
 
 		wantImage       manifest.Image
@@ -55,7 +68,7 @@ func TestConvertImageConfig(t *testing.T) {
 					"ARG2":       aws.String("VAL"),
 				},
 				Labels: map[string]string{
-					"docker.test": "val",
+					"should.be.ignored": "test",
 				},
 				CacheFrom: []string{
 					"example.com",
@@ -73,6 +86,9 @@ func TestConvertImageConfig(t *testing.T) {
 				Extensions: map[string]interface{}{
 					"test": "ext",
 				},
+			},
+			inLabels: map[string]string{
+				"docker.test": "val",
 			},
 			wantIgnoredKeys: []string{
 				"build.cache_to",
@@ -142,12 +158,11 @@ func TestConvertImageConfig(t *testing.T) {
 			},
 			wantErr: errors.New("convert build args: some entries are missing values and require user input, this is not supported in Copilot: [GIT_COMMIT]"),
 		},
-		// TODO
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			img, ignored, err := convertImageConfig(&tc.inBuild, tc.inImgLoc)
+			img, ignored, err := convertImageConfig(&tc.inBuild, tc.inLabels, tc.inImgLoc)
 
 			if tc.wantErr != nil {
 				require.Error(t, err)
