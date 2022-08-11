@@ -25,7 +25,7 @@ var testEnvironmentProfile string
 
 func TestAppWithDomain(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Import Certificate Suite")
+	RunSpecs(t, "Import Certificates Suite")
 }
 
 var _ = BeforeSuite(func() {

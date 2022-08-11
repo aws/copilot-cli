@@ -1,18 +1,15 @@
 package import_certs
 
 import (
-	"net/http"
-	"strings"
-	"sync"
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"net/http"
+	"strings"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 )
 
-var _ = Describe("Import Certificate", func() {
+var _ = Describe("Import Certificates", func() {
 
 	Context("when creating a new app", func() {
 		var appInitErr error
@@ -36,72 +33,34 @@ var _ = Describe("Import Certificate", func() {
 		})
 	})
 
-	Context("when adding new environments", func() {
-		fatalErrors := make(chan error)
-		wgDone := make(chan bool)
-		It("env init should succeed for adding test environment", func() {
-			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for {
-					content, err := cli.EnvInit(&client.EnvInitRequest{
-						AppName:           appName,
-						EnvName:           "test",
-						Profile:           testEnvironmentProfile,
-						Prod:              false,
-						CertificateImport: "arn:aws:acm:us-west-2:323664494501:certificate/a6a4fffb-b498-4190-b5b2-7c2dff4e8d39",
-					})
-					if err == nil {
-						break
-					}
-					if !isStackSetOperationInProgress(content) {
-						fatalErrors <- err
-					}
-					time.Sleep(waitingInterval)
-				}
-			}()
-			go func() {
-				wg.Wait()
-				close(wgDone)
-				close(fatalErrors)
-			}()
-
-			select {
-			case <-wgDone:
-			case err := <-fatalErrors:
-				Expect(err).NotTo(HaveOccurred())
-			}
+	Context("when adding new environment", func() {
+		var (
+			err error
+		)
+		BeforeAll(func() {
+			_, err = cli.EnvInit(&client.EnvInitRequest{
+				AppName:           appName,
+				EnvName:           "test",
+				Profile:           testEnvironmentProfile,
+				Prod:              false,
+				CertificateImport: "arn:aws:acm:us-west-2:323664494501:certificate/a6a4fffb-b498-4190-b5b2-7c2dff4e8d39",
+			})
+		})
+		It("env init should succeed", func() {
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	Context("when deploying the environments", func() {
-		fatalErrors := make(chan error)
-		wgDone := make(chan bool)
-		It("env deploy should succeed for deploying test environment", func() {
-			var wg sync.WaitGroup
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				_, err := cli.EnvDeploy(&client.EnvDeployRequest{
-					AppName: appName,
-					Name:    "test",
-				})
-				if err != nil {
-					fatalErrors <- err
-				}
-			}()
-			go func() {
-				wg.Wait()
-				close(wgDone)
-				close(fatalErrors)
-			}()
-
-			select {
-			case <-wgDone:
-			case err := <-fatalErrors:
-				Expect(err).NotTo(HaveOccurred())
-			}
+		var envDeployErr error
+		BeforeAll(func() {
+			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
+				AppName: appName,
+				Name:    "test",
+			})
+		})
+		It("env deploy should succeed", func() {
+			Expect(envDeployErr).NotTo(HaveOccurred())
 		})
 	})
 
@@ -120,40 +79,13 @@ var _ = Describe("Import Certificate", func() {
 	})
 
 	Context("when deploying a Load Balanced Web Service", func() {
-		It("deployments should succeed", func() {
-			fatalErrors := make(chan error)
-			wgDone := make(chan bool)
-			var wg sync.WaitGroup
-			wg.Add(1)
-			// deploy frontend to test.
-			go func() {
-				defer wg.Done()
-				for {
-					content, err := cli.SvcDeploy(&client.SvcDeployInput{
-						Name:     "frontend",
-						EnvName:  "test",
-						ImageTag: "frontend",
-					})
-					if err == nil {
-						break
-					}
-					if !isStackSetOperationInProgress(content) && !isImagePushingToECRInProgress(content) {
-						fatalErrors <- err
-					}
-					time.Sleep(waitingInterval)
-				}
-			}()
-			go func() {
-				wg.Wait()
-				close(wgDone)
-				close(fatalErrors)
-			}()
-
-			select {
-			case <-wgDone:
-			case err := <-fatalErrors:
-				Expect(err).NotTo(HaveOccurred())
-			}
+		It("deployment should succeed", func() {
+			_, err := cli.SvcDeploy(&client.SvcDeployInput{
+				Name:     "frontend",
+				EnvName:  "test",
+				ImageTag: "frontend",
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("svc show should contain the expected domain and the request should succeed", func() {
