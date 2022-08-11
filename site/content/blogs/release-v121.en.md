@@ -29,11 +29,39 @@ Copilot v1.21 brings several new features and improvements:
 
 ## Configure Environment Security Group
 
+
 ## `job logs`
 
 ## Package Addons CloudFormation Templates
 
-## ELB Access Log Support
+## ELB Access Logs Support
+You can now enable Elastic Load Balancing access logs that capture detailed information about requests sent to your load balancer. 
+There are couple ways how you can enable access logs: 
+
+1. You can specify `access_logs: true` in your environment manifest as mentioned below and copilot will create an S3 bucket and enable access logs on behalf of you.
+```yaml
+name: qa
+type: Environment
+
+http:
+  public:
+    access_logs: true 
+```
+
+2. You can also bring in your own bucket and prefix and copilot will enable access logs using that bucket details. 
+You can do that by specifying following configuration in your environment manifest. In this you need to make sure that the bucket exist and has required [bucket policy](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html#attach-bucket-policy) for the load balancer to 
+write access logs to it. 
+
+```yaml
+name: qa
+type: Environment
+
+http:
+ public:
+   access_logs:
+     bucket_name: my-bucket
+     bucket_prefix: my-prefix
+```
 
 ## What’s next?
 
