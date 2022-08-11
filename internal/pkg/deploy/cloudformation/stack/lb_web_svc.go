@@ -177,6 +177,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// TODO: need to be refactored because we can error out earlier.
 	if len(aliasesFor) != 0 && !s.certImported {
 		return "", fmt.Errorf("cannot specify alias hosted zones when env certificates are managed by Copilot")
 	}
