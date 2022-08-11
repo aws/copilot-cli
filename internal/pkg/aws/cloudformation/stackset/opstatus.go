@@ -3,6 +3,14 @@
 
 package stackset
 
+import "github.com/aws/aws-sdk-go/service/cloudformation"
+
+const (
+	opStatusSucceeded = cloudformation.StackSetOperationStatusSucceeded
+	opStatusStopped   = cloudformation.StackSetOperationStatusStopped
+	opStatusFailed    = cloudformation.StackSetOperationStatusFailed
+)
+
 // OpStatus represents a stack set operation status.
 type OpStatus string
 

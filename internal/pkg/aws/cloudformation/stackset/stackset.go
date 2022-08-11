@@ -27,12 +27,6 @@ type api interface {
 	ListStackInstances(*cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error)
 }
 
-const (
-	opStatusSucceeded = cloudformation.StackSetOperationStatusSucceeded
-	opStatusStopped   = cloudformation.StackSetOperationStatusStopped
-	opStatusFailed    = cloudformation.StackSetOperationStatusFailed
-)
-
 // StackSet represents an AWS CloudFormation client to interact with stack sets.
 type StackSet struct {
 	client api
