@@ -39,6 +39,13 @@ func convertBackendService(service *types.ServiceConfig, port uint16) (*manifest
 
 	if service.HealthCheck != nil {
 		svcCfg.ImageConfig.HealthCheck = convertHealthCheckConfig(service.HealthCheck)
+		for ext := range service.HealthCheck.Extensions {
+			ignored = append(ignored, "healthcheck."+ext)
+		}
+	}
+
+	for ext := range service.Extensions {
+		ignored = append(ignored, ext)
 	}
 
 	return svcCfg, ignored, nil
@@ -75,6 +82,13 @@ func convertLBWS(service *types.ServiceConfig, port uint16) (*manifest.LoadBalan
 
 	if service.HealthCheck != nil {
 		svcCfg.ImageConfig.HealthCheck = convertHealthCheckConfig(service.HealthCheck)
+		for ext := range service.HealthCheck.Extensions {
+			ignored = append(ignored, "healthcheck"+ext)
+		}
+	}
+
+	for ext := range service.Extensions {
+		ignored = append(ignored, ext)
 	}
 
 	return svcCfg, ignored, nil
