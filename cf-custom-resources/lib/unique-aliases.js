@@ -100,8 +100,8 @@ exports.handler = async function (event, context) {
     switch (event.RequestType) {
       case "Create":
       case "Update":
-        const aliasesForService = JSON.parse(event.ResourceProperties.Aliases);
-        const unique = new Set(Object.values(aliasesForService || {}).flat());
+        const aliasesForService = JSON.parse(event.ResourceProperties.Aliases || "{}");
+        const unique = new Set(Object.values(aliasesForService).flat());
         responseData.UniqueAliases = Array.from(unique).sort();
         break;
       case "Delete":
