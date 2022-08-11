@@ -7,9 +7,9 @@ describe("Unique Aliases", () => {
   const LambdaTester = require("lambda-tester").noVersionCheck();
   const uniqueAliases = require("../lib/unique-aliases");
   const nock = require("nock");
-  const ResponseURL = "https://cloudwatch-response-mock.example.com/";
-  const LogGroup = "/aws/lambda/testLambda";
-  const LogStream = "2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
+  const responseURL = "https://cloudwatch-response-mock.example.com/";
+  const logGroup = "/aws/lambda/testLambda";
+  const logStream = "2021/06/28/[$LATEST]9b93a7dca7344adeb193d15c092dbbfd";
 
   let origLog = console.log;
   let origError = console.error;
@@ -17,9 +17,6 @@ describe("Unique Aliases", () => {
   const testRequestId = "f4ef1b10-c39a-44e3-99c0-fbf7e53c3943";
 
   beforeEach(() => {
-    uniqueAliases.withDefaultResponseURL(ResponseURL);
-    uniqueAliases.withDefaultLogGroup(LogGroup);
-    uniqueAliases.withDefaultLogStream(LogStream);
     console.log = function () { };
     console.error = function () { };
   });
@@ -29,7 +26,7 @@ describe("Unique Aliases", () => {
   });
 
   test("Bogus operation fails", () => {
-    const request = nock(ResponseURL)
+    const request = nock(responseURL)
       .put("/", (body) => {
         return (
           body.Status === "FAILED" &&
@@ -39,7 +36,12 @@ describe("Unique Aliases", () => {
       })
       .reply(200);
     return LambdaTester(uniqueAliases.handler)
+      .context({
+        logGroupName: logGroup,
+        logStreamName: logStream
+      })
       .event({
+        ResponseURL: responseURL,
         RequestType: "bogus",
         RequestId: testRequestId,
         ResourceProperties: {},
@@ -51,13 +53,18 @@ describe("Unique Aliases", () => {
   });
 
   test("Delete event is a no-op", () => {
-    const request = nock(ResponseURL)
+    const request = nock(responseURL)
       .put("/", (body) => {
         return body.Status === "SUCCESS";
       })
       .reply(200);
     return LambdaTester(uniqueAliases.handler)
+      .context({
+        logGroupName: logGroup,
+        logStreamName: logStream
+      })
       .event({
+        ResponseURL: responseURL,
         RequestType: "Delete",
         RequestId: testRequestId,
         ResourceProperties: {},
@@ -71,7 +78,7 @@ describe("Unique Aliases", () => {
   const aliasTest = (name, input, expectedOutput) => {
     const tt = (name, reqType, input, expectedOutput) => {
       test(name, () => {
-        const request = nock(ResponseURL)
+        const request = nock(responseURL)
           .put("/", (body) => {
             return body.Status === "SUCCESS" &&
               body.PhysicalResourceId === "mockID" &&
@@ -80,7 +87,12 @@ describe("Unique Aliases", () => {
           .reply(200);
 
         return LambdaTester(uniqueAliases.handler)
+          .context({
+            logGroupName: logGroup,
+            logStreamName: logStream
+          })
           .event({
+            ResponseURL: responseURL,
             RequestType: reqType,
             RequestId: testRequestId,
             ResourceProperties: {

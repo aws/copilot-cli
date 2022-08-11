@@ -3,11 +3,6 @@
 
 "use strict";
 
-// These are used for test purposes only
-let defaultResponseURL;
-let defaultLogGroup;
-let defaultLogStream;
-
 /**
  * Upload a CloudFormation response object to S3.
  *
@@ -41,7 +36,7 @@ const report = function (
       Data: responseData,
     });
 
-    const parsedUrl = new URL(event.ResponseURL || defaultResponseURL);
+    const parsedUrl = new URL(event.ResponseURL);
     const options = {
       hostname: parsedUrl.hostname,
       port: 443,
@@ -66,14 +61,6 @@ const report = function (
       })
       .end(responseBody, "utf8");
   });
-};
-
-const logGroupName = function (context) {
-  return defaultLogGroup || context.logGroupName;
-};
-
-const logStreamName = function (context) {
-  return defaultLogStream || context.logStreamName;
 };
 
 const deadlineExpired = function () {
@@ -125,27 +112,6 @@ exports.handler = async function (event, context) {
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.error(`caught error: ${err}`);
-    await report(event, context, "FAILED", physicalResourceId, null, `${err.message} (Log: ${logGroupName()}/${logStreamName()})`);
+    await report(event, context, "FAILED", physicalResourceId, null, `${err.message} (Log: ${context.logGroupName}/${context.logStreamName})`);
   }
-};
-
-/**
- * @private
- */
-exports.withDefaultResponseURL = function (url) {
-  defaultResponseURL = url;
-};
-
-/**
- * @private
- */
-exports.withDefaultLogStream = function (logStream) {
-  defaultLogStream = logStream;
-};
-
-/**
- * @private
- */
-exports.withDefaultLogGroup = function (logGroup) {
-  defaultLogGroup = logGroup;
 };
