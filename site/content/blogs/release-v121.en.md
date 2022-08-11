@@ -32,17 +32,35 @@ Copilot v1.21 brings several new features and improvements:
 ## `job logs`
 At long last, you can now view and follow logs for executions of your scheduled jobs. 
 You can choose how many invocations of the job to view, filter logs by specific task IDs, and choose whether to view state machine execution logs. 
-For example, you can view logs from the last 4 invocations of the job and all the state machine 
+For example, you can view logs from the last invocation of the job and all the state machine execution data:
 ```console
-$ copilot job logs --last 4 --include-state-machine
+$ copilot job logs --include-state-machine
+Which application does your job belong to? [Use arrows to move, type to filter, ? for more help]
+> app1
+  app2
+Which job's logs would you like to show? [Use arrows to move, type to filter, ? for more help]
+> emailer (test)
+  emailer (prod)
+Application: app1
+Job: emailer
+states/app1-test-emailer {"id":"1","type":"ExecutionStarted","details": ...
+states/app1-test-emailer {"id":"2","type":"TaskStateEntered","details": ...
+states/app1-test-emailer {"id":"3","type":"TaskScheduled","details": ...
+states/app1-test-emailer {"id":"4","type":"TaskStarted","details": ...
+states/app1-test-emailer {"id":"5","type":"TaskSubmitted","details": ...
+copilot/emailer/d476069 Gathered recipients
+copilot/emailer/d476069 Prepared email body 
+copilot/emailer/d476069 Attached headers
+copilot/emailer/d476069 Sent all emails
+states/app1-test-emailer {"id":"6","type":"TaskSucceeded","details": ...
+states/app1-test-emailer {"id":"7","type":"TaskStateExited","details": ...
+states/app1-test-emailer {"id":"8","type":"ExecutionSucceeded","details": ...
 
 ```
 or follow the logs of a task you've just invoked with [`copilot job run`](../docs/commands/job-run.en.md):
 ```console
-$ copilot job run -n my-job && copilot job logs -n my-job --follow
-
+$ copilot job run -n emailer && copilot job logs -n emailer --follow
 ```
-
 ## Package Addons CloudFormation Templates
 
 ## ELB Access Log Support
