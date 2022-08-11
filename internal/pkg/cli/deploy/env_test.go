@@ -81,6 +81,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				"CertificateValidationFunction": "",
 				"CustomDomainFunction":          "",
 				"DNSDelegationFunction":         "",
+				"UniqueAliasesFunction":         "",
 			},
 		},
 	}
