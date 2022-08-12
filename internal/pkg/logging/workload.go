@@ -24,6 +24,7 @@ const (
 
 	fmtWkldLogGroupName         = "/copilot/%s-%s-%s"
 	fmtWkldLogStreamPrefix      = "copilot/%s"
+	wkldLogStreamPrefix         = "copilot"
 	stateMachineLogStreamPrefix = "states"
 )
 
@@ -33,6 +34,7 @@ type logGetter interface {
 
 // WorkloadClient retrieves the logs of an Amazon ECS or AppRunner service.
 type WorkloadClient struct {
+	name                string
 	logGroupName        string
 	logStreamNamePrefix string
 	eventsGetter        logGetter
@@ -114,8 +116,9 @@ func NewWorkloadClient(opts *NewWorkloadLogsConfig) (*WorkloadClient, error) {
 		logGroup = opts.LogGroup
 	}
 	return &WorkloadClient{
+		name:                opts.Name,
 		logGroupName:        logGroup,
-		logStreamNamePrefix: fmt.Sprintf(fmtWkldLogStreamPrefix, opts.Name),
+		logStreamNamePrefix: fmt.Sprintf("%s/%s", wkldLogStreamPrefix, opts.Name),
 		eventsGetter:        cloudwatchlogs.New(opts.Sess),
 		w:                   log.OutputWriter,
 		now:                 time.Now,
@@ -153,6 +156,7 @@ func newAppRunnerServiceClient(opts *NewWorkloadLogsConfig) (*WorkloadClient, er
 		}
 	}
 	return &WorkloadClient{
+		name:         opts.Name,
 		logGroupName: logGroup,
 		eventsGetter: cloudwatchlogs.New(opts.Sess),
 		w:            log.OutputWriter,
@@ -212,8 +216,10 @@ func (s *WorkloadClient) logStreams(taskIDs []string, includeStateMachineLogs bo
 	if len(taskIDs) != 0 {
 		logStreamPrefixes = []string{}
 		for _, taskID := range taskIDs {
-			logStreamPrefixes = append(logStreamPrefixes, fmt.Sprintf("%s/%s", s.logStreamNamePrefix, taskID))
+			prefix := wkldLogStreamPrefix
+			prefix = fmt.Sprintf("%s/%s/%s", prefix, s.name, taskID) // Example: copilot/sidecar/1111 or copilot/web/1111
+			logStreamPrefixes = append(logStreamPrefixes, prefix)
 		}
 	}
-	return
+	return logStreamPrefixes
 }
