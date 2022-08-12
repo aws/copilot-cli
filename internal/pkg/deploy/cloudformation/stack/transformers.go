@@ -365,8 +365,8 @@ func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessL
 	}
 
 	return &template.ELBAccessLogs{
-		BucketName:   aws.StringValue(elbAccessLogsArgs.BucketName),
-		BucketPrefix: aws.StringValue(elbAccessLogsArgs.BucketPrefix),
+		BucketName: aws.StringValue(elbAccessLogsArgs.BucketName),
+		Prefix:     aws.StringValue(elbAccessLogsArgs.Prefix),
 	}, nil
 }
 
