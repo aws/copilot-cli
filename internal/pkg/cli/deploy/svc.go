@@ -153,10 +153,6 @@ type aliasCertValidator interface {
 	ValidateCertAliases(aliases []string, certs []string) error
 }
 
-type configDescriber interface {
-	Manifest() ([]byte, error)
-}
-
 type workloadDeployer struct {
 	name          string
 	app           *config.Application
