@@ -45,7 +45,7 @@ network:
           ports: 80
           cidr: 0.0.0.0/0
 ```
-[See detailed walkthrough](../docs/manifest/environment.en.md)
+[See detailed walkthrough](../docs/manifest/environment.en.md#http-public-access-logs)
 for how to specify a security group rules to add to the environment security group.
 ## `job logs`
 
