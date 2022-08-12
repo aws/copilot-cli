@@ -459,12 +459,12 @@ func (al *ELBAccessLogsArgsOrBool) UnmarshalYAML(value *yaml.Node) error {
 
 // ELBAccessLogsArgs holds the access logs configuration.
 type ELBAccessLogsArgs struct {
-	BucketName   *string `yaml:"bucket_name,omitempty"`
-	BucketPrefix *string `yaml:"bucket_prefix,omitempty"`
+	BucketName *string `yaml:"bucket_name,omitempty"`
+	Prefix     *string `yaml:"prefix,omitempty"`
 }
 
 func (al *ELBAccessLogsArgs) isEmpty() bool {
-	return al.BucketName == nil && al.BucketPrefix == nil
+	return al.BucketName == nil && al.Prefix == nil
 }
 
 // ELBAccessLogs returns the access logs config if the user has set any values.
