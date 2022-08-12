@@ -34,8 +34,6 @@ type LoadBalancedWebService struct {
 	*ecsWkld
 	manifest               *manifest.LoadBalancedWebService
 	httpsEnabled           bool
-	certImported           bool
-	cdnEnabled             bool
 	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
@@ -105,8 +103,6 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest:             conf.Manifest,
-		certImported:         certImported,
-		cdnEnabled:           conf.EnvManifest.CDNEnabled(),
 		httpsEnabled:         httpsEnabled,
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,
@@ -177,24 +173,14 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// TODO: need to be refactored because we can error out earlier.
-	if len(aliasesFor) != 0 && !s.certImported {
-		return "", fmt.Errorf("cannot specify alias hosted zones when env certificates are managed by Copilot")
-	}
-	if len(aliasesFor) != 0 && s.cdnEnabled {
-		return "", fmt.Errorf("cannot specify alias hosted zones when cdn is enabled in environment %q", s.env)
-	}
-
 	var deregistrationDelay *int64 = aws.Int64(60)
 	if s.manifest.RoutingRule.DeregistrationDelay != nil {
 		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
 	}
-
 	var allowedSourceIPs []string
 	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
-
 	nlbConfig, err := s.convertNetworkLoadBalancer()
 	if err != nil {
 		return "", err
