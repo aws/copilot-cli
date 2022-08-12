@@ -80,7 +80,7 @@ func decomposeService(content []byte, svcName string) (*manifest.BackendServiceC
 		return nil, nil, fmt.Errorf("get service from Compose project: %w", err)
 	}
 
-	// TODO: Port
+	// TODO: Port handling & exposed port detection, to be implemented in Milestone 3
 	var port uint16 = 80
 	backendSvc, svcIgnored, err := convertBackendService(&svcConfig, port)
 
