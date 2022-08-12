@@ -11,6 +11,7 @@ type IgnoredKeys []string
 // ignoredServiceKeys lists out the keys on Compose services that are ignored in conversion.
 //
 // note: build keys are handled separately in convertBuildConfig
+// note: using a map as a set here
 var ignoredServiceKeys = map[string]struct{}{
 	"blkio_config":        {},
 	"cpu_count":           {},
@@ -50,6 +51,17 @@ var ignoredServiceKeys = map[string]struct{}{
 	"hostname":            {},
 	"depends_on":          {},
 	"restart":             {},
+	"read_only":           {},
+	"ulimits":             {},
+	// These aren't listed in the Compose spec, but are in the Compose structure...
+	// are these legacy variants of existing properties?
+	"custom_labels": {},
+	"log_driver":    {},
+	"log_opt":       {},
+	"net":           {},
+	"tty":           {},
+	"uts":           {},
+	"dockerfile":    {},
 }
 
 // fatalServiceKeys lists out the service keys that are unsupported and whose absence will
@@ -75,4 +87,16 @@ var fatalServiceKeys = map[string]string{
 	"stop_grace_period": "unsupported in Copilot manifests",
 	"stop_signal":       "unsupported in Copilot manifests",
 	"volumes_from":      "sharing volumes is not yet supported",
+	"volume_driver":     "Set the `driver` property on a volume instead",
+	// Lifted in Milestone 3
+	"expose": "implemented in milestone 3",
+	"ports":  "implemented in milestone 3",
+	// Lifted in Milestone 4
+	"volumes": "implemented in milestone 4",
+	// Lifted in Milestone 5
+	"secrets": "implemented in milestone 5",
+	// Lifted in Milestone 6
+	"networks": "implemented in Milestone 6",
+	// Lifted in stretch goal
+	"extra_hosts": "",
 }

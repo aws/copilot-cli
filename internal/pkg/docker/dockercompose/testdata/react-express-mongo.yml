@@ -1,0 +1,42 @@
+# Tweaked from https://github.com/docker/awesome-compose/blob/master/react-express-mongodb/compose.yaml
+
+services:
+  frontend:
+    build:
+      context: frontend
+      target: development
+    ports:
+      - 3000:3000
+    volumes:
+      - /usr/src/app/node_modules
+    networks:
+      - react-express
+    depends_on:
+      - backend
+
+  backend:
+    container_name: backend
+    build:
+      context: backend
+      target: development
+    volumes:
+      - /usr/src/app/node_modules
+    depends_on:
+      - mongo
+    networks:
+      - express-mongo
+      - react-express
+    expose:
+      - 3000
+  mongo:
+    container_name: mongo
+    image: mongo:4.2.0
+    volumes:
+      - ./data:/data/db
+    networks:
+      - express-mongo
+    expose:
+      - 27017
+networks:
+  react-express:
+  express-mongo:

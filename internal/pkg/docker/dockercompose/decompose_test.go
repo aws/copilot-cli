@@ -61,13 +61,49 @@ func TestDecomposeService(t *testing.T) {
 			filename: "unsupported-keys.yml",
 			svcName:  "fatal3",
 
-			wantError: errors.New("\"services.fatal3\" relies on fatally-unsupported Compose keys: [domainname init]"),
+			wantError: errors.New("\"services.fatal3\" relies on fatally-unsupported Compose keys: [domainname init networks]"),
 		},
 		"invalid compose": {
 			filename: "invalid-compose.yml",
 			svcName:  "invalid",
 
 			wantError: errors.New("load Compose project: services.invalid.build.ssh must be a mapping"),
+		},
+		"nginx-golang-postgres backend": {
+			filename: "nginx-golang-postgres.yml",
+			svcName:  "backend",
+
+			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: [secrets]"),
+		},
+		"nginx-golang-postgres db": {
+			filename: "nginx-golang-postgres.yml",
+			svcName:  "db",
+
+			wantError: errors.New("\"services.db\" relies on fatally-unsupported Compose keys: [expose secrets volumes]"),
+		},
+		"nginx-golang-postgres proxy": {
+			filename: "nginx-golang-postgres.yml",
+			svcName:  "proxy",
+
+			wantError: errors.New("\"services.proxy\" relies on fatally-unsupported Compose keys: [ports volumes]"),
+		},
+		"react-express-mongo frontend": {
+			filename: "react-express-mongo.yml",
+			svcName:  "frontend",
+
+			wantError: errors.New("\"services.frontend\" relies on fatally-unsupported Compose keys: [networks ports volumes]"),
+		},
+		"react-express-mongo backend": {
+			filename: "react-express-mongo.yml",
+			svcName:  "backend",
+
+			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: [expose networks volumes]"),
+		},
+		"react-express-mongo mongo": {
+			filename: "react-express-mongo.yml",
+			svcName:  "mongo",
+
+			wantError: errors.New("\"services.mongo\" relies on fatally-unsupported Compose keys: [expose networks volumes]"),
 		},
 	}
 
