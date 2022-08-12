@@ -21,6 +21,30 @@ func TestDecomposeService(t *testing.T) {
 		wantIgnored IgnoredKeys
 		wantError   error
 	}{
+		"no services": {
+			filename: "empty-compose.yml",
+			svcName:  "test",
+
+			wantError: errors.New("compose file has no services"),
+		},
+		"bad services": {
+			filename: "bad-services-compose.yml",
+			svcName:  "test",
+
+			wantError: errors.New("\"services\" top-level element was not a map, was: invalid"),
+		},
+		"wrong name": {
+			filename: "unsupported-keys.yml",
+			svcName:  "test",
+
+			wantError: errors.New("no service named \"test\" in this Compose file, valid services are: [fatal1 fatal2 fatal3]"),
+		},
+		"invalid service not a map": {
+			filename: "invalid-compose.yml",
+			svcName:  "invalid2",
+
+			wantError: errors.New("\"services.invalid2\" element was not a map"),
+		},
 		"unsupported keys fatal1": {
 			filename: "unsupported-keys.yml",
 			svcName:  "fatal1",

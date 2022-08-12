@@ -18,18 +18,23 @@ func decomposeService(content []byte, svcName string) (*manifest.BackendServiceC
 	}
 
 	svcs, ok := config["services"]
-	if !ok {
+	if !ok || svcs == nil {
 		return nil, nil, fmt.Errorf("compose file has no services")
 	}
 
 	services, ok := svcs.(map[string]interface{})
 	if !ok {
-		return nil, nil, fmt.Errorf("\"services\" top-level element was not a map")
+		return nil, nil, fmt.Errorf("\"services\" top-level element was not a map, was: %v", svcs)
 	}
 
 	svc, ok := services[svcName]
 	if !ok {
-		return nil, nil, fmt.Errorf("no service named \"%s\" in this Compose file", svcName)
+		var validNames []string
+		for svc := range services {
+			validNames = append(validNames, svc)
+		}
+		sort.Strings(validNames)
+		return nil, nil, fmt.Errorf("no service named \"%s\" in this Compose file, valid services are: %v", svcName, validNames)
 	}
 
 	service, ok := svc.(map[string]interface{})
