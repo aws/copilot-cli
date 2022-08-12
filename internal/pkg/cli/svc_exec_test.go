@@ -290,7 +290,7 @@ func TestSvcExec_Ask(t *testing.T) {
 			inputEnv: inputEnv,
 			inputSvc: inputSvc,
 			setupMocks: func(m execSvcMocks) {
-				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil)
+				m.sel.EXPECT().Application(svcAppNamePrompt, wkldAppNameHelpPrompt).Return("my-app", nil)
 				m.storeSvc.EXPECT().GetApplication(gomock.Any()).Times(0)
 				// Don't care about the other calls.
 				m.storeSvc.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
@@ -306,7 +306,7 @@ func TestSvcExec_Ask(t *testing.T) {
 		},
 		"returns error when fail to select apps": {
 			setupMocks: func(m execSvcMocks) {
-				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error"))
+				m.sel.EXPECT().Application(svcAppNamePrompt, wkldAppNameHelpPrompt).Return("", errors.New("some error"))
 			},
 			wantedError: fmt.Errorf("select application: some error"),
 		},
@@ -341,7 +341,7 @@ func TestSvcExec_Ask(t *testing.T) {
 		"success": {
 			setupMocks: func(m execSvcMocks) {
 				gomock.InOrder(
-					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil),
+					m.sel.EXPECT().Application(svcAppNamePrompt, wkldAppNameHelpPrompt).Return("my-app", nil),
 					m.sel.EXPECT().DeployedService(svcExecNamePrompt, svcExecNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
 						Return(&selector.DeployedService{
 							Env:  "my-env",

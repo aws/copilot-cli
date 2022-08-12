@@ -1,3 +1,48 @@
+{{- if or .CDNConfig.ImportedCertificate .DelegateDNS}}
+UniqueJSONValuesFunctionRole:
+  Metadata:
+    'aws:copilot:description': 'An IAM Role for the unique json values lambda'
+  Type: AWS::IAM::Role
+  Condition: CreateALB
+  Properties:
+    AssumeRolePolicyDocument:
+      Version: '2012-10-17'
+      Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+    Path: /
+    ManagedPolicyArns:
+      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+UniqueJSONValuesFunction:
+  Type: AWS::Lambda::Function
+  Condition: CreateALB
+  Properties:
+    {{- with $cr := index .CustomResources "UniqueJSONValuesFunction" }}
+    Code:
+      S3Bucket: {{$cr.Bucket}}
+      S3Key: {{$cr.Key}}
+    {{- end}}
+    Handler: "index.handler"
+    Timeout: 600
+    MemorySize: 512
+    Role: !GetAtt 'UniqueJSONValuesFunctionRole.Arn'
+    Runtime: nodejs12.x
+
+UniqueAliasesAction:
+  Metadata:
+    'aws:copilot:description': 'An action to get unique custom aliases for services in your environment'
+  Condition: CreateALB
+  Type: Custom::UniqueJSONValuesFunction
+  Properties:
+    ServiceToken: !GetAtt UniqueJSONValuesFunction.Arn
+    Aliases: !Ref Aliases
+{{- end}}{{/* endif or .CDNConfig.ImportedCertificate .DelegateDNS */}}
+
 CloudFrontDistribution:
   Metadata:
     'aws:copilot:description': 'A CloudFront distribution for global content delivery'
@@ -5,6 +50,9 @@ CloudFrontDistribution:
   Type: AWS::CloudFront::Distribution
   Properties:
     DistributionConfig:
+      {{- if or .CDNConfig.ImportedCertificate .DelegateDNS}}
+      Aliases: !GetAtt UniqueAliasesAction.UniqueValues
+      {{- end}}
       DefaultCacheBehavior:
         AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
         CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k
@@ -18,9 +66,9 @@ CloudFrontDistribution:
             OriginProtocolPolicy: match-viewer
           DomainName: !GetAtt PublicLoadBalancer.DNSName
           Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
-{{- if .CDNConfig.ViewerCertificate}}
+{{- if .CDNConfig.ImportedCertificate}}
       ViewerCertificate:
-        AcmCertificateArn: {{.CDNConfig.ViewerCertificate}}
+        AcmCertificateArn: {{.CDNConfig.ImportedCertificate}}
         MinimumProtocolVersion: TLSv1
         SslSupportMethod:  sni-only
 {{- else}}

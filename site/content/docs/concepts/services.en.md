@@ -198,7 +198,7 @@ Alarms
 
 ### Where are my service logs?
 
-Checking the your service logs is easy as well. Running `copilot svc logs` will show the most recent logs of your service. You can follow your logs live with the `--follow` flag.
+Checking your service logs is easy as well. Running `copilot svc logs` will show the most recent logs of your service. You can follow your logs live with the `--follow` flag.
 
 ```bash
 $ copilot svc logs
