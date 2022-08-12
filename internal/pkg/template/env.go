@@ -127,7 +127,7 @@ type HTTPConfig struct {
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.
 type CDNConfig struct {
-	ViewerCertificate *string
+	ImportedCertificate *string
 }
 
 type VPCConfig struct {

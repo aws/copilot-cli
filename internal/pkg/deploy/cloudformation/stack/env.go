@@ -362,7 +362,7 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 		return nil
 	}
 	return &template.CDNConfig{
-		ViewerCertificate: e.in.Mft.CDNConfig.Config.Certificate,
+		ImportedCertificate: e.in.Mft.CDNConfig.Config.Certificate,
 	}
 }
 
