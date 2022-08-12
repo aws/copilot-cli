@@ -703,6 +703,55 @@ func TestStackSet_InstanceSummaries(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("list stack instances for stack set %s: %w", testName, testError),
 		},
+		"keeps iterating until there is no more next token": {
+			mockClient: func(ctrl *gomock.Controller) api {
+				m := mocks.NewMockapi(ctrl)
+				gomock.InOrder(
+					m.EXPECT().ListStackInstances(&cloudformation.ListStackInstancesInput{
+						StackSetName:         aws.String(testName),
+						StackInstanceAccount: aws.String(testAccountID),
+						StackInstanceRegion:  aws.String(testRegion),
+					}).Return(&cloudformation.ListStackInstancesOutput{
+						Summaries: []*cloudformation.StackInstanceSummary{
+							{
+								StackId: aws.String("1111"),
+								Account: aws.String(testAccountID),
+								Region:  aws.String("us-west-2"),
+							},
+						},
+						NextToken: aws.String("token"),
+					}, nil),
+					m.EXPECT().ListStackInstances(&cloudformation.ListStackInstancesInput{
+						StackSetName:         aws.String(testName),
+						StackInstanceAccount: aws.String(testAccountID),
+						StackInstanceRegion:  aws.String(testRegion),
+						NextToken:            aws.String("token"),
+					}).Return(&cloudformation.ListStackInstancesOutput{
+						Summaries: []*cloudformation.StackInstanceSummary{
+							{
+								StackId: aws.String("2222"),
+								Account: aws.String(testAccountID),
+								Region:  aws.String("us-east-1"),
+							},
+						},
+					}, nil),
+				)
+
+				return m
+			},
+			wantedSummaries: []InstanceSummary{
+				{
+					StackID: "1111",
+					Account: testAccountID,
+					Region:  "us-west-2",
+				},
+				{
+					StackID: "2222",
+					Account: testAccountID,
+					Region:  "us-east-1",
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {

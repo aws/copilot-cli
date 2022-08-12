@@ -204,25 +204,32 @@ type InstanceSummariesOption func(input *cloudformation.ListStackInstancesInput)
 
 // InstanceSummaries returns a list of unique identifiers for all the stack instances in a stack set.
 func (ss *StackSet) InstanceSummaries(name string, opts ...InstanceSummariesOption) ([]InstanceSummary, error) {
-	in := &cloudformation.ListStackInstancesInput{
-		StackSetName: aws.String(name),
-	}
-	for _, opt := range opts {
-		opt(in)
-	}
-	resp, err := ss.client.ListStackInstances(in)
-	if err != nil {
-		return nil, fmt.Errorf("list stack instances for stack set %s: %w", name, err)
-	}
-	// TODO(efekarakus): looks like we're not looping through the next token.
+	var nextToken *string
 	var summaries []InstanceSummary
-	for _, summary := range resp.Summaries {
-		summaries = append(summaries, InstanceSummary{
-			StackID: aws.StringValue(summary.StackId),
-			Account: aws.StringValue(summary.Account),
-			Region:  aws.StringValue(summary.Region),
-			Status:  InstanceStatus(aws.StringValue(summary.Status)),
-		})
+	for {
+		in := &cloudformation.ListStackInstancesInput{
+			StackSetName: aws.String(name),
+			NextToken:    nextToken,
+		}
+		for _, opt := range opts {
+			opt(in)
+		}
+		resp, err := ss.client.ListStackInstances(in)
+		if err != nil {
+			return nil, fmt.Errorf("list stack instances for stack set %s: %w", name, err)
+		}
+		for _, summary := range resp.Summaries {
+			summaries = append(summaries, InstanceSummary{
+				StackID: aws.StringValue(summary.StackId),
+				Account: aws.StringValue(summary.Account),
+				Region:  aws.StringValue(summary.Region),
+				Status:  InstanceStatus(aws.StringValue(summary.Status)),
+			})
+		}
+		nextToken = resp.NextToken
+		if nextToken == nil {
+			break
+		}
 	}
 	return summaries, nil
 }
