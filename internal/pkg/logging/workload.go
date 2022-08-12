@@ -208,22 +208,23 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 func (s *WorkloadClient) logStreams(taskIDs []string, includeStateMachineLogs bool, container string) []string {
 	// By default, we only want logs from copilot task log streams.
 	// This filters out log streams not starting with `copilot/`, or `copilot/mysidecar` if container is set.
-	logStreamPrefixes := []string{fmt.Sprintf("%s/%s", wkldLogStreamPrefix, container)}
-	// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for job. Therefore, we
-	// need to grab all recent log streams with no prefix filtering.
-	if includeStateMachineLogs {
-		return append(logStreamPrefixes, stateMachineLogStreamPrefix)
+	switch {
+	case includeStateMachineLogs:
+		// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for jobs. Therefore, we
+		// need to grab all recent log streams with no prefix filtering.
+		return []string{fmt.Sprintf("%s/%s", wkldLogStreamPrefix, container), stateMachineLogStreamPrefix}
+	case len(taskIDs) == 0:
+		return []string{fmt.Sprintf("%s/%s", wkldLogStreamPrefix, container)}
 	}
-	if len(taskIDs) != 0 {
-		logStreamPrefixes = []string{}
-		if container == "" {
-			container = s.name
-		}
-		for _, taskID := range taskIDs {
-			prefix := wkldLogStreamPrefix
-			prefix = fmt.Sprintf("%s/%s/%s", prefix, container, taskID) // Example: copilot/sidecar/1111 or copilot/web/1111
-			logStreamPrefixes = append(logStreamPrefixes, prefix)
-		}
+
+	var logStreamPrefixes []string
+	if container == "" {
+		container = s.name
+	}
+	for _, taskID := range taskIDs {
+		prefix := wkldLogStreamPrefix
+		prefix = fmt.Sprintf("%s/%s/%s", prefix, container, taskID) // Example: copilot/sidecar/1111 or copilot/web/1111
+		logStreamPrefixes = append(logStreamPrefixes, prefix)
 	}
 	return logStreamPrefixes
 }
