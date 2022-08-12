@@ -18,7 +18,7 @@ func convertImageConfig(build *types.BuildConfig, labels map[string]string, imag
 	}
 
 	// note: Compose allows both build & image to be specified, but image takes precedence.
-	//       in Copilot, however, build & image are mutually exclusive.
+	// In Copilot, however, build and image are mutually exclusive.
 	if imageLoc != "" {
 		image.Location = aws.String(imageLoc)
 		return image, nil, nil
