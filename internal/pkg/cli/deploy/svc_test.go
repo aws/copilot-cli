@@ -22,7 +22,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -153,16 +152,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Platform:   "mockContainerPlatform",
 					Tags:       []string{mockImageTag},
 				}).Return("mockDigest", nil)
-				m.mockAddons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
-					WlName: "mockWkld",
-				})
+				m.mockAddons = nil
 			},
 			wantImageDigest: aws.String("mockDigest"),
 		},
 		"should retrieve Load Balanced Web Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
-				m.mockAddons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
 				crs, err := customresource.LBWS(fakeTemplateFS())
@@ -188,7 +185,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should retrieve Backend Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
-				m.mockAddons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
 				crs, err := customresource.Backend(fakeTemplateFS())
@@ -214,7 +211,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should retrieve Worker Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
-				m.mockAddons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
 				crs, err := customresource.Worker(fakeTemplateFS())
@@ -240,7 +237,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should retrieve Request-Driven Web Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
-				m.mockAddons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
 				crs, err := customresource.RDWS(fakeTemplateFS())
@@ -266,7 +263,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should retrieve Scheduled Job custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
-				m.mockAddons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
 				crs, err := customresource.ScheduledJob(fakeTemplateFS())
@@ -331,6 +328,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockAddonPath, gomock.Any()).
 					Return(mockAddonsS3URL, nil)
@@ -342,6 +340,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should return error if fail to upload to S3 bucket": {
 			inRegion: "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("some data", nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockAddonPath, gomock.Any()).
 					Return("", mockError)
@@ -351,13 +350,18 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		},
 		"should return empty url if the service doesn't have any addons and env files": {
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockAddons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
-					WlName: "mockWkld",
-				})
+				m.mockAddons = nil
 			},
 		},
-		"should fail if addons cannot be retrieved from workspace": {
+		"should fail if packaging addons fails": {
 			mock: func(t *testing.T, m *deployMocks) {
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(mockError)
+			},
+			wantErr: fmt.Errorf("package addons: %w", mockError),
+		},
+		"should fail if addons template can't be created": {
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.mockAddons.EXPECT().Template().Return("", mockError)
 			},
 			wantErr: fmt.Errorf("retrieve addons template: %w", mockError),
@@ -393,11 +397,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					fileName:      tc.inEnvFile,
 					buildRequired: tc.inBuildRequired,
 				},
-				addons:             m.mockAddons,
 				fs:                 m.mockFileReader,
 				s3Client:           m.mockUploader,
 				imageBuilderPusher: m.mockImageBuilderPusher,
 				templateFS:         fakeTemplateFS(),
+			}
+			if m.mockAddons != nil {
+				wkldDeployer.addons = m.mockAddons
 			}
 			var deployer artifactsUploader
 			deployer = &lbWebSvcDeployer{

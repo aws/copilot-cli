@@ -58,7 +58,7 @@ func TestJobRun_Ask(t *testing.T) {
 			inputEnvName: inputEnv,
 			setupMocks: func(m jobRunMock) {
 				gomock.InOrder(
-					m.sel.EXPECT().Application(jobAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil),
+					m.sel.EXPECT().Application(jobAppNamePrompt, wkldAppNameHelpPrompt).Return("my-app", nil),
 					m.configStore.EXPECT().GetApplication(gomock.Any()).Times(0),
 					m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).AnyTimes(),
 					m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes(),
@@ -73,7 +73,7 @@ func TestJobRun_Ask(t *testing.T) {
 		"returns error if fail to select app": {
 			setupMocks: func(m jobRunMock) {
 				gomock.InOrder(
-					m.sel.EXPECT().Application(jobAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error")),
+					m.sel.EXPECT().Application(jobAppNamePrompt, wkldAppNameHelpPrompt).Return("", errors.New("some error")),
 				)
 			},
 			wantedError: fmt.Errorf("select application: some error"),

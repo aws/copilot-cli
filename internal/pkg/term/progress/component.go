@@ -24,6 +24,14 @@ func (c *noopComponent) Render(out io.Writer) (numLines int, err error) {
 	return 0, nil
 }
 
+// LineRenderer returns a Renderer that can display a single line of text.
+func LineRenderer(text string, padding int) Renderer {
+	return &singleLineComponent{
+		Text:    text,
+		Padding: padding,
+	}
+}
+
 // singleLineComponent can display a single line of text.
 type singleLineComponent struct {
 	Text    string // Line of text to print.

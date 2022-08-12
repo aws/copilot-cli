@@ -1,5 +1,7 @@
 # AWS Copilot v1.16: Multiple pipelines, SNS subscription filters and more
 
+Posted On: Apr 6, 2022
+
 The AWS Copilot core team is excited to announce the Copilot v1.16 release.
 We welcome 7 new community developers who contributed to this release: [@codekitchen](https://github.com/codekitchen),
 [@shingos](https://github.com/shingos), [@csantos](https://github.com/csantos), [@rfma23](https://github.com/rfma23),

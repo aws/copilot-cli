@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/dustin/go-humanize/english"
 )
@@ -117,6 +118,19 @@ func (e *errAtLeastOneFieldMustBeSpecified) Error() string {
 		errMsg = fmt.Sprintf(`%s if "%s" is specified`, errMsg, e.conditionalField)
 	}
 	return errMsg
+}
+
+type errInvalidCloudFrontRegion struct{}
+
+func (e *errInvalidCloudFrontRegion) Error() string {
+	return fmt.Sprintf(`cdn certificate must be in region %s`, cloudfront.CertRegion)
+}
+
+// RecommendActions returns recommended actions to be taken after the error.
+func (e *errInvalidCloudFrontRegion) RecommendActions() string {
+	return fmt.Sprintf(`It looks like your CloudFront certificate is in the wrong region. CloudFront only supports certificates in %s.
+We recommend creating a duplicate certificate in the %s region through AWS Certificate Manager.
+More information: https://go.aws/3BMxY4J`, cloudfront.CertRegion, cloudfront.CertRegion)
 }
 
 func quoteStringSlice(in []string) []string {

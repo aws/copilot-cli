@@ -233,9 +233,7 @@ func TestDeleteAppOpts_Execute(t *testing.T) {
 					mocks.pipelineDeleter.EXPECT().Execute().Return(nil).Times(2),
 
 					// deleteAppResources
-					mocks.spinner.EXPECT().Start(deleteAppResourcesStartMsg),
 					mocks.deployer.EXPECT().DeleteApp(mockAppName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccess(deleteAppResourcesStopMsg)),
 
 					// deleteAppConfigs
 					mocks.spinner.EXPECT().Start(deleteAppConfigStartMsg),

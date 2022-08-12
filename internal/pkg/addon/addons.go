@@ -9,10 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
-	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,180 +33,156 @@ var (
 type workspaceReader interface {
 	ReadAddonsDir(svcName string) ([]string, error)
 	ReadAddon(svcName, fileName string) ([]byte, error)
-	Path() (string, error)
 }
 
-// Addons represents additional resources for a workload.
-type Addons struct {
-	wlName string
-
-	parser template.Parser
-	ws     workspaceReader
-
-	cachedTemplate    string
-	cachedTemplateErr error
-
-	bucket   string
-	uploader uploader
-	wsPath   string
-	fs       *afero.Afero
+// Stack represents a CloudFormation stack.
+type Stack struct {
+	template     *cfnTemplate
+	parameters   yaml.Node
+	workloadName string
 }
 
-// New creates an Addons struct given a workload name.
-func New(wlName string) (*Addons, error) {
-	ws, err := workspace.New()
+// Parse parses the 'addon/' directory for the given workload
+// and returns a Stack created by merging the CloudFormation templates
+// files found there. If no addons are found, Parse returns a nil
+// Stack and ErrAddonsNotFound.
+func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
+	fnames, err := ws.ReadAddonsDir(workloadName)
 	if err != nil {
-		return nil, fmt.Errorf("workspace cannot be created: %w", err)
-	}
-	return &Addons{
-		wlName: wlName,
-		parser: template.New(),
-		ws:     ws,
-	}, nil
-}
-
-// NewPackager creates an Addons struct that will package local artifacts when
-// generating the addons template.
-// See https://docs.aws.amazon.com/cli/latest/reference/cloudformation/package.html for more details.
-func NewPackager(wlName string, bucket string, uploader uploader) (*Addons, error) {
-	addons, err := New(wlName)
-	if err != nil {
-		return nil, err
-	}
-
-	addons.wsPath, err = addons.ws.Path()
-	if err != nil {
-		return nil, fmt.Errorf("get workspace path: %w", err)
-	}
-
-	addons.bucket = bucket
-	addons.uploader = uploader
-	addons.fs = &afero.Afero{
-		Fs: afero.NewOsFs(),
-	}
-	return addons, nil
-}
-
-// Template merges CloudFormation templates under the "addons/" directory of a workload
-// into a single CloudFormation template and returns it.
-//
-// If the addons directory doesn't exist, it returns the empty string and
-// ErrAddonsDirNotExist.
-func (a *Addons) Template() (string, error) {
-	if a.cachedTemplate != "" || a.cachedTemplateErr != nil {
-		return a.cachedTemplate, a.cachedTemplateErr
-	}
-
-	a.cachedTemplate, a.cachedTemplateErr = a.template()
-	return a.cachedTemplate, a.cachedTemplateErr
-}
-
-func (a *Addons) template() (string, error) {
-	fnames, err := a.ws.ReadAddonsDir(a.wlName)
-	if err != nil {
-		return "", &ErrAddonsNotFound{
-			WlName:    a.wlName,
+		return nil, &ErrAddonsNotFound{
+			WlName:    workloadName,
 			ParentErr: err,
 		}
 	}
 
+	template, err := parseTemplate(fnames, workloadName, ws)
+	if err != nil {
+		return nil, err
+	}
+
+	params, err := parseParameters(fnames, workloadName, ws)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Stack{
+		template:     template,
+		parameters:   params,
+		workloadName: workloadName,
+	}, nil
+}
+
+// Template returns Stack's CloudFormation template as a yaml string.
+func (s *Stack) Template() (string, error) {
+	if s.template == nil {
+		return "", nil
+	}
+
+	return s.encode(s.template)
+}
+
+// Template returns Stack's CloudFormation parameters as a yaml string.
+func (s *Stack) Parameters() (string, error) {
+	if s.parameters.IsZero() {
+		return "", nil
+	}
+
+	return s.encode(s.parameters)
+}
+
+// encode encodes v as a yaml string indented with 2 spaces.
+func (s *Stack) encode(v any) (string, error) {
+	str := &strings.Builder{}
+	enc := yaml.NewEncoder(str)
+	enc.SetIndent(2)
+
+	if err := enc.Encode(v); err != nil {
+		return "", err
+	}
+
+	return str.String(), nil
+}
+
+// parseTemplate merges CloudFormation templates under the "addons/" directory of a workload
+// into a single CloudFormation template and returns it.
+//
+// If the addons directory doesn't exist or no yaml files are found in
+// the addons directory, it returns the empty string and
+// ErrAddonsNotFound.
+func parseTemplate(fnames []string, workloadName string, ws workspaceReader) (*cfnTemplate, error) {
 	templateFiles := filterFiles(fnames, yamlMatcher, nonParamsMatcher)
 	if len(templateFiles) == 0 {
-		return "", &ErrAddonsNotFound{
-			WlName: a.wlName,
+		return nil, &ErrAddonsNotFound{
+			WlName: workloadName,
 		}
 	}
 
 	mergedTemplate := newCFNTemplate("merged")
 	for _, fname := range templateFiles {
-		out, err := a.ws.ReadAddon(a.wlName, fname)
+		out, err := ws.ReadAddon(workloadName, fname)
 		if err != nil {
-			return "", fmt.Errorf("read addon %s under %s: %w", fname, a.wlName, err)
+			return nil, fmt.Errorf("read addon %s under %s: %w", fname, workloadName, err)
 		}
 		tpl := newCFNTemplate(fname)
 		if err := yaml.Unmarshal(out, tpl); err != nil {
-			return "", fmt.Errorf("unmarshal addon %s under %s: %w", fname, a.wlName, err)
+			return nil, fmt.Errorf("unmarshal addon %s under %s: %w", fname, workloadName, err)
 		}
 		if err := mergedTemplate.merge(tpl); err != nil {
-			return "", err
+			return nil, err
 		}
 	}
 
-	if a.uploader != nil {
-		if err := mergedTemplate.pkg(a); err != nil {
-			return "", fmt.Errorf("package local artifacts: %s", err)
-		}
-	}
-
-	out, err := yaml.Marshal(mergedTemplate)
-	if err != nil {
-		return "", fmt.Errorf("marshal merged addons template: %w", err)
-	}
-
-	return string(out), nil
+	return mergedTemplate, nil
 }
 
-// Parameters returns the content of user-defined additional CloudFormation Parameters
+// parseParameters returns the content of user-defined additional CloudFormation Parameters
 // to pass from the parent stack to Template.
 //
-// If there is no addons/ directory defined, then returns "" and ErrAddonsNotFound.
 // If there are addons but no parameters file defined, then returns "" and nil for error.
 // If there are multiple parameters files, then returns "" and cannot define multiple parameter files error.
 // If the addons parameters use the reserved parameter names, then returns "" and a reserved parameter error.
-func (a *Addons) Parameters() (string, error) {
-	fnames, err := a.ws.ReadAddonsDir(a.wlName)
-	if err != nil {
-		return "", &ErrAddonsNotFound{
-			WlName:    a.wlName,
-			ParentErr: err,
-		}
-	}
+func parseParameters(fnames []string, workloadName string, ws workspaceReader) (yaml.Node, error) {
 	paramFiles := filterFiles(fnames, paramsMatcher)
 	if len(paramFiles) == 0 {
-		return "", nil
+		return yaml.Node{}, nil
 	}
 	if len(paramFiles) > 1 {
-		return "", fmt.Errorf("defining %s is not allowed under %s addons/", english.WordSeries(parameterFileNames, "and"), a.wlName)
+		return yaml.Node{}, fmt.Errorf("defining %s is not allowed under %s addons/", english.WordSeries(parameterFileNames, "and"), workloadName)
 	}
 	paramFile := paramFiles[0]
-	raw, err := a.ws.ReadAddon(a.wlName, paramFile)
+	raw, err := ws.ReadAddon(workloadName, paramFile)
 	if err != nil {
-		return "", fmt.Errorf("read parameter file %s under %s addons/: %w", paramFile, a.wlName, err)
+		return yaml.Node{}, fmt.Errorf("read parameter file %s under %s addons/: %w", paramFile, workloadName, err)
 	}
 	content := struct {
 		Parameters yaml.Node `yaml:"Parameters"`
 	}{}
 	if err := yaml.Unmarshal(raw, &content); err != nil {
-		return "", fmt.Errorf("unmarshal 'Parameters' in file %s under %s addons/: %w", paramFile, a.wlName, err)
+		return yaml.Node{}, fmt.Errorf("unmarshal 'Parameters' in file %s under %s addons/: %w", paramFile, workloadName, err)
 	}
 	if content.Parameters.IsZero() {
-		return "", fmt.Errorf("must define field 'Parameters' in file %s under %s addons/", paramFile, a.wlName)
+		return yaml.Node{}, fmt.Errorf("must define field 'Parameters' in file %s under %s addons/", paramFile, workloadName)
 	}
-	if err := a.validateReservedParameters(content.Parameters, paramFile); err != nil {
-		return "", err
+	if err := validateReservedParameters(content.Parameters, paramFile, workloadName); err != nil {
+		return yaml.Node{}, err
 	}
-	buf := new(strings.Builder)
-	encoder := yaml.NewEncoder(buf)
-	encoder.SetIndent(2 /* 2 spaces to indent */)
-	if err := encoder.Encode(content.Parameters); err != nil {
-		return "", fmt.Errorf("marshal contents of 'Parameters' in file %s under %s addons/", paramFile, a.wlName)
-	}
-	return buf.String(), nil
+
+	return content.Parameters, nil
 }
 
-func (a *Addons) validateReservedParameters(params yaml.Node, fname string) error {
+func validateReservedParameters(params yaml.Node, fname, workloadName string) error {
 	content := struct {
 		App  yaml.Node `yaml:"App"`
 		Env  yaml.Node `yaml:"Env"`
 		Name yaml.Node `yaml:"Name"`
 	}{}
 	if err := params.Decode(&content); err != nil {
-		return fmt.Errorf("decode content of parameters file %s under %s addons/", fname, a.wlName)
+		return fmt.Errorf("decode content of parameters file %s under %s addons/", fname, workloadName)
 	}
 
 	for _, field := range []yaml.Node{content.App, content.Env, content.Name} {
 		if !field.IsZero() {
-			return fmt.Errorf("reserved parameters 'App', 'Env', and 'Name' cannot be declared in %s under %s addons/", fname, a.wlName)
+			return fmt.Errorf("reserved parameters 'App', 'Env', and 'Name' cannot be declared in %s under %s addons/", fname, workloadName)
 		}
 	}
 	return nil

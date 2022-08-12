@@ -23,10 +23,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template"
 )
 
-const (
-	envCloudFrontCertRegion = "us-east-1"
-)
-
 type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
 }

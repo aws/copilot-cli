@@ -131,7 +131,7 @@ func TestDeleteSvcOpts_Ask(t *testing.T) {
 			inName:           testSvcName,
 			skipConfirmation: true,
 			setUpMocks: func(m *svcDeleteAskMocks) {
-				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return(testAppName, nil)
+				m.sel.EXPECT().Application(svcAppNamePrompt, wkldAppNameHelpPrompt).Return(testAppName, nil)
 				m.store.EXPECT().GetApplication(gomock.Any()).Times(0)
 				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
 			},
@@ -350,9 +350,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteStart, mockSvcName, mockEnvName)),
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteComplete, mockSvcName, mockEnvName)),
 
 					mocks.sessProvider.EXPECT().DefaultWithRegion(gomock.Any()).Return(&session.Session{}, nil),
 
@@ -385,9 +383,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteStart, mockSvcName, mockEnvName)),
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteComplete, mockSvcName, mockEnvName)),
 
 					// It should **not** emptyECRRepos
 					mocks.ecr.EXPECT().ClearRepository(gomock.Any()).Return(nil).Times(0),
@@ -412,9 +408,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 
 					mocks.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{}, nil),
 					// deleteStacks
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteStart, mockSvcName, mockEnvName)),
 					mocks.svcCFN.EXPECT().DeleteWorkload(gomock.Any()).Return(testError),
-					mocks.spinner.EXPECT().Stop(log.Serrorf(fmtSvcDeleteFailed, mockSvcName, mockEnvName, testError)),
 				)
 			},
 			wantedError: fmt.Errorf("delete service: %w", testError),
