@@ -12,7 +12,7 @@ Copilot v1.21 brings several new features and improvements:
 - **Integrate CloudFront with Application Load Balancer**:
 - **Configure environment security group**:
 - **Check out job logs**:
-- **Package addons CloudFormation templates before deployments**:
+- **Package addon CloudFormation templates before deployments**: Copilot will now package addon templates before deploying your services. You can now automatically upload lambda functions with Copilot to be deployed alongside your containerized services! Read more about how to get started deploying lambda functions, and other resources, in [Copilot's documentation](../docs/developing/package-addons.en.md).
 - **ELB access log support**:
 
 ???+ note "What’s AWS Copilot?"
@@ -62,6 +62,10 @@ or follow the logs of a task you've just invoked with [`copilot job run`](../doc
 $ copilot job run -n emailer && copilot job logs -n emailer --follow
 ```
 ## Package Addons CloudFormation Templates
+Addon templates are now [packaged](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html) on `copilot svc deploy` and `copilot svc package --upload-assets`.
+This means you can reference local files in your addon CloudFormation templates, and Copilot will upload those files to S3 and update the template with the S3 locations before deploying your addon stack.
+
+Read more in depth about packaging addons in [Copilot documentation](../docs/developing/package-addons.en.md)!
 
 ## ELB Access Log Support
 

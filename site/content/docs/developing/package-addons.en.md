@@ -1,14 +1,14 @@
 # Package Addons
 
 Copilot supports uploading local files referenced from your addon templates to S3, and replacing the relevant resource properties with the uploaded S3 location.
-On [`copilot svc deploy`]() or [`copilot svc package --upload-assets`](), certain fields on supported resources will be updated with an S3 locaton.
+On [`copilot svc deploy`](../commands/svc-deploy.en.md) or [`copilot svc package --upload-assets`](../commands/svc-package.en.md), certain fields on supported resources will be updated with an S3 locaton.
 To see the full list of resources that are supported, take a look at the [AWS CLI documentation](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html).
 
 This feature can be used to deploy local Lambda Functions stored in the same repo as another Copilot service.
 For example, to deploy a javascript Lambda Function alongside a copilot service, you can add this resource to your [addon template](./additional-aws-resources.en.md):
 
 ???+ note "Example Lambda Function"
-    === "copilot/example-service/addons/lambda.yml"
+    === "copilot/service-name/addons/lambda.yml"
 
         ```yaml hl_lines="4"
           ExampleFunction:
@@ -72,21 +72,26 @@ For the above example, the folder structure would look like:
 ```
 Absolute paths are supported as well, though they may not work as well across multiple machines.
 
-## Backend Service + DyanmoDB + Lambda
-Example blah about backend service -> dynamo db -> lambda.
+## Example: DynamoDB Stream Processing Lambda
+This example will walk through creating a [Dynamo DB](https://aws.amazon.com/dynamodb/) table with a lambda function conntected to process events from the [table's stream](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html).
+This architecture could be useful if you have a service that needs to minimize latency on storing data, but can kick off separate process that takes longer to process the data.
 
-1. Generate a DynamoDB table by running `copilot storage init`
-2. Add a [`StreamSpecification`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-dynamodb-table.html#cfn-dynamodb-table-streamspecification) property to the generated [`AWS::DynamoDB::Table`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-dynamodb-table.html) resource:
+#### Prerequesites:
+- [A deployed copilot service](../concepts/services.en.md)
+
+#### Steps:
+1. Generate a DynamoDB table addon for your service by running `copilot storage init` (More info [here!](./storage.en.md))
+2. Add the [`StreamSpecification`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-dynamodb-table.html#cfn-dynamodb-table-streamspecification) property to the generated [`AWS::DynamoDB::Table`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-dynamodb-table.html) resource:
   ```yaml title="copilot/service-name/addons/ddb.yml"
   StreamSpecification:
     StreamViewType: NEW_AND_OLD_IMAGES
   ```
-3. Add a Lambda function, IAM Role, and Lambda event stream mapping resource, making sure to give access to the DyanmoDB table in the IAM Role:
-  ```yaml title="copilot/service-name/addons/ddb.yml"
+3. Add a Lambda function, IAM Role, and Lambda event stream mapping resource, making sure to give access to the DynamoDB table stream in the IAM Role:
+  ```yaml title="copilot/service-name/addons/ddb.yml" hl_lines="4 37 43"
     recordProcessor:
       Type: AWS::Lambda::Function
       Properties:
-        Code: lambdas/record-processor/ # local file path to your record-processor lambda
+        Code: lambdas/record-processor/ # path to your record-processor lambda
         Handler: "index.handler"
         Timeout: 60
         MemorySize: 512
@@ -118,10 +123,10 @@ Example blah about backend service -> dynamo db -> lambda.
                     - dynamodb:GetRecords
                     - dynamodb:GetShardIterator
                     - dynamodb:ListStreams
-                  # replace <table> with the genrated table's resource name
+                  # replace <table> with the generated table's resource name
                   Resource: !Sub ${<table>.Arn}/stream/*
 
-    ordersStreamMappingToProcessor:
+    tableStreamMappingToRecordProcessor:
       Type: AWS::Lambda::EventSourceMapping
       Properties:
         FunctionName: !Ref recordProcessor
@@ -132,17 +137,19 @@ Example blah about backend service -> dynamo db -> lambda.
 4. Write your lambda function:
   ```js title="record-processor/lambda"
   "use strict";
-  const { unmarshall } = require("@aws-sdk/util-dynamodb");
+  const AWS = require('aws-sdk');
 
-  exports.handler = function (event, context) {
+  exports.handler = async function (event, context) {
     for (const record of event?.Records) {
       if (record?.eventName != "INSERT") {
         continue;
       }
 
       // process new records
-      const item = unmarshall(record?.dynamodb?.NewImage);
-      console.log("processing record", item);
+      const item = AWS.DynamoDB.Converter.unmarshall(record?.dynamodb?.NewImage);
+      console.log("processing item", item);
     }
   };
   ```
+5. Run `copilot svc deploy` to deploy your lambda function!🎉
+As your service adds records to the table, the lambda function will be triggered and can process new records.
