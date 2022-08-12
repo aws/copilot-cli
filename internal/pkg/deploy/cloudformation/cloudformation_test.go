@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
+
 	"github.com/aws/aws-sdk-go/aws"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	awsecs "github.com/aws/aws-sdk-go/service/ecs"
@@ -20,6 +22,31 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+func TestIsEmptyErr(t *testing.T) {
+	testCases := map[string]struct {
+		err    error
+		wanted bool
+	}{
+		"should return true when the error is an ErrStackSetNotFound": {
+			err:    &stackset.ErrStackSetNotFound{},
+			wanted: true,
+		},
+		"should return true when the error is an ErrStackSetInstancesNotFound": {
+			err:    &stackset.ErrStackSetInstancesNotFound{},
+			wanted: true,
+		},
+		"should return false on any other error": {
+			err: errors.New("some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, IsEmptyErr(tc.err))
+		})
+	}
+}
 
 type mockFileWriter struct {
 	io.Writer

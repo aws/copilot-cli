@@ -354,6 +354,22 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
+func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessLogs, error) {
+	elbAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
+	if !isELBAccessLogsSet {
+		return nil, nil
+	}
+
+	if elbAccessLogsArgs == nil {
+		return &template.ELBAccessLogs{}, nil
+	}
+
+	return &template.ELBAccessLogs{
+		BucketName:   aws.StringValue(elbAccessLogsArgs.BucketName),
+		BucketPrefix: aws.StringValue(elbAccessLogsArgs.BucketPrefix),
+	}, nil
+}
+
 func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {
 	securityGroupConfig, isSecurityConfigSet := mft.EnvSecurityGroup()
 	if !isSecurityConfigSet {

@@ -91,7 +91,7 @@ func (o *resumeSvcOpts) validateOrAskApp() error {
 		_, err := o.store.GetApplication(o.appName)
 		return err
 	}
-	appName, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
+	appName, err := o.sel.Application(svcAppNamePrompt, wkldAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
 	}

@@ -76,6 +76,8 @@ var (
 		"vpc-resources",
 		"nat-gateways",
 		"bootstrap-resources",
+		"elb-access-logs",
+		"mappings-regional-configs",
 	}
 )
 
@@ -114,6 +116,8 @@ type EnvOpts struct {
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
 	ForceUpdateID      string
+
+	DelegateDNS bool
 }
 
 // HTTPConfig represents configuration for a Load Balancer.
@@ -121,11 +125,26 @@ type HTTPConfig struct {
 	CIDRPrefixListIDs []string
 	ImportedCertARNs  []string
 	CustomALBSubnets  []string
+	ELBAccessLogs     *ELBAccessLogs
+}
+
+// ELBAccessLogs represents configuration for ELB access logs S3 bucket.
+type ELBAccessLogs struct {
+	BucketName   string
+	BucketPrefix string
+}
+
+// ShouldCreateBucket returns true if copilot should create bucket on behalf of customer.
+func (elb *ELBAccessLogs) ShouldCreateBucket() bool {
+	if elb == nil {
+		return false
+	}
+	return elb.BucketName == ""
 }
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.
 type CDNConfig struct {
-	ViewerCertificate *string
+	ImportedCertificate *string
 }
 
 type VPCConfig struct {
