@@ -1,4 +1,4 @@
-# Package Addons
+# Package Addons <span class="version" > added in [v1.21.0](../../blogs/release-v121.en.md) </span>
 
 Copilot supports uploading local files referenced from your addon templates to S3, and replacing the relevant resource properties with the uploaded S3 location.
 On [`copilot svc deploy`](../commands/svc-deploy.en.md) or [`copilot svc package --upload-assets`](../commands/svc-package.en.md), certain fields on supported resources will be updated with an S3 locaton.
