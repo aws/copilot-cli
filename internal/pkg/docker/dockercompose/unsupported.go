@@ -3,14 +3,11 @@
 
 package dockercompose
 
-// NOTE: This file is currently unused, it will be used in the next PR. Don't mind the comments for now!
-
 // IgnoredKeys stores a list of keys in the Compose YAML that couldn't be processed,
 // but are likely to not be significant enough to cause the converted application to
 // fail. It's expected that this will eventually be displayed to the user.
 type IgnoredKeys []string
 
-/*
 // ignoredServiceKeys lists out the keys on Compose services that are ignored in conversion.
 //
 // note: build keys are handled separately in convertBuildConfig
@@ -79,4 +76,3 @@ var fatalServiceKeys = map[string]string{
 	"stop_signal":       "unsupported in Copilot manifests",
 	"volumes_from":      "sharing volumes is not yet supported",
 }
-*/

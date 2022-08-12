@@ -1,0 +1,18 @@
+services:
+  fatal1:
+    image: nginx
+    privileged: true
+    external_links:
+      - "app"
+    cpus: 6553600
+    cpu_count: 256
+    restart: never
+  fatal2:
+    build:
+      ssh: default
+  fatal3:
+    domainname: "example.com"
+    init: "/bin/shutdown"
+    networks:
+      testnet:
+        ipv6_address: "DEAD::BEEF"
