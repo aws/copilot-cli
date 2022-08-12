@@ -23,7 +23,6 @@ const (
 	defaultServiceLogsLimit = 10
 
 	fmtWkldLogGroupName         = "/copilot/%s-%s-%s"
-	fmtWkldLogStreamPrefix      = "copilot/%s"
 	wkldLogStreamPrefix         = "copilot"
 	stateMachineLogStreamPrefix = "states"
 )
