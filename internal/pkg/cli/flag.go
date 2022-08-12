@@ -241,7 +241,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription               = "Optional. Only return logs from specific task IDs."
 	includeStateMachineLogsFlagDescription = "Optional. Include logs from the state machine executions."
 	logGroupFlagDescription                = "Optional. Only return logs from specific log group."
-	containerLogFlagDescription            = "Optional. Return only logs from a container."
+	containerLogFlagDescription            = "Optional. Return only logs from a specific container."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "(Deprecated.) Use '--url' instead. Repository URL to trigger your pipeline."
