@@ -204,16 +204,15 @@ type InstanceSummariesOption func(input *cloudformation.ListStackInstancesInput)
 
 // InstanceSummaries returns a list of unique identifiers for all the stack instances in a stack set.
 func (ss *StackSet) InstanceSummaries(name string, opts ...InstanceSummariesOption) ([]InstanceSummary, error) {
-	var nextToken *string
+	in := &cloudformation.ListStackInstancesInput{
+		StackSetName: aws.String(name),
+	}
+	for _, opt := range opts {
+		opt(in)
+	}
+
 	var summaries []InstanceSummary
 	for {
-		in := &cloudformation.ListStackInstancesInput{
-			StackSetName: aws.String(name),
-			NextToken:    nextToken,
-		}
-		for _, opt := range opts {
-			opt(in)
-		}
 		resp, err := ss.client.ListStackInstances(in)
 		if err != nil {
 			return nil, fmt.Errorf("list stack instances for stack set %s: %w", name, err)
@@ -226,8 +225,8 @@ func (ss *StackSet) InstanceSummaries(name string, opts ...InstanceSummariesOpti
 				Status:  InstanceStatus(aws.StringValue(summary.Status)),
 			})
 		}
-		nextToken = resp.NextToken
-		if nextToken == nil {
+		in.NextToken = resp.NextToken
+		if in.NextToken == nil {
 			break
 		}
 	}
