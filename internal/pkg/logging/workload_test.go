@@ -66,6 +66,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		jsonOutput          bool
 		taskIDs             []string
 		includeStateMachine bool
+		containerName       string
 		setupMocks          func(mocks workloadLogsMocks)
 
 		wantedError   error
@@ -225,6 +226,26 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error"
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
 `,
 		},
+		"success with only log stream from certain container": {
+			containerName: "datadog",
+			taskIDs:       []string{"mockTaskID"},
+			setupMocks: func(m workloadLogsMocks) {
+				gomock.InOrder(
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/datadog/mockTaskID"})
+							require.Equal(t, param.Limit, aws.Int64(10))
+						}).
+						Return(&cloudwatchlogs.LogEventsOutput{
+							Events: logEvents,
+						}, nil),
+				)
+			},
+			wantedContent: `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
+`,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -265,6 +286,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				OnEvents:                logWriter,
 				LogStreamLimit:          tc.last,
 				IncludeStateMachineLogs: tc.includeStateMachine,
+				ContainerName:           tc.containerName,
 			})
 
 			// THEN

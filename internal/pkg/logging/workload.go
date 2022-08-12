@@ -56,6 +56,7 @@ type WriteLogEventsOpts struct {
 	// involving multiple log streams.
 	LogStreamLimit          int
 	IncludeStateMachineLogs bool
+	ContainerName           string
 }
 
 // NewWorkloadLogsConfig contains fields that initiates WorkloadClient struct.
@@ -177,10 +178,11 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	if opts.IncludeStateMachineLogs {
 		logStreamLimit *= 2
 	}
-	// TODO: there should be a separate logging client for ECS services
+	// TODO(lou1415926): there should be a separate logging client for ECS services
 	// and App Runner services. This `if` check is only ever true for ECS services.
+	// Refactor so that there are separate client for rdws, job and other services.
 	if s.logStreamNamePrefix != "" {
-		logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs, opts.IncludeStateMachineLogs)
+		logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs, opts.IncludeStateMachineLogs, opts.ContainerName)
 	}
 	logEventsOpts.LogStreamLimit = logStreamLimit
 
@@ -204,11 +206,11 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	}
 }
 
-func (s *WorkloadClient) logStreams(taskIDs []string, includeStateMachineLogs bool) (logStreamPrefixes []string) {
+func (s *WorkloadClient) logStreams(taskIDs []string, includeStateMachineLogs bool, container string) []string {
 	// By default, we only want logs from copilot task log streams.
-	// This filters out log streams not starting with `copilot/`
-	logStreamPrefixes = []string{fmt.Sprintf(fmtWkldLogStreamPrefix, "")}
-	// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for jobs. Therefore, we
+	// This filters out log streams not starting with `copilot/`, or `copilot/mysidecar` if a container is appointed.
+	logStreamPrefixes := []string{fmt.Sprintf("%s/%s", wkldLogStreamPrefix, container)}
+	// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for jobgs. Therefore, we
 	// need to grab all recent log streams with no prefix filtering.
 	if includeStateMachineLogs {
 		return append(logStreamPrefixes, stateMachineLogStreamPrefix)
@@ -217,6 +219,9 @@ func (s *WorkloadClient) logStreams(taskIDs []string, includeStateMachineLogs bo
 		logStreamPrefixes = []string{}
 		for _, taskID := range taskIDs {
 			prefix := wkldLogStreamPrefix
+			if container == "" {
+				container = s.name
+			}
 			prefix = fmt.Sprintf("%s/%s/%s", prefix, s.name, taskID) // Example: copilot/sidecar/1111 or copilot/web/1111
 			logStreamPrefixes = append(logStreamPrefixes, prefix)
 		}
