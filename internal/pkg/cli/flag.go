@@ -43,6 +43,7 @@ const (
 	endTimeFlag           = "end-time"
 	tasksFlag             = "tasks"
 	logGroupFlag          = "log-group"
+	containerLogFlag      = "container"
 	prodEnvFlag           = "prod"
 	deployFlag            = "deploy"
 	resourcesFlag         = "resources"
@@ -214,7 +215,7 @@ const (
 rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
-	manifestFlagDescription = "Optional. Output the manifest file used for the deployment."
+	manifestFlagDescription    = "Optional. Output the manifest file used for the deployment."
 	svcManifestFlagDescription = `Optional. Name of the environment in which the service was deployed;
 output the manifest file used for that deployment.`
 
@@ -240,6 +241,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription               = "Optional. Only return logs from specific task IDs."
 	includeStateMachineLogsFlagDescription = "Optional. Include logs from the state machine executions."
 	logGroupFlagDescription                = "Optional. Only return logs from specific log group."
+	containerLogFlagDescription            = "Optional. Return only logs from a container."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "(Deprecated.) Use '--url' instead. Repository URL to trigger your pipeline."
@@ -285,10 +287,10 @@ Must be either "MySQL" or "PostgreSQL".`
 	envFileFlagDescription       = `Optional. A path to an environment variable (.env) file. 
 Each line should be of the form of VARIABLE=VALUE. 
 Values specified with --env-vars take precedence over --env-file.`
-	secretsFlagDescription       = "Optional. Secrets to inject into the container. Specified by key=value separated by commas."
-	runCommandFlagDescription    = `Optional. The command that is passed to "docker run" to override the default command.`
-	entrypointFlagDescription    = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`
-	taskGroupFlagDescription     = `Optional. The group name of the task. 
+	secretsFlagDescription    = "Optional. Secrets to inject into the container. Specified by key=value separated by commas."
+	runCommandFlagDescription = `Optional. The command that is passed to "docker run" to override the default command.`
+	entrypointFlagDescription = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`
+	taskGroupFlagDescription  = `Optional. The group name of the task. 
 Tasks with the same group name share the same set of resources. 
 (default directory name)`
 	taskImageTagFlagDescription    = `Optional. The container image tag in addition to "latest".`

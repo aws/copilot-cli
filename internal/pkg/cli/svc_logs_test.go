@@ -285,6 +285,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 		endTime   int64
 		startTime int64
 		taskIDs   []string
+		container string
 
 		mocklogsSvc func(ctrl *gomock.Controller) logEventsWriter
 
@@ -297,6 +298,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 			follow:    true,
 			limit:     10,
 			taskIDs:   []string{"mockTaskID"},
+			container: "datadog",
 
 			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
 				m := mocks.NewMocklogEventsWriter(ctrl)
@@ -306,6 +308,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 					require.Equal(t, param.StartTime, &mockStartTime)
 					require.Equal(t, param.Follow, true)
 					require.Equal(t, param.Limit, &mockLimit)
+					require.Equal(t, param.ContainerName, "datadog")
 				}).Return(nil)
 
 				return m
@@ -357,10 +360,11 @@ func TestSvcLogs_Execute(t *testing.T) {
 
 			svcLogs := &svcLogsOpts{
 				wkldLogsVars: wkldLogsVars{
-					name:    tc.inputSvc,
-					follow:  tc.follow,
-					limit:   tc.limit,
-					taskIDs: tc.taskIDs,
+					name:          tc.inputSvc,
+					follow:        tc.follow,
+					limit:         tc.limit,
+					taskIDs:       tc.taskIDs,
+					containerName: tc.container,
 				},
 				wkldLogOpts: wkldLogOpts{
 					startTime:   &tc.startTime,

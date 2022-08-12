@@ -43,6 +43,7 @@ type wkldLogsVars struct {
 	taskIDs          []string
 	since            time.Duration
 	logGroup         string
+	containerName    string
 }
 
 type svcLogsOpts struct {
@@ -180,12 +181,13 @@ func (o *svcLogsOpts) Execute() error {
 		limit = aws.Int64(int64(o.limit))
 	}
 	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
-		Follow:    o.follow,
-		Limit:     limit,
-		EndTime:   o.endTime,
-		StartTime: o.startTime,
-		TaskIDs:   o.taskIDs,
-		OnEvents:  eventsWriter,
+		Follow:        o.follow,
+		Limit:         limit,
+		EndTime:       o.endTime,
+		StartTime:     o.startTime,
+		TaskIDs:       o.taskIDs,
+		OnEvents:      eventsWriter,
+		ContainerName: o.containerName,
 	})
 	if err != nil {
 		return fmt.Errorf("write log events for service %s: %w", o.name, err)
@@ -294,5 +296,6 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	cmd.Flags().StringVar(&vars.logGroup, logGroupFlag, "", logGroupFlagDescription)
+	cmd.Flags().StringVar(&vars.containerName, containerLogFlag, "", containerLogFlagDescription)
 	return cmd
 }
