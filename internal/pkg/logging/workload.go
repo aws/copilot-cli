@@ -222,8 +222,7 @@ func (s *WorkloadClient) logStreams(taskIDs []string, includeStateMachineLogs bo
 		container = s.name
 	}
 	for _, taskID := range taskIDs {
-		prefix := wkldLogStreamPrefix
-		prefix = fmt.Sprintf("%s/%s/%s", prefix, container, taskID) // Example: copilot/sidecar/1111 or copilot/web/1111
+		prefix := fmt.Sprintf("%s/%s/%s", wkldLogStreamPrefix, container, taskID) // Example: copilot/sidecar/1111 or copilot/web/1111
 		logStreamPrefixes = append(logStreamPrefixes, prefix)
 	}
 	return logStreamPrefixes
