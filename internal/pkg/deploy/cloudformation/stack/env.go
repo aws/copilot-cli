@@ -122,6 +122,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		LatestVersion:      deploy.LatestEnvTemplateVersion,
 		SerializedManifest: string(e.in.RawMft),
 		ForceUpdateID:      forceUpdateID,
+		DelegateDNS:        e.in.App.Domain != "",
 	})
 	if err != nil {
 		return "", err
@@ -366,7 +367,7 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 		return nil
 	}
 	return &template.CDNConfig{
-		ViewerCertificate: e.in.Mft.CDNConfig.Config.Certificate,
+		ImportedCertificate: e.in.Mft.CDNConfig.Config.Certificate,
 	}
 }
 
