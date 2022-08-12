@@ -1112,7 +1112,9 @@ Outputs:
   CloudFrontDomainName:
     Condition: CreateALB
     Value: !GetAtt CloudFrontDistribution.DomainName
-    Description: The domain name of an associated Cloud Front Distribution.
+    Description: The domain name of an associated CloudFront Distribution.
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDomainName
   PublicALBAccessible:
     Condition: CreateALB
     Value: false
