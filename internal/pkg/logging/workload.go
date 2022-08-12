@@ -209,7 +209,7 @@ func (s *WorkloadClient) logStreams(taskIDs []string, includeStateMachineLogs bo
 	// By default, we only want logs from copilot task log streams.
 	// This filters out log streams not starting with `copilot/`, or `copilot/mysidecar` if a container is appointed.
 	logStreamPrefixes := []string{fmt.Sprintf("%s/%s", wkldLogStreamPrefix, container)}
-	// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for jobgs. Therefore, we
+	// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for job. Therefore, we
 	// need to grab all recent log streams with no prefix filtering.
 	if includeStateMachineLogs {
 		return append(logStreamPrefixes, stateMachineLogStreamPrefix)
