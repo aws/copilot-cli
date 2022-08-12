@@ -32,7 +32,7 @@ One of our first major additions to the Copilot environment manifest! CloudFront
 ### Currently supported features:
 - A distribution deployed in front of your Public Load Balancer
 - Public ingress restricted to the CloudFront distribution
-- HTTPS traffic through an imported certificate, or a Copilot managed certificate
+- HTTPS traffic through an imported certificate, or a Copilot-managed certificate
 
 ### CloudFront with HTTPS
 Copilot makes this process easy! If you have an application initialized with a `--domain` specified during `app init`, the required certificate will be created for you. If you import your own certificates for your hosted zone, we'll walk you through importing the correct certificate for CloudFront.
