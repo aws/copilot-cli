@@ -28,8 +28,25 @@ Copilot v1.21 brings several new features and improvements:
 ## CloudFront Integration
 
 ## Configure Environment Security Group
+You can now configure your environment security group rules through environment manifest. 
 
+Sample security group rules template inside environment manifest is given below.
 
+```yaml
+network:
+  vpc:
+    security_group:
+      ingress:
+        - ip_protocol: tcp
+          ports: 0-65535
+          cidr: 0.0.0.0/0
+      egress:
+        - ip_protocol: tcp
+          ports: 80
+          cidr: 0.0.0.0/0
+```
+[See detailed walkthrough](../docs/manifest/environment.en.md)
+for how to specify a security group rules to add to the environment security group.
 ## `job logs`
 
 ## Package Addons CloudFormation Templates
