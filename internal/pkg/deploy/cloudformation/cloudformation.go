@@ -102,8 +102,10 @@ type stackSetClient interface {
 	UpdateAndWait(name, template string, opts ...stackset.CreateOrUpdateOption) error
 	Describe(name string) (stackset.Description, error)
 	InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error)
+	DeleteAllInstances(name string) (string, error)
 	Delete(name string) error
 	WaitForStackSetLastOperationComplete(name string) error
+	WaitForOperation(name, opID string) error
 }
 
 // OptFn represents an optional configuration function for the CloudFormation client.
@@ -165,6 +167,16 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 		opt(&client)
 	}
 	return client
+}
+
+// IsEmptyErr returns true if the error occurred because the cloudformation resource does not exist or does not contain any sub-resources.
+func IsEmptyErr(err error) bool {
+	type isEmpty interface {
+		IsEmpty() bool
+	}
+
+	var emptyErr isEmpty
+	return errors.As(err, &emptyErr)
 }
 
 // errorEvents returns the list of status reasons of failed resource events
