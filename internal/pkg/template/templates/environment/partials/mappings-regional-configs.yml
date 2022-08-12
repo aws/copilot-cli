@@ -1,0 +1,54 @@
+Mappings:
+  RegionalConfigs:
+    us-east-1:
+      ElbAccountId: '127311923021'
+    us-east-2:
+      ElbAccountId: '033677994240'
+    us-west-1:
+      ElbAccountId: '027434742980'
+    us-west-2:
+      ElbAccountId: '797873946194'
+    af-south-1:
+      ElbAccountId: '098369216593'
+    ca-central-1:
+      ElbAccountId: '985666609251'
+    eu-central-1:
+      ElbAccountId: '054676820928'
+    eu-west-1:
+      ElbAccountId: '156460612806'
+    eu-west-2:
+      ElbAccountId: '652711504416'
+    eu-south-1:
+      ElbAccountId: '635631232127'
+    eu-west-3:
+      ElbAccountId: '009996457667'
+    eu-north-1:
+      ElbAccountId: '897822967062'
+    ap-east-1:
+      ElbAccountId: '754344448648'
+    ap-northeast-1:
+      ElbAccountId: '582318560864'
+    ap-northeast-2:
+      ElbAccountId: '600734575887'
+    ap-northeast-3:
+      ElbAccountId: '383597477331'
+    ap-southeast-1:
+      ElbAccountId: '114774131450'
+    ap-southeast-2:
+      ElbAccountId: '783225319266'
+    ap-southeast-3:
+      ElbAccountId: '589379963580'
+    ap-south-1:
+      ElbAccountId: '718504428378'
+    me-south-1:
+      ElbAccountId: '076674570225'
+    sa-east-1:
+      ElbAccountId: '507241528517'
+    us-gov-west-1:
+      ElbAccountId: '048591011584'
+    us-gov-east-1:
+      ElbAccountId: '190560391635'
+    cn-north-1:
+      ElbAccountId: '638102146993'
+    cn-northwest-1:
+      ElbAccountId: '037604701340'

@@ -138,7 +138,7 @@ func (o *jobRunOpts) validateOrAskApp() error {
 		_, err := o.configStore.GetApplication(o.appName)
 		return err
 	}
-	app, err := o.sel.Application(jobAppNamePrompt, svcAppNameHelpPrompt)
+	app, err := o.sel.Application(jobAppNamePrompt, wkldAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
 	}

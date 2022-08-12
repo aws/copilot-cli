@@ -913,6 +913,27 @@ func TestCloudFormation_DeleteApp(t *testing.T) {
 			},
 			mockStackSet: func(ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().DeleteAllInstances("testApp-infrastructure").Return("1", nil)
+				m.EXPECT().WaitForOperation("testApp-infrastructure", "1").Return(nil)
+				m.EXPECT().Delete("testApp-infrastructure").Return(nil)
+				return m
+			},
+		},
+		"should skip waiting for delete instance operation if the stack set is already deleted": {
+			appName: "testApp",
+			createMock: func(ctrl *gomock.Controller) cfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().TemplateBody(gomock.Any()).Return("", nil)
+				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
+					StackId: aws.String("some stack"),
+				}, nil)
+				m.EXPECT().DeleteAndWait(gomock.Any()).Return(&cloudformation.ErrStackNotFound{})
+				m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&awscfn.DescribeStackEventsOutput{}, nil).AnyTimes()
+				return m
+			},
+			mockStackSet: func(ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().DeleteAllInstances(gomock.Any()).Return("", &stackset.ErrStackSetNotFound{})
 				m.EXPECT().Delete(gomock.Any()).Return(nil)
 				return m
 			},

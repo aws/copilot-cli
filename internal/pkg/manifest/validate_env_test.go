@@ -187,6 +187,33 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			},
 			wantedError: "CDN must be enabled to limit security group ingress to CloudFront",
 		},
+		"valid elb access logs config with bucket_prefix": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						ELBAccessLogs: ELBAccessLogsArgsOrBool{
+							AdvancedConfig: ELBAccessLogsArgs{
+								BucketPrefix: aws.String("bucketPrefix"),
+							},
+						},
+					},
+				},
+			},
+		},
+		"valid elb access logs config with both bucket_prefix and bucket_name": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						ELBAccessLogs: ELBAccessLogsArgsOrBool{
+							AdvancedConfig: ELBAccessLogsArgs{
+								BucketPrefix: aws.String("bucketPrefix"),
+								BucketName:   aws.String("bucketName"),
+							},
+						},
+					},
+				},
+			},
+		},
 		"error if cdn cert specified but public certs not specified": {
 			in: EnvironmentConfig{
 				CDNConfig: environmentCDNConfig{
