@@ -33,7 +33,7 @@ type StackSetStreamer struct {
 	opID        string
 	opStartTime time.Time
 
-	mu         sync.Mutex
+	subsMu     sync.Mutex
 	subs       []chan StackSetOpEvent
 	done       chan struct{}
 	isDone     bool
@@ -82,8 +82,8 @@ func (s *StackSetStreamer) Subscribe() <-chan StackSetOpEvent {
 		return c
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.subsMu.Lock()
+	defer s.subsMu.Unlock()
 	s.subs = append(s.subs, c)
 	return c
 }
@@ -118,10 +118,10 @@ func (s *StackSetStreamer) Notify() {
 		return
 	}
 
-	s.mu.Lock()
+	s.subsMu.Lock()
 	subs := make([]chan StackSetOpEvent, len(s.subs))
 	copy(subs, s.subs)
-	s.mu.Unlock()
+	s.subsMu.Unlock()
 
 	for _, sub := range subs {
 		sub <- StackSetOpEvent{
@@ -135,8 +135,8 @@ func (s *StackSetStreamer) Notify() {
 // Close closes all subscribed channels notifying them that no more events will be sent
 // and causes the streamer to no longer accept any new subscribers.
 func (s *StackSetStreamer) Close() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.subsMu.Lock()
+	defer s.subsMu.Unlock()
 
 	for _, sub := range s.subs {
 		close(sub)
