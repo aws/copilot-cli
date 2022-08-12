@@ -91,7 +91,7 @@ This architecture could be useful if you have a service that needs to minimize l
     recordProcessor:
       Type: AWS::Lambda::Function
       Properties:
-        Code: lambdas/record-processor/ # path to your record-processor lambda
+        Code: lambdas/record-processor/ # local path to the record processor lambda
         Handler: "index.handler"
         Timeout: 60
         MemorySize: 512
@@ -135,7 +135,7 @@ This architecture could be useful if you have a service that needs to minimize l
         StartingPosition: LATEST
   ```
 4. Write your lambda function:
-  ```js title="record-processor/lambda"
+  ```js title="lambdas/record-processor/index.js"
   "use strict";
   const AWS = require('aws-sdk');
 
