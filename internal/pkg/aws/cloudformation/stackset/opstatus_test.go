@@ -92,14 +92,14 @@ func TestOpStatus_IsFailure(t *testing.T) {
 		"false when stopping": {
 			status: cloudformation.StackSetOperationStatusStopping,
 		},
-		"true when succeeded": {
+		"false when succeeded": {
 			status: cloudformation.StackSetOperationStatusSucceeded,
 		},
-		"false when stopped": {
+		"true when stopped": {
 			status: cloudformation.StackSetOperationStatusStopped,
 			wanted: true,
 		},
-		"false when failed": {
+		"true when failed": {
 			status: cloudformation.StackSetOperationStatusFailed,
 			wanted: true,
 		},

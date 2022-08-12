@@ -134,7 +134,7 @@ func (ss *StackSet) DeleteAllInstances(name string) (string, error) {
 		}
 	}
 
-	// We want to delete all the stack instances, so we create a set of account ids and regions.
+	// We want to delete all the stack instances, so we create a set of account IDs and regions.
 	uniqueAccounts := make(map[string]bool)
 	uniqueRegions := make(map[string]bool)
 	for _, summary := range summaries {
