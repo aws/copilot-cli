@@ -177,7 +177,8 @@ func (s *StackStreamer) Notify() {
 	s.eventsToFlush = nil // reset after flushing all events.
 }
 
-// Close closes all subscribed channels notifying them that no more events will be sent.
+// Close closes all subscribed channels notifying them that no more events will be sent
+// and causes the streamer to no longer accept any new subscribers.
 func (s *StackStreamer) Close() {
 	s.mu.Lock()
 	defer s.mu.Unlock()

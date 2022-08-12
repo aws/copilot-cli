@@ -191,6 +191,14 @@ func (ss *StackSet) CreateInstancesAndWait(name string, accounts, regions []stri
 	return ss.WaitForOperation(name, id)
 }
 
+// InstanceSummary represents the identifiers for a stack instance.
+type InstanceSummary struct {
+	StackID string
+	Account string
+	Region  string
+	Status  InstanceStatus
+}
+
 // InstanceSummariesOption allows to filter instance summaries to retrieve for the stack set.
 type InstanceSummariesOption func(input *cloudformation.ListStackInstancesInput)
 
@@ -206,12 +214,14 @@ func (ss *StackSet) InstanceSummaries(name string, opts ...InstanceSummariesOpti
 	if err != nil {
 		return nil, fmt.Errorf("list stack instances for stack set %s: %w", name, err)
 	}
+	// TODO(efekarakus): looks like we're not looping through the next token.
 	var summaries []InstanceSummary
 	for _, summary := range resp.Summaries {
 		summaries = append(summaries, InstanceSummary{
 			StackID: aws.StringValue(summary.StackId),
 			Account: aws.StringValue(summary.Account),
 			Region:  aws.StringValue(summary.Region),
+			Status:  InstanceStatus(aws.StringValue(summary.Status)),
 		})
 	}
 	return summaries, nil
@@ -397,5 +407,17 @@ func FilterSummariesByAccountID(accountID string) InstanceSummariesOption {
 func FilterSummariesByRegion(region string) InstanceSummariesOption {
 	return func(input *cloudformation.ListStackInstancesInput) {
 		input.StackInstanceRegion = aws.String(region)
+	}
+}
+
+// FilterSummariesByDetailedStatus limits the stack instance summaries to the passed status values.
+func FilterSummariesByDetailedStatus(values []InstanceStatus) InstanceSummariesOption {
+	return func(input *cloudformation.ListStackInstancesInput) {
+		for _, value := range values {
+			input.Filters = append(input.Filters, &cloudformation.StackInstanceFilter{
+				Name:   aws.String(cloudformation.StackInstanceFilterNameDetailedStatus),
+				Values: aws.String(string(value)),
+			})
+		}
 	}
 }
