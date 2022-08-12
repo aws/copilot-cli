@@ -31,7 +31,6 @@ type BackendService struct {
 	*ecsWkld
 	manifest     *manifest.BackendService
 	httpsEnabled bool
-	certImported bool
 	albEnabled   bool
 
 	parser backendSvcReadParser
@@ -72,7 +71,6 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 	}
 
 	if len(conf.EnvManifest.HTTPConfig.Private.Certificates) != 0 {
-		b.certImported = true
 		b.httpsEnabled = b.albEnabled
 	}
 
@@ -153,7 +151,6 @@ func (s *BackendService) Template() (string, error) {
 		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
 		Aliases:                  aliases,
 		HTTPSListener:            s.httpsEnabled,
-		UseImportedCerts:         s.certImported,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
