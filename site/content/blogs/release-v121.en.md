@@ -28,10 +28,8 @@ Copilot v1.21 brings several new features and improvements:
 ## CloudFront Integration
 
 ## Configure Environment Security Group
-You can now configure your environment security group rules through environment manifest. 
-
+You can now configure your environment security group rules through environment manifest.   
 Sample security group rules template inside environment manifest is given below.
-
 ```yaml
 network:
   vpc:
@@ -45,17 +43,15 @@ network:
           ports: 80
           cidr: 0.0.0.0/0
 ```
-[See detailed walkthrough](../docs/manifest/environment.en.md#http-public-access-logs)
-for how to specify security group rules to add to the environment security group.
 ## `job logs`
 
 ## Package Addons CloudFormation Templates
 
 ## ELB Access Logs Support
-You can now enable Elastic Load Balancing access logs that capture detailed information about requests sent to your load balancer. 
-There are couple ways how you can enable access logs: 
+You can now enable Elastic Load Balancing access logs that capture detailed information about requests sent to your load balancer.
+There are a few ways to enable access logs: 
 
-1. You can specify `access_logs: true` in your environment manifest as shown below and Copilot will create an S3 bucket to which the Public Load Balancer will store access logs.
+1. You can specify `access_logs: true` in your environment manifest as shown below and Copilot will create an S3 bucket where the Public Load Balancer will store access logs.
 ```yaml
 name: qa
 type: Environment
@@ -66,8 +62,7 @@ http:
 ```
 
 2. You can also bring in your own bucket and prefix. Copilot will use those bucket details to enable access logs. 
-You can do that by specifying following configuration in your environment manifest.
-
+You can do that by specifying the following configuration in your environment manifest.
 ```yaml
 name: qa
 type: Environment
@@ -78,8 +73,7 @@ http:
      bucket_name: my-bucket
      bucket_prefix: my-prefix
 ```
-
-In the option 2 you need to make sure that the bucket exists and has required [bucket policy](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html#attach-bucket-policy) for the load balancer to
+When importing your own bucket, you need to make sure that the bucket exists and has the required [bucket policy](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html#attach-bucket-policy) for the load balancer to
 write access logs to it.
 
 ## What’s next?
