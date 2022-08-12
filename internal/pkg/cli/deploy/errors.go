@@ -31,11 +31,11 @@ func (e *errSvcWithALBAliasHostedZoneWithCDNEnabled) Error() string {
 // Implements main.actionRecommender interface.
 func (e *errSvcWithALBAliasHostedZoneWithCDNEnabled) RecommendActions() string {
 	msgs := []string{
-		"If you already have an Load Balanced Web Service deployed, you can switch to CDN by running:",
-		fmt.Sprintf("1. manually update the A-record value to be the CDN distribution domain name with %q set to %s.",
+		"If you already have an Load Balanced Web Service deployed, you can switch to CDN by:",
+		fmt.Sprintf("1. manually update the A-record value to be the CDN distribution domain name. Please make sure your A-record has %q set to %s.",
 			"Evaluate target health", color.HighlightCode("True")),
-		"2. Remove the alias hosted zones setting in the service manifest.",
-		fmt.Sprintf("3. Reploy the service %s.", color.HighlightCode("copilot svc deploy")),
+		fmt.Sprintf("2. Remove the %s setting from the service manifest.", color.HighlightCode(`"http.alias.hosted_zone"`)),
+		fmt.Sprintf("3. Redeploy the service via %s.", color.HighlightCode("copilot svc deploy")),
 	}
 	return strings.Join(msgs, "\n")
 }
