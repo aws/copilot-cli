@@ -76,7 +76,7 @@ func TestListJobOpts_Ask(t *testing.T) {
 	}{
 		"with no flags set": {
 			mockSel: func(m *mocks.MockappSelector) {
-				m.EXPECT().Application(jobListAppNamePrompt, svcAppNameHelpPrompt).Return("myapp", nil)
+				m.EXPECT().Application(jobListAppNamePrompt, wkldAppNameHelpPrompt).Return("myapp", nil)
 			},
 			wantedApp: "myapp",
 		},

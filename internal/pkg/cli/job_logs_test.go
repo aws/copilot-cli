@@ -6,6 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/logging"
+	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"testing"
 	"time"
 
@@ -25,14 +27,16 @@ func TestJobLogs_Validate(t *testing.T) {
 		mockBadEndTime   = "badEndTime"
 	)
 	testCases := map[string]struct {
-		inputApp       string
-		inputSvc       string
-		inputLimit     int
-		inputFollow    bool
-		inputEnvName   string
-		inputStartTime string
-		inputEndTime   string
-		inputSince     time.Duration
+		inputApp          string
+		inputSvc          string
+		inputLimit        int
+		inputLast         int
+		inputFollow       bool
+		inputEnvName      string
+		inputStartTime    string
+		inputEndTime      string
+		inputSince        time.Duration
+		inputStateMachine bool
 
 		mockstore func(m *mocks.Mockstore)
 
@@ -149,6 +153,8 @@ func TestJobLogs_Validate(t *testing.T) {
 						name:           tc.inputSvc,
 						appName:        tc.inputApp,
 					},
+					includeStateMachineLogs: tc.inputStateMachine,
+					last:                    tc.inputLast,
 				},
 				wkldLogOpts: wkldLogOpts{
 					configStore: mockstore,
@@ -157,6 +163,276 @@ func TestJobLogs_Validate(t *testing.T) {
 
 			// WHEN
 			err := jobLogs.Validate()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestJobLogs_Ask(t *testing.T) {
+	const (
+		inputApp = "my-app"
+		inputEnv = "my-env"
+		inputJob = "my-job"
+	)
+	testCases := map[string]struct {
+		inputApp     string
+		inputJob     string
+		inputEnvName string
+
+		setupMocks func(mocks wkldLogsMock)
+
+		wantedApp   string
+		wantedEnv   string
+		wantedJob   string
+		wantedError error
+	}{
+		"validate app env and job with all flags passed in": {
+			inputApp:     inputApp,
+			inputJob:     inputJob,
+			inputEnvName: inputEnv,
+			setupMocks: func(m wkldLogsMock) {
+				gomock.InOrder(
+					m.configStore.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil),
+					m.configStore.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{Name: "my-env"}, nil),
+					m.configStore.EXPECT().GetJob("my-app", "my-job").Return(&config.Workload{}, nil),
+					m.sel.EXPECT().DeployedJob(jobLogNamePrompt, jobLogNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
+						Return(&selector.DeployedJob{
+							Env:  "my-env",
+							Name: "my-job",
+						}, nil), // Let prompter handles the case when svc(env) is definite.
+				)
+			},
+			wantedApp: inputApp,
+			wantedEnv: inputEnv,
+			wantedJob: inputJob,
+		},
+		"prompt for app name": {
+			inputJob:     inputJob,
+			inputEnvName: inputEnv,
+			setupMocks: func(m wkldLogsMock) {
+				m.sel.EXPECT().Application(jobAppNamePrompt, wkldAppNameHelpPrompt).Return("my-app", nil)
+				m.configStore.EXPECT().GetApplication(gomock.Any()).Times(0)
+				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
+				m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).AnyTimes()
+				m.sel.EXPECT().DeployedJob(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&selector.DeployedJob{
+					Env:  "my-env",
+					Name: "my-job",
+				}, nil).AnyTimes()
+			},
+			wantedApp: inputApp,
+			wantedEnv: inputEnv,
+			wantedJob: inputJob,
+		},
+		"returns error if fail to select app": {
+			setupMocks: func(m wkldLogsMock) {
+				gomock.InOrder(
+					m.sel.EXPECT().Application(jobAppNamePrompt, wkldAppNameHelpPrompt).Return("", errors.New("some error")),
+				)
+			},
+			wantedError: fmt.Errorf("select application: some error"),
+		},
+		"prompt for job and env": {
+			inputApp: "my-app",
+			setupMocks: func(m wkldLogsMock) {
+				m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().DeployedJob(jobLogNamePrompt, jobLogNameHelpPrompt, "my-app", gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedJob{
+						Env:  "my-env",
+						Name: "my-job",
+					}, nil)
+			},
+			wantedApp: inputApp,
+			wantedEnv: inputEnv,
+			wantedJob: inputJob,
+		},
+		"return error if fail to select deployed job": {
+			inputApp: inputApp,
+			setupMocks: func(m wkldLogsMock) {
+				m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.configStore.EXPECT().GetJob(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().DeployedJob(jobLogNamePrompt, jobLogNameHelpPrompt, inputApp, gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("select deployed jobs for application my-app: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockstore := mocks.NewMockstore(ctrl)
+			mockSel := mocks.NewMockdeploySelector(ctrl)
+
+			mocks := wkldLogsMock{
+				configStore: mockstore,
+				sel:         mockSel,
+			}
+
+			tc.setupMocks(mocks)
+
+			jobLogs := &jobLogsOpts{
+				jobLogsVars: jobLogsVars{
+					wkldLogsVars: wkldLogsVars{
+						envName: tc.inputEnvName,
+						name:    tc.inputJob,
+						appName: tc.inputApp,
+					},
+				},
+				wkldLogOpts: wkldLogOpts{
+					configStore: mockstore,
+					sel:         mockSel,
+				},
+			}
+
+			// WHEN
+			err := jobLogs.Ask()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedApp, jobLogs.appName, "expected app name to match")
+				require.Equal(t, tc.wantedJob, jobLogs.name, "expected job name to match")
+				require.Equal(t, tc.wantedEnv, jobLogs.envName, "expected service name to match")
+			}
+		})
+	}
+}
+
+func TestJobLogs_Execute(t *testing.T) {
+	mockStartTime := int64(123456789)
+	mockEndTime := int64(987654321)
+	mockLimit := int64(10)
+	var mockNilLimit *int64
+	testCases := map[string]struct {
+		inputJob  string
+		follow    bool
+		limit     int
+		endTime   int64
+		startTime int64
+		taskIDs   []string
+
+		mocklogsSvc func(ctrl *gomock.Controller) logEventsWriter
+
+		last                int
+		includeStateMachine bool
+
+		wantedError error
+	}{
+		"success": {
+			inputJob:            "mockJob",
+			endTime:             mockEndTime,
+			startTime:           mockStartTime,
+			limit:               10,
+			last:                4,
+			includeStateMachine: true,
+
+			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
+				m := mocks.NewMocklogEventsWriter(ctrl)
+				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
+					require.Equal(t, param.LogStreamLimit, 4)
+					require.Equal(t, param.EndTime, &mockEndTime)
+					require.Equal(t, param.StartTime, &mockStartTime)
+					require.Equal(t, param.Limit, &mockLimit)
+					require.Equal(t, param.IncludeStateMachineLogs, true)
+				}).Return(nil)
+
+				return m
+			},
+
+			wantedError: nil,
+		},
+		"success with no execution limit set": {
+			inputJob:            "mockJob",
+			includeStateMachine: true,
+			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
+				m := mocks.NewMocklogEventsWriter(ctrl)
+				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
+					require.Equal(t, param.LogStreamLimit, 1)
+					require.Equal(t, param.Limit, mockNilLimit)
+					require.Equal(t, param.IncludeStateMachineLogs, true)
+				}).Return(nil)
+
+				return m
+			},
+
+			wantedError: nil,
+		},
+		"success with no limit set": {
+			inputJob:  "mockJob",
+			endTime:   mockEndTime,
+			startTime: mockStartTime,
+			follow:    true,
+			taskIDs:   []string{"mockTaskID"},
+
+			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
+				m := mocks.NewMocklogEventsWriter(ctrl)
+				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
+					require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
+					require.Equal(t, param.EndTime, &mockEndTime)
+					require.Equal(t, param.StartTime, &mockStartTime)
+					require.Equal(t, param.Follow, true)
+					require.Equal(t, param.Limit, mockNilLimit)
+				}).Return(nil)
+
+				return m
+			},
+
+			wantedError: nil,
+		},
+		"returns error if fail to get event logs": {
+			inputJob: "mockJob",
+
+			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
+				m := mocks.NewMocklogEventsWriter(ctrl)
+				m.EXPECT().WriteLogEvents(gomock.Any()).
+					Return(errors.New("some error"))
+
+				return m
+			},
+
+			wantedError: fmt.Errorf("write log events for job mockJob: some error"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			svcLogs := &jobLogsOpts{
+				jobLogsVars: jobLogsVars{
+					wkldLogsVars: wkldLogsVars{
+						name:    tc.inputJob,
+						follow:  tc.follow,
+						limit:   tc.limit,
+						taskIDs: tc.taskIDs,
+					},
+					includeStateMachineLogs: tc.includeStateMachine,
+					last:                    tc.last,
+				},
+				wkldLogOpts: wkldLogOpts{
+					startTime:   &tc.startTime,
+					endTime:     &tc.endTime,
+					initLogsSvc: func() error { return nil },
+					logsSvc:     tc.mocklogsSvc(ctrl),
+				},
+			}
+
+			// WHEN
+			err := svcLogs.Execute()
 
 			// THEN
 			if tc.wantedError != nil {

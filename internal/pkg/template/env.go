@@ -116,6 +116,8 @@ type EnvOpts struct {
 	LatestVersion      string
 	SerializedManifest string // Serialized manifest used to render the environment template.
 	ForceUpdateID      string
+
+	DelegateDNS bool
 }
 
 // HTTPConfig represents configuration for a Load Balancer.
@@ -142,7 +144,7 @@ func (elb *ELBAccessLogs) ShouldCreateBucket() bool {
 
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.
 type CDNConfig struct {
-	ViewerCertificate *string
+	ImportedCertificate *string
 }
 
 type VPCConfig struct {
