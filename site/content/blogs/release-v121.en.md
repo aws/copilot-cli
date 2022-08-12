@@ -27,11 +27,11 @@ Copilot v1.21 brings several new features and improvements:
 
 ## CloudFront Integration
 
-One of our first major additions to the Copilot environment manifest! CloudFront is an AWS Content Delivery Network which helps people deploy their applications across the globe, and now you can enable a distribution by simply setting `cdn: true` in your environment manifest and running `copilot env deploy`.
+One of our first major additions to the Copilot environment manifest! CloudFront is an AWS Content Delivery Network (CDN) which helps people deploy their applications across the globe, and now you can enable a distribution by simply setting `cdn: true` in your environment manifest and running `copilot env deploy`.
 
 ### Currently supported features:
-- A distribution deployed in front of your Public Load Balancer
-- Public ingress restricted to the CloudFront distribution
+- A distribution deployed in front of your public Application Load Balancer (ALB)
+- ALB ingress restricted to the CloudFront distribution to protect from DDoS attack
 - HTTPS traffic through an imported certificate, or a Copilot-managed certificate
 
 ### CloudFront with HTTPS
@@ -45,7 +45,7 @@ First, create a certificate in the `us-east-1` region for your application with 
 cdn:
   certificate: arn:aws:acm:us-east-1:${AWS_ACCOUNT_ID}:certificate/13245665-h74x-4ore-jdnz-avs87dl11jd
 ```
-Run `copilot env deploy`, then you can create an A-record in [Route 53](https://aws.amazon.com/route53/) which points to the CloudFront distribution created by Copilot. Just select to point the record to an `Alias` in the console, then Route 53 will show a valid DNS with any resources created in your account after you select the resource type (CloudFront in this case).
+Run `copilot env deploy`, then you can create an A-record in [Route 53](https://aws.amazon.com/route53/) which points to the CloudFront distribution created by Copilot. Just select to point the record to an `Alias` in the console, then select to route traffic to a CloudFront distribution resource type, and enter the CloudFront DNS from the deployed distribution. 
 
 ### Restricting traffic to CloudFront
 To restrict public traffic to come through the CloudFront distribution, there's a new field in `http` for your public load balancer:
