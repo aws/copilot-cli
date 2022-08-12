@@ -212,11 +212,11 @@ func TestStackSetStreamer_Integration(t *testing.T) {
 		// GIVEN
 		var callCount int
 		responses := [5]stackset.Operation{
-			{"1", "QUEUED", ""},
-			{"1", "QUEUED", ""},
-			{"1", "RUNNING", ""},
-			{"1", "STOPPING", ""},
-			{"1", "STOPPED", "manually stopped"},
+			{ID: "1", Status: "QUEUED"},
+			{ID: "1", Status: "QUEUED"},
+			{ID: "1", Status: "RUNNING"},
+			{ID: "1", Status: "STOPPING"},
+			{ID: "1", Status: "STOPPED", Reason: "manually stopped"},
 		}
 		wanted := [4]StackSetOpEvent{
 			{Name: "demo-infrastructure", Operation: stackset.Operation{ID: "1", Status: "QUEUED"}},
