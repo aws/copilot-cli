@@ -1,17 +1,20 @@
 # Package Addons
 
-Copilot supports uploading local files referenced from your addon templates to S3, and replacing the relevant resource properties with the uploaded S3 location. To see the full list of resources that are supported, take a look at the [AWS CLI documentation](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html).
+Copilot supports uploading local files referenced from your addon templates to S3, and replacing the relevant resource properties with the uploaded S3 location.
+On [`copilot svc deploy`]() or [`copilot svc package --upload-assets`](), certain fields on supported resources will be updated with an S3 locaton.
+To see the full list of resources that are supported, take a look at the [AWS CLI documentation](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html).
 
-For example, to create a lambda function using local javascript, you can add this resource to your addon template:
+This feature can be used to deploy local Lambda Functions stored in the same repo as another Copilot service.
+For example, to deploy a javascript Lambda Function alongside a copilot service, you can add this resource to your [addon template](./additional-aws-resources.en.md):
 
 ???+ note "Example Lambda Function"
-    === "CloudFormation Resource"
+    === "copilot/example-service/addons/lambda.yml"
 
         ```yaml hl_lines="4"
           ExampleFunction:
             Type: AWS::Lambda::Function
             Properties:
-              Code: lambdas/example/index.js
+              Code: lambdas/example/
               Handler: "index.handler"
               Timeout: 900
               MemorySize: 512
@@ -42,6 +45,32 @@ For example, to create a lambda function using local javascript, you can add thi
 	        context.succeed('success!');
         };
         ```
+
+On `copilot svc deploy`, the `lambdas/example` directory will be zipped and uploaded to S3, and the `Code` property will be updated to:
+```yaml
+Code:
+  S3Bucket: copilotBucket
+  S3Key: hashOfLambdasExampleZip
+```
+before the addon template is uploaded and deployed by Copilot.
+If you specify a file, the file is directly uploaded to S3.
+If you specify a folder, the folder will be zipped before being uploaded to S3.
+For some resources that require a zip (e.g., `AWS::Serverless::Function`), a file will be zipped before upload as well.
+
+File paths are considered relative to the parent of the `copilot/` directory in your repo.
+For the above example, the folder structure would look like:
+```bash
+.
+├── copilot
+│   └── example-service
+│       ├── addons
+│       │   └── lambda.yml
+│       └── manifest.yml
+└── lambdas
+    └── example
+        └── index.js
+```
+Absolute paths are supported as well, though they may not work as well across multiple machines.
 
 ## Backend Service + DyanmoDB + Lambda
 Example blah about backend service -> dynamo db -> lambda.
