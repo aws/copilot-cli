@@ -207,7 +207,7 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 
 func (s *WorkloadClient) logStreams(taskIDs []string, includeStateMachineLogs bool, container string) []string {
 	// By default, we only want logs from copilot task log streams.
-	// This filters out log streams not starting with `copilot/`, or `copilot/mysidecar` if a container is appointed.
+	// This filters out log streams not starting with `copilot/`, or `copilot/mysidecar` if container is set.
 	logStreamPrefixes := []string{fmt.Sprintf("%s/%s", wkldLogStreamPrefix, container)}
 	// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for job. Therefore, we
 	// need to grab all recent log streams with no prefix filtering.
