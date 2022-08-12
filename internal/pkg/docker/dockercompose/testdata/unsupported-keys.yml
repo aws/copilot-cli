@@ -9,10 +9,13 @@ services:
     restart: never
   fatal2:
     build:
-      ssh: default
+      ssh: ["default"]
   fatal3:
+    image: "wordpress"
     domainname: "example.com"
-    init: "/bin/shutdown"
+    init: true
     networks:
       testnet:
         ipv6_address: "DEAD::BEEF"
+networks:
+  testnet:

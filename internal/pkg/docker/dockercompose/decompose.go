@@ -61,7 +61,11 @@ func decomposeService(content []byte, svcName string) (*manifest.BackendServiceC
 		},
 	})
 
-	svcConfig, err := project.GetService("test")
+	if err != nil {
+		return nil, nil, fmt.Errorf("load Compose project: %w", err)
+	}
+
+	svcConfig, err := project.GetService(svcName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get service from Compose project: %w", err)
 	}

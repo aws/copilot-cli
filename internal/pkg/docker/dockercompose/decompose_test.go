@@ -1,25 +1,64 @@
 package dockercompose
 
 import (
-	"fmt"
+	"errors"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-func TestCompose_ValidateKeys(t *testing.T) {
-	path := filepath.Join("testdata", "unsupported-keys.yml")
-	cfg, err := os.ReadFile(path)
-	if err != nil {
-		fmt.Printf("read file %s: %s\n", path, err.Error())
-		return
+func TestDecomposeService(t *testing.T) {
+	testCases := map[string]struct {
+		filename string
+		svcName  string
+
+		wantSvc     manifest.BackendServiceConfig
+		wantIgnored IgnoredKeys
+		wantError   error
+	}{
+		"unsupported keys fatal1": {
+			filename: "unsupported-keys.yml",
+			svcName:  "fatal1",
+
+			wantError: errors.New("\"services.fatal1\" relies on fatally-unsupported Compose keys: [external_links privileged]"),
+		},
+		"unsupported keys fatal2": {
+			filename: "unsupported-keys.yml",
+			svcName:  "fatal2",
+
+			wantError: errors.New("convert Compose service to Copilot manifest: convert image config: `build.ssh` and `build.secrets` are not supported yet, see https://github.com/aws/copilot-cli/issues/2090 for details"),
+		},
+		"unsupported keys fatal3": {
+			filename: "unsupported-keys.yml",
+			svcName:  "fatal3",
+
+			wantError: errors.New("\"services.fatal3\" relies on fatally-unsupported Compose keys: [domainname init]"),
+		},
+		"invalid compose": {
+			filename: "invalid-compose.yml",
+			svcName:  "invalid",
+
+			wantError: errors.New("load Compose project: services.invalid.build.ssh must be a mapping"),
+		},
 	}
 
-	// TODO: Actual test case
-	_, _, err = decomposeService(cfg, "test")
-	if err != nil {
-		fmt.Printf("decompose service: %s\n", err.Error())
-	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join("testdata", tc.filename)
+			cfg, err := os.ReadFile(path)
+			require.NoError(t, err)
 
-	fmt.Println("Done")
+			svc, ign, err := decomposeService(cfg, tc.svcName)
+
+			if tc.wantError != nil {
+				require.EqualError(t, err, tc.wantError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantSvc, svc)
+				require.Equal(t, tc.wantIgnored, ign)
+			}
+		})
+	}
 }
