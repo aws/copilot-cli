@@ -46,7 +46,7 @@ network:
           cidr: 0.0.0.0/0
 ```
 [See detailed walkthrough](../docs/manifest/environment.en.md#http-public-access-logs)
-for how to specify a security group rules to add to the environment security group.
+for how to specify security group rules to add to the environment security group.
 ## `job logs`
 
 ## Package Addons CloudFormation Templates
@@ -55,7 +55,7 @@ for how to specify a security group rules to add to the environment security gro
 You can now enable Elastic Load Balancing access logs that capture detailed information about requests sent to your load balancer. 
 There are couple ways how you can enable access logs: 
 
-1. You can specify `access_logs: true` in your environment manifest as mentioned below and copilot will create an S3 bucket and enable access logs on behalf of you.
+1. You can specify `access_logs: true` in your environment manifest as shown below and Copilot will create an S3 bucket to which the Public Load Balancer will store access logs.
 ```yaml
 name: qa
 type: Environment
@@ -65,9 +65,8 @@ http:
     access_logs: true 
 ```
 
-2. You can also bring in your own bucket and prefix and copilot will enable access logs using that bucket details. 
-You can do that by specifying following configuration in your environment manifest. In this you need to make sure that the bucket exist and has required [bucket policy](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html#attach-bucket-policy) for the load balancer to 
-write access logs to it. 
+2. You can also bring in your own bucket and prefix. Copilot will use those bucket details to enable access logs. 
+You can do that by specifying following configuration in your environment manifest.
 
 ```yaml
 name: qa
@@ -79,6 +78,9 @@ http:
      bucket_name: my-bucket
      bucket_prefix: my-prefix
 ```
+
+In the option 2 you need to make sure that the bucket exists and has required [bucket policy](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html#attach-bucket-policy) for the load balancer to
+write access logs to it.
 
 ## What’s next?
 
