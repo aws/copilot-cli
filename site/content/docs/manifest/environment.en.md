@@ -146,9 +146,9 @@ The Availability Zone name assigned to the subnet. The `az` field is optional, b
 This field is mutually exclusive with `id`.
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-group" href="#network-vpc-security-group" class="field">`security_group`</a> <span class="type">Map</span>  
-Rules of the environment's security group.
+Rules for the environment's security group.
 
-<span class="parent-field">network.vpc.security_group</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
+<span class="parent-field">network.vpc.security_group.</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
 Rules controlling inbound traffic.
 ```yaml
 network:
@@ -160,7 +160,7 @@ network:
           cidr: 0.0.0.0/0
 ```
 
-<span class="parent-field">network.vpc.security_group</span><a id="network-vpc-security-group-egress" href="#network-vpc-security-group-egress" class="field">`egress`</a> <span class="type">Map</span>  
+<span class="parent-field">network.vpc.security_group.</span><a id="network-vpc-security-group-egress" href="#network-vpc-security-group-egress" class="field">`egress`</a> <span class="type">Map</span>  
 Rules controlling outbound traffic.
 ```yaml
 network:
@@ -179,23 +179,23 @@ A list of outbound security group rules.
 
 
 <span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-ip-protocol" href="#network-vpc-security-group-ip-protocol" class="field">`ip_protocol`</a> <span class="type">String</span>    
-The IP protocol name.
+The IP protocol name or number.
 
 <span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-ports" href="#network-vpc-security-group-ports" class="field">`ports`</a> <span class="type">String or Integer</span>     
-You can specify FromPort and ToPort for an environment security group rule.
+The port range or number for the security group rule.
 
 ```yaml
-ports: n-m
+ports: 0-65535
 ```
 
-Alternatively, you can specify it as an Integer if both FromPort and ToPort is same
+or
 
 ```yaml
-ports: n
+ports: 80
 ```
 
 <span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-cidr" href="#network-vpc-security-group-cidr" class="field">`cidr`</a> <span class="type">String</span>   
-a CIDR range.
+The IPv4 address range, in CIDR format.
 
 
 <div class="separator"></div>
