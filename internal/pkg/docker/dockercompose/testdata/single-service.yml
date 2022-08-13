@@ -1,0 +1,31 @@
+services:
+  complete:
+    runtime: "ignored"
+    userns_mode: "ignored"
+    oom_score_adj: 999
+
+    command: ["CMD-SHELL", "/bin/nginx"]
+    entrypoint: ["CMD", "/bin/sh"]
+    environment:
+      HOST_PATH: "/home/nginx"
+      ENABLE_HTTPS: "true"
+    platform: "linux/arm64"
+    healthcheck:
+      test: ["CMD", "/bin/echo"]
+      timeout: 5s
+      interval: 1s
+      retries: 100
+      start_period: 3s
+    labels:
+      docker.test: "val"
+      docker.test2: "val2"
+    image: "nginx"
+    build:
+      context: "dir"
+      dockerfile: "dir/Dockerfile"
+      args:
+        GIT_COMMIT: "323189ab"
+        ARG2: "VAL"
+      cache_from:
+        - "example.com"
+      target: "myapp"

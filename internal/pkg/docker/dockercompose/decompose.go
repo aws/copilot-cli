@@ -92,5 +92,5 @@ func decomposeService(content []byte, svcName string) (*manifest.BackendServiceC
 		ignored = append(ignored, ign)
 	}
 
-	return backendSvc, svcIgnored, nil
+	return backendSvc, ignored, nil
 }

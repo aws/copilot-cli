@@ -5,14 +5,21 @@ package dockercompose
 
 import (
 	"errors"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/compose-spec/compose-go/types"
 	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestDecomposeService(t *testing.T) {
+	fiveSeconds := types.Duration(5 * time.Second)
+	threeSeconds := types.Duration(3 * time.Second)
+	oneSecond := types.Duration(time.Second)
+
 	testCases := map[string]struct {
 		filename string
 		svcName  string
@@ -105,6 +112,69 @@ func TestDecomposeService(t *testing.T) {
 
 			wantError: errors.New("\"services.mongo\" relies on fatally-unsupported Compose keys: [expose networks volumes]"),
 		},
+		"unrecognized-field-name": {
+			filename: "unrecognized-field-name.yml",
+			svcName:  "complete",
+
+			wantError: errors.New("load Compose project: services.complete.healthcheck Additional property exthealthcheck is not allowed"),
+		},
+		"single-service complete": {
+			filename: "single-service.yml",
+			svcName:  "complete",
+
+			wantIgnored: []string{
+				"oom_score_adj",
+				"runtime",
+				"userns_mode",
+			},
+			wantSvc: manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+							DockerLabels: map[string]string{
+								"docker.test":  "val",
+								"docker.test2": "val2",
+							},
+						},
+						Port: aws.Uint16(80),
+					},
+					HealthCheck: manifest.ContainerHealthCheck{
+						Command: []string{
+							"CMD",
+							"/bin/echo",
+						},
+						Timeout:     (*time.Duration)(&fiveSeconds),
+						Interval:    (*time.Duration)(&oneSecond),
+						Retries:     aws.Int(100),
+						StartPeriod: (*time.Duration)(&threeSeconds),
+					},
+				},
+				ImageOverride: manifest.ImageOverride{
+					Command: manifest.CommandOverride{
+						StringSlice: []string{
+							"CMD-SHELL",
+							"/bin/nginx",
+						},
+					},
+					EntryPoint: manifest.EntryPointOverride{
+						StringSlice: []string{
+							"CMD",
+							"/bin/sh",
+						},
+					},
+				},
+				TaskConfig: manifest.TaskConfig{
+					Platform: manifest.PlatformArgsOrString{
+						PlatformString: (*manifest.PlatformString)(aws.String("linux/arm64")),
+					},
+					Variables: map[string]string{
+						"HOST_PATH":    "/home/nginx",
+						"ENABLE_HTTPS": "true",
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
@@ -119,7 +189,7 @@ func TestDecomposeService(t *testing.T) {
 				require.EqualError(t, err, tc.wantError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantSvc, svc)
+				require.Equal(t, &tc.wantSvc, svc)
 				require.Equal(t, tc.wantIgnored, ign)
 			}
 		})
