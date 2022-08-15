@@ -10,10 +10,10 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 Copilot v1.21 brings several new features and improvements:
 
 - **Integrate CloudFront with Application Load Balancer**:
-- **Configure environment security group**:
+- **Configure environment security group**: Configure your environment security group rules through environment manifest. [See detailed section](#configure-environment-security-group).
+- **ELB access log support**: Enable elastic load balancing access logs for your Load Balanced Web Service. [See detailed section](#elb-access-logs-support).
 - **Check out job logs**:
-- **Package addons CloudFormation templates before deployments**:
-- **ELB access log support**:
+- **Package addons CloudFormation templates before deployments**: 
 
 ???+ note "What’s AWS Copilot?"
 
@@ -26,6 +26,55 @@ Copilot v1.21 brings several new features and improvements:
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## CloudFront Integration
+
+## New Environment Manifest Features
+### Configure Environment Security Group
+You can now configure your environment security group rules through environment manifest.   
+Sample security group rules template inside environment manifest is given below.
+```yaml
+network:
+  vpc:
+    security_group:
+      ingress:
+        - ip_protocol: tcp
+          ports: 80
+          cidr: 0.0.0.0/0
+      egress:
+        - ip_protocol: tcp
+          ports: 0-65535
+          cidr: 0.0.0.0/0
+```
+For the complete specification, see the [environment manifest](../docs/manifest/environment.en.md#network-vpc-security-group).
+
+### ELB Access Logs Support
+You can now enable Elastic Load Balancing access logs that capture detailed information about requests sent to your load balancer.
+There are a few ways to enable access logs:
+
+1. You can specify `access_logs: true` in your environment manifest as shown below and Copilot will create an S3 bucket where the Public Load Balancer will store access logs.
+```yaml
+name: qa
+type: Environment
+
+http:
+  public:
+    access_logs: true 
+```
+You can also view the bucket name with `copilot env show --resources` command.
+
+2. You can also bring in your own bucket and prefix. Copilot will use those bucket details to enable access logs.
+   You can do that by specifying the following configuration in your environment manifest.
+```yaml
+name: qa
+type: Environment
+
+http:
+ public:
+   access_logs:
+     bucket_name: my-bucket
+     prefix: my-prefix
+```
+When importing your own bucket, you need to make sure that the bucket exists and has the required [bucket policy](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html#attach-bucket-policy) for the load balancer to
+write access logs to it.
 
 One of our first major additions to the Copilot environment manifest! CloudFront is an AWS Content Delivery Network (CDN) which helps people deploy their applications across the globe, and now you can enable a distribution by simply setting `cdn: true` in your environment manifest and running `copilot env deploy`.
 
@@ -58,8 +107,6 @@ http:
           cdn: true
 ```
 Specifying this will modify the Load Balancer's security group to only accept traffic from CloudFront.
-
-## Configure Environment Security Group
 
 ## `job logs`
 At long last, you can now view and follow logs for executions of your scheduled jobs. 
@@ -94,8 +141,6 @@ or follow the logs of a task you've just invoked with [`copilot job run`](../doc
 $ copilot job run -n emailer && copilot job logs -n emailer --follow
 ```
 ## Package Addons CloudFormation Templates
-
-## ELB Access Log Support
 
 ## What’s next?
 
