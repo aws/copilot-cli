@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/compose-spec/compose-go/types"
+	"github.com/dustin/go-humanize/english"
 )
 
 // convertImageConfig takes in a Compose build config & image field and returns a Copilot image manifest.
@@ -73,7 +74,11 @@ func convertMappingWithEquals(inArgs types.MappingWithEquals) (map[string]string
 	}
 
 	if badArgs != nil {
-		return nil, fmt.Errorf("%s '%v' %s missing %s and %s user input", english.PluralWord(badArgs, "entry", "entries"), badArgs, english.PluralWord(badArgs, "is", "are"), english.PluralWord(badArgs, "a value", "values"), english.PluralWord(badArgs, "requires", "require"))
+		return nil, fmt.Errorf("%s '%v' %s missing %s and %s user input, this is unsupported in Copilot",
+			english.PluralWord(len(badArgs), "entry", "entries"), badArgs,
+			english.PluralWord(len(badArgs), "is", "are"),
+			english.PluralWord(len(badArgs), "a value", "values"),
+			english.PluralWord(len(badArgs), "requires", "require"))
 	}
 
 	if len(args) == 0 {
