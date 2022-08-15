@@ -45,7 +45,7 @@ func prettifyElapsedTime(sw *stopWatch) string {
 func failureReasons(statuses []cfnStatus) []string {
 	var reasons []string
 	for _, status := range statuses {
-		if !status.value.Failure() {
+		if !status.value.IsFailure() {
 			continue
 		}
 		if status.reason == "" {
@@ -77,14 +77,14 @@ func splitByLength(s string, maxLength int) []string {
 func colorStackStatus(statuses []cfnStatus) func(format string, a ...interface{}) string {
 	hasPastFailure := false
 	for _, status := range statuses {
-		if status.value.Failure() {
+		if status.value.IsFailure() {
 			hasPastFailure = true
 			break
 		}
 	}
 
 	latestStatus := statuses[len(statuses)-1]
-	if latestStatus.value.Success() && !hasPastFailure {
+	if latestStatus.value.IsSuccessful() && !hasPastFailure {
 		return color.Green.Sprintf
 	}
 	if hasPastFailure {

@@ -74,7 +74,7 @@ func TestStackStatus_UpsertInProgress(t *testing.T) {
 	}
 }
 
-func TestStackStatus_Success(t *testing.T) {
+func TestStackStatus_IsSuccessful(t *testing.T) {
 	testCases := map[string]struct {
 		status string
 		wanted bool
@@ -98,7 +98,7 @@ func TestStackStatus_Success(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, StackStatus(tc.status).Success())
+			require.Equal(t, tc.wanted, StackStatus(tc.status).IsSuccessful())
 		})
 	}
 }
@@ -139,7 +139,7 @@ func TestStackStatus_Failure(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, StackStatus(tc.status).Failure())
+			require.Equal(t, tc.wanted, StackStatus(tc.status).IsFailure())
 		})
 	}
 }

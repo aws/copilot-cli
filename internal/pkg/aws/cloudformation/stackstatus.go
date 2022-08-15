@@ -52,7 +52,8 @@ func (ss StackStatus) UpsertInProgress() bool {
 	return ss == cloudformation.StackStatusCreateInProgress || ss == cloudformation.StackStatusUpdateInProgress
 }
 
-func (ss StackStatus) Success() bool {
+// IsSuccessful returns true if the resource mutated successfully.
+func (ss StackStatus) IsSuccessful() bool {
 	for _, success := range successStackStatuses {
 		if string(ss) == success {
 			return true
@@ -61,7 +62,8 @@ func (ss StackStatus) Success() bool {
 	return false
 }
 
-func (ss StackStatus) Failure() bool {
+// IsFailure returns true if the resource failed to mutate.
+func (ss StackStatus) IsFailure() bool {
 	for _, failure := range failureStackStatuses {
 		if string(ss) == failure {
 			return true
