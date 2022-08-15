@@ -32,9 +32,9 @@ func (e *errSvcWithALBAliasHostedZoneWithCDNEnabled) Error() string {
 func (e *errSvcWithALBAliasHostedZoneWithCDNEnabled) RecommendActions() string {
 	msgs := []string{
 		"If you already have a Load Balanced Web Service deployed, you can switch to CDN by:",
-		" 1. Update the A-record value to be the CDN distribution domain name.",
-		fmt.Sprintf(" 2. Remove the %s setting from the service manifest.", color.HighlightCode(`"http.alias.hosted_zone"`)),
-		fmt.Sprintf(" 3. Redeploy the service via %s.", color.HighlightCode("copilot svc deploy")),
+		" 1. Updating the A-record value to be the CDN distribution domain name.",
+		fmt.Sprintf(" 2. Removing the %s setting from the service manifest.", color.HighlightCode(`"http.alias.hosted_zone"`)),
+		fmt.Sprintf(" 3. Redeploying the service via %s.", color.HighlightCode("copilot svc deploy")),
 	}
 	return strings.Join(msgs, "\n")
 }
