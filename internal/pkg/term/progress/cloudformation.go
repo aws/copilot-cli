@@ -17,9 +17,14 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// StackSubscriber is the interface to subscribe channels to a CloudFormation stack stream event.
+// StackSubscriber is the interface to subscribe to a CloudFormation stack event stream.
 type StackSubscriber interface {
 	Subscribe() <-chan stream.StackEvent
+}
+
+// StackSetSubscriber is the interface to subscribe channels to a CloudFormation stack set operation event stream.
+type StackSetSubscriber interface {
+	Subscribe() <-chan stream.StackSetOpEvent
 }
 
 // ResourceRendererOpts is optional configuration for a listening CloudFormation resource renderer.
@@ -89,10 +94,10 @@ func ListeningECSServiceResourceRenderer(streamer StackSubscriber, ecsDescriber 
 
 // regularResourceComponent can display a simple CloudFormation stack resource event.
 type regularResourceComponent struct {
-	logicalID   string        // The LogicalID defined in the template for the resource.
-	description string        // The human friendly explanation of the resource.
-	statuses    []stackStatus // In-order history of the CloudFormation status of the resource throughout the deployment.
-	stopWatch   *stopWatch    // Timer to measure how long the operation takes to complete.
+	logicalID   string      // The LogicalID defined in the template for the resource.
+	description string      // The human friendly explanation of the resource.
+	statuses    []cfnStatus // In-order history of the CloudFormation status of the resource throughout the deployment.
+	stopWatch   *stopWatch  // Timer to measure how long the operation takes to complete.
 
 	padding   int  // Leading spaces before rendering the resource.
 	separator rune // Character used to separate columns of text.
@@ -106,7 +111,7 @@ func listeningResourceComponent(streamer StackSubscriber, logicalID, description
 	comp := &regularResourceComponent{
 		logicalID:   logicalID,
 		description: description,
-		statuses:    []stackStatus{notStartedStackStatus},
+		statuses:    []cfnStatus{notStartedStackStatus},
 		stopWatch:   newStopWatch(),
 		stream:      streamer.Subscribe(),
 		done:        make(chan struct{}),
@@ -340,17 +345,17 @@ func (c *ecsServiceResourceComponent) newListeningRollingUpdateRenderer(serviceA
 	return renderer
 }
 
-func updateComponentStatus(mu *sync.Mutex, statuses *[]stackStatus, event stream.StackEvent) {
+func updateComponentStatus(mu *sync.Mutex, statuses *[]cfnStatus, event stream.StackEvent) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	*statuses = append(*statuses, stackStatus{
+	*statuses = append(*statuses, cfnStatus{
 		value:  cloudformation.StackStatus(event.ResourceStatus),
 		reason: event.ResourceStatusReason,
 	})
 }
 
-func updateComponentTimer(mu *sync.Mutex, statuses []stackStatus, sw *stopWatch) {
+func updateComponentTimer(mu *sync.Mutex, statuses []cfnStatus, sw *stopWatch) {
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -375,7 +380,7 @@ func updateComponentTimer(mu *sync.Mutex, statuses []stackStatus, sw *stopWatch)
 	}
 }
 
-func stackResourceComponents(description string, separator rune, statuses []stackStatus, sw *stopWatch, padding int) []Renderer {
+func stackResourceComponents(description string, separator rune, statuses []cfnStatus, sw *stopWatch, padding int) []Renderer {
 	columns := []string{fmt.Sprintf("- %s", description), prettifyLatestStackStatus(statuses), prettifyElapsedTime(sw)}
 	components := []Renderer{
 		&singleLineComponent{

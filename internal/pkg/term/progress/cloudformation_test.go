@@ -118,7 +118,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		done := make(chan struct{})
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
-			statuses:  []stackStatus{notStartedStackStatus},
+			statuses:  []cfnStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
 				clock: &fakeClock{
 					wantedValues: []time.Time{testDate},
@@ -140,7 +140,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 
 		// THEN
 		<-done // Wait for listen to exit.
-		require.ElementsMatch(t, []stackStatus{notStartedStackStatus}, comp.statuses)
+		require.ElementsMatch(t, []cfnStatus{notStartedStackStatus}, comp.statuses)
 		_, hasStarted := comp.stopWatch.elapsed()
 		require.False(t, hasStarted, "the stopwatch should not have started")
 	})
@@ -150,7 +150,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		done := make(chan struct{})
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
-			statuses:  []stackStatus{notStartedStackStatus},
+			statuses:  []cfnStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
 				clock: &fakeClock{
 					wantedValues: []time.Time{testDate},
@@ -177,7 +177,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 
 		// THEN
 		<-done // Wait for listen to exit.
-		require.ElementsMatch(t, []stackStatus{
+		require.ElementsMatch(t, []cfnStatus{
 			notStartedStackStatus,
 			{
 				value:  "CREATE_FAILED",
@@ -197,7 +197,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		}
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
-			statuses:  []stackStatus{notStartedStackStatus},
+			statuses:  []cfnStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
 				clock: fc,
 			},
@@ -232,7 +232,7 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		// GIVEN
 		comp := &regularResourceComponent{
 			description: "An ECS cluster to hold your services",
-			statuses: []stackStatus{
+			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
 					value: "CREATE_COMPLETE",
@@ -260,7 +260,7 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		// GIVEN
 		comp := &regularResourceComponent{
 			description: "An ECS cluster to hold your services",
-			statuses: []stackStatus{
+			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
 					value: "CREATE_IN_PROGRESS",
@@ -289,7 +289,7 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		// GIVEN
 		comp := &regularResourceComponent{
 			description: `The environment stack "phonetool-test" contains your shared resources between services`,
-			statuses: []stackStatus{
+			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
 					value: "CREATE_IN_PROGRESS",
@@ -330,7 +330,7 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		// GIVEN
 		comp := &regularResourceComponent{
 			description: `The environment stack "phonetool-test" contains your shared resources between services`,
-			statuses: []stackStatus{
+			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
 					value: "CREATE_IN_PROGRESS",

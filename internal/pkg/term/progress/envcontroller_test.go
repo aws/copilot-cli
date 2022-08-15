@@ -42,7 +42,7 @@ nat
 		c := &envControllerComponent{
 			actionComponent: &regularResourceComponent{
 				description: "Env controller action",
-				statuses: []stackStatus{
+				statuses: []cfnStatus{
 					notStartedStackStatus,
 					{
 						value: "CREATE_IN_PROGRESS",
