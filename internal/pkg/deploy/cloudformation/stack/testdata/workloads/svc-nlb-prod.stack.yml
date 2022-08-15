@@ -246,7 +246,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'EnvControllerRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
   EnvControllerRole:
     Metadata:
       'aws:copilot:description': "An IAM role to update your environment stack"
@@ -415,7 +415,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'NLBCustomDomainRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
   NLBCustomDomainRole:
     Metadata:
       'aws:copilot:description': "An IAM role to update the environment Route 53 hosted zone"
@@ -482,7 +482,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'NLBCertValidatorRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
   NLBCertValidatorRole:
     Metadata:
       'aws:copilot:description': "An IAM role to request and validate a certificate for your service"
