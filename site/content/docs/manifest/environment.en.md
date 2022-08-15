@@ -156,7 +156,7 @@ network:
     security_group:
       ingress:
         - ip_protocol: tcp
-          ports: 0-65535  
+          ports: 80  
           cidr: 0.0.0.0/0
 ```
 
@@ -168,7 +168,7 @@ network:
     security_group:
       egress:
         - ip_protocol: tcp
-          ports: 80
+          ports: 0-65535
           cidr: 0.0.0.0/0
 ```
 <span class="parent-field">network.vpc.security_group.</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group" class="field">`ingress`</a> <span class="type">Array of Security Group Rules</span>    
