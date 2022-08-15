@@ -147,9 +147,6 @@ This field is mutually exclusive with `id`.
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-security-group" href="#network-vpc-security-group" class="field">`security_group`</a> <span class="type">Map</span>  
 Rules for the environment's security group.
-
-<span class="parent-field">network.vpc.security_group.</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
-Rules controlling inbound traffic.
 ```yaml
 network:
   vpc:
@@ -157,18 +154,6 @@ network:
       ingress:
         - ip_protocol: tcp
           ports: 80  
-          cidr: 0.0.0.0/0
-```
-
-<span class="parent-field">network.vpc.security_group.</span><a id="network-vpc-security-group-egress" href="#network-vpc-security-group-egress" class="field">`egress`</a> <span class="type">Map</span>  
-Rules controlling outbound traffic.
-```yaml
-network:
-  vpc:
-    security_group:
-      egress:
-        - ip_protocol: tcp
-          ports: 0-65535
           cidr: 0.0.0.0/0
 ```
 <span class="parent-field">network.vpc.security_group.</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group-ingress" class="field">`ingress`</a> <span class="type">Array of Security Group Rules</span>    
