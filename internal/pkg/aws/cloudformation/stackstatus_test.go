@@ -143,3 +143,8 @@ func TestStackStatus_Failure(t *testing.T) {
 		})
 	}
 }
+
+func TestStackStatus_String(t *testing.T) {
+	var s StackStatus = "hello"
+	require.Equal(t, "hello", s.String())
+}

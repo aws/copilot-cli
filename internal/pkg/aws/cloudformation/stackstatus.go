@@ -71,3 +71,8 @@ func (ss StackStatus) IsFailure() bool {
 	}
 	return false
 }
+
+// String implements the fmt.Stringer interface.
+func (ss StackStatus) String() string {
+	return string(ss)
+}

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
@@ -180,7 +182,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		require.ElementsMatch(t, []cfnStatus{
 			notStartedStackStatus,
 			{
-				value:  "CREATE_FAILED",
+				value:  cloudformation.StackStatus("CREATE_FAILED"),
 				reason: "This IAM role already exists.",
 			},
 		}, comp.statuses)
@@ -235,7 +237,7 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
-					value: "CREATE_COMPLETE",
+					value: cloudformation.StackStatus("CREATE_COMPLETE"),
 				},
 			},
 			stopWatch: &stopWatch{
@@ -263,7 +265,7 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
-					value: "CREATE_IN_PROGRESS",
+					value: cloudformation.StackStatus("CREATE_IN_PROGRESS"),
 				},
 			},
 			stopWatch: &stopWatch{
@@ -292,16 +294,16 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
-					value: "CREATE_IN_PROGRESS",
+					value: cloudformation.StackStatus("CREATE_IN_PROGRESS"),
 				},
 				{
-					value: "CREATE_FAILED",
+					value: cloudformation.StackStatus("CREATE_FAILED"),
 					reason: "The following resource(s) failed to create: [PublicSubnet2, CloudformationExecutionRole, " +
 						"PrivateSubnet1, InternetGatewayAttachment, PublicSubnet1, ServiceDiscoveryNamespace," +
 						" PrivateSubnet2], EnvironmentSecurityGroup, PublicRouteTable]. Rollback requested by user.",
 				},
 				{
-					value: "DELETE_COMPLETE",
+					value: cloudformation.StackStatus("DELETE_COMPLETE"),
 				},
 			},
 			stopWatch: &stopWatch{
@@ -333,14 +335,14 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
-					value: "CREATE_IN_PROGRESS",
+					value: cloudformation.StackStatus("CREATE_IN_PROGRESS"),
 				},
 				{
-					value:  "CREATE_FAILED",
+					value:  cloudformation.StackStatus("CREATE_FAILED"),
 					reason: "Resource creation cancelled",
 				},
 				{
-					value:  "DELETE_FAILED",
+					value:  cloudformation.StackStatus("DELETE_FAILED"),
 					reason: "Resource cannot be deleted",
 				},
 			},

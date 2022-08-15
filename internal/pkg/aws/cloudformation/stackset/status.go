@@ -9,6 +9,9 @@ const (
 	opStatusSucceeded = cloudformation.StackSetOperationStatusSucceeded
 	opStatusStopped   = cloudformation.StackSetOperationStatusStopped
 	opStatusFailed    = cloudformation.StackSetOperationStatusFailed
+	opStatusRunning   = cloudformation.StackSetOperationStatusRunning
+	opStatusStopping  = cloudformation.StackSetOperationStatusStopping
+	opStatusQueued    = cloudformation.StackSetOperationStatusQueued
 )
 
 const (
@@ -28,6 +31,16 @@ func (s OpStatus) IsCompleted() bool {
 	return s.IsSuccessful() || s.IsFailure()
 }
 
+// InProgress returns true if the operation is not in a final state yet.
+func (s OpStatus) InProgress() bool {
+	switch s {
+	case opStatusQueued, opStatusRunning, opStatusStopping:
+		return true
+	default:
+		return false
+	}
+}
+
 // IsSuccessful returns true if the operation is completed successfully.
 func (s OpStatus) IsSuccessful() bool {
 	return s == opStatusSucceeded
@@ -36,6 +49,11 @@ func (s OpStatus) IsSuccessful() bool {
 // IsFailure returns true if the operation terminated in failure.
 func (s OpStatus) IsFailure() bool {
 	return s == opStatusStopped || s == opStatusFailed
+}
+
+// String implements the fmt.Stringer interface.
+func (s OpStatus) String() string {
+	return string(s)
 }
 
 // InstanceStatus represents a stack set's instance detailed status.
@@ -64,6 +82,11 @@ func (s InstanceStatus) IsSuccessful() bool {
 // IsFailure returns true if the instance cannot be updated and needs to be recovered.
 func (s InstanceStatus) IsFailure() bool {
 	return s == instanceStatusFailed || s == instanceStatusCancelled || s == instanceStatusInoperable
+}
+
+// String implements the fmt.Stringer interface.
+func (s InstanceStatus) String() string {
+	return string(s)
 }
 
 // ProgressInstanceStatuses returns a slice of statuses that are InProgress.

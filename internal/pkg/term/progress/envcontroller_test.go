@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,7 +47,7 @@ nat
 				statuses: []cfnStatus{
 					notStartedStackStatus,
 					{
-						value: "CREATE_IN_PROGRESS",
+						value: cloudformation.StackStatus("CREATE_IN_PROGRESS"),
 					},
 				},
 				stopWatch: &stopWatch{

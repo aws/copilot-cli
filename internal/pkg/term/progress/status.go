@@ -7,24 +7,49 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 var (
 	notStartedStackStatus = cfnStatus{
-		value: "not started",
+		value: notStartedResult{},
 	}
 )
 
+type result interface {
+	IsSuccessful() bool
+	IsFailure() bool
+	InProgress() bool
+	fmt.Stringer
+}
+
+// notStartedResult represents an unbegun status that implements the result interface.
+type notStartedResult struct{}
+
+func (r notStartedResult) IsSuccessful() bool {
+	return false
+}
+
+func (r notStartedResult) IsFailure() bool {
+	return false
+}
+
+func (r notStartedResult) InProgress() bool {
+	return false
+}
+
+func (r notStartedResult) String() string {
+	return "not started"
+}
+
 type cfnStatus struct {
-	value  cloudformation.StackStatus
+	value  result
 	reason string
 }
 
 func prettifyLatestStackStatus(statuses []cfnStatus) string {
 	color := colorStackStatus(statuses)
-	latest := string(statuses[len(statuses)-1].value)
+	latest := statuses[len(statuses)-1].value.String()
 	pretty := strings.ToLower(strings.ReplaceAll(latest, "_", " "))
 	return color("[%s]", pretty)
 }

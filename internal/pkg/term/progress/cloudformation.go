@@ -244,6 +244,19 @@ func (c *stackComponent) addResourceRenderer(ev stream.StackEvent, description s
 	c.resources = append(c.resources, ListeningResourceRenderer(c.stack, ev.LogicalResourceID, description, opts))
 }
 
+// stackSetComponent is a DynamicRenderer that can display stack set operation events.
+type stackSetComponent struct {
+	stream <-chan stream.StackSetOpEvent
+	done   chan struct{}
+
+	style RenderOptions
+	title string
+
+	mu        sync.Mutex
+	statuses  []cfnStatus
+	stopWatch *stopWatch
+}
+
 // ecsServiceResourceComponent can display an ECS service created with CloudFormation.
 type ecsServiceResourceComponent struct {
 	// Required inputs.
