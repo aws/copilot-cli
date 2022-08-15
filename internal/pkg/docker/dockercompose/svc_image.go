@@ -73,8 +73,7 @@ func convertMappingWithEquals(inArgs types.MappingWithEquals) (map[string]string
 	}
 
 	if badArgs != nil {
-		return nil, fmt.Errorf("some entries are missing values and require user input, "+
-			"this is not supported in Copilot: %v", badArgs)
+		return nil, fmt.Errorf("%s '%v' %s missing %s and %s user input", english.PluralWord(badArgs, "entry", "entries"), badArgs, english.PluralWord(badArgs, "is", "are"), english.PluralWord(badArgs, "a value", "values"), english.PluralWord(badArgs, "requires", "require"))
 	}
 
 	if len(args) == 0 {
