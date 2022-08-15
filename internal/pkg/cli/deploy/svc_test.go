@@ -499,6 +499,66 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("cannot deploy service mockWkld without http.alias to environment mockEnv with certificate imported"),
 		},
+		"cannot specify alias hosted zone when no certificates are imported in the env": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-east-1",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				return envConfig
+			},
+			inAliases: manifest.Alias{
+				AdvancedAliases: []manifest.AdvancedAlias{
+					{
+						Alias:      aws.String("example.com"),
+						HostedZone: aws.String("mockHostedZone1"),
+					},
+					{
+						Alias:      aws.String("foobar.com"),
+						HostedZone: aws.String("mockHostedZone2"),
+					},
+				},
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+			wantErr: fmt.Errorf("cannot specify alias hosted zones [mockHostedZone1 mockHostedZone2] when no certificates are imported in environment \"mockEnv\""),
+		},
+		"cannot specify alias hosted zone when cdn is enabled": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-east-1",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				envConfig.CDNConfig.Config.Certificate = aws.String(mockCDNCertARN)
+				return envConfig
+			},
+			inAliases: manifest.Alias{
+				AdvancedAliases: []manifest.AdvancedAlias{
+					{
+						Alias:      aws.String("example.com"),
+						HostedZone: aws.String("mockHostedZone1"),
+					},
+					{
+						Alias:      aws.String("foobar.com"),
+						HostedZone: aws.String("mockHostedZone2"),
+					},
+				},
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+			wantErr: fmt.Errorf("cannot specify alias hosted zones when cdn is enabled in environment \"mockEnv\""),
+		},
 		"fail to validate certificate aliases": {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -899,14 +959,14 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			deployer := lbWebSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
-						name:              mockName,
-						app:               tc.inApp,
-						env:               tc.inEnvironment,
-						environmentConfig: tc.inEnvironmentConfig(),
-						resources:         mockResources,
-						deployer:          m.mockServiceDeployer,
-						endpointGetter:    m.mockEndpointGetter,
-						spinner:           m.mockSpinner,
+						name:           mockName,
+						app:            tc.inApp,
+						env:            tc.inEnvironment,
+						envConfig:      tc.inEnvironmentConfig(),
+						resources:      mockResources,
+						deployer:       m.mockServiceDeployer,
+						endpointGetter: m.mockEndpointGetter,
+						spinner:        m.mockSpinner,
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return m.mockServiceForceUpdater
@@ -1488,11 +1548,11 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			deployer := &backendSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
-						name:              mockSvcName,
-						app:               tc.App,
-						env:               tc.Env,
-						endpointGetter:    m.mockEndpointGetter,
-						environmentConfig: tc.inEnvironmentConfig(),
+						name:           mockSvcName,
+						app:            tc.App,
+						env:            tc.Env,
+						endpointGetter: m.mockEndpointGetter,
+						envConfig:      tc.inEnvironmentConfig(),
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return nil

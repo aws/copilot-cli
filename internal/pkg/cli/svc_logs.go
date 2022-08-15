@@ -198,7 +198,7 @@ func (o *svcLogsOpts) validateOrAskApp() error {
 		_, err := o.configStore.GetApplication(o.appName)
 		return err
 	}
-	app, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
+	app, err := o.sel.Application(svcAppNamePrompt, wkldAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
 	}
