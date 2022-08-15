@@ -26,12 +26,15 @@ const (
 
 	jobLogNamePrompt     = "Which job's logs would you like to show?"
 	jobLogNameHelpPrompt = "The logs of the indicated deployed job will be shown."
+
+	defaultJobLogExecutionLimit = 1
 )
 
 type jobLogsVars struct {
 	wkldLogsVars
 
 	includeStateMachineLogs bool // Whether to include the logs from the state machine log streams
+	last                    int  // The number of previous executions of the state machine to show.
 }
 
 type jobLogsOpts struct {
@@ -64,7 +67,7 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 		},
 	}
 	opts.initLogsSvc = func() error {
-		env, err := opts.configStore.GetEnvironment(opts.appName, opts.envName)
+		env, err := opts.getTargetEnv()
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
@@ -73,10 +76,13 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 			return err
 		}
 		opts.logsSvc, err = logging.NewWorkloadClient(&logging.NewWorkloadLogsConfig{
-			Sess: sess,
-			App:  opts.appName,
-			Env:  opts.envName,
-			Name: opts.name,
+			Sess:        sess,
+			App:         opts.appName,
+			Env:         opts.envName,
+			Name:        opts.name,
+			LogGroup:    opts.logGroup,
+			TaskIDs:     opts.taskIDs,
+			ConfigStore: configStore,
 		})
 		if err != nil {
 			return err
@@ -151,38 +157,39 @@ func (o *jobLogsOpts) Ask() error {
 	return o.validateAndAskJobEnvName()
 }
 
-func (o *jobLogsOpts) validateOrAskApp() error {
-	if o.appName != "" {
-		_, err := o.configStore.GetApplication(o.appName)
+// Execute outputs logs of the job.
+func (o *jobLogsOpts) Execute() error {
+	if err := o.initLogsSvc(); err != nil {
 		return err
 	}
-	app, err := o.sel.Application(jobAppNamePrompt, svcAppNameHelpPrompt)
+	eventsWriter := logging.WriteHumanLogs
+	if o.shouldOutputJSON {
+		eventsWriter = logging.WriteJSONLogs
+	}
+	var limit *int64
+	if o.limit != 0 {
+		limit = aws.Int64(int64(o.limit))
+	}
+
+	// By default, only display the logs of the last execution of the job.
+	logStreamLimit := defaultJobLogExecutionLimit
+	if o.last != 0 {
+		logStreamLimit = o.last
+	}
+
+	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
+		Follow:                  o.follow,
+		Limit:                   limit,
+		EndTime:                 o.endTime,
+		StartTime:               o.startTime,
+		TaskIDs:                 o.taskIDs,
+		OnEvents:                eventsWriter,
+		LogStreamLimit:          logStreamLimit,
+		IncludeStateMachineLogs: o.includeStateMachineLogs,
+	})
 	if err != nil {
-		return fmt.Errorf("select application: %w", err)
+		return fmt.Errorf("write log events for job %s: %w", o.name, err)
 	}
-	o.appName = app
-	return nil
-}
-
-func (o *jobLogsOpts) validateAndAskJobEnvName() error {
-	if o.envName != "" {
-		if _, err := o.getTargetEnv(); err != nil {
-			return err
-		}
-	}
-
-	if o.name != "" {
-		if _, err := o.configStore.GetJob(o.appName, o.name); err != nil {
-			return err
-		}
-	}
-
-	deployedJob, err := o.sel.DeployedJob(jobLogNamePrompt, jobLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithName(o.name))
-	if err != nil {
-		return fmt.Errorf("select deployed jobs for application %s: %w", o.appName, err)
-	}
-	o.name = deployedJob.Name
-	o.envName = deployedJob.Env
 	return nil
 }
 
@@ -198,31 +205,36 @@ func (o *jobLogsOpts) getTargetEnv() (*config.Environment, error) {
 	return o.targetEnv, nil
 }
 
-// Execute outputs logs of the job.
-func (o *jobLogsOpts) Execute() error {
-	if err := o.initLogsSvc(); err != nil {
+func (o *jobLogsOpts) validateOrAskApp() error {
+	if o.appName != "" {
+		_, err := o.configStore.GetApplication(o.appName)
 		return err
 	}
-	eventsWriter := logging.WriteHumanLogs
-	if o.shouldOutputJSON {
-		eventsWriter = logging.WriteJSONLogs
-	}
-
-	var limit *int64
-	if o.limit != 0 {
-		limit = aws.Int64(int64(o.limit))
-	}
-	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
-		Follow:    o.follow,
-		Limit:     limit,
-		EndTime:   o.endTime,
-		StartTime: o.startTime,
-		TaskIDs:   o.taskIDs,
-		OnEvents:  eventsWriter,
-	})
+	app, err := o.sel.Application(jobAppNamePrompt, wkldAppNameHelpPrompt)
 	if err != nil {
-		return fmt.Errorf("write log events for job %s: %w", o.name, err)
+		return fmt.Errorf("select application: %w", err)
 	}
+	o.appName = app
+	return nil
+}
+
+func (o *jobLogsOpts) validateAndAskJobEnvName() error {
+	if o.envName != "" {
+		if _, err := o.getTargetEnv(); err != nil {
+			return err
+		}
+	}
+	if o.name != "" {
+		if _, err := o.configStore.GetJob(o.appName, o.name); err != nil {
+			return err
+		}
+	}
+	deployedJob, err := o.sel.DeployedJob(jobLogNamePrompt, jobLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithName(o.name))
+	if err != nil {
+		return fmt.Errorf("select deployed jobs for application %s: %w", o.appName, err)
+	}
+	o.name = deployedJob.Name
+	o.envName = deployedJob.Env
 	return nil
 }
 
@@ -230,22 +242,21 @@ func (o *jobLogsOpts) Execute() error {
 func buildJobLogsCmd() *cobra.Command {
 	vars := jobLogsVars{}
 	cmd := &cobra.Command{
-		Use:    "logs",
-		Short:  "Displays logs of a deployed job.",
-		Hidden: true,
+		Use:   "logs",
+		Short: "Displays logs of a deployed job.",
 		Example: `
   Displays logs of the job "my-job" in environment "test".
   /code $ copilot job logs -n my-job -e test
   Displays logs in the last hour.
   /code $ copilot job logs --since 1h
-  Displays logs from 2006-01-02T15:04:05 to 2006-01-02T15:05:05.
-  /code $ copilot job logs --start-time 2006-01-02T15:04:05+00:00 --end-time 2006-01-02T15:05:05+00:00
-Displays logs from specific task IDs.
-  /code $ copilot job logs --tasks 709c7eae05f947f6861b150372ddc443,1de57fd63c6a4920ac416d02add891b9
+  Displays logs from the last execution of the job.
+  /code $ copilot job logs --last 1
+  Displays logs from specific task IDs.
+/code $ copilot job logs --tasks 709c7ea,1de57fd
   Displays logs in real time.
   /code $ copilot job logs --follow
   Displays container logs and state machine execution logs from the last execution.
-  /code $ copilot job logs --include-state-machine`,
+  /code $ copilot job logs --include-state-machine --last 1`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newJobLogOpts(vars)
 			if err != nil {
@@ -263,7 +274,13 @@ Displays logs from specific task IDs.
 	cmd.Flags().BoolVar(&vars.follow, followFlag, false, followFlagDescription)
 	cmd.Flags().DurationVar(&vars.since, sinceFlag, 0, sinceFlagDescription)
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
+	cmd.Flags().IntVar(&vars.last, lastFlag, 1, lastFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	cmd.Flags().BoolVar(&vars.includeStateMachineLogs, includeStateMachineLogsFlag, false, includeStateMachineLogsFlagDescription)
+
+	// There's no way to associate a specific execution with a task without parsing the logs of every state machine invocation.
+	cmd.MarkFlagsMutuallyExclusive(includeStateMachineLogsFlag, tasksFlag)
+	cmd.MarkFlagsMutuallyExclusive(followFlag, lastFlag)
+
 	return cmd
 }

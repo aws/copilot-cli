@@ -76,7 +76,7 @@ func TestSvcPause_Ask(t *testing.T) {
 			inputEnvironment: inputEnv,
 			skipConfirmation: true,
 			setupMocks: func(m svcPauseAskMock) {
-				m.sel.EXPECT().Application(svcPauseAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil)
+				m.sel.EXPECT().Application(svcPauseAppNamePrompt, wkldAppNameHelpPrompt).Return("my-app", nil)
 				m.store.EXPECT().GetApplication(gomock.Any()).Times(0)
 				m.store.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.store.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
@@ -94,7 +94,7 @@ func TestSvcPause_Ask(t *testing.T) {
 		"errors if failed to select application": {
 			skipConfirmation: true,
 			setupMocks: func(m svcPauseAskMock) {
-				m.sel.EXPECT().Application(svcPauseAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error"))
+				m.sel.EXPECT().Application(svcPauseAppNamePrompt, wkldAppNameHelpPrompt).Return("", errors.New("some error"))
 			},
 			wantedError: fmt.Errorf("select application: some error"),
 		},

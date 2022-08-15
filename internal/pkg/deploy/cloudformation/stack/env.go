@@ -96,6 +96,11 @@ func (e *EnvStackConfig) Template() (string, error) {
 		forceUpdateID = id.String()
 	}
 
+	publicHTTPConfig, err := e.publicHTTPConfig()
+	if err != nil {
+		return "", err
+	}
+
 	vpcConfig, err := e.vpcConfig()
 	if err != nil {
 		return "", err
@@ -107,8 +112,8 @@ func (e *EnvStackConfig) Template() (string, error) {
 		CustomResources:      crs,
 		ArtifactBucketARN:    e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
+		PublicHTTPConfig:     publicHTTPConfig,
 		VPCConfig:            vpcConfig,
-		PublicHTTPConfig:     e.publicHTTPConfig(),
 		PrivateHTTPConfig:    e.privateHTTPConfig(),
 		Telemetry:            e.telemetryConfig(),
 		CDNConfig:            e.cdnConfig(),
@@ -117,6 +122,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		LatestVersion:      deploy.LatestEnvTemplateVersion,
 		SerializedManifest: string(e.in.RawMft),
 		ForceUpdateID:      forceUpdateID,
+		DelegateDNS:        e.in.App.Domain != "",
 	})
 	if err != nil {
 		return "", err
@@ -361,15 +367,20 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 		return nil
 	}
 	return &template.CDNConfig{
-		ViewerCertificate: e.in.Mft.CDNConfig.Config.Certificate,
+		ImportedCertificate: e.in.Mft.CDNConfig.Config.Certificate,
 	}
 }
 
-func (e *EnvStackConfig) publicHTTPConfig() template.HTTPConfig {
+func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
+	elbAccessLogsConfig, err := convertELBAccessLogsConfig(e.in.Mft)
+	if err != nil {
+		return template.HTTPConfig{}, err
+	}
 	return template.HTTPConfig{
 		CIDRPrefixListIDs: e.in.CIDRPrefixListIDs,
 		ImportedCertARNs:  e.importPublicCertARNs(),
-	}
+		ELBAccessLogs:     elbAccessLogsConfig,
+	}, nil
 }
 
 func (e *EnvStackConfig) privateHTTPConfig() template.HTTPConfig {

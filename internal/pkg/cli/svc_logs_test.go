@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type svcLogsMock struct {
+type wkldLogsMock struct {
 	configStore *mocks.Mockstore
 	sel         *mocks.MockdeploySelector
 }
@@ -149,7 +149,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 		inputSvc     string
 		inputEnvName string
 
-		setupMocks func(mocks svcLogsMock)
+		setupMocks func(mocks wkldLogsMock)
 
 		wantedApp   string
 		wantedEnv   string
@@ -160,7 +160,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 			inputApp:     inputApp,
 			inputSvc:     inputSvc,
 			inputEnvName: inputEnv,
-			setupMocks: func(m svcLogsMock) {
+			setupMocks: func(m wkldLogsMock) {
 				gomock.InOrder(
 					m.configStore.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil),
 					m.configStore.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{Name: "my-env"}, nil),
@@ -179,8 +179,8 @@ func TestSvcLogs_Ask(t *testing.T) {
 		"prompt for app name": {
 			inputSvc:     inputSvc,
 			inputEnvName: inputEnv,
-			setupMocks: func(m svcLogsMock) {
-				m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("my-app", nil)
+			setupMocks: func(m wkldLogsMock) {
+				m.sel.EXPECT().Application(svcAppNamePrompt, wkldAppNameHelpPrompt).Return("my-app", nil)
 				m.configStore.EXPECT().GetApplication(gomock.Any()).Times(0)
 				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).AnyTimes()
 				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).AnyTimes()
@@ -194,16 +194,16 @@ func TestSvcLogs_Ask(t *testing.T) {
 			wantedSvc: inputSvc,
 		},
 		"returns error if fail to select app": {
-			setupMocks: func(m svcLogsMock) {
+			setupMocks: func(m wkldLogsMock) {
 				gomock.InOrder(
-					m.sel.EXPECT().Application(svcAppNamePrompt, svcAppNameHelpPrompt).Return("", errors.New("some error")),
+					m.sel.EXPECT().Application(svcAppNamePrompt, wkldAppNameHelpPrompt).Return("", errors.New("some error")),
 				)
 			},
 			wantedError: fmt.Errorf("select application: some error"),
 		},
 		"prompt for svc and env": {
 			inputApp: "my-app",
-			setupMocks: func(m svcLogsMock) {
+			setupMocks: func(m wkldLogsMock) {
 				m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
@@ -219,7 +219,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 		},
 		"return error if fail to select deployed services": {
 			inputApp: inputApp,
-			setupMocks: func(m svcLogsMock) {
+			setupMocks: func(m wkldLogsMock) {
 				m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes()
 				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
 				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
@@ -238,7 +238,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 			mockstore := mocks.NewMockstore(ctrl)
 			mockSel := mocks.NewMockdeploySelector(ctrl)
 
-			mocks := svcLogsMock{
+			mocks := wkldLogsMock{
 				configStore: mockstore,
 				sel:         mockSel,
 			}

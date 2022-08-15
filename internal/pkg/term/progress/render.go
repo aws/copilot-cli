@@ -78,3 +78,44 @@ func EraseAndRender(out FileWriteFlusher, r Renderer, prevNumLines int) (int, er
 	}
 	return nl, err
 }
+
+// MultiRenderer returns a Renderer that's the concatenation of the input renderers.
+// The renderers are rendered sequentially, and the MultiRenderer is only Done once all renderers are Done.
+func MultiRenderer(renderers ...DynamicRenderer) DynamicRenderer {
+	mr := &multiRenderer{
+		renderers: renderers,
+		done:      make(chan struct{}),
+	}
+	go mr.listen()
+	return mr
+}
+
+type multiRenderer struct {
+	renderers []DynamicRenderer
+	done      chan struct{}
+}
+
+// Render sequentially renders the renderers to out and returns the sum of the number of lines written.
+func (mr *multiRenderer) Render(out io.Writer) (int, error) {
+	var sum int
+	for _, r := range mr.renderers {
+		nl, err := r.Render(out)
+		if err != nil {
+			return 0, err
+		}
+		sum += nl
+	}
+	return sum, nil
+}
+
+// Done returns a channel that's closed when there are no more events to Listen.
+func (mr *multiRenderer) Done() <-chan struct{} {
+	return mr.done
+}
+
+func (mr *multiRenderer) listen() {
+	for _, r := range mr.renderers {
+		<-r.Done()
+	}
+	close(mr.done)
+}
