@@ -240,23 +240,11 @@ exports.certificateReplicateHandler = async function (event, context) {
       "FAILED",
       physicalResourceId,
       null,
-      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}/${
-        defaultLogStream || context.logStreamName
+      `${err.message} (Log: ${defaultLogGroup || context.logGroupName}/${defaultLogStream || context.logStreamName
       })`
     );
   }
 };
-
-/**
- * Update parameter by adding workload to the parameter values.
- *
- * @param {string} requestType type of the request.
- * @param {string} workload name of the workload.
- * @param {string} paramValue value of the parameter.
- *
- * @returns {string} The updated parameter.
- * @returns {bool} whether the parameter is modified.
- */
 
 exports.deadlineExpired = function () {
   return new Promise(function (resolve, reject) {

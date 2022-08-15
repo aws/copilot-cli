@@ -501,7 +501,13 @@ func (cf CloudFormation) getLastDeployedAppConfig(appConfig *stack.AppStackConfi
 func (cf CloudFormation) DeleteApp(appName string) error {
 	spinner := progress.NewSpinner(cf.console)
 	spinner.Start(fmt.Sprintf("Delete regional resources for application %q", appName))
-	if err := cf.appStackSet.Delete(fmt.Sprintf("%s-infrastructure", appName)); err != nil {
+
+	stackSetName := fmt.Sprintf("%s-infrastructure", appName)
+	if err := cf.deleteStackSetInstances(stackSetName); err != nil {
+		spinner.Stop(log.Serrorf("Error deleting regional resources for application %q\n", appName))
+		return err
+	}
+	if err := cf.appStackSet.Delete(stackSetName); err != nil {
 		spinner.Stop(log.Serrorf("Error deleting regional resources for application %q\n", appName))
 		return err
 	}
@@ -511,4 +517,15 @@ func (cf CloudFormation) DeleteApp(appName string) error {
 	return cf.deleteAndRenderStack(stackName, description, func() error {
 		return cf.cfnClient.DeleteAndWait(stackName)
 	})
+}
+
+func (cf CloudFormation) deleteStackSetInstances(name string) error {
+	opID, err := cf.appStackSet.DeleteAllInstances(name)
+	if err != nil {
+		if IsEmptyErr(err) {
+			return nil
+		}
+		return err
+	}
+	return cf.appStackSet.WaitForOperation(name, opID)
 }

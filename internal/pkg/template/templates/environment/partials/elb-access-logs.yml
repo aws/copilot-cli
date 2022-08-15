@@ -17,9 +17,9 @@ ELBAccessLogsBucketPolicy:
                 - !Ref AWS::Partition
                 - ':s3:::'
                 - !Ref ELBAccessLogsBucket
-                {{- if .BucketPrefix }}
+                {{- if .Prefix }}
                 - '/'
-                - {{.BucketPrefix }}
+                - {{.Prefix }}
                 {{- end }}
                 - '/AWSLogs/'
                 - !Ref AWS::AccountId

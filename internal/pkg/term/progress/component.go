@@ -20,7 +20,7 @@ type noopComponent struct{}
 
 // Render does not do anything.
 // It returns 0 and nil for the error.
-func (c *noopComponent) Render(out io.Writer) (numLines int, err error) {
+func (c *noopComponent) Render(_ io.Writer) (numLines int, err error) {
 	return 0, nil
 }
 
