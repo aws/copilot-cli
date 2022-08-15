@@ -82,6 +82,20 @@ To learn more about Copilot environments, see [Environments](../concepts/environ
             subnets: ['subnet-11111', 'subnet-22222']
         ```
 
+    === "Content delivery network"
+
+        ```yaml
+        name: cloudfront
+        type: Environment
+        cdn: true
+        http:
+          public:
+            security_groups:
+             ingress: 
+               restrict_to:
+                 cdn: true
+        ```
+
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your environment.
 
@@ -147,6 +161,15 @@ This field is mutually exclusive with `id`.
 
 <div class="separator"></div>
 
+<a id="cdn" href="#cdn" class="field">`cdn`</a> <span class="type">Boolean or Map</span>  
+The cdn section contains parameters related to integrating your service with a CloudFront distribution. To enable the CloudFront distribution, specify `cdn: true`.
+
+<span class="parent-field">cdn.</span><a id="cdn-certificate" href="#cdn-certificate" class="field">`certificate`</a> <span class="type">String</span>  
+A certificate by which to enable HTTPS traffic on a CloudFront distribution.
+CloudFront requires imported certificates to be in the `us-east-1` region.
+
+<div class="separator"></div>
+
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
 The http section contains parameters to configure the public load balancer shared by [Load Balanced Web Services](./lb-web-service.en.md) 
 and the internal load balancer shared by [Backend Services](./backend-service.en.md).
@@ -158,6 +181,26 @@ Configuration for the public load balancer.
 List of [public AWS Certificate Manager certificate](https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-request-public.html) ARNs.    
 By attaching public certificates to your load balancer, you can associate your Load Balanced Web Services with a domain name and reach them with HTTPS. 
 See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-existing-validated-certificates) guide to learn more about how to redeploy services using [`http.alias`](./lb-web-service.en.md#http-alias).
+
+<span class="parent-field">http.public.</span><a id="http-public-security-groups" href="#http-public-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
+Configure security groups to add to the public load balancer.
+
+<span class="parent-field">http.public.security_groups.</span><a id="http-public-security-groups-ingress" href="#http-public-security-groups-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
+Ingress rules to allow for the public load balancer.  
+```yaml
+http:
+  public:
+    security_groups:
+      ingress: 
+        restrict_to:
+          cdn: true
+```
+
+<span class="parent-field">http.public.security_groups.ingress.</span><a id="http-public-security-groups-ingress-restrict-to" href="#http-public-security-groups-ingress-restrict-to" class="field">`restrict_to`</a> <span class="type">Map</span>  
+Ingress rules to restrict the Public Load Balancer's traffic.
+
+<span class="parent-field">http.public.security_groups.ingress.restrict_to.</span><a id="http-public-security-groups-ingress-restrict-to-cdn" href="#http-public-security-groups-ingress-restrict-to-cdn" class="field">`cdn`</a> <span class="type">Boolean</span>    
+Restrict ingress traffic for the public load balancer to come from a CloudFront distribution.
 
 <span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Map</span>  
 Configuration for the internal load balancer.
