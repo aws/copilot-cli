@@ -171,10 +171,10 @@ network:
           ports: 0-65535
           cidr: 0.0.0.0/0
 ```
-<span class="parent-field">network.vpc.security_group.</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group" class="field">`ingress`</a> <span class="type">Array of Security Group Rules</span>    
+<span class="parent-field">network.vpc.security_group.</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group-ingress" class="field">`ingress`</a> <span class="type">Array of Security Group Rules</span>    
 A list of inbound security group rules.
 
-<span class="parent-field">network.vpc.security-group.</span><a id="network-vpc-security-group-egress" href="#network-vpc-security-group" class="field">`egress`</a> <span class="type">Array of Security Group Rules</span>    
+<span class="parent-field">network.vpc.security-group.</span><a id="network-vpc-security-group-egress" href="#network-vpc-security-group-egress" class="field">`egress`</a> <span class="type">Array of Security Group Rules</span>    
 A list of outbound security group rules.
 
 
