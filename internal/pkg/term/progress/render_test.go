@@ -14,6 +14,7 @@ package progress
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -185,4 +186,84 @@ func TestEraseAndRender(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, nl, `only hello\n should have been written`)
 	require.Equal(t, wanted.String(), actual.String())
+}
+
+func TestMultiRenderer(t *testing.T) {
+	t.Run("returns the error if a renderer fails to render", func(t *testing.T) {
+		// GIVEN
+		renderers := []DynamicRenderer{
+			&mockDynamicRenderer{
+				content: "hello",
+				done:    make(chan struct{}),
+			},
+			&mockDynamicRenderer{
+				err:  errors.New("some error"),
+				done: make(chan struct{}),
+			},
+		}
+		buf := new(strings.Builder)
+		mr := MultiRenderer(renderers...)
+
+		// WHEN
+		_, err := mr.Render(buf)
+
+		// THEN
+		require.EqualError(t, err, "some error")
+	})
+	t.Run("returns the total number of lines on successful render", func(t *testing.T) {
+		renderers := []DynamicRenderer{
+			&mockDynamicRenderer{
+				content: "hello\n",
+				done:    make(chan struct{}),
+			},
+			&mockDynamicRenderer{
+				content: "from\n",
+				done:    make(chan struct{}),
+			},
+			&mockDynamicRenderer{
+				content: "copilot\n",
+				done:    make(chan struct{}),
+			},
+		}
+		buf := new(strings.Builder)
+		mr := MultiRenderer(renderers...)
+
+		// WHEN
+		nl, err := mr.Render(buf)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, 3, nl, "expected all 3 lines to be written")
+		require.Equal(t, "hello\nfrom\ncopilot\n", buf.String())
+	})
+	t.Run("ensure Done exits once all the renderers are Done", func(t *testing.T) {
+		renderers := []DynamicRenderer{
+			&mockDynamicRenderer{
+				done: make(chan struct{}),
+			},
+			&mockDynamicRenderer{
+				done: make(chan struct{}),
+			},
+			&mockDynamicRenderer{
+				done: make(chan struct{}),
+			},
+		}
+		mr := MultiRenderer(renderers...)
+
+		// WHEN
+		go func() {
+			for _, r := range renderers {
+				if dr, ok := r.(*mockDynamicRenderer); ok {
+					close(dr.done)
+				}
+			}
+		}()
+
+		// THEN
+		select {
+		case <-time.After(5 * time.Second):
+			require.Fail(t, "testcase should not timeout")
+		case <-mr.Done(): // Should exit the test within timeout.
+		}
+	})
 }
