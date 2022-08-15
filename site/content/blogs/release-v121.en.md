@@ -10,10 +10,10 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 Copilot v1.21 brings several new features and improvements:
 
 - **Integrate CloudFront with Application Load Balancer**:
-- **Configure environment security group**:
+- **Configure environment security group**: Configure your environment security group rules through environment manifest. [See detailed section](#configure-environment-security-group).
+- **ELB access log support**: Enable elastic load balancing access logs for your Load Balanced Web Service. [See detailed section](#elb-access-logs-support).
 - **Check out job logs**:
-- **Package addons CloudFormation templates before deployments**:
-- **ELB access log support**:
+- **Package addons CloudFormation templates before deployments**: 
 
 ???+ note "What’s AWS Copilot?"
 
