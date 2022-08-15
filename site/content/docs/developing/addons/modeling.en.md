@@ -1,12 +1,12 @@
 # Modeling with AWS CloudFormation
 
-Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a [service manifest](../manifest/overview.en.md) does not integrate by default. For example, an addon can be a DynamoDB table, an S3 bucket, or an RDS Aurora Serverless cluster that your service needs to read or write to.
+Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a [service manifest](../../manifest/overview.en.md) does not integrate by default. For example, an addon can be a DynamoDB table, an S3 bucket, or an RDS Aurora Serverless cluster that your service needs to read or write to.
 
 ## How do I add an S3 bucket, a DDB Table, or an Aurora Serverless cluster?
 
 Copilot provides the following commands to help you create certain kinds of addons:
 
-* [`storage init`](../commands/storage-init.en.md) will create a DynamoDB table, an S3 bucket, or an Aurora Serverless cluster.  
+* [`storage init`](../../commands/storage-init.en.md) will create a DynamoDB table, an S3 bucket, or an Aurora Serverless cluster.  
 
 You can run `copilot storage init` from your workspace and be guided through some questions to help you set up these resources.
 
