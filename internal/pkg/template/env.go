@@ -130,8 +130,8 @@ type HTTPConfig struct {
 
 // ELBAccessLogs represents configuration for ELB access logs S3 bucket.
 type ELBAccessLogs struct {
-	BucketName   string
-	BucketPrefix string
+	BucketName string
+	Prefix     string
 }
 
 // ShouldCreateBucket returns true if copilot should create bucket on behalf of customer.
