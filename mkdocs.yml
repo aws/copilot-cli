@@ -47,8 +47,9 @@ nav:
       - Worker Service: docs/manifest/worker-service.en.md
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:
-      - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
-      - Package Addons: docs/developing/package-addons.en.md
+      - Additional AWS Resources:
+        - Modeling with AWS CloudFormation: docs/developing/addons/modeling.en.md
+        - Uploading Local Artifacts: docs/developing/addons/package.en.md
       - Container Environment Variables: docs/developing/environment-variables.en.md
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Domain: docs/developing/domain.en.md
@@ -200,6 +201,8 @@ plugins:
             'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
             'docs/commands/pipeline-update.en.md': 'docs/commands/pipeline-deploy.en.md'
             'docs/commands/pipeline-update.ja.md': 'docs/commands/pipeline-deploy.ja.md'
+            'docs/developing/additional-aws-resources.en.md': 'docs/developing/addons/modeling.en.md'
+            'docs/developing/additional-aws-resources.ja.md': 'docs/developing/addons/modeling.ja.md'
     - i18n:
         default_language: en
         languages:

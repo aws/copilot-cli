@@ -1,11 +1,11 @@
-# Package Addons <span class="version" > added in [v1.21.0](../../blogs/release-v121.en.md) </span>
+# Uploading Local Artifacts <span class="version" > added in [v1.21.0](../../blogs/release-v121.en.md) </span>
 
 Copilot supports uploading local files referenced from your addon templates to S3, and replacing the relevant resource properties with the uploaded S3 location.
 On [`copilot svc deploy`](../commands/svc-deploy.en.md) or [`copilot svc package --upload-assets`](../commands/svc-package.en.md), certain fields on supported resources will be updated with an S3 location.
 To see the full list of resources that are supported, take a look at the [AWS CLI documentation](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html).
 
 This feature can be used to deploy local Lambda Functions stored in the same repo as another Copilot service.
-For example, to deploy a javascript Lambda Function alongside a copilot service, you can add this resource to your [addon template](./additional-aws-resources.en.md):
+For example, to deploy a javascript Lambda Function alongside a copilot service, you can add this resource to your [addon template](./modeling.en.md):
 
 ???+ note "Example Lambda Function"
     === "copilot/service-name/addons/lambda.yml"
@@ -20,21 +20,6 @@ For example, to deploy a javascript Lambda Function alongside a copilot service,
               MemorySize: 512
               Role: !GetAtt "ExampleFunctionRole.Arn"
               Runtime: nodejs16.x
-          ExampleFunctionRole:
-            Type: AWS::IAM::Role
-            Properties:
-              Path: /
-              ManagedPolicyArns:
-                - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-              AssumeRolePolicyDocument:
-                Version: 2012-10-17
-                Statement:
-                  - Effect: Allow
-                    Principal:
-                    Service:
-                      - lambda.amazonaws.com
-                    Action:
-                      - sts:AssumeRole
         ```
     
     === "lambdas/example/index.js"
@@ -73,7 +58,7 @@ For the above example, the folder structure would look like:
 Absolute paths are supported as well, though they may not work as well across multiple machines.
 
 ## Example: DynamoDB Stream Processing Lambda
-This example will walk through creating a [Dynamo DB](https://aws.amazon.com/dynamodb/) table with a lambda function connected to process events from the [table's stream](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html).
+This example will walk through creating an [Amazon Dynamo DB](https://aws.amazon.com/dynamodb/) table with a lambda function connected to process events from the [table's stream](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html).
 This architecture could be useful if you have a service that needs to minimize latency on storing data, but can kick off a separate process that takes longer to process the data.
 
 #### Prerequesites:

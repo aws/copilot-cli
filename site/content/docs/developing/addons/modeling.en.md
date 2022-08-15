@@ -1,4 +1,4 @@
-# Additional AWS Resources
+# Modeling with AWS CloudFormation
 
 Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a [service manifest](../manifest/overview.en.md) does not integrate by default. For example, an addon can be a DynamoDB table, an S3 bucket, or an RDS Aurora Serverless cluster that your service needs to read or write to.
 
