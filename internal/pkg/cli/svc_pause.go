@@ -144,7 +144,7 @@ func (o *svcPauseOpts) validateOrAskApp() error {
 		_, err := o.store.GetApplication(o.appName)
 		return err
 	}
-	app, err := o.sel.Application(svcPauseAppNamePrompt, svcAppNameHelpPrompt)
+	app, err := o.sel.Application(svcPauseAppNamePrompt, wkldAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application: %w", err)
 	}

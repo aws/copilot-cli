@@ -82,6 +82,20 @@ To learn more about Copilot environments, see [Environments](../concepts/environ
             subnets: ['subnet-11111', 'subnet-22222']
         ```
 
+    === "Content delivery network"
+
+        ```yaml
+        name: cloudfront
+        type: Environment
+        cdn: true
+        http:
+          public:
+            security_groups:
+             ingress: 
+               restrict_to:
+                 cdn: true
+        ```
+
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your environment.
 
@@ -147,6 +161,15 @@ This field is mutually exclusive with `id`.
 
 <div class="separator"></div>
 
+<a id="cdn" href="#cdn" class="field">`cdn`</a> <span class="type">Boolean or Map</span>  
+The cdn section contains parameters related to integrating your service with a CloudFront distribution. To enable the CloudFront distribution, specify `cdn: true`.
+
+<span class="parent-field">cdn.</span><a id="cdn-certificate" href="#cdn-certificate" class="field">`certificate`</a> <span class="type">String</span>  
+A certificate by which to enable HTTPS traffic on a CloudFront distribution.
+CloudFront requires imported certificates to be in the `us-east-1` region.
+
+<div class="separator"></div>
+
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
 The http section contains parameters to configure the public load balancer shared by [Load Balanced Web Services](./lb-web-service.en.md) 
 and the internal load balancer shared by [Backend Services](./backend-service.en.md).
@@ -191,7 +214,25 @@ The name of an existing S3 bucket to which to store the access logs.
 <span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-prefix" href="#http-public-access-logs-prefix" class="field">`prefix`</a> <span class="type">String</span>   
 The prefix for the log objects.
 
+<span class="parent-field">http.public.</span><a id="http-public-security-groups" href="#http-public-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
+Configure security groups to add to the public load balancer.
 
+<span class="parent-field">http.public.security_groups.</span><a id="http-public-security-groups-ingress" href="#http-public-security-groups-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
+Ingress rules to allow for the public load balancer.  
+```yaml
+http:
+  public:
+    security_groups:
+      ingress: 
+        restrict_to:
+          cdn: true
+```
+
+<span class="parent-field">http.public.security_groups.ingress.</span><a id="http-public-security-groups-ingress-restrict-to" href="#http-public-security-groups-ingress-restrict-to" class="field">`restrict_to`</a> <span class="type">Map</span>  
+Ingress rules to restrict the Public Load Balancer's traffic.
+
+<span class="parent-field">http.public.security_groups.ingress.restrict_to.</span><a id="http-public-security-groups-ingress-restrict-to-cdn" href="#http-public-security-groups-ingress-restrict-to-cdn" class="field">`cdn`</a> <span class="type">Boolean</span>    
+Restrict ingress traffic for the public load balancer to come from a CloudFront distribution.
 
 <span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Map</span>  
 Configuration for the internal load balancer.

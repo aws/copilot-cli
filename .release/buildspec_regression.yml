@@ -34,13 +34,10 @@ phases:
       - make build-regression
       - |
         if [ -z "$FROM_VERSION" ]; then
-            version_tag=$(git describe --always --tag) # Example: v1.20.0-54-g67546c3b
-            version="${version_tag%%-*}" # Example: v1.20.0
-            minor="${version%.*}" # Remove ".0" from "v1.20.0". The result is "v1.20".
-            FROM_VERSION=$(git tag --list | grep ${minor} | sort -n | tail -1)  # Get the latest patch of "v1.20". Example: "v1.20.2".
+            FROM_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1)) # Latest tag. Example: "v1.20.0".
         fi
       - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-${FROM_VERSION}
       - chmod +x ./copilot-linux-${FROM_VERSION}
       - export REGRESSION_TEST_FROM_PATH=../../copilot-linux-${FROM_VERSION}
       - export REGRESSION_TEST_TO_PATH=../../bin/local/copilot-linux-amd64
-      - cd regression/${TEST_SUITE} && ginkgo -v -r
+      - cd regression/${TEST_SUITE} && ginkgo -v -r -noColor

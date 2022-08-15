@@ -102,6 +102,17 @@ type Alias struct {
 	StringSliceOrString StringSliceOrString
 }
 
+// HostedZones returns all the hosted zones.
+func (a *Alias) HostedZones() []string {
+	var hostedZones []string
+	for _, alias := range a.AdvancedAliases {
+		if alias.HostedZone != nil {
+			hostedZones = append(hostedZones, *alias.HostedZone)
+		}
+	}
+	return hostedZones
+}
+
 // IsEmpty returns empty if Alias is empty.
 func (a *Alias) IsEmpty() bool {
 	return len(a.AdvancedAliases) == 0 && a.StringSliceOrString.isEmpty()
