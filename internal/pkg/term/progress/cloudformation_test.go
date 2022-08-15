@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 
 	"github.com/aws/copilot-cli/internal/pkg/stream"
@@ -111,6 +113,120 @@ func TestStackComponent_Render(t *testing.T) {
 	require.Equal(t, `hello
 world
 `, buf.String(), "expected each renderer to be rendered")
+}
+
+func TestStackSetComponent_Listen(t *testing.T) {
+	t.Run("should update statuses and timer when an operation event is received", func(t *testing.T) {
+		// GIVEN
+		ch := make(chan stream.StackSetOpEvent)
+		done := make(chan struct{})
+		clock := &fakeClock{
+			wantedValues: []time.Time{testDate, testDate.Add(10 * time.Second)},
+		}
+		r := &stackSetComponent{
+			stream:   ch,
+			done:     done,
+			statuses: []cfnStatus{notStartedStackStatus},
+			stopWatch: &stopWatch{
+				clock: clock,
+			},
+		}
+
+		// WHEN
+		go r.Listen()
+		go func() {
+			// emulate the streamer.
+			ch <- stream.StackSetOpEvent{
+				Operation: stackset.Operation{
+					Status: "RUNNING",
+				},
+			}
+			ch <- stream.StackSetOpEvent{
+				Operation: stackset.Operation{
+					Status: "SUCCEEDED",
+				},
+			}
+			close(ch)
+		}()
+
+		// THEN
+		<-r.Done()
+		require.ElementsMatch(t, []cfnStatus{
+			notStartedStackStatus,
+			{
+				value: stackset.OpStatus("RUNNING"),
+			},
+			{
+				value: stackset.OpStatus("SUCCEEDED"),
+			},
+		}, r.statuses)
+		_, hasStarted := r.stopWatch.elapsed()
+		require.True(t, hasStarted, "the stopwatch should have started")
+	})
+}
+
+func TestStackSetComponent_Render(t *testing.T) {
+	t.Run("renders a sack set operation that succeeded", func(t *testing.T) {
+		// GIVEN
+		r := &stackSetComponent{
+			title: "Update stack set demo-infrastructure",
+			statuses: []cfnStatus{
+				notStartedStackStatus,
+				{
+					value: stackset.OpStatus("SUCCEEDED"),
+				},
+			},
+			stopWatch: &stopWatch{
+				startTime: testDate,
+				stopTime:  testDate.Add(1*time.Minute + 10*time.Second + 100*time.Millisecond),
+				started:   true,
+				stopped:   true,
+			},
+			separator: '\t',
+		}
+		buf := new(strings.Builder)
+
+		// WHEN
+		nl, err := r.Render(buf)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, 1, nl, "expected to be rendered as a single line component")
+		require.Equal(t, "- Update stack set demo-infrastructure\t[succeeded]\t[70.1s]\n", buf.String())
+	})
+	t.Run("renders a stack set operation that failed", func(t *testing.T) {
+		// GIVEN
+		r := &stackSetComponent{
+			title: "Update stack set demo-infrastructure",
+			statuses: []cfnStatus{
+				notStartedStackStatus,
+				{
+					value: stackset.OpStatus("RUNNING"),
+				},
+				{
+					value:  stackset.OpStatus("FAILED"),
+					reason: "The Operation 1 has failed to create",
+				},
+			},
+			stopWatch: &stopWatch{
+				startTime: testDate,
+				stopTime:  testDate,
+				started:   true,
+				stopped:   true,
+			},
+			separator: '\t',
+		}
+		buf := new(strings.Builder)
+
+		// WHEN
+		nl, err := r.Render(buf)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, 2, nl, "expected 2 entries to be printed to the terminal")
+		require.Equal(t, "- Update stack set demo-infrastructure\t[failed]\t[0.0s]\n"+
+			"  The Operation 1 has failed to create\t\t\n", buf.String())
+	})
 }
 
 func TestRegularResourceComponent_Listen(t *testing.T) {
