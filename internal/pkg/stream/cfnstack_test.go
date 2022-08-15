@@ -14,12 +14,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockCloudFormation struct {
+type mockStackClient struct {
 	out *cloudformation.DescribeStackEventsOutput
 	err error
 }
 
-func (m mockCloudFormation) DescribeStackEvents(*cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+func (m mockStackClient) DescribeStackEvents(*cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
 	return m.out, m.err
 }
 
@@ -93,7 +93,7 @@ func TestStackStreamer_Notify(t *testing.T) {
 func testStackStreamer_Fetch_Success(t *testing.T) {
 	// GIVEN
 	startTime := time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC)
-	client := mockCloudFormation{
+	client := mockStackClient{
 		// Events are in reverse chronological order.
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
@@ -176,7 +176,7 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 
 func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
 	// GIVEN
-	client := mockCloudFormation{
+	client := mockStackClient{
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
 				{
@@ -208,7 +208,7 @@ func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
 func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 	// GIVEN
 	startTime := time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC)
-	client := mockCloudFormation{
+	client := mockStackClient{
 
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
@@ -255,7 +255,7 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 
 func testStackStreamer_Fetch_WithError(t *testing.T) {
 	// GIVEN
-	client := mockCloudFormation{
+	client := mockStackClient{
 		err: errors.New("some error"),
 	}
 	streamer := &StackStreamer{
@@ -276,7 +276,7 @@ func testStackStreamer_Fetch_WithError(t *testing.T) {
 
 func testStackStreamer_Fetch_withThrottle(t *testing.T) {
 	// GIVEN
-	client := &mockCloudFormation{
+	client := &mockStackClient{
 		err: awserr.New("RequestThrottled", "throttle err", errors.New("abc")),
 	}
 	streamer := &StackStreamer{

@@ -36,7 +36,7 @@ http:
   public:
     access_logs:
       bucket_name: accesslogsbucket
-      bucket_prefix: accesslogsbucketprefix
+      prefix: accesslogsbucketprefix
     security_groups:
       ingress:
         restrict_to:
