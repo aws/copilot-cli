@@ -80,7 +80,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "TestRole.Arn"
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
 `,
 			outTemplate: `
 Resources:
@@ -96,7 +96,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "TestRole.Arn"
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
 `,
 		},
 		"AWS::Glue::Job, non-zipped file": {
@@ -225,7 +225,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "TestRole.Arn"
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
 `,
 			outTemplate: `
 Resources:
@@ -247,7 +247,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "TestRole.Arn"
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
 `,
 		},
 		"Fn::Transform nested in a yaml mapping and sequence node": {

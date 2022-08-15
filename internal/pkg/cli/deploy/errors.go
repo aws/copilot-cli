@@ -3,7 +3,12 @@
 
 package deploy
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
+)
 
 type errSvcWithNoALBAliasDeployingToEnvWithImportedCerts struct {
 	name    string
@@ -12,4 +17,25 @@ type errSvcWithNoALBAliasDeployingToEnvWithImportedCerts struct {
 
 func (e *errSvcWithNoALBAliasDeployingToEnvWithImportedCerts) Error() string {
 	return fmt.Sprintf("cannot deploy service %s without http.alias to environment %s with certificate imported", e.name, e.envName)
+}
+
+type errSvcWithALBAliasHostedZoneWithCDNEnabled struct {
+	envName string
+}
+
+func (e *errSvcWithALBAliasHostedZoneWithCDNEnabled) Error() string {
+	return fmt.Sprintf("cannot specify alias hosted zones when cdn is enabled in environment %q", e.envName)
+}
+
+// RecommendActions returns recommended actions to be taken after the error.
+// Implements main.actionRecommender interface.
+func (e *errSvcWithALBAliasHostedZoneWithCDNEnabled) RecommendActions() string {
+	msgs := []string{
+		"If you already have a Load Balanced Web Service deployed, you can switch to CDN by:",
+		fmt.Sprintf(" 1. Update the A-record value to be the CDN distribution domain name. Please make sure your A-record has %q set to %s.",
+			"Evaluate target health", color.HighlightCode("True")),
+		fmt.Sprintf(" 2. Remove the %s setting from the service manifest.", color.HighlightCode(`"http.alias.hosted_zone"`)),
+		fmt.Sprintf(" 3. Redeploy the service via %s.", color.HighlightCode("copilot svc deploy")),
+	}
+	return strings.Join(msgs, "\n")
 }

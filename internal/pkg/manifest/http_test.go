@@ -50,6 +50,42 @@ func TestRoutingRuleConfigOrBool_Disabled(t *testing.T) {
 	}
 }
 
+func TestAlias_HostedZones(t *testing.T) {
+	testCases := map[string]struct {
+		in     Alias
+		wanted []string
+	}{
+		"no hosted zone": {
+			in: Alias{
+				AdvancedAliases: []AdvancedAlias{},
+			},
+			wanted: []string{},
+		},
+		"with hosted zones": {
+			in: Alias{
+				AdvancedAliases: []AdvancedAlias{
+					{
+						HostedZone: aws.String("mockHostedZone1"),
+					},
+					{
+						HostedZone: aws.String("mockHostedZone2"),
+					},
+				},
+			},
+			wanted: []string{"mockHostedZone1", "mockHostedZone2"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.HostedZones()
+			// THEN
+			require.ElementsMatch(t, tc.wanted, got)
+		})
+	}
+}
+
 func TestAlias_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte

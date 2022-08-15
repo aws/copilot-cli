@@ -4,7 +4,7 @@ $ copilot env show [flags]
 ```
 
 ## What does it do?
-`copilot env show` shows displays information about a particular environment, including:
+`copilot env show` displays information about a particular environment, including:
 
 * The region and account the environment is in  
 * Whether or not the environment is production  

@@ -288,9 +288,9 @@ Resources:
       LoadBalancerAttributes:
         - Key: 'access_logs.s3.enabled'
           Value: true
-          {{- if .PublicHTTPConfig.ELBAccessLogs.BucketPrefix }}
+          {{- if .PublicHTTPConfig.ELBAccessLogs.Prefix }}
         - Key: 'access_logs.s3.prefix'
-          Value: {{ .PublicHTTPConfig.ELBAccessLogs.BucketPrefix }}
+          Value: {{ .PublicHTTPConfig.ELBAccessLogs.Prefix }}
           {{- end }}
         - Key: 'access_logs.s3.bucket'
           Value: {{- if .PublicHTTPConfig.ELBAccessLogs.BucketName }} {{ .PublicHTTPConfig.ELBAccessLogs.BucketName }}{{- else }} !Ref ELBAccessLogsBucket {{- end }}
@@ -728,7 +728,9 @@ Outputs:
   CloudFrontDomainName:
     Condition: CreateALB
     Value: !GetAtt CloudFrontDistribution.DomainName
-    Description: The domain name of an associated Cloud Front Distribution.
+    Description: The domain name of an associated CloudFront Distribution.
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDomainName
 {{- end}}
   PublicALBAccessible:
     Condition: CreateALB
