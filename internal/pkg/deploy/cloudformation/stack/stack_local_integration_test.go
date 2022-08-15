@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,8 +46,12 @@ func Test_Stack_Local_Integration(t *testing.T) {
 	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
 
-	addons, err := addon.New(aws.StringValue(v.Name))
+	ws, err := workspace.New()
 	require.NoError(t, err)
+
+	_, err = addon.Parse(aws.StringValue(v.Name), ws)
+	var notFound *addon.ErrAddonsNotFound
+	require.ErrorAs(t, err, &notFound)
 
 	envConfig := &manifest.Environment{
 		Workload: manifest.Workload{
@@ -64,7 +69,6 @@ func Test_Stack_Local_Integration(t *testing.T) {
 				ImageTag: imageTag,
 			},
 		},
-		Addons: addons,
 	})
 	require.NoError(t, err)
 	tpl, err := serializer.Template()

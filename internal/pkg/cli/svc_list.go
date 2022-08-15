@@ -76,7 +76,7 @@ func (o *listSvcOpts) Ask() error {
 		return nil
 	}
 
-	name, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
+	name, err := o.sel.Application(svcAppNamePrompt, wkldAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
 	}

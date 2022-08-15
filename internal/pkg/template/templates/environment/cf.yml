@@ -56,8 +56,14 @@ Conditions:
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
+{{- if .PublicHTTPConfig.ELBAccessLogs.ShouldCreateBucket }}
+{{ include "mappings-regional-configs" . }}
+{{- end }}
 Resources:
 {{include "bootstrap-resources" . | indent 2}}
+{{- if .PublicHTTPConfig.ELBAccessLogs.ShouldCreateBucket }}
+{{include "elb-access-logs" .PublicHTTPConfig.ELBAccessLogs | indent 2}}
+{{- end}}
 {{- if .CDNConfig}}
 {{include "cdn-resources" . | indent 2}}
 {{- end}}
@@ -278,6 +284,17 @@ Resources:
     Condition: CreateALB
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      {{- if .PublicHTTPConfig.ELBAccessLogs }}
+      LoadBalancerAttributes:
+        - Key: 'access_logs.s3.enabled'
+          Value: true
+          {{- if .PublicHTTPConfig.ELBAccessLogs.Prefix }}
+        - Key: 'access_logs.s3.prefix'
+          Value: {{ .PublicHTTPConfig.ELBAccessLogs.Prefix }}
+          {{- end }}
+        - Key: 'access_logs.s3.bucket'
+          Value: {{- if .PublicHTTPConfig.ELBAccessLogs.BucketName }} {{ .PublicHTTPConfig.ELBAccessLogs.BucketName }}{{- else }} !Ref ELBAccessLogsBucket {{- end }}
+      {{- end }}
       Scheme: internet-facing
       SecurityGroups: 
         - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId
@@ -711,7 +728,9 @@ Outputs:
   CloudFrontDomainName:
     Condition: CreateALB
     Value: !GetAtt CloudFrontDistribution.DomainName
-    Description: The domain name of an associated Cloud Front Distribution.
+    Description: The domain name of an associated CloudFront Distribution.
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDomainName
 {{- end}}
   PublicALBAccessible:
     Condition: CreateALB

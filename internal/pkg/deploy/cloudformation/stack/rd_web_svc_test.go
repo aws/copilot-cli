@@ -164,7 +164,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				mockParser.EXPECT().ParseRequestDrivenWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
 						AppName:           "phonetool",
@@ -197,7 +197,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 		"should parse template without addons/ directory": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				mockParser.EXPECT().ParseRequestDrivenWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
 						AppName:                  "phonetool",
@@ -269,7 +269,7 @@ Outputs:
 		"should return parsing error": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
 				mockParser := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				mockParser.EXPECT().ParseRequestDrivenWebService(gomock.Any()).Return(nil, errors.New("parsing error"))
 				c.parser = mockParser
 				c.addons = addons
@@ -285,7 +285,7 @@ Outputs:
 				"CustomDomainFunction": "such-a-weird-url",
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *RequestDrivenWebService) {
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				c.wkld.addons = addons
 			},
 			wantedError: errors.New(`convert custom resource "CustomDomainFunction" url: cannot parse S3 URL such-a-weird-url into bucket name and key`),

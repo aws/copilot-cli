@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 )
 
 var (
@@ -39,10 +40,13 @@ func (e EnvironmentConfig) validate() error {
 	if err := e.Network.VPC.SecurityGroupConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "security_group": %w`, err)
 	}
-	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
+	if err := e.CDNConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "cdn": %w`, err)
+	}
+	if e.IsIngressRestrictedToCDN() && !e.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
-	if e.CDNConfig.CDNEnabled() {
+	if e.CDNEnabled() {
 		cdnCert := e.CDNConfig.Config.Certificate
 		if e.HTTPConfig.Public.Certificates == nil {
 			if cdnCert != nil {
@@ -294,7 +298,23 @@ func (cfg PublicHTTPConfig) validate() error {
 	if cfg.SecurityGroupConfig.Ingress.VPCIngress != nil {
 		return fmt.Errorf("a public load balancer already allows vpc ingress")
 	}
+	if err := cfg.ELBAccessLogs.validate(); err != nil {
+		return fmt.Errorf(`validate "access_logs": %w`, err)
+	}
 	return cfg.SecurityGroupConfig.validate()
+}
+
+// validate returns nil if ELBAccessLogsArgsOrBool is configured correctly.
+func (al ELBAccessLogsArgsOrBool) validate() error {
+	if al.isEmpty() {
+		return nil
+	}
+	return al.AdvancedConfig.validate()
+}
+
+// validate is a no-op for ELBAccessLogsArgs.
+func (al ELBAccessLogsArgs) validate() error {
+	return nil
 }
 
 // validate returns nil if ALBSecurityGroupsConfig is configured correctly.
@@ -346,10 +366,15 @@ func (i RestrictiveIngress) validate() error {
 
 // validate returns nil if advancedCDNConfig is configured correctly.
 func (cfg advancedCDNConfig) validate() error {
-	if cfg.Certificate != nil {
-		if _, err := arn.Parse(*cfg.Certificate); err != nil {
-			return fmt.Errorf(`parse cdn certificate: %w`, err)
-		}
+	if cfg.Certificate == nil {
+		return nil
+	}
+	certARN, err := arn.Parse(*cfg.Certificate)
+	if err != nil {
+		return fmt.Errorf(`parse cdn certificate: %w`, err)
+	}
+	if certARN.Region != cloudfront.CertRegion {
+		return &errInvalidCloudFrontRegion{}
 	}
 	return nil
 }

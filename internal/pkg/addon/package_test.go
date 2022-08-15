@@ -4,7 +4,6 @@
 package addon
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -81,7 +80,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "TestRole.Arn"
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
 `,
 			outTemplate: `
 Resources:
@@ -97,7 +96,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "TestRole.Arn"
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
 `,
 		},
 		"AWS::Glue::Job, non-zipped file": {
@@ -226,7 +225,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "TestRole.Arn"
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
 `,
 			outTemplate: `
 Resources:
@@ -248,7 +247,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt "TestRole.Arn"
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
 `,
 		},
 		"Fn::Transform nested in a yaml mapping and sequence node": {
@@ -397,34 +396,30 @@ Resources:
 				tc.setupMocks(mocks)
 			}
 
-			a := &Addons{
-				wlName:   wlName,
-				wsPath:   wsPath,
-				bucket:   bucket,
-				uploader: mocks.uploader,
-				fs: &afero.Afero{
-					Fs: fs,
-				},
+			stack := &Stack{
+				workloadName: wlName,
+				template:     newCFNTemplate("merged"),
 			}
 
-			tmpl := newCFNTemplate("merged")
-			err := yaml.Unmarshal([]byte(tc.inTemplate), tmpl)
-			require.NoError(t, err)
+			require.NoError(t, yaml.Unmarshal([]byte(tc.inTemplate), stack.template))
 
-			err = tmpl.pkg(a)
+			config := PackageConfig{
+				Bucket:        bucket,
+				WorkspacePath: wsPath,
+				Uploader:      mocks.uploader,
+				FS:            fs,
+			}
+			err := stack.Package(config)
 			if tc.pkgError != "" {
 				require.EqualError(t, err, tc.pkgError)
 				return
 			}
-
 			require.NoError(t, err)
 
-			buf := &bytes.Buffer{}
-			enc := yaml.NewEncoder(buf)
-			enc.SetIndent(2)
+			tmpl, err := stack.Template()
+			require.NoError(t, err)
 
-			require.NoError(t, enc.Encode(tmpl))
-			require.Equal(t, strings.TrimSpace(tc.outTemplate), strings.TrimSpace(buf.String()))
+			require.Equal(t, strings.TrimSpace(tc.outTemplate), strings.TrimSpace(tmpl))
 		})
 	}
 }

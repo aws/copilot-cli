@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	addon "github.com/aws/copilot-cli/internal/pkg/addon"
 	cloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	s3 "github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	deploy "github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -210,6 +211,20 @@ func NewMockstackBuilder(ctrl *gomock.Controller) *MockstackBuilder {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockstackBuilder) EXPECT() *MockstackBuilderMockRecorder {
 	return m.recorder
+}
+
+// Package mocks base method.
+func (m *MockstackBuilder) Package(arg0 addon.PackageConfig) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Package", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Package indicates an expected call of Package.
+func (mr *MockstackBuilderMockRecorder) Package(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Package", reflect.TypeOf((*MockstackBuilder)(nil).Package), arg0)
 }
 
 // Parameters mocks base method.
@@ -661,44 +676,6 @@ func (m *MockaliasCertValidator) ValidateCertAliases(aliases, certs []string) er
 func (mr *MockaliasCertValidatorMockRecorder) ValidateCertAliases(aliases, certs interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateCertAliases", reflect.TypeOf((*MockaliasCertValidator)(nil).ValidateCertAliases), aliases, certs)
-}
-
-// MockconfigDescriber is a mock of configDescriber interface.
-type MockconfigDescriber struct {
-	ctrl     *gomock.Controller
-	recorder *MockconfigDescriberMockRecorder
-}
-
-// MockconfigDescriberMockRecorder is the mock recorder for MockconfigDescriber.
-type MockconfigDescriberMockRecorder struct {
-	mock *MockconfigDescriber
-}
-
-// NewMockconfigDescriber creates a new mock instance.
-func NewMockconfigDescriber(ctrl *gomock.Controller) *MockconfigDescriber {
-	mock := &MockconfigDescriber{ctrl: ctrl}
-	mock.recorder = &MockconfigDescriberMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockconfigDescriber) EXPECT() *MockconfigDescriberMockRecorder {
-	return m.recorder
-}
-
-// Manifest mocks base method.
-func (m *MockconfigDescriber) Manifest() ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Manifest")
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Manifest indicates an expected call of Manifest.
-func (mr *MockconfigDescriberMockRecorder) Manifest() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Manifest", reflect.TypeOf((*MockconfigDescriber)(nil).Manifest))
 }
 
 // MocktimeoutError is a mock of timeoutError interface.

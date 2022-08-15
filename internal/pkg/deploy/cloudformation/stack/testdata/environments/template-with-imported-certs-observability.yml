@@ -10,6 +10,9 @@ Metadata:
       certificate: viewer-cert
     http:
       public:
+        access_logs:
+          bucket_name: accesslogsbucket
+          prefix: accesslogsbucketprefix
         security_groups:
           ingress:
             restrict_to:
@@ -269,6 +272,44 @@ Resources:
       ClusterSettings:
         - Name: containerInsights
           Value: enabled
+  UniqueJSONValuesFunctionRole:
+    Metadata:
+      "aws:copilot:description": "An IAM Role for the unique json values lambda"
+    Type: AWS::IAM::Role
+    Condition: CreateALB
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  UniqueJSONValuesFunction:
+    Type: AWS::Lambda::Function
+    Condition: CreateALB
+    Properties:
+      Code:
+        S3Bucket: mockbucket
+        S3Key: unique-json-values
+      Handler: "index.handler"
+      Timeout: 600
+      MemorySize: 512
+      Role: !GetAtt "UniqueJSONValuesFunctionRole.Arn"
+      Runtime: nodejs16.x
+  UniqueAliasesAction:
+    Metadata:
+      "aws:copilot:description": "An action to get unique custom aliases for services in your environment"
+    Condition: CreateALB
+    Type: Custom::UniqueJSONValuesFunction
+    Properties:
+      ServiceToken: !GetAtt UniqueJSONValuesFunction.Arn
+      Aliases: !Ref Aliases
   CloudFrontDistribution:
     Metadata:
       'aws:copilot:description': 'A CloudFront distribution for global content delivery'
@@ -276,6 +317,7 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
+        Aliases: !GetAtt UniqueAliasesAction.UniqueValues
         DefaultCacheBehavior:
           AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
           CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k
@@ -418,6 +460,13 @@ Resources:
     Condition: CreateALB
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      LoadBalancerAttributes:
+        - Key: 'access_logs.s3.enabled'
+          Value: true
+        - Key: 'access_logs.s3.prefix'
+          Value: "accesslogsbucketprefix"
+        - Key: 'access_logs.s3.bucket'
+          Value: "accesslogsbucket"
       Scheme: internet-facing
       SecurityGroups: 
         - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId
@@ -1063,7 +1112,9 @@ Outputs:
   CloudFrontDomainName:
     Condition: CreateALB
     Value: !GetAtt CloudFrontDistribution.DomainName
-    Description: The domain name of an associated Cloud Front Distribution.
+    Description: The domain name of an associated CloudFront Distribution.
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDomainName
   PublicALBAccessible:
     Condition: CreateALB
     Value: false
