@@ -160,29 +160,36 @@ By attaching public certificates to your load balancer, you can associate your L
 See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-existing-validated-certificates) guide to learn more about how to redeploy services using [`http.alias`](./lb-web-service.en.md#http-alias).
 
 <span class="parent-field">http.public.</span><a id="http-public-access-logs" href="#http-public-access-logs" class="field">`access_logs`</a> <span class="type">Boolean or Map</span>   
-Enable Elastic Load Balancing access logs.   
-If you specify `true`, Copilot will create an S3 bucket to which the Public Load Balancer will store access logs.
+Enable [Elastic Load Balancing access logs](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html).   
+If you specify `true`, Copilot will create an S3 bucket where the Public Load Balancer will store access logs.
 
 ```yaml
 http:
   public:
     access_logs: true 
 ```
-
-You can also specify an existing S3 bucket with a map.
+You can customize the log prefix:
 ```yaml
 http:
- public:
-   access_logs:
-     bucket_name: my-bucket
-     bucket_prefix: access-logs
+  public:
+    access_logs:
+      prefix: access-logs
 ```
 
-<span class="parent-field">http.public.access_logs</span><a id="http-public-access-logs-bucket-name" href="#http-public-access-logs-bucket-name" class="field">`bucket_name`</a> <span class="type">String</span>   
-Existing S3 bucket name 
+It is also possible to use your own S3 bucket instead of letting Copilot creates one for you:
+```yaml
+http:
+  public:
+    access_logs:
+      bucket_name: my-bucket
+      prefix: access-logs
+```
 
-<span class="parent-field">http.public.access_logs</span><a id="http-public-access-logs-bucket-prefix" href="#http-public-access-logs-bucket-prefix" class="field">`bucket_prefix`</a> <span class="type">String</span>   
-S3 bucket prefix
+<span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-bucket-name" href="#http-public-access-logs-bucket-name" class="field">`bucket_name`</a> <span class="type">String</span>   
+The name of an existing S3 bucket to which to store the access logs. 
+
+<span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-prefix" href="#http-public-access-logs-prefix" class="field">`prefix`</a> <span class="type">String</span>   
+The prefix for the log objects.
 
 
 
