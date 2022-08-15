@@ -27,7 +27,8 @@ Copilot v1.21 brings several new features and improvements:
 
 ## CloudFront Integration
 
-## Configure Environment Security Group
+## New Environment Manifest Features
+### Configure Environment Security Group
 You can now configure your environment security group rules through environment manifest.   
 Sample security group rules template inside environment manifest is given below.
 ```yaml
@@ -36,20 +37,18 @@ network:
     security_group:
       ingress:
         - ip_protocol: tcp
-          ports: 0-65535
+          ports: 80
           cidr: 0.0.0.0/0
       egress:
         - ip_protocol: tcp
-          ports: 80
+          ports: 0-65535
           cidr: 0.0.0.0/0
 ```
-## `job logs`
+For the complete specification, see the [environment manifest](../docs/manifest/environment.en.md#network-vpc-security-group).
 
-## Package Addons CloudFormation Templates
-
-## ELB Access Logs Support
+### ELB Access Logs Support
 You can now enable Elastic Load Balancing access logs that capture detailed information about requests sent to your load balancer.
-There are a few ways to enable access logs: 
+There are a few ways to enable access logs:
 
 1. You can specify `access_logs: true` in your environment manifest as shown below and Copilot will create an S3 bucket where the Public Load Balancer will store access logs.
 ```yaml
@@ -60,9 +59,10 @@ http:
   public:
     access_logs: true 
 ```
+You can also view the bucket name with `copilot env show --resources` command.
 
-2. You can also bring in your own bucket and prefix. Copilot will use those bucket details to enable access logs. 
-You can do that by specifying the following configuration in your environment manifest.
+2. You can also bring in your own bucket and prefix. Copilot will use those bucket details to enable access logs.
+   You can do that by specifying the following configuration in your environment manifest.
 ```yaml
 name: qa
 type: Environment
@@ -71,10 +71,13 @@ http:
  public:
    access_logs:
      bucket_name: my-bucket
-     bucket_prefix: my-prefix
+     prefix: my-prefix
 ```
 When importing your own bucket, you need to make sure that the bucket exists and has the required [bucket policy](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html#attach-bucket-policy) for the load balancer to
 write access logs to it.
+## `job logs`
+
+## Package Addons CloudFormation Templates
 
 ## What’s next?
 
