@@ -135,9 +135,5 @@ func unsupportedBuildKeys(build *compose.BuildConfig) (IgnoredKeys, error) {
 		ignoredKeys = append(ignoredKeys, "build.labels")
 	}
 
-	if len(ignoredKeys) == 0 {
-		return nil, nil
-	}
-
 	return ignoredKeys, nil
 }
