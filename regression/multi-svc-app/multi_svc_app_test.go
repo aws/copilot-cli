@@ -183,7 +183,7 @@ var _ = Describe("regression", func() {
 				Expect(err).NotTo(HaveOccurred())
 				_, err = cli.Run("job", "init",
 					"--name", "query",
-					"--schedule", "@every 4m",
+					"--schedule", "@every 1m",
 					"--dockerfile", fmt.Sprintf("./%s/Dockerfile", "query"))
 				Expect(err).NotTo(HaveOccurred())
 			})
