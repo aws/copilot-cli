@@ -66,18 +66,23 @@ func convertTaskConfig(service *types.ServiceConfig) (manifest.TaskConfig, error
 		}
 	}
 
+	taskCfg := manifest.TaskConfig{
+		Platform: manifest.PlatformArgsOrString{
+			PlatformString: (*manifest.PlatformString)(nilIfEmpty(service.Platform)),
+		},
+		EnvFile: envFile,
+	}
+
 	envVars, err := convertMappingWithEquals(service.Environment)
 	if err != nil {
 		return manifest.TaskConfig{}, fmt.Errorf("convert environment variables: %w", err)
 	}
 
-	return manifest.TaskConfig{
-		Platform: manifest.PlatformArgsOrString{
-			PlatformString: (*manifest.PlatformString)(nilIfEmpty(service.Platform)),
-		},
-		Variables: envVars,
-		EnvFile:   envFile,
-	}, nil
+	if len(envVars) != 0 {
+		taskCfg.Variables = envVars
+	}
+
+	return taskCfg, nil
 }
 
 // convertHealthCheckConfig trivially converts a Compose container health check into its Copilot variant.

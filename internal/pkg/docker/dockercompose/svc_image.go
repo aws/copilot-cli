@@ -32,17 +32,20 @@ func convertImageConfig(build *types.BuildConfig, labels map[string]string, imag
 		return manifest.Image{}, ignored, err
 	}
 
+	buildArgs := manifest.DockerBuildArgs{
+		Context:    nilIfEmpty(build.Context),
+		Dockerfile: nilIfEmpty(build.Dockerfile),
+		Target:     nilIfEmpty(build.Target),
+		CacheFrom:  build.CacheFrom,
+	}
+
 	args, err := convertMappingWithEquals(build.Args)
 	if err != nil {
 		return manifest.Image{}, nil, fmt.Errorf("convert build args: %w", err)
 	}
 
-	buildArgs := manifest.DockerBuildArgs{
-		Context:    nilIfEmpty(build.Context),
-		Dockerfile: nilIfEmpty(build.Dockerfile),
-		Args:       args,
-		Target:     nilIfEmpty(build.Target),
-		CacheFrom:  build.CacheFrom,
+	if len(args) != 0 {
+		buildArgs.Args = args
 	}
 
 	image.Build = manifest.BuildArgsOrString{
@@ -79,10 +82,6 @@ func convertMappingWithEquals(inArgs types.MappingWithEquals) (map[string]string
 			english.PluralWord(len(badArgs), "is", "are"),
 			english.PluralWord(len(badArgs), "a value", "values"),
 			english.PluralWord(len(badArgs), "requires", "require"))
-	}
-
-	if len(args) == 0 {
-		return nil, nil
 	}
 
 	return args, nil
