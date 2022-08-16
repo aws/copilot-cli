@@ -29,7 +29,7 @@ Copilot v1.21 brings several new features and improvements:
 
 One of our first major additions to the Copilot environment manifest! CloudFront is an AWS Content Delivery Network (CDN) which helps people deploy their applications across the globe, and now you can enable a distribution by simply setting `cdn: true` in your environment manifest and running `copilot env deploy`.
 
-### Currently supported features:
+### Currently supported features
 - A distribution deployed in front of your public Application Load Balancer (ALB)
 - ALB ingress restricted to the CloudFront distribution to protect from DDoS attack
 - HTTPS traffic through an imported certificate, or a Copilot-managed certificate
