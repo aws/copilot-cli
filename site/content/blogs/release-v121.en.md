@@ -13,7 +13,8 @@ Copilot v1.21 brings several new features and improvements:
 - **Configure environment security group**: Configure your environment security group rules through environment manifest. [See detailed section](#configure-environment-security-group).
 - **ELB access log support**: Enable elastic load balancing access logs for your Load Balanced Web Service. [See detailed section](#elb-access-logs-support).
 - **Check out job logs**:
-- **Package addons CloudFormation templates before deployments**: 
+- **Package addon CloudFormation templates before deployments**: Copilot will now package addon templates on `copilot svc deploy`. This means Copilot can upload AWS Lambda functions to be deployed alongside your containerized services! Read more about how to get started deploying Lambda functions, and other resources, in [Copilot's documentation](../docs/developing/addons/package.en.md).
+- **ELB access log support**:
 
 ???+ note "What’s AWS Copilot?"
 
@@ -140,8 +141,6 @@ or follow the logs of a task you've just invoked with [`copilot job run`](../doc
 ```console
 $ copilot job run -n emailer && copilot job logs -n emailer --follow
 ```
-## Package Addons CloudFormation Templates
-
 ## What’s next?
 
 Download the new Copilot CLI version by following the link below and leave your feedback on [GitHub](https://github.com/aws/copilot-cli/) or our [Community Chat](https://gitter.im/aws/copilot-cli):
