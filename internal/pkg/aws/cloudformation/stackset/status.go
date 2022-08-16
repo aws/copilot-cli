@@ -28,10 +28,10 @@ type OpStatus string
 
 // IsCompleted returns true if the operation is in a final state.
 func (s OpStatus) IsCompleted() bool {
-	return s.IsSuccessful() || s.IsFailure()
+	return s.IsSuccess() || s.IsFailure()
 }
 
-// InProgress returns true if the operation is not in a final state yet.
+// InProgress returns true if the operation has started but hasn't reached a final state yet.
 func (s OpStatus) InProgress() bool {
 	switch s {
 	case opStatusQueued, opStatusRunning, opStatusStopping:
@@ -41,8 +41,8 @@ func (s OpStatus) InProgress() bool {
 	}
 }
 
-// IsSuccessful returns true if the operation is completed successfully.
-func (s OpStatus) IsSuccessful() bool {
+// IsSuccess returns true if the operation is completed successfully.
+func (s OpStatus) IsSuccess() bool {
 	return s == opStatusSucceeded
 }
 
@@ -61,7 +61,7 @@ type InstanceStatus string
 
 // IsCompleted returns true if the operation is in a final state.
 func (s InstanceStatus) IsCompleted() bool {
-	return s.IsSuccessful() || s.IsFailure()
+	return s.IsSuccess() || s.IsFailure()
 }
 
 // InProgress returns true if the instance is being updated with a new template.
@@ -74,8 +74,8 @@ func (s InstanceStatus) InProgress() bool {
 	return false
 }
 
-// IsSuccessful returns true if the instance is up-to-date with the stack set template.
-func (s InstanceStatus) IsSuccessful() bool {
+// IsSuccess returns true if the instance is up-to-date with the stack set template.
+func (s InstanceStatus) IsSuccess() bool {
 	return s == instanceStatusSucceeded
 }
 

@@ -17,7 +17,7 @@ var (
 )
 
 type result interface {
-	IsSuccessful() bool
+	IsSuccess() bool
 	IsFailure() bool
 	InProgress() bool
 	fmt.Stringer
@@ -26,18 +26,22 @@ type result interface {
 // notStartedResult represents an unbegun status that implements the result interface.
 type notStartedResult struct{}
 
-func (r notStartedResult) IsSuccessful() bool {
+// IsSuccess is false for a non-started state.
+func (r notStartedResult) IsSuccess() bool {
 	return false
 }
 
+// IsFailure is false for a non-started state.
 func (r notStartedResult) IsFailure() bool {
 	return false
 }
 
+// InProgress is false for a non-started state.
 func (r notStartedResult) InProgress() bool {
 	return false
 }
 
+// String implements the fmt.Stringer interface.
 func (r notStartedResult) String() string {
 	return "not started"
 }
@@ -109,7 +113,7 @@ func colorStackStatus(statuses []cfnStatus) func(format string, a ...interface{}
 	}
 
 	latestStatus := statuses[len(statuses)-1]
-	if latestStatus.value.IsSuccessful() && !hasPastFailure {
+	if latestStatus.value.IsSuccess() && !hasPastFailure {
 		return color.Green.Sprintf
 	}
 	if hasPastFailure {

@@ -291,8 +291,8 @@ func (c *stackSetComponent) Listen() {
 	close(c.done)
 }
 
-// Render renders the stack set status updates to out.
-func (c *stackSetComponent) Render(out io.Writer) (numLines int, err error) {
+// Render renders the stack set status updates to out and returns the total number of lines written and error if any.
+func (c *stackSetComponent) Render(out io.Writer) (int, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

@@ -45,7 +45,7 @@ func TestOpStatus_IsCompleted(t *testing.T) {
 	}
 }
 
-func TestOpStatus_IsSuccessful(t *testing.T) {
+func TestOpStatus_IsSuccess(t *testing.T) {
 	testCases := map[string]struct {
 		status string
 		wanted bool
@@ -73,7 +73,7 @@ func TestOpStatus_IsSuccessful(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, OpStatus(tc.status).IsSuccessful())
+			require.Equal(t, tc.wanted, OpStatus(tc.status).IsSuccess())
 		})
 	}
 }
@@ -222,7 +222,7 @@ func TestInstanceStatus_InProgress(t *testing.T) {
 	}
 }
 
-func TestInstanceStatus_IsSuccessful(t *testing.T) {
+func TestInstanceStatus_IsSuccess(t *testing.T) {
 	testCases := map[string]struct {
 		status string
 		wanted bool
@@ -250,7 +250,7 @@ func TestInstanceStatus_IsSuccessful(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, InstanceStatus(tc.status).IsSuccessful())
+			require.Equal(t, tc.wanted, InstanceStatus(tc.status).IsSuccess())
 		})
 	}
 }
