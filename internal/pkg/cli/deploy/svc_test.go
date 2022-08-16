@@ -22,7 +22,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -44,7 +43,7 @@ type deployMocks struct {
 	mockSNSTopicsLister        *mocks.MocksnsTopicsLister
 	mockServiceDeployer        *mocks.MockserviceDeployer
 	mockServiceForceUpdater    *mocks.MockserviceForceUpdater
-	mockTemplater              *mocks.Mocktemplater
+	mockAddons                 *mocks.MockstackBuilder
 	mockUploader               *mocks.Mockuploader
 	mockVersionGetter          *mocks.MockversionGetter
 	mockFileReader             *mocks.MockfileReader
@@ -153,16 +152,14 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					Platform:   "mockContainerPlatform",
 					Tags:       []string{mockImageTag},
 				}).Return("mockDigest", nil)
-				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
-					WlName: "mockWkld",
-				})
+				m.mockAddons = nil
 			},
 			wantImageDigest: aws.String("mockDigest"),
 		},
 		"should retrieve Load Balanced Web Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
-				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
 				crs, err := customresource.LBWS(fakeTemplateFS())
@@ -188,7 +185,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should retrieve Backend Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
-				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
 				crs, err := customresource.Backend(fakeTemplateFS())
@@ -214,7 +211,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should retrieve Worker Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
-				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
 				crs, err := customresource.Worker(fakeTemplateFS())
@@ -240,7 +237,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should retrieve Request-Driven Web Service custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
-				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
 				crs, err := customresource.RDWS(fakeTemplateFS())
@@ -266,7 +263,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should retrieve Scheduled Job custom resource URLs": {
 			mock: func(t *testing.T, m *deployMocks) {
 				// Ignore addon uploads.
-				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
 				crs, err := customresource.ScheduledJob(fakeTemplateFS())
@@ -331,7 +328,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockFileReader.EXPECT().ReadFile(filepath.Join(mockWorkspacePath, mockEnvFile)).Return([]byte{}, nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockEnvFilePath, gomock.Any()).
 					Return(mockEnvFileS3URL, nil)
-				m.mockTemplater.EXPECT().Template().Return("some data", nil)
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.mockAddons.EXPECT().Template().Return("some data", nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockAddonPath, gomock.Any()).
 					Return(mockAddonsS3URL, nil)
 			},
@@ -342,7 +340,8 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		"should return error if fail to upload to S3 bucket": {
 			inRegion: "us-west-2",
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockTemplater.EXPECT().Template().Return("some data", nil)
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.mockAddons.EXPECT().Template().Return("some data", nil)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, mockAddonPath, gomock.Any()).
 					Return("", mockError)
 			},
@@ -351,14 +350,19 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 		},
 		"should return empty url if the service doesn't have any addons and env files": {
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockTemplater.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{
-					WlName: "mockWkld",
-				})
+				m.mockAddons = nil
 			},
 		},
-		"should fail if addons cannot be retrieved from workspace": {
+		"should fail if packaging addons fails": {
 			mock: func(t *testing.T, m *deployMocks) {
-				m.mockTemplater.EXPECT().Template().Return("", mockError)
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(mockError)
+			},
+			wantErr: fmt.Errorf("package addons: %w", mockError),
+		},
+		"should fail if addons template can't be created": {
+			mock: func(t *testing.T, m *deployMocks) {
+				m.mockAddons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.mockAddons.EXPECT().Template().Return("", mockError)
 			},
 			wantErr: fmt.Errorf("retrieve addons template: %w", mockError),
 		},
@@ -371,7 +375,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 
 			m := &deployMocks{
 				mockUploader:           mocks.NewMockuploader(ctrl),
-				mockTemplater:          mocks.NewMocktemplater(ctrl),
+				mockAddons:             mocks.NewMockstackBuilder(ctrl),
 				mockImageBuilderPusher: mocks.NewMockimageBuilderPusher(ctrl),
 				mockFileReader:         mocks.NewMockfileReader(ctrl),
 			}
@@ -393,12 +397,13 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					fileName:      tc.inEnvFile,
 					buildRequired: tc.inBuildRequired,
 				},
-
-				templater:          m.mockTemplater,
 				fs:                 m.mockFileReader,
 				s3Client:           m.mockUploader,
 				imageBuilderPusher: m.mockImageBuilderPusher,
 				templateFS:         fakeTemplateFS(),
+			}
+			if m.mockAddons != nil {
+				wkldDeployer.addons = m.mockAddons
 			}
 			var deployer artifactsUploader
 			deployer = &lbWebSvcDeployer{
@@ -448,6 +453,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		},
 	}
 	mockCertARNs := []string{"mockCertARN"}
+	mockCDNCertARN := "mockCDNCertARN"
 	mockResources := &stack.AppRegionalResources{
 		S3Bucket: mockS3Bucket,
 	}
@@ -493,6 +499,66 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("cannot deploy service mockWkld without http.alias to environment mockEnv with certificate imported"),
 		},
+		"cannot specify alias hosted zone when no certificates are imported in the env": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-east-1",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				return envConfig
+			},
+			inAliases: manifest.Alias{
+				AdvancedAliases: []manifest.AdvancedAlias{
+					{
+						Alias:      aws.String("example.com"),
+						HostedZone: aws.String("mockHostedZone1"),
+					},
+					{
+						Alias:      aws.String("foobar.com"),
+						HostedZone: aws.String("mockHostedZone2"),
+					},
+				},
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+			wantErr: fmt.Errorf("cannot specify alias hosted zones [mockHostedZone1 mockHostedZone2] when no certificates are imported in environment \"mockEnv\""),
+		},
+		"cannot specify alias hosted zone when cdn is enabled": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-east-1",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				envConfig.CDNConfig.Config.Certificate = aws.String(mockCDNCertARN)
+				return envConfig
+			},
+			inAliases: manifest.Alias{
+				AdvancedAliases: []manifest.AdvancedAlias{
+					{
+						Alias:      aws.String("example.com"),
+						HostedZone: aws.String("mockHostedZone1"),
+					},
+					{
+						Alias:      aws.String("foobar.com"),
+						HostedZone: aws.String("mockHostedZone2"),
+					},
+				},
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+			},
+			wantErr: fmt.Errorf("cannot specify alias hosted zones when cdn is enabled in environment \"mockEnv\""),
+		},
 		"fail to validate certificate aliases": {
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
@@ -513,7 +579,31 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(mockError)
 			},
-			wantErr: fmt.Errorf("validate aliases against the imported certificate for env mockEnv: some error"),
+			wantErr: fmt.Errorf("validate aliases against the imported public ALB certificate for env mockEnv: some error"),
+		},
+		"fail to validate cdn certificate aliases": {
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-east-1",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				envConfig.CDNConfig.Config.Certificate = aws.String(mockCDNCertARN)
+				return envConfig
+			},
+			inAliases: manifest.Alias{
+				AdvancedAliases: mockMultiAliases,
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, []string{mockCDNCertARN}).Return(mockError)
+			},
+			wantErr: fmt.Errorf("validate aliases against the imported CDN certificate for env mockEnv: some error"),
 		},
 		"fail to get public CIDR blocks": {
 			inNLB: manifest.NetworkLoadBalancerConfiguration{
@@ -687,7 +777,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(errors.New("some error"))
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).Return(errors.New("some error"))
 			},
 			wantErr: fmt.Errorf("deploy service: some error"),
 		},
@@ -701,7 +791,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).Return(cloudformation.NewMockErrChangeSetEmpty())
 			},
 			wantErr: fmt.Errorf("deploy service: change set with name mockChangeSet for stack mockStack has no changes"),
 		},
@@ -716,7 +806,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).
 					Return(nil)
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(time.Time{}, mockError)
@@ -734,7 +824,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).
 					Return(nil)
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockAfterTime, nil)
@@ -751,7 +841,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockBeforeTime, nil)
@@ -772,7 +862,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockBeforeTime, nil)
@@ -797,7 +887,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
 			},
 		},
 		"success": {
@@ -820,7 +910,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
 			},
 		},
 		"success with force update": {
@@ -834,7 +924,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			mock: func(m *deployMocks) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
-				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), gomock.Any(), "mockBucket", gomock.Any()).
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).
 					Return(cloudformation.NewMockErrChangeSetEmpty())
 				m.mockServiceForceUpdater.EXPECT().LastUpdatedAt(mockAppName, mockEnvName, mockName).
 					Return(mockBeforeTime, nil)
@@ -869,14 +959,14 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			deployer := lbWebSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
-						name:              mockName,
-						app:               tc.inApp,
-						env:               tc.inEnvironment,
-						environmentConfig: tc.inEnvironmentConfig(),
-						resources:         mockResources,
-						deployer:          m.mockServiceDeployer,
-						endpointGetter:    m.mockEndpointGetter,
-						spinner:           m.mockSpinner,
+						name:           mockName,
+						app:            tc.inApp,
+						env:            tc.inEnvironment,
+						envConfig:      tc.inEnvironmentConfig(),
+						resources:      mockResources,
+						deployer:       m.mockServiceDeployer,
+						endpointGetter: m.mockEndpointGetter,
+						spinner:        m.mockSpinner,
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return m.mockServiceForceUpdater
@@ -887,7 +977,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				},
 				appVersionGetter:       m.mockVersionGetter,
 				publicCIDRBlocksGetter: m.mockPublicCIDRBlocksGetter,
-				aliasCertValidator:     m.mockValidator,
+				newAliasCertValidator: func(region *string) aliasCertValidator {
+					return m.mockValidator
+				},
 				lbMft: &manifest.LoadBalancedWebService{
 					Workload: manifest.Workload{
 						Name: aws.String(mockName),
@@ -1456,11 +1548,11 @@ func TestBackendSvcDeployer_stackConfiguration(t *testing.T) {
 			deployer := &backendSvcDeployer{
 				svcDeployer: &svcDeployer{
 					workloadDeployer: &workloadDeployer{
-						name:              mockSvcName,
-						app:               tc.App,
-						env:               tc.Env,
-						endpointGetter:    m.mockEndpointGetter,
-						environmentConfig: tc.inEnvironmentConfig(),
+						name:           mockSvcName,
+						app:            tc.App,
+						env:            tc.Env,
+						endpointGetter: m.mockEndpointGetter,
+						envConfig:      tc.inEnvironmentConfig(),
 					},
 					newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
 						return nil

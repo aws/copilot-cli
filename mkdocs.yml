@@ -47,8 +47,11 @@ nav:
       - Worker Service: docs/manifest/worker-service.en.md
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:
-      - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
+      - Additional AWS Resources:
+        - Modeling with AWS CloudFormation: docs/developing/addons/modeling.en.md
+        - Uploading Local Artifacts: docs/developing/addons/package.en.md
       - Container Environment Variables: docs/developing/environment-variables.en.md
+      - Content Delivery: docs/developing/content-delivery.en.md
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
       - Domain: docs/developing/domain.en.md
       - Internal Load Balancers: docs/developing/internal-albs.en.md
@@ -73,19 +76,20 @@ nav:
         - env delete: docs/commands/env-delete.en.md
         - job init: docs/commands/job-init.en.md
         - job package: docs/commands/job-package.en.md
-        - job deploy: docs/commands/job-deploy.en.md
         - job delete: docs/commands/job-delete.en.md
         - svc init: docs/commands/svc-init.en.md
         - svc package: docs/commands/svc-package.en.md
-        - svc deploy: docs/commands/svc-deploy.en.md
         - svc delete: docs/commands/svc-delete.en.md
       - Release:
+        - env deploy: docs/commands/env-deploy.en.md
+        - job deploy: docs/commands/job-deploy.en.md
         - pipeline init: docs/commands/pipeline-init.en.md
         - pipeline deploy: docs/commands/pipeline-deploy.en.md
         - pipeline ls: docs/commands/pipeline-ls.en.md
         - pipeline show: docs/commands/pipeline-show.en.md
         - pipeline status: docs/commands/pipeline-status.en.md
         - pipeline delete: docs/commands/pipeline-delete.en.md
+        - svc deploy: docs/commands/svc-deploy.en.md
         - deploy: docs/commands/deploy.en.md
       - Operate:
         - app ls: docs/commands/app-ls.en.md
@@ -117,6 +121,7 @@ nav:
         - completion: docs/commands/completion.en.md
         - docs: docs/commands/docs.en.md
         - env delete: docs/commands/env-delete.en.md
+        - env deploy: docs/commands/env-deploy.en.md
         - env init: docs/commands/env-init.en.md
         - env ls: docs/commands/env-ls.en.md
         - env package: docs/commands/env-package.en.md
@@ -197,6 +202,8 @@ plugins:
             'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
             'docs/commands/pipeline-update.en.md': 'docs/commands/pipeline-deploy.en.md'
             'docs/commands/pipeline-update.ja.md': 'docs/commands/pipeline-deploy.ja.md'
+            'docs/developing/additional-aws-resources.en.md': 'docs/developing/addons/modeling.en.md'
+            'docs/developing/additional-aws-resources.ja.md': 'docs/developing/addons/modeling.ja.md'
     - i18n:
         default_language: en
         languages:

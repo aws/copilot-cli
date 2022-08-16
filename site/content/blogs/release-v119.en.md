@@ -1,5 +1,7 @@
 # AWS Copilot v1.19: Internal Load Balancers, Subnet Placement Specification, and more
 
+Posted On: Jun 13, 2022
+
 The AWS Copilot core team is excited to announce the v1.19 release!
 Special thanks to [@gautam-nutalapati](https://github.com/gautam-nutalapati) and [@jonstacks](https://github.com/jonstacks), who contributed to this release.
 Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has nearly 300 people online,
@@ -40,7 +42,7 @@ http:
       hosted_zone: HostedZoneID2
 ```
 * **Access to Created Private Route Tables**:
-Copilot now exports private route table IDs from CloudFormation environment stacks. Use them to create VPC gateway endpoints with [addons](../docs/developing/additional-aws-resources.en.md). ([#3611](https://github.com/aws/copilot-cli/pull/3611))
+Copilot now exports private route table IDs from CloudFormation environment stacks. Use them to create VPC gateway endpoints with [addons](../docs/developing/addons/modeling.en.md). ([#3611](https://github.com/aws/copilot-cli/pull/3611))
 * **`port` for Target Group Health Checks**:
 With the new `port` field, you can configure a non-default port for health checks, one different than that for requests from the load balancer. ([#3548](https://github.com/aws/copilot-cli/pull/3548))
 ```yaml
@@ -50,7 +52,7 @@ http:
     port: 8080
 ```
 
-* **Bug fixes:** 
+* **Bug fixes:**
     * Preserve tags applied by `app init --resource-tags` when services are deleted from an application ([#3582](https://github.com/aws/copilot-cli/pull/3582))
     * Fix regression when enabling autoscaling fields for Load Balanced Web Services with Network Load Balancers ([#3578](https://github.com/aws/copilot-cli/pull/3578))
     * Enable `copilot svc exec` for Fargate Windows tasks ([#3566](https://github.com/aws/copilot-cli/pull/3566))

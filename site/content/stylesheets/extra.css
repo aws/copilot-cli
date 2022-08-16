@@ -27,3 +27,9 @@ span.type {
   font-size: .7rem;
   margin-right: 4px;
 }
+
+span.version {
+  color: #8792a2;
+  font-size: .7rem;
+  float: right;
+}

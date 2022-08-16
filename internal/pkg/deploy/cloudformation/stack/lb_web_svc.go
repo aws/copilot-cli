@@ -10,7 +10,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -35,7 +34,6 @@ type LoadBalancedWebService struct {
 	*ecsWkld
 	manifest               *manifest.LoadBalancedWebService
 	httpsEnabled           bool
-	certImported           bool
 	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
@@ -61,16 +59,13 @@ type LoadBalancedWebServiceConfig struct {
 	RawManifest   []byte // Content of the manifest file without any transformations.
 	RuntimeConfig RuntimeConfig
 	RootUserARN   string
+	Addons        addons
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
 func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	opts ...LoadBalancedWebServiceOption) (*LoadBalancedWebService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(conf.Manifest.Name))
-	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
-	}
 	var dnsDelegationEnabled, httpsEnabled bool
 	var appInfo deploy.AppInformation
 
@@ -101,14 +96,13 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				image:       conf.Manifest.ImageConfig.Image,
 				rawManifest: conf.RawManifest,
 				parser:      parser,
-				addons:      addons,
+				addons:      conf.Addons,
 			},
 			logRetention:        conf.Manifest.Logging.Retention,
 			tc:                  conf.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest:             conf.Manifest,
-		certImported:         certImported,
 		httpsEnabled:         httpsEnabled,
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,
@@ -179,20 +173,14 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if len(aliasesFor) != 0 && !s.certImported {
-		return "", fmt.Errorf("cannot specify alias hosted zones when env certificates are managed by Copilot")
-	}
-
 	var deregistrationDelay *int64 = aws.Int64(60)
 	if s.manifest.RoutingRule.DeregistrationDelay != nil {
 		deregistrationDelay = aws.Int64(int64(s.manifest.RoutingRule.DeregistrationDelay.Seconds()))
 	}
-
 	var allowedSourceIPs []string
 	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
-
 	nlbConfig, err := s.convertNetworkLoadBalancer()
 	if err != nil {
 		return "", err
@@ -207,7 +195,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:                  aliases,
 		HTTPSListener:            s.httpsEnabled,
-		UseImportedCerts:         s.certImported,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,

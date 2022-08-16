@@ -19,18 +19,21 @@ EnvironmentManagerRole:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-{{- if or .PublicImportedCertARNs .PrivateImportedCertARNs}}
+{{- if or .PublicHTTPConfig.ImportedCertARNs .PrivateHTTPConfig.ImportedCertARNs}}
         - Sid: ImportedCertificates
           Effect: Allow
           Action: [
             acm:DescribeCertificate
           ]
           Resource:
-{{- range $arn := .PublicImportedCertARNs}}
+{{- range $arn := .PublicHTTPConfig.ImportedCertARNs}}
           - "{{$arn}}"
 {{- end}}
-{{- range $arn := .PrivateImportedCertARNs}}
+{{- range $arn := .PrivateHTTPConfig.ImportedCertARNs}}
           - "{{$arn}}"
+{{- end}}
+{{- if and .CDNConfig .CDNConfig.ImportedCertificate}}
+          - "{{.CDNConfig.ImportedCertificate}}"
 {{- end}}
 {{- end}}
         - Sid: CloudwatchLogs
@@ -93,7 +96,7 @@ EnvironmentManagerRole:
           Action:
             - "states:StartExecution"
           Resource:
-            - !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
+            - !Sub "arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
         - Sid: CloudFormation
           Effect: Allow
           Action: [

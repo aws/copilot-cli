@@ -102,6 +102,17 @@ type Alias struct {
 	StringSliceOrString StringSliceOrString
 }
 
+// HostedZones returns all the hosted zones.
+func (a *Alias) HostedZones() []string {
+	var hostedZones []string
+	for _, alias := range a.AdvancedAliases {
+		if alias.HostedZone != nil {
+			hostedZones = append(hostedZones, *alias.HostedZone)
+		}
+	}
+	return hostedZones
+}
+
 // IsEmpty returns empty if Alias is empty.
 func (a *Alias) IsEmpty() bool {
 	return len(a.AdvancedAliases) == 0 && a.StringSliceOrString.isEmpty()
@@ -125,7 +136,7 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 		a.StringSliceOrString = StringSliceOrString{}
 		return nil
 	}
-	if err := unmarshalYAMLToStringSliceOrString(&a.StringSliceOrString, value); err != nil {
+	if err := a.StringSliceOrString.UnmarshalYAML(value); err != nil {
 		return errUnmarshalAlias
 	}
 	return nil
@@ -133,16 +144,12 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 
 // ToStringSlice converts an Alias to a slice of string.
 func (a *Alias) ToStringSlice() ([]string, error) {
-	if len(a.AdvancedAliases) != 0 {
-		aliases := make([]string, len(a.AdvancedAliases))
-		for i, advancedAlias := range a.AdvancedAliases {
-			aliases[i] = aws.StringValue(advancedAlias.Alias)
-		}
-		return aliases, nil
+	if len(a.AdvancedAliases) == 0 {
+		return a.StringSliceOrString.toStringSlice(), nil
 	}
-	aliases, err := toStringSlice(&a.StringSliceOrString)
-	if err != nil {
-		return nil, err
+	aliases := make([]string, len(a.AdvancedAliases))
+	for i, advancedAlias := range a.AdvancedAliases {
+		aliases[i] = aws.StringValue(advancedAlias.Alias)
 	}
 	return aliases, nil
 }

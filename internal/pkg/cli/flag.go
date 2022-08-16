@@ -36,6 +36,7 @@ const (
 	stackOutputDirFlag    = "output-dir"
 	uploadAssetsFlag      = "upload-assets"
 	limitFlag             = "limit"
+	lastFlag              = "last"
 	followFlag            = "follow"
 	sinceFlag             = "since"
 	startTimeFlag         = "start-time"
@@ -83,6 +84,7 @@ const (
 	subnetsFlag                  = "subnets"
 	securityGroupsFlag           = "security-groups"
 	envVarsFlag                  = "env-vars"
+	envFileFlag                  = "env-file"
 	secretsFlag                  = "secrets"
 	commandFlag                  = "command"
 	entrypointFlag               = "entrypoint"
@@ -226,6 +228,8 @@ Uploaded asset locations are filled in the template configuration.`
 
 	limitFlagDescription = `Optional. The maximum number of log events returned. Default is 10
 unless any time filtering flags are set.`
+	lastFlagDescription = `Optional. The number of executions of the scheduled job for which
+logs should be shown.`
 	followFlagDescription = "Optional. Specifies if the logs should be streamed."
 	sinceFlagDescription  = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
 Defaults to all logs. Only one of start-time / since may be used.`
@@ -278,6 +282,9 @@ Must be either "MySQL" or "PostgreSQL".`
 	taskRoleFlagDescription      = "Optional. The ARN of the role for the task to use."
 	executionRoleFlagDescription = "Optional. The ARN of the role that grants the container agent permission to make AWS API calls."
 	envVarsFlagDescription       = "Optional. Environment variables specified by key=value separated by commas."
+	envFileFlagDescription       = `Optional. A path to an environment variable (.env) file. 
+Each line should be of the form of VARIABLE=VALUE. 
+Values specified with --env-vars take precedence over --env-file.`
 	secretsFlagDescription       = "Optional. Secrets to inject into the container. Specified by key=value separated by commas."
 	runCommandFlagDescription    = `Optional. The command that is passed to "docker run" to override the default command.`
 	entrypointFlagDescription    = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`

@@ -15,10 +15,13 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/stretchr/testify/require"
 )
@@ -76,6 +79,13 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 
 		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
+
+		ws, err := workspace.New()
+		require.NoError(t, err)
+
+		_, err = addon.Parse(aws.StringValue(v.Name), ws)
+		var notFound *addon.ErrAddonsNotFound
+		require.ErrorAs(t, err, &notFound)
 
 		svcDiscoveryEndpointName := fmt.Sprintf("%s.%s.local", tc.envName, appName)
 		envConfig := &manifest.Environment{

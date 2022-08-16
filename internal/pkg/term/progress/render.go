@@ -36,10 +36,10 @@ func NestedRenderOptions(opts RenderOptions) RenderOptions {
 	}
 }
 
-// Render renders r periodically to out.
+// Render renders r periodically to out and returns the last number of lines written to out.
 // Render stops when there the ctx is canceled or r is done listening to new events.
 // While Render is executing, the terminal cursor is hidden and updates are written in-place.
-func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) error {
+func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) (int, error) {
 	defer out.Flush() // Make sure every buffered text in out is written before exiting.
 
 	cursor := cursor.NewWithWriter(out)
@@ -50,24 +50,21 @@ func Render(ctx context.Context, out FileWriteFlusher, r DynamicRenderer) error 
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return writtenLines, ctx.Err()
 		case <-r.Done():
-			if _, err := eraseAndRender(out, r, writtenLines); err != nil {
-				return err
-			}
-			return nil
+			return EraseAndRender(out, r, writtenLines)
 		case <-time.After(renderInterval):
-			nl, err := eraseAndRender(out, r, writtenLines)
+			nl, err := EraseAndRender(out, r, writtenLines)
 			if err != nil {
-				return err
+				return nl, err
 			}
 			writtenLines = nl
 		}
 	}
 }
 
-// eraseAndRender erases prevNumLines from out and then renders r.
-func eraseAndRender(out FileWriteFlusher, r Renderer, prevNumLines int) (int, error) {
+// EraseAndRender erases prevNumLines from out and then renders r.
+func EraseAndRender(out FileWriteFlusher, r Renderer, prevNumLines int) (int, error) {
 	cursor.EraseLinesAbove(out, prevNumLines)
 	if err := out.Flush(); err != nil {
 		return 0, err
@@ -80,4 +77,45 @@ func eraseAndRender(out FileWriteFlusher, r Renderer, prevNumLines int) (int, er
 		return 0, err
 	}
 	return nl, err
+}
+
+// MultiRenderer returns a Renderer that's the concatenation of the input renderers.
+// The renderers are rendered sequentially, and the MultiRenderer is only Done once all renderers are Done.
+func MultiRenderer(renderers ...DynamicRenderer) DynamicRenderer {
+	mr := &multiRenderer{
+		renderers: renderers,
+		done:      make(chan struct{}),
+	}
+	go mr.listen()
+	return mr
+}
+
+type multiRenderer struct {
+	renderers []DynamicRenderer
+	done      chan struct{}
+}
+
+// Render sequentially renders the renderers to out and returns the sum of the number of lines written.
+func (mr *multiRenderer) Render(out io.Writer) (int, error) {
+	var sum int
+	for _, r := range mr.renderers {
+		nl, err := r.Render(out)
+		if err != nil {
+			return 0, err
+		}
+		sum += nl
+	}
+	return sum, nil
+}
+
+// Done returns a channel that's closed when there are no more events to Listen.
+func (mr *multiRenderer) Done() <-chan struct{} {
+	return mr.done
+}
+
+func (mr *multiRenderer) listen() {
+	for _, r := range mr.renderers {
+		<-r.Done()
+	}
+	close(mr.done)
 }

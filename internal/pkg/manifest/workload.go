@@ -58,17 +58,17 @@ func WorkloadTypes() []string {
 	return append(ServiceTypes(), JobTypes()...)
 }
 
-// WorkloadManifest represents a workload manifest.
-type WorkloadManifest interface {
-	ApplyEnv(envName string) (WorkloadManifest, error)
+// DynamicWorkload represents a dynamically populated workload.
+type DynamicWorkload interface {
+	ApplyEnv(envName string) (DynamicWorkload, error)
 	Validate() error
 	RequiredEnvironmentFeatures() []string
 	Load(sess *session.Session) error
-	Manifest() interface{}
+	Manifest() any
 }
 
 type workloadManifest interface {
-	Validate() error
+	validate() error
 	applyEnv(envName string) (workloadManifest, error)
 	requiredEnvironmentFeatures() []string
 	subnets() *SubnetListOrArgs
@@ -77,7 +77,7 @@ type workloadManifest interface {
 // UnmarshalWorkload deserializes the YAML input stream into a workload manifest object.
 // If an error occurs during deserialization, then returns the error.
 // If the workload type in the manifest is invalid, then returns an ErrInvalidManifestType.
-func UnmarshalWorkload(in []byte) (WorkloadManifest, error) {
+func UnmarshalWorkload(in []byte) (DynamicWorkload, error) {
 	am := Workload{}
 	if err := yaml.Unmarshal(in, &am); err != nil {
 		return nil, fmt.Errorf("unmarshal to workload manifest: %w", err)
@@ -230,19 +230,22 @@ type ImageOverride struct {
 	Command    CommandOverride    `yaml:"command"`
 }
 
+// StringSliceOrShellString is either a slice of string or a string using shell-style rules.
+type stringSliceOrShellString StringSliceOrString
+
 // EntryPointOverride is a custom type which supports unmarshalling "entrypoint" yaml which
 // can either be of type string or type slice of string.
-type EntryPointOverride StringSliceOrString
+type EntryPointOverride stringSliceOrShellString
 
 // CommandOverride is a custom type which supports unmarshalling "command" yaml which
 // can either be of type string or type slice of string.
-type CommandOverride StringSliceOrString
+type CommandOverride stringSliceOrShellString
 
 // UnmarshalYAML overrides the default YAML unmarshalling logic for the EntryPointOverride
-// struct, allowing it to perform more complex unmarshalling behavior.
+// struct, allowing it to be unmarshalled into a string slice or a string.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (e *EntryPointOverride) UnmarshalYAML(value *yaml.Node) error {
-	if err := unmarshalYAMLToStringSliceOrString((*StringSliceOrString)(e), value); err != nil {
+	if err := (*StringSliceOrString)(e).UnmarshalYAML(value); err != nil {
 		return errUnmarshalEntryPoint
 	}
 	return nil
@@ -250,7 +253,7 @@ func (e *EntryPointOverride) UnmarshalYAML(value *yaml.Node) error {
 
 // ToStringSlice converts an EntryPointOverride to a slice of string using shell-style rules.
 func (e *EntryPointOverride) ToStringSlice() ([]string, error) {
-	out, err := toStringSlice((*StringSliceOrString)(e))
+	out, err := (*stringSliceOrShellString)(e).toStringSlice()
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +264,7 @@ func (e *EntryPointOverride) ToStringSlice() ([]string, error) {
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (c *CommandOverride) UnmarshalYAML(value *yaml.Node) error {
-	if err := unmarshalYAMLToStringSliceOrString((*StringSliceOrString)(c), value); err != nil {
+	if err := (*StringSliceOrString)(c).UnmarshalYAML(value); err != nil {
 		return errUnmarshalCommand
 	}
 	return nil
@@ -269,7 +272,7 @@ func (c *CommandOverride) UnmarshalYAML(value *yaml.Node) error {
 
 // ToStringSlice converts an CommandOverride to a slice of string using shell-style rules.
 func (c *CommandOverride) ToStringSlice() ([]string, error) {
-	out, err := toStringSlice((*StringSliceOrString)(c))
+	out, err := (*stringSliceOrShellString)(c).toStringSlice()
 	if err != nil {
 		return nil, err
 	}
@@ -286,17 +289,6 @@ type StringSliceOrString struct {
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (s *StringSliceOrString) UnmarshalYAML(value *yaml.Node) error {
-	if err := unmarshalYAMLToStringSliceOrString(s, value); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *StringSliceOrString) isEmpty() bool {
-	return s.String == nil && len(s.StringSlice) == 0
-}
-
-func unmarshalYAMLToStringSliceOrString(s *StringSliceOrString, value *yaml.Node) error {
 	if err := value.Decode(&s.StringSlice); err != nil {
 		var yamlTypeErr *yaml.TypeError
 		if !errors.As(err, &yamlTypeErr) {
@@ -313,7 +305,22 @@ func unmarshalYAMLToStringSliceOrString(s *StringSliceOrString, value *yaml.Node
 	return value.Decode(&s.String)
 }
 
-func toStringSlice(s *StringSliceOrString) ([]string, error) {
+func (s *StringSliceOrString) isEmpty() bool {
+	return s.String == nil && len(s.StringSlice) == 0
+}
+
+func (s *StringSliceOrString) toStringSlice() []string {
+	if s.StringSlice != nil {
+		return s.StringSlice
+	}
+
+	if s.String == nil {
+		return nil
+	}
+	return []string{*s.String}
+}
+
+func (s *stringSliceOrShellString) toStringSlice() ([]string, error) {
 	if s.StringSlice != nil {
 		return s.StringSlice, nil
 	}
@@ -484,7 +491,7 @@ func (dyn *dynamicSubnets) load() error {
 	for k, v := range dyn.cfg.FromTags {
 		values := v.StringSlice
 		if v.String != nil {
-			values = []string{aws.StringValue(v.String)}
+			values = v.toStringSlice()
 		}
 		filters = append(filters, ec2.FilterForTags(k, values...))
 	}
@@ -552,7 +559,7 @@ func (s *SecurityGroupsConfig) isEmpty() bool {
 }
 
 // UnmarshalYAML overrides the default YAML unmarshalling logic for the SecurityGroupsIDsOrConfig
-// struct, allowing it to perform more complex unmarshalling behavior.
+// struct, allowing it to be unmarshalled into a string slice or a string.
 // This method implements the yaml.Unmarshaler (v3) interface.
 func (s *SecurityGroupsIDsOrConfig) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&s.AdvancedConfig); err != nil {

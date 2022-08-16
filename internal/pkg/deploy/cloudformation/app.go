@@ -8,6 +8,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	"github.com/aws/copilot-cli/internal/pkg/term/progress"
+
 	"github.com/aws/aws-sdk-go/aws"
 	sdkcloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	sdkcloudformationiface "github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
@@ -29,8 +32,8 @@ func (cf CloudFormation) DeployApp(in *deploy.CreateAppInput) error {
 	if err != nil {
 		return err
 	}
-	if err := cf.cfnClient.CreateAndWait(s); err != nil {
-		// If the stack already exists - we can move on to creating the StackSet.
+
+	if err := cf.executeAndRenderChangeSet(cf.newCreateChangeSetInput(cf.console, s)); err != nil {
 		var alreadyExists *cloudformation.ErrStackAlreadyExists
 		if !errors.As(err, &alreadyExists) {
 			return err
@@ -496,8 +499,33 @@ func (cf CloudFormation) getLastDeployedAppConfig(appConfig *stack.AppStackConfi
 
 // DeleteApp deletes all application specific StackSet and Stack resources.
 func (cf CloudFormation) DeleteApp(appName string) error {
-	if err := cf.appStackSet.Delete(fmt.Sprintf("%s-infrastructure", appName)); err != nil {
+	spinner := progress.NewSpinner(cf.console)
+	spinner.Start(fmt.Sprintf("Delete regional resources for application %q", appName))
+
+	stackSetName := fmt.Sprintf("%s-infrastructure", appName)
+	if err := cf.deleteStackSetInstances(stackSetName); err != nil {
+		spinner.Stop(log.Serrorf("Error deleting regional resources for application %q\n", appName))
 		return err
 	}
-	return cf.cfnClient.DeleteAndWait(fmt.Sprintf("%s-infrastructure-roles", appName))
+	if err := cf.appStackSet.Delete(stackSetName); err != nil {
+		spinner.Stop(log.Serrorf("Error deleting regional resources for application %q\n", appName))
+		return err
+	}
+	spinner.Stop(log.Ssuccessf("Deleted regional resources for application %q\n", appName))
+	stackName := fmt.Sprintf("%s-infrastructure-roles", appName)
+	description := fmt.Sprintf("Delete application roles stack %s", stackName)
+	return cf.deleteAndRenderStack(stackName, description, func() error {
+		return cf.cfnClient.DeleteAndWait(stackName)
+	})
+}
+
+func (cf CloudFormation) deleteStackSetInstances(name string) error {
+	opID, err := cf.appStackSet.DeleteAllInstances(name)
+	if err != nil {
+		if IsEmptyErr(err) {
+			return nil
+		}
+		return err
+	}
+	return cf.appStackSet.WaitForOperation(name, opID)
 }

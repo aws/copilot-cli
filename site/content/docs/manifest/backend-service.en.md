@@ -1,63 +1,142 @@
 List of all available properties for a `'Backend Service'` manifest. To learn about Copilot services, see the [Services](../concepts/services.en.md) concept page.
 
-???+ note "Sample manifest for an api service"
+???+ note "Sample backend service manifests"
 
-    ```yaml
-        # Your service name will be used in naming your resources like log groups, ECS services, etc.
+    === "Service Discovery"
+
+        ```yaml
+            # Your service is reachable at "http://api.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:8080" only within your VPC.
+            name: api
+            type: Backend Service
+
+            image:
+              build: ./api/Dockerfile
+              port: 8080
+              healthcheck:
+                command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
+                interval: 10s
+                retries: 2
+                timeout: 5s
+                start_period: 0s
+    
+            cpu: 256
+            memory: 512
+            count: 2
+            exec: true
+    
+            env_file: ./api/.env
+            environments:
+              test:
+                deployment:
+                  rolling: "recreate"
+                count: 1
+        ```
+
+    === "Internal Application Load Balancer"
+
+        ```yaml
+        # Your service is reachable at:
+        # http://api.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.internal
+        # behind an internal load balancer only within your VPC.
         name: api
         type: Backend Service
-
-        # Your service is reachable at "http://api.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:8080" but is not public.
-
-        # Configuration for your containers and service.
+    
         image:
           build: ./api/Dockerfile
           port: 8080
+
+        http:
+          path: '/'
           healthcheck:
-            command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
-            interval: 10s
-            retries: 2
-            timeout: 5s
-            start_period: 0s
-
-        cpu: 256
-        memory: 512
-        count: 1
-        exec: true
-
-        storage:
-          volumes:
-            myEFSVolume:
-              path: '/etc/mount1'
-              read_only: true
-              efs:
-                id: fs-12345678
-                root_dir: '/'
-                auth:
-                  iam: true
-                  access_point_id: fsap-12345678
+            path: '/_healthcheck'
+            success_codes: '200,301'
+            healthy_threshold: 3
+            interval: 15s
+            timeout: 10s
+            grace_period: 30s
+          deregistration_delay: 50s
 
         network:
           vpc:
             placement: 'private'
-            security_groups: ['sg-05d7cd12cceeb9a6e']
+
+        count:
+          range: 1-10
+          cpu_percentage: 70
+          requests: 10
+          response_time: 2s
+
+        secrets:
+          GITHUB_WEBHOOK_SECRET: GH_WEBHOOK_SECRET
+          DB_PASSWORD:
+            secretsmanager: 'demo/test/mysql:password::'
+        ```
+
+    === "With a domain"
+
+        ```yaml
+        # Assuming your environment has private certificates imported, you can assign
+        # an HTTPS endpoint to your service.
+        # See https://aws.github.io/copilot-cli/docs/manifest/environment/#http-private-certificates
+        name: api
+        type: Backend Service
+    
+        image:
+          build: ./api/Dockerfile
+          port: 8080
+
+        http:
+          path: '/'
+          alias: 'v1.api.example.com'
+          hosted_zone: AN0THE9H05TED20NEID # Insert record for v1.api.example.com to the hosted zone.
+
+        count: 1
+        ```
+
+    === "Event-driven"
+
+        ```yaml
+        # See https://aws.github.io/copilot-cli/docs/developing/publish-subscribe/
+        name: warehouse
+        type: Backend Service
+    
+        image:
+          build: ./warehouse/Dockerfile
+          port: 80
+
+        publish:
+          topics:
+            - name: 'inventory'
 
         variables:
-          LOG_LEVEL: info
-        env_file: log.env
-        secrets:
-          GITHUB_TOKEN: GITHUB_TOKEN
+          DDB_TABLE_NAME: 'inventory'
 
-        # You can override any of the values defined above by environment.
-        environments:
-          test:
-            deployment:
-              rolling: "recreate"
-            count:
-              spot: 2
-          production:
-            count: 2
-    ```
+        count:
+          range: 3-5
+          cpu_percentage: 70
+          memory_percentage: 80
+        ```
+
+    === "Shared file system"
+
+        ```yaml
+        # See http://localhost:8000/copilot-cli/docs/developing/storage/#file-systems
+        name: sync
+        type: Backend Serivce
+
+        image:
+          build: Dockerfile
+
+        variables:
+          S3_BUCKET_NAME: my-userdata-bucket
+
+        storage:
+          volumes:
+            userdata: 
+              path: /etc/mount1
+              efs:
+                id: fs-1234567
+        ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>
 The name of your service.
@@ -132,7 +211,9 @@ If using gRPC, please note that a domain must be associated with your applicatio
 
 <div class="separator"></div>
 
-<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>  
+<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span> 
+The number of tasks that your service should maintain.
+
 If you specify a number:
 ```yaml
 count: 5
@@ -186,13 +267,13 @@ count:
 
 This will set your range as 1-10 as above, but will place the first two copies of your service on dedicated Fargate capacity. If your service scales to 3 or higher, the third and any additional copies will be placed on Spot until the maximum is reached.
 
-<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
 The minimum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
 The maximum desired count for your service using autoscaling.
 
-<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
 The desired count at which you wish to start placing your service using Fargate Spot capacity providers.
 
 <span class="parent-field">count.</span><a id="count-cooldown" href="#count-cooldown" class="field">`cooldown`</a> <span class="type">Map</span>

@@ -45,6 +45,8 @@ type TaskStackInfo struct {
 	Env       string
 
 	RoleARN string
+
+	BucketName string
 }
 
 // TaskName returns the name of the one-off task. This is the same as the value of the

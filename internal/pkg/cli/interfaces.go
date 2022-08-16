@@ -5,6 +5,7 @@ package cli
 
 import (
 	"encoding"
+	"io"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/secretsmanager"
 
@@ -29,7 +30,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/repository"
 	"github.com/aws/copilot-cli/internal/pkg/task"
-	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
@@ -182,10 +182,6 @@ type logEventsWriter interface {
 	WriteLogEvents(opts logging.WriteLogEventsOpts) error
 }
 
-type templater interface {
-	Template() (string, error)
-}
-
 type execRunner interface {
 	Run(name string, args []string, options ...exec.CmdOption) error
 }
@@ -251,10 +247,18 @@ type wsPipelineManifestReader interface {
 	ReadPipelineManifest(path string) (*manifest.Pipeline, error)
 }
 
+type relPath interface {
+	// Rel returns the path relative from the object's root path to the target path.
+	//
+	// Unlike filepath.Rel, the input path is allowed to be either relative to the
+	// current working directory or absolute.
+	Rel(path string) (string, error)
+}
+
 type wsPipelineIniter interface {
+	relPath
 	WritePipelineBuildspec(marshaler encoding.BinaryMarshaler, name string) (string, error)
 	WritePipelineManifest(marshaler encoding.BinaryMarshaler, name string) (string, error)
-	Rel(path string) (string, error)
 	ListPipelines() ([]workspace.PipelineManifest, error)
 }
 
@@ -302,7 +306,7 @@ type wsEnvironmentReader interface {
 
 type wsPipelineReader interface {
 	wsPipelineGetter
-	Rel(path string) (string, error)
+	relPath
 }
 
 type wsPipelineGetter interface {
@@ -322,13 +326,17 @@ type wsAddonManager interface {
 	wlLister
 }
 
+type uploader interface {
+	Upload(bucket, key string, data io.Reader) (string, error)
+}
+
 type bucketEmptier interface {
 	EmptyBucket(bucket string) error
 }
 
 // Interfaces for deploying resources through CloudFormation. Facilitates mocking.
 type environmentDeployer interface {
-	CreateAndRenderEnvironment(out termprogress.FileWriter, env *deploy.CreateEnvironmentInput) error
+	CreateAndRenderEnvironment(env *deploy.CreateEnvironmentInput) error
 	DeleteEnvironment(appName, envName, cfnExecRoleARN string) error
 	GetEnvironment(appName, envName string) (*config.Environment, error)
 	EnvironmentTemplate(appName, envName string) (string, error)
@@ -376,7 +384,8 @@ type appResourcesGetter interface {
 }
 
 type taskDeployer interface {
-	DeployTask(out termprogress.FileWriter, input *deploy.CreateTaskResourcesInput, opts ...awscloudformation.StackOption) error
+	DeployTask(input *deploy.CreateTaskResourcesInput, opts ...awscloudformation.StackOption) error
+	GetTaskStack(taskName string) (*deploy.TaskStackInfo, error)
 }
 
 type taskStackManager interface {
@@ -421,6 +430,7 @@ type envDescriber interface {
 	Describe() (*describe.EnvDescription, error)
 	PublicCIDRBlocks() ([]string, error)
 	Manifest() ([]byte, error)
+	ValidateCFServiceDomainAliases() error
 }
 
 type versionCompatibilityChecker interface {
@@ -625,10 +635,11 @@ type workloadDeployer interface {
 	IsServiceAvailableInRegion(region string) (bool, error)
 }
 
-type workloadTemplateGenerator interface {
+type workloadStackGenerator interface {
 	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
 	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
 		*clideploy.GenerateCloudFormationTemplateOutput, error)
+	AddonsTemplate() (string, error)
 }
 
 type runner interface {

@@ -1,10 +1,9 @@
 //go:build integration || localintegration
-// +build integration localintegration
 
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package manifest_test
+package manifest
 
 import (
 	"fmt"
@@ -12,19 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
-
-var basicKinds = []reflect.Kind{
-	reflect.Bool,
-	reflect.String,
-	reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-	reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-	reflect.Float32, reflect.Float64,
-	reflect.Complex64, reflect.Complex128,
-}
 
 func basicTypesString() []string {
 	var types []string
@@ -37,7 +26,7 @@ func basicTypesString() []string {
 }
 
 type validator interface {
-	Validate() error
+	validate() error
 }
 
 // Test_ValidateAudit ensures that every manifest struct implements "Validate()" method.
@@ -47,19 +36,19 @@ func Test_ValidateAudit(t *testing.T) {
 		mft interface{}
 	}{
 		"backend service": {
-			mft: &manifest.BackendService{},
+			mft: &BackendService{},
 		},
 		"load balanced web service": {
-			mft: &manifest.LoadBalancedWebService{},
+			mft: &LoadBalancedWebService{},
 		},
 		"request-driven web service": {
-			mft: &manifest.RequestDrivenWebService{},
+			mft: &RequestDrivenWebService{},
 		},
 		"schedule job": {
-			mft: &manifest.ScheduledJob{},
+			mft: &ScheduledJob{},
 		},
 		"worker service": {
-			mft: &manifest.WorkerService{},
+			mft: &WorkerService{},
 		},
 	}
 	for name, tc := range testCases {
@@ -71,7 +60,8 @@ func Test_ValidateAudit(t *testing.T) {
 
 	// Audit environment manifest.
 	t.Run("environment manifest", func(t *testing.T) {
-		err := isValid(reflect.ValueOf(&manifest.Environment{}).Type())
+		env := &Environment{}
+		err := isValid(reflect.ValueOf(env.EnvironmentConfig).Type())
 		require.NoError(t, err)
 	})
 }
@@ -100,7 +90,7 @@ func isValid(typ reflect.Type) error {
 	var val validator
 	validatorType := reflect.TypeOf(&val).Elem()
 	if !typ.Implements(validatorType) {
-		return fmt.Errorf(`%v does not implement "Validate()"`, typ)
+		return fmt.Errorf(`%v does not implement "validate()"`, typ)
 	}
 	// For struct we'll check its members after its own validation.
 	if typ.Kind() != reflect.Struct {

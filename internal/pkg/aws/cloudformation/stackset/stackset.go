@@ -27,12 +27,6 @@ type api interface {
 	ListStackInstances(*cloudformation.ListStackInstancesInput) (*cloudformation.ListStackInstancesOutput, error)
 }
 
-const (
-	opStatusSucceeded = "SUCCEEDED"
-	opStatusStopped   = "STOPPED"
-	opStatusFailed    = "FAILED"
-)
-
 // StackSet represents an AWS CloudFormation client to interact with stack sets.
 type StackSet struct {
 	client api
@@ -81,12 +75,32 @@ func (ss *StackSet) Describe(name string) (Description, error) {
 	}, nil
 }
 
-// Update updates a stack set with a new template.
-func (ss *StackSet) Update(name, template string, opts ...CreateOrUpdateOption) error {
-	if _, err := ss.update(name, template, opts...); err != nil {
-		return err
+// Operation represents information about a stack set operation.
+type Operation struct {
+	ID     string
+	Status OpStatus
+	Reason string
+}
+
+// DescribeOperation returns a description of the operation.
+func (ss *StackSet) DescribeOperation(name, opID string) (Operation, error) {
+	resp, err := ss.client.DescribeStackSetOperation(&cloudformation.DescribeStackSetOperationInput{
+		StackSetName: aws.String(name),
+		OperationId:  aws.String(opID),
+	})
+	if err != nil {
+		return Operation{}, fmt.Errorf("describe operation %s for stack set %s: %w", opID, name, err)
 	}
-	return nil
+	return Operation{
+		ID:     opID,
+		Status: OpStatus(aws.StringValue(resp.StackSetOperation.Status)),
+		Reason: aws.StringValue(resp.StackSetOperation.StatusReason),
+	}, nil
+}
+
+// Update updates all the instances in a stack set with the new template and returns the operation ID.
+func (ss *StackSet) Update(name, template string, opts ...CreateOrUpdateOption) (string, error) {
+	return ss.update(name, template, opts...)
 }
 
 // UpdateAndWait updates a stack set with a new template, and waits until the operation completes.
@@ -95,21 +109,32 @@ func (ss *StackSet) UpdateAndWait(name, template string, opts ...CreateOrUpdateO
 	if err != nil {
 		return err
 	}
-	return ss.waitForOperation(name, id)
+	return ss.WaitForOperation(name, id)
 }
 
-// Delete removes all the stack instances from a stack set and then deletes the stack set.
-func (ss *StackSet) Delete(name string) error {
+// DeleteAllInstances removes all stack instances from a stack set and returns the operation ID.
+// If the stack set does not exist, then return [ErrStackSetNotFound].
+// If the stack set does not have any instances, then return [ErrStackSetInstancesNotFound].
+// Both errors should satisfy [IsEmptyStackSetErr], otherwise it's an unexpected error.
+func (ss *StackSet) DeleteAllInstances(name string) (string, error) {
 	summaries, err := ss.InstanceSummaries(name)
 	if err != nil {
 		// If the stack set doesn't exist - just move on.
 		if isNotFoundStackSet(errors.Unwrap(err)) {
-			return nil
+			return "", &ErrStackSetNotFound{
+				name: name,
+			}
 		}
-		return err
+		return "", err
 	}
 
-	// We want to delete all the stack instances, so we create a set of account ids and regions.
+	if len(summaries) == 0 {
+		return "", &ErrStackSetInstancesNotFound{
+			name: name,
+		}
+	}
+
+	// We want to delete all the stack instances, so we create a set of account IDs and regions.
 	uniqueAccounts := make(map[string]bool)
 	uniqueRegions := make(map[string]bool)
 	for _, summary := range summaries {
@@ -126,41 +151,35 @@ func (ss *StackSet) Delete(name string) error {
 		regions = append(regions, region)
 	}
 
-	// Delete the stack instances for those accounts and regions.
-	if len(summaries) > 0 {
-		operation, err := ss.client.DeleteStackInstances(&cloudformation.DeleteStackInstancesInput{
-			StackSetName: aws.String(name),
-			Accounts:     aws.StringSlice(accounts),
-			Regions:      aws.StringSlice(regions),
-			RetainStacks: aws.Bool(false),
-		})
-		if err != nil {
-			return fmt.Errorf("delete stack instances in regions %v for accounts %v for stackset %s: %w",
-				regions, accounts, name, err)
-		}
-		if err := ss.waitForOperation(name, aws.StringValue(operation.OperationId)); err != nil {
-			return err
-		}
+	out, err := ss.client.DeleteStackInstances(&cloudformation.DeleteStackInstancesInput{
+		StackSetName: aws.String(name),
+		Accounts:     aws.StringSlice(accounts),
+		Regions:      aws.StringSlice(regions),
+		RetainStacks: aws.Bool(false),
+	})
+	if err != nil {
+		return "", fmt.Errorf("delete stack instances in regions %v for accounts %v for stackset %s: %w",
+			regions, accounts, name, err)
 	}
+	return aws.StringValue(out.OperationId), nil
+}
 
-	// Delete the stack set now that the stack instances are gone.
+// Delete deletes the stack set, if the stack set does not exist then just return nil.
+func (ss *StackSet) Delete(name string) error {
 	if _, err := ss.client.DeleteStackSet(&cloudformation.DeleteStackSetInput{
 		StackSetName: aws.String(name),
 	}); err != nil {
 		if !isNotFoundStackSet(err) {
 			return fmt.Errorf("delete stack set %s: %w", name, err)
 		}
-		// If the stack set doesn't exist, that's fine, move on.
 	}
 	return nil
 }
 
-// CreateInstances creates new stack instances for a stack set within the regions of the specified AWS accounts.
-func (ss *StackSet) CreateInstances(name string, accounts, regions []string) error {
-	if _, err := ss.createInstances(name, accounts, regions); err != nil {
-		return err
-	}
-	return nil
+// CreateInstances creates new stack instances within the regions
+// of the specified AWS accounts and returns the operation ID.
+func (ss *StackSet) CreateInstances(name string, accounts, regions []string) (string, error) {
+	return ss.createInstances(name, accounts, regions)
 }
 
 // CreateInstancesAndWait creates new stack instances in the regions of the specified AWS accounts, and waits until the operation completes.
@@ -169,7 +188,15 @@ func (ss *StackSet) CreateInstancesAndWait(name string, accounts, regions []stri
 	if err != nil {
 		return err
 	}
-	return ss.waitForOperation(name, id)
+	return ss.WaitForOperation(name, id)
+}
+
+// InstanceSummary represents the identifiers for a stack instance.
+type InstanceSummary struct {
+	StackID string
+	Account string
+	Region  string
+	Status  InstanceStatus
 }
 
 // InstanceSummariesOption allows to filter instance summaries to retrieve for the stack set.
@@ -183,17 +210,25 @@ func (ss *StackSet) InstanceSummaries(name string, opts ...InstanceSummariesOpti
 	for _, opt := range opts {
 		opt(in)
 	}
-	resp, err := ss.client.ListStackInstances(in)
-	if err != nil {
-		return nil, fmt.Errorf("list stack instances for stack set %s: %w", name, err)
-	}
+
 	var summaries []InstanceSummary
-	for _, summary := range resp.Summaries {
-		summaries = append(summaries, InstanceSummary{
-			StackID: aws.StringValue(summary.StackId),
-			Account: aws.StringValue(summary.Account),
-			Region:  aws.StringValue(summary.Region),
-		})
+	for {
+		resp, err := ss.client.ListStackInstances(in)
+		if err != nil {
+			return nil, fmt.Errorf("list stack instances for stack set %s: %w", name, err)
+		}
+		for _, summary := range resp.Summaries {
+			summaries = append(summaries, InstanceSummary{
+				StackID: aws.StringValue(summary.StackId),
+				Account: aws.StringValue(summary.Account),
+				Region:  aws.StringValue(summary.Region),
+				Status:  InstanceStatus(aws.StringValue(summary.Status)),
+			})
+		}
+		in.NextToken = resp.NextToken
+		if in.NextToken == nil {
+			break
+		}
 	}
 	return summaries, nil
 }
@@ -213,8 +248,8 @@ func (ss *StackSet) update(name, template string, opts ...CreateOrUpdateOption) 
 	if err != nil {
 		if isOutdatedStackSet(err) {
 			return "", &ErrStackSetOutOfDate{
-				stackSetName: name,
-				parentErr:    err,
+				name:      name,
+				parentErr: err,
 			}
 		}
 		return "", fmt.Errorf("update stack set %s: %w", name, err)
@@ -259,23 +294,24 @@ func (ss *StackSet) WaitForStackSetLastOperationComplete(name string) error {
 	}
 }
 
-func (ss *StackSet) waitForOperation(name, operationID string) error {
+// WaitForOperation waits for the operation with opID to reaches a successful completion status.
+func (ss *StackSet) WaitForOperation(name, opID string) error {
 	for {
 		response, err := ss.client.DescribeStackSetOperation(&cloudformation.DescribeStackSetOperationInput{
 			StackSetName: aws.String(name),
-			OperationId:  aws.String(operationID),
+			OperationId:  aws.String(opID),
 		})
 		if err != nil {
-			return fmt.Errorf("describe operation %s for stack set %s: %w", operationID, name, err)
+			return fmt.Errorf("describe operation %s for stack set %s: %w", opID, name, err)
 		}
 		if aws.StringValue(response.StackSetOperation.Status) == opStatusSucceeded {
 			return nil
 		}
 		if aws.StringValue(response.StackSetOperation.Status) == opStatusStopped {
-			return fmt.Errorf("operation %s for stack set %s was manually stopped", operationID, name)
+			return fmt.Errorf("operation %s for stack set %s was manually stopped", opID, name)
 		}
 		if aws.StringValue(response.StackSetOperation.Status) == opStatusFailed {
-			return fmt.Errorf("operation %s for stack set %s failed", operationID, name)
+			return fmt.Errorf("operation %s for stack set %s failed", opID, name)
 		}
 		time.Sleep(3 * time.Second)
 	}
@@ -377,5 +413,17 @@ func FilterSummariesByAccountID(accountID string) InstanceSummariesOption {
 func FilterSummariesByRegion(region string) InstanceSummariesOption {
 	return func(input *cloudformation.ListStackInstancesInput) {
 		input.StackInstanceRegion = aws.String(region)
+	}
+}
+
+// FilterSummariesByDetailedStatus limits the stack instance summaries to the passed status values.
+func FilterSummariesByDetailedStatus(values []InstanceStatus) InstanceSummariesOption {
+	return func(input *cloudformation.ListStackInstancesInput) {
+		for _, value := range values {
+			input.Filters = append(input.Filters, &cloudformation.StackInstanceFilter{
+				Name:   aws.String(cloudformation.StackInstanceFilterNameDetailedStatus),
+				Values: aws.String(string(value)),
+			})
+		}
 	}
 }

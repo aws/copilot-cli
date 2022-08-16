@@ -50,7 +50,7 @@ type deploySvcOpts struct {
 
 	store                store
 	ws                   wsWlDirReader
-	unmarshal            func([]byte) (manifest.WorkloadManifest, error)
+	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
 	cmd                  execRunner
 	sessProvider         *sessions.Provider
@@ -62,13 +62,13 @@ type deploySvcOpts struct {
 	prompt  prompter
 
 	// cached variables
-	targetApp       *config.Application
-	targetEnv       *config.Environment
-	envSess         *session.Session
-	svcType         string
-	appliedManifest interface{}
-	rootUserARN     string
-	deployRecs      clideploy.ActionRecommender
+	targetApp         *config.Application
+	targetEnv         *config.Environment
+	envSess           *session.Session
+	svcType           string
+	appliedDynamicMft manifest.DynamicWorkload
+	rootUserARN       string
+	deployRecs        clideploy.ActionRecommender
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
@@ -115,6 +115,7 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", o.name, err)
 	}
+	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadDeployer
 	in := clideploy.WorkloadDeployerInput{
 		SessionProvider: o.sessProvider,
@@ -122,10 +123,10 @@ func newSvcDeployer(o *deploySvcOpts) (workloadDeployer, error) {
 		App:             targetApp,
 		Env:             o.targetEnv,
 		ImageTag:        o.imageTag,
-		Mft:             o.appliedManifest,
+		Mft:             content,
 		RawMft:          raw,
 	}
-	switch t := o.appliedManifest.(type) {
+	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:
 		deployer, err = clideploy.NewLBWSDeployer(&in)
 	case *manifest.BackendService:
@@ -192,7 +193,7 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	o.appliedManifest = mft
+	o.appliedDynamicMft = mft
 	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, mft, o.envName); err != nil {
 		return err
 	}
@@ -362,10 +363,10 @@ type workloadManifestInput struct {
 	ws           wsWlDirReader
 	interpolator interpolator
 	sess         *session.Session
-	unmarshal    func([]byte) (manifest.WorkloadManifest, error)
+	unmarshal    func([]byte) (manifest.DynamicWorkload, error)
 }
 
-func workloadManifest(in *workloadManifestInput) (manifest.WorkloadManifest, error) {
+func workloadManifest(in *workloadManifestInput) (manifest.DynamicWorkload, error) {
 	raw, err := in.ws.ReadWorkloadManifest(in.name)
 	if err != nil {
 		return nil, fmt.Errorf("read manifest file for %s: %w", in.name, err)
@@ -391,7 +392,7 @@ func workloadManifest(in *workloadManifestInput) (manifest.WorkloadManifest, err
 	return envMft, nil
 }
 
-func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env versionCompatibilityChecker, mft manifest.WorkloadManifest, envName string) error {
+func validateWorkloadManifestCompatibilityWithEnv(ws wsEnvironmentsLister, env versionCompatibilityChecker, mft manifest.DynamicWorkload, envName string) error {
 	availableFeatures, err := env.AvailableFeatures()
 	if err != nil {
 		return fmt.Errorf("get available features of the %s environment stack: %w", envName, err)
@@ -429,7 +430,7 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	type reachable interface {
 		Port() (uint16, bool)
 	}
-	mft, ok := o.appliedManifest.(reachable)
+	mft, ok := o.appliedDynamicMft.Manifest().(reachable)
 	if !ok {
 		return nil, nil
 	}
@@ -463,7 +464,7 @@ func (o *deploySvcOpts) publishRecommendedActions() []string {
 	type publisher interface {
 		Publish() []manifest.Topic
 	}
-	mft, ok := o.appliedManifest.(publisher)
+	mft, ok := o.appliedDynamicMft.Manifest().(publisher)
 	if !ok {
 		return nil
 	}

@@ -95,24 +95,34 @@ func (e *EnvStackConfig) Template() (string, error) {
 		}
 		forceUpdateID = id.String()
 	}
+
+	publicHTTPConfig, err := e.publicHTTPConfig()
+	if err != nil {
+		return "", err
+	}
+
+	vpcConfig, err := e.vpcConfig()
+	if err != nil {
+		return "", err
+	}
+
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
-		AppName:                  e.in.App.Name,
-		EnvName:                  e.in.Name,
-		CustomResources:          crs,
-		ArtifactBucketARN:        e.in.ArtifactBucketARN,
-		ArtifactBucketKeyARN:     e.in.ArtifactBucketKeyARN,
-		PublicImportedCertARNs:   e.importPublicCertARNs(),
-		PrivateImportedCertARNs:  e.importPrivateCertARNs(),
-		VPCConfig:                e.vpcConfig(),
-		CustomInternalALBSubnets: e.internalALBSubnets(),
-		AllowVPCIngress:          aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
-		Telemetry:                e.telemetryConfig(),
-		CDNConfig:                e.cdnConfig(),
+		AppName:              e.in.App.Name,
+		EnvName:              e.in.Name,
+		CustomResources:      crs,
+		ArtifactBucketARN:    e.in.ArtifactBucketARN,
+		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
+		PublicHTTPConfig:     publicHTTPConfig,
+		VPCConfig:            vpcConfig,
+		PrivateHTTPConfig:    e.privateHTTPConfig(),
+		Telemetry:            e.telemetryConfig(),
+		CDNConfig:            e.cdnConfig(),
 
 		Version:            e.in.Version,
 		LatestVersion:      deploy.LatestEnvTemplateVersion,
 		SerializedManifest: string(e.in.RawMft),
 		ForceUpdateID:      forceUpdateID,
+		DelegateDNS:        e.in.App.Domain != "",
 	})
 	if err != nil {
 		return "", err
@@ -350,14 +360,47 @@ func (e *BootstrapEnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.En
 }
 
 func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
-	return nil // no-op - return &template.CDNConfig{} when feature is ready
+	if e.in.Mft == nil {
+		return nil
+	}
+	if !e.in.Mft.CDNEnabled() {
+		return nil
+	}
+	return &template.CDNConfig{
+		ImportedCertificate: e.in.Mft.CDNConfig.Config.Certificate,
+	}
 }
 
-func (e *EnvStackConfig) vpcConfig() template.VPCConfig {
-	return template.VPCConfig{
-		Imported: e.importVPC(),
-		Managed:  e.managedVPC(),
+func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
+	elbAccessLogsConfig, err := convertELBAccessLogsConfig(e.in.Mft)
+	if err != nil {
+		return template.HTTPConfig{}, err
 	}
+	return template.HTTPConfig{
+		CIDRPrefixListIDs: e.in.CIDRPrefixListIDs,
+		ImportedCertARNs:  e.importPublicCertARNs(),
+		ELBAccessLogs:     elbAccessLogsConfig,
+	}, nil
+}
+
+func (e *EnvStackConfig) privateHTTPConfig() template.HTTPConfig {
+	return template.HTTPConfig{
+		ImportedCertARNs: e.importPrivateCertARNs(),
+		CustomALBSubnets: e.internalALBSubnets(),
+	}
+}
+
+func (e *EnvStackConfig) vpcConfig() (template.VPCConfig, error) {
+	securityGroupConfig, err := convertEnvSecurityGroupCfg(e.in.Mft)
+	if err != nil {
+		return template.VPCConfig{}, err
+	}
+	return template.VPCConfig{
+		Imported:            e.importVPC(),
+		Managed:             e.managedVPC(),
+		AllowVPCIngress:     aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
+		SecurityGroupConfig: securityGroupConfig,
+	}, nil
 }
 
 func (e *EnvStackConfig) importVPC() *template.ImportVPC {

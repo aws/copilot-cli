@@ -20,7 +20,7 @@ var defaultTransformers = []mergo.Transformers{
 	imageTransformer{},
 	buildArgsOrStringTransformer{},
 	aliasTransformer{},
-	StringSliceOrStringTransformer{},
+	stringSliceOrStringTransformer{},
 	platformArgsOrStringTransformer{},
 	securityGroupsIDsOrConfigTransformer{},
 	placementArgOrStringTransformer{},
@@ -133,10 +133,10 @@ func (t aliasTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Va
 	}
 }
 
-type StringSliceOrStringTransformer struct{}
+type stringSliceOrStringTransformer struct{}
 
 // Transformer returns custom merge logic for StringSliceOrString's fields.
-func (t StringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+func (t stringSliceOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if !typ.ConvertibleTo(reflect.TypeOf(StringSliceOrString{})) {
 		return nil
 	}
@@ -529,12 +529,12 @@ func (t environmentCDNConfigTransformer) Transformer(typ reflect.Type) func(dst,
 	return func(dst, src reflect.Value) error {
 		dstStruct, srcStruct := dst.Interface().(environmentCDNConfig), src.Interface().(environmentCDNConfig)
 
-		if !srcStruct.CDNConfig.IsEmpty() {
+		if !srcStruct.Config.isEmpty() {
 			dstStruct.Enabled = nil
 		}
 
 		if srcStruct.Enabled != nil {
-			dstStruct.CDNConfig = advancedCDNConfig{}
+			dstStruct.Config = advancedCDNConfig{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

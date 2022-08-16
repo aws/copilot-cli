@@ -633,6 +633,21 @@ func (mr *MockstackSetClientMockRecorder) Delete(name interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockstackSetClient)(nil).Delete), name)
 }
 
+// DeleteAllInstances mocks base method.
+func (m *MockstackSetClient) DeleteAllInstances(name string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAllInstances", name)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteAllInstances indicates an expected call of DeleteAllInstances.
+func (mr *MockstackSetClientMockRecorder) DeleteAllInstances(name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllInstances", reflect.TypeOf((*MockstackSetClient)(nil).DeleteAllInstances), name)
+}
+
 // Describe mocks base method.
 func (m *MockstackSetClient) Describe(name string) (stackset.Description, error) {
 	m.ctrl.T.Helper()
@@ -685,6 +700,20 @@ func (mr *MockstackSetClientMockRecorder) UpdateAndWait(name, template interface
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{name, template}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndWait", reflect.TypeOf((*MockstackSetClient)(nil).UpdateAndWait), varargs...)
+}
+
+// WaitForOperation mocks base method.
+func (m *MockstackSetClient) WaitForOperation(name, opID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitForOperation", name, opID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitForOperation indicates an expected call of WaitForOperation.
+func (mr *MockstackSetClientMockRecorder) WaitForOperation(name, opID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForOperation", reflect.TypeOf((*MockstackSetClient)(nil).WaitForOperation), name, opID)
 }
 
 // WaitForStackSetLastOperationComplete mocks base method.

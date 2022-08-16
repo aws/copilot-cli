@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -35,15 +34,12 @@ type WorkerServiceConfig struct {
 	Manifest      *manifest.WorkerService
 	RawManifest   []byte
 	RuntimeConfig RuntimeConfig
+	Addons        addons
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
 func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 	parser := template.New()
-	addons, err := addon.New(aws.StringValue(cfg.Manifest.Name))
-	if err != nil {
-		return nil, fmt.Errorf("new addons: %w", err)
-	}
 	return &WorkerService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -54,15 +50,14 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 				image:       cfg.Manifest.ImageConfig.Image,
 				rawManifest: cfg.RawManifest,
 				parser:      parser,
-				addons:      addons,
+				addons:      cfg.Addons,
 			},
 			logRetention:        cfg.Manifest.Logging.Retention,
 			tc:                  cfg.Manifest.TaskConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest: cfg.Manifest,
-
-		parser: parser,
+		parser:   parser,
 	}, nil
 }
 

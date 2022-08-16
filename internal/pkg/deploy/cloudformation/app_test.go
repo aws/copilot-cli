@@ -34,10 +34,11 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 		region       string
 		want         error
 	}{
-		"Infrastructure Roles Stack Fails": {
+		"should return an error if infrastructure roles stack fails": {
 			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(errors.New("error creating stack"))
+				m.EXPECT().Create(gomock.Any()).Return("", errors.New("error creating stack"))
+				m.EXPECT().ErrorEvents(gomock.Any()).Return(nil, nil) // No additional error descriptions.
 				return m
 			},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
@@ -45,11 +46,11 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 			},
 			want: errors.New("error creating stack"),
 		},
-		"fail to get admin role arn": {
+		"should return a wrapped error if region is invalid when populating the admin role arn": {
 			region: "bad-region",
 			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(&cloudformation.ErrStackAlreadyExists{})
+				m.EXPECT().Create(gomock.Any()).Return("", &cloudformation.ErrStackAlreadyExists{})
 				return m
 			},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
@@ -57,11 +58,11 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 			},
 			want: fmt.Errorf("get stack set administrator role arn: find the partition for region bad-region"),
 		},
-		"Infrastructure Roles Stack Already Exists": {
+		"should return nil if there are no updates": {
 			region: "us-west-2",
 			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(&cloudformation.ErrStackAlreadyExists{})
+				m.EXPECT().Create(gomock.Any()).Return("", &cloudformation.ErrStackAlreadyExists{})
 				return m
 			},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
@@ -71,11 +72,11 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 				return m
 			},
 		},
-		"Infrastructure Roles StackSet Created": {
+		"should return nil if infrastructure roles stackset created for the first time": {
 			region: "us-west-2",
 			mockStack: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().CreateAndWait(gomock.Any()).Return(nil)
+				m.EXPECT().Create(gomock.Any()).Return("", nil)
 				return m
 			},
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
@@ -99,6 +100,7 @@ func TestCloudFormation_DeployApp(t *testing.T) {
 				cfnClient:   tc.mockStack(ctrl),
 				appStackSet: tc.mockStackSet(t, ctrl),
 				region:      tc.region,
+				console:     new(discardFile),
 			}
 
 			// WHEN
@@ -901,11 +903,37 @@ func TestCloudFormation_DeleteApp(t *testing.T) {
 			appName: "testApp",
 			createMock: func(ctrl *gomock.Controller) cfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
-				m.EXPECT().DeleteAndWait("testApp-infrastructure-roles").Return(nil)
+				m.EXPECT().TemplateBody("testApp-infrastructure-roles").Return("", nil)
+				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
+					StackId: aws.String("some stack"),
+				}, nil)
+				m.EXPECT().DeleteAndWait("testApp-infrastructure-roles").Return(&cloudformation.ErrStackNotFound{})
+				m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&awscfn.DescribeStackEventsOutput{}, nil).AnyTimes()
 				return m
 			},
 			mockStackSet: func(ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().DeleteAllInstances("testApp-infrastructure").Return("1", nil)
+				m.EXPECT().WaitForOperation("testApp-infrastructure", "1").Return(nil)
+				m.EXPECT().Delete("testApp-infrastructure").Return(nil)
+				return m
+			},
+		},
+		"should skip waiting for delete instance operation if the stack set is already deleted": {
+			appName: "testApp",
+			createMock: func(ctrl *gomock.Controller) cfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().TemplateBody(gomock.Any()).Return("", nil)
+				m.EXPECT().Describe(gomock.Any()).Return(&cloudformation.StackDescription{
+					StackId: aws.String("some stack"),
+				}, nil)
+				m.EXPECT().DeleteAndWait(gomock.Any()).Return(&cloudformation.ErrStackNotFound{})
+				m.EXPECT().DescribeStackEvents(gomock.Any()).Return(&awscfn.DescribeStackEventsOutput{}, nil).AnyTimes()
+				return m
+			},
+			mockStackSet: func(ctrl *gomock.Controller) stackSetClient {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().DeleteAllInstances(gomock.Any()).Return("", &stackset.ErrStackSetNotFound{})
 				m.EXPECT().Delete(gomock.Any()).Return(nil)
 				return m
 			},
@@ -921,6 +949,7 @@ func TestCloudFormation_DeleteApp(t *testing.T) {
 			cf := CloudFormation{
 				cfnClient:   tc.createMock(ctrl),
 				appStackSet: tc.mockStackSet(ctrl),
+				console:     new(discardFile),
 			}
 
 			// WHEN

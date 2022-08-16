@@ -34,6 +34,8 @@ const (
 	customDomainFnName        = "CustomDomainFunction"
 	certValidationFnName      = "CertificateValidationFunction"
 	dnsDelegationFnName       = "DNSDelegationFunction"
+	certReplicatorFnName      = "CertificateReplicatorFunction"
+	uniqueJsonValuesFnName    = "UniqueJSONValuesFunction"
 )
 
 // Function source file locations.
@@ -44,10 +46,12 @@ var (
 	customDomainAppRunnerFilePath    = path.Join(customResourcesDir, "custom-domain-app-runner.js")
 	desiredCountDelegationFilePath   = path.Join(customResourcesDir, "desired-count-delegation.js")
 	dnsCertValidationFilePath        = path.Join(customResourcesDir, "dns-cert-validator.js")
+	certReplicatorFilePath           = path.Join(customResourcesDir, "cert-replicator.js")
 	dnsDelegationFilePath            = path.Join(customResourcesDir, "dns-delegation.js")
 	envControllerFilePath            = path.Join(customResourcesDir, "env-controller.js")
 	nlbCertValidatorFilePath         = path.Join(customResourcesDir, "nlb-cert-validator.js")
 	nlbCustomDomainFilePath          = path.Join(customResourcesDir, "nlb-custom-domain.js")
+	uniqueJSONValuesFilePath         = path.Join(customResourcesDir, "unique-json-values.js")
 )
 
 // CustomResource represents a CloudFormation custom resource backed by a Lambda function.
@@ -146,9 +150,11 @@ func ScheduledJob(fs template.Reader) ([]*CustomResource, error) {
 // Env returns the custom resources for an environment.
 func Env(fs template.Reader) ([]*CustomResource, error) {
 	return buildCustomResources(fs, map[string]string{
-		certValidationFnName: dnsCertValidationFilePath,
-		customDomainFnName:   customDomainFilePath,
-		dnsDelegationFnName:  dnsDelegationFilePath,
+		certValidationFnName:   dnsCertValidationFilePath,
+		customDomainFnName:     customDomainFilePath,
+		dnsDelegationFnName:    dnsDelegationFilePath,
+		certReplicatorFnName:   certReplicatorFilePath,
+		uniqueJsonValuesFnName: uniqueJSONValuesFilePath,
 	})
 }
 
