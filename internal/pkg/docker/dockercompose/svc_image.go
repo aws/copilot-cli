@@ -58,9 +58,8 @@ func convertImageConfig(build *compose.BuildConfig, labels map[string]string, im
 func nilIfEmpty(s string) *string {
 	if s == "" {
 		return nil
-	} else {
-		return &s
 	}
+	return &s
 }
 
 // convertMappingWithEquals checks for entries with missing values and generates an error if any are found.
