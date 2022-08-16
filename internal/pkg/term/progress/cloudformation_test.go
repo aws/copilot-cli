@@ -166,7 +166,7 @@ func TestStackSetComponent_Listen(t *testing.T) {
 }
 
 func TestStackSetComponent_Render(t *testing.T) {
-	t.Run("renders a sack set operation that succeeded", func(t *testing.T) {
+	t.Run("renders a stack set operation that succeeded", func(t *testing.T) {
 		// GIVEN
 		r := &stackSetComponent{
 			title: "Update stack set demo-infrastructure",
