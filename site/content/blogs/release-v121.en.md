@@ -3,8 +3,8 @@
 Posted On: Aug 15, 2022
 
 The AWS Copilot core team is announcing the Copilot v1.21 release.  
-Special thanks to [@dave-moser](https://github.com/dave-moser) who contributed to this release.
-Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 300 people online and over 2.3k stars on [GitHub](http://github.com/aws/copilot-cli/).
+Special thanks to [@dave-moser](https://github.com/dave-moser), [@dclark](https://github.com/dclark), and [@apopa57](https://github.com/apopa57) who contributed to this release.
+Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 300 people online and over 2.4k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.21 brings several new features and improvements:
