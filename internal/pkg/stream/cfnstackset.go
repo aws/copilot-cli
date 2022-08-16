@@ -40,9 +40,11 @@ type StackSetStreamer struct {
 	lastSentOp stackset.Operation
 	curOp      stackset.Operation
 
-	clock   clock
-	rand    func(int) int
-	retries int
+	// Overriden in tests.
+	clock                     clock
+	rand                      func(int) int
+	retries                   int
+	instanceSummariesInterval time.Duration
 }
 
 // NewStackSetStreamer creates a StackSetStreamer for the given stack set name and operation.
@@ -55,21 +57,43 @@ func NewStackSetStreamer(cfn StackSetDescriber, ssName, opID string, opStartTime
 
 		done: make(chan struct{}),
 
-		clock: realClock{},
-		rand:  rand.Intn,
+		clock:                     realClock{},
+		rand:                      rand.Intn,
+		instanceSummariesInterval: 250 * time.Millisecond,
 	}
 }
 
 // InstanceStreamers initializes Streamers for each stack instance that's in progress part of the stack set.
-func (s *StackSetStreamer) InstanceStreamers(cfnClientFor func(region string) StackEventsDescriber) ([]Streamer, error) {
-	instances, err := s.stackset.InstanceSummaries(s.ssName,
-		stackset.FilterSummariesByDetailedStatus(stackset.ProgressInstanceStatuses()))
-	if err != nil {
-		return nil, fmt.Errorf("describe in progress stack instances for stack set %q: %w", s.ssName, err)
-	}
-	streamers := make([]Streamer, len(instances))
-	for i, instance := range instances {
-		streamers[i] = NewStackStreamer(cfnClientFor(instance.Region), instance.StackID, s.opStartTime)
+// As long as the operation is in progress, [InstanceStreamers] will keep
+// looking for at least one stack instance that's outdated and return only then.
+func (s *StackSetStreamer) InstanceStreamers(cfnClientFor func(region string) StackEventsDescriber) ([]*StackStreamer, error) {
+	var streamers []*StackStreamer
+	for {
+		instances, err := s.stackset.InstanceSummaries(s.ssName)
+		if err != nil {
+			return nil, fmt.Errorf("describe in progress stack instances for stack set %q: %w", s.ssName, err)
+		}
+
+		for _, instance := range instances {
+			if !instance.Status.InProgress() {
+				continue
+			}
+			streamers = append(streamers, NewStackStreamer(cfnClientFor(instance.Region), instance.StackID, s.opStartTime))
+		}
+		if len(streamers) > 0 {
+			break
+		}
+
+		// It's possible that instance statuses aren't updated immediately after a stack set operation is started.
+		// If the operation is still ongoing, there must be at least one stack instance that's outdated.
+		op, err := s.stackset.DescribeOperation(s.ssName, s.opID)
+		if err != nil {
+			return nil, fmt.Errorf("describe operation %q for stack set %q: %w", s.opID, s.ssName, err)
+		}
+		if !op.Status.InProgress() {
+			break
+		}
+		<-time.After(s.instanceSummariesInterval) // Empirically, instances appear within this timeframe.
 	}
 	return streamers, nil
 }

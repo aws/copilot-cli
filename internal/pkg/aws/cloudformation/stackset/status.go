@@ -66,12 +66,12 @@ func (s InstanceStatus) IsCompleted() bool {
 
 // InProgress returns true if the instance is being updated with a new template.
 func (s InstanceStatus) InProgress() bool {
-	for _, wanted := range ProgressInstanceStatuses() {
-		if s == wanted {
-			return true
-		}
+	switch s {
+	case instanceStatusPending, instanceStatusRunning:
+		return true
+	default:
+		return false
 	}
-	return false
 }
 
 // IsSuccess returns true if the instance is up-to-date with the stack set template.
@@ -87,9 +87,4 @@ func (s InstanceStatus) IsFailure() bool {
 // String implements the fmt.Stringer interface.
 func (s InstanceStatus) String() string {
 	return string(s)
-}
-
-// ProgressInstanceStatuses returns a slice of statuses that are InProgress.
-func ProgressInstanceStatuses() []InstanceStatus {
-	return []InstanceStatus{instanceStatusPending, instanceStatusRunning}
 }
