@@ -76,9 +76,8 @@ func convertMappingWithEquals(inArgs compose.MappingWithEquals) (map[string]stri
 	}
 
 	if len(badArgs) != 0 {
-		return nil, fmt.Errorf("%s '%v' %s missing %s and %s user input, this is unsupported in Copilot",
+		return nil, fmt.Errorf("%s '%v' %s missing %s; this is unsupported in Copilot",
 			english.PluralWord(len(badArgs), "entry", "entries"), badArgs,
-			english.PluralWord(len(badArgs), "is", "are"),
 			english.PluralWord(len(badArgs), "a value", "values"),
 			english.PluralWord(len(badArgs), "requires", "require"))
 	}

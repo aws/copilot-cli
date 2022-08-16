@@ -160,8 +160,8 @@ func TestConvertImageConfig(t *testing.T) {
 					"ARG2":       aws.String("VAL"),
 				},
 			},
-			wantErr: errors.New("convert build args: entry '[GIT_COMMIT]' is missing a value and requires user " +
-				"input, this is unsupported in Copilot"),
+			wantErr: errors.New("convert build args: entry '[GIT_COMMIT]' is missing a value; " +
+				"this is unsupported in Copilot"),
 		},
 	}
 

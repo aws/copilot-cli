@@ -160,7 +160,7 @@ func TestConvertBackendService(t *testing.T) {
 			inPort: 8080,
 
 			wantError: errors.New("convert task config: convert environment variables: entry '[test]' is missing " +
-				"a value and requires user input, this is unsupported in Copilot"),
+				"a value; this is unsupported in Copilot"),
 		},
 		"platform windows": {
 			inSvc: compose.ServiceConfig{
