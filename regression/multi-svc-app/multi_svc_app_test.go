@@ -115,6 +115,7 @@ var _ = Describe("regression", func() {
 			_, envDeployErr := cli.Run("env", "deploy",
 				"--name", "test",
 				"--app", appName,
+				"--force",
 			)
 			Expect(envDeployErr).NotTo(HaveOccurred())
 		})
