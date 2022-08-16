@@ -7,19 +7,19 @@ import (
 	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/compose-spec/compose-go/types"
+	compose "github.com/compose-spec/compose-go/types"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
 func TestConvertBackendService(t *testing.T) {
-	fiveSeconds := types.Duration(5 * time.Second)
-	threeSeconds := types.Duration(3 * time.Second)
-	oneSecond := types.Duration(time.Second)
+	fiveSeconds := compose.Duration(5 * time.Second)
+	threeSeconds := compose.Duration(3 * time.Second)
+	oneSecond := compose.Duration(time.Second)
 
 	testCases := map[string]struct {
-		inSvc  types.ServiceConfig
+		inSvc  compose.ServiceConfig
 		inPort uint16
 
 		wantBackendSvc manifest.BackendServiceConfig
@@ -27,7 +27,7 @@ func TestConvertBackendService(t *testing.T) {
 		wantError      error
 	}{
 		"happy path trivial image": {
-			inSvc: types.ServiceConfig{
+			inSvc: compose.ServiceConfig{
 				Name:  "web",
 				Image: "nginx",
 			},
@@ -43,14 +43,14 @@ func TestConvertBackendService(t *testing.T) {
 			}},
 		},
 		"happy path complete": {
-			inSvc: types.ServiceConfig{
+			inSvc: compose.ServiceConfig{
 				Name: "web",
 
-				Command: types.ShellCommand{
+				Command: compose.ShellCommand{
 					"CMD-SHELL",
 					"/bin/nginx",
 				},
-				Entrypoint: types.ShellCommand{
+				Entrypoint: compose.ShellCommand{
 					"CMD",
 					"/bin/sh",
 				},
@@ -60,7 +60,7 @@ func TestConvertBackendService(t *testing.T) {
 					"ENABLE_HTTPS": aws.String("true"),
 				},
 				Platform: "linux/arm64",
-				HealthCheck: &types.HealthCheckConfig{
+				HealthCheck: &compose.HealthCheckConfig{
 					Test: []string{
 						"CMD",
 						"/bin/echo",
@@ -75,7 +75,7 @@ func TestConvertBackendService(t *testing.T) {
 					"docker.test2": "val2",
 				},
 				Image: "nginx",
-				Build: &types.BuildConfig{
+				Build: &compose.BuildConfig{
 					Context:    "dir",
 					Dockerfile: "dir/Dockerfile",
 					Args: map[string]*string{
@@ -136,7 +136,7 @@ func TestConvertBackendService(t *testing.T) {
 				}},
 		},
 		"multiple env files": {
-			inSvc: types.ServiceConfig{
+			inSvc: compose.ServiceConfig{
 				Name:  "web",
 				Image: "nginx",
 				EnvFile: []string{
@@ -149,7 +149,7 @@ func TestConvertBackendService(t *testing.T) {
 			wantError: errors.New("convert task config: at most one env file is supported, but 2 env files were attached to this service"),
 		},
 		"env variables with missing values": {
-			inSvc: types.ServiceConfig{
+			inSvc: compose.ServiceConfig{
 				Name:  "web",
 				Image: "nginx",
 				Environment: map[string]*string{
@@ -163,7 +163,7 @@ func TestConvertBackendService(t *testing.T) {
 				"a value and requires user input, this is unsupported in Copilot"),
 		},
 		"platform windows": {
-			inSvc: types.ServiceConfig{
+			inSvc: compose.ServiceConfig{
 				Name:     "web",
 				Image:    "nginx",
 				Platform: "windows",
@@ -187,9 +187,9 @@ func TestConvertBackendService(t *testing.T) {
 			},
 		},
 		"partial healthcheck": {
-			inSvc: types.ServiceConfig{
+			inSvc: compose.ServiceConfig{
 				Name: "web",
-				HealthCheck: &types.HealthCheckConfig{
+				HealthCheck: &compose.HealthCheckConfig{
 					Timeout:     &fiveSeconds,
 					StartPeriod: &threeSeconds,
 				},
@@ -214,9 +214,9 @@ func TestConvertBackendService(t *testing.T) {
 			},
 		},
 		"disabled healthcheck": {
-			inSvc: types.ServiceConfig{
+			inSvc: compose.ServiceConfig{
 				Name: "web",
-				HealthCheck: &types.HealthCheckConfig{
+				HealthCheck: &compose.HealthCheckConfig{
 					Timeout:     &fiveSeconds,
 					StartPeriod: &threeSeconds,
 					Disable:     true,
@@ -243,9 +243,9 @@ func TestConvertBackendService(t *testing.T) {
 			},
 		},
 		"disabled healthcheck with cmd": {
-			inSvc: types.ServiceConfig{
+			inSvc: compose.ServiceConfig{
 				Name: "web",
-				HealthCheck: &types.HealthCheckConfig{
+				HealthCheck: &compose.HealthCheckConfig{
 					Test: []string{
 						"CMD",
 						"/bin/echo",
@@ -282,14 +282,14 @@ func TestConvertBackendService(t *testing.T) {
 				"unrecognized",
 			},
 
-			inSvc: types.ServiceConfig{
+			inSvc: compose.ServiceConfig{
 				Name: "web",
-				HealthCheck: &types.HealthCheckConfig{
+				HealthCheck: &compose.HealthCheckConfig{
 					Extensions: map[string]interface{}{
 						"extfield": 1,
 					},
 				},
-				Build: &types.BuildConfig{
+				Build: &compose.BuildConfig{
 					Context: "here/",
 					Extensions: map[string]interface{}{
 						"ext": "field",

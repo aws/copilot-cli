@@ -7,7 +7,7 @@ import (
 	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/compose-spec/compose-go/types"
+	compose "github.com/compose-spec/compose-go/types"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -26,7 +26,7 @@ func TestConvertImageConfigNil(t *testing.T) {
 
 func TestConvertImageConfig(t *testing.T) {
 	testCases := map[string]struct {
-		inBuild  types.BuildConfig
+		inBuild  compose.BuildConfig
 		inLabels map[string]string
 		inImgLoc string
 
@@ -42,7 +42,7 @@ func TestConvertImageConfig(t *testing.T) {
 		},
 		"happy path image and build": {
 			inImgLoc: "nginx",
-			inBuild: types.BuildConfig{
+			inBuild: compose.BuildConfig{
 				Context:    "test",
 				Dockerfile: "Dockerfile.test",
 			},
@@ -51,7 +51,7 @@ func TestConvertImageConfig(t *testing.T) {
 			},
 		},
 		"happy path build only": {
-			inBuild: types.BuildConfig{
+			inBuild: compose.BuildConfig{
 				Context:    "test",
 				Dockerfile: "Dockerfile.test",
 			},
@@ -63,7 +63,7 @@ func TestConvertImageConfig(t *testing.T) {
 			},
 		},
 		"build with all non-fatal properties": {
-			inBuild: types.BuildConfig{
+			inBuild: compose.BuildConfig{
 				Context:    "test",
 				Dockerfile: "Dockerfile.test",
 				Args: map[string]*string{
@@ -119,8 +119,8 @@ func TestConvertImageConfig(t *testing.T) {
 			},
 		},
 		"fatal build.ssh": {
-			inBuild: types.BuildConfig{
-				SSH: []types.SSHKey{
+			inBuild: compose.BuildConfig{
+				SSH: []compose.SSHKey{
 					{
 						ID:   "ssh",
 						Path: "/test",
@@ -130,8 +130,8 @@ func TestConvertImageConfig(t *testing.T) {
 			wantErr: errors.New("`build.ssh` and `build.secrets` are not supported yet, see https://github.com/aws/copilot-cli/issues/2090 for details"),
 		},
 		"fatal build.secrets": {
-			inBuild: types.BuildConfig{
-				Secrets: []types.ServiceSecretConfig{
+			inBuild: compose.BuildConfig{
+				Secrets: []compose.ServiceSecretConfig{
 					{
 						Source: "/root",
 					},
@@ -140,7 +140,7 @@ func TestConvertImageConfig(t *testing.T) {
 			wantErr: errors.New("`build.ssh` and `build.secrets` are not supported yet, see https://github.com/aws/copilot-cli/issues/2090 for details"),
 		},
 		"fatal build.extra_hosts": {
-			inBuild: types.BuildConfig{
+			inBuild: compose.BuildConfig{
 				ExtraHosts: map[string]string{
 					"host1": "192.168.1.1",
 				},
@@ -148,13 +148,13 @@ func TestConvertImageConfig(t *testing.T) {
 			wantErr: errors.New("key `build.extra_hosts` is not supported yet, this might break your app"),
 		},
 		"fatal build.network": {
-			inBuild: types.BuildConfig{
+			inBuild: compose.BuildConfig{
 				Network: "none",
 			},
 			wantErr: errors.New("key `build.network` is not supported yet, this might break your app"),
 		},
 		"fatal missing arg values": {
-			inBuild: types.BuildConfig{
+			inBuild: compose.BuildConfig{
 				Args: map[string]*string{
 					"GIT_COMMIT": nil,
 					"ARG2":       aws.String("VAL"),

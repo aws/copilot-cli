@@ -6,11 +6,11 @@ package dockercompose
 import (
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/compose-spec/compose-go/types"
+	compose "github.com/compose-spec/compose-go/types"
 	"time"
 )
 
-func convertBackendService(service *types.ServiceConfig, port uint16) (*manifest.BackendServiceConfig, IgnoredKeys, error) {
+func convertBackendService(service *compose.ServiceConfig, port uint16) (*manifest.BackendServiceConfig, IgnoredKeys, error) {
 	image, ignored, err := convertImageConfig(service.Build, service.Labels, service.Image)
 	if err != nil {
 		return nil, nil, fmt.Errorf("convert image config: %w", err)
@@ -54,7 +54,7 @@ func convertBackendService(service *types.ServiceConfig, port uint16) (*manifest
 }
 
 // convertTaskConfig converts environment variables, env files, and platform strings.
-func convertTaskConfig(service *types.ServiceConfig) (manifest.TaskConfig, error) {
+func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, error) {
 	var envFile *string
 
 	if service.EnvFile != nil {
@@ -86,7 +86,7 @@ func convertTaskConfig(service *types.ServiceConfig) (manifest.TaskConfig, error
 }
 
 // convertHealthCheckConfig trivially converts a Compose container health check into its Copilot variant.
-func convertHealthCheckConfig(healthcheck *types.HealthCheckConfig) manifest.ContainerHealthCheck {
+func convertHealthCheckConfig(healthcheck *compose.HealthCheckConfig) manifest.ContainerHealthCheck {
 	retries := 3
 
 	if healthcheck.Retries != nil {

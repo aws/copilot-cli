@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/compose-spec/compose-go/types"
+	compose "github.com/compose-spec/compose-go/types"
 	"github.com/dustin/go-humanize/english"
 )
 
 // convertImageConfig takes in a Compose build config & image field and returns a Copilot image manifest.
-func convertImageConfig(build *types.BuildConfig, labels map[string]string, imageLoc string) (manifest.Image, IgnoredKeys, error) {
+func convertImageConfig(build *compose.BuildConfig, labels map[string]string, imageLoc string) (manifest.Image, IgnoredKeys, error) {
 	image := manifest.Image{
 		DockerLabels: labels,
 	}
@@ -64,7 +64,7 @@ func nilIfEmpty(s string) *string {
 }
 
 // convertMappingWithEquals checks for entries with missing values and generates an error if any are found.
-func convertMappingWithEquals(inArgs types.MappingWithEquals) (map[string]string, error) {
+func convertMappingWithEquals(inArgs compose.MappingWithEquals) (map[string]string, error) {
 	args := map[string]string{}
 	var badArgs []string
 
@@ -88,7 +88,7 @@ func convertMappingWithEquals(inArgs types.MappingWithEquals) (map[string]string
 }
 
 // unsupportedBuildKeys checks for unsupported keys in the given Compose build config.
-func unsupportedBuildKeys(build *types.BuildConfig) (IgnoredKeys, error) {
+func unsupportedBuildKeys(build *compose.BuildConfig) (IgnoredKeys, error) {
 	if build.SSH != nil || build.Secrets != nil {
 		return nil, errors.New("`build.ssh` and `build.secrets` are not supported yet, see " +
 			"https://github.com/aws/copilot-cli/issues/2090 for details")
