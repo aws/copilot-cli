@@ -9,12 +9,11 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.21 brings several new features and improvements:
 
-- **Integrate CloudFront with Application Load Balancer**:
+- **Integrate CloudFront with Application Load Balancer**: You can now deploy CloudFront in front of your Load Balanced Web Services! [See detailed section](#cloudfront-integration) to learn more.
 - **Configure environment security group**: Configure your environment security group rules through environment manifest. [See detailed section](#configure-environment-security-group).
 - **ELB access log support**: Enable elastic load balancing access logs for your Load Balanced Web Service. [See detailed section](#elb-access-logs-support).
-- **Check out job logs**:
-- **Package addon CloudFormation templates before deployments**: Copilot will now package addon templates on `copilot svc deploy`. This means Copilot can upload AWS Lambda functions to be deployed alongside your containerized services! Read more about how to get started deploying Lambda functions, and other resources, in [Copilot's documentation](../docs/developing/addons/package.en.md).
-- **ELB access log support**:
+- **`job logs` improvements**: You can now follow logs and view state machine execution logs for your jobs. [See detailed Section](#job-logs)
+- **Package addon CloudFormation templates before deployments**: Copilot will now package addon templates on `copilot svc deploy`. This means Copilot can now deploy AWS Lambda functions alongside your containerized services! Read more about how to get started in [Copilot's documentation](../docs/developing/addons/package.en.md).
 
 ???+ note "What’s AWS Copilot?"
 
@@ -26,17 +25,16 @@ Copilot v1.21 brings several new features and improvements:
 
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
-## New Environment Manifest Features
-### CloudFront Integration
+## CloudFront Integration
 
 One of our first major additions to the Copilot environment manifest! CloudFront is an AWS Content Delivery Network (CDN) which helps people deploy their applications across the globe, and now you can enable a distribution by simply setting `cdn: true` in your environment manifest and running `copilot env deploy`.
 
-#### Currently supported features:
+### Currently supported features:
 - A distribution deployed in front of your public Application Load Balancer (ALB)
 - ALB ingress restricted to the CloudFront distribution to protect from DDoS attack
 - HTTPS traffic through an imported certificate, or a Copilot-managed certificate
 
-#### CloudFront with HTTPS
+### CloudFront with HTTPS
 Copilot makes this process easy! If you have an application initialized with a `--domain` specified during `app init`, the required certificate will be created for you. If you import your own certificates for your hosted zone, we'll walk you through importing the correct certificate for CloudFront.
 
 !!!info
@@ -49,7 +47,7 @@ cdn:
 ```
 Run `copilot env deploy`, then you can create an A-record in [Route 53](https://aws.amazon.com/route53/) which points to the CloudFront distribution created by Copilot. Just select to point the record to an `Alias` in the console, then select to route traffic to a CloudFront distribution resource type, and enter the CloudFront DNS from the deployed distribution. 
 
-#### Restricting traffic to CloudFront
+### Restricting traffic to CloudFront
 To restrict public traffic to come through the CloudFront distribution, there's a new field in `http` for your public load balancer:
 ```yaml
 http:
@@ -61,7 +59,7 @@ http:
 ```
 Specifying this will modify the Load Balancer's security group to only accept traffic from CloudFront.
 
-### Configure Environment Security Group
+## Configure Environment Security Group
 You can now configure your environment security group rules through environment manifest.   
 Sample security group rules template inside environment manifest is given below.
 ```yaml
@@ -79,7 +77,7 @@ network:
 ```
 For the complete specification, see the [environment manifest](../docs/manifest/environment.en.md#network-vpc-security-group).
 
-### ELB Access Logs Support
+## ELB Access Logs Support
 You can now enable Elastic Load Balancing access logs that capture detailed information about requests sent to your load balancer.
 There are a few ways to enable access logs:
 
