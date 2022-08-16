@@ -22,7 +22,7 @@ type StackSubscriber interface {
 	Subscribe() <-chan stream.StackEvent
 }
 
-// StackSetSubscriber is the interface to subscribe channels to a CloudFormation stack set operation event stream.
+// StackSetSubscriber is the interface to subscribe channels to a CloudFormation stack set event stream.
 type StackSetSubscriber interface {
 	Subscribe() <-chan stream.StackSetOpEvent
 }
