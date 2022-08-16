@@ -26,9 +26,41 @@ Copilot v1.21 brings several new features and improvements:
 
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
-## CloudFront Integration
-
 ## New Environment Manifest Features
+### CloudFront Integration
+
+One of our first major additions to the Copilot environment manifest! CloudFront is an AWS Content Delivery Network (CDN) which helps people deploy their applications across the globe, and now you can enable a distribution by simply setting `cdn: true` in your environment manifest and running `copilot env deploy`.
+
+#### Currently supported features:
+- A distribution deployed in front of your public Application Load Balancer (ALB)
+- ALB ingress restricted to the CloudFront distribution to protect from DDoS attack
+- HTTPS traffic through an imported certificate, or a Copilot-managed certificate
+
+#### CloudFront with HTTPS
+Copilot makes this process easy! If you have an application initialized with a `--domain` specified during `app init`, the required certificate will be created for you. If you import your own certificates for your hosted zone, we'll walk you through importing the correct certificate for CloudFront.
+
+!!!info
+    CloudFront requires certificates to be in the `us-east-1` region. When importing a certificate, make sure to create your certificate in this region.
+
+First, create a certificate in the `us-east-1` region for your application with [AWS Certificate Manager](https://aws.amazon.com/certificate-manager/). You must add each domain associated with your application to this certificate. Once you've validated the certificate, you can add a field to your environment manifest to import the certificate for CloudFront:
+```yaml
+cdn:
+  certificate: arn:aws:acm:us-east-1:${AWS_ACCOUNT_ID}:certificate/13245665-h74x-4ore-jdnz-avs87dl11jd
+```
+Run `copilot env deploy`, then you can create an A-record in [Route 53](https://aws.amazon.com/route53/) which points to the CloudFront distribution created by Copilot. Just select to point the record to an `Alias` in the console, then select to route traffic to a CloudFront distribution resource type, and enter the CloudFront DNS from the deployed distribution. 
+
+#### Restricting traffic to CloudFront
+To restrict public traffic to come through the CloudFront distribution, there's a new field in `http` for your public load balancer:
+```yaml
+http:
+  public:
+    security_groups:
+      ingress:
+        restrict_to:
+          cdn: true
+```
+Specifying this will modify the Load Balancer's security group to only accept traffic from CloudFront.
+
 ### Configure Environment Security Group
 You can now configure your environment security group rules through environment manifest.   
 Sample security group rules template inside environment manifest is given below.
@@ -76,38 +108,6 @@ http:
 ```
 When importing your own bucket, you need to make sure that the bucket exists and has the required [bucket policy](https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html#attach-bucket-policy) for the load balancer to
 write access logs to it.
-
-One of our first major additions to the Copilot environment manifest! CloudFront is an AWS Content Delivery Network (CDN) which helps people deploy their applications across the globe, and now you can enable a distribution by simply setting `cdn: true` in your environment manifest and running `copilot env deploy`.
-
-### Currently supported features:
-- A distribution deployed in front of your public Application Load Balancer (ALB)
-- ALB ingress restricted to the CloudFront distribution to protect from DDoS attack
-- HTTPS traffic through an imported certificate, or a Copilot-managed certificate
-
-### CloudFront with HTTPS
-Copilot makes this process easy! If you have an application initialized with a `--domain` specified during `app init`, the required certificate will be created for you. If you import your own certificates for your hosted zone, we'll walk you through importing the correct certificate for CloudFront.
-
-!!!info
-    CloudFront requires certificates to be in the `us-east-1` region. When importing a certificate, make sure to create your certificate in this region.
-
-First, create a certificate in the `us-east-1` region for your application with [AWS Certificate Manager](https://aws.amazon.com/certificate-manager/). You must add each domain associated with your application to this certificate. Once you've validated the certificate, you can add a field to your environment manifest to import the certificate for CloudFront:
-```yaml
-cdn:
-  certificate: arn:aws:acm:us-east-1:${AWS_ACCOUNT_ID}:certificate/13245665-h74x-4ore-jdnz-avs87dl11jd
-```
-Run `copilot env deploy`, then you can create an A-record in [Route 53](https://aws.amazon.com/route53/) which points to the CloudFront distribution created by Copilot. Just select to point the record to an `Alias` in the console, then select to route traffic to a CloudFront distribution resource type, and enter the CloudFront DNS from the deployed distribution. 
-
-### Restricting traffic to CloudFront
-To restrict public traffic to come through the CloudFront distribution, there's a new field in `http` for your public load balancer:
-```yaml
-http:
-  public:
-    security_groups:
-      ingress:
-        restrict_to:
-          cdn: true
-```
-Specifying this will modify the Load Balancer's security group to only accept traffic from CloudFront.
 
 ## `job logs`
 At long last, you can now view and follow logs for executions of your scheduled jobs. 
