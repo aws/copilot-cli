@@ -1,6 +1,6 @@
 # AWS Copilot v1.21: CloudFront is coming!
 
-Posted On: Aug 15, 2022
+Posted On: Aug 16, 2022
 
 The AWS Copilot core team is announcing the Copilot v1.21 release.  
 Special thanks to [@dave-moser](https://github.com/dave-moser), [@dclark](https://github.com/dclark), and [@apopa57](https://github.com/apopa57) who contributed to this release.
