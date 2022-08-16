@@ -35,7 +35,9 @@ One of our first major additions to the Copilot environment manifest! CloudFront
 - HTTPS traffic through an imported certificate, or a Copilot-managed certificate
 
 ### CloudFront with HTTPS
-Copilot makes this process easy! If you have an application initialized with a `--domain` specified during `app init`, the required certificate will be created for you. If you import your own certificates for your hosted zone, we'll walk you through importing the correct certificate for CloudFront.
+Copilot makes this process easy! If you have an application initialized with a `--domain` specified during `app init`, the required certificate will be created for you and no additional actions are required. 
+
+If you import your own certificates for your hosted zone, we'll walk you through importing the correct certificate for CloudFront.
 
 !!!info
     CloudFront requires certificates to be in the `us-east-1` region. When importing a certificate, make sure to create your certificate in this region.
