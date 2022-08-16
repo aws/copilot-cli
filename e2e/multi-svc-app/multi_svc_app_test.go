@@ -109,7 +109,7 @@ var _ = Describe("Multiple Service App", func() {
 			_, jobInitErr = cli.JobInit(&client.JobInitInput{
 				Name:       "query",
 				Dockerfile: "./query/Dockerfile",
-				Schedule:   "@every 4m", // This should run once, immediately after creation, then every 4m thereafter.
+				Schedule:   "@every 4m",
 			})
 		})
 
