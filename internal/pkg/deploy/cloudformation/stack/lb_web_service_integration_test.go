@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -71,6 +72,8 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 		envMft, err := mft.ApplyEnv(tc.envName)
 		require.NoError(t, err)
 		err = envMft.Validate()
+		require.NoError(t, err)
+		err = envMft.Load(session.New())
 		require.NoError(t, err)
 		content := envMft.Manifest()
 
