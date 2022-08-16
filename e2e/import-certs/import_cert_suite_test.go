@@ -5,6 +5,7 @@ package import_certs
 
 import (
 	"fmt"
+	"testing"
 	"time"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
@@ -16,12 +17,10 @@ var cli *client.CLI
 var appName string
 var testEnvironmentProfile string
 
-/*
 func TestAppWithDomain(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Import Certificates Suite")
 }
-*/
 
 var _ = BeforeSuite(func() {
 	testEnvironmentProfile = "e2etestenv"
