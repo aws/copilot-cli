@@ -1,4 +1,13 @@
-# AWS Copilot v1.21: CloudFront is coming!
+---
+title: 'AWS Copilot v1.21: CloudFront is here!'
+twitter_title: 'AWS Copilot v1.21'
+image: 'https://user-images.githubusercontent.com/10566468/184949047-f4f173ae-0b29-47fd-8c0b-14a212029587.png'
+image_alt: 'v1.21 Environment Manifest and Lambda Addon'
+image_width: '1051'
+image_height: '747'
+---
+
+# AWS Copilot v1.21: CloudFront is here!
 
 Posted On: Aug 16, 2022
 
