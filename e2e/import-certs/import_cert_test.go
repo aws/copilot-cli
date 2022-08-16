@@ -4,10 +4,11 @@
 package import_certs
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"net/http"
 	"strings"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 )
@@ -44,9 +45,8 @@ var _ = Describe("Import Certificates", func() {
 			_, err = cli.EnvInit(&client.EnvInitRequest{
 				AppName:           appName,
 				EnvName:           "test",
-				Profile:           testEnvironmentProfile,
 				Prod:              false,
-				CertificateImport: "arn:aws:acm:us-west-2:323664494501:certificate/a6a4fffb-b498-4190-b5b2-7c2dff4e8d39",
+				CertificateImport: importedCert,
 			})
 		})
 		It("env init should succeed", func() {
