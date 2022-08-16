@@ -71,9 +71,9 @@ func convertMappingWithEquals(inArgs types.MappingWithEquals) (map[string]string
 	for k, v := range inArgs {
 		if v == nil {
 			badArgs = append(badArgs, k)
-		} else {
-			args[k] = *v
+			continue
 		}
+		args[k] = *v
 	}
 
 	if len(badArgs) != 0 {
