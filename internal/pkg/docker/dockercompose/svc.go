@@ -79,13 +79,11 @@ func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, err
 // convertHealthCheckConfig trivially converts a Compose container health check into its Copilot variant.
 func convertHealthCheckConfig(healthcheck *compose.HealthCheckConfig) manifest.ContainerHealthCheck {
 	retries := 3
-
 	if healthcheck.Retries != nil {
 		retries = int(*healthcheck.Retries)
 	}
 
 	cmd := healthcheck.Test
-
 	if healthcheck.Disable {
 		cmd = []string{"NONE"}
 	}
