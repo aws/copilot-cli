@@ -23,6 +23,7 @@ func TestDecomposeService(t *testing.T) {
 	testCases := map[string]struct {
 		filename string
 		svcName  string
+		workDir  string
 
 		wantSvc     manifest.BackendServiceConfig
 		wantIgnored IgnoredKeys
@@ -118,6 +119,22 @@ func TestDecomposeService(t *testing.T) {
 
 			wantError: errors.New("load Compose project: services.complete.healthcheck Additional property exthealthcheck is not allowed"),
 		},
+		"extends": {
+			filename: "extends/extending.yml",
+			svcName:  "web",
+			workDir:  "extends",
+
+			wantSvc: manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+						},
+						Port: aws.Uint16(80),
+					},
+				},
+			},
+		},
 		"single-service complete": {
 			filename: "single-service.yml",
 			svcName:  "complete",
@@ -183,7 +200,7 @@ func TestDecomposeService(t *testing.T) {
 			cfg, err := os.ReadFile(path)
 			require.NoError(t, err)
 
-			svc, ign, err := DecomposeService(cfg, tc.svcName, "")
+			svc, ign, err := DecomposeService(cfg, tc.svcName, filepath.Join("testdata", tc.workDir))
 
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())
