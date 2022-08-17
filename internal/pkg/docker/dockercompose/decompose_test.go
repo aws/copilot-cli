@@ -32,31 +32,31 @@ func TestDecomposeService(t *testing.T) {
 			filename: "empty-compose.yml",
 			svcName:  "test",
 
-			wantError: errors.New("compose file has no services"),
+			wantError: errors.New("get service config: compose file has no services"),
 		},
 		"bad services": {
 			filename: "bad-services-compose.yml",
 			svcName:  "test",
 
-			wantError: errors.New("\"services\" top-level element was not a map, was: invalid"),
+			wantError: errors.New("get service config: \"services\" top-level element was not a map, was: invalid"),
 		},
 		"wrong name": {
 			filename: "unsupported-keys.yml",
 			svcName:  "test",
 
-			wantError: errors.New("no service named \"test\" in this Compose file, valid services are: [fatal1 fatal2 fatal3]"),
+			wantError: errors.New("get service config: no service named \"test\" in this Compose file, valid services are: [fatal1 fatal2 fatal3]"),
 		},
 		"invalid service not a map": {
 			filename: "invalid-compose.yml",
 			svcName:  "invalid2",
 
-			wantError: errors.New("\"services.invalid2\" element was not a map"),
+			wantError: errors.New("get service config: \"services.invalid2\" element was not a map"),
 		},
 		"unsupported keys fatal1": {
 			filename: "unsupported-keys.yml",
 			svcName:  "fatal1",
 
-			wantError: errors.New("\"services.fatal1\" relies on fatally-unsupported Compose keys: [external_links privileged]"),
+			wantError: errors.New("get unsupported service keys: \"services.fatal1\" relies on fatally-unsupported Compose keys: [external_links privileged]"),
 		},
 		"unsupported keys fatal2": {
 			filename: "unsupported-keys.yml",
@@ -68,7 +68,7 @@ func TestDecomposeService(t *testing.T) {
 			filename: "unsupported-keys.yml",
 			svcName:  "fatal3",
 
-			wantError: errors.New("\"services.fatal3\" relies on fatally-unsupported Compose keys: [domainname init networks]"),
+			wantError: errors.New("get unsupported service keys: \"services.fatal3\" relies on fatally-unsupported Compose keys: [domainname init networks]"),
 		},
 		"invalid compose": {
 			filename: "invalid-compose.yml",
@@ -80,37 +80,37 @@ func TestDecomposeService(t *testing.T) {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "backend",
 
-			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: [secrets]"),
+			wantError: errors.New("get unsupported service keys: \"services.backend\" relies on fatally-unsupported Compose keys: [secrets]"),
 		},
 		"nginx-golang-postgres db": {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "db",
 
-			wantError: errors.New("\"services.db\" relies on fatally-unsupported Compose keys: [expose secrets volumes]"),
+			wantError: errors.New("get unsupported service keys: \"services.db\" relies on fatally-unsupported Compose keys: [expose secrets volumes]"),
 		},
 		"nginx-golang-postgres proxy": {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "proxy",
 
-			wantError: errors.New("\"services.proxy\" relies on fatally-unsupported Compose keys: [ports volumes]"),
+			wantError: errors.New("get unsupported service keys: \"services.proxy\" relies on fatally-unsupported Compose keys: [ports volumes]"),
 		},
 		"react-express-mongo frontend": {
 			filename: "react-express-mongo.yml",
 			svcName:  "frontend",
 
-			wantError: errors.New("\"services.frontend\" relies on fatally-unsupported Compose keys: [networks ports volumes]"),
+			wantError: errors.New("get unsupported service keys: \"services.frontend\" relies on fatally-unsupported Compose keys: [networks ports volumes]"),
 		},
 		"react-express-mongo backend": {
 			filename: "react-express-mongo.yml",
 			svcName:  "backend",
 
-			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: [expose networks volumes]"),
+			wantError: errors.New("get unsupported service keys: \"services.backend\" relies on fatally-unsupported Compose keys: [expose networks volumes]"),
 		},
 		"react-express-mongo mongo": {
 			filename: "react-express-mongo.yml",
 			svcName:  "mongo",
 
-			wantError: errors.New("\"services.mongo\" relies on fatally-unsupported Compose keys: [expose networks volumes]"),
+			wantError: errors.New("get unsupported service keys: \"services.mongo\" relies on fatally-unsupported Compose keys: [expose networks volumes]"),
 		},
 		"unrecognized-field-name": {
 			filename: "unrecognized-field-name.yml",
