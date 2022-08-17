@@ -183,7 +183,7 @@ func TestDecomposeService(t *testing.T) {
 			cfg, err := os.ReadFile(path)
 			require.NoError(t, err)
 
-			svc, ign, err := DecomposeService(cfg, tc.svcName)
+			svc, ign, err := DecomposeService(cfg, tc.svcName, "")
 
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())

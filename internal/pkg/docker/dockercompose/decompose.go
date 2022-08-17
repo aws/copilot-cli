@@ -12,7 +12,7 @@ import (
 )
 
 // DecomposeService parses a Compose YAML file and then converts a single service to a Copilot manifest.
-func DecomposeService(content []byte, svcName string) (*manifest.BackendServiceConfig, IgnoredKeys, error) {
+func DecomposeService(content []byte, svcName string, workingDir string) (*manifest.BackendServiceConfig, IgnoredKeys, error) {
 	config, err := loader.ParseYAML(content)
 	if err != nil {
 		return nil, nil, fmt.Errorf("parse compose yaml: %w", err)
@@ -29,6 +29,7 @@ func DecomposeService(content []byte, svcName string) (*manifest.BackendServiceC
 	}
 
 	project, err := loader.Load(compose.ConfigDetails{
+		WorkingDir: workingDir,
 		ConfigFiles: []compose.ConfigFile{
 			{
 				Content: content,
