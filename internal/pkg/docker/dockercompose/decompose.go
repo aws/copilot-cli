@@ -54,10 +54,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 	if err != nil {
 		return nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
 	}
-
-	for _, ign := range svcIgnored {
-		ignored = append(ignored, ign)
-	}
+	ignored = append(ignored, svcIgnored...)
 
 	sort.Strings(ignored)
 	return backendSvc, ignored, nil
