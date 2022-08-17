@@ -57,13 +57,11 @@ func convertBackendService(service *compose.ServiceConfig, port uint16) (*manife
 func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, error) {
 	var envFile *string
 
-	if service.EnvFile != nil {
-		if len(service.EnvFile) == 1 {
-			envFile = &service.EnvFile[0]
-		} else if len(service.EnvFile) > 1 {
-			return manifest.TaskConfig{}, fmt.Errorf("at most one env file is supported, but %d env files "+
-				"were attached to this service", len(service.EnvFile))
-		}
+	if len(service.EnvFile) == 1 {
+		envFile = &service.EnvFile[0]
+	} else if len(service.EnvFile) > 1 {
+		return manifest.TaskConfig{}, fmt.Errorf("at most one env file is supported, but %d env files "+
+			"were attached to this service", len(service.EnvFile))
 	}
 
 	taskCfg := manifest.TaskConfig{
