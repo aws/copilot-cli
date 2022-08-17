@@ -13,6 +13,8 @@ Metadata:
   - {{$account}}{{end}}{{end}}
 Resources:
   KMSKey:
+    Metadata:
+      'aws:copilot:description': 'KMS key to encrypt pipeline artifacts between stages'
     # Used by the CodePipeline in the tools account to en/decrypt the
     # artifacts between stages
     Type: AWS::KMS::Key
@@ -58,6 +60,8 @@ Resources:
               - kms:DescribeKey
             Resource: "*"
   PipelineBuiltArtifactBucketPolicy:
+    Metadata:
+      'aws:copilot:description': 'S3 Bucket to store local artifacts'
     Type: AWS::S3::BucketPolicy
     DependsOn: PipelineBuiltArtifactBucket
     Properties:
@@ -88,6 +92,8 @@ Resources:
 
 {{range $service := $services}}
   ECRRepo{{logicalIDSafe $service}}:
+    Metadata:
+      'aws:copilot:description': 'ECR container image repository for "{{$service}}"'
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: {{$app}}/{{$service}}
