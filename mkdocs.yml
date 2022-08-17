@@ -47,7 +47,9 @@ nav:
       - Worker Service: docs/manifest/worker-service.en.md
       - Pipeline: docs/manifest/pipeline.en.md
     - Developing:
-      - Additional AWS Resources: docs/developing/additional-aws-resources.en.md
+      - Additional AWS Resources:
+        - Modeling with AWS CloudFormation: docs/developing/addons/modeling.en.md
+        - Uploading Local Artifacts: docs/developing/addons/package.en.md
       - Container Environment Variables: docs/developing/environment-variables.en.md
       - Content Delivery: docs/developing/content-delivery.en.md
       - Custom Environment Resources: docs/developing/custom-environment-resources.en.md
@@ -155,6 +157,7 @@ nav:
         - task run: docs/commands/task-run.en.md
         - version: docs/commands/version.en.md
   - Blogs:
+      - Release v1.21: blogs/release-v121.en.md
       - Release v1.20: blogs/release-v120.en.md
       - AWS App Runner VPC: blogs/apprunner-vpc.en.md
       - Release v1.19: blogs/release-v119.en.md
@@ -200,6 +203,8 @@ plugins:
             'docs/getting-started.md': 'docs/getting-started/first-app-tutorial.en.md'
             'docs/commands/pipeline-update.en.md': 'docs/commands/pipeline-deploy.en.md'
             'docs/commands/pipeline-update.ja.md': 'docs/commands/pipeline-deploy.ja.md'
+            'docs/developing/additional-aws-resources.en.md': 'docs/developing/addons/modeling.en.md'
+            'docs/developing/additional-aws-resources.ja.md': 'docs/developing/addons/modeling.ja.md'
     - i18n:
         default_language: en
         languages:
