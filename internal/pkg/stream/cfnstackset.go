@@ -40,7 +40,7 @@ type StackSetStreamer struct {
 	lastSentOp stackset.Operation
 	curOp      stackset.Operation
 
-	// Overriden in tests.
+	// Overridden in tests.
 	clock                     clock
 	rand                      func(int) int
 	retries                   int
