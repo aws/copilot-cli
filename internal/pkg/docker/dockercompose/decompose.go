@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/compose-spec/compose-go/loader"
-	"github.com/compose-spec/compose-go/types"
+	compose "github.com/compose-spec/compose-go/types"
 	"sort"
 )
 
@@ -60,8 +60,8 @@ func decomposeService(content []byte, svcName string) (*manifest.BackendServiceC
 		return nil, nil, fmt.Errorf("\"services.%s\" relies on fatally-unsupported Compose keys: %v", svcName, fatal)
 	}
 
-	project, err := loader.Load(types.ConfigDetails{
-		ConfigFiles: []types.ConfigFile{
+	project, err := loader.Load(compose.ConfigDetails{
+		ConfigFiles: []compose.ConfigFile{
 			{
 				Content: content,
 				Config:  config,

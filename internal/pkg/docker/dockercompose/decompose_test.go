@@ -7,7 +7,7 @@ import (
 	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/compose-spec/compose-go/types"
+	compose "github.com/compose-spec/compose-go/types"
 	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
@@ -16,9 +16,9 @@ import (
 )
 
 func TestDecomposeService(t *testing.T) {
-	fiveSeconds := types.Duration(5 * time.Second)
-	threeSeconds := types.Duration(3 * time.Second)
-	oneSecond := types.Duration(time.Second)
+	fiveSeconds := compose.Duration(5 * time.Second)
+	threeSeconds := compose.Duration(3 * time.Second)
+	oneSecond := compose.Duration(time.Second)
 
 	testCases := map[string]struct {
 		filename string
