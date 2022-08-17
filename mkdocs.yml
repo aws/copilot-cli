@@ -157,6 +157,7 @@ nav:
         - task run: docs/commands/task-run.en.md
         - version: docs/commands/version.en.md
   - Blogs:
+      - Release v1.21: blogs/release-v121.en.md
       - Release v1.20: blogs/release-v120.en.md
       - AWS App Runner VPC: blogs/apprunner-vpc.en.md
       - Release v1.19: blogs/release-v119.en.md
