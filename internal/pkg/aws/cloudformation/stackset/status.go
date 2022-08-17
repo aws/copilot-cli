@@ -66,12 +66,7 @@ func (s InstanceStatus) IsCompleted() bool {
 
 // InProgress returns true if the instance is being updated with a new template.
 func (s InstanceStatus) InProgress() bool {
-	switch s {
-	case instanceStatusPending, instanceStatusRunning:
-		return true
-	default:
-		return false
-	}
+	return s == instanceStatusPending || s == instanceStatusRunning
 }
 
 // IsSuccess returns true if the instance is up-to-date with the stack set template.
