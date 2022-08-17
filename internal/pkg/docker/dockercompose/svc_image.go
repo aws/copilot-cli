@@ -122,13 +122,6 @@ func unsupportedBuildKeys(build *compose.BuildConfig) (IgnoredKeys, error) {
 		ignoredKeys = append(ignoredKeys, "build.tags")
 	}
 
-	if build.Extensions != nil {
-		// catchall for any unrecognized key
-		for ext := range build.Extensions {
-			ignoredKeys = append(ignoredKeys, "build."+ext)
-		}
-	}
-
 	if build.Labels != nil {
 		ignoredKeys = append(ignoredKeys, "build.labels")
 	}

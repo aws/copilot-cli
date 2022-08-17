@@ -275,46 +275,6 @@ func TestConvertBackendService(t *testing.T) {
 				},
 			},
 		},
-		"extension fields": {
-			wantIgnored: []string{
-				"build.ext",
-				"healthcheck.extfield",
-				"unrecognized",
-			},
-
-			inSvc: compose.ServiceConfig{
-				Name: "web",
-				HealthCheck: &compose.HealthCheckConfig{
-					Extensions: map[string]interface{}{
-						"extfield": 1,
-					},
-				},
-				Build: &compose.BuildConfig{
-					Context: "here/",
-					Extensions: map[string]interface{}{
-						"ext": "field",
-					},
-				},
-				Extensions: map[string]interface{}{
-					"unrecognized": "ignored",
-				},
-			},
-			inPort: 443,
-
-			wantBackendSvc: manifest.BackendServiceConfig{ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
-				ImageWithOptionalPort: manifest.ImageWithOptionalPort{
-					Image: manifest.Image{
-						Build: manifest.BuildArgsOrString{BuildArgs: manifest.DockerBuildArgs{
-							Context: aws.String("here/"),
-						}},
-					},
-					Port: aws.Uint16(443),
-				},
-				HealthCheck: manifest.ContainerHealthCheck{
-					Retries: aws.Int(3),
-				},
-			}},
-		},
 	}
 
 	for name, tc := range testCases {

@@ -41,13 +41,6 @@ func convertBackendService(service *compose.ServiceConfig, port uint16) (*manife
 
 	if service.HealthCheck != nil {
 		svcCfg.ImageConfig.HealthCheck = convertHealthCheckConfig(service.HealthCheck)
-		for ext := range service.HealthCheck.Extensions {
-			ignored = append(ignored, "healthcheck."+ext)
-		}
-	}
-
-	for ext := range service.Extensions {
-		ignored = append(ignored, ext)
 	}
 
 	return svcCfg, ignored, nil

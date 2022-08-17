@@ -86,9 +86,6 @@ func TestConvertImageConfig(t *testing.T) {
 				Tags: []string{
 					"tag",
 				},
-				Extensions: map[string]interface{}{
-					"extfield": "ext",
-				},
 			},
 			inLabels: map[string]string{
 				"docker.test": "val",
@@ -99,7 +96,6 @@ func TestConvertImageConfig(t *testing.T) {
 				"build.pull",
 				"build.isolation",
 				"build.tags",
-				"build.extfield",
 				"build.labels",
 			},
 			wantImage: manifest.Image{
