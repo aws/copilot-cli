@@ -190,7 +190,7 @@ func (o *svcLogsOpts) Execute() error {
 		limit = aws.Int64(int64(o.limit))
 	}
 	if o.previousStoppedTask {
-		err := o.getStoppedTaskID()
+		err := o.setPreviousStoppedTaskID()
 		if err != nil {
 			return err
 		}
@@ -209,7 +209,7 @@ func (o *svcLogsOpts) Execute() error {
 	return nil
 }
 
-func (o *svcLogsOpts) getStoppedTaskID() error {
+func (o *svcLogsOpts) setPreviousStoppedTaskID() error {
 	env, err := o.configStore.GetEnvironment(o.appName, o.envName)
 	if err != nil {
 		return fmt.Errorf("get environment %s: %w", o.envName, err)
@@ -335,6 +335,6 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	cmd.Flags().StringVar(&vars.logGroup, logGroupFlag, "", logGroupFlagDescription)
-	cmd.Flags().BoolVar(&vars.previousStoppedTask, previousStoppedTaskFlag, false, previousTaskFlagDescription)
+	cmd.Flags().BoolVar(&vars.previousStoppedTask, previousStoppedTaskFlag, false, previousStoppedTaskFlagDescription)
 	return cmd
 }
