@@ -202,8 +202,8 @@ exports.certificateReplicateHandler = async function (event, context) {
   ];
   let handler = async function () {
     // Configure clients.
-    const envRegionAcm = new aws.ACM({ envRegion });
-    const targetRegionAcm = new aws.ACM({ targetRegion });
+    const envRegionAcm = new aws.ACM({ region: envRegion });
+    const targetRegionAcm = new aws.ACM({ region: targetRegion });
     switch (event.RequestType) {
       case "Create":
       case "Update":

@@ -519,7 +519,7 @@ func (cf CloudFormation) errOnFailedStack(stackName string) error {
 		return err
 	}
 	status := aws.StringValue(stack.StackStatus)
-	if cloudformation.StackStatus(status).Failure() {
+	if cloudformation.StackStatus(status).IsFailure() {
 		return fmt.Errorf("stack %s did not complete successfully and exited with status %s", stackName, status)
 	}
 	return nil

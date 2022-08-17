@@ -7,24 +7,53 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 )
 
 var (
-	notStartedStackStatus = stackStatus{
-		value: "not started",
+	notStartedStackStatus = cfnStatus{
+		value: notStartedResult{},
 	}
 )
 
-type stackStatus struct {
-	value  cloudformation.StackStatus
+type result interface {
+	IsSuccess() bool
+	IsFailure() bool
+	InProgress() bool
+	fmt.Stringer
+}
+
+// notStartedResult represents an unbegun status that implements the result interface.
+type notStartedResult struct{}
+
+// IsSuccess is false for a non-started state.
+func (r notStartedResult) IsSuccess() bool {
+	return false
+}
+
+// IsFailure is false for a non-started state.
+func (r notStartedResult) IsFailure() bool {
+	return false
+}
+
+// InProgress is false for a non-started state.
+func (r notStartedResult) InProgress() bool {
+	return false
+}
+
+// String implements the fmt.Stringer interface.
+func (r notStartedResult) String() string {
+	return "not started"
+}
+
+type cfnStatus struct {
+	value  result
 	reason string
 }
 
-func prettifyLatestStackStatus(statuses []stackStatus) string {
+func prettifyLatestStackStatus(statuses []cfnStatus) string {
 	color := colorStackStatus(statuses)
-	latest := string(statuses[len(statuses)-1].value)
+	latest := statuses[len(statuses)-1].value.String()
 	pretty := strings.ToLower(strings.ReplaceAll(latest, "_", " "))
 	return color("[%s]", pretty)
 }
@@ -42,10 +71,10 @@ func prettifyElapsedTime(sw *stopWatch) string {
 	return color.Faint.Sprintf("[%.1fs]", elapsed.Seconds())
 }
 
-func failureReasons(statuses []stackStatus) []string {
+func failureReasons(statuses []cfnStatus) []string {
 	var reasons []string
 	for _, status := range statuses {
-		if !status.value.Failure() {
+		if !status.value.IsFailure() {
 			continue
 		}
 		if status.reason == "" {
@@ -74,17 +103,17 @@ func splitByLength(s string, maxLength int) []string {
 // If there was any failure in the history of the stack, then color the status as red.
 // If the latest event is a success, then it's green.
 // Otherwise, it's fainted.
-func colorStackStatus(statuses []stackStatus) func(format string, a ...interface{}) string {
+func colorStackStatus(statuses []cfnStatus) func(format string, a ...interface{}) string {
 	hasPastFailure := false
 	for _, status := range statuses {
-		if status.value.Failure() {
+		if status.value.IsFailure() {
 			hasPastFailure = true
 			break
 		}
 	}
 
 	latestStatus := statuses[len(statuses)-1]
-	if latestStatus.value.Success() && !hasPastFailure {
+	if latestStatus.value.IsSuccess() && !hasPastFailure {
 		return color.Green.Sprintf
 	}
 	if hasPastFailure {

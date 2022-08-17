@@ -5,6 +5,7 @@ package import_certs
 
 import (
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 
 var cli *client.CLI
 var appName string
-var testEnvironmentProfile string
+var importedCert string
 
 func TestAppWithDomain(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -23,10 +24,12 @@ func TestAppWithDomain(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	testEnvironmentProfile = "e2etestenv"
+	arn, ok := os.LookupEnv("IMPORTED_CERT_ARN")
+	Expect(ok).Should(Equal(true))
+	importedCert = arn
 	copilotCLI, err := client.NewCLI()
-	cli = copilotCLI
 	Expect(err).NotTo(HaveOccurred())
+	cli = copilotCLI
 	appName = fmt.Sprintf("e2e-import-certs-%d", time.Now().Unix())
 })
 
