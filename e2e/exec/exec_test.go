@@ -56,7 +56,6 @@ var _ = Describe("exec flow", func() {
 				AppName: appName,
 				EnvName: envName,
 				Profile: "default",
-				Prod:    false,
 			})
 		})
 

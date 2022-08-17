@@ -45,7 +45,6 @@ type EnvInitRequest struct {
 	AppName           string
 	EnvName           string
 	Profile           string
-	Prod              bool
 	CustomizedEnv     bool
 	VPCImport         EnvInitRequestVPCImport
 	VPCConfig         EnvInitRequestVPCConfig
@@ -589,9 +588,6 @@ func (cli *CLI) EnvInit(opts *EnvInitRequest) (string, error) {
 	}
 	if opts.CertificateImport != "" {
 		commands = append(commands, "--import-cert-arns", opts.CertificateImport)
-	}
-	if opts.Prod {
-		commands = append(commands, "--prod")
 	}
 	if !opts.CustomizedEnv {
 		commands = append(commands, "--default-config")

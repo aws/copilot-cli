@@ -53,7 +53,6 @@ var _ = Describe("CloudFront", func() {
 				AppName: appName,
 				EnvName: "test",
 				Profile: "default",
-				Prod:    false,
 			})
 		})
 		It("env init should succeed", func() {

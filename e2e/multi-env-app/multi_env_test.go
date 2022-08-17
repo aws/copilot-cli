@@ -59,14 +59,12 @@ var _ = Describe("Multiple Env App", func() {
 				AppName: appName,
 				EnvName: "test",
 				Profile: testEnvironmentProfile,
-				Prod:    false,
 			})
 
 			_, prodEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: "prod",
 				Profile: prodEnvironmentProfile,
-				Prod:    true,
 			})
 
 		})

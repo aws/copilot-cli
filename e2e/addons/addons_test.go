@@ -53,7 +53,6 @@ var _ = Describe("addons flow", func() {
 				AppName: appName,
 				EnvName: "test",
 				Profile: "default",
-				Prod:    false,
 			})
 		})
 
