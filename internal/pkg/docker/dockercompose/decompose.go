@@ -62,7 +62,7 @@ func DecomposeService(content []byte, svcName string) (*manifest.BackendServiceC
 	return backendSvc, ignored, nil
 }
 
-// serviceConfig extracts the map corresponding to a Compose service from the parsed Compose yaml
+// serviceConfig extracts the map corresponding to a Compose service from the parsed Compose config map.
 func serviceConfig(config map[string]interface{}, svcName string) (map[string]interface{}, error) {
 	svcs, ok := config["services"]
 	if !ok || svcs == nil {
@@ -92,7 +92,7 @@ func serviceConfig(config map[string]interface{}, svcName string) (map[string]in
 	return service, nil
 }
 
-// unsupportedServiceKeys scans over fields in the parsed yaml to find unsupported keys
+// unsupportedServiceKeys scans over fields in the parsed yaml to find unsupported keys.
 func unsupportedServiceKeys(service map[string]interface{}, svcName string) (IgnoredKeys, error) {
 	var ignored, fatal []string
 
