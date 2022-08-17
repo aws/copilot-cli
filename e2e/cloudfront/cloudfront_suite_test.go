@@ -13,10 +13,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const (
-	waitingInterval = 60 * time.Second
-)
-
 var cli *client.CLI
 var appName string
 
@@ -29,7 +25,7 @@ var _ = BeforeSuite(func() {
 	copilotCLI, err := client.NewCLI()
 	Expect(err).NotTo(HaveOccurred())
 	cli = copilotCLI
-	appName = fmt.Sprintf("e2e-cloudfront-penghaoh")
+	appName = fmt.Sprintf("e2e-cloudfront-%d", time.Now().Unix())
 })
 
 var _ = AfterSuite(func() {
