@@ -6,6 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/session"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"io"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -32,17 +35,18 @@ const (
 )
 
 type wkldLogsVars struct {
-	shouldOutputJSON bool
-	follow           bool
-	limit            int
-	name             string
-	envName          string
-	appName          string
-	humanStartTime   string
-	humanEndTime     string
-	taskIDs          []string
-	since            time.Duration
-	logGroup         string
+	shouldOutputJSON    bool
+	follow              bool
+	limit               int
+	name                string
+	envName             string
+	appName             string
+	humanStartTime      string
+	humanEndTime        string
+	taskIDs             []string
+	since               time.Duration
+	logGroup            string
+	previousStoppedTask bool
 }
 
 type svcLogsOpts struct {
@@ -57,12 +61,14 @@ type wkldLogOpts struct {
 	startTime *int64
 	endTime   *int64
 
-	w           io.Writer
-	configStore store
-	deployStore deployedEnvironmentLister
-	sel         deploySelector
-	logsSvc     logEventsWriter
-	initLogsSvc func() error // Overridden in tests.
+	w               io.Writer
+	configStore     store
+	sessProvider    sessionProvider
+	deployStore     deployedEnvironmentLister
+	sel             deploySelector
+	logsSvc         logEventsWriter
+	newSvcDescriber func(*session.Session) serviceDescriber
+	initLogsSvc     func() error // Overridden in tests.
 }
 
 func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
@@ -84,6 +90,10 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 			configStore: configStore,
 			deployStore: deployStore,
 			sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
+			newSvcDescriber: func(s *session.Session) serviceDescriber {
+				return ecs.New(s)
+			},
+			sessProvider: sessProvider,
 		},
 	}
 	opts.initLogsSvc = func() error {
@@ -179,6 +189,12 @@ func (o *svcLogsOpts) Execute() error {
 	if o.limit != 0 {
 		limit = aws.Int64(int64(o.limit))
 	}
+	if o.previousStoppedTask {
+		err := o.getStoppedTaskID()
+		if err != nil {
+			return err
+		}
+	}
 	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
 		Follow:    o.follow,
 		Limit:     limit,
@@ -189,6 +205,31 @@ func (o *svcLogsOpts) Execute() error {
 	})
 	if err != nil {
 		return fmt.Errorf("write log events for service %s: %w", o.name, err)
+	}
+	return nil
+}
+
+func (o *svcLogsOpts) getStoppedTaskID() error {
+	env, err := o.configStore.GetEnvironment(o.appName, o.envName)
+	if err != nil {
+		return fmt.Errorf("get environment %s: %w", o.envName, err)
+	}
+	sess, err := o.sessProvider.FromRole(env.ManagerRoleARN, env.Region)
+	if err != nil {
+		return fmt.Errorf("get session %s: %w", o.envName, err)
+	}
+	svcDesc, err := o.newSvcDescriber(sess).DescribeService(o.appName, o.envName, o.name)
+	if err != nil {
+		return fmt.Errorf("describe serivce %s: %w", o.name, err)
+	}
+	if len(svcDesc.StoppedTasks) > 0 {
+		taskID, err := awsecs.TaskID(aws.StringValue(svcDesc.StoppedTasks[0].TaskArn))
+		if err != nil {
+			return err
+		}
+		o.taskIDs = append(o.taskIDs, taskID)
+	} else {
+		return fmt.Errorf("previously stopped task for the service %s: no logs available", o.name)
 	}
 	return nil
 }
@@ -294,5 +335,6 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	cmd.Flags().StringVar(&vars.logGroup, logGroupFlag, "", logGroupFlagDescription)
+	cmd.Flags().BoolVar(&vars.previousStoppedTask, previousStoppedTaskFlag, false, previousTaskFlagDescription)
 	return cmd
 }
