@@ -14,9 +14,11 @@ import (
 func decomposeService(content []byte, svcName string) (*manifest.BackendServiceConfig, IgnoredKeys, error) {
 	config, err := loader.ParseYAML(content)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("parse compose yaml: %w", err)
 	}
 
+	// scan over fields in the parsed yaml to find unsupported fields instead of using
+	// boilerplate code or complex reflection
 	svcs, ok := config["services"]
 	if !ok || svcs == nil {
 		return nil, nil, fmt.Errorf("compose file has no services")
@@ -52,11 +54,9 @@ func decomposeService(content []byte, svcName string) (*manifest.BackendServiceC
 		}
 	}
 
-	// sort so we have consistent (testable) error messages
-	sort.Strings(ignored)
-	sort.Strings(fatal)
-
 	if len(fatal) != 0 {
+		// sort so we have consistent (testable) error messages
+		sort.Strings(fatal)
 		return nil, nil, fmt.Errorf("\"services.%s\" relies on fatally-unsupported Compose keys: %v", svcName, fatal)
 	}
 
@@ -83,7 +83,6 @@ func decomposeService(content []byte, svcName string) (*manifest.BackendServiceC
 	// TODO: Port handling & exposed port detection, to be implemented in Milestone 3
 	var port uint16 = 80
 	backendSvc, svcIgnored, err := convertBackendService(&svcConfig, port)
-
 	if err != nil {
 		return nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
 	}
@@ -92,5 +91,6 @@ func decomposeService(content []byte, svcName string) (*manifest.BackendServiceC
 		ignored = append(ignored, ign)
 	}
 
+	sort.Strings(ignored)
 	return backendSvc, ignored, nil
 }
