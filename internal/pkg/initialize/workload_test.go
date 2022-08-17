@@ -12,7 +12,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/initialize/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +32,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 		mockWriter      func(m *mocks.MockWorkspace)
 		mockstore       func(m *mocks.MockStore)
 		mockappDeployer func(m *mocks.MockWorkloadAdder)
-		mockProg        func(m *mocks.MockProg)
 
 		wantedErr error
 	}{
@@ -73,10 +71,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 					AccountID: "1234",
 				}, "resizer")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "job", "resizer"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "job", "resizer"))
-			},
 		},
 		"using existing image": {
 			inJobType: manifest.ScheduledJobType,
@@ -113,10 +107,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 					Name:      "app",
 					AccountID: "1234",
 				}, "resizer")
-			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "job", "resizer"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "job", "resizer"))
 			},
 		},
 		"write manifest error": {
@@ -169,10 +159,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 					AccountID: "1234",
 				}, nil)
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "job", "resizer"))
-				m.EXPECT().Stop(log.Serrorf(fmtAddWlToAppFailed, "job", "resizer"))
-			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
@@ -198,10 +184,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(gomock.Any())
-				m.EXPECT().Stop(gomock.Any())
-			},
 			wantedErr: fmt.Errorf("saving job resizer: oops"),
 		},
 	}
@@ -213,7 +195,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 
 			mockWriter := mocks.NewMockWorkspace(ctrl)
 			mockstore := mocks.NewMockStore(ctrl)
-			mockProg := mocks.NewMockProg(ctrl)
 			mockappDeployer := mocks.NewMockWorkloadAdder(ctrl)
 			if tc.mockWriter != nil {
 				tc.mockWriter(mockWriter)
@@ -224,14 +205,10 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			if tc.mockappDeployer != nil {
 				tc.mockappDeployer(mockappDeployer)
 			}
-			if tc.mockProg != nil {
-				tc.mockProg(mockProg)
-			}
 
 			initializer := &WorkloadInitializer{
 				Store:    mockstore,
 				Ws:       mockWriter,
-				Prog:     mockProg,
 				Deployer: mockappDeployer,
 			}
 
@@ -455,7 +432,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 		mockWriter      func(m *mocks.MockWorkspace)
 		mockstore       func(m *mocks.MockStore)
 		mockappDeployer func(m *mocks.MockWorkloadAdder)
-		mockProg        func(m *mocks.MockProg)
 
 		wantedErr error
 	}{
@@ -494,10 +470,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Name:      "app",
 					AccountID: "1234",
 				}, "frontend")
-			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "frontend"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "frontend"))
 			},
 		},
 		"app error": {
@@ -556,10 +528,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					AccountID: "1234",
 				}, nil)
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "frontend"))
-				m.EXPECT().Stop(log.Serrorf(fmtAddWlToAppFailed, "service", "frontend"))
-			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 			},
@@ -584,10 +552,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(gomock.Any())
-				m.EXPECT().Stop(gomock.Any())
 			},
 			wantedErr: fmt.Errorf("saving service frontend: oops"),
 		},
@@ -630,10 +594,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					AccountID: "1234",
 				}, "backend")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "backend"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
-			},
 		},
 		"no healthcheck options": {
 			inSvcType:        manifest.BackendServiceType,
@@ -674,10 +634,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Name:      "app",
 					AccountID: "1234",
 				}, "backend")
-			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "backend"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
 			},
 		},
 		"default healthcheck options": {
@@ -731,10 +687,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					AccountID: "1234",
 				}, "backend")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "backend"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
-			},
 		},
 		"topic subscriptions enabled": {
 			inSvcType:        manifest.WorkerServiceType,
@@ -782,10 +734,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					AccountID: "1234",
 				}, "worker")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "worker"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "worker"))
-			},
 		},
 	}
 
@@ -808,9 +756,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			}
 			if tc.mockappDeployer != nil {
 				tc.mockappDeployer(mockappDeployer)
-			}
-			if tc.mockProg != nil {
-				tc.mockProg(mockProg)
 			}
 
 			initializer := &WorkloadInitializer{

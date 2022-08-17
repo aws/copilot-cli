@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -95,7 +96,7 @@ func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error)
 		prog:                   termprogress.NewSpinner(log.DiagnosticWriter),
 		prompt:                 prompter,
 		secretsmanager:         secretsmanager.New(defaultSess),
-		pipelineDeployer:       cloudformation.New(defaultSess),
+		pipelineDeployer:       cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr)),
 		deployedPipelineLister: pipelineLister,
 		ws:                     ws,
 		store:                  ssmStore,

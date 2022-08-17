@@ -7,6 +7,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/aws/copilot-cli/internal/pkg/stream"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/progress"
@@ -86,7 +91,7 @@ func (cf CloudFormation) upgradeAppStackSet(config *stack.AppStackConfig) error 
 			return err
 		}
 		previouslyDeployedConfig.Version += 1
-		err = cf.deployAppConfig(config, previouslyDeployedConfig)
+		err = cf.deployAppConfig(config, previouslyDeployedConfig, true /* updating template resources should update all instances*/)
 		if err == nil {
 			return nil
 		}
@@ -279,7 +284,7 @@ func (cf CloudFormation) addWorkloadToApp(app *config.Application, wlName string
 		Accounts: previouslyDeployedConfig.Accounts,
 		App:      appConfig.Name,
 	}
-	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig); err != nil {
+	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig, shouldAddNewWl); err != nil {
 		return err
 	}
 
@@ -337,7 +342,7 @@ func (cf CloudFormation) removeWorkloadFromApp(app *config.Application, wlName s
 		Accounts: previouslyDeployedConfig.Accounts,
 		App:      appConfig.Name,
 	}
-	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig); err != nil {
+	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig, shouldRemoveWl); err != nil {
 		return err
 	}
 
@@ -390,7 +395,7 @@ func (cf CloudFormation) AddEnvToApp(opts *AddEnvToAppOpts) error {
 		App:      appConfig.Name,
 	}
 
-	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig); err != nil {
+	if err := cf.deployAppConfig(appConfig, &newDeploymentConfig, shouldAddNewAccountID); err != nil {
 		return fmt.Errorf("adding %s environment resources to application: %w", opts.EnvName, err)
 	}
 
@@ -430,7 +435,7 @@ func (cf CloudFormation) AddPipelineResourcesToApp(
 	return nil
 }
 
-func (cf CloudFormation) deployAppConfig(appConfig *stack.AppStackConfig, resources *stack.AppResourcesConfig) error {
+func (cf CloudFormation) deployAppConfig(appConfig *stack.AppStackConfig, resources *stack.AppResourcesConfig, hasInstanceUpdates bool) error {
 	newTemplateToDeploy, err := appConfig.ResourceTemplate(resources)
 	if err != nil {
 		return err
@@ -449,12 +454,22 @@ func (cf CloudFormation) deployAppConfig(appConfig *stack.AppStackConfig, resour
 	if err != nil {
 		return fmt.Errorf("get stack set administrator role arn: %w", err)
 	}
-	return cf.appStackSet.UpdateAndWait(appConfig.StackSetName(), newTemplateToDeploy,
-		stackset.WithOperationID(fmt.Sprintf("%d", resources.Version)),
-		stackset.WithDescription(appConfig.StackSetDescription()),
-		stackset.WithExecutionRoleName(appConfig.StackSetExecutionRoleName()),
-		stackset.WithAdministrationRoleARN(stackSetAdminRoleARN),
-		stackset.WithTags(toMap(appConfig.Tags())))
+
+	renderInput := renderStackSetInput{
+		name:               appConfig.StackSetName(),
+		template:           newTemplateToDeploy,
+		hasInstanceUpdates: hasInstanceUpdates,
+		createOpFn: func() (string, error) {
+			return cf.appStackSet.Update(appConfig.StackSetName(), newTemplateToDeploy,
+				stackset.WithOperationID(fmt.Sprintf("%d", resources.Version)),
+				stackset.WithDescription(appConfig.StackSetDescription()),
+				stackset.WithExecutionRoleName(appConfig.StackSetExecutionRoleName()),
+				stackset.WithAdministrationRoleARN(stackSetAdminRoleARN),
+				stackset.WithTags(toMap(appConfig.Tags())))
+		},
+		now: time.Now,
+	}
+	return cf.renderStackSet(renderInput)
 }
 
 // addNewAppStackInstances takes an environment and determines if we need to create a new
@@ -528,4 +543,81 @@ func (cf CloudFormation) deleteStackSetInstances(name string) error {
 		return err
 	}
 	return cf.appStackSet.WaitForOperation(name, opID)
+}
+
+type renderStackSetInput struct {
+	name               string                 // Name of the stack set.
+	template           string                 // Template body for stack set instances.
+	hasInstanceUpdates bool                   // True when the stack set update will force instances to also be updated.
+	createOpFn         func() (string, error) // Function to create a stack set operation.
+	now                func() time.Time
+}
+
+func (cf CloudFormation) renderStackSetImpl(in renderStackSetInput) error {
+	titles, err := cloudformation.ParseTemplateDescriptions(in.template)
+	if err != nil {
+		return fmt.Errorf("parse resource descriptions from stack set template: %w", err)
+	}
+
+	// Start the operation.
+	timestamp := in.now()
+	opID, err := in.createOpFn()
+	if err != nil {
+		return err
+	}
+
+	// Collect streamers.
+	setStreamer := stream.NewStackSetStreamer(cf.appStackSet, in.name, opID, timestamp)
+	var stackStreamers []*stream.StackStreamer
+	if in.hasInstanceUpdates {
+		stackStreamers, err = setStreamer.InstanceStreamers(func(region string) stream.StackEventsDescriber {
+			return cf.regionalClient(region)
+		})
+		if err != nil {
+			return fmt.Errorf("retrieve stack instance streamers: %w", err)
+		}
+	}
+	streamers := []stream.Streamer{setStreamer}
+	for _, streamer := range stackStreamers {
+		streamers = append(streamers, streamer)
+	}
+
+	// Collect renderers
+	renderers := stackSetRenderers(setStreamer, stackStreamers, titles)
+
+	// Render.
+	waitCtx, cancelWait := context.WithTimeout(context.Background(), waitForStackTimeout)
+	defer cancelWait()
+	g, ctx := errgroup.WithContext(waitCtx)
+
+	for _, streamer := range streamers {
+		streamer := streamer // Create a new instance of streamer for the goroutine.
+		g.Go(func() error {
+			return stream.Stream(ctx, streamer)
+		})
+	}
+	g.Go(func() error {
+		_, err := progress.Render(ctx, progress.NewTabbedFileWriter(cf.console), progress.MultiRenderer(renderers...))
+		return err
+	})
+	if err := g.Wait(); err != nil {
+		return fmt.Errorf("render progress of stack set %q: %w", in.name, err)
+	}
+	return nil
+}
+
+func stackSetRenderers(setStreamer *stream.StackSetStreamer, stackStreamers []*stream.StackStreamer, resourceTitles map[string]string) []progress.DynamicRenderer {
+	noStyle := progress.RenderOptions{}
+	renderers := []progress.DynamicRenderer{
+		progress.ListeningStackSetRenderer(setStreamer, fmt.Sprintf("Update regional resources with stack set %q", setStreamer.Name()), noStyle),
+	}
+	for _, streamer := range stackStreamers {
+		title := fmt.Sprintf("Update stack set instance %q", streamer.Name())
+		if region, ok := streamer.Region(); ok {
+			title = fmt.Sprintf("Update resources in region %q", region)
+		}
+		r := progress.ListeningStackRenderer(streamer, streamer.Name(), title, resourceTitles, progress.NestedRenderOptions(noStyle))
+		renderers = append(renderers, r)
+	}
+	return renderers
 }
