@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"testing"
@@ -366,15 +365,6 @@ func TestSvcLogs_Execute(t *testing.T) {
 
 			setupMocks: func(m wkldLogsMock) {
 				gomock.InOrder(
-					m.configStore.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name:           "my-env",
-						ManagerRoleARN: "manager-role-arn",
-					}, nil),
-					m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-						Config: &aws.Config{
-							Region: aws.String("mockRegion"),
-						},
-					}, nil),
 					m.newSvcDescriber.EXPECT().DescribeService("my-app", "my-env", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName: "mockCluster",
 						StoppedTasks: []*awsecs.Task{
@@ -406,7 +396,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 
 			wantedError: nil,
 		},
-		"retrieve error when no stopped task or logs available": {
+		"retrieve warning no previously stopped tasks found, when no stopped task or logs available": {
 			inputSvc:          "mockSvc",
 			inputPreviousTask: true,
 			inputApp:          "my-app",
@@ -416,15 +406,6 @@ func TestSvcLogs_Execute(t *testing.T) {
 
 			setupMocks: func(m wkldLogsMock) {
 				gomock.InOrder(
-					m.configStore.EXPECT().GetEnvironment("my-app", "my-env").Return(&config.Environment{
-						Name:           "my-env",
-						ManagerRoleARN: "manager-role-arn",
-					}, nil),
-					m.sessProvider.EXPECT().FromRole(gomock.Any(), gomock.Any()).Return(&session.Session{
-						Config: &aws.Config{
-							Region: aws.String("mockRegion"),
-						},
-					}, nil),
 					m.newSvcDescriber.EXPECT().DescribeService("my-app", "my-env", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName:  "mockCluster",
 						StoppedTasks: []*awsecs.Task{},
@@ -438,7 +419,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 				)
 			},
 
-			wantedError: fmt.Errorf("previously stopped task for the service mockSvc: no logs available"),
+			wantedError: nil,
 		},
 	}
 
@@ -451,7 +432,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 			mockSelector := mocks.NewMockdeploySelector(ctrl)
 			mockSvcDescriber := mocks.NewMockserviceDescriber(ctrl)
 			mockSessionProvider := mocks.NewMocksessionProvider(ctrl)
-			mockNewSvcDescriber := func(*session.Session) serviceDescriber {
+			mockNewSvcDescriber := func() serviceDescriber {
 				return mockSvcDescriber
 			}
 			mockLogsSvc := mocks.NewMocklogEventsWriter(ctrl)
@@ -468,13 +449,13 @@ func TestSvcLogs_Execute(t *testing.T) {
 
 			svcLogs := &svcLogsOpts{
 				wkldLogsVars: wkldLogsVars{
-					name:                tc.inputSvc,
-					appName:             tc.inputApp,
-					envName:             tc.inputEnv,
-					follow:              tc.follow,
-					limit:               tc.limit,
-					taskIDs:             tc.taskIDs,
-					previousStoppedTask: tc.inputPreviousTask,
+					name:     tc.inputSvc,
+					appName:  tc.inputApp,
+					envName:  tc.inputEnv,
+					follow:   tc.follow,
+					limit:    tc.limit,
+					taskIDs:  tc.taskIDs,
+					previous: tc.inputPreviousTask,
 				},
 				wkldLogOpts: wkldLogOpts{
 					startTime:       &tc.startTime,
