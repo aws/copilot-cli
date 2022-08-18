@@ -64,7 +64,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 // serviceConfig extracts the map corresponding to a Compose service from the parsed Compose config map.
 func serviceConfig(config map[string]interface{}, svcName string) (map[string]interface{}, error) {
 	svcs, ok := config["services"]
-	if !ok || svcs == nil {
+	if !ok || len(svcs) == 0 {
 		return nil, fmt.Errorf("compose file has no services")
 	}
 
