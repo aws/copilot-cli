@@ -67,7 +67,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 
 func getServices(config map[string]interface{}) (map[string]map[string]interface{}, error) {
 	svcs, ok := config["services"]
-	if !ok || len(svcs) == 0 {
+	if !ok || svcs == nil {
 		return nil, fmt.Errorf("compose file has no services")
 	}
 
