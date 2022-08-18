@@ -48,10 +48,10 @@ func TestDecomposeService(t *testing.T) {
 			wantError: errors.New("no service named \"test\" in this Compose file, valid services are: [fatal1 fatal2 fatal3]"),
 		},
 		"invalid service not a map": {
-			filename: "invalid-compose.yml",
-			svcName:  "invalid2",
+			filename: "bad-service-compose.yml",
+			svcName:  "bad",
 
-			wantError: errors.New("\"services.invalid2\" element was not a map"),
+			wantError: errors.New("\"services.bad\" element was not a map"),
 		},
 		"unsupported keys fatal1": {
 			filename: "unsupported-keys.yml",

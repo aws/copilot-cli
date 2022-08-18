@@ -2,4 +2,3 @@ services:
  invalid:
     build:
       ssh: invalid-compose-file
- invalid2: "test"
