@@ -40,7 +40,7 @@ http:
       hosted_zone: HostedZoneID2
 ```
 * **プライベートルートテーブルへのアクセス**:
-Copilot は CloudFormation スタックからプライベートルートテーブルの ID をエクスポートする様になりました。[Addon](../docs/developing/additional-aws-resources.ja.md)を利用して VPC ゲートウェイエンドポイントを作成する時に利用します。([#3611](https://github.com/aws/copilot-cli/pull/3611))
+Copilot は CloudFormation スタックからプライベートルートテーブルの ID をエクスポートする様になりました。[Addon](../docs/developing/addons/modeling.ja.md)を利用して VPC ゲートウェイエンドポイントを作成する時に利用します。([#3611](https://github.com/aws/copilot-cli/pull/3611))
 * **ターゲットグループのヘルスチェックに利用する `port`**:
 新しい `port` フィールドにより、ヘルスチェックのために、ロードバランサーからのリクエストに利用するポートとは異なる、デフォルトではないポートを設定することが出来る様になりました。
 ([#3548](https://github.com/aws/copilot-cli/pull/3548))

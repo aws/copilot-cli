@@ -110,7 +110,7 @@ service:
       exporters: [otlp]
 ```
 
-X-Ray トレースの書き込みには、以下のような追加の IAM 権限が必要です。[公開されているドキュメント](../developing/additional-aws-resources.ja.md)に従ってこれを Addon に含めてください。
+X-Ray トレースの書き込みには、以下のような追加の IAM 権限が必要です。[公開されているドキュメント](../developing/addons/modeling.ja.md)に従ってこれを Addon に含めてください。
 
 ``` yaml
 Resources:
@@ -181,7 +181,7 @@ logging:
     log_stream_prefix: copilot/
 ```
 
-FireLens がログを転送するためにタスクロールに対して必要なアクセス許可を追加で与える必要があるかもしれません。[Addon](../developing/additional-aws-resources.ja.md) のなかで許可を追加できます。例えば以下のように設定できます。
+FireLens がログを転送するためにタスクロールに対して必要なアクセス許可を追加で与える必要があるかもしれません。[Addon](../developing/addons/modeling.ja.md) のなかで許可を追加できます。例えば以下のように設定できます。
 
 ``` yaml
 Resources:

@@ -9,6 +9,9 @@ const (
 	opStatusSucceeded = cloudformation.StackSetOperationStatusSucceeded
 	opStatusStopped   = cloudformation.StackSetOperationStatusStopped
 	opStatusFailed    = cloudformation.StackSetOperationStatusFailed
+	opStatusRunning   = cloudformation.StackSetOperationStatusRunning
+	opStatusStopping  = cloudformation.StackSetOperationStatusStopping
+	opStatusQueued    = cloudformation.StackSetOperationStatusQueued
 )
 
 const (
@@ -25,11 +28,21 @@ type OpStatus string
 
 // IsCompleted returns true if the operation is in a final state.
 func (s OpStatus) IsCompleted() bool {
-	return s.IsSuccessful() || s.IsFailure()
+	return s.IsSuccess() || s.IsFailure()
 }
 
-// IsSuccessful returns true if the operation is completed successfully.
-func (s OpStatus) IsSuccessful() bool {
+// InProgress returns true if the operation has started but hasn't reached a final state yet.
+func (s OpStatus) InProgress() bool {
+	switch s {
+	case opStatusQueued, opStatusRunning, opStatusStopping:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsSuccess returns true if the operation is completed successfully.
+func (s OpStatus) IsSuccess() bool {
 	return s == opStatusSucceeded
 }
 
@@ -38,26 +51,26 @@ func (s OpStatus) IsFailure() bool {
 	return s == opStatusStopped || s == opStatusFailed
 }
 
+// String implements the fmt.Stringer interface.
+func (s OpStatus) String() string {
+	return string(s)
+}
+
 // InstanceStatus represents a stack set's instance detailed status.
 type InstanceStatus string
 
 // IsCompleted returns true if the operation is in a final state.
 func (s InstanceStatus) IsCompleted() bool {
-	return s.IsSuccessful() || s.IsFailure()
+	return s.IsSuccess() || s.IsFailure()
 }
 
 // InProgress returns true if the instance is being updated with a new template.
 func (s InstanceStatus) InProgress() bool {
-	for _, wanted := range ProgressInstanceStatuses() {
-		if s == wanted {
-			return true
-		}
-	}
-	return false
+	return s == instanceStatusPending || s == instanceStatusRunning
 }
 
-// IsSuccessful returns true if the instance is up-to-date with the stack set template.
-func (s InstanceStatus) IsSuccessful() bool {
+// IsSuccess returns true if the instance is up-to-date with the stack set template.
+func (s InstanceStatus) IsSuccess() bool {
 	return s == instanceStatusSucceeded
 }
 
@@ -66,7 +79,7 @@ func (s InstanceStatus) IsFailure() bool {
 	return s == instanceStatusFailed || s == instanceStatusCancelled || s == instanceStatusInoperable
 }
 
-// ProgressInstanceStatuses returns a slice of statuses that are InProgress.
-func ProgressInstanceStatuses() []InstanceStatus {
-	return []InstanceStatus{instanceStatusPending, instanceStatusRunning}
+// String implements the fmt.Stringer interface.
+func (s InstanceStatus) String() string {
+	return string(s)
 }

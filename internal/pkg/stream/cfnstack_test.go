@@ -23,6 +23,40 @@ func (m mockStackClient) DescribeStackEvents(*cloudformation.DescribeStackEvents
 	return m.out, m.err
 }
 
+func TestStackStreamer_Region(t *testing.T) {
+	testCases := map[string]struct {
+		stackID string
+
+		wantedRegion string
+		wantedOK     bool
+	}{
+		"should return false when the stack id isn't an ARN": {
+			stackID:      "StackSet-demo-infrastructure-7382d3ee-6823-4967-9bcf-8a9118259998",
+			wantedRegion: "",
+			wantedOK:     false,
+		},
+		"should return the region when the stack id is an ARN": {
+			stackID:      "arn:aws:cloudformation:ap-northeast-1:1111:stack/StackSet-demo-infrastructure-7382d3ee-6823-4967-9bcf-8a9118259998/23f0ecb0-1d7e-11ed-af45-06a7c29c9545",
+			wantedRegion: "ap-northeast-1",
+			wantedOK:     true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			streamer := NewStackStreamer(nil, tc.stackID, time.Now())
+
+			// WHEN
+			region, ok := streamer.Region()
+
+			// THEN
+			require.Equal(t, tc.wantedOK, ok)
+			require.Equal(t, tc.wantedRegion, region)
+		})
+	}
+}
+
 func TestStackStreamer_Subscribe(t *testing.T) {
 	t.Run("allow new subscriptions if stack streamer is still active", func(t *testing.T) {
 		// GIVEN

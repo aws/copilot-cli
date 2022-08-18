@@ -159,6 +159,44 @@ An IPv4 CIDR block assigned to the subnet. This field is mutually exclusive with
 The Availability Zone name assigned to the subnet. The `az` field is optional, by default Availability Zones are assigned in alphabetical order.
 This field is mutually exclusive with `id`.
 
+<span class="parent-field">network.vpc.</span><a id="network-vpc-security-group" href="#network-vpc-security-group" class="field">`security_group`</a> <span class="type">Map</span>  
+Rules for the environment's security group.
+```yaml
+network:
+  vpc:
+    security_group:
+      ingress:
+        - ip_protocol: tcp
+          ports: 80  
+          cidr: 0.0.0.0/0
+```
+<span class="parent-field">network.vpc.security_group.</span><a id="network-vpc-security-group-ingress" href="#network-vpc-security-group-ingress" class="field">`ingress`</a> <span class="type">Array of Security Group Rules</span>    
+A list of inbound security group rules.
+
+<span class="parent-field">network.vpc.security-group.</span><a id="network-vpc-security-group-egress" href="#network-vpc-security-group-egress" class="field">`egress`</a> <span class="type">Array of Security Group Rules</span>    
+A list of outbound security group rules.
+
+
+<span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-ip-protocol" href="#network-vpc-security-group-ip-protocol" class="field">`ip_protocol`</a> <span class="type">String</span>    
+The IP protocol name or number.
+
+<span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-ports" href="#network-vpc-security-group-ports" class="field">`ports`</a> <span class="type">String or Integer</span>     
+The port range or number for the security group rule.
+
+```yaml
+ports: 0-65535
+```
+
+or
+
+```yaml
+ports: 80
+```
+
+<span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-cidr" href="#network-vpc-security-group-cidr" class="field">`cidr`</a> <span class="type">String</span>   
+The IPv4 address range, in CIDR format.
+
+
 <div class="separator"></div>
 
 <a id="cdn" href="#cdn" class="field">`cdn`</a> <span class="type">Boolean or Map</span>  

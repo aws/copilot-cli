@@ -717,6 +717,9 @@ func TestStackSet_InstanceSummaries(t *testing.T) {
 								StackId: aws.String("1111"),
 								Account: aws.String(testAccountID),
 								Region:  aws.String("us-west-2"),
+								StackInstanceStatus: &cloudformation.StackInstanceComprehensiveStatus{
+									DetailedStatus: aws.String(instanceStatusRunning),
+								},
 							},
 						},
 						NextToken: aws.String("token"),
@@ -732,6 +735,9 @@ func TestStackSet_InstanceSummaries(t *testing.T) {
 								StackId: aws.String("2222"),
 								Account: aws.String(testAccountID),
 								Region:  aws.String("us-east-1"),
+								StackInstanceStatus: &cloudformation.StackInstanceComprehensiveStatus{
+									DetailedStatus: aws.String(instanceStatusSucceeded),
+								},
 							},
 						},
 					}, nil),
@@ -744,11 +750,13 @@ func TestStackSet_InstanceSummaries(t *testing.T) {
 					StackID: "1111",
 					Account: testAccountID,
 					Region:  "us-west-2",
+					Status:  InstanceStatus(instanceStatusRunning),
 				},
 				{
 					StackID: "2222",
 					Account: testAccountID,
 					Region:  "us-east-1",
+					Status:  InstanceStatus(instanceStatusSucceeded),
 				},
 			},
 		},
