@@ -371,10 +371,12 @@ func TestSvcLogs_Execute(t *testing.T) {
 							{
 								TaskArn:    aws.String(mockTaskARN),
 								LastStatus: aws.String("STOPPED"),
+								StoppingAt: aws.Time(time.Now()),
 							},
 							{
 								TaskArn:    aws.String(mockOtherTaskARN),
 								LastStatus: aws.String("STOPPED"),
+								StoppingAt: aws.Time(time.Now()),
 							},
 						},
 						Tasks: []*awsecs.Task{
@@ -386,7 +388,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 					}, nil),
 
 					m.logSvcWriter.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
-						require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
+						require.Equal(t, param.TaskIDs, []string{"mockTaskID1"})
 						require.Equal(t, param.EndTime, &mockEndTime)
 						require.Equal(t, param.StartTime, &mockStartTime)
 						require.Equal(t, param.Limit, mockNilLimit)

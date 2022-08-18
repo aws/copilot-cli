@@ -8,6 +8,7 @@ import (
 	"fmt"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"io"
+	"sort"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -165,8 +166,7 @@ func (o *svcLogsOpts) Validate() error {
 	}
 
 	if o.previous {
-		err := o.validatePrevious()
-		if err != nil {
+		if err := o.validatePrevious(); err != nil {
 			return err
 		}
 	}
@@ -196,7 +196,7 @@ func (o *svcLogsOpts) Execute() error {
 		limit = aws.Int64(int64(o.limit))
 	}
 	if o.previous {
-		taskID, err := o.setPreviousStoppedTaskID()
+		taskID, err := o.latestStoppedTaskID()
 		if taskID != "" {
 			o.taskIDs = []string{taskID}
 		} else {
@@ -217,12 +217,15 @@ func (o *svcLogsOpts) Execute() error {
 	return nil
 }
 
-func (o *svcLogsOpts) setPreviousStoppedTaskID() (string, error) {
+func (o *svcLogsOpts) latestStoppedTaskID() (string, error) {
 	svcDesc, err := o.newSvcDescriber().DescribeService(o.appName, o.envName, o.name)
 	if err != nil {
-		return "", fmt.Errorf("describe serivce %s: %w", o.name, err)
+		return "", fmt.Errorf("describe service %s: %w", o.name, err)
 	}
 	if len(svcDesc.StoppedTasks) > 0 {
+		sort.Slice(svcDesc.StoppedTasks, func(i, j int) bool {
+			return svcDesc.StoppedTasks[i].StoppingAt.After(aws.TimeValue(svcDesc.StoppedTasks[j].StoppingAt))
+		})
 		taskID, err := awsecs.TaskID(aws.StringValue(svcDesc.StoppedTasks[0].TaskArn))
 		if err != nil {
 			return "", err
