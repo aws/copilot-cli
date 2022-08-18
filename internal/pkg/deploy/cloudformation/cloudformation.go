@@ -98,6 +98,7 @@ type s3Client interface {
 
 type stackSetClient interface {
 	Create(name, template string, opts ...stackset.CreateOrUpdateOption) error
+	CreateInstances(name string, accounts, regions []string) (string, error)
 	CreateInstancesAndWait(name string, accounts, regions []string) error
 	Update(name, template string, opts ...stackset.CreateOrUpdateOption) (string, error)
 	UpdateAndWait(name, template string, opts ...stackset.CreateOrUpdateOption) error

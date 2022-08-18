@@ -287,7 +287,7 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 						require.Equal(t, actual, wanted)
 					})
 				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
-				m.EXPECT().CreateInstancesAndWait(gomock.Any(), []string{"1234"}, []string{"us-west-2"})
+				m.EXPECT().CreateInstances(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return("", nil)
 				return m
 			},
 		},
@@ -308,7 +308,7 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 				m.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return("", nil)
 				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
-				m.EXPECT().CreateInstancesAndWait(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return(nil)
+				m.EXPECT().CreateInstances(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return("", nil)
 				return m
 			},
 		},
@@ -342,7 +342,7 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 						Account: "1234",
 					},
 				}, nil)
-				m.EXPECT().CreateInstancesAndWait(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().CreateInstances(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				return m
 			},
 		},
@@ -393,7 +393,12 @@ func TestCloudFormation_AddPipelineResourcesToApp(t *testing.T) {
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
 				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
-				m.EXPECT().CreateInstancesAndWait(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return(nil)
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{})
+				require.NoError(t, err)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().CreateInstances(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return("1", nil)
 				return m
 			},
 			getRegionFromClient: func(client cloudformationiface.CloudFormationAPI) (string, error) {
@@ -410,7 +415,12 @@ func TestCloudFormation_AddPipelineResourcesToApp(t *testing.T) {
 						Account: mockApp.AccountID,
 					},
 				}, nil)
-				m.EXPECT().CreateInstancesAndWait(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{})
+				require.NoError(t, err)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().CreateInstances(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				return m
 			},
 			getRegionFromClient: func(client cloudformationiface.CloudFormationAPI) (string, error) {
@@ -426,6 +436,10 @@ func TestCloudFormation_AddPipelineResourcesToApp(t *testing.T) {
 			defer ctrl.Finish()
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
+				renderStackSet: func(input renderStackSetInput) error {
+					_, err := input.createOpFn()
+					return err
+				},
 			}
 			getRegionFromClient = tc.getRegionFromClient
 

@@ -605,6 +605,21 @@ func (mr *MockstackSetClientMockRecorder) Create(name, template interface{}, opt
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockstackSetClient)(nil).Create), varargs...)
 }
 
+// CreateInstances mocks base method.
+func (m *MockstackSetClient) CreateInstances(name string, accounts, regions []string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInstances", name, accounts, regions)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateInstances indicates an expected call of CreateInstances.
+func (mr *MockstackSetClientMockRecorder) CreateInstances(name, accounts, regions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstances", reflect.TypeOf((*MockstackSetClient)(nil).CreateInstances), name, accounts, regions)
+}
+
 // CreateInstancesAndWait mocks base method.
 func (m *MockstackSetClient) CreateInstancesAndWait(name string, accounts, regions []string) error {
 	m.ctrl.T.Helper()

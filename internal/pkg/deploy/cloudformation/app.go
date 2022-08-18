@@ -399,7 +399,7 @@ func (cf CloudFormation) AddEnvToApp(opts *AddEnvToAppOpts) error {
 		return fmt.Errorf("adding %s environment resources to application: %w", opts.EnvName, err)
 	}
 
-	if err := cf.addNewAppStackInstances(appConfig, opts.EnvRegion); err != nil {
+	if err := cf.addNewAppStackInstances(appConfig, previouslyDeployedConfig, opts.EnvRegion); err != nil {
 		return fmt.Errorf("adding new stack instance for environment %s: %w", opts.EnvName, err)
 	}
 
@@ -425,9 +425,14 @@ func (cf CloudFormation) AddPipelineResourcesToApp(
 		Version:   deploy.LatestAppTemplateVersion,
 	})
 
+	resourcesConfig, err := cf.getLastDeployedAppConfig(appConfig)
+	if err != nil {
+		return err
+	}
+
 	// conditionally create a new stack instance in the application region
 	// if there's no existing stack instance.
-	if err := cf.addNewAppStackInstances(appConfig, appRegion); err != nil {
+	if err := cf.addNewAppStackInstances(appConfig, resourcesConfig, appRegion); err != nil {
 		return fmt.Errorf("failed to add stack instance for pipeline, application: %s, region: %s, error: %w",
 			app.Name, appRegion, err)
 	}
@@ -474,7 +479,7 @@ func (cf CloudFormation) deployAppConfig(appConfig *stack.AppStackConfig, resour
 
 // addNewAppStackInstances takes an environment and determines if we need to create a new
 // stack instance. We only spin up a new stack instance if the env is in a new region.
-func (cf CloudFormation) addNewAppStackInstances(appConfig *stack.AppStackConfig, region string) error {
+func (cf CloudFormation) addNewAppStackInstances(appConfig *stack.AppStackConfig, resourcesConfig *stack.AppResourcesConfig, region string) error {
 	summaries, err := cf.appStackSet.InstanceSummaries(appConfig.StackSetName())
 	if err != nil {
 		return err
@@ -493,8 +498,22 @@ func (cf CloudFormation) addNewAppStackInstances(appConfig *stack.AppStackConfig
 		return nil
 	}
 
+	template, err := appConfig.ResourceTemplate(resourcesConfig)
+	if err != nil {
+		return err
+	}
+
 	// Set up a new Stack Instance for the new region. The Stack Instance will inherit the latest StackSet template.
-	return cf.appStackSet.CreateInstancesAndWait(appConfig.StackSetName(), []string{appConfig.AccountID}, []string{region})
+	renderInput := renderStackSetInput{
+		name:               appConfig.StackSetName(),
+		template:           template,
+		hasInstanceUpdates: shouldDeployNewStackInstance,
+		createOpFn: func() (string, error) {
+			return cf.appStackSet.CreateInstances(appConfig.StackSetName(), []string{appConfig.AccountID}, []string{region})
+		},
+		now: time.Now,
+	}
+	return cf.renderStackSet(renderInput)
 }
 
 func (cf CloudFormation) getLastDeployedAppConfig(appConfig *stack.AppStackConfig) (*stack.AppResourcesConfig, error) {
