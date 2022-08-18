@@ -18,7 +18,12 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 		return nil, nil, fmt.Errorf("parse compose yaml: %w", err)
 	}
 
-	service, err := serviceConfig(config, svcName)
+	services, err := getServices(config)
+	if err != nil {
+		return nil, nil, fmt.Errorf("get compose file services: %w", err)
+	}
+
+	service, err := serviceConfig(services, svcName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("get service config: %w", err)
 	}
@@ -32,8 +37,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 		WorkingDir: workingDir,
 		ConfigFiles: []compose.ConfigFile{
 			{
-				Content: content,
-				Config:  config,
+				Config: config,
 			},
 		},
 	})
@@ -61,8 +65,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 	return backendSvc, ignored, nil
 }
 
-// serviceConfig extracts the map corresponding to a Compose service from the parsed Compose config map.
-func serviceConfig(config map[string]interface{}, svcName string) (map[string]interface{}, error) {
+func getServices(config map[string]interface{}) (map[string]map[string]interface{}, error) {
 	svcs, ok := config["services"]
 	if !ok || svcs == nil {
 		return nil, fmt.Errorf("compose file has no services")
@@ -73,22 +76,32 @@ func serviceConfig(config map[string]interface{}, svcName string) (map[string]in
 		return nil, fmt.Errorf("\"services\" top-level element was not a map, was: %v", svcs)
 	}
 
-	svc, ok := services[svcName]
-	if !ok {
-		var validNames []string
-		for svc := range services {
-			validNames = append(validNames, svc)
+	typedServices := make(map[string]map[string]interface{})
+
+	for name, svc := range services {
+		service, ok := svc.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("\"services.%s\" element was not a map", name)
 		}
-		sort.Strings(validNames)
-		return nil, fmt.Errorf("no service named \"%s\" in this Compose file, valid services are: %v", svcName, validNames)
+		typedServices[name] = service
 	}
 
-	service, ok := svc.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("\"services.%s\" element was not a map", svcName)
+	return typedServices, nil
+}
+
+// serviceConfig extracts the map corresponding to a Compose service from the parsed Compose config map.
+func serviceConfig(services map[string]map[string]interface{}, svcName string) (map[string]interface{}, error) {
+	service, ok := services[svcName]
+	if ok {
+		return service, nil
 	}
 
-	return service, nil
+	var validNames []string
+	for svc := range services {
+		validNames = append(validNames, svc)
+	}
+	sort.Strings(validNames)
+	return nil, fmt.Errorf("no service named \"%s\" in this Compose file, valid services are: %v", svcName, validNames)
 }
 
 // unsupportedServiceKeys scans over fields in the parsed yaml to find unsupported keys.
