@@ -22,11 +22,11 @@ import (
 )
 
 type wkldLogsMock struct {
-	configStore     *mocks.Mockstore
-	sel             *mocks.MockdeploySelector
-	sessProvider    *mocks.MocksessionProvider
-	newSvcDescriber *mocks.MockserviceDescriber
-	logSvcWriter    *mocks.MocklogEventsWriter
+	configStore  *mocks.Mockstore
+	sel          *mocks.MockdeploySelector
+	sessProvider *mocks.MocksessionProvider
+	ecs          *mocks.MockserviceDescriber
+	logSvcWriter *mocks.MocklogEventsWriter
 }
 
 func TestSvcLogs_Validate(t *testing.T) {
@@ -365,7 +365,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 
 			setupMocks: func(m wkldLogsMock) {
 				gomock.InOrder(
-					m.newSvcDescriber.EXPECT().DescribeService("my-app", "my-env", "mockSvc").Return(&ecs.ServiceDesc{
+					m.ecs.EXPECT().DescribeService("my-app", "my-env", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName: "mockCluster",
 						StoppedTasks: []*awsecs.Task{
 							{
@@ -408,7 +408,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 
 			setupMocks: func(m wkldLogsMock) {
 				gomock.InOrder(
-					m.newSvcDescriber.EXPECT().DescribeService("my-app", "my-env", "mockSvc").Return(&ecs.ServiceDesc{
+					m.ecs.EXPECT().DescribeService("my-app", "my-env", "mockSvc").Return(&ecs.ServiceDesc{
 						ClusterName:  "mockCluster",
 						StoppedTasks: []*awsecs.Task{},
 						Tasks: []*awsecs.Task{
@@ -434,17 +434,14 @@ func TestSvcLogs_Execute(t *testing.T) {
 			mockSelector := mocks.NewMockdeploySelector(ctrl)
 			mockSvcDescriber := mocks.NewMockserviceDescriber(ctrl)
 			mockSessionProvider := mocks.NewMocksessionProvider(ctrl)
-			mockNewSvcDescriber := func() serviceDescriber {
-				return mockSvcDescriber
-			}
 			mockLogsSvc := mocks.NewMocklogEventsWriter(ctrl)
 
 			mocks := wkldLogsMock{
-				configStore:     mockConfigStoreReader,
-				sessProvider:    mockSessionProvider,
-				sel:             mockSelector,
-				newSvcDescriber: mockSvcDescriber,
-				logSvcWriter:    mockLogsSvc,
+				configStore:  mockConfigStoreReader,
+				sessProvider: mockSessionProvider,
+				sel:          mockSelector,
+				ecs:          mockSvcDescriber,
+				logSvcWriter: mockLogsSvc,
 			}
 
 			tc.setupMocks(mocks)
@@ -460,14 +457,14 @@ func TestSvcLogs_Execute(t *testing.T) {
 					previous: tc.inputPreviousTask,
 				},
 				wkldLogOpts: wkldLogOpts{
-					startTime:       &tc.startTime,
-					endTime:         &tc.endTime,
-					initLogsSvc:     func() error { return nil },
-					logsSvc:         mockLogsSvc,
-					configStore:     mockConfigStoreReader,
-					sel:             mockSelector,
-					sessProvider:    mockSessionProvider,
-					newSvcDescriber: mockNewSvcDescriber,
+					startTime:          &tc.startTime,
+					endTime:            &tc.endTime,
+					initRuntimeClients: func() error { return nil },
+					logsSvc:            mockLogsSvc,
+					configStore:        mockConfigStoreReader,
+					sel:                mockSelector,
+					sessProvider:       mockSessionProvider,
+					ecs:                mockSvcDescriber,
 				},
 			}
 

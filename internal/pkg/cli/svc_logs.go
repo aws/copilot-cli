@@ -34,6 +34,10 @@ const (
 	cwGetLogEventsLimitMax = 10000
 )
 
+var (
+	noPreviousTasksErr = errors.New("no previously stopped tasks found")
+)
+
 type wkldLogsVars struct {
 	shouldOutputJSON bool
 	follow           bool
@@ -61,14 +65,14 @@ type wkldLogOpts struct {
 	startTime *int64
 	endTime   *int64
 
-	w               io.Writer
-	configStore     store
-	sessProvider    sessionProvider
-	deployStore     deployedEnvironmentLister
-	sel             deploySelector
-	logsSvc         logEventsWriter
-	newSvcDescriber func() serviceDescriber
-	initLogsSvc     func() error // Overridden in tests.
+	w                  io.Writer
+	configStore        store
+	sessProvider       sessionProvider
+	deployStore        deployedEnvironmentLister
+	sel                deploySelector
+	logsSvc            logEventsWriter
+	ecs                serviceDescriber
+	initRuntimeClients func() error // Overridden in tests.
 }
 
 func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
@@ -92,7 +96,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 			sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 		},
 	}
-	opts.initLogsSvc = func() error {
+	opts.initRuntimeClients = func() error {
 		env, err := opts.getTargetEnv()
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
@@ -105,9 +109,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return err
 		}
-		opts.newSvcDescriber = func() serviceDescriber {
-			return ecs.New(sess)
-		}
+		opts.ecs = ecs.New(sess)
 		opts.logsSvc, err = logging.NewWorkloadClient(&logging.NewWorkloadLogsConfig{
 			App:         opts.appName,
 			Env:         opts.envName,
@@ -184,7 +186,7 @@ func (o *svcLogsOpts) Ask() error {
 
 // Execute outputs logs of the service.
 func (o *svcLogsOpts) Execute() error {
-	if err := o.initLogsSvc(); err != nil {
+	if err := o.initRuntimeClients(); err != nil {
 		return err
 	}
 	eventsWriter := logging.WriteHumanLogs
@@ -197,11 +199,14 @@ func (o *svcLogsOpts) Execute() error {
 	}
 	if o.previous {
 		taskID, err := o.latestStoppedTaskID()
-		if taskID != "" {
-			o.taskIDs = []string{taskID}
-		} else {
+		if err != nil {
+			if errors.Is(err, noPreviousTasksErr) {
+				log.Warningln("no previously stopped tasks found")
+				return nil // return nil as we have no stopped tasks.
+			}
 			return err
 		}
+		o.taskIDs = []string{taskID}
 	}
 	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
 		Follow:    o.follow,
@@ -218,7 +223,7 @@ func (o *svcLogsOpts) Execute() error {
 }
 
 func (o *svcLogsOpts) latestStoppedTaskID() (string, error) {
-	svcDesc, err := o.newSvcDescriber().DescribeService(o.appName, o.envName, o.name)
+	svcDesc, err := o.ecs.DescribeService(o.appName, o.envName, o.name)
 	if err != nil {
 		return "", fmt.Errorf("describe service %s: %w", o.name, err)
 	}
@@ -231,10 +236,8 @@ func (o *svcLogsOpts) latestStoppedTaskID() (string, error) {
 			return "", err
 		}
 		return taskID, nil
-	} else {
-		log.Warningln("no previously stopped tasks found")
 	}
-	return "", nil
+	return "", noPreviousTasksErr
 }
 
 func (o *svcLogsOpts) validateOrAskApp() error {
@@ -275,7 +278,7 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 
 func (o *svcLogsOpts) validatePrevious() error {
 	if o.previous && len(o.taskIDs) != 0 {
-		return fmt.Errorf("validate service logs: cannot specify both --%s and --%s", previousFlag, tasksFlag)
+		return fmt.Errorf("cannot specify both --%s and --%s", previousFlag, tasksFlag)
 	}
 	return nil
 }
