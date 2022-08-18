@@ -47,9 +47,8 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 
 	svcConfig, err := project.GetService(svcName)
 	if err != nil {
-		// I don't think this is possible due to the previous check,
-		// but I'm not confident enough in that assessment to make this a panic.
-		return nil, nil, fmt.Errorf("get service from Compose project: %w", err)
+		panic("impossible: project.GetService failed even though we have already checked that the " +
+			"service is valid and exists")
 	}
 
 	// TODO: Port handling & exposed port detection, to be implemented in Milestone 3
