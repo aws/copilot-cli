@@ -13,12 +13,12 @@ import (
 func convertBackendService(service *compose.ServiceConfig, port uint16) (*manifest.BackendServiceConfig, IgnoredKeys, error) {
 	image, ignored, err := convertImageConfig(service.Build, service.Labels, service.Image)
 	if err != nil {
-		return nil, nil, fmt.Errorf("convert image config: %w", err)
+		return nil, nil, err
 	}
 
 	taskCfg, err := convertTaskConfig(service)
 	if err != nil {
-		return nil, nil, fmt.Errorf("convert task config: %w", err)
+		return nil, nil, err
 	}
 
 	svcCfg := &manifest.BackendServiceConfig{

@@ -30,7 +30,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 
 	ignored, err := unsupportedServiceKeys(service, svcName)
 	if err != nil {
-		return nil, nil, fmt.Errorf("get unsupported service keys: %w", err)
+		return nil, nil, err
 	}
 
 	project, err := loader.Load(compose.ConfigDetails{
