@@ -66,7 +66,7 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 			sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 		},
 	}
-	opts.initLogsSvc = func() error {
+	opts.initRuntimeClients = func() error {
 		env, err := opts.getTargetEnv()
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
@@ -159,7 +159,7 @@ func (o *jobLogsOpts) Ask() error {
 
 // Execute outputs logs of the job.
 func (o *jobLogsOpts) Execute() error {
-	if err := o.initLogsSvc(); err != nil {
+	if err := o.initRuntimeClients(); err != nil {
 		return err
 	}
 	eventsWriter := logging.WriteHumanLogs

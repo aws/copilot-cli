@@ -38,6 +38,7 @@ const (
 	limitFlag             = "limit"
 	lastFlag              = "last"
 	followFlag            = "follow"
+	previousFlag          = "previous"
 	sinceFlag             = "since"
 	startTimeFlag         = "start-time"
 	endTimeFlag           = "end-time"
@@ -135,6 +136,7 @@ const (
 	envFlagShort      = "e"
 	typeFlagShort     = "t"
 	workloadFlagShort = "w"
+	previousFlagShort = "p"
 
 	dockerFileFlagShort        = "d"
 	commandFlagShort           = "c"
@@ -214,7 +216,7 @@ const (
 rollback in case of deployment failure.
 We do not recommend using this flag for a
 production environment.`
-	manifestFlagDescription = "Optional. Output the manifest file used for the deployment."
+	manifestFlagDescription    = "Optional. Output the manifest file used for the deployment."
 	svcManifestFlagDescription = `Optional. Name of the environment in which the service was deployed;
 output the manifest file used for that deployment.`
 
@@ -230,8 +232,9 @@ Uploaded asset locations are filled in the template configuration.`
 unless any time filtering flags are set.`
 	lastFlagDescription = `Optional. The number of executions of the scheduled job for which
 logs should be shown.`
-	followFlagDescription = "Optional. Specifies if the logs should be streamed."
-	sinceFlagDescription  = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
+	followFlagDescription   = "Optional. Specifies if the logs should be streamed."
+	previousFlagDescription = "Optional. Print logs for the last stopped task if exists."
+	sinceFlagDescription    = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
 Defaults to all logs. Only one of start-time / since may be used.`
 	startTimeFlagDescription = `Optional. Only return logs after a specific date (RFC3339).
 Defaults to all logs. Only one of start-time / since may be used.`
@@ -285,10 +288,10 @@ Must be either "MySQL" or "PostgreSQL".`
 	envFileFlagDescription       = `Optional. A path to an environment variable (.env) file. 
 Each line should be of the form of VARIABLE=VALUE. 
 Values specified with --env-vars take precedence over --env-file.`
-	secretsFlagDescription       = "Optional. Secrets to inject into the container. Specified by key=value separated by commas."
-	runCommandFlagDescription    = `Optional. The command that is passed to "docker run" to override the default command.`
-	entrypointFlagDescription    = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`
-	taskGroupFlagDescription     = `Optional. The group name of the task. 
+	secretsFlagDescription    = "Optional. Secrets to inject into the container. Specified by key=value separated by commas."
+	runCommandFlagDescription = `Optional. The command that is passed to "docker run" to override the default command.`
+	entrypointFlagDescription = `Optional. The entrypoint that is passed to "docker run" to override the default entrypoint.`
+	taskGroupFlagDescription  = `Optional. The group name of the task. 
 Tasks with the same group name share the same set of resources. 
 (default directory name)`
 	taskImageTagFlagDescription    = `Optional. The container image tag in addition to "latest".`

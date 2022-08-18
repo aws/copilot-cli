@@ -6,6 +6,9 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"testing"
 	"time"
 
@@ -19,8 +22,11 @@ import (
 )
 
 type wkldLogsMock struct {
-	configStore *mocks.Mockstore
-	sel         *mocks.MockdeploySelector
+	configStore  *mocks.Mockstore
+	sel          *mocks.MockdeploySelector
+	sessProvider *mocks.MocksessionProvider
+	ecs          *mocks.MockserviceDescriber
+	logSvcWriter *mocks.MocklogEventsWriter
 }
 
 func TestSvcLogs_Validate(t *testing.T) {
@@ -274,19 +280,25 @@ func TestSvcLogs_Ask(t *testing.T) {
 }
 
 func TestSvcLogs_Execute(t *testing.T) {
+
+	mockTaskARN := "arn:aws:ecs:us-west-2:123456789:task/mockCluster/mockTaskID"
+	mockOtherTaskARN := "arn:aws:ecs:us-west-2:123456789:task/mockCluster/mockTaskID1"
 	mockStartTime := int64(123456789)
 	mockEndTime := int64(987654321)
 	mockLimit := int64(10)
 	var mockNilLimit *int64
 	testCases := map[string]struct {
-		inputSvc  string
-		follow    bool
-		limit     int
-		endTime   int64
-		startTime int64
-		taskIDs   []string
+		inputSvc          string
+		inputApp          string
+		inputEnv          string
+		follow            bool
+		limit             int
+		endTime           int64
+		startTime         int64
+		taskIDs           []string
+		inputPreviousTask bool
 
-		mocklogsSvc func(ctrl *gomock.Controller) logEventsWriter
+		setupMocks func(mocks wkldLogsMock)
 
 		wantedError error
 	}{
@@ -298,17 +310,16 @@ func TestSvcLogs_Execute(t *testing.T) {
 			limit:     10,
 			taskIDs:   []string{"mockTaskID"},
 
-			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
-				m := mocks.NewMocklogEventsWriter(ctrl)
-				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
-					require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
-					require.Equal(t, param.EndTime, &mockEndTime)
-					require.Equal(t, param.StartTime, &mockStartTime)
-					require.Equal(t, param.Follow, true)
-					require.Equal(t, param.Limit, &mockLimit)
-				}).Return(nil)
-
-				return m
+			setupMocks: func(m wkldLogsMock) {
+				gomock.InOrder(
+					m.logSvcWriter.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
+						require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
+						require.Equal(t, param.EndTime, &mockEndTime)
+						require.Equal(t, param.StartTime, &mockStartTime)
+						require.Equal(t, param.Follow, true)
+						require.Equal(t, param.Limit, &mockLimit)
+					}).Return(nil),
+				)
 			},
 
 			wantedError: nil,
@@ -320,33 +331,97 @@ func TestSvcLogs_Execute(t *testing.T) {
 			follow:    true,
 			taskIDs:   []string{"mockTaskID"},
 
-			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
-				m := mocks.NewMocklogEventsWriter(ctrl)
-				m.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
-					require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
-					require.Equal(t, param.EndTime, &mockEndTime)
-					require.Equal(t, param.StartTime, &mockStartTime)
-					require.Equal(t, param.Follow, true)
-					require.Equal(t, param.Limit, mockNilLimit)
-				}).Return(nil)
-
-				return m
+			setupMocks: func(m wkldLogsMock) {
+				gomock.InOrder(
+					m.logSvcWriter.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
+						require.Equal(t, param.TaskIDs, []string{"mockTaskID"})
+						require.Equal(t, param.EndTime, &mockEndTime)
+						require.Equal(t, param.StartTime, &mockStartTime)
+						require.Equal(t, param.Follow, true)
+						require.Equal(t, param.Limit, mockNilLimit)
+					}).Return(nil),
+				)
 			},
-
 			wantedError: nil,
 		},
 		"returns error if fail to get event logs": {
 			inputSvc: "mockSvc",
-
-			mocklogsSvc: func(ctrl *gomock.Controller) logEventsWriter {
-				m := mocks.NewMocklogEventsWriter(ctrl)
-				m.EXPECT().WriteLogEvents(gomock.Any()).
-					Return(errors.New("some error"))
-
-				return m
+			setupMocks: func(m wkldLogsMock) {
+				gomock.InOrder(
+					m.logSvcWriter.EXPECT().WriteLogEvents(gomock.Any()).
+						Return(errors.New("some error")),
+				)
 			},
 
 			wantedError: fmt.Errorf("write log events for service mockSvc: some error"),
+		},
+		"retrieve previously stopped task's logs": {
+			inputSvc:          "mockSvc",
+			inputPreviousTask: true,
+			inputApp:          "my-app",
+			inputEnv:          "my-env",
+			endTime:           mockEndTime,
+			startTime:         mockStartTime,
+
+			setupMocks: func(m wkldLogsMock) {
+				gomock.InOrder(
+					m.ecs.EXPECT().DescribeService("my-app", "my-env", "mockSvc").Return(&ecs.ServiceDesc{
+						ClusterName: "mockCluster",
+						StoppedTasks: []*awsecs.Task{
+							{
+								TaskArn:    aws.String(mockTaskARN),
+								LastStatus: aws.String("STOPPED"),
+								StoppingAt: aws.Time(time.Now()),
+							},
+							{
+								TaskArn:    aws.String(mockOtherTaskARN),
+								LastStatus: aws.String("STOPPED"),
+								StoppingAt: aws.Time(time.Now()),
+							},
+						},
+						Tasks: []*awsecs.Task{
+							{
+								TaskArn:    aws.String(mockTaskARN),
+								LastStatus: aws.String("RUNNING"),
+							},
+						},
+					}, nil),
+
+					m.logSvcWriter.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
+						require.Equal(t, param.TaskIDs, []string{"mockTaskID1"})
+						require.Equal(t, param.EndTime, &mockEndTime)
+						require.Equal(t, param.StartTime, &mockStartTime)
+						require.Equal(t, param.Limit, mockNilLimit)
+					}).Return(nil),
+				)
+			},
+
+			wantedError: nil,
+		},
+		"retrieve warning no previously stopped tasks found, when no stopped task or logs available": {
+			inputSvc:          "mockSvc",
+			inputPreviousTask: true,
+			inputApp:          "my-app",
+			inputEnv:          "my-env",
+			endTime:           mockEndTime,
+			startTime:         mockStartTime,
+
+			setupMocks: func(m wkldLogsMock) {
+				gomock.InOrder(
+					m.ecs.EXPECT().DescribeService("my-app", "my-env", "mockSvc").Return(&ecs.ServiceDesc{
+						ClusterName:  "mockCluster",
+						StoppedTasks: []*awsecs.Task{},
+						Tasks: []*awsecs.Task{
+							{
+								TaskArn:    aws.String(mockTaskARN),
+								LastStatus: aws.String("RUNNING"),
+							},
+						},
+					}, nil),
+				)
+			},
+
+			wantedError: nil,
 		},
 	}
 
@@ -355,18 +430,41 @@ func TestSvcLogs_Execute(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
+			mockConfigStoreReader := mocks.NewMockstore(ctrl)
+			mockSelector := mocks.NewMockdeploySelector(ctrl)
+			mockSvcDescriber := mocks.NewMockserviceDescriber(ctrl)
+			mockSessionProvider := mocks.NewMocksessionProvider(ctrl)
+			mockLogsSvc := mocks.NewMocklogEventsWriter(ctrl)
+
+			mocks := wkldLogsMock{
+				configStore:  mockConfigStoreReader,
+				sessProvider: mockSessionProvider,
+				sel:          mockSelector,
+				ecs:          mockSvcDescriber,
+				logSvcWriter: mockLogsSvc,
+			}
+
+			tc.setupMocks(mocks)
+
 			svcLogs := &svcLogsOpts{
 				wkldLogsVars: wkldLogsVars{
-					name:    tc.inputSvc,
-					follow:  tc.follow,
-					limit:   tc.limit,
-					taskIDs: tc.taskIDs,
+					name:     tc.inputSvc,
+					appName:  tc.inputApp,
+					envName:  tc.inputEnv,
+					follow:   tc.follow,
+					limit:    tc.limit,
+					taskIDs:  tc.taskIDs,
+					previous: tc.inputPreviousTask,
 				},
 				wkldLogOpts: wkldLogOpts{
-					startTime:   &tc.startTime,
-					endTime:     &tc.endTime,
-					initLogsSvc: func() error { return nil },
-					logsSvc:     tc.mocklogsSvc(ctrl),
+					startTime:          &tc.startTime,
+					endTime:            &tc.endTime,
+					initRuntimeClients: func() error { return nil },
+					logsSvc:            mockLogsSvc,
+					configStore:        mockConfigStoreReader,
+					sel:                mockSelector,
+					sessProvider:       mockSessionProvider,
+					ecs:                mockSvcDescriber,
 				},
 			}
 

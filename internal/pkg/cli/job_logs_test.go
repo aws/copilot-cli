@@ -424,10 +424,10 @@ func TestJobLogs_Execute(t *testing.T) {
 					last:                    tc.last,
 				},
 				wkldLogOpts: wkldLogOpts{
-					startTime:   &tc.startTime,
-					endTime:     &tc.endTime,
-					initLogsSvc: func() error { return nil },
-					logsSvc:     tc.mocklogsSvc(ctrl),
+					startTime:          &tc.startTime,
+					endTime:            &tc.endTime,
+					initRuntimeClients: func() error { return nil },
+					logsSvc:            tc.mocklogsSvc(ctrl),
 				},
 			}
 
