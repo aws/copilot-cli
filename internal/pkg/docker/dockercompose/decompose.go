@@ -20,12 +20,12 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 
 	services, err := getServices(config)
 	if err != nil {
-		return nil, nil, fmt.Errorf("get compose file services: %w", err)
+		return nil, nil, err
 	}
 
 	service, err := serviceConfig(services, svcName)
 	if err != nil {
-		return nil, nil, fmt.Errorf("get service config: %w", err)
+		return nil, nil, err
 	}
 
 	ignored, err := unsupportedServiceKeys(service, svcName)
