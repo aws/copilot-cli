@@ -3,7 +3,7 @@
 
 ![latest version](https://img.shields.io/github/v/release/aws/copilot-cli)
 [![Join the chat at https://gitter.im/aws/copilot-cli](https://badges.gitter.im/aws/copilot-cli.svg)](https://gitter.im/aws/copilot-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![codecov](https://codecov.io/gh/aws/copilot-cli/branch/master/graph/badge.svg)](https://codecov.io/gh/aws/copilot-cli) 
+[![codecov](https://codecov.io/gh/aws/copilot-cli/branch/mainline/graph/badge.svg)](https://codecov.io/gh/aws/copilot-cli) 
 
 * **Documentation**: [https://aws.github.io/copilot-cli/](https://aws.github.io/copilot-cli/)
 
