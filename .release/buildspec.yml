@@ -76,4 +76,4 @@ phases:
       - $ARTIFACT_DIRECTORY/copilot-linux-$VERSION --version
 artifacts:
   files:
-    - "**/*"
+    - '**/*'
