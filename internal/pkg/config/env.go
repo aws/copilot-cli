@@ -19,7 +19,6 @@ type Environment struct {
 	Name             string `json:"name"`             // Name of the environment, must be unique within a App.
 	Region           string `json:"region"`           // Name of the region this environment is stored in.
 	AccountID        string `json:"accountID"`        // Account ID of the account this environment is stored in.
-	Prod             bool   `json:"-"`                // Deprecated. Whether or not this environment is a production environment.
 	RegistryURL      string `json:"registryURL"`      // URL For ECR Registry for this environment.
 	ExecutionRoleARN string `json:"executionRoleARN"` // ARN used by CloudFormation to make modification to the environment stack.
 	ManagerRoleARN   string `json:"managerRoleARN"`   // ARN for the manager role assumed to manipulate the environment and its services.

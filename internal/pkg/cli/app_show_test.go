@@ -208,13 +208,11 @@ func TestShowAppOpts_Execute(t *testing.T) {
 						Name:      "test",
 						Region:    "us-west-2",
 						AccountID: "123456789",
-						Prod:      false,
 					},
 					{
 						Name:      "prod",
 						AccountID: "123456789",
 						Region:    "us-west-1",
-						Prod:      true,
 					},
 				}, nil)
 				m.deployStore.EXPECT().ListDeployedJobs("my-app", "test").Return([]string{"my-job"}, nil).AnyTimes()

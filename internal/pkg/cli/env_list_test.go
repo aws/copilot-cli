@@ -179,7 +179,7 @@ func TestEnvList_Execute(t *testing.T) {
 					ListEnvironments(gomock.Eq("coolapp")).
 					Return([]*config.Environment{
 						{Name: "test"},
-						{Name: "test2", Prod: true},
+						{Name: "test2"},
 					}, nil)
 			},
 			expectedContent: "test\ntest2\n",
