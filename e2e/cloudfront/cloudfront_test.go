@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package import_certs
+package cloudfront_test
 
 import (
 	"net/http"
@@ -13,7 +13,8 @@ import (
 	"github.com/aws/copilot-cli/e2e/internal/client"
 )
 
-var _ = Describe("Import Certificates", func() {
+var _ = Describe("CloudFront", func() {
+	const domainName = "copilot-e2e-tests.ecs.aws.dev"
 
 	Context("when creating a new app", func() {
 		var appInitErr error
@@ -21,6 +22,7 @@ var _ = Describe("Import Certificates", func() {
 		BeforeAll(func() {
 			_, appInitErr = cli.AppInit(&client.AppInitRequest{
 				AppName: appName,
+				Domain:  domainName,
 			})
 		})
 
@@ -35,18 +37,22 @@ var _ = Describe("Import Certificates", func() {
 		It("app ls includes new application", func() {
 			Eventually(cli.AppList, "30s", "5s").Should(ContainSubstring(appName))
 		})
+
+		It("app show includes domain name", func() {
+			appShowOutput, err := cli.AppShow(appName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(appShowOutput.Name).To(Equal(appName))
+			Expect(appShowOutput.URI).To(Equal(domainName))
+		})
 	})
 
 	Context("when adding new environment", func() {
-		var (
-			err error
-		)
+		var err error
 		BeforeAll(func() {
 			_, err = cli.EnvInit(&client.EnvInitRequest{
-				AppName:           appName,
-				EnvName:           "test",
-				Profile:           "default",
-				CertificateImport: importedCert,
+				AppName: appName,
+				EnvName: "test",
+				Profile: "default",
 			})
 		})
 		It("env init should succeed", func() {
@@ -69,14 +75,15 @@ var _ = Describe("Import Certificates", func() {
 
 	Context("when initializing Load Balanced Web Services", func() {
 		var svcInitErr error
-
-		It("svc init should succeed for creating the frontend service", func() {
+		BeforeAll(func() {
 			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{
 				Name:       "frontend",
 				SvcType:    "Load Balanced Web Service",
 				Dockerfile: "./src/Dockerfile",
 				SvcPort:    "80",
 			})
+		})
+		It("svc init should succeed for creating the frontend service", func() {
 			Expect(svcInitErr).NotTo(HaveOccurred())
 		})
 	})
@@ -92,34 +99,31 @@ var _ = Describe("Import Certificates", func() {
 		})
 
 		It("svc show should contain the expected domain and the request should succeed", func() {
-			// Check frontend service
 			svc, err := cli.SvcShow(&client.SvcShowRequest{
 				Name:    "frontend",
 				AppName: appName,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
-
+			route := svc.Routes[0]
 			wantedURLs := map[string]string{
-				"test": "https://test.copilot-e2e-tests.ecs.aws.dev",
+				"test": "https://cloudfront.copilot-e2e-tests.ecs.aws.dev",
 			}
-			for _, route := range svc.Routes {
-				// Validate route has the expected HTTPS endpoint.
-				Expect(route.URL).To(Equal(wantedURLs[route.Environment]))
+			// Validate route has the expected HTTPS endpoint.
+			Expect(route.URL).To(Equal(wantedURLs[route.Environment]))
 
-				// Make sure the response is OK.
-				var resp *http.Response
-				var fetchErr error
-				Eventually(func() (int, error) {
-					resp, fetchErr = http.Get(route.URL)
-					return resp.StatusCode, fetchErr
-				}, "60s", "1s").Should(Equal(200))
-				// HTTP should route to HTTPS.
-				Eventually(func() (int, error) {
-					resp, fetchErr = http.Get(strings.Replace(route.URL, "https", "http", 1))
-					return resp.StatusCode, fetchErr
-				}, "60s", "1s").Should(Equal(200))
-			}
+			// Make sure the response is OK.
+			var resp *http.Response
+			var fetchErr error
+			Eventually(func() (int, error) {
+				resp, fetchErr = http.Get(route.URL)
+				return resp.StatusCode, fetchErr
+			}, "60s", "1s").Should(Equal(200))
+			// HTTP should work.
+			Eventually(func() (int, error) {
+				resp, fetchErr = http.Get(strings.Replace(route.URL, "https", "http", 1))
+				return resp.StatusCode, fetchErr
+			}, "60s", "1s").Should(Equal(200))
 		})
 	})
 })
