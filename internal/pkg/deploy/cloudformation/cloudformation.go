@@ -98,9 +98,12 @@ type s3Client interface {
 
 type stackSetClient interface {
 	Create(name, template string, opts ...stackset.CreateOrUpdateOption) error
+	CreateInstances(name string, accounts, regions []string) (string, error)
 	CreateInstancesAndWait(name string, accounts, regions []string) error
+	Update(name, template string, opts ...stackset.CreateOrUpdateOption) (string, error)
 	UpdateAndWait(name, template string, opts ...stackset.CreateOrUpdateOption) error
 	Describe(name string) (stackset.Description, error)
+	DescribeOperation(name, opID string) (stackset.Operation, error)
 	InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error)
 	DeleteAllInstances(name string) (string, error)
 	Delete(name string) error
@@ -144,6 +147,9 @@ type CloudFormation struct {
 
 	// cached variables.
 	cachedDeployedStack *cloudformation.StackDescription
+
+	// Overriden in tests.
+	renderStackSet func(input renderStackSetInput) error
 }
 
 // New returns a configured CloudFormation client.
@@ -166,6 +172,7 @@ func New(sess *session.Session, opts ...OptFn) CloudFormation {
 	for _, opt := range opts {
 		opt(&client)
 	}
+	client.renderStackSet = client.renderStackSetImpl
 	return client
 }
 

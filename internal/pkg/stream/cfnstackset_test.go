@@ -48,7 +48,7 @@ func TestStackSetStreamer_InstanceStreamers(t *testing.T) {
 		// THEN
 		require.EqualError(t, err, `describe in progress stack instances for stack set "demo-infrastructure": some error`)
 	})
-	t.Run("should return as many stack streamers", func(t *testing.T) {
+	t.Run("should return immediately if there are stack instances in progress", func(t *testing.T) {
 		// GIVEN
 		mockStackSet := mockStackSetClient{
 			instanceSummariesFn: func(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error) {
@@ -56,10 +56,12 @@ func TestStackSetStreamer_InstanceStreamers(t *testing.T) {
 					{
 						StackID: "1111",
 						Region:  "us-west-2",
+						Status:  "RUNNING",
 					},
 					{
 						StackID: "2222",
 						Region:  "us-east-1",
+						Status:  "RUNNING",
 					},
 				}, nil
 			},
@@ -78,6 +80,85 @@ func TestStackSetStreamer_InstanceStreamers(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 2, len(regionalStreamers), "expected a separate streamer for each region")
 		require.Equal(t, 2, len(children), "expected as many streamers as instance summaries")
+	})
+	t.Run("should return a wrapped error when describing the operation fails", func(t *testing.T) {
+		// GIVEN
+		mockStackSet := mockStackSetClient{
+			instanceSummariesFn: func(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error) {
+				return []stackset.InstanceSummary{
+					{
+						StackID: "1111",
+						Region:  "us-west-2",
+						Status:  "SUCCEEDED",
+					},
+				}, nil
+			},
+			describeOpFn: func(_, _ string) (stackset.Operation, error) {
+				return stackset.Operation{}, errors.New("some error")
+			},
+		}
+		regionalStreamers := make(map[string]int)
+		mockStackLocator := func(region string) StackEventsDescriber {
+			regionalStreamers[region] += 1
+			return mockStackClient{}
+		}
+		streamer := NewStackSetStreamer(mockStackSet, "demo-infrastructure", "1", time.Now())
+
+		// WHEN
+		_, err := streamer.InstanceStreamers(mockStackLocator)
+
+		// THEN
+		require.EqualError(t, err, `describe operation "1" for stack set "demo-infrastructure": some error`)
+	})
+	t.Run("should keep calling InstanceSummary until in progress instances are found", func(t *testing.T) {
+		// GIVEN
+		var callCount int
+		mockStackSet := mockStackSetClient{
+			instanceSummariesFn: func(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error) {
+				defer func() { callCount += 1 }()
+				if callCount == 0 {
+					return []stackset.InstanceSummary{
+						{
+							StackID: "1111",
+							Region:  "us-west-2",
+							Status:  "SUCCEEDED",
+						},
+					}, nil
+				}
+				return []stackset.InstanceSummary{
+					{
+						StackID: "1111",
+						Region:  "us-west-2",
+						Status:  "SUCCEEDED",
+					},
+					{
+						StackID: "2222",
+						Region:  "us-east-1",
+						Status:  "RUNNING",
+					},
+				}, nil
+			},
+			describeOpFn: func(_, _ string) (stackset.Operation, error) {
+				return stackset.Operation{
+					Status: "RUNNING",
+				}, nil
+			},
+		}
+		regionalStreamers := make(map[string]int)
+		mockStackLocator := func(region string) StackEventsDescriber {
+			regionalStreamers[region] += 1
+			return mockStackClient{}
+		}
+		streamer := NewStackSetStreamer(mockStackSet, "demo-infrastructure", "1", time.Now())
+		streamer.instanceSummariesInterval = 0 // override time to wait interval.
+
+		// WHEN
+		children, err := streamer.InstanceStreamers(mockStackLocator)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, 1, len(regionalStreamers), "expected a separate streamer for each region")
+		require.Equal(t, 1, len(children), "expected as many streamers as instance summaries")
 	})
 }
 

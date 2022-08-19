@@ -55,7 +55,6 @@ var _ = Describe("Multiple Service App", func() {
 				AppName: appName,
 				EnvName: "test",
 				Profile: "default",
-				Prod:    false,
 			})
 		})
 

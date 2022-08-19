@@ -87,7 +87,6 @@ var _ = Describe("Customized Env", func() {
 				AppName:       appName,
 				EnvName:       "test",
 				Profile:       "default",
-				Prod:          false,
 				VPCImport:     vpcImport,
 				CustomizedEnv: true,
 			})
@@ -95,7 +94,6 @@ var _ = Describe("Customized Env", func() {
 				AppName:       appName,
 				EnvName:       "prod",
 				Profile:       "default",
-				Prod:          true,
 				VPCConfig:     vpcConfig,
 				CustomizedEnv: true,
 			})
@@ -103,7 +101,6 @@ var _ = Describe("Customized Env", func() {
 				AppName:       appName,
 				EnvName:       "shared",
 				Profile:       "default",
-				Prod:          false,
 				VPCImport:     vpcImport,
 				CustomizedEnv: true,
 			})
