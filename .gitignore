@@ -11,4 +11,4 @@ internal/pkg/template/templates/custom-resources/
 regression/*/copilot/
 e2e/*/copilot/
 copilot/
-
+cf-custom-resources/coverage

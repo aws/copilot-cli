@@ -67,7 +67,7 @@ test: run-unit-test custom-resource-tests
 custom-resource-tests: tools
 	@echo "Running custom resource unit tests" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} &&\
-	npm test &&\
+	npm test -- --coverage &&\
 	cd ${ROOT_SRC_DIR}
 
 # Minifies the resources in cf-custom-resources/lib and copies
