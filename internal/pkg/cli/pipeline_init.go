@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -238,7 +239,7 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		secretsmanager:   secretsmanager.New(defaultSession),
 		parser:           template.New(),
 		sessProvider:     p,
-		cfnClient:        cloudformation.New(defaultSession),
+		cfnClient:        cloudformation.New(defaultSession, cloudformation.WithProgressTracker(os.Stderr)),
 		store:            ssmStore,
 		prompt:           prompter,
 		sel:              selector.NewAppEnvSelector(prompter, ssmStore),

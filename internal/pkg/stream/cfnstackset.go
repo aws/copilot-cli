@@ -63,6 +63,11 @@ func NewStackSetStreamer(cfn StackSetDescriber, ssName, opID string, opStartTime
 	}
 }
 
+// Name returns the CloudFormation stack set's name.
+func (s *StackSetStreamer) Name() string {
+	return s.ssName
+}
+
 // InstanceStreamers initializes Streamers for each stack instance that's in progress part of the stack set.
 // As long as the operation is in progress, [InstanceStreamers] will keep
 // looking for at least one stack instance that's outdated and return only then.
@@ -75,7 +80,7 @@ func (s *StackSetStreamer) InstanceStreamers(cfnClientFor func(region string) St
 		}
 
 		for _, instance := range instances {
-			if !instance.Status.InProgress() {
+			if !instance.Status.InProgress() || instance.StackID == "" /* new instances won't immediately have an ID */ {
 				continue
 			}
 			streamers = append(streamers, NewStackStreamer(cfnClientFor(instance.Region), instance.StackID, s.opStartTime))
