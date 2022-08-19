@@ -605,6 +605,21 @@ func (mr *MockstackSetClientMockRecorder) Create(name, template interface{}, opt
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockstackSetClient)(nil).Create), varargs...)
 }
 
+// CreateInstances mocks base method.
+func (m *MockstackSetClient) CreateInstances(name string, accounts, regions []string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInstances", name, accounts, regions)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateInstances indicates an expected call of CreateInstances.
+func (mr *MockstackSetClientMockRecorder) CreateInstances(name, accounts, regions interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInstances", reflect.TypeOf((*MockstackSetClient)(nil).CreateInstances), name, accounts, regions)
+}
+
 // CreateInstancesAndWait mocks base method.
 func (m *MockstackSetClient) CreateInstancesAndWait(name string, accounts, regions []string) error {
 	m.ctrl.T.Helper()
@@ -663,6 +678,21 @@ func (mr *MockstackSetClientMockRecorder) Describe(name interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Describe", reflect.TypeOf((*MockstackSetClient)(nil).Describe), name)
 }
 
+// DescribeOperation mocks base method.
+func (m *MockstackSetClient) DescribeOperation(name, opID string) (stackset.Operation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeOperation", name, opID)
+	ret0, _ := ret[0].(stackset.Operation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeOperation indicates an expected call of DescribeOperation.
+func (mr *MockstackSetClientMockRecorder) DescribeOperation(name, opID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeOperation", reflect.TypeOf((*MockstackSetClient)(nil).DescribeOperation), name, opID)
+}
+
 // InstanceSummaries mocks base method.
 func (m *MockstackSetClient) InstanceSummaries(name string, opts ...stackset.InstanceSummariesOption) ([]stackset.InstanceSummary, error) {
 	m.ctrl.T.Helper()
@@ -681,6 +711,26 @@ func (mr *MockstackSetClientMockRecorder) InstanceSummaries(name interface{}, op
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{name}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstanceSummaries", reflect.TypeOf((*MockstackSetClient)(nil).InstanceSummaries), varargs...)
+}
+
+// Update mocks base method.
+func (m *MockstackSetClient) Update(name, template string, opts ...stackset.CreateOrUpdateOption) (string, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{name, template}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Update", varargs...)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockstackSetClientMockRecorder) Update(name, template interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{name, template}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockstackSetClient)(nil).Update), varargs...)
 }
 
 // UpdateAndWait mocks base method.

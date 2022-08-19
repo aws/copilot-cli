@@ -6,7 +6,9 @@ package cli
 import (
 	"errors"
 	"fmt"
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"io"
+	"sort"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -16,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/logging"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
@@ -31,6 +34,10 @@ const (
 	cwGetLogEventsLimitMax = 10000
 )
 
+var (
+	noPreviousTasksErr = errors.New("no previously stopped tasks found")
+)
+
 type wkldLogsVars struct {
 	shouldOutputJSON bool
 	follow           bool
@@ -43,6 +50,7 @@ type wkldLogsVars struct {
 	taskIDs          []string
 	since            time.Duration
 	logGroup         string
+	previous         bool
 }
 
 type svcLogsOpts struct {
@@ -57,12 +65,14 @@ type wkldLogOpts struct {
 	startTime *int64
 	endTime   *int64
 
-	w           io.Writer
-	configStore store
-	deployStore deployedEnvironmentLister
-	sel         deploySelector
-	logsSvc     logEventsWriter
-	initLogsSvc func() error // Overridden in tests.
+	w                  io.Writer
+	configStore        store
+	sessProvider       sessionProvider
+	deployStore        deployedEnvironmentLister
+	sel                deploySelector
+	logsSvc            logEventsWriter
+	ecs                serviceDescriber
+	initRuntimeClients func() error // Overridden in tests.
 }
 
 func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
@@ -86,7 +96,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 			sel:         selector.NewDeploySelect(prompt.New(), configStore, deployStore),
 		},
 	}
-	opts.initLogsSvc = func() error {
+	opts.initRuntimeClients = func() error {
 		env, err := opts.getTargetEnv()
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
@@ -99,6 +109,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return err
 		}
+		opts.ecs = ecs.New(sess)
 		opts.logsSvc, err = logging.NewWorkloadClient(&logging.NewWorkloadLogsConfig{
 			App:         opts.appName,
 			Env:         opts.envName,
@@ -109,6 +120,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 			TaskIDs:     opts.taskIDs,
 			ConfigStore: configStore,
 		})
+
 		if err != nil {
 			return err
 		}
@@ -155,6 +167,12 @@ func (o *svcLogsOpts) Validate() error {
 		return fmt.Errorf("--limit %d is out-of-bounds, value must be between %d and %d", o.limit, cwGetLogEventsLimitMin, cwGetLogEventsLimitMax)
 	}
 
+	if o.previous {
+		if err := o.validatePrevious(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -168,7 +186,7 @@ func (o *svcLogsOpts) Ask() error {
 
 // Execute outputs logs of the service.
 func (o *svcLogsOpts) Execute() error {
-	if err := o.initLogsSvc(); err != nil {
+	if err := o.initRuntimeClients(); err != nil {
 		return err
 	}
 	eventsWriter := logging.WriteHumanLogs
@@ -178,6 +196,17 @@ func (o *svcLogsOpts) Execute() error {
 	var limit *int64
 	if o.limit != 0 {
 		limit = aws.Int64(int64(o.limit))
+	}
+	if o.previous {
+		taskID, err := o.latestStoppedTaskID()
+		if err != nil {
+			if errors.Is(err, noPreviousTasksErr) {
+				log.Warningln("no previously stopped tasks found")
+				return nil // return nil as we have no stopped tasks.
+			}
+			return err
+		}
+		o.taskIDs = []string{taskID}
 	}
 	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
 		Follow:    o.follow,
@@ -191,6 +220,24 @@ func (o *svcLogsOpts) Execute() error {
 		return fmt.Errorf("write log events for service %s: %w", o.name, err)
 	}
 	return nil
+}
+
+func (o *svcLogsOpts) latestStoppedTaskID() (string, error) {
+	svcDesc, err := o.ecs.DescribeService(o.appName, o.envName, o.name)
+	if err != nil {
+		return "", fmt.Errorf("describe service %s: %w", o.name, err)
+	}
+	if len(svcDesc.StoppedTasks) > 0 {
+		sort.Slice(svcDesc.StoppedTasks, func(i, j int) bool {
+			return svcDesc.StoppedTasks[i].StoppingAt.After(aws.TimeValue(svcDesc.StoppedTasks[j].StoppingAt))
+		})
+		taskID, err := awsecs.TaskID(aws.StringValue(svcDesc.StoppedTasks[0].TaskArn))
+		if err != nil {
+			return "", err
+		}
+		return taskID, nil
+	}
+	return "", noPreviousTasksErr
 }
 
 func (o *svcLogsOpts) validateOrAskApp() error {
@@ -226,6 +273,13 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 	}
 	o.name = deployedService.Name
 	o.envName = deployedService.Env
+	return nil
+}
+
+func (o *svcLogsOpts) validatePrevious() error {
+	if o.previous && len(o.taskIDs) != 0 {
+		return fmt.Errorf("cannot specify both --%s and --%s", previousFlag, tasksFlag)
+	}
 	return nil
 }
 
@@ -294,5 +348,6 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	cmd.Flags().StringVar(&vars.logGroup, logGroupFlag, "", logGroupFlagDescription)
+	cmd.Flags().BoolVarP(&vars.previous, previousFlag, previousFlagShort, false, previousFlagDescription)
 	return cmd
 }

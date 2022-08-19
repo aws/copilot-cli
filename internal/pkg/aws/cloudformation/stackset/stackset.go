@@ -217,13 +217,16 @@ func (ss *StackSet) InstanceSummaries(name string, opts ...InstanceSummariesOpti
 		if err != nil {
 			return nil, fmt.Errorf("list stack instances for stack set %s: %w", name, err)
 		}
-		for _, summary := range resp.Summaries {
-			summaries = append(summaries, InstanceSummary{
-				StackID: aws.StringValue(summary.StackId),
-				Account: aws.StringValue(summary.Account),
-				Region:  aws.StringValue(summary.Region),
-				Status:  InstanceStatus(aws.StringValue(summary.Status)),
-			})
+		for _, cfnSummary := range resp.Summaries {
+			summary := InstanceSummary{
+				StackID: aws.StringValue(cfnSummary.StackId),
+				Account: aws.StringValue(cfnSummary.Account),
+				Region:  aws.StringValue(cfnSummary.Region),
+			}
+			if status := cfnSummary.StackInstanceStatus; status != nil {
+				summary.Status = InstanceStatus(aws.StringValue(status.DetailedStatus))
+			}
+			summaries = append(summaries, summary)
 		}
 		in.NextToken = resp.NextToken
 		if in.NextToken == nil {

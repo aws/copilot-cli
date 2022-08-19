@@ -45,7 +45,7 @@ func TestOpStatus_IsCompleted(t *testing.T) {
 	}
 }
 
-func TestOpStatus_IsSuccessful(t *testing.T) {
+func TestOpStatus_IsSuccess(t *testing.T) {
 	testCases := map[string]struct {
 		status string
 		wanted bool
@@ -73,7 +73,42 @@ func TestOpStatus_IsSuccessful(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, OpStatus(tc.status).IsSuccessful())
+			require.Equal(t, tc.wanted, OpStatus(tc.status).IsSuccess())
+		})
+	}
+}
+
+func TestOpStatus_InProgress(t *testing.T) {
+	testCases := map[string]struct {
+		status string
+		wanted bool
+	}{
+		"true when queued": {
+			status: cloudformation.StackSetOperationStatusQueued,
+			wanted: true,
+		},
+		"true when running": {
+			status: cloudformation.StackSetOperationStatusRunning,
+			wanted: true,
+		},
+		"true when stopping": {
+			status: cloudformation.StackSetOperationStatusStopping,
+			wanted: true,
+		},
+		"false when succeeded": {
+			status: cloudformation.StackSetOperationStatusSucceeded,
+		},
+		"false when stopped": {
+			status: cloudformation.StackSetOperationStatusStopped,
+		},
+		"false when failed": {
+			status: cloudformation.StackSetOperationStatusFailed,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, OpStatus(tc.status).InProgress())
 		})
 	}
 }
@@ -110,6 +145,11 @@ func TestOpStatus_IsFailure(t *testing.T) {
 			require.Equal(t, tc.wanted, OpStatus(tc.status).IsFailure())
 		})
 	}
+}
+
+func TestOpStatus_String(t *testing.T) {
+	var s OpStatus = "hello"
+	require.Equal(t, "hello", s.String())
 }
 
 func TestInstanceStatus_IsCompleted(t *testing.T) {
@@ -182,7 +222,7 @@ func TestInstanceStatus_InProgress(t *testing.T) {
 	}
 }
 
-func TestInstanceStatus_IsSuccessful(t *testing.T) {
+func TestInstanceStatus_IsSuccess(t *testing.T) {
 	testCases := map[string]struct {
 		status string
 		wanted bool
@@ -210,7 +250,7 @@ func TestInstanceStatus_IsSuccessful(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, InstanceStatus(tc.status).IsSuccessful())
+			require.Equal(t, tc.wanted, InstanceStatus(tc.status).IsSuccess())
 		})
 	}
 }
@@ -248,4 +288,9 @@ func TestInstanceStatus_IsFailure(t *testing.T) {
 			require.Equal(t, tc.wanted, InstanceStatus(tc.status).IsFailure())
 		})
 	}
+}
+
+func TestInstanceStatus_String(t *testing.T) {
+	var s InstanceStatus = "hello"
+	require.Equal(t, "hello", s.String())
 }

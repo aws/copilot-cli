@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -359,9 +358,7 @@ func TestDeleteSvcOpts_Execute(t *testing.T) {
 
 					// removeSvcFromApp
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtSvcDeleteResourcesStart, mockSvcName, mockAppName)),
 					mocks.appCFN.EXPECT().RemoveServiceFromApp(mockApp, mockSvcName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtSvcDeleteResourcesComplete, mockSvcName, mockAppName)),
 
 					// deleteSSMParam
 					mocks.store.EXPECT().DeleteService(mockAppName, mockSvcName).Return(nil),

@@ -989,8 +989,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
 				m.iam.EXPECT().CreateECSServiceLinkedRole().Return(nil)
-				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
-				m.progress.EXPECT().Stop(log.Serrorf(fmtAddEnvToAppFailed, "1234", "us-west-2", "phonetool"))
 				m.deployer.EXPECT().AddEnvToApp(&deploycfn.AddEnvToAppOpts{
 					App:          &config.Application{Name: "phonetool"},
 					EnvName:      "test",
@@ -1006,8 +1004,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
 				m.iam.EXPECT().CreateECSServiceLinkedRole().Return(nil)
-				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
-				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 				m.deployer.EXPECT().AddEnvToApp(gomock.Any()).Return(nil)
 				m.appCFN.EXPECT().GetAppResourcesByRegion(&config.Application{Name: "phonetool"}, "us-west-2").
 					Return(nil, errors.New("some error"))
@@ -1018,8 +1014,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 			setupMocks: func(m *initEnvExecuteMocks) {
 				m.store.EXPECT().GetApplication("phonetool").Return(&config.Application{Name: "phonetool"}, nil)
 				m.manifestWriter.EXPECT().WriteEnvironmentManifest(gomock.Any(), "test").Return("/environments/test/manifest.yml", nil)
-				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
-				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 				m.identity.EXPECT().Get().Return(identity.Caller{RootUserARN: "some arn", Account: "1234"}, nil).Times(2)
 				gomock.InOrder(
 					m.iam.EXPECT().CreateECSServiceLinkedRole().Return(nil),
@@ -1057,8 +1051,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.iam.EXPECT().ListRoleTags(gomock.Any()).
 					Return(nil, errors.New("does not exist")).AnyTimes()
 				m.cfn.EXPECT().Exists("phonetool-test").Return(false, nil)
-				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
-				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					App:       "phonetool",
@@ -1090,8 +1082,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.iam.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-CFNExecutionRole")).Return(nil, errors.New("does not exist"))
 				m.iam.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-EnvManagerRole")).Return(nil, errors.New("does not exist"))
 				m.cfn.EXPECT().Exists("phonetool-test").Return(false, nil)
-				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
-				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
@@ -1123,8 +1113,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.iam.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-CFNExecutionRole")).Return(nil, errors.New("does not exist"))
 				m.iam.EXPECT().ListRoleTags(gomock.Eq("phonetool-test-EnvManagerRole")).Return(nil, errors.New("does not exist"))
 				m.cfn.EXPECT().Exists("phonetool-test").Return(false, nil)
-				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
-				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
 					AccountID: "1234",
@@ -1154,8 +1142,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				// Don't attempt to delete any roles since an environment stack already exists.
 				m.iam.EXPECT().ListRoleTags(gomock.Any()).Times(0)
 				m.cfn.EXPECT().Exists("phonetool-test").Return(true, nil)
-				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "1234", "us-west-2", "phonetool"))
-				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "1234", "us-west-2", "phonetool"))
 				m.deployer.EXPECT().CreateAndRenderEnvironment(&deploy.CreateEnvironmentInput{
 					Name: "test",
 					App: deploy.AppInformation{
@@ -1208,8 +1194,6 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.cfn.EXPECT().Exists("phonetool-test").Return(false, nil)
 				m.progress.EXPECT().Start(fmt.Sprintf(fmtDNSDelegationStart, "4567"))
 				m.progress.EXPECT().Stop(log.Ssuccessf(fmtDNSDelegationComplete, "4567"))
-				m.progress.EXPECT().Start(fmt.Sprintf(fmtAddEnvToAppStart, "4567", "us-west-2", "phonetool"))
-				m.progress.EXPECT().Stop(log.Ssuccessf(fmtAddEnvToAppComplete, "4567", "us-west-2", "phonetool"))
 				m.deployer.EXPECT().DelegateDNSPermissions(gomock.Any(), "4567").Return(nil)
 				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().GetEnvironment("phonetool", "test").Return(&config.Environment{
