@@ -143,9 +143,7 @@ func (s *Store) ListEnvironments(appName string) ([]*Environment, error) {
 
 		environments = append(environments, &env)
 	}
-	// non-prod env before prod env. sort by alphabetically if same
 	sort.SliceStable(environments, func(i, j int) bool { return environments[i].Name < environments[j].Name })
-	sort.SliceStable(environments, func(i, j int) bool { return !environments[i].Prod })
 	return environments, nil
 }
 
