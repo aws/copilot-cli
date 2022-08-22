@@ -106,7 +106,7 @@ func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, err
 			Value: aws.Int(1),
 		},
 		CPU:    aws.Int(256),
-		Memory: aws.Int(256),
+		Memory: aws.Int(512),
 	}
 
 	envVars, err := convertMappingWithEquals(service.Environment)

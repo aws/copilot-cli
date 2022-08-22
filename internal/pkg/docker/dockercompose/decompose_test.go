@@ -25,7 +25,8 @@ func TestDecomposeService(t *testing.T) {
 		svcName  string
 		workDir  string
 
-		wantSvc     manifest.BackendServiceConfig
+		wantLbws    *manifest.LoadBalancedWebServiceConfig
+		wantBs      *manifest.BackendServiceConfig
 		wantIgnored IgnoredKeys
 		wantError   error
 	}{
@@ -124,13 +125,20 @@ func TestDecomposeService(t *testing.T) {
 			svcName:  "web",
 			workDir:  "extends",
 
-			wantSvc: manifest.BackendServiceConfig{
+			wantBs: &manifest.BackendServiceConfig{
 				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 						},
 						Port: aws.Uint16(80),
+					},
+				},
+				TaskConfig: manifest.TaskConfig{
+					CPU:    aws.Int(256),
+					Memory: aws.Int(512),
+					Count: manifest.Count{
+						Value: aws.Int(1),
 					},
 				},
 			},
@@ -144,7 +152,7 @@ func TestDecomposeService(t *testing.T) {
 				"runtime",
 				"userns_mode",
 			},
-			wantSvc: manifest.BackendServiceConfig{
+			wantBs: &manifest.BackendServiceConfig{
 				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
 						Image: manifest.Image{
@@ -189,6 +197,11 @@ func TestDecomposeService(t *testing.T) {
 						"HOST_PATH":    "/home/nginx",
 						"ENABLE_HTTPS": "true",
 					},
+					CPU:    aws.Int(256),
+					Memory: aws.Int(512),
+					Count: manifest.Count{
+						Value: aws.Int(1),
+					},
 				},
 			},
 		},
@@ -200,14 +213,23 @@ func TestDecomposeService(t *testing.T) {
 			cfg, err := os.ReadFile(path)
 			require.NoError(t, err)
 
-			svc, ign, err := DecomposeService(cfg, tc.svcName, filepath.Join("testdata", tc.workDir))
+			lbws, bs, ign, err := DecomposeService(cfg, tc.svcName, filepath.Join("testdata", tc.workDir))
 
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, &tc.wantSvc, svc)
 				require.Equal(t, tc.wantIgnored, ign)
+
+				if tc.wantLbws != nil {
+					require.NotNil(t, lbws)
+					require.Nil(t, bs)
+					require.Equal(t, tc.wantLbws, &lbws.LoadBalancedWebServiceConfig)
+				} else {
+					require.Nil(t, lbws)
+					require.NotNil(t, bs)
+					require.Equal(t, tc.wantBs, &bs.BackendServiceConfig)
+				}
 			}
 		})
 	}

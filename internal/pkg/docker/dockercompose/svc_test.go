@@ -19,10 +19,10 @@ func TestConvertBackendService(t *testing.T) {
 	oneSecond := compose.Duration(time.Second)
 
 	testCases := map[string]struct {
-		inSvc  compose.ServiceConfig
-		inPort uint16
+		inSvc compose.ServiceConfig
 
-		wantBackendSvc manifest.BackendServiceConfig
+		wantLbws       *manifest.LoadBalancedWebServiceConfig
+		wantBackendSvc *manifest.BackendServiceConfig
 		wantIgnored    IgnoredKeys
 		wantError      error
 	}{
@@ -31,16 +31,24 @@ func TestConvertBackendService(t *testing.T) {
 				Name:  "web",
 				Image: "nginx",
 			},
-			inPort: 8080,
 
-			wantBackendSvc: manifest.BackendServiceConfig{ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
-				ImageWithOptionalPort: manifest.ImageWithOptionalPort{
-					Image: manifest.Image{
-						Location: aws.String("nginx"),
+			wantBackendSvc: &manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+						},
+						Port: aws.Uint16(80),
 					},
-					Port: aws.Uint16(8080),
 				},
-			}},
+				TaskConfig: manifest.TaskConfig{
+					CPU:    aws.Int(256),
+					Memory: aws.Int(512),
+					Count: manifest.Count{
+						Value: aws.Int(1),
+					},
+				},
+			},
 		},
 		"happy path complete": {
 			inSvc: compose.ServiceConfig{
@@ -86,9 +94,8 @@ func TestConvertBackendService(t *testing.T) {
 					Target:    "myapp",
 				},
 			},
-			inPort: 443,
 
-			wantBackendSvc: manifest.BackendServiceConfig{ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+			wantBackendSvc: &manifest.BackendServiceConfig{ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 				ImageWithOptionalPort: manifest.ImageWithOptionalPort{
 					Image: manifest.Image{
 						Location: aws.String("nginx"),
@@ -97,7 +104,7 @@ func TestConvertBackendService(t *testing.T) {
 							"docker.test2": "val2",
 						},
 					},
-					Port: aws.Uint16(443),
+					Port: aws.Uint16(80),
 				},
 				HealthCheck: manifest.ContainerHealthCheck{
 					Command: []string{
@@ -133,7 +140,13 @@ func TestConvertBackendService(t *testing.T) {
 						"ENABLE_HTTPS": "true",
 					},
 					EnvFile: aws.String("/test.env"),
-				}},
+					CPU:     aws.Int(256),
+					Memory:  aws.Int(512),
+					Count: manifest.Count{
+						Value: aws.Int(1),
+					},
+				},
+			},
 		},
 		"multiple env files": {
 			inSvc: compose.ServiceConfig{
@@ -144,7 +157,6 @@ func TestConvertBackendService(t *testing.T) {
 					"/envfile2.env",
 				},
 			},
-			inPort: 8080,
 
 			wantError: errors.New("at most one env file is supported, but 2 env files were attached to this service"),
 		},
@@ -157,7 +169,6 @@ func TestConvertBackendService(t *testing.T) {
 					"test2": aws.String("value"),
 				},
 			},
-			inPort: 8080,
 
 			wantError: errors.New("convert environment variables: entry '[test]' is missing " +
 				"a value; this is unsupported in Copilot"),
@@ -168,20 +179,24 @@ func TestConvertBackendService(t *testing.T) {
 				Image:    "nginx",
 				Platform: "windows",
 			},
-			inPort: 8080,
 
-			wantBackendSvc: manifest.BackendServiceConfig{
+			wantBackendSvc: &manifest.BackendServiceConfig{
 				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 						},
-						Port: aws.Uint16(8080),
+						Port: aws.Uint16(80),
 					},
 				},
 				TaskConfig: manifest.TaskConfig{
+					CPU:    aws.Int(256),
+					Memory: aws.Int(512),
 					Platform: manifest.PlatformArgsOrString{
 						PlatformString: (*manifest.PlatformString)(aws.String("windows")),
+					},
+					Count: manifest.Count{
+						Value: aws.Int(1),
 					},
 				},
 			},
@@ -195,20 +210,26 @@ func TestConvertBackendService(t *testing.T) {
 				},
 				Image: "nginx",
 			},
-			inPort: 443,
 
-			wantBackendSvc: manifest.BackendServiceConfig{
+			wantBackendSvc: &manifest.BackendServiceConfig{
 				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 						},
-						Port: aws.Uint16(443),
+						Port: aws.Uint16(80),
 					},
 					HealthCheck: manifest.ContainerHealthCheck{
 						Retries:     aws.Int(3),
 						Timeout:     (*time.Duration)(&fiveSeconds),
 						StartPeriod: (*time.Duration)(&threeSeconds),
+					},
+				},
+				TaskConfig: manifest.TaskConfig{
+					CPU:    aws.Int(256),
+					Memory: aws.Int(512),
+					Count: manifest.Count{
+						Value: aws.Int(1),
 					},
 				},
 			},
@@ -223,21 +244,27 @@ func TestConvertBackendService(t *testing.T) {
 				},
 				Image: "nginx",
 			},
-			inPort: 443,
 
-			wantBackendSvc: manifest.BackendServiceConfig{
+			wantBackendSvc: &manifest.BackendServiceConfig{
 				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 						},
-						Port: aws.Uint16(443),
+						Port: aws.Uint16(80),
 					},
 					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"NONE"},
 						Retries:     aws.Int(3),
 						Timeout:     (*time.Duration)(&fiveSeconds),
 						StartPeriod: (*time.Duration)(&threeSeconds),
+					},
+				},
+				TaskConfig: manifest.TaskConfig{
+					CPU:    aws.Int(256),
+					Memory: aws.Int(512),
+					Count: manifest.Count{
+						Value: aws.Int(1),
 					},
 				},
 			},
@@ -256,15 +283,14 @@ func TestConvertBackendService(t *testing.T) {
 				},
 				Image: "nginx",
 			},
-			inPort: 443,
 
-			wantBackendSvc: manifest.BackendServiceConfig{
+			wantBackendSvc: &manifest.BackendServiceConfig{
 				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 						},
-						Port: aws.Uint16(443),
+						Port: aws.Uint16(80),
 					},
 					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"NONE"},
@@ -273,20 +299,36 @@ func TestConvertBackendService(t *testing.T) {
 						StartPeriod: (*time.Duration)(&threeSeconds),
 					},
 				},
+				TaskConfig: manifest.TaskConfig{
+					CPU:    aws.Int(256),
+					Memory: aws.Int(512),
+					Count: manifest.Count{
+						Value: aws.Int(1),
+					},
+				},
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			svc, ignored, err := convertBackendService(&tc.inSvc, tc.inPort)
+			lbws, bs, ignored, err := convertService(&tc.inSvc)
 
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantIgnored, ignored)
-				require.Equal(t, tc.wantBackendSvc, *svc)
+
+				if tc.wantLbws != nil {
+					require.NotNil(t, lbws)
+					require.Nil(t, bs)
+					require.Equal(t, tc.wantLbws, &lbws.LoadBalancedWebServiceConfig)
+				} else {
+					require.Nil(t, lbws)
+					require.NotNil(t, bs)
+					require.Equal(t, tc.wantBackendSvc, &bs.BackendServiceConfig)
+				}
 			}
 		})
 	}
