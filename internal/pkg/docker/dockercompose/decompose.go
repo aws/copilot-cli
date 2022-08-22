@@ -12,25 +12,25 @@ import (
 )
 
 // DecomposeService parses a Compose YAML file and then converts a single service to a Copilot manifest.
-func DecomposeService(content []byte, svcName string, workingDir string) (*manifest.BackendServiceConfig, IgnoredKeys, error) {
+func DecomposeService(content []byte, svcName string, workingDir string) (*manifest.LoadBalancedWebService, *manifest.BackendService, IgnoredKeys, error) {
 	config, err := loader.ParseYAML(content)
 	if err != nil {
-		return nil, nil, fmt.Errorf("parse compose yaml: %w", err)
+		return nil, nil, nil, fmt.Errorf("parse compose yaml: %w", err)
 	}
 
 	services, err := getServices(config)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	service, err := serviceConfig(services, svcName)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	ignored, err := unsupportedServiceKeys(service, svcName)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	project, err := loader.Load(compose.ConfigDetails{
@@ -42,7 +42,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 		},
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("load Compose project: %w", err)
+		return nil, nil, nil, fmt.Errorf("load Compose project: %w", err)
 	}
 
 	svcConfig, err := project.GetService(svcName)
@@ -51,17 +51,15 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 			"service is valid and exists")
 	}
 
-	// TODO: Port handling & exposed port detection, to be implemented in Milestone 3
-	var port uint16 = 80
-	backendSvc, svcIgnored, err := convertBackendService(&svcConfig, port)
+	lbws, bs, svcIgnored, err := convertService(&svcConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
+		return nil, nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
 	}
 
 	ignored = append(ignored, svcIgnored...)
 	sort.Strings(ignored)
 
-	return backendSvc, ignored, nil
+	return lbws, bs, ignored, nil
 }
 
 func getServices(config map[string]interface{}) (map[string]map[string]interface{}, error) {
