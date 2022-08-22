@@ -102,7 +102,7 @@ func TestEnvList_Execute(t *testing.T) {
 						{Name: "test2"},
 					}, nil)
 			},
-			expectedContent: "{\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"\",\"accountID\":\"\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"test2\",\"region\":\"\",\"accountID\":\"\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}]}\n",
+			expectedContent: "{\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"\",\"accountID\":\"\",\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"test2\",\"region\":\"\",\"accountID\":\"\",\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}]}\n",
 		},
 		"with envs": {
 			listOpts: listEnvOpts{
@@ -179,10 +179,10 @@ func TestEnvList_Execute(t *testing.T) {
 					ListEnvironments(gomock.Eq("coolapp")).
 					Return([]*config.Environment{
 						{Name: "test"},
-						{Name: "test2", Prod: true},
+						{Name: "test2"},
 					}, nil)
 			},
-			expectedContent: "test\ntest2 (prod)\n",
+			expectedContent: "test\ntest2\n",
 		},
 	}
 
