@@ -106,7 +106,7 @@ func unsupportedServiceKeys(service map[string]interface{}, svcName string) (Ign
 	var ignored, fatal []string
 
 	for key := range service {
-		if _, ok := ignoredServiceKeys[key]; ok {
+		if ignoredServiceKeys[key] {
 			ignored = append(ignored, key)
 		} else if _, ok := fatalServiceKeys[key]; ok {
 			fatal = append(fatal, key)
