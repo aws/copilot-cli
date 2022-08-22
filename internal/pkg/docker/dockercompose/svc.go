@@ -59,25 +59,25 @@ func convertService(service *compose.ServiceConfig) (*manifest.LoadBalancedWebSe
 			TaskConfig:    taskCfg,
 		}
 		return &lbws, nil, ignored, nil
-	} else {
-		bs := manifest.BackendService{}
-		bs.Workload = manifest.Workload{
-			Name: &service.Name,
-			Type: aws.String(manifest.BackendServiceType),
-		}
-		bs.BackendServiceConfig = manifest.BackendServiceConfig{
-			ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
-				ImageWithOptionalPort: manifest.ImageWithOptionalPort{
-					Image: image,
-					Port:  port,
-				},
-				HealthCheck: hc,
-			},
-			ImageOverride: imgOverride,
-			TaskConfig:    taskCfg,
-		}
-		return nil, &bs, ignored, nil
 	}
+
+	bs := manifest.BackendService{}
+	bs.Workload = manifest.Workload{
+		Name: &service.Name,
+		Type: aws.String(manifest.BackendServiceType),
+	}
+	bs.BackendServiceConfig = manifest.BackendServiceConfig{
+		ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+			ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+				Image: image,
+				Port:  port,
+			},
+			HealthCheck: hc,
+		},
+		ImageOverride: imgOverride,
+		TaskConfig:    taskCfg,
+	}
+	return nil, &bs, ignored, nil
 }
 
 // findExposedPort attempts to detect a singular exposed port in the given service and determines if it is publicly exposed.
