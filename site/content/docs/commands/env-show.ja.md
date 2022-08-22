@@ -7,7 +7,6 @@ $ copilot env show [flags]
 `copilot env show` は、特定の Environment に関する以下のような情報を表示します。
 
 * Environment があるリージョンとアカウント
-* Environment が production かどうか
 * Environment に現在デプロイされている Service
 * Environment に関連するタグ
 
