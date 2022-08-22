@@ -88,31 +88,31 @@ func TestDecomposeService(t *testing.T) {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "db",
 
-			wantError: errors.New("\"services.db\" relies on fatally-unsupported Compose keys: [expose secrets volumes]"),
+			wantError: errors.New("\"services.db\" relies on fatally-unsupported Compose keys: [secrets volumes]"),
 		},
 		"nginx-golang-postgres proxy": {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "proxy",
 
-			wantError: errors.New("\"services.proxy\" relies on fatally-unsupported Compose keys: [ports volumes]"),
+			wantError: errors.New("\"services.proxy\" relies on fatally-unsupported Compose keys: [volumes]"),
 		},
 		"react-express-mongo frontend": {
 			filename: "react-express-mongo.yml",
 			svcName:  "frontend",
 
-			wantError: errors.New("\"services.frontend\" relies on fatally-unsupported Compose keys: [networks ports volumes]"),
+			wantError: errors.New("\"services.frontend\" relies on fatally-unsupported Compose keys: [networks volumes]"),
 		},
 		"react-express-mongo backend": {
 			filename: "react-express-mongo.yml",
 			svcName:  "backend",
 
-			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: [expose networks volumes]"),
+			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: [networks volumes]"),
 		},
 		"react-express-mongo mongo": {
 			filename: "react-express-mongo.yml",
 			svcName:  "mongo",
 
-			wantError: errors.New("\"services.mongo\" relies on fatally-unsupported Compose keys: [expose networks volumes]"),
+			wantError: errors.New("\"services.mongo\" relies on fatally-unsupported Compose keys: [networks volumes]"),
 		},
 		"unrecognized-field-name": {
 			filename: "unrecognized-field-name.yml",
@@ -131,7 +131,7 @@ func TestDecomposeService(t *testing.T) {
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 						},
-						Port: aws.Uint16(80),
+						Port: aws.Uint16(8096),
 					},
 				},
 				TaskConfig: manifest.TaskConfig{
@@ -152,9 +152,9 @@ func TestDecomposeService(t *testing.T) {
 				"runtime",
 				"userns_mode",
 			},
-			wantBs: &manifest.BackendServiceConfig{
-				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
-					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+			wantLbws: &manifest.LoadBalancedWebServiceConfig{
+				ImageConfig: manifest.ImageWithPortAndHealthcheck{
+					ImageWithPort: manifest.ImageWithPort{
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 							DockerLabels: map[string]string{
@@ -162,7 +162,7 @@ func TestDecomposeService(t *testing.T) {
 								"docker.test2": "val2",
 							},
 						},
-						Port: aws.Uint16(80),
+						Port: aws.Uint16(443),
 					},
 					HealthCheck: manifest.ContainerHealthCheck{
 						Command: []string{

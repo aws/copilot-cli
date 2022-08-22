@@ -4,10 +4,15 @@
 package dockercompose
 
 import (
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	compose "github.com/compose-spec/compose-go/types"
+	"github.com/spf13/afero"
+	"path/filepath"
+	"strconv"
 	"time"
 )
 
@@ -97,9 +102,64 @@ type exposedPort struct {
 
 // findExposedPort attempts to detect a singular exposed port in the given service and determines if it is publicly exposed.
 func findExposedPort(service *compose.ServiceConfig) (*exposedPort, error) {
-	// TODO: Port handling & exposed port detection, to be implemented in Milestone 3
+	if len(service.Ports) == 1 {
+		binding := service.Ports[0]
+		port := uint16(binding.Target)
+
+		if binding.Published != "" && strconv.Itoa(int(port)) != binding.Published {
+			return nil, fmt.Errorf("cannot publish the container port %v under a different public port %v in Copilot", port, binding.Published)
+		}
+
+		return &exposedPort{
+			port:   port,
+			public: true,
+		}, nil
+	} else if len(service.Ports) > 1 {
+		return nil, fmt.Errorf("cannot expose more than one public port in Copilot, but %v ports are exposed publicly", len(service.Ports))
+	}
+
+	if len(service.Expose) == 1 {
+		port, err := strconv.Atoi(service.Expose[0])
+		if err != nil {
+			return nil, fmt.Errorf("could not parse exposed port: %w", err)
+		}
+
+		return &exposedPort{
+			port:   uint16(port),
+			public: false,
+		}, nil
+	} else if len(service.Expose) > 1 {
+		return nil, fmt.Errorf("cannot expose more than one port in Copilot, but %v ports are exposed", len(service.Expose))
+	}
+
+	if service.Image != "" || service.Build == nil {
+		// No dockerfile to parse, don't infer any ports.
+		return nil, nil
+	}
+
+	dockerfilePath := service.Build.Dockerfile
+	if dockerfilePath == "" {
+		dockerfilePath = filepath.Join(service.Build.Context, "Dockerfile")
+	}
+
+	if dockerfilePath == "" {
+		return nil, errors.New("service is missing an image location or Dockerfile path")
+	}
+
+	df := dockerfile.New(&afero.Afero{Fs: afero.NewOsFs()}, dockerfilePath)
+	ports, err := df.GetExposedPorts()
+	if err != nil {
+		return nil, fmt.Errorf("")
+	}
+
+	if len(ports) == 0 {
+		// No exposed ports
+		return nil, nil
+	}
+
 	return &exposedPort{
-		port:   80,
+		// matches "svc init" behavior
+		port:   ports[0].Port,
 		public: false,
 	}, nil
 }
