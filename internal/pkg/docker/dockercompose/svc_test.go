@@ -312,7 +312,7 @@ func TestConvertBackendService(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			lbws, bs, ignored, err := convertService(&tc.inSvc)
+			svc, ignored, err := convertService(&tc.inSvc)
 
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())
@@ -321,13 +321,13 @@ func TestConvertBackendService(t *testing.T) {
 				require.Equal(t, tc.wantIgnored, ignored)
 
 				if tc.wantLbws != nil {
-					require.NotNil(t, lbws)
-					require.Nil(t, bs)
-					require.Equal(t, tc.wantLbws, &lbws.LoadBalancedWebServiceConfig)
+					require.NotNil(t, svc.LbSvc)
+					require.Nil(t, svc.BackendSvc)
+					require.Equal(t, tc.wantLbws, &svc.LbSvc.LoadBalancedWebServiceConfig)
 				} else {
-					require.Nil(t, lbws)
-					require.NotNil(t, bs)
-					require.Equal(t, tc.wantBackendSvc, &bs.BackendServiceConfig)
+					require.Nil(t, svc.LbSvc)
+					require.NotNil(t, svc.BackendSvc)
+					require.Equal(t, tc.wantBackendSvc, &svc.BackendSvc.BackendServiceConfig)
 				}
 			}
 		})

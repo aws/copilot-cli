@@ -5,7 +5,6 @@ package dockercompose
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
 	"sort"
@@ -14,25 +13,25 @@ import (
 type composeServices map[string]map[string]any
 
 // DecomposeService parses a Compose YAML file and then converts a single service to a Copilot manifest.
-func DecomposeService(content []byte, svcName string, workingDir string) (*manifest.LoadBalancedWebService, *manifest.BackendService, IgnoredKeys, error) {
+func DecomposeService(content []byte, svcName string, workingDir string) (*ConvertedService, IgnoredKeys, error) {
 	config, err := loader.ParseYAML(content)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("parse compose yaml: %w", err)
+		return nil, nil, fmt.Errorf("parse compose yaml: %w", err)
 	}
 
 	services, err := getServices(config)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	service, err := serviceConfig(services, svcName)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	ignored, err := unsupportedServiceKeys(service, svcName)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	project, err := loader.Load(compose.ConfigDetails{
@@ -44,7 +43,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 		},
 	})
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("load Compose project: %w", err)
+		return nil, nil, fmt.Errorf("load Compose project: %w", err)
 	}
 
 	svcConfig, err := project.GetService(svcName)
@@ -53,15 +52,15 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 			"service is valid and exists")
 	}
 
-	lbws, bs, svcIgnored, err := convertService(&svcConfig)
+	svc, svcIgnored, err := convertService(&svcConfig)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
+		return nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
 	}
 
 	ignored = append(ignored, svcIgnored...)
 	sort.Strings(ignored)
 
-	return lbws, bs, ignored, nil
+	return svc, ignored, nil
 }
 
 func getServices(config map[string]any) (composeServices, error) {

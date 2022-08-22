@@ -11,15 +11,20 @@ import (
 	"time"
 )
 
-func convertService(service *compose.ServiceConfig) (*manifest.LoadBalancedWebService, *manifest.BackendService, IgnoredKeys, error) {
+type ConvertedService struct {
+	LbSvc      *manifest.LoadBalancedWebService
+	BackendSvc *manifest.BackendService
+}
+
+func convertService(service *compose.ServiceConfig) (*ConvertedService, IgnoredKeys, error) {
 	image, ignored, err := convertImageConfig(service.Build, service.Labels, service.Image)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	taskCfg, err := convertTaskConfig(service)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	imgOverride := manifest.ImageOverride{
@@ -38,7 +43,7 @@ func convertService(service *compose.ServiceConfig) (*manifest.LoadBalancedWebSe
 
 	port, publicPort, err := findExposedPort(service)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	if publicPort {
@@ -58,7 +63,7 @@ func convertService(service *compose.ServiceConfig) (*manifest.LoadBalancedWebSe
 			ImageOverride: imgOverride,
 			TaskConfig:    taskCfg,
 		}
-		return &lbws, nil, ignored, nil
+		return &ConvertedService{LbSvc: &lbws}, ignored, nil
 	}
 
 	bs := manifest.BackendService{}
@@ -77,7 +82,7 @@ func convertService(service *compose.ServiceConfig) (*manifest.LoadBalancedWebSe
 		ImageOverride: imgOverride,
 		TaskConfig:    taskCfg,
 	}
-	return nil, &bs, ignored, nil
+	return &ConvertedService{BackendSvc: &bs}, ignored, nil
 }
 
 // findExposedPort attempts to detect a singular exposed port in the given service and determines if it is publicly exposed.

@@ -213,7 +213,7 @@ func TestDecomposeService(t *testing.T) {
 			cfg, err := os.ReadFile(path)
 			require.NoError(t, err)
 
-			lbws, bs, ign, err := DecomposeService(cfg, tc.svcName, filepath.Join("testdata", tc.workDir))
+			svc, ign, err := DecomposeService(cfg, tc.svcName, filepath.Join("testdata", tc.workDir))
 
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())
@@ -222,13 +222,13 @@ func TestDecomposeService(t *testing.T) {
 				require.Equal(t, tc.wantIgnored, ign)
 
 				if tc.wantLbws != nil {
-					require.NotNil(t, lbws)
-					require.Nil(t, bs)
-					require.Equal(t, tc.wantLbws, &lbws.LoadBalancedWebServiceConfig)
+					require.NotNil(t, svc.LbSvc)
+					require.Nil(t, svc.BackendSvc)
+					require.Equal(t, tc.wantLbws, &svc.LbSvc.LoadBalancedWebServiceConfig)
 				} else {
-					require.Nil(t, lbws)
-					require.NotNil(t, bs)
-					require.Equal(t, tc.wantBs, &bs.BackendServiceConfig)
+					require.Nil(t, svc.LbSvc)
+					require.NotNil(t, svc.BackendSvc)
+					require.Equal(t, tc.wantBs, &svc.BackendSvc.BackendServiceConfig)
 				}
 			}
 		})
