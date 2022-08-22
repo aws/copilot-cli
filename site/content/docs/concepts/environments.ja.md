@@ -71,7 +71,6 @@ $ copilot env show --name test
 About
 
   Name              test
-  Production        false
   Region            us-west-2
   Account ID        693652174720
 
