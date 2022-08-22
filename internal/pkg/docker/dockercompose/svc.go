@@ -41,12 +41,12 @@ func convertService(service *compose.ServiceConfig) (*ConvertedService, IgnoredK
 		hc = convertHealthCheckConfig(service.HealthCheck)
 	}
 
-	port, publicPort, err := findExposedPort(service)
+	exposed, err := findExposedPort(service)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if publicPort {
+	if exposed != nil && exposed.public {
 		lbws := manifest.LoadBalancedWebService{}
 		lbws.Workload = manifest.Workload{
 			Name: &service.Name,
@@ -56,7 +56,7 @@ func convertService(service *compose.ServiceConfig) (*ConvertedService, IgnoredK
 			ImageConfig: manifest.ImageWithPortAndHealthcheck{
 				ImageWithPort: manifest.ImageWithPort{
 					Image: image,
-					Port:  port,
+					Port:  &exposed.port,
 				},
 				HealthCheck: hc,
 			},
@@ -64,6 +64,11 @@ func convertService(service *compose.ServiceConfig) (*ConvertedService, IgnoredK
 			TaskConfig:    taskCfg,
 		}
 		return &ConvertedService{LbSvc: &lbws}, ignored, nil
+	}
+
+	var port *uint16
+	if exposed != nil {
+		port = &exposed.port
 	}
 
 	bs := manifest.BackendService{}
@@ -85,10 +90,18 @@ func convertService(service *compose.ServiceConfig) (*ConvertedService, IgnoredK
 	return &ConvertedService{BackendSvc: &bs}, ignored, nil
 }
 
+type exposedPort struct {
+	port   uint16
+	public bool
+}
+
 // findExposedPort attempts to detect a singular exposed port in the given service and determines if it is publicly exposed.
-func findExposedPort(service *compose.ServiceConfig) (*uint16, bool, error) {
+func findExposedPort(service *compose.ServiceConfig) (*exposedPort, error) {
 	// TODO: Port handling & exposed port detection, to be implemented in Milestone 3
-	return aws.Uint16(80), false, nil
+	return &exposedPort{
+		port:   80,
+		public: false,
+	}, nil
 }
 
 // convertTaskConfig converts environment variables, env files, and platform strings.
