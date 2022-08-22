@@ -11,6 +11,8 @@ import (
 	"sort"
 )
 
+type composeServices map[string]map[string]any
+
 // DecomposeService parses a Compose YAML file and then converts a single service to a Copilot manifest.
 func DecomposeService(content []byte, svcName string, workingDir string) (*manifest.LoadBalancedWebService, *manifest.BackendService, IgnoredKeys, error) {
 	config, err := loader.ParseYAML(content)
@@ -62,21 +64,21 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*manif
 	return lbws, bs, ignored, nil
 }
 
-func getServices(config map[string]interface{}) (map[string]map[string]interface{}, error) {
+func getServices(config map[string]any) (composeServices, error) {
 	svcs, ok := config["services"]
 	if !ok || svcs == nil {
 		return nil, fmt.Errorf("compose file has no services")
 	}
 
-	services, ok := svcs.(map[string]interface{})
+	services, ok := svcs.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("\"services\" top-level element was not a map, was: %v", svcs)
 	}
 
-	typedServices := make(map[string]map[string]interface{})
+	typedServices := make(composeServices)
 
 	for name, svc := range services {
-		service, ok := svc.(map[string]interface{})
+		service, ok := svc.(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("\"services.%s\" element was not a map", name)
 		}
@@ -87,7 +89,7 @@ func getServices(config map[string]interface{}) (map[string]map[string]interface
 }
 
 // serviceConfig extracts the map corresponding to a Compose service from the parsed Compose config map.
-func serviceConfig(services map[string]map[string]interface{}, svcName string) (map[string]interface{}, error) {
+func serviceConfig(services composeServices, svcName string) (map[string]any, error) {
 	service, ok := services[svcName]
 	if ok {
 		return service, nil
@@ -102,7 +104,7 @@ func serviceConfig(services map[string]map[string]interface{}, svcName string) (
 }
 
 // unsupportedServiceKeys scans over fields in the parsed yaml to find unsupported keys.
-func unsupportedServiceKeys(service map[string]interface{}, svcName string) (IgnoredKeys, error) {
+func unsupportedServiceKeys(service map[string]any, svcName string) (IgnoredKeys, error) {
 	var ignored, fatal []string
 
 	for key := range service {
