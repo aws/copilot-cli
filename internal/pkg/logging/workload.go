@@ -33,11 +33,11 @@ type logGetter interface {
 
 // WorkloadClient retrieves the logs of an Amazon ECS or AppRunner service.
 type WorkloadClient struct {
-	name                string
-	logGroupName        string
-	logStreamNamePrefix string
-	eventsGetter        logGetter
-	w                   io.Writer
+	name         string
+	logGroupName string
+	isECS        bool
+	eventsGetter logGetter
+	w            io.Writer
 
 	now func() time.Time
 }
@@ -116,12 +116,12 @@ func NewWorkloadClient(opts *NewWorkloadLogsConfig) (*WorkloadClient, error) {
 		logGroup = opts.LogGroup
 	}
 	return &WorkloadClient{
-		name:                opts.Name,
-		logGroupName:        logGroup,
-		logStreamNamePrefix: fmt.Sprintf("%s/%s", wkldLogStreamPrefix, opts.Name),
-		eventsGetter:        cloudwatchlogs.New(opts.Sess),
-		w:                   log.OutputWriter,
-		now:                 time.Now,
+		name:         opts.Name,
+		logGroupName: logGroup,
+		isECS:        true,
+		eventsGetter: cloudwatchlogs.New(opts.Sess),
+		w:            log.OutputWriter,
+		now:          time.Now,
 	}, nil
 }
 
@@ -180,7 +180,8 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	// TODO(lou1415926): there should be a separate logging client for ECS services
 	// and App Runner services. This `if` check is only ever true for ECS services.
 	// Refactor so that there are separate client for rdws, job and other services.
-	if s.logStreamNamePrefix != "" {
+	// As well as the `isECS` variable in `WorkloadClient`.
+	if s.isECS {
 		logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs, opts.IncludeStateMachineLogs, opts.ContainerName)
 	}
 	logEventsOpts.LogStreamLimit = logStreamLimit

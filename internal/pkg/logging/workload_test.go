@@ -24,7 +24,6 @@ type workloadLogsMocks struct {
 func TestWorkloadClient_WriteLogEvents(t *testing.T) {
 	const (
 		mockLogGroupName     = "mockLogGroup"
-		mockLogStreamPrefix  = "mockLogStreamPrefix"
 		logEventsHumanString = `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
@@ -263,11 +262,11 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 
 			b := &bytes.Buffer{}
 			svcLogs := &WorkloadClient{
-				name:                "mockSvc",
-				logGroupName:        mockLogGroupName,
-				logStreamNamePrefix: mockLogStreamPrefix,
-				eventsGetter:        mocklogGetter,
-				w:                   b,
+				name:         "mockSvc",
+				logGroupName: mockLogGroupName,
+				isECS:        true,
+				eventsGetter: mocklogGetter,
+				w:            b,
 				now: func() time.Time {
 					return mockCurrentTimestamp
 				},
