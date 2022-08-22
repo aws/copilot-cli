@@ -150,7 +150,6 @@ func TestEnvShow_Execute(t *testing.T) {
 			Name:             "testEnv",
 			Region:           "us-west-2",
 			AccountID:        "123456789012",
-			Prod:             false,
 			RegistryURL:      "",
 			ExecutionRoleARN: "",
 			ManagerRoleARN:   "",
@@ -227,7 +226,6 @@ func TestEnvShow_Execute(t *testing.T) {
 			wantedContent: `About
 
   Name        testEnv
-  Production  false
   Region      us-west-2
   Account ID  123456789012
 
@@ -263,7 +261,7 @@ Resources
 				m.describer.EXPECT().Describe().Return(&mockEnvDescription, nil)
 			},
 
-			wantedContent: "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"jobs\":[{\"app\":\"testApp\",\"name\":\"testJob1\",\"type\":\"Scheduled Job\"},{\"app\":\"testApp\",\"name\":\"testJob2\",\"type\":\"Scheduled Job\"}],\"tags\":{\"copilot-application\":\"testApp\",\"copilot-environment\":\"testEnv\",\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}],\"environmentVPC\":{\"id\":\"\",\"publicSubnetIDs\":null,\"privateSubnetIDs\":null}}\n",
+			wantedContent: "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"jobs\":[{\"app\":\"testApp\",\"name\":\"testJob1\",\"type\":\"Scheduled Job\"},{\"app\":\"testApp\",\"name\":\"testJob2\",\"type\":\"Scheduled Job\"}],\"tags\":{\"copilot-application\":\"testApp\",\"copilot-environment\":\"testEnv\",\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}],\"environmentVPC\":{\"id\":\"\",\"publicSubnetIDs\":null,\"privateSubnetIDs\":null}}\n",
 		},
 		"should print manifest file": {
 			inputEnv:             "testEnv",

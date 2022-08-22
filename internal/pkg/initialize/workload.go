@@ -20,12 +20,6 @@ import (
 )
 
 const (
-	fmtAddWlToAppStart    = "Creating ECR repositories for %s %s."
-	fmtAddWlToAppFailed   = "Failed to create ECR repositories for %s %s.\n\n"
-	fmtAddWlToAppComplete = "Created ECR repositories for %s %s.\n\n"
-)
-
-const (
 	jobWlType = "job"
 	svcWlType = "service"
 )
@@ -255,12 +249,9 @@ func (w *WorkloadInitializer) addJobToAppAndSSM(app *config.Application, props W
 }
 
 func (w *WorkloadInitializer) addWlToAppAndSSM(app *config.Application, props WorkloadProps, wlType string) error {
-	w.Prog.Start(fmt.Sprintf(fmtAddWlToAppStart, wlType, props.Name))
 	if err := w.addWlToApp(app, props.Name, wlType); err != nil {
-		w.Prog.Stop(log.Serrorf(fmtAddWlToAppFailed, wlType, props.Name))
 		return fmt.Errorf("add %s %s to application %s: %w", wlType, props.Name, props.App, err)
 	}
-	w.Prog.Stop(log.Ssuccessf(fmtAddWlToAppComplete, wlType, props.Name))
 
 	if err := w.addWlToStore(&config.Workload{
 		App:  props.App,

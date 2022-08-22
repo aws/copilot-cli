@@ -32,7 +32,6 @@ var _ = Describe("Task", func() {
 				AppName: appName,
 				EnvName: envName,
 				Profile: "default",
-				Prod:    false,
 			})
 		})
 

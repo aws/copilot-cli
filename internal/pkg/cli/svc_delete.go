@@ -37,12 +37,6 @@ const (
 	svcDeleteFromEnvConfirmHelp      = "This will remove the service from just the %s environment."
 )
 
-const (
-	fmtSvcDeleteResourcesStart    = "Deleting resources of service %s from application %s."
-	fmtSvcDeleteResourcesFailed   = "Failed to delete resources of service %s from application %s.\n"
-	fmtSvcDeleteResourcesComplete = "Deleted resources of service %s from application %s.\n"
-)
-
 var (
 	errSvcDeleteCancelled = errors.New("svc delete cancelled - no changes made")
 )
@@ -300,14 +294,11 @@ func (o *deleteSvcOpts) removeSvcFromApp() error {
 		return err
 	}
 
-	o.spinner.Start(fmt.Sprintf(fmtSvcDeleteResourcesStart, o.name, o.appName))
 	if err := o.appCFN.RemoveServiceFromApp(proj, o.name); err != nil {
 		if !isStackSetNotExistsErr(err) {
-			o.spinner.Stop(log.Serrorf(fmtSvcDeleteResourcesFailed, o.name, o.appName))
 			return err
 		}
 	}
-	o.spinner.Stop(log.Ssuccessf(fmtSvcDeleteResourcesComplete, o.name, o.appName))
 	return nil
 }
 

@@ -6,10 +6,11 @@ package isolated_test
 import (
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
 )
 
 var _ = Describe("Isolated", func() {
@@ -71,7 +72,6 @@ var _ = Describe("Isolated", func() {
 				AppName:       appName,
 				EnvName:       envName,
 				Profile:       "default",
-				Prod:          false,
 				VPCImport:     vpcImport,
 				CustomizedEnv: true,
 			})
@@ -98,7 +98,6 @@ var _ = Describe("Isolated", func() {
 			Expect(len(envListOutput.Envs)).To(Equal(1))
 			env := envListOutput.Envs[0]
 			Expect(env.Name).To(Equal(envName))
-			Expect(env.Prod).To(BeFalse())
 			Expect(env.ExecutionRole).NotTo(BeEmpty())
 			Expect(env.ManagerRole).NotTo(BeEmpty())
 		})

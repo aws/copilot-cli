@@ -105,7 +105,6 @@ var _ = Describe("sidecars flow", func() {
 				AppName: appName,
 				EnvName: "test",
 				Profile: "default",
-				Prod:    false,
 			})
 		})
 

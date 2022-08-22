@@ -71,9 +71,6 @@ https://aws.github.io/copilot-cli/docs/credentials/#environment-credentials`
 	fmtDNSDelegationStart    = "Sharing DNS permissions for this application to account %s."
 	fmtDNSDelegationFailed   = "Failed to grant DNS permissions to account %s.\n\n"
 	fmtDNSDelegationComplete = "Shared DNS permissions for this application to account %s.\n\n"
-	fmtAddEnvToAppStart      = "Linking account %s and region %s to application %s."
-	fmtAddEnvToAppFailed     = "Failed to link account %s and region %s to application %s.\n\n"
-	fmtAddEnvToAppComplete   = "Linked account %s and region %s to application %s.\n\n"
 )
 
 var (
@@ -309,7 +306,6 @@ func (o *initEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get environment struct for %s: %w", o.name, err)
 	}
-	env.Prod = o.isProduction
 	if err := o.store.CreateEnvironment(env); err != nil {
 		return fmt.Errorf("store environment: %w", err)
 	}
@@ -726,13 +722,9 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 }
 
 func (o *initEnvOpts) addToStackset(opts *deploycfn.AddEnvToAppOpts) error {
-	o.prog.Start(fmt.Sprintf(fmtAddEnvToAppStart, color.Emphasize(opts.EnvAccountID), color.Emphasize(opts.EnvRegion), color.HighlightUserInput(o.appName)))
 	if err := o.appDeployer.AddEnvToApp(opts); err != nil {
-		o.prog.Stop(log.Serrorf(fmtAddEnvToAppFailed, color.Emphasize(opts.EnvAccountID), color.Emphasize(opts.EnvRegion), color.HighlightUserInput(o.appName)))
 		return fmt.Errorf("add env %s to application %s: %w", opts.EnvName, opts.App.Name, err)
 	}
-	o.prog.Stop(log.Ssuccessf(fmtAddEnvToAppComplete, color.Emphasize(opts.EnvAccountID), color.Emphasize(opts.EnvRegion), color.HighlightUserInput(o.appName)))
-
 	return nil
 }
 

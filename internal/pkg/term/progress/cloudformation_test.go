@@ -9,6 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation/stackset"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+
 	"github.com/aws/copilot-cli/internal/pkg/stream"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
@@ -111,6 +115,120 @@ world
 `, buf.String(), "expected each renderer to be rendered")
 }
 
+func TestStackSetComponent_Listen(t *testing.T) {
+	t.Run("should update statuses and timer when an operation event is received", func(t *testing.T) {
+		// GIVEN
+		ch := make(chan stream.StackSetOpEvent)
+		done := make(chan struct{})
+		clock := &fakeClock{
+			wantedValues: []time.Time{testDate, testDate.Add(10 * time.Second)},
+		}
+		r := &stackSetComponent{
+			stream:   ch,
+			done:     done,
+			statuses: []cfnStatus{notStartedStackStatus},
+			stopWatch: &stopWatch{
+				clock: clock,
+			},
+		}
+
+		// WHEN
+		go r.Listen()
+		go func() {
+			// emulate the streamer.
+			ch <- stream.StackSetOpEvent{
+				Operation: stackset.Operation{
+					Status: "RUNNING",
+				},
+			}
+			ch <- stream.StackSetOpEvent{
+				Operation: stackset.Operation{
+					Status: "SUCCEEDED",
+				},
+			}
+			close(ch)
+		}()
+
+		// THEN
+		<-r.Done()
+		require.ElementsMatch(t, []cfnStatus{
+			notStartedStackStatus,
+			{
+				value: stackset.OpStatus("RUNNING"),
+			},
+			{
+				value: stackset.OpStatus("SUCCEEDED"),
+			},
+		}, r.statuses)
+		_, hasStarted := r.stopWatch.elapsed()
+		require.True(t, hasStarted, "the stopwatch should have started")
+	})
+}
+
+func TestStackSetComponent_Render(t *testing.T) {
+	t.Run("renders a stack set operation that succeeded", func(t *testing.T) {
+		// GIVEN
+		r := &stackSetComponent{
+			title: "Update stack set demo-infrastructure",
+			statuses: []cfnStatus{
+				notStartedStackStatus,
+				{
+					value: stackset.OpStatus("SUCCEEDED"),
+				},
+			},
+			stopWatch: &stopWatch{
+				startTime: testDate,
+				stopTime:  testDate.Add(1*time.Minute + 10*time.Second + 100*time.Millisecond),
+				started:   true,
+				stopped:   true,
+			},
+			separator: '\t',
+		}
+		buf := new(strings.Builder)
+
+		// WHEN
+		nl, err := r.Render(buf)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, 1, nl, "expected to be rendered as a single line component")
+		require.Equal(t, "- Update stack set demo-infrastructure\t[succeeded]\t[70.1s]\n", buf.String())
+	})
+	t.Run("renders a stack set operation that failed", func(t *testing.T) {
+		// GIVEN
+		r := &stackSetComponent{
+			title: "Update stack set demo-infrastructure",
+			statuses: []cfnStatus{
+				notStartedStackStatus,
+				{
+					value: stackset.OpStatus("RUNNING"),
+				},
+				{
+					value:  stackset.OpStatus("FAILED"),
+					reason: "The Operation 1 has failed to create",
+				},
+			},
+			stopWatch: &stopWatch{
+				startTime: testDate,
+				stopTime:  testDate,
+				started:   true,
+				stopped:   true,
+			},
+			separator: '\t',
+		}
+		buf := new(strings.Builder)
+
+		// WHEN
+		nl, err := r.Render(buf)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, 2, nl, "expected 2 entries to be printed to the terminal")
+		require.Equal(t, "- Update stack set demo-infrastructure\t[failed]\t[0.0s]\n"+
+			"  The Operation 1 has failed to create\t\t\n", buf.String())
+	})
+}
+
 func TestRegularResourceComponent_Listen(t *testing.T) {
 	t.Run("should not add status if no events are received for the logical ID", func(t *testing.T) {
 		// GIVEN
@@ -118,7 +236,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		done := make(chan struct{})
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
-			statuses:  []stackStatus{notStartedStackStatus},
+			statuses:  []cfnStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
 				clock: &fakeClock{
 					wantedValues: []time.Time{testDate},
@@ -140,7 +258,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 
 		// THEN
 		<-done // Wait for listen to exit.
-		require.ElementsMatch(t, []stackStatus{notStartedStackStatus}, comp.statuses)
+		require.ElementsMatch(t, []cfnStatus{notStartedStackStatus}, comp.statuses)
 		_, hasStarted := comp.stopWatch.elapsed()
 		require.False(t, hasStarted, "the stopwatch should not have started")
 	})
@@ -150,7 +268,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		done := make(chan struct{})
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
-			statuses:  []stackStatus{notStartedStackStatus},
+			statuses:  []cfnStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
 				clock: &fakeClock{
 					wantedValues: []time.Time{testDate},
@@ -177,10 +295,10 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 
 		// THEN
 		<-done // Wait for listen to exit.
-		require.ElementsMatch(t, []stackStatus{
+		require.ElementsMatch(t, []cfnStatus{
 			notStartedStackStatus,
 			{
-				value:  "CREATE_FAILED",
+				value:  cloudformation.StackStatus("CREATE_FAILED"),
 				reason: "This IAM role already exists.",
 			},
 		}, comp.statuses)
@@ -197,7 +315,7 @@ func TestRegularResourceComponent_Listen(t *testing.T) {
 		}
 		comp := &regularResourceComponent{
 			logicalID: "EnvironmentManagerRole",
-			statuses:  []stackStatus{notStartedStackStatus},
+			statuses:  []cfnStatus{notStartedStackStatus},
 			stopWatch: &stopWatch{
 				clock: fc,
 			},
@@ -232,10 +350,10 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		// GIVEN
 		comp := &regularResourceComponent{
 			description: "An ECS cluster to hold your services",
-			statuses: []stackStatus{
+			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
-					value: "CREATE_COMPLETE",
+					value: cloudformation.StackStatus("CREATE_COMPLETE"),
 				},
 			},
 			stopWatch: &stopWatch{
@@ -260,10 +378,10 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		// GIVEN
 		comp := &regularResourceComponent{
 			description: "An ECS cluster to hold your services",
-			statuses: []stackStatus{
+			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
-					value: "CREATE_IN_PROGRESS",
+					value: cloudformation.StackStatus("CREATE_IN_PROGRESS"),
 				},
 			},
 			stopWatch: &stopWatch{
@@ -289,19 +407,19 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		// GIVEN
 		comp := &regularResourceComponent{
 			description: `The environment stack "phonetool-test" contains your shared resources between services`,
-			statuses: []stackStatus{
+			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
-					value: "CREATE_IN_PROGRESS",
+					value: cloudformation.StackStatus("CREATE_IN_PROGRESS"),
 				},
 				{
-					value: "CREATE_FAILED",
+					value: cloudformation.StackStatus("CREATE_FAILED"),
 					reason: "The following resource(s) failed to create: [PublicSubnet2, CloudformationExecutionRole, " +
 						"PrivateSubnet1, InternetGatewayAttachment, PublicSubnet1, ServiceDiscoveryNamespace," +
 						" PrivateSubnet2], EnvironmentSecurityGroup, PublicRouteTable]. Rollback requested by user.",
 				},
 				{
-					value: "DELETE_COMPLETE",
+					value: cloudformation.StackStatus("DELETE_COMPLETE"),
 				},
 			},
 			stopWatch: &stopWatch{
@@ -330,17 +448,17 @@ func TestRegularResourceComponent_Render(t *testing.T) {
 		// GIVEN
 		comp := &regularResourceComponent{
 			description: `The environment stack "phonetool-test" contains your shared resources between services`,
-			statuses: []stackStatus{
+			statuses: []cfnStatus{
 				notStartedStackStatus,
 				{
-					value: "CREATE_IN_PROGRESS",
+					value: cloudformation.StackStatus("CREATE_IN_PROGRESS"),
 				},
 				{
-					value:  "CREATE_FAILED",
+					value:  cloudformation.StackStatus("CREATE_FAILED"),
 					reason: "Resource creation cancelled",
 				},
 				{
-					value:  "DELETE_FAILED",
+					value:  cloudformation.StackStatus("DELETE_FAILED"),
 					reason: "Resource cannot be deleted",
 				},
 			},

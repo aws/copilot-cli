@@ -38,6 +38,7 @@ const (
 	limitFlag             = "limit"
 	lastFlag              = "last"
 	followFlag            = "follow"
+	previousFlag          = "previous"
 	sinceFlag             = "since"
 	startTimeFlag         = "start-time"
 	endTimeFlag           = "end-time"
@@ -136,6 +137,7 @@ const (
 	envFlagShort      = "e"
 	typeFlagShort     = "t"
 	workloadFlagShort = "w"
+	previousFlagShort = "p"
 
 	dockerFileFlagShort        = "d"
 	commandFlagShort           = "c"
@@ -231,8 +233,9 @@ Uploaded asset locations are filled in the template configuration.`
 unless any time filtering flags are set.`
 	lastFlagDescription = `Optional. The number of executions of the scheduled job for which
 logs should be shown.`
-	followFlagDescription = "Optional. Specifies if the logs should be streamed."
-	sinceFlagDescription  = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
+	followFlagDescription   = "Optional. Specifies if the logs should be streamed."
+	previousFlagDescription = "Optional. Print logs for the last stopped task if exists."
+	sinceFlagDescription    = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
 Defaults to all logs. Only one of start-time / since may be used.`
 	startTimeFlagDescription = `Optional. Only return logs after a specific date (RFC3339).
 Defaults to all logs. Only one of start-time / since may be used.`

@@ -14,13 +14,47 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockCloudFormation struct {
+type mockStackClient struct {
 	out *cloudformation.DescribeStackEventsOutput
 	err error
 }
 
-func (m mockCloudFormation) DescribeStackEvents(*cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
+func (m mockStackClient) DescribeStackEvents(*cloudformation.DescribeStackEventsInput) (*cloudformation.DescribeStackEventsOutput, error) {
 	return m.out, m.err
+}
+
+func TestStackStreamer_Region(t *testing.T) {
+	testCases := map[string]struct {
+		stackID string
+
+		wantedRegion string
+		wantedOK     bool
+	}{
+		"should return false when the stack id isn't an ARN": {
+			stackID:      "StackSet-demo-infrastructure-7382d3ee-6823-4967-9bcf-8a9118259998",
+			wantedRegion: "",
+			wantedOK:     false,
+		},
+		"should return the region when the stack id is an ARN": {
+			stackID:      "arn:aws:cloudformation:ap-northeast-1:1111:stack/StackSet-demo-infrastructure-7382d3ee-6823-4967-9bcf-8a9118259998/23f0ecb0-1d7e-11ed-af45-06a7c29c9545",
+			wantedRegion: "ap-northeast-1",
+			wantedOK:     true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			streamer := NewStackStreamer(nil, tc.stackID, time.Now())
+
+			// WHEN
+			region, ok := streamer.Region()
+
+			// THEN
+			require.Equal(t, tc.wantedOK, ok)
+			require.Equal(t, tc.wantedRegion, region)
+		})
+	}
 }
 
 func TestStackStreamer_Subscribe(t *testing.T) {
@@ -93,7 +127,7 @@ func TestStackStreamer_Notify(t *testing.T) {
 func testStackStreamer_Fetch_Success(t *testing.T) {
 	// GIVEN
 	startTime := time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC)
-	client := mockCloudFormation{
+	client := mockStackClient{
 		// Events are in reverse chronological order.
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
@@ -176,7 +210,7 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 
 func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
 	// GIVEN
-	client := mockCloudFormation{
+	client := mockStackClient{
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
 				{
@@ -208,7 +242,7 @@ func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
 func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 	// GIVEN
 	startTime := time.Date(2020, time.November, 23, 16, 0, 0, 0, time.UTC)
-	client := mockCloudFormation{
+	client := mockStackClient{
 
 		out: &cloudformation.DescribeStackEventsOutput{
 			StackEvents: []*cloudformation.StackEvent{
@@ -255,7 +289,7 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 
 func testStackStreamer_Fetch_WithError(t *testing.T) {
 	// GIVEN
-	client := mockCloudFormation{
+	client := mockStackClient{
 		err: errors.New("some error"),
 	}
 	streamer := &StackStreamer{
@@ -276,7 +310,7 @@ func testStackStreamer_Fetch_WithError(t *testing.T) {
 
 func testStackStreamer_Fetch_withThrottle(t *testing.T) {
 	// GIVEN
-	client := &mockCloudFormation{
+	client := &mockStackClient{
 		err: awserr.New("RequestThrottled", "throttle err", errors.New("abc")),
 	}
 	streamer := &StackStreamer{

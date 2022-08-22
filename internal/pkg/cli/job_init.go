@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -99,7 +100,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		Store:    store,
 		Ws:       ws,
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
-		Deployer: cloudformation.New(sess),
+		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
 
 	prompter := prompt.New()

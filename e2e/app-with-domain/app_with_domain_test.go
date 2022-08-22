@@ -61,7 +61,6 @@ var _ = Describe("App With Domain", func() {
 						AppName: appName,
 						EnvName: "test",
 						Profile: "default",
-						Prod:    false,
 					})
 					if err == nil {
 						break
@@ -79,7 +78,6 @@ var _ = Describe("App With Domain", func() {
 						AppName: appName,
 						EnvName: "prod",
 						Profile: prodEnvironmentProfile,
-						Prod:    false,
 					})
 					if err == nil {
 						break

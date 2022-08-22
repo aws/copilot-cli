@@ -1,0 +1,16 @@
+name: frontend
+type: Load Balanced Web Service
+image:
+  build:
+    dockerfile: src/Dockerfile
+    context: src
+  port: 80
+
+http:
+  path: '/'
+  alias: "test.copilot-e2e-tests.ecs.aws.dev"
+  hosted_zone: "Z0512687YJJFTKMRQUQR"
+
+cpu: 256
+memory: 512
+count: 1

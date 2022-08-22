@@ -417,7 +417,7 @@ http:
   public:
     access_logs:
       bucket_name: testbucket
-      bucket_prefix: testprefix`,
+      prefix: prefix`,
 			wantedStruct: &Environment{
 				Workload: Workload{
 					Name: aws.String("prod"),
@@ -428,8 +428,8 @@ http:
 						Public: PublicHTTPConfig{
 							ELBAccessLogs: ELBAccessLogsArgsOrBool{
 								AdvancedConfig: ELBAccessLogsArgs{
-									BucketPrefix: aws.String("testprefix"),
-									BucketName:   aws.String("testbucket"),
+									Prefix:     aws.String("prefix"),
+									BucketName: aws.String("testbucket"),
 								},
 							},
 						},
@@ -969,8 +969,8 @@ func TestEnvironmentConfig_ELBAccessLogs(t *testing.T) {
 					Public: PublicHTTPConfig{
 						ELBAccessLogs: ELBAccessLogsArgsOrBool{
 							AdvancedConfig: ELBAccessLogsArgs{
-								BucketPrefix: aws.String("bucketprefix"),
-								BucketName:   aws.String("bucketname"),
+								Prefix:     aws.String("prefix"),
+								BucketName: aws.String("bucketname"),
 							},
 						},
 					},
@@ -978,8 +978,8 @@ func TestEnvironmentConfig_ELBAccessLogs(t *testing.T) {
 			},
 			wantedFlag: true,
 			wantedConfigs: &ELBAccessLogsArgs{
-				BucketName:   aws.String("bucketname"),
-				BucketPrefix: aws.String("bucketprefix"),
+				BucketName: aws.String("bucketname"),
+				Prefix:     aws.String("prefix"),
 			},
 		},
 	}
