@@ -4,15 +4,11 @@
 package manifest
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"testing"
 
-	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/fatih/structs"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -141,53 +137,7 @@ func TestNewPipelineManifest(t *testing.T) {
 	}
 }
 
-func TestPipelineManifest_MarshalBinary(t *testing.T) {
-	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, manifest *Pipeline)
-
-		wantedBinary []byte
-		wantedError  error
-	}{
-		"error parsing template": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *Pipeline) {
-				m := mocks.NewMockParser(ctrl)
-				manifest.parser = m
-				m.EXPECT().Parse(pipelineManifestPath, *manifest).Return(nil, errors.New("some error"))
-			},
-
-			wantedError: errors.New("some error"),
-		},
-		"returns rendered content": {
-			mockDependencies: func(ctrl *gomock.Controller, manifest *Pipeline) {
-				m := mocks.NewMockParser(ctrl)
-				manifest.parser = m
-				m.EXPECT().Parse(pipelineManifestPath, *manifest).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
-
-			},
-
-			wantedBinary: []byte("hello"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			manifest := &Pipeline{}
-			tc.mockDependencies(ctrl, manifest)
-
-			// WHEN
-			b, err := manifest.MarshalBinary()
-
-			// THEN
-			require.Equal(t, tc.wantedError, err)
-			require.Equal(t, tc.wantedBinary, b)
-		})
-	}
-}
-
-func TestUnmarshalPipeline(t *testing.T) {
+func TestUnmarshalMarshalPipeline(t *testing.T) {
 	testCases := map[string]struct {
 		inContent        string
 		expectedManifest *Pipeline
@@ -313,6 +263,13 @@ stages:
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.Equal(t, tc.expectedManifest, m)
+
+				// round-trip
+				bin, err := m.MarshalBinary()
+				require.NoError(t, err)
+				m2, err := UnmarshalPipeline(bin)
+				require.NoError(t, err)
+				require.Equal(t, m, m2)
 			}
 		})
 	}
