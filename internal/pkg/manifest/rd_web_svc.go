@@ -18,8 +18,6 @@ type RequestDrivenWebService struct {
 	Workload                      `yaml:",inline"`
 	RequestDrivenWebServiceConfig `yaml:",inline"`
 	Environments                  map[string]*RequestDrivenWebServiceConfig `yaml:",flow"` // Fields to override per environment.
-
-	parser template.Parser
 }
 
 func (s *RequestDrivenWebService) subnets() *SubnetListOrArgs {
@@ -107,14 +105,13 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
-	svc.parser = template.New()
 	return svc
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *RequestDrivenWebService) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(requestDrivenWebSvcManifestPath, *s)
+	content, err := template.New().Parse(requestDrivenWebSvcManifestPath, *s)
 	if err != nil {
 		return nil, err
 	}

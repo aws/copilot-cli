@@ -44,8 +44,6 @@ type LoadBalancedWebService struct {
 	LoadBalancedWebServiceConfig `yaml:",inline"`
 	// Use *LoadBalancedWebServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
-
-	parser template.Parser
 }
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
@@ -94,7 +92,6 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 		svc.RoutingRule.ProtocolVersion = &props.HTTPVersion
 	}
 	svc.RoutingRule.Path = aws.String(props.Path)
-	svc.parser = template.New()
 	return svc
 }
 
@@ -146,7 +143,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(lbWebSvcManifestPath, *s)
+	content, err := template.New().Parse(lbWebSvcManifestPath, *s)
 	if err != nil {
 		return nil, err
 	}

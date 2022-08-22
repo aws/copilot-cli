@@ -30,8 +30,6 @@ var (
 type Environment struct {
 	Workload          `yaml:",inline"`
 	EnvironmentConfig `yaml:",inline"`
-
-	parser template.Parser
 }
 
 // EnvironmentProps contains properties for creating a new environment manifest.
@@ -47,11 +45,11 @@ func NewEnvironment(props *EnvironmentProps) *Environment {
 		Name:         props.Name,
 		CustomConfig: props.CustomConfig,
 		Telemetry:    props.Telemetry,
-	}, template.New())
+	})
 }
 
 // FromEnvConfig transforms an environment configuration into a manifest.
-func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment {
+func FromEnvConfig(cfg *config.Environment) *Environment {
 	var vpc environmentVPCConfig
 	vpc.loadVPCConfig(cfg.CustomConfig)
 
@@ -73,14 +71,13 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 			HTTPConfig:    http,
 			Observability: obs,
 		},
-		parser: parser,
 	}
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (e *Environment) MarshalBinary() ([]byte, error) {
-	content, err := e.parser.Parse(environmentManifestPath, *e, template.WithFuncs(map[string]interface{}{
+	content, err := template.New().Parse(environmentManifestPath, *e, template.WithFuncs(map[string]interface{}{
 		"fmtStringSlice": template.FmtSliceFunc,
 	}))
 	if err != nil {
