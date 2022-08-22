@@ -3,56 +3,64 @@
 
 package dockercompose
 
-// NOTE: This file is currently unused, it will be used in the next PR. Don't mind the comments for now!
-
 // IgnoredKeys stores a list of keys in the Compose YAML that couldn't be processed,
 // but are likely to not be significant enough to cause the converted application to
 // fail. It's expected that this will eventually be displayed to the user.
 type IgnoredKeys []string
 
-/*
 // ignoredServiceKeys lists out the keys on Compose services that are ignored in conversion.
 //
 // note: build keys are handled separately in convertBuildConfig
-var ignoredServiceKeys = map[string]struct{}{
-	"blkio_config":        {},
-	"cpu_count":           {},
-	"cpu_percent":         {},
-	"cpu_shares":          {},
-	"cpu_period":          {},
-	"cpu_quota":           {},
-	"cpu_rt_runtime":      {},
-	"cpu_rt_period":       {},
-	"cpus":                {},
-	"cpuset":              {},
-	"cap_add":             {},
-	"cap_drop":            {},
-	"cgroup_parent":       {},
-	"device_cgroup_rules": {},
-	"logging":             {},
-	"mac_address":         {},
-	"mem_limit":           {},
-	"mem_reservation":     {},
-	"mem_swappiness":      {},
-	"memswap_limit":       {},
-	"oom_kill_disable":    {},
-	"oom_score_adj":       {},
-	"pid":                 {},
-	"pids_limit":          {},
-	"profiles":            {},
-	"pull_policy":         {},
-	"runtime":             {},
-	"security_opt":        {},
-	"shm_size":            {},
-	"stdin_open":          {},
-	"storage_opt":         {},
-	"sysctls":             {},
-	"tmpfs":               {},
-	"user":                {},
-	"userns_mode":         {},
-	"hostname":            {},
-	"depends_on":          {},
-	"restart":             {},
+var ignoredServiceKeys = map[string]bool{
+	"blkio_config":        true,
+	"cpu_count":           true,
+	"cpu_percent":         true,
+	"cpu_shares":          true,
+	"cpu_period":          true,
+	"cpu_quota":           true,
+	"cpu_rt_runtime":      true,
+	"cpu_rt_period":       true,
+	"cpus":                true,
+	"cpuset":              true,
+	"cap_add":             true,
+	"cap_drop":            true,
+	"cgroup_parent":       true,
+	"device_cgroup_rules": true,
+	"logging":             true,
+	"mac_address":         true,
+	"mem_limit":           true,
+	"mem_reservation":     true,
+	"mem_swappiness":      true,
+	"memswap_limit":       true,
+	"oom_kill_disable":    true,
+	"oom_score_adj":       true,
+	"pid":                 true,
+	"pids_limit":          true,
+	"profiles":            true,
+	"pull_policy":         true,
+	"runtime":             true,
+	"security_opt":        true,
+	"shm_size":            true,
+	"stdin_open":          true,
+	"storage_opt":         true,
+	"sysctls":             true,
+	"tmpfs":               true,
+	"user":                true,
+	"userns_mode":         true,
+	"hostname":            true,
+	"depends_on":          true,
+	"restart":             true,
+	"read_only":           true,
+	"ulimits":             true,
+	// These aren't listed in the Compose spec, but are in the Compose structure...
+	// are these legacy variants of existing properties?
+	"custom_labels": true,
+	"log_driver":    true,
+	"log_opt":       true,
+	"net":           true,
+	"tty":           true,
+	"uts":           true,
+	"dockerfile":    true,
 }
 
 // fatalServiceKeys lists out the service keys that are unsupported and whose absence will
@@ -78,5 +86,16 @@ var fatalServiceKeys = map[string]string{
 	"stop_grace_period": "unsupported in Copilot manifests",
 	"stop_signal":       "unsupported in Copilot manifests",
 	"volumes_from":      "sharing volumes is not yet supported",
+	"volume_driver":     "Set the `driver` property on a volume instead",
+	// Lifted in Milestone 3
+	"expose": "implemented in milestone 3",
+	"ports":  "implemented in milestone 3",
+	// Lifted in Milestone 4
+	"volumes": "implemented in milestone 4",
+	// Lifted in Milestone 5
+	"secrets": "implemented in milestone 5",
+	// Lifted in Milestone 6
+	"networks": "implemented in Milestone 6",
+	// Lifted in stretch goal
+	"extra_hosts": "",
 }
-*/

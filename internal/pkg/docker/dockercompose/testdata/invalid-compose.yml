@@ -1,0 +1,4 @@
+services:
+ invalid:
+    build:
+      ssh: invalid-compose-file

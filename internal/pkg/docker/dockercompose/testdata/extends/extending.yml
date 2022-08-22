@@ -1,0 +1,5 @@
+services:
+  web:
+    extends:
+      file: extended.yml
+      service: webapp

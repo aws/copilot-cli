@@ -5,45 +5,103 @@ package dockercompose
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	compose "github.com/compose-spec/compose-go/types"
 	"time"
 )
 
-func convertBackendService(service *compose.ServiceConfig, port uint16) (*manifest.BackendServiceConfig, IgnoredKeys, error) {
+type ConvertedService struct {
+	LbSvc      *manifest.LoadBalancedWebService
+	BackendSvc *manifest.BackendService
+}
+
+func convertService(service *compose.ServiceConfig) (*ConvertedService, IgnoredKeys, error) {
 	image, ignored, err := convertImageConfig(service.Build, service.Labels, service.Image)
 	if err != nil {
-		return nil, nil, fmt.Errorf("convert image config: %w", err)
+		return nil, nil, err
 	}
 
 	taskCfg, err := convertTaskConfig(service)
 	if err != nil {
-		return nil, nil, fmt.Errorf("convert task config: %w", err)
+		return nil, nil, err
 	}
 
-	svcCfg := &manifest.BackendServiceConfig{
+	imgOverride := manifest.ImageOverride{
+		Command: manifest.CommandOverride{
+			StringSlice: service.Command,
+		},
+		EntryPoint: manifest.EntryPointOverride{
+			StringSlice: service.Entrypoint,
+		},
+	}
+
+	var hc manifest.ContainerHealthCheck
+	if service.HealthCheck != nil {
+		hc = convertHealthCheckConfig(service.HealthCheck)
+	}
+
+	exposed, err := findExposedPort(service)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if exposed != nil && exposed.public {
+		lbws := manifest.LoadBalancedWebService{}
+		lbws.Workload = manifest.Workload{
+			Name: &service.Name,
+			Type: aws.String(manifest.LoadBalancedWebServiceType),
+		}
+		lbws.LoadBalancedWebServiceConfig = manifest.LoadBalancedWebServiceConfig{
+			ImageConfig: manifest.ImageWithPortAndHealthcheck{
+				ImageWithPort: manifest.ImageWithPort{
+					Image: image,
+					Port:  &exposed.port,
+				},
+				HealthCheck: hc,
+			},
+			ImageOverride: imgOverride,
+			TaskConfig:    taskCfg,
+		}
+		return &ConvertedService{LbSvc: &lbws}, ignored, nil
+	}
+
+	var port *uint16
+	if exposed != nil {
+		port = &exposed.port
+	}
+
+	bs := manifest.BackendService{}
+	bs.Workload = manifest.Workload{
+		Name: &service.Name,
+		Type: aws.String(manifest.BackendServiceType),
+	}
+	bs.BackendServiceConfig = manifest.BackendServiceConfig{
 		ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 			ImageWithOptionalPort: manifest.ImageWithOptionalPort{
 				Image: image,
-				Port:  &port,
+				Port:  port,
 			},
+			HealthCheck: hc,
 		},
-		ImageOverride: manifest.ImageOverride{
-			Command: manifest.CommandOverride{
-				StringSlice: service.Command,
-			},
-			EntryPoint: manifest.EntryPointOverride{
-				StringSlice: service.Entrypoint,
-			},
-		},
-		TaskConfig: taskCfg,
+		ImageOverride: imgOverride,
+		TaskConfig:    taskCfg,
 	}
+	return &ConvertedService{BackendSvc: &bs}, ignored, nil
+}
 
-	if service.HealthCheck != nil {
-		svcCfg.ImageConfig.HealthCheck = convertHealthCheckConfig(service.HealthCheck)
-	}
+type exposedPort struct {
+	port   uint16
+	public bool
+}
 
-	return svcCfg, ignored, nil
+// findExposedPort attempts to detect a singular exposed port in the given service and determines if it is publicly exposed.
+func findExposedPort(service *compose.ServiceConfig) (*exposedPort, error) {
+	// TODO: Port handling & exposed port detection, to be implemented in Milestone 3
+	return &exposedPort{
+		port:   80,
+		public: false,
+	}, nil
 }
 
 // convertTaskConfig converts environment variables, env files, and platform strings.
@@ -62,6 +120,11 @@ func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, err
 			PlatformString: (*manifest.PlatformString)(nilIfEmpty(service.Platform)),
 		},
 		EnvFile: envFile,
+		Count: manifest.Count{
+			Value: aws.Int(1),
+		},
+		CPU:    aws.Int(256),
+		Memory: aws.Int(512),
 	}
 
 	envVars, err := convertMappingWithEquals(service.Environment)

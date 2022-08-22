@@ -1,0 +1,11 @@
+services:
+  complete:
+    healthcheck:
+      exthealthcheck: "extension field on healthcheck"
+      test: ["CMD", "/bin-echo"]
+      timeout: 5s
+      interval: 1s
+      retries: 100
+      start_period: 3s
+    build:
+      context: "dir"

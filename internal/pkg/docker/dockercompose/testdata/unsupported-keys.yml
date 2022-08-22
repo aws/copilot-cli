@@ -1,0 +1,21 @@
+services:
+  fatal1:
+    image: nginx
+    privileged: true
+    external_links:
+      - "app"
+    cpus: 6553600
+    cpu_count: 256
+    restart: never
+  fatal2:
+    build:
+      ssh: ["default"]
+  fatal3:
+    image: "wordpress"
+    domainname: "example.com"
+    init: true
+    networks:
+      testnet:
+        ipv6_address: "DEAD::BEEF"
+networks:
+  testnet:
