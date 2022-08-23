@@ -15,7 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatchlogs"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
 
@@ -31,7 +30,34 @@ type logGetter interface {
 	LogEvents(opts cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
-type workloadClient struct {
+// NewWorkloadLoggerOpts contains fields that initiate workloadLogger struct.
+type NewWorkloadLoggerOpts struct {
+	App         string
+	Env         string
+	Name        string
+	Sess        *session.Session
+	LogGroup    string
+	TaskIDs     []string
+	ConfigStore describe.ConfigStoreSvc
+}
+
+// newWorkloadLogger returns a workloadLogger for the svc service under env and app.
+// The logging client is initialized from the given sess session.
+func newWorkloadLogger(opts *NewWorkloadLoggerOpts) (*workloadLogger, error) {
+	logGroup := fmt.Sprintf(fmtWkldLogGroupName, opts.App, opts.Env, opts.Name)
+	if opts.LogGroup != "" {
+		logGroup = opts.LogGroup
+	}
+	return &workloadLogger{
+		name:         opts.Name,
+		logGroupName: logGroup,
+		eventsGetter: cloudwatchlogs.New(opts.Sess),
+		w:            log.OutputWriter,
+		now:          time.Now,
+	}, nil
+}
+
+type workloadLogger struct {
 	name         string
 	logGroupName string
 	eventsGetter logGetter
@@ -41,7 +67,7 @@ type workloadClient struct {
 }
 
 // WriteLogEvents writes service logs.
-func (s *workloadClient) writeEventLogs(logEventsOpts cloudwatchlogs.LogEventsOpts, onEvent func(io.Writer, []HumanJSONStringer) error, follow bool) error {
+func (s *workloadLogger) writeEventLogs(logEventsOpts cloudwatchlogs.LogEventsOpts, onEvent func(io.Writer, []HumanJSONStringer) error, follow bool) error {
 	for {
 		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)
 		if err != nil {
@@ -62,7 +88,7 @@ func (s *workloadClient) writeEventLogs(logEventsOpts cloudwatchlogs.LogEventsOp
 	}
 }
 
-func (s *workloadClient) ecsLogStreamPrefixes(taskIDs []string, container string) []string {
+func (s *workloadLogger) ecsLogStreamPrefixes(taskIDs []string, container string) []string {
 	// By default, we only want logs from copilot task log streams.
 	// This filters out log stream not starting with `copilot/`, or `copilot/datadog` if container is set.
 	if len(taskIDs) == 0 {
@@ -79,9 +105,20 @@ func (s *workloadClient) ecsLogStreamPrefixes(taskIDs []string, container string
 	return logStreamPrefixes
 }
 
+// NewECSServiceClient returns an ECSServiceClient for the svc service under env and app.
+func NewECSServiceClient(opts *NewWorkloadLoggerOpts) (*ECSServiceLogger, error) {
+	logger, err := newWorkloadLogger(opts)
+	if err != nil {
+		return nil, err
+	}
+	return &ECSServiceLogger{
+		workloadLogger: logger,
+	}, nil
+}
+
 // ECSServiceLogger retrieves the logs of an Amazon ECS service.
 type ECSServiceLogger struct {
-	*workloadClient
+	*workloadLogger
 }
 
 // WriteLogEvents writes service logs.
@@ -95,16 +132,59 @@ func (s *ECSServiceLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
 		LogStreamLimit:         opts.LogStreamLimit,
 		LogStreamPrefixFilters: s.logStreamPrefixes(opts.TaskIDs, opts.ContainerName),
 	}
-	return s.workloadClient.writeEventLogs(logEventsOpts, opts.OnEvents, opts.Follow)
+	return s.workloadLogger.writeEventLogs(logEventsOpts, opts.OnEvents, opts.Follow)
 }
 
 func (s *ECSServiceLogger) logStreamPrefixes(taskIDs []string, container string) []string {
 	return s.ecsLogStreamPrefixes(taskIDs, container)
 }
 
+// NewAppRunnerServiceLogger returns an AppRunnerServiceLogger for the svc service under env and app.
+func NewAppRunnerServiceLogger(opts *NewWorkloadLoggerOpts) (*AppRunnerServiceLogger, error) {
+	logger, err := newWorkloadLogger(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if opts.TaskIDs != nil {
+		return nil, fmt.Errorf("cannot use --tasks for App Runner service logs")
+	}
+	serviceDescriber, err := describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
+		App: opts.App,
+		Svc: opts.Name,
+
+		ConfigStore: opts.ConfigStore,
+	})
+	if err != nil {
+		return nil, err
+	}
+	serviceArn, err := serviceDescriber.ServiceARN(opts.Env)
+	if err != nil {
+		return nil, err
+	}
+	logGroup := opts.LogGroup
+	switch strings.ToLower(logGroup) {
+	case "system":
+		logGroup, err = apprunner.SystemLogGroupName(serviceArn)
+		if err != nil {
+			return nil, fmt.Errorf("get system log group name: %w", err)
+		}
+	case "":
+		logGroup, err = apprunner.LogGroupName(serviceArn)
+		if err != nil {
+			return nil, fmt.Errorf("get log group name: %w", err)
+		}
+	}
+
+	logger.logGroupName = logGroup
+	return &AppRunnerServiceLogger{
+		workloadLogger: logger,
+	}, nil
+}
+
 // AppRunnerServiceLogger retrieves the logs of an AppRunner service.
 type AppRunnerServiceLogger struct {
-	*workloadClient
+	*workloadLogger
 }
 
 // WriteLogEvents writes service logs.
@@ -117,12 +197,23 @@ func (s *AppRunnerServiceLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
 		StreamLastEventTime: nil,
 		LogStreamLimit:      opts.LogStreamLimit,
 	}
-	return s.workloadClient.writeEventLogs(logEventsOpts, opts.OnEvents, opts.Follow)
+	return s.workloadLogger.writeEventLogs(logEventsOpts, opts.OnEvents, opts.Follow)
+}
+
+// NewJobLogger returns an JobLogger for the job under env and app.
+func NewJobLogger(opts *NewWorkloadLoggerOpts) (*JobLogger, error) {
+	logger, err := newWorkloadLogger(opts)
+	if err != nil {
+		return nil, err
+	}
+	return &JobLogger{
+		workloadLogger: logger,
+	}, nil
 }
 
 // JobLogger retrieves the logs of a job.
 type JobLogger struct {
-	*workloadClient
+	*workloadLogger
 }
 
 // WriteLogEvents writes job logs.
@@ -140,7 +231,7 @@ func (s *JobLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
 		LogStreamLimit:         logStreamLimit,
 		LogStreamPrefixFilters: s.logStreamPrefixes(opts.TaskIDs, opts.IncludeStateMachineLogs),
 	}
-	return s.workloadClient.writeEventLogs(logEventsOpts, opts.OnEvents, opts.Follow)
+	return s.workloadLogger.writeEventLogs(logEventsOpts, opts.OnEvents, opts.Follow)
 }
 
 //  The log stream prefixes for a job should be:
@@ -176,18 +267,6 @@ type WriteLogEventsOpts struct {
 	TaskIDs       []string
 }
 
-// NewWorkloadLogsConfig contains fields that initiates workloadClient struct.
-type NewWorkloadLogsConfig struct {
-	App         string
-	Env         string
-	Name        string
-	Sess        *session.Session
-	LogGroup    string
-	WkldType    string
-	TaskIDs     []string
-	ConfigStore describe.ConfigStoreSvc
-}
-
 func (o WriteLogEventsOpts) limit() *int64 {
 	if o.Limit != nil {
 		return o.Limit
@@ -221,62 +300,4 @@ func (o WriteLogEventsOpts) startTime(now func() time.Time) *int64 {
 
 func (o WriteLogEventsOpts) hasTimeFilters() bool {
 	return o.Follow || o.StartTime != nil || o.EndTime != nil
-}
-
-// NewWorkloadClient returns a workloadClient for the svc service under env and app.
-// The logging client is initialized from the given sess session.
-func NewWorkloadClient(opts *NewWorkloadLogsConfig) (*workloadClient, error) {
-	if opts.WkldType == manifest.RequestDrivenWebServiceType {
-		return newAppRunnerServiceClient(opts)
-	}
-	logGroup := fmt.Sprintf(fmtWkldLogGroupName, opts.App, opts.Env, opts.Name)
-	if opts.LogGroup != "" {
-		logGroup = opts.LogGroup
-	}
-	return &workloadClient{
-		name:         opts.Name,
-		logGroupName: logGroup,
-		eventsGetter: cloudwatchlogs.New(opts.Sess),
-		w:            log.OutputWriter,
-		now:          time.Now,
-	}, nil
-}
-
-func newAppRunnerServiceClient(opts *NewWorkloadLogsConfig) (*workloadClient, error) {
-	if opts.TaskIDs != nil {
-		return nil, fmt.Errorf("cannot use --tasks for App Runner service logs")
-	}
-	serviceDescriber, err := describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
-		App: opts.App,
-		Svc: opts.Name,
-
-		ConfigStore: opts.ConfigStore,
-	})
-	if err != nil {
-		return nil, err
-	}
-	serviceArn, err := serviceDescriber.ServiceARN(opts.Env)
-	if err != nil {
-		return nil, err
-	}
-	logGroup := opts.LogGroup
-	switch strings.ToLower(logGroup) {
-	case "system":
-		logGroup, err = apprunner.SystemLogGroupName(serviceArn)
-		if err != nil {
-			return nil, fmt.Errorf("get system log group name: %w", err)
-		}
-	case "":
-		logGroup, err = apprunner.LogGroupName(serviceArn)
-		if err != nil {
-			return nil, fmt.Errorf("get log group name: %w", err)
-		}
-	}
-	return &workloadClient{
-		name:         opts.Name,
-		logGroupName: logGroup,
-		eventsGetter: cloudwatchlogs.New(opts.Sess),
-		w:            log.OutputWriter,
-		now:          time.Now,
-	}, nil
 }

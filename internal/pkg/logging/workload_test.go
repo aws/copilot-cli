@@ -206,7 +206,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 
 			b := &bytes.Buffer{}
 			svcLogs := &ECSServiceLogger{
-				workloadClient: &workloadClient{
+				workloadLogger: &workloadLogger{
 					name:         "mockSvc",
 					logGroupName: mockLogGroupName,
 					eventsGetter: mocklogGetter,
@@ -327,7 +327,7 @@ instance/4e66ee07f2034a7c Server is running on port 4055
 
 			b := &bytes.Buffer{}
 			svcLogs := &AppRunnerServiceLogger{
-				workloadClient: &workloadClient{
+				workloadLogger: &workloadLogger{
 					logGroupName: mockLogGroupName,
 					eventsGetter: mocklogGetter,
 					w:            b,
@@ -557,7 +557,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 
 			b := &bytes.Buffer{}
 			svcLogs := &JobLogger{
-				workloadClient: &workloadClient{
+				workloadLogger: &workloadLogger{
 					name:         "mockSvc",
 					logGroupName: mockLogGroupName,
 					eventsGetter: mocklogGetter,
