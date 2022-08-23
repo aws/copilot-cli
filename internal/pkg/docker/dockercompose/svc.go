@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/afero"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -115,7 +116,8 @@ func findExposedPort(service *compose.ServiceConfig, workingDir string) (*expose
 			public: true,
 		}, nil
 	} else if len(service.Ports) > 1 {
-		return nil, fmt.Errorf("cannot expose more than one public port in Copilot, but %v ports are exposed publicly: %v", len(service.Ports), service.Ports)
+		return nil, fmt.Errorf("cannot expose more than one public port in Copilot, but %v ports are exposed publicly: %v",
+			len(service.Ports), service.Ports)
 	}
 
 	if len(service.Expose) == 1 {
@@ -129,7 +131,8 @@ func findExposedPort(service *compose.ServiceConfig, workingDir string) (*expose
 			public: false,
 		}, nil
 	} else if len(service.Expose) > 1 {
-		return nil, fmt.Errorf("cannot expose more than one port in Copilot, but %v ports are exposed: %v", len(service.Expose), service.Expose)
+		return nil, fmt.Errorf("cannot expose more than one port in Copilot, but %v ports are exposed: %s",
+			len(service.Expose), strings.Join(service.Expose, ", "))
 	}
 
 	if service.Image != "" || service.Build == nil {

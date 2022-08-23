@@ -80,7 +80,7 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "unsupported-keys.yml",
 			svcName:  "test",
 
-			wantError: errors.New("no service named \"test\" in this Compose file, valid services are: [fatal1 fatal2 fatal3]"),
+			wantError: errors.New("no service named \"test\" in this Compose file, valid services are: fatal1, fatal2, fatal3"),
 		},
 		"invalid service not a map": {
 			filename: "bad-service-compose.yml",
@@ -92,7 +92,7 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "unsupported-keys.yml",
 			svcName:  "fatal1",
 
-			wantError: errors.New("\"services.fatal1\" relies on fatally-unsupported Compose keys: [external_links privileged]"),
+			wantError: errors.New("\"services.fatal1\" relies on fatally-unsupported Compose keys: external_links, privileged"),
 		},
 		"unsupported keys fatal2": {
 			filename: "unsupported-keys.yml",
@@ -104,7 +104,7 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "unsupported-keys.yml",
 			svcName:  "fatal3",
 
-			wantError: errors.New("\"services.fatal3\" relies on fatally-unsupported Compose keys: [domainname init networks]"),
+			wantError: errors.New("\"services.fatal3\" relies on fatally-unsupported Compose keys: domainname, init, networks"),
 		},
 		"invalid compose": {
 			filename: "invalid-compose.yml",
@@ -116,37 +116,37 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "backend",
 
-			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: [secrets]"),
+			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: secrets"),
 		},
 		"nginx-golang-postgres db": {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "db",
 
-			wantError: errors.New("\"services.db\" relies on fatally-unsupported Compose keys: [secrets volumes]"),
+			wantError: errors.New("\"services.db\" relies on fatally-unsupported Compose keys: secrets, volumes"),
 		},
 		"nginx-golang-postgres proxy": {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "proxy",
 
-			wantError: errors.New("\"services.proxy\" relies on fatally-unsupported Compose keys: [volumes]"),
+			wantError: errors.New("\"services.proxy\" relies on fatally-unsupported Compose keys: volumes"),
 		},
 		"react-express-mongo frontend": {
 			filename: "react-express-mongo.yml",
 			svcName:  "frontend",
 
-			wantError: errors.New("\"services.frontend\" relies on fatally-unsupported Compose keys: [networks volumes]"),
+			wantError: errors.New("\"services.frontend\" relies on fatally-unsupported Compose keys: networks, volumes"),
 		},
 		"react-express-mongo backend": {
 			filename: "react-express-mongo.yml",
 			svcName:  "backend",
 
-			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: [networks volumes]"),
+			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: networks, volumes"),
 		},
 		"react-express-mongo mongo": {
 			filename: "react-express-mongo.yml",
 			svcName:  "mongo",
 
-			wantError: errors.New("\"services.mongo\" relies on fatally-unsupported Compose keys: [networks volumes]"),
+			wantError: errors.New("\"services.mongo\" relies on fatally-unsupported Compose keys: networks, volumes"),
 		},
 		"unrecognized-field-name": {
 			filename: "unrecognized-field-name.yml",
@@ -270,7 +270,7 @@ func TestDecomposeService_ExposedPorts(t *testing.T) {
 		},
 		{
 			svcName:   "two-exposed-ports",
-			wantError: errors.New("convert Compose service to Copilot manifest: cannot expose more than one port in Copilot, but 2 ports are exposed: [80 443]"),
+			wantError: errors.New("convert Compose service to Copilot manifest: cannot expose more than one port in Copilot, but 2 ports are exposed: 80, 443"),
 		},
 		{
 			svcName: "no-exposed-ports",
