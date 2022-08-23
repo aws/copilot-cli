@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
+	"github.com/mitchellh/mapstructure"
 	"sort"
 )
 
@@ -34,6 +35,15 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*Conve
 		return nil, nil, err
 	}
 
+	// workaround for compose-go automatically loading env files from disk and merging their
+	// content into the "environment" field (the equivalent of the Copilot variables key)
+	// TODO (rclinard-amzn): make a PR to compose-go instead of using this workaround
+	envFiles, err := isolateEnvFiles(service)
+	if err != nil {
+		return nil, nil, fmt.Errorf("isolate env file(s): %w", err)
+	}
+	removeEnvFiles(services)
+
 	project, err := loader.Load(compose.ConfigDetails{
 		WorkingDir: workingDir,
 		ConfigFiles: []compose.ConfigFile{
@@ -52,6 +62,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*Conve
 			"service is valid and exists")
 	}
 
+	svcConfig.EnvFile = envFiles
 	svc, svcIgnored, err := convertService(&svcConfig)
 	if err != nil {
 		return nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
@@ -121,4 +132,33 @@ func unsupportedServiceKeys(service map[string]any, svcName string) (IgnoredKeys
 	}
 
 	return ignored, nil
+}
+
+// isolateEnvFiles manually handles the env_file key so that compose-go does not try to read the env files from the disk.
+func isolateEnvFiles(service map[string]interface{}) ([]string, error) {
+	envFileStr := struct {
+		EnvFile string `mapstructure:"env_file"`
+	}{}
+	err := mapstructure.Decode(service, &envFileStr)
+
+	if err == nil && envFileStr.EnvFile != "" {
+		return []string{envFileStr.EnvFile}, nil
+	}
+
+	envFileOnly := struct {
+		EnvFile []string `mapstructure:"env_file"`
+	}{}
+	err = mapstructure.Decode(service, &envFileOnly)
+
+	if err == nil {
+		return envFileOnly.EnvFile, nil
+	}
+
+	return nil, err
+}
+
+func removeEnvFiles(services map[string]map[string]interface{}) {
+	for _, svc := range services {
+		delete(svc, "env_file")
+	}
 }

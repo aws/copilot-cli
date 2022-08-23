@@ -1,4 +1,10 @@
 services:
+  multiple-env-files:
+    image: "wordpress"
+    env_file:
+      - "file1.env"
+      - "file2.env"
+      - "file3.env"
   complete:
     runtime: "ignored"
     userns_mode: "ignored"
@@ -6,6 +12,7 @@ services:
 
     command: ["CMD-SHELL", "/bin/nginx"]
     entrypoint: ["CMD", "/bin/sh"]
+    env_file: "/file-that-does-not-exist.env"
     environment:
       HOST_PATH: "/home/nginx"
       ENABLE_HTTPS: "true"
