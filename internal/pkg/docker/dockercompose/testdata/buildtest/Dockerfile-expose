@@ -1,0 +1,2 @@
+FROM nginx
+EXPOSE 8096

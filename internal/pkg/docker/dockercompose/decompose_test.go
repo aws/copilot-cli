@@ -15,21 +15,55 @@ import (
 	"time"
 )
 
-func TestDecomposeService(t *testing.T) {
+type decomposeTest struct {
+	filename string
+	svcName  string
+	workDir  string
+
+	wantLbws          *manifest.LoadBalancedWebServiceConfig
+	wantBs            *manifest.BackendServiceConfig
+	wantIgnored       IgnoredKeys
+	wantError         error
+	wantErrorContains string
+}
+
+func runDecomposeTests(t *testing.T, testCases map[string]decomposeTest) {
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join("testdata", tc.filename)
+			cfg, err := os.ReadFile(path)
+			require.NoError(t, err)
+
+			svc, ign, err := DecomposeService(cfg, tc.svcName, filepath.Join("testdata", tc.workDir))
+
+			if tc.wantErrorContains != "" {
+				require.ErrorContains(t, err, tc.wantErrorContains)
+			} else if tc.wantError != nil {
+				require.EqualError(t, err, tc.wantError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantIgnored, ign)
+
+				if tc.wantLbws != nil {
+					require.NotNil(t, svc.LbSvc)
+					require.Nil(t, svc.BackendSvc)
+					require.Equal(t, tc.wantLbws, &svc.LbSvc.LoadBalancedWebServiceConfig)
+				} else {
+					require.Nil(t, svc.LbSvc)
+					require.NotNil(t, svc.BackendSvc)
+					require.Equal(t, tc.wantBs, &svc.BackendSvc.BackendServiceConfig)
+				}
+			}
+		})
+	}
+}
+
+func TestDecomposeService_General(t *testing.T) {
 	fiveSeconds := compose.Duration(5 * time.Second)
 	threeSeconds := compose.Duration(3 * time.Second)
 	oneSecond := compose.Duration(time.Second)
 
-	testCases := map[string]struct {
-		filename string
-		svcName  string
-		workDir  string
-
-		wantLbws    *manifest.LoadBalancedWebServiceConfig
-		wantBs      *manifest.BackendServiceConfig
-		wantIgnored IgnoredKeys
-		wantError   error
-	}{
+	testCases := map[string]decomposeTest{
 		"no services": {
 			filename: "empty-compose.yml",
 			svcName:  "test",
@@ -207,30 +241,159 @@ func TestDecomposeService(t *testing.T) {
 		},
 	}
 
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			path := filepath.Join("testdata", tc.filename)
-			cfg, err := os.ReadFile(path)
-			require.NoError(t, err)
+	runDecomposeTests(t, testCases)
+}
 
-			svc, ign, err := DecomposeService(cfg, tc.svcName, filepath.Join("testdata", tc.workDir))
-
-			if tc.wantError != nil {
-				require.EqualError(t, err, tc.wantError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantIgnored, ign)
-
-				if tc.wantLbws != nil {
-					require.NotNil(t, svc.LbSvc)
-					require.Nil(t, svc.BackendSvc)
-					require.Equal(t, tc.wantLbws, &svc.LbSvc.LoadBalancedWebServiceConfig)
-				} else {
-					require.Nil(t, svc.LbSvc)
-					require.NotNil(t, svc.BackendSvc)
-					require.Equal(t, tc.wantBs, &svc.BackendSvc.BackendServiceConfig)
-				}
-			}
-		})
+func TestDecomposeService_ExposedPorts(t *testing.T) {
+	taskCfg := manifest.TaskConfig{
+		CPU:    aws.Int(256),
+		Memory: aws.Int(512),
+		Count: manifest.Count{
+			Value: aws.Int(1),
+		},
 	}
+	nginxNoPorts := manifest.BackendServiceConfig{
+		ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+			ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+				Image: manifest.Image{
+					Location: aws.String("nginx"),
+				},
+			},
+		},
+		TaskConfig: taskCfg,
+	}
+
+	testCases := []decomposeTest{
+		{
+			svcName:           "two-public-ports",
+			wantErrorContains: "convert Compose service to Copilot manifest: cannot expose more than one public port in Copilot, but 2 ports are exposed publicly",
+		},
+		{
+			svcName:   "two-exposed-ports",
+			wantError: errors.New("convert Compose service to Copilot manifest: cannot expose more than one port in Copilot, but 2 ports are exposed: [80 443]"),
+		},
+		{
+			svcName: "no-exposed-ports",
+			wantBs:  &nginxNoPorts,
+		},
+		{
+			svcName: "different-public-and-exposed",
+			wantLbws: &manifest.LoadBalancedWebServiceConfig{
+				ImageConfig: manifest.ImageWithPortAndHealthcheck{
+					ImageWithPort: manifest.ImageWithPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+						},
+						Port: aws.Uint16(432),
+					},
+				},
+				TaskConfig: taskCfg,
+			},
+		},
+		{
+			svcName: "expose-and-ports",
+			wantLbws: &manifest.LoadBalancedWebServiceConfig{
+				ImageConfig: manifest.ImageWithPortAndHealthcheck{
+					ImageWithPort: manifest.ImageWithPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+						},
+						Port: aws.Uint16(8096),
+					},
+				},
+				TaskConfig: taskCfg,
+			},
+		},
+		{
+			svcName:   "remap-ports",
+			wantError: errors.New("convert Compose service to Copilot manifest: cannot publish the container port 80 under a different public port 8080 in Copilot"),
+		},
+		{
+			svcName:   "remap-ports-long-form",
+			wantError: errors.New("convert Compose service to Copilot manifest: cannot publish the container port 80 under a different public port 8080 in Copilot"),
+		},
+		{
+			svcName:   "invalid-expose",
+			wantError: errors.New("convert Compose service to Copilot manifest: could not parse exposed port: strconv.Atoi: parsing \"pony\": invalid syntax"),
+		},
+		{
+			filename:          "invalid-ports.yml",
+			svcName:           "invalid-ports",
+			wantErrorContains: "load Compose project: ",
+		},
+		{
+			svcName: "no-ports",
+			wantBs:  &nginxNoPorts,
+		},
+		{
+			svcName: "expose-only",
+			wantBs: &manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+						},
+						Port: aws.Uint16(80),
+					},
+				},
+				TaskConfig: taskCfg,
+			},
+		},
+		{
+			svcName: "parsed-from-dockerfile",
+			wantBs: &manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Build: manifest.BuildArgsOrString{
+								BuildArgs: manifest.DockerBuildArgs{
+									Context:    aws.String("buildtest"),
+									Dockerfile: aws.String("Dockerfile-expose"),
+								},
+							},
+						},
+						Port: aws.Uint16(8096),
+					},
+				},
+				TaskConfig: taskCfg,
+			},
+		},
+		{
+			svcName: "dockerfile-no-expose",
+			wantBs: &manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Build: manifest.BuildArgsOrString{
+								BuildArgs: manifest.DockerBuildArgs{
+									Context:    aws.String("buildtest"),
+									Dockerfile: aws.String("Dockerfile-no-expose"),
+								},
+							},
+						},
+					},
+				},
+				TaskConfig: taskCfg,
+			},
+		},
+		{
+			svcName:           "dockerfile-cant-parse",
+			wantErrorContains: "convert Compose service to Copilot manifest: parse dockerfile for exposed ports: ",
+		},
+		{
+			svcName:           "dockerfile-doesnt-exist",
+			wantErrorContains: "convert Compose service to Copilot manifest: parse dockerfile for exposed ports: open Dockerfile:",
+		},
+	}
+
+	actualTestCases := map[string]decomposeTest{}
+
+	for _, tc := range testCases {
+		if tc.filename == "" {
+			tc.filename = "exposed-port-tests.yml"
+		}
+		actualTestCases[tc.svcName] = tc
+	}
+
+	runDecomposeTests(t, actualTestCases)
 }

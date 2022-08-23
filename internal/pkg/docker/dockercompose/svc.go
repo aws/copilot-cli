@@ -21,7 +21,7 @@ type ConvertedService struct {
 	BackendSvc *manifest.BackendService
 }
 
-func convertService(service *compose.ServiceConfig) (*ConvertedService, IgnoredKeys, error) {
+func convertService(service *compose.ServiceConfig, workingDir string) (*ConvertedService, IgnoredKeys, error) {
 	image, ignored, err := convertImageConfig(service.Build, service.Labels, service.Image)
 	if err != nil {
 		return nil, nil, err
@@ -46,7 +46,7 @@ func convertService(service *compose.ServiceConfig) (*ConvertedService, IgnoredK
 		hc = convertHealthCheckConfig(service.HealthCheck)
 	}
 
-	exposed, err := findExposedPort(service)
+	exposed, err := findExposedPort(service, workingDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -101,7 +101,7 @@ type exposedPort struct {
 }
 
 // findExposedPort attempts to detect a singular exposed port in the given service and determines if it is publicly exposed.
-func findExposedPort(service *compose.ServiceConfig) (*exposedPort, error) {
+func findExposedPort(service *compose.ServiceConfig, workingDir string) (*exposedPort, error) {
 	if len(service.Ports) == 1 {
 		binding := service.Ports[0]
 		port := uint16(binding.Target)
@@ -115,7 +115,7 @@ func findExposedPort(service *compose.ServiceConfig) (*exposedPort, error) {
 			public: true,
 		}, nil
 	} else if len(service.Ports) > 1 {
-		return nil, fmt.Errorf("cannot expose more than one public port in Copilot, but %v ports are exposed publicly", len(service.Ports))
+		return nil, fmt.Errorf("cannot expose more than one public port in Copilot, but %v ports are exposed publicly: %v", len(service.Ports), service.Ports)
 	}
 
 	if len(service.Expose) == 1 {
@@ -129,7 +129,7 @@ func findExposedPort(service *compose.ServiceConfig) (*exposedPort, error) {
 			public: false,
 		}, nil
 	} else if len(service.Expose) > 1 {
-		return nil, fmt.Errorf("cannot expose more than one port in Copilot, but %v ports are exposed", len(service.Expose))
+		return nil, fmt.Errorf("cannot expose more than one port in Copilot, but %v ports are exposed: %v", len(service.Expose), service.Expose)
 	}
 
 	if service.Image != "" || service.Build == nil {
@@ -137,19 +137,22 @@ func findExposedPort(service *compose.ServiceConfig) (*exposedPort, error) {
 		return nil, nil
 	}
 
-	dockerfilePath := service.Build.Dockerfile
-	if dockerfilePath == "" {
-		dockerfilePath = filepath.Join(service.Build.Context, "Dockerfile")
-	}
-
-	if dockerfilePath == "" {
+	if service.Build.Context == "" {
 		return nil, errors.New("service is missing an image location or Dockerfile path")
 	}
 
+	dockerfilePath := service.Build.Dockerfile
+	if dockerfilePath == "" {
+		dockerfilePath = "Dockerfile"
+	}
+
+	dockerfilePath = filepath.Join(workingDir, service.Build.Context, dockerfilePath)
+
 	df := dockerfile.New(&afero.Afero{Fs: afero.NewOsFs()}, dockerfilePath)
 	ports, err := df.GetExposedPorts()
-	if err != nil {
-		return nil, fmt.Errorf("")
+	var exposeErr dockerfile.ErrNoExpose
+	if err != nil && !errors.As(err, &exposeErr) {
+		return nil, fmt.Errorf("parse dockerfile for exposed ports: %w", err)
 	}
 
 	if len(ports) == 0 {

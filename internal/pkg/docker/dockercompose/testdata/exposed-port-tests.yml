@@ -1,0 +1,66 @@
+services:
+  two-public-ports:
+    image: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+  two-exposed-ports:
+    image: nginx
+    expose:
+      - 80
+      - 443
+  no-exposed-ports:
+    image: nginx
+  expose-only:
+    image: nginx
+    expose:
+      - 80
+  different-public-and-exposed:
+    image: nginx
+    ports:
+      - "432:432"
+    expose:
+      - 80
+  expose-and-ports:
+    image: nginx
+    ports:
+      - "8096:8096"
+    expose:
+      - 8096
+  remap-ports:
+    image: nginx
+    ports:
+      - "8080:80"
+  remap-ports-long-form:
+    image: nginx
+    ports:
+      - published: 8080
+        target: 80
+        protocol: tcp
+  normal-ports-long-form:
+    image: nginx
+    ports:
+      - published: 80
+        target: 80
+  invalid-expose:
+    image: nginx
+    expose:
+      - "pony"
+  no-ports:
+    image: nginx
+  parsed-from-dockerfile:
+    build:
+      context: buildtest
+      dockerfile: Dockerfile-expose
+  dockerfile-no-expose:
+    build:
+      context: buildtest
+      dockerfile: Dockerfile-no-expose
+  dockerfile-cant-parse:
+    build:
+      context: buildtest
+      dockerfile: Dockerfile-unparseable
+  dockerfile-doesnt-exist:
+    build:
+      context: buildtest
+      dockerfile: Dockerfile-dsoajdosajoidsao
