@@ -103,7 +103,11 @@ type exposedPort struct {
 
 // findExposedPort attempts to detect a singular exposed port in the given service and determines if it is publicly exposed.
 func findExposedPort(service *compose.ServiceConfig, workingDir string) (*exposedPort, error) {
-	if len(service.Ports) == 1 {
+	switch {
+	case len(service.Ports) > 1:
+		return nil, fmt.Errorf("cannot expose more than one public port in Copilot, but %v ports are exposed publicly: %v",
+			len(service.Ports), service.Ports)
+	case len(service.Ports) == 1:
 		binding := service.Ports[0]
 		port := uint16(binding.Target)
 
@@ -115,12 +119,10 @@ func findExposedPort(service *compose.ServiceConfig, workingDir string) (*expose
 			port:   port,
 			public: true,
 		}, nil
-	} else if len(service.Ports) > 1 {
-		return nil, fmt.Errorf("cannot expose more than one public port in Copilot, but %v ports are exposed publicly: %v",
-			len(service.Ports), service.Ports)
-	}
-
-	if len(service.Expose) == 1 {
+	case len(service.Expose) > 1:
+		return nil, fmt.Errorf("cannot expose more than one port in Copilot, but %v ports are exposed: %s",
+			len(service.Expose), strings.Join(service.Expose, ", "))
+	case len(service.Expose) == 1:
 		port, err := strconv.Atoi(service.Expose[0])
 		if err != nil {
 			return nil, fmt.Errorf("could not parse exposed port: %w", err)
@@ -130,9 +132,6 @@ func findExposedPort(service *compose.ServiceConfig, workingDir string) (*expose
 			port:   uint16(port),
 			public: false,
 		}, nil
-	} else if len(service.Expose) > 1 {
-		return nil, fmt.Errorf("cannot expose more than one port in Copilot, but %v ports are exposed: %s",
-			len(service.Expose), strings.Join(service.Expose, ", "))
 	}
 
 	if service.Image != "" || service.Build == nil {
