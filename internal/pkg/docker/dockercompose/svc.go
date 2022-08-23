@@ -10,6 +10,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	compose "github.com/compose-spec/compose-go/types"
+	"github.com/docker/go-units"
 	"github.com/spf13/afero"
 	"path/filepath"
 	"strconv"
@@ -203,6 +204,11 @@ func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, err
 			"were attached to this service", len(service.EnvFile))
 	}
 
+	storage, err := convertVolumes(service.Volumes)
+	if err != nil {
+		return manifest.TaskConfig{}, err
+	}
+
 	taskCfg := manifest.TaskConfig{
 		Platform: manifest.PlatformArgsOrString{
 			PlatformString: (*manifest.PlatformString)(nilIfEmpty(service.Platform)),
@@ -211,8 +217,9 @@ func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, err
 		Count: manifest.Count{
 			Value: aws.Int(1),
 		},
-		CPU:    aws.Int(256),
-		Memory: aws.Int(512),
+		CPU:     aws.Int(256),
+		Memory:  aws.Int(512),
+		Storage: *storage,
 	}
 
 	envVars, err := convertMappingWithEquals(service.Environment)
@@ -225,6 +232,57 @@ func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, err
 	}
 
 	return taskCfg, nil
+}
+
+// convertVolumes converts a list of Compose volumes into the Copilot storage equivalent.
+func convertVolumes(volumes []compose.ServiceVolumeConfig) (*manifest.Storage, error) {
+	copilotVols := map[string]*manifest.Volume{}
+
+	var ephemeralBytes uint64 = 20 * units.GiB
+
+	for idx, vol := range volumes {
+		mountOpts := manifest.MountPointOpts{
+			ContainerPath: aws.String(vol.Target),
+			ReadOnly:      aws.Bool(vol.ReadOnly),
+		}
+
+		if vol.Type == "tmpfs" {
+			ephemeralBytes += uint64(vol.Tmpfs.Size)
+
+			name := fmt.Sprintf("tmpfs-%v", idx)
+			copilotVols[name] = &manifest.Volume{
+				EFS: manifest.EFSConfigOrBool{
+					Enabled: aws.Bool(false),
+				},
+				MountPointOpts: mountOpts,
+			}
+			continue
+		}
+
+		if vol.Type != "volume" {
+			// TODO (rclinard-amzn): Relax the "bind" restriction in Milestone 6
+			return nil, fmt.Errorf("volume type %v is not supported yet", vol.Type)
+		}
+
+		name := vol.Source
+		if copilotVols[name] != nil {
+			// avoid name collision
+			name = fmt.Sprintf("%s-%v", name, idx)
+		}
+
+		copilotVols[name] = &manifest.Volume{
+			EFS:            manifest.EFSConfigOrBool{},
+			MountPointOpts: mountOpts,
+		}
+	}
+
+	// math trick to round up to the next highest GiB if it's not an even size in GiB
+	ephemeralGiB := (ephemeralBytes + units.GiB - 1) / units.GiB
+
+	return &manifest.Storage{
+		Ephemeral: aws.Int(int(ephemeralGiB)),
+		Volumes:   copilotVols,
+	}, nil
 }
 
 // convertHealthCheckConfig trivially converts a Compose container health check into its Copilot variant.
