@@ -87,8 +87,6 @@ var fatalServiceKeys = map[string]string{
 	"stop_signal":       "unsupported in Copilot manifests",
 	"volumes_from":      "sharing volumes is not yet supported",
 	"volume_driver":     "Set the `driver` property on a volume instead",
-	// Lifted in Milestone 4
-	"volumes": "implemented in milestone 4",
 	// Lifted in Milestone 5
 	"secrets": "implemented in milestone 5",
 	// Lifted in Milestone 6
