@@ -11,6 +11,7 @@ import (
 	"time"
 
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -103,23 +104,17 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
-		workload, err := configStore.GetWorkload(opts.appName, opts.name)
-		if err != nil {
-			return fmt.Errorf("get workload: %w", err)
-		}
 		sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
 		}
 		opts.ecs = ecs.New(sess)
-		opts.logsSvc, err = logging.NewWorkloadClient(&logging.NewWorkloadLogsConfig{
+		opts.logsSvc, err = logging.newWorkloadClient(&logging.NewWorkloadLoggerOpts{
 			App:         opts.appName,
 			Env:         opts.envName,
 			Name:        opts.name,
 			Sess:        sess,
 			LogGroup:    opts.logGroup,
-			WkldType:    workload.Type,
-			TaskIDs:     opts.taskIDs,
 			ConfigStore: configStore,
 		})
 
@@ -174,7 +169,6 @@ func (o *svcLogsOpts) Validate() error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -273,6 +267,9 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 	deployedService, err := o.sel.DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, o.appName, selector.WithEnv(o.envName), selector.WithName(o.name))
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
+	}
+	if deployedService.SvcType == manifest.RequestDrivenWebServiceType && len(o.taskIDs) != 0 {
+		return fmt.Errorf("cannot use --tasks for App Runner service logs")
 	}
 	o.name = deployedService.Name
 	o.envName = deployedService.Env

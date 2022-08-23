@@ -37,7 +37,6 @@ type NewWorkloadLoggerOpts struct {
 	Name        string
 	Sess        *session.Session
 	LogGroup    string
-	TaskIDs     []string
 	ConfigStore describe.ConfigStoreSvc
 }
 
@@ -144,10 +143,6 @@ func NewAppRunnerServiceLogger(opts *NewWorkloadLoggerOpts) (*AppRunnerServiceLo
 	logger, err := newWorkloadLogger(opts)
 	if err != nil {
 		return nil, err
-	}
-
-	if opts.TaskIDs != nil {
-		return nil, fmt.Errorf("cannot use --tasks for App Runner service logs")
 	}
 	serviceDescriber, err := describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
 		App: opts.App,
