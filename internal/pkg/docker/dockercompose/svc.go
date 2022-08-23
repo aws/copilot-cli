@@ -11,6 +11,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	compose "github.com/compose-spec/compose-go/types"
 	"github.com/docker/go-units"
+	"github.com/dustin/go-humanize/english"
 	"github.com/spf13/afero"
 	"path/filepath"
 	"strconv"
@@ -23,13 +24,13 @@ type ConvertedService struct {
 	BackendSvc *manifest.BackendService
 }
 
-func convertService(service *compose.ServiceConfig, workingDir string) (*ConvertedService, IgnoredKeys, error) {
+func convertService(service *compose.ServiceConfig, workingDir string, otherSvcs compose.Services, vols compose.Volumes) (*ConvertedService, IgnoredKeys, error) {
 	image, ignored, err := convertImageConfig(service.Build, service.Labels, service.Image)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	taskCfg, err := convertTaskConfig(service)
+	taskCfg, err := convertTaskConfig(service, otherSvcs, vols)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -194,7 +195,7 @@ func toExposedPort(binding compose.ServicePortConfig) (*exposedPort, IgnoredKeys
 }
 
 // convertTaskConfig converts environment variables, env files, and platform strings.
-func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, error) {
+func convertTaskConfig(service *compose.ServiceConfig, otherSvcs compose.Services, topLevelVols compose.Volumes) (manifest.TaskConfig, error) {
 	var envFile *string
 
 	if len(service.EnvFile) == 1 {
@@ -204,7 +205,7 @@ func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, err
 			"were attached to this service", len(service.EnvFile))
 	}
 
-	storage, err := convertVolumes(service.Volumes)
+	storage, err := convertVolumes(service.Volumes, otherSvcs, topLevelVols)
 	if err != nil {
 		return manifest.TaskConfig{}, err
 	}
@@ -235,8 +236,19 @@ func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, err
 }
 
 // convertVolumes converts a list of Compose volumes into the Copilot storage equivalent.
-func convertVolumes(volumes []compose.ServiceVolumeConfig) (*manifest.Storage, error) {
+func convertVolumes(volumes []compose.ServiceVolumeConfig, otherSvcs compose.Services, topLevelVols compose.Volumes) (*manifest.Storage, error) {
 	copilotVols := map[string]*manifest.Volume{}
+
+	// TODO: Detect unsupported properties in top-level named volumes
+
+	var otherSvcVols map[string][]string
+	for _, otherSvc := range otherSvcs {
+		for _, vol := range otherSvc.Volumes {
+			if vol.Type == "volume" {
+				otherSvcVols[vol.Source] = append(otherSvcVols[vol.Source], otherSvc.Name)
+			}
+		}
+	}
 
 	var ephemeralBytes uint64 = 20 * units.GiB
 
@@ -262,6 +274,11 @@ func convertVolumes(volumes []compose.ServiceVolumeConfig) (*manifest.Storage, e
 		if vol.Type != "volume" {
 			// TODO (rclinard-amzn): Relax the "bind" restriction in Milestone 6
 			return nil, fmt.Errorf("volume type %v is not supported yet", vol.Type)
+		}
+
+		if shared := otherSvcVols[vol.Source]; shared != nil {
+			return nil, fmt.Errorf("named volume %s is shared with %s [%s], this is not supported in Copilot",
+				vol.Source, english.PluralWord(len(shared), "service", "services"), strings.Join(shared, ", "))
 		}
 
 		name := vol.Source
