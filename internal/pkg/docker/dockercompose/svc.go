@@ -276,15 +276,15 @@ func convertVolumes(volumes []compose.ServiceVolumeConfig, otherSvcs compose.Ser
 			return nil, fmt.Errorf("volume type %v is not supported yet", vol.Type)
 		}
 
-		if shared := otherSvcVols[vol.Source]; shared != nil {
+		name := vol.Source
+		if shared := otherSvcVols[name]; shared != nil {
 			return nil, fmt.Errorf("named volume %s is shared with %s [%s], this is not supported in Copilot",
-				vol.Source, english.PluralWord(len(shared), "service", "services"), strings.Join(shared, ", "))
+				name, english.PluralWord(len(shared), "service", "services"), strings.Join(shared, ", "))
 		}
 
-		name := vol.Source
 		if copilotVols[name] != nil {
-			// avoid name collision
-			name = fmt.Sprintf("%s-%v", name, idx)
+			return nil, fmt.Errorf("cannot mount named volume %s a second time at %s, it is already mounted at %s",
+				name, vol.Target, *copilotVols[name].ContainerPath)
 		}
 
 		copilotVols[name] = &manifest.Volume{
