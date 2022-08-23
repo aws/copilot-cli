@@ -250,6 +250,8 @@ func convertVolumes(volumes []compose.ServiceVolumeConfig, otherSvcs compose.Ser
 		}
 	}
 
+	var tmpfsVolNames map[string]bool
+
 	var ephemeralBytes uint64 = 20 * units.GiB
 
 	for idx, vol := range volumes {
@@ -262,6 +264,7 @@ func convertVolumes(volumes []compose.ServiceVolumeConfig, otherSvcs compose.Ser
 			ephemeralBytes += uint64(vol.Tmpfs.Size)
 
 			name := fmt.Sprintf("tmpfs-%v", idx)
+			tmpfsVolNames[name] = true
 			copilotVols[name] = &manifest.Volume{
 				EFS: manifest.EFSConfigOrBool{
 					Enabled: aws.Bool(false),
@@ -280,6 +283,10 @@ func convertVolumes(volumes []compose.ServiceVolumeConfig, otherSvcs compose.Ser
 		if shared := otherSvcVols[name]; shared != nil {
 			return nil, fmt.Errorf("named volume %s is shared with %s [%s], this is not supported in Copilot",
 				name, english.PluralWord(len(shared), "service", "services"), strings.Join(shared, ", "))
+		}
+
+		if tmpfsVolNames[name] {
+			return nil, fmt.Errorf("named volume %s collides with the generated name of a tmpfs mount", name)
 		}
 
 		if copilotVols[name] != nil {
