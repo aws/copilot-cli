@@ -64,3 +64,26 @@ services:
     build:
       context: buildtest
       dockerfile: Dockerfile-dsoajdosajoidsao
+  public-port-container-only:
+    image: nginx
+    ports:
+      - target: 8096
+  public-host-ip:
+    image: nginx
+    ports:
+      - "192.168.1.1:8096:8096"
+  public-port-range-to-one:
+    image: nginx
+    ports:
+      - "8000-9000:80"
+  public-port-range-to-range:
+    image: nginx
+    ports:
+      - "8000-9000:8001-9001"
+  public-port-complete:
+    image: nginx
+    ports:
+      - target: 8096
+        published: 8096
+        protocol: tcp
+        mode: host

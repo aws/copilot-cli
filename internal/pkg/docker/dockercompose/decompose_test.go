@@ -262,6 +262,17 @@ func TestDecomposeService_ExposedPorts(t *testing.T) {
 		},
 		TaskConfig: taskCfg,
 	}
+	nginxLbws8096 := manifest.LoadBalancedWebServiceConfig{
+		ImageConfig: manifest.ImageWithPortAndHealthcheck{
+			ImageWithPort: manifest.ImageWithPort{
+				Image: manifest.Image{
+					Location: aws.String("nginx"),
+				},
+				Port: aws.Uint16(8096),
+			},
+		},
+		TaskConfig: taskCfg,
+	}
 
 	testCases := []decomposeTest{
 		{
@@ -291,18 +302,8 @@ func TestDecomposeService_ExposedPorts(t *testing.T) {
 			},
 		},
 		{
-			svcName: "expose-and-ports",
-			wantLbws: &manifest.LoadBalancedWebServiceConfig{
-				ImageConfig: manifest.ImageWithPortAndHealthcheck{
-					ImageWithPort: manifest.ImageWithPort{
-						Image: manifest.Image{
-							Location: aws.String("nginx"),
-						},
-						Port: aws.Uint16(8096),
-					},
-				},
-				TaskConfig: taskCfg,
-			},
+			svcName:  "expose-and-ports",
+			wantLbws: &nginxLbws8096,
 		},
 		{
 			svcName:   "remap-ports",
@@ -383,6 +384,30 @@ func TestDecomposeService_ExposedPorts(t *testing.T) {
 		{
 			svcName:           "dockerfile-doesnt-exist",
 			wantErrorContains: "convert Compose service to Copilot manifest: parse dockerfile for exposed ports: open Dockerfile:",
+		},
+		{
+			svcName:  "public-port-container-only",
+			wantLbws: &nginxLbws8096,
+		},
+		{
+			svcName:  "public-host-ip",
+			wantLbws: &nginxLbws8096,
+
+			wantIgnored: []string{"ports.<port>.host_ip"},
+		},
+		{
+			svcName:   "public-port-range-to-one",
+			wantError: errors.New("convert Compose service to Copilot manifest: cannot map a published port range (8000-9000) to a single container port (80) yet"),
+		},
+		{
+			svcName:           "public-port-range-to-range",
+			wantErrorContains: "convert Compose service to Copilot manifest: cannot expose more than one public port in Copilot, but 1001 ports are exposed publicly: ",
+		},
+		{
+			svcName:  "public-port-complete",
+			wantLbws: &nginxLbws8096,
+
+			wantIgnored: []string{"ports.<port>.mode"},
 		},
 	}
 
