@@ -36,17 +36,15 @@ type serviceARNGetter interface {
 
 // NewWorkloadLoggerOpts contains fields that initiate workloadLogger struct.
 type NewWorkloadLoggerOpts struct {
-	App         string
-	Env         string
-	Name        string
-	Sess        *session.Session
-	LogGroup    string
-	ConfigStore describe.ConfigStoreSvc
+	App  string
+	Env  string
+	Name string
+	Sess *session.Session
 }
 
 // newWorkloadLogger returns a workloadLogger for the svc service under env and app.
 // The logging client is initialized from the given sess session.
-func newWorkloadLogger(opts *NewWorkloadLoggerOpts) (*workloadLogger, error) {
+func newWorkloadLogger(opts *NewWorkloadLoggerOpts) *workloadLogger {
 	return &workloadLogger{
 		app:          opts.App,
 		env:          opts.Env,
@@ -54,17 +52,17 @@ func newWorkloadLogger(opts *NewWorkloadLoggerOpts) (*workloadLogger, error) {
 		eventsGetter: cloudwatchlogs.New(opts.Sess),
 		w:            log.OutputWriter,
 		now:          time.Now,
-	}, nil
+	}
 }
 
 type workloadLogger struct {
-	app          string
-	env          string
-	name         string
+	app  string
+	env  string
+	name string
+
 	eventsGetter logGetter
 	w            io.Writer
-
-	now func() time.Time
+	now          func() time.Time
 }
 
 // WriteLogEvents writes service logs.
@@ -108,12 +106,8 @@ func (s *workloadLogger) ecsLogStreamPrefixes(taskIDs []string, container string
 
 // NewECSServiceClient returns an ECSServiceClient for the svc service under env and app.
 func NewECSServiceClient(opts *NewWorkloadLoggerOpts) (*ECSServiceLogger, error) {
-	logger, err := newWorkloadLogger(opts)
-	if err != nil {
-		return nil, err
-	}
 	return &ECSServiceLogger{
-		workloadLogger: logger,
+		workloadLogger: newWorkloadLogger(opts),
 	}, nil
 }
 
@@ -144,12 +138,14 @@ func (s *ECSServiceLogger) logStreamPrefixes(taskIDs []string, container string)
 	return s.ecsLogStreamPrefixes(taskIDs, container)
 }
 
+// NewAppRunnerServiceLoggerOpts contains fields that initiate AppRunnerServiceLoggerOpts struct.
+type NewAppRunnerServiceLoggerOpts struct {
+	*NewWorkloadLoggerOpts
+	ConfigStore describe.ConfigStoreSvc
+}
+
 // NewAppRunnerServiceLogger returns an AppRunnerServiceLogger for the svc service under env and app.
-func NewAppRunnerServiceLogger(opts *NewWorkloadLoggerOpts) (*AppRunnerServiceLogger, error) {
-	logger, err := newWorkloadLogger(opts)
-	if err != nil {
-		return nil, err
-	}
+func NewAppRunnerServiceLogger(opts *NewAppRunnerServiceLoggerOpts) (*AppRunnerServiceLogger, error) {
 	serviceDescriber, err := describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
 		App:         opts.App,
 		Svc:         opts.Name,
@@ -159,7 +155,7 @@ func NewAppRunnerServiceLogger(opts *NewWorkloadLoggerOpts) (*AppRunnerServiceLo
 		return nil, err
 	}
 	return &AppRunnerServiceLogger{
-		workloadLogger:   logger,
+		workloadLogger:   newWorkloadLogger(opts.NewWorkloadLoggerOpts),
 		serviceARNGetter: serviceDescriber,
 	}, nil
 }
@@ -172,7 +168,7 @@ type AppRunnerServiceLogger struct {
 
 // WriteLogEvents writes service logs.
 func (s *AppRunnerServiceLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
-	logGroup := opts.LogGroup
+	var logGroup string
 	switch strings.ToLower(opts.LogGroup) {
 	case "system":
 		serviceArn, err := s.serviceARNGetter.ServiceARN(s.env)
@@ -192,6 +188,8 @@ func (s *AppRunnerServiceLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
 		if err != nil {
 			return fmt.Errorf("get log group name: %w", err)
 		}
+	default:
+		logGroup = opts.LogGroup
 	}
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
 		LogGroup:            logGroup,
@@ -206,12 +204,8 @@ func (s *AppRunnerServiceLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
 
 // NewJobLogger returns an JobLogger for the job under env and app.
 func NewJobLogger(opts *NewWorkloadLoggerOpts) (*JobLogger, error) {
-	logger, err := newWorkloadLogger(opts)
-	if err != nil {
-		return nil, err
-	}
 	return &JobLogger{
-		workloadLogger: logger,
+		workloadLogger: newWorkloadLogger(opts),
 	}, nil
 }
 
