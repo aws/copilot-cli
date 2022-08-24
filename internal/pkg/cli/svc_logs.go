@@ -59,15 +59,19 @@ type wkldLogsVars struct {
 type svcLogsOpts struct {
 	wkldLogsVars
 	wkldLogOpts
-	// cached variables.
+	// Cached variables.
 	targetEnv *config.Environment
+
+	// Cached variables.
+	targetSvcType string
 }
 
 type wkldLogOpts struct {
-	// internal states
+	// Internal states.
 	startTime *int64
 	endTime   *int64
 
+	// Dependencies.
 	w                  io.Writer
 	configStore        store
 	sessProvider       sessionProvider
@@ -109,19 +113,23 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 			return err
 		}
 		opts.ecs = ecs.New(sess)
-		opts.logsSvc, err = logging.newWorkloadClient(&logging.NewWorkloadLoggerOpts{
-			App:         opts.appName,
-			Env:         opts.envName,
-			Name:        opts.name,
-			Sess:        sess,
-			LogGroup:    opts.logGroup,
-			ConfigStore: configStore,
-		})
 
-		if err != nil {
-			return err
+		newWorkloadLoggerOpts := &logging.NewWorkloadLoggerOpts{
+			App:  opts.appName,
+			Env:  opts.envName,
+			Name: opts.name,
+			Sess: sess,
 		}
-		return nil
+		switch opts.targetSvcType {
+		case manifest.RequestDrivenWebServiceType:
+			opts.logsSvc, err = logging.NewAppRunnerServiceLogger(&logging.NewAppRunnerServiceLoggerOpts{
+				NewWorkloadLoggerOpts: newWorkloadLoggerOpts,
+				ConfigStore:           opts.configStore,
+			})
+		default:
+			opts.logsSvc, err = logging.NewECSServiceClient(newWorkloadLoggerOpts)
+		}
+		return err
 	}
 	return opts, nil
 }
@@ -212,6 +220,7 @@ func (o *svcLogsOpts) Execute() error {
 		TaskIDs:       o.taskIDs,
 		OnEvents:      eventsWriter,
 		ContainerName: o.containerName,
+		LogGroup:      o.logGroup,
 	})
 	if err != nil {
 		return fmt.Errorf("write log events for service %s: %w", o.name, err)
@@ -269,10 +278,11 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
 	}
 	if deployedService.SvcType == manifest.RequestDrivenWebServiceType && len(o.taskIDs) != 0 {
-		return fmt.Errorf("cannot use --tasks for App Runner service logs")
+		return fmt.Errorf("cannot use `--tasks` for App Runner service logs")
 	}
 	o.name = deployedService.Name
 	o.envName = deployedService.Env
+	o.targetSvcType = deployedService.SvcType
 	return nil
 }
 

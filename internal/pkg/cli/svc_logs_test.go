@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -155,6 +156,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 		inputApp     string
 		inputSvc     string
 		inputEnvName string
+		inputTaskIDs []string
 
 		setupMocks func(mocks wkldLogsMock)
 
@@ -235,6 +237,20 @@ func TestSvcLogs_Ask(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("select deployed services for application my-app: some error"),
 		},
+		"return error if task ID is used for an RDWS": {
+			inputApp:     inputApp,
+			inputTaskIDs: []string{"mockTask1, mockTask2"},
+			setupMocks: func(m wkldLogsMock) {
+				m.configStore.EXPECT().GetApplication(gomock.Any()).AnyTimes()
+				m.configStore.EXPECT().GetEnvironment(gomock.Any(), gomock.Any()).Times(0)
+				m.configStore.EXPECT().GetService(gomock.Any(), gomock.Any()).Times(0)
+				m.sel.EXPECT().DeployedService(svcLogNamePrompt, svcLogNameHelpPrompt, inputApp, gomock.Any(), gomock.Any()).
+					Return(&selector.DeployedService{
+						SvcType: manifest.RequestDrivenWebServiceType,
+					}, nil)
+			},
+			wantedError: errors.New("cannot use `--tasks` for App Runner service logs"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -257,6 +273,7 @@ func TestSvcLogs_Ask(t *testing.T) {
 					envName: tc.inputEnvName,
 					name:    tc.inputSvc,
 					appName: tc.inputApp,
+					taskIDs: tc.inputTaskIDs,
 				},
 				wkldLogOpts: wkldLogOpts{
 					configStore: mockstore,
@@ -281,7 +298,6 @@ func TestSvcLogs_Ask(t *testing.T) {
 }
 
 func TestSvcLogs_Execute(t *testing.T) {
-
 	mockTaskARN := "arn:aws:ecs:us-west-2:123456789:task/mockCluster/mockTaskID"
 	mockOtherTaskARN := "arn:aws:ecs:us-west-2:123456789:task/mockCluster/mockTaskID1"
 	mockStartTime := int64(123456789)
@@ -299,6 +315,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 		taskIDs           []string
 		inputPreviousTask bool
 		container         string
+		logGroup          string
 
 		setupMocks func(mocks wkldLogsMock)
 
@@ -312,7 +329,6 @@ func TestSvcLogs_Execute(t *testing.T) {
 			limit:     10,
 			taskIDs:   []string{"mockTaskID"},
 			container: "datadog",
-
 			setupMocks: func(m wkldLogsMock) {
 				gomock.InOrder(
 					m.logSvcWriter.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
@@ -325,7 +341,6 @@ func TestSvcLogs_Execute(t *testing.T) {
 					}).Return(nil),
 				)
 			},
-
 			wantedError: nil,
 		},
 		"success with no limit set": {
@@ -343,6 +358,26 @@ func TestSvcLogs_Execute(t *testing.T) {
 						require.Equal(t, param.StartTime, &mockStartTime)
 						require.Equal(t, param.Follow, true)
 						require.Equal(t, param.Limit, mockNilLimit)
+					}).Return(nil),
+				)
+			},
+			wantedError: nil,
+		},
+		"success with system log group for RDWS": {
+			inputSvc:  "mockSvc",
+			startTime: mockStartTime,
+			endTime:   mockEndTime,
+			logGroup:  "system",
+			setupMocks: func(m wkldLogsMock) {
+				gomock.InOrder(
+					m.logSvcWriter.EXPECT().WriteLogEvents(gomock.Any()).Do(func(param logging.WriteLogEventsOpts) {
+						require.Equal(t, param.TaskIDs, ([]string)(nil))
+						require.Equal(t, param.EndTime, &mockEndTime)
+						require.Equal(t, param.StartTime, &mockStartTime)
+						require.Equal(t, param.Follow, false)
+						require.Equal(t, param.Limit, (*int64)(nil))
+						require.Equal(t, param.ContainerName, "")
+						require.Equal(t, param.LogGroup, "system")
 					}).Return(nil),
 				)
 			},
@@ -460,6 +495,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 					taskIDs:       tc.taskIDs,
 					previous:      tc.inputPreviousTask,
 					containerName: tc.container,
+					logGroup:      tc.logGroup,
 				},
 				wkldLogOpts: wkldLogOpts{
 					startTime:          &tc.startTime,
