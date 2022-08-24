@@ -66,7 +66,7 @@ type svcLogsVars struct {
 type svcLogsOpts struct {
 	svcLogsVars
 	wkldLogOpts
-	
+
 	// Cached variables.
 	targetEnv     *config.Environment
 	targetSvcType string
@@ -132,10 +132,13 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 				NewWorkloadLoggerOpts: newWorkloadLoggerOpts,
 				ConfigStore:           opts.configStore,
 			})
+			if err != nil {
+				return err
+			}
 		default:
-			opts.logsSvc, err = logging.NewECSServiceClient(newWorkloadLoggerOpts)
+			opts.logsSvc = logging.NewECSServiceClient(newWorkloadLoggerOpts)
 		}
-		return err
+		return nil
 	}
 	return opts, nil
 }

@@ -105,10 +105,10 @@ func (s *workloadLogger) ecsLogStreamPrefixes(taskIDs []string, container string
 }
 
 // NewECSServiceClient returns an ECSServiceClient for the svc service under env and app.
-func NewECSServiceClient(opts *NewWorkloadLoggerOpts) (*ECSServiceLogger, error) {
+func NewECSServiceClient(opts *NewWorkloadLoggerOpts) *ECSServiceLogger {
 	return &ECSServiceLogger{
 		workloadLogger: newWorkloadLogger(opts),
-	}, nil
+	}
 }
 
 // ECSServiceLogger retrieves the logs of an Amazon ECS service.
@@ -203,10 +203,10 @@ func (s *AppRunnerServiceLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
 }
 
 // NewJobLogger returns an JobLogger for the job under env and app.
-func NewJobLogger(opts *NewWorkloadLoggerOpts) (*JobLogger, error) {
+func NewJobLogger(opts *NewWorkloadLoggerOpts) *JobLogger {
 	return &JobLogger{
 		workloadLogger: newWorkloadLogger(opts),
-	}, nil
+	}
 }
 
 // JobLogger retrieves the logs of a job.

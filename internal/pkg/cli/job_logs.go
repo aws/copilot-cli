@@ -75,15 +75,12 @@ func newJobLogOpts(vars jobLogsVars) (*jobLogsOpts, error) {
 		if err != nil {
 			return err
 		}
-		opts.logsSvc, err = logging.NewJobLogger(&logging.NewWorkloadLoggerOpts{
+		opts.logsSvc = logging.NewJobLogger(&logging.NewWorkloadLoggerOpts{
 			Sess: sess,
 			App:  opts.appName,
 			Env:  opts.envName,
 			Name: opts.name,
 		})
-		if err != nil {
-			return err
-		}
 		return nil
 	}
 	return opts, nil
