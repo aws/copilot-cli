@@ -44,25 +44,31 @@ type wkldLogsVars struct {
 	shouldOutputJSON bool
 	follow           bool
 	limit            int
-	name             string
-	envName          string
-	appName          string
-	humanStartTime   string
-	humanEndTime     string
-	taskIDs          []string
-	since            time.Duration
-	logGroup         string
-	previous         bool
-	containerName    string
+
+	name           string
+	envName        string
+	appName        string
+	humanStartTime string
+	humanEndTime   string
+
+	taskIDs []string
+	since   time.Duration
+}
+
+type svcLogsVars struct {
+	wkldLogsVars
+
+	logGroup      string
+	containerName string
+	previous      bool
 }
 
 type svcLogsOpts struct {
-	wkldLogsVars
+	svcLogsVars
 	wkldLogOpts
+	
 	// Cached variables.
-	targetEnv *config.Environment
-
-	// Cached variables.
+	targetEnv     *config.Environment
 	targetSvcType string
 }
 
@@ -82,7 +88,7 @@ type wkldLogOpts struct {
 	initRuntimeClients func() error // Overridden in tests.
 }
 
-func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
+func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc logs"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
@@ -95,7 +101,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
 	opts := &svcLogsOpts{
-		wkldLogsVars: vars,
+		svcLogsVars: vars,
 		wkldLogOpts: wkldLogOpts{
 			w:           log.OutputWriter,
 			configStore: configStore,
@@ -321,7 +327,7 @@ func parseRFC3339(timeStr string) (int64, error) {
 
 // buildSvcLogsCmd builds the command for displaying service logs in an application.
 func buildSvcLogsCmd() *cobra.Command {
-	vars := wkldLogsVars{}
+	vars := svcLogsVars{}
 	cmd := &cobra.Command{
 		Use:   "logs",
 		Short: "Displays logs of a deployed service.",

@@ -118,15 +118,17 @@ func TestSvcLogs_Validate(t *testing.T) {
 			tc.mockstore(mockstore)
 
 			svcLogs := &svcLogsOpts{
-				wkldLogsVars: wkldLogsVars{
-					follow:         tc.inputFollow,
-					limit:          tc.inputLimit,
-					envName:        tc.inputEnvName,
-					humanStartTime: tc.inputStartTime,
-					humanEndTime:   tc.inputEndTime,
-					since:          tc.inputSince,
-					name:           tc.inputSvc,
-					appName:        tc.inputApp,
+				svcLogsVars: svcLogsVars{
+					wkldLogsVars: wkldLogsVars{
+						follow:         tc.inputFollow,
+						limit:          tc.inputLimit,
+						envName:        tc.inputEnvName,
+						humanStartTime: tc.inputStartTime,
+						humanEndTime:   tc.inputEndTime,
+						since:          tc.inputSince,
+						name:           tc.inputSvc,
+						appName:        tc.inputApp,
+					},
 				},
 				wkldLogOpts: wkldLogOpts{
 					configStore: mockstore,
@@ -269,11 +271,13 @@ func TestSvcLogs_Ask(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			svcLogs := &svcLogsOpts{
-				wkldLogsVars: wkldLogsVars{
-					envName: tc.inputEnvName,
-					name:    tc.inputSvc,
-					appName: tc.inputApp,
-					taskIDs: tc.inputTaskIDs,
+				svcLogsVars: svcLogsVars{
+					wkldLogsVars: wkldLogsVars{
+						envName: tc.inputEnvName,
+						name:    tc.inputSvc,
+						appName: tc.inputApp,
+						taskIDs: tc.inputTaskIDs,
+					},
 				},
 				wkldLogOpts: wkldLogOpts{
 					configStore: mockstore,
@@ -486,17 +490,20 @@ func TestSvcLogs_Execute(t *testing.T) {
 			tc.setupMocks(mocks)
 
 			svcLogs := &svcLogsOpts{
-				wkldLogsVars: wkldLogsVars{
-					name:          tc.inputSvc,
-					appName:       tc.inputApp,
-					envName:       tc.inputEnv,
-					follow:        tc.follow,
-					limit:         tc.limit,
-					taskIDs:       tc.taskIDs,
+				svcLogsVars: svcLogsVars{
+					wkldLogsVars: wkldLogsVars{
+						name:    tc.inputSvc,
+						appName: tc.inputApp,
+						envName: tc.inputEnv,
+						follow:  tc.follow,
+						limit:   tc.limit,
+						taskIDs: tc.taskIDs,
+					},
 					previous:      tc.inputPreviousTask,
 					containerName: tc.container,
 					logGroup:      tc.logGroup,
 				},
+
 				wkldLogOpts: wkldLogOpts{
 					startTime:          &tc.startTime,
 					endTime:            &tc.endTime,
