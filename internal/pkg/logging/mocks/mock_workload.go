@@ -48,3 +48,41 @@ func (mr *MocklogGetterMockRecorder) LogEvents(opts interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogEvents", reflect.TypeOf((*MocklogGetter)(nil).LogEvents), opts)
 }
+
+// MockserviceARNGetter is a mock of serviceARNGetter interface.
+type MockserviceARNGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockserviceARNGetterMockRecorder
+}
+
+// MockserviceARNGetterMockRecorder is the mock recorder for MockserviceARNGetter.
+type MockserviceARNGetterMockRecorder struct {
+	mock *MockserviceARNGetter
+}
+
+// NewMockserviceARNGetter creates a new mock instance.
+func NewMockserviceARNGetter(ctrl *gomock.Controller) *MockserviceARNGetter {
+	mock := &MockserviceARNGetter{ctrl: ctrl}
+	mock.recorder = &MockserviceARNGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockserviceARNGetter) EXPECT() *MockserviceARNGetterMockRecorder {
+	return m.recorder
+}
+
+// ServiceARN mocks base method.
+func (m *MockserviceARNGetter) ServiceARN(env string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceARN", env)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceARN indicates an expected call of ServiceARN.
+func (mr *MockserviceARNGetterMockRecorder) ServiceARN(env interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceARN", reflect.TypeOf((*MockserviceARNGetter)(nil).ServiceARN), env)
+}

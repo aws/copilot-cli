@@ -18,7 +18,8 @@ import (
 )
 
 type workloadLogsMocks struct {
-	logGetter *mocks.MocklogGetter
+	logGetter        *mocks.MocklogGetter
+	serviceARNGetter *mocks.MockserviceARNGetter
 }
 
 func TestECSServiceLogger_WriteLogEvents(t *testing.T) {
@@ -207,8 +208,9 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 			b := &bytes.Buffer{}
 			svcLogs := &ECSServiceLogger{
 				workloadLogger: &workloadLogger{
+					app:          "mockApp",
+					env:          "mockEnv",
 					name:         "mockSvc",
-					logGroupName: mockLogGroupName,
 					eventsGetter: mocklogGetter,
 					w:            b,
 					now: func() time.Time {
@@ -229,6 +231,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 				StartTime:     tc.startTime,
 				OnEvents:      logWriter,
 				ContainerName: tc.containerName,
+				LogGroup:      mockLogGroupName,
 			})
 
 			// THEN
@@ -244,7 +247,6 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 
 func TestAppRunnerServiceLogger_WriteLogEvents(t *testing.T) {
 	const (
-		mockLogGroupName     = "mockLogGroup"
 		logEventsHumanString = `instance/85372273718e4806 web-server@1.0.0 start /app
 instance/4e66ee07f2034a7c Server is running on port 4055
 `
@@ -264,29 +266,64 @@ instance/4e66ee07f2034a7c Server is running on port 4055
 	var mockNilLimit *int64
 	mockStartTime := aws.Int64(123456789)
 	testCases := map[string]struct {
-		follow     bool
-		limit      *int64
-		startTime  *int64
-		jsonOutput bool
-		setupMocks func(mocks workloadLogsMocks)
+		follow       bool
+		limit        *int64
+		startTime    *int64
+		jsonOutput   bool
+		logGroupName string
+		setupMocks   func(mocks workloadLogsMocks)
 
 		wantedError   error
 		wantedContent string
 	}{
+		"failed to get service ARN": {
+			setupMocks: func(m workloadLogsMocks) {
+				m.serviceARNGetter.EXPECT().ServiceARN("mockEnv").Return("", errors.New("some error"))
+			},
+			wantedError: fmt.Errorf("get service ARN for mockSvc: some error"),
+		},
 		"failed to get log events": {
+			logGroupName: "mockLogGroup",
 			setupMocks: func(m workloadLogsMocks) {
 				m.logGetter.EXPECT().LogEvents(gomock.Any()).Return(nil, errors.New("some error"))
 			},
-
 			wantedError: fmt.Errorf("get log events for log group mockLogGroup: some error"),
 		},
 		"success with human output": {
-			limit: mockLimit,
+			limit:        mockLimit,
+			logGroupName: "mockLogGroup",
+			setupMocks: func(m workloadLogsMocks) {
+				m.logGetter.EXPECT().LogEvents(gomock.Any()).
+					Do(func(param cloudwatchlogs.LogEventsOpts) {
+						require.Equal(t, param.Limit, mockLimit)
+					}).Return(&cloudwatchlogs.LogEventsOutput{
+					Events: logEvents,
+				}, nil)
+			},
+			wantedContent: logEventsHumanString,
+		},
+		"success with json output": {
+			jsonOutput:   true,
+			startTime:    mockStartTime,
+			logGroupName: "mockLogGroup",
+			setupMocks: func(m workloadLogsMocks) {
+				m.logGetter.EXPECT().LogEvents(gomock.Any()).
+					Do(func(param cloudwatchlogs.LogEventsOpts) {
+						require.Equal(t, param.Limit, mockNilLimit)
+					}).
+					Return(&cloudwatchlogs.LogEventsOutput{
+						Events: logEvents,
+					}, nil)
+			},
+			wantedContent: logEventsJSONString,
+		},
+		"success with application log": {
 			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
+					m.serviceARNGetter.EXPECT().ServiceARN("mockEnv").Return("arn:aws:apprunner:us-east-1:11111111111:service/mockSvc/mockSvcID", nil),
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.Limit, mockLimit)
+							require.Equal(t, param.LogGroup, "/aws/apprunner/mockSvc/mockSvcID/application")
 						}).Return(&cloudwatchlogs.LogEventsOutput{
 						Events: logEvents,
 					}, nil),
@@ -294,21 +331,20 @@ instance/4e66ee07f2034a7c Server is running on port 4055
 			},
 			wantedContent: logEventsHumanString,
 		},
-		"success with json output": {
-			jsonOutput: true,
-			startTime:  mockStartTime,
+		"success with system log": {
+			logGroupName: "system",
 			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
+					m.serviceARNGetter.EXPECT().ServiceARN("mockEnv").Return("arn:aws:apprunner:us-east-1:11111111111:service/mockSvc/mockSvcID", nil),
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.Limit, mockNilLimit)
-						}).
-						Return(&cloudwatchlogs.LogEventsOutput{
-							Events: logEvents,
-						}, nil),
+							require.Equal(t, param.LogGroup, "/aws/apprunner/mockSvc/mockSvcID/service")
+						}).Return(&cloudwatchlogs.LogEventsOutput{
+						Events: logEvents,
+					}, nil),
 				)
 			},
-			wantedContent: logEventsJSONString,
+			wantedContent: logEventsHumanString,
 		},
 	}
 
@@ -317,21 +353,23 @@ instance/4e66ee07f2034a7c Server is running on port 4055
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mocklogGetter := mocks.NewMocklogGetter(ctrl)
-
-			mocks := workloadLogsMocks{
-				logGetter: mocklogGetter,
+			m := workloadLogsMocks{
+				logGetter:        mocks.NewMocklogGetter(ctrl),
+				serviceARNGetter: mocks.NewMockserviceARNGetter(ctrl),
 			}
 
-			tc.setupMocks(mocks)
+			tc.setupMocks(m)
 
 			b := &bytes.Buffer{}
 			svcLogs := &AppRunnerServiceLogger{
 				workloadLogger: &workloadLogger{
-					logGroupName: mockLogGroupName,
-					eventsGetter: mocklogGetter,
+					app:          "mockApp",
+					env:          "mockEnv",
+					name:         "mockSvc",
+					eventsGetter: m.logGetter,
 					w:            b,
 				},
+				serviceARNGetter: m.serviceARNGetter,
 			}
 
 			// WHEN
@@ -343,6 +381,7 @@ instance/4e66ee07f2034a7c Server is running on port 4055
 				Follow:    tc.follow,
 				Limit:     tc.limit,
 				StartTime: tc.startTime,
+				LogGroup:  tc.logGroupName,
 				OnEvents:  logWriter,
 			})
 
@@ -558,8 +597,9 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 			b := &bytes.Buffer{}
 			svcLogs := &JobLogger{
 				workloadLogger: &workloadLogger{
+					app:          "mockApp",
+					env:          "mockEnv",
 					name:         "mockSvc",
-					logGroupName: mockLogGroupName,
 					eventsGetter: mocklogGetter,
 					w:            b,
 					now: func() time.Time {
@@ -580,6 +620,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 				StartTime:               tc.startTime,
 				OnEvents:                logWriter,
 				LogStreamLimit:          tc.logStreamLimit,
+				LogGroup:                mockLogGroupName,
 				IncludeStateMachineLogs: tc.includeStateMachine,
 			})
 

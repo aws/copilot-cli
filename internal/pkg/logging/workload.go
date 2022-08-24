@@ -30,6 +30,10 @@ type logGetter interface {
 	LogEvents(opts cloudwatchlogs.LogEventsOpts) (*cloudwatchlogs.LogEventsOutput, error)
 }
 
+type serviceARNGetter interface {
+	ServiceARN(env string) (string, error)
+}
+
 // NewWorkloadLoggerOpts contains fields that initiate workloadLogger struct.
 type NewWorkloadLoggerOpts struct {
 	App         string
@@ -43,13 +47,10 @@ type NewWorkloadLoggerOpts struct {
 // newWorkloadLogger returns a workloadLogger for the svc service under env and app.
 // The logging client is initialized from the given sess session.
 func newWorkloadLogger(opts *NewWorkloadLoggerOpts) (*workloadLogger, error) {
-	logGroup := fmt.Sprintf(fmtWkldLogGroupName, opts.App, opts.Env, opts.Name)
-	if opts.LogGroup != "" {
-		logGroup = opts.LogGroup
-	}
 	return &workloadLogger{
+		app:          opts.App,
+		env:          opts.Env,
 		name:         opts.Name,
-		logGroupName: logGroup,
 		eventsGetter: cloudwatchlogs.New(opts.Sess),
 		w:            log.OutputWriter,
 		now:          time.Now,
@@ -57,8 +58,9 @@ func newWorkloadLogger(opts *NewWorkloadLoggerOpts) (*workloadLogger, error) {
 }
 
 type workloadLogger struct {
+	app          string
+	env          string
 	name         string
-	logGroupName string
 	eventsGetter logGetter
 	w            io.Writer
 
@@ -122,8 +124,12 @@ type ECSServiceLogger struct {
 
 // WriteLogEvents writes service logs.
 func (s *ECSServiceLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
+	logGroup := fmt.Sprintf(fmtWkldLogGroupName, s.app, s.env, s.name)
+	if opts.LogGroup != "" {
+		logGroup = opts.LogGroup
+	}
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
-		LogGroup:               s.logGroupName,
+		LogGroup:               logGroup,
 		Limit:                  opts.limit(),
 		StartTime:              opts.startTime(s.now),
 		EndTime:                opts.EndTime,
@@ -145,47 +151,50 @@ func NewAppRunnerServiceLogger(opts *NewWorkloadLoggerOpts) (*AppRunnerServiceLo
 		return nil, err
 	}
 	serviceDescriber, err := describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
-		App: opts.App,
-		Svc: opts.Name,
-
+		App:         opts.App,
+		Svc:         opts.Name,
 		ConfigStore: opts.ConfigStore,
 	})
 	if err != nil {
 		return nil, err
 	}
-	serviceArn, err := serviceDescriber.ServiceARN(opts.Env)
-	if err != nil {
-		return nil, err
-	}
-	logGroup := opts.LogGroup
-	switch strings.ToLower(logGroup) {
-	case "system":
-		logGroup, err = apprunner.SystemLogGroupName(serviceArn)
-		if err != nil {
-			return nil, fmt.Errorf("get system log group name: %w", err)
-		}
-	case "":
-		logGroup, err = apprunner.LogGroupName(serviceArn)
-		if err != nil {
-			return nil, fmt.Errorf("get log group name: %w", err)
-		}
-	}
-
-	logger.logGroupName = logGroup
 	return &AppRunnerServiceLogger{
-		workloadLogger: logger,
+		workloadLogger:   logger,
+		serviceARNGetter: serviceDescriber,
 	}, nil
 }
 
 // AppRunnerServiceLogger retrieves the logs of an AppRunner service.
 type AppRunnerServiceLogger struct {
 	*workloadLogger
+	serviceARNGetter serviceARNGetter
 }
 
 // WriteLogEvents writes service logs.
 func (s *AppRunnerServiceLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
+	logGroup := opts.LogGroup
+	switch strings.ToLower(opts.LogGroup) {
+	case "system":
+		serviceArn, err := s.serviceARNGetter.ServiceARN(s.env)
+		if err != nil {
+			return fmt.Errorf("get service ARN for %s: %w", s.name, err)
+		}
+		logGroup, err = apprunner.SystemLogGroupName(serviceArn)
+		if err != nil {
+			return fmt.Errorf("get system log group name: %w", err)
+		}
+	case "":
+		serviceArn, err := s.serviceARNGetter.ServiceARN(s.env)
+		if err != nil {
+			return fmt.Errorf("get service ARN for %s: %w", s.name, err)
+		}
+		logGroup, err = apprunner.LogGroupName(serviceArn)
+		if err != nil {
+			return fmt.Errorf("get log group name: %w", err)
+		}
+	}
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
-		LogGroup:            s.logGroupName,
+		LogGroup:            logGroup,
 		Limit:               opts.limit(),
 		StartTime:           opts.startTime(s.now),
 		EndTime:             opts.EndTime,
@@ -217,8 +226,12 @@ func (s *JobLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
 	if opts.IncludeStateMachineLogs {
 		logStreamLimit *= 2
 	}
+	logGroup := fmt.Sprintf(fmtWkldLogGroupName, s.app, s.env, s.name)
+	if opts.LogGroup != "" {
+		logGroup = opts.LogGroup
+	}
 	logEventsOpts := cloudwatchlogs.LogEventsOpts{
-		LogGroup:               s.logGroupName,
+		LogGroup:               logGroup,
 		Limit:                  opts.limit(),
 		StartTime:              opts.startTime(s.now),
 		EndTime:                opts.EndTime,
@@ -250,6 +263,7 @@ type WriteLogEventsOpts struct {
 	EndTime   *int64
 	// OnEvents is a handler that's invoked when logs are retrieved from the service.
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
+	LogGroup string
 
 	// Job specific options.
 	IncludeStateMachineLogs bool
