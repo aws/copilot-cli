@@ -199,7 +199,7 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	}
 	// If we're creating a stack configuration for an existing environment stack, ensure the previous env controller
 	// managed parameters are using the previous value.
-	return e.transformParameters(currParams, e.prevParams, transformEnvControllerParameters)
+	return e.transformParameters(currParams, e.prevParams, transformEnvControllerParameters, e.transformServiceDiscoveryEndpoint)
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
@@ -220,20 +220,24 @@ func (e *EnvStackConfig) StackName() string {
 	return NameForEnv(e.in.App.Name, e.in.Name)
 }
 
+type transformParameterFunc func(new *cloudformation.Parameter, old *cloudformation.Parameter) *cloudformation.Parameter
+
 // transformParameters removes or transforms each of the current parameters and does not add any new parameters.
 // This means that parameters that exist only in the old template are left out.
-// The parameter`transform` is a function that transform a parameter, given its value in the new template and the old template.
-// If `old` is `nil`, the parameter does not exist in the old template.
-// `transform` should return `nil` if caller intends to delete the parameter.
+// The parameter`transformFunc` are functions that transform a parameter, given its value in the new template and the old template.
+// Each transform functions should keep the following in mind:
+// 1. It should return `nil` if the parameter should be removed.
+// 2. The transform functions are applied in a convolutional manner. 
+// 3. If the parameter `old` is passed in as `nil`, the parameter does not exist in the old template.
 func (e *EnvStackConfig) transformParameters(
 	currParams []*cloudformation.Parameter,
 	oldParams []*cloudformation.Parameter,
-	transform func(new cloudformation.Parameter, old *cloudformation.Parameter) *cloudformation.Parameter) ([]*cloudformation.Parameter, error) {
+	transformFunc ...transformParameterFunc) ([]*cloudformation.Parameter, error) {
 
 	// Make a map out of `currParams` and out of `oldParams`.
-	curr := make(map[string]cloudformation.Parameter)
+	curr := make(map[string]*cloudformation.Parameter)
 	for _, p := range currParams {
-		curr[aws.StringValue(p.ParameterKey)] = *p
+		curr[aws.StringValue(p.ParameterKey)] = p
 	}
 	old := make(map[string]*cloudformation.Parameter)
 	for _, p := range oldParams {
@@ -243,22 +247,23 @@ func (e *EnvStackConfig) transformParameters(
 	// Remove or transform each of the current parameters.
 	var params []*cloudformation.Parameter
 	for k, p := range curr {
-		if transformed := transform(p, old[k]); transformed != nil {
-			params = append(params, transformed)
+		var currP = p
+		for _, transform := range transformFunc {
+			currP = transform(currP, old[k])
+		}
+		if currP != nil {
+			params = append(params, currP)
 		}
 	}
 	return params, nil
 }
 
-// transformEnvControllerParameters transforms a parameter such that it uses its previous value if:
-// 1. The parameter exists in the old template.
-// 2. The parameter is env-controller managed.
-// Otherwise, it returns the parameter untouched.
-func transformEnvControllerParameters(new cloudformation.Parameter, old *cloudformation.Parameter) *cloudformation.Parameter {
-	if old == nil { // The ParamKey doesn't exist in the old stack, use the new value.
-		return &new
+// transformEnvControllerParameters transforms an env-controller managed parameter.
+// If the parameter exists in the old template, it uses its previous value. Otherwise, it returns its new default value.
+func transformEnvControllerParameters(new *cloudformation.Parameter, old *cloudformation.Parameter) *cloudformation.Parameter {
+	if new == nil {
+		return nil
 	}
-
 	var (
 		isEnvControllerManaged = make(map[string]struct{})
 		exists                 = struct{}{}
@@ -267,7 +272,35 @@ func transformEnvControllerParameters(new cloudformation.Parameter, old *cloudfo
 		isEnvControllerManaged[f] = exists
 	}
 	if _, ok := isEnvControllerManaged[aws.StringValue(new.ParameterKey)]; !ok {
-		return &new
+		return new
+	}
+	if old == nil { // The EnvController-managed parameter doesn't exist in the old stack. Use the new value.
+		return new
+	}
+	return &cloudformation.Parameter{
+		ParameterKey: new.ParameterKey,
+
+		// Ideally, we would set `UsePreviousValue: true` unfortunately CodePipeline template config does not support it.
+		// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-cfn-artifacts.html#w2ab1c21c15c15
+		ParameterValue: old.ParameterValue,
+	}
+}
+
+// transformServiceDiscoveryEndpoint transforms the service discovery endpoint parameter.
+// If the parameter exists in the old template, it uses its previous value.
+// Otherwise, it uses a default value of `<app>.local`.
+func (e *EnvStackConfig) transformServiceDiscoveryEndpoint(new *cloudformation.Parameter, old *cloudformation.Parameter) *cloudformation.Parameter {
+	if new == nil {
+		return nil
+	}
+	if aws.StringValue(new.ParameterKey) != EnvParamServiceDiscoveryEndpoint {
+		return new
+	}
+	if old == nil {
+		return &cloudformation.Parameter{
+			ParameterKey:   new.ParameterKey,
+			ParameterValue: aws.String(fmt.Sprintf(`%s.local`, e.in.App.Name)),
+		}
 	}
 	return &cloudformation.Parameter{
 		ParameterKey: new.ParameterKey,
