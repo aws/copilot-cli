@@ -34,3 +34,10 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           directory: cf-custom-resources/
+
+      - name: Get coverage report from CodeCov
+        run: |
+          curl --location --request POST 'https://api.codecov.io/graphql/gh' \
+            --header 'cache-control: no-cache' \
+            --header 'Content-Type: application/json' \
+            --data-raw '{"query":"query GetCommits($owner: String!, $repo: String!, $filters:CommitsSetFilters, $after: String){owner (username:$owner) {repository (name: $repo) {commits (filters: $filters, first: 2, after: $after) {edges{node{...CommitFragment}}}}}}\nfragment CommitFragment on Commit {commitid createdAt totals{coverage} parent {totals{coverage}}}","variables":{"owner":"${{ github.repository_owner }}","repo":"copilot-cli"}}'
