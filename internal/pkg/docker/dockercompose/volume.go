@@ -65,7 +65,7 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 
 		if vol.Type != "volume" {
 			// TODO (rclinard-amzn): Relax the "bind" restriction in Milestone 6
-			return nil, fmt.Errorf("volume type %v is not supported yet", vol.Type)
+			return nil, fmt.Errorf("volume type \"%v\" is not supported yet", vol.Type)
 		}
 
 		name, err := vc.checkNamedVolume(vol)
