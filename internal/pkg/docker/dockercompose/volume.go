@@ -18,7 +18,12 @@ type volumeConverter struct {
 }
 
 func newVolumeConverter(topLevelVols compose.Volumes) volumeConverter {
-	return volumeConverter{topLevelVols: topLevelVols}
+	return volumeConverter{
+		otherSvcVols:  map[string][]string{},
+		copilotVols:   nil,
+		topLevelVols:  topLevelVols,
+		tmpfsVolNames: map[string]bool{},
+	}
 }
 
 // convertVolumes converts a list of Compose volumes into the Copilot storage equivalent.
@@ -78,11 +83,18 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 
 	// math trick to round up to the next highest GiB if it's not an even size in GiB
 	ephemeralGiB := (ephemeralBytes + units.GiB - 1) / units.GiB
+	var storage manifest.Storage
 
-	return &manifest.Storage{
-		Ephemeral: aws.Int(int(ephemeralGiB)),
-		Volumes:   vc.copilotVols,
-	}, nil
+	// default: 20 GiB
+	if ephemeralGiB != 20 {
+		storage.Ephemeral = aws.Int(int(ephemeralGiB))
+	}
+
+	if len(vc.copilotVols) != 0 {
+		storage.Volumes = vc.copilotVols
+	}
+
+	return &storage, nil
 }
 
 func (vc *volumeConverter) checkNamedVolume(vol compose.ServiceVolumeConfig) (*string, error) {

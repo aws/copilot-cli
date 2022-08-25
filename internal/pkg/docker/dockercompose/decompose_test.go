@@ -122,7 +122,7 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "db",
 
-			wantError: errors.New("\"services.db\" relies on fatally-unsupported Compose keys: secrets, volumes"),
+			wantError: errors.New("\"services.db\" relies on fatally-unsupported Compose keys: secrets"),
 		},
 		"nginx-golang-postgres proxy": {
 			filename: "nginx-golang-postgres.yml",
@@ -134,19 +134,19 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "react-express-mongo.yml",
 			svcName:  "frontend",
 
-			wantError: errors.New("\"services.frontend\" relies on fatally-unsupported Compose keys: networks, volumes"),
+			wantError: errors.New("\"services.frontend\" relies on fatally-unsupported Compose keys: networks"),
 		},
 		"react-express-mongo backend": {
 			filename: "react-express-mongo.yml",
 			svcName:  "backend",
 
-			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: networks, volumes"),
+			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: networks"),
 		},
 		"react-express-mongo mongo": {
 			filename: "react-express-mongo.yml",
 			svcName:  "mongo",
 
-			wantError: errors.New("\"services.mongo\" relies on fatally-unsupported Compose keys: networks, volumes"),
+			wantError: errors.New("\"services.mongo\" relies on fatally-unsupported Compose keys: networks"),
 		},
 		"unrecognized-field-name": {
 			filename: "unrecognized-field-name.yml",
