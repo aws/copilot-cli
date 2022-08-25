@@ -104,7 +104,7 @@ func ecsLogStreamPrefixes(taskIDs []string, service, container string) []string 
 	return logStreamPrefixes
 }
 
-// NewECSServiceClient returns an ECSServiceClient for the svc service under env and app.
+// NewECSServiceClient returns an ECSServiceClient for the service under env and app.
 func NewECSServiceClient(opts *NewWorkloadLoggerOpts) *ECSServiceLogger {
 	return &ECSServiceLogger{
 		workloadLogger: newWorkloadLogger(opts),
