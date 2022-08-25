@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "mainline"
+      - "test/cov"
 
 jobs:
   test-cov:
