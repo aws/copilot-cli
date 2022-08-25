@@ -3,8 +3,14 @@ name: codecov
 on:
   push:
     branches:
-      - "mainline"
-      - "test/cov"
+      - mainline
+  pull_request:
+    branches:
+      - mainline
+    types:
+      - opened
+      - edited
+      - synchronize
 
 jobs:
   test-cov:
