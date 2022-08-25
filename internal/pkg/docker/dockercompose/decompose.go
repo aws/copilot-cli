@@ -35,6 +35,16 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*Conve
 		return nil, nil, err
 	}
 
+	// workaround for compose-go automatically loading env files from disk and merging their
+	// content into the "environment" field (the equivalent of the Copilot variables key)
+	// this separates them from the YAML before compose-go has a chance to parse the YAML.
+	// TODO (rclinard-amzn): make a PR to compose-go instead of using this workaround
+	envFiles, err := isolateEnvFiles(service)
+	if err != nil {
+		return nil, nil, fmt.Errorf("isolate env file(s): %w", err)
+	}
+	removeEnvFiles(services)
+
 	project, err := loader.Load(compose.ConfigDetails{
 		WorkingDir: workingDir,
 		ConfigFiles: []compose.ConfigFile{
@@ -53,6 +63,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*Conve
 			"service is valid and exists")
 	}
 
+	svcConfig.EnvFile = envFiles
 	svc, svcIgnored, err := convertService(&svcConfig, workingDir)
 	if err != nil {
 		return nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
@@ -125,4 +136,39 @@ func unsupportedServiceKeys(service map[string]any, svcName string) (IgnoredKeys
 	}
 
 	return ignored, nil
+}
+
+// isolateEnvFiles manually handles the env_file key so that compose-go does not try to read the env files from the disk.
+func isolateEnvFiles(service map[string]any) ([]string, error) {
+	envFile, ok := service["env_file"]
+	if !ok || envFile == nil {
+		return nil, nil
+	}
+
+	if envFileStr, ok := envFile.(string); ok {
+		return []string{envFileStr}, nil
+	}
+
+	envFileList, ok := envFile.([]any)
+	if !ok {
+		return nil, fmt.Errorf("expected string or string array for env_file key, but got %v (%T)", envFile, envFile)
+	}
+
+	envFiles := make([]string, len(envFileList))
+	for i, ent := range envFileList {
+		ef, ok := ent.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected string or string array for env_file key, but got %v where %v is not a string", envFile, ent)
+		}
+
+		envFiles[i] = ef
+	}
+
+	return envFiles, nil
+}
+
+func removeEnvFiles(services composeServices) {
+	for _, svc := range services {
+		delete(svc, "env_file")
+	}
 }

@@ -177,6 +177,12 @@ func TestDecomposeService_General(t *testing.T) {
 				},
 			},
 		},
+		"multiple env files": {
+			filename: "single-service.yml",
+			svcName:  "multiple-env-files",
+
+			wantError: errors.New("convert Compose service to Copilot manifest: at most one env file is supported, but 3 env files were attached to this service"),
+		},
 		"single-service complete": {
 			filename: "single-service.yml",
 			svcName:  "complete",
@@ -227,6 +233,7 @@ func TestDecomposeService_General(t *testing.T) {
 					Platform: manifest.PlatformArgsOrString{
 						PlatformString: (*manifest.PlatformString)(aws.String("linux/arm64")),
 					},
+					EnvFile: aws.String("/file-that-does-not-exist.env"),
 					Variables: map[string]string{
 						"HOST_PATH":    "/home/nginx",
 						"ENABLE_HTTPS": "true",
