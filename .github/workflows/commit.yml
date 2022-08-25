@@ -6,7 +6,7 @@ on:
       - mainline
 
 jobs:
-  test-cov:
+  test: # same as ci/test
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go
