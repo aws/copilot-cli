@@ -37,6 +37,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*Conve
 
 	// workaround for compose-go automatically loading env files from disk and merging their
 	// content into the "environment" field (the equivalent of the Copilot variables key)
+	// this separates them from the YAML before compose-go has a chance to parse the YAML.
 	// TODO (rclinard-amzn): make a PR to compose-go instead of using this workaround
 	envFiles, err := isolateEnvFiles(service)
 	if err != nil {
