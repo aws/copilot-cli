@@ -87,7 +87,7 @@ func (s *workloadLogger) writeEventLogs(logEventsOpts cloudwatchlogs.LogEventsOp
 	}
 }
 
-func (s *workloadLogger) ecsLogStreamPrefixes(taskIDs []string, container string) []string {
+func ecsLogStreamPrefixes(taskIDs []string, service, container string) []string {
 	// By default, we only want logs from copilot task log streams.
 	// This filters out log stream not starting with `copilot/`, or `copilot/datadog` if container is set.
 	if len(taskIDs) == 0 {
@@ -95,7 +95,7 @@ func (s *workloadLogger) ecsLogStreamPrefixes(taskIDs []string, container string
 	}
 	var logStreamPrefixes []string
 	if container == "" {
-		container = s.name
+		container = service
 	}
 	for _, taskID := range taskIDs {
 		prefix := fmt.Sprintf("%s/%s/%s", wkldLogStreamPrefix, container, taskID) // Example: copilot/sidecar/1111 or copilot/web/1111
@@ -135,7 +135,7 @@ func (s *ECSServiceLogger) WriteLogEvents(opts WriteLogEventsOpts) error {
 }
 
 func (s *ECSServiceLogger) logStreamPrefixes(taskIDs []string, container string) []string {
-	return s.ecsLogStreamPrefixes(taskIDs, container)
+	return ecsLogStreamPrefixes(taskIDs, s.name, container)
 }
 
 // NewAppRunnerServiceLoggerOpts contains fields that initiate AppRunnerServiceLoggerOpts struct.
@@ -246,7 +246,7 @@ func (s *JobLogger) logStreamPrefixes(taskIDs []string, includeStateMachineLogs 
 	if includeStateMachineLogs {
 		return []string{fmt.Sprintf("%s/", wkldLogStreamPrefix), stateMachineLogStreamPrefix}
 	}
-	return s.ecsLogStreamPrefixes(taskIDs, "")
+	return ecsLogStreamPrefixes(taskIDs, s.name, "")
 }
 
 // WriteLogEventsOpts wraps the parameters to call WriteLogEvents.
