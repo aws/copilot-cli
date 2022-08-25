@@ -145,13 +145,13 @@ func isolateEnvFiles(service map[string]interface{}) ([]string, error) {
 		return []string{envFileStr.EnvFile}, nil
 	}
 
-	envFileOnly := struct {
+	envFileList := struct {
 		EnvFile []string `mapstructure:"env_file"`
 	}{}
-	err = mapstructure.Decode(service, &envFileOnly)
+	err = mapstructure.Decode(service, &envFileList)
 
 	if err == nil {
-		return envFileOnly.EnvFile, nil
+		return envFileList.EnvFile, nil
 	}
 
 	return nil, err
