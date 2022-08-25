@@ -171,7 +171,7 @@ func (o *deleteJobOpts) Execute() error {
 		return nil
 	}
 
-	if err := o.emptyECRRepos(envs); err != nil {
+	if err := o.imageRepoEmptier.EmptyRepo(o.appName+"/"+o.name, regionSet(envs)); err != nil {
 		return err
 	}
 	if err := o.removeJobFromApp(); err != nil {
@@ -300,10 +300,6 @@ func regionSet(envs []*config.Environment) map[string]struct{} {
 		regions[envs[i].Region] = struct{}{}
 	}
 	return regions
-}
-
-func (o *deleteJobOpts) emptyECRRepos(envs []*config.Environment) error {
-	return o.imageRepoEmptier.EmptyRepo(o.appName+"/"+o.name, regionSet(envs))
 }
 
 func (o *deleteJobOpts) removeJobFromApp() error {
