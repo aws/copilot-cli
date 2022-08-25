@@ -21,7 +21,7 @@ If you'd like, you may configure your environment by making changes to your [env
 ```console
 $ copilot env deploy
 ```
-In this step, Copilot adds more resources: an ECS cluster, a security group, a private DNS namespace. After deployment, you can modify your env manifest and redeploy by simply running [`copilot env deploy`](../commands/env-deploy.en.md) again.
+In this step, Copilot creates more resources, like an ECS cluster, a security group, and a private DNS namespace. After deployment, you can modify your env manifest and redeploy by simply running [`copilot env deploy`](../commands/env-deploy.en.md) again.
 
 ### Deploying a Service
 
