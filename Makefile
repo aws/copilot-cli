@@ -141,7 +141,7 @@ site-local:
 	docker run -p 8000:8000 -v `pwd`/site:/website/site -it site:latest
 
 .PHONY: gen-mocks
-gen-mocks: tools
+gen-mocks:
 	GOBIN=${GOBIN} go install github.com/golang/mock/mockgen
 	# TODO: make this more extensible?
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/sessions/mocks/mock_sessions.go -source=./internal/pkg/aws/sessions/sessions.go
@@ -212,3 +212,4 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_run_task_request.go -source=./internal/pkg/ecs/run_task_request.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/runner/jobrunner/mocks/mock.go -source=./internal/pkg/runner/jobrunner/jobrunner.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/manifest/mocks/mock.go -source=./internal/pkg/manifest/loader.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/delete/mocks/delete.go -source=./internal/pkg/cli/delete/delete.go
