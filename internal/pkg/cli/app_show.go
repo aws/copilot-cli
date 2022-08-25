@@ -192,7 +192,6 @@ func (o *showAppOpts) description() (*describe.App, error) {
 			Name:      env.Name,
 			AccountID: env.AccountID,
 			Region:    env.Region,
-			Prod:      env.Prod,
 		})
 	}
 	var trimmedSvcs []*config.Workload

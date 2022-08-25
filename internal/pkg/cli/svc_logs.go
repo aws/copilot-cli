@@ -6,10 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
-	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"io"
 	"sort"
 	"time"
+
+	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -51,6 +52,7 @@ type wkldLogsVars struct {
 	since            time.Duration
 	logGroup         string
 	previous         bool
+	containerName    string
 }
 
 type svcLogsOpts struct {
@@ -209,12 +211,13 @@ func (o *svcLogsOpts) Execute() error {
 		o.taskIDs = []string{taskID}
 	}
 	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
-		Follow:    o.follow,
-		Limit:     limit,
-		EndTime:   o.endTime,
-		StartTime: o.startTime,
-		TaskIDs:   o.taskIDs,
-		OnEvents:  eventsWriter,
+		Follow:        o.follow,
+		Limit:         limit,
+		EndTime:       o.endTime,
+		StartTime:     o.startTime,
+		TaskIDs:       o.taskIDs,
+		OnEvents:      eventsWriter,
+		ContainerName: o.containerName,
 	})
 	if err != nil {
 		return fmt.Errorf("write log events for service %s: %w", o.name, err)
@@ -349,5 +352,6 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	cmd.Flags().StringVar(&vars.logGroup, logGroupFlag, "", logGroupFlagDescription)
 	cmd.Flags().BoolVarP(&vars.previous, previousFlag, previousFlagShort, false, previousFlagDescription)
+	cmd.Flags().StringVar(&vars.containerName, containerLogFlag, "", containerLogFlagDescription)
 	return cmd
 }

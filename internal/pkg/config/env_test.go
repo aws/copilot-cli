@@ -15,17 +15,17 @@ import (
 )
 
 func TestStore_ListEnvironments(t *testing.T) {
-	testEnvironment := Environment{Name: "test", AccountID: "12345", App: "chicken", Region: "us-west-2s", Prod: false}
+	testEnvironment := Environment{Name: "test", AccountID: "12345", App: "chicken", Region: "us-west-2s"}
 	testEnvironmentString, err := marshal(testEnvironment)
 	testEnvironmentPath := fmt.Sprintf(fmtEnvParamPath, testEnvironment.App, testEnvironment.Name)
 	require.NoError(t, err, "Marshal test environment should not fail")
 
-	prodPDXEnv := Environment{Name: "prod-pdx", AccountID: "12345", App: "chicken", Region: "us-west-2", Prod: true}
+	prodPDXEnv := Environment{Name: "prod-pdx", AccountID: "12345", App: "chicken", Region: "us-west-2"}
 	prodPDXEnvString, err := marshal(prodPDXEnv)
 	prodPDXEnvPath := fmt.Sprintf(fmtEnvParamPath, prodPDXEnv.App, prodPDXEnv.Name)
 	require.NoError(t, err, "Marshal pdx environment should not fail")
 
-	prodIADEnv := Environment{Name: "prod-iad", AccountID: "12345", App: "chicken", Region: "us-east-1", Prod: true}
+	prodIADEnv := Environment{Name: "prod-iad", AccountID: "12345", App: "chicken", Region: "us-east-1"}
 	prodIADEnvString, err := marshal(prodIADEnv)
 	prodIADEnvPath := fmt.Sprintf(fmtEnvParamPath, prodIADEnv.App, prodIADEnv.Name)
 	require.NoError(t, err, "Marshal iad environment should not fail")
@@ -57,7 +57,7 @@ func TestStore_ListEnvironments(t *testing.T) {
 				}, nil
 			},
 
-			wantedEnvironments: []Environment{testEnvironment, prodIADEnv},
+			wantedEnvironments: []Environment{prodIADEnv, testEnvironment},
 			wantedErr:          nil,
 		},
 		"with malformed json": {
@@ -112,7 +112,7 @@ func TestStore_ListEnvironments(t *testing.T) {
 				}, nil
 			},
 
-			wantedEnvironments: []Environment{testEnvironment, prodIADEnv, prodPDXEnv},
+			wantedEnvironments: []Environment{prodIADEnv, prodPDXEnv, testEnvironment},
 			wantedErr:          nil,
 		},
 	}

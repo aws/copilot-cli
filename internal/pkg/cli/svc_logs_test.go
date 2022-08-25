@@ -6,11 +6,12 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	"testing"
-	"time"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -297,6 +298,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 		startTime         int64
 		taskIDs           []string
 		inputPreviousTask bool
+		container         string
 
 		setupMocks func(mocks wkldLogsMock)
 
@@ -309,6 +311,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 			follow:    true,
 			limit:     10,
 			taskIDs:   []string{"mockTaskID"},
+			container: "datadog",
 
 			setupMocks: func(m wkldLogsMock) {
 				gomock.InOrder(
@@ -318,6 +321,7 @@ func TestSvcLogs_Execute(t *testing.T) {
 						require.Equal(t, param.StartTime, &mockStartTime)
 						require.Equal(t, param.Follow, true)
 						require.Equal(t, param.Limit, &mockLimit)
+						require.Equal(t, param.ContainerName, "datadog")
 					}).Return(nil),
 				)
 			},
@@ -448,13 +452,14 @@ func TestSvcLogs_Execute(t *testing.T) {
 
 			svcLogs := &svcLogsOpts{
 				wkldLogsVars: wkldLogsVars{
-					name:     tc.inputSvc,
-					appName:  tc.inputApp,
-					envName:  tc.inputEnv,
-					follow:   tc.follow,
-					limit:    tc.limit,
-					taskIDs:  tc.taskIDs,
-					previous: tc.inputPreviousTask,
+					name:          tc.inputSvc,
+					appName:       tc.inputApp,
+					envName:       tc.inputEnv,
+					follow:        tc.follow,
+					limit:         tc.limit,
+					taskIDs:       tc.taskIDs,
+					previous:      tc.inputPreviousTask,
+					containerName: tc.container,
 				},
 				wkldLogOpts: wkldLogOpts{
 					startTime:          &tc.startTime,
