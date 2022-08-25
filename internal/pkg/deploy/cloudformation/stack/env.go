@@ -220,7 +220,7 @@ func (e *EnvStackConfig) StackName() string {
 	return NameForEnv(e.in.App.Name, e.in.Name)
 }
 
-type transformParameterFunc func(new *cloudformation.Parameter, old *cloudformation.Parameter) *cloudformation.Parameter
+type transformParameterFunc func(new, old *cloudformation.Parameter) *cloudformation.Parameter
 
 // transformParameters removes or transforms each of the current parameters and does not add any new parameters.
 // This means that parameters that exist only in the old template are left out.
@@ -229,10 +229,7 @@ type transformParameterFunc func(new *cloudformation.Parameter, old *cloudformat
 // 1. It should return `nil` if the parameter should be removed.
 // 2. The transform functions are applied in a convolutional manner. 
 // 3. If the parameter `old` is passed in as `nil`, the parameter does not exist in the old template.
-func (e *EnvStackConfig) transformParameters(
-	currParams []*cloudformation.Parameter,
-	oldParams []*cloudformation.Parameter,
-	transformFunc ...transformParameterFunc) ([]*cloudformation.Parameter, error) {
+func (e *EnvStackConfig) transformParameters(currParams, oldParams []*cloudformation.Parameter, transformFunc ...transformParameterFunc) ([]*cloudformation.Parameter, error) {
 
 	// Make a map out of `currParams` and out of `oldParams`.
 	curr := make(map[string]*cloudformation.Parameter)
@@ -260,7 +257,7 @@ func (e *EnvStackConfig) transformParameters(
 
 // transformEnvControllerParameters transforms an env-controller managed parameter.
 // If the parameter exists in the old template, it uses its previous value. Otherwise, it returns its new default value.
-func transformEnvControllerParameters(new *cloudformation.Parameter, old *cloudformation.Parameter) *cloudformation.Parameter {
+func transformEnvControllerParameters(new, old *cloudformation.Parameter) *cloudformation.Parameter {
 	if new == nil {
 		return nil
 	}
@@ -289,7 +286,7 @@ func transformEnvControllerParameters(new *cloudformation.Parameter, old *cloudf
 // transformServiceDiscoveryEndpoint transforms the service discovery endpoint parameter.
 // If the parameter exists in the old template, it uses its previous value.
 // Otherwise, it uses a default value of `<app>.local`.
-func (e *EnvStackConfig) transformServiceDiscoveryEndpoint(new *cloudformation.Parameter, old *cloudformation.Parameter) *cloudformation.Parameter {
+func (e *EnvStackConfig) transformServiceDiscoveryEndpoint(new, old *cloudformation.Parameter) *cloudformation.Parameter {
 	if new == nil {
 		return nil
 	}
