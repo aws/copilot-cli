@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
-	"github.com/mitchellh/mapstructure"
 	"sort"
 )
 
@@ -136,29 +135,35 @@ func unsupportedServiceKeys(service map[string]any, svcName string) (IgnoredKeys
 }
 
 // isolateEnvFiles manually handles the env_file key so that compose-go does not try to read the env files from the disk.
-func isolateEnvFiles(service map[string]interface{}) ([]string, error) {
-	envFileStr := struct {
-		EnvFile string `mapstructure:"env_file"`
-	}{}
-	err := mapstructure.Decode(service, &envFileStr)
-
-	if err == nil && envFileStr.EnvFile != "" {
-		return []string{envFileStr.EnvFile}, nil
+func isolateEnvFiles(service map[string]any) ([]string, error) {
+	envFile, ok := service["env_file"]
+	if !ok || envFile == nil {
+		return nil, nil
 	}
 
-	envFileList := struct {
-		EnvFile []string `mapstructure:"env_file"`
-	}{}
-	err = mapstructure.Decode(service, &envFileList)
-
-	if err == nil {
-		return envFileList.EnvFile, nil
+	if envFileStr, ok := envFile.(string); ok {
+		return []string{envFileStr}, nil
 	}
 
-	return nil, err
+	envFileList, ok := envFile.([]any)
+	if !ok {
+		return nil, fmt.Errorf("expected string or string array for env_file key, but got %v (%T)", envFile, envFile)
+	}
+
+	envFiles := make([]string, len(envFileList))
+	for i, ent := range envFileList {
+		ef, ok := ent.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected string or string array for env_file key, but got %v where %v is not a string", envFile, ent)
+		}
+
+		envFiles[i] = ef
+	}
+
+	return envFiles, nil
 }
 
-func removeEnvFiles(services map[string]map[string]interface{}) {
+func removeEnvFiles(services composeServices) {
 	for _, svc := range services {
 		delete(svc, "env_file")
 	}
