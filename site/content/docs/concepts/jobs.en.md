@@ -59,12 +59,12 @@ Since Copilot uses CloudFormation under the hood, all the resources created are 
 Scheduled Jobs are composed of an AmazonECS Task Definition, Task Role, Task Execution Role, 
 a Step Function State Machine for retrying on failures, and finally an Event Rule to trigger the state machine.
 
-### Where are my job's logs?
+### Where Are My Job's Logs?
 
 Checking your job logs is easy as well. Running [`copilot job logs`](../commands/job-logs.en.md) will show the most recent logs of your job. You can follow your logs live with the `--follow` flag,
 which will display logs from any new invocation of your job after you run the command.
 
-```bash
+```console
 $ copilot job logs
 copilot/myjob/37236ed Doing some work
 copilot/myjob/37236ed Did some work

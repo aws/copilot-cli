@@ -6,7 +6,7 @@ Copilot will build your image, push it to Amazon ECR and set up all the infrastr
 
 Creating a service to run your containers on AWS can be done in a few ways. The easiest way is by running the `init` command from the same directory as your Dockerfile.
 
-```bash
+```console
 $ copilot init
 ```
 
@@ -114,7 +114,7 @@ To learn about the specification of manifest files, see the [manifest](../manife
 
 Once you've set up your service, you can deploy it (and any changes to your manifest) by running the deploy command:
 
-```bash
+```console
 $ copilot deploy
 ```
 
@@ -136,7 +136,7 @@ Now that we've got a service up and running, we can check on it using Copilot. B
 
 Running `copilot svc show` will show you a summary of your service. Here's an example of the output you might see for a load balanced web application. This output includes the configuration of your service for each environment, all the endpoints for your service, and the environment variables passed into your service. You can also provide an optional `--resources` flag to see all AWS resources associated with your service.
 
-```bash
+```console
 $ copilot svc show
 About
 
@@ -174,7 +174,7 @@ Variables
 Often it's handy to be able to check on the status of your service. Are all the instances of my service healthy? Are there any alarms firing? To do that, you can run `copilot svc status` to get a summary of your service's status.
 
 
-```bash
+```console
 $ copilot svc status
 Service Status
 
@@ -200,7 +200,7 @@ Alarms
 
 Checking your service logs is easy as well. Running `copilot svc logs` will show the most recent logs of your service. You can follow your logs live with the `--follow` flag.
 
-```bash
+```console
 $ copilot svc logs
 37236ed 10.0.0.30 🚑 Health-check ok!
 37236ed 10.0.0.30 🚑 Health-check ok!
