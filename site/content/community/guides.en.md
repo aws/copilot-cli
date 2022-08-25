@@ -57,6 +57,7 @@ Share your applications, videos, and blog posts with fellow Copilots!
 
 | Title      | Description                          |
 | ----------- | ------------------------------------ |
+[**Explore the Foundations of AWS Containers**](
 [**Deploy .NET Apps with AWS Copilot**](https://aws-labs.net/netonaws/copilot-windows-dotnet.html) | This lab, part of the AWS Windows Workshop, guides you through creating a .NET 6 project, including deploying CI/CD pipelines. Plenty of screen shots help you see what's happening in the terminal, in VS Code, and on the console. |
 [**Copilot Rocks**](https://www.copilot.rocks/) | This open-source, comprehensive, modular workshop lets you pick and choose from multiple mini-workshops, covering everything from installation to implementing pub/sub patterns. Step-by-step guides offer tips and tricks, clarify with useful diagrams, and delve into advanced patterns. (Source code is hosted [here](https://github.com/donnieprakoso/copilot.rocks).) |
 [**ECS Workshop**](https://ecsworkshop.com/microservices/) | In this workshop, we deploy a three-tier microservices application using the AWS Copilot CLI. (Optional accompanying video [here](https://www.youtube.com/watch?v=o8o9Ea9o0aI).) |

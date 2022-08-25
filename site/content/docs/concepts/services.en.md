@@ -66,7 +66,7 @@ A Worker Service is composed of:
 
 ## Config and the Manifest
 
-After you've run `copilot init` you might have noticed that Copilot created a file called `manifest.yml` in the copilot directory. This manifest file contains common configuration options for your service. While the exact set of options depends on the type of service you're running, common ones include the resources allocated to your service (like memory and CPU), health checks, and environment variables.
+After you've run `copilot init` you might have noticed that Copilot created a file called `manifest.yml` in the `copilot/[service name]/` directory. This manifest file contains common configuration options for your service. While the exact set of options depends on the type of service you're running, common ones include the resources allocated to your service (like memory and CPU), health checks, and environment variables.
 
 Let's take a look at the manifest for a Load Balanced Web Service called _front-end_.
 
