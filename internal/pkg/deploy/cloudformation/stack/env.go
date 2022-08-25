@@ -244,7 +244,7 @@ func (e *EnvStackConfig) transformParameters(currParams, oldParams []*cloudforma
 	// Remove or transform each of the current parameters.
 	var params []*cloudformation.Parameter
 	for k, p := range curr {
-		var currP = p
+		currP := p
 		for _, transform := range transformFunc {
 			currP = transform(currP, old[k])
 		}
@@ -261,12 +261,9 @@ func transformEnvControllerParameters(new, old *cloudformation.Parameter) *cloud
 	if new == nil {
 		return nil
 	}
-	var (
-		isEnvControllerManaged = make(map[string]struct{})
-		exists                 = struct{}{}
-	)
+	isEnvControllerManaged := make(map[string]struct{})
 	for _, f := range template.AvailableEnvFeatures() {
-		isEnvControllerManaged[f] = exists
+		isEnvControllerManaged[f] = struct{}{}
 	}
 	if _, ok := isEnvControllerManaged[aws.StringValue(new.ParameterKey)]; !ok {
 		return new
