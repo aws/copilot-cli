@@ -28,8 +28,9 @@ func TestConvertBackendService(t *testing.T) {
 	}{
 		"happy path trivial image": {
 			inSvc: compose.ServiceConfig{
-				Name:  "web",
-				Image: "nginx",
+				Name:   "internalweb",
+				Image:  "nginx",
+				Expose: []string{"8080"},
 			},
 
 			wantBackendSvc: &manifest.BackendServiceConfig{
@@ -38,7 +39,7 @@ func TestConvertBackendService(t *testing.T) {
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 						},
-						Port: aws.Uint16(80),
+						Port: aws.Uint16(8080),
 					},
 				},
 				TaskConfig: manifest.TaskConfig{
@@ -54,6 +55,12 @@ func TestConvertBackendService(t *testing.T) {
 			inSvc: compose.ServiceConfig{
 				Name: "web",
 
+				Ports: []compose.ServicePortConfig{
+					{
+						Target:    443,
+						Published: "443",
+					},
+				},
 				Command: compose.ShellCommand{
 					"CMD-SHELL",
 					"/bin/nginx",
@@ -95,8 +102,8 @@ func TestConvertBackendService(t *testing.T) {
 				},
 			},
 
-			wantBackendSvc: &manifest.BackendServiceConfig{ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
-				ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+			wantLbws: &manifest.LoadBalancedWebServiceConfig{ImageConfig: manifest.ImageWithPortAndHealthcheck{
+				ImageWithPort: manifest.ImageWithPort{
 					Image: manifest.Image{
 						Location: aws.String("nginx"),
 						DockerLabels: map[string]string{
@@ -104,7 +111,7 @@ func TestConvertBackendService(t *testing.T) {
 							"docker.test2": "val2",
 						},
 					},
-					Port: aws.Uint16(80),
+					Port: aws.Uint16(443),
 				},
 				HealthCheck: manifest.ContainerHealthCheck{
 					Command: []string{
@@ -178,6 +185,7 @@ func TestConvertBackendService(t *testing.T) {
 				Name:     "web",
 				Image:    "nginx",
 				Platform: "windows",
+				Expose:   []string{"80"},
 			},
 
 			wantBackendSvc: &manifest.BackendServiceConfig{
@@ -208,12 +216,19 @@ func TestConvertBackendService(t *testing.T) {
 					Timeout:     &fiveSeconds,
 					StartPeriod: &threeSeconds,
 				},
-				Image: "nginx",
+				Image:  "nginx",
+				Expose: []string{"80"},
+				Ports: []compose.ServicePortConfig{
+					{
+						Target:    80,
+						Published: "80",
+					},
+				},
 			},
 
-			wantBackendSvc: &manifest.BackendServiceConfig{
-				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
-					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+			wantLbws: &manifest.LoadBalancedWebServiceConfig{
+				ImageConfig: manifest.ImageWithPortAndHealthcheck{
+					ImageWithPort: manifest.ImageWithPort{
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 						},
@@ -251,7 +266,6 @@ func TestConvertBackendService(t *testing.T) {
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 						},
-						Port: aws.Uint16(80),
 					},
 					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"NONE"},
@@ -290,7 +304,6 @@ func TestConvertBackendService(t *testing.T) {
 						Image: manifest.Image{
 							Location: aws.String("nginx"),
 						},
-						Port: aws.Uint16(80),
 					},
 					HealthCheck: manifest.ContainerHealthCheck{
 						Command:     []string{"NONE"},
@@ -312,7 +325,7 @@ func TestConvertBackendService(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			svc, ignored, err := convertService(&tc.inSvc)
+			svc, ignored, err := convertService(&tc.inSvc, "")
 
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())

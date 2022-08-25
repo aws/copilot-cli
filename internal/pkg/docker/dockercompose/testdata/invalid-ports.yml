@@ -1,0 +1,5 @@
+services:
+  invalid-ports:
+    image: nginx
+    ports:
+      - "pony"

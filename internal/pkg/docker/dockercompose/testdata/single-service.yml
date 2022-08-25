@@ -4,6 +4,8 @@ services:
     userns_mode: "ignored"
     oom_score_adj: 999
 
+    ports:
+      - "443:443"
     command: ["CMD-SHELL", "/bin/nginx"]
     entrypoint: ["CMD", "/bin/sh"]
     environment:
