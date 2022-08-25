@@ -4,10 +4,16 @@
 package dockercompose
 
 import (
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	compose "github.com/compose-spec/compose-go/types"
+	"github.com/spf13/afero"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,7 +22,7 @@ type ConvertedService struct {
 	BackendSvc *manifest.BackendService
 }
 
-func convertService(service *compose.ServiceConfig) (*ConvertedService, IgnoredKeys, error) {
+func convertService(service *compose.ServiceConfig, workingDir string) (*ConvertedService, IgnoredKeys, error) {
 	image, ignored, err := convertImageConfig(service.Build, service.Labels, service.Image)
 	if err != nil {
 		return nil, nil, err
@@ -41,10 +47,11 @@ func convertService(service *compose.ServiceConfig) (*ConvertedService, IgnoredK
 		hc = convertHealthCheckConfig(service.HealthCheck)
 	}
 
-	exposed, err := findExposedPort(service)
+	exposed, portIgnored, err := findExposedPort(service, workingDir)
 	if err != nil {
 		return nil, nil, err
 	}
+	ignored = append(ignored, portIgnored...)
 
 	if exposed != nil && exposed.public {
 		lbws := manifest.LoadBalancedWebService{}
@@ -96,12 +103,93 @@ type exposedPort struct {
 }
 
 // findExposedPort attempts to detect a singular exposed port in the given service and determines if it is publicly exposed.
-func findExposedPort(service *compose.ServiceConfig) (*exposedPort, error) {
-	// TODO: Port handling & exposed port detection, to be implemented in Milestone 3
+func findExposedPort(service *compose.ServiceConfig, workingDir string) (*exposedPort, IgnoredKeys, error) {
+	switch {
+	case len(service.Ports) > 1:
+		return nil, nil, fmt.Errorf("cannot expose more than one public port in Copilot, but %v ports are exposed publicly: %v",
+			len(service.Ports), service.Ports)
+	case len(service.Ports) == 1:
+		return toExposedPort(service.Ports[0])
+	case len(service.Expose) > 1:
+		return nil, nil, fmt.Errorf("cannot expose more than one port in Copilot, but %v ports are exposed: %s",
+			len(service.Expose), strings.Join(service.Expose, ", "))
+	case len(service.Expose) == 1:
+		port, err := strconv.Atoi(service.Expose[0])
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not parse exposed port: %w", err)
+		}
+
+		return &exposedPort{
+			port:   uint16(port),
+			public: false,
+		}, nil, nil
+	}
+
+	if service.Image != "" || service.Build == nil {
+		// No dockerfile to parse, don't infer any ports.
+		return nil, nil, nil
+	}
+
+	if service.Build.Context == "" {
+		return nil, nil, errors.New("service is missing an image location or Dockerfile path")
+	}
+
+	dockerfilePath := service.Build.Dockerfile
+	if dockerfilePath == "" {
+		dockerfilePath = "Dockerfile"
+	}
+
+	dockerfilePath = filepath.Join(workingDir, service.Build.Context, dockerfilePath)
+
+	df := dockerfile.New(&afero.Afero{Fs: afero.NewOsFs()}, dockerfilePath)
+	ports, err := df.GetExposedPorts()
+	var exposeErr dockerfile.ErrNoExpose
+	if err != nil && !errors.As(err, &exposeErr) {
+		return nil, nil, fmt.Errorf("parse dockerfile for exposed ports: %w", err)
+	}
+
+	if len(ports) == 0 {
+		// No exposed ports
+		return nil, nil, nil
+	}
+
 	return &exposedPort{
-		port:   80,
+		// matches "svc init" behavior
+		port:   ports[0].Port,
 		public: false,
-	}, nil
+	}, nil, nil
+}
+
+// toExposedPort converts a single published Compose port to a simplified Copilot exposed port.
+func toExposedPort(binding compose.ServicePortConfig) (*exposedPort, IgnoredKeys, error) {
+	port := uint16(binding.Target)
+	var ignored IgnoredKeys
+
+	if binding.HostIP != "" {
+		ignored = append(ignored, "ports.<port>.host_ip")
+	}
+
+	if binding.Protocol != "" && binding.Protocol != "tcp" {
+		ignored = append(ignored, "ports.<port>.protocol")
+	}
+
+	if binding.Mode != "" && binding.Mode != "ingress" {
+		ignored = append(ignored, "ports.<port>.mode")
+	}
+
+	if strings.Contains(binding.Published, "-") {
+		return nil, nil, fmt.Errorf("cannot map a published port range (%s) to a single container port (%v) yet", binding.Published, binding.Target)
+	}
+
+	// if binding.Published is empty, we can choose any port on the host, so we'll just choose the container port.
+	if binding.Published != "" && strconv.Itoa(int(port)) != binding.Published {
+		return nil, nil, fmt.Errorf("cannot publish the container port %v under a different public port %v in Copilot", port, binding.Published)
+	}
+
+	return &exposedPort{
+		port:   port,
+		public: true,
+	}, ignored, nil
 }
 
 // convertTaskConfig converts environment variables, env files, and platform strings.

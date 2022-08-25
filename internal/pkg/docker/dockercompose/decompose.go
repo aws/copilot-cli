@@ -8,6 +8,7 @@ import (
 	"github.com/compose-spec/compose-go/loader"
 	compose "github.com/compose-spec/compose-go/types"
 	"sort"
+	"strings"
 )
 
 type composeServices map[string]map[string]any
@@ -63,7 +64,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*Conve
 	}
 
 	svcConfig.EnvFile = envFiles
-	svc, svcIgnored, err := convertService(&svcConfig)
+	svc, svcIgnored, err := convertService(&svcConfig, workingDir)
 	if err != nil {
 		return nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
 	}
@@ -109,8 +110,11 @@ func serviceConfig(services composeServices, svcName string) (map[string]any, er
 	for svc := range services {
 		validNames = append(validNames, svc)
 	}
+	if len(validNames) == 0 {
+		return nil, fmt.Errorf("compose file has no services")
+	}
 	sort.Strings(validNames)
-	return nil, fmt.Errorf("no service named \"%s\" in this Compose file, valid services are: %v", svcName, validNames)
+	return nil, fmt.Errorf("no service named \"%s\" in this Compose file, valid services are: %s", svcName, strings.Join(validNames, ", "))
 }
 
 // unsupportedServiceKeys scans over fields in the parsed yaml to find unsupported keys.
@@ -128,7 +132,7 @@ func unsupportedServiceKeys(service map[string]any, svcName string) (IgnoredKeys
 	if len(fatal) != 0 {
 		// sort so we have consistent (testable) error messages
 		sort.Strings(fatal)
-		return nil, fmt.Errorf("\"services.%s\" relies on fatally-unsupported Compose keys: %v", svcName, fatal)
+		return nil, fmt.Errorf("\"services.%s\" relies on fatally-unsupported Compose keys: %s", svcName, strings.Join(fatal, ", "))
 	}
 
 	return ignored, nil

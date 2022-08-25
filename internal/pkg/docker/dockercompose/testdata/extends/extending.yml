@@ -1,5 +1,7 @@
 services:
   web:
+    expose:
+      - 8096
     extends:
       file: extended.yml
       service: webapp
