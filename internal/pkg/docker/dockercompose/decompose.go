@@ -71,7 +71,7 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*Conve
 	}
 
 	svcConfig.EnvFile = envFiles
-	svc, svcIgnored, err := convertService(&svcConfig, otherSvcs, project.Volumes)
+	svc, svcIgnored, err := convertService(&svcConfig, workingDir, otherSvcs, project.Volumes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
 	}
