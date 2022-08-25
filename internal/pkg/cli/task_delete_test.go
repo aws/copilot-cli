@@ -438,7 +438,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.ecs.EXPECT().StopDefaultClusterTasks(mockTaskName).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.spinner.EXPECT().Start(gomock.Any()),
-					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.ecr.EXPECT().EmptyRepo(mockTaskRepoName, mockRegionSet).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(&mockDefaultTaskNoBucket, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),

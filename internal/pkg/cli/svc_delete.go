@@ -170,7 +170,7 @@ func (o *deleteSvcOpts) Execute() error {
 		return nil
 	}
 
-	if err := o.emptyECRRepo(envs); err != nil {
+	if err := o.imageRepoEmptier.EmptyRepo(o.appName+"/"+o.name, regionSet(envs)); err != nil {
 		return err
 	}
 	if err := o.removeSvcFromApp(); err != nil {
@@ -262,10 +262,6 @@ func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
 		}
 	}
 	return nil
-}
-
-func (o *deleteSvcOpts) emptyECRRepo(envs []*config.Environment) error {
-	return o.imageRepoEmptier.EmptyRepo(o.appName+"/"+o.name, regionSet(envs))
 }
 
 func (o *deleteSvcOpts) removeSvcFromApp() error {
