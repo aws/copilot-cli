@@ -14,9 +14,13 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 
 	"github.com/stretchr/testify/require"
 )
@@ -49,10 +53,19 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 		require.NoError(t, err)
 		err = envMft.Validate()
 		require.NoError(t, err)
+		err = envMft.Load(session.New())
+		require.NoError(t, err)
 		content := envMft.Manifest()
 
 		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
+
+		ws, err := workspace.New()
+		require.NoError(t, err)
+
+		_, err = addon.Parse(aws.StringValue(v.Name), ws)
+		var notFound *addon.ErrAddonsNotFound
+		require.ErrorAs(t, err, &notFound)
 
 		envConfig := &manifest.Environment{
 			Workload: manifest.Workload{

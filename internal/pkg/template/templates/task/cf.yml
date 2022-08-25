@@ -35,6 +35,7 @@ Conditions:
     !Not [!Equals [ !Join ["", !Ref Command], ""]]
   HasEntryPoint:
     !Not [ !Equals [ !Join [ "", !Ref EntryPoint ], "" ] ]
+  # NOTE: Env file cannot be pushed until the S3 bucket is created, at which time the EnvFileARN would be "".
   HasEnvFile:
     !Not [!Equals [!Ref EnvFileARN, ""]]
   HasCustomPlatform:
@@ -255,7 +256,48 @@ Resources:
     Properties:
       LogGroupName: !Join ['', ["/copilot/", !Ref TaskName]]
       RetentionInDays: !Ref LogRetention
+  S3Bucket:
+    Metadata:
+      'aws:copilot:description': 'An S3 bucket to hold .env files'
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          # .env files are only needed on the initial RunTask call and are not needed after that.
+          # This prevents them from piling up (hopefully it does not take 1 day to build the docker image).
+          - Id: DeleteEnvFilesRule
+            Status: Enabled
+            Prefix: 'manual/env-files'
+            ExpirationInDays: 1
+  S3BucketPolicy:
+    Metadata:
+      'aws:copilot:description': 'A policy to allow file uploads to the S3 bucket'
+    Type: AWS::S3::BucketPolicy
+    DependsOn: S3Bucket
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Action:
+              - s3:*
+            Effect: Allow
+            Resource:
+              - !Sub arn:${AWS::Partition}:s3:::${S3Bucket}
+              - !Sub arn:${AWS::Partition}:s3:::${S3Bucket}/*
+            Principal:
+              AWS:
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:root
 Outputs:
   ECRRepo:
     Description: ECR Repo used to store images of task.
     Value: !GetAtt ECRRepo.Arn
+  S3Bucket:
+    Description: S3 Bucket used to store env files.
+    Value: !Ref S3Bucket

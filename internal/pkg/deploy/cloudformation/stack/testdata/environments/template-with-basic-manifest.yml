@@ -176,7 +176,7 @@ Resources:
                 Action:
                   - "states:StartExecution"
                 Resource:
-                  - !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
+                  - !Sub "arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
               - Sid: CloudFormation
                 Effect: Allow
                 Action: [
@@ -586,7 +586,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb-http'
   PublicHTTPSLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTPS traffic'
@@ -603,7 +603,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb-https'
   InternalLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your internal load balancer allowing HTTP traffic from within the VPC'
@@ -913,7 +913,7 @@ Resources:
       Timeout: 900
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
   
   CustomDomainFunction:
     Condition: ManagedAliases
@@ -926,7 +926,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
   
   DNSDelegationFunction:
     Type: AWS::Lambda::Function
@@ -939,7 +939,7 @@ Resources:
       Timeout: 600
       MemorySize: 512
       Role: !GetAtt 'CustomResourceRole.Arn'
-      Runtime: nodejs12.x
+      Runtime: nodejs16.x
   DelegateDNSAction:
     Metadata:
       'aws:copilot:description': 'Delegate DNS for environment subdomain'
@@ -986,8 +986,8 @@ Resources:
       Aliases: !Ref Aliases
       AppDNSRole: !Ref AppDNSDelegationRole
       DomainName: !Ref AppDNSName
-      LoadBalancerDNS: !GetAtt PublicLoadBalancer.DNSName
-      LoadBalancerHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+      PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
+      PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -1127,6 +1127,9 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  PublicALBAccessible:
+    Condition: CreateALB
+    Value: true
   LastForceDeployID:
     Value: ""
     Description: Optionally force the template to update when no immediate resource change is present.

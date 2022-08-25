@@ -93,6 +93,81 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			},
 			wantedError: "in order to specify internal ALB subnet placement, subnets must be imported",
 		},
+		"error if invalid security group config": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []securityGroupRule{
+								{
+									IpProtocol: "tcp",
+									Ports: portsConfig{
+										Port: aws.Int(80),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"security_group\": validate ingress[0]: \"cidr\" must be specified",
+		},
+		"valid security group config": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []securityGroupRule{
+								{
+									CidrIP:     "0.0.0.0",
+									IpProtocol: "tcp",
+									Ports: portsConfig{
+										Range: (*IntRangeBand)(aws.String("1-10")),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"invalid ports value in security group config": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []securityGroupRule{
+								{
+									CidrIP:     "0.0.0.0",
+									IpProtocol: "tcp",
+									Ports: portsConfig{
+										Range: (*IntRangeBand)(aws.String("1-10-10")),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"security_group\": validate ingress[0]: invalid range value 1-10-10: valid format is ${from_port}-${to_port}",
+		},
+		"valid security group config without ports": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						SecurityGroupConfig: securityGroupConfig{
+							Ingress: []securityGroupRule{
+								{
+									CidrIP:     "0.0.0.0",
+									IpProtocol: "tcp",
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"security_group\": validate ingress[0]: \"ports\" must be specified",
+		},
 		"error if security group ingress is limited to a cdn distribution not enabled": {
 			in: EnvironmentConfig{
 				CDNConfig: environmentCDNConfig{
@@ -111,6 +186,56 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				},
 			},
 			wantedError: "CDN must be enabled to limit security group ingress to CloudFront",
+		},
+		"valid elb access logs config with bucket_prefix": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						ELBAccessLogs: ELBAccessLogsArgsOrBool{
+							AdvancedConfig: ELBAccessLogsArgs{
+								Prefix: aws.String("prefix"),
+							},
+						},
+					},
+				},
+			},
+		},
+		"valid elb access logs config with both bucket_prefix and bucket_name": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						ELBAccessLogs: ELBAccessLogsArgsOrBool{
+							AdvancedConfig: ELBAccessLogsArgs{
+								Prefix:     aws.String("prefix"),
+								BucketName: aws.String("bucketName"),
+							},
+						},
+					},
+				},
+			},
+		},
+		"error if cdn cert specified but public certs not specified": {
+			in: EnvironmentConfig{
+				CDNConfig: environmentCDNConfig{
+					Config: advancedCDNConfig{
+						Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
+					},
+				},
+			},
+			wantedError: "\"http.public.certificates\" must be specified if \"cdn.certificate\" is specified",
+		},
+		"error if cdn cert not specified but public certs imported": {
+			in: EnvironmentConfig{
+				CDNConfig: environmentCDNConfig{
+					Enabled: aws.Bool(true),
+				},
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						Certificates: []string{"arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"},
+					},
+				},
+			},
+			wantedError: "\"cdn.certificate\" must be specified if \"http.public.certificates\" and \"cdn\" are specified",
 		},
 		"error if subnets specified for internal ALB placement don't exist": {
 			in: EnvironmentConfig{
@@ -607,8 +732,9 @@ func TestSubnetsConfiguration_validate(t *testing.T) {
 
 func TestCDNConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
-		in          environmentCDNConfig
-		wantedError error
+		in                   environmentCDNConfig
+		wantedError          error
+		wantedErrorMsgPrefix string
 	}{
 		"valid if empty": {
 			in: environmentCDNConfig{},
@@ -620,14 +746,35 @@ func TestCDNConfiguration_validate(t *testing.T) {
 		},
 		"valid if advanced config configured correctly": {
 			in: environmentCDNConfig{
-				CDNConfig: advancedCDNConfig{},
+				Config: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
+				},
 			},
+		},
+		"error if certificate invalid": {
+			in: environmentCDNConfig{
+				Config: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:weird-little-arn"),
+				},
+			},
+			wantedErrorMsgPrefix: "parse cdn certificate:",
+		},
+		"error if certificate in invalid region": {
+			in: environmentCDNConfig{
+				Config: advancedCDNConfig{
+					Certificate: aws.String("arn:aws:acm:us-west-2:1111111:certificate/look-like-a-good-arn"),
+				},
+			},
+			wantedError: errors.New("cdn certificate must be in region us-east-1"),
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			gotErr := tc.in.validate()
-			if tc.wantedError != nil {
+			if tc.wantedErrorMsgPrefix != "" {
+				require.Error(t, gotErr)
+				require.Contains(t, gotErr.Error(), tc.wantedErrorMsgPrefix)
+			} else if tc.wantedError != nil {
 				require.Error(t, gotErr)
 				require.EqualError(t, tc.wantedError, gotErr.Error())
 			} else {

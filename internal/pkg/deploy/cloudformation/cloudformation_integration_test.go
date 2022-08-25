@@ -50,7 +50,7 @@ func Test_App_Infrastructure(t *testing.T) {
 	callerInfo, err := identity.Get()
 	require.NoError(t, err)
 	require.NoError(t, err)
-	deployer := cloudformation.New(sess)
+	deployer := cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 	cfClient := awsCF.New(sess)
 	require.NoError(t, err)
 
@@ -380,7 +380,7 @@ func Test_App_Infrastructure(t *testing.T) {
 func Test_Environment_Deployment_Integration(t *testing.T) {
 	sess, err := testSession(nil)
 	require.NoError(t, err)
-	deployer := cloudformation.New(sess)
+	deployer := cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr))
 	cfClient := awsCF.New(sess)
 	identity := identity.New(sess)
 	s3ManagerClient := s3manager.NewUploader(sess)
@@ -437,7 +437,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		environmentToDeploy.ArtifactBucketARN = fmt.Sprintf("arn:aws:s3:::%s", bucketName)
 
 		// Deploy the environment and wait for it to be complete
-		require.NoError(t, deployer.CreateAndRenderEnvironment(os.Stderr, &environmentToDeploy))
+		require.NoError(t, deployer.CreateAndRenderEnvironment(&environmentToDeploy))
 
 		// Ensure that the new stack exists
 		output, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{
@@ -508,7 +508,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		conf := stack.NewEnvConfigFromExistingStack(&environmentToDeploy, lastForceUpdateID, oldParams)
 
 		// Deploy the environment and wait for it to be complete.
-		require.NoError(t, deployer.UpdateAndRenderEnvironment(os.Stderr, conf, environmentToDeploy.ArtifactBucketARN))
+		require.NoError(t, deployer.UpdateAndRenderEnvironment(conf, environmentToDeploy.ArtifactBucketARN))
 
 		// Ensure that the updated stack still exists.
 		output, err := cfClient.DescribeStacks(&awsCF.DescribeStacksInput{

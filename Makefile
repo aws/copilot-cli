@@ -28,6 +28,9 @@ build: package-custom-resources compile-local package-custom-resources-clean
 .PHONY: build-e2e
 build-e2e: package-custom-resources compile-linux package-custom-resources-clean
 
+.PHONY: build-regression
+build-regression: package-custom-resources compile-linux package-custom-resources-clean
+
 .PHONY: release
 release: package-custom-resources compile-darwin compile-linux compile-windows package-custom-resources-clean
 
@@ -125,9 +128,22 @@ e2e-dryrun: build # Sample command "make e2e-dryrun test=multi-env-app" to run t
 	@echo "Install ginkgo"
 	go install github.com/onsi/ginkgo/ginkgo@latest
 	@echo "Setup credentials"
-	./scripts/e2e-dryrun-creds.sh
+	./scripts/dryrun-creds.sh e2e
 	@echo "Run the $(test) test"
 	cd e2e/$(test) && DRYRUN=true ginkgo -v -r
+	cd -
+
+# Examples:
+# REGRESSION_TEST_FROM_PATH=/usr/local/bin/copilot make regression-dryrun test=multi-svc-app
+# REGRESSION_TEST_FROM_PATH=/usr/local/bin/copilot-v1.18.0 REGRESSION_TO_FROM_PATH=/usr/local/bin/copilot-v1.19.0 make regression-dryrun test=multi-svc-app
+.PHONY: regression-dryrun
+regression-dryrun: build
+	@echo "Install ginkgo"
+	go install github.com/onsi/ginkgo/ginkgo@latest
+	@echo "Setup credentials"
+	./scripts/dryrun-creds.sh regression
+	@echo "Run the $(test) test"
+	cd regression/$(test) && DRYRUN=true ginkgo -v -r
 	cd -
 
 .PHONY: tools
@@ -142,7 +158,7 @@ site-local:
 
 .PHONY: gen-mocks
 gen-mocks:
-	GOBIN=${GOBIN} go install github.com/golang/mock/mockgen
+	GOBIN=${GOBIN} go install github.com/golang/mock/mockgen@latest
 	# TODO: make this more extensible?
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/aws/sessions/mocks/mock_sessions.go -source=./internal/pkg/aws/sessions/sessions.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/mocks/mock_rg.go -source=./internal/pkg/cli/env_delete.go resourceGetter
@@ -198,6 +214,7 @@ gen-mocks:
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_rd_web_svc.go -source=./internal/pkg/deploy/cloudformation/stack/rd_web_svc.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_backend_svc.go -source=./internal/pkg/deploy/cloudformation/stack/backend_svc.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_scheduled_job.go -source=./internal/pkg/deploy/cloudformation/stack/scheduled_job.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/deploy/cloudformation/stack/mocks/mock_workload.go -source=./internal/pkg/deploy/cloudformation/stack/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/template/mocks/mock_template.go -source=./internal/pkg/template/template.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/task/mocks/mock_task.go -source=./internal/pkg/task/task.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/repository/mocks/mock_repository.go -source=./internal/pkg/repository/repository.go
@@ -212,4 +229,6 @@ gen-mocks:
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_run_task_request.go -source=./internal/pkg/ecs/run_task_request.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/runner/jobrunner/mocks/mock.go -source=./internal/pkg/runner/jobrunner/jobrunner.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/manifest/mocks/mock.go -source=./internal/pkg/manifest/loader.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addon/mocks/mock_package.go -source=./internal/pkg/addon/package.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/addon/mocks/mock_addons.go -source=./internal/pkg/addon/addons.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/delete/mocks/delete.go -source=./internal/pkg/cli/delete/delete.go

@@ -1,0 +1,43 @@
+version: 0.2
+
+batch:
+  fast-fail: false
+  build-list:
+    - identifier: multi_svc_app
+      env:
+        privileged-mode: true
+        variables:
+          TEST_SUITE: multi-svc-app
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 16
+    commands:
+      - 'cd $HOME/.goenv && git pull --ff-only && cd -'
+      - 'goenv install 1.18.4'
+      - 'goenv global 1.18.4'
+      - 'go install github.com/onsi/ginkgo/ginkgo@latest'
+  pre_build:
+    commands:
+      - printenv DOCKERHUB_TOKEN | docker login --username ${DOCKERHUB_USERNAME} --password-stdin
+  build:
+    commands:
+      - cd $CODEBUILD_SRC_DIR
+      - export GOPATH=/go
+      - rm -rf cf-custom-resources/node_modules
+      - mkdir -p /tmp/.aws
+      - printf "[default]\nregion = us-west-1\n" > /tmp/.aws/config
+      - printf "[default]\naws_access_key_id=$REGRESSION_TEST_USER_ACCESS_KEY\naws_secret_access_key=$REGRESSION_TEST_USER_SECRET_KEY\n" > /tmp/.aws/credentials
+      - export AWS_CONFIG_FILE=/tmp/.aws/config
+      - export AWS_SHARED_CREDENTIALS_FILE=/tmp/.aws/credentials
+      - make build-regression
+      - |
+        if [ -z "$FROM_VERSION" ]; then
+            FROM_VERSION=$(git describe --tags $(git rev-list --tags --max-count=1)) # Latest tag. Example: "v1.20.0".
+        fi
+      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-${FROM_VERSION}
+      - chmod +x ./copilot-linux-${FROM_VERSION}
+      - export REGRESSION_TEST_FROM_PATH=../../copilot-linux-${FROM_VERSION}
+      - export REGRESSION_TEST_TO_PATH=../../bin/local/copilot-linux-amd64
+      - cd regression/${TEST_SUITE} && ginkgo -v -r -noColor

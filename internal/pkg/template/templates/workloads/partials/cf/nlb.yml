@@ -145,7 +145,7 @@ NLBCustomDomainFunction:
     Timeout: 900
     MemorySize: 512
     Role: !GetAtt 'NLBCustomDomainRole.Arn'
-    Runtime: nodejs12.x
+    Runtime: nodejs16.x
 
 NLBCustomDomainRole:
   Metadata:
@@ -222,7 +222,7 @@ NLBCertValidatorFunction:
     Timeout: 900
     MemorySize: 512
     Role: !GetAtt 'NLBCertValidatorRole.Arn'
-    Runtime: nodejs12.x
+    Runtime: nodejs16.x
 
 NLBCertValidatorRole:
   Metadata:

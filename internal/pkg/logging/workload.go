@@ -23,7 +23,7 @@ const (
 	defaultServiceLogsLimit = 10
 
 	fmtWkldLogGroupName         = "/copilot/%s-%s-%s"
-	fmtWkldLogStreamPrefix      = "copilot/%s"
+	wkldLogStreamPrefix         = "copilot"
 	stateMachineLogStreamPrefix = "states"
 )
 
@@ -33,11 +33,11 @@ type logGetter interface {
 
 // WorkloadClient retrieves the logs of an Amazon ECS or AppRunner service.
 type WorkloadClient struct {
-	logGroupName            string
-	logStreamNamePrefix     string
-	eventsGetter            logGetter
-	w                       io.Writer
-	includeStateMachineLogs bool
+	name         string
+	logGroupName string
+	isECS        bool
+	eventsGetter logGetter
+	w            io.Writer
 
 	now func() time.Time
 }
@@ -53,20 +53,21 @@ type WriteLogEventsOpts struct {
 	OnEvents func(w io.Writer, logs []HumanJSONStringer) error
 	// LogStreamLimit is an optional parameter for jobs and tasks to speed up CW queries
 	// involving multiple log streams.
-	LogStreamLimit int
+	LogStreamLimit          int
+	IncludeStateMachineLogs bool
+	ContainerName           string
 }
 
 // NewWorkloadLogsConfig contains fields that initiates WorkloadClient struct.
 type NewWorkloadLogsConfig struct {
-	App                     string
-	Env                     string
-	Name                    string
-	Sess                    *session.Session
-	LogGroup                string
-	WkldType                string
-	TaskIDs                 []string
-	ConfigStore             describe.ConfigStoreSvc
-	IncludeStateMachineLogs bool
+	App         string
+	Env         string
+	Name        string
+	Sess        *session.Session
+	LogGroup    string
+	WkldType    string
+	TaskIDs     []string
+	ConfigStore describe.ConfigStoreSvc
 }
 
 func (o WriteLogEventsOpts) limit() *int64 {
@@ -115,12 +116,12 @@ func NewWorkloadClient(opts *NewWorkloadLogsConfig) (*WorkloadClient, error) {
 		logGroup = opts.LogGroup
 	}
 	return &WorkloadClient{
-		logGroupName:            logGroup,
-		logStreamNamePrefix:     fmt.Sprintf(fmtWkldLogStreamPrefix, opts.Name),
-		eventsGetter:            cloudwatchlogs.New(opts.Sess),
-		w:                       log.OutputWriter,
-		now:                     time.Now,
-		includeStateMachineLogs: opts.IncludeStateMachineLogs,
+		name:         opts.Name,
+		logGroupName: logGroup,
+		isECS:        true,
+		eventsGetter: cloudwatchlogs.New(opts.Sess),
+		w:            log.OutputWriter,
+		now:          time.Now,
 	}, nil
 }
 
@@ -155,6 +156,7 @@ func newAppRunnerServiceClient(opts *NewWorkloadLogsConfig) (*WorkloadClient, er
 		}
 	}
 	return &WorkloadClient{
+		name:         opts.Name,
 		logGroupName: logGroup,
 		eventsGetter: cloudwatchlogs.New(opts.Sess),
 		w:            log.OutputWriter,
@@ -170,14 +172,19 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 		StartTime:           opts.startTime(s.now),
 		EndTime:             opts.EndTime,
 		StreamLastEventTime: nil,
-		LogStreamLimit:      opts.LogStreamLimit,
 	}
-
-	// TODO: there should be a separate logging client for ECS services
+	logStreamLimit := opts.LogStreamLimit
+	if opts.IncludeStateMachineLogs {
+		logStreamLimit *= 2
+	}
+	// TODO(lou1415926): there should be a separate logging client for ECS services
 	// and App Runner services. This `if` check is only ever true for ECS services.
-	if s.logStreamNamePrefix != "" {
-		logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs)
+	// Refactor so that there are separate client for rdws, job and other services.
+	// As well as the `isECS` variable in `WorkloadClient`.
+	if s.isECS {
+		logEventsOpts.LogStreamPrefixFilters = s.logStreams(opts.TaskIDs, opts.IncludeStateMachineLogs, opts.ContainerName)
 	}
+	logEventsOpts.LogStreamLimit = logStreamLimit
 
 	for {
 		logEventsOutput, err := s.eventsGetter.LogEvents(logEventsOpts)
@@ -199,20 +206,25 @@ func (s *WorkloadClient) WriteLogEvents(opts WriteLogEventsOpts) error {
 	}
 }
 
-func (s *WorkloadClient) logStreams(taskIDs []string) (logStreamPrefixes []string) {
+func (s *WorkloadClient) logStreams(taskIDs []string, includeStateMachineLogs bool, container string) []string {
 	// By default, we only want logs from copilot task log streams.
-	// This filters out log streams not starting with `copilot/`
-	logStreamPrefixes = []string{fmt.Sprintf(fmtWkldLogStreamPrefix, "")}
-	// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for jobs. Therefore, we
-	// need to grab all recent log streams with no prefix filtering.
-	if s.includeStateMachineLogs {
-		return append(logStreamPrefixes, stateMachineLogStreamPrefix)
+	// This filters out log streams not starting with `copilot/`, or `copilot/mysidecar` if container is set.
+	switch {
+	case includeStateMachineLogs:
+		// includeStateMachineLogs is mutually exclusive with specific task IDs and only used for jobs. Therefore, we
+		// need to grab all recent log streams with no prefix filtering.
+		return []string{fmt.Sprintf("%s/%s", wkldLogStreamPrefix, container), stateMachineLogStreamPrefix}
+	case len(taskIDs) == 0:
+		return []string{fmt.Sprintf("%s/%s", wkldLogStreamPrefix, container)}
 	}
-	if len(taskIDs) != 0 {
-		logStreamPrefixes = []string{}
-		for _, taskID := range taskIDs {
-			logStreamPrefixes = append(logStreamPrefixes, fmt.Sprintf("%s/%s", s.logStreamNamePrefix, taskID))
-		}
+
+	var logStreamPrefixes []string
+	if container == "" {
+		container = s.name
 	}
-	return
+	for _, taskID := range taskIDs {
+		prefix := fmt.Sprintf("%s/%s/%s", wkldLogStreamPrefix, container, taskID) // Example: copilot/sidecar/1111 or copilot/web/1111
+		logStreamPrefixes = append(logStreamPrefixes, prefix)
+	}
+	return logStreamPrefixes
 }

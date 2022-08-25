@@ -1,5 +1,7 @@
 # AWS App Runner VPC connection with AWS Copilot
 
+Posted On: Jun 15, 2022
+
 **Rafael Mosca**, Associate Solutions Architect, WWPS EMEA Central SA
 
 The [AWS Copilot CLI](https://aws.github.io/copilot-cli/) is a tool that was [launched in 2020](https://aws.amazon.com/blogs/containers/introducing-aws-copilot/), and since then developers have been using it to build, manage, and operate Linux and Windows containers on [Amazon Elastic Container Service (Amazon ECS)](https://aws.amazon.com/ecs/), [AWS Fargate](https://aws.amazon.com/fargate/), and [AWS App Runner.](https://aws.amazon.com/apprunner/)

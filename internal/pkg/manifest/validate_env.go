@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 )
 
 var (
@@ -20,7 +21,7 @@ var (
 // Validate returns nil if Environment is configured correctly.
 func (e Environment) Validate() error {
 	if err := e.EnvironmentConfig.validate(); err != nil {
-		return fmt.Errorf(`validate "network": %w`, err)
+		return err
 	}
 	return nil
 }
@@ -36,9 +37,33 @@ func (e EnvironmentConfig) validate() error {
 	if err := e.HTTPConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "http config": %w`, err)
 	}
-
-	if e.IsIngressRestrictedToCDN() && !e.CDNConfig.CDNEnabled() {
+	if err := e.Network.VPC.SecurityGroupConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "security_group": %w`, err)
+	}
+	if err := e.CDNConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "cdn": %w`, err)
+	}
+	if e.IsIngressRestrictedToCDN() && !e.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
+	}
+	if e.CDNEnabled() {
+		cdnCert := e.CDNConfig.Config.Certificate
+		if e.HTTPConfig.Public.Certificates == nil {
+			if cdnCert != nil {
+				return &errFieldMustBeSpecified{
+					missingField:      "http.public.certificates",
+					conditionalFields: []string{"cdn.certificate"},
+				}
+			}
+		} else {
+			if cdnCert == nil {
+				return &errFieldMustBeSpecified{
+					missingField:       "cdn.certificate",
+					conditionalFields:  []string{"http.public.certificates", "cdn"},
+					allMustBeSpecified: true,
+				}
+			}
+		}
 	}
 
 	if e.HTTPConfig.Private.InternalALBSubnets != nil {
@@ -76,6 +101,59 @@ func (cfg environmentVPCConfig) validate() error {
 	if cfg.managedVPCCustomized() {
 		if err := cfg.validateManagedVPC(); err != nil {
 			return fmt.Errorf(`validate "subnets" for an adjusted VPC: %w`, err)
+		}
+	}
+	return nil
+}
+
+// validate returns nil if securityGroupRule has all the required parameters set.
+func (cfg securityGroupRule) validate() error {
+	if cfg.CidrIP == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "cidr",
+		}
+	}
+	if cfg.IpProtocol == "" {
+		return &errFieldMustBeSpecified{
+			missingField: "ip_protocol",
+		}
+	}
+	return cfg.Ports.validate()
+}
+
+// validate if ports are set.
+func (cfg portsConfig) validate() error {
+	if cfg.IsEmpty() {
+		return &errFieldMustBeSpecified{
+			missingField: "ports",
+		}
+	}
+	if cfg.Range == nil {
+		return nil
+	}
+	if err := cfg.Range.validate(); err != nil {
+		var targetErr *errInvalidRange
+		if errors.As(err, &targetErr) {
+			return &errInvalidRange{
+				value:       aws.StringValue((*string)(cfg.Range)),
+				validFormat: "${from_port}-${to_port}",
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+// validate returns nil if securityGroupConfig is configured correctly.
+func (cfg securityGroupConfig) validate() error {
+	for idx, ingress := range cfg.Ingress {
+		if err := ingress.validate(); err != nil {
+			return fmt.Errorf(`validate ingress[%d]: %w`, idx, err)
+		}
+	}
+	for idx, egress := range cfg.Egress {
+		if err := egress.validate(); err != nil {
+			return fmt.Errorf(`validate egress[%d]: %w`, idx, err)
 		}
 	}
 	return nil
@@ -220,7 +298,23 @@ func (cfg PublicHTTPConfig) validate() error {
 	if cfg.SecurityGroupConfig.Ingress.VPCIngress != nil {
 		return fmt.Errorf("a public load balancer already allows vpc ingress")
 	}
+	if err := cfg.ELBAccessLogs.validate(); err != nil {
+		return fmt.Errorf(`validate "access_logs": %w`, err)
+	}
 	return cfg.SecurityGroupConfig.validate()
+}
+
+// validate returns nil if ELBAccessLogsArgsOrBool is configured correctly.
+func (al ELBAccessLogsArgsOrBool) validate() error {
+	if al.isEmpty() {
+		return nil
+	}
+	return al.AdvancedConfig.validate()
+}
+
+// validate is a no-op for ELBAccessLogsArgs.
+func (al ELBAccessLogsArgs) validate() error {
+	return nil
 }
 
 // validate returns nil if ALBSecurityGroupsConfig is configured correctly.
@@ -254,10 +348,10 @@ func (cfg securityGroupsConfig) validate() error {
 
 // validate returns nil if environmentCDNConfig is configured correctly.
 func (cfg environmentCDNConfig) validate() error {
-	if cfg.CDNConfig.IsEmpty() {
+	if cfg.Config.isEmpty() {
 		return nil
 	}
-	return cfg.CDNConfig.validate()
+	return cfg.Config.validate()
 }
 
 // validate returns nil if Ingress is configured correctly.
@@ -270,8 +364,18 @@ func (i RestrictiveIngress) validate() error {
 	return nil
 }
 
-// validate is a no-op for AdvancedCDNConfig.
+// validate returns nil if advancedCDNConfig is configured correctly.
 func (cfg advancedCDNConfig) validate() error {
+	if cfg.Certificate == nil {
+		return nil
+	}
+	certARN, err := arn.Parse(*cfg.Certificate)
+	if err != nil {
+		return fmt.Errorf(`parse cdn certificate: %w`, err)
+	}
+	if certARN.Region != cloudfront.CertRegion {
+		return &errInvalidCloudFrontRegion{}
+	}
 	return nil
 }
 

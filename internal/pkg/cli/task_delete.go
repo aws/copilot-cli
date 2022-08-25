@@ -6,9 +6,11 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/cli/delete"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -60,9 +62,10 @@ type deleteTaskOpts struct {
 	imageRepoEmptier imageRepoEmptier
 
 	// Generators for env-specific clients
-	newTaskSel      func(session *session.Session) cfTaskSelector
-	newTaskStopper  func(session *session.Session) taskStopper
-	newStackManager func(session *session.Session) taskStackManager
+	newTaskSel       func(session *session.Session) cfTaskSelector
+	newTaskStopper   func(session *session.Session) taskStopper
+	newBucketEmptier func(session *session.Session) bucketEmptier
+	newStackManager  func(session *session.Session) taskStackManager
 
 	// Cached variables
 	session   *session.Session
@@ -95,14 +98,17 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 			SessionProvider: sessProvider,
 		},
 		newTaskSel: func(session *session.Session) cfTaskSelector {
-			cfn := cloudformation.New(session)
+			cfn := cloudformation.New(session, cloudformation.WithProgressTracker(os.Stderr))
 			return selector.NewCFTaskSelect(prompter, store, cfn)
 		},
 		newTaskStopper: func(session *session.Session) taskStopper {
 			return ecs.New(session)
 		},
 		newStackManager: func(session *session.Session) taskStackManager {
-			return cloudformation.New(session)
+			return cloudformation.New(session, cloudformation.WithProgressTracker(os.Stderr))
+		},
+		newBucketEmptier: func(session *session.Session) bucketEmptier {
+			return s3.New(session)
 		},
 	}, nil
 }
@@ -377,10 +383,22 @@ func (o *deleteTaskOpts) clearECRRepository() error {
 	o.spinner.Start(fmt.Sprintf("Emptying ECR repository for task %s.", color.HighlightUserInput(o.name)))
 	if err := o.imageRepoEmptier.EmptyRepo(repo, region); err != nil {
 		o.spinner.Stop(log.Serrorln("Error emptying ECR repository."))
-		return fmt.Errorf("clear ECR repository for task %s: %w", o.name, err)
+		return fmt.Errorf("empty ECR repository for task %s: %w", o.name, err)
 	}
 
-	o.spinner.Stop(log.Ssuccessf("Emptied ECR repositories for task %s.\n", color.HighlightUserInput(o.name)))
+	o.spinner.Stop(log.Ssuccessf("Emptied ECR repository for task %s.\n", color.HighlightUserInput(o.name)))
+	return nil
+}
+
+func (o *deleteTaskOpts) emptyS3Bucket(info *deploy.TaskStackInfo) error {
+	o.spinner.Start(fmt.Sprintf("Emptying S3 bucket for task %s.", color.HighlightUserInput(o.name)))
+	err := o.newBucketEmptier(o.session).EmptyBucket(info.BucketName)
+	if err != nil {
+		o.spinner.Stop(log.Serrorln("Error emptying S3 bucket."))
+		return fmt.Errorf("empty S3 bucket for task %s: %w", o.name, err)
+	}
+
+	o.spinner.Stop(log.Ssuccessf("Emptied S3 bucket for task %s.\n", color.HighlightUserInput(o.name)))
 	return nil
 }
 
@@ -420,6 +438,11 @@ func (o *deleteTaskOpts) deleteStack() error {
 	if info == nil {
 		// Stack does not exist; skip deleting it.
 		return nil
+	}
+	if info.BucketName != "" {
+		if err := o.emptyS3Bucket(info); err != nil {
+			return err
+		}
 	}
 	o.spinner.Start(fmt.Sprintf("Deleting CloudFormation stack for task %s.", color.HighlightUserInput(o.name)))
 	err = o.newStackManager(sess).DeleteTask(*info)

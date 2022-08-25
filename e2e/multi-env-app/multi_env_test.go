@@ -59,14 +59,12 @@ var _ = Describe("Multiple Env App", func() {
 				AppName: appName,
 				EnvName: "test",
 				Profile: testEnvironmentProfile,
-				Prod:    false,
 			})
 
 			_, prodEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
 				AppName: appName,
 				EnvName: "prod",
 				Profile: prodEnvironmentProfile,
-				Prod:    true,
 			})
 
 		})
@@ -95,10 +93,7 @@ var _ = Describe("Multiple Env App", func() {
 			}
 
 			Expect(envs["test"]).NotTo(BeNil())
-			Expect(envs["test"].Prod).To(BeFalse())
-
 			Expect(envs["prod"]).NotTo(BeNil())
-			Expect(envs["prod"].Prod).To(BeTrue())
 
 			// Make sure, for the sake of coverage, these are cross account,
 			// cross region environments if we're not doing a dryrun.
@@ -289,9 +284,7 @@ var _ = Describe("Multiple Env App", func() {
 				envs[envShowOutput.Environment.Name] = envShowOutput.Environment
 			}
 			Expect(envs["test"]).NotTo(BeNil())
-			Expect(envs["test"].Prod).To(BeFalse())
 			Expect(envs["prod"]).NotTo(BeNil())
-			Expect(envs["prod"].Prod).To(BeTrue())
 			if os.Getenv("DRYRUN") != "true" {
 				Expect(envs["test"].Region).NotTo(Equal(envs["prod"].Region))
 				Expect(envs["test"].Account).NotTo(Equal(envs["prod"].Account))

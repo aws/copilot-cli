@@ -13,7 +13,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -136,9 +135,8 @@ func TestPackageSvcOpts_Ask(t *testing.T) {
 
 type svcPackageExecuteMock struct {
 	ws                   *mocks.MockwsWlDirReader
-	generator            *mocks.MockworkloadTemplateGenerator
+	generator            *mocks.MockworkloadStackGenerator
 	interpolator         *mocks.Mockinterpolator
-	addons               *mocks.Mocktemplater
 	envFeaturesDescriber *mocks.MockversionCompatibilityChecker
 	mft                  *mockWorkloadMft
 }
@@ -215,7 +213,7 @@ count: 1`
 					Parameters: "myparams",
 				}, nil)
 				m.interpolator.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
-				m.addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.generator.EXPECT().AddonsTemplate().Return("", nil)
 			},
 			wantedStack:  "mystack",
 			wantedParams: "myparams",
@@ -231,7 +229,7 @@ count: 1`
 			setupMocks: func(m *svcPackageExecuteMock) {
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(rdwsMft), nil)
 				m.interpolator.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
-				m.addons.EXPECT().Template().Return("", &addon.ErrAddonsNotFound{})
+				m.generator.EXPECT().AddonsTemplate().Return("", nil)
 				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						ImageDigest: aws.String(""),
@@ -260,32 +258,26 @@ count: 1`
 
 			m := &svcPackageExecuteMock{
 				ws:                   mocks.NewMockwsWlDirReader(ctrl),
-				generator:            mocks.NewMockworkloadTemplateGenerator(ctrl),
+				generator:            mocks.NewMockworkloadStackGenerator(ctrl),
 				interpolator:         mocks.NewMockinterpolator(ctrl),
-				addons:               mocks.NewMocktemplater(ctrl),
 				envFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			tc.setupMocks(m)
 			opts := &packageSvcOpts{
 				packageSvcVars: tc.inVars,
 
-				stackWriter:  mockWriteCloser{w: stackBuf},
-				paramsWriter: mockWriteCloser{w: paramsBuf},
-				addonsWriter: mockWriteCloser{w: addonsBuf},
+				templateWriter: mockWriteCloser{w: stackBuf},
+				paramsWriter:   mockWriteCloser{w: paramsBuf},
+				addonsWriter:   mockWriteCloser{w: addonsBuf},
 				unmarshal: func(b []byte) (manifest.DynamicWorkload, error) {
 					return m.mft, nil
 				},
 				rootUserARN: mockARN,
-
-				ws: m.ws,
-				initAddonsClient: func(opts *packageSvcOpts) error {
-					opts.addonsClient = m.addons
-					return nil
-				},
+				ws:          m.ws,
 				newInterpolator: func(_, _ string) interpolator {
 					return m.interpolator
 				},
-				newTplGenerator: func(_ *packageSvcOpts) (workloadTemplateGenerator, error) {
+				newStackGenerator: func(_ *packageSvcOpts) (workloadStackGenerator, error) {
 					return m.generator, nil
 				},
 				envFeaturesDescriber: m.envFeaturesDescriber,
@@ -349,7 +341,7 @@ func TestPackageSvcOpts_RecommendedActions(t *testing.T) {
 					envName: "mockEnv",
 				},
 				envFeaturesDescriber: m.envFeaturesDescriber,
-				appliedManifest:      m.mft,
+				appliedDynamicMft:    m.mft,
 			}
 			got := opts.RecommendActions()
 			if tc.wantedError != nil {

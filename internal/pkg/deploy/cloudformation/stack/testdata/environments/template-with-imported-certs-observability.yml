@@ -6,9 +6,13 @@ Metadata:
     name: test
     type: Environment
     # Create the public ALB with certificates attached.
-    cdn: true
+    cdn:
+      certificate: viewer-cert
     http:
       public:
+        access_logs:
+          bucket_name: accesslogsbucket
+          prefix: accesslogsbucketprefix
         security_groups:
           ingress:
             restrict_to:
@@ -268,6 +272,69 @@ Resources:
       ClusterSettings:
         - Name: containerInsights
           Value: enabled
+  UniqueJSONValuesFunctionRole:
+    Metadata:
+      "aws:copilot:description": "An IAM Role for the unique json values lambda"
+    Type: AWS::IAM::Role
+    Condition: CreateALB
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  UniqueJSONValuesFunction:
+    Type: AWS::Lambda::Function
+    Condition: CreateALB
+    Properties:
+      Code:
+        S3Bucket: mockbucket
+        S3Key: unique-json-values
+      Handler: "index.handler"
+      Timeout: 600
+      MemorySize: 512
+      Role: !GetAtt "UniqueJSONValuesFunctionRole.Arn"
+      Runtime: nodejs16.x
+  UniqueAliasesAction:
+    Metadata:
+      "aws:copilot:description": "An action to get unique custom aliases for services in your environment"
+    Condition: CreateALB
+    Type: Custom::UniqueJSONValuesFunction
+    Properties:
+      ServiceToken: !GetAtt UniqueJSONValuesFunction.Arn
+      Aliases: !Ref Aliases
+  CloudFrontDistribution:
+    Metadata:
+      'aws:copilot:description': 'A CloudFront distribution for global content delivery'
+    Condition: CreateALB
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Aliases: !GetAtt UniqueAliasesAction.UniqueValues
+        DefaultCacheBehavior:
+          AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k
+          TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3 # See https://go.aws/3BIE8CP
+          ViewerProtocolPolicy: allow-all # Will need to change with TLS termination and Alias usage
+        Enabled: true
+        IPV6Enabled: true
+        Origins:
+          - CustomOriginConfig:
+              OriginProtocolPolicy: match-viewer # Will need to change with TLS termination and Alias usage
+            DomainName: !GetAtt PublicLoadBalancer.DNSName
+            Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+        ViewerCertificate:
+          AcmCertificateArn: viewer-cert
+          MinimumProtocolVersion: TLSv1
+          SslSupportMethod:  sni-only
   PublicHTTPLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTP traffic'
@@ -284,7 +351,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb-http'
   PublicHTTPSLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your load balancer allowing HTTPS traffic'
@@ -301,7 +368,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb'
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-lb-https'
   InternalLoadBalancerSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your internal load balancer allowing HTTP traffic from within the VPC'
@@ -393,6 +460,13 @@ Resources:
     Condition: CreateALB
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
+      LoadBalancerAttributes:
+        - Key: 'access_logs.s3.enabled'
+          Value: true
+        - Key: 'access_logs.s3.prefix'
+          Value: "accesslogsbucketprefix"
+        - Key: 'access_logs.s3.bucket'
+          Value: "accesslogsbucket"
       Scheme: internet-facing
       SecurityGroups: 
         - !GetAtt PublicHTTPLoadBalancerSecurityGroup.GroupId
@@ -649,6 +723,7 @@ Resources:
                 Resource:
                   - "cert-1"
                   - "cert-2"
+                  - "viewer-cert"
               - Sid: CloudwatchLogs
                 Effect: Allow
                 Action: [
@@ -709,7 +784,7 @@ Resources:
                 Action:
                   - "states:StartExecution"
                 Resource:
-                  - !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
+                  - !Sub "arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
               - Sid: CloudFormation
                 Effect: Allow
                 Action: [
@@ -1034,6 +1109,15 @@ Outputs:
     Description: The ID of the Copilot-managed EFS filesystem.
     Export:
       Name: !Sub ${AWS::StackName}-FilesystemID
+  CloudFrontDomainName:
+    Condition: CreateALB
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Description: The domain name of an associated CloudFront Distribution.
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontDomainName
+  PublicALBAccessible:
+    Condition: CreateALB
+    Value: false
   LastForceDeployID:
     Value: ""
     Description: Optionally force the template to update when no immediate resource change is present.

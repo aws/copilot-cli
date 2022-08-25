@@ -1,42 +1,74 @@
 List of all available properties for a `'Request-Driven Web Service'` manifest.
 
-???+ note "Sample manifest for a frontend service"
+???+ note "Sample AWS App Runner manifests"
 
-    ```yaml
-        # Your service name will be used in naming your resources like log groups, App Runner services, etc.
+    === "Public"
+
+        ```yaml
+        # Deploys a web service accessible at https://web.example.com.
         name: frontend
         type: Request-Driven Web Service
     
         http:
-          healthcheck:
-            path: '/_healthcheck'
-            healthy_threshold: 3
-            unhealthy_threshold: 5
-            interval: 10s
-            timeout: 5s
+          healthcheck: '/_healthcheck'
           alias: web.example.com
     
-        # Configuration for your containers and service.
         image:
           build: ./frontend/Dockerfile
           port: 80
         cpu: 1024
         memory: 2048
-    
-        network:
-          vpc:
-            placement: 'private'
-    
+
         variables:
           LOG_LEVEL: info
-        
         tags:
-          owner: frontend-team
+          owner: frontend
+        observability:
+          tracing: awsxray
     
         environments:
           test:
             LOG_LEVEL: debug
-    ```
+        ```
+
+    === "Connected to the environment VPC"
+
+        ```yaml
+        # All egress traffic is routed though the environment VPC.
+        name: frontend
+        type: Request-Driven Web Service
+
+        image:
+          build: ./frontend/Dockerfile
+          port: 8080
+        cpu: 1024
+        memory: 2048
+
+        network:
+          vpc:
+            placement: private
+        ```
+
+    === "Event-driven"
+
+        ```yaml
+        # See https://aws.github.io/copilot-cli/docs/developing/publish-subscribe/
+        name: refunds
+        type: Request-Driven Web Service
+
+        image:
+          build: ./refunds/Dockerfile
+          port: 8080
+
+        http:
+          alias: refunds.example.com
+        cpu: 1024
+        memory: 2048
+
+        publish:
+          topics:
+            - name: 'refunds'
+        ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 The name of your service.

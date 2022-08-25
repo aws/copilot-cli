@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -39,15 +40,9 @@ const (
 )
 
 const (
-	fmtJobStackDeleteStart        = "Deleting the stack of job %s from environment %s."
-	fmtJobStackDeleteFailed       = "Failed to delete the stack of job %s from environment %s: %v.\n"
-	fmtJobStackDeleteComplete     = "Deleted the stack of job %s from environment %s.\n"
-	fmtJobDeleteResourcesStart    = "Deleting resources of job %s from application %s."
-	fmtJobDeleteResourcesFailed   = "Failed to delete resources of job %s from application %s.\n"
-	fmtJobDeleteResourcesComplete = "Deleted resources of job %s from application %s.\n"
-	fmtJobTasksStopStart          = "Stopping running tasks of job %s from environment %s."
-	fmtJobTasksStopFailed         = "Failed to stop running tasks of job %s from environment %s: %v.\n"
-	fmtJobTasksStopComplete       = "Stopped running tasks of job %s from environment %s.\n"
+	fmtJobTasksStopStart    = "Stopping running tasks of job %s from environment %s."
+	fmtJobTasksStopFailed   = "Failed to stop running tasks of job %s from environment %s: %v.\n"
+	fmtJobTasksStopComplete = "Stopped running tasks of job %s from environment %s.\n"
 )
 
 var (
@@ -92,9 +87,9 @@ func newDeleteJobOpts(vars deleteJobVars) (*deleteJobOpts, error) {
 		prompt:  prompt.New(),
 		sel:     selector.NewConfigSelector(prompter, store),
 		sess:    provider,
-		appCFN:  cloudformation.New(defaultSession),
+		appCFN:  cloudformation.New(defaultSession, cloudformation.WithProgressTracker(os.Stderr)),
 		newWlDeleter: func(session *session.Session) wlDeleter {
-			return cloudformation.New(session)
+			return cloudformation.New(session, cloudformation.WithProgressTracker(os.Stderr))
 		},
 		imageRepoEmptier: &delete.ECREmptier{
 			SessionProvider: provider,
@@ -257,12 +252,9 @@ func (o *deleteJobOpts) deleteJobs(envs []*config.Environment) error {
 			return err
 		}
 		// Delete job stack
-		o.spinner.Start(fmt.Sprintf(fmtJobStackDeleteStart, o.name, env.Name))
 		if err = o.deleteStack(sess, env.Name); err != nil {
-			o.spinner.Stop(log.Serrorf(fmtJobStackDeleteFailed, o.name, env.Name, err))
 			return err
 		}
-		o.spinner.Stop(log.Ssuccessf(fmtJobStackDeleteComplete, o.name, env.Name))
 		// Delete orphan tasks
 		if err = o.deleteTasks(sess, env.Name); err != nil {
 			return err
@@ -320,14 +312,11 @@ func (o *deleteJobOpts) removeJobFromApp() error {
 		return err
 	}
 
-	o.spinner.Start(fmt.Sprintf(fmtJobDeleteResourcesStart, o.name, o.appName))
 	if err := o.appCFN.RemoveJobFromApp(proj, o.name); err != nil {
 		if !isStackSetNotExistsErr(err) {
-			o.spinner.Stop(log.Serrorf(fmtJobDeleteResourcesFailed, o.name, o.appName))
 			return err
 		}
 	}
-	o.spinner.Stop(log.Ssuccessf(fmtJobDeleteResourcesComplete, o.name, o.appName))
 	return nil
 }
 

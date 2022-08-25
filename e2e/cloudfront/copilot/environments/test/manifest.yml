@@ -1,0 +1,13 @@
+name: test
+type: Environment
+observability:
+  container_insights: false
+
+http: 
+  public:
+    security_groups:
+      ingress:
+        restrict_to:
+          cdn: true
+
+cdn: true

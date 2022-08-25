@@ -1,0 +1,44 @@
+# The manifest for the "fe" service.
+# Read the full specification for the "Load Balanced Web Service" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: front-end
+# The "architecture" of the service you're running.
+type: Load Balanced Web Service
+
+image:
+  # Path to your service's Dockerfile.
+  build: 
+    dockerfile: front-end/Dockerfile
+    context: front-end
+    args:
+      MAGIC_VERB_ARG: "open"
+  # Port exposed through your container to route traffic to it.
+  port: 80
+
+http:
+  # Requests to this path will be forwarded to your service. 
+  # To match all requests you can use the "/" path. 
+  path: '/'
+
+# Number of CPU units for the task.
+cpu: 256
+# Amount of memory in MiB used by the task.
+memory: 512
+# Number of tasks that should be running in your service.
+count: 1
+
+storage:
+  ephemeral: 30
+  volumes:
+    efsTestVolume:
+      path: /var/www
+      read_only: false
+      efs: true
+      
+
+variables:
+  TEST_JSON_ENV_VAR: "{}" # https://github.com/aws/copilot-cli/issues/1292
+  TEST_BOOL_ENV_VAR: on # https://github.com/aws/copilot-cli/issues/1120
+  TEST_JOB_CHECK_VAR: "no"

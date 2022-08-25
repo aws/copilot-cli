@@ -16,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/spf13/cobra"
@@ -101,11 +100,7 @@ func (o *listEnvOpts) Execute() error {
 func (o *listEnvOpts) humanOutput(envs []*config.Environment) string {
 	b := &strings.Builder{}
 	for _, env := range envs {
-		if env.Prod {
-			fmt.Fprintf(b, "%s (prod)\n", color.Prod(env.Name))
-		} else {
-			fmt.Fprintln(b, env.Name)
-		}
+		fmt.Fprintln(b, env.Name)
 	}
 	return b.String()
 }

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -108,7 +109,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 
 	opts := &deployPipelineOpts{
 		ws:                 ws,
-		pipelineDeployer:   deploycfn.New(defaultSession),
+		pipelineDeployer:   deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
 		region:             aws.StringValue(defaultSession.Config.Region),
 		deployPipelineVars: vars,
 		store:              store,

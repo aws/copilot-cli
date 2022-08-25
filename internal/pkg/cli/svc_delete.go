@@ -8,6 +8,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -34,15 +35,6 @@ const (
 	fmtSvcDeleteFromEnvConfirmPrompt = "Are you sure you want to delete %s from environment %s?"
 	svcDeleteConfirmHelp             = "This will remove the service from all environments and delete it from your app."
 	svcDeleteFromEnvConfirmHelp      = "This will remove the service from just the %s environment."
-)
-
-const (
-	fmtSvcDeleteStart             = "Deleting service %s from environment %s."
-	fmtSvcDeleteFailed            = "Failed to delete service %s from environment %s: %v.\n"
-	fmtSvcDeleteComplete          = "Deleted service %s from environment %s.\n"
-	fmtSvcDeleteResourcesStart    = "Deleting resources of service %s from application %s."
-	fmtSvcDeleteResourcesFailed   = "Failed to delete resources of service %s from application %s.\n"
-	fmtSvcDeleteResourcesComplete = "Deleted resources of service %s from application %s.\n"
 )
 
 var (
@@ -87,7 +79,7 @@ func newDeleteSvcOpts(vars deleteSvcVars) (*deleteSvcOpts, error) {
 		prompt:  prompter,
 		sess:    sessProvider,
 		sel:     selector.NewConfigSelector(prompter, store),
-		appCFN:  cloudformation.New(defaultSession),
+		appCFN:  cloudformation.New(defaultSession, cloudformation.WithProgressTracker(os.Stderr)),
 		imageRepoEmptier: &delete.ECREmptier{
 			SessionProvider: sessProvider,
 		},
@@ -218,7 +210,7 @@ func (o *deleteSvcOpts) targetEnv() (*config.Environment, error) {
 }
 
 func (o *deleteSvcOpts) askAppName() error {
-	name, err := o.sel.Application(svcAppNamePrompt, svcAppNameHelpPrompt)
+	name, err := o.sel.Application(svcAppNamePrompt, wkldAppNameHelpPrompt)
 	if err != nil {
 		return fmt.Errorf("select application name: %w", err)
 	}
@@ -261,16 +253,13 @@ func (o *deleteSvcOpts) deleteStacks(envs []*config.Environment) error {
 		}
 
 		cfClient := o.getSvcCFN(sess)
-		o.spinner.Start(fmt.Sprintf(fmtSvcDeleteStart, o.name, env.Name))
 		if err := cfClient.DeleteWorkload(deploy.DeleteWorkloadInput{
 			Name:    o.name,
 			EnvName: env.Name,
 			AppName: o.appName,
 		}); err != nil {
-			o.spinner.Stop(log.Serrorf(fmtSvcDeleteFailed, o.name, env.Name, err))
 			return fmt.Errorf("delete service: %w", err)
 		}
-		o.spinner.Stop(log.Ssuccessf(fmtSvcDeleteComplete, o.name, env.Name))
 	}
 	return nil
 }
@@ -285,14 +274,11 @@ func (o *deleteSvcOpts) removeSvcFromApp() error {
 		return err
 	}
 
-	o.spinner.Start(fmt.Sprintf(fmtSvcDeleteResourcesStart, o.name, o.appName))
 	if err := o.appCFN.RemoveServiceFromApp(proj, o.name); err != nil {
 		if !isStackSetNotExistsErr(err) {
-			o.spinner.Stop(log.Serrorf(fmtSvcDeleteResourcesFailed, o.name, o.appName))
 			return err
 		}
 	}
-	o.spinner.Stop(log.Ssuccessf(fmtSvcDeleteResourcesComplete, o.name, o.appName))
 	return nil
 }
 

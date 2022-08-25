@@ -261,7 +261,7 @@ Resources:
     Type: AWS::IAM::Role
 `, "arn").Return(errors.New("some error"))
 
-				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool.\n"))
+				prog.EXPECT().Stop(log.Serror("Failed to retain IAM roles for the \"test\" environment\n"))
 
 				return &deleteEnvOpts{
 					deleteEnvVars: deleteEnvVars{
@@ -298,7 +298,7 @@ Resources:
     DeletionPolicy: Retain`, nil)
 				deployer.EXPECT().DeleteEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("some error"))
 
-				prog.EXPECT().Stop(log.Serror("Failed to delete environment test from application phonetool.\n"))
+				prog.EXPECT().Stop(gomock.Any())
 
 				return &deleteEnvOpts{
 					deleteEnvVars: deleteEnvVars{
@@ -315,14 +315,14 @@ Resources:
 
 			wantedError: errors.New("delete environment test stack: some error"),
 		},
-		"deletes the stack, then attemps a best-effort deletion of the IAM roles, and finally cleans up SSM on success": {
+		"deletes the stack, then attempts a best-effort deletion of the IAM roles, and finally cleans up SSM on success": {
 			given: func(t *testing.T, ctrl *gomock.Controller) *deleteEnvOpts {
 				rg := mocks.NewMockresourceGetter(ctrl)
 				rg.EXPECT().GetResources(gomock.Any()).Return(&resourcegroupstaggingapi.GetResourcesOutput{
 					ResourceTagMappingList: []*resourcegroupstaggingapi.ResourceTagMapping{}}, nil)
 
 				prog := mocks.NewMockprogress(ctrl)
-				prog.EXPECT().Start("Deleting environment test from application phonetool.")
+				prog.EXPECT().Start(gomock.Any()).AnyTimes()
 
 				deployer := mocks.NewMockenvironmentDeployer(ctrl)
 				deployer.EXPECT().EnvironmentTemplate("phonetool", "test").Return(`
@@ -344,7 +344,7 @@ Resources:
 				store := mocks.NewMockenvironmentStore(ctrl)
 				store.EXPECT().DeleteEnvironment("phonetool", "test").Return(nil)
 
-				prog.EXPECT().Stop(log.Ssuccess("Deleted environment test from application phonetool.\n"))
+				prog.EXPECT().Stop(gomock.Any()).AnyTimes()
 
 				return &deleteEnvOpts{
 					deleteEnvVars: deleteEnvVars{

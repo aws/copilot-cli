@@ -323,6 +323,7 @@ type deleteTaskMocks struct {
 	store   *mocks.Mockstore
 	sess    *mocks.MocksessionProvider
 	ecr     *mocks.MockimageRepoEmptier
+	s3      *mocks.MockbucketEmptier
 	ecs     *mocks.MocktaskStopper
 	cfn     *mocks.MocktaskStackManager
 	spinner *mocks.Mockprogress
@@ -356,9 +357,14 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 		Env:     mockEnvName,
 		RoleARN: mockManagerARN,
 
-		StackName: mockTaskStackName,
+		StackName:  mockTaskStackName,
+		BucketName: "arn:aws:s3:::bucket",
 	}
 	mockDefaultTask := deploy.TaskStackInfo{
+		StackName:  mockTaskStackName,
+		BucketName: "arn:aws:s3:::bucket",
+	}
+	mockDefaultTaskNoBucket := deploy.TaskStackInfo{
 		StackName: mockTaskStackName,
 	}
 	mockError := errors.New("some error")
@@ -390,6 +396,9 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
+					m.s3.EXPECT().EmptyBucket(gomock.Any()).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.spinner.EXPECT().Start(gomock.Any()),
 					m.cfn.EXPECT().DeleteTask(*mockAppEnvTask).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
@@ -410,7 +419,30 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(&mockDefaultTask, nil),
 					m.spinner.EXPECT().Start(gomock.Any()),
+					m.s3.EXPECT().EmptyBucket(gomock.Any()).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.spinner.EXPECT().Start(gomock.Any()),
 					m.cfn.EXPECT().DeleteTask(mockDefaultTask).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+				)
+			},
+		},
+		"success with default cluster and no S3 bucket": {
+			inDefault: true,
+			inName:    mockTaskName,
+
+			setupMocks: func(m deleteTaskMocks) {
+				gomock.InOrder(
+					m.sess.EXPECT().Default().Return(&session.Session{}, nil),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecs.EXPECT().StopDefaultClusterTasks(mockTaskName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.ecr.EXPECT().ClearRepository(mockTaskRepoName).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
+					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(&mockDefaultTaskNoBucket, nil),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.cfn.EXPECT().DeleteTask(mockDefaultTaskNoBucket).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 				)
 			},
@@ -446,6 +478,9 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 					m.ecr.EXPECT().EmptyRepo(mockTaskRepoName, mockRegionSet).Return(nil),
 					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.cfn.EXPECT().GetTaskStack(mockTaskName).Return(mockAppEnvTask, nil),
+					m.spinner.EXPECT().Start(gomock.Any()),
+					m.s3.EXPECT().EmptyBucket(gomock.Any()).Return(nil),
+					m.spinner.EXPECT().Stop(gomock.Any()),
 					m.spinner.EXPECT().Start(gomock.Any()),
 					m.cfn.EXPECT().DeleteTask(*mockAppEnvTask).Return(mockError),
 					m.spinner.EXPECT().Stop(gomock.Any()),
@@ -559,11 +594,15 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 			// GIVEN
 			mockstore := mocks.NewMockstore(ctrl)
 			mockImageRepoEmptier := mocks.NewMockimageRepoEmptier(ctrl)
+			mockS3 := mocks.NewMockbucketEmptier(ctrl)
 			mockCFN := mocks.NewMocktaskStackManager(ctrl)
 			mockECS := mocks.NewMocktaskStopper(ctrl)
 			mockSession := mocks.NewMocksessionProvider(ctrl)
 			mockSpinner := mocks.NewMockprogress(ctrl)
 
+			mockGetS3 := func(_ *session.Session) bucketEmptier {
+				return mockS3
+			}
 			mockGetECS := func(_ *session.Session) taskStopper {
 				return mockECS
 			}
@@ -575,6 +614,7 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 				store:   mockstore,
 				sess:    mockSession,
 				ecr:     mockImageRepoEmptier,
+				s3:      mockS3,
 				ecs:     mockECS,
 				cfn:     mockCFN,
 				spinner: mockSpinner,
@@ -594,8 +634,9 @@ func TestDeleteTaskOpts_Execute(t *testing.T) {
 				spinner:          mockSpinner,
 				imageRepoEmptier: mockImageRepoEmptier,
 
-				newStackManager: mockGetCFN,
-				newTaskStopper:  mockGetECS,
+				newBucketEmptier: mockGetS3,
+				newStackManager:  mockGetCFN,
+				newTaskStopper:   mockGetECS,
 			}
 
 			// WHEN

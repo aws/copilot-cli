@@ -136,7 +136,6 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		noImportedCerts  bool
 		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
 		wantedTemplate   string
 		wantedError      error
@@ -154,16 +153,6 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				c.wkld.addons = addons
 			},
 			wantedError: fmt.Errorf("parse addons parameters for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
-		},
-		"failed if hosted zone is set without imported certs": {
-			noImportedCerts: true,
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
-				c.wkld.addons = addons
-			},
-
-			wantedTemplate: "",
-			wantedError:    fmt.Errorf("cannot specify alias hosted zones when env certificates are managed by Copilot"),
 		},
 		"failed parsing svc template": {
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
@@ -198,7 +187,6 @@ Outputs:
 							HealthCheckPath: "/",
 							GracePeriod:     aws.Int64(60),
 						},
-						UseImportedCerts: true,
 						HostedZoneAliases: template.AliasesForHostedZone{
 							"mockHostedZone": []string{"mockAlias"},
 						},
@@ -222,7 +210,7 @@ Outputs:
 					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
 				})
 
-				addons := mockAddons{tplErr: &addon.ErrAddonsNotFound{}, paramsErr: &addon.ErrAddonsNotFound{}}
+				addons := mockAddons{}
 				c.parser = m
 				c.wkld.addons = addons
 			},
@@ -243,7 +231,6 @@ Outputs:
 							SecretOutputs:   []string{"MySecretArn"},
 							PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
 						},
-						UseImportedCerts: true,
 						HostedZoneAliases: template.AliasesForHostedZone{
 							"mockHostedZone": []string{"mockAlias"},
 						},
@@ -329,7 +316,6 @@ Outputs:
 					},
 					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
-				certImported: !tc.noImportedCerts,
 				httpsEnabled: true,
 				manifest:     testLBWebServiceManifest,
 			}

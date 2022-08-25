@@ -24,7 +24,6 @@ type workloadLogsMocks struct {
 func TestWorkloadClient_WriteLogEvents(t *testing.T) {
 	const (
 		mockLogGroupName     = "mockLogGroup"
-		mockLogStreamPrefix  = "mockLogStreamPrefix"
 		logEventsHumanString = `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
 firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
@@ -66,6 +65,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		jsonOutput          bool
 		taskIDs             []string
 		includeStateMachine bool
+		containerName       string
 		setupMocks          func(mocks workloadLogsMocks)
 
 		wantedError   error
@@ -120,7 +120,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.LogStreamPrefixFilters, []string{"mockLogStreamPrefix/mockTaskID1", "mockLogStreamPrefix/mockTaskID2"})
+							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/mockSvc/mockTaskID1", "copilot/mockSvc/mockTaskID2"})
 							var val *int64 = nil // Explicitly mark that nil is of type *int64 otherwise require.Equal returns an error.
 							require.Equal(t, param.Limit, val)
 							require.Equal(t, param.StartTime, aws.Int64(mockCurrentTimestamp.UnixMilli()))
@@ -149,7 +149,7 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
-							require.Equal(t, param.LogStreamPrefixFilters, []string{"mockLogStreamPrefix/mockTaskID1"})
+							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/mockSvc/mockTaskID1"})
 							require.Equal(t, param.Limit, aws.Int64(10))
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
@@ -165,12 +165,14 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 		},
 		"success with state machine included": {
 			includeStateMachine: true,
+			last:                1,
 			setupMocks: func(m workloadLogsMocks) {
 				gomock.InOrder(
 					m.logGetter.EXPECT().LogEvents(gomock.Any()).
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
 							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/", "states"})
-							require.Equal(t, param.Limit, aws.Int64(10))
+							require.Equal(t, param.Limit, mockNilLimit)
+							require.Equal(t, param.LogStreamLimit, 2)
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events: logEvents,
@@ -190,6 +192,48 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 						Do(func(param cloudwatchlogs.LogEventsOpts) {
 							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/"})
 							require.Equal(t, param.LogStreamLimit, 1)
+							require.Equal(t, param.Limit, mockNilLimit)
+						}).
+						Return(&cloudwatchlogs.LogEventsOutput{
+							Events: logEvents,
+						}, nil),
+				)
+			},
+			wantedContent: `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
+`,
+		},
+		"success with log stream limit and log limit": {
+			last:  1,
+			limit: aws.Int64(50),
+			setupMocks: func(m workloadLogsMocks) {
+				gomock.InOrder(
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/"})
+							require.Equal(t, param.LogStreamLimit, 1)
+							require.Equal(t, param.Limit, aws.Int64(50))
+						}).
+						Return(&cloudwatchlogs.LogEventsOutput{
+							Events: logEvents,
+						}, nil),
+				)
+			},
+			wantedContent: `firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "GET / HTTP/1.1" 200 -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "FATA some error" - -
+firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warning" - -
+`,
+		},
+		"success with only log stream from certain container": {
+			containerName: "datadog",
+			taskIDs:       []string{"mockTaskID"},
+			setupMocks: func(m workloadLogsMocks) {
+				gomock.InOrder(
+					m.logGetter.EXPECT().LogEvents(gomock.Any()).
+						Do(func(param cloudwatchlogs.LogEventsOpts) {
+							require.Equal(t, param.LogStreamPrefixFilters, []string{"copilot/datadog/mockTaskID"})
+							require.Equal(t, param.Limit, aws.Int64(10))
 						}).
 						Return(&cloudwatchlogs.LogEventsOutput{
 							Events: logEvents,
@@ -218,14 +262,14 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 
 			b := &bytes.Buffer{}
 			svcLogs := &WorkloadClient{
-				logGroupName:        mockLogGroupName,
-				logStreamNamePrefix: mockLogStreamPrefix,
-				eventsGetter:        mocklogGetter,
-				w:                   b,
+				name:         "mockSvc",
+				logGroupName: mockLogGroupName,
+				isECS:        true,
+				eventsGetter: mocklogGetter,
+				w:            b,
 				now: func() time.Time {
 					return mockCurrentTimestamp
 				},
-				includeStateMachineLogs: tc.includeStateMachine,
 			}
 
 			// WHEN
@@ -234,12 +278,14 @@ firelens_log_router/fcfe4 10.0.0.00 - - [01/Jan/1970 01:01:01] "WARN some warnin
 				logWriter = WriteJSONLogs
 			}
 			err := svcLogs.WriteLogEvents(WriteLogEventsOpts{
-				Follow:         tc.follow,
-				TaskIDs:        tc.taskIDs,
-				Limit:          tc.limit,
-				StartTime:      tc.startTime,
-				OnEvents:       logWriter,
-				LogStreamLimit: tc.last,
+				Follow:                  tc.follow,
+				TaskIDs:                 tc.taskIDs,
+				Limit:                   tc.limit,
+				StartTime:               tc.startTime,
+				OnEvents:                logWriter,
+				LogStreamLimit:          tc.last,
+				IncludeStateMachineLogs: tc.includeStateMachine,
+				ContainerName:           tc.containerName,
 			})
 
 			// THEN

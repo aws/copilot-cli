@@ -12,7 +12,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/initialize/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
-	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +32,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 		mockWriter      func(m *mocks.MockWorkspace)
 		mockstore       func(m *mocks.MockStore)
 		mockappDeployer func(m *mocks.MockWorkloadAdder)
-		mockProg        func(m *mocks.MockProg)
 
 		wantedErr error
 	}{
@@ -46,7 +44,10 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/resizer/copilot", nil)
+				// workspace root: "/resizer/copilot"
+				gomock.InOrder(
+					m.EXPECT().Rel("resizer/Dockerfile").Return("../Dockerfile", nil),
+					m.EXPECT().Rel("/resizer/copilot/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/copilot/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -70,10 +71,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 					AccountID: "1234",
 				}, "resizer")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "job", "resizer"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "job", "resizer"))
-			},
 		},
 		"using existing image": {
 			inJobType: manifest.ScheduledJobType,
@@ -84,6 +81,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
+				m.EXPECT().Rel("/resizer/manifest.yml").Return("manifest.yml", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Do(func(m *manifest.ScheduledJob, _ string) {
 					require.Equal(t, *m.Workload.Type, manifest.ScheduledJobType)
 					require.Equal(t, *m.ImageConfig.Image.Location, "mockImage")
@@ -110,10 +108,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 					AccountID: "1234",
 				}, "resizer")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "job", "resizer"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "job", "resizer"))
-			},
 		},
 		"write manifest error": {
 			inJobType:        manifest.ScheduledJobType,
@@ -124,7 +118,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/resizer", nil)
+				m.EXPECT().Rel("resizer/Dockerfile").Return("Dockerfile", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.MockStore) {},
@@ -138,7 +132,8 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 
 			inSchedule: "@hourly",
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/copilot", nil)
+				// workspace root: "/copilot"
+				m.EXPECT().Rel("resizer/Dockerfile").Return("resizer/Dockerfile", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/copilot/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -155,7 +150,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/resizer", nil)
+				m.EXPECT().Rel("frontend/Dockerfile").Return("frontend/Dockerfile", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -163,10 +158,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 					Name:      "app",
 					AccountID: "1234",
 				}, nil)
-			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "job", "resizer"))
-				m.EXPECT().Stop(log.Serrorf(fmtAddWlToAppFailed, "job", "resizer"))
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
@@ -182,7 +173,7 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			inSchedule: "@hourly",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/resizer", nil)
+				m.EXPECT().Rel("resizer/Dockerfile").Return("Dockerfile", nil)
 				m.EXPECT().WriteJobManifest(gomock.Any(), "resizer").Return("/resizer/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -192,10 +183,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddJobToApp(gomock.Any(), gomock.Any()).Return(nil)
-			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(gomock.Any())
-				m.EXPECT().Stop(gomock.Any())
 			},
 			wantedErr: fmt.Errorf("saving job resizer: oops"),
 		},
@@ -208,7 +195,6 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 
 			mockWriter := mocks.NewMockWorkspace(ctrl)
 			mockstore := mocks.NewMockStore(ctrl)
-			mockProg := mocks.NewMockProg(ctrl)
 			mockappDeployer := mocks.NewMockWorkloadAdder(ctrl)
 			if tc.mockWriter != nil {
 				tc.mockWriter(mockWriter)
@@ -219,14 +205,10 @@ func TestWorkloadInitializer_Job(t *testing.T) {
 			if tc.mockappDeployer != nil {
 				tc.mockappDeployer(mockappDeployer)
 			}
-			if tc.mockProg != nil {
-				tc.mockProg(mockProg)
-			}
 
 			initializer := &WorkloadInitializer{
 				Store:    mockstore,
 				Ws:       mockWriter,
-				Prog:     mockProg,
 				Deployer: mockappDeployer,
 			}
 
@@ -450,7 +432,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 		mockWriter      func(m *mocks.MockWorkspace)
 		mockstore       func(m *mocks.MockStore)
 		mockappDeployer func(m *mocks.MockWorkloadAdder)
-		mockProg        func(m *mocks.MockProg)
 
 		wantedErr error
 	}{
@@ -462,7 +443,10 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcPort:        80,
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/frontend", nil)
+				// workspace root: "/frontend"
+				gomock.InOrder(
+					m.EXPECT().Rel("frontend/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/frontend/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -487,10 +471,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					AccountID: "1234",
 				}, "frontend")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "frontend"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "frontend"))
-			},
 		},
 		"app error": {
 			inSvcType:        manifest.LoadBalancedWebServiceType,
@@ -500,7 +480,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/frontend", nil)
+				// workspace root: "/frontend"
+				m.EXPECT().Rel("frontend/Dockerfile").Return("Dockerfile", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
 				m.EXPECT().GetApplication("app").Return(nil, errors.New("some error"))
@@ -515,7 +496,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcPort:        80,
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/frontend", nil)
+				// workspace root: "/frontend"
+				m.EXPECT().Rel("frontend/Dockerfile").Return("Dockerfile", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", errors.New("some error"))
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -535,7 +517,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/frontend", nil)
+				// workspace root: "/frontend"
+				m.EXPECT().Rel("frontend/Dockerfile").Return("Dockerfile", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -544,10 +527,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					Name:      "app",
 					AccountID: "1234",
 				}, nil)
-			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "frontend"))
-				m.EXPECT().Stop(log.Serrorf(fmtAddWlToAppFailed, "service", "frontend"))
 			},
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(errors.New("some error"))
@@ -561,7 +540,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inDockerfilePath: "frontend/Dockerfile",
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/frontend", nil)
+				// workspace root: "/frontend"
+				m.EXPECT().Rel("frontend/Dockerfile").Return("Dockerfile", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "frontend").Return("/frontend/manifest.yml", nil)
 			},
 			mockstore: func(m *mocks.MockStore) {
@@ -573,10 +553,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
 				m.EXPECT().AddServiceToApp(gomock.Any(), gomock.Any()).Return(nil)
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(gomock.Any())
-				m.EXPECT().Stop(gomock.Any())
-			},
 			wantedErr: fmt.Errorf("saving service frontend: oops"),
 		},
 		"using existing image": {
@@ -587,6 +563,8 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcPort: 80,
 
 			mockWriter: func(m *mocks.MockWorkspace) {
+				// workspace root: "/backend"
+				m.EXPECT().Rel("/backend/manifest.yml").Return("manifest.yml", nil)
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
@@ -616,10 +594,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					AccountID: "1234",
 				}, "backend")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "backend"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
-			},
 		},
 		"no healthcheck options": {
 			inSvcType:        manifest.BackendServiceType,
@@ -629,7 +603,10 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			inSvcPort:        80,
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/backend", nil)
+				// workspace root: "/backend"
+				gomock.InOrder(
+					m.EXPECT().Rel("backend/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/backend/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
@@ -658,10 +635,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					AccountID: "1234",
 				}, "backend")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "backend"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
-			},
 		},
 		"default healthcheck options": {
 			inSvcType:        manifest.BackendServiceType,
@@ -678,7 +651,10 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/backend", nil)
+				// workspace root: "/backend"
+				gomock.InOrder(
+					m.EXPECT().Rel("backend/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/backend/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "backend").
 					Do(func(m *manifest.BackendService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.BackendServiceType)
@@ -711,10 +687,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					AccountID: "1234",
 				}, "backend")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "backend"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "backend"))
-			},
 		},
 		"topic subscriptions enabled": {
 			inSvcType:        manifest.WorkerServiceType,
@@ -730,7 +702,10 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			},
 
 			mockWriter: func(m *mocks.MockWorkspace) {
-				m.EXPECT().Path().Return("/worker", nil)
+				// workspace root: "/worker"
+				gomock.InOrder(
+					m.EXPECT().Rel("worker/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/worker/manifest.yml").Return("manifest.yml", nil))
 				m.EXPECT().WriteServiceManifest(gomock.Any(), "worker").
 					Do(func(m *manifest.WorkerService, _ string) {
 						require.Equal(t, *m.Workload.Type, manifest.WorkerServiceType)
@@ -759,10 +734,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 					AccountID: "1234",
 				}, "worker")
 			},
-			mockProg: func(m *mocks.MockProg) {
-				m.EXPECT().Start(fmt.Sprintf(fmtAddWlToAppStart, "service", "worker"))
-				m.EXPECT().Stop(log.Ssuccessf(fmtAddWlToAppComplete, "service", "worker"))
-			},
 		},
 	}
 
@@ -785,9 +756,6 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 			}
 			if tc.mockappDeployer != nil {
 				tc.mockappDeployer(mockappDeployer)
-			}
-			if tc.mockProg != nil {
-				tc.mockProg(mockProg)
 			}
 
 			initializer := &WorkloadInitializer{
