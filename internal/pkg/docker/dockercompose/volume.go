@@ -20,7 +20,7 @@ type volumeConverter struct {
 func newVolumeConverter(topLevelVols compose.Volumes) volumeConverter {
 	return volumeConverter{
 		otherSvcVols:  map[string][]string{},
-		copilotVols:   nil,
+		copilotVols:   map[string]*manifest.Volume{},
 		topLevelVols:  topLevelVols,
 		tmpfsVolNames: map[string]bool{},
 	}

@@ -1,0 +1,46 @@
+services:
+  simple-named:
+    image: nginx
+    volumes:
+      - "nvol-1:/test/path/please/ignore"
+  bind-file:
+    image: nginx
+    volumes:
+      - "./testfile.txt:/cont/testfile.txt"
+  bind-directory:
+    image: nginx
+    volumes:
+      - "./testdir:/cont/testdir"
+  sharing1:
+    image: nginx
+    volumes:
+      - "nvol-shared-1:/test"
+  sharing2:
+    image: nginx
+    volumes:
+      - "nvol-shared-1:/test"
+  sharing-within:
+    image: nginx
+    volumes:
+      - "nvol-shared-2:/test"
+      - "nvol-shared-2:/test2"
+  mount-ro-simple:
+    image: nginx
+    volumes:
+      - "nvol-2:/testdir:ro"
+  mount-ro-selinux-simple:
+    image: nginx
+    volumes:
+      - "nvol-3:/testdir:ro,Z"
+  uses-external-volume:
+    image: nginx
+    volumes:
+      - "nvol-external:/"
+volumes:
+  nvol-1:
+  nvol-shared-1:
+  nvol-shared-2:
+  nvol-2:
+  nvol-3:
+  nvol-external:
+    external: true

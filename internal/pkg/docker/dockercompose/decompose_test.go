@@ -429,3 +429,101 @@ func TestDecomposeService_ExposedPorts(t *testing.T) {
 
 	runDecomposeTests(t, actualTestCases)
 }
+
+func TestDecomposeService_Volumes(t *testing.T) {
+	efsTrue := manifest.EFSConfigOrBool{Enabled: aws.Bool(true)}
+
+	testCases := map[string]struct {
+		wantError         error
+		wantErrorContains string
+		wantStorage       manifest.Storage
+	}{
+		"simple-named": {
+			wantStorage: manifest.Storage{
+				Volumes: map[string]*manifest.Volume{
+					"nvol-1": {
+						EFS: efsTrue,
+						MountPointOpts: manifest.MountPointOpts{
+							ContainerPath: aws.String("/test/path/please/ignore"),
+							ReadOnly:      aws.Bool(false),
+						},
+					},
+				},
+			},
+		},
+		"bind-file": {
+			wantError: errors.New("convert Compose service to Copilot manifest: volume type \"bind\" is not supported yet"),
+		},
+		"bind-directory": {
+			wantError: errors.New("convert Compose service to Copilot manifest: volume type \"bind\" is not supported yet"),
+		},
+		"sharing1": {
+			wantError: errors.New("convert Compose service to Copilot manifest: named volume nvol-shared-1 is shared with service [sharing2], this is not supported in Copilot"),
+		},
+		"sharing2": {
+			wantError: errors.New("convert Compose service to Copilot manifest: named volume nvol-shared-1 is shared with service [sharing1], this is not supported in Copilot"),
+		},
+		"sharing-within": {
+			wantError: errors.New("convert Compose service to Copilot manifest: cannot mount named volume nvol-shared-2 a second time at /test2, it is already mounted at /test"),
+		},
+		"mount-ro-simple": {
+			wantStorage: manifest.Storage{
+				Volumes: map[string]*manifest.Volume{
+					"nvol-2": {
+						EFS: efsTrue,
+						MountPointOpts: manifest.MountPointOpts{
+							ContainerPath: aws.String("/testdir"),
+							ReadOnly:      aws.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		"mount-ro-selinux-simple": {
+			wantStorage: manifest.Storage{
+				Volumes: map[string]*manifest.Volume{
+					"nvol-3": {
+						EFS: efsTrue,
+						MountPointOpts: manifest.MountPointOpts{
+							ContainerPath: aws.String("/testdir"),
+							ReadOnly:      aws.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		"uses-external-volume": {
+			wantError: errors.New("convert Compose service to Copilot manifest: named volume nvol-external is marked as external, this is unsupported"),
+		},
+	}
+
+	actualTestCases := map[string]decomposeTest{}
+
+	for name, tc := range testCases {
+		actualTestCases[name] = decomposeTest{
+			svcName:           name,
+			filename:          "volume-tests.yml",
+			wantError:         tc.wantError,
+			wantErrorContains: tc.wantErrorContains,
+			wantBs: &manifest.BackendServiceConfig{
+				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
+					ImageWithOptionalPort: manifest.ImageWithOptionalPort{
+						Image: manifest.Image{
+							Location: aws.String("nginx"),
+						},
+					},
+				},
+				TaskConfig: manifest.TaskConfig{
+					CPU:    aws.Int(256),
+					Memory: aws.Int(512),
+					Count: manifest.Count{
+						Value: aws.Int(1),
+					},
+					Storage: tc.wantStorage,
+				},
+			},
+		}
+	}
+
+	runDecomposeTests(t, actualTestCases)
+}
