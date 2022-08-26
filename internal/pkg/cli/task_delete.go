@@ -6,6 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -94,14 +96,14 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 		provider: sessProvider,
 		sel:      selector.NewLocalWorkloadSelector(prompter, store, ws),
 		newTaskSel: func(session *session.Session) cfTaskSelector {
-			cfn := cloudformation.New(session)
+			cfn := cloudformation.New(session, cloudformation.WithProgressTracker(os.Stderr))
 			return selector.NewCFTaskSelect(prompter, store, cfn)
 		},
 		newTaskStopper: func(session *session.Session) taskStopper {
 			return ecs.New(session)
 		},
 		newStackManager: func(session *session.Session) taskStackManager {
-			return cloudformation.New(session)
+			return cloudformation.New(session, cloudformation.WithProgressTracker(os.Stderr))
 		},
 		newImageRemover: func(session *session.Session) imageRemover {
 			return ecr.New(session)

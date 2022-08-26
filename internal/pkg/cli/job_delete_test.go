@@ -349,9 +349,7 @@ func TestDeleteJobOpts_Execute(t *testing.T) {
 					mocks.ecr.EXPECT().ClearRepository(mockRepo).Return(nil),
 					// removeJobFromApp
 					mocks.store.EXPECT().GetApplication(mockAppName).Return(mockApp, nil),
-					mocks.spinner.EXPECT().Start(fmt.Sprintf(fmtJobDeleteResourcesStart, mockJobName, mockAppName)),
 					mocks.appCFN.EXPECT().RemoveJobFromApp(mockApp, mockJobName).Return(nil),
-					mocks.spinner.EXPECT().Stop(log.Ssuccessf(fmtJobDeleteResourcesComplete, mockJobName, mockAppName)),
 
 					// deleteSSMParam
 					mocks.store.EXPECT().DeleteJob(mockAppName, mockJobName).Return(nil),

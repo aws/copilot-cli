@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -160,7 +161,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Store:    store,
 		Ws:       ws,
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
-		Deployer: cloudformation.New(sess),
+		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
 	opts := &initSvcOpts{
 		initSvcVars:  vars,

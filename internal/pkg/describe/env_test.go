@@ -44,7 +44,6 @@ func TestEnvDescriber_Describe(t *testing.T) {
 		Name:             "testEnv",
 		Region:           "us-west-2",
 		AccountID:        "123456789012",
-		Prod:             false,
 		RegistryURL:      "",
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
@@ -781,7 +780,6 @@ func TestEnvDescription_JSONString(t *testing.T) {
 		Name:             "testEnv",
 		Region:           "us-west-2",
 		AccountID:        "123456789012",
-		Prod:             false,
 		RegistryURL:      "",
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
@@ -809,7 +807,7 @@ func TestEnvDescription_JSONString(t *testing.T) {
 	}
 	allSvcs := []*config.Workload{testSvc1, testSvc2, testSvc3}
 	allJobs := []*config.Workload{testJob1}
-	wantedContent := "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"prod\":false,\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\",\"customConfig\":{}},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"jobs\":[{\"app\":\"testApp\",\"name\":\"testJob1\",\"type\":\"Scheduled Job\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}],\"environmentVPC\":{\"id\":\"\",\"publicSubnetIDs\":null,\"privateSubnetIDs\":null}}\n"
+	wantedContent := "{\"environment\":{\"app\":\"testApp\",\"name\":\"testEnv\",\"region\":\"us-west-2\",\"accountID\":\"123456789012\",\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\",\"customConfig\":{}},\"services\":[{\"app\":\"testApp\",\"name\":\"testSvc1\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc2\",\"type\":\"load-balanced\"},{\"app\":\"testApp\",\"name\":\"testSvc3\",\"type\":\"load-balanced\"}],\"jobs\":[{\"app\":\"testApp\",\"name\":\"testJob1\",\"type\":\"Scheduled Job\"}],\"tags\":{\"key1\":\"value1\",\"key2\":\"value2\"},\"resources\":[{\"type\":\"AWS::IAM::Role\",\"physicalID\":\"testApp-testEnv-CFNExecutionRole\"},{\"type\":\"testApp-testEnv-Cluster\",\"physicalID\":\"AWS::ECS::Cluster-jI63pYBWU6BZ\"}],\"environmentVPC\":{\"id\":\"\",\"publicSubnetIDs\":null,\"privateSubnetIDs\":null}}\n"
 
 	// GIVEN
 	ctrl := gomock.NewController(t)
@@ -841,7 +839,6 @@ func TestEnvDescription_HumanString(t *testing.T) {
 		Name:             "testEnv",
 		Region:           "us-west-2",
 		AccountID:        "123456789012",
-		Prod:             false,
 		RegistryURL:      "",
 		ExecutionRoleARN: "",
 		ManagerRoleARN:   "",
@@ -872,7 +869,6 @@ func TestEnvDescription_HumanString(t *testing.T) {
 	wantedContent := `About
 
   Name        testEnv
-  Production  false
   Region      us-west-2
   Account ID  123456789012
 

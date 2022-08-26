@@ -87,7 +87,6 @@ var _ = Describe("Customized Env", func() {
 				AppName:       appName,
 				EnvName:       "test",
 				Profile:       "default",
-				Prod:          false,
 				VPCImport:     vpcImport,
 				CustomizedEnv: true,
 			})
@@ -95,7 +94,6 @@ var _ = Describe("Customized Env", func() {
 				AppName:       appName,
 				EnvName:       "prod",
 				Profile:       "default",
-				Prod:          true,
 				VPCConfig:     vpcConfig,
 				CustomizedEnv: true,
 			})
@@ -103,7 +101,6 @@ var _ = Describe("Customized Env", func() {
 				AppName:       appName,
 				EnvName:       "shared",
 				Profile:       "default",
-				Prod:          false,
 				VPCImport:     vpcImport,
 				CustomizedEnv: true,
 			})
@@ -133,13 +130,8 @@ var _ = Describe("Customized Env", func() {
 			}
 
 			Expect(envs["test"]).NotTo(BeNil())
-			Expect(envs["test"].Prod).To(BeFalse())
-
 			Expect(envs["shared"]).NotTo(BeNil())
-			Expect(envs["shared"].Prod).To(BeFalse())
-
 			Expect(envs["prod"]).NotTo(BeNil())
-			Expect(envs["prod"].Prod).To(BeTrue())
 		})
 
 		It("should show only bootstrap resources in env show", func() {
@@ -399,11 +391,8 @@ environments:
 				envs[envShowOutput.Environment.Name] = envShowOutput.Environment
 			}
 			Expect(envs["test"]).NotTo(BeNil())
-			Expect(envs["test"].Prod).To(BeFalse())
 			Expect(envs["prod"]).NotTo(BeNil())
-			Expect(envs["prod"].Prod).To(BeTrue())
 			Expect(envs["shared"]).NotTo(BeNil())
-			Expect(envs["shared"].Prod).To(BeFalse())
 		})
 	})
 })

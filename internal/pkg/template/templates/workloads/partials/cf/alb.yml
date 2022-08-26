@@ -50,7 +50,7 @@ RulePriorityFunction:
     Timeout: 600
     MemorySize: 512
     Role: !GetAtt "RulePriorityFunctionRole.Arn"
-    Runtime: nodejs12.x
+    Runtime: nodejs16.x
 
 RulePriorityFunctionRole:
   Metadata:

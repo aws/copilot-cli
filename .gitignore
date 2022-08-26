@@ -9,6 +9,3 @@ site/node_modules/
 site/themes/docsy
 internal/pkg/template/templates/custom-resources/
 regression/*/copilot/
-e2e/*/copilot/
-copilot/
-

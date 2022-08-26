@@ -4,6 +4,7 @@ env:
   secrets-manager:
     DOCKERHUB_USERNAME: prod/ecs-cicd-bot/dockerhub-account-info:username
     DOCKERHUB_TOKEN: prod/ecs-cicd-bot/dockerhub-token:dockerhub-token
+    IMPORTED_CERT_ARN: e2e/account/imported-cert:arn
 
 # We increased the number of VPCs limit to 15 from 5 in the e2e test's app account/region pair.
 # If the number of tests running in a region is larger than 15, this comment should be updated.
@@ -91,6 +92,15 @@ batch:
         variables:
           TEST_SUITE: app-with-domain
           APP_REGION: us-west-2
+    - identifier: import_certs
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+        compute-type: BUILD_GENERAL1_LARGE
+        image: aws/codebuild/standard:5.0
+        variables:
+          TEST_SUITE: import-certs
+          APP_REGION: us-west-2
     - identifier: exec
       env:
         privileged-mode: true
@@ -140,42 +150,52 @@ batch:
         variables:
           TEST_SUITE: worker
           APP_REGION: eu-central-1
+    - identifier: cloudfront
+      env:
+        privileged-mode: true
+        type: LINUX_CONTAINER
+        compute-type: BUILD_GENERAL1_LARGE
+        image: aws/codebuild/standard:5.0
+        variables:
+          TEST_SUITE: cloudfront
+          APP_REGION: eu-central-1
 
 phases:
   install:
     runtime-versions:
-      nodejs: 12
+      nodejs: 16
     commands:
-      - 'cd $HOME/.goenv && git pull --ff-only && cd -'
-      - 'goenv install 1.18.4'
-      - 'goenv global 1.18.4'
+      - "cd $HOME/.goenv && git pull --ff-only && cd -"
+      - "goenv install 1.18.4"
+      - "goenv global 1.18.4"
   pre_build:
     commands:
-       - printenv DOCKERHUB_TOKEN | docker login --username ${DOCKERHUB_USERNAME} --password-stdin
+      - printenv DOCKERHUB_TOKEN | docker login --username ${DOCKERHUB_USERNAME} --password-stdin
   build:
     commands:
-       - cd $CODEBUILD_SRC_DIR
-       - export GOPATH=/go
-       - rm -rf cf-custom-resources/node_modules
-       - mkdir -p /tmp/.aws
-       - TEST_RGN=$TESTENV_REGION
-       - |
-         if [ -z "$TEST_RGN" ]; then
-            TEST_RGN=us-west-1
-         fi
-       - PROD_RGN=$PRODENV_REGION
-       - |
-         if [ -z "$PROD_RGN" ]; then
-            PROD_RGN=us-east-1
-         fi
-       - printf "[default]\nregion = $APP_REGION\n[profile e2etestenv]\nregion=$TEST_RGN\n[profile e2eprodenv]\nregion=$PROD_RGN\n" > /tmp/.aws/config
-       - printf "[default]\naws_access_key_id=$E2E_USER_1_ACCESS_KEY\naws_secret_access_key=$E2E_USER_1_SECRET_KEY\n\n[e2etestenv]\naws_access_key_id=$E2E_USER_2_ACCESS_KEY\naws_secret_access_key=$E2E_USER_2_SECRET_KEY\n\n[e2eprodenv]\naws_access_key_id=$E2E_USER_3_ACCESS_KEY\naws_secret_access_key=$E2E_USER_3_SECRET_KEY\n" > /tmp/.aws/credentials
-       - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
-       - make build-e2e
-       - docker build -t copilot-cli/e2e . -f e2e/Dockerfile
-       - >
-         docker run --privileged -v /tmp/.aws:/home/.aws -e "HOME=/home"
-         -e "TEST_SUITE=$TEST_SUITE"
-         -e "DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME"
-         -e "DOCKERHUB_TOKEN=$DOCKERHUB_TOKEN"
-         copilot-cli/e2e:latest
+      - cd $CODEBUILD_SRC_DIR
+      - export GOPATH=/go
+      - rm -rf cf-custom-resources/node_modules
+      - mkdir -p /tmp/.aws
+      - TEST_RGN=$TESTENV_REGION
+      - |
+        if [ -z "$TEST_RGN" ]; then
+           TEST_RGN=us-west-1
+        fi
+      - PROD_RGN=$PRODENV_REGION
+      - |
+        if [ -z "$PROD_RGN" ]; then
+           PROD_RGN=us-east-1
+        fi
+      - printf "[default]\nregion = $APP_REGION\n[profile e2etestenv]\nregion=$TEST_RGN\n[profile e2eprodenv]\nregion=$PROD_RGN\n" > /tmp/.aws/config
+      - printf "[default]\naws_access_key_id=$E2E_USER_1_ACCESS_KEY\naws_secret_access_key=$E2E_USER_1_SECRET_KEY\n\n[e2etestenv]\naws_access_key_id=$E2E_USER_2_ACCESS_KEY\naws_secret_access_key=$E2E_USER_2_SECRET_KEY\n\n[e2eprodenv]\naws_access_key_id=$E2E_USER_3_ACCESS_KEY\naws_secret_access_key=$E2E_USER_3_SECRET_KEY\n" > /tmp/.aws/credentials
+      - sed -i -e '$s/$/ --noColor/' e2e/e2e.sh
+      - make build-e2e
+      - docker build -t copilot-cli/e2e . -f e2e/Dockerfile
+      - >
+        docker run --privileged -v /tmp/.aws:/home/.aws -e "HOME=/home"
+        -e "TEST_SUITE=$TEST_SUITE"
+        -e "DOCKERHUB_USERNAME=$DOCKERHUB_USERNAME"
+        -e "DOCKERHUB_TOKEN=$DOCKERHUB_TOKEN"
+        -e "IMPORTED_CERT_ARN=$IMPORTED_CERT_ARN"
+        copilot-cli/e2e:latest

@@ -6,7 +6,9 @@ package cloudformation
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
@@ -152,6 +154,9 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 				m.EXPECT().UpdateAndWait(gomock.Any()).Return(errors.New("some error"))
 				return &CloudFormation{
 					cfnClient: m,
+					renderStackSet: func(input renderStackSetInput) error {
+						return nil
+					},
 				}
 			},
 			wantedErr: fmt.Errorf("update and wait for stack phonetool-infrastructure-roles: some error"),
@@ -182,13 +187,17 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 				mockAppStackSet := mocks.NewMockstackSetClient(ctrl)
 				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").Return(nil)
 				mockAppStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{}, nil)
-				mockAppStackSet.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
+				mockAppStackSet.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", nil)
 
 				return &CloudFormation{
 					cfnClient:   mockCFNClient,
 					appStackSet: mockAppStackSet,
 					region:      "us-west-2",
+					renderStackSet: func(input renderStackSetInput) error {
+						_, err := input.createOpFn()
+						return err
+					},
 				}
 			},
 		},
@@ -205,17 +214,21 @@ func TestCloudFormation_UpgradeApplication(t *testing.T) {
 				mockAppStackSet := mocks.NewMockstackSetClient(ctrl)
 				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").Return(nil)
 				mockAppStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{}, nil)
-				mockAppStackSet.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(&stackset.ErrStackSetOutOfDate{})
+				mockAppStackSet.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", &stackset.ErrStackSetOutOfDate{})
 				mockAppStackSet.EXPECT().WaitForStackSetLastOperationComplete("phonetool-infrastructure").Return(nil)
 				mockAppStackSet.EXPECT().Describe("phonetool-infrastructure").Return(stackset.Description{}, nil)
-				mockAppStackSet.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
+				mockAppStackSet.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", nil)
 
 				return &CloudFormation{
 					cfnClient:   mockCFNClient,
 					appStackSet: mockAppStackSet,
 					region:      "us-west-2",
+					renderStackSet: func(input renderStackSetInput) error {
+						_, err := input.createOpFn()
+						return err
+					},
 				}
 			},
 		},
@@ -264,8 +277,8 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
 					Template: string(body),
 				}, nil)
-				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil).
+				m.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", nil).
 					Do(func(_, _ string, ops ...stackset.CreateOrUpdateOption) {
 						actual := &awscfn.UpdateStackSetInput{}
 						ops[0](actual)
@@ -274,7 +287,7 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 						require.Equal(t, actual, wanted)
 					})
 				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
-				m.EXPECT().CreateInstancesAndWait(gomock.Any(), []string{"1234"}, []string{"us-west-2"})
+				m.EXPECT().CreateInstances(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return("", nil)
 				return m
 			},
 		},
@@ -292,10 +305,10 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
 					Template: string(body),
 				}, nil)
-				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
+				m.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", nil)
 				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
-				m.EXPECT().CreateInstancesAndWait(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return(nil)
+				m.EXPECT().CreateInstances(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return("", nil)
 				return m
 			},
 		},
@@ -314,8 +327,8 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
 					Template: string(body),
 				}, nil)
-				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil).
+				m.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", nil).
 					Do(func(_, _ string, ops ...stackset.CreateOrUpdateOption) {
 						actual := &awscfn.UpdateStackSetInput{}
 						ops[0](actual)
@@ -329,7 +342,7 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 						Account: "1234",
 					},
 				}, nil)
-				m.EXPECT().CreateInstancesAndWait(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.EXPECT().CreateInstances(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				return m
 			},
 		},
@@ -343,6 +356,10 @@ func TestCloudFormation_AddEnvToApp(t *testing.T) {
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
 				region:      "us-west-2",
+				renderStackSet: func(input renderStackSetInput) error {
+					_, err := input.createOpFn()
+					return err
+				},
 			}
 			got := cf.AddEnvToApp(&AddEnvToAppOpts{
 				App:          tc.app,
@@ -376,7 +393,12 @@ func TestCloudFormation_AddPipelineResourcesToApp(t *testing.T) {
 			mockStackSet: func(t *testing.T, ctrl *gomock.Controller) stackSetClient {
 				m := mocks.NewMockstackSetClient(ctrl)
 				m.EXPECT().InstanceSummaries(gomock.Any()).Return([]stackset.InstanceSummary{}, nil)
-				m.EXPECT().CreateInstancesAndWait(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return(nil)
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{})
+				require.NoError(t, err)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().CreateInstances(gomock.Any(), []string{"1234"}, []string{"us-west-2"}).Return("1", nil)
 				return m
 			},
 			getRegionFromClient: func(client cloudformationiface.CloudFormationAPI) (string, error) {
@@ -393,7 +415,12 @@ func TestCloudFormation_AddPipelineResourcesToApp(t *testing.T) {
 						Account: mockApp.AccountID,
 					},
 				}, nil)
-				m.EXPECT().CreateInstancesAndWait(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				body, err := yaml.Marshal(stack.DeployedAppMetadata{})
+				require.NoError(t, err)
+				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
+					Template: string(body),
+				}, nil)
+				m.EXPECT().CreateInstances(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				return m
 			},
 			getRegionFromClient: func(client cloudformationiface.CloudFormationAPI) (string, error) {
@@ -409,6 +436,10 @@ func TestCloudFormation_AddPipelineResourcesToApp(t *testing.T) {
 			defer ctrl.Finish()
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
+				renderStackSet: func(input renderStackSetInput) error {
+					_, err := input.createOpFn()
+					return err
+				},
 			}
 			getRegionFromClient = tc.getRegionFromClient
 
@@ -445,8 +476,8 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
 					Template: string(body),
 				}, nil)
-				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil).
+				m.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", nil).
 					Do(func(_, template string, _ ...stackset.CreateOrUpdateOption) {
 						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
@@ -470,8 +501,8 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
 					Template: string(body),
 				}, nil)
-				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil).
+				m.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", nil).
 					Do(func(_, template string, _ ...stackset.CreateOrUpdateOption) {
 						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
@@ -496,7 +527,7 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
 					Template: string(body),
 				}, nil)
-				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				m.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Times(0)
 				return m
 			},
@@ -510,6 +541,10 @@ func TestCloudFormation_AddServiceToApp(t *testing.T) {
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
 				region:      "us-west-2",
+				renderStackSet: func(input renderStackSetInput) error {
+					_, err := input.createOpFn()
+					return err
+				},
 			}
 
 			got := cf.AddServiceToApp(tc.app, tc.svcName)
@@ -547,8 +582,8 @@ func TestCloudFormation_RemoveServiceFromApp(t *testing.T) {
 				m.EXPECT().Describe(gomock.Any()).Return(stackset.Description{
 					Template: string(body),
 				}, nil)
-				m.EXPECT().UpdateAndWait(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil).
+				m.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return("", nil).
 					Do(func(_, template string, opts ...stackset.CreateOrUpdateOption) {
 						configToDeploy, err := stack.AppConfigFrom(&template)
 						require.NoError(t, err)
@@ -569,6 +604,10 @@ func TestCloudFormation_RemoveServiceFromApp(t *testing.T) {
 			cf := CloudFormation{
 				appStackSet: tc.mockStackSet(t, ctrl),
 				region:      "us-west-2",
+				renderStackSet: func(input renderStackSetInput) error {
+					_, err := input.createOpFn()
+					return err
+				},
 			}
 
 			got := cf.RemoveServiceFromApp(mockApp, tc.service)
@@ -957,6 +996,116 @@ func TestCloudFormation_DeleteApp(t *testing.T) {
 
 			// THEN
 			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestCloudFormation_RenderStackSet(t *testing.T) {
+	testDate := time.Date(2020, time.November, 23, 18, 0, 0, 0, time.UTC)
+	testCases := map[string]struct {
+		in   renderStackSetInput
+		mock func(t *testing.T, ctrl *gomock.Controller) CloudFormation
+
+		wantedErr error
+	}{
+		"should return the error if a stack set operation cannot be created": {
+			in: renderStackSetInput{
+				hasInstanceUpdates: true,
+				createOpFn: func() (string, error) {
+					return "", errors.New("some error")
+				},
+				now: func() time.Time {
+					return testDate
+				},
+			},
+			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
+				return CloudFormation{}
+			},
+
+			wantedErr: errors.New("some error"),
+		},
+		"should return a wrapped error if stack set instance streamers cannot be retrieved": {
+			in: renderStackSetInput{
+				name:               "demo-infra",
+				hasInstanceUpdates: true,
+				createOpFn: func() (string, error) {
+					return "1", nil
+				},
+				now: func() time.Time {
+					return testDate
+				},
+			},
+			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
+				m := mocks.NewMockstackSetClient(ctrl)
+				m.EXPECT().InstanceSummaries(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				return CloudFormation{
+					appStackSet: m,
+				}
+			},
+
+			wantedErr: errors.New(`retrieve stack instance streamers`),
+		},
+		"cancel all goroutines if a streamer fails": {
+			in: renderStackSetInput{
+				name:               "demo-infra",
+				hasInstanceUpdates: true,
+				createOpFn: func() (string, error) {
+					return "1", nil
+				},
+				now: func() time.Time {
+					return testDate
+				},
+			},
+			mock: func(t *testing.T, ctrl *gomock.Controller) CloudFormation {
+				mockStackSet := mocks.NewMockstackSetClient(ctrl)
+				mockStackSet.EXPECT().InstanceSummaries(gomock.Any(), gomock.Any()).Return([]stackset.InstanceSummary{
+					{
+						StackID: "stackset-instance-demo-infra",
+						Account: "1111",
+						Region:  "us-west-2",
+						Status:  "RUNNING",
+					},
+				}, nil)
+				mockStackSet.EXPECT().DescribeOperation(gomock.Any(), gomock.Any()).Return(stackset.Operation{
+					Status: "RUNNING",
+				}, nil).AnyTimes()
+
+				mockStack := mocks.NewMockcfnClient(ctrl)
+				mockStack.EXPECT().DescribeStackEvents(gomock.Any()).
+					Return(nil, errors.New("some error")).AnyTimes()
+
+				return CloudFormation{
+					appStackSet: mockStackSet,
+					cfnClient:   mockStack,
+					regionalClient: func(_ string) cfnClient {
+						return mockStack
+					},
+					console: mockFileWriter{
+						Writer: new(strings.Builder),
+					},
+				}
+			},
+
+			wantedErr: errors.New(`render progress of stack set "demo-infra"`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			client := tc.mock(t, ctrl)
+
+			// WHEN
+			err := client.renderStackSetImpl(tc.in)
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.ErrorContains(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

@@ -82,6 +82,21 @@ func NewStackStreamer(cfn StackEventsDescriber, stackID string, csCreationTime t
 	}
 }
 
+// Name returns the CloudFormation stack's name.
+func (s *StackStreamer) Name() string {
+	return s.stackName
+}
+
+// Region returns the region of the CloudFormation stack.
+// If the region cannot be parsed from the input stack ID, then return "", false.
+func (s *StackStreamer) Region() (string, bool) {
+	arn, err := awsarn.Parse(s.stackID)
+	if err != nil {
+		return "", false // If the stack ID is just a name and not an ARN, we won't be able to retrieve the region.
+	}
+	return arn.Region, true
+}
+
 // Subscribe returns a read-only channel that will receive stack events from the StackStreamer.
 func (s *StackStreamer) Subscribe() <-chan StackEvent {
 	s.mu.Lock()
@@ -177,7 +192,8 @@ func (s *StackStreamer) Notify() {
 	s.eventsToFlush = nil // reset after flushing all events.
 }
 
-// Close closes all subscribed channels notifying them that no more events will be sent.
+// Close closes all subscribed channels notifying them that no more events will be sent
+// and causes the streamer to no longer accept any new subscribers.
 func (s *StackStreamer) Close() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
