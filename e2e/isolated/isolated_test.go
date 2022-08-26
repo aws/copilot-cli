@@ -98,7 +98,6 @@ var _ = Describe("Isolated", func() {
 			Expect(len(envListOutput.Envs)).To(Equal(1))
 			env := envListOutput.Envs[0]
 			Expect(env.Name).To(Equal(envName))
-			Expect(env.Prod).To(BeFalse())
 			Expect(env.ExecutionRole).NotTo(BeEmpty())
 			Expect(env.ManagerRole).NotTo(BeEmpty())
 		})

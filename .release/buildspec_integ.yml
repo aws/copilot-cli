@@ -2,7 +2,7 @@ version: 0.2
 env:
   parameter-store:
     NEUTRAL_BUILD_RELEASE_ROLE: COPILOT_NEUTRAL_BUILD_RELEASE_ROLE_ARN
-  variables: 
+  variables:
     NEUTRAL_BUILD_RELEASE_BUCKET_NAME: ecs-cli-v2-release
     AWS_STS_REGIONAL_ENDPOINTS: regional
     INTEG_TEST_SESSION_NAME: aws_copilot_cli_integ_test
@@ -12,7 +12,7 @@ env:
 phases:
   install:
     runtime-versions:
-      nodejs: 12
+      nodejs: 16
     commands:
       - 'cd $HOME/.goenv && git pull --ff-only && cd -'
       - 'goenv install 1.18.4'
