@@ -427,6 +427,7 @@ Resources:
       Aliases: ["example.com", "foobar.com", "*.foobar.com"]
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters: [InternalALBWorkloads]
+      CopilotVersion:
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:

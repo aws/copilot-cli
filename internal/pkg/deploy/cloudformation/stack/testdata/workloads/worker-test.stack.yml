@@ -744,6 +744,7 @@ Resources:
       Workload: !Ref WorkloadName
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters: []
+      CopilotVersion:
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:

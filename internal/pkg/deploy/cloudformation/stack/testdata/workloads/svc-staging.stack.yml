@@ -242,6 +242,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Aliases: ["example.com"]
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters: [ALBWorkloads, Aliases]
+      CopilotVersion:
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:

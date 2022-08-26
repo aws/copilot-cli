@@ -449,6 +449,7 @@ Resources:
       Workload: !Ref WorkloadName
       EnvStack: !Sub "${AppName}-${EnvName}"
       Parameters: ["InternalALBWorkloads"]
+      CopilotVersion:
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:
