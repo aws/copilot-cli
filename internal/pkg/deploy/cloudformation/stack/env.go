@@ -271,13 +271,10 @@ func transformEnvControllerParameters(new, old *cloudformation.Parameter) *cloud
 	if old == nil { // The EnvController-managed parameter doesn't exist in the old stack. Use the new value.
 		return new
 	}
-	return &cloudformation.Parameter{
-		ParameterKey: new.ParameterKey,
-
-		// Ideally, we would set `UsePreviousValue: true` unfortunately CodePipeline template config does not support it.
-		// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-cfn-artifacts.html#w2ab1c21c15c15
-		ParameterValue: old.ParameterValue,
-	}
+	// Ideally, we would return `&cloudformation.Parameter{ ParameterKey: new.ParameterKey, UsePreviousValue: true}`.
+	// Unfortunately CodePipeline template config does not support it.
+	// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-cfn-artifacts.html#w2ab1c21c15c15
+	return old
 }
 
 // transformServiceDiscoveryEndpoint transforms the service discovery endpoint parameter.
@@ -296,13 +293,10 @@ func (e *EnvStackConfig) transformServiceDiscoveryEndpoint(new, old *cloudformat
 			ParameterValue: aws.String(fmt.Sprintf(`%s.local`, e.in.App.Name)),
 		}
 	}
-	return &cloudformation.Parameter{
-		ParameterKey: new.ParameterKey,
-
-		// Ideally, we would set `UsePreviousValue: true` unfortunately CodePipeline template config does not support it.
-		// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-cfn-artifacts.html#w2ab1c21c15c15
-		ParameterValue: old.ParameterValue,
-	}
+	// Ideally, we would return `&cloudformation.Parameter{ ParameterKey: new.ParameterKey, UsePreviousValue: true}`.
+	// Unfortunately CodePipeline template config does not support it.
+	// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-cfn-artifacts.html#w2ab1c21c15c15
+	return old
 }
 
 // NewBootstrapEnvStackConfig sets up a BootstrapEnvStackConfig struct.
