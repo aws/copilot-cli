@@ -437,6 +437,7 @@ func TestDecomposeService_Volumes(t *testing.T) {
 		wantError         error
 		wantErrorContains string
 		wantStorage       manifest.Storage
+		wantIgnored       IgnoredKeys
 	}{
 		"simple-named": {
 			wantStorage: manifest.Storage{
@@ -495,6 +496,57 @@ func TestDecomposeService_Volumes(t *testing.T) {
 		"uses-external-volume": {
 			wantError: errors.New("convert Compose service to Copilot manifest: named volume nvol-external is marked as external, this is unsupported"),
 		},
+		"tmpfs-simple": {
+			wantStorage: manifest.Storage{
+				Ephemeral: aws.Int(53),
+				Volumes: map[string]*manifest.Volume{
+					"tmpfs-0": {
+						MountPointOpts: manifest.MountPointOpts{
+							ContainerPath: aws.String("/tmp2"),
+							ReadOnly:      aws.Bool(false),
+						},
+					},
+					"tmpfs-1": {
+						MountPointOpts: manifest.MountPointOpts{
+							ContainerPath: aws.String("/tmp3"),
+							ReadOnly:      aws.Bool(false),
+						},
+					},
+				},
+			},
+		},
+		"tmpfs-missing-target": {
+			wantError: errors.New("convert Compose service to Copilot manifest: volume mounted from \"\" (type \"tmpfs\") is missing a target mount point"),
+		},
+		"tmpfs-name-collision-1": {
+			wantError: errors.New("convert Compose service to Copilot manifest: named volume tmpfs-0 collides with the generated name of a tmpfs mount"),
+		},
+		"tmpfs-name-collision-2": {
+			wantError: errors.New("convert Compose service to Copilot manifest: generated tmpfs volume name tmpfs-1 collides with an existing volume name"),
+		},
+		"unsupported-volume-type": {
+			wantError: errors.New("convert Compose service to Copilot manifest: volume type \"npipe\" is not supported yet"),
+		},
+		"unsupported-driver": {
+			wantError: errors.New("convert Compose service to Copilot manifest: only the default driver is supported, but the volume uses-driver tries to use a different driver"),
+		},
+		"ignored-top-level-keys": {
+			wantIgnored: []string{
+				"volumes.ignored-top-level.driver_opts",
+				"volumes.ignored-top-level.labels",
+			},
+			wantStorage: manifest.Storage{
+				Volumes: map[string]*manifest.Volume{
+					"ignored-top-level": {
+						EFS: efsTrue,
+						MountPointOpts: manifest.MountPointOpts{
+							ContainerPath: aws.String("/ignored"),
+							ReadOnly:      aws.Bool(false),
+						},
+					},
+				},
+			},
+		},
 	}
 
 	actualTestCases := map[string]decomposeTest{}
@@ -505,6 +557,7 @@ func TestDecomposeService_Volumes(t *testing.T) {
 			filename:          "volume-tests.yml",
 			wantError:         tc.wantError,
 			wantErrorContains: tc.wantErrorContains,
+			wantIgnored:       tc.wantIgnored,
 			wantBs: &manifest.BackendServiceConfig{
 				ImageConfig: manifest.ImageWithHealthcheckAndOptionalPort{
 					ImageWithOptionalPort: manifest.ImageWithOptionalPort{

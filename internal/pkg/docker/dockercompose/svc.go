@@ -28,7 +28,7 @@ func convertService(service *compose.ServiceConfig, workingDir string, otherSvcs
 		return nil, nil, err
 	}
 
-	taskCfg, err := convertTaskConfig(service, otherSvcs, vols)
+	taskCfg, tcIgn, err := convertTaskConfig(service, otherSvcs, vols)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -52,6 +52,7 @@ func convertService(service *compose.ServiceConfig, workingDir string, otherSvcs
 		return nil, nil, err
 	}
 	ignored = append(ignored, portIgnored...)
+	ignored = append(ignored, tcIgn...)
 
 	if exposed != nil && exposed.public {
 		lbws := manifest.LoadBalancedWebService{}
@@ -193,20 +194,20 @@ func toExposedPort(binding compose.ServicePortConfig) (*exposedPort, IgnoredKeys
 }
 
 // convertTaskConfig converts environment variables, env files, and platform strings.
-func convertTaskConfig(service *compose.ServiceConfig, otherSvcs compose.Services, topLevelVols compose.Volumes) (manifest.TaskConfig, error) {
+func convertTaskConfig(service *compose.ServiceConfig, otherSvcs compose.Services, topLevelVols compose.Volumes) (manifest.TaskConfig, IgnoredKeys, error) {
 	var envFile *string
 
 	if len(service.EnvFile) == 1 {
 		envFile = &service.EnvFile[0]
 	} else if len(service.EnvFile) > 1 {
-		return manifest.TaskConfig{}, fmt.Errorf("at most one env file is supported, but %d env files "+
+		return manifest.TaskConfig{}, nil, fmt.Errorf("at most one env file is supported, but %d env files "+
 			"were attached to this service", len(service.EnvFile))
 	}
 
 	vc := newVolumeConverter(topLevelVols)
-	storage, err := vc.convertVolumes(service.Volumes, otherSvcs)
+	storage, ignored, err := vc.convertVolumes(service.Volumes, otherSvcs)
 	if err != nil {
-		return manifest.TaskConfig{}, err
+		return manifest.TaskConfig{}, nil, err
 	}
 
 	taskCfg := manifest.TaskConfig{
@@ -224,14 +225,14 @@ func convertTaskConfig(service *compose.ServiceConfig, otherSvcs compose.Service
 
 	envVars, err := convertMappingWithEquals(service.Environment)
 	if err != nil {
-		return manifest.TaskConfig{}, fmt.Errorf("convert environment variables: %w", err)
+		return manifest.TaskConfig{}, nil, fmt.Errorf("convert environment variables: %w", err)
 	}
 
 	if len(envVars) != 0 {
 		taskCfg.Variables = envVars
 	}
 
-	return taskCfg, nil
+	return taskCfg, ignored, nil
 }
 
 // convertHealthCheckConfig trivially converts a Compose container health check into its Copilot variant.

@@ -27,7 +27,7 @@ func newVolumeConverter(topLevelVols compose.Volumes) volumeConverter {
 }
 
 // convertVolumes converts a list of Compose volumes into the Copilot storage equivalent.
-func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig, otherSvcs compose.Services) (*manifest.Storage, error) {
+func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig, otherSvcs compose.Services) (*manifest.Storage, IgnoredKeys, error) {
 	for _, otherSvc := range otherSvcs {
 		for _, vol := range otherSvc.Volumes {
 			if vol.Type == "volume" {
@@ -37,8 +37,13 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 	}
 
 	var ephemeralBytes uint64 = 20 * units.GiB
+	var ignored IgnoredKeys
 
 	for idx, vol := range volumes {
+		if vol.Target == "" {
+			return nil, nil, fmt.Errorf("volume mounted from \"%v\" (type \"%v\") is missing a target mount point", vol.Source, vol.Type)
+		}
+
 		mountOpts := manifest.MountPointOpts{
 			ContainerPath: aws.String(vol.Target),
 			ReadOnly:      aws.Bool(vol.ReadOnly),
@@ -50,14 +55,12 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 			name := fmt.Sprintf("tmpfs-%v", idx)
 
 			if vc.copilotVols[name] != nil {
-				return nil, fmt.Errorf("generated tmpfs volume name %s collides with an existing volume name", name)
+				return nil, nil, fmt.Errorf("generated tmpfs volume name %s collides with an existing volume name", name)
 			}
 
 			vc.tmpfsVolNames[name] = true
 			vc.copilotVols[name] = &manifest.Volume{
-				EFS: manifest.EFSConfigOrBool{
-					Enabled: aws.Bool(false),
-				},
+				// efs is off by default
 				MountPointOpts: mountOpts,
 			}
 			continue
@@ -65,13 +68,14 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 
 		if vol.Type != "volume" {
 			// TODO (rclinard-amzn): Relax the "bind" restriction in Milestone 6
-			return nil, fmt.Errorf("volume type \"%v\" is not supported yet", vol.Type)
+			return nil, nil, fmt.Errorf("volume type \"%v\" is not supported yet", vol.Type)
 		}
 
-		name, err := vc.checkNamedVolume(vol)
+		name, ign, err := vc.checkNamedVolume(vol)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		ignored = append(ignored, ign...)
 
 		vc.copilotVols[*name] = &manifest.Volume{
 			EFS: manifest.EFSConfigOrBool{
@@ -94,43 +98,45 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 		storage.Volumes = vc.copilotVols
 	}
 
-	return &storage, nil
+	return &storage, ignored, nil
 }
 
-func (vc *volumeConverter) checkNamedVolume(vol compose.ServiceVolumeConfig) (*string, error) {
+func (vc *volumeConverter) checkNamedVolume(vol compose.ServiceVolumeConfig) (*string, IgnoredKeys, error) {
 	name := vol.Source
 	if shared := vc.otherSvcVols[name]; shared != nil {
-		return nil, fmt.Errorf("named volume %s is shared with %s [%s], this is not supported in Copilot",
+		return nil, nil, fmt.Errorf("named volume %s is shared with %s [%s], this is not supported in Copilot",
 			name, english.PluralWord(len(shared), "service", "services"), strings.Join(shared, ", "))
 	}
 
 	if vc.tmpfsVolNames[name] {
-		return nil, fmt.Errorf("named volume %s collides with the generated name of a tmpfs mount", name)
+		return nil, nil, fmt.Errorf("named volume %s collides with the generated name of a tmpfs mount", name)
 	}
 
 	if vc.copilotVols[name] != nil {
-		return nil, fmt.Errorf("cannot mount named volume %s a second time at %s, it is already mounted at %s",
+		return nil, nil, fmt.Errorf("cannot mount named volume %s a second time at %s, it is already mounted at %s",
 			name, vol.Target, *vc.copilotVols[name].ContainerPath)
 	}
 
+	var ignored IgnoredKeys
+
 	if topLevel, ok := vc.topLevelVols[name]; ok {
 		var err error
-		var ignored IgnoredKeys
 
 		switch {
 		case topLevel.External.External:
 			err = fmt.Errorf("named volume %s is marked as external, this is unsupported", name)
 		case topLevel.Driver != "":
-			err = fmt.Errorf("only the default driver is supported, but %s tries to use a different driver", name)
-		case len(topLevel.Labels) != 0:
-			ignored = append(ignored, fmt.Sprintf("volumes.%s.labels", name))
+			err = fmt.Errorf("only the default driver is supported, but the volume %s tries to use a different driver", name)
 		case len(topLevel.DriverOpts) != 0:
 			ignored = append(ignored, fmt.Sprintf("volumes.%s.driver_opts", name))
+			fallthrough
+		case len(topLevel.Labels) != 0:
+			ignored = append(ignored, fmt.Sprintf("volumes.%s.labels", name))
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return &name, nil
+	return &name, ignored, nil
 }
