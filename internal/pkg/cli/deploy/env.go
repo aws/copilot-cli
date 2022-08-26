@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
+	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/patch"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
@@ -33,6 +34,10 @@ type environmentDeployer interface {
 	ForceUpdateOutputID(app, env string) (string, error)
 }
 
+type patcher interface {
+	EnsureManagerRoleIsAllowedToUpload(bucketName string) error
+}
+
 type prefixListGetter interface {
 	CloudFrontManagedPrefixListID() (string, error)
 }
@@ -48,6 +53,7 @@ type envDeployer struct {
 	// Dependencies to deploy an environment.
 	appCFN             appResourcesGetter
 	envDeployer        environmentDeployer
+	patcher            patcher
 	newStackSerializer func(input *deploy.CreateEnvironmentInput, forceUpdateID string, prevParams []*awscfn.Parameter) stackSerializer
 
 	// Cached variables.
@@ -75,6 +81,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get env session: %w", err)
 	}
+	cfnClient := deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr))
 	return &envDeployer{
 		app: in.App,
 		env: in.Env,
@@ -84,7 +91,11 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		prefixListGetter: ec2.New(envRegionSession),
 
 		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
-		envDeployer: deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr)),
+		envDeployer: cfnClient,
+		patcher: &patch.EnvironmentPatcher{
+			TemplatePatcher: cfnClient,
+			Env:             in.Env,
+		},
 		newStackSerializer: func(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
 			return stack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
 		},
@@ -96,6 +107,9 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 	resources, err := d.getAppRegionalResources()
 	if err != nil {
 		return nil, err
+	}
+	if err := d.patcher.EnsureManagerRoleIsAllowedToUpload(resources.S3Bucket); err != nil {
+		return nil, fmt.Errorf("ensure env manager role has permissions to upload: %w", err)
 	}
 	return d.uploadCustomResources(resources.S3Bucket)
 }
