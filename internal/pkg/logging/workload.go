@@ -42,7 +42,7 @@ type NewWorkloadLoggerOpts struct {
 	Sess *session.Session
 }
 
-// newWorkloadLogger returns a workloadLogger for the svc service under env and app.
+// newWorkloadLogger returns a workloadLogger for the service under env and app.
 // The logging client is initialized from the given sess session.
 func newWorkloadLogger(opts *NewWorkloadLoggerOpts) *workloadLogger {
 	return &workloadLogger{
