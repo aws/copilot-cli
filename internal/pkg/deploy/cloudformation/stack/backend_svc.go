@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
+	"github.com/aws/copilot-cli/internal/pkg/version"
 )
 
 const (
@@ -146,6 +147,7 @@ func (s *BackendService) Template() (string, error) {
 		EnvName:            s.env,
 		WorkloadName:       s.name,
 		SerializedManifest: string(s.rawManifest),
+		CopilotVersion:     version.Version,
 
 		Variables:                s.manifest.BackendServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
