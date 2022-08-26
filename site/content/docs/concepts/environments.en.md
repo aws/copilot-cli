@@ -13,7 +13,7 @@ To create a new environment in your app, you can run `copilot env init` from wit
 $ copilot env init
 ```
 
-After you run `copilot env init`, you can watch as Copilot sets up the first of the environment's resources. IAM roles and other infrastructural resources are created. If the environment was created with a different AWS account than the app, the environment will be linked back to the application account; this allows actors in the application account to manage the environment, even without access to the environment account. Copilot creates an [env manifest](../manifest/environment.en.md) at `copilot/environments/[env name]/manifest.yml`.
+After you run `copilot env init`, you can watch as Copilot sets up the two IAM roles that are essential in updating and managing the environment. If the environment was created with a different AWS account than the app, the environment will be linked back to the application account; this allows actors in the application account to manage the environment, even without access to the environment account. Copilot creates an [env manifest](../manifest/environment.en.md) at `copilot/environments/[env name]/manifest.yml`.
 
 ## Deploying an Environment
 
@@ -21,7 +21,7 @@ If you'd like, you may configure your environment by making changes to your [env
 ```console
 $ copilot env deploy
 ```
-In this step, Copilot creates more resources, like an ECS cluster, a security group, and a private DNS namespace. After deployment, you can modify your env manifest and redeploy by simply running [`copilot env deploy`](../commands/env-deploy.en.md) again.
+In this step, Copilot creates your environment infrastructure resources, like an ECS cluster, a security group, and a private DNS namespace. After deployment, you can modify your env manifest and redeploy by simply running [`copilot env deploy`](../commands/env-deploy.en.md) again.
 
 ### Deploying a Service
 
