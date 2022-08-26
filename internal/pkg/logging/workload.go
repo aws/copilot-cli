@@ -144,7 +144,7 @@ type NewAppRunnerServiceLoggerOpts struct {
 	ConfigStore describe.ConfigStoreSvc
 }
 
-// NewAppRunnerServiceLogger returns an AppRunnerServiceLogger for the svc service under env and app.
+// NewAppRunnerServiceLogger returns an AppRunnerServiceLogger for the service under env and app.
 func NewAppRunnerServiceLogger(opts *NewAppRunnerServiceLoggerOpts) (*AppRunnerServiceLogger, error) {
 	serviceDescriber, err := describe.NewRDWebServiceDescriber(describe.NewServiceConfig{
 		App:         opts.App,
