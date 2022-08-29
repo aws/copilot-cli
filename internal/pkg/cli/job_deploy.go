@@ -88,13 +88,14 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	}
 	content := o.appliedDynamicMft.Manifest()
 	in := deploy.WorkloadDeployerInput{
-		SessionProvider: o.sessProvider,
-		Name:            o.name,
-		App:             o.targetApp,
-		Env:             o.targetEnv,
-		ImageTag:        o.imageTag,
-		Mft:             content,
-		RawMft:          raw,
+		SessionProvider:  o.sessProvider,
+		Name:             o.name,
+		App:              o.targetApp,
+		Env:              o.targetEnv,
+		ImageTag:         o.imageTag,
+		Mft:              content,
+		RawMft:           raw,
+		EnvVersionGetter: o.envFeaturesDescriber,
 	}
 	var deployer workloadDeployer
 	switch t := content.(type) {
@@ -178,10 +179,6 @@ func (o *deployJobOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
 	}
-	envVersion, err := o.envFeaturesDescriber.Version()
-	if err != nil {
-		return fmt.Errorf("get version of environment %q: %w", o.envName, err)
-	}
 	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigest:        uploadOut.ImageDigest,
@@ -190,7 +187,6 @@ func (o *deployJobOpts) Execute() error {
 			RootUserARN:        o.rootUserARN,
 			Tags:               tags.Merge(o.targetApp.Tags, o.resourceTags),
 			CustomResourceURLs: uploadOut.CustomResourceURLs,
-			EnvVersion:         envVersion,
 		},
 		Options: deploy.Options{
 			DisableRollback: o.disableRollback,

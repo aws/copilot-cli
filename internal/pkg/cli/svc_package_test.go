@@ -207,7 +207,6 @@ count: 1`
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						ImageDigest: aws.String(mockDigest),
 						RootUserARN: mockARN,
-						EnvVersion:  "v1.42.0",
 					},
 				}).Return(&deploy.GenerateCloudFormationTemplateOutput{
 					Template:   "mystack",
@@ -215,7 +214,6 @@ count: 1`
 				}, nil)
 				m.interpolator.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
 				m.generator.EXPECT().AddonsTemplate().Return("", nil)
-				m.envFeaturesDescriber.EXPECT().Version().Return("v1.42.0", nil)
 			},
 			wantedStack:  "mystack",
 			wantedParams: "myparams",
@@ -232,12 +230,10 @@ count: 1`
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(rdwsMft), nil)
 				m.interpolator.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
 				m.generator.EXPECT().AddonsTemplate().Return("", nil)
-				m.envFeaturesDescriber.EXPECT().Version().Return("v1.42.0", nil)
 				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						ImageDigest: aws.String(""),
 						RootUserARN: mockARN,
-						EnvVersion:  "v1.42.0",
 					},
 				}).Return(&deploy.GenerateCloudFormationTemplateOutput{
 					Template:   "mystack",

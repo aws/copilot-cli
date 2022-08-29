@@ -120,13 +120,14 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadStackGenerator
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider: o.sessProvider,
-		Name:            o.name,
-		App:             targetApp,
-		Env:             targetEnv,
-		ImageTag:        o.tag,
-		Mft:             content,
-		RawMft:          raw,
+		SessionProvider:  o.sessProvider,
+		Name:             o.name,
+		App:              targetApp,
+		Env:              targetEnv,
+		ImageTag:         o.tag,
+		Mft:              content,
+		RawMft:           raw,
+		EnvVersionGetter: o.envFeaturesDescriber,
 	}
 	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:
@@ -325,10 +326,6 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 		}
 		uploadOut = *out
 	}
-	envVersion, err := o.envFeaturesDescriber.Version()
-	if err != nil {
-		return nil, fmt.Errorf("get version of environment %q: %w", o.envName, err)
-	}
 	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			RootUserARN:        o.rootUserARN,
@@ -337,7 +334,6 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 			EnvFileARN:         uploadOut.EnvFileARN,
 			AddonsURL:          uploadOut.AddonsURL,
 			CustomResourceURLs: uploadOut.CustomResourceURLs,
-			EnvVersion:         envVersion,
 		},
 	})
 	if err != nil {
