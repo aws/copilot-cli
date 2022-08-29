@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   stale:
-    if: github.repository == "aws/copilot-cli"
+    if: github.repository == 'aws/copilot-cli'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/stale@v5
