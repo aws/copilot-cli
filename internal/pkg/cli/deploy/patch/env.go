@@ -27,9 +27,9 @@ type EnvironmentPatcher struct {
 	TemplatePatcher environmentTemplateUpdateGetter
 }
 
-// EnsureManagerRoleIsAllowedToUpload checks if the environment manager role has the necessary permission to upload 
-// objects and patch the permissions if not.
-func (d *EnvironmentPatcher) EnsureManagerRoleIsAllowedToUpload(bucketName string) error {
+// EnsureManagerRoleIsAllowedToUpload checks if the environment manager role has the necessary permissions to upload  
+// objects to bucket and patches the permissions if not.
+func (d *EnvironmentPatcher) EnsureManagerRoleIsAllowedToUpload(bucket string) error {
 	body, err := d.TemplatePatcher.EnvironmentTemplate(d.Env.App, d.Env.Name)
 	if err != nil {
 		return fmt.Errorf("get environment template for %q: %w", d.Env.Name, err)
@@ -41,7 +41,7 @@ func (d *EnvironmentPatcher) EnsureManagerRoleIsAllowedToUpload(bucketName strin
 	if ok {
 		return nil
 	}
-	return d.grantManagerRolePermissionToUpload(d.Env.App, d.Env.Name, d.Env.ExecutionRoleARN, body, s3.FormatARN(endpoints.AwsPartitionID, bucketName))
+	return d.grantManagerRolePermissionToUpload(d.Env.App, d.Env.Name, d.Env.ExecutionRoleARN, body, s3.FormatARN(endpoints.AwsPartitionID, bucket))
 }
 
 func (d *EnvironmentPatcher) grantManagerRolePermissionToUpload(app, env, execRole, body, bucketARN string) error {
