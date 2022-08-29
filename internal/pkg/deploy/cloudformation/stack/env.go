@@ -256,7 +256,8 @@ func (e *EnvStackConfig) transformParameters(currParams, oldParams []*cloudforma
 }
 
 // transformEnvControllerParameters transforms an env-controller managed parameter.
-// If the parameter exists in the old template, it uses its previous value. Otherwise, it returns its new default value.
+// If the parameter exists in the old template, it returns the old parameter assuming that old.ParameterKey = new.ParameterKey. 
+// Otherwise, it returns its new default value.
 func transformEnvControllerParameters(new, old *cloudformation.Parameter) *cloudformation.Parameter {
 	if new == nil {
 		return nil
