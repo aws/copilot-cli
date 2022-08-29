@@ -68,7 +68,7 @@ func (d *EnvironmentPatcher) grantManagerRolePermissionToUpload(app, env, execRo
 	if len(tpl.Resources.ManagerRole.Properties.Policies) == 0 {
 		return errors.New("unable to find policies for the EnvironmentManagerRole")
 	}
-	// lines and columns are 1-indexed, so we have to substract one from each.
+	// lines and columns are 1-indexed, so we have to subtract one from each.
 	statementLineIndex := tpl.Resources.ManagerRole.Properties.Policies[0].Document.Statements.Line - 1
 	numSpaces := tpl.Resources.ManagerRole.Properties.Policies[0].Document.Statements.Column - 1
 	pad := strings.Repeat(" ", numSpaces)
