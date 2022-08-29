@@ -218,6 +218,10 @@ func (o *deploySvcOpts) Execute() error {
 	if err != nil {
 		return err
 	}
+	envVersion, err := o.envFeaturesDescriber.Version()
+	if err != nil {
+		return fmt.Errorf("get version of environment %q: %w", o.envName, err)
+	}
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			ImageDigest:        uploadOut.ImageDigest,
@@ -226,6 +230,7 @@ func (o *deploySvcOpts) Execute() error {
 			RootUserARN:        o.rootUserARN,
 			Tags:               tags.Merge(targetApp.Tags, o.resourceTags),
 			CustomResourceURLs: uploadOut.CustomResourceURLs,
+			EnvVersion:         envVersion,
 		},
 		Options: clideploy.Options{
 			ForceNewUpdate:  o.forceNewUpdate,

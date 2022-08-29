@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/version"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -118,7 +117,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		EnvName:            s.env,
 		WorkloadName:       s.name,
 		SerializedManifest: string(s.rawManifest),
-		EnvVersion:         version.Version,
+		EnvVersion:         s.rc.EnvVersion,
 
 		Variables:            s.manifest.Variables,
 		StartCommand:         s.manifest.StartCommand,

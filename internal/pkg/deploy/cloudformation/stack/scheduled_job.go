@@ -16,7 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
-	"github.com/aws/copilot-cli/internal/pkg/version"
 	"github.com/robfig/cron/v3"
 )
 
@@ -185,7 +184,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		ServiceDiscoveryEndpoint: j.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
 		Platform:                 convertPlatform(j.manifest.Platform),
-		EnvVersion:               version.Version,
+		EnvVersion:               j.rc.EnvVersion,
 
 		CustomResources: crs,
 	})

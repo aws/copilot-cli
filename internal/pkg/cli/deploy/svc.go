@@ -545,6 +545,7 @@ type StackRuntimeConfiguration struct {
 	RootUserARN        string
 	Tags               map[string]string
 	CustomResourceURLs map[string]string
+	EnvVersion         string
 }
 
 // DeployWorkloadInput is the input of DeployWorkload.
@@ -1000,6 +1001,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 			AccountID:                d.env.AccountID,
 			Region:                   d.env.Region,
 			CustomResourcesURL:       in.CustomResourceURLs,
+			EnvVersion:               in.EnvVersion,
 		}, nil
 	}
 	return &stack.RuntimeConfig{
@@ -1015,6 +1017,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		AccountID:                d.env.AccountID,
 		Region:                   d.env.Region,
 		CustomResourcesURL:       in.CustomResourceURLs,
+		EnvVersion:               in.EnvVersion,
 	}, nil
 }
 

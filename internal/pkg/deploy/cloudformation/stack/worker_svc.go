@@ -12,7 +12,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
-	"github.com/aws/copilot-cli/internal/pkg/version"
 )
 
 type workerSvcReadParser interface {
@@ -116,7 +115,7 @@ func (s *WorkerService) Template() (string, error) {
 		EnvName:            s.env,
 		WorkloadName:       s.name,
 		SerializedManifest: string(s.rawManifest),
-		EnvVersion:         version.Version,
+		EnvVersion:         s.rc.EnvVersion,
 
 		Variables:                s.manifest.WorkerServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.WorkerServiceConfig.Secrets),

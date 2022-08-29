@@ -15,7 +15,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
-	"github.com/aws/copilot-cli/internal/pkg/version"
 )
 
 // Parameter logical IDs for a load balanced web service.
@@ -191,7 +190,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		EnvName:            s.env,
 		WorkloadName:       s.name,
 		SerializedManifest: string(s.rawManifest),
-		EnvVersion:         version.Version,
+		EnvVersion:         s.rc.EnvVersion,
 
 		Variables:                s.manifest.TaskConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),
