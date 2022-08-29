@@ -36,10 +36,10 @@ type EnvironmentPatcher struct {
 
 // EnsureManagerRoleIsAllowedToUpload checks if the environment manager role has the necessary permissions to upload  
 // objects to bucket and patches the permissions if not.
-func (d *EnvironmentPatcher) EnsureManagerRoleIsAllowedToUpload(bucket string) error {
-	body, err := d.TemplatePatcher.EnvironmentTemplate(d.Env.App, d.Env.Name)
+func (p *EnvironmentPatcher) EnsureManagerRoleIsAllowedToUpload(bucket string) error {
+	body, err := p.TemplatePatcher.EnvironmentTemplate(p.Env.App, p.Env.Name)
 	if err != nil {
-		return fmt.Errorf("get environment template for %q: %w", d.Env.Name, err)
+		return fmt.Errorf("get environment template for %q: %w", p.Env.Name, err)
 	}
 	ok, err := isManagerRoleAllowedToUpload(body)
 	if err != nil {
@@ -48,10 +48,10 @@ func (d *EnvironmentPatcher) EnsureManagerRoleIsAllowedToUpload(bucket string) e
 	if ok {
 		return nil
 	}
-	return d.grantManagerRolePermissionToUpload(d.Env.App, d.Env.Name, d.Env.ExecutionRoleARN, body, s3.FormatARN(endpoints.AwsPartitionID, bucket))
+	return p.grantManagerRolePermissionToUpload(p.Env.App, p.Env.Name, p.Env.ExecutionRoleARN, body, s3.FormatARN(endpoints.AwsPartitionID, bucket))
 }
 
-func (d *EnvironmentPatcher) grantManagerRolePermissionToUpload(app, env, execRole, body, bucketARN string) error {
+func (p *EnvironmentPatcher) grantManagerRolePermissionToUpload(app, env, execRole, body, bucketARN string) error {
 	// Detect which line number the EnvironmentManagerRole's PolicyDocument Statement is at.
 	// We will add additional permissions after that line.
 	type Template struct {
@@ -102,13 +102,13 @@ func (d *EnvironmentPatcher) grantManagerRolePermissionToUpload(app, env, execRo
 	// CloudFormation is the only entity that's allowed to update the EnvManagerRole so we have to go through this route.
 	// See #3556.
 	var errEmptyChangeSet *cloudformation.ErrChangeSetEmpty
-	d.Prog.Start("Update the environment's manager role with permission to upload artifacts to S3")
-	err := d.TemplatePatcher.UpdateEnvironmentTemplate(app, env, updatedBody, execRole)
+	p.Prog.Start("Update the environment's manager role with permission to upload artifacts to S3")
+	err := p.TemplatePatcher.UpdateEnvironmentTemplate(app, env, updatedBody, execRole)
 	if err != nil && !errors.As(err, &errEmptyChangeSet) {
-		d.Prog.Stop(log.Serrorln("Unable to update the environment's manager role with upload artifacts permission"))
+		p.Prog.Stop(log.Serrorln("Unable to update the environment's manager role with upload artifacts permission"))
 		return fmt.Errorf("update environment template with PutObject permissions: %v", err)
 	}
-	d.Prog.Stop(log.Ssuccessln("Updated the environment's manager role with permissions to upload artifacts to S3"))
+	p.Prog.Stop(log.Ssuccessln("Updated the environment's manager role with permissions to upload artifacts to S3"))
 	return nil
 }
 
