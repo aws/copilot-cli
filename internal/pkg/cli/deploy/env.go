@@ -22,6 +22,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
+	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 )
 
 type appResourcesGetter interface {
@@ -93,6 +95,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
 		envDeployer: cfnClient,
 		patcher: &patch.EnvironmentPatcher{
+			Prog:            termprogress.NewSpinner(log.DiagnosticWriter),
 			TemplatePatcher: cfnClient,
 			Env:             in.Env,
 		},

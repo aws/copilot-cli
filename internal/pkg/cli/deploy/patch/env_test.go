@@ -17,6 +17,7 @@ import (
 
 type envPatcherMock struct {
 	templatePatcher *mocks.MockenvironmentTemplateUpdateGetter
+	prog            *mocks.Mockprogress
 }
 
 func TestEnvironmentPatcher_EnsureManagerRoleIsAllowedToUpload(t *testing.T) {
@@ -45,6 +46,7 @@ Resources:
             Statement:
             - Sid: CloudwatchLogs 
   OtherResource:`, nil)
+				m.prog.EXPECT().Start(gomock.Any())
 				m.templatePatcher.EXPECT().UpdateEnvironmentTemplate("mockApp", "mockEnv", `
 Metadata:
   Version: v1.7.0
@@ -64,6 +66,7 @@ Resources:
                 - arn:aws:s3:::mockBucket/*
             - Sid: CloudwatchLogs 
   OtherResource:`, "mockExecutionRoleARN").Return(errors.New("some error"))
+				m.prog.EXPECT().Stop(gomock.Any())
 			},
 			wantedError: errors.New("update environment template with PutObject permissions: some error"),
 		},
@@ -95,7 +98,9 @@ Resources:
                 - arn:aws:s3:::mockBucket
                 - arn:aws:s3:::mockBucket/*
 `, nil)
+				m.prog.EXPECT().Start(gomock.Any())
 				m.templatePatcher.EXPECT().UpdateEnvironmentTemplate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("wrapped err: %w", &cloudformation.ErrChangeSetEmpty{}))
+				m.prog.EXPECT().Stop(gomock.Any())
 			},
 		},
 	}
@@ -107,6 +112,7 @@ Resources:
 
 			m := &envPatcherMock{
 				templatePatcher: mocks.NewMockenvironmentTemplateUpdateGetter(ctrl),
+				prog:            mocks.NewMockprogress(ctrl),
 			}
 			tc.setupMocks(m)
 			p := EnvironmentPatcher{
@@ -116,6 +122,7 @@ Resources:
 					ExecutionRoleARN: "mockExecutionRoleARN",
 				},
 				TemplatePatcher: m.templatePatcher,
+				Prog:            m.prog,
 			}
 
 			got := p.EnsureManagerRoleIsAllowedToUpload("mockBucket")

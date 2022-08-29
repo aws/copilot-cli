@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
 )
@@ -21,8 +22,14 @@ type environmentTemplateUpdateGetter interface {
 	UpdateEnvironmentTemplate(appName, envName, templateBody, cfnExecRoleARN string) error
 }
 
+type progress interface {
+	Start(label string)
+	Stop(label string)
+}
+
 // EnvironmentPatcher checks if the environment needs a patch and perform the patch when necessary.
 type EnvironmentPatcher struct {
+	Prog            progress
 	Env             *config.Environment
 	TemplatePatcher environmentTemplateUpdateGetter
 }
@@ -95,13 +102,13 @@ func (d *EnvironmentPatcher) grantManagerRolePermissionToUpload(app, env, execRo
 	// CloudFormation is the only entity that's allowed to update the EnvManagerRole so we have to go through this route.
 	// See #3556.
 	var errEmptyChangeSet *cloudformation.ErrChangeSetEmpty
-	// o.prog.Start("Update the environment's manager role with permission to upload artifacts to S3")
+	d.Prog.Start("Update the environment's manager role with permission to upload artifacts to S3")
 	err := d.TemplatePatcher.UpdateEnvironmentTemplate(app, env, updatedBody, execRole)
 	if err != nil && !errors.As(err, &errEmptyChangeSet) {
-		// o.prog.Stop(log.Serrorln("Unable to update the environment's manager role with upload artifacts permission"))
+		d.Prog.Stop(log.Serrorln("Unable to update the environment's manager role with upload artifacts permission"))
 		return fmt.Errorf("update environment template with PutObject permissions: %v", err)
 	}
-	// o.prog.Stop(log.Ssuccessln("Updated the environment's manager role with permissions to upload artifacts to S3"))
+	d.Prog.Stop(log.Ssuccessln("Updated the environment's manager role with permissions to upload artifacts to S3"))
 	return nil
 }
 
