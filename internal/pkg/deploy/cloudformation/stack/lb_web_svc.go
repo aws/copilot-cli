@@ -191,7 +191,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		EnvName:            s.env,
 		WorkloadName:       s.name,
 		SerializedManifest: string(s.rawManifest),
-		CopilotVersion:     version.Version,
+		EnvVersion:         version.Version,
 
 		Variables:                s.manifest.TaskConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),

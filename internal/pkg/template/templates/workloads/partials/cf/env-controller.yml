@@ -10,7 +10,7 @@ EnvControllerAction:
 {{- end}}
     EnvStack: !Sub '${AppName}-${EnvName}'
     Parameters: {{ envControllerParams . }}
-    CopilotVersion: {{.CopilotVersion}}
+    EnvVersion: {{.EnvVersion}}
 
 EnvControllerFunction:
   Type: AWS::Lambda::Function

@@ -147,7 +147,7 @@ func (s *BackendService) Template() (string, error) {
 		EnvName:            s.env,
 		WorkloadName:       s.name,
 		SerializedManifest: string(s.rawManifest),
-		CopilotVersion:     version.Version,
+		EnvVersion:         version.Version,
 
 		Variables:                s.manifest.BackendServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),

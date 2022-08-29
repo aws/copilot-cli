@@ -185,7 +185,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		ServiceDiscoveryEndpoint: j.rc.ServiceDiscoveryEndpoint,
 		Publish:                  publishers,
 		Platform:                 convertPlatform(j.manifest.Platform),
-		CopilotVersion:           version.Version,
+		EnvVersion:               version.Version,
 
 		CustomResources: crs,
 	})
