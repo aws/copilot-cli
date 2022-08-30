@@ -35,6 +35,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 					SubnetsType:    template.PublicSubnetsPlacement,
 				},
 				CustomResources: customResources,
+				EnvVersion:      "v1.42.0",
 			},
 		},
 		"renders with timeout and no retries": {
@@ -48,6 +49,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				CustomResources:          customResources,
+				EnvVersion:               "v1.42.0",
 			},
 		},
 		"renders with options": {
@@ -62,6 +64,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				CustomResources:          customResources,
+				EnvVersion:               "v1.42.0",
 			},
 		},
 		"renders with options and addons": {
@@ -81,6 +84,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				CustomResources:          customResources,
+				EnvVersion:               "v1.42.0",
 			},
 		},
 		"renders with Windows platform": {
@@ -95,6 +99,7 @@ func TestTemplate_ParseScheduledJob(t *testing.T) {
 				},
 				ServiceDiscoveryEndpoint: "test.app.local",
 				CustomResources:          customResources,
+				EnvVersion:               "v1.42.0",
 			},
 		},
 	}
@@ -148,6 +153,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ALBEnabled:      true,
 				CustomResources: customResources,
+				EnvVersion:      "v1.42.0",
 			},
 		},
 		"renders a valid grpc template by default": {
@@ -161,6 +167,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ALBEnabled:      true,
 				CustomResources: customResources,
+				EnvVersion:      "v1.42.0",
 			},
 		},
 		"renders a valid template with addons with no outputs": {
@@ -176,6 +183,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
 				CustomResources:          customResources,
+				EnvVersion:               "v1.42.0",
 			},
 		},
 		"renders a valid template with addons with outputs": {
@@ -194,6 +202,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
 				CustomResources:          customResources,
+				EnvVersion:               "v1.42.0",
 			},
 		},
 		"renders a valid template with private subnet placement": {
@@ -206,6 +215,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
 				CustomResources:          customResources,
+				EnvVersion:               "v1.42.0",
 			},
 		},
 		"renders a valid template with all storage options": {
@@ -246,6 +256,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ALBEnabled:      true,
 				CustomResources: customResources,
+				EnvVersion:      "v1.42.0",
 			},
 		},
 		"renders a valid template with minimal storage options": {
@@ -281,6 +292,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ALBEnabled:      true,
 				CustomResources: customResources,
+				EnvVersion:      "v1.42.0",
 			},
 		},
 		"renders a valid template with ephemeral storage": {
@@ -296,6 +308,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ALBEnabled:      true,
 				CustomResources: customResources,
+				EnvVersion:      "v1.42.0",
 			},
 		},
 		"renders a valid template with entrypoint and command overrides": {
@@ -310,6 +323,7 @@ func TestTemplate_ParseLoadBalancedWebService(t *testing.T) {
 				},
 				ALBEnabled:      true,
 				CustomResources: customResources,
+				EnvVersion:      "v1.42.0",
 			},
 		},
 		"renders a valid template with additional addons parameters": {
@@ -326,6 +340,7 @@ DiscoveryServiceArn:
 `,
 				ALBEnabled:      true,
 				CustomResources: customResources,
+				EnvVersion:      "v1.42.0",
 			},
 		},
 		"renders a valid template with Windows platform": {
@@ -342,6 +357,7 @@ DiscoveryServiceArn:
 				ServiceDiscoveryEndpoint: "test.app.local",
 				ALBEnabled:               true,
 				CustomResources:          customResources,
+				EnvVersion:               "v1.42.0",
 			},
 		},
 	}
