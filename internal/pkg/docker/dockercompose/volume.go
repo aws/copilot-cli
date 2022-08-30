@@ -48,7 +48,7 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 
 	for idx, vol := range volumes {
 		if vol.Target == "" {
-			return nil, nil, fmt.Errorf("volume mounted from \"%v\" (type \"%v\") is missing a target mount point", vol.Source, vol.Type)
+			return nil, nil, fmt.Errorf("volume mounted from %q (type %q) is missing a target mount point", vol.Source, vol.Type)
 		}
 
 		mountOpts := manifest.MountPointOpts{
@@ -75,7 +75,7 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 
 		if vol.Type != "volume" {
 			// TODO (rclinard-amzn): Relax the "bind" restriction in Milestone 6
-			return nil, nil, fmt.Errorf("volume type \"%v\" is not supported yet", vol.Type)
+			return nil, nil, fmt.Errorf("volume type %q is not supported yet", vol.Type)
 		}
 
 		name, ign, err := vc.checkNamedVolume(vol)
