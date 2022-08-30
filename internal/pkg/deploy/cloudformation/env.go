@@ -209,5 +209,5 @@ func (cf CloudFormation) isInitialDeployment(appName, envName string) (bool, err
 	if err := yaml.Unmarshal([]byte(raw), &metadata); err != nil {
 		return false, fmt.Errorf("unmarshal Metadata property to read Version: %w", err)
 	}
-	return metadata.Version == "bootstrap", nil
+	return metadata.Version == deploy.EnvTemplateVersionBootstrap, nil
 }
