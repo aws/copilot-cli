@@ -501,7 +501,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 		}
 
 		// Deploy the environment and wait for it to be complete.
-		oldParams, err := deployer.EnvironmentParameters(environmentToDeploy.App.Name, environmentToDeploy.Name)
+		oldParams, err := deployer.DeployedEnvironmentParameters(environmentToDeploy.App.Name, environmentToDeploy.Name)
 		require.NoError(t, err)
 		lastForceUpdateID, err := deployer.ForceUpdateOutputID(environmentToDeploy.App.Name, environmentToDeploy.Name)
 		require.NoError(t, err)

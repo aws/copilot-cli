@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
@@ -116,8 +117,15 @@ func (cf CloudFormation) ForceUpdateOutputID(app, env string) (string, error) {
 	return "", nil
 }
 
-// EnvironmentParameters returns the environment stack's parameters.
-func (cf CloudFormation) EnvironmentParameters(appName, envName string) ([]*awscfn.Parameter, error) {
+// DeployedEnvironmentParameters returns the environment stack's parameters.
+func (cf CloudFormation) DeployedEnvironmentParameters(appName, envName string) ([]*awscfn.Parameter, error) {
+	isInitial, err := cf.isInitialDeployment(appName, envName)
+	if err != nil {
+		return nil, err
+	}
+	if isInitial {
+		return nil, nil
+	}
 	out, err := cf.cachedStack(stack.NameForEnv(appName, envName))
 	if err != nil {
 		return nil, err
@@ -187,4 +195,19 @@ func (cf CloudFormation) cachedStack(stackName string) (*cloudformation.StackDes
 	}
 	cf.cachedDeployedStack = stackDescr
 	return cf.cachedDeployedStack, nil
+}
+
+// isInitialDeployment returns the environment stack's parameters.
+func (cf CloudFormation) isInitialDeployment(appName, envName string) (bool, error) {
+	raw, err := cf.cfnClient.Metadata(cloudformation.MetadataWithStackName(stack.NameForEnv(appName, envName)))
+	if err != nil {
+		return false, fmt.Errorf("get metadata of stack %q: %w", stack.NameForEnv(appName, envName), err)
+	}
+	metadata := struct {
+		Version string `yaml:"Version"`
+	}{}
+	if err := yaml.Unmarshal([]byte(raw), &metadata); err != nil {
+		return false, fmt.Errorf("unmarshal Metadata property to read Version: %w", err)
+	}
+	return metadata.Version == "bootstrap", nil
 }

@@ -334,6 +334,21 @@ func (mr *MockcfnClientMockRecorder) ListStacksWithTags(tags interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStacksWithTags", reflect.TypeOf((*MockcfnClient)(nil).ListStacksWithTags), tags)
 }
 
+// Metadata mocks base method.
+func (m *MockcfnClient) Metadata(opts cloudformation0.MetadataOpts) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Metadata", opts)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Metadata indicates an expected call of Metadata.
+func (mr *MockcfnClientMockRecorder) Metadata(opts interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Metadata", reflect.TypeOf((*MockcfnClient)(nil).Metadata), opts)
+}
+
 // Outputs mocks base method.
 func (m *MockcfnClient) Outputs(stack *cloudformation0.Stack) (map[string]string, error) {
 	m.ctrl.T.Helper()

@@ -76,19 +76,19 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 	return m.recorder
 }
 
-// EnvironmentParameters mocks base method.
-func (m *MockenvironmentDeployer) EnvironmentParameters(app, env string) ([]*cloudformation.Parameter, error) {
+// DeployedEnvironmentParameters mocks base method.
+func (m *MockenvironmentDeployer) DeployedEnvironmentParameters(app, env string) ([]*cloudformation.Parameter, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentParameters", app, env)
+	ret := m.ctrl.Call(m, "DeployedEnvironmentParameters", app, env)
 	ret0, _ := ret[0].([]*cloudformation.Parameter)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// EnvironmentParameters indicates an expected call of EnvironmentParameters.
-func (mr *MockenvironmentDeployerMockRecorder) EnvironmentParameters(app, env interface{}) *gomock.Call {
+// DeployedEnvironmentParameters indicates an expected call of DeployedEnvironmentParameters.
+func (mr *MockenvironmentDeployerMockRecorder) DeployedEnvironmentParameters(app, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentParameters", reflect.TypeOf((*MockenvironmentDeployer)(nil).EnvironmentParameters), app, env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedEnvironmentParameters", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployedEnvironmentParameters), app, env)
 }
 
 // ForceUpdateOutputID mocks base method.
