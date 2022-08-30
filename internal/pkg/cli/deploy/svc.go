@@ -172,6 +172,7 @@ type workloadDeployer struct {
 	endpointGetter     endpointGetter
 	spinner            spinner
 	templateFS         template.Reader
+	envVersionGetter   versionGetter
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -183,13 +184,14 @@ type workloadDeployer struct {
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
 type WorkloadDeployerInput struct {
-	SessionProvider *sessions.Provider
-	Name            string
-	App             *config.Application
-	Env             *config.Environment
-	ImageTag        string
-	Mft             interface{} // Interpolated, applied, and unmarshaled manifest.
-	RawMft          []byte      // Content of the manifest file without any transformations.
+	SessionProvider  *sessions.Provider
+	Name             string
+	App              *config.Application
+	Env              *config.Environment
+	ImageTag         string
+	Mft              interface{} // Interpolated, applied, and unmarshaled manifest.
+	RawMft           []byte      // Content of the manifest file without any transformations.
+	EnvVersionGetter versionGetter
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -269,6 +271,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		endpointGetter:     envDescriber,
 		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
 		templateFS:         template.New(),
+		envVersionGetter:   in.EnvVersionGetter,
 
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
@@ -991,6 +994,10 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	if err != nil {
 		return nil, fmt.Errorf("get service discovery endpoint: %w", err)
 	}
+	envVersion, err := d.envVersionGetter.Version()
+	if err != nil {
+		return nil, fmt.Errorf("get version of environment %q: %w", d.env.Name, err)
+	}
 	if in.ImageDigest == nil {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        in.AddonsURL,
@@ -1000,6 +1007,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 			AccountID:                d.env.AccountID,
 			Region:                   d.env.Region,
 			CustomResourcesURL:       in.CustomResourceURLs,
+			EnvVersion:               envVersion,
 		}, nil
 	}
 	return &stack.RuntimeConfig{
@@ -1015,6 +1023,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		AccountID:                d.env.AccountID,
 		Region:                   d.env.Region,
 		CustomResourcesURL:       in.CustomResourceURLs,
+		EnvVersion:               envVersion,
 	}, nil
 }
 
