@@ -197,7 +197,7 @@ func (cf CloudFormation) cachedStack(stackName string) (*cloudformation.StackDes
 	return cf.cachedDeployedStack, nil
 }
 
-// isInitialDeployment returns the environment stack's parameters.
+// isInitialDeployment returns whether this is the first deployment of the environment stack.
 func (cf CloudFormation) isInitialDeployment(appName, envName string) (bool, error) {
 	raw, err := cf.cfnClient.Metadata(cloudformation.MetadataWithStackName(stack.NameForEnv(appName, envName)))
 	if err != nil {
