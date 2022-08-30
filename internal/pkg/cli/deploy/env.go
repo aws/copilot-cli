@@ -32,7 +32,7 @@ type appResourcesGetter interface {
 
 type environmentDeployer interface {
 	UpdateAndRenderEnvironment(conf deploycfn.StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error
-	EnvironmentParameters(app, env string) ([]*awscfn.Parameter, error)
+	DeployedEnvironmentParameters(app, env string) ([]*awscfn.Parameter, error)
 	ForceUpdateOutputID(app, env string) (string, error)
 }
 
@@ -171,7 +171,7 @@ func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput)
 	if err != nil {
 		return nil, err
 	}
-	oldParams, err := d.envDeployer.EnvironmentParameters(d.app.Name, d.env.Name)
+	oldParams, err := d.envDeployer.DeployedEnvironmentParameters(d.app.Name, d.env.Name)
 	if err != nil {
 		return nil, fmt.Errorf("describe environment stack parameters: %w", err)
 	}
@@ -200,7 +200,7 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if err != nil {
 		return err
 	}
-	oldParams, err := d.envDeployer.EnvironmentParameters(d.app.Name, d.env.Name)
+	oldParams, err := d.envDeployer.DeployedEnvironmentParameters(d.app.Name, d.env.Name)
 	if err != nil {
 		return fmt.Errorf("describe environment stack parameters: %w", err)
 	}
