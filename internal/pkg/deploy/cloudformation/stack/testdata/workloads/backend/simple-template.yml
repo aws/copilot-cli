@@ -315,7 +315,7 @@ Resources:
       Workload: !Ref WorkloadName
       EnvStack: !Sub "${AppName}-${EnvName}"
       Parameters: []
-      EnvVersion:
+      EnvVersion: v1.42.0
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:
