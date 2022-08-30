@@ -32,6 +32,7 @@ func convertService(service *compose.ServiceConfig, workingDir string, otherSvcs
 	if err != nil {
 		return nil, nil, err
 	}
+	ignored = append(ignored, tcIgn...)
 
 	imgOverride := manifest.ImageOverride{
 		Command: manifest.CommandOverride{
@@ -52,7 +53,6 @@ func convertService(service *compose.ServiceConfig, workingDir string, otherSvcs
 		return nil, nil, err
 	}
 	ignored = append(ignored, portIgnored...)
-	ignored = append(ignored, tcIgn...)
 
 	if exposed != nil && exposed.public {
 		lbws := manifest.LoadBalancedWebService{}

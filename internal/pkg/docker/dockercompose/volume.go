@@ -13,6 +13,10 @@ import (
 	"strings"
 )
 
+// The default size that Copilot reserves for a service's ephemeral on-disk storage.
+const defaultEphemeralGiB = 20
+const defaultEphemeralBytes uint64 = defaultEphemeralGiB * units.GiB
+
 type volumeConverter struct {
 	otherSvcVols  map[string][]string
 	copilotVols   map[string]*manifest.Volume
@@ -39,7 +43,7 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 		}
 	}
 
-	var ephemeralBytes uint64 = 20 * units.GiB
+	var ephemeralBytes = defaultEphemeralBytes
 	var ignored IgnoredKeys
 
 	for idx, vol := range volumes {
@@ -92,8 +96,7 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 	ephemeralGiB := (ephemeralBytes + units.GiB - 1) / units.GiB
 	var storage manifest.Storage
 
-	// default: 20 GiB
-	if ephemeralGiB != 20 {
+	if ephemeralGiB != defaultEphemeralGiB {
 		storage.Ephemeral = aws.Int(int(ephemeralGiB))
 	}
 
