@@ -125,6 +125,43 @@ func (mr *MockenvironmentDeployerMockRecorder) UpdateAndRenderEnvironment(conf, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).UpdateAndRenderEnvironment), varargs...)
 }
 
+// Mockpatcher is a mock of patcher interface.
+type Mockpatcher struct {
+	ctrl     *gomock.Controller
+	recorder *MockpatcherMockRecorder
+}
+
+// MockpatcherMockRecorder is the mock recorder for Mockpatcher.
+type MockpatcherMockRecorder struct {
+	mock *Mockpatcher
+}
+
+// NewMockpatcher creates a new mock instance.
+func NewMockpatcher(ctrl *gomock.Controller) *Mockpatcher {
+	mock := &Mockpatcher{ctrl: ctrl}
+	mock.recorder = &MockpatcherMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockpatcher) EXPECT() *MockpatcherMockRecorder {
+	return m.recorder
+}
+
+// EnsureManagerRoleIsAllowedToUpload mocks base method.
+func (m *Mockpatcher) EnsureManagerRoleIsAllowedToUpload(bucketName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureManagerRoleIsAllowedToUpload", bucketName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureManagerRoleIsAllowedToUpload indicates an expected call of EnsureManagerRoleIsAllowedToUpload.
+func (mr *MockpatcherMockRecorder) EnsureManagerRoleIsAllowedToUpload(bucketName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureManagerRoleIsAllowedToUpload", reflect.TypeOf((*Mockpatcher)(nil).EnsureManagerRoleIsAllowedToUpload), bucketName)
+}
+
 // MockprefixListGetter is a mock of prefixListGetter interface.
 type MockprefixListGetter struct {
 	ctrl     *gomock.Controller
