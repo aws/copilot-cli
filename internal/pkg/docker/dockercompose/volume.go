@@ -126,21 +126,16 @@ func (vc *volumeConverter) checkNamedVolume(vol compose.ServiceVolumeConfig) (*s
 	var ignored IgnoredKeys
 
 	if topLevel, ok := vc.topLevelVols[name]; ok {
-		var err error
-
 		switch {
 		case topLevel.External.External:
-			err = fmt.Errorf("named volume %s is marked as external, this is unsupported", name)
+			return nil, nil, fmt.Errorf("named volume %s is marked as external, this is unsupported", name)
 		case topLevel.Driver != "":
-			err = fmt.Errorf("only the default driver is supported, but the volume %s tries to use a different driver", name)
+			return nil, nil, fmt.Errorf("only the default driver is supported, but the volume %s tries to use a different driver", name)
 		case len(topLevel.DriverOpts) != 0:
 			ignored = append(ignored, fmt.Sprintf("volumes.%s.driver_opts", name))
 			fallthrough
 		case len(topLevel.Labels) != 0:
 			ignored = append(ignored, fmt.Sprintf("volumes.%s.labels", name))
-		}
-		if err != nil {
-			return nil, nil, err
 		}
 	}
 
