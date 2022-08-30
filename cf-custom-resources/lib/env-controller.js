@@ -122,7 +122,11 @@ const controlEnv = async function (
       (param) => !envSet.has(param)
     );
     const exportedValues = getExportedValues(updatedEnvStack);
-    // Return if there are no parameter changes.
+    // If there are no changes in env-controller managed parameters, the custom 
+    // resource may have been triggered because the env template is upgraded, 
+    // and the service template is attempting to retrieve the latest Outputs
+    // from the env stack (see PR #3957). Return the updated Outputs instead 
+    // of triggering an env-controller update of the environment.
     const shouldUpdateAliases = needUpdateAliases(envParams, workload, aliases);
     if (
       parametersToRemove.length + parametersToAdd.length === 0 &&
@@ -314,7 +318,7 @@ const getExportedValues = function (stack) {
   const exportedValues = {};
   stack.Outputs.forEach((output) => {
     if (ignoredEnvOutputs.has(output.OutputKey)) {
-      return
+      return;
     }
     exportedValues[output.OutputKey] = output.OutputValue;
   });
