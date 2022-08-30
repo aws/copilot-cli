@@ -264,30 +264,13 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 					},
 				}
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
-				m.mockEnvFeaturesDescriber.EXPECT().Version().Times(1)
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Times(0)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
 				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 			},
 
 			wantedError: fmt.Errorf("deploy job upload to environment prod-iad: some error"),
-		},
-		"error if unable to get env version": {
-			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockMft = &mockWorkloadMft{
-					mockRequiredEnvironmentFeatures: func() []string {
-						return []string{"mockFeature1"}
-					},
-				}
-				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
-				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
-				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
-				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("", errors.New("some error"))
-			},
-
-			wantedError: fmt.Errorf(`get version of environment "prod-iad": some error`),
 		},
 	}
 
