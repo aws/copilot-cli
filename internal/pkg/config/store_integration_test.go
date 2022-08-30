@@ -58,8 +58,8 @@ func Test_SSM_Environment_Integration(t *testing.T) {
 
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	applicationToCreate := config.Application{Name: randStringBytes(10), Version: "1.0"}
-	testEnvironment := config.Environment{Name: "test", App: applicationToCreate.Name, Region: "us-west-2", AccountID: " 1234", Prod: false}
-	prodEnvironment := config.Environment{Name: "prod", App: applicationToCreate.Name, Region: "us-west-2", AccountID: " 1234", Prod: true}
+	testEnvironment := config.Environment{Name: "test", App: applicationToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
+	prodEnvironment := config.Environment{Name: "prod", App: applicationToCreate.Name, Region: "us-west-2", AccountID: " 1234"}
 
 	defer func() {
 		store.DeleteEnvironment(applicationToCreate.Name, testEnvironment.Name)
