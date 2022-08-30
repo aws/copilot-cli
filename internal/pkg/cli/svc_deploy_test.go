@@ -217,22 +217,6 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 
 			wantedError: fmt.Errorf("deploy service frontend to environment prod-iad: some error"),
 		},
-		"success with no recommendations": {
-			mock: func(m *deployMocks) {
-				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
-				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
-				m.mockMft = &mockWorkloadMft{
-					mockRequiredEnvironmentFeatures: func() []string {
-						return []string{"mockFeature1"}
-					},
-				}
-				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
-				m.mockEnvFeaturesDescriber.EXPECT().Version().Times(0)
-				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
-				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, nil)
-				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
-			},
-		},
 	}
 
 	for name, tc := range testCases {
