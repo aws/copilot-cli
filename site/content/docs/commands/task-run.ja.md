@@ -106,7 +106,12 @@ $ copilot task run --subnets subnet-123,subnet-456 --security-groups sg-123,sg-4
 $ copilot task run --command "python migrate-script.py"
 ```
 
-Windows タスクを最小のCPUとメモリで実行します。 
+Windows 2019 タスクを最小の CPU とメモリで実行します。 
 ```console
 $ copilot task run --platform-os WINDOWS_SERVER_2019_CORE --platform-arch X86_64 --cpu 1024 --memory 2048
+```
+
+Windows 2022 タスクを最小の CPU とメモリで実行します。 
+```console
+$ copilot task run --platform-os WINDOWS_SERVER_2022_CORE --platform-arch X86_64 --cpu 1024 --memory 2048
 ```

@@ -125,6 +125,21 @@ platform:
   osfamily: windows_server_2019_full
   architecture: x86_64
 ```
+```yaml
+platform:
+  osfamily: windows_server_2019_core
+  architecture: x86_64
+```
+```yaml
+platform:
+  osfamily: windows_server_2022_core
+  architecture: x86_64
+```
+```yaml
+platform:
+  osfamily: windows_server_2022_full
+  architecture: x86_64
+```
 
 <div class="separator"></div>
 
