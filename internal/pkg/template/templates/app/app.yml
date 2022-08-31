@@ -42,6 +42,9 @@ Resources:
               Service: cloudformation.amazonaws.com
             Action:
               - sts:AssumeRole
+{{- if .PermissionsBoundary }}
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+{{- end }} 
       Path: /
       Policies:
         - PolicyName: AssumeRole-AWSCloudFormationStackSetExecutionRole
@@ -67,6 +70,9 @@ Resources:
               AWS: !GetAtt AdministrationRole.Arn
             Action:
               - sts:AssumeRole
+{{- if .PermissionsBoundary }}
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+{{- end }}
       Path: /
       Policies:
       - PolicyName: ExecutionRolePolicy
@@ -130,6 +136,9 @@ Resources:
 {{- end}}
             Action:
               - sts:AssumeRole
+{{- if .PermissionsBoundary }}
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+{{- end }}
       Path: /
       Policies:
       - PolicyName: DNSDelegationPolicy
