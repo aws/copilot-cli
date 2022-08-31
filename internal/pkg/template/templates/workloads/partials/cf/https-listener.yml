@@ -45,6 +45,7 @@ LoadBalancerDNSAlias{{$hostedZoneID}}:
 {{- end}}
 {{- end}}
 
+{{if .HTTPRedirect}}
 HTTPSRulePriorityAction:
   Metadata:
     'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
@@ -57,6 +58,7 @@ HTTPSRulePriorityAction:
     {{- else}}
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
+{{- end}}
 
 HTTPRuleWithDomainPriorityAction:
   Metadata:
@@ -77,6 +79,7 @@ HTTPListenerRuleWithDomain:
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
     Actions:
+      {{- if .HTTPRedirect}}
       - Type: redirect
         RedirectConfig:
           Protocol: HTTPS
@@ -85,12 +88,24 @@ HTTPListenerRuleWithDomain:
           Path: "/#{path}"
           Query: "#{query}"
           StatusCode: HTTP_301
+      {{- else}}
+      - TargetGroupArn: !Ref TargetGroup
+        Type: forward
+      {{- end}}
     Conditions:
-{{- if .Aliases }}
+      {{- if .AllowedSourceIps}} {{/* TODO why was this not here initially ???*/}}
+      - Field: 'source-ip'
+        SourceIpConfig:
+          Values:
+            {{- range $sourceIP := .AllowedSourceIps}}
+            - {{$sourceIP}}
+            {{- end}}
+      {{- end}}
+      {{- if .Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
           Values: {{ fmtSlice (quoteSlice .Aliases) }}
-{{- else }}
+      {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
           Values:
@@ -99,7 +114,7 @@ HTTPListenerRuleWithDomain:
               - - !Ref WorkloadName
                 - Fn::ImportValue:
                     !Sub "${AppName}-${EnvName}-SubDomain"
-{{- end}}
+      {{- end}}
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
@@ -117,6 +132,7 @@ HTTPListenerRuleWithDomain:
     {{- end}}
     Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
 
+{{if .HTTPRedirect}}
 HTTPSListenerRule:
   Metadata:
     'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'
@@ -126,19 +142,19 @@ HTTPSListenerRule:
       - TargetGroupArn: !Ref TargetGroup
         Type: forward
     Conditions:
-{{- if .AllowedSourceIps}}
+      {{- if .AllowedSourceIps}}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-{{- range $sourceIP := .AllowedSourceIps}}
-          - {{$sourceIP}}
-{{- end}}
-{{- end}}
-{{- if .Aliases }}
+          {{- range $sourceIP := .AllowedSourceIps}}
+            - {{$sourceIP}}
+          {{- end}}
+      {{- end}}
+      {{- if .Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
           Values: {{ fmtSlice (quoteSlice .Aliases) }}
-{{- else }}
+      {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
           Values:
@@ -147,7 +163,7 @@ HTTPSListenerRule:
               - - !Ref WorkloadName
                 - Fn::ImportValue:
                     !Sub "${AppName}-${EnvName}-SubDomain"
-{{- end}}
+      {{- end}}
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
@@ -164,3 +180,4 @@ HTTPSListenerRule:
     ListenerArn: !GetAtt EnvControllerAction.HTTPSListenerArn
     {{- end}}
     Priority: !GetAtt HTTPSRulePriorityAction.Priority
+{{- end}}
