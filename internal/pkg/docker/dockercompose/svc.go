@@ -193,7 +193,9 @@ func toExposedPort(binding compose.ServicePortConfig) (*exposedPort, IgnoredKeys
 	}, ignored, nil
 }
 
-// convertTaskConfig converts environment variables, env files, and platform strings.
+// convertTaskConfig converts environment variables, env files, volumes, and platform strings.
+// topLevelVols is the top-level volume list in the Compose file shared between services, as opposed to the volumes
+// key of the service config which describes bind mounts and mounts of top-level named volumes.
 func convertTaskConfig(service *compose.ServiceConfig, otherSvcs compose.Services, topLevelVols compose.Volumes) (manifest.TaskConfig, IgnoredKeys, error) {
 	var envFile *string
 
