@@ -115,6 +115,7 @@ func (s *WorkerService) Template() (string, error) {
 		EnvName:            s.env,
 		WorkloadName:       s.name,
 		SerializedManifest: string(s.rawManifest),
+		EnvVersion:         s.rc.EnvVersion,
 
 		Variables:                s.manifest.WorkerServiceConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.WorkerServiceConfig.Secrets),

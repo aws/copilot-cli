@@ -702,6 +702,7 @@ Resources:
                 Effect: Allow
                 Action:
                   - "states:StartExecution"
+                  - "states:DescribeStateMachine"
                 Resource:
                   - !Sub "arn:${AWS::Partition}:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AppName}-${EnvironmentName}-*"
               - Sid: CloudFormation
