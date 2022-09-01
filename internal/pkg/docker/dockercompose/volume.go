@@ -84,7 +84,7 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 		}
 		ignored = append(ignored, ign...)
 
-		vc.copilotVols[*name] = &manifest.Volume{
+		vc.copilotVols[name] = &manifest.Volume{
 			EFS: manifest.EFSConfigOrBool{
 				Enabled: aws.Bool(true),
 			},
@@ -107,19 +107,19 @@ func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig,
 	return &storage, ignored, nil
 }
 
-func (vc *volumeConverter) checkNamedVolume(vol compose.ServiceVolumeConfig) (*string, IgnoredKeys, error) {
+func (vc *volumeConverter) checkNamedVolume(vol compose.ServiceVolumeConfig) (string, IgnoredKeys, error) {
 	name := vol.Source
 	if shared := vc.otherSvcVols[name]; shared != nil {
-		return nil, nil, fmt.Errorf("named volume %s is shared with %s [%s], this is not supported in Copilot",
+		return "", nil, fmt.Errorf("named volume %s is shared with %s [%s], this is not supported in Copilot",
 			name, english.PluralWord(len(shared), "service", "services"), strings.Join(shared, ", "))
 	}
 
 	if vc.tmpfsVolNames[name] {
-		return nil, nil, fmt.Errorf("named volume %s collides with the generated name of a tmpfs mount", name)
+		return "", nil, fmt.Errorf("named volume %s collides with the generated name of a tmpfs mount", name)
 	}
 
 	if vc.copilotVols[name] != nil {
-		return nil, nil, fmt.Errorf("cannot mount named volume %s a second time at %s, it is already mounted at %s",
+		return "", nil, fmt.Errorf("cannot mount named volume %s a second time at %s, it is already mounted at %s",
 			name, vol.Target, *vc.copilotVols[name].ContainerPath)
 	}
 
@@ -128,9 +128,9 @@ func (vc *volumeConverter) checkNamedVolume(vol compose.ServiceVolumeConfig) (*s
 	if topLevel, ok := vc.topLevelVols[name]; ok {
 		switch {
 		case topLevel.External.External:
-			return nil, nil, fmt.Errorf("named volume %s is marked as external, this is unsupported", name)
+			return "", nil, fmt.Errorf("named volume %s is marked as external, this is unsupported", name)
 		case topLevel.Driver != "":
-			return nil, nil, fmt.Errorf("only the default driver is supported, but the volume %s tries to use a different driver", name)
+			return "", nil, fmt.Errorf("only the default driver is supported, but the volume %s tries to use a different driver", name)
 		case len(topLevel.DriverOpts) != 0:
 			ignored = append(ignored, fmt.Sprintf("volumes.%s.driver_opts", name))
 			fallthrough
@@ -139,5 +139,5 @@ func (vc *volumeConverter) checkNamedVolume(vol compose.ServiceVolumeConfig) (*s
 		}
 	}
 
-	return &name, ignored, nil
+	return name, ignored, nil
 }
