@@ -33,7 +33,8 @@ func newVolumeConverter(topLevelVols compose.Volumes) volumeConverter {
 	}
 }
 
-// convertVolumes converts a list of Compose volumes into the Copilot storage equivalent.
+// convertVolumes converts a list of Compose volumes into the Copilot storage equivalent. Currently, only tmpfs mounts
+// and mounts of named volumes that are not shared between services are supported. Notably, bind mounts are unsupported.
 func (vc *volumeConverter) convertVolumes(volumes []compose.ServiceVolumeConfig, otherSvcs compose.Services) (*manifest.Storage, IgnoredKeys, error) {
 	for _, otherSvc := range otherSvcs {
 		for _, vol := range otherSvc.Volumes {
