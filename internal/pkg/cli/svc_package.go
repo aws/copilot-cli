@@ -120,13 +120,14 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	content := o.appliedDynamicMft.Manifest()
 	var deployer workloadStackGenerator
 	in := clideploy.WorkloadDeployerInput{
-		SessionProvider: o.sessProvider,
-		Name:            o.name,
-		App:             targetApp,
-		Env:             targetEnv,
-		ImageTag:        o.tag,
-		Mft:             content,
-		RawMft:          raw,
+		SessionProvider:  o.sessProvider,
+		Name:             o.name,
+		App:              targetApp,
+		Env:              targetEnv,
+		ImageTag:         o.tag,
+		Mft:              content,
+		RawMft:           raw,
+		EnvVersionGetter: o.envFeaturesDescriber,
 	}
 	switch t := content.(type) {
 	case *manifest.LoadBalancedWebService:

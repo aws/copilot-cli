@@ -102,6 +102,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 				AccountID:                "123456789123",
 				Region:                   "us-west-2",
+				EnvVersion:               "v1.42.0",
 			},
 		})
 		tpl, err := serializer.Template()

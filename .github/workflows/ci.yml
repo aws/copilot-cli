@@ -55,6 +55,16 @@ jobs:
       - name: Run tests
         run: make test
 
+      - name: Upload golang coverage report to CodeCov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.out
+
+      - name: Upload node coverage report to CodeCov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: cf-custom-resources/
+
   test-race:
     runs-on: ubuntu-latest
     steps:

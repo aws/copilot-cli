@@ -44,10 +44,10 @@ const (
 	endTimeFlag           = "end-time"
 	tasksFlag             = "tasks"
 	logGroupFlag          = "log-group"
-	containerLogFlag      = "container"
-	prodEnvFlag           = "prod"
-	deployFlag            = "deploy"
-	resourcesFlag         = "resources"
+	// containerLogFlag      = "container"
+	prodEnvFlag   = "prod"
+	deployFlag    = "deploy"
+	resourcesFlag = "resources"
 
 	githubURLFlag         = "github-url"
 	repoURLFlag           = "url"
@@ -137,7 +137,7 @@ const (
 	envFlagShort      = "e"
 	typeFlagShort     = "t"
 	workloadFlagShort = "w"
-	previousFlagShort = "p"
+	// previousFlagShort = "p"
 
 	dockerFileFlagShort        = "d"
 	commandFlagShort           = "c"
@@ -233,9 +233,9 @@ Uploaded asset locations are filled in the template configuration.`
 unless any time filtering flags are set.`
 	lastFlagDescription = `Optional. The number of executions of the scheduled job for which
 logs should be shown.`
-	followFlagDescription   = "Optional. Specifies if the logs should be streamed."
-	previousFlagDescription = "Optional. Print logs for the last stopped task if exists."
-	sinceFlagDescription    = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
+	followFlagDescription = "Optional. Specifies if the logs should be streamed."
+	// previousFlagDescription = "Optional. Print logs for the last stopped task if exists."
+	sinceFlagDescription = `Optional. Only return logs newer than a relative duration like 5s, 2m, or 3h.
 Defaults to all logs. Only one of start-time / since may be used.`
 	startTimeFlagDescription = `Optional. Only return logs after a specific date (RFC3339).
 Defaults to all logs. Only one of start-time / since may be used.`
@@ -244,7 +244,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	tasksLogsFlagDescription               = "Optional. Only return logs from specific task IDs."
 	includeStateMachineLogsFlagDescription = "Optional. Include logs from the state machine executions."
 	logGroupFlagDescription                = "Optional. Only return logs from specific log group."
-	containerLogFlagDescription            = "Optional. Return only logs from a specific container."
+	// containerLogFlagDescription            = "Optional. Return only logs from a specific container."
 
 	deployTestFlagDescription        = `Deploy your service or job to a "test" environment.`
 	githubURLFlagDescription         = "(Deprecated.) Use '--url' instead. Repository URL to trigger your pipeline."

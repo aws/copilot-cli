@@ -74,8 +74,9 @@ func TestRDWS_Template(t *testing.T) {
 			Env:      tc.envName,
 			Manifest: v,
 			RuntimeConfig: stack.RuntimeConfig{
-				AccountID: "123456789123",
-				Region:    "us-west-2",
+				AccountID:  "123456789123",
+				Region:     "us-west-2",
+				EnvVersion: "v1.42.0",
 			},
 		})
 		require.NoError(t, err, "create rdws serializer")

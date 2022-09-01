@@ -80,6 +80,7 @@ type RuntimeConfig struct {
 	ServiceDiscoveryEndpoint string // Endpoint for the service discovery namespace in the environment.
 	AccountID                string
 	Region                   string
+	EnvVersion               string
 }
 
 // ECRImage represents configuration about the pushed ECR image that is needed to
