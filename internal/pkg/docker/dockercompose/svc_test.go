@@ -325,7 +325,7 @@ func TestConvertBackendService(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			svc, ignored, err := convertService(&tc.inSvc, "")
+			svc, ignored, err := convertService(&tc.inSvc, "", nil, nil)
 
 			if tc.wantError != nil {
 				require.EqualError(t, err, tc.wantError.Error())

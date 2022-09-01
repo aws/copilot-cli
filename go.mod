@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go v1.44.70
 	github.com/briandowns/spinner v1.19.0
 	github.com/compose-spec/compose-go v1.4.0
+	github.com/docker/go-units v0.4.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
 	github.com/fatih/structs v1.1.0
@@ -39,7 +40,6 @@ require (
 	github.com/distribution/distribution/v3 v3.0.0-20220725133111-4bf3547399eb // indirect
 	github.com/docker/docker v20.10.7+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
-	github.com/docker/go-units v0.4.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect

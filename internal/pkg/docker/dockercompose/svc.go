@@ -22,16 +22,17 @@ type ConvertedService struct {
 	BackendSvc *manifest.BackendService
 }
 
-func convertService(service *compose.ServiceConfig, workingDir string) (*ConvertedService, IgnoredKeys, error) {
-	image, ignored, err := convertImageConfig(service.Build, service.Labels, service.Image)
+func convertService(service *compose.ServiceConfig, workingDir string, otherSvcs compose.Services, vols compose.Volumes) (*ConvertedService, IgnoredKeys, error) {
+	image, ignoredComposeKeys, err := convertImageConfig(service.Build, service.Labels, service.Image)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	taskCfg, err := convertTaskConfig(service)
+	taskCfg, moreIgnoredKeys, err := convertTaskConfig(service, otherSvcs, vols)
 	if err != nil {
 		return nil, nil, err
 	}
+	ignoredComposeKeys = append(ignoredComposeKeys, moreIgnoredKeys...)
 
 	imgOverride := manifest.ImageOverride{
 		Command: manifest.CommandOverride{
@@ -47,11 +48,11 @@ func convertService(service *compose.ServiceConfig, workingDir string) (*Convert
 		hc = convertHealthCheckConfig(service.HealthCheck)
 	}
 
-	exposed, portIgnored, err := findExposedPort(service, workingDir)
+	exposed, moreIgnoredKeys, err := findExposedPort(service, workingDir)
 	if err != nil {
 		return nil, nil, err
 	}
-	ignored = append(ignored, portIgnored...)
+	ignoredComposeKeys = append(ignoredComposeKeys, moreIgnoredKeys...)
 
 	if exposed != nil && exposed.public {
 		lbws := manifest.LoadBalancedWebService{}
@@ -70,7 +71,7 @@ func convertService(service *compose.ServiceConfig, workingDir string) (*Convert
 			ImageOverride: imgOverride,
 			TaskConfig:    taskCfg,
 		}
-		return &ConvertedService{LbSvc: &lbws}, ignored, nil
+		return &ConvertedService{LbSvc: &lbws}, ignoredComposeKeys, nil
 	}
 
 	var port *uint16
@@ -94,7 +95,7 @@ func convertService(service *compose.ServiceConfig, workingDir string) (*Convert
 		ImageOverride: imgOverride,
 		TaskConfig:    taskCfg,
 	}
-	return &ConvertedService{BackendSvc: &bs}, ignored, nil
+	return &ConvertedService{BackendSvc: &bs}, ignoredComposeKeys, nil
 }
 
 type exposedPort struct {
@@ -192,15 +193,23 @@ func toExposedPort(binding compose.ServicePortConfig) (*exposedPort, IgnoredKeys
 	}, ignored, nil
 }
 
-// convertTaskConfig converts environment variables, env files, and platform strings.
-func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, error) {
+// convertTaskConfig converts environment variables, env files, volumes, and platform strings.
+// topLevelVols is the top-level volume list in the Compose file shared between services, as opposed to the volumes
+// key of the service config which describes bind mounts and mounts of top-level named volumes.
+func convertTaskConfig(service *compose.ServiceConfig, otherSvcs compose.Services, topLevelVols compose.Volumes) (manifest.TaskConfig, IgnoredKeys, error) {
 	var envFile *string
 
 	if len(service.EnvFile) == 1 {
 		envFile = &service.EnvFile[0]
 	} else if len(service.EnvFile) > 1 {
-		return manifest.TaskConfig{}, fmt.Errorf("at most one env file is supported, but %d env files "+
+		return manifest.TaskConfig{}, nil, fmt.Errorf("at most one env file is supported, but %d env files "+
 			"were attached to this service", len(service.EnvFile))
+	}
+
+	vc := newVolumeConverter(topLevelVols)
+	storage, ignored, err := vc.convertVolumes(service.Volumes, otherSvcs)
+	if err != nil {
+		return manifest.TaskConfig{}, nil, err
 	}
 
 	taskCfg := manifest.TaskConfig{
@@ -211,20 +220,21 @@ func convertTaskConfig(service *compose.ServiceConfig) (manifest.TaskConfig, err
 		Count: manifest.Count{
 			Value: aws.Int(1),
 		},
-		CPU:    aws.Int(256),
-		Memory: aws.Int(512),
+		CPU:     aws.Int(256),
+		Memory:  aws.Int(512),
+		Storage: *storage,
 	}
 
 	envVars, err := convertMappingWithEquals(service.Environment)
 	if err != nil {
-		return manifest.TaskConfig{}, fmt.Errorf("convert environment variables: %w", err)
+		return manifest.TaskConfig{}, nil, fmt.Errorf("convert environment variables: %w", err)
 	}
 
 	if len(envVars) != 0 {
 		taskCfg.Variables = envVars
 	}
 
-	return taskCfg, nil
+	return taskCfg, ignored, nil
 }
 
 // convertHealthCheckConfig trivially converts a Compose container health check into its Copilot variant.

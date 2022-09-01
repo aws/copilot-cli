@@ -63,8 +63,15 @@ func DecomposeService(content []byte, svcName string, workingDir string) (*Conve
 			"service is valid and exists")
 	}
 
+	var otherSvcs []compose.ServiceConfig
+	for _, otherSvc := range project.Services {
+		if otherSvc.Name != svcConfig.Name {
+			otherSvcs = append(otherSvcs, otherSvc)
+		}
+	}
+
 	svcConfig.EnvFile = envFiles
-	svc, svcIgnored, err := convertService(&svcConfig, workingDir)
+	svc, svcIgnored, err := convertService(&svcConfig, workingDir, otherSvcs, project.Volumes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("convert Compose service to Copilot manifest: %w", err)
 	}
@@ -83,7 +90,7 @@ func getServices(config map[string]any) (composeServices, error) {
 
 	services, ok := svcs.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("\"services\" top-level element was not a map, was: %v", svcs)
+		return nil, fmt.Errorf(`"services" top-level element was not a map, was: %v`, svcs)
 	}
 
 	typedServices := make(composeServices)
@@ -91,7 +98,7 @@ func getServices(config map[string]any) (composeServices, error) {
 	for name, svc := range services {
 		service, ok := svc.(map[string]any)
 		if !ok {
-			return nil, fmt.Errorf("\"services.%s\" element was not a map", name)
+			return nil, fmt.Errorf(`"services.%s" element was not a map`, name)
 		}
 		typedServices[name] = service
 	}
@@ -114,7 +121,7 @@ func serviceConfig(services composeServices, svcName string) (map[string]any, er
 		return nil, fmt.Errorf("compose file has no services")
 	}
 	sort.Strings(validNames)
-	return nil, fmt.Errorf("no service named \"%s\" in this Compose file, valid services are: %s", svcName, strings.Join(validNames, ", "))
+	return nil, fmt.Errorf(`no service named "%s" in this Compose file, valid services are: %s`, svcName, strings.Join(validNames, ", "))
 }
 
 // unsupportedServiceKeys scans over fields in the parsed yaml to find unsupported keys.
@@ -132,7 +139,7 @@ func unsupportedServiceKeys(service map[string]any, svcName string) (IgnoredKeys
 	if len(fatal) != 0 {
 		// sort so we have consistent (testable) error messages
 		sort.Strings(fatal)
-		return nil, fmt.Errorf("\"services.%s\" relies on fatally-unsupported Compose keys: %s", svcName, strings.Join(fatal, ", "))
+		return nil, fmt.Errorf(`"services.%s" relies on fatally-unsupported Compose keys: %s`, svcName, strings.Join(fatal, ", "))
 	}
 
 	return ignored, nil

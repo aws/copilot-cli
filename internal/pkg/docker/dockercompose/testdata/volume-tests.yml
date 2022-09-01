@@ -1,0 +1,101 @@
+services:
+  simple-named:
+    image: nginx
+    volumes:
+      - "nvol-1:/test/path/please/ignore"
+  bind-file:
+    image: nginx
+    volumes:
+      - "./testfile.txt:/cont/testfile.txt"
+  bind-directory:
+    image: nginx
+    volumes:
+      - "./testdir:/cont/testdir"
+  sharing1:
+    image: nginx
+    volumes:
+      - "nvol-shared-1:/test"
+  sharing2:
+    image: nginx
+    volumes:
+      - "nvol-shared-1:/test"
+  sharing-within:
+    image: nginx
+    volumes:
+      - "nvol-shared-2:/test"
+      - "nvol-shared-2:/test2"
+  mount-ro-simple:
+    image: nginx
+    volumes:
+      - "nvol-2:/testdir:ro"
+  mount-ro-selinux-simple:
+    image: nginx
+    volumes:
+      - "nvol-3:/testdir:ro,Z"
+  uses-external-volume:
+    image: nginx
+    volumes:
+      - "nvol-external:/"
+  tmpfs-simple:
+    image: nginx
+    volumes:
+      - type: tmpfs
+        target: "/tmp2"
+        tmpfs:
+          size: "32GiB"
+      - type: tmpfs
+        target: "/tmp3"
+        tmpfs:
+          size: "1MiB"
+  tmpfs-missing-target:
+    image: nginx
+    volumes:
+      - type: tmpfs
+        tmpfs:
+          size: "2GiB"
+  tmpfs-name-collision-1:
+    image: nginx
+    volumes:
+      - type: tmpfs
+        target: "/boom2"
+        tmpfs:
+          size: "1GiB"
+      - "tmpfs-0:/boom"
+  tmpfs-name-collision-2:
+    image: nginx
+    volumes:
+      - "tmpfs-1:/boom"
+      - type: tmpfs
+        target: "/boom2"
+        tmpfs:
+          size: "1GiB"
+  unsupported-volume-type:
+    image: nginx
+    volumes:
+      - type: npipe
+        target: "/pipe"
+  unsupported-driver:
+    image: nginx
+    volumes:
+      - "uses-driver:/drivervol"
+  ignored-top-level-keys:
+    image: nginx
+    volumes:
+      - "ignored-top-level:/ignored"
+volumes:
+  nvol-1:
+  nvol-shared-1:
+  nvol-shared-2:
+  nvol-2:
+  nvol-3:
+  nvol-external:
+    external: true
+  tmpfs-0:
+  tmpfs-1:
+  uses-driver:
+    driver: "notsupporteddriver"
+  ignored-top-level:
+    labels:
+      "com.example.fail": "fail"
+    driver_opts:
+      floppy_disk_count: 23120012
