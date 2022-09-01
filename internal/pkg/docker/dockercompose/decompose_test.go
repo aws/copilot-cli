@@ -74,25 +74,25 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "bad-services-compose.yml",
 			svcName:  "test",
 
-			wantError: errors.New("\"services\" top-level element was not a map, was: invalid"),
+			wantError: errors.New(`"services" top-level element was not a map, was: invalid`),
 		},
 		"wrong name": {
 			filename: "unsupported-keys.yml",
 			svcName:  "test",
 
-			wantError: errors.New("no service named \"test\" in this Compose file, valid services are: fatal1, fatal2, fatal3"),
+			wantError: errors.New(`no service named "test" in this Compose file, valid services are: fatal1, fatal2, fatal3`),
 		},
 		"invalid service not a map": {
 			filename: "bad-service-compose.yml",
 			svcName:  "bad",
 
-			wantError: errors.New("\"services.bad\" element was not a map"),
+			wantError: errors.New(`"services.bad" element was not a map`),
 		},
 		"unsupported keys fatal1": {
 			filename: "unsupported-keys.yml",
 			svcName:  "fatal1",
 
-			wantError: errors.New("\"services.fatal1\" relies on fatally-unsupported Compose keys: external_links, privileged"),
+			wantError: errors.New(`"services.fatal1" relies on fatally-unsupported Compose keys: external_links, privileged`),
 		},
 		"unsupported keys fatal2": {
 			filename: "unsupported-keys.yml",
@@ -104,7 +104,7 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "unsupported-keys.yml",
 			svcName:  "fatal3",
 
-			wantError: errors.New("\"services.fatal3\" relies on fatally-unsupported Compose keys: domainname, init, networks"),
+			wantError: errors.New(`"services.fatal3" relies on fatally-unsupported Compose keys: domainname, init, networks`),
 		},
 		"invalid compose": {
 			filename: "invalid-compose.yml",
@@ -116,13 +116,13 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "backend",
 
-			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: secrets"),
+			wantError: errors.New(`"services.backend" relies on fatally-unsupported Compose keys: secrets`),
 		},
 		"nginx-golang-postgres db": {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "db",
 
-			wantError: errors.New("\"services.db\" relies on fatally-unsupported Compose keys: secrets"),
+			wantError: errors.New(`"services.db" relies on fatally-unsupported Compose keys: secrets`),
 		},
 		"nginx-golang-postgres proxy": {
 			filename: "nginx-golang-postgres.yml",
@@ -134,19 +134,19 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "react-express-mongo.yml",
 			svcName:  "frontend",
 
-			wantError: errors.New("\"services.frontend\" relies on fatally-unsupported Compose keys: networks"),
+			wantError: errors.New(`"services.frontend" relies on fatally-unsupported Compose keys: networks`),
 		},
 		"react-express-mongo backend": {
 			filename: "react-express-mongo.yml",
 			svcName:  "backend",
 
-			wantError: errors.New("\"services.backend\" relies on fatally-unsupported Compose keys: networks"),
+			wantError: errors.New(`"services.backend" relies on fatally-unsupported Compose keys: networks`),
 		},
 		"react-express-mongo mongo": {
 			filename: "react-express-mongo.yml",
 			svcName:  "mongo",
 
-			wantError: errors.New("\"services.mongo\" relies on fatally-unsupported Compose keys: networks"),
+			wantError: errors.New(`"services.mongo" relies on fatally-unsupported Compose keys: networks`),
 		},
 		"unrecognized-field-name": {
 			filename: "unrecognized-field-name.yml",
@@ -322,7 +322,7 @@ func TestDecomposeService_ExposedPorts(t *testing.T) {
 		},
 		{
 			svcName:   "invalid-expose",
-			wantError: errors.New("convert Compose service to Copilot manifest: could not parse exposed port: strconv.Atoi: parsing \"pony\": invalid syntax"),
+			wantError: errors.New(`convert Compose service to Copilot manifest: could not parse exposed port: strconv.Atoi: parsing "pony": invalid syntax`),
 		},
 		{
 			filename:          "invalid-ports.yml",
@@ -453,10 +453,10 @@ func TestDecomposeService_Volumes(t *testing.T) {
 			},
 		},
 		"bind-file": {
-			wantError: errors.New("convert Compose service to Copilot manifest: volume type \"bind\" is not supported yet"),
+			wantError: errors.New(`convert Compose service to Copilot manifest: volume type "bind" is not supported yet`),
 		},
 		"bind-directory": {
-			wantError: errors.New("convert Compose service to Copilot manifest: volume type \"bind\" is not supported yet"),
+			wantError: errors.New(`convert Compose service to Copilot manifest: volume type "bind" is not supported yet`),
 		},
 		"sharing1": {
 			wantError: errors.New("convert Compose service to Copilot manifest: named volume nvol-shared-1 is shared with service [sharing2], this is not supported in Copilot"),
@@ -516,7 +516,7 @@ func TestDecomposeService_Volumes(t *testing.T) {
 			},
 		},
 		"tmpfs-missing-target": {
-			wantError: errors.New("convert Compose service to Copilot manifest: volume mounted from \"\" (type \"tmpfs\") is missing a target mount point"),
+			wantError: errors.New(`convert Compose service to Copilot manifest: volume mounted from "" (type "tmpfs") is missing a target mount point`),
 		},
 		"tmpfs-name-collision-1": {
 			wantError: errors.New("convert Compose service to Copilot manifest: named volume tmpfs-0 collides with the generated name of a tmpfs mount"),
@@ -525,7 +525,7 @@ func TestDecomposeService_Volumes(t *testing.T) {
 			wantError: errors.New("convert Compose service to Copilot manifest: generated tmpfs volume name tmpfs-1 collides with an existing volume name"),
 		},
 		"unsupported-volume-type": {
-			wantError: errors.New("convert Compose service to Copilot manifest: volume type \"npipe\" is not supported yet"),
+			wantError: errors.New(`convert Compose service to Copilot manifest: volume type "npipe" is not supported yet`),
 		},
 		"unsupported-driver": {
 			wantError: errors.New("convert Compose service to Copilot manifest: only the default driver is supported, but the volume uses-driver tries to use a different driver"),
