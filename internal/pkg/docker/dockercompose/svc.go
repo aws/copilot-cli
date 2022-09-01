@@ -23,16 +23,16 @@ type ConvertedService struct {
 }
 
 func convertService(service *compose.ServiceConfig, workingDir string, otherSvcs compose.Services, vols compose.Volumes) (*ConvertedService, IgnoredKeys, error) {
-	image, ignored, err := convertImageConfig(service.Build, service.Labels, service.Image)
+	image, ignoredComposeKeys, err := convertImageConfig(service.Build, service.Labels, service.Image)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	taskCfg, tcIgn, err := convertTaskConfig(service, otherSvcs, vols)
+	taskCfg, moreIgnoredKeys, err := convertTaskConfig(service, otherSvcs, vols)
 	if err != nil {
 		return nil, nil, err
 	}
-	ignored = append(ignored, tcIgn...)
+	ignoredComposeKeys = append(ignoredComposeKeys, moreIgnoredKeys...)
 
 	imgOverride := manifest.ImageOverride{
 		Command: manifest.CommandOverride{
@@ -48,11 +48,11 @@ func convertService(service *compose.ServiceConfig, workingDir string, otherSvcs
 		hc = convertHealthCheckConfig(service.HealthCheck)
 	}
 
-	exposed, portIgnored, err := findExposedPort(service, workingDir)
+	exposed, moreIgnoredKeys, err := findExposedPort(service, workingDir)
 	if err != nil {
 		return nil, nil, err
 	}
-	ignored = append(ignored, portIgnored...)
+	ignoredComposeKeys = append(ignoredComposeKeys, moreIgnoredKeys...)
 
 	if exposed != nil && exposed.public {
 		lbws := manifest.LoadBalancedWebService{}
@@ -71,7 +71,7 @@ func convertService(service *compose.ServiceConfig, workingDir string, otherSvcs
 			ImageOverride: imgOverride,
 			TaskConfig:    taskCfg,
 		}
-		return &ConvertedService{LbSvc: &lbws}, ignored, nil
+		return &ConvertedService{LbSvc: &lbws}, ignoredComposeKeys, nil
 	}
 
 	var port *uint16
@@ -95,7 +95,7 @@ func convertService(service *compose.ServiceConfig, workingDir string, otherSvcs
 		ImageOverride: imgOverride,
 		TaskConfig:    taskCfg,
 	}
-	return &ConvertedService{BackendSvc: &bs}, ignored, nil
+	return &ConvertedService{BackendSvc: &bs}, ignoredComposeKeys, nil
 }
 
 type exposedPort struct {
