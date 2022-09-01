@@ -128,7 +128,7 @@ func TestDecomposeService_General(t *testing.T) {
 			filename: "nginx-golang-postgres.yml",
 			svcName:  "proxy",
 
-			wantError: errors.New("convert Compose service to Copilot manifest: volume type \"bind\" is not supported yet"),
+			wantError: errors.New(`convert Compose service to Copilot manifest: volume type "bind" is not supported yet`),
 		},
 		"react-express-mongo frontend": {
 			filename: "react-express-mongo.yml",
