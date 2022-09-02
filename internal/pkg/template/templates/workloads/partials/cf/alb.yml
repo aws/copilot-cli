@@ -79,7 +79,7 @@ RulePriorityFunctionRole:
                 - elasticloadbalancing:DescribeRules
               Resource: "*"
 
-{{- if .HTTPSListener}}
+{{- if or .HTTPSListener .HTTPSRedirect}}
 {{include "https-listener" .}}
 {{- else}}
 {{include "http-listener" .}}

@@ -263,23 +263,15 @@ func (d *uriDescriber) uri() (accessURI, error) {
 		return accessURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
 	}
 
-	var httpsRuleARN, httpRuleARN string
+	var ruleARN string
 	for _, resource := range svcResources {
-		switch {
-		case resource.Type != svcStackResourceListenerRuleResourceType:
-			continue
-		case httpsEnabled && resource.LogicalID == svcStackResourceHTTPSListenerRuleLogicalID:
-			httpsRuleARN = resource.PhysicalID
-		case httpsEnabled && resource.LogicalID == svcStackResourceHTTPListenerRuleWithDomainLogicalID:
-			httpRuleARN = resource.PhysicalID
-		case !httpsEnabled && resource.LogicalID == svcStackResourceHTTPListenerRuleLogicalID:
-			httpRuleARN = resource.PhysicalID
+		if resource.Type == svcStackResourceListenerRuleResourceType &&
+			((httpsEnabled && resource.LogicalID == svcStackResourceHTTPSListenerRuleLogicalID) ||
+				(!httpsEnabled && resource.LogicalID == svcStackResourceHTTPListenerRuleLogicalID) ||
+				(!httpsEnabled && resource.LogicalID == svcStackResourceHTTPListenerRuleWithDomainLogicalID)) {
+			ruleARN = resource.PhysicalID
+			break
 		}
-	}
-
-	ruleARN := httpsRuleARN
-	if httpsRuleARN == "" {
-		ruleARN = httpRuleARN
 	}
 
 	lbDescr, err := d.initLBDescriber(d.env)
@@ -294,7 +286,7 @@ func (d *uriDescriber) uri() (accessURI, error) {
 		return d.envDNSName(path)
 	}
 	return accessURI{
-		HTTPS:    httpsEnabled && ruleARN == httpsRuleARN,
+		HTTPS:    httpsEnabled,
 		DNSNames: dnsNames,
 		Path:     path,
 	}, nil

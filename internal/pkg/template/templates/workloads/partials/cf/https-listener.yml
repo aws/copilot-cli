@@ -45,7 +45,7 @@ LoadBalancerDNSAlias{{$hostedZoneID}}:
 {{- end}}
 {{- end}}
 
-{{if .HTTPRedirect}}
+{{if .HTTPSRedirect}}
 HTTPSRulePriorityAction:
   Metadata:
     'aws:copilot:description': 'A custom resource assigning priority for HTTPS listener rules'
@@ -79,7 +79,7 @@ HTTPListenerRuleWithDomain:
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
     Actions:
-      {{- if .HTTPRedirect}}
+      {{- if .HTTPSRedirect}}
       - Type: redirect
         RedirectConfig:
           Protocol: HTTPS
@@ -132,7 +132,7 @@ HTTPListenerRuleWithDomain:
     {{- end}}
     Priority: !GetAtt HTTPRuleWithDomainPriorityAction.Priority
 
-{{if .HTTPRedirect}}
+{{if .HTTPSRedirect}}
 HTTPSListenerRule:
   Metadata:
     'aws:copilot:description': 'An HTTPS listener rule for forwarding HTTPS traffic to your tasks'

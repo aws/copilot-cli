@@ -86,6 +86,9 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	if conf.Manifest.RoutingRule.Disabled() {
 		httpsEnabled = false
 	}
+	if !aws.BoolValue(conf.Manifest.RoutingRule.Redirect) {
+		httpsEnabled = false
+	}
 	s := &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
 			wkld: &wkld{
@@ -162,8 +165,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", err
 	}
 
+	// TODO in validate(), only allow httpsRedirect if managed domain || aliases
+	httpsRedirect := s.manifest.RoutingRule.Redirect == nil || *s.manifest.RoutingRule.Redirect
 	var aliases []string
-	if s.httpsEnabled {
+	if s.httpsEnabled || httpsRedirect {
 		if aliases, err = convertAlias(s.manifest.RoutingRule.Alias); err != nil {
 			return "", err
 		}
@@ -196,7 +201,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:                  aliases,
 		HTTPSListener:            s.httpsEnabled,
-		HTTPRedirect:             (s.manifest.RoutingRule.Redirect == nil || *s.manifest.RoutingRule.Redirect),
+		HTTPSRedirect:            httpsRedirect,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
