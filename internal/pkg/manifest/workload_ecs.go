@@ -101,15 +101,15 @@ type ImageWithOptionalPort struct {
 
 // TaskConfig represents the resource boundaries and environment variables for the containers in the task.
 type TaskConfig struct {
-	CPU            *int                 `yaml:"cpu"`
-	Memory         *int                 `yaml:"memory"`
+	CPU            *int                 `yaml:"cpu,omitempty"`
+	Memory         *int                 `yaml:"memory,omitempty"`
 	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
-	Count          Count                `yaml:"count"`
-	ExecuteCommand ExecuteCommand       `yaml:"exec"`
-	Variables      map[string]string    `yaml:"variables"`
-	EnvFile        *string              `yaml:"env_file"`
-	Secrets        map[string]Secret    `yaml:"secrets"`
-	Storage        Storage              `yaml:"storage"`
+	Count          Count                `yaml:"count,omitempty"`
+	ExecuteCommand ExecuteCommand       `yaml:"exec,omitempty"`
+	Variables      map[string]string    `yaml:"variables,omitempty"`
+	EnvFile        *string              `yaml:"env_file,omitempty"`
+	Secrets        map[string]Secret    `yaml:"secrets,omitempty"`
+	Storage        Storage              `yaml:"storage,omitempty"`
 }
 
 // ContainerPlatform returns the platform for the service.

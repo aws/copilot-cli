@@ -399,7 +399,7 @@ type: 'OH NO'
 	}
 }
 
-func TestCount_UnmarshalYAML(t *testing.T) {
+func TestCount_UnmarshalMarshalYAML(t *testing.T) {
 	var (
 		perc               = Percentage(70)
 		timeMinute         = 60 * time.Second
@@ -540,6 +540,13 @@ func TestCount_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.AdvancedCount.Requests, b.Count.AdvancedCount.Requests)
 				require.Equal(t, tc.wantedStruct.AdvancedCount.ResponseTime, b.Count.AdvancedCount.ResponseTime)
 				require.Equal(t, tc.wantedStruct.AdvancedCount.Spot, b.Count.AdvancedCount.Spot)
+
+				out, err := yaml.Marshal(b)
+				require.NoError(t, err)
+				var rt TaskConfig
+				fmt.Printf("%s\n", string(out))
+				require.NoError(t, yaml.Unmarshal(out, &rt), fmt.Sprintf("(re-marshalled form):\n%s", string(out)))
+				require.Equal(t, b, rt)
 			}
 		})
 	}

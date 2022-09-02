@@ -80,6 +80,14 @@ func (r *Range) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (r Range) MarshalYAML() (interface{}, error) {
+	if !r.RangeConfig.IsEmpty() {
+		return r.RangeConfig, nil
+	}
+
+	return r.Value, nil
+}
+
 // IntRangeBand is a number range with maximum and minimum values.
 type IntRangeBand string
 
@@ -107,9 +115,9 @@ func (r IntRangeBand) Parse() (min int, max int, err error) {
 // be placed on dedicated Fargate capacity, and then after that, any scaling
 // event will place additioanl services on spot capacity.
 type RangeConfig struct {
-	Min      *int `yaml:"min"`
-	Max      *int `yaml:"max"`
-	SpotFrom *int `yaml:"spot_from"`
+	Min      *int `yaml:"min,omitempty"`
+	Max      *int `yaml:"max,omitempty"`
+	SpotFrom *int `yaml:"spot_from,omitempty"`
 }
 
 // IsEmpty returns whether RangeConfig is empty.
@@ -148,6 +156,14 @@ func (c *Count) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (c Count) MarshalYAML() (interface{}, error) {
+	if !c.AdvancedCount.IsEmpty() {
+		return c.AdvancedCount, nil
+	}
+
+	return c.Value, nil
+}
+
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the ScalingConfigOrT
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
@@ -170,6 +186,14 @@ func (r *ScalingConfigOrT[_]) UnmarshalYAML(value *yaml.Node) error {
 		return errors.New(`unable to unmarshal into int or composite-style map`)
 	}
 	return nil
+}
+
+func (r ScalingConfigOrT[_]) MarshalYAML() (interface{}, error) {
+	if !r.ScalingConfig.IsEmpty() {
+		return r.ScalingConfig, nil
+	}
+
+	return r.Value, nil
 }
 
 // IsEmpty returns whether Count is empty.
@@ -204,27 +228,27 @@ type ScalingConfigOrT[T ~int | time.Duration] struct {
 
 // AdvancedScalingConfig represents advanced configurable options for a scaling policy.
 type AdvancedScalingConfig[T ~int | time.Duration] struct {
-	Value    *T       `yaml:"value"`
-	Cooldown Cooldown `yaml:"cooldown"`
+	Value    *T       `yaml:"value,omitempty"`
+	Cooldown Cooldown `yaml:"cooldown,omitempty"`
 }
 
 // Cooldown represents the autoscaling cooldown of resources.
 type Cooldown struct {
-	ScaleInCooldown  *time.Duration `yaml:"in"`
-	ScaleOutCooldown *time.Duration `yaml:"out"`
+	ScaleInCooldown  *time.Duration `yaml:"in,omitempty"`
+	ScaleOutCooldown *time.Duration `yaml:"out,omitempty"`
 }
 
 // AdvancedCount represents the configurable options for Auto Scaling as well as
 // Capacity configuration (spot).
 type AdvancedCount struct {
-	Spot         *int                            `yaml:"spot"` // mutually exclusive with other fields
-	Range        Range                           `yaml:"range"`
-	Cooldown     Cooldown                        `yaml:"cooldown"`
-	CPU          ScalingConfigOrT[Percentage]    `yaml:"cpu_percentage"`
-	Memory       ScalingConfigOrT[Percentage]    `yaml:"memory_percentage"`
-	Requests     ScalingConfigOrT[int]           `yaml:"requests"`
-	ResponseTime ScalingConfigOrT[time.Duration] `yaml:"response_time"`
-	QueueScaling QueueScaling                    `yaml:"queue_delay"`
+	Spot         *int                            `yaml:"spot,omitempty"` // mutually exclusive with other fields
+	Range        Range                           `yaml:"range,omitempty"`
+	Cooldown     Cooldown                        `yaml:"cooldown,omitempty"`
+	CPU          ScalingConfigOrT[Percentage]    `yaml:"cpu_percentage,omitempty"`
+	Memory       ScalingConfigOrT[Percentage]    `yaml:"memory_percentage,omitempty"`
+	Requests     ScalingConfigOrT[int]           `yaml:"requests,omitempty"`
+	ResponseTime ScalingConfigOrT[time.Duration] `yaml:"response_time,omitempty"`
+	QueueScaling QueueScaling                    `yaml:"queue_delay,omitempty"`
 
 	workloadType string
 }
@@ -320,9 +344,9 @@ func (a *AdvancedCount) unsetAutoscaling() {
 
 // QueueScaling represents the configuration to scale a service based on a SQS queue.
 type QueueScaling struct {
-	AcceptableLatency *time.Duration `yaml:"acceptable_latency"`
-	AvgProcessingTime *time.Duration `yaml:"msg_processing_time"`
-	Cooldown          Cooldown       `yaml:"cooldown"`
+	AcceptableLatency *time.Duration `yaml:"acceptable_latency,omitempty"`
+	AvgProcessingTime *time.Duration `yaml:"msg_processing_time,omitempty"`
+	Cooldown          Cooldown       `yaml:"cooldown,omitempty"`
 }
 
 // IsEmpty returns true if the QueueScaling is set.
@@ -400,6 +424,14 @@ func (hc *HealthCheckArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 		return errUnmarshalHealthCheckArgs
 	}
 	return nil
+}
+
+func (hc HealthCheckArgsOrString) MarshalYAML() (interface{}, error) {
+	if !hc.HealthCheckArgs.isEmpty() {
+		return hc.HealthCheckArgs, nil
+	}
+
+	return hc.HealthCheckPath, nil
 }
 
 // IsEmpty returns true if there are no health check configuration set.

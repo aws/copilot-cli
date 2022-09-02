@@ -47,6 +47,14 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (r *RoutingRuleConfigOrBool) MarshalYAML() (interface{}, error) {
+	if !r.RoutingRuleConfiguration.IsEmpty() {
+		return r.RoutingRuleConfiguration, nil
+	}
+
+	return r.Enabled, nil
+}
+
 // RoutingRuleConfiguration holds the path to route requests to the service.
 type RoutingRuleConfiguration struct {
 	Path                *string                 `yaml:"path"`
@@ -140,6 +148,14 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 		return errUnmarshalAlias
 	}
 	return nil
+}
+
+func (a *Alias) MarshalYAML() (interface{}, error) {
+	if len(a.AdvancedAliases) != 0 {
+		return a.AdvancedAliases, nil
+	}
+
+	return a.StringSliceOrString, nil
 }
 
 // ToStringSlice converts an Alias to a slice of string.
