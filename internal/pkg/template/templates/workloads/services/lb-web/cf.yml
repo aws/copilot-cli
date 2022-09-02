@@ -101,10 +101,10 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
     {{- if .ALBEnabled}}
-    {{- if and .HTTPSListener .HTTPRedirect}}
+    {{- if and .HTTPSListener .HTTPSRedirect}}
       - HTTPListenerRuleWithDomain
       - HTTPSListenerRule
-    {{- else if and .HTTPSListener (not .HTTPRedirect)}}
+    {{- else if and (not .HTTPSRedirect) (or .HostedZoneAliases .Aliases)}}
       - HTTPListenerRuleWithDomain
     {{- else}}
       - HTTPListenerRule

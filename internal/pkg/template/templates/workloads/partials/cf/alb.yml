@@ -79,7 +79,8 @@ RulePriorityFunctionRole:
                 - elasticloadbalancing:DescribeRules
               Resource: "*"
 
-{{- if or .HTTPSListener .HTTPSRedirect}}
+{{/* TODO maybe change the listener files to customAliasListener and defaultAliasListener? or just combine?*/}}
+{{- if or .HTTPSListener (or .HostedZoneAliases .Aliases)}}
 {{include "https-listener" .}}
 {{- else}}
 {{include "http-listener" .}}

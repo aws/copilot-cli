@@ -125,6 +125,31 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			},
 			wantedURI: "https://jobs.test.phonetool.com or https://phonetool.com",
 		},
+		"https web service with redirect disabled": { // TODO change to service with custom alias (or just non-default? idk)
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
+						stack.WorkloadRulePathParamKey: testSvcPath,
+						stack.WorkloadHTTPSParamKey:    "false",
+					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
+							Type:       svcStackResourceListenerRuleResourceType,
+							PhysicalID: "mockRuleARN",
+						},
+					}, nil),
+					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").
+						Return([]string{"jobs.test.phonetool.com", "phonetool.com"}, nil),
+				)
+			},
+			wantedURI: "https://jobs.test.phonetool.com or https://phonetool.com",
+		},
 		"http web service": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(

@@ -168,7 +168,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	// TODO in validate(), only allow httpsRedirect if managed domain || aliases
 	httpsRedirect := s.manifest.RoutingRule.Redirect == nil || *s.manifest.RoutingRule.Redirect
 	var aliases []string
-	if s.httpsEnabled || httpsRedirect {
+	if s.httpsEnabled || httpsRedirect { // TODO this doesn't work either :(
 		if aliases, err = convertAlias(s.manifest.RoutingRule.Alias); err != nil {
 			return "", err
 		}
