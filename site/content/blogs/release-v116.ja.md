@@ -117,7 +117,7 @@ _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 AWS Copilot は、ロジックを簡単にするため、Amazon SNS と Amazon SQS のサービスを組み合わせて実現します。
 AWS Copilot では、 単一または複数のサービスが名前付き SNS トピックにメッセージを発行する様に設定し、 メッセージを受信して処理するワーカーサービスを作成できます。
 AWS Copilot は SNS トピック、SQS キュー、必要なポリシーなどの、 パブサブインフラストラクチャを設定し、自動プロビジョニングします。
-詳細については、 [AWS Copilot のドキュメン内の Publish/Subscribe architecture](../docs/developing/publish-subscribe.en.md)を確認してください。
+詳細については、 [AWS Copilot のドキュメン内の Publish/Subscribe architecture](../docs/developing/publish-subscribe.ja.md)を確認してください。
 
 デフォルトでは、Amazon SNS トピックのサブスクライバーはトピックにパブリッシュされた全てのメッセージを受け取ります。
 メッセージのサブセットを受け取る為には、サブスクライバーはトピックサブスクリプションに対してフィルターポリシーを割り当てる必要があります。例えば、トピックに注文をバブリッシュするサービスがあるとします。

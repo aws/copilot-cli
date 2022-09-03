@@ -99,7 +99,7 @@ http:
 ブログ記事にも 2 つ目の[例](../../blogs/release-v118.ja.md#certificate-import)を掲載しています。
 
 ## Request-Driven Web Service
-Request-Driven Web Service に[カスタムドメイン](https://docs.aws.amazon.com/ja_jp/apprunner/latest/dg/manage-custom-domains.html)を追加もできます。Load Balanced Web Service と同様に、Manifest の [`alias`](../manifest/rd-web-service.en.md#http-alias) フィールドを変更することで追加できます。
+Request-Driven Web Service に[カスタムドメイン](https://docs.aws.amazon.com/ja_jp/apprunner/latest/dg/manage-custom-domains.html)を追加もできます。Load Balanced Web Service と同様に、Manifest の [`alias`](../manifest/rd-web-service.ja.md#http-alias) フィールドを変更することで追加できます。
 ```yaml
 # in copilot/{service name}/manifest.yml
 http:

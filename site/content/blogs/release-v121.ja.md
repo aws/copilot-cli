@@ -16,11 +16,11 @@ AWS Copilot コアチームは、Copilot v1.21 リリースを発表します。
 
 Copilot v1.21 では、いくつかの新機能と改良が施されています。
 
-- **CloudFront を Application Load Balancer に統合**: CloudFront を Load Balanced Web Service の手前にデプロイできるようになりました。[詳細はこちらをご覧ください](./#CloudFront+の統合)。
-- **Environment セキュリティグループの設定**: Environment Manifest にて Environment セキュリティグループのルールを設定します。[詳しくはこちらをご覧ください](./#)。
-- **ELB アクセスログのサポート**: Load Balanced Web Service に対して、Elastic Load Balancing のアクセスログを有効にします。[詳しくはこちらをご覧ください](./#ELB+アクセスログのサポート)。
+- **CloudFront を Application Load Balancer に統合**: CloudFront を Load Balanced Web Service の手前にデプロイできるようになりました。[詳細はこちらをご覧ください](#cloudfront-%E3%81%AE%E7%B5%B1%E5%90%88)。
+- **Environment セキュリティグループの設定**: Environment Manifest にて Environment セキュリティグループのルールを設定します。[詳しくはこちらをご覧ください](#environment-%E3%82%BB%E3%82%AD%E3%83%A5%E3%83%AA%E3%83%86%E3%82%A3%E3%82%B0%E3%83%AB%E3%83%BC%E3%83%97%E3%81%AE%E8%A8%AD%E5%AE%9A)。
+- **ELB アクセスログのサポート**: Load Balanced Web Service に対して、Elastic Load Balancing のアクセスログを有効にします。[詳しくはこちらをご覧ください](#elb-%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%AD%E3%82%B0%E3%81%AE%E3%82%B5%E3%83%9D%E3%83%BC%E3%83%88)。
 - **`job logs` の改善**: Job のログをたどり、ステートマシンの実行ログを見ることができるようになりました。[詳しくはこちらをご覧ください](./#)。
-- **Pデプロイ前の CloudFormation テンプレートのパッケージ化 Addon**: Copilot は、`copilot svc deploy` コマンドで Addon テンプレートをパッケージ化するようになりました。これにより、Copilot はコンテナ化された Service と一緒に AWS Lambda 関数をデプロイできるようになりました! 導入方法については [Copilotのドキュメント](../docs/developing/addons/package.ja.md) をご覧ください。
+- **デプロイ前の CloudFormation テンプレートのパッケージ化 Addon**: Copilot は、`copilot svc deploy` コマンドで Addon テンプレートをパッケージ化するようになりました。これにより、Copilot はコンテナ化された Service と一緒に AWS Lambda 関数をデプロイできるようになりました! 導入方法については [Copilotのドキュメント](../docs/developing/addons/package.ja.md) をご覧ください。
 
 ???+ note "AWS Copilot とは?"
 

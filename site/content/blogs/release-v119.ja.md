@@ -90,7 +90,7 @@ http:
   alias: example.aws
   hosted_zone: Z0873220N255IR3MTNR4
 ```
-より詳細については、[内部 ALB](../docs/developing/internal-albs.en.md)のドキュメントを確認してください!
+より詳細については、[内部 ALB](../docs/developing/internal-albs.ja.md)のドキュメントを確認してください!
 
 ## 次は？
 

@@ -214,7 +214,7 @@ http セクションには、[Load Balanced Web Service](./lb-web-service.ja.md)
 
 <span class="parent-field">http.public.</span><a id="http-public-certificates" href="#http-public-certificates" class="field">`certificates`</a> <span class="type">Array of Strings</span>  
  [公開されている AWS Certificate Manager の証明書](https://docs.aws.amazon.com/ja_jp/acm/latest/userguide/gs-acm-request-public.html) ARN のリスト。
-ロードバランサーにパブリック証明書をアタッチすることで、Load Balanced Web Service をドメイン名と関連付け、HTTPS で到達することができるようになります。[`http.alias`](./lb-web-service.en.md#http-alias) を使用してサービスを再デプロイする方法の詳細については、[Developing/Domains](../developing/domain.ja.md#%E6%97%A2%E5%AD%98%E3%81%AE%E6%9C%89%E5%8A%B9%E3%81%AA%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%81%AB%E5%90%AB%E3%81%BE%E3%82%8C%E3%82%8B%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%99%E3%82%8B) ガイドを参照してください。
+ロードバランサーにパブリック証明書をアタッチすることで、Load Balanced Web Service をドメイン名と関連付け、HTTPS で到達することができるようになります。[`http.alias`](./lb-web-service.ja.md#http-alias) を使用してサービスを再デプロイする方法の詳細については、[Developing/Domains](../developing/domain.ja.md#%E6%97%A2%E5%AD%98%E3%81%AE%E6%9C%89%E5%8A%B9%E3%81%AA%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%81%AB%E5%90%AB%E3%81%BE%E3%82%8C%E3%82%8B%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%99%E3%82%8B) ガイドを参照してください。
 
 <span class="parent-field">http.public.</span><a id="http-public-access-logs" href="#http-public-access-logs" class="field">`access_logs`</a> <span class="type">Boolean or Map</span>   
 [Elastic Load Balancing のアクセスログ](https://docs.aws.amazon.com/ja_jp/elasticloadbalancing/latest/application/load-balancer-access-logs.html)を有効にします。
