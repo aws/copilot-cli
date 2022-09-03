@@ -69,7 +69,7 @@ nlb:
 * Environment 用のサブドメインに使う ACM 証明書の作成と検証し
 * ACM 証明書を
     - エイリアスが Application Load Balancer　(`http.alias`) として利用されている場合、HTTPS リスナーと関連づけて HTTP のトラフィックを HTTPS にリダイレクトし
-    - エリアスが `nlb.alias` として利用されていて、 TLS ターミーネーションが有効な場合、 Network Load Balancer の TLS リスナーと関連づけて
+    - エイリアスが `nlb.alias` として利用されていて、 TLS ターミーネーションが有効な場合、 Network Load Balancer の TLS リスナーと関連づけて
 * エイリアス用でオプションの A レコードを作成しています。
 
 **どのように見えるか**
@@ -86,7 +86,7 @@ $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certifi
 
 Service の Manifest において、次のどちらかを行います。
 
-1. Copilot が A レコードを追加する[ホストゾーン](../manifest/lb-web-service.ja.md#http-hosted-zone)のIDを指定する
+1. Copilot が A レコードを追加する[`hosted zone`](../manifest/lb-web-service.ja.md#http-hosted-zone)の ID を指定します。
 ``` yaml
 # in copilot/{service name}/manifest.yml
 http:

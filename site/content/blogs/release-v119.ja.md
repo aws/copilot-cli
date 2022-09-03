@@ -1,5 +1,7 @@
 # AWS Copilot v1.19: 内部ロードバランサー, サブネット配置指定など
 
+投稿日: 2022 年 6 月 13 日
+
 The AWS Copilot コアチームは v1.19 リリースを発表できることを嬉しく思います！
 このリリースに貢献した[@gautam-nutalapati](https://github.com/gautam-nutalapati) と [@jonstacks](https://github.com/jonstacks)に心から感謝します。
 私たちのパブリック[コミュニティチャット](https://gitter.im/aws/copilot-cli)は成長していて、300 人近い方がオンラインで、
@@ -40,7 +42,7 @@ http:
       hosted_zone: HostedZoneID2
 ```
 * **プライベートルートテーブルへのアクセス**:
-Copilot は CloudFormation スタックからプライベートルートテーブルの ID をエクスポートする様になりました。[Addon](../docs/developing/addons/modeling.ja.md)を利用して VPC ゲートウェイエンドポイントを作成する時に利用します。([#3611](https://github.com/aws/copilot-cli/pull/3611))
+Copilot は CloudFormation スタックからプライベートルートテーブルの ID をエクスポートする様になりました。[Addon](../docs/developing/addons/modeling.ja.md) を利用して VPC ゲートウェイエンドポイントを作成する時に利用します。([#3611](https://github.com/aws/copilot-cli/pull/3611))
 * **ターゲットグループのヘルスチェックに利用する `port`**:
 新しい `port` フィールドにより、ヘルスチェックのために、ロードバランサーからのリクエストに利用するポートとは異なる、デフォルトではないポートを設定することが出来る様になりました。
 ([#3548](https://github.com/aws/copilot-cli/pull/3548))
@@ -51,7 +53,7 @@ http:
     port: 8080
 ```
 
-* **バグフィックス:** 
+* **バグフィックス:**
     * Application から Service が削除された場合に、`app init --resource-tags` で適用されたタグを保持します([#3582](https://github.com/aws/copilot-cli/pull/3582))。
     * Network Load Balancer を利用した Load Balanced Web Service のオートスケーリングフィールドを有効化する際の不具合を修正しました([#3578](https://github.com/aws/copilot-cli/pull/3578))。
     * Fargate Windows タスクに対する `copilot svc exec` を有効にしました([#3566](https://github.com/aws/copilot-cli/pull/3566))。

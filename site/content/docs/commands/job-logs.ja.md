@@ -3,11 +3,11 @@
 $ copilot job logs
 ```
 
-## What does it do?
+## コマンドの概要
 
-`copilot job logs` displays the logs of a deployed job.
+`copilot job logs` は、デプロイされた Job のログを表示します。
 
-## What are the flags?
+## フラッグ
 
 ```  
   -a, --app string              Name of the application.
@@ -31,37 +31,37 @@ $ copilot job logs
 
 ```
 
-## Examples 
+## 実行例 
 
-Displays logs of the job "my-job" in environment "test".
+Environment "test" の Job "my-job" のログを表示します。
 
 ```console
 $ copilot job logs -n my-job -e test
 ```
 
-Displays logs in the last hour.
+過去 1 時間のログを表示します。
 
 ```console
 $ copilot job logs --since 1h
 ```
 
-Displays logs from the last 4 executions of the job.
+過去 4 回分の Job の実行ログを表示します。
 
 ```console
 $ copilot job logs --last 4
 ```
 
-Displays logs from specific task IDs
+特定のタスク ID のログを表示します。
 ```console
 $ copilot job logs --tasks 709c7ea,1de57fd
 ```
 
-Displays logs in real time.
+ログをリアルタイムで表示します。
 ```console
 $ copilot job logs --follow
 ```
 
-Displays container logs and state machine execution logs from the last execution.
+前回実行時のコンテナログとステートマシンの実行ログを表示します。
 ```console
 $ copilot job logs --include-state-machine --last 1
 ```
