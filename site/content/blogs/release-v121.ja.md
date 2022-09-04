@@ -33,7 +33,7 @@ Copilot v1.21 では、いくつかの新機能と改良が施されています
 
 ## CloudFront の統合
 
-Copilot の Environment Manifest への最初の大きな追加の 1 つです! CloudFront は AWS Content Delivery Network (CDN) で、世界中にアプリケーションをディストリビューションするのに役立ちます。Environment Manifest に `cdn: true` を設定して `copilot env deploy` を実行するだけで、ディストリビューションを有効にできるようになりました。
+Copilot の Environment Manifest への最初の大きな追加の 1 つです! CloudFront は AWS Content Delivery Network (CDN) で、世界中にアプリケーションを配信するのに役立ちます。Environment Manifest に `cdn: true` を設定して `copilot env deploy` を実行するだけで、ディストリビューションを有効にできるようになりました。
 
 ### 現在サポートされている機能
 - 公開されている Application Load Balancer (ALB) の手前に配置されたディストリビューション

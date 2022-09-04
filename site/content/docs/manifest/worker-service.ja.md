@@ -252,15 +252,15 @@ Service がオートスケーリングを利用する場合の最大タスク数
 Service の何個目のタスクから Fargate Spot キャパシティプロバイダーを利用するか。
 
 <span class="parent-field">count.</span><a id="count-cooldown" href="#count-cooldown" class="field">`cooldown`</a> <span class="type">Map</span>
-Cooldown scaling fields that are used as the default cooldown for all autoscaling fields specified.
+指定されたすべてのオートスケーリングフィールドのデフォルトクールダウンとして使用されるクールダウンスケーリングフィールド。
 
 <span class="parent-field">count.cooldown.</span><a id="count-cooldown-in" href="#count-cooldown-in" class="field">`in`</a> <span class="type">Duration</span>
-The cooldown time for autoscaling fields to scale up the service.
+Service をスケールアップするためのオートスケーリングクールダウン時間。
 
 <span class="parent-field">count.cooldown.</span><a id="count-cooldown-out" href="#count-cooldown-out" class="field">`out`</a> <span class="type">Duration</span>
-The cooldown time for autoscaling fields to scale down the service.
+Service をスケールダウンさせるためのオートスケーリングクールダウン時間。
 
-The following options `cpu_percentage` and `memory_percentage` are autoscaling fields for `count` which can be defined either as the value of the field, or as a Map containing advanced information about the field's `value` and `cooldown`:
+`cpu_percentage` および `memory_percentage`  は `count` のオートスケーリングフィールドであり、フィールドの値として定義するか、または `value` と `cooldown` にて関連する詳細情報を含むマップとして定義することができます。
 ```yaml
 value: 50
 cooldown:

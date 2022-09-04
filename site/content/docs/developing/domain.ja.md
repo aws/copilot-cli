@@ -86,7 +86,7 @@ $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certifi
 
 Service の Manifest において、次のどちらかを行います。
 
-1. Copilot が A レコードを追加する[`hosted zone`](../manifest/lb-web-service.ja.md#http-hosted-zone)の ID を指定します。
+1. Copilot が A レコードを追加する[ホストゾーン](../manifest/lb-web-service.ja.md#http-hosted-zone)の ID を指定します。
 ``` yaml
 # in copilot/{service name}/manifest.yml
 http:

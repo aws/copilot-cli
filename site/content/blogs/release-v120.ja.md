@@ -18,9 +18,9 @@ Copilot v1.20 では、いくつかの新機能と改良が施されています
 
 * **Environment Manifest**: Infrastructure as Code のすべての利点を環境にもたらす [Manifest ファイル](../docs/manifest/environment.ja.md)を使用して、Environment を作成および更新できるようになりました。既存の Environment を移行する方法については、[詳細な手順](#environment-manifest)を参照してください。
 * **オートスケーリングクールダウンのサポート**: Service Manifest で[オートスケーリングクールダウン](#%E3%82%AA%E3%83%BC%E3%83%88%E3%82%B9%E3%82%B1%E3%83%BC%E3%83%AA%E3%83%B3%E3%82%B0%E3%82%AF%E3%83%BC%E3%83%AB%E3%83%80%E3%82%A6%E3%83%B3%E3%81%AE%E3%82%B5%E3%83%9D%E3%83%BC%E3%83%88)を指定できるようになりました。
-* **ビルドロールの追加ポリシー**: Pipeline Manifest の `additional_policy` フィールドを通じて、CodeBuild Build Project Role の追加ポリシーを指定できるようになりました。ビルドプロジェクトロールに追加する追加ポリシードキュメントの指定方法については、[詳細な手順](../docs/manifest/pipeline.ja.md)を参照してください。 [(#3709)](https://github.com/aws/copilot-cli/pull/3709)
+* **ビルドロールの追加ポリシー**: Pipeline Manifest の `additional_policy` フィールドを通じて、CodeBuild ビルドプロジェクトのサービスロールにおける追加ポリシーを指定できるようになりました。ビルドプロジェクトロールに追加する追加ポリシードキュメントの指定方法については、[詳細な手順](../docs/manifest/pipeline.ja.md)を参照してください。 [(#3709)](https://github.com/aws/copilot-cli/pull/3709)
 * **スケジュールされた Job の呼び出し**: 新しい `copilot job run` コマンドを使用して、既存のスケジュールされた Job をアドホックに実行できるようになりました。 [(#3692)](https://github.com/aws/copilot-cli/pull/3692)
-* **デフォルトセキュリティグループを拒否する**: Service Manifest の `security_groups` に `deny_default` というオプションを追加し、デフォルトで適用される EnvironmentSecurityGroup のイングレスを削除するようにしました。 [(#3682)](https://github.com/aws/copilot-cli/pull/3682)
+* **デフォルトセキュリティグループを拒否する**: Service Manifest の `security_groups` に `deny_default` というオプションを追加し、デフォルトで適用される Environment のセキュリティグループの Ingress を削除するようにしました。 [(#3682)](https://github.com/aws/copilot-cli/pull/3682)
 * **ALBを使った Backend Service の予測可能なエイリアス**: 内部 ALB が設定されている Backend Service にエイリアスを指定しない場合、デフォルトの ALB ホスト名ではなく、`svc.env.app.internal` というホスト名で到達できるようになりました。 ([#3668](https://github.com/aws/copilot-cli/pull/3668))
 
 ???+ note "AWS Copilot とは?"
@@ -129,7 +129,7 @@ v1.20 以前は、クライアントは追加の設定で Environment を更新�
 
 最後に、Copilot は Service または Job として、Environment に対して同じ[継続的デリバリーの Pipeline](../docs/concepts/pipelines.ja.md)のワークフローを提供します。
 
-**[1\]** [Manifest ファイルが作成される]()と、既存の `copilot pipeline init` コマンドを実行して、デプロイステージを記述するための Pipeline の [`manifest.yml`](../docs/manifest/pipeline.ja.md) ファイルや、CloudFormation 設定ファイルを生成するための "Build" ステージで使用する `buildspec.yml` を作成することが可能です。
+**[1\]** [Manifest ファイルが作成される](#%E6%97%A2%E5%AD%98-environment-%E3%81%AE%E7%A7%BB%E8%A1%8C)と、既存の `copilot pipeline init` コマンドを実行して、デプロイステージを記述するための Pipeline の [`manifest.yml`](../docs/manifest/pipeline.ja.md) ファイルや、CloudFormation 設定ファイルを生成するための "Build" ステージで使用する `buildspec.yml` を作成することが可能です。
 
 ??? example "Pipeline Manifest と buildspec の作成"
 

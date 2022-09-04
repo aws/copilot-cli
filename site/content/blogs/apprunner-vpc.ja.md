@@ -12,10 +12,10 @@ AWS App Runner の管理コンソールにて[ドキュメントに記載され�
 
 ## 背景
 
-[AWS App Runner](https://aws.amazon.com/jp/apprunner/) は、開発者が Web サーバーや API サーバーなどの HTTP ベースのアプリケーションを簡単に実行できるように設計されたフルマネージドサービスです。事前のインフラや経験は必要ありません。ソースコードやコンテナイメージを与えると、App Runner がアプリケーションコンテナをビルドして AWS クラウドにデプロイし、バックグラウンドでリクエストを自動的にスケーリングしてロードバランシングを行います。表示されるのは、HTTPS リクエストを実行できる Service URL だけです。
+[AWS App Runner](https://aws.amazon.com/jp/apprunner/) は、開発者が Web サーバーや API サーバーなどの HTTP ベースのアプリケーションを簡単に実行できるように設計されたフルマネージドサービスです。事前のインフラや経験は必要ありません。ソースコードやコンテナイメージを与えると、App Runner がアプリケーションコンテナをビルドして AWS クラウドにデプロイし、バックグラウンドでリクエストを自動的にスケーリングしてロードバランシングを行います。表示されるのは、HTTPS リクエストを実行できる App Runner サービスの URL だけです。
 ![App Runner](./../assets/images/apprunner-vpc-blog/apprunner-arch.png)
 
-Service を作成すると、裏では App Runner が所属する VPC で [Amazon Elastic Container Service (ECS)](https://aws.amazon.com/jp/ecs/) によってオーケストレーションされた [AWS Fargate](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/userguide/what-is-fargate.html) タスクとして Application コンテナがデプロイされます。デフォルトでは、Application によって開始されたすべてのアウトバウンドトラフィックは、NAT ゲートウェイとこの App Runner が所有する VPC にプロビジョニングされたインターネットゲートウェイを経由してインターネットにルーティングされます。従ってこのモードでは、App Runner でホストされている Application は、インターネット上のパブリックエンドポイントにのみ接続できますが、VPC 内のプライベートエンドポイントに到達することはできません。
+サービスを作成すると、裏では App Runner が所属する VPC で [Amazon Elastic Container Service (ECS)](https://aws.amazon.com/jp/ecs/) によってオーケストレーションされた [AWS Fargate](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/userguide/what-is-fargate.html) タスクとしてアプリケーションコンテナがデプロイされます。デフォルトでは、アプリケーションによって開始されたすべてのアウトバウンドトラフィックは、NAT ゲートウェイとこの App Runner が所有する VPC にプロビジョニングされたインターネットゲートウェイを経由してインターネットにルーティングされます。従ってこのモードでは、App Runner でホストされているアプリケーションは、インターネット上のパブリックエンドポイントにのみ接続できますが、VPC 内のプライベートエンドポイントに到達することはできません。
 
 ![App Runner Deep Dive](./../assets/images/apprunner-vpc-blog/apprunner-deepdive.png)
 
@@ -30,7 +30,7 @@ AWS Copilot CLI と AWS App Runner の VPC サポートの機能を実証する�
 
 必要なステップは以下の通りです。
 
-- Copilot の環境概念を使用して、Customer VPC を作成します。
+- Copilot の Environment 概念を使用して、Customer VPC を作成します。
 - この VPC 内のプライベートサブネット内に [Amazon Aurora](https://aws.amazon.com/jp/rds/aurora/) PostgreSQL データベースを作成します。
 - AWS App Runner 上で動作する Service を、VPC 内にあるデータベースに VPC コネクターを使用して接続し、適切なセキュリティグループのルールを設定します。
 - Python 向けの一般的な ORM である SQLAlchemy を使用してデータベースに接続し、接続がうまくいくことを確認します。
@@ -48,13 +48,13 @@ AWS Copilot CLI と AWS App Runner の VPC サポートの機能を実証する�
 
 ### Application と Environment の作成
 
-まず、関連するサービス、環境、パイプラインの論理的なグループを作成する必要があります。AWS Copilot の用語では、これを _Application_ と呼びます。
+まず、関連する Service、Environment、Pipeline の論理的なグループを作成する必要があります。AWS Copilot の用語では、これを _Application_ と呼びます。
 
 `copilot app init apprunner-vpc`
 
 このコマンドを実行すると、Copilot は `./copilot` というフォルダを使用して、_Manifest_ と呼ばれる Infrastructure-as-Code のYAML 設定ファイルを保持するようになり、Copilot を使って AWS 上にコンテナ化した Application を簡単にデプロイできるようになります。
 
-次のステップは、Service をデプロイする Application の Environment を作成することです。AWS Copilot では、Application のデプロイを別々のアカウントやリージョンに論理的に分離した、異なる環境を作成することが可能です。一般的なユースケースは、テスト環境と別の本番環境があり、テスト環境上で検証された場合にのみ Application がデプロイされる、というものです。この記事の範囲では、次のコマンドで作成した _test_ という名前のテスト環境にのみ Service をデプロイすることとします。
+次のステップは、Service をデプロイする Application の Environment を作成することです。AWS Copilot では、異なる Environment を作成することで、別のアカウントやリージョンに Application を論理的に分離してデプロイすることができます。一般的なユースケースは、テスト環境と別の本番環境があり、テスト環境上で検証された場合にのみ Application がデプロイされる、というものです。この記事の範囲では、次のコマンドで作成した _test_ という名前のテスト環境にのみ Service をデプロイすることとします。
 
 ```
 copilot env init \
@@ -64,14 +64,14 @@ copilot env init \
     --default-config
 ```
 
-コマンドで Enter を押すと、Service をホストするために必要なインフラストラクチャを作成するために使用される AWS 認証情報を選択するように求められます。資格情報を選択すると、Copilot があなたに代わってリソースの作成を開始します。このプロセスにはしばらく時間がかかるので、このプロセスが完了するまでの間、少しストレッチしてお待ちください。
+コマンドで Enter を押すと、Service をホストするために必要なインフラストラクチャを作成するために使用される AWS 認証情報を選択するように求められます。認証情報を選択すると、Copilot があなたに代わってリソースの作成を開始します。このプロセスにはしばらく時間がかかるので、このプロセスが完了するまでの間、少しストレッチしてお待ちください。
 
-作成した環境ごとに、AWS Copilot は個別のネットワークスタック (VPC) と、今回のデモでは使用しない ECS Cluster を作成します。
+作成した Environment ごとに、AWS Copilot は個別のネットワークスタック (VPC) と、今回のデモでは使用しない ECS Cluster を作成します。
 ![AWS Copilot Groupings](./../assets/images/apprunner-vpc-blog/copilot-groupings.png)
 
 ### AWS App Runner 上で動作する Service の作成
 
-AWS Copilotは、様々なタイプの Service をデプロイするために使用できる、いくつかの抽象化された機能を提供します。この記事の例では、[Request-Driven Web Service](https://aws.github.io/copilot-cli/ja/docs/manifest/rd-web-service/) という Copilot パターンを使用しています。これは、受信トラフィックに基づいてオートスケールし、トラフィックがないときはベースラインまでスケールダウンするAWS App Runner Service をデプロイします。このオプションは、リクエスト量が急激に増加する HTTP サービスや、リクエスト量が少ない場合に、より費用対効果が高くなります。
+AWS Copilotは、様々なタイプの Service をデプロイするために使用できる、いくつかの抽象化された機能を提供します。この記事の例では、[Request-Driven Web Service](https://aws.github.io/copilot-cli/ja/docs/manifest/rd-web-service/) という Copilot パターンを使用しています。これは、受信トラフィックに基づいてオートスケールし、トラフィックがないときはベースラインまでスケールダウンする AWS App Runner Service をデプロイします。このオプションは、リクエスト量が急激に増加する HTTP サービスや、リクエスト量が少ない場合に、より費用対効果が高くなります。
 
 ```
 copilot svc init \
@@ -129,7 +129,7 @@ secret = json.loads(response['SecretString'])
 DB_URI = f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}/{secret['dbname']}"
 ```
 
-Copilot は自動的に適切な Instance Role を作成し、作成された Secret に対して `secretsmanager:GetSecretValue` アクションを許可します。また、セキュリティグループも設定する必要はありません。Copilot でデータベースを追加したため、データベースセキュリティグループは、Service セキュリティグループ (VPCコネクタに関連付けられたもの) から PostgreSQL ポート (5432) へのトラフィックを自動的に許可し、Service がアウトバウンドトラフィックをルーティングする場所になります。
+Copilot は自動的に適切なインスタンスロールを作成し、作成された Secret に対して `secretsmanager:GetSecretValue` アクションを許可します。また、セキュリティグループも設定する必要はありません。Copilot でデータベースを追加したため、データベースセキュリティグループは、Service セキュリティグループ (VPCコネクタに関連付けられたもの) から PostgreSQL ポート (5432) へのトラフィックを自動的に許可し、Service がアウトバウンドトラフィックをルーティングする場所になります。
 
 ### サンプルアプリケーションのデプロイ
 

@@ -18,10 +18,10 @@
     
         build:
           image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
-          # additional_policy: # Add additional permissions while building your container images and templates.
+          # additional_policy: # コンテナイメージやテンプレートを構築する際に、権限を追加することができます。
     
         stages: 
-          - # By default all workloads are deployed concurrently within a stage.
+          - # デフォルトでは、すべてのワークロードはステージ内で同時にデプロイされます。
             name: test
             test_commands:
               - make integ-test
@@ -139,7 +139,7 @@ CodeBuild のビルドプロジェクトで利用する Docker イメージの U
 任意項目。ビルドプロジェクトで利用する buildspec ファイルを指定する URI です。デフォルトでは、Copilot  が buildspec ファイルを作成します。作成したファイルは、 `copilot/pipelines/[your pipeline name]/buildspec.yml` に配置されています。
 
 <span class="parent-field">build.</span><a id="build-additional-policy" href="#build-additional-policy" class="field">`additional_policy.`</a><a id="policy-document" href="#policy-document" class="field">`PolicyDocument`</a> <span class="type">Map</span>
-任意項目。ビルドプロジェクトの役割に追加する追加のポリシードキュメントを指定します。追加のポリシードキュメントは、以下の例のように YAML のマップに指定することができます。
+任意項目。ビルドプロジェクトロールに追加するポリシードキュメントを指定します。追加のポリシードキュメントは、以下の例のように YAML のマップに指定することができます。
 ```yaml
 build:
   additional_policy:

@@ -48,8 +48,6 @@ network:
   vpc:
     security_groups: [sg-0001, sg-0002]
 ```
-Copilot includes a security group so containers within your environment can communicate with each other. To disable
-the default security group, you can specify the Map form:
 Copilot にはセキュリティグループが含まれており、Environment 内のコンテナ同士が通信できるようになっています。デフォルトのセキュリティグループを無効にするには、Map 形式で以下のように指定します。
 ```yaml
 network:

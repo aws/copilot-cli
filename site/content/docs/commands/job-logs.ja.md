@@ -33,7 +33,7 @@ $ copilot job logs
 
 ## 実行例 
 
-Environment "test" の Job "my-job" のログを表示します。
+"test" Environment の "my-job" Job のログを表示します。
 
 ```console
 $ copilot job logs -n my-job -e test

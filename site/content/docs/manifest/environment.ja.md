@@ -1,5 +1,5 @@
 `'Environment'` Manifest で利用可能なすべてのプロパティのリストです。
-Copilot Environment の詳細については、[Environments](../concepts/environments.ja.md) のコンセプトページを参照してください。
+Copilot Environment の詳細については、[Environment](../concepts/environments.ja.md) のコンセプトページを参照してください。
 
 ???+ note "Environment のサンプル Manifest"
 
@@ -297,7 +297,7 @@ VPC 内から内部ロードバランサーへのトラフィックを有効に�
 <div class="separator"></div>
 
 <a id="observability" href="#observability" class="field">`observability`</a> <span class="type">Map</span>  
-observability セクションでは、Environment にデプロイされた Service や Jaob に関するデータを収集する方法を設定します。
+observability セクションでは、Environment にデプロイされた Service や Job に関するデータを収集する方法を設定します。
 
 <span class="parent-field">observability.</span><a id="http-container-insights" href="#http-container-insights" class="field">`container_insights`</a> <span class="type">Bool</span>  
 Environment の ECS クラスターで [CloudWatch の Container Insights](https://docs.aws.amazon.com/ja_jp/AmazonCloudWatch/latest/monitoring/ContainerInsights.html) を有効にするかどうか。

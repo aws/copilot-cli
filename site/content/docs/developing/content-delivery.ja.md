@@ -1,14 +1,12 @@
 # グローバルなコンテンツ配信
 
-Copilot は、AWS CloudFront を介した Content Delivery Network をサポートしています。このリソースは Copilot によって Environment レベルで管理され、ユーザーは [Environment Manifest](../manifest/environment.ja.md) を通じて CloudFront を活用することができます。
+Copilot は、Amazon CloudFront を介した Content Delivery Network をサポートしています。このリソースは Copilot によって Environment レベルで管理され、ユーザーは [Environment Manifest](../manifest/environment.ja.md) を通じて CloudFront を活用することができます。
 
 ## Copilot による CloudFront インフラストラクチャ
 
-Copilot が [CloudFront ディストリビューション](https://docs.aws.amazon.com/ja_jp/AmazonCloudFront/latest/DeveloperGuide/distribution-overview.html) を作成すると、Application Load Balancer の代わりに Application への新しいエントリポイントになるようディストリビューションが作成されます。これにより、CloudFron tは世界中に配置されたエッジロケーションを経由して、ロードバランサーにトラフィックをより速くルーティングすることができます。
+Copilot が [CloudFront ディストリビューション](https://docs.aws.amazon.com/ja_jp/AmazonCloudFront/latest/DeveloperGuide/distribution-overview.html) を作成すると、Application Load Balancer の代わりに Application への新しいエントリポイントになるようディストリビューションが作成されます。これにより、CloudFront tは世界中に配置されたエッジロケーションを経由して、ロードバランサーにトラフィックをより速くルーティングすることができます。
 
 ## 既存のアプリケーションで CloudFront を使うには?
-
-Starting with Copilot v1.20, `copilot env init` creates an environment manifest file. In this manifest, you can specify the value `cdn: true` and then run `copilot env deploy` to enable a basic CloudFront distribution.
 
 Copilot v1.20 から、`copilot env init` で Environment Manifest ファイルが作成されるようになりました。この Manifest に `cdn: true` という値を指定し、`copilot env deploy` を実行すると、基本的な CloudFront ディストリビューションを有効にすることができます。
 
