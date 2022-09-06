@@ -47,7 +47,7 @@ func (r *RoutingRuleConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (r *RoutingRuleConfigOrBool) MarshalYAML() (interface{}, error) {
+func (r RoutingRuleConfigOrBool) MarshalYAML() (interface{}, error) {
 	if !r.RoutingRuleConfiguration.IsEmpty() {
 		return r.RoutingRuleConfiguration, nil
 	}
@@ -150,7 +150,7 @@ func (a *Alias) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (a *Alias) MarshalYAML() (interface{}, error) {
+func (a Alias) MarshalYAML() (interface{}, error) {
 	if len(a.AdvancedAliases) != 0 {
 		return a.AdvancedAliases, nil
 	}

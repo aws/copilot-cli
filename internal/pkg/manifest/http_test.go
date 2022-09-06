@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -158,6 +159,13 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
 				// check memberwise dereferenced pointer equality
 				require.Equal(t, tc.wantedStruct.StringSliceOrString, r.Alias.StringSliceOrString)
 				require.Equal(t, tc.wantedStruct.AdvancedAliases, r.Alias.AdvancedAliases)
+
+				roundtrip, err := yaml.Marshal(tc.wantedStruct)
+				require.NoError(t, err)
+				fmt.Printf("re-marshalled form:\n%s\n", string(roundtrip))
+				var rt Alias
+				require.NoError(t, yaml.Unmarshal(roundtrip, &rt))
+				require.Equal(t, tc.wantedStruct, rt)
 			}
 		})
 	}
