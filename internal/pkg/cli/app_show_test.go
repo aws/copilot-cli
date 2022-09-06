@@ -348,7 +348,7 @@ Pipelines
 			wantedContent: `About
 
   Name     my-app
-  Version  v1.0.3
+  Version  v1.0.3 
   URI      example.com
 
 Environments
@@ -505,7 +505,7 @@ Pipelines
 			wantedContent: `About
 
   Name     my-app
-  Version  v1.0.3
+  Version  v1.0.3 
   URI      example.com
 
 Environments
