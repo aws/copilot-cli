@@ -24,14 +24,14 @@ func TestExec_UnmarshalYAML(t *testing.T) {
 count: 1`),
 
 			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(false),
+				Enable: nil,
 			},
 		},
 		"use default without any input": {
 			inContent: []byte(`count: 1`),
 
 			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(false),
+				Enable: nil,
 			},
 		},
 		"simple enable": {
@@ -41,13 +41,28 @@ count: 1`),
 				Enable: aws.Bool(true),
 			},
 		},
+		"simple disable": {
+			inContent: []byte(`exec: false`),
+
+			wantedStruct: ExecuteCommand{
+				Enable: aws.Bool(false),
+			},
+		},
 		"with config": {
 			inContent: []byte(`exec:
   enable: true`),
 			wantedStruct: ExecuteCommand{
-				Enable: aws.Bool(false),
 				Config: ExecuteCommandConfig{
 					Enable: aws.Bool(true),
+				},
+			},
+		},
+		"with config disable": {
+			inContent: []byte(`exec:
+  enable: false`),
+			wantedStruct: ExecuteCommand{
+				Config: ExecuteCommandConfig{
+					Enable: aws.Bool(false),
 				},
 			},
 		},
@@ -61,9 +76,7 @@ count: 1`),
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			b := TaskConfig{
-				ExecuteCommand: ExecuteCommand{
-					Enable: aws.Bool(false),
-				},
+				ExecuteCommand: ExecuteCommand{},
 			}
 			err := yaml.Unmarshal(tc.inContent, &b)
 			if tc.wantedError != nil {
@@ -73,6 +86,8 @@ count: 1`),
 				// check memberwise dereferenced pointer equality
 				require.Equal(t, tc.wantedStruct.Enable, b.ExecuteCommand.Enable)
 				require.Equal(t, tc.wantedStruct.Config, b.ExecuteCommand.Config)
+
+				checkYamlRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -115,6 +130,8 @@ func TestSecret_UnmarshalYAML(t *testing.T) {
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
 				require.Equal(t, tc.wanted, actual)
+
+				checkYamlRoundtrip(t, tc.wanted)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}

@@ -105,7 +105,7 @@ type TaskConfig struct {
 	Memory         *int                 `yaml:"memory,omitempty"`
 	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
 	Count          Count                `yaml:"count,omitempty"`
-	ExecuteCommand ExecuteCommand       `yaml:"exec,omitempty"`
+	ExecuteCommand ExecuteCommand       `yaml:"exec"`
 	Variables      map[string]string    `yaml:"variables,omitempty"`
 	EnvFile        *string              `yaml:"env_file,omitempty"`
 	Secrets        map[string]Secret    `yaml:"secrets,omitempty"`
@@ -156,6 +156,13 @@ func (s *Secret) UnmarshalYAML(value *yaml.Node) error {
 		return errors.New(`cannot marshal "secret" field to a string or "secretsmanager" object`)
 	}
 	return nil
+}
+
+func (s Secret) MarshalYAML() (any, error) {
+	if !s.fromSecretsManager.IsEmpty() {
+		return s.fromSecretsManager, nil
+	}
+	return s.from, nil
 }
 
 // IsSecretsManagerName returns true if the secret refers to the name of a secret stored in SecretsManager.
@@ -265,6 +272,14 @@ func (e *ExecuteCommand) UnmarshalYAML(value *yaml.Node) error {
 		return errUnmarshalExec
 	}
 	return nil
+}
+
+func (e ExecuteCommand) MarshalYAML() (any, error) {
+	if !e.Config.IsEmpty() {
+		return e.Config, nil
+	}
+
+	return e.Enable, nil
 }
 
 // ExecuteCommandConfig represents the configuration for ECS Execute Command.
