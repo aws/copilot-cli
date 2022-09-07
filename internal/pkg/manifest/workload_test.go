@@ -74,7 +74,7 @@ depends_on:
 				require.NoError(t, err)
 				require.Equal(t, tc.wantImage, i)
 
-				checkYamlRoundtrip(t, tc.wantImage)
+				checkYAMLRoundtrip(t, tc.wantImage)
 			}
 		})
 	}
@@ -128,7 +128,7 @@ func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.StringSlice, e.EntryPoint.StringSlice)
 				require.Equal(t, tc.wantedStruct.String, e.EntryPoint.String)
 
-				checkYamlRoundtrip(t, tc.wantedStruct)
+				checkYAMLRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -221,7 +221,7 @@ func TestCommandOverride_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.StringSlice, e.Command.StringSlice)
 				require.Equal(t, tc.wantedStruct.String, e.Command.String)
 
-				checkYamlRoundtrip(t, tc.wantedStruct)
+				checkYAMLRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -348,7 +348,7 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 				// check memberwise dereferenced pointer equality
 				require.Equal(t, tc.wantedStruct, b.Build)
 
-				checkYamlRoundtrip(t, tc.wantedStruct)
+				checkYAMLRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -387,7 +387,7 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.PlatformArgs.OSFamily, p.Platform.PlatformArgs.OSFamily)
 				require.Equal(t, tc.wantedStruct.PlatformArgs.Arch, p.Platform.PlatformArgs.Arch)
 
-				checkYamlRoundtrip(t, tc.wantedStruct)
+				checkYAMLRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -435,7 +435,7 @@ func TestPlacementArgOrString_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.PlacementString, v.Placement.PlacementString)
 				require.Equal(t, tc.wantedStruct.PlacementArgs.Subnets, v.Placement.PlacementArgs.Subnets)
 
-				checkYamlRoundtrip(t, tc.wantedStruct)
+				checkYAMLRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -491,7 +491,7 @@ func TestSubnetListOrArgs_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.IDs, v.Subnets.IDs)
 				require.Equal(t, tc.wantedStruct.FromTags, v.Subnets.FromTags)
 
-				checkYamlRoundtrip(t, tc.wantedStruct)
+				checkYAMLRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -956,7 +956,7 @@ network:
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedConfig, m.Network)
 
-				checkYamlRoundtrip(t, tc.wantedConfig)
+				checkYAMLRoundtrip(t, tc.wantedConfig)
 			}
 		})
 	}
@@ -1014,7 +1014,7 @@ func TestDependency_UnmarshalYAML(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedStruct.DependsOn, i.DependsOn)
 
-				checkYamlRoundtrip(t, tc.wantedStruct)
+				checkYAMLRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}

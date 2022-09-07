@@ -87,7 +87,7 @@ count: 1`),
 				require.Equal(t, tc.wantedStruct.Enable, b.ExecuteCommand.Enable)
 				require.Equal(t, tc.wantedStruct.Config, b.ExecuteCommand.Config)
 
-				checkYamlRoundtrip(t, tc.wantedStruct)
+				checkYAMLRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -131,7 +131,7 @@ func TestSecret_UnmarshalYAML(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wanted, actual)
 
-				checkYamlRoundtrip(t, tc.wanted)
+				checkYAMLRoundtrip(t, tc.wanted)
 			} else {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			}
