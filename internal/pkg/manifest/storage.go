@@ -130,6 +130,14 @@ func (e *EFSConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (e EFSConfigOrBool) MarshalYAML() (any, error) {
+	if !e.Advanced.IsEmpty() {
+		return e.Advanced, nil
+	}
+
+	return e.Enabled, nil
+}
+
 // UseManagedFS returns true if the user has specified EFS as a bool, or has only specified UID and GID.
 func (e *EFSConfigOrBool) UseManagedFS() bool {
 	// Respect explicitly enabled or disabled value first.

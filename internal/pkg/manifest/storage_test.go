@@ -4,6 +4,7 @@
 package manifest
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -103,6 +104,13 @@ efs:
 				require.Equal(t, tc.want.EFS.Advanced.AuthConfig, v.EFS.Advanced.AuthConfig)
 				require.Equal(t, tc.want.EFS.Advanced.UID, v.EFS.Advanced.UID)
 				require.Equal(t, tc.want.EFS.Advanced.GID, v.EFS.Advanced.GID)
+
+				roundtrip, err := yaml.Marshal(tc.want)
+				require.NoError(t, err)
+				fmt.Printf("re-marshalled form:\n%s\n", string(roundtrip))
+				var rt testVolume
+				require.NoError(t, yaml.Unmarshal(roundtrip, &rt))
+				require.Equal(t, tc.want, rt)
 			} else {
 				require.EqualError(t, err, tc.wantErr)
 			}
