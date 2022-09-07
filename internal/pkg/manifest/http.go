@@ -57,17 +57,17 @@ func (r RoutingRuleConfigOrBool) MarshalYAML() (interface{}, error) {
 
 // RoutingRuleConfiguration holds the path to route requests to the service.
 type RoutingRuleConfiguration struct {
-	Path                *string                 `yaml:"path"`
-	ProtocolVersion     *string                 `yaml:"version"`
-	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck"`
-	Stickiness          *bool                   `yaml:"stickiness"`
-	Alias               Alias                   `yaml:"alias"`
-	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
+	Path                *string                 `yaml:"path,omitempty"`
+	ProtocolVersion     *string                 `yaml:"version,omitempty"`
+	HealthCheck         HealthCheckArgsOrString `yaml:"healthcheck,omitempty"`
+	Stickiness          *bool                   `yaml:"stickiness,omitempty"`
+	Alias               Alias                   `yaml:"alias,omitempty"`
+	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay,omitempty"`
 	// TargetContainer is the container load balancer routes traffic to.
-	TargetContainer          *string `yaml:"target_container"`
-	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
-	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
-	HostedZone               *string `yaml:"hosted_zone"`
+	TargetContainer          *string `yaml:"target_container,omitempty"`
+	TargetContainerCamelCase *string `yaml:"targetContainer,omitempty"` // "targetContainerCamelCase" for backwards compatibility
+	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips,omitempty"`
+	HostedZone               *string `yaml:"hosted_zone,omitempty"`
 }
 
 // GetTargetContainer returns the correct target container value, if set.

@@ -26,7 +26,7 @@ type WorkerService struct {
 	Workload            `yaml:",inline"`
 	WorkerServiceConfig `yaml:",inline"`
 	// Use *WorkerServiceConfig because of https://github.com/imdario/mergo/issues/146
-	Environments map[string]*WorkerServiceConfig `yaml:",flow"`
+	Environments map[string]*WorkerServiceConfig `yaml:",omitempty"`
 
 	parser template.Parser
 }
@@ -42,23 +42,23 @@ func (s *WorkerService) subnets() *SubnetListOrArgs {
 
 // WorkerServiceConfig holds the configuration that can be overridden per environments.
 type WorkerServiceConfig struct {
-	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
+	ImageConfig      ImageWithHealthcheck `yaml:"image,omitempty"`
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
-	Logging          Logging                   `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
-	Subscribe        SubscribeConfig           `yaml:"subscribe"`
-	PublishConfig    PublishConfig             `yaml:"publish"`
-	Network          NetworkConfig             `yaml:"network"`
-	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
-	DeployConfig     DeploymentConfiguration   `yaml:"deployment"`
-	Observability    Observability             `yaml:"observability"`
+	Logging          Logging                   `yaml:"logging,omitempty"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars,omitempty"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Subscribe        SubscribeConfig           `yaml:"subscribe,omitempty"`
+	PublishConfig    PublishConfig             `yaml:"publish,omitempty"`
+	Network          NetworkConfig             `yaml:"network,omitempty"`
+	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides,omitempty"`
+	DeployConfig     DeploymentConfiguration   `yaml:"deployment,omitempty"`
+	Observability    Observability             `yaml:"observability,omitempty"`
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.
 type SubscribeConfig struct {
-	Topics []TopicSubscription `yaml:"topics"`
-	Queue  SQSQueue            `yaml:"queue"`
+	Topics []TopicSubscription `yaml:"topics,omitempty"`
+	Queue  SQSQueue            `yaml:"queue,omitempty"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
@@ -68,10 +68,10 @@ func (s *SubscribeConfig) IsEmpty() bool {
 
 // TopicSubscription represents the configurable options for setting up a SNS Topic Subscription.
 type TopicSubscription struct {
-	Name         *string                `yaml:"name"`
-	Service      *string                `yaml:"service"`
-	FilterPolicy map[string]interface{} `yaml:"filter_policy"`
-	Queue        SQSQueueOrBool         `yaml:"queue"`
+	Name         *string                `yaml:"name,omitempty"`
+	Service      *string                `yaml:"service,omitempty"`
+	FilterPolicy map[string]interface{} `yaml:"filter_policy,omitempty"`
+	Queue        SQSQueueOrBool         `yaml:"queue,omitempty"`
 }
 
 // SQSQueueOrBool is a custom type which supports unmarshaling yaml which
@@ -108,12 +108,20 @@ func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (q SQSQueueOrBool) MarshalYAML() (any, error) {
+	if !q.Advanced.IsEmpty() {
+		return q.Advanced, nil
+	}
+
+	return q.Enabled, nil
+}
+
 // SQSQueue represents the configurable options for setting up a SQS Queue.
 type SQSQueue struct {
-	Retention  *time.Duration  `yaml:"retention"`
-	Delay      *time.Duration  `yaml:"delay"`
-	Timeout    *time.Duration  `yaml:"timeout"`
-	DeadLetter DeadLetterQueue `yaml:"dead_letter"`
+	Retention  *time.Duration  `yaml:"retention,omitempty"`
+	Delay      *time.Duration  `yaml:"delay,omitempty"`
+	Timeout    *time.Duration  `yaml:"timeout,omitempty"`
+	DeadLetter DeadLetterQueue `yaml:"dead_letter,omitempty"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
@@ -124,7 +132,7 @@ func (q *SQSQueue) IsEmpty() bool {
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
 type DeadLetterQueue struct {
-	Tries *uint16 `yaml:"tries"`
+	Tries *uint16 `yaml:"tries,omitempty"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.

@@ -18,24 +18,24 @@ type BackendService struct {
 	Workload             `yaml:",inline"`
 	BackendServiceConfig `yaml:",inline"`
 	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
-	Environments map[string]*BackendServiceConfig `yaml:",flow"`
+	Environments map[string]*BackendServiceConfig `yaml:",omitempty"`
 
 	parser template.Parser
 }
 
 // BackendServiceConfig holds the configuration that can be overridden per environments.
 type BackendServiceConfig struct {
-	ImageConfig      ImageWithHealthcheckAndOptionalPort `yaml:"image,flow"`
+	ImageConfig      ImageWithHealthcheckAndOptionalPort `yaml:"image,omitempty"`
 	ImageOverride    `yaml:",inline"`
-	RoutingRule      RoutingRuleConfiguration `yaml:"http,flow"`
+	RoutingRule      RoutingRuleConfiguration `yaml:"http,omitempty"`
 	TaskConfig       `yaml:",inline"`
-	Logging          Logging                   `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
-	Network          NetworkConfig             `yaml:"network"`
-	PublishConfig    PublishConfig             `yaml:"publish"`
-	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
-	DeployConfig     DeploymentConfiguration   `yaml:"deployment"`
-	Observability    Observability             `yaml:"observability"`
+	Logging          Logging                   `yaml:"logging,omitempty"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars,omitempty"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Network          NetworkConfig             `yaml:"network,omitempty"`
+	PublishConfig    PublishConfig             `yaml:"publish,omitempty"`
+	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides,omitempty"`
+	DeployConfig     DeploymentConfiguration   `yaml:"deployment,omitempty"`
+	Observability    Observability             `yaml:"observability,omitempty"`
 }
 
 // BackendServiceProps represents the configuration needed to create a backend service.

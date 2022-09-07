@@ -43,25 +43,25 @@ type LoadBalancedWebService struct {
 	Workload                     `yaml:",inline"`
 	LoadBalancedWebServiceConfig `yaml:",inline"`
 	// Use *LoadBalancedWebServiceConfig because of https://github.com/imdario/mergo/issues/146
-	Environments map[string]*LoadBalancedWebServiceConfig `yaml:",flow"` // Fields to override per environment.
+	Environments map[string]*LoadBalancedWebServiceConfig `yaml:",omitempty"` // Fields to override per environment.
 
 	parser template.Parser
 }
 
 // LoadBalancedWebServiceConfig holds the configuration for a load balanced web service.
 type LoadBalancedWebServiceConfig struct {
-	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,flow"`
+	ImageConfig      ImageWithPortAndHealthcheck `yaml:"image,omitempty"`
 	ImageOverride    `yaml:",inline"`
-	RoutingRule      RoutingRuleConfigOrBool `yaml:"http,flow"`
+	RoutingRule      RoutingRuleConfigOrBool `yaml:"http,omitempty"`
 	TaskConfig       `yaml:",inline"`
-	Logging          `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
-	Network          NetworkConfig                    `yaml:"network"`
-	PublishConfig    PublishConfig                    `yaml:"publish"`
-	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides"`
-	NLBConfig        NetworkLoadBalancerConfiguration `yaml:"nlb"`
-	DeployConfig     DeploymentConfiguration          `yaml:"deployment"`
-	Observability    Observability                    `yaml:"observability"`
+	Logging          `yaml:"logging,omitempty"`
+	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars,omitempty"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Network          NetworkConfig                    `yaml:"network,omitempty"`
+	PublishConfig    PublishConfig                    `yaml:"publish,omitempty"`
+	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides,omitempty"`
+	NLBConfig        NetworkLoadBalancerConfiguration `yaml:"nlb,omitempty"`
+	DeployConfig     DeploymentConfiguration          `yaml:"deployment,omitempty"`
+	Observability    Observability                    `yaml:"observability,omitempty"`
 }
 
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
