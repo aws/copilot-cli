@@ -19,6 +19,7 @@ func TestImage_UnmarshalYAML(t *testing.T) {
 		inContent []byte
 
 		wantedError error
+		wantImage   Image
 	}{
 		"error if both build and location are set": {
 			inContent: []byte(`build: mockBuild
@@ -27,6 +28,39 @@ location: mockLocation`),
 		},
 		"success": {
 			inContent: []byte(`location: mockLocation`),
+			wantImage: Image{
+				Location: aws.String("mockLocation"),
+			},
+		},
+		"simple build": {
+			inContent: []byte(`build: mockBuild`),
+			wantImage: Image{
+				Build: BuildArgsOrString{BuildString: aws.String("mockBuild")},
+			},
+		},
+		"complex": {
+			inContent: []byte(
+				`build:
+  context: dir
+  dockerfile: Dockerfile.custom
+credentials: "arn:bull"
+labels:
+  com.docker.example: test
+depends_on:
+  sidecar1: healthy`),
+			wantImage: Image{
+				Build: BuildArgsOrString{BuildArgs: DockerBuildArgs{
+					Context:    aws.String("dir"),
+					Dockerfile: aws.String("Dockerfile.custom"),
+				}},
+				Credentials: aws.String("arn:bull"),
+				DockerLabels: map[string]string{
+					"com.docker.example": "test",
+				},
+				DependsOn: map[string]string{
+					"sidecar1": "healthy",
+				},
+			},
 		},
 	}
 
@@ -38,7 +72,9 @@ location: mockLocation`),
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, "mockLocation", aws.StringValue(i.Location))
+				require.Equal(t, tc.wantImage, i)
+
+				checkYamlRoundtrip(t, tc.wantImage)
 			}
 		})
 	}
@@ -91,6 +127,8 @@ func TestEntryPointOverride_UnmarshalYAML(t *testing.T) {
 				// check memberwise dereferenced pointer equality
 				require.Equal(t, tc.wantedStruct.StringSlice, e.EntryPoint.StringSlice)
 				require.Equal(t, tc.wantedStruct.String, e.EntryPoint.String)
+
+				checkYamlRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -182,6 +220,8 @@ func TestCommandOverride_UnmarshalYAML(t *testing.T) {
 				// check memberwise dereferenced pointer equality
 				require.Equal(t, tc.wantedStruct.StringSlice, e.Command.StringSlice)
 				require.Equal(t, tc.wantedStruct.String, e.Command.String)
+
+				checkYamlRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -306,12 +346,9 @@ func TestBuildArgs_UnmarshalYAML(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				// check memberwise dereferenced pointer equality
-				require.Equal(t, tc.wantedStruct.BuildString, b.Build.BuildString)
-				require.Equal(t, tc.wantedStruct.BuildArgs.Context, b.Build.BuildArgs.Context)
-				require.Equal(t, tc.wantedStruct.BuildArgs.Dockerfile, b.Build.BuildArgs.Dockerfile)
-				require.Equal(t, tc.wantedStruct.BuildArgs.Args, b.Build.BuildArgs.Args)
-				require.Equal(t, tc.wantedStruct.BuildArgs.Target, b.Build.BuildArgs.Target)
-				require.Equal(t, tc.wantedStruct.BuildArgs.CacheFrom, b.Build.BuildArgs.CacheFrom)
+				require.Equal(t, tc.wantedStruct, b.Build)
+
+				checkYamlRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -349,6 +386,8 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 				require.Equal(t, tc.wantedStruct.PlatformString, p.Platform.PlatformString)
 				require.Equal(t, tc.wantedStruct.PlatformArgs.OSFamily, p.Platform.PlatformArgs.OSFamily)
 				require.Equal(t, tc.wantedStruct.PlatformArgs.Arch, p.Platform.PlatformArgs.Arch)
+
+				checkYamlRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -395,6 +434,8 @@ func TestPlacementArgOrString_UnmarshalYAML(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedStruct.PlacementString, v.Placement.PlacementString)
 				require.Equal(t, tc.wantedStruct.PlacementArgs.Subnets, v.Placement.PlacementArgs.Subnets)
+
+				checkYamlRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -449,6 +490,8 @@ func TestSubnetListOrArgs_UnmarshalYAML(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedStruct.IDs, v.Subnets.IDs)
 				require.Equal(t, tc.wantedStruct.FromTags, v.Subnets.FromTags)
+
+				checkYamlRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}
@@ -912,6 +955,8 @@ network:
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedConfig, m.Network)
+
+				checkYamlRoundtrip(t, tc.wantedConfig)
 			}
 		})
 	}
@@ -968,6 +1013,8 @@ func TestDependency_UnmarshalYAML(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedStruct.DependsOn, i.DependsOn)
+
+				checkYamlRoundtrip(t, tc.wantedStruct)
 			}
 		})
 	}

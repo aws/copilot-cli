@@ -119,11 +119,11 @@ type Workload struct {
 
 // Image represents the workload's container image.
 type Image struct {
-	Build        BuildArgsOrString `yaml:"build"`           // Build an image from a Dockerfile.
-	Location     *string           `yaml:"location"`        // Use an existing image instead.
-	Credentials  *string           `yaml:"credentials"`     // ARN of the secret containing the private repository credentials.
-	DockerLabels map[string]string `yaml:"labels,flow"`     // Apply Docker labels to the container at runtime.
-	DependsOn    DependsOn         `yaml:"depends_on,flow"` // Add any sidecar dependencies.
+	Build        BuildArgsOrString `yaml:"build,omitempty"`       // Build an image from a Dockerfile.
+	Location     *string           `yaml:"location,omitempty"`    // Use an existing image instead.
+	Credentials  *string           `yaml:"credentials,omitempty"` // ARN of the secret containing the private repository credentials.
+	DockerLabels map[string]string `yaml:"labels,omitempty"`      // Apply Docker labels to the container at runtime.
+	DependsOn    DependsOn         `yaml:"depends_on,omitempty"`  // Add any sidecar dependencies.
 }
 
 // DependsOn represents container dependency for a container.
@@ -226,8 +226,8 @@ func (i *Image) cacheFrom() []string {
 
 // ImageOverride holds fields that override Dockerfile image defaults.
 type ImageOverride struct {
-	EntryPoint EntryPointOverride `yaml:"entrypoint"`
-	Command    CommandOverride    `yaml:"command"`
+	EntryPoint EntryPointOverride `yaml:"entrypoint,omitempty"`
+	Command    CommandOverride    `yaml:"command,omitempty"`
 }
 
 // StringSliceOrShellString is either a slice of string or a string using shell-style rules.
@@ -251,6 +251,10 @@ func (e *EntryPointOverride) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (e EntryPointOverride) MarshalYAML() (any, error) {
+	return (StringSliceOrString)(e), nil
+}
+
 // ToStringSlice converts an EntryPointOverride to a slice of string using shell-style rules.
 func (e *EntryPointOverride) ToStringSlice() ([]string, error) {
 	out, err := (*stringSliceOrShellString)(e).toStringSlice()
@@ -268,6 +272,10 @@ func (c *CommandOverride) UnmarshalYAML(value *yaml.Node) error {
 		return errUnmarshalCommand
 	}
 	return nil
+}
+
+func (c CommandOverride) MarshalYAML() (any, error) {
+	return (StringSliceOrString)(c), nil
 }
 
 // ToStringSlice converts an CommandOverride to a slice of string using shell-style rules.
@@ -303,6 +311,14 @@ func (s *StringSliceOrString) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	return value.Decode(&s.String)
+}
+
+func (s StringSliceOrString) MarshalYAML() (any, error) {
+	if s.StringSlice != nil {
+		return s.StringSlice, nil
+	}
+
+	return s.String, nil
 }
 
 func (s *StringSliceOrString) isEmpty() bool {
@@ -374,6 +390,14 @@ func (b *BuildArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (b BuildArgsOrString) MarshalYAML() (any, error) {
+	if !b.BuildArgs.isEmpty() {
+		return b.BuildArgs, nil
+	}
+
+	return b.BuildString, nil
+}
+
 // DockerBuildArgs represents the options specifiable under the "build" field
 // of Docker Compose services. For more information, see:
 // https://docs.docker.com/compose/compose-file/#build
@@ -394,17 +418,17 @@ func (b *DockerBuildArgs) isEmpty() bool {
 
 // PublishConfig represents the configurable options for setting up publishers.
 type PublishConfig struct {
-	Topics []Topic `yaml:"topics"`
+	Topics []Topic `yaml:"topics,omitempty"`
 }
 
 // Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
-	Name *string `yaml:"name"`
+	Name *string `yaml:"name,omitempty"`
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
-	VPC vpcConfig `yaml:"vpc"`
+	VPC vpcConfig `yaml:"vpc,omitempty"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
@@ -454,9 +478,17 @@ func (p *PlacementArgOrString) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (p PlacementArgOrString) MarshalYAML() (any, error) {
+	if !p.PlacementArgs.isEmpty() {
+		return p.PlacementArgs, nil
+	}
+
+	return p.PlacementString, nil
+}
+
 // PlacementArgs represents where to place tasks.
 type PlacementArgs struct {
-	Subnets SubnetListOrArgs `yaml:"subnets"`
+	Subnets SubnetListOrArgs `yaml:"subnets,omitempty"`
 }
 
 func (p *PlacementArgs) isEmpty() bool {
@@ -508,7 +540,7 @@ type Tags map[string]StringSliceOrString
 
 // SubnetArgs represents what subnets to place tasks.
 type SubnetArgs struct {
-	FromTags Tags `yaml:"from_tags"`
+	FromTags Tags `yaml:"from_tags,omitempty"`
 }
 
 func (s *SubnetArgs) isEmpty() bool {
@@ -536,6 +568,14 @@ func (s *SubnetListOrArgs) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (s SubnetListOrArgs) MarshalYAML() (any, error) {
+	if !s.SubnetArgs.isEmpty() {
+		return s.SubnetArgs, nil
+	}
+
+	return s.IDs, nil
+}
+
 // SecurityGroupsIDsOrConfig represents security groups attached to task. It supports unmarshalling
 // yaml which can either be of type SecurityGroupsConfig or a list of strings.
 type SecurityGroupsIDsOrConfig struct {
@@ -550,8 +590,8 @@ func (s *SecurityGroupsIDsOrConfig) isEmpty() bool {
 // SecurityGroupsConfig represents which security groups are attached to a task
 // and if default security group is applied.
 type SecurityGroupsConfig struct {
-	SecurityGroups []string `yaml:"groups"`
-	DenyDefault    *bool    `yaml:"deny_default"`
+	SecurityGroups []string `yaml:"groups,omitempty"`
+	DenyDefault    *bool    `yaml:"deny_default,omitempty"`
 }
 
 func (s *SecurityGroupsConfig) isEmpty() bool {
@@ -581,6 +621,14 @@ func (s *SecurityGroupsIDsOrConfig) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (s SecurityGroupsIDsOrConfig) MarshalYAML() (any, error) {
+	if !s.AdvancedConfig.isEmpty() {
+		return s.AdvancedConfig, nil
+	}
+
+	return s.IDs, nil
+}
+
 // GetIDs returns security groups from SecurityGroupsIDsOrConfig that are attached to task.
 // nil is returned if no security groups are specified.
 func (s *SecurityGroupsIDsOrConfig) GetIDs() []string {
@@ -601,8 +649,8 @@ func (s *SecurityGroupsIDsOrConfig) IsDefaultSecurityGroupDenied() bool {
 
 // vpcConfig represents the security groups and subnets attached to a task.
 type vpcConfig struct {
-	Placement      PlacementArgOrString      `yaml:"placement"`
-	SecurityGroups SecurityGroupsIDsOrConfig `yaml:"security_groups"`
+	Placement      PlacementArgOrString      `yaml:"placement,omitempty"`
+	SecurityGroups SecurityGroupsIDsOrConfig `yaml:"security_groups,omitempty"`
 }
 
 func (v *vpcConfig) isEmpty() bool {
@@ -635,6 +683,14 @@ func (p *PlatformArgsOrString) UnmarshalYAML(value *yaml.Node) error {
 		return errUnmarshalPlatformOpts
 	}
 	return nil
+}
+
+func (p PlatformArgsOrString) MarshalYAML() (any, error) {
+	if !p.PlatformArgs.isEmpty() {
+		return p.PlatformArgs, nil
+	}
+
+	return p.PlatformString, nil
 }
 
 // OS returns the operating system family.
