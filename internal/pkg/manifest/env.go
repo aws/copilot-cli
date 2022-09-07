@@ -175,6 +175,14 @@ func (cfg *portsConfig) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
+func (cfg portsConfig) MarshalYAML() (any, error) {
+	if cfg.Port != nil {
+		return cfg.Port, nil
+	}
+
+	return cfg.Range, nil
+}
+
 // EnvSecurityGroup returns the security group config if the user has set any values.
 // If there is no env security group settings, then returns nil and false.
 func (cfg *EnvironmentConfig) EnvSecurityGroup() (*securityGroupConfig, bool) {
@@ -232,6 +240,14 @@ func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 		return errUnmarshalEnvironmentCDNConfig
 	}
 	return nil
+}
+
+func (cfg environmentCDNConfig) MarshalYAML() (any, error) {
+	if !cfg.Config.isEmpty() {
+		return cfg.Config, nil
+	}
+
+	return cfg.Enabled, nil
 }
 
 // IsEmpty returns true if vpc is not configured.
@@ -455,6 +471,14 @@ func (al *ELBAccessLogsArgsOrBool) UnmarshalYAML(value *yaml.Node) error {
 		return errUnmarshalELBAccessLogs
 	}
 	return nil
+}
+
+func (al ELBAccessLogsArgsOrBool) MarshalYAML() (any, error) {
+	if !al.AdvancedConfig.isEmpty() {
+		return al.AdvancedConfig, nil
+	}
+
+	return al.Enabled, nil
 }
 
 // ELBAccessLogsArgs holds the access logs configuration.
