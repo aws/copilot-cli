@@ -4,7 +4,7 @@ Copilot は、Amazon CloudFront を介した Content Delivery Network をサポ�
 
 ## Copilot による CloudFront インフラストラクチャ
 
-Copilot が [CloudFront ディストリビューション](https://docs.aws.amazon.com/ja_jp/AmazonCloudFront/latest/DeveloperGuide/distribution-overview.html) を作成すると、Application Load Balancer の代わりに Application への新しいエントリポイントになるようディストリビューションが作成されます。これにより、CloudFront tは世界中に配置されたエッジロケーションを経由して、ロードバランサーにトラフィックをより速くルーティングすることができます。
+Copilot が [CloudFront ディストリビューション](https://docs.aws.amazon.com/ja_jp/AmazonCloudFront/latest/DeveloperGuide/distribution-overview.html) を作成すると、Application Load Balancer の代わりに Application への新しいエントリポイントになるようディストリビューションが作成されます。これにより、CloudFront は世界中に配置されたエッジロケーションを経由して、ロードバランサーにトラフィックをより速くルーティングすることができます。
 
 ## 既存のアプリケーションで CloudFront を使うには?
 

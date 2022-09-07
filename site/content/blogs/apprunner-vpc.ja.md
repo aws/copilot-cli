@@ -54,7 +54,7 @@ AWS Copilot CLI と AWS App Runner の VPC サポートの機能を実証する�
 
 このコマンドを実行すると、Copilot は `./copilot` というフォルダを使用して、_Manifest_ と呼ばれる Infrastructure-as-Code のYAML 設定ファイルを保持するようになり、Copilot を使って AWS 上にコンテナ化した Application を簡単にデプロイできるようになります。
 
-次のステップは、Service をデプロイする Application の Environment を作成することです。AWS Copilot では、異なる Environment を作成することで、別のアカウントやリージョンに Application を論理的に分離してデプロイすることができます。一般的なユースケースは、テスト環境と別の本番環境があり、テスト環境上で検証された場合にのみ Application がデプロイされる、というものです。この記事の範囲では、次のコマンドで作成した _test_ という名前のテスト環境にのみ Service をデプロイすることとします。
+次のステップは、Service をデプロイする Application の Environment を作成することです。AWS Copilot では、異なる環境を作成することで、別のアカウントやリージョンにアプリケーションを論理的に分離してデプロイすることができます。一般的なユースケースは、テスト環境と別の本番環境があり、テスト環境上で検証された場合にのみアプリケーションがデプロイされる、というものです。この記事の範囲では、次のコマンドで作成した _test_ という名前のテスト環境にのみ Service をデプロイすることとします。
 
 ```
 copilot env init \
@@ -71,7 +71,7 @@ copilot env init \
 
 ### AWS App Runner 上で動作する Service の作成
 
-AWS Copilotは、様々なタイプの Service をデプロイするために使用できる、いくつかの抽象化された機能を提供します。この記事の例では、[Request-Driven Web Service](https://aws.github.io/copilot-cli/ja/docs/manifest/rd-web-service/) という Copilot パターンを使用しています。これは、受信トラフィックに基づいてオートスケールし、トラフィックがないときはベースラインまでスケールダウンする AWS App Runner Service をデプロイします。このオプションは、リクエスト量が急激に増加する HTTP サービスや、リクエスト量が少ない場合に、より費用対効果が高くなります。
+AWS Copilotは、様々なタイプの Service をデプロイするために使用できる、いくつかの抽象化された機能を提供します。この記事の例では、[Request-Driven Web Service](https://aws.github.io/copilot-cli/ja/docs/manifest/rd-web-service/) という Copilot パターンを使用しています。これは、受信トラフィックに基づいてオートスケールし、トラフィックがないときはベースラインまでスケールダウンする AWS App Runner サービスをデプロイします。このオプションは、リクエスト量が急激に増加する HTTP サービスや、リクエスト量が少ない場合に、より費用対効果が高くなります。
 
 ```
 copilot svc init \
