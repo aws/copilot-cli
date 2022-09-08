@@ -1,69 +1,201 @@
 以下は `'Load Balanced Web Service'` Manifest で利用できるすべてのプロパティのリストです。[Copilot Service の概念](../concepts/services.ja.md)説明のページも合わせてご覧ください。
 
-???+ note "frontend Service のサンプル Manifest"
+???+ note "インターネット向け Service の サンプル Manifest"
 
-    ```yaml
-        # Service 名はロググループや ECS サービスなどのリソースの命名に利用されます。
-        name: frontend
-        type: Load Balanced Web Service
+    === "Basic"
 
-        # Serviceのトラフィックを分散します。
+        ```yaml
+            name: 'frontend'
+            type: 'Load Balanced Web Service'
+    
+            image:
+              build: './frontend/Dockerfile'
+              port: 8080
+    
+            http:
+              path: '/'
+              healthcheck: '/_healthcheck'
+    
+            cpu: 256
+            memory: 512
+            count: 3
+            exec: true
+    
+            variables:
+              LOG_LEVEL: info
+            secrets:
+              GITHUB_TOKEN: GITHUB_TOKEN
+              DB_SECRET:
+                secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+        ```
+
+    === "With a domain"
+
+        ```yaml
+            name: 'frontend'
+            type: 'Load Balanced Web Service'
+    
+            image:
+              build: './frontend/Dockerfile'
+              port: 8080
+    
+            http:
+              path: '/'
+              alias: 'example.com'
+
+            environments:
+              qa:
+                http:
+                  alias: # 証明書インポート済みの "qa" Environment
+                    - name: 'qa.example.com'
+                      hosted_zone: Z0873220N255IR3MTNR4
+        ```
+
+    === "Larger containers"
+
+        ```yaml
+        # 例えば、外部からのトラフィックを受け入れる前に、Java サービスをウォームアップしておきたい場合など。
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build:
+            dockerfile: './frontend/Dockerfile'
+            context: './frontend'
+          port: 80
+
         http:
           path: '/'
           healthcheck:
-            path: '/_healthcheck'
+            path: '/_deephealthcheck'
             port: 8080
             success_codes: '200,301'
-            healthy_threshold: 3
+            healthy_threshold: 4
             unhealthy_threshold: 2
             interval: 15s
             timeout: 10s
-            grace_period: 45s
-          deregistration_delay: 5s
-          stickiness: false
+            grace_period: 2m
+          deregistration_delay: 50s
+          stickiness: true
           allowed_source_ips: ["10.24.34.0/23"]
-          alias: example.com
 
-        nlb:
-          port: 443/tls
+        cpu: 2048
+        memory: 4096
+        count: 3
+        storage:
+          ephemeral: 100
 
-        # コンテナと Service の構成
+        network:
+          vpc:
+            placement: 'private'
+        ```
+
+    === "Autoscaling"
+
+        ```yaml
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        http:
+          path: '/'
         image:
-          build:
-            dockerfile: ./frontend/Dockerfile
-            context: ./frontend
+          location: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/frontend:latest
           port: 80
 
-        cpu: 256
-        memory: 512
+        cpu: 512
+        memory: 1024
         count:
-          range: 1-10
+          range: 1-10 
+          cooldown:
+            in: 60s
+            out: 30s
           cpu_percentage: 70
-          memory_percentage: 80
-          requests: 10000
+          requests: 30
           response_time: 2s
-        exec: true
+        ```
+
+    === "Event-driven"
+
+        ```yaml
+        # https://aws.github.io/copilot-cli/docs/developing/publish-subscribe/ を参照してください。
+        name: 'orders'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: Dockerfile
+          port: 80
+        http:
+          path: '/'
+          alias: 'orders.example.com'
 
         variables:
-          LOG_LEVEL: info
-        env_file: log.env
-        secrets:
-          GITHUB_TOKEN: GITHUB_TOKEN
+          DDB_TABLE_NAME: 'orders'
 
-        # 上記すべての値は Environment ごとにオーバーライド可能です。
-        environments:
-          test:
-            count:
-              range:
-                min: 1
-                max: 10
-                spot_from: 2
-          staging:
-            count:
-              spot: 2
-          production:
-            count: 2
-    ```
+        publish:
+          topics:
+            - name: 'products'
+        ```
+
+    === "Network Load Balancer"
+
+        ```yaml
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: Dockerfile
+          port: 8080
+
+        http: false
+        nlb:
+          alias: 'example.com'
+          port: 80/tcp
+          target_container: envoy
+
+        network:
+          vpc:
+            placement: 'private'
+
+        sidecars:
+          envoy:
+            port: 80
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/envoy:latest
+        ```
+
+    === "Shared file system"
+
+        ```yaml
+        # http://localhost:8000/copilot-cli/docs/developing/storage.ja.md#ファイルシステム を参照してください。
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: Dockerfile
+          port: 80
+          depends_on:
+            bootstrap: success
+        
+        http:
+          path: '/'
+
+        storage:
+          volumes:
+            wp:
+              path: /bitnami/wordpress
+              read_only: false
+              efs: true
+
+        # ブートストラップコンテナを使って、ファイルシステム内のコンテンツを用意しておきます。
+        sidecars:
+          bootstrap:
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/bootstrap:v1.0.0
+            essential: false
+            mount_points:
+              - source_volume: wp
+                path: /bitnami/wordpress
+                read_only: false
+        ```
+
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。
@@ -120,7 +252,6 @@ http:
       hosted_zone: AN0THE9H05TED20NEID
 ```
 <span class="parent-field">http.</span><a id="http-hosted-zone" href="#http-hosted-zone" class="field">`hosted_zone`</a> <span class="type">String</span>  
-ID of your existing hosted zone; must be used with `http.alias`. If you have an environment with imported certificates, you can specify the hosted zone into which Copilot should insert the A record once the load balancer is created.
 既存のプライベートホストゾーンの ID。`http.alias` と共に使用します。証明書をインポートした Environment がある場合、ロードバランサーの作成後に Copilot が A レコードを挿入するホストゾーンを指定できます。
 ```yaml
 http:
@@ -145,6 +276,8 @@ gRPC を利用する場合は、Application にドメインが関連付けられ
 <div class="separator"></div>
 
 <a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>
+Service が保つべきタスクの数。
+
 次の様に指定すると、
 ```yaml
 count: 5
@@ -167,8 +300,15 @@ count:
 ```yaml
 count:
   range: 1-10
+  cooldown:
+    in: 30s
+    out: 60s
   cpu_percentage: 70
-  memory_percentage: 80
+  memory_percentage:
+    value: 80
+    cooldown:
+      in: 80s
+      out: 160s
   requests: 10000
   response_time: 2s
 ```
@@ -193,16 +333,34 @@ count:
 
 上記の例では Application Auto Scaling は 1-10 の範囲で設定されますが、最初の２タスクはオンデマンド Fargate キャパシティに配置されます。Service が３つ以上のタスクを実行するようにスケールした場合、３つ目以降のタスクは最大タスク数に達するまで Fargate Spot に配置されます。
 
-<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
 Service がオートスケーリングを利用する場合の最小タスク数。
 
-<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
 Service がオートスケーリングを利用する場合の最大タスク数。
 
-<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
 Service の何個目のタスクから Fargate Spot キャパシティプロバイダーを利用するか。
 
-<span class="parent-field">count.</span><a id="count-cpu-percentage" href="#count-cpu-percentage" class="field">`cpu_percentage`</a> <span class="type">Integer</span>
+<span class="parent-field">count.</span><a id="count-cooldown" href="#count-cooldown" class="field">`cooldown`</a> <span class="type">Map</span>
+指定されたすべてのオートスケーリングフィールドのデフォルトクールダウンとして使用されるクールダウンスケーリングフィールド。
+
+<span class="parent-field">count.cooldown.</span><a id="count-cooldown-in" href="#count-cooldown-in" class="field">`in`</a> <span class="type">Duration</span>
+Service をスケールアップするためのオートスケーリングのクールダウン時間。
+
+<span class="parent-field">count.cooldown.</span><a id="count-cooldown-out" href="#count-cooldown-out" class="field">`out`</a> <span class="type">Duration</span>
+Service をスケールダウンさせるためのオートスケーリングクールダウン時間。
+
+`cpu_percentage`、`memory_percentage`、`requests` および `response_time` のオプションは、オートスケーリングに関する `count` フィールドにて、フィールド値としてあるいはフィールド値とクールダウン設定に関する詳細情報を含むマップとして定義することができます。
+```yaml
+value: 50
+cooldown:
+  in: 30s
+  out: 60s
+```
+ここで指定したクールダウン設定は、デフォルトのクールダウン設定より優先されます。
+
+<span class="parent-field">count.</span><a id="count-cpu-percentage" href="#count-cpu-percentage" class="field">`cpu_percentage`</a> <span class="type">Integer or Map</span>
 Service が保つべき平均 CPU 使用率を指定し、それによってスケールアップ・ダウンします。
 
 <span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>
