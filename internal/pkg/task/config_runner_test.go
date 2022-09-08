@@ -254,13 +254,121 @@ func TestNetworkConfigRunner_Run(t *testing.T) {
 				},
 			},
 		},
-		"successfully kick off task with platform version for windows": {
+		"successfully kick off task with platform version for windows 2019 core": {
 			count:     1,
 			groupName: "my-task",
 
 			securityGroups: []string{"sg-1", "sg-2"},
 
 			os:   "WINDOWS_SERVER_2019_CORE",
+			arch: "X86_64",
+
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
+				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
+			},
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).
+					Return([]string{"default-subnet-1", "default-subnet-2"}, nil)
+			},
+			mockStarter: func(m *mocks.MockRunner) {
+				m.EXPECT().RunTask(ecs.RunTaskInput{
+					Cluster:         "cluster-1",
+					Count:           1,
+					Subnets:         []string{"default-subnet-1", "default-subnet-2"},
+					SecurityGroups:  []string{"sg-1", "sg-2"},
+					TaskFamilyName:  taskFamilyName("my-task"),
+					StartedBy:       startedBy,
+					PlatformVersion: "1.0.0",
+					EnableExec:      true,
+				}).Return([]*ecs.Task{&taskWithENI}, nil)
+			},
+
+			wantedTasks: []*Task{
+				{
+					TaskARN: "task-1",
+					ENI:     "eni-1",
+				},
+			},
+		},
+		"successfully kick off task with platform version for windows 2019 full": {
+			count:     1,
+			groupName: "my-task",
+
+			securityGroups: []string{"sg-1", "sg-2"},
+
+			os:   "WINDOWS_SERVER_2019_FULL",
+			arch: "X86_64",
+
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
+				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
+			},
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).
+					Return([]string{"default-subnet-1", "default-subnet-2"}, nil)
+			},
+			mockStarter: func(m *mocks.MockRunner) {
+				m.EXPECT().RunTask(ecs.RunTaskInput{
+					Cluster:         "cluster-1",
+					Count:           1,
+					Subnets:         []string{"default-subnet-1", "default-subnet-2"},
+					SecurityGroups:  []string{"sg-1", "sg-2"},
+					TaskFamilyName:  taskFamilyName("my-task"),
+					StartedBy:       startedBy,
+					PlatformVersion: "1.0.0",
+					EnableExec:      true,
+				}).Return([]*ecs.Task{&taskWithENI}, nil)
+			},
+
+			wantedTasks: []*Task{
+				{
+					TaskARN: "task-1",
+					ENI:     "eni-1",
+				},
+			},
+		},
+		"successfully kick off task with platform version for windows 2022 core": {
+			count:     1,
+			groupName: "my-task",
+
+			securityGroups: []string{"sg-1", "sg-2"},
+
+			os:   "WINDOWS_SERVER_2022_CORE",
+			arch: "X86_64",
+
+			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
+				m.EXPECT().DefaultCluster().Return("cluster-1", nil)
+			},
+			MockVPCGetter: func(m *mocks.MockVPCGetter) {
+				m.EXPECT().SubnetIDs([]ec2.Filter{ec2.FilterForDefaultVPCSubnets}).
+					Return([]string{"default-subnet-1", "default-subnet-2"}, nil)
+			},
+			mockStarter: func(m *mocks.MockRunner) {
+				m.EXPECT().RunTask(ecs.RunTaskInput{
+					Cluster:         "cluster-1",
+					Count:           1,
+					Subnets:         []string{"default-subnet-1", "default-subnet-2"},
+					SecurityGroups:  []string{"sg-1", "sg-2"},
+					TaskFamilyName:  taskFamilyName("my-task"),
+					StartedBy:       startedBy,
+					PlatformVersion: "1.0.0",
+					EnableExec:      true,
+				}).Return([]*ecs.Task{&taskWithENI}, nil)
+			},
+
+			wantedTasks: []*Task{
+				{
+					TaskARN: "task-1",
+					ENI:     "eni-1",
+				},
+			},
+		},
+		"successfully kick off task with platform version for windows 2022 full": {
+			count:     1,
+			groupName: "my-task",
+
+			securityGroups: []string{"sg-1", "sg-2"},
+
+			os:   "WINDOWS_SERVER_2022_FULL",
 			arch: "X86_64",
 
 			mockClusterGetter: func(m *mocks.MockDefaultClusterGetter) {
