@@ -8,7 +8,7 @@ $ copilot job run
 `copilot job run` は、スケジュールされた Job を実行します。
 
 ## フラグ
-```bash
+```console
   -a, --app string          Name of the application.
   -e, --env string          Name of the environment.
   -h, --help                help for package
