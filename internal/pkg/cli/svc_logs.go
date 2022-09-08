@@ -126,17 +126,16 @@ func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 			Name: opts.name,
 			Sess: sess,
 		}
-		switch opts.targetSvcType {
-		case manifest.RequestDrivenWebServiceType:
-			opts.logsSvc, err = logging.NewAppRunnerServiceLogger(&logging.NewAppRunnerServiceLoggerOpts{
-				NewWorkloadLoggerOpts: newWorkloadLoggerOpts,
-				ConfigStore:           opts.configStore,
-			})
-			if err != nil {
-				return err
-			}
-		default:
+		if opts.targetSvcType != manifest.RequestDrivenWebServiceType {
 			opts.logsSvc = logging.NewECSServiceClient(newWorkloadLoggerOpts)
+			return nil
+		}
+		opts.logsSvc, err = logging.NewAppRunnerServiceLogger(&logging.NewAppRunnerServiceLoggerOpts{
+			NewWorkloadLoggerOpts: newWorkloadLoggerOpts,
+			ConfigStore:           opts.configStore,
+		})
+		if err != nil {
+			return err
 		}
 		return nil
 	}
