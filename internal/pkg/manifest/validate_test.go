@@ -2680,7 +2680,7 @@ func TestTopic_validate(t *testing.T) {
 			in: Topic{
 				Name: aws.String("!@#"),
 			},
-			wanted: errors.New(`"name" can only contain letters, numbers, underscores, and hypthens`),
+			wanted: errors.New(`"name" can only contain letters, numbers, underscores, hypthens and .fifo suffix`),
 		},
 	}
 	for name, tc := range testCases {
