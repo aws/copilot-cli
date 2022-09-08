@@ -88,13 +88,14 @@ func newJobDeployer(o *deployJobOpts) (workloadDeployer, error) {
 	}
 	content := o.appliedDynamicMft.Manifest()
 	in := deploy.WorkloadDeployerInput{
-		SessionProvider: o.sessProvider,
-		Name:            o.name,
-		App:             o.targetApp,
-		Env:             o.targetEnv,
-		ImageTag:        o.imageTag,
-		Mft:             content,
-		RawMft:          raw,
+		SessionProvider:  o.sessProvider,
+		Name:             o.name,
+		App:              o.targetApp,
+		Env:              o.targetEnv,
+		ImageTag:         o.imageTag,
+		Mft:              content,
+		RawMft:           raw,
+		EnvVersionGetter: o.envFeaturesDescriber,
 	}
 	var deployer workloadDeployer
 	switch t := content.(type) {

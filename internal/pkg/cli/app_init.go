@@ -34,9 +34,10 @@ const (
 )
 
 type initAppVars struct {
-	name         string
-	domainName   string
-	resourceTags map[string]string
+	name                string
+	permissionsBoundary string
+	domainName          string
+	resourceTags        map[string]string
 }
 
 type initAppOpts struct {
@@ -192,6 +193,7 @@ func (o *initAppOpts) Execute() error {
 		AccountID:          caller.Account,
 		DomainName:         o.domainName,
 		DomainHostedZoneID: hostedZoneID,
+		PermissionBoundary: o.permissionsBoundary,
 		AdditionalTags:     o.resourceTags,
 		Version:            deploy.LatestAppTemplateVersion,
 	})

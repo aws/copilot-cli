@@ -101,6 +101,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 				ServiceDiscoveryEndpoint: svcDiscoveryEndpointName,
 				AccountID:                "123456789123",
 				Region:                   "us-west-2",
+				EnvVersion:               "v1.42.0",
 			},
 			RootUserARN: "arn:aws:iam::123456789123:root",
 		}, stack.WithNLB([]string{"10.0.0.0/24", "10.1.0.0/24"}))

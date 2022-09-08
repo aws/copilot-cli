@@ -219,6 +219,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       Workload: !Ref WorkloadName
       EnvStack: !Sub '${AppName}-${EnvName}'
       Parameters: [Aliases]
+      EnvVersion: v1.42.0
   EnvControllerFunction:
     Type: AWS::Lambda::Function
     Properties:

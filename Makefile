@@ -67,7 +67,7 @@ test: run-unit-test custom-resource-tests
 custom-resource-tests: tools
 	@echo "Running custom resource unit tests" &&\
 	cd ${SOURCE_CUSTOM_RESOURCES} &&\
-	npm test &&\
+	npm test -- --coverage &&\
 	cd ${ROOT_SRC_DIR}
 
 # Minifies the resources in cf-custom-resources/lib and copies
@@ -223,6 +223,7 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/list/mocks/mock_list.go -source=./internal/pkg/cli/list/list.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_svc.go -source=./internal/pkg/cli/deploy/svc.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_env.go -source=./internal/pkg/cli/deploy/env.go
+	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/patch/mocks/mock_env.go -source=./internal/pkg/cli/deploy/patch/env.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/initialize/mocks/mock_workload.go -source=./internal/pkg/initialize/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/apprunner/mocks/mock_apprunner.go -source=./internal/pkg/apprunner/apprunner.go

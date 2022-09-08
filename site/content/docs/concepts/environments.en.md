@@ -9,14 +9,19 @@ In the diagram below we have an application called _MyApp_ with two services, _A
 ## Creating an Environment
 
 To create a new environment in your app, you can run `copilot env init` from within your workspace. Copilot will ask you what you want to name this environment and what profile you'd like to use to bootstrap the environment. These profiles are AWS [named profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html) which are associated with a particular account and region. When you select one of these profiles, your environment will be created in whichever account and region that profile is associated with.
-
-
-```bash
+```console
 $ copilot env init
 ```
 
-After you run `copilot env init` you can watch as Copilot sets up all the environment resources, which can take a few minutes. Once all those resources are created, the environment will be linked back to the application account. This allows actors in the application account to manage the environment, even without access to the environment account. This linking process also creates and configures new regional ECR repositories, if necessary.
+After you run `copilot env init`, you can watch as Copilot sets up the two IAM roles that are essential in updating and managing the environment. If the environment was created with a different AWS account than the app, the environment will be linked back to the application account; this allows actors in the application account to manage the environment, even without access to the environment account. Copilot creates an [env manifest](../manifest/environment.en.md) at `copilot/environments/[env name]/manifest.yml`.
 
+## Deploying an Environment
+
+If you'd like, you may configure your environment by making changes to your [env manifest](../manifest/environment.en.md) before deploying it:
+```console
+$ copilot env deploy
+```
+In this step, Copilot creates your environment infrastructure resources, like an ECS cluster, a security group, and a private DNS namespace. After deployment, you can modify your env manifest and redeploy by simply running [`copilot env deploy`](../commands/env-deploy.en.md) again.
 
 ### Deploying a Service
 
@@ -54,7 +59,7 @@ Now that we've spun up an environment, we can check on it using Copilot. Below a
 
 To see all the environments in your application you can run `copilot env ls`.
 
-```bash
+```console
 $ copilot env ls
 test
 production
@@ -64,7 +69,7 @@ production
 
 Running `copilot env show` will show you a summary of your environment. Here's an example of the output you might see for our test environment. This output includes the account and region the environment is in, the services deployed to that environment, and the tag that all resources created in this environment will have. You can also provide an optional `--resources` flag to see all AWS resources associated with this environment.
 
-```bash
+```console
 $ copilot env show --name test
 About
 
@@ -72,7 +77,7 @@ About
   Region            us-west-2
   Account ID        693652174720
 
-Services
+Workloads
 
   Name              Type
   ----              ----

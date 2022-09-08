@@ -62,6 +62,7 @@ func TestWorkerService_Template(t *testing.T) {
 			ServiceDiscoveryEndpoint: "test.my-app.local",
 			AccountID:                "123456789123",
 			Region:                   "us-west-2",
+			EnvVersion:               "v1.42.0",
 		},
 	})
 

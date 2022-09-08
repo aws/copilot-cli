@@ -57,6 +57,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 				"DynamicDesiredCountFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
 				"RulePriorityFunction":        "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
 			},
+			EnvVersion: "v1.42.0",
 		},
 	})
 	require.NoError(t, err)
@@ -100,6 +101,7 @@ func TestScheduledJob_Validate(t *testing.T) {
 			CustomResourcesURL: map[string]string{
 				"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
 			},
+			EnvVersion: "v1.42.0",
 		},
 	})
 
