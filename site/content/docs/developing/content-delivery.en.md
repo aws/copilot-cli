@@ -1,6 +1,6 @@
 # Global Content Delivery
 
-Copilot supports a Content Delivery Network through AWS CloudFront. This resource is managed by Copilot at the environment level, allowing users to leverage CloudFront through the [environment manifest](../manifest/environment.en.md).
+Copilot supports a Content Delivery Network through Amazon CloudFront. This resource is managed by Copilot at the environment level, allowing users to leverage CloudFront through the [environment manifest](../manifest/environment.en.md).
 
 ## CloudFront infrastructure with Copilot
 

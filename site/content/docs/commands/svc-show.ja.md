@@ -10,11 +10,24 @@ $ copilot svc show
 ## フラグ
 
 ```
-  -a, --app string    Name of the application.
-  -h, --help          help for show
-      --json          Optional. Output in JSON format.
-  -n, --name string   Name of the service.
-      --resources     Optional. Show the resources in your service.
+-a, --app string        Name of the application.
+-h, --help              help for show
+    --json              Optional. Output in JSON format.
+    --manifest string   Optional. Name of the environment in which the service was deployed;
+                        output the manifest file used for that deployment.
+-n, --name string       Name of the service.
+      --resources         Optional. Show the resources in your service.
+```
+
+## 実行例
+デプロイされた Environment で Service 設定を出力します。
+```console
+$ copilot svc show -n api
+```
+
+"prod" Environment に "api" Service をデプロイするために使用される Manifest ファイルを出力します。
+```console
+$ copilot svc show -n api --manifest prod
 ```
 
 ## 出力例
