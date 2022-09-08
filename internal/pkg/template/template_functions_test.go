@@ -314,3 +314,29 @@ func TestGenerateQueueURIJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestIsFIFOFunc(t *testing.T) {
+	testCases := map[string]struct {
+		in     string
+		wanted bool
+	}{
+		"standard topic": {
+			in:     "mytopic",
+			wanted: false,
+		},
+		"is fifo topic": {
+			in:     "mytopic.fifo",
+			wanted: true,
+		},
+		"not a fifo topic": {
+			in:     "mytopic.lifo",
+			wanted: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, IsFIFO(tc.in))
+		})
+	}
+}

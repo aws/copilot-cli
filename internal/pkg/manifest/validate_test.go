@@ -565,6 +565,21 @@ func TestBackendService_validate(t *testing.T) {
 			},
 			wantedError: errors.New(`"http" must be specified if "count.requests" or "count.response_time" are specified`),
 		},
+		"error if invalid topic is defined": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					PublishConfig: PublishConfig{
+						Topics: []Topic{
+							{
+								Name: aws.String("mytopic.lifo"),
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "publish": `,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
