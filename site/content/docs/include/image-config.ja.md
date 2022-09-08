@@ -4,7 +4,7 @@
 image セクションは、Docker ビルドに関する設定や公開するポートについてのパラメータを含みます。
 
 <span class="parent-field">image.</span><a id="image-build" href="#image-build" class="field">`build`</a> <span class="type">String or Map</span>  
-オプションの引数で指定した Dockerfile からコンテナを構築します。後述の [`image.location`](#image-location) フィールドとは排他的な使用となります。
+オプションの引数で指定した Dockerfile からコンテナをビルドします。後述の [`image.location`](#image-location) フィールドとは排他的な使用となります。
 
 このフィールドに String（文字列）を指定した場合、Copilot はそれを Dockerfile の場所を示すパスと解釈します。その際、指定したパスのディレクトリ部が Docker のビルドコンテキストであると仮定します。以下は build フィールドに文字列を指定する例です。
 ```yaml

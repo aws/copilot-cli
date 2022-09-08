@@ -23,6 +23,5 @@ const {orderEvents} = JSON.parse(process.env.COPILOT_SNS_TOPIC_ARNS)
 <span class="parent-field">publish.topics.</span><a id="publish-topics-topic" href="#publish-topics-topic" class="field">`topic`</a> <span class="type">Map</span>  
 1 つの SNS トピックの設定を保持します。
 
-<span class="parent-field">topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
+<span class="parent-field">publish.topics.topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
 必須項目。SNS トピックの名前です。大文字、小文字、数字、ハイフン、アンダースコアのみを含む必要があります。
-

@@ -21,8 +21,44 @@ network:
       subnets: ["SubnetID1", "SubnetID2"]
 ```
 
-<span class="parent-field">network.vpc.placement.</span><a id="network-vpc-placement-subnets" href="#network-vpc-placement-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>  
-Copilot が ECS タスクを起動するサブネット ID のリスト
+<span class="parent-field">network.vpc.placement.</span><a id="network-vpc-placement-subnets" href="#network-vpc-placement-subnets" class="field">`subnets`</a> <span class="type">Array of Strings or Map</span>  
+String のリストとする場合、Copilot が ECS タスクを起動するサブネット ID を指定します。
 
-<span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings</span>
-Copilot がタスクに対して自動で設定するセキュリティグループ以外に追加で設定したいセキュリティグループがある場合にそれらの ID を指定します。複数のセキュリティグループ ID を指定可能です。(Copilot が自動設定するセキュリティグループは、同一 Environment 内の Service 間通信を可能にする目的で設定されます。)
+Map の場合、サブネットをフィルタリングするための名前と値のペアを指定します。フィルタは `AND` で結合され、各フィルタの値は `OR` で結合されることに注意してください。例えば、タグセット `org: bi` と `type: public` を持つサブネットと、タグセット `org: bi` と `type: private` を持つサブネットの両方は、以下の方法でマッチングされることになります。
+
+```yaml
+network:
+  vpc:
+    placement:
+      subnets:
+        from_tags:
+          org: bi
+          type:
+            - public
+            - private
+```
+
+<span class="parent-field">network.vpc.placement.subnets</span><a id="network-vpc-placement-subnets-from-tags" href="#network-vpc-placement-subnets-from-tags" class="field">`from_tags`</a> <span class="type">Map of String and String or Array of Strings</span>  
+Copilot が ECS タスクを起動するサブネットをフィルタリングするためのタグセット。
+
+<span class="parent-field">network.vpc.</span><a id="network-vpc-security-groups" href="#network-vpc-security-groups" class="field">`security_groups`</a> <span class="type">Array of Strings or Map</span>  
+タスクに関連する追加のセキュリティグループ ID。
+```yaml
+network:
+  vpc:
+    security_groups: [sg-0001, sg-0002]
+```
+Copilot にはセキュリティグループが含まれており、Environment 内のコンテナ同士が通信できるようになっています。デフォルトのセキュリティグループを無効にするには、Map 形式で以下のように指定します。
+```yaml
+network:
+  vpc:
+    security_groups:
+      deny_default: true
+      groups: [sg-0001, sg-0002]
+```
+
+<span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-deny-default" href="#network-vpc-security-groups-deny-default" class="field">`deny_default`</a> <span class="type">Boolean</span>  
+Environment 内のすべての Service からの侵入を許可するデフォルトのセキュリティグループを無効化します。
+
+<span class="parent-field">network.vpc.security_groups.</span><a id="network-vpc-security-groups-groups" href="#network-vpc-security-groups-groups" class="field">`groups`</a> <span class="type">Array of Strings</span>    
+タスクに関連する追加のセキュリティグループ ID。

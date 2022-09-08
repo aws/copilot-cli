@@ -1,12 +1,12 @@
-# AWS リソースを追加する
+# AWS CloudFormation を使ったモデリング
 
-[Service の Manifest](../manifest/overview.ja.md)とデフォルトでは統合されていない任意の AWS サービスを Copilot CLI では Addon という形で追加できます。Addon の例として Service から読み書きをする必要がある DyanmoDB テーブルや S3 バケット、RDS Aurora Serverless クラスターなどが考えられます。
+[Service の Manifest](../../manifest/overview.ja.md)とデフォルトでは統合されていない任意の AWS サービスを Copilot CLI では Addon という形で追加できます。Addon の例として Service から読み書きをする必要がある DyanmoDB テーブルや S3 バケット、RDS Aurora Serverless クラスターなどが考えられます。
 
 ## S3 バケットや DynamoDB テーブル、RDS Aurora Serverless クラスターを追加する方法
 
 Copilot は以下のコマンドを使っていくつかの種類の Addon を作成するお手伝いをします:
 
-* [`storage init`](../commands/storage-init.ja.md) は、 DynamoDB テーブルや S3 バケット、RDS Aurora Serverless クラスターを作成します。
+* [`storage init`](../../commands/storage-init.ja.md) は、 DynamoDB テーブルや S3 バケット、RDS Aurora Serverless クラスターを作成します。
 
 ワークスペースから `copilot storage init` を実行するといくつかの質問に沿ってこれらのリソースをセットアップできます。
 

@@ -1617,7 +1617,7 @@ func TestPlatformArgsOrString_validate(t *testing.T) {
 					Arch:     aws.String("amd64"),
 				},
 			},
-			wanted: fmt.Errorf("platform pair ('foo', 'amd64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('linux', 'arm'), ('linux', 'arm64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+			wanted: fmt.Errorf("platform pair ('foo', 'amd64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('linux', 'arm'), ('linux', 'arm64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64'), ('windows_server_2022_core', 'x86_64'), ('windows_server_2022_core', 'amd64'), ('windows_server_2022_full', 'x86_64'), ('windows_server_2022_full', 'amd64')"),
 		},
 		"error if arch is invalid": {
 			in: PlatformArgsOrString{
@@ -1626,7 +1626,7 @@ func TestPlatformArgsOrString_validate(t *testing.T) {
 					Arch:     aws.String("bar"),
 				},
 			},
-			wanted: fmt.Errorf("platform pair ('linux', 'bar') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('linux', 'arm'), ('linux', 'arm64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+			wanted: fmt.Errorf("platform pair ('linux', 'bar') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('linux', 'arm'), ('linux', 'arm64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64'), ('windows_server_2022_core', 'x86_64'), ('windows_server_2022_core', 'amd64'), ('windows_server_2022_full', 'x86_64'), ('windows_server_2022_full', 'amd64')"),
 		},
 		"return nil if platform string valid": {
 			in: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("linux/amd64"))},
@@ -2541,7 +2541,7 @@ func TestAppRunnerInstanceConfig_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: fmt.Errorf("validate \"platform\": platform pair ('linux', 'leg64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('linux', 'arm'), ('linux', 'arm64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64')"),
+			wantedError: fmt.Errorf("validate \"platform\": platform pair ('linux', 'leg64') is invalid: fields ('osfamily', 'architecture') must be one of ('linux', 'x86_64'), ('linux', 'amd64'), ('linux', 'arm'), ('linux', 'arm64'), ('windows', 'x86_64'), ('windows', 'amd64'), ('windows_server_2019_core', 'x86_64'), ('windows_server_2019_core', 'amd64'), ('windows_server_2019_full', 'x86_64'), ('windows_server_2019_full', 'amd64'), ('windows_server_2022_core', 'x86_64'), ('windows_server_2022_core', 'amd64'), ('windows_server_2022_full', 'x86_64'), ('windows_server_2022_full', 'amd64')"),
 		},
 		"error if App Runner + ARM": {
 			config: AppRunnerInstanceConfig{
