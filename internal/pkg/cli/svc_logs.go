@@ -209,7 +209,7 @@ func (o *svcLogsOpts) Execute() error {
 			return err
 		}
 		o.taskIDs = []string{taskID}
-		fmt.Printf("previously stopped task: %s\n", taskID)
+		log.Infoln("previously stopped task:", taskID)
 	}
 	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
 		Follow:        o.follow,
