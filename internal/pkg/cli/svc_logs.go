@@ -352,6 +352,6 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	cmd.Flags().StringVar(&vars.logGroup, logGroupFlag, "", logGroupFlagDescription)
 	// cmd.Flags().BoolVarP(&vars.previous, previousFlag, previousFlagShort, false, previousFlagDescription)
-	// cmd.Flags().StringVar(&vars.containerName, containerLogFlag, "", containerLogFlagDescription)
+	cmd.Flags().StringVar(&vars.containerName, containerLogFlag, "", containerLogFlagDescription)
 	return cmd
 }
