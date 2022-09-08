@@ -1,42 +1,76 @@
 以下は `'Request-Driven Web Service'` Manifest で利用できるすべてのプロパティのリストです。[Copilot Service の概念](../concepts/services.ja.md)説明のページも合わせてご覧ください。
 
-???+ note "frontend Service のサンプル Manifest"
+???+ note "AWS App Runner のサンプル Manifest"
 
-    ```yaml
-        # Service 名はロググループや App Runner サービスなどのリソースの命名に利用されます。
+    === "Public"
+
+        ```yaml
+        # https://web.example.com からアクセス可能な Web サービスをデプロイします。
         name: frontend
         type: Request-Driven Web Service
     
         http:
-          healthcheck:
-            path: '/_healthcheck'
-            healthy_threshold: 3
-            unhealthy_threshold: 5
-            interval: 10s
-            timeout: 5s
+          healthcheck: '/_healthcheck'
           alias: web.example.com
-
-        # コンテナと Service の構成
+    
         image:
           build: ./frontend/Dockerfile
           port: 80
         cpu: 1024
         memory: 2048
-    
-        network:
-          vpc:
-            placement: 'private'
-    
+
         variables:
           LOG_LEVEL: info
-        
         tags:
-          owner: frontend-team
+          owner: frontend
+        observability:
+          tracing: awsxray
     
         environments:
           test:
             LOG_LEVEL: debug
-    ```
+        ```
+
+    === "Connected to the environment VPC"
+
+        ```yaml
+        # すべての Egress トラフィックは、Environment の VPCを経由してルーティングされます。
+        name: frontend
+        type: Request-Driven Web Service
+
+        image:
+          build: ./frontend/Dockerfile
+          port: 8080
+        cpu: 1024
+        memory: 2048
+
+        network:
+          vpc:
+            placement: private
+        ```
+
+    === "Event-driven"
+
+        ```yaml
+        # https://aws.github.io/copilot-cli/docs/developing/publish-subscribe/ を参照してください。
+        name: refunds
+        type: Request-Driven Web Service
+
+        image:
+          build: ./refunds/Dockerfile
+          port: 8080
+
+        http:
+          alias: refunds.example.com
+        cpu: 1024
+        memory: 2048
+
+        publish:
+          topics:
+            - name: 'refunds'
+        ```
+
+
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。

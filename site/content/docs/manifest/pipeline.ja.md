@@ -1,31 +1,91 @@
 以下は Copilot Pipeline の Manifest で利用できるすべてのプロパティのリストです。[Pipeline の概念](../concepts/pipelines.ja.md)説明のページも合わせてご覧ください。
 
-???+ note "GitHub のリポジトリからトリガーされる Pipeline のサンプル Manifest"
+???+ note "継続的デリバリー Pipeline のサンプル Manifest"
 
-    ```yaml
-        name: frontend
+    === "Release workloads"
+        ```yaml
+        # "app-pipeline" は、user/repo にあるすべての Service や Job を
+        # "test" や "prod" Environment にデプロイします。
+        name: app-pipeline
     
         source:
           provider: GitHub
           properties:
             branch: main
-            repository: https://github.com/<user>/frontend
+            repository: https://github.com/user/repo
             # オプション。既存の CodeStar Connection の接続名を指定します。
-            connection_name: a-connection
+            # connection_name: a-connection
     
         build:
           image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+          # additional_policy: # コンテナイメージやテンプレートを構築する際に、権限を追加することができます。
+    
+        stages: 
+          - # デフォルトでは、すべてのワークロードはステージ内で同時にデプロイされます。
+            name: test
+            test_commands:
+              - make integ-test
+              - echo "woo! Tests passed"
+          -
+            name: prod
+            requires_approval: true
+        ```
+
+    === "Control order of deployments"
+
+        ```yaml
+        # また、ステージ内のスタックデプロイの順番を制御することも可能です。
+        # https://aws.github.io/copilot-cli/blogs/release-v118/#controlling-order-of-deployments-in-a-pipeline を参照してください。
+        name: app-pipeline
+    
+        source:
+          provider: Bitbucket
+          properties:
+            branch: main
+            repository:  https://bitbucket.org/user/repo
     
         stages:
-            -
-              name: test
-              test_commands:
-                - make test
-                - echo "woo! Tests passed"
-            -
-              name: prod
-              requires_approval: true
-    ```
+          - name: test
+            deployments:
+              orders:
+              warehouse:
+              frontend:
+                depends_on: [orders, warehouse]
+          - name: prod
+            require_approval: true
+            deployments:
+              orders:
+              warehouse:
+              frontend:
+                depends_on: [orders, warehouse]
+        ```
+
+    === "Release environments"
+
+        ```yaml
+        # Environment Manifest の変更も、Pipeline でリリースすることができます。
+        name: env-pipeline
+    
+        source:
+          provider: CodeCommit
+          properties:
+            branch: main
+            repository: https://git-codecommit.us-east-2.amazonaws.com/v1/repos/MyDemoRepo
+    
+        stages:
+          - name: test
+            deployments:
+              deploy-env:
+                template_path: infrastructure/test.env.yml
+                template_config: infrastructure/test.env.params.json
+                stack_name: app-test
+          - name: prod
+            deployments:
+              deploy-prod:
+                template_path: infrastructure/prod.env.yml
+                template_config: infrastructure/prod.env.params.json
+                stack_name: app-prod
+        ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Pipeline 名。
@@ -77,6 +137,36 @@ CodeBuild のビルドプロジェクトで利用する Docker イメージの U
 
 <span class="parent-field">build.</span><a id="build-buildspec" href="#build-buildspec" class="field">`buildspec`</a> <span class="type">String</span>
 任意項目。ビルドプロジェクトで利用する buildspec ファイルを指定する URI です。デフォルトでは、Copilot  が buildspec ファイルを作成します。作成したファイルは、 `copilot/pipelines/[your pipeline name]/buildspec.yml` に配置されています。
+
+<span class="parent-field">build.</span><a id="build-additional-policy" href="#build-additional-policy" class="field">`additional_policy.`</a><a id="policy-document" href="#policy-document" class="field">`PolicyDocument`</a> <span class="type">Map</span>
+任意項目。ビルドプロジェクトロールに追加するポリシードキュメントを指定します。追加のポリシードキュメントは、以下の例のように YAML のマップに指定することができます。
+```yaml
+build:
+  additional_policy:
+    PolicyDocument:
+      Version: 2012-10-17
+      Statement:
+        - Effect: Allow
+          Action:
+            - ecr:GetAuthorizationToken
+          Resource: '*'
+```
+or alternatively as JSON:
+```yaml
+build:
+  additional_policy:
+    PolicyDocument: 
+      {
+        “Statement": [
+          {
+            "Action": ["ecr:GetAuthorizationToken"],
+            "Effect": "Allow",
+            "Resource": "*"
+          }
+        ],
+        "Version": "2012-10-17"
+      }
+```
 
 <div class="separator"></div>
 
