@@ -78,7 +78,7 @@ func (s *workloadLogger) writeEventLogs(logEventsOpts cloudwatchlogs.LogEventsOp
 		if !follow {
 			return nil
 		}
-		// for unit test.
+		// For unit test.
 		if logEventsOutput.StreamLastEventTime == nil {
 			return nil
 		}
