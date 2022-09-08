@@ -48,7 +48,7 @@ func TestCloudFormation_EnvironmentTemplate(t *testing.T) {
 	}
 }
 
-func TestCloudFormation_EnvironmentParameters(t *testing.T) {
+func TestCloudFormation_DeployedEnvironmentParameters(t *testing.T) {
 	testCases := map[string]struct {
 		inAppName string
 		inEnvName string
@@ -57,11 +57,31 @@ func TestCloudFormation_EnvironmentParameters(t *testing.T) {
 		wantedParams []*awscfn.Parameter
 		wantedErr    error
 	}{
+		"error retrieving metadata": {
+			inAppName: "phonetool",
+			inEnvName: "test",
+			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Metadata(gomock.Any()).Return("", errors.New("some error"))
+				return m
+			},
+			wantedErr: errors.New("get metadata of stack \"phonetool-test\": some error"),
+		},
+		"returns nil if the version is bootstrap": {
+			inAppName: "phonetool",
+			inEnvName: "test",
+			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
+				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Metadata(gomock.Any()).Return(`Version: bootstrap`, nil)
+				return m
+			},
+		},
 		"should return stack parameters from a stack description": {
 			inAppName: "phonetool",
 			inEnvName: "test",
 			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Metadata(gomock.Any()).Return(`Version: `, nil)
 				m.EXPECT().Describe("phonetool-test").Return(&cloudformation.StackDescription{
 					Parameters: []*awscfn.Parameter{
 						{
@@ -85,6 +105,7 @@ func TestCloudFormation_EnvironmentParameters(t *testing.T) {
 			inEnvName: "test",
 			inClient: func(ctrl *gomock.Controller) *mocks.MockcfnClient {
 				m := mocks.NewMockcfnClient(ctrl)
+				m.EXPECT().Metadata(gomock.Any()).Return(`Version: v1.21.0`, nil)
 				m.EXPECT().Describe(gomock.Any()).Return(nil, errors.New("some error"))
 				return m
 			},
@@ -102,7 +123,7 @@ func TestCloudFormation_EnvironmentParameters(t *testing.T) {
 			}
 
 			// WHEN
-			actual, err := cf.EnvironmentParameters(tc.inAppName, tc.inEnvName)
+			actual, err := cf.DeployedEnvironmentParameters(tc.inAppName, tc.inEnvName)
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 			} else {

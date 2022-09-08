@@ -171,9 +171,30 @@ func TestRuntimePlatformOpts_Version(t *testing.T) {
 			},
 			wantedPV: "LATEST",
 		},
-		"should return 1.0.0 for windows containers": {
+		"should return 1.0.0 for windows containers 2019 Core": {
+			in: RuntimePlatformOpts{
+				OS:   "WINDOWS_SERVER_2019_CORE",
+				Arch: "X86_64",
+			},
+			wantedPV: "1.0.0",
+		},
+		"should return 1.0.0 for windows containers 2019 Full": {
 			in: RuntimePlatformOpts{
 				OS:   "WINDOWS_SERVER_2019_FULL",
+				Arch: "X86_64",
+			},
+			wantedPV: "1.0.0",
+		},
+		"should return 1.0.0 for windows containers 2022 Core": {
+			in: RuntimePlatformOpts{
+				OS:   "WINDOWS_SERVER_2022_CORE",
+				Arch: "X86_64",
+			},
+			wantedPV: "1.0.0",
+		},
+		"should return 1.0.0 for windows containers 2022 Full": {
+			in: RuntimePlatformOpts{
+				OS:   "WINDOWS_SERVER_2022_FULL",
 				Arch: "X86_64",
 			},
 			wantedPV: "1.0.0",
@@ -202,9 +223,27 @@ func TestRuntimePlatformOpts_IsDefault(t *testing.T) {
 			},
 			wanted: true,
 		},
-		"should return false for windows containers": {
+		"should return false for windows containers 2019 Core": {
 			in: RuntimePlatformOpts{
 				OS:   "WINDOWS_SERVER_2019_CORE",
+				Arch: "X86_64",
+			},
+		},
+		"should return false for windows containers 2019 Full": {
+			in: RuntimePlatformOpts{
+				OS:   "WINDOWS_SERVER_2019_FULL",
+				Arch: "X86_64",
+			},
+		},
+		"should return false for windows containers 2022 Core": {
+			in: RuntimePlatformOpts{
+				OS:   "WINDOWS_SERVER_2022_CORE",
+				Arch: "X86_64",
+			},
+		},
+		"should return false for windows containers 2022 Full": {
+			in: RuntimePlatformOpts{
+				OS:   "WINDOWS_SERVER_2022_FULL",
 				Arch: "X86_64",
 			},
 		},

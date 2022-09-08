@@ -76,19 +76,19 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 	return m.recorder
 }
 
-// EnvironmentParameters mocks base method.
-func (m *MockenvironmentDeployer) EnvironmentParameters(app, env string) ([]*cloudformation.Parameter, error) {
+// DeployedEnvironmentParameters mocks base method.
+func (m *MockenvironmentDeployer) DeployedEnvironmentParameters(app, env string) ([]*cloudformation.Parameter, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnvironmentParameters", app, env)
+	ret := m.ctrl.Call(m, "DeployedEnvironmentParameters", app, env)
 	ret0, _ := ret[0].([]*cloudformation.Parameter)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// EnvironmentParameters indicates an expected call of EnvironmentParameters.
-func (mr *MockenvironmentDeployerMockRecorder) EnvironmentParameters(app, env interface{}) *gomock.Call {
+// DeployedEnvironmentParameters indicates an expected call of DeployedEnvironmentParameters.
+func (mr *MockenvironmentDeployerMockRecorder) DeployedEnvironmentParameters(app, env interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvironmentParameters", reflect.TypeOf((*MockenvironmentDeployer)(nil).EnvironmentParameters), app, env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployedEnvironmentParameters", reflect.TypeOf((*MockenvironmentDeployer)(nil).DeployedEnvironmentParameters), app, env)
 }
 
 // ForceUpdateOutputID mocks base method.
@@ -123,6 +123,43 @@ func (mr *MockenvironmentDeployerMockRecorder) UpdateAndRenderEnvironment(conf, 
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{conf, bucketARN}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).UpdateAndRenderEnvironment), varargs...)
+}
+
+// Mockpatcher is a mock of patcher interface.
+type Mockpatcher struct {
+	ctrl     *gomock.Controller
+	recorder *MockpatcherMockRecorder
+}
+
+// MockpatcherMockRecorder is the mock recorder for Mockpatcher.
+type MockpatcherMockRecorder struct {
+	mock *Mockpatcher
+}
+
+// NewMockpatcher creates a new mock instance.
+func NewMockpatcher(ctrl *gomock.Controller) *Mockpatcher {
+	mock := &Mockpatcher{ctrl: ctrl}
+	mock.recorder = &MockpatcherMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *Mockpatcher) EXPECT() *MockpatcherMockRecorder {
+	return m.recorder
+}
+
+// EnsureManagerRoleIsAllowedToUpload mocks base method.
+func (m *Mockpatcher) EnsureManagerRoleIsAllowedToUpload(bucketName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureManagerRoleIsAllowedToUpload", bucketName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureManagerRoleIsAllowedToUpload indicates an expected call of EnsureManagerRoleIsAllowedToUpload.
+func (mr *MockpatcherMockRecorder) EnsureManagerRoleIsAllowedToUpload(bucketName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureManagerRoleIsAllowedToUpload", reflect.TypeOf((*Mockpatcher)(nil).EnsureManagerRoleIsAllowedToUpload), bucketName)
 }
 
 // MockprefixListGetter is a mock of prefixListGetter interface.

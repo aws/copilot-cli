@@ -6,15 +6,15 @@ package task
 
 import (
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/template"
 	"time"
 
-	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
-
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
+	"github.com/aws/aws-sdk-go/aws"
 )
 
 // VPCGetter wraps methods of getting VPC info.
@@ -59,17 +59,25 @@ const (
 	startedBy = "copilot-task"
 
 	// Platform options.
-	osLinux             = template.OSLinux
-	osWindowsServerFull = template.OSWindowsServerFull
-	osWindowsServerCore = template.OSWindowsServerCore
+	osLinux                 = template.OSLinux
+	osWindowsServer2019Full = template.OSWindowsServer2019Full
+	osWindowsServer2019Core = template.OSWindowsServer2019Core
+	osWindowsServer2022Full = template.OSWindowsServer2022Full
+	osWindowsServer2022Core = template.OSWindowsServer2022Core
 
 	archX86   = template.ArchX86
 	archARM64 = template.ArchARM64
 )
 
 var (
-	ValidWindowsOSs   = []string{osWindowsServerCore, osWindowsServerFull}
-	ValidCFNPlatforms = []string{dockerengine.PlatformString(osWindowsServerCore, archX86), dockerengine.PlatformString(osWindowsServerFull, archX86), dockerengine.PlatformString(osLinux, archX86), dockerengine.PlatformString(osLinux, archARM64)}
+	ValidWindowsOSs   = []string{osWindowsServer2019Core, osWindowsServer2019Full, osWindowsServer2022Core, osWindowsServer2022Full}
+	ValidCFNPlatforms = []string{
+		dockerengine.PlatformString(osWindowsServer2019Core, archX86),
+		dockerengine.PlatformString(osWindowsServer2019Full, archX86),
+		dockerengine.PlatformString(osWindowsServer2022Core, archX86),
+		dockerengine.PlatformString(osWindowsServer2022Full, archX86),
+		dockerengine.PlatformString(osLinux, archX86),
+		dockerengine.PlatformString(osLinux, archARM64)}
 
 	fmtTaskFamilyName = "copilot-%s"
 )

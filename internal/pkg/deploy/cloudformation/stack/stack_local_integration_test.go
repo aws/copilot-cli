@@ -68,6 +68,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 				RepoURL:  imageURL,
 				ImageTag: imageTag,
 			},
+			EnvVersion: "v1.42.0",
 		},
 	})
 	require.NoError(t, err)

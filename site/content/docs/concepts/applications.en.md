@@ -72,21 +72,29 @@ ecs-kudos
 
 Running `copilot app show` will show you a summary of your application, including all the services and environments in your app.
 
-```bash
+```console
 $ copilot app show
 About
 
   Name              vote
+  Version           v1.0.2
   URI               vote-app.aws
 
 Environments
 
   Name              AccountID           Region
+  ----              ---------           ------
   test              000000000000        us-east-1
 
-Services
+Workloads
 
-  Name              Type
-  collector         Load Balanced Web Service
-  aggregator        Backend Service
+  Name              Type                        Environments
+  ----              ----                        ------------
+  collector         Load Balanced Web Service   prod
+  aggregator        Backend Service             test, prod
+
+Pipelines
+
+  Name
+  ----
 ```

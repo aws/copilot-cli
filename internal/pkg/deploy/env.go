@@ -14,7 +14,8 @@ const (
 	// LegacyEnvTemplateVersion is the version associated with the environment template before we started versioning.
 	LegacyEnvTemplateVersion = "v0.0.0"
 	// LatestEnvTemplateVersion is the latest version number available for environment templates.
-	LatestEnvTemplateVersion = "v1.12.1"
+	LatestEnvTemplateVersion    = "v1.12.2"
+	EnvTemplateVersionBootstrap = "bootstrap"
 )
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.

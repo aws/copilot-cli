@@ -62,7 +62,7 @@ Alternatively, you can specify a cron schedule if you'd like to trigger the job 
 * `"* * * * *"` based on the standard [cron format](https://en.wikipedia.org/wiki/Cron#Overview).
 * `"cron({fields})"` based on CloudWatch's [cron expressions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) with six fields.
 
-Finally, you can disable the job from triggering by setting the `schedule` field to `none` for example:
+Finally, you can disable the job from triggering by setting the `schedule` field to `none`:
 ```yaml
 on:
   schedule: "none"
@@ -118,6 +118,21 @@ which defaults to `WINDOWS_SERVER_2019_CORE`, using a map:
 ```yaml
 platform:
   osfamily: windows_server_2019_full
+  architecture: x86_64
+```
+```yaml
+platform:
+  osfamily: windows_server_2019_core
+  architecture: x86_64
+```
+```yaml
+platform:
+  osfamily: windows_server_2022_core
+  architecture: x86_64
+```
+```yaml
+platform:
+  osfamily: windows_server_2022_full
   architecture: x86_64
 ```
 

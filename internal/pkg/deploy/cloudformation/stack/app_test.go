@@ -48,11 +48,13 @@ func TestAppTemplate(t *testing.T) {
 					AppDNSDelegatedAccounts []string
 					Domain                  string
 					Name                    string
+					PermissionsBoundary     string
 				}{
 					"v1.0.0",
 					[]string{"123456"},
 					"",
 					"demo",
+					"",
 				}, gomock.Any()).Return(&template.Content{
 					Buffer: bytes.NewBufferString("template"),
 				}, nil)
@@ -74,6 +76,7 @@ func TestAppTemplate(t *testing.T) {
 					AccountID:  "123456",
 					Name:       "demo",
 					DomainName: "",
+					PermissionBoundary: "",
 				},
 			}
 			tc.mockDependencies(ctrl, appStack)
