@@ -48,6 +48,8 @@ func TestSvcLogs_Validate(t *testing.T) {
 		inputStartTime string
 		inputEndTime   string
 		inputSince     time.Duration
+		inputPrevious  bool
+		inputTaskIDs   []string
 
 		mockstore func(m *mocks.Mockstore)
 
@@ -107,6 +109,14 @@ func TestSvcLogs_Validate(t *testing.T) {
 
 			wantedError: fmt.Errorf("--limit 10001 is out-of-bounds, value must be between 1 and 10000"),
 		},
+		"returns error if both previous and tasks flags are defined": {
+			inputPrevious: true,
+			inputTaskIDs:  []string{"taskId"},
+
+			mockstore: func(m *mocks.Mockstore) {},
+
+			wantedError: fmt.Errorf("cannot specify both --previous and --tasks"),
+		},
 	}
 
 	for name, tc := range testCases {
@@ -128,7 +138,9 @@ func TestSvcLogs_Validate(t *testing.T) {
 						since:          tc.inputSince,
 						name:           tc.inputSvc,
 						appName:        tc.inputApp,
+						taskIDs:        tc.inputTaskIDs,
 					},
+					previous: tc.inputPrevious,
 				},
 				wkldLogOpts: wkldLogOpts{
 					configStore: mockstore,

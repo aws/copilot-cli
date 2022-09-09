@@ -219,6 +219,7 @@ func (o *svcLogsOpts) Execute() error {
 			return err
 		}
 		o.taskIDs = []string{taskID}
+		log.Infoln("previously stopped task:", taskID)
 	}
 	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
 		Follow:        o.follow,
@@ -366,7 +367,7 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	cmd.Flags().StringVar(&vars.logGroup, logGroupFlag, "", logGroupFlagDescription)
-	// cmd.Flags().BoolVarP(&vars.previous, previousFlag, previousFlagShort, false, previousFlagDescription)
+	cmd.Flags().BoolVarP(&vars.previous, previousFlag, previousFlagShort, false, previousFlagDescription)
 	// cmd.Flags().StringVar(&vars.containerName, containerLogFlag, "", containerLogFlagDescription)
 	return cmd
 }
