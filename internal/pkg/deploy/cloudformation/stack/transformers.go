@@ -823,7 +823,7 @@ func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, erro
 		}
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
-	subscriptions.Queue = convertQueue(s.Queue)
+	subscriptions.Queue = convertQueue(s.Queue, false)
 	return &subscriptions, nil
 }
 
@@ -841,10 +841,16 @@ func convertTopicSubscription(t manifest.TopicSubscription) (
 			FilterPolicy: filterPolicy,
 		}, nil
 	}
+	var queueAdvacnedConfig *template.SQSQueue
+	if template.IsFIFOFunc(aws.StringValue(t.Name)) {
+		queueAdvacnedConfig = convertQueue(t.Queue.Advanced, true)
+	} else {
+		queueAdvacnedConfig = convertQueue(t.Queue.Advanced, false)
+	}
 	return &template.TopicSubscription{
 		Name:         t.Name,
 		Service:      t.Service,
-		Queue:        convertQueue(t.Queue.Advanced),
+		Queue:        queueAdvacnedConfig,
 		FilterPolicy: filterPolicy,
 	}, nil
 }
@@ -860,7 +866,24 @@ func convertFilterPolicy(filterPolicy map[string]interface{}) (*string, error) {
 	return aws.String(string(bytes)), nil
 }
 
-func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
+func convertQueue(q manifest.SQSQueue, isFIFO bool) *template.SQSQueue {
+
+	if isFIFO {
+		if q.IsFIFOEmpty() {
+			return nil
+		}
+		return &template.SQSQueue{
+			Retention:                 convertRetention(q.Retention),
+			Delay:                     convertDelay(q.Delay),
+			Timeout:                   convertTimeout(q.Timeout),
+			DeadLetter:                convertDeadLetter(q.DeadLetter),
+			FifoThroughputLimit:       aws.StringValue(q.FifoThroughputLimit),
+			HighThroughputFifo:        aws.BoolValue(q.HighThroughputFifo),
+			ContentBasedDeduplication: aws.BoolValue(q.ContentBasedDeduplication),
+			DeduplicationScope:        aws.StringValue(q.DeduplicationScope),
+		}
+	}
+
 	if q.IsEmpty() {
 		return nil
 	}

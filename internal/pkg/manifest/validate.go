@@ -6,6 +6,7 @@ package manifest
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 	"net"
 	"path/filepath"
 	"regexp"
@@ -44,10 +45,10 @@ const (
 var (
 	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
 	volumesPathRegexp   = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
-	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
-	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
-	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
-	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
+	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*(\.fifo)?$`) // Validates that an expression contains only letters, numbers, underscores, hyphens, and .fifo suffix.
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`)        // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
+	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)                // Check for consecutive periods or dashes.
+	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)                   // Check for trailing dash or dot.
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
@@ -58,6 +59,8 @@ var (
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
+	validDeduplicationScopeValues    = []string{"messageGroup", "queue"}
+	validFIFOThroughputLimitValues   = []string{"perMessageGroupId", "perQueue"}
 )
 
 // Validate returns nil if DynamicLoadBalancedWebService is configured correctly.
@@ -1444,24 +1447,55 @@ func (t TopicSubscription) validate() error {
 	if !isValidSubSvcName(svcName) {
 		return fmt.Errorf("service name must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 	}
-	if err := t.Queue.validate(); err != nil {
+
+	if err := t.Queue.validate(template.IsFIFOFunc(aws.StringValue(t.Name))); err != nil {
 		return fmt.Errorf(`validate "queue": %w`, err)
 	}
 	return nil
 }
 
 // validate returns nil if SQSQueue is configured correctly.
-func (q SQSQueueOrBool) validate() error {
-	if q.IsEmpty() {
-		return nil
+func (q SQSQueueOrBool) validate(isFIFO bool) error {
+
+	if !isFIFO {
+		if q.Advanced.FifoThroughputLimit != nil || q.Advanced.HighThroughputFifo != nil ||
+			q.Advanced.DeduplicationScope != nil || q.Advanced.ContentBasedDeduplication != nil {
+			return fmt.Errorf(`parameters such as "content_based_deduplication", "deduplication_scope", "fifo_throughput_limit", and "high_throughput_fifo" are only used with FIFO SQS Queue`)
+		}
+		if q.IsEmpty() {
+			return nil
+		}
+		return q.Advanced.validate()
 	}
-	return q.Advanced.validate()
+
+	if q.IsFIFOEmpty() {
+		return errors.New(`FIFO SQS Queue configuration is required, you can either set "queue: true" or complete configuration alternatively`)
+	}
+	return q.Advanced.validateFIFO()
 }
 
 // validate returns nil if SQSQueue is configured correctly.
 func (q SQSQueue) validate() error {
 	if q.IsEmpty() {
 		return nil
+	}
+	if err := q.DeadLetter.validate(); err != nil {
+		return fmt.Errorf(`validate "dead_letter": %w`, err)
+	}
+	return nil
+}
+
+// validateFIFO returns nil if FIFO SQSQueue is configured correctly.
+func (q SQSQueue) validateFIFO() error {
+	if q.IsFIFOEmpty() {
+		return nil
+	}
+
+	if q.DeduplicationScope != nil && !contains(aws.StringValue(q.DeduplicationScope), validDeduplicationScopeValues) {
+		return fmt.Errorf(`validate "deduplication_scope": deduplication scope value must be one of %s`, english.WordSeries(validDeduplicationScopeValues, "or"))
+	}
+	if q.FifoThroughputLimit != nil && !contains(aws.StringValue(q.FifoThroughputLimit), validFIFOThroughputLimitValues) {
+		return fmt.Errorf(`validate "fifo_throughput_limit": fifo throughput limit value must be one of %s`, english.WordSeries(validFIFOThroughputLimitValues, "or"))
 	}
 	if err := q.DeadLetter.validate(); err != nil {
 		return fmt.Errorf(`validate "dead_letter": %w`, err)
@@ -1634,9 +1668,9 @@ func validatePubSubName(name string) error {
 			missingField: "name",
 		}
 	}
-	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
+	// Name must contain letters, numbers, and can't use special characters besides underscores, hyphens, and .fifo suffix.
 	if !awsSNSTopicRegexp.MatchString(name) {
-		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, and hypthens`)
+		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, hyphens, and .fifo suffix`)
 	}
 	return nil
 }

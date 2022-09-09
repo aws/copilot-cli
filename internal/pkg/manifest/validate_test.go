@@ -2665,7 +2665,7 @@ func TestTopic_validate(t *testing.T) {
 			in: Topic{
 				Name: aws.String("!@#"),
 			},
-			wanted: errors.New(`"name" can only contain letters, numbers, underscores, and hypthens`),
+			wanted: errors.New(`"name" can only contain letters, numbers, underscores, hyphens, and .fifo suffix`),
 		},
 	}
 	for name, tc := range testCases {
@@ -2697,6 +2697,17 @@ func TestSubscribeConfig_validate(t *testing.T) {
 			},
 			wantedErrorPrefix: `validate "topics[0]": `,
 		},
+		/*"error if fail to validate topics1": {
+			config: SubscribeConfig{
+				Topics: []TopicSubscription{
+					{
+						Name:    aws.String("mocktopic"),
+						Service: aws.String("mockservice"),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "topics[0]": `,
+		},*/
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -2712,6 +2723,7 @@ func TestSubscribeConfig_validate(t *testing.T) {
 }
 
 func TestTopicSubscription_validate(t *testing.T) {
+	duration111Seconds := 111 * time.Second
 	testCases := map[string]struct {
 		in     TopicSubscription
 		wanted error
@@ -2732,6 +2744,125 @@ func TestTopicSubscription_validate(t *testing.T) {
 				Service: aws.String("!!!!!"),
 			},
 			wanted: errors.New("service name must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen"),
+		},
+		"should not return an error if service is in valid format": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic"),
+				Service: aws.String("mockservice"),
+			},
+			wanted: nil,
+		},
+		"should return an error if fifo queue config is missing": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic.fifo"),
+				Service: aws.String("mockservice"),
+			},
+			wanted: errors.New(`validate "queue": FIFO SQS Queue configuration is required, you can either set "queue: true" or complete configuration alternatively`),
+		},
+		"should not return error if fifo queue enabled": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic.fifo"),
+				Service: aws.String("mockservice"),
+				Queue: SQSQueueOrBool{
+					Enabled: aws.Bool(true),
+				},
+			},
+			wanted: nil,
+		},
+		"should return error if invalid fifo throughput limit": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic.fifo"),
+				Service: aws.String("mockservice"),
+				Queue: SQSQueueOrBool{
+					Advanced: SQSQueue{
+						Retention:           &duration111Seconds,
+						Delay:               &duration111Seconds,
+						Timeout:             &duration111Seconds,
+						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
+						FifoThroughputLimit: aws.String("incorrectFIFOThoughoutLimit"),
+					},
+				},
+			},
+			wanted: errors.New(`validate "queue": validate "fifo_throughput_limit": fifo throughput limit value must be one of perMessageGroupId or perQueue`),
+		},
+		"should not return error if valid fifo throughput limit": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic.fifo"),
+				Service: aws.String("mockservice"),
+				Queue: SQSQueueOrBool{
+					Advanced: SQSQueue{
+						Retention:           &duration111Seconds,
+						Delay:               &duration111Seconds,
+						Timeout:             &duration111Seconds,
+						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
+						FifoThroughputLimit: aws.String("perMessageGroupId"),
+					},
+				},
+			},
+			wanted: nil,
+		},
+		"should return error if invalid deduplicate scope": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic.fifo"),
+				Service: aws.String("mockservice"),
+				Queue: SQSQueueOrBool{
+					Advanced: SQSQueue{
+						Retention:          &duration111Seconds,
+						Delay:              &duration111Seconds,
+						Timeout:            &duration111Seconds,
+						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
+						DeduplicationScope: aws.String("incorrectDeduplicateScope"),
+					},
+				},
+			},
+			wanted: errors.New(`validate "queue": validate "deduplication_scope": deduplication scope value must be one of messageGroup or queue`),
+		},
+		"should not return error if valid deduplicate scope": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic.fifo"),
+				Service: aws.String("mockservice"),
+				Queue: SQSQueueOrBool{
+					Advanced: SQSQueue{
+						Retention:          &duration111Seconds,
+						Delay:              &duration111Seconds,
+						Timeout:            &duration111Seconds,
+						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
+						DeduplicationScope: aws.String("messageGroup"),
+					},
+				},
+			},
+			wanted: nil,
+		},
+		"should return error if standard queue config has fifo queue parameters defined": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic"),
+				Service: aws.String("mockservice"),
+				Queue: SQSQueueOrBool{
+					Advanced: SQSQueue{
+						Retention:          &duration111Seconds,
+						Delay:              &duration111Seconds,
+						Timeout:            &duration111Seconds,
+						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
+						DeduplicationScope: aws.String("messageGroup"),
+					},
+				},
+			},
+			wanted: errors.New(`validate "queue": parameters such as "content_based_deduplication", "deduplication_scope", "fifo_throughput_limit", and "high_throughput_fifo" are only used with FIFO SQS Queue`),
+		},
+		"should not return error if valid standard queue config defined": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic"),
+				Service: aws.String("mockservice"),
+				Queue: SQSQueueOrBool{
+					Advanced: SQSQueue{
+						Retention:  &duration111Seconds,
+						Delay:      &duration111Seconds,
+						Timeout:    &duration111Seconds,
+						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+					},
+				},
+			},
+			wanted: nil,
 		},
 	}
 	for name, tc := range testCases {

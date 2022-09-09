@@ -29,6 +29,23 @@ func newMockSQSQueue() SQSQueue {
 	}
 }
 
+func newMockSQSFIFOQueueOrBool() SQSQueueOrBool {
+	return SQSQueueOrBool{
+		Advanced: newMockSQSFIFOQueue(),
+	}
+}
+
+func newMockSQSFIFOQueue() SQSQueue {
+	duration111Seconds := 111 * time.Second
+	return SQSQueue{
+		Retention:           &duration111Seconds,
+		Delay:               &duration111Seconds,
+		Timeout:             &duration111Seconds,
+		DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
+		FifoThroughputLimit: aws.String("asd"),
+	}
+}
+
 func TestNewWorkerSvc(t *testing.T) {
 	testCases := map[string]struct {
 		inProps WorkerServiceProps

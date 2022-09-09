@@ -86,6 +86,11 @@ func (q *SQSQueueOrBool) IsEmpty() bool {
 	return q.Advanced.IsEmpty() && q.Enabled == nil
 }
 
+// IsFIFOEmpty returns empty if the struct has all zero members.
+func (q *SQSQueueOrBool) IsFIFOEmpty() bool {
+	return q.Advanced.IsFIFOEmpty() && q.Enabled == nil
+}
+
 // UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueueOrBool to be specified as a
 // string or a struct alternately.
 func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
@@ -110,16 +115,27 @@ func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
 
 // SQSQueue represents the configurable options for setting up a SQS Queue.
 type SQSQueue struct {
-	Retention  *time.Duration  `yaml:"retention"`
-	Delay      *time.Duration  `yaml:"delay"`
-	Timeout    *time.Duration  `yaml:"timeout"`
-	DeadLetter DeadLetterQueue `yaml:"dead_letter"`
+	Retention                 *time.Duration  `yaml:"retention"`
+	Delay                     *time.Duration  `yaml:"delay"`
+	Timeout                   *time.Duration  `yaml:"timeout"`
+	DeadLetter                DeadLetterQueue `yaml:"dead_letter"`
+	ContentBasedDeduplication *bool           `yaml:"content_based_deduplication"`
+	DeduplicationScope        *string         `yaml:"deduplication_scope"`
+	FifoThroughputLimit       *string         `yaml:"fifo_throughput_limit"`
+	HighThroughputFifo        *bool           `yaml:"high_throughput_fifo"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
 func (q *SQSQueue) IsEmpty() bool {
 	return q.Retention == nil && q.Delay == nil && q.Timeout == nil &&
 		q.DeadLetter.IsEmpty()
+}
+
+// IsFIFOEmpty returns empty if the struct has all zero members.
+func (q *SQSQueue) IsFIFOEmpty() bool {
+	return q.Retention == nil && q.Delay == nil && q.Timeout == nil &&
+		q.DeadLetter.IsEmpty() && q.FifoThroughputLimit == nil && q.HighThroughputFifo == nil &&
+		q.DeduplicationScope == nil && q.ContentBasedDeduplication == nil
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
