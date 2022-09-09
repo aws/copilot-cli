@@ -138,9 +138,9 @@ func TestSvcLogs_Validate(t *testing.T) {
 						since:          tc.inputSince,
 						name:           tc.inputSvc,
 						appName:        tc.inputApp,
-            taskIDs:        tc.inputTaskIDs,
-					  previous:       tc.inputPrevious,
+						taskIDs:        tc.inputTaskIDs,
 					},
+					previous: tc.inputPrevious,
 				},
 				wkldLogOpts: wkldLogOpts{
 					configStore: mockstore,
