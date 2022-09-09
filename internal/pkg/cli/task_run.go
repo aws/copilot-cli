@@ -10,6 +10,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"golang.org/x/mod/semver"
 	"os"
 	"path/filepath"
 	"strings"
@@ -149,6 +151,7 @@ type runTaskOpts struct {
 	sel     appEnvSelector
 	spinner progress
 	prompt  prompter
+	ws      wsEnvironmentsLister
 
 	// Fields below are configured at runtime.
 	deployer             taskDeployer
@@ -178,12 +181,11 @@ type runTaskOpts struct {
 	runTaskRequestFromService    func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error)
 	runTaskRequestFromJob        func(client ecs.JobDescriber, app, env, job string) (*ecs.RunTaskRequest, error)
 
-	// Cached variables to hold SSM Param and Secrets Manager Secrets
-	ssmParamSecrets       map[string]string
-	secretsManagerSecrets map[string]string
-
-	// Cached variable for uploaded env file ARN
-	envFileARN string
+	// Cached variables.
+	ssmParamSecrets         map[string]string
+	secretsManagerSecrets   map[string]string
+	envFileARN              string
+	envCompatibilityChecker func() (versionCompatibilityChecker, error)
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -195,11 +197,13 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 	prompter := prompt.New()
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
+	ws, err := workspace.New()
 	opts := runTaskOpts{
 		runTaskVars: vars,
 
 		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
 		store:                 store,
+		ws:                    ws,
 		prompt:                prompter,
 		sel:                   selector.NewAppEnvSelector(prompter, store),
 		spinner:               termprogress.NewSpinner(log.DiagnosticWriter),
@@ -240,6 +244,17 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 	opts.configureUploader = func(session *session.Session) uploader {
 		return s3.New(session)
+	}
+	opts.envCompatibilityChecker = func() (versionCompatibilityChecker, error) {
+		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         opts.appName,
+			Env:         opts.env,
+			ConfigStore: opts.store,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("new environment compatibility checker: %v", err)
+		}
+		return envDescriber, nil
 	}
 
 	opts.runTaskRequestFromECSService = ecs.RunTaskRequestFromECSService
@@ -501,6 +516,30 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 	return nil
 }
 
+func (o *runTaskOpts) validateEnvCompatibility() error {
+	envStack, err := o.envCompatibilityChecker()
+	if err != nil {
+		return err
+	}
+	version, err := envStack.Version()
+	if err != nil {
+		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", o.env, o.appName, err)
+	}
+	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0,
+	// EnvManagerRole took over, but "states:DescribeStateMachine" permissions
+	// weren't added until 1.12.2. Any version predating the feature's
+	// introduction or between v1.8.0 and 1.12.2 are invalid.
+	if semver.Compare(version, "v1.4.0") < 0 || ((semver.Compare(version, "v1.7.0") > 0) && (semver.Compare(version, "v1.12.2") < 0)) {
+		return &errFeatureIncompatibleWithEnvironment{
+			ws:             o.ws,
+			missingFeature: "task run --generate-cmd",
+			envName:        o.env,
+			curVersion:     version,
+		}
+	}
+	return nil
+}
+
 func (o *runTaskOpts) validatePlatform() error {
 	if o.os == "" {
 		return nil
@@ -628,6 +667,11 @@ func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
 	if o.generateCommandTarget != "" {
+		if o.env != "" {
+			if err := o.validateEnvCompatibility(); err != nil {
+				return err
+			}
+		}
 		return o.generateCommand()
 	}
 

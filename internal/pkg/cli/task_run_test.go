@@ -733,15 +733,17 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 }
 
 type runTaskMocks struct {
-	deployer             *mocks.MocktaskDeployer
-	repository           *mocks.MockrepositoryService
-	runner               *mocks.MocktaskRunner
-	store                *mocks.Mockstore
-	eventsWriter         *mocks.MockeventsWriter
-	defaultClusterGetter *mocks.MockdefaultClusterGetter
-	publicIPGetter       *mocks.MockpublicIPGetter
-	provider             *mocks.MocksessionProvider
-	uploader             *mocks.Mockuploader
+	deployer                *mocks.MocktaskDeployer
+	repository              *mocks.MockrepositoryService
+	runner                  *mocks.MocktaskRunner
+	store                   *mocks.Mockstore
+	eventsWriter            *mocks.MockeventsWriter
+	defaultClusterGetter    *mocks.MockdefaultClusterGetter
+	publicIPGetter          *mocks.MockpublicIPGetter
+	provider                *mocks.MocksessionProvider
+	uploader                *mocks.Mockuploader
+	ws                      *mocks.MockwsEnvironmentsLister
+	envCompatibilityChecker *mocks.MockversionCompatibilityChecker
 }
 
 func mockHasDefaultCluster(m runTaskMocks) {
@@ -765,14 +767,15 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inSecrets    map[string]string
-		inImage      string
-		inTag        string
-		inDockerCtx  string
-		inFollow     bool
-		inCommand    string
-		inEntryPoint string
-		inEnvFile    string
+		inSecrets     map[string]string
+		inImage       string
+		inTag         string
+		inDockerCtx   string
+		inFollow      bool
+		inCommand     string
+		inEntryPoint  string
+		inEnvFile     string
+		inGenerateCmd string
 
 		inApp string
 		inEnv string
@@ -782,6 +785,15 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 		wantedError error
 	}{
+		"disallow 'generate-cmd' flag if env version can't support it": {
+			inApp:         "app",
+			inEnv:         "test",
+			inGenerateCmd: "cluster/service",
+			setupMocks: func(m runTaskMocks) {
+				m.envCompatibilityChecker.EXPECT().Version().Return("v1.9.0", nil)
+			},
+			wantedError: errors.New(`environment "test" is on version "v1.9.0" which does not support the "task run --generate-cmd" feature`),
+		},
 		"check if default cluster exists if deploying to default cluster": {
 			setupMocks: func(m runTaskMocks) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
@@ -1120,15 +1132,17 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			}
 
 			mocks := runTaskMocks{
-				deployer:             mocks.NewMocktaskDeployer(ctrl),
-				repository:           mocks.NewMockrepositoryService(ctrl),
-				runner:               mocks.NewMocktaskRunner(ctrl),
-				store:                mocks.NewMockstore(ctrl),
-				eventsWriter:         mocks.NewMockeventsWriter(ctrl),
-				defaultClusterGetter: mocks.NewMockdefaultClusterGetter(ctrl),
-				publicIPGetter:       mocks.NewMockpublicIPGetter(ctrl),
-				provider:             mocks.NewMocksessionProvider(ctrl),
-				uploader:             mocks.NewMockuploader(ctrl),
+				deployer:                mocks.NewMocktaskDeployer(ctrl),
+				repository:              mocks.NewMockrepositoryService(ctrl),
+				runner:                  mocks.NewMocktaskRunner(ctrl),
+				store:                   mocks.NewMockstore(ctrl),
+				eventsWriter:            mocks.NewMockeventsWriter(ctrl),
+				defaultClusterGetter:    mocks.NewMockdefaultClusterGetter(ctrl),
+				publicIPGetter:          mocks.NewMockpublicIPGetter(ctrl),
+				provider:                mocks.NewMocksessionProvider(ctrl),
+				uploader:                mocks.NewMockuploader(ctrl),
+				ws:                      mocks.NewMockwsEnvironmentsLister(ctrl),
+				envCompatibilityChecker: mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			tc.setupMocks(mocks)
 
@@ -1140,13 +1154,14 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					imageTag:              tc.inTag,
 					dockerfileContextPath: tc.inDockerCtx,
 
-					appName:    tc.inApp,
-					env:        tc.inEnv,
-					follow:     tc.inFollow,
-					secrets:    tc.inSecrets,
-					command:    tc.inCommand,
-					entrypoint: tc.inEntryPoint,
-					envFile:    tc.inEnvFile,
+					appName:               tc.inApp,
+					env:                   tc.inEnv,
+					follow:                tc.inFollow,
+					secrets:               tc.inSecrets,
+					command:               tc.inCommand,
+					entrypoint:            tc.inEntryPoint,
+					envFile:               tc.inEnvFile,
+					generateCommandTarget: tc.inGenerateCmd,
 				},
 				spinner:  &mockSpinner{},
 				store:    mocks.store,
@@ -1170,10 +1185,11 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			opts.configureUploader = func(session *session.Session) uploader {
 				return mocks.uploader
 			}
+			opts.envCompatibilityChecker = func() (versionCompatibilityChecker, error) { return mocks.envCompatibilityChecker, nil }
 
 			err := opts.Execute()
 			if tc.wantedError != nil {
-				require.EqualError(t, tc.wantedError, err.Error())
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 			}
@@ -1216,7 +1232,7 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 			},
 			wantedCommand: &wantedCommand,
 		},
-		"fail to generate a command given an service ARN": {
+		"fail to generate a command given a service ARN": {
 			inGenerateCommandTarget: "arn:aws:ecs:us-east-1:123456789012:service/crowded-cluster/good-service",
 			setUpMocks: func(m *taskRunMocks) {
 				m.provider.EXPECT().Default()
