@@ -105,7 +105,7 @@ type TaskConfig struct {
 	Memory         *int                 `yaml:"memory,omitempty"`
 	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
 	Count          Count                `yaml:"count,omitempty"`
-	ExecuteCommand ExecuteCommand       `yaml:"exec"`
+	ExecuteCommand ExecuteCommand       `yaml:"exec,omitempty"`
 	Variables      map[string]string    `yaml:"variables,omitempty"`
 	EnvFile        *string              `yaml:"env_file,omitempty"`
 	Secrets        map[string]Secret    `yaml:"secrets,omitempty"`
