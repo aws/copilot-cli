@@ -30,9 +30,6 @@ func TestUnmarshalSvc(t *testing.T) {
 version: 1.0
 name: frontend
 type: "Load Balanced Web Service"
-taskdef_overrides:
-  - path: "ContainerDefinitions[0].Ulimits[-].HardLimit"
-    value: !Ref ParamName
 image:
   location: foo/bar
   credentials: some arn
@@ -162,19 +159,6 @@ environments:
 								},
 							},
 						},
-						TaskDefOverrides: []OverrideRule{
-							{
-								Path: "ContainerDefinitions[0].Ulimits[-].HardLimit",
-								Value: yaml.Node{
-									Kind:   8,
-									Style:  1,
-									Tag:    "!Ref",
-									Value:  "ParamName",
-									Line:   7,
-									Column: 12,
-								},
-							},
-						},
 					},
 					Environments: map[string]*LoadBalancedWebServiceConfig{
 						"test": {
@@ -217,6 +201,74 @@ environments:
 										},
 										CPU: mockConfig,
 									},
+								},
+							},
+						},
+					},
+				}
+				require.Equal(t, wantedManifest, actualManifest)
+			},
+		},
+		"load balanced web service with taskdef overrides": {
+			inContent: `name: frontend
+type: "Load Balanced Web Service"
+image:
+    location: foo/bar
+    credentials: some arn
+    port: 80
+cpu: 512
+memory: 1024
+count: 1
+exec: true
+network:
+    vpc:
+        placement: public
+taskdef_overrides:
+    - path: "ContainerDefinitions[0].Ulimits[-].HardLimit"
+      value: !Ref ParamName
+`,
+			requireCorrectValues: func(t *testing.T, i interface{}) {
+				actualManifest, ok := i.(*LoadBalancedWebService)
+				require.True(t, ok)
+				wantedManifest := &LoadBalancedWebService{
+					Workload: Workload{Name: aws.String("frontend"), Type: aws.String(LoadBalancedWebServiceType)},
+					LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
+						ImageConfig: ImageWithPortAndHealthcheck{
+							ImageWithPort: ImageWithPort{Image: Image{Build: BuildArgsOrString{},
+								Location:    aws.String("foo/bar"),
+								Credentials: aws.String("some arn"),
+							}, Port: aws.Uint16(80)},
+						},
+						TaskConfig: TaskConfig{
+							CPU:    aws.Int(512),
+							Memory: aws.Int(1024),
+							Count: Count{
+								Value: aws.Int(1),
+								AdvancedCount: AdvancedCount{
+									workloadType: LoadBalancedWebServiceType,
+								},
+							},
+							ExecuteCommand: ExecuteCommand{
+								Enable: aws.Bool(true),
+							},
+						},
+						TaskDefOverrides: []OverrideRule{
+							{
+								Path: "ContainerDefinitions[0].Ulimits[-].HardLimit",
+								Value: yaml.Node{
+									Kind:   8,
+									Style:  1,
+									Tag:    "!Ref",
+									Value:  "ParamName",
+									Line:   16,
+									Column: 14,
+								},
+							},
+						},
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PublicSubnetPlacement),
 								},
 							},
 						},
@@ -394,6 +446,13 @@ type: 'OH NO'
 			} else {
 				require.NoError(t, err)
 				tc.requireCorrectValues(t, m.Manifest())
+
+				roundtrip, err := yaml.Marshal(m.Manifest())
+				require.NoError(t, err)
+				fmt.Printf("re-marshalled form:\n%s\n", string(roundtrip))
+				m2, err := UnmarshalWorkload(roundtrip)
+				require.NoError(t, err)
+				tc.requireCorrectValues(t, m2.Manifest())
 			}
 		})
 	}
