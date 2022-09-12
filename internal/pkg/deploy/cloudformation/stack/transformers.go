@@ -797,7 +797,6 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	var publishers template.PublishOpts
 	// convert the topics to template Topics
 	for _, topic := range topics {
-		fmt.Println("printing topic name - ", topic.Name)
 		publishers.Topics = append(publishers.Topics, &template.Topic{
 			Name:      topic.Name,
 			AccountID: accountID,

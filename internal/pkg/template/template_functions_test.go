@@ -324,7 +324,7 @@ func TestIsFIFOFunc(t *testing.T) {
 			in:     "mytopic",
 			wanted: false,
 		},
-		"is fifo topic": {
+		"fifo topic": {
 			in:     "mytopic.fifo",
 			wanted: true,
 		},
