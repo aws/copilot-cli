@@ -1,4 +1,4 @@
-An application is a group of related services, environments, and pipelines. Whether you have one service that does everything or a constellation of micro-services, Copilot organizes them and the environments they're deployed to into an "application".
+An application is a group of related services, environments, and pipelines. Whether you have one service that does everything or a constellation of micro-services, Copilot organizes the service(s), and the environments into which they can be deployed, into an "application."
 
 Let's walk through an example. We want to build a voting app which needs to collect votes and aggregate the results.
 
