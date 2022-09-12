@@ -2653,6 +2653,26 @@ func TestPublishConfig_validate(t *testing.T) {
 			},
 			wantedErrorPrefix: `validate "topics[0]": `,
 		},
+		"error if empty topic name": {
+			config: PublishConfig{
+				Topics: []Topic{
+					{
+						Name: aws.String("mytopic.lifo"),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "topics[0]": `,
+		},
+		"error if invalid topic name": {
+			config: PublishConfig{
+				Topics: []Topic{
+					{
+						Name: aws.String("mytopic.lifo"),
+					},
+				},
+			},
+			wantedErrorPrefix: `validate "topics[0]": `,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

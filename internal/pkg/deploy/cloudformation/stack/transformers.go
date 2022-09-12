@@ -798,10 +798,8 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	// convert the topics to template Topics
 	for _, topic := range topics {
 		fmt.Println("printing topic name - ", topic.Name)
-		//fmt.Println("printing topic type - ", topic.Type)
 		publishers.Topics = append(publishers.Topics, &template.Topic{
-			Name: topic.Name,
-			//Type:      aws.StringValue(topic.Type),
+			Name:      topic.Name,
 			AccountID: accountID,
 			Partition: partition.ID(),
 			Region:    region,
