@@ -733,17 +733,15 @@ func TestTaskRunOpts_Ask(t *testing.T) {
 }
 
 type runTaskMocks struct {
-	deployer                *mocks.MocktaskDeployer
-	repository              *mocks.MockrepositoryService
-	runner                  *mocks.MocktaskRunner
-	store                   *mocks.Mockstore
-	eventsWriter            *mocks.MockeventsWriter
-	defaultClusterGetter    *mocks.MockdefaultClusterGetter
-	publicIPGetter          *mocks.MockpublicIPGetter
-	provider                *mocks.MocksessionProvider
-	uploader                *mocks.Mockuploader
-	ws                      *mocks.MockwsEnvironmentsLister
-	envCompatibilityChecker *mocks.MockversionCompatibilityChecker
+	deployer             *mocks.MocktaskDeployer
+	repository           *mocks.MockrepositoryService
+	runner               *mocks.MocktaskRunner
+	store                *mocks.Mockstore
+	eventsWriter         *mocks.MockeventsWriter
+	defaultClusterGetter *mocks.MockdefaultClusterGetter
+	publicIPGetter       *mocks.MockpublicIPGetter
+	provider             *mocks.MocksessionProvider
+	uploader             *mocks.Mockuploader
 }
 
 func mockHasDefaultCluster(m runTaskMocks) {
@@ -767,15 +765,14 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		inSecrets     map[string]string
-		inImage       string
-		inTag         string
-		inDockerCtx   string
-		inFollow      bool
-		inCommand     string
-		inEntryPoint  string
-		inEnvFile     string
-		inGenerateCmd string
+		inSecrets    map[string]string
+		inImage      string
+		inTag        string
+		inDockerCtx  string
+		inFollow     bool
+		inCommand    string
+		inEntryPoint string
+		inEnvFile    string
 
 		inApp string
 		inEnv string
@@ -785,24 +782,24 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 		wantedError error
 	}{
-		"error if can't get env version": {
-			inApp:         "app",
-			inEnv:         "test",
-			inGenerateCmd: "cluster/service",
-			setupMocks: func(m runTaskMocks) {
-				m.envCompatibilityChecker.EXPECT().Version().Return("", errors.New("some error"))
-			},
-			wantedError: errors.New(`retrieve version of environment stack "test" in application "app": some error`),
-		},
-		"disallow 'generate-cmd' flag if env version can't support it": {
-			inApp:         "app",
-			inEnv:         "test",
-			inGenerateCmd: "cluster/service",
-			setupMocks: func(m runTaskMocks) {
-				m.envCompatibilityChecker.EXPECT().Version().Return("v1.9.0", nil)
-			},
-			wantedError: errors.New(`environment "test" is on version "v1.9.0" which does not support the "task run --generate-cmd" feature`),
-		},
+		//"error if can't get env version": {
+		//	inApp:         "app",
+		//	inEnv:         "test",
+		//	inGenerateCmd: "cluster/service",
+		//	setupMocks: func(m runTaskMocks) {
+		//		m.envCompatibilityChecker.EXPECT().Version().Return("", errors.New("some error"))
+		//	},
+		//	wantedError: errors.New(`retrieve version of environment stack "test" in application "app": some error`),
+		//},
+		//"disallow 'generate-cmd' flag if env version can't support it": {
+		//	inApp:         "app",
+		//	inEnv:         "test",
+		//	inGenerateCmd: "cluster/service",
+		//	setupMocks: func(m runTaskMocks) {
+		//		m.envCompatibilityChecker.EXPECT().Version().Return("v1.9.0", nil)
+		//	},
+		//	wantedError: errors.New(`environment "test" is on version "v1.9.0" which does not support the "task run --generate-cmd" feature`),
+		//},
 		"check if default cluster exists if deploying to default cluster": {
 			setupMocks: func(m runTaskMocks) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
@@ -1141,17 +1138,15 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			}
 
 			mocks := runTaskMocks{
-				deployer:                mocks.NewMocktaskDeployer(ctrl),
-				repository:              mocks.NewMockrepositoryService(ctrl),
-				runner:                  mocks.NewMocktaskRunner(ctrl),
-				store:                   mocks.NewMockstore(ctrl),
-				eventsWriter:            mocks.NewMockeventsWriter(ctrl),
-				defaultClusterGetter:    mocks.NewMockdefaultClusterGetter(ctrl),
-				publicIPGetter:          mocks.NewMockpublicIPGetter(ctrl),
-				provider:                mocks.NewMocksessionProvider(ctrl),
-				uploader:                mocks.NewMockuploader(ctrl),
-				ws:                      mocks.NewMockwsEnvironmentsLister(ctrl),
-				envCompatibilityChecker: mocks.NewMockversionCompatibilityChecker(ctrl),
+				deployer:             mocks.NewMocktaskDeployer(ctrl),
+				repository:           mocks.NewMockrepositoryService(ctrl),
+				runner:               mocks.NewMocktaskRunner(ctrl),
+				store:                mocks.NewMockstore(ctrl),
+				eventsWriter:         mocks.NewMockeventsWriter(ctrl),
+				defaultClusterGetter: mocks.NewMockdefaultClusterGetter(ctrl),
+				publicIPGetter:       mocks.NewMockpublicIPGetter(ctrl),
+				provider:             mocks.NewMocksessionProvider(ctrl),
+				uploader:             mocks.NewMockuploader(ctrl),
 			}
 			tc.setupMocks(mocks)
 
@@ -1163,14 +1158,13 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					imageTag:              tc.inTag,
 					dockerfileContextPath: tc.inDockerCtx,
 
-					appName:               tc.inApp,
-					env:                   tc.inEnv,
-					follow:                tc.inFollow,
-					secrets:               tc.inSecrets,
-					command:               tc.inCommand,
-					entrypoint:            tc.inEntryPoint,
-					envFile:               tc.inEnvFile,
-					generateCommandTarget: tc.inGenerateCmd,
+					appName:    tc.inApp,
+					env:        tc.inEnv,
+					follow:     tc.inFollow,
+					secrets:    tc.inSecrets,
+					command:    tc.inCommand,
+					entrypoint: tc.inEntryPoint,
+					envFile:    tc.inEnvFile,
 				},
 				spinner:  &mockSpinner{},
 				store:    mocks.store,
@@ -1194,7 +1188,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			opts.configureUploader = func(session *session.Session) uploader {
 				return mocks.uploader
 			}
-			opts.envCompatibilityChecker = func() (versionCompatibilityChecker, error) { return mocks.envCompatibilityChecker, nil }
 
 			err := opts.Execute()
 			if tc.wantedError != nil {
@@ -1213,8 +1206,10 @@ type mockRunTaskRequester struct {
 }
 
 type taskRunMocks struct {
-	store    *mocks.Mockstore
-	provider *mocks.MocksessionProvider
+	store                   *mocks.Mockstore
+	provider                *mocks.MocksessionProvider
+	ws                      *mocks.MockwsEnvironmentsLister
+	envCompatibilityChecker *mocks.MockversionCompatibilityChecker
 }
 
 func TestTaskRunOpts_runTaskCommand(t *testing.T) {
@@ -1322,6 +1317,7 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 				}, nil)
 				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "good-job").Return(&config.Workload{}, nil)
+				m.envCompatibilityChecker.EXPECT().Version().Return("v1.12.2", nil)
 			},
 			mockRunTaskRequester: mockRunTaskRequester{
 				mockRunTaskRequestFromJob: func(client ecs.JobDescriber, app, env, svc string) (*ecs.RunTaskRequest, error) {
@@ -1339,6 +1335,7 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 				}, nil)
 				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "good-job").Return(&config.Workload{}, nil)
+				m.envCompatibilityChecker.EXPECT().Version().Return("v1.12.2", nil)
 			},
 			mockRunTaskRequester: mockRunTaskRequester{
 				mockRunTaskRequestFromJob: func(client ecs.JobDescriber, app, env, svc string) (*ecs.RunTaskRequest, error) {
@@ -1346,6 +1343,34 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 				},
 			},
 			wantedError: fmt.Errorf("generate task run command from job good-job of application good-app deployed in environment good-env: some error"),
+		},
+		"error out if fail to get env version when target is job": {
+			inGenerateCommandTarget: "good-app/good-env/good-job",
+			setUpMocks: func(m *taskRunMocks) {
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
+				m.store.EXPECT().GetJob("good-app", "good-job").Return(&config.Workload{}, nil)
+				m.envCompatibilityChecker.EXPECT().Version().Return("", errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf(`retrieve version of environment stack "good-env" in application "good-app": some error`),
+		},
+		"error out if env version doesn't support `--generate-cmd` for jobs": {
+			inGenerateCommandTarget: "good-app/good-env/good-job",
+			setUpMocks: func(m *taskRunMocks) {
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
+				m.store.EXPECT().GetJob("good-app", "good-job").Return(&config.Workload{}, nil)
+				m.envCompatibilityChecker.EXPECT().Version().Return("v1.9.0", nil)
+			},
+
+			wantedError: fmt.Errorf(`environment "good-env" is on version "v1.9.0" which does not support the "task run --generate-cmd" feature`),
 		},
 		"fail to determine if the workload is a job given an app/env/workload target": {
 			inGenerateCommandTarget: "good-app/good-env/bad-workload",
@@ -1397,8 +1422,10 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &taskRunMocks{
-				store:    mocks.NewMockstore(ctrl),
-				provider: mocks.NewMocksessionProvider(ctrl),
+				store:                   mocks.NewMockstore(ctrl),
+				provider:                mocks.NewMocksessionProvider(ctrl),
+				ws:                      mocks.NewMockwsEnvironmentsLister(ctrl),
+				envCompatibilityChecker: mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			if tc.setUpMocks != nil {
 				tc.setUpMocks(m)
@@ -1419,15 +1446,18 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 				configureServiceDescriber: func(session *session.Session) ecs.ServiceDescriber {
 					return ecsMocks.NewMockServiceDescriber(ctrl)
 				},
-
 				runTaskRequestFromECSService: tc.mockRunTaskRequester.mockRunTaskRequestFromECSService,
 				runTaskRequestFromService:    tc.mockRunTaskRequester.mockRunTaskRequestFromService,
 				runTaskRequestFromJob:        tc.mockRunTaskRequester.mockRunTaskRequestFromJob,
+				ws:                           mocks.NewMockwsEnvironmentsLister(ctrl),
+				envCompatibilityChecker: func() (versionCompatibilityChecker, error) {
+					return m.envCompatibilityChecker, nil
+				},
 			}
 
 			got, err := opts.runTaskCommand()
 			if tc.wantedError != nil {
-				require.EqualError(t, tc.wantedError, err.Error())
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedCommand, got)

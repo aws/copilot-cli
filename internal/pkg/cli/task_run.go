@@ -516,14 +516,14 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 	return nil
 }
 
-func (o *runTaskOpts) validateEnvCompatibility() error {
+func (o *runTaskOpts) validateEnvCompatibility(app, env string) error {
 	envStack, err := o.envCompatibilityChecker()
 	if err != nil {
 		return err
 	}
 	version, err := envStack.Version()
 	if err != nil {
-		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", o.env, o.appName, err)
+		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", env, app, err)
 	}
 	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0,
 	// EnvManagerRole took over, but "states:DescribeStateMachine" permissions
@@ -533,7 +533,7 @@ func (o *runTaskOpts) validateEnvCompatibility() error {
 		return &errFeatureIncompatibleWithEnvironment{
 			ws:             o.ws,
 			missingFeature: "task run --generate-cmd",
-			envName:        o.env,
+			envName:        env,
 			curVersion:     version,
 		}
 	}
@@ -667,11 +667,6 @@ func (o *runTaskOpts) shouldPromptForAppEnv() bool {
 // Execute deploys and runs the task.
 func (o *runTaskOpts) Execute() error {
 	if o.generateCommandTarget != "" {
-		if o.env != "" {
-			if err := o.validateEnvCompatibility(); err != nil {
-				return err
-			}
-		}
 		return o.generateCommand()
 	}
 
@@ -870,6 +865,9 @@ func (o *runTaskOpts) runTaskCommandFromWorkload(sess *session.Session, appName,
 	var cmd cliStringer
 	switch workloadType {
 	case workloadTypeJob:
+		if err := o.validateEnvCompatibility(appName, envName); err != nil {
+			return nil, err
+		}
 		cmd, err = o.runTaskRequestFromJob(o.configureJobDescriber(sess), appName, envName, workloadName)
 		if err != nil {
 			return nil, fmt.Errorf("generate task run command from job %s of application %s deployed in environment %s: %w", workloadName, appName, envName, err)
