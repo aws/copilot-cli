@@ -4,15 +4,11 @@
 package manifest
 
 import (
-	"bytes"
-	"errors"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/template/mocks"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -250,50 +246,6 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedStruct, svc)
 			}
-		})
-	}
-}
-
-func TestRequestDrivenWebService_MarshalBinary(t *testing.T) {
-	testCases := map[string]struct {
-		inManifest *RequestDrivenWebService
-
-		wantedBinary []byte
-		wantedError  error
-	}{
-		"error parsing template": {
-			inManifest: &RequestDrivenWebService{},
-
-			wantedError: errors.New("test error"),
-		},
-		"returns rendered content": {
-			inManifest: &RequestDrivenWebService{},
-
-			wantedBinary: []byte("test content"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			mockParser := mocks.NewMockParser(ctrl)
-			tc.inManifest.parser = mockParser
-			var wantedTemplContent *template.Content = nil
-
-			if tc.wantedBinary != nil {
-				wantedTemplContent = &template.Content{Buffer: bytes.NewBufferString(string(tc.wantedBinary))}
-			}
-
-			mockParser.
-				EXPECT().
-				Parse(requestDrivenWebSvcManifestPath, *tc.inManifest, gomock.Any()).
-				Return(wantedTemplContent, tc.wantedError)
-
-			b, err := tc.inManifest.MarshalBinary()
-
-			require.Equal(t, tc.wantedError, err)
-			require.Equal(t, tc.wantedBinary, b)
 		})
 	}
 }

@@ -315,7 +315,7 @@ func TestFromEnvConfig(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, FromEnvConfig(tc.in, nil))
+			require.Equal(t, tc.wanted, FromEnvConfig(tc.in))
 		})
 	}
 }
