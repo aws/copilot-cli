@@ -77,7 +77,7 @@ $ copilot app show
 About
 
   Name              vote
-  Version           v1.0.3
+  Version           v1.1.0 
   URI               vote-app.aws
 
 Environments
