@@ -37,7 +37,7 @@ http:
   path: 'api'
   healthcheck: '/api/health-check'
   # ロードバランサーのターゲットコンテナは Service のコンテナの代わりにサイドカーの'nginx'を指定しています。
-  targetContainer: 'nginx'
+  target_container: 'nginx'
 
 cpu: 256
 memory: 512
