@@ -782,24 +782,6 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 
 		wantedError error
 	}{
-		//"error if can't get env version": {
-		//	inApp:         "app",
-		//	inEnv:         "test",
-		//	inGenerateCmd: "cluster/service",
-		//	setupMocks: func(m runTaskMocks) {
-		//		m.envCompatibilityChecker.EXPECT().Version().Return("", errors.New("some error"))
-		//	},
-		//	wantedError: errors.New(`retrieve version of environment stack "test" in application "app": some error`),
-		//},
-		//"disallow 'generate-cmd' flag if env version can't support it": {
-		//	inApp:         "app",
-		//	inEnv:         "test",
-		//	inGenerateCmd: "cluster/service",
-		//	setupMocks: func(m runTaskMocks) {
-		//		m.envCompatibilityChecker.EXPECT().Version().Return("v1.9.0", nil)
-		//	},
-		//	wantedError: errors.New(`environment "test" is on version "v1.9.0" which does not support the "task run --generate-cmd" feature`),
-		//},
 		"check if default cluster exists if deploying to default cluster": {
 			setupMocks: func(m runTaskMocks) {
 				m.provider.EXPECT().Default().Return(&session.Session{}, nil)
