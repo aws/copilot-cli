@@ -282,7 +282,7 @@ func TestShowAppOpts_Execute(t *testing.T) {
 			wantedContent: `About
 
   Name     my-app
-  Version  v0.0.0 (latest available: v1.0.2)
+  Version  v0.0.0 (latest available: v1.1.0)
   URI      example.com
 
 Environments
@@ -348,7 +348,7 @@ Pipelines
 			wantedContent: `About
 
   Name     my-app
-  Version  v1.0.2 
+  Version  v1.1.0 
   URI      example.com
 
 Environments
@@ -416,7 +416,7 @@ Pipelines
 			wantedContent: `About
 
   Name     my-app
-  Version  v1.0.2 
+  Version  v1.1.0 
   URI      example.com
 
 Environments
@@ -505,7 +505,7 @@ Pipelines
 			wantedContent: `About
 
   Name     my-app
-  Version  v1.0.2 
+  Version  v1.1.0 
   URI      example.com
 
 Environments
