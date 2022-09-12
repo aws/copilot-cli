@@ -349,7 +349,7 @@ Pipelines
 
   Name     my-app
   Version  v1.1.0 
-gi  URI      example.com
+  URI      example.com
 
 Environments
 
