@@ -5,7 +5,6 @@ package manifest
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -21,11 +20,6 @@ func TestImage_UnmarshalYAML(t *testing.T) {
 		wantedError error
 		wantImage   Image
 	}{
-		"error if both build and location are set": {
-			inContent: []byte(`build: mockBuild
-location: mockLocation`),
-			wantedError: fmt.Errorf(`must specify one of "build" and "location"`),
-		},
 		"success": {
 			inContent: []byte(`location: mockLocation`),
 			wantImage: Image{

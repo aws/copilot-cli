@@ -129,24 +129,6 @@ type Image struct {
 // DependsOn represents container dependency for a container.
 type DependsOn map[string]string
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the Image
-// struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v3) interface.
-func (i *Image) UnmarshalYAML(value *yaml.Node) error {
-	type image Image
-	if err := value.Decode((*image)(i)); err != nil {
-		return err
-	}
-	if !i.Build.isEmpty() && i.Location != nil {
-		return &errFieldMutualExclusive{
-			firstField:  "build",
-			secondField: "location",
-			mustExist:   true,
-		}
-	}
-	return nil
-}
-
 // GetLocation returns the location of the image.
 func (i Image) GetLocation() string {
 	return aws.StringValue(i.Location)
@@ -410,7 +392,7 @@ type DockerBuildArgs struct {
 }
 
 func (b *DockerBuildArgs) isEmpty() bool {
-	if b.Context == nil && b.Dockerfile == nil && b.Args == nil && b.Target == nil && b.CacheFrom == nil {
+	if b.Context == nil && b.Dockerfile == nil && len(b.Args) == 0 && b.Target == nil && len(b.CacheFrom) == 0 {
 		return true
 	}
 	return false
