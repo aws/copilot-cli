@@ -529,7 +529,7 @@ func (o *runTaskOpts) validateEnvCompatibilityForGenerateJobCmd(app, env string)
 	// EnvManagerRole took over, but "states:DescribeStateMachine" permissions
 	// weren't added until 1.12.2. Any version predating the feature's
 	// introduction or between v1.8.0 and 1.12.2 are invalid.
-	if semver.Compare(version, "v1.4.0") < 0 || ((semver.Compare(version, "v1.7.0") > 0) && (semver.Compare(version, "v1.12.2") < 0)) {
+	if semver.Compare(version, "v1.12.2") < 0 {
 		return &errFeatureIncompatibleWithEnvironment{
 			ws:             o.ws,
 			missingFeature: "task run --generate-cmd",
