@@ -338,7 +338,7 @@ func (s *stringSliceOrShellString) toStringSlice() ([]string, error) {
 // BuildArgsOrString is a custom type which supports unmarshaling yaml which
 // can either be of type string or type DockerBuildArgs.
 type BuildArgsOrString struct {
-	BuildString *string
+	BuildString *string // path to a Dockerfile to be built
 	BuildArgs   DockerBuildArgs
 }
 
