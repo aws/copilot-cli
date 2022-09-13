@@ -516,7 +516,7 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 	return nil
 }
 
-func (o *runTaskOpts) validateEnvCompatibility(app, env string) error {
+func (o *runTaskOpts) validateEnvCompatibilityForGenerateJobCmd(app, env string) error {
 	envStack, err := o.envCompatibilityChecker()
 	if err != nil {
 		return err
