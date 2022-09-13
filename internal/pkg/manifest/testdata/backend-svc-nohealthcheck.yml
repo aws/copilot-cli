@@ -6,7 +6,7 @@
 name: subscribers
 type: Backend Service
 
-# Your service does not allow any traffic.
+# Your service does not allow any incoming traffic.
 
 # Configuration for your containers and service.
 image:

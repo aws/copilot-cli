@@ -8,7 +8,7 @@ type: {{.Type}}
 {{if .ImageConfig.Port}}
 # Your service is reachable at "http://{{.Name}}.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:{{.ImageConfig.Port}}" but is not public.
 {{- else}}
-# Your service does not allow any traffic.
+# Your service does not allow any incoming traffic.
 {{- end}}
 
 # Configuration for your containers and service.
