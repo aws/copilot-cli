@@ -4,11 +4,9 @@
 package s3
 
 import (
-	"archive/zip"
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"testing"
 
@@ -21,77 +19,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
-
-func TestS3_ZipAndUpload(t *testing.T) {
-	testCases := map[string]struct {
-		mockS3ManagerClient func(m *mocks.Mocks3ManagerAPI)
-
-		wantedURL string
-		wantError error
-	}{
-		"return error if upload fails": {
-			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
-				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
-					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
-					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
-				}).Return(nil, errors.New("some error"))
-			},
-			wantError: fmt.Errorf("upload mockFileName to bucket mockBucket: some error"),
-		},
-		"should upload to the s3 bucket": {
-			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
-				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
-					b, err := ioutil.ReadAll(in.Body)
-					require.NoError(t, err)
-					reader, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
-					require.NoError(t, err)
-					for _, f := range reader.File {
-						require.Equal(t, f.Name, "foo")
-						rc, err := f.Open()
-						require.NoError(t, err)
-						buf := &bytes.Buffer{}
-						_, err = io.CopyN(buf, rc, 3)
-						require.NoError(t, err)
-						require.Equal(t, buf.String(), "bar")
-						rc.Close()
-						fmt.Println()
-					}
-					require.Equal(t, aws.StringValue(in.Bucket), "mockBucket")
-					require.Equal(t, aws.StringValue(in.Key), "mockFileName")
-					require.Equal(t, s3.ObjectCannedACLBucketOwnerFullControl, aws.StringValue(in.ACL))
-				}).Return(&s3manager.UploadOutput{
-					Location: "mockURL",
-				}, nil)
-			},
-			wantedURL: "mockURL",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockS3ManagerClient := mocks.NewMocks3ManagerAPI(ctrl)
-			tc.mockS3ManagerClient(mockS3ManagerClient)
-
-			service := S3{
-				s3Manager: mockS3ManagerClient,
-			}
-
-			gotURL, gotErr := service.ZipAndUpload("mockBucket", "mockFileName", namedBinary{})
-
-			if gotErr != nil {
-				require.EqualError(t, gotErr, tc.wantError.Error())
-			} else {
-				require.Equal(t, gotErr, nil)
-				require.Equal(t, gotURL, tc.wantedURL)
-			}
-		})
-
-	}
-}
 
 func TestS3_Upload(t *testing.T) {
 	testCases := map[string]struct {

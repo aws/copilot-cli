@@ -97,7 +97,6 @@ type imageBuilderPusher interface {
 
 type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
-	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
 }
 
 type templater interface {
