@@ -185,7 +185,7 @@ type runTaskOpts struct {
 	ssmParamSecrets         map[string]string
 	secretsManagerSecrets   map[string]string
 	envFileARN              string
-	envCompatibilityChecker func() (versionCompatibilityChecker, error)
+	envCompatibilityChecker func(app, env string) (versionCompatibilityChecker, error)
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -245,10 +245,10 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	opts.configureUploader = func(session *session.Session) uploader {
 		return s3.New(session)
 	}
-	opts.envCompatibilityChecker = func() (versionCompatibilityChecker, error) {
+	opts.envCompatibilityChecker = func(app, env string) (versionCompatibilityChecker, error) {
 		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-			App:         opts.appName,
-			Env:         opts.env,
+			App:         app,
+			Env:         env,
 			ConfigStore: opts.store,
 		})
 		if err != nil {
@@ -517,7 +517,7 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 }
 
 func (o *runTaskOpts) validateEnvCompatibilityForGenerateJobCmd(app, env string) error {
-	envStack, err := o.envCompatibilityChecker()
+	envStack, err := o.envCompatibilityChecker(app, env)
 	if err != nil {
 		return err
 	}
@@ -865,8 +865,6 @@ func (o *runTaskOpts) runTaskCommandFromWorkload(sess *session.Session, appName,
 	var cmd cliStringer
 	switch workloadType {
 	case workloadTypeJob:
-		o.appName = appName
-		o.env = envName
 		if err := o.validateEnvCompatibilityForGenerateJobCmd(appName, envName); err != nil {
 			return nil, err
 		}

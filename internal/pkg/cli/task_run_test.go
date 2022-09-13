@@ -1432,7 +1432,7 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 				runTaskRequestFromService:    tc.mockRunTaskRequester.mockRunTaskRequestFromService,
 				runTaskRequestFromJob:        tc.mockRunTaskRequester.mockRunTaskRequestFromJob,
 				ws:                           mocks.NewMockwsEnvironmentsLister(ctrl),
-				envCompatibilityChecker: func() (versionCompatibilityChecker, error) {
+				envCompatibilityChecker: func(app, env string) (versionCompatibilityChecker, error) {
 					return m.envCompatibilityChecker, nil
 				},
 			}
