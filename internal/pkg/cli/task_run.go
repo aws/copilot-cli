@@ -865,7 +865,7 @@ func (o *runTaskOpts) runTaskCommandFromWorkload(sess *session.Session, appName,
 	var cmd cliStringer
 	switch workloadType {
 	case workloadTypeJob:
-		if err := o.validateEnvCompatibility(appName, envName); err != nil {
+		if err := o.validateEnvCompatibilityForGenerateJobCmd(appName, envName); err != nil {
 			return nil, err
 		}
 		cmd, err = o.runTaskRequestFromJob(o.configureJobDescriber(sess), appName, envName, workloadName)
