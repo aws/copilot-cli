@@ -57,20 +57,24 @@ var (
 // CustomResource represents a CloudFormation custom resource backed by a Lambda function.
 type CustomResource struct {
 	name  string
+	env   string
 	files []file
 
 	// Post-initialization cached fields.
 	zip *bytes.Buffer
 }
 
-// FunctionName is the name of the Lambda function.
-func (cr *CustomResource) FunctionName() string {
+// Name returns the name of the custom resource.
+func (cr *CustomResource) Name() string {
 	return cr.name
 }
 
-// ArtifactPath returns the S3 key for the zipped custom resource object.
-func (cr *CustomResource) ArtifactPath() string {
-	return artifactpath.CustomResource(strings.ToLower(cr.FunctionName()), cr.zip.Bytes())
+func (cr *CustomResource) relativePath() string {
+	return path.Join(cr.env, cr.name)
+}
+
+func (cr *CustomResource) artifactPath() string {
+	return artifactpath.CustomResource(strings.ToLower(cr.relativePath()), cr.zip.Bytes())
 }
 
 // zipReader returns a reader for the zip archive from all the files in the custom resource.
@@ -84,15 +88,15 @@ func (cr *CustomResource) init() error {
 	for _, file := range cr.files {
 		f, err := w.Create(file.name)
 		if err != nil {
-			return fmt.Errorf("create zip file %q for custom resource %q: %v", file.name, cr.FunctionName(), err)
+			return fmt.Errorf("create zip file %q for custom resource %q: %v", file.name, cr.name, err)
 		}
 		_, err = f.Write(file.content)
 		if err != nil {
-			return fmt.Errorf("write zip file %q for custom resource %q: %v", file.name, cr.FunctionName(), err)
+			return fmt.Errorf("write zip file %q for custom resource %q: %v", file.name, cr.name, err)
 		}
 	}
 	if err := w.Close(); err != nil {
-		return fmt.Errorf("close zip file for custom resource %q: %v", cr.FunctionName(), err)
+		return fmt.Errorf("close zip file for custom resource %q: %v", cr.name, err)
 	}
 	cr.zip = buf
 	return nil
@@ -104,16 +108,16 @@ type file struct {
 }
 
 // RDWS returns the custom resources for a request-driven web service.
-func RDWS(fs template.Reader) ([]*CustomResource, error) {
-	return buildCustomResources(fs, map[string]string{
+func RDWS(fs template.Reader, env string) ([]*CustomResource, error) {
+	return buildCustomResources(fs, env, map[string]string{
 		envControllerFnName: envControllerFilePath,
 		customDomainFnName:  customDomainAppRunnerFilePath,
 	})
 }
 
 // LBWS returns the custom resources for a load-balanced web service.
-func LBWS(fs template.Reader) ([]*CustomResource, error) {
-	return buildCustomResources(fs, map[string]string{
+func LBWS(fs template.Reader, env string) ([]*CustomResource, error) {
+	return buildCustomResources(fs, env, map[string]string{
 		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
 		envControllerFnName:       envControllerFilePath,
 		rulePriorityFnName:        albRulePriorityGeneratorFilePath,
@@ -123,8 +127,8 @@ func LBWS(fs template.Reader) ([]*CustomResource, error) {
 }
 
 // Worker returns the custom resources for a worker service.
-func Worker(fs template.Reader) ([]*CustomResource, error) {
-	return buildCustomResources(fs, map[string]string{
+func Worker(fs template.Reader, env string) ([]*CustomResource, error) {
+	return buildCustomResources(fs, env, map[string]string{
 		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
 		backlogPerTaskFnName:      backlogPerTaskCalculatorFilePath,
 		envControllerFnName:       envControllerFilePath,
@@ -132,8 +136,8 @@ func Worker(fs template.Reader) ([]*CustomResource, error) {
 }
 
 // Backend returns the custom resources for a backend service.
-func Backend(fs template.Reader) ([]*CustomResource, error) {
-	return buildCustomResources(fs, map[string]string{
+func Backend(fs template.Reader, env string) ([]*CustomResource, error) {
+	return buildCustomResources(fs, env, map[string]string{
 		dynamicDesiredCountFnName: desiredCountDelegationFilePath,
 		rulePriorityFnName:        albRulePriorityGeneratorFilePath,
 		envControllerFnName:       envControllerFilePath,
@@ -141,15 +145,15 @@ func Backend(fs template.Reader) ([]*CustomResource, error) {
 }
 
 // ScheduledJob returns the custom resources for a scheduled job.
-func ScheduledJob(fs template.Reader) ([]*CustomResource, error) {
-	return buildCustomResources(fs, map[string]string{
+func ScheduledJob(fs template.Reader, env string) ([]*CustomResource, error) {
+	return buildCustomResources(fs, env, map[string]string{
 		envControllerFnName: envControllerFilePath,
 	})
 }
 
 // Env returns the custom resources for an environment.
-func Env(fs template.Reader) ([]*CustomResource, error) {
-	return buildCustomResources(fs, map[string]string{
+func Env(fs template.Reader, envName string) ([]*CustomResource, error) {
+	return buildCustomResources(fs, envName, map[string]string{
 		certValidationFnName:   dnsCertValidationFilePath,
 		customDomainFnName:     customDomainFilePath,
 		dnsDelegationFnName:    dnsDelegationFilePath,
@@ -166,16 +170,16 @@ type UploadFunc func(key string, contents io.Reader) (url string, err error)
 func Upload(upload UploadFunc, crs []*CustomResource) (map[string]string, error) {
 	urls := make(map[string]string)
 	for _, cr := range crs {
-		url, err := upload(cr.ArtifactPath(), cr.zipReader())
+		url, err := upload(cr.artifactPath(), cr.zipReader())
 		if err != nil {
-			return nil, fmt.Errorf("upload custom resource %q: %w", cr.FunctionName(), err)
+			return nil, fmt.Errorf("upload custom resource %q: %w", cr.name, err)
 		}
-		urls[cr.FunctionName()] = url
+		urls[cr.name] = url
 	}
 	return urls, nil
 }
 
-func buildCustomResources(fs template.Reader, pathForFn map[string]string) ([]*CustomResource, error) {
+func buildCustomResources(fs template.Reader, env string, pathForFn map[string]string) ([]*CustomResource, error) {
 	var idx int
 	crs := make([]*CustomResource, len(pathForFn))
 	for fn, path := range pathForFn {
@@ -185,6 +189,7 @@ func buildCustomResources(fs template.Reader, pathForFn map[string]string) ([]*C
 		}
 		crs[idx] = &CustomResource{
 			name: fn,
+			env:  env,
 			files: []file{
 				{
 					name:    handlerFileName,

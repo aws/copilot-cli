@@ -89,7 +89,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		env: in.Env,
 
 		templateFS:       template.New(),
-		s3:               s3.New(envRegionSession),
+		s3:               s3.New(envManagerSession),
 		prefixListGetter: ec2.New(envRegionSession),
 
 		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
@@ -118,9 +118,9 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 }
 
 func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, error) {
-	crs, err := customresource.Env(d.templateFS)
+	crs, err := customresource.Env(d.templateFS, d.env.Name)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for environments: %w", err)
+		return nil, fmt.Errorf("read custom resources for environment %s: %w", d.env.Name, err)
 	}
 	urls, err := customresource.Upload(func(key string, dat io.Reader) (url string, err error) {
 		return d.s3.Upload(bucket, key, dat)

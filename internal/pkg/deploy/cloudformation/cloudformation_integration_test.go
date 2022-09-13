@@ -484,7 +484,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	})
 
 	t.Run("Deploys an environment to CloudFormation", func(t *testing.T) {
-		crs, err := customresource.Env(template.New())
+		crs, err := customresource.Env(template.New(), envName)
 		require.NoError(t, err)
 		urls, err := customresource.Upload(func(key string, dat io.Reader) (url string, err error) {
 			return s3Client.Upload(bucketName, key, dat)

@@ -163,11 +163,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
-				crs, err := customresource.LBWS(fakeTemplateFS())
+				crs, err := customresource.LBWS(fakeTemplateFS(), mockEnvName)
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
@@ -179,7 +179,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
-					customResources: customresource.LBWS,
+					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+						return customresource.LBWS(fs, mockEnvName)
+					},
 				}
 			},
 		},
@@ -189,11 +191,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
-				crs, err := customresource.Backend(fakeTemplateFS())
+				crs, err := customresource.Backend(fakeTemplateFS(), mockEnvName)
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
@@ -205,7 +207,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
-					customResources: customresource.Backend,
+					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+						return customresource.Backend(fs, mockEnvName)
+					},
 				}
 			},
 		},
@@ -215,11 +219,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
-				crs, err := customresource.Worker(fakeTemplateFS())
+				crs, err := customresource.Worker(fakeTemplateFS(), mockEnvName)
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
@@ -231,7 +235,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
-					customResources: customresource.Worker,
+					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+						return customresource.Worker(fs, mockEnvName)
+					},
 				}
 			},
 		},
@@ -241,11 +247,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
-				crs, err := customresource.RDWS(fakeTemplateFS())
+				crs, err := customresource.RDWS(fakeTemplateFS(), mockEnvName)
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
@@ -257,7 +263,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
-					customResources: customresource.RDWS,
+					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+						return customresource.RDWS(fs, mockEnvName)
+					},
 				}
 			},
 		},
@@ -267,11 +275,11 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
-				crs, err := customresource.ScheduledJob(fakeTemplateFS())
+				crs, err := customresource.ScheduledJob(fakeTemplateFS(), mockEnvName)
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
@@ -281,7 +289,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &jobDeployer{
 					workloadDeployer: deployer,
-					customResources:  customresource.ScheduledJob,
+					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+						return customresource.ScheduledJob(fs, mockEnvName)
+					},
 				}
 			},
 		},
