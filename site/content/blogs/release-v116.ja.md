@@ -1,5 +1,7 @@
 # AWS Copilot v1.16: マルチパイプライン、 SNS サブスクリプションフィルターなど
 
+投稿日: 2022 年 4 月 6 日
+
 The AWS Copilot コアチームは Copilot v1.16 リリースを発表できることを嬉しく思います。
 このリリースに貢献した 7 人の新しいコミュニティ開発者を歓迎します。[@codekitchen](https://github.com/codekitchen),
 [@shingos](https://github.com/shingos) 、 [@csantos](https://github.com/csantos) 、 [@rfma23](https://github.com/rfma23)、
@@ -39,7 +41,7 @@ Copilot は、 さまざまなタイプのマイクロサービスの作成と�
 _Contributed by [Efe Karakus](https://github.com/efekarakus/), [Janice Huang](https://github.com/huanjani/)_
 
 リリースプロセスを自動化することは、ソフトウエアデリバリの最も重要な部分の 1 つです。 AWS Copilot はそのプロセスをできるだけ簡単に設定できる様にしたいと考えています。
-アプリケーションの全ての Enviroment で `copilot deploy` を手動で実行する代わりに、
+アプリケーションの全ての Environment で `copilot deploy` を手動で実行する代わりに、
 いくつかの `copilot pipeline` コマンドを実行するだけで、 `git push` するたびに環境に対して自動的にリリースされる継続的デリバリーパイプラインをセットアップできます。
 
 生成された CodePipeline は、次の様な基本構造になります。
@@ -74,7 +76,7 @@ stages:
     # test_commands: [echo 'running tests', make test]
 ```
 
-このモデルは "main" ブランチへの全てのコミットを Enviroment 全体でリリースしたいユーザに適しています。
+このモデルは "main" ブランチへの全てのコミットを Environment 全体でリリースしたいユーザに適しています。
 代替モデルは、ブランチごとにパイプラインを作成することです。例えば、"main" ブランチにいくつかの変更をコミットし、満足したら "test" ブランチに変更をマージして "test" Environment にデプロイします。次に "prod" ブランチにマージします。v1.15 までは単一の Pipeline Manifest のみがサポートされていたため、このモデルは実現できませんでした。
 
 v1.16 からは、Copilot ユーザは git リポジトリに複数のパイプラインを作成できる様になったので、ブランチごとに別々のパイプラインを設定できます。例えば、 マージ時のコンフリクトを気にすることなく、`copilot pipeline init` を git リポジトリの別々のブランチで実行できます。
@@ -115,7 +117,7 @@ _Contributed by [Penghao He](https://github.com/iamhopaul123/)_
 AWS Copilot は、ロジックを簡単にするため、Amazon SNS と Amazon SQS のサービスを組み合わせて実現します。
 AWS Copilot では、 単一または複数のサービスが名前付き SNS トピックにメッセージを発行する様に設定し、 メッセージを受信して処理するワーカーサービスを作成できます。
 AWS Copilot は SNS トピック、SQS キュー、必要なポリシーなどの、 パブサブインフラストラクチャを設定し、自動プロビジョニングします。
-詳細については、 [AWS Copilot のドキュメン内の Publish/Subscribe architecture](../docs/developing/publish-subscribe.en.md)を確認してください。
+詳細については、 [AWS Copilot のドキュメント内の Publish/Subscribe architecture](../docs/developing/publish-subscribe.ja.md)を確認してください。
 
 デフォルトでは、Amazon SNS トピックのサブスクライバーはトピックにパブリッシュされた全てのメッセージを受け取ります。
 メッセージのサブセットを受け取る為には、サブスクライバーはトピックサブスクリプションに対してフィルターポリシーを割り当てる必要があります。例えば、トピックに注文をバブリッシュするサービスがあるとします。
