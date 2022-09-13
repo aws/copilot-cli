@@ -824,6 +824,7 @@ func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, erro
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
 	subscriptions.Queue = convertQueue(s.Queue, false)
+	subscriptions.StandardQueue = subscriptions.StandardDefaultQueue()
 	return &subscriptions, nil
 }
 
@@ -872,15 +873,28 @@ func convertQueue(q manifest.SQSQueue, isFIFO bool) *template.SQSQueue {
 		if q.IsFIFOEmpty() {
 			return nil
 		}
+		var fifoThroughputLimit, deduplicationScope *string
+
+		if aws.BoolValue(q.HighThroughputFifo) != true {
+			if q.FifoThroughputLimit != nil {
+				fifoThroughputLimit = q.FifoThroughputLimit
+			}
+			if q.DeduplicationScope != nil {
+				deduplicationScope = q.DeduplicationScope
+			}
+		} else if aws.BoolValue(q.HighThroughputFifo) == true {
+			fifoThroughputLimit = aws.String("messageGroup")
+			deduplicationScope = aws.String("perMessageGroupId")
+		}
+
 		return &template.SQSQueue{
 			Retention:                 convertRetention(q.Retention),
 			Delay:                     convertDelay(q.Delay),
 			Timeout:                   convertTimeout(q.Timeout),
 			DeadLetter:                convertDeadLetter(q.DeadLetter),
-			FifoThroughputLimit:       aws.StringValue(q.FifoThroughputLimit),
-			HighThroughputFifo:        aws.BoolValue(q.HighThroughputFifo),
-			ContentBasedDeduplication: aws.BoolValue(q.ContentBasedDeduplication),
-			DeduplicationScope:        aws.StringValue(q.DeduplicationScope),
+			FifoThroughputLimit:       fifoThroughputLimit,
+			ContentBasedDeduplication: q.ContentBasedDeduplication,
+			DeduplicationScope:        deduplicationScope,
 		}
 	}
 

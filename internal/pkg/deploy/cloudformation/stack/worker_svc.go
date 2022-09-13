@@ -153,6 +153,7 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
+	fmt.Println(string(overridenTpl))
 	return string(overridenTpl), nil
 }
 

@@ -400,14 +400,25 @@ type Topic struct {
 
 // SubscribeOpts holds configuration needed if the service has subscriptions.
 type SubscribeOpts struct {
-	Topics []*TopicSubscription
-	Queue  *SQSQueue
+	Topics        []*TopicSubscription
+	Queue         *SQSQueue
+	StandardQueue bool
 }
 
 // HasTopicQueues returns true if any individual subscription has a dedicated queue.
 func (s *SubscribeOpts) HasTopicQueues() bool {
 	for _, t := range s.Topics {
 		if t.Queue != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// StandardDefaultQueue returns true if at least one standard topic exist and does not have its own queue configs.
+func (s *SubscribeOpts) StandardDefaultQueue() bool {
+	for _, t := range s.Topics {
+		if !IsFIFOFunc(aws.StringValue(t.Name)) {
 			return true
 		}
 	}
@@ -428,10 +439,9 @@ type SQSQueue struct {
 	Delay                     *int64
 	Timeout                   *int64
 	DeadLetter                *DeadLetterQueue
-	FifoThroughputLimit       string
-	HighThroughputFifo        bool
-	ContentBasedDeduplication bool
-	DeduplicationScope        string
+	FifoThroughputLimit       *string
+	ContentBasedDeduplication *bool
+	DeduplicationScope        *string
 }
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.

@@ -1490,6 +1490,138 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
+		"valid subscribe with high throughput fifo sqs": {
+			inSubscribe: manifest.SubscribeConfig{
+				Topics: []manifest.TopicSubscription{
+					{
+						Name:    aws.String("name.fifo"),
+						Service: aws.String("svc"),
+						Queue: manifest.SQSQueueOrBool{
+							Advanced: manifest.SQSQueue{
+								Retention: &duration111Seconds,
+								Delay:     &duration111Seconds,
+								Timeout:   &duration111Seconds,
+								DeadLetter: manifest.DeadLetterQueue{
+									Tries: aws.Uint16(35),
+								},
+								HighThroughputFifo: aws.Bool(true),
+							},
+						},
+						FilterPolicy: mockStruct,
+					},
+				},
+				Queue: manifest.SQSQueue{},
+			},
+			wanted: &template.SubscribeOpts{
+				Topics: []*template.TopicSubscription{
+					{
+						Name:    aws.String("name.fifo"),
+						Service: aws.String("svc"),
+						Queue: &template.SQSQueue{
+							Retention: aws.Int64(111),
+							Delay:     aws.Int64(111),
+							Timeout:   aws.Int64(111),
+							DeadLetter: &template.DeadLetterQueue{
+								Tries: aws.Uint16(35),
+							},
+							FifoThroughputLimit: aws.String("messageGroup"),
+							DeduplicationScope:  aws.String("perMessageGroupId"),
+						},
+						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
+					},
+				},
+				Queue: nil,
+			},
+		},
+		"valid subscribe with default fifo sqs config values": {
+			inSubscribe: manifest.SubscribeConfig{
+				Topics: []manifest.TopicSubscription{
+					{
+						Name:    aws.String("name.fifo"),
+						Service: aws.String("svc"),
+						Queue: manifest.SQSQueueOrBool{
+							Advanced: manifest.SQSQueue{
+								Retention: &duration111Seconds,
+								Delay:     &duration111Seconds,
+								Timeout:   &duration111Seconds,
+								DeadLetter: manifest.DeadLetterQueue{
+									Tries: aws.Uint16(35),
+								},
+							},
+						},
+						FilterPolicy: mockStruct,
+					},
+				},
+				Queue: manifest.SQSQueue{},
+			},
+			wanted: &template.SubscribeOpts{
+				Topics: []*template.TopicSubscription{
+					{
+						Name:    aws.String("name.fifo"),
+						Service: aws.String("svc"),
+						Queue: &template.SQSQueue{
+							Retention: aws.Int64(111),
+							Delay:     aws.Int64(111),
+							Timeout:   aws.Int64(111),
+							DeadLetter: &template.DeadLetterQueue{
+								Tries: aws.Uint16(35),
+							},
+							FifoThroughputLimit:       nil,
+							DeduplicationScope:        nil,
+							ContentBasedDeduplication: nil,
+						},
+						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
+					},
+				},
+				Queue: nil,
+			},
+		},
+		"valid subscribe with custom fifo sqs config values": {
+			inSubscribe: manifest.SubscribeConfig{
+				Topics: []manifest.TopicSubscription{
+					{
+						Name:    aws.String("name.fifo"),
+						Service: aws.String("svc"),
+						Queue: manifest.SQSQueueOrBool{
+							Advanced: manifest.SQSQueue{
+								Retention: &duration111Seconds,
+								Delay:     &duration111Seconds,
+								Timeout:   &duration111Seconds,
+								DeadLetter: manifest.DeadLetterQueue{
+									Tries: aws.Uint16(35),
+								},
+								FifoThroughputLimit:       aws.String("queue"),
+								DeduplicationScope:        aws.String("perQueue"),
+								ContentBasedDeduplication: aws.Bool(true),
+							},
+						},
+						FilterPolicy: mockStruct,
+					},
+				},
+				Queue: manifest.SQSQueue{},
+			},
+			wanted: &template.SubscribeOpts{
+				Topics: []*template.TopicSubscription{
+					{
+						Name:    aws.String("name.fifo"),
+						Service: aws.String("svc"),
+						Queue: &template.SQSQueue{
+							Retention: aws.Int64(111),
+							Delay:     aws.Int64(111),
+							Timeout:   aws.Int64(111),
+							DeadLetter: &template.DeadLetterQueue{
+								Tries: aws.Uint16(35),
+							},
+							FifoThroughputLimit:       aws.String("queue"),
+							DeduplicationScope:        aws.String("perQueue"),
+							ContentBasedDeduplication: aws.Bool(true),
+						},
+						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
+					},
+				},
+				Queue: nil,
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

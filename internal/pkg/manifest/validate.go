@@ -1491,11 +1491,17 @@ func (q SQSQueue) validateFIFO() error {
 		return nil
 	}
 
+	if q.HighThroughputFifo != nil && (q.FifoThroughputLimit != nil || q.DeduplicationScope != nil) {
+		return fmt.Errorf(`validate "high_throughput_fifo": cannot define fifo_throughput_limit and fifo_throughput_limit when high_throughput_fifo is defined`)
+	}
 	if q.DeduplicationScope != nil && !contains(aws.StringValue(q.DeduplicationScope), validDeduplicationScopeValues) {
 		return fmt.Errorf(`validate "deduplication_scope": deduplication scope value must be one of %s`, english.WordSeries(validDeduplicationScopeValues, "or"))
 	}
 	if q.FifoThroughputLimit != nil && !contains(aws.StringValue(q.FifoThroughputLimit), validFIFOThroughputLimitValues) {
 		return fmt.Errorf(`validate "fifo_throughput_limit": fifo throughput limit value must be one of %s`, english.WordSeries(validFIFOThroughputLimitValues, "or"))
+	}
+	if q.FifoThroughputLimit != nil && strings.Compare(aws.StringValue(q.FifoThroughputLimit), "perMessageGroupId") == 0 && q.DeduplicationScope != nil && strings.Compare(aws.StringValue(q.DeduplicationScope), "queue") == 0 {
+		return fmt.Errorf(`when Deduplication scope is set to Queue, FIFO throughput limit must be set to Per Queue`)
 	}
 	if err := q.DeadLetter.validate(); err != nil {
 		return fmt.Errorf(`validate "dead_letter": %w`, err)
