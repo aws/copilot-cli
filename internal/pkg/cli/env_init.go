@@ -285,7 +285,6 @@ func (o *initEnvOpts) Execute() error {
 	// If the call fails because the role already exists, nothing to do.
 	// If the call fails because the user doesn't have permissions, then the role must be created outside of Copilot.
 	_ = o.iam.CreateECSServiceLinkedRole()
-
 	// 4. Add the stack set instance to the app stackset.
 	if err := o.addToStackset(&deploycfn.AddEnvToAppOpts{
 		App:          app,
@@ -300,7 +299,6 @@ func (o *initEnvOpts) Execute() error {
 	if err := o.deployEnv(app); err != nil {
 		return err
 	}
-
 	// 6. Store the environment in SSM with information about the deployed bootstrap roles.
 	env, err := o.envDeployer.GetEnvironment(o.appName, o.name)
 	if err != nil {
@@ -702,6 +700,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		AdditionalTags:       app.Tags,
 		ArtifactBucketARN:    artifactBucketARN,
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
+		PermissionsBoundary:  app.PermissionsBoundary,
 	}
 
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
