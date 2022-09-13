@@ -263,13 +263,6 @@ stages:
 				require.EqualError(t, err, tc.expectedErr.Error())
 			} else {
 				require.Equal(t, tc.expectedManifest, m)
-
-				// round-trip
-				bin, err := m.MarshalBinary()
-				require.NoError(t, err)
-				m2, err := UnmarshalPipeline(bin)
-				require.NoError(t, err)
-				require.Equal(t, m, m2)
 			}
 		})
 	}
