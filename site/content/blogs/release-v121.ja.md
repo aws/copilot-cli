@@ -155,3 +155,6 @@ $ copilot job run -n emailer && copilot job logs -n emailer --follow
 * [最新 CLI バージョン](../docs/getting-started/install.ja.md)のダウンロード
 * [スタートガイド](../docs/getting-started/first-app-tutorial.ja.md)を試す
 * [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.21.0) でリリースノートの全文を読む
+
+今回のリリースの翻訳はソリューションアーキテクトの杉本が担当しました。
+
