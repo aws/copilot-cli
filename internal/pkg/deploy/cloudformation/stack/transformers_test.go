@@ -1405,6 +1405,42 @@ func Test_convertPublish(t *testing.T) {
 				},
 			},
 		},
+		"valid publish with fifo and standard topics": {
+			inTopics: []manifest.Topic{
+				{
+					Name: aws.String("topic1"),
+					Type: aws.String("fifo"),
+				},
+				{
+					Name: aws.String("topic2"),
+				},
+			},
+			wanted: &template.PublishOpts{
+				Topics: []*template.Topic{
+					{
+						Name:      aws.String("topic1"),
+						Type:      "fifo",
+						AccountID: accountId,
+						Partition: partition,
+						Region:    region,
+						App:       app,
+						Env:       env,
+						Svc:       svc,
+					},
+					{
+
+						Name:      aws.String("topic2"),
+						Type:      "standard",
+						AccountID: accountId,
+						Partition: partition,
+						Region:    region,
+						App:       app,
+						Env:       env,
+						Svc:       svc,
+					},
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

@@ -1638,7 +1638,7 @@ func validatePubSubName(name string) error {
 			missingField: "name",
 		}
 	}
-	// Name must contain letters, numbers, and can't use special characters besides underscores, hyphens and .fifo suffix.
+	// Name must contain letters, numbers, and can't use special characters besides underscores, and hyphens.
 	if !awsSNSTopicRegexp.MatchString(name) {
 		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, and hyphens`)
 	}
