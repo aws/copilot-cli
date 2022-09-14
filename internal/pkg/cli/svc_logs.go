@@ -11,6 +11,7 @@ import (
 	"time"
 
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -43,30 +44,40 @@ type wkldLogsVars struct {
 	shouldOutputJSON bool
 	follow           bool
 	limit            int
-	name             string
-	envName          string
-	appName          string
-	humanStartTime   string
-	humanEndTime     string
-	taskIDs          []string
-	since            time.Duration
-	logGroup         string
-	previous         bool
-	containerName    string
+
+	name           string
+	envName        string
+	appName        string
+	humanStartTime string
+	humanEndTime   string
+
+	taskIDs []string
+	since   time.Duration
+}
+
+type svcLogsVars struct {
+	wkldLogsVars
+
+	logGroup      string
+	containerName string
+	previous      bool
 }
 
 type svcLogsOpts struct {
-	wkldLogsVars
+	svcLogsVars
 	wkldLogOpts
-	// cached variables.
-	targetEnv *config.Environment
+
+	// Cached variables.
+	targetEnv     *config.Environment
+	targetSvcType string
 }
 
 type wkldLogOpts struct {
-	// internal states
+	// Internal states.
 	startTime *int64
 	endTime   *int64
 
+	// Dependencies.
 	w                  io.Writer
 	configStore        store
 	sessProvider       sessionProvider
@@ -77,7 +88,7 @@ type wkldLogOpts struct {
 	initRuntimeClients func() error // Overridden in tests.
 }
 
-func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
+func newSvcLogOpts(vars svcLogsVars) (*svcLogsOpts, error) {
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc logs"))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
@@ -90,7 +101,7 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		return nil, fmt.Errorf("connect to deploy store: %w", err)
 	}
 	opts := &svcLogsOpts{
-		wkldLogsVars: vars,
+		svcLogsVars: vars,
 		wkldLogOpts: wkldLogOpts{
 			w:           log.OutputWriter,
 			configStore: configStore,
@@ -103,26 +114,26 @@ func newSvcLogOpts(vars wkldLogsVars) (*svcLogsOpts, error) {
 		if err != nil {
 			return fmt.Errorf("get environment: %w", err)
 		}
-		workload, err := configStore.GetWorkload(opts.appName, opts.name)
-		if err != nil {
-			return fmt.Errorf("get workload: %w", err)
-		}
 		sess, err := sessProvider.FromRole(env.ManagerRoleARN, env.Region)
 		if err != nil {
 			return err
 		}
 		opts.ecs = ecs.New(sess)
-		opts.logsSvc, err = logging.NewWorkloadClient(&logging.NewWorkloadLogsConfig{
-			App:         opts.appName,
-			Env:         opts.envName,
-			Name:        opts.name,
-			Sess:        sess,
-			LogGroup:    opts.logGroup,
-			WkldType:    workload.Type,
-			TaskIDs:     opts.taskIDs,
-			ConfigStore: configStore,
-		})
 
+		newWorkloadLoggerOpts := &logging.NewWorkloadLoggerOpts{
+			App:  opts.appName,
+			Env:  opts.envName,
+			Name: opts.name,
+			Sess: sess,
+		}
+		if opts.targetSvcType != manifest.RequestDrivenWebServiceType {
+			opts.logsSvc = logging.NewECSServiceClient(newWorkloadLoggerOpts)
+			return nil
+		}
+		opts.logsSvc, err = logging.NewAppRunnerServiceLogger(&logging.NewAppRunnerServiceLoggerOpts{
+			NewWorkloadLoggerOpts: newWorkloadLoggerOpts,
+			ConfigStore:           opts.configStore,
+		})
 		if err != nil {
 			return err
 		}
@@ -174,7 +185,6 @@ func (o *svcLogsOpts) Validate() error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -209,6 +219,7 @@ func (o *svcLogsOpts) Execute() error {
 			return err
 		}
 		o.taskIDs = []string{taskID}
+		log.Infoln("previously stopped task:", taskID)
 	}
 	err := o.logsSvc.WriteLogEvents(logging.WriteLogEventsOpts{
 		Follow:        o.follow,
@@ -218,6 +229,7 @@ func (o *svcLogsOpts) Execute() error {
 		TaskIDs:       o.taskIDs,
 		OnEvents:      eventsWriter,
 		ContainerName: o.containerName,
+		LogGroup:      o.logGroup,
 	})
 	if err != nil {
 		return fmt.Errorf("write log events for service %s: %w", o.name, err)
@@ -274,8 +286,12 @@ func (o *svcLogsOpts) validateAndAskSvcEnvName() error {
 	if err != nil {
 		return fmt.Errorf("select deployed services for application %s: %w", o.appName, err)
 	}
+	if deployedService.SvcType == manifest.RequestDrivenWebServiceType && len(o.taskIDs) != 0 {
+		return fmt.Errorf("cannot use `--tasks` for App Runner service logs")
+	}
 	o.name = deployedService.Name
 	o.envName = deployedService.Env
+	o.targetSvcType = deployedService.SvcType
 	return nil
 }
 
@@ -314,7 +330,7 @@ func parseRFC3339(timeStr string) (int64, error) {
 
 // buildSvcLogsCmd builds the command for displaying service logs in an application.
 func buildSvcLogsCmd() *cobra.Command {
-	vars := wkldLogsVars{}
+	vars := svcLogsVars{}
 	cmd := &cobra.Command{
 		Use:   "logs",
 		Short: "Displays logs of a deployed service.",
@@ -351,7 +367,7 @@ func buildSvcLogsCmd() *cobra.Command {
 	cmd.Flags().IntVar(&vars.limit, limitFlag, 0, limitFlagDescription)
 	cmd.Flags().StringSliceVar(&vars.taskIDs, tasksFlag, nil, tasksLogsFlagDescription)
 	cmd.Flags().StringVar(&vars.logGroup, logGroupFlag, "", logGroupFlagDescription)
-	// cmd.Flags().BoolVarP(&vars.previous, previousFlag, previousFlagShort, false, previousFlagDescription)
+	cmd.Flags().BoolVarP(&vars.previous, previousFlag, previousFlagShort, false, previousFlagDescription)
 	cmd.Flags().StringVar(&vars.containerName, containerLogFlag, "", containerLogFlagDescription)
 	return cmd
 }
