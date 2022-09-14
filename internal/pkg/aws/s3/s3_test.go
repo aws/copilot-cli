@@ -78,12 +78,6 @@ func TestS3_Upload(t *testing.T) {
 	}
 }
 
-type namedBinary struct{}
-
-func (n namedBinary) Name() string { return "foo" }
-
-func (n namedBinary) Content() []byte { return []byte("bar") }
-
 func TestS3_EmptyBucket(t *testing.T) {
 	batchObject1 := make([]*s3.ObjectVersion, 1000)
 	batchObject2 := make([]*s3.ObjectVersion, 10)
