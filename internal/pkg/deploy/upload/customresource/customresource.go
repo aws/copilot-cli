@@ -69,7 +69,7 @@ func (cr *CustomResource) Name() string {
 }
 
 func (cr *CustomResource) artifactPath() string {
-	return artifactpath.CustomResource(strings.ToLower(cr.name), cr.zip.Bytes())
+	return artifactpath.CustomResource(strings.ToLower(cr.Name()), cr.zip.Bytes())
 }
 
 // zipReader returns a reader for the zip archive from all the files in the custom resource.
@@ -83,15 +83,15 @@ func (cr *CustomResource) init() error {
 	for _, file := range cr.files {
 		f, err := w.Create(file.name)
 		if err != nil {
-			return fmt.Errorf("create zip file %q for custom resource %q: %v", file.name, cr.name, err)
+			return fmt.Errorf("create zip file %q for custom resource %q: %v", file.name, cr.Name(), err)
 		}
 		_, err = f.Write(file.content)
 		if err != nil {
-			return fmt.Errorf("write zip file %q for custom resource %q: %v", file.name, cr.name, err)
+			return fmt.Errorf("write zip file %q for custom resource %q: %v", file.name, cr.Name(), err)
 		}
 	}
 	if err := w.Close(); err != nil {
-		return fmt.Errorf("close zip file for custom resource %q: %v", cr.name, err)
+		return fmt.Errorf("close zip file for custom resource %q: %v", cr.Name(), err)
 	}
 	cr.zip = buf
 	return nil
@@ -167,9 +167,9 @@ func Upload(upload UploadFunc, crs []*CustomResource) (map[string]string, error)
 	for _, cr := range crs {
 		url, err := upload(cr.artifactPath(), cr.zipReader())
 		if err != nil {
-			return nil, fmt.Errorf("upload custom resource %q: %w", cr.name, err)
+			return nil, fmt.Errorf("upload custom resource %q: %w", cr.Name(), err)
 		}
-		urls[cr.name] = url
+		urls[cr.Name()] = url
 	}
 	return urls, nil
 }
