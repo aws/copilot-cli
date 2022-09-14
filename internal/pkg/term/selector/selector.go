@@ -611,15 +611,12 @@ func (s *DeploySelector) deployedWorkload(workloadType string, msg, help string,
 	var err error
 	var envNames []string
 	wkldTypes := map[string]string{}
-	// Type is only utilized by the filtering functionality. No need to retrieve types if filters are not being applied
-	if len(s.filters) > 0 {
-		workloads, err := s.workloadLister.ListWorkloads(app)
-		if err != nil {
-			return nil, fmt.Errorf("list %ss: %w", workloadType, err)
-		}
-		for _, wkld := range workloads {
-			wkldTypes[wkld.Name] = wkld.Type
-		}
+	workloads, err := s.workloadLister.ListWorkloads(app)
+	if err != nil {
+		return nil, fmt.Errorf("list %ss: %w", workloadType, err)
+	}
+	for _, wkld := range workloads {
+		wkldTypes[wkld.Name] = wkld.Type
 	}
 
 	if s.env != "" {
