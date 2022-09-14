@@ -72,10 +72,10 @@ func TestAppTemplate(t *testing.T) {
 			defer ctrl.Finish()
 			appStack := &AppStackConfig{
 				CreateAppInput: &deploy.CreateAppInput{
-					Version:    tc.inVersion,
-					AccountID:  "123456",
-					Name:       "demo",
-					DomainName: "",
+					Version:            tc.inVersion,
+					AccountID:          "123456",
+					Name:               "demo",
+					DomainName:         "",
 					PermissionBoundary: "",
 				},
 			}
