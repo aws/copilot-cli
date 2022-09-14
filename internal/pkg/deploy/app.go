@@ -20,7 +20,7 @@ type CreateAppInput struct {
 	DNSDelegationAccounts []string          // Accounts to grant DNS access to for this application.
 	DomainName            string            // DNS Name used for this application.
 	DomainHostedZoneID    string            // Hosted Zone ID for the domain.
-	PermissionBoundary    string            // Name of the permission boundary for IAM roles.
+	PermissionsBoundary   string            // Name of the IAM Managed Policy to set a permissions boundary.
 	AdditionalTags        map[string]string // AdditionalTags are labels applied to resources under the application.
 	Version               string            // The version of the application template to create the stack/stackset. If empty, creates the legacy stack/stackset.
 }

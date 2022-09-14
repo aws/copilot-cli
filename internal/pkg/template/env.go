@@ -104,6 +104,7 @@ type EnvOpts struct {
 	CustomDomainLambda        string
 
 	ScriptBucketName     string
+	PermissionsBoundary  string
 	ArtifactBucketARN    string
 	ArtifactBucketKeyARN string
 
