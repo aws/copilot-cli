@@ -118,7 +118,7 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 }
 
 func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, error) {
-	crs, err := customresource.Env(d.templateFS, d.env.Name)
+	crs, err := customresource.Env(d.templateFS)
 	if err != nil {
 		return nil, fmt.Errorf("read custom resources for environment %s: %w", d.env.Name, err)
 	}

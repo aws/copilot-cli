@@ -75,7 +75,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 					S3Bucket: "mockS3Bucket",
 				}, nil)
 				m.patcher.EXPECT().EnsureManagerRoleIsAllowedToUpload("mockS3Bucket").Return(nil)
-				crs, err := customresource.Env(fakeTemplateFS(), "mockEnv")
+				crs, err := customresource.Env(fakeTemplateFS())
 				require.NoError(t, err)
 				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {

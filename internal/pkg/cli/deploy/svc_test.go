@@ -163,7 +163,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
-				crs, err := customresource.LBWS(fakeTemplateFS(), mockEnvName)
+				crs, err := customresource.LBWS(fakeTemplateFS())
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
@@ -180,7 +180,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						workloadDeployer: deployer,
 					},
 					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.LBWS(fs, mockEnvName)
+						return customresource.LBWS(fs)
 					},
 				}
 			},
@@ -191,7 +191,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
-				crs, err := customresource.Backend(fakeTemplateFS(), mockEnvName)
+				crs, err := customresource.Backend(fakeTemplateFS())
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
@@ -208,7 +208,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						workloadDeployer: deployer,
 					},
 					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.Backend(fs, mockEnvName)
+						return customresource.Backend(fs)
 					},
 				}
 			},
@@ -219,7 +219,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
-				crs, err := customresource.Worker(fakeTemplateFS(), mockEnvName)
+				crs, err := customresource.Worker(fakeTemplateFS())
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
@@ -236,7 +236,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						workloadDeployer: deployer,
 					},
 					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.Worker(fs, mockEnvName)
+						return customresource.Worker(fs)
 					},
 				}
 			},
@@ -247,7 +247,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
-				crs, err := customresource.RDWS(fakeTemplateFS(), mockEnvName)
+				crs, err := customresource.RDWS(fakeTemplateFS())
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
@@ -264,7 +264,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 						workloadDeployer: deployer,
 					},
 					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.RDWS(fs, mockEnvName)
+						return customresource.RDWS(fs)
 					},
 				}
 			},
@@ -275,7 +275,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				m.mockAddons = nil
 
 				// Ensure all custom resources were uploaded.
-				crs, err := customresource.ScheduledJob(fakeTemplateFS(), mockEnvName)
+				crs, err := customresource.ScheduledJob(fakeTemplateFS())
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
@@ -290,7 +290,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				return &jobDeployer{
 					workloadDeployer: deployer,
 					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-						return customresource.ScheduledJob(fs, mockEnvName)
+						return customresource.ScheduledJob(fs)
 					},
 				}
 			},

@@ -364,7 +364,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 			return acm.New(sess)
 		},
 		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.LBWS(fs, in.Env.Name)
+			crs, err := customresource.LBWS(fs)
 			if err != nil {
 				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.LoadBalancedWebServiceType, err)
 			}
@@ -400,7 +400,7 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 		backendMft:         bsMft,
 		aliasCertValidator: acm.New(svcDeployer.envSess),
 		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.Backend(fs, in.Env.Name)
+			crs, err := customresource.Backend(fs)
 			if err != nil {
 				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.BackendServiceType, err)
 			}
@@ -434,7 +434,7 @@ func NewJobDeployer(in *WorkloadDeployerInput) (*jobDeployer, error) {
 		workloadDeployer: wkldDeployer,
 		jobMft:           jobMft,
 		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.ScheduledJob(fs, in.Env.Name)
+			crs, err := customresource.ScheduledJob(fs)
 			if err != nil {
 				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.ScheduledJobType, err)
 			}
@@ -476,7 +476,7 @@ func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
 		appVersionGetter:       versionGetter,
 		rdwsMft:                rdwsMft,
 		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.RDWS(fs, in.Env.Name)
+			crs, err := customresource.RDWS(fs)
 			if err != nil {
 				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.RequestDrivenWebServiceType, err)
 			}
@@ -516,7 +516,7 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 		topicLister: deployStore,
 		wsMft:       wsMft,
 		customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
-			crs, err := customresource.Worker(fs, in.Env.Name)
+			crs, err := customresource.Worker(fs)
 			if err != nil {
 				return nil, fmt.Errorf("read custom resources for a %q: %w", manifest.WorkerServiceType, err)
 			}
