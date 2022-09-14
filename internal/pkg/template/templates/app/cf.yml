@@ -89,6 +89,9 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
 
 {{range $service := $services}}
   ECRRepo{{logicalIDSafe $service}}:
