@@ -1,5 +1,7 @@
 # AWS Copilot v1.17: Request-Driven Web Service のためのトレース
 
+投稿日: 2022 年 4 月 12 日
+
 v1.16 のリリースからまだ1週間しか経っていませんが、The AWS Copilot コアチームは AWS App Runner とともに AWS X-Ray with OpenTelemetry を使った統合トレースのサポートを発表しています。App Runner のリリースについては、[こちら](https://aws.amazon.com/jp/blogs/containers/tracing-an-aws-app-runner-service-using-aws-x-ray-with-opentelemetry/)をご覧ください。Copilot で Request-Driven Web Services のトレースを有効にする方法については、[後述のセクション](#request-driven-web-service-%E3%81%AE%E3%83%88%E3%83%AC%E3%83%BC%E3%82%B9%E3%82%92-aws-x-ray-%E3%81%AB%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B)をご覧ください。
 
 
@@ -52,3 +54,6 @@ observability:
 * [最新 CLI バージョン](../docs/getting-started/install.ja.md)のダウンロード
 * [スタートガイド](../docs/getting-started/first-app-tutorial.ja.md)を試す
 * [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.17.0) でリリースノートの全文を読む
+
+今回のリリースの翻訳はソリューションアーキテクトの杉本が担当しました。
+

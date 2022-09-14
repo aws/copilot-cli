@@ -45,9 +45,13 @@ const (
 	PrivateSubnetsPlacement = "PrivateSubnets"
 
 	// RuntimePlatform configuration.
-	OSLinux             = "LINUX"
-	OSWindowsServerFull = "WINDOWS_SERVER_2019_FULL"
-	OSWindowsServerCore = "WINDOWS_SERVER_2019_CORE"
+	OSLinux                 = "LINUX"
+	OSWindowsServerFull     = OSWindowsServer2019Full // Alias 2019 as Default WindowsSever Full platform.
+	OSWindowsServerCore     = OSWindowsServer2019Core // Alias 2019 as Default WindowsSever Core platform.
+	OSWindowsServer2019Full = "WINDOWS_SERVER_2019_FULL"
+	OSWindowsServer2019Core = "WINDOWS_SERVER_2019_CORE"
+	OSWindowsServer2022Full = "WINDOWS_SERVER_2022_FULL"
+	OSWindowsServer2022Core = "WINDOWS_SERVER_2022_CORE"
 
 	ArchX86   = "X86_64"
 	ArchARM64 = "ARM64"
@@ -96,7 +100,7 @@ var (
 
 	// Operating systems to determine Fargate platform versions.
 	osFamiliesForPV100 = []string{
-		OSWindowsServerFull, OSWindowsServerCore,
+		OSWindowsServer2019Full, OSWindowsServer2019Core, OSWindowsServer2022Full, OSWindowsServer2022Core,
 	}
 )
 

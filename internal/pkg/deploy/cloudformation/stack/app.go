@@ -87,18 +87,20 @@ func NewAppStackConfig(in *deploy.CreateAppInput) *AppStackConfig {
 	}
 }
 
-// Template returns the environment CloudFormation template.
+// Template returns the application CloudFormation template.
 func (c *AppStackConfig) Template() (string, error) {
 	content, err := c.parser.Parse(appTemplatePath, struct {
 		TemplateVersion         string
 		AppDNSDelegatedAccounts []string
 		Domain                  string
 		Name                    string
+		PermissionsBoundary     string
 	}{
 		c.Version,
 		c.dnsDelegationAccounts(),
 		c.DomainName,
 		c.Name,
+		c.PermissionsBoundary,
 	}, template.WithFuncs(map[string]any{
 		"join": strings.Join,
 	}))

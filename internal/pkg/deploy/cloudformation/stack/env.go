@@ -63,7 +63,7 @@ var (
 	DefaultPrivateSubnetCIDRs   = []string{"10.0.2.0/24", "10.0.3.0/24"}
 )
 
-// NewEnvStackConfig return o CloudFormation stack configuration for deploying a brand new environment.
+// NewEnvStackConfig returns a CloudFormation stack configuration for deploying a brand-new environment.
 func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 	return &EnvStackConfig{
 		in:     input,
@@ -112,6 +112,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 		CustomResources:      crs,
 		ArtifactBucketARN:    e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
+		PermissionsBoundary:  e.in.PermissionsBoundary,
 		PublicHTTPConfig:     publicHTTPConfig,
 		VPCConfig:            vpcConfig,
 		PrivateHTTPConfig:    e.privateHTTPConfig(),
@@ -227,7 +228,7 @@ type transformParameterFunc func(new, old *cloudformation.Parameter) *cloudforma
 // The parameter`transformFunc` are functions that transform a parameter, given its value in the new template and the old template.
 // Each transform functions should keep the following in mind:
 // 1. It should return `nil` if the parameter should be removed.
-// 2. The transform functions are applied in a convolutional manner. 
+// 2. The transform functions are applied in a convolutional manner.
 // 3. If the parameter `old` is passed in as `nil`, the parameter does not exist in the old template.
 func (e *EnvStackConfig) transformParameters(currParams, oldParams []*cloudformation.Parameter, transformFunc ...transformParameterFunc) ([]*cloudformation.Parameter, error) {
 
@@ -256,7 +257,7 @@ func (e *EnvStackConfig) transformParameters(currParams, oldParams []*cloudforma
 }
 
 // transformEnvControllerParameters transforms an env-controller managed parameter.
-// If the parameter exists in the old template, it returns the old parameter assuming that old.ParameterKey = new.ParameterKey. 
+// If the parameter exists in the old template, it returns the old parameter assuming that old.ParameterKey = new.ParameterKey.
 // Otherwise, it returns its new default value.
 func transformEnvControllerParameters(new, old *cloudformation.Parameter) *cloudformation.Parameter {
 	if new == nil {
@@ -316,6 +317,7 @@ func (e *BootstrapEnvStackConfig) Template() (string, error) {
 	content, err := e.parser.ParseEnvBootstrap(&template.EnvOpts{
 		ArtifactBucketARN:    e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
+		PermissionsBoundary:  e.in.PermissionsBoundary,
 	})
 	if err != nil {
 		return "", err

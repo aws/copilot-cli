@@ -45,7 +45,8 @@ type CreateEnvironmentInput struct {
 	RawMft             []byte                // Content of the environment manifest without any modifications.
 	ForceUpdate        bool
 
-	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
+	CFNServiceRoleARN   string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
+	PermissionsBoundary string // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.
 }
 
 // CreateEnvironmentResponse holds the created environment on successful deployment.
