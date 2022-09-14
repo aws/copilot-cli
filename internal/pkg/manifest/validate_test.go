@@ -572,7 +572,23 @@ func TestBackendService_validate(t *testing.T) {
 					PublishConfig: PublishConfig{
 						Topics: []Topic{
 							{
-								Name: aws.String("mytopic.lifo"),
+								Name: aws.String("mytopic.fifo"),
+							},
+						},
+					},
+				},
+			},
+			wantedErrorMsgPrefix: `validate "publish": `,
+		},
+		"error if invalid type is defined": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					PublishConfig: PublishConfig{
+						Topics: []Topic{
+							{
+								Name: aws.String("mytopic"),
+								Type: aws.String("incorrectValue"),
 							},
 						},
 					},
@@ -2700,7 +2716,7 @@ func TestTopic_validate(t *testing.T) {
 			in: Topic{
 				Name: aws.String("!@#"),
 			},
-			wanted: errors.New(`"name" can only contain letters, numbers, underscores, hyphens and .fifo suffix`),
+			wanted: errors.New(`"name" can only contain letters, numbers, underscores, and hyphens`),
 		},
 	}
 	for name, tc := range testCases {

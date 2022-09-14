@@ -53,11 +53,6 @@ func StripNonAlphaNumFunc(s string) string {
 	return nonAlphaNum.ReplaceAllString(s, "")
 }
 
-// IsFIFO checks if the given string contains ".fifo" suffix.
-func IsFIFO(s string) bool {
-	return strings.Contains(s, ".fifo")
-}
-
 // EnvVarNameFunc converts an input resource name to LogicalIDSafe, then appends
 // "Name" to the end.
 func EnvVarNameFunc(s string) string {

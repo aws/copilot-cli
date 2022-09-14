@@ -44,10 +44,10 @@ const (
 var (
 	intRangeBandRegexp  = regexp.MustCompile(`^(\d+)-(\d+)$`)
 	volumesPathRegexp   = regexp.MustCompile(`^[a-zA-Z0-9\-\.\_/]+$`)
-	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*(\.fifo)?$`) // Validates that an expression contains only letters, numbers, underscores, hyphens and .fifo suffix.
-	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`)        // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
-	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)                // Check for consecutive periods or dashes.
-	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)                   // Check for trailing dash or dot.
+	awsSNSTopicRegexp   = regexp.MustCompile(`^[a-zA-Z0-9_-]*$`)   // Validates that an expression contains only letters, numbers, underscores, and hyphens.
+	awsNameRegexp       = regexp.MustCompile(`^[a-z][a-z0-9\-]+$`) // Validates that an expression starts with a letter and only contains letters, numbers, and hyphens.
+	punctuationRegExp   = regexp.MustCompile(`[\.\-]{2,}`)         // Check for consecutive periods or dashes.
+	trailingPunctRegExp = regexp.MustCompile(`[\-\.]$`)            // Check for trailing dash or dot.
 
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
@@ -58,6 +58,7 @@ var (
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
+	validTopicsTypeValues            = []string{"standard", "fifo"}
 )
 
 // Validate returns nil if DynamicLoadBalancedWebService is configured correctly.
@@ -1411,6 +1412,9 @@ func (p PublishConfig) validate() error {
 
 // validate returns nil if Topic is configured correctly.
 func (t Topic) validate() error {
+	if t.Type != nil && !contains(aws.StringValue(t.Type), validTopicsTypeValues) {
+		return fmt.Errorf(`the "Type" value must be one of %s`, english.WordSeries(validTopicsTypeValues, "or"))
+	}
 	return validatePubSubName(aws.StringValue(t.Name))
 }
 
@@ -1636,7 +1640,7 @@ func validatePubSubName(name string) error {
 	}
 	// Name must contain letters, numbers, and can't use special characters besides underscores, hyphens and .fifo suffix.
 	if !awsSNSTopicRegexp.MatchString(name) {
-		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, hyphens and .fifo suffix`)
+		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, and hyphens`)
 	}
 	return nil
 }

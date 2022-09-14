@@ -1383,6 +1383,7 @@ func Test_convertPublish(t *testing.T) {
 				Topics: []*template.Topic{
 					{
 						Name:      aws.String("topic1"),
+						Type:      "standard",
 						AccountID: accountId,
 						Partition: partition,
 						Region:    region,
@@ -1393,6 +1394,7 @@ func Test_convertPublish(t *testing.T) {
 					{
 
 						Name:      aws.String("topic2"),
+						Type:      "standard",
 						AccountID: accountId,
 						Partition: partition,
 						Region:    region,

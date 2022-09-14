@@ -36,6 +36,7 @@ const (
 	defaultReadOnly        = true
 	defaultWritePermission = false
 	defaultNLBProtocol     = manifest.TCP
+	defaultTopicType       = "standard"
 )
 
 // Supported capacityproviders for Fargate services
@@ -795,10 +796,17 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 		return nil, err
 	}
 	var publishers template.PublishOpts
+	var topicType string
 	// convert the topics to template Topics
 	for _, topic := range topics {
+		if topic.Type != nil {
+			topicType = aws.StringValue(topic.Type)
+		} else {
+			topicType = defaultTopicType
+		}
 		publishers.Topics = append(publishers.Topics, &template.Topic{
 			Name:      topic.Name,
+			Type:      topicType,
 			AccountID: accountID,
 			Partition: partition.ID(),
 			Region:    region,
