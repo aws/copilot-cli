@@ -79,8 +79,7 @@ RulePriorityFunctionRole:
                 - elasticloadbalancing:DescribeRules
               Resource: "*"
 
-{{/* TODO maybe change the listener files to customAliasListener and defaultAliasListener? or just combine?*/}}
-{{- if or .HTTPSListener (or .HostedZoneAliases .Aliases)}}
+{{- if or .HTTPSListener}}
 {{include "https-listener" .}}
 {{- else}}
 {{include "http-listener" .}}

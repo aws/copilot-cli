@@ -93,7 +93,7 @@ HTTPListenerRuleWithDomain:
         Type: forward
       {{- end}}
     Conditions:
-      {{- if .AllowedSourceIps}} {{/* TODO why was this not here initially ???*/}}
+      {{- if .AllowedSourceIps}}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
