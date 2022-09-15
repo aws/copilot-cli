@@ -594,7 +594,7 @@ func TestBackendService_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedErrorMsgPrefix: `validate "publish": `,
+			wantedErrorMsgPrefix: `validate "publish": validate "topics[0]": "type" value "incorrectValue" is not allowed`,
 		},
 	}
 	for name, tc := range testCases {

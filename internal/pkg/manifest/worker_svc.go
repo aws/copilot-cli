@@ -86,6 +86,19 @@ func (q *SQSQueueOrBool) IsEmpty() bool {
 	return q.Advanced.IsEmpty() && q.Enabled == nil
 }
 
+// UnmarshalYAML implements the yaml(v3) interface. Here it sets default value
+// of the type field if it is not set already.
+func (t *Topic) UnmarshalYAML(value *yaml.Node) error {
+	defaultTopicType := "standard"
+	t.Type = &defaultTopicType
+
+	type plain Topic
+	if err := value.Decode((*plain)(t)); err != nil {
+		return err
+	}
+	return nil
+}
+
 // UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueueOrBool to be specified as a
 // string or a struct alternately.
 func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {

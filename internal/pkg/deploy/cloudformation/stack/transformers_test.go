@@ -1374,9 +1374,11 @@ func Test_convertPublish(t *testing.T) {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
+					Type: aws.String("standard"),
 				},
 				{
 					Name: aws.String("topic2"),
+					Type: aws.String("standard"),
 				},
 			},
 			wanted: &template.PublishOpts{
@@ -1413,6 +1415,7 @@ func Test_convertPublish(t *testing.T) {
 				},
 				{
 					Name: aws.String("topic2"),
+					Type: aws.String("standard"),
 				},
 			},
 			wanted: &template.PublishOpts{

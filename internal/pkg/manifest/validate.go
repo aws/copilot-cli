@@ -1413,7 +1413,7 @@ func (p PublishConfig) validate() error {
 // validate returns nil if Topic is configured correctly.
 func (t Topic) validate() error {
 	if t.Type != nil && !contains(aws.StringValue(t.Type), validTopicsTypeValues) {
-		return fmt.Errorf(`the "Type" value must be one of %s`, english.WordSeries(validTopicsTypeValues, "or"))
+		return fmt.Errorf(`"type" value %q is not allowed; must be one of %s`, aws.StringValue(t.Type), english.WordSeries(validTopicsTypeValues, "or"))
 	}
 	return validatePubSubName(aws.StringValue(t.Name))
 }
