@@ -58,7 +58,7 @@ var (
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
-	validTopicsTypeValues            = []string{"standard", "fifo"}
+	validTopicsTypeValues            = []string{standardTopicType, fifoTopicType}
 )
 
 // Validate returns nil if DynamicLoadBalancedWebService is configured correctly.

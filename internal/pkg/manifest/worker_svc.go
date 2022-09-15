@@ -15,7 +15,9 @@ import (
 
 const (
 	workerSvcManifestPath = "workloads/services/worker/manifest.yml"
-	defaultTopicType      = "standard"
+	standardTopicType     = "standard"
+	fifoTopicType         = "fifo"
+	defaultTopicType      = standardTopicType
 )
 
 var (
