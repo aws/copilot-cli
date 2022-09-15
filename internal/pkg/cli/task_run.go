@@ -10,7 +10,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"golang.org/x/mod/semver"
 	"os"
 	"path/filepath"
@@ -151,7 +150,6 @@ type runTaskOpts struct {
 	sel     appEnvSelector
 	spinner progress
 	prompt  prompter
-	ws      wsEnvironmentsLister
 
 	// Fields below are configured at runtime.
 	deployer             taskDeployer
@@ -197,16 +195,11 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 
 	prompter := prompt.New()
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
-	}
 	opts := runTaskOpts{
 		runTaskVars: vars,
 
 		fs:                    &afero.Afero{Fs: afero.NewOsFs()},
 		store:                 store,
-		ws:                    ws,
 		prompt:                prompter,
 		sel:                   selector.NewAppEnvSelector(prompter, store),
 		spinner:               termprogress.NewSpinner(log.DiagnosticWriter),
@@ -532,7 +525,6 @@ func (o *runTaskOpts) validateEnvCompatibilityForGenerateJobCmd(app, env string)
 	//"states:DescribeStateMachine" permissions weren't added until 1.12.2.
 	if semver.Compare(version, "v1.12.2") < 0 {
 		return &errFeatureIncompatibleWithEnvironment{
-			ws:             o.ws,
 			missingFeature: "task run --generate-cmd",
 			envName:        env,
 			curVersion:     version,

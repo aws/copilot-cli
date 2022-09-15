@@ -1190,7 +1190,6 @@ type mockRunTaskRequester struct {
 type taskRunMocks struct {
 	store                   *mocks.Mockstore
 	provider                *mocks.MocksessionProvider
-	ws                      *mocks.MockwsEnvironmentsLister
 	envCompatibilityChecker *mocks.MockversionCompatibilityChecker
 }
 
@@ -1406,7 +1405,6 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 			m := &taskRunMocks{
 				store:                   mocks.NewMockstore(ctrl),
 				provider:                mocks.NewMocksessionProvider(ctrl),
-				ws:                      mocks.NewMockwsEnvironmentsLister(ctrl),
 				envCompatibilityChecker: mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			if tc.setUpMocks != nil {
@@ -1431,7 +1429,6 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 				runTaskRequestFromECSService: tc.mockRunTaskRequester.mockRunTaskRequestFromECSService,
 				runTaskRequestFromService:    tc.mockRunTaskRequester.mockRunTaskRequestFromService,
 				runTaskRequestFromJob:        tc.mockRunTaskRequester.mockRunTaskRequestFromJob,
-				ws:                           mocks.NewMockwsEnvironmentsLister(ctrl),
 				envCompatibilityChecker: func(app, env string) (versionCompatibilityChecker, error) {
 					return m.envCompatibilityChecker, nil
 				},
