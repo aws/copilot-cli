@@ -953,7 +953,7 @@ func (o *runTaskOpts) deploy() error {
 	if o.env != "" {
 		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
 	}
-	
+
 	var boundaryPolicy string
 	if o.appName != "" {
 		app, err := o.store.GetApplication(o.appName)
