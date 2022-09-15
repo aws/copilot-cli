@@ -79,7 +79,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				require.NoError(t, err)
 				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
