@@ -69,6 +69,14 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						stack.WorkloadRulePathParamKey: testSvcPath,
 					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
+							Type:       svcStackResourceListenerRuleResourceType,
+							PhysicalID: "mockRuleARN",
+						},
+					}, nil),
+					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(nil, mockErr),
 				)
 			},
@@ -125,7 +133,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 			},
 			wantedURI: "https://jobs.test.phonetool.com or https://phonetool.com",
 		},
-		"https web service with redirect disabled": { // TODO change to service with custom alias (or just non-default? idk)
+		"custom alias web service with redirect disabled": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
@@ -139,7 +147,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
 						{
-							LogicalID:  svcStackResourceHTTPSListenerRuleLogicalID,
+							LogicalID:  svcStackResourceHTTPListenerRuleWithDomainLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
 							PhysicalID: "mockRuleARN",
 						},
@@ -148,7 +156,7 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 						Return([]string{"jobs.test.phonetool.com", "phonetool.com"}, nil),
 				)
 			},
-			wantedURI: "https://jobs.test.phonetool.com or https://phonetool.com",
+			wantedURI: "http://jobs.test.phonetool.com or http://phonetool.com",
 		},
 		"http web service": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
@@ -161,6 +169,14 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						stack.WorkloadRulePathParamKey: "mySvc",
 					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
+							Type:       svcStackResourceListenerRuleResourceType,
+							PhysicalID: "mockRuleARN",
+						},
+					}, nil),
+					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
@@ -180,6 +196,14 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						stack.WorkloadRulePathParamKey: "mySvc",
 					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
+							Type:       svcStackResourceListenerRuleResourceType,
+							PhysicalID: "mockRuleARN",
+						},
+					}, nil),
+					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						envOutputPublicALBAccessible:       testALBAccessible,
@@ -201,6 +225,14 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
 						stack.WorkloadRulePathParamKey: "mySvc",
 					}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+						{
+							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
+							Type:       svcStackResourceListenerRuleResourceType,
+							PhysicalID: "mockRuleARN",
+						},
+					}, nil),
+					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						envOutputPublicALBAccessible:       testALBInaccessible,

@@ -385,7 +385,8 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		httpsEnabled         bool
+		customDomain         bool
+		httpsRedirect        bool
 		dnsDelegationEnabled bool
 		setupManifest        func(*manifest.LoadBalancedWebService)
 
@@ -393,7 +394,8 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		expectedErr    error
 	}{
 		"HTTPS Enabled": {
-			httpsEnabled: true,
+			customDomain:  true,
+			httpsRedirect: true,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				countRange := manifest.IntRangeBand("2-100")
 				service.Count = manifest.Count{
@@ -405,7 +407,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					},
 				}
 			},
-
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
@@ -437,8 +438,53 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				},
 			}...),
 		},
+		"custom domain without https redirect": {
+			customDomain:  true,
+			httpsRedirect: false,
+			setupManifest: func(service *manifest.LoadBalancedWebService) {
+				countRange := manifest.IntRangeBand("2-100")
+				service.Count = manifest.Count{
+					Value: aws.Int(1),
+					AdvancedCount: manifest.AdvancedCount{
+						Range: manifest.Range{
+							Value: &countRange,
+						},
+					},
+				}
+			},
+			expectedParams: append(expectedParams, []*cloudformation.Parameter{
+				{
+					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
+					ParameterValue: aws.String("80"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
+					ParameterValue: aws.String("2"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadRulePathParamKey),
+					ParameterValue: aws.String("frontend"),
+				},
+				{
+					ParameterKey:   aws.String(WorkloadStickinessParamKey),
+					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
+					ParameterValue: aws.String("false"),
+				},
+			}...),
+		},
 		"HTTPS Not Enabled": {
-			httpsEnabled: false,
+			customDomain: false,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				countRange := manifest.IntRangeBand("2-100")
 				service.Count = manifest.Count{
@@ -482,7 +528,8 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"with sidecar container": {
-			httpsEnabled: true,
+			customDomain:  true,
+			httpsRedirect: true,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.RoutingRule.TargetContainer = aws.String("xray")
 				service.Sidecars = map[string]*manifest.SidecarConfig{
@@ -523,7 +570,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"Stickiness enabled": {
-			httpsEnabled: false,
+			customDomain: false,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.RoutingRule.Stickiness = aws.Bool(true)
 			},
@@ -559,7 +606,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"exec enabled": {
-			httpsEnabled: false,
+			customDomain: false,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.ExecuteCommand = manifest.ExecuteCommand{
 					Enable: aws.Bool(false),
@@ -600,7 +647,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"dns delegation enabled": {
-			httpsEnabled:         false,
+			customDomain:         false,
 			dnsDelegationEnabled: true,
 
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
@@ -764,7 +811,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"with bad count": {
-			httpsEnabled: true,
+			customDomain: true,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				badCountRange := manifest.IntRangeBand("badCount")
 				service.Count = manifest.Count{
@@ -800,7 +847,8 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					tc: testManifest.TaskConfig,
 				},
 				manifest:             testManifest,
-				customDomain:         tc.httpsEnabled,
+				customDomain:         tc.customDomain,
+				httpsRedirect:        tc.httpsRedirect,
 				dnsDelegationEnabled: tc.dnsDelegationEnabled,
 			}
 
