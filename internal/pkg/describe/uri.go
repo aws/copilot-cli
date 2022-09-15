@@ -253,11 +253,6 @@ func (d *uriDescriber) uri() (accessURI, error) {
 	path := svcParams[stack.WorkloadRulePathParamKey]
 	httpsEnabled := svcParams[stack.WorkloadHTTPSParamKey] == "true"
 
-	// public load balancers use the env DNS name if https is not enabled
-	if d.albCFNOutputName == envOutputPublicLoadBalancerDNSName && !httpsEnabled {
-		return d.envDNSName(path)
-	}
-
 	svcResources, err := d.svcDescriber.ServiceStackResources()
 	if err != nil {
 		return accessURI{}, fmt.Errorf("get stack resources for service %s: %w", d.svc, err)
