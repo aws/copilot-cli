@@ -198,6 +198,9 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	prompter := prompt.New()
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	ws, err := workspace.New()
+	if err != nil {
+		return nil, fmt.Errorf("new workspace: %w", err)
+	}
 	opts := runTaskOpts{
 		runTaskVars: vars,
 
@@ -525,10 +528,8 @@ func (o *runTaskOpts) validateEnvCompatibilityForGenerateJobCmd(app, env string)
 	if err != nil {
 		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", env, app, err)
 	}
-	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0,
-	// EnvManagerRole took over, but "states:DescribeStateMachine" permissions
-	// weren't added until 1.12.2. Any version predating the feature's
-	// introduction or between v1.8.0 and 1.12.2 are invalid.
+	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0, EnvManagerRole took over, but 
+	//"states:DescribeStateMachine" permissions weren't added until 1.12.2.
 	if semver.Compare(version, "v1.12.2") < 0 {
 		return &errFeatureIncompatibleWithEnvironment{
 			ws:             o.ws,
