@@ -245,6 +245,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 						return deployer, nil
 					},
 					envCfg: &config.Environment{Name: "test"},
+					appCfg: &config.Application{},
 				}
 			},
 			wantedErr: errors.New(`generate CloudFormation template from environment "test" manifest: some error`),
@@ -280,6 +281,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 					},
 					fs:     fs,
 					envCfg: &config.Environment{Name: "test"},
+					appCfg: &config.Application{},
 				}
 			},
 			wantedFS: func(t *testing.T, fs afero.Fs) {
