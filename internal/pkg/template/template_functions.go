@@ -70,6 +70,9 @@ func EnvVarSecretFunc(s string) string {
 	return StripNonAlphaNumFunc(s) + "Secret"
 }
 
+// Deref dereferences the pointer.
+func Deref(i *string) string { return *i }
+
 // Grabs word boundaries in default CamelCase. Matches lowercase letters & numbers
 // before the next capital as capturing group 1, and the first capital in the
 // next word as capturing group 2. Will match "yC" in "MyCamel" and "y2ndC" in"My2ndCamel"

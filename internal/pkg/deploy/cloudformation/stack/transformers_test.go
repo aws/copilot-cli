@@ -1462,6 +1462,28 @@ func Test_convertSubscribe(t *testing.T) {
 						Tries: aws.Uint16(35),
 					},
 				},
+				StandardQueue: true,
+			},
+		},
+		"valid subscribe with no queue configs": {
+			inSubscribe: manifest.SubscribeConfig{
+				Topics: []manifest.TopicSubscription{
+					{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+					},
+				},
+				Queue: manifest.SQSQueue{},
+			},
+			wanted: &template.SubscribeOpts{
+				Topics: []*template.TopicSubscription{
+					{
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+					},
+				},
+				Queue:         nil,
+				StandardQueue: true,
 			},
 		},
 		"valid subscribe with minimal queue": {
@@ -1481,20 +1503,23 @@ func Test_convertSubscribe(t *testing.T) {
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
-						Name:         aws.String("name"),
-						Service:      aws.String("svc"),
-						Queue:        &template.SQSQueue{},
+						Name:    aws.String("name"),
+						Service: aws.String("svc"),
+						Queue: &template.SQSQueue{
+							Type: aws.String(defaultQueueType),
+						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
-				Queue: nil,
+				Queue:         nil,
+				StandardQueue: false,
 			},
 		},
 		"valid subscribe with high throughput fifo sqs": {
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
-						Name:    aws.String("name.fifo"),
+						Name:    aws.String("name"),
 						Service: aws.String("svc"),
 						Queue: manifest.SQSQueueOrBool{
 							Advanced: manifest.SQSQueue{
@@ -1515,7 +1540,7 @@ func Test_convertSubscribe(t *testing.T) {
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
-						Name:    aws.String("name.fifo"),
+						Name:    aws.String("name"),
 						Service: aws.String("svc"),
 						Queue: &template.SQSQueue{
 							Retention: aws.Int64(111),
@@ -1530,14 +1555,15 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
-				Queue: nil,
+				Queue:         nil,
+				StandardQueue: false,
 			},
 		},
 		"valid subscribe with default fifo sqs config values": {
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
-						Name:    aws.String("name.fifo"),
+						Name:    aws.String("name"),
 						Service: aws.String("svc"),
 						Queue: manifest.SQSQueueOrBool{
 							Advanced: manifest.SQSQueue{
@@ -1547,6 +1573,7 @@ func Test_convertSubscribe(t *testing.T) {
 								DeadLetter: manifest.DeadLetterQueue{
 									Tries: aws.Uint16(35),
 								},
+								Type: aws.String("fifo"),
 							},
 						},
 						FilterPolicy: mockStruct,
@@ -1557,7 +1584,7 @@ func Test_convertSubscribe(t *testing.T) {
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
-						Name:    aws.String("name.fifo"),
+						Name:    aws.String("name"),
 						Service: aws.String("svc"),
 						Queue: &template.SQSQueue{
 							Retention: aws.Int64(111),
@@ -1569,11 +1596,13 @@ func Test_convertSubscribe(t *testing.T) {
 							FifoThroughputLimit:       nil,
 							DeduplicationScope:        nil,
 							ContentBasedDeduplication: nil,
+							Type:                      aws.String("fifo"),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
-				Queue: nil,
+				Queue:         nil,
+				StandardQueue: false,
 			},
 		},
 		"valid subscribe with custom fifo sqs config values": {
@@ -1593,6 +1622,7 @@ func Test_convertSubscribe(t *testing.T) {
 								FifoThroughputLimit:       aws.String("queue"),
 								DeduplicationScope:        aws.String("perQueue"),
 								ContentBasedDeduplication: aws.Bool(true),
+								Type:                      aws.String("fifo"),
 							},
 						},
 						FilterPolicy: mockStruct,
@@ -1615,11 +1645,13 @@ func Test_convertSubscribe(t *testing.T) {
 							FifoThroughputLimit:       aws.String("queue"),
 							DeduplicationScope:        aws.String("perQueue"),
 							ContentBasedDeduplication: aws.Bool(true),
+							Type:                      aws.String("fifo"),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
-				Queue: nil,
+				Queue:         nil,
+				StandardQueue: false,
 			},
 		},
 	}

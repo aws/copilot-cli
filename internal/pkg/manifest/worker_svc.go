@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -86,10 +87,11 @@ func (q *SQSQueueOrBool) IsEmpty() bool {
 	return q.Advanced.IsEmpty() && q.Enabled == nil
 }
 
+/*
 // IsFIFOEmpty returns empty if the struct has all zero members.
 func (q *SQSQueueOrBool) IsFIFOEmpty() bool {
 	return q.Advanced.IsFIFOEmpty() && q.Enabled == nil
-}
+}*/
 
 // UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueueOrBool to be specified as a
 // string or a struct alternately.
@@ -123,20 +125,22 @@ type SQSQueue struct {
 	DeduplicationScope        *string         `yaml:"deduplication_scope"`
 	FifoThroughputLimit       *string         `yaml:"fifo_throughput_limit"`
 	HighThroughputFifo        *bool           `yaml:"high_throughput_fifo"`
+	Type                      *string         `yaml:"type"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
 func (q *SQSQueue) IsEmpty() bool {
 	return q.Retention == nil && q.Delay == nil && q.Timeout == nil &&
-		q.DeadLetter.IsEmpty()
+		q.DeadLetter.IsEmpty() && q.FifoThroughputLimit == nil && q.HighThroughputFifo == nil &&
+		q.DeduplicationScope == nil && q.ContentBasedDeduplication == nil && q.Type == nil
 }
 
-// IsFIFOEmpty returns empty if the struct has all zero members.
+/*// IsFIFOEmpty returns empty if the struct has all zero members.
 func (q *SQSQueue) IsFIFOEmpty() bool {
 	return q.Retention == nil && q.Delay == nil && q.Timeout == nil &&
 		q.DeadLetter.IsEmpty() && q.FifoThroughputLimit == nil && q.HighThroughputFifo == nil &&
-		q.DeduplicationScope == nil && q.ContentBasedDeduplication == nil
-}
+		q.DeduplicationScope == nil && q.ContentBasedDeduplication == nil && q.Type == nil
+}*/
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
 type DeadLetterQueue struct {
@@ -209,6 +213,16 @@ func (s *WorkerService) EnvFile() string {
 // receives messages from.
 func (s *WorkerService) Subscriptions() []TopicSubscription {
 	return s.Subscribe.Topics
+}
+
+func (s *WorkerService) AttachFIFOSuffixToFIFOQueues() {
+	for idx, topic := range s.Subscribe.Topics {
+		if topic.Queue.IsEmpty() && !s.Subscribe.Queue.IsEmpty() && s.Subscribe.Queue.Type != nil && strings.Compare(aws.StringValue(s.Subscribe.Queue.Type), "fifo") == 0 {
+			s.Subscribe.Topics[idx].Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		} else if !topic.Queue.IsEmpty() && !topic.Queue.Advanced.IsEmpty() && topic.Queue.Advanced.Type != nil && strings.Compare(aws.StringValue(topic.Queue.Advanced.Type), "fifo") == 0 {
+			s.Subscribe.Topics[idx].Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		}
+	}
 }
 
 func (s WorkerService) applyEnv(envName string) (workloadManifest, error) {

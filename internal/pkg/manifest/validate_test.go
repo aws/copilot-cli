@@ -2752,16 +2752,9 @@ func TestTopicSubscription_validate(t *testing.T) {
 			},
 			wanted: nil,
 		},
-		"should return an error if fifo queue config is missing": {
+		"should not return error if standard queue is enabled": {
 			in: TopicSubscription{
-				Name:    aws.String("mockTopic.fifo"),
-				Service: aws.String("mockservice"),
-			},
-			wanted: errors.New(`validate "queue": FIFO SQS Queue configuration is required, you can either set "queue: true" or complete configuration alternatively`),
-		},
-		"should not return error if fifo queue enabled": {
-			in: TopicSubscription{
-				Name:    aws.String("mockTopic.fifo"),
+				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Enabled: aws.Bool(true),
@@ -2780,6 +2773,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Timeout:             &duration111Seconds,
 						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
 						FifoThroughputLimit: aws.String("incorrectFIFOThoughoutLimit"),
+						Type:                aws.String("fifo"),
 					},
 				},
 			},
@@ -2796,6 +2790,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Timeout:             &duration111Seconds,
 						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
 						FifoThroughputLimit: aws.String("perMessageGroupId"),
+						Type:                aws.String("fifo"),
 					},
 				},
 			},
@@ -2812,6 +2807,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Timeout:            &duration111Seconds,
 						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
 						DeduplicationScope: aws.String("incorrectDeduplicateScope"),
+						Type:               aws.String("fifo"),
 					},
 				},
 			},
@@ -2828,6 +2824,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Timeout:            &duration111Seconds,
 						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
 						DeduplicationScope: aws.String("messageGroup"),
+						Type:               aws.String("fifo"),
 					},
 				},
 			},
@@ -2861,6 +2858,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
 						HighThroughputFifo: aws.Bool(true),
 						DeduplicationScope: aws.String("messageGroup"),
+						Type:               aws.String("fifo"),
 					},
 				},
 			},
@@ -2878,6 +2876,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
 						FifoThroughputLimit: aws.String("perMessageGroupId"),
 						DeduplicationScope:  aws.String("queue"),
+						Type:                aws.String("fifo"),
 					},
 				},
 			},

@@ -58,10 +58,10 @@ EventsKMSKey:
             - "kms:Decrypt"
           Resource: '*'
 
-{{- if .Subscribe.StandardQueue}}
+{{- if and .Subscribe .Subscribe.QueueType}}
 EventsQueue:
   Metadata:
-    'aws:copilot:description': 'An events SQS queue to buffer messages'
+    'aws:copilot:description': {{- if eq (deref .Subscribe.QueueType) "fifo"}}'An events SQS FIFO queue to buffer messages'{{- else}}'An events SQS queue to buffer messages'{{- end}}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -81,16 +81,31 @@ EventsQueue:
       deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
       maxReceiveCount: {{.Subscribe.Queue.DeadLetter.Tries}}
     {{- end}}
+    {{- if eq (deref .Subscribe.QueueType) "fifo"}}
+     FifoQueue: true
+    {{- end}}
+    {{- if .Subscribe.Queue.FifoThroughputLimit }}
+    FifoThroughputLimit: {{.Subscribe.Queue.FifoThroughputLimit}}
+    {{- end}}
+    {{- if .Subscribe.Queue.DeduplicationScope }}
+    DeduplicationScope: {{.Subscribe.Queue.DeduplicationScope}}
+    {{- end }}
+    {{- if .Subscribe.Queue.ContentBasedDeduplication }}
+    ContentBasedDeduplication: {{.Subscribe.Queue.ContentBasedDeduplication}}
+    {{- end}}
   {{- end}}
 
 {{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}
 DeadLetterQueue:
   Metadata:
-    'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the events queue'
+    'aws:copilot:description': {{- if eq (deref .Subscribe.QueueType) "fifo"}}'A dead letter SQS FIFO queue to buffer failed messages from the events queue'{{- else}}'A dead letter SQS queue to buffer failed messages from the events queue'{{- end}}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
     MessageRetentionPeriod: 1209600 # 14 days
+    {{- if eq (deref .Subscribe.QueueType) "fifo" }}
+    FifoQueue: true
+    {{- end }}
 
 DeadLetterPolicy:
   Type: AWS::SQS::QueuePolicy
@@ -110,10 +125,10 @@ DeadLetterPolicy:
 {{- end}}{{- end}}
 
 {{- end}}{{/* endif .Subscribe */}}
-{{- end}}{{/* endif .Subscribe.StandardQueue */}}
+{{- end}}{{/* endif and .Subscribe .Subscribe.StandardQueu */}}
 
 
-{{- if .Subscribe.StandardQueue}}
+{{- if and .Subscribe .Subscribe.QueueType}}
 QueuePolicy:
   Type: AWS::SQS::QueuePolicy
   Properties:
@@ -132,7 +147,6 @@ QueuePolicy:
 {{- if .Subscribe }}
         {{- range $topic := .Subscribe.Topics}}
         {{- if not $topic.Queue}}
-        {{- if not (isFIFO $topic.Name)}}
         - Effect: Allow
           Principal:
             Service: sns.amazonaws.com
@@ -144,9 +158,8 @@ QueuePolicy:
               aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{$topic.Name}}']]
         {{- end}}
         {{- end}}
-        {{- end}}
 {{- end}}{{/* if .Subscribe */}}
-{{- end}}{{/* endif .Subscribe.StandardQueue */}}
+{{- end}}{{/* if and .Subscribe .Subscribe.QueueType */}}
 
 {{- if .Subscribe }}
 {{- range $topic := .Subscribe.Topics}}
@@ -187,7 +200,7 @@ QueuePolicy:
       deadLetterTargetArn: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue.Arn
       maxReceiveCount: {{$topic.Queue.DeadLetter.Tries}}
     {{- end}}
-    {{- if isFIFO $topic.Name }}
+    {{- if eq (deref $topic.Queue.Type) "fifo"}}
     FifoQueue: true
     {{- end}}
     {{- if $topic.Queue.FifoThroughputLimit }}
@@ -208,10 +221,9 @@ QueuePolicy:
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
     MessageRetentionPeriod: 1209600 # 14 days
-    {{- if isFIFO $topic.Name }}
+    {{- if eq (deref $topic.Queue.Type) "fifo"}}
     FifoQueue: true
     {{- end}}
-
 
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterPolicy:
   Type: AWS::SQS::QueuePolicy
