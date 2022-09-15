@@ -163,6 +163,7 @@ type DeployEnvironmentInput struct {
 	Manifest            *manifest.Environment
 	ForceNewUpdate      bool
 	RawManifest         []byte
+	PermissionsBoundary string
 }
 
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
@@ -254,6 +255,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		Mft:                  in.Manifest,
 		ForceUpdate:          in.ForceNewUpdate,
 		RawMft:               in.RawManifest,
+		PermissionsBoundary:  in.PermissionsBoundary,
 		Version:              deploy.LatestEnvTemplateVersion,
 	}, nil
 }
