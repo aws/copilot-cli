@@ -1364,6 +1364,9 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	hasImportedCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
+	if d.lbMft.RoutingRule.Redirect == nil && *d.lbMft.RoutingRule.Redirect && d.app.Domain == "" && !hasImportedCerts {
+		return fmt.Errorf("cannot redirect to https without using a custom domain")
+	}
 	if d.lbMft.RoutingRule.Alias.IsEmpty() {
 		if hasImportedCerts {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
