@@ -315,8 +315,8 @@ Outputs:
 					},
 					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
-				domainEnabled: true,
-				manifest:      testLBWebServiceManifest,
+				customDomain: true,
+				manifest:     testLBWebServiceManifest,
 			}
 			tc.mockDependencies(t, ctrl, conf)
 			// WHEN
@@ -800,7 +800,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					tc: testManifest.TaskConfig,
 				},
 				manifest:             testManifest,
-				domainEnabled:        tc.httpsEnabled,
+				customDomain:         tc.httpsEnabled,
 				dnsDelegationEnabled: tc.dnsDelegationEnabled,
 			}
 
