@@ -15,6 +15,7 @@ import (
 
 const (
 	workerSvcManifestPath = "workloads/services/worker/manifest.yml"
+	defaultTopicType      = "standard"
 )
 
 var (
@@ -89,8 +90,7 @@ func (q *SQSQueueOrBool) IsEmpty() bool {
 // UnmarshalYAML implements the yaml(v3) interface. Here it sets default value
 // of the type field if it is not set already.
 func (t *Topic) UnmarshalYAML(value *yaml.Node) error {
-	defaultTopicType := "standard"
-	t.Type = &defaultTopicType
+	t.Type = aws.String(defaultTopicType)
 
 	type plain Topic
 	if err := value.Decode((*plain)(t)); err != nil {
