@@ -104,7 +104,7 @@ Resources:
     {{- if and .HTTPSListener .HTTPSRedirect}}
       - HTTPListenerRuleWithDomain
       - HTTPSListenerRule
-    {{- else if and (not .HTTPSRedirect) (or .HostedZoneAliases .Aliases)}}
+    {{- else if and .HTTPSListener (not .HTTPSRedirect)}}
       - HTTPListenerRuleWithDomain
     {{- else}}
       - HTTPListenerRule
