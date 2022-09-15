@@ -12,7 +12,6 @@ import (
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
-	describeStack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -91,7 +90,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
@@ -128,7 +127,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
@@ -166,7 +165,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
@@ -192,7 +191,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
@@ -222,7 +221,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
@@ -262,7 +261,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
@@ -314,7 +313,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
@@ -352,7 +351,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockProdParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*describeStack.Resource{
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
 							Type:       svcStackResourceListenerRuleResourceType,
