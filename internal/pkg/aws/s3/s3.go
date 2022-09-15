@@ -190,7 +190,6 @@ func (s *S3) upload(bucket, key string, buf io.Reader) (string, error) {
 		Body:   buf,
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
-		ACL:    aws.String(s3.ObjectCannedACLBucketOwnerFullControl),
 	}
 	resp, err := s.s3Manager.Upload(in)
 	if err != nil {
