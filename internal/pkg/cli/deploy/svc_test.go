@@ -167,7 +167,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
@@ -179,7 +179,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
-					customResources: customresource.LBWS,
+					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+						return customresource.LBWS(fs)
+					},
 				}
 			},
 		},
@@ -193,7 +195,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
@@ -205,7 +207,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
-					customResources: customresource.Backend,
+					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+						return customresource.Backend(fs)
+					},
 				}
 			},
 		},
@@ -219,7 +223,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
@@ -231,7 +235,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
-					customResources: customresource.Worker,
+					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+						return customresource.Worker(fs)
+					},
 				}
 			},
 		},
@@ -245,7 +251,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
@@ -257,7 +263,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 					svcDeployer: &svcDeployer{
 						workloadDeployer: deployer,
 					},
-					customResources: customresource.RDWS,
+					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+						return customresource.RDWS(fs)
+					},
 				}
 			},
 		},
@@ -271,7 +279,7 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 				require.NoError(t, err)
 				m.mockUploader.EXPECT().Upload(mockS3Bucket, gomock.Any(), gomock.Any()).DoAndReturn(func(_, key string, _ io.Reader) (url string, err error) {
 					for _, cr := range crs {
-						if strings.Contains(key, strings.ToLower(cr.FunctionName())) {
+						if strings.Contains(key, strings.ToLower(cr.Name())) {
 							return "", nil
 						}
 					}
@@ -281,7 +289,9 @@ func TestWorkloadDeployer_UploadArtifacts(t *testing.T) {
 			mockServiceDeployer: func(deployer *workloadDeployer) artifactsUploader {
 				return &jobDeployer{
 					workloadDeployer: deployer,
-					customResources:  customresource.ScheduledJob,
+					customResources: func(fs template.Reader) ([]*customresource.CustomResource, error) {
+						return customresource.ScheduledJob(fs)
+					},
 				}
 			},
 		},

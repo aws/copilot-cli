@@ -97,7 +97,6 @@ type imageBuilderPusher interface {
 
 type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
-	ZipAndUpload(bucket, key string, files ...s3.NamedBinary) (string, error)
 }
 
 type templater interface {
@@ -207,9 +206,6 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	defaultSession, err := in.SessionProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("create default: %w", err)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("create env session with region %s: %w", in.Env.Region, err)
 	}
 	envSession, err := in.SessionProvider.FromRole(in.Env.ManagerRoleARN, in.Env.Region)
 	if err != nil {
