@@ -386,7 +386,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	}
 	testCases := map[string]struct {
 		httpsEnabled         bool
-		httpsRedirect        bool
+		httpRedirect         bool
 		dnsDelegationEnabled bool
 		setupManifest        func(*manifest.LoadBalancedWebService)
 
@@ -394,8 +394,8 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		expectedErr    error
 	}{
 		"HTTPS Enabled": {
-			httpsEnabled:  true,
-			httpsRedirect: true,
+			httpsEnabled: true,
+			httpRedirect: true,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				countRange := manifest.IntRangeBand("2-100")
 				service.Count = manifest.Count{
@@ -439,8 +439,8 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"custom domain without https redirect": {
-			httpsEnabled:  true,
-			httpsRedirect: false,
+			httpsEnabled: true,
+			httpRedirect: false,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				countRange := manifest.IntRangeBand("2-100")
 				service.Count = manifest.Count{
@@ -528,8 +528,8 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"with sidecar container": {
-			httpsEnabled:  true,
-			httpsRedirect: true,
+			httpsEnabled: true,
+			httpRedirect: true,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.RoutingRule.TargetContainer = aws.String("xray")
 				service.Sidecars = map[string]*manifest.SidecarConfig{
@@ -848,7 +848,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				},
 				manifest:             testManifest,
 				httpsEnabled:         tc.httpsEnabled,
-				httpsRedirect:        tc.httpsRedirect,
+				httpRedirect:         tc.httpRedirect,
 				dnsDelegationEnabled: tc.dnsDelegationEnabled,
 			}
 

@@ -152,7 +152,7 @@ func (s *BackendService) Template() (string, error) {
 		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
 		Aliases:                  aliases,
 		HTTPSListener:            s.httpsEnabled,
-		HTTPSRedirect:            s.httpsEnabled,
+		HTTPRedirect:             s.httpsEnabled,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
