@@ -79,17 +79,30 @@ Resources:
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
-              - Sid: StackSetRequiredPermissions
+              - Sid: StackSetRequiredPermissions # https://go.aws/3Sa5Tcf
                 Effect: Allow
                 Action:
                   - cloudformation:*
                   - s3:*
                   - sns:*
                 Resource: "*"
-              - Sid: ManageKMSKeys
+              - Sid: KeyAdminPermissions # https://go.aws/3BIqf7a
                 Effect: Allow
                 Action:
-                  - kms:*
+                  - kms:Create*
+                  - kms:Describe*
+                  - kms:Enable*
+                  - kms:List*
+                  - kms:Put*
+                  - kms:Update*
+                  - kms:Revoke*
+                  - kms:Disable*
+                  - kms:Get*
+                  - kms:Delete*
+                  - kms:TagResource
+                  - kms:UntagResource
+                  - kms:ScheduleKeyDeletion
+                  - kms:CancelKeyDeletion
                 Resource: "*"
               - Sid: ManageECRRepos
                 Effect: Allow
