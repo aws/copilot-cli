@@ -185,7 +185,7 @@ func serializeTemplateConfig(parser template.Parser, stack templateConfigurer) (
 	if err != nil {
 		return "", err
 	}
-	doc, err := parser.Parse(wkldParamsTemplatePath, struct {
+	doc, err := template.RequireParser(parser).Parse(wkldParamsTemplatePath, struct {
 		Parameters []*cloudformation.Parameter
 		Tags       []*cloudformation.Tag
 	}{

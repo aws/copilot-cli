@@ -771,7 +771,7 @@ func (o *initPipelineOpts) createBuildspec(buildSpecTemplatePath string) error {
 	if err != nil {
 		return err
 	}
-	content, err := o.parser.Parse(buildSpecTemplatePath, struct {
+	content, err := template.RequireParser(o.parser).Parse(buildSpecTemplatePath, struct {
 		BinaryS3BucketPath string
 		Version            string
 		ManifestPath       string

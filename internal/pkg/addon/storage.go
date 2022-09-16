@@ -47,7 +47,7 @@ type DynamoDBTemplate struct {
 
 // MarshalBinary serializes the content of the template into binary.
 func (d *DynamoDBTemplate) MarshalBinary() ([]byte, error) {
-	content, err := d.parser.Parse(dynamoDbTemplatePath, *d, template.WithFuncs(storageTemplateFunctions))
+	content, err := template.RequireParser(d.parser).Parse(dynamoDbTemplatePath, *d, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ type S3Template struct {
 
 // MarshalBinary serializes the content of the template into binary.
 func (s *S3Template) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(s3TemplatePath, *s, template.WithFuncs(storageTemplateFunctions))
+	content, err := template.RequireParser(s.parser).Parse(s3TemplatePath, *s, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (r *RDSTemplate) MarshalBinary() ([]byte, error) {
 	if r.WorkloadType == manifest.RequestDrivenWebServiceType {
 		path = rdsRDWSTemplatePath
 	}
-	content, err := r.parser.Parse(path, *r, template.WithFuncs(storageTemplateFunctions))
+	content, err := template.RequireParser(r.parser).Parse(path, *r, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ type RDSParams struct {
 
 // MarshalBinary serializes the content of the params file into binary.
 func (r *RDSParams) MarshalBinary() ([]byte, error) {
-	content, err := r.parser.Parse(rdsRDWSParamsPath, *r, template.WithFuncs(storageTemplateFunctions))
+	content, err := template.RequireParser(r.parser).Parse(rdsRDWSParamsPath, *r, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}

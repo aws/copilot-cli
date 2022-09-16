@@ -89,7 +89,7 @@ func NewAppStackConfig(in *deploy.CreateAppInput) *AppStackConfig {
 
 // Template returns the environment CloudFormation template.
 func (c *AppStackConfig) Template() (string, error) {
-	content, err := c.parser.Parse(appTemplatePath, struct {
+	content, err := template.RequireParser(c.parser).Parse(appTemplatePath, struct {
 		TemplateVersion         string
 		AppDNSDelegatedAccounts []string
 		Domain                  string
@@ -114,7 +114,7 @@ func (c *AppStackConfig) ResourceTemplate(config *AppResourcesConfig) (string, e
 	sort.Strings(config.Accounts)
 	sort.Strings(config.Services)
 
-	content, err := c.parser.Parse(appResourcesTemplatePath, struct {
+	content, err := template.RequireParser(c.parser).Parse(appResourcesTemplatePath, struct {
 		*AppResourcesConfig
 		ServiceTagKey   string
 		TemplateVersion string

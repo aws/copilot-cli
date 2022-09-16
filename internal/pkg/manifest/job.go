@@ -99,7 +99,7 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (j *ScheduledJob) MarshalBinary() ([]byte, error) {
-	content, err := j.parser.Parse(scheduledJobManifestPath, *j)
+	content, err := template.RequireParser(j.parser).Parse(scheduledJobManifestPath, *j)
 	if err != nil {
 		return nil, err
 	}

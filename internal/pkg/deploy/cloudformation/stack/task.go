@@ -62,7 +62,7 @@ var cfnFuntion = map[string]interface{}{
 
 // Template returns the task CloudFormation template.
 func (t *taskStackConfig) Template() (string, error) {
-	content, err := t.parser.Parse(taskTemplatePath, struct {
+	content, err := template.RequireParser(t.parser).Parse(taskTemplatePath, struct {
 		EnvVars               map[string]string
 		SSMParamSecrets       map[string]string
 		SecretsManagerSecrets map[string]string

@@ -228,7 +228,7 @@ func NewPipeline(pipelineName string, provider Provider, stages []PipelineStage)
 // MarshalBinary serializes the pipeline manifest object into byte array that
 // represents the pipeline.yml document.
 func (m *Pipeline) MarshalBinary() ([]byte, error) {
-	content, err := m.parser.Parse(pipelineManifestPath, *m)
+	content, err := template.RequireParser(m.parser).Parse(pipelineManifestPath, *m)
 	if err != nil {
 		return nil, err
 	}

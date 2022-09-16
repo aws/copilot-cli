@@ -35,7 +35,7 @@ func (p *pipelineStackConfig) StackName() string {
 
 // Template returns the CloudFormation template for the service parametrized for the environment.
 func (p *pipelineStackConfig) Template() (string, error) {
-	content, err := p.parser.Parse(pipelineCfnTemplatePath, p, template.WithFuncs(cfTemplateFunctions), template.WithFuncs(map[string]interface{}{
+	content, err := template.RequireParser(p.parser).Parse(pipelineCfnTemplatePath, p, template.WithFuncs(cfTemplateFunctions), template.WithFuncs(map[string]interface{}{
 		"isCodeStarConnection": func(source interface{}) bool {
 			type connectionName interface {
 				ConnectionName() (string, error)

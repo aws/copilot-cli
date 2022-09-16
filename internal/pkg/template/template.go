@@ -46,6 +46,14 @@ var (
 	}
 )
 
+// RequireParser either creates a default Template or uses a provided overridden Parser object.
+func RequireParser(parser Parser) Parser {
+	if parser == nil {
+		return New()
+	}
+	return parser
+}
+
 // Reader is the interface that wraps the Read method.
 type Reader interface {
 	Read(path string) (*Content, error)

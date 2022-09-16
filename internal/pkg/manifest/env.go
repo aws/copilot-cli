@@ -80,7 +80,7 @@ func FromEnvConfig(cfg *config.Environment, parser template.Parser) *Environment
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (e *Environment) MarshalBinary() ([]byte, error) {
-	content, err := e.parser.Parse(environmentManifestPath, *e, template.WithFuncs(map[string]interface{}{
+	content, err := template.RequireParser(e.parser).Parse(environmentManifestPath, *e, template.WithFuncs(map[string]interface{}{
 		"fmtStringSlice": template.FmtSliceFunc,
 	}))
 	if err != nil {

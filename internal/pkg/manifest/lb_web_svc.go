@@ -146,7 +146,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *LoadBalancedWebService) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(lbWebSvcManifestPath, *s)
+	content, err := template.RequireParser(s.parser).Parse(lbWebSvcManifestPath, *s)
 	if err != nil {
 		return nil, err
 	}

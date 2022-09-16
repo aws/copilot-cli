@@ -172,7 +172,7 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *WorkerService) MarshalBinary() ([]byte, error) {
-	content, err := s.parser.Parse(workerSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
+	content, err := template.RequireParser(s.parser).Parse(workerSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
 		"fmtSlice":   template.FmtSliceFunc,
 		"quoteSlice": template.QuoteSliceFunc,
 	}))
