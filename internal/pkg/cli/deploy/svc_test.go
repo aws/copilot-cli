@@ -539,7 +539,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf("cannot redirect to https without using a custom domain"),
+			wantErr: fmt.Errorf(`validate "redirect": cannot redirect to https without using a custom domain`),
 		},
 		"cannot specify alias hosted zone when no certificates are imported in the env": {
 			inEnvironment: &config.Environment{
