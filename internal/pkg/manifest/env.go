@@ -191,7 +191,9 @@ type environmentCDNConfig struct {
 
 // advancedCDNConfig represents an advanced configuration for a Content Delivery Network.
 type advancedCDNConfig struct {
-	Certificate *string `yaml:"certificate"`
+	// TODO does this need omitempty?
+	Certificate  *string `yaml:"certificate"`
+	TerminateTLS *bool   `yaml:"tls_termination"`
 }
 
 // IsEmpty returns whether environmentCDNConfig is empty.
@@ -201,7 +203,7 @@ func (cfg *environmentCDNConfig) IsEmpty() bool {
 
 // isEmpty returns whether advancedCDNConfig is empty.
 func (cfg *advancedCDNConfig) isEmpty() bool {
-	return cfg.Certificate == nil
+	return cfg.Certificate == nil && cfg.TerminateTLS == nil
 }
 
 // CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
