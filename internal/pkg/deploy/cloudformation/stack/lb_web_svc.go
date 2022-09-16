@@ -33,7 +33,7 @@ type loadBalancedWebSvcReadParser interface {
 type LoadBalancedWebService struct {
 	*ecsWkld
 	manifest               *manifest.LoadBalancedWebService
-	customDomain           bool
+	httpsEnabled           bool
 	httpsRedirect          bool
 	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
@@ -67,7 +67,7 @@ type LoadBalancedWebServiceConfig struct {
 func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 	opts ...LoadBalancedWebServiceOption) (*LoadBalancedWebService, error) {
 	parser := template.New()
-	var dnsDelegationEnabled, customDomain bool
+	var dnsDelegationEnabled, httpsEnabled bool
 	var appInfo deploy.AppInformation
 
 	if conf.App.Domain != "" {
@@ -77,15 +77,15 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 			Domain:              conf.App.Domain,
 			AccountPrincipalARN: conf.RootUserARN,
 		}
-		customDomain = true
+		httpsEnabled = true
 	}
 	certImported := len(conf.EnvManifest.HTTPConfig.Public.Certificates) != 0
 	if certImported {
-		customDomain = true
+		httpsEnabled = true
 		dnsDelegationEnabled = false
 	}
 	if conf.Manifest.RoutingRule.Disabled() {
-		customDomain = false
+		httpsEnabled = false
 	}
 	s := &LoadBalancedWebService{
 		ecsWkld: &ecsWkld{
@@ -104,8 +104,8 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 			taskDefOverrideFunc: override.CloudFormationTemplate,
 		},
 		manifest:             conf.Manifest,
-		customDomain:         customDomain,
-		httpsRedirect:        customDomain && (conf.Manifest.RoutingRule.Redirect == nil || *conf.Manifest.RoutingRule.Redirect),
+		httpsEnabled:         httpsEnabled,
+		httpsRedirect:        httpsEnabled && (conf.Manifest.RoutingRule.Redirect == nil || *conf.Manifest.RoutingRule.Redirect),
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,
 
@@ -165,7 +165,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	}
 
 	var aliases []string
-	if s.customDomain {
+	if s.httpsEnabled {
 		if aliases, err = convertAlias(s.manifest.RoutingRule.Alias); err != nil {
 			return "", err
 		}
@@ -197,7 +197,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Variables:                s.manifest.TaskConfig.Variables,
 		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:                  aliases,
-		HTTPSListener:            s.customDomain,
+		HTTPSListener:            s.httpsEnabled,
 		HTTPSRedirect:            s.httpsRedirect,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
@@ -300,7 +300,7 @@ func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, erro
 			},
 			{
 				ParameterKey:   aws.String(WorkloadHTTPSParamKey),
-				ParameterValue: aws.String(strconv.FormatBool(s.customDomain && s.httpsRedirect)),
+				ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
 			},
 			{
 				ParameterKey:   aws.String(WorkloadStickinessParamKey),

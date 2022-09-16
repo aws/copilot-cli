@@ -315,7 +315,7 @@ Outputs:
 					},
 					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
 				},
-				customDomain: true,
+				httpsEnabled: true,
 				manifest:     testLBWebServiceManifest,
 			}
 			tc.mockDependencies(t, ctrl, conf)
@@ -385,7 +385,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 	}
 	testCases := map[string]struct {
-		customDomain         bool
+		httpsEnabled         bool
 		httpsRedirect        bool
 		dnsDelegationEnabled bool
 		setupManifest        func(*manifest.LoadBalancedWebService)
@@ -394,7 +394,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		expectedErr    error
 	}{
 		"HTTPS Enabled": {
-			customDomain:  true,
+			httpsEnabled:  true,
 			httpsRedirect: true,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				countRange := manifest.IntRangeBand("2-100")
@@ -439,7 +439,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"custom domain without https redirect": {
-			customDomain:  true,
+			httpsEnabled:  true,
 			httpsRedirect: false,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				countRange := manifest.IntRangeBand("2-100")
@@ -484,7 +484,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"HTTPS Not Enabled": {
-			customDomain: false,
+			httpsEnabled: false,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				countRange := manifest.IntRangeBand("2-100")
 				service.Count = manifest.Count{
@@ -528,7 +528,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"with sidecar container": {
-			customDomain:  true,
+			httpsEnabled:  true,
 			httpsRedirect: true,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.RoutingRule.TargetContainer = aws.String("xray")
@@ -570,7 +570,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"Stickiness enabled": {
-			customDomain: false,
+			httpsEnabled: false,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.RoutingRule.Stickiness = aws.Bool(true)
 			},
@@ -606,7 +606,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"exec enabled": {
-			customDomain: false,
+			httpsEnabled: false,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.ExecuteCommand = manifest.ExecuteCommand{
 					Enable: aws.Bool(false),
@@ -647,7 +647,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"dns delegation enabled": {
-			customDomain:         false,
+			httpsEnabled:         false,
 			dnsDelegationEnabled: true,
 
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
@@ -811,7 +811,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			}...),
 		},
 		"with bad count": {
-			customDomain: true,
+			httpsEnabled: true,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				badCountRange := manifest.IntRangeBand("badCount")
 				service.Count = manifest.Count{
@@ -847,7 +847,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					tc: testManifest.TaskConfig,
 				},
 				manifest:             testManifest,
-				customDomain:         tc.customDomain,
+				httpsEnabled:         tc.httpsEnabled,
 				httpsRedirect:        tc.httpsRedirect,
 				dnsDelegationEnabled: tc.dnsDelegationEnabled,
 			}

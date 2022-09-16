@@ -34,13 +34,12 @@ const (
 	envOutputCloudFrontDomainName        = "CloudFrontDomainName"
 	envOutputPublicALBAccessible         = "PublicALBAccessible"
 
-	svcStackResourceALBTargetGroupLogicalID             = "TargetGroup"
-	svcStackResourceNLBTargetGroupLogicalID             = "NLBTargetGroup"
-	svcStackResourceHTTPSListenerRuleLogicalID          = "HTTPSListenerRule"
-	svcStackResourceHTTPListenerRuleLogicalID           = "HTTPListenerRule"
-	svcStackResourceHTTPListenerRuleWithDomainLogicalID = "HTTPListenerRuleWithDomain"
-	svcStackResourceListenerRuleResourceType            = "AWS::ElasticLoadBalancingV2::ListenerRule"
-	svcOutputPublicNLBDNSName                           = "PublicNetworkLoadBalancerDNSName"
+	svcStackResourceALBTargetGroupLogicalID    = "TargetGroup"
+	svcStackResourceNLBTargetGroupLogicalID    = "NLBTargetGroup"
+	svcStackResourceHTTPSListenerRuleLogicalID = "HTTPSListenerRule"
+	svcStackResourceHTTPListenerRuleLogicalID  = "HTTPListenerRule"
+	svcStackResourceListenerRuleResourceType   = "AWS::ElasticLoadBalancingV2::ListenerRule"
+	svcOutputPublicNLBDNSName                  = "PublicNetworkLoadBalancerDNSName"
 )
 
 type envDescriber interface {
