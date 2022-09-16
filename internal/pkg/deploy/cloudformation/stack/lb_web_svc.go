@@ -34,7 +34,6 @@ type LoadBalancedWebService struct {
 	*ecsWkld
 	manifest               *manifest.LoadBalancedWebService
 	httpsEnabled           bool
-	httpRedirect           bool
 	dnsDelegationEnabled   bool
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
@@ -105,7 +104,6 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 		},
 		manifest:             conf.Manifest,
 		httpsEnabled:         httpsEnabled,
-		httpRedirect:         httpsEnabled && (conf.Manifest.RoutingRule.Redirect == nil || *conf.Manifest.RoutingRule.Redirect),
 		appInfo:              appInfo,
 		dnsDelegationEnabled: dnsDelegationEnabled,
 
@@ -198,7 +196,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:                  aliases,
 		HTTPSListener:            s.httpsEnabled,
-		HTTPRedirect:             s.httpRedirect,
+		HTTPRedirect:             !aws.BoolValue(s.manifest.RoutingRule.DisableRedirect),
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,

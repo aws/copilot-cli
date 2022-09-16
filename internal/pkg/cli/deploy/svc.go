@@ -1360,8 +1360,8 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	hasImportedCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
-	if d.lbMft.RoutingRule.Redirect != nil && *d.lbMft.RoutingRule.Redirect && d.app.Domain == "" && !hasImportedCerts {
-		return fmt.Errorf(`validate "redirect": cannot redirect to https without using a custom domain`)
+	if aws.BoolValue(d.lbMft.RoutingRule.DisableRedirect) && d.app.Domain == "" && !hasImportedCerts {
+		return fmt.Errorf(`validate "redirect": cannot disable http to https redirect without having a domain associated with the app %q or importing any certificates in env %q`, d.app.Name, d.env.Name)
 	}
 	if d.lbMft.RoutingRule.Alias.IsEmpty() {
 		if hasImportedCerts {

@@ -386,7 +386,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	}
 	testCases := map[string]struct {
 		httpsEnabled         bool
-		httpRedirect         bool
 		dnsDelegationEnabled bool
 		setupManifest        func(*manifest.LoadBalancedWebService)
 
@@ -395,52 +394,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 	}{
 		"HTTPS Enabled": {
 			httpsEnabled: true,
-			httpRedirect: true,
-			setupManifest: func(service *manifest.LoadBalancedWebService) {
-				countRange := manifest.IntRangeBand("2-100")
-				service.Count = manifest.Count{
-					Value: aws.Int(1),
-					AdvancedCount: manifest.AdvancedCount{
-						Range: manifest.Range{
-							Value: &countRange,
-						},
-					},
-				}
-			},
-			expectedParams: append(expectedParams, []*cloudformation.Parameter{
-				{
-					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
-					ParameterValue: aws.String("true"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
-					ParameterValue: aws.String("frontend"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadTargetPortParamKey),
-					ParameterValue: aws.String("80"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadTaskCountParamKey),
-					ParameterValue: aws.String("2"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadRulePathParamKey),
-					ParameterValue: aws.String("frontend"),
-				},
-				{
-					ParameterKey:   aws.String(WorkloadStickinessParamKey),
-					ParameterValue: aws.String("false"),
-				},
-				{
-					ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
-					ParameterValue: aws.String("false"),
-				},
-			}...),
-		},
-		"custom domain without https redirect": {
-			httpsEnabled: true,
-			httpRedirect: false,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				countRange := manifest.IntRangeBand("2-100")
 				service.Count = manifest.Count{
@@ -529,7 +482,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 		},
 		"with sidecar container": {
 			httpsEnabled: true,
-			httpRedirect: true,
 			setupManifest: func(service *manifest.LoadBalancedWebService) {
 				service.RoutingRule.TargetContainer = aws.String("xray")
 				service.Sidecars = map[string]*manifest.SidecarConfig{
@@ -848,7 +800,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 				},
 				manifest:             testManifest,
 				httpsEnabled:         tc.httpsEnabled,
-				httpRedirect:         tc.httpRedirect,
 				dnsDelegationEnabled: tc.dnsDelegationEnabled,
 			}
 
