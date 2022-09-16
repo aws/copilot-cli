@@ -4,7 +4,6 @@
 package manifest
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -107,7 +106,7 @@ efs:
 
 				roundtrip, err := yaml.Marshal(tc.want)
 				require.NoError(t, err)
-				fmt.Printf("re-marshalled form:\n%s\n", string(roundtrip))
+				t.Logf("re-marshalled form:\n%s\n", string(roundtrip))
 				var rt testVolume
 				require.NoError(t, yaml.Unmarshal(roundtrip, &rt))
 				require.Equal(t, tc.want, rt)

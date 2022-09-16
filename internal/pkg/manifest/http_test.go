@@ -4,7 +4,6 @@
 package manifest
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -162,7 +161,7 @@ func TestAlias_UnmarshalYAML(t *testing.T) {
 
 				roundtrip, err := yaml.Marshal(tc.wantedStruct)
 				require.NoError(t, err)
-				fmt.Printf("re-marshalled form:\n%s\n", string(roundtrip))
+				t.Logf("re-marshalled form:\n%s\n", string(roundtrip))
 				var rt Alias
 				require.NoError(t, yaml.Unmarshal(roundtrip, &rt))
 				require.Equal(t, tc.wantedStruct, rt)

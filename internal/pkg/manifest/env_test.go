@@ -4,7 +4,6 @@
 package manifest
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"testing"
 
@@ -527,7 +526,7 @@ http:
 
 				roundtrip, err := yaml.Marshal(tc.wantedStruct)
 				require.NoError(t, err)
-				fmt.Printf("re-marshalled form:\n%s\n", string(roundtrip))
+				t.Logf("re-marshalled form:\n%s\n", string(roundtrip))
 				var rt Environment
 				require.NoError(t, yaml.Unmarshal(roundtrip, &rt))
 				require.Equal(t, tc.wantedStruct, &rt)

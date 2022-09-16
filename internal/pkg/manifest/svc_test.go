@@ -449,7 +449,7 @@ type: 'OH NO'
 
 				roundtrip, err := yaml.Marshal(m.Manifest())
 				require.NoError(t, err)
-				fmt.Printf("re-marshalled form:\n%s\n", string(roundtrip))
+				t.Logf("re-marshalled form:\n%s\n", string(roundtrip))
 				m2, err := UnmarshalWorkload(roundtrip)
 				require.NoError(t, err)
 				tc.requireCorrectValues(t, m2.Manifest())
