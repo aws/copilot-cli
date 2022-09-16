@@ -5,6 +5,8 @@ package cli
 
 import (
 	"errors"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"io"
 	"testing"
 
@@ -259,7 +261,20 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				caller := mocks.NewMockidentityService(ctrl)
 				caller.EXPECT().Get().Return(identity.Caller{}, nil)
 				deployer := mocks.NewMockenvPackager(ctrl)
-				deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{
+				deployer.EXPECT().GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
+					RootUserARN:         "",
+					CustomResourcesURLs: nil,
+					Manifest: &manifest.Environment{
+						Workload: manifest.Workload{
+							Name: aws.String("test"),
+							Type: aws.String("Environment"),
+						},
+						EnvironmentConfig: manifest.EnvironmentConfig{},
+					},
+					ForceNewUpdate:      false,
+					RawManifest:         []byte("name: test\ntype: Environment\n"),
+					PermissionsBoundary: "mockPermissionsBoundaryPolicy",
+				}).Return(&deploy.GenerateCloudFormationTemplateOutput{
 					Template:   "template",
 					Parameters: "parameters",
 				}, nil)
@@ -281,7 +296,9 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 					},
 					fs:     fs,
 					envCfg: &config.Environment{Name: "test"},
-					appCfg: &config.Application{},
+					appCfg: &config.Application{
+						PermissionsBoundary: "mockPermissionsBoundaryPolicy",
+					},
 				}
 			},
 			wantedFS: func(t *testing.T, fs afero.Fs) {
