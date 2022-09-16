@@ -101,7 +101,7 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn:
     {{- if .ALBEnabled}}
-    {{- if and .HTTPSListener}}
+    {{- if .HTTPSListener}}
       - HTTPListenerRuleWithDomain
       - HTTPSListenerRule
     {{- else}}
