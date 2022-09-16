@@ -191,6 +191,7 @@ Outputs:
 						},
 						Aliases:             []string{"mockAlias"},
 						HTTPSListener:       true,
+						HTTPRedirect:        true,
 						DeregistrationDelay: aws.Int64(60),
 						HealthCheck:         &overridenContainerHealthCheck,
 						CustomResources:     make(map[string]template.S3ObjectLocation),
@@ -235,6 +236,7 @@ Outputs:
 						},
 						Aliases:           []string{"mockAlias"},
 						HTTPSListener:     true,
+						HTTPRedirect:      true,
 						AddonsExtraParams: "ServiceName: !GetAtt Service.Name",
 						WorkloadType:      manifest.LoadBalancedWebServiceType,
 						HTTPHealthCheck: template.HTTPHealthCheckOpts{
