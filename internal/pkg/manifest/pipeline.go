@@ -166,6 +166,8 @@ type Pipeline struct {
 	Source  *Source                    `yaml:"source"`
 	Build   *Build                     `yaml:"build"`
 	Stages  []PipelineStage            `yaml:"stages"`
+
+	parser template.Parser
 }
 
 // Source defines the source of the artifacts to be built and deployed.
@@ -218,13 +220,15 @@ func NewPipeline(pipelineName string, provider Provider, stages []PipelineStage)
 			Properties:   provider.Properties(),
 		},
 		Stages: stages,
+
+		parser: template.New(),
 	}, nil
 }
 
 // MarshalBinary serializes the pipeline manifest object into byte array that
 // represents the pipeline.yml document.
 func (m *Pipeline) MarshalBinary() ([]byte, error) {
-	content, err := template.New().Parse(pipelineManifestPath, *m)
+	content, err := m.parser.Parse(pipelineManifestPath, *m)
 	if err != nil {
 		return nil, err
 	}

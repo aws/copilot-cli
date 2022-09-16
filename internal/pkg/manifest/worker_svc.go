@@ -27,6 +27,8 @@ type WorkerService struct {
 	WorkerServiceConfig `yaml:",inline"`
 	// Use *WorkerServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*WorkerServiceConfig `yaml:",omitempty"`
+
+	parser template.Parser
 }
 
 // Publish returns the list of topics where notifications can be published.
@@ -163,13 +165,14 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform
+	svc.parser = template.New()
 	return svc
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *WorkerService) MarshalBinary() ([]byte, error) {
-	content, err := template.New().Parse(workerSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
+	content, err := s.parser.Parse(workerSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
 		"fmtSlice":   template.FmtSliceFunc,
 		"quoteSlice": template.QuoteSliceFunc,
 	}))

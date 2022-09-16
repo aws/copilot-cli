@@ -19,6 +19,8 @@ type BackendService struct {
 	BackendServiceConfig `yaml:",inline"`
 	// Use *BackendServiceConfig because of https://github.com/imdario/mergo/issues/146
 	Environments map[string]*BackendServiceConfig `yaml:",omitempty"`
+
+	parser template.Parser
 }
 
 // BackendServiceConfig holds the configuration that can be overridden per environments.
@@ -59,13 +61,14 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 		svc.BackendServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
 		svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
+	svc.parser = template.New()
 	return svc
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (s *BackendService) MarshalBinary() ([]byte, error) {
-	content, err := template.New().Parse(backendSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
+	content, err := s.parser.Parse(backendSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
 		"fmtSlice":   template.FmtSliceFunc,
 		"quoteSlice": template.QuoteSliceFunc,
 	}))

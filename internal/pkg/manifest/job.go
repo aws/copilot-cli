@@ -31,6 +31,8 @@ type ScheduledJob struct {
 	Workload           `yaml:",inline"`
 	ScheduledJobConfig `yaml:",inline"`
 	Environments       map[string]*ScheduledJobConfig `yaml:",flow"`
+
+	parser template.Parser
 }
 
 func (s *ScheduledJob) subnets() *SubnetListOrArgs {
@@ -90,13 +92,14 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 		job.Retries = aws.Int(props.Retries)
 	}
 	job.Timeout = stringP(props.Timeout)
+	job.parser = template.New()
 	return job
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
 // Implements the encoding.BinaryMarshaler interface.
 func (j *ScheduledJob) MarshalBinary() ([]byte, error) {
-	content, err := template.New().Parse(scheduledJobManifestPath, *j)
+	content, err := j.parser.Parse(scheduledJobManifestPath, *j)
 	if err != nil {
 		return nil, err
 	}

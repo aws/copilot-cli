@@ -41,11 +41,13 @@ var storageTemplateFunctions = map[string]interface{}{
 // Implements the encoding.BinaryMarshaler interface.
 type DynamoDBTemplate struct {
 	DynamoDBProps
+
+	parser template.Parser
 }
 
 // MarshalBinary serializes the content of the template into binary.
 func (d *DynamoDBTemplate) MarshalBinary() ([]byte, error) {
-	content, err := template.New().Parse(dynamoDbTemplatePath, *d, template.WithFuncs(storageTemplateFunctions))
+	content, err := d.parser.Parse(dynamoDbTemplatePath, *d, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -56,11 +58,13 @@ func (d *DynamoDBTemplate) MarshalBinary() ([]byte, error) {
 // Implements the encoding.BinaryMarshaler interface.
 type S3Template struct {
 	S3Props
+
+	parser template.Parser
 }
 
 // MarshalBinary serializes the content of the template into binary.
 func (s *S3Template) MarshalBinary() ([]byte, error) {
-	content, err := template.New().Parse(s3TemplatePath, *s, template.WithFuncs(storageTemplateFunctions))
+	content, err := s.parser.Parse(s3TemplatePath, *s, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +75,8 @@ func (s *S3Template) MarshalBinary() ([]byte, error) {
 // Implements the encoding.BinaryMarshaler interface.
 type RDSTemplate struct {
 	RDSProps
+
+	parser template.Parser
 }
 
 // MarshalBinary serializes the content of the template into binary.
@@ -79,7 +85,7 @@ func (r *RDSTemplate) MarshalBinary() ([]byte, error) {
 	if r.WorkloadType == manifest.RequestDrivenWebServiceType {
 		path = rdsRDWSTemplatePath
 	}
-	content, err := template.New().Parse(path, *r, template.WithFuncs(storageTemplateFunctions))
+	content, err := r.parser.Parse(path, *r, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -88,11 +94,12 @@ func (r *RDSTemplate) MarshalBinary() ([]byte, error) {
 
 // RDSParams represents the addons.parameters.yml file for a RDS Aurora Serverless cluster.
 type RDSParams struct {
+	parser template.Parser
 }
 
 // MarshalBinary serializes the content of the params file into binary.
 func (r *RDSParams) MarshalBinary() ([]byte, error) {
-	content, err := template.New().Parse(rdsRDWSParamsPath, *r, template.WithFuncs(storageTemplateFunctions))
+	content, err := r.parser.Parse(rdsRDWSParamsPath, *r, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
 		return nil, err
 	}
@@ -113,6 +120,8 @@ type S3Props struct {
 func NewS3Template(input *S3Props) *S3Template {
 	return &S3Template{
 		S3Props: *input,
+
+		parser: template.New(),
 	}
 }
 
@@ -131,6 +140,8 @@ type DynamoDBProps struct {
 func NewDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 	return &DynamoDBTemplate{
 		DynamoDBProps: *input,
+
+		parser: template.New(),
 	}
 }
 
@@ -148,12 +159,16 @@ type RDSProps struct {
 func NewRDSTemplate(input RDSProps) *RDSTemplate {
 	return &RDSTemplate{
 		RDSProps: input,
+
+		parser: template.New(),
 	}
 }
 
 // NewRDSParams creates a new RDS parameters marshaler.
 func NewRDSParams() *RDSParams {
-	return &RDSParams{}
+	return &RDSParams{
+		parser: template.New(),
+	}
 }
 
 // BuildPartitionKey generates the properties required to specify the partition key

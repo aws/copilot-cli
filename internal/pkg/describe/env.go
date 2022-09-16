@@ -151,7 +151,7 @@ func (d *EnvDescriber) Manifest() ([]byte, error) {
 		return []byte(strings.TrimSpace(metadata.Manifest)), nil
 	}
 	// Otherwise, the Manifest wasn't written into the CloudFormation template, we'll convert the config in SSM.
-	mft := manifest.FromEnvConfig(d.env)
+	mft := manifest.FromEnvConfig(d.env, template.New())
 	out, err := yaml.Marshal(mft)
 	if err != nil {
 		return nil, fmt.Errorf("marshal manifest generated from SSM: %v", err)
