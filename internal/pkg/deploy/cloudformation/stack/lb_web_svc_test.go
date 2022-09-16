@@ -455,7 +455,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(WorkloadHTTPSParamKey),
-					ParameterValue: aws.String("false"),
+					ParameterValue: aws.String("true"),
 				},
 				{
 					ParameterKey:   aws.String(WorkloadTargetContainerParamKey),

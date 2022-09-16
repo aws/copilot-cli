@@ -90,14 +90,6 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
-						{
-							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
-							Type:       svcStackResourceListenerRuleResourceType,
-							PhysicalID: "mockRuleARN",
-						},
-					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
@@ -127,14 +119,6 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
-						{
-							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
-							Type:       svcStackResourceListenerRuleResourceType,
-							PhysicalID: "mockRuleARN",
-						},
-					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
@@ -165,14 +149,6 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
-						{
-							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
-							Type:       svcStackResourceListenerRuleResourceType,
-							PhysicalID: "mockRuleARN",
-						},
-					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
@@ -191,14 +167,6 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
-						{
-							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
-							Type:       svcStackResourceListenerRuleResourceType,
-							PhysicalID: "mockRuleARN",
-						},
-					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
@@ -221,14 +189,6 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
-						{
-							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
-							Type:       svcStackResourceListenerRuleResourceType,
-							PhysicalID: "mockRuleARN",
-						},
-					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
@@ -261,14 +221,6 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
-						{
-							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
-							Type:       svcStackResourceListenerRuleResourceType,
-							PhysicalID: "mockRuleARN",
-						},
-					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 					}, nil),
@@ -313,14 +265,6 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
-						{
-							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
-							Type:       svcStackResourceListenerRuleResourceType,
-							PhysicalID: "mockRuleARN",
-						},
-					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						envOutputPublicALBAccessible:       testALBAccessible,
@@ -351,14 +295,6 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockProdParams, nil),
-					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
-						{
-							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
-							Type:       svcStackResourceListenerRuleResourceType,
-							PhysicalID: "mockRuleARN",
-						},
-					}, nil),
-					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("mockRuleARN").Return(nil, nil),
 					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
 						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
 						envOutputPublicALBAccessible:       testALBAccessible,
@@ -502,12 +438,10 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 			mockStore := mocks.NewMockDeployedEnvServicesLister(ctrl)
 			mockSvcStackDescriber := mocks.NewMockecsDescriber(ctrl)
 			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
-			mockLBDescriber := mocks.NewMocklbDescriber(ctrl)
 			mocks := lbWebSvcDescriberMocks{
 				storeSvc:     mockStore,
 				ecsDescriber: mockSvcStackDescriber,
 				envDescriber: mockEnvDescriber,
-				lbDescriber:  mockLBDescriber,
 			}
 
 			tc.setupMocks(mocks)
@@ -519,7 +453,6 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 				store:                    mockStore,
 				initECSServiceDescribers: func(s string) (ecsDescriber, error) { return mockSvcStackDescriber, nil },
 				initEnvDescribers:        func(s string) (envDescriber, error) { return mockEnvDescriber, nil },
-				initLBDescriber:          func(s string) (lbDescriber, error) { return mockLBDescriber, nil },
 			}
 
 			// WHEN
