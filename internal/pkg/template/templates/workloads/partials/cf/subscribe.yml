@@ -58,10 +58,10 @@ EventsKMSKey:
             - "kms:Decrypt"
           Resource: '*'
 
-{{- if and .Subscribe .Subscribe.QueueType}}
+{{- if and .Subscribe .Subscribe.Queue}}
 EventsQueue:
   Metadata:
-    'aws:copilot:description': {{- if eq (deref .Subscribe.QueueType) "fifo"}}'An events SQS FIFO queue to buffer messages'{{- else}}'An events SQS queue to buffer messages'{{- end}}
+    'aws:copilot:description': {{ if eq (deref .Subscribe.Queue.Type) "fifo"}}'An events SQS FIFO queue to buffer messages'{{ else}}'An events SQS queue to buffer messages'{{ end}}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -81,8 +81,8 @@ EventsQueue:
       deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
       maxReceiveCount: {{.Subscribe.Queue.DeadLetter.Tries}}
     {{- end}}
-    {{- if eq (deref .Subscribe.QueueType) "fifo"}}
-     FifoQueue: true
+    {{- if eq (deref .Subscribe.Queue.Type) "fifo"}}
+    FifoQueue: true
     {{- end}}
     {{- if .Subscribe.Queue.FifoThroughputLimit }}
     FifoThroughputLimit: {{.Subscribe.Queue.FifoThroughputLimit}}
@@ -98,12 +98,12 @@ EventsQueue:
 {{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}
 DeadLetterQueue:
   Metadata:
-    'aws:copilot:description': {{- if eq (deref .Subscribe.QueueType) "fifo"}}'A dead letter SQS FIFO queue to buffer failed messages from the events queue'{{- else}}'A dead letter SQS queue to buffer failed messages from the events queue'{{- end}}
+    'aws:copilot:description': {{ if eq (deref .Subscribe.Queue.Type) "fifo"}}'A dead letter SQS FIFO queue to buffer failed messages from the events queue'{{ else}} 'A dead letter SQS queue to buffer failed messages from the events queue'{{ end}}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
     MessageRetentionPeriod: 1209600 # 14 days
-    {{- if eq (deref .Subscribe.QueueType) "fifo" }}
+    {{- if eq (deref .Subscribe.Queue.Type) "fifo" }}
     FifoQueue: true
     {{- end }}
 
@@ -128,7 +128,7 @@ DeadLetterPolicy:
 {{- end}}{{/* endif and .Subscribe .Subscribe.StandardQueu */}}
 
 
-{{- if and .Subscribe .Subscribe.QueueType}}
+{{- if and .Subscribe .Subscribe.Queue}}
 QueuePolicy:
   Type: AWS::SQS::QueuePolicy
   Properties:
@@ -159,7 +159,7 @@ QueuePolicy:
         {{- end}}
         {{- end}}
 {{- end}}{{/* if .Subscribe */}}
-{{- end}}{{/* if and .Subscribe .Subscribe.QueueType */}}
+{{- end}}{{/* if and .Subscribe .Subscribe.Queue */}}
 
 {{- if .Subscribe }}
 {{- range $topic := .Subscribe.Topics}}
@@ -266,6 +266,6 @@ QueuePolicy:
           Condition:
             ArnEquals:
               aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']]
-{{- end}}{{/* endif $topic.Queue =*/}}
+{{- end}}{{/* endif $topic.Queue */}}
 {{- end}}{{/* endrange $topic := .Subscribe.Topics */}}
 {{- end}}{{/* if .Subscribe */}}

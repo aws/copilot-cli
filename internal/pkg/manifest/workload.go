@@ -22,6 +22,13 @@ import (
 
 const (
 	defaultDockerfileName = "Dockerfile"
+	perMessageGroupID     = "perMessageGroupId"
+	perQueue              = "perQueue"
+	messageGroup          = "messageGroup"
+	queue                 = "queue"
+	standardQueueType     = "standard"
+	fifoQueueType         = "fifo"
+	defaultQueueType      = standardQueueType
 )
 
 const (

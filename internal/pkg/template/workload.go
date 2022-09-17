@@ -400,25 +400,14 @@ type Topic struct {
 
 // SubscribeOpts holds configuration needed if the service has subscriptions.
 type SubscribeOpts struct {
-	Topics    []*TopicSubscription
-	Queue     *SQSQueue
-	QueueType *string
+	Topics []*TopicSubscription
+	Queue  *SQSQueue
 }
 
 // HasTopicQueues returns true if any individual subscription has a dedicated queue.
 func (s *SubscribeOpts) HasTopicQueues() bool {
 	for _, t := range s.Topics {
 		if t.Queue != nil {
-			return true
-		}
-	}
-	return false
-}
-
-// StandardDefaultQueue returns true if at least one standard topic exist and does not have its own queue configs.
-func (s *SubscribeOpts) StandardDefaultQueue() bool {
-	for _, t := range s.Topics {
-		if t.Queue == nil {
 			return true
 		}
 	}

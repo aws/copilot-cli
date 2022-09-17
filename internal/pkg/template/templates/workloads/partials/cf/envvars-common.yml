@@ -16,7 +16,7 @@
 {{- end}}{{- end}}
 {{- if eq .WorkloadType "Worker Service"}}
 - Name: COPILOT_QUEUE_URI
-  Value: !Ref EventsQueue
+  Value: {{ if .Subscribe.Queue }}!Ref EventsQueue {{ else }} "" {{ end }}
 {{- end}}
 {{- if .Subscribe}}{{if .Subscribe.HasTopicQueues}}
 - Name: COPILOT_TOPIC_QUEUE_URIS

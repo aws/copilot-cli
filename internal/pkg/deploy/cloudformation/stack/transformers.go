@@ -25,10 +25,11 @@ import (
 )
 
 const (
-	enabled          = "ENABLED"
-	disabled         = "DISABLED"
-	defaultQueueType = "standard"
-	fifoQueue        = "fifo"
+	enabled           = "ENABLED"
+	disabled          = "DISABLED"
+	standardQueueType = "standard"
+	fifoQueueType     = "fifo"
+	defaultQueueType  = standardQueueType
 )
 
 // Default values for EFS options
@@ -826,11 +827,14 @@ func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, erro
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
 	subscriptions.Queue = convertQueue(s.Queue)
-	if subscriptions.Queue == nil && subscriptions.StandardDefaultQueue() {
+	/*if subscriptions.Queue == nil && subscriptions.StandardDefaultQueue() {
 		subscriptions.QueueType = aws.String(defaultQueueType)
-	} else if strings.Compare(aws.StringValue(subscriptions.Queue.Type), "fifo") == 0 {
-		subscriptions.QueueType = aws.String(fifoQueue)
-	}
+		//subscriptions.Queue = &template.SQSQueue{Type: aws.String(defaultQueueType)}
+	} else if subscriptions.Queue != nil && strings.Compare(aws.StringValue(subscriptions.Queue.Type), "fifo") == 0 {
+		subscriptions.QueueType = aws.String(fifoQueueType)
+	} else if subscriptions.Queue != nil && aws.StringValue(subscriptions.Queue.Type) != "fifo" {
+		subscriptions.QueueType = aws.String(defaultQueueType)
+	}*/
 	return &subscriptions, nil
 }
 
@@ -876,13 +880,13 @@ func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
 		return nil
 	}
 
-	if strings.Compare(aws.StringValue(q.Type), defaultQueueType) == 0 {
+	if strings.Compare(aws.StringValue(q.Type), standardQueueType) == 0 {
 		return &template.SQSQueue{
 			Retention:  convertRetention(q.Retention),
 			Delay:      convertDelay(q.Delay),
 			Timeout:    convertTimeout(q.Timeout),
 			DeadLetter: convertDeadLetter(q.DeadLetter),
-			Type:       aws.String(defaultQueueType),
+			Type:       q.Type,
 		}
 	}
 
@@ -909,17 +913,6 @@ func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
 		DeduplicationScope:        deduplicationScope,
 		Type:                      q.Type,
 	}
-
-	/*if q.IsEmpty() {
-		return nil
-	}
-	return &template.SQSQueue{
-		Retention:  convertRetention(q.Retention),
-		Delay:      convertDelay(q.Delay),
-		Timeout:    convertTimeout(q.Timeout),
-		DeadLetter: convertDeadLetter(q.DeadLetter),
-		Type:       aws.String(defaultQueueType),
-	}*/
 }
 
 func convertTime(t *time.Duration) *int64 {

@@ -58,8 +58,8 @@ var (
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
-	validDeduplicationScopeValues    = []string{"messageGroup", "queue"}
-	validFIFOThroughputLimitValues   = []string{"perMessageGroupId", "perQueue"}
+	validDeduplicationScopeValues    = []string{messageGroup, queue}
+	validFIFOThroughputLimitValues   = []string{perMessageGroupID, perQueue}
 )
 
 // Validate returns nil if DynamicLoadBalancedWebService is configured correctly.
@@ -1468,7 +1468,7 @@ func (q SQSQueueOrBool) validate() error {
 		} else {
 			if q.Advanced.FifoThroughputLimit != nil || q.Advanced.HighThroughputFifo != nil ||
 				q.Advanced.DeduplicationScope != nil || q.Advanced.ContentBasedDeduplication != nil {
-				return fmt.Errorf(`parameters such as "content_based_deduplication", "deduplication_scope", "fifo_throughput_limit", and "high_throughput_fifo" are only used with FIFO SQS Queue`)
+				return fmt.Errorf(`parameters such as "content_based_deduplication", "deduplication_scope", "fifo_throughput_limit", and "high_throughput_fifo" are only used with FIFO SQS Queue; to enable fifo SQS add type: fifo in your topic specific queue`)
 			}
 			return q.Advanced.validate()
 		}
