@@ -24,7 +24,7 @@ Starting with Copilot v1.20, `copilot env init` creates an environment manifest 
                 restrict_to:
                   cdn: true
         ```
-    
+
     === "Imported Certificates"
 
         ```yaml
@@ -54,3 +54,23 @@ With both of these setups, Copilot will provision CloudFront to use the [SSL/TLS
 ## What is ingress restriction?
 
 You can restrict incoming traffic to come from a certain source. For CloudFront, Copilot uses an [AWS managed prefix list](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html) to restrict allowed traffic to a set of CIDR IP addresses associated with CloudFront edge locations. When you specify `restrict_to.cdn: true`, your Public Load Balancer is no longer fully publicly accessible, and can only be accessed through the CloudFront distribution, guarding against security threats to your services.
+
+## How do I use CloudFront to terminate TLS?
+
+You can optionally use CloudFront for TLS termination by configuring the env manifest as
+
+```yaml
+cdn:
+  tls_termination: true
+```
+
+And traffic from `CloudFront → Application Load Balancer (ALB) → ECS` will be HTTP only. This brings a very important benefit which is faster TLS termination, since the CloudFront edges are usually closer to the viewers.
+
+However, if HTTPS is enabled by either having the app domain or importing any certificates in the environment, you must turn off ALB http redirect by updating the service manifests as
+
+```yaml
+http:
+  disable_redirect: true
+```
+
+And then redeploy all the Load Balanced Web Services before `env deploy` to enable CloudFront TLS termination.
