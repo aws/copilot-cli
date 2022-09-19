@@ -954,6 +954,15 @@ func (o *runTaskOpts) deploy() error {
 		deployOpts = []awscloudformation.StackOption{awscloudformation.WithRoleARN(o.targetEnvironment.ExecutionRoleARN)}
 	}
 
+	var boundaryPolicy string
+	if o.appName != "" {
+		app, err := o.store.GetApplication(o.appName)
+		if err != nil {
+			return fmt.Errorf("get application: %w", err)
+		}
+		boundaryPolicy = app.PermissionsBoundary
+	}
+
 	secretsManagerSecrets, ssmParamSecrets := o.getCategorizedSecrets()
 
 	entrypoint, err := shlex.Split(o.entrypoint)
@@ -971,6 +980,7 @@ func (o *runTaskOpts) deploy() error {
 		CPU:                   o.cpu,
 		Memory:                o.memory,
 		Image:                 o.image,
+		PermissionsBoundary:   boundaryPolicy,
 		TaskRole:              o.taskRole,
 		ExecutionRole:         o.executionRole,
 		Command:               command,

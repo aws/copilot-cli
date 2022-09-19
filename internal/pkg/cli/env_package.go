@@ -167,6 +167,7 @@ func (o *packageEnvOpts) Execute() error {
 		CustomResourcesURLs: urls,
 		Manifest:            mft,
 		RawManifest:         rawMft,
+		PermissionsBoundary: o.appCfg.PermissionsBoundary,
 		ForceNewUpdate:      o.forceNewUpdate,
 	})
 	if err != nil {
