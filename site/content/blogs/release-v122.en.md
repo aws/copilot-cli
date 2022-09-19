@@ -12,7 +12,7 @@ image_height: '747'
 Posted On: Sep 27, 2022
 
 The AWS Copilot core team is announcing the Copilot v1.22 release.  
-Special thanks to [@jterry75](https://github.com/jterry75) and [@gabrielcostasilva](https://github.com/gabrielcostasilva) who contributed to this release.
+Special thanks to [@jterry75](https://github.com/jterry75), [@gabrielcostasilva](https://github.com/gabrielcostasilva), [@shingos](https://github.com/shingos), and [@hkford](https://github.com/hkford) who contributed to this release.
 Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 300 people online and over 2.4k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
