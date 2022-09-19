@@ -538,12 +538,13 @@ type StackRuntimeConfiguration struct {
 	// Use *string for three states (see https://github.com/aws/copilot-cli/pull/3268#discussion_r806060230)
 	// This is mainly to keep the `workload package` behavior backward-compatible, otherwise our old pipeline buildspec would break,
 	// since previously we parsed the env region from a mock ECR URL that we generated from `workload package``.
-	ImageDigest        *string
-	EnvFileARN         string
-	AddonsURL          string
-	RootUserARN        string
-	Tags               map[string]string
-	CustomResourceURLs map[string]string
+	ImageDigest         *string
+	EnvFileARN          string
+	AddonsURL           string
+	RootUserARN         string
+	PermissionsBoundary string
+	Tags                map[string]string
+	CustomResourceURLs  map[string]string
 }
 
 // DeployWorkloadInput is the input of DeployWorkload.
@@ -1004,6 +1005,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 			Region:                   d.env.Region,
 			CustomResourcesURL:       in.CustomResourceURLs,
 			EnvVersion:               envVersion,
+			PermissionsBoundary:      in.PermissionsBoundary,
 		}, nil
 	}
 	return &stack.RuntimeConfig{
@@ -1020,6 +1022,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		Region:                   d.env.Region,
 		CustomResourcesURL:       in.CustomResourceURLs,
 		EnvVersion:               envVersion,
+		PermissionsBoundary:      in.PermissionsBoundary,
 	}, nil
 }
 
@@ -1048,13 +1051,13 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
 	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-		App:           d.app,
-		EnvManifest:   d.envConfig,
-		Manifest:      d.lbMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		RootUserARN:   in.RootUserARN,
-		Addons:        d.addons,
+		App:                 d.app,
+		EnvManifest:         d.envConfig,
+		Manifest:            d.lbMft,
+		RawManifest:         d.rawMft,
+		RuntimeConfig:       *rc,
+		RootUserARN:         in.RootUserARN,
+		Addons:              d.addons,
 	}, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)

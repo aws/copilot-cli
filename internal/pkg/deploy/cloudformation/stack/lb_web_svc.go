@@ -53,13 +53,14 @@ func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 
 // LoadBalancedWebServiceConfig contains fields to configure LoadBalancedWebService.
 type LoadBalancedWebServiceConfig struct {
-	App           *config.Application
-	EnvManifest   *manifest.Environment
-	Manifest      *manifest.LoadBalancedWebService
-	RawManifest   []byte // Content of the manifest file without any transformations.
-	RuntimeConfig RuntimeConfig
-	RootUserARN   string
-	Addons        addons
+	App                 *config.Application
+	PermissionsBoundary string
+	EnvManifest         *manifest.Environment
+	Manifest            *manifest.LoadBalancedWebService
+	RawManifest         []byte // Content of the manifest file without any transformations.
+	RuntimeConfig       RuntimeConfig
+	RootUserARN         string
+	Addons              addons
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
@@ -230,6 +231,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
 		HostedZoneAliases: aliasesFor,
+		PermissionsBoundary:     s.rc.PermissionsBoundary,
 	})
 	if err != nil {
 		return "", err
