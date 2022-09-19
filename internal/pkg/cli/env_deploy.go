@@ -170,6 +170,7 @@ func (o *deployEnvOpts) Execute() error {
 		Manifest:            mft,
 		ForceNewUpdate:      o.forceNewUpdate,
 		RawManifest:         rawMft,
+		PermissionsBoundary: o.targetApp.PermissionsBoundary,
 	}); err != nil {
 		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 		if errors.As(err, &errEmptyChangeSet) {
