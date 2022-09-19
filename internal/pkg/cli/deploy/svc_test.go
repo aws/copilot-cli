@@ -539,7 +539,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf(`validate "redirect": cannot disable http to https redirect without having a domain associated with the app "mockApp" or importing any certificates in env "mockEnv"`),
+			wantErr: fmt.Errorf(`cannot disable http to https redirect without having a domain associated with the app "mockApp" or importing any certificates in env "mockEnv"`),
 		},
 		"cannot specify alias hosted zone when no certificates are imported in the env": {
 			inEnvironment: &config.Environment{
