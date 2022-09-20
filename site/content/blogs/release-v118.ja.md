@@ -21,6 +21,8 @@ Copilot v1.18 では、いくつかの新機能提供と改善が行われまし
 
 ## AWS Copilot とは?
 
+投稿日: 2022 年 5 月 9 日
+
 AWS Copilot CLI は AWS 上でプロダクションレディなコンテナ化されたアプリケーションのビルド、リリース、そして運用のためのツールです。
 開発のスタートからステージング環境へのプッシュ、本番環境へのリリースまで、Copilot はアプリケーション開発ライフサイクル全体の管理を容易にします。
 Copilot の基礎となるのは、 AWS CloudFormation です。CloudFormation により、インフラストラクチャを 1 回の操作でコードとしてプロビジョニングできます。
@@ -211,3 +213,5 @@ observability:
 * [最新 CLI バージョン](../docs/getting-started/install.ja.md)のダウンロード
 * [スタートガイド](../docs/getting-started/first-app-tutorial.ja.md)を試す
 * [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.18.0) でリリースノートの全文を読む
+
+今回のリリースの翻訳はソリューションアーキテクトの杉本が担当しました。

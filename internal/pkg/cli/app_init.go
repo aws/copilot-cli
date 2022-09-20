@@ -34,9 +34,10 @@ const (
 )
 
 type initAppVars struct {
-	name         string
-	domainName   string
-	resourceTags map[string]string
+	name                string
+	permissionsBoundary string
+	domainName          string
+	resourceTags        map[string]string
 }
 
 type initAppOpts struct {
@@ -188,23 +189,25 @@ func (o *initAppOpts) Execute() error {
 		}
 	}
 	err = o.cfn.DeployApp(&deploy.CreateAppInput{
-		Name:               o.name,
-		AccountID:          caller.Account,
-		DomainName:         o.domainName,
-		DomainHostedZoneID: hostedZoneID,
-		AdditionalTags:     o.resourceTags,
-		Version:            deploy.LatestAppTemplateVersion,
+		Name:                o.name,
+		AccountID:           caller.Account,
+		DomainName:          o.domainName,
+		DomainHostedZoneID:  hostedZoneID,
+		PermissionsBoundary: o.permissionsBoundary,
+		AdditionalTags:      o.resourceTags,
+		Version:             deploy.LatestAppTemplateVersion,
 	})
 	if err != nil {
 		return err
 	}
 
 	if err := o.store.CreateApplication(&config.Application{
-		AccountID:          caller.Account,
-		Name:               o.name,
-		Domain:             o.domainName,
-		DomainHostedZoneID: hostedZoneID,
-		Tags:               o.resourceTags,
+		AccountID:           caller.Account,
+		Name:                o.name,
+		Domain:              o.domainName,
+		DomainHostedZoneID:  hostedZoneID,
+		PermissionsBoundary: o.permissionsBoundary,
+		Tags:                o.resourceTags,
 	}); err != nil {
 		return err
 	}

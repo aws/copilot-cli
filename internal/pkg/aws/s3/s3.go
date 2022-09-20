@@ -5,8 +5,6 @@
 package s3
 
 import (
-	"archive/zip"
-	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -54,28 +52,6 @@ func New(s *session.Session) *S3 {
 		s3Manager: s3manager.NewUploader(s),
 		s3Client:  s3.New(s),
 	}
-}
-
-// ZipAndUpload zips all files and uploads the zipped file to an S3 bucket under the specified key.
-// Per s3's recommendation https://docs.aws.amazon.com/AmazonS3/latest/userguide/about-object-ownership.html:
-// The bucket owner, in addition to the object owner, is granted full control.
-func (s *S3) ZipAndUpload(bucket, key string, files ...NamedBinary) (string, error) {
-	buf := new(bytes.Buffer)
-	w := zip.NewWriter(buf)
-	for _, file := range files {
-		f, err := w.Create(file.Name())
-		if err != nil {
-			return "", fmt.Errorf("create zip file %s: %w", file.Name(), err)
-		}
-		_, err = f.Write(file.Content())
-		if err != nil {
-			return "", fmt.Errorf("write zip file %s: %w", file.Name(), err)
-		}
-	}
-	if err := w.Close(); err != nil {
-		return "", err
-	}
-	return s.upload(bucket, key, buf)
 }
 
 // Upload uploads a file to an S3 bucket under the specified key.

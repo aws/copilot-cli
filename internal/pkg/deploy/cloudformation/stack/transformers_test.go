@@ -1547,7 +1547,7 @@ func Test_convertPlatform(t *testing.T) {
 		out template.RuntimePlatformOpts
 	}{
 		"should return empty struct if user did not set a platform field in the manifest": {},
-		"should return windows server 2019 full and x86_64 when advanced config specifies full": {
+		"should return windows server 2019 full and x86_64 when advanced config specifies 2019 full": {
 			in: manifest.PlatformArgsOrString{
 				PlatformArgs: manifest.PlatformArgs{
 					OSFamily: aws.String(manifest.OSWindowsServer2019Full),
@@ -1555,16 +1555,52 @@ func Test_convertPlatform(t *testing.T) {
 				},
 			},
 			out: template.RuntimePlatformOpts{
-				OS:   template.OSWindowsServerFull,
+				OS:   template.OSWindowsServer2019Full,
 				Arch: template.ArchX86,
 			},
 		},
-		"should return windows server core and x86_64 when platform is 'windows/x86_64'": {
+		"should return windows server 2019 core and x86_64 when advanced config specifies 2019 core": {
+			in: manifest.PlatformArgsOrString{
+				PlatformArgs: manifest.PlatformArgs{
+					OSFamily: aws.String(manifest.OSWindowsServer2019Core),
+					Arch:     aws.String(manifest.ArchX86),
+				},
+			},
+			out: template.RuntimePlatformOpts{
+				OS:   template.OSWindowsServer2019Core,
+				Arch: template.ArchX86,
+			},
+		},
+		"should return windows server 2022 full and x86_64 when advanced config specifies 2022 full": {
+			in: manifest.PlatformArgsOrString{
+				PlatformArgs: manifest.PlatformArgs{
+					OSFamily: aws.String(manifest.OSWindowsServer2022Full),
+					Arch:     aws.String(manifest.ArchX86),
+				},
+			},
+			out: template.RuntimePlatformOpts{
+				OS:   template.OSWindowsServer2022Full,
+				Arch: template.ArchX86,
+			},
+		},
+		"should return windows server 2022 core and x86_64 when advanced config specifies 2022 core": {
+			in: manifest.PlatformArgsOrString{
+				PlatformArgs: manifest.PlatformArgs{
+					OSFamily: aws.String(manifest.OSWindowsServer2022Core),
+					Arch:     aws.String(manifest.ArchX86),
+				},
+			},
+			out: template.RuntimePlatformOpts{
+				OS:   template.OSWindowsServer2022Core,
+				Arch: template.ArchX86,
+			},
+		},
+		"should return windows server core 2019 and x86_64 when platform is 'windows/x86_64'": {
 			in: manifest.PlatformArgsOrString{
 				PlatformString: (*manifest.PlatformString)(aws.String("windows/amd64")),
 			},
 			out: template.RuntimePlatformOpts{
-				OS:   template.OSWindowsServerCore,
+				OS:   template.OSWindowsServer2019Core,
 				Arch: template.ArchX86,
 			},
 		},

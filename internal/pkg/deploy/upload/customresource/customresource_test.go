@@ -58,7 +58,7 @@ func TestRDWS(t *testing.T) {
 	// ensure custom resource names match.
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
-		actualFnNames[i] = cr.FunctionName()
+		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t, []string{"CustomDomainFunction", "EnvControllerFunction"}, actualFnNames, "function names must match")
 
@@ -76,7 +76,7 @@ func TestRDWS(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
 	}
 }
 
@@ -118,7 +118,7 @@ func TestLBWS(t *testing.T) {
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
-		actualFnNames[i] = cr.FunctionName()
+		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t,
 		[]string{"DynamicDesiredCountFunction", "EnvControllerFunction", "RulePriorityFunction", "NLBCustomDomainFunction", "NLBCertValidatorFunction"},
@@ -138,7 +138,7 @@ func TestLBWS(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
 	}
 }
 
@@ -172,7 +172,7 @@ func TestWorker(t *testing.T) {
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
-		actualFnNames[i] = cr.FunctionName()
+		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t,
 		[]string{"DynamicDesiredCountFunction", "BacklogPerTaskCalculatorFunction", "EnvControllerFunction"},
@@ -192,7 +192,7 @@ func TestWorker(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
 	}
 }
 
@@ -226,7 +226,7 @@ func TestBackend(t *testing.T) {
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
-		actualFnNames[i] = cr.FunctionName()
+		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t,
 		[]string{"DynamicDesiredCountFunction", "RulePriorityFunction", "EnvControllerFunction"},
@@ -246,7 +246,7 @@ func TestBackend(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
 	}
 }
 
@@ -272,7 +272,7 @@ func TestScheduledJob(t *testing.T) {
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
-		actualFnNames[i] = cr.FunctionName()
+		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t,
 		[]string{"EnvControllerFunction"},
@@ -292,7 +292,7 @@ func TestScheduledJob(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
 	}
 }
 
@@ -334,7 +334,7 @@ func TestEnv(t *testing.T) {
 
 	actualFnNames := make([]string, len(crs))
 	for i, cr := range crs {
-		actualFnNames[i] = cr.FunctionName()
+		actualFnNames[i] = cr.Name()
 	}
 	require.ElementsMatch(t,
 		[]string{"CertificateValidationFunction", "CustomDomainFunction", "DNSDelegationFunction", "CertificateReplicatorFunction", "UniqueJSONValuesFunction"},
@@ -354,7 +354,7 @@ func TestEnv(t *testing.T) {
 
 	// ensure artifact paths match.
 	for _, cr := range crs {
-		require.Equal(t, wantedPaths[cr.FunctionName()], cr.ArtifactPath())
+		require.Equal(t, wantedPaths[cr.Name()], cr.artifactPath())
 	}
 }
 

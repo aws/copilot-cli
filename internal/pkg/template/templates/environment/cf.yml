@@ -663,7 +663,7 @@ Outputs:
   {{- if not .PrivateHTTPConfig.ImportedCertARNs}}
   InternalWorkloadsHostedZone:
     Condition: CreateInternalALB
-    Value: !GetAtt InternalWorkloadsHostedZone.Id
+    Value: !Ref InternalWorkloadsHostedZone
     Export:
       Name: !Sub ${AWS::StackName}-InternalWorkloadsHostedZoneID
   InternalWorkloadsHostedZoneName:

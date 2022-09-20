@@ -183,7 +183,6 @@ func TestLBWebServiceDescriber_URI(t *testing.T) {
 					}, nil),
 				)
 			},
-
 			wantedURI: "http://test.cloudfront.com/mySvc",
 		},
 		"fail to get parameters of service stack when fetching NLB uris": {

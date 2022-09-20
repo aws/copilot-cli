@@ -69,7 +69,7 @@ nlb:
 * Environment 用のサブドメインに使う ACM 証明書の作成と検証し
 * ACM 証明書を
     - エイリアスが Application Load Balancer　(`http.alias`) として利用されている場合、HTTPS リスナーと関連づけて HTTP のトラフィックを HTTPS にリダイレクトし
-    - エリアスが `nlb.alias` として利用されていて、 TLS ターミーネーションが有効な場合、 Network Load Balancer の TLS リスナーと関連づけて
+    - エイリアスが `nlb.alias` として利用されていて、 TLS ターミーネーションが有効な場合、 Network Load Balancer の TLS リスナーと関連づけて
 * エイリアス用でオプションの A レコードを作成しています。
 
 **どのように見えるか**
@@ -86,7 +86,7 @@ $ copilot env init --import-cert-arns arn:aws:acm:us-east-1:123456789012:certifi
 
 Service の Manifest において、次のどちらかを行います。
 
-1. Copilot が A レコードを追加する[ホストゾーン](../manifest/lb-web-service.ja.md#http-hosted-zone)のIDを指定する
+1. Copilot が A レコードを追加する[ホストゾーン](../manifest/lb-web-service.ja.md#http-hosted-zone)の ID を指定します。
 ``` yaml
 # in copilot/{service name}/manifest.yml
 http:
@@ -99,7 +99,7 @@ http:
 ブログ記事にも 2 つ目の[例](../../blogs/release-v118.ja.md#certificate-import)を掲載しています。
 
 ## Request-Driven Web Service
-Request-Driven Web Service に[カスタムドメイン](https://docs.aws.amazon.com/ja_jp/apprunner/latest/dg/manage-custom-domains.html)を追加もできます。Load Balanced Web Service と同様に、Manifest の [`alias`](../manifest/rd-web-service.en.md#http-alias) フィールドを変更することで追加できます。
+Request-Driven Web Service に[カスタムドメイン](https://docs.aws.amazon.com/ja_jp/apprunner/latest/dg/manage-custom-domains.html)を追加もできます。Load Balanced Web Service と同様に、Manifest の [`alias`](../manifest/rd-web-service.ja.md#http-alias) フィールドを変更することで追加できます。
 ```yaml
 # in copilot/{service name}/manifest.yml
 http:

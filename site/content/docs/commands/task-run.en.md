@@ -112,3 +112,8 @@ Run a Windows task with the minimum cpu and memory values.
 ```console
 $ copilot task run --platform-os WINDOWS_SERVER_2019_CORE --platform-arch X86_64 --cpu 1024 --memory 2048
 ```
+
+Run a Windows 2022 task with the minimum cpu and memory values.
+```console
+$ copilot task run --platform-os WINDOWS_SERVER_2022_CORE --platform-arch X86_64 --cpu 1024 --memory 2048
+```

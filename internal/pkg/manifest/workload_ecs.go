@@ -25,6 +25,8 @@ const (
 	OSWindows               = dockerengine.OSWindows
 	OSWindowsServer2019Core = "windows_server_2019_core"
 	OSWindowsServer2019Full = "windows_server_2019_full"
+	OSWindowsServer2022Core = "windows_server_2022_core"
+	OSWindowsServer2022Full = "windows_server_2022_full"
 
 	ArchAMD64 = dockerengine.ArchAMD64
 	ArchX86   = dockerengine.ArchX86
@@ -43,7 +45,7 @@ const (
 // Platform related settings.
 var (
 	defaultPlatform     = platformString(OSLinux, ArchAMD64)
-	windowsOSFamilies   = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full}
+	windowsOSFamilies   = []string{OSWindows, OSWindowsServer2019Core, OSWindowsServer2019Full, OSWindowsServer2022Core, OSWindowsServer2022Full}
 	validShortPlatforms = []string{ // All of the os/arch combinations that the PlatformString field may accept.
 		dockerengine.PlatformString(OSLinux, ArchAMD64),
 		dockerengine.PlatformString(OSLinux, ArchX86),
@@ -63,6 +65,10 @@ var (
 		{OSFamily: aws.String(OSWindowsServer2019Core), Arch: aws.String(ArchAMD64)},
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchX86)},
 		{OSFamily: aws.String(OSWindowsServer2019Full), Arch: aws.String(ArchAMD64)},
+		{OSFamily: aws.String(OSWindowsServer2022Core), Arch: aws.String(ArchX86)},
+		{OSFamily: aws.String(OSWindowsServer2022Core), Arch: aws.String(ArchAMD64)},
+		{OSFamily: aws.String(OSWindowsServer2022Full), Arch: aws.String(ArchX86)},
+		{OSFamily: aws.String(OSWindowsServer2022Full), Arch: aws.String(ArchAMD64)},
 	}
 )
 

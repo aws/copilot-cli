@@ -920,9 +920,13 @@ func convertPlatform(platform manifest.PlatformArgsOrString) template.RuntimePla
 	os := template.OSLinux
 	switch platform.OS() {
 	case manifest.OSWindows, manifest.OSWindowsServer2019Core:
-		os = template.OSWindowsServerCore
+		os = template.OSWindowsServer2019Core
 	case manifest.OSWindowsServer2019Full:
-		os = template.OSWindowsServerFull
+		os = template.OSWindowsServer2019Full
+	case manifest.OSWindowsServer2022Core:
+		os = template.OSWindowsServer2022Core
+	case manifest.OSWindowsServer2022Full:
+		os = template.OSWindowsServer2022Full
 	}
 
 	arch := template.ArchX86
