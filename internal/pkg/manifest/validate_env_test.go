@@ -767,6 +767,22 @@ func TestCDNConfiguration_validate(t *testing.T) {
 			},
 			wantedError: errors.New("cdn certificate must be in region us-east-1"),
 		},
+		"error if terminate tls set without cert": {
+			in: environmentCDNConfig{
+				Config: advancedCDNConfig{
+					TerminateTLS: aws.Bool(true),
+				},
+			},
+			wantedError: errors.New(`"certificate" must be specified if "terminate_tls" is specified`),
+		},
+		"success with cert and terminate tls": {
+			in: environmentCDNConfig{
+				Config: advancedCDNConfig{
+					Certificate:  aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
+					TerminateTLS: aws.Bool(true),
+				},
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

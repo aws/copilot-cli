@@ -191,9 +191,8 @@ type environmentCDNConfig struct {
 
 // advancedCDNConfig represents an advanced configuration for a Content Delivery Network.
 type advancedCDNConfig struct {
-	// TODO does this need omitempty?
-	Certificate  *string `yaml:"certificate"`
-	TerminateTLS *bool   `yaml:"tls_termination"`
+	Certificate  *string `yaml:"certificate,omitempty"`
+	TerminateTLS *bool   `yaml:"terminate_tls,omitempty"`
 }
 
 // IsEmpty returns whether environmentCDNConfig is empty.
