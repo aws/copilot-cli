@@ -186,6 +186,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	httpRedirect := true
+	if s.manifest.RoutingRule.RedirectToHTTPS != nil {
+		httpRedirect = aws.BoolValue(s.manifest.RoutingRule.RedirectToHTTPS)
+	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -197,6 +201,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:                  aliases,
 		HTTPSListener:            s.httpsEnabled,
+		HTTPRedirect:             httpRedirect,
 		NestedStack:              addonsOutputs,
 		AddonsExtraParams:        addonsParams,
 		Sidecars:                 sidecars,
