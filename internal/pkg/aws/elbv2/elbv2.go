@@ -74,6 +74,7 @@ func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
 	return hostHeaders, nil
 }
 
+// ListenerRuleIsRedirect returns true if ruleARN has an action to redirect.
 func (e *ELBV2) ListenerRuleIsRedirect(ctx context.Context, ruleARN string) (bool, error) {
 	resp, err := e.client.DescribeRules(&elbv2.DescribeRulesInput{
 		RuleArns: aws.StringSlice([]string{ruleARN}),

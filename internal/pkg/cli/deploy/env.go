@@ -151,8 +151,8 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 	}, nil
 }
 
-// Verify checks that the manifest configuration is valid to deploy alongside currently
-// deployed resources in this environment.
+// Verify checks that the manifest configuration is valid to deploy alongside
+// the currently deployed resources.
 func (d *envDeployer) Verify(ctx context.Context, mft *manifest.Environment) error {
 	if mft.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && d.app.Domain != "" {
 		// With managed domain, if the customer isn't using `alias` the A-records are inserted in the service stack as each service domain is unique.
@@ -173,6 +173,9 @@ func (d *envDeployer) Verify(ctx context.Context, mft *manifest.Environment) err
 	return nil
 }
 
+// verifyALBWorkloadsDontRedirect verifies that none of the ALB Workloads
+// in this environment have a redirect in their HTTPWithDomain listener.
+// If any services redirect, an error is returned.
 func (d *envDeployer) verifyALBWorkloadsDontRedirect(ctx context.Context) error {
 	params, err := d.envDescriber.Params()
 	if err != nil {
@@ -218,6 +221,7 @@ func (d *envDeployer) verifyALBWorkloadsDontRedirect(ctx context.Context) error 
 	return nil
 }
 
+// lbServiceRedirects returns true if svc's HTTP listener rule redirects.
 func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool, error) {
 	stackDescriber := d.newServiceStackDescriber(svc, d.envManagerSession)
 	resources, err := stackDescriber.Resources()
