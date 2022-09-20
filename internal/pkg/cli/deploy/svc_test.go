@@ -479,6 +479,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 		inEnvironment     *config.Environment
 		inForceDeploy     bool
 		inDisableRollback bool
+		inRedirectToHTTPS *bool
 
 		// Cached variables.
 		inEnvironmentConfig func() *manifest.Environment
@@ -521,6 +522,24 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
 			wantErr: fmt.Errorf("cannot deploy service mockWkld without http.alias to environment mockEnv with certificate imported"),
+		},
+		"fail if http redirect to https configured without custom domain": {
+			inRedirectToHTTPS: aws.Bool(true),
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				return &manifest.Environment{}
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+			},
+			wantErr: fmt.Errorf(`cannot configure http to https redirect without having a domain associated with the app "mockApp" or importing any certificates in env "mockEnv"`),
 		},
 		"cannot specify alias hosted zone when no certificates are imported in the env": {
 			inEnvironment: &config.Environment{
@@ -724,6 +743,23 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
 			wantErr: fmt.Errorf("get version for app %s: %w", mockAppName, mockError),
+		},
+		"out of date app version": {
+			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v.0.99.0", nil)
+			},
+			wantErr: fmt.Errorf("alias is not compatible with application versions below v1.0.0"),
 		},
 		"fail to enable https alias because of incompatible app version": {
 			inAliases: manifest.Alias{AdvancedAliases: mockAlias},
@@ -957,6 +993,58 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
 			},
 		},
+		"success with http redirect disabled and certs imported": {
+			inRedirectToHTTPS: aws.Bool(false),
+			inAliases: manifest.Alias{
+				AdvancedAliases: mockMultiAliases,
+			},
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.HTTPConfig.Public.Certificates = mockCertARNs
+				return envConfig
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
+			},
+		},
+		"success with http redirect disabled and domain imported": {
+			inRedirectToHTTPS: aws.Bool(false),
+			inAliases: manifest.Alias{
+				AdvancedAliases: []manifest.AdvancedAlias{
+					{
+						Alias: aws.String("hi.mockDomain"),
+					},
+				},
+			},
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				return envConfig
+			},
+			inApp: &config.Application{
+				Name:   mockAppName,
+				Domain: "mockDomain",
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockAppVersionGetter.EXPECT().Version().Return("v1.0.0", nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
+			},
+		},
 		"success with force update": {
 			inForceDeploy: true,
 			inEnvironment: &config.Environment{
@@ -1042,8 +1130,9 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 						},
 						RoutingRule: manifest.RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
-								Path:  aws.String("/"),
-								Alias: tc.inAliases,
+								Path:            aws.String("/"),
+								Alias:           tc.inAliases,
+								RedirectToHTTPS: tc.inRedirectToHTTPS,
 							},
 						},
 						NLBConfig: tc.inNLB,
