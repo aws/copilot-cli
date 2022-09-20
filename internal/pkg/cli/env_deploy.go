@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -16,7 +17,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -47,7 +47,6 @@ type deployEnvOpts struct {
 	identity        identityService
 	newInterpolator func(app, env string) interpolator
 	newEnvDeployer  func() (envDeployer, error)
-	newEnvDescriber func() (envDescriber, error)
 
 	// Cached variables.
 	targetApp *config.Application
@@ -79,17 +78,6 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 	opts.newEnvDeployer = func() (envDeployer, error) {
 		return newEnvDeployer(opts)
 	}
-	opts.newEnvDescriber = func() (envDescriber, error) {
-		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-			App:         opts.appName,
-			Env:         opts.name,
-			ConfigStore: opts.store,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return envDescriber, nil
-	}
 	return opts, nil
 }
 
@@ -106,6 +94,7 @@ func newEnvDeployer(opts *deployEnvOpts) (envDeployer, error) {
 		App:             app,
 		Env:             env,
 		SessionProvider: opts.sessionProvider,
+		ConfigStore:     opts.store,
 	})
 }
 
@@ -126,10 +115,6 @@ func (o *deployEnvOpts) Ask() error {
 	return o.validateOrAskEnvName()
 }
 
-func (o *deployEnvOpts) isManagedCDNEnabled(mft *manifest.Environment) bool {
-	return mft.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && o.targetApp.Domain != ""
-}
-
 // Execute deploys an environment given a manifest.
 func (o *deployEnvOpts) Execute() error {
 	rawMft, err := o.ws.ReadEnvironmentManifest(o.name)
@@ -140,24 +125,15 @@ func (o *deployEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	if o.isManagedCDNEnabled(mft) {
-		describer, err := o.newEnvDescriber()
-		if err != nil {
-			return err
-		}
-		// With managed domain, if the customer isn't using `alias` the A-records are inserted in the service stack as each service domain is unique.
-		// However, when clients enable CloudFront, they would need to update all their existing records to now point to the distribution.
-		// Hence, we force users to use `alias` and let the records be written in the environment stack instead.
-		if err := describer.ValidateCFServiceDomainAliases(); err != nil {
-			return err
-		}
-	}
 	caller, err := o.identity.Get()
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
 	deployer, err := o.newEnvDeployer()
 	if err != nil {
+		return err
+	}
+	if err := deployer.Verify(context.Background(), mft); err != nil {
 		return err
 	}
 	urls, err := deployer.UploadArtifacts()

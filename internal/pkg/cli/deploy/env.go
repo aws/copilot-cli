@@ -4,13 +4,19 @@
 package deploy
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"strings"
+	"sync"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -18,16 +24,20 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	deploycfn "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
+	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/dustin/go-humanize/english"
+	"golang.org/x/sync/errgroup"
 )
 
 type appResourcesGetter interface {
-	GetAppResourcesByRegion(app *config.Application, region string) (*stack.AppRegionalResources, error)
+	GetAppResourcesByRegion(app *config.Application, region string) (*cfnstack.AppRegionalResources, error)
 }
 
 type environmentDeployer interface {
@@ -44,6 +54,11 @@ type prefixListGetter interface {
 	CloudFrontManagedPrefixListID() (string, error)
 }
 
+type envDescriber interface {
+	ValidateCFServiceDomainAliases() error
+	Params() (map[string]string, error)
+}
+
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
@@ -57,9 +72,11 @@ type envDeployer struct {
 	envDeployer        environmentDeployer
 	patcher            patcher
 	newStackSerializer func(input *deploy.CreateEnvironmentInput, forceUpdateID string, prevParams []*awscfn.Parameter) stackSerializer
+	envDescriber       envDescriber
+	envManagerSession  *session.Session
 
 	// Cached variables.
-	appRegionalResources *stack.AppRegionalResources
+	appRegionalResources *cfnstack.AppRegionalResources
 }
 
 // NewEnvDeployerInput contains information needed to construct an environment deployer.
@@ -67,6 +84,7 @@ type NewEnvDeployerInput struct {
 	App             *config.Application
 	Env             *config.Environment
 	SessionProvider *sessions.Provider
+	ConfigStore     describe.ConfigStoreSvc
 }
 
 // NewEnvDeployer constructs an environment deployer.
@@ -83,6 +101,11 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get env session: %w", err)
 	}
+	envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+		App:         in.App.Name,
+		Env:         in.Env.Name,
+		ConfigStore: in.ConfigStore,
+	})
 	cfnClient := deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr))
 	return &envDeployer{
 		app: in.App,
@@ -100,9 +123,99 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 			Env:             in.Env,
 		},
 		newStackSerializer: func(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
-			return stack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
+			return cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
 		},
+		envDescriber:      envDescriber,
+		envManagerSession: envManagerSession,
 	}, nil
+}
+
+func (d *envDeployer) Verify(ctx context.Context, mft *manifest.Environment) error {
+	if mft.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && d.app.Domain != "" {
+		// With managed domain, if the customer isn't using `alias` the A-records are inserted in the service stack as each service domain is unique.
+		// However, when clients enable CloudFront, they would need to update all their existing records to now point to the distribution.
+		// Hence, we force users to use `alias` and let the records be written in the environment stack instead.
+		if err := d.envDescriber.ValidateCFServiceDomainAliases(); err != nil {
+			return err
+		}
+	}
+
+	if mft.CDNEnabled() && aws.BoolValue(mft.CDNConfig.Config.TerminateTLS) {
+		// ensure all services _are not_ doing http->https redirect
+		if err := d.verifyALBWorkloadsDontRedirect(ctx); err != nil {
+			return fmt.Errorf("can't enable TLS termination on CDN: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (d *envDeployer) verifyALBWorkloadsDontRedirect(ctx context.Context) error {
+	params, err := d.envDescriber.Params()
+	if err != nil {
+		return fmt.Errorf("get env params: %w", err)
+	}
+
+	services := strings.Split(params[cfnstack.EnvParamALBWorkloadsKey], ",")
+	g, ctx := errgroup.WithContext(ctx)
+
+	var badServices []string
+	var badServicesMu sync.Mutex
+
+	for i := range services {
+		svc := services[i]
+		g.Go(func() error {
+			allowsHTTP, err := d.lbServiceAllowsHTTP(ctx, svc)
+			switch {
+			case err != nil:
+				return fmt.Errorf("verify service %q: %w", svc, err)
+			case !allowsHTTP:
+				badServicesMu.Lock()
+				defer badServicesMu.Unlock()
+				badServices = append(badServices, svc)
+			}
+
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	if len(badServices) > 0 {
+		return fmt.Errorf("HTTP traffic redirects to HTTPS in services %v.\nSet http.redirect_to_https to false for those services and redeploy them.", english.OxfordWordSeries(badServices, "and"))
+	}
+
+	return nil
+}
+
+const (
+	svcStackResourceHTTPListenerRuleLogicalID = "HTTPListenerRuleWithDomain"
+)
+
+func (d *envDeployer) lbServiceAllowsHTTP(ctx context.Context, svc string) (bool, error) {
+	cfn := stack.NewStackDescriber(cfnstack.NameForService(d.app.Name, d.env.Name, svc), d.envManagerSession)
+	resources, err := cfn.Resources()
+	if err != nil {
+		return false, fmt.Errorf("get stack resources: %w", err)
+	}
+
+	ruleARN := ""
+	for _, res := range resources {
+		if res.LogicalID == svcStackResourceHTTPListenerRuleLogicalID {
+			ruleARN = res.PhysicalID
+		}
+	}
+	if ruleARN == "" {
+		return false, fmt.Errorf("resource %q not present", svcStackResourceHTTPListenerRuleLogicalID)
+	}
+
+	elbv2 := elbv2.New(d.envManagerSession)
+	isRedirect, err := elbv2.ListenerRuleIsRedirect(ctx, ruleARN)
+	if err != nil {
+		return false, fmt.Errorf("verify rule isn't redirect: %w", err)
+	}
+	return !isRedirect, nil
 }
 
 // UploadArtifacts uploads the deployment artifacts for the environment.
@@ -208,11 +321,11 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if err != nil {
 		return fmt.Errorf("retrieve environment stack force update ID: %w", err)
 	}
-	conf := stack.NewEnvConfigFromExistingStack(stackInput, lastForceUpdateID, oldParams)
+	conf := cfnstack.NewEnvConfigFromExistingStack(stackInput, lastForceUpdateID, oldParams)
 	return d.envDeployer.UpdateAndRenderEnvironment(conf, stackInput.ArtifactBucketARN, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
 }
 
-func (d *envDeployer) getAppRegionalResources() (*stack.AppRegionalResources, error) {
+func (d *envDeployer) getAppRegionalResources() (*cfnstack.AppRegionalResources, error) {
 	if d.appRegionalResources != nil {
 		return d.appRegionalResources, nil
 	}

@@ -5,6 +5,7 @@
 package elbv2
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -71,6 +72,26 @@ func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
 	}
 	sort.Slice(hostHeaders, func(i, j int) bool { return hostHeaders[i] < hostHeaders[j] })
 	return hostHeaders, nil
+}
+
+func (e *ELBV2) ListenerRuleIsRedirect(ctx context.Context, ruleARN string) (bool, error) {
+	resp, err := e.client.DescribeRules(&elbv2.DescribeRulesInput{
+		RuleArns: aws.StringSlice([]string{ruleARN}),
+	})
+	switch {
+	case err != nil:
+		return false, fmt.Errorf("get listener rule for %s: %w", ruleARN, err)
+	case len(resp.Rules) == 0:
+		return false, fmt.Errorf("cannot find listener rule %s", ruleARN)
+	}
+
+	rule := resp.Rules[0]
+	for _, action := range rule.Actions {
+		if aws.StringValue(action.Type) == "redirect" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // TargetHealth wraps up elbv2.TargetHealthDescription.

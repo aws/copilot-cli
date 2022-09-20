@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"context"
 	"encoding"
 	"io"
 
@@ -648,6 +649,7 @@ type runner interface {
 
 type envDeployer interface {
 	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
+	Verify(ctx context.Context, mft *manifest.Environment) error
 	UploadArtifacts() (map[string]string, error)
 }
 
