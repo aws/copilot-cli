@@ -1486,7 +1486,7 @@ func Test_convertSubscribe(t *testing.T) {
 					DeadLetter: manifest.DeadLetterQueue{
 						Tries: aws.Uint16(35),
 					},
-					Type: aws.String(standardQueueType),
+					Type: aws.String(sqsStandardQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1503,7 +1503,7 @@ func Test_convertSubscribe(t *testing.T) {
 					DeadLetter: &template.DeadLetterQueue{
 						Tries: aws.Uint16(35),
 					},
-					Type: aws.String(standardQueueType),
+					Type: aws.String(sqsStandardQueueType),
 				},
 			},
 		},
@@ -1516,7 +1516,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: manifest.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1527,7 +1527,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &template.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 		},
@@ -1544,7 +1544,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: manifest.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1553,13 +1553,13 @@ func Test_convertSubscribe(t *testing.T) {
 						Name:    aws.String("name"),
 						Service: aws.String("svc"),
 						Queue: &template.SQSQueue{
-							Type: aws.String(standardQueueType),
+							Type: aws.String(sqsStandardQueueType),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
 				Queue: &template.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 		},
@@ -1577,14 +1577,14 @@ func Test_convertSubscribe(t *testing.T) {
 								DeadLetter: manifest.DeadLetterQueue{
 									Tries: aws.Uint16(35),
 								},
-								Type: aws.String(standardQueueType),
+								Type: aws.String(sqsStandardQueueType),
 							},
 						},
 						FilterPolicy: mockStruct,
 					},
 				},
 				Queue: manifest.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1599,13 +1599,13 @@ func Test_convertSubscribe(t *testing.T) {
 							DeadLetter: &template.DeadLetterQueue{
 								Tries: aws.Uint16(35),
 							},
-							Type: aws.String(standardQueueType),
+							Type: aws.String(sqsStandardQueueType),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
 				Queue: &template.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 		},
@@ -1623,7 +1623,7 @@ func Test_convertSubscribe(t *testing.T) {
 								DeadLetter: manifest.DeadLetterQueue{
 									Tries: aws.Uint16(35),
 								},
-								Type:               aws.String(fifoQueueType),
+								Type:               aws.String(sqsFifoQueueType),
 								HighThroughputFifo: aws.Bool(true),
 							},
 						},
@@ -1631,7 +1631,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: manifest.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1646,7 +1646,7 @@ func Test_convertSubscribe(t *testing.T) {
 							DeadLetter: &template.DeadLetterQueue{
 								Tries: aws.Uint16(35),
 							},
-							Type:                aws.String(fifoQueueType),
+							Type:                aws.String(sqsFifoQueueType),
 							FifoThroughputLimit: aws.String("perMessageGroupId"),
 							DeduplicationScope:  aws.String("messageGroup"),
 						},
@@ -1654,7 +1654,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &template.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 		},
@@ -1672,14 +1672,14 @@ func Test_convertSubscribe(t *testing.T) {
 								DeadLetter: manifest.DeadLetterQueue{
 									Tries: aws.Uint16(35),
 								},
-								Type: aws.String(fifoQueueType),
+								Type: aws.String(sqsFifoQueueType),
 							},
 						},
 						FilterPolicy: mockStruct,
 					},
 				},
 				Queue: manifest.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1697,13 +1697,13 @@ func Test_convertSubscribe(t *testing.T) {
 							FifoThroughputLimit:       nil,
 							DeduplicationScope:        nil,
 							ContentBasedDeduplication: nil,
-							Type:                      aws.String(fifoQueueType),
+							Type:                      aws.String(sqsFifoQueueType),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
 				Queue: &template.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 		},
@@ -1724,14 +1724,14 @@ func Test_convertSubscribe(t *testing.T) {
 								FifoThroughputLimit:       aws.String("queue"),
 								DeduplicationScope:        aws.String("perQueue"),
 								ContentBasedDeduplication: aws.Bool(true),
-								Type:                      aws.String(fifoQueueType),
+								Type:                      aws.String(sqsFifoQueueType),
 							},
 						},
 						FilterPolicy: mockStruct,
 					},
 				},
 				Queue: manifest.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1749,13 +1749,13 @@ func Test_convertSubscribe(t *testing.T) {
 							FifoThroughputLimit:       aws.String("queue"),
 							DeduplicationScope:        aws.String("perQueue"),
 							ContentBasedDeduplication: aws.Bool(true),
-							Type:                      aws.String(fifoQueueType),
+							Type:                      aws.String(sqsFifoQueueType),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
 				Queue: &template.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 		},
@@ -1776,7 +1776,7 @@ func Test_convertSubscribe(t *testing.T) {
 								FifoThroughputLimit:       aws.String("queue"),
 								DeduplicationScope:        aws.String("perQueue"),
 								ContentBasedDeduplication: aws.Bool(true),
-								Type:                      aws.String(fifoQueueType),
+								Type:                      aws.String(sqsFifoQueueType),
 							},
 						},
 						FilterPolicy: mockStruct,
@@ -1787,7 +1787,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: manifest.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1805,7 +1805,7 @@ func Test_convertSubscribe(t *testing.T) {
 							FifoThroughputLimit:       aws.String("queue"),
 							DeduplicationScope:        aws.String("perQueue"),
 							ContentBasedDeduplication: aws.Bool(true),
-							Type:                      aws.String(fifoQueueType),
+							Type:                      aws.String(sqsFifoQueueType),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
@@ -1815,7 +1815,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &template.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 		},
@@ -1836,7 +1836,7 @@ func Test_convertSubscribe(t *testing.T) {
 								FifoThroughputLimit:       aws.String("queue"),
 								DeduplicationScope:        aws.String("perQueue"),
 								ContentBasedDeduplication: aws.Bool(true),
-								Type:                      aws.String(fifoQueueType),
+								Type:                      aws.String(sqsFifoQueueType),
 							},
 						},
 						FilterPolicy: mockStruct,
@@ -1851,7 +1851,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: manifest.SQSQueue{
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(sqsDefaultQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1869,7 +1869,7 @@ func Test_convertSubscribe(t *testing.T) {
 							FifoThroughputLimit:       aws.String("queue"),
 							DeduplicationScope:        aws.String("perQueue"),
 							ContentBasedDeduplication: aws.Bool(true),
-							Type:                      aws.String(fifoQueueType),
+							Type:                      aws.String(sqsFifoQueueType),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
@@ -1883,7 +1883,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &template.SQSQueue{
-					Type: aws.String(standardQueueType),
+					Type: aws.String(sqsStandardQueueType),
 				},
 			},
 		},
@@ -1901,7 +1901,7 @@ func Test_convertSubscribe(t *testing.T) {
 								DeadLetter: manifest.DeadLetterQueue{
 									Tries: aws.Uint16(35),
 								},
-								Type: aws.String(standardQueueType),
+								Type: aws.String(sqsStandardQueueType),
 							},
 						},
 						FilterPolicy: mockStruct,
@@ -1912,7 +1912,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: manifest.SQSQueue{
-					Type: aws.String(fifoQueueType),
+					Type: aws.String(sqsFifoQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1927,7 +1927,7 @@ func Test_convertSubscribe(t *testing.T) {
 							DeadLetter: &template.DeadLetterQueue{
 								Tries: aws.Uint16(35),
 							},
-							Type: aws.String(standardQueueType),
+							Type: aws.String(sqsStandardQueueType),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
@@ -1937,7 +1937,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &template.SQSQueue{
-					Type: aws.String(fifoQueueType),
+					Type: aws.String(sqsFifoQueueType),
 				},
 			},
 		},
@@ -1955,7 +1955,7 @@ func Test_convertSubscribe(t *testing.T) {
 								DeadLetter: manifest.DeadLetterQueue{
 									Tries: aws.Uint16(35),
 								},
-								Type: aws.String(standardQueueType),
+								Type: aws.String(sqsStandardQueueType),
 							},
 						},
 						FilterPolicy: mockStruct,
@@ -1970,7 +1970,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: manifest.SQSQueue{
-					Type: aws.String(fifoQueueType),
+					Type: aws.String(sqsFifoQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1985,7 +1985,7 @@ func Test_convertSubscribe(t *testing.T) {
 							DeadLetter: &template.DeadLetterQueue{
 								Tries: aws.Uint16(35),
 							},
-							Type: aws.String(standardQueueType),
+							Type: aws.String(sqsStandardQueueType),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
@@ -1999,7 +1999,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &template.SQSQueue{
-					Type: aws.String(fifoQueueType),
+					Type: aws.String(sqsFifoQueueType),
 				},
 			},
 		},

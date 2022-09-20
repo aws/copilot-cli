@@ -228,15 +228,15 @@ func (s *WorkerService) RetrofitFIFOConfig() {
 		}
 		// if condition sets topic specific type to defaultQueueType (i.e. standard) in case customer doesn't define it in their topic specific queue.
 		if !topic.Queue.IsEmpty() && !topic.Queue.Advanced.IsEmpty() && topic.Queue.Advanced.Type == nil {
-			s.Subscribe.Topics[idx].Queue.Advanced.Type = aws.String(defaultQueueType)
+			s.Subscribe.Topics[idx].Queue.Advanced.Type = aws.String(sqsDefaultQueueType)
 		}
 	}
 	if s.Subscribe.Queue.IsEmpty() && s.Subscribe.Topics != nil {
 		s.Subscribe.Queue = SQSQueue{
-			Type: aws.String(defaultQueueType),
+			Type: aws.String(sqsDefaultQueueType),
 		}
 	} else if !s.Subscribe.Queue.IsEmpty() && s.Subscribe.Queue.Type == nil {
-		s.Subscribe.Queue.Type = aws.String(defaultQueueType)
+		s.Subscribe.Queue.Type = aws.String(sqsDefaultQueueType)
 	}
 }
 

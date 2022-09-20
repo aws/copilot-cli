@@ -22,13 +22,16 @@ import (
 
 const (
 	defaultDockerfileName = "Dockerfile"
-	perMessageGroupID     = "perMessageGroupId"
-	perQueue              = "perQueue"
-	messageGroup          = "messageGroup"
-	queue                 = "queue"
-	standardQueueType     = "standard"
-	fifoQueueType         = "fifo"
-	defaultQueueType      = standardQueueType
+)
+
+const (
+	sqsFifoPerMessageGroupID = "perMessageGroupId"
+	sqsFifoPerQueue          = "perQueue"
+	sqsFifoMessageGroup      = "messageGroup"
+	sqsFifoQueue             = "queue"
+	sqsStandardQueueType     = "standard"
+	sqsFifoQueueType         = "fifo"
+	sqsDefaultQueueType      = sqsStandardQueueType
 )
 
 const (
@@ -39,7 +42,8 @@ const (
 
 // All placement options.
 var (
-	subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
+	subnetPlacements        = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
+	sqsValidQueueTypeValues = []string{sqsStandardQueueType, sqsFifoQueueType}
 )
 
 // Error definitions.

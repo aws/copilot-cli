@@ -2802,6 +2802,18 @@ func TestTopicSubscription_validate(t *testing.T) {
 			},
 			wanted: nil,
 		},
+		"should return error if invalid queue type is provided": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic"),
+				Service: aws.String("mockservice"),
+				Queue: SQSQueueOrBool{
+					Advanced: SQSQueue{
+						Type: aws.String("FIFO"), // it is case-sensitive, correct values are standard or fifo.
+					},
+				},
+			},
+			wanted: errors.New(`validate "queue": validate "type": type value must be one of standard or fifo`),
+		},
 		"should return error if invalid fifo throughput limit": {
 			in: TopicSubscription{
 				Name:    aws.String("mockTopic"),
@@ -2813,7 +2825,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Timeout:             &duration111Seconds,
 						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
 						FifoThroughputLimit: aws.String("incorrectFIFOThoughoutLimit"),
-						Type:                aws.String("fifo"),
+						Type:                aws.String(sqsFifoQueueType),
 					},
 				},
 			},
@@ -2829,8 +2841,8 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Delay:               &duration111Seconds,
 						Timeout:             &duration111Seconds,
 						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
-						FifoThroughputLimit: aws.String("perMessageGroupId"),
-						Type:                aws.String("fifo"),
+						FifoThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
+						Type:                aws.String(sqsFifoQueueType),
 					},
 				},
 			},
@@ -2847,7 +2859,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Timeout:            &duration111Seconds,
 						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
 						DeduplicationScope: aws.String("incorrectDeduplicateScope"),
-						Type:               aws.String("fifo"),
+						Type:               aws.String(sqsFifoQueueType),
 					},
 				},
 			},
@@ -2863,8 +2875,8 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Delay:              &duration111Seconds,
 						Timeout:            &duration111Seconds,
 						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
-						DeduplicationScope: aws.String("messageGroup"),
-						Type:               aws.String("fifo"),
+						DeduplicationScope: aws.String(sqsFifoMessageGroup),
+						Type:               aws.String(sqsFifoQueueType),
 					},
 				},
 			},
@@ -2880,13 +2892,13 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Delay:              &duration111Seconds,
 						Timeout:            &duration111Seconds,
 						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
-						DeduplicationScope: aws.String("messageGroup"),
+						DeduplicationScope: aws.String(sqsFifoMessageGroup),
 					},
 				},
 			},
 			wanted: errors.New(`validate "queue": parameters such as "content_based_deduplication", "deduplication_scope", "fifo_throughput_limit", and "high_throughput_fifo" are only used with FIFO SQS Queue; to enable fifo SQS add type: fifo in your topic specific queue`),
 		},
-		"should return error if high_throughput_fifo is defined along with deduplication_scope or fifo_throughput_limit": {
+		"should return error if high_throughput_fifo is defined along with deduplication_scope": {
 			in: TopicSubscription{
 				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
@@ -2897,14 +2909,14 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Timeout:            &duration111Seconds,
 						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
 						HighThroughputFifo: aws.Bool(true),
-						DeduplicationScope: aws.String("messageGroup"),
-						Type:               aws.String("fifo"),
+						DeduplicationScope: aws.String(sqsFifoMessageGroup),
+						Type:               aws.String(sqsFifoQueueType),
 					},
 				},
 			},
-			wanted: errors.New(`validate "queue": validate "high_throughput_fifo": cannot define fifo_throughput_limit and fifo_throughput_limit when high_throughput_fifo is defined`),
+			wanted: errors.New(`validate "queue": must specify one, not both, of "high_throughput_fifo" and "deduplication_scope"`),
 		},
-		"should return error if invalid combination of fifo_throughput_limit and fifo_throughput_limit is defined": {
+		"should return error if high_throughput_fifo is defined along with  fifo_throughput_limit": {
 			in: TopicSubscription{
 				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
@@ -2914,13 +2926,31 @@ func TestTopicSubscription_validate(t *testing.T) {
 						Delay:               &duration111Seconds,
 						Timeout:             &duration111Seconds,
 						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
-						FifoThroughputLimit: aws.String("perMessageGroupId"),
-						DeduplicationScope:  aws.String("queue"),
-						Type:                aws.String("fifo"),
+						HighThroughputFifo:  aws.Bool(true),
+						FifoThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
+						Type:                aws.String(sqsFifoQueueType),
 					},
 				},
 			},
-			wanted: errors.New(`validate "queue": when deduplication_scope scope is set to queue, fifo_throughput_limit must be set to perQueue`),
+			wanted: errors.New(`validate "queue": must specify one, not both, of "high_throughput_fifo" and "fifo_throughput_limit"`),
+		},
+		"should return error if invalid combination of deduplication_scope and fifo_throughput_limit is defined": {
+			in: TopicSubscription{
+				Name:    aws.String("mockTopic"),
+				Service: aws.String("mockservice"),
+				Queue: SQSQueueOrBool{
+					Advanced: SQSQueue{
+						Retention:           &duration111Seconds,
+						Delay:               &duration111Seconds,
+						Timeout:             &duration111Seconds,
+						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
+						FifoThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
+						DeduplicationScope:  aws.String(sqsFifoQueue),
+						Type:                aws.String(sqsFifoQueueType),
+					},
+				},
+			},
+			wanted: errors.New(`validate "queue": "fifo_throughput_limit" must be set to "perQueue" when "deduplication_scope" is set to "queue"`),
 		},
 		"should not return error if valid standard queue config defined": {
 			in: TopicSubscription{

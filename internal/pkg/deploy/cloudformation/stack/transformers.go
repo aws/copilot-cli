@@ -25,13 +25,16 @@ import (
 )
 
 const (
-	enabled           = "ENABLED"
-	disabled          = "DISABLED"
-	standardQueueType = "standard"
-	fifoQueueType     = "fifo"
-	defaultQueueType  = standardQueueType
-	messageGroup      = "messageGroup"
-	perMessageGroupId = "perMessageGroupId"
+	enabled  = "ENABLED"
+	disabled = "DISABLED"
+)
+
+const (
+	sqsStandardQueueType                    = "standard"
+	sqsFifoQueueType                        = "fifo"
+	sqsDefaultQueueType                     = sqsStandardQueueType
+	sqsDedupeScopeMessageGroup              = "messageGroup"
+	sqsFIFOThroughputLimitPerMessageGroupId = "perMessageGroupId"
 )
 
 // Default values for EFS options
@@ -844,17 +847,15 @@ func convertTopicSubscription(t manifest.TopicSubscription) (
 			Name:    t.Name,
 			Service: t.Service,
 			Queue: &template.SQSQueue{
-				Type: aws.String(defaultQueueType),
+				Type: aws.String(sqsDefaultQueueType),
 			},
 			FilterPolicy: filterPolicy,
 		}, nil
 	}
-	queueAdvancedConfig := convertQueue(t.Queue.Advanced)
-
 	return &template.TopicSubscription{
 		Name:         t.Name,
 		Service:      t.Service,
-		Queue:        queueAdvancedConfig,
+		Queue:        convertQueue(t.Queue.Advanced),
 		FilterPolicy: filterPolicy,
 	}, nil
 }
@@ -875,7 +876,7 @@ func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
 		return nil
 	}
 
-	if strings.Compare(aws.StringValue(q.Type), standardQueueType) == 0 {
+	if aws.StringValue(q.Type) == sqsStandardQueueType {
 		return &template.SQSQueue{
 			Retention:  convertRetention(q.Retention),
 			Delay:      convertDelay(q.Delay),
@@ -894,8 +895,8 @@ func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
 			deduplicationScope = q.DeduplicationScope
 		}
 	} else if aws.BoolValue(q.HighThroughputFifo) {
-		fifoThroughputLimit = aws.String(perMessageGroupId)
-		deduplicationScope = aws.String(messageGroup)
+		fifoThroughputLimit = aws.String(sqsFIFOThroughputLimitPerMessageGroupId)
+		deduplicationScope = aws.String(sqsDedupeScopeMessageGroup)
 	}
 
 	return &template.SQSQueue{
