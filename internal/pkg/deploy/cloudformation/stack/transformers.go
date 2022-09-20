@@ -829,14 +829,6 @@ func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, erro
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
 	subscriptions.Queue = convertQueue(s.Queue)
-	/*if subscriptions.Queue == nil && subscriptions.StandardDefaultQueue() {
-		subscriptions.QueueType = aws.String(defaultQueueType)
-		//subscriptions.Queue = &template.SQSQueue{Type: aws.String(defaultQueueType)}
-	} else if subscriptions.Queue != nil && strings.Compare(aws.StringValue(subscriptions.Queue.Type), "fifo") == 0 {
-		subscriptions.QueueType = aws.String(fifoQueueType)
-	} else if subscriptions.Queue != nil && aws.StringValue(subscriptions.Queue.Type) != "fifo" {
-		subscriptions.QueueType = aws.String(defaultQueueType)
-	}*/
 	return &subscriptions, nil
 }
 

@@ -627,7 +627,6 @@ func withSvcParsingFuncs() ParseOption {
 			"jsonQueueURIs":        generateQueueURIJSON,
 			"envControllerParams":  envControllerParameters,
 			"logicalIDSafe":        StripNonAlphaNumFunc,
-			"isFIFO":               IsFIFOFunc,
 			"wordSeries":           english.WordSeries,
 			"pluralWord":           english.PluralWord,
 			"contains":             contains,

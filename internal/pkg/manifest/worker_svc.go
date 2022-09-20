@@ -225,16 +225,6 @@ func (s *WorkerService) RetrofitFIFOConfig() {
 	}
 }
 
-// StandardDefaultQueue returns true if at least one standard topic exist and does not have its own queue configs.
-func (s *SubscribeConfig) StandardDefaultQueue() bool {
-	for _, t := range s.Topics {
-		if t.Queue.IsEmpty() {
-			return true
-		}
-	}
-	return false
-}
-
 func (s WorkerService) applyEnv(envName string) (workloadManifest, error) {
 	overrideConfig, ok := s.Environments[envName]
 	if !ok {

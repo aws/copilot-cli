@@ -2697,17 +2697,6 @@ func TestSubscribeConfig_validate(t *testing.T) {
 			},
 			wantedErrorPrefix: `validate "topics[0]": `,
 		},
-		/*"error if fail to validate topics1": {
-			config: SubscribeConfig{
-				Topics: []TopicSubscription{
-					{
-						Name:    aws.String("mocktopic"),
-						Service: aws.String("mockservice"),
-					},
-				},
-			},
-			wantedErrorPrefix: `validate "topics[0]": `,
-		},*/
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -2880,7 +2869,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 					},
 				},
 			},
-			wanted: errors.New(`validate "queue": when Deduplication scope is set to Queue, FIFO throughput limit must be set to Per Queue`),
+			wanted: errors.New(`validate "queue": when deduplication_scope scope is set to queue, fifo_throughput_limit must be set to perQueue`),
 		},
 		"should not return error if valid standard queue config defined": {
 			in: TopicSubscription{

@@ -30,11 +30,6 @@ func ReplaceDashesFunc(logicalID string) string {
 	return strings.ReplaceAll(logicalID, "-", dashReplacement)
 }
 
-// IsFIFOFunc takes a string value and determines if has .fifo suffix.
-func IsFIFOFunc(value string) bool {
-	return strings.Contains(value, ".fifo")
-}
-
 // IsArnFunc takes a string value and determines if it's an ARN or not.
 func IsARNFunc(value string) bool {
 	return arn.IsARN(value)

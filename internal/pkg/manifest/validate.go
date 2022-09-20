@@ -1446,7 +1446,6 @@ func (t TopicSubscription) validate() error {
 	if !isValidSubSvcName(svcName) {
 		return fmt.Errorf("service name must start with a letter, contain only lower-case letters, numbers, and hyphens, and have no consecutive or trailing hyphen")
 	}
-
 	if err := t.Queue.validate(); err != nil {
 		return fmt.Errorf(`validate "queue": %w`, err)
 	}
@@ -1455,7 +1454,6 @@ func (t TopicSubscription) validate() error {
 
 // validate returns nil if SQSQueue is configured correctly.
 func (q SQSQueueOrBool) validate() error {
-
 	if q.IsEmpty() {
 		return nil
 	}
@@ -1502,7 +1500,7 @@ func (q SQSQueue) validateFIFO() error {
 		return fmt.Errorf(`validate "fifo_throughput_limit": fifo throughput limit value must be one of %s`, english.WordSeries(validFIFOThroughputLimitValues, "or"))
 	}
 	if q.FifoThroughputLimit != nil && strings.Compare(aws.StringValue(q.FifoThroughputLimit), "perMessageGroupId") == 0 && q.DeduplicationScope != nil && strings.Compare(aws.StringValue(q.DeduplicationScope), "queue") == 0 {
-		return fmt.Errorf(`when Deduplication scope is set to Queue, FIFO throughput limit must be set to Per Queue`)
+		return fmt.Errorf(`when deduplication_scope scope is set to queue, fifo_throughput_limit must be set to perQueue`)
 	}
 	if err := q.DeadLetter.validate(); err != nil {
 		return fmt.Errorf(`validate "dead_letter": %w`, err)
