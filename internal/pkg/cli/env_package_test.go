@@ -192,6 +192,34 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErr: errors.New(`get caller principal identity: some error`),
 		},
+		"should return a wrapped error when fails to verify env": {
+			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
+				ws := mocks.NewMockwsEnvironmentReader(ctrl)
+				ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: test\ntype: Environment\n"), nil)
+				interop := mocks.NewMockinterpolator(ctrl)
+				interop.EXPECT().Interpolate(gomock.Any()).Return("name: test\ntype: Environment\n", nil)
+				caller := mocks.NewMockidentityService(ctrl)
+				caller.EXPECT().Get().Return(identity.Caller{}, nil)
+				deployer := mocks.NewMockenvPackager(ctrl)
+				deployer.EXPECT().Verify(gomock.Any(), gomock.Any()).Return(errors.New("mock error"))
+
+				return &packageEnvOpts{
+					packageEnvVars: packageEnvVars{
+						envName: "test",
+					},
+					ws:     ws,
+					caller: caller,
+					newInterpolator: func(_, _ string) interpolator {
+						return interop
+					},
+					newEnvDeployer: func() (envPackager, error) {
+						return deployer, nil
+					},
+					envCfg: &config.Environment{Name: "test"},
+				}
+			},
+			wantedErr: errors.New(`mock error`),
+		},
 		"should return a wrapped error when uploading assets fails": {
 			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
 				ws := mocks.NewMockwsEnvironmentReader(ctrl)
@@ -201,6 +229,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				caller := mocks.NewMockidentityService(ctrl)
 				caller.EXPECT().Get().Return(identity.Caller{}, nil)
 				deployer := mocks.NewMockenvPackager(ctrl)
+				deployer.EXPECT().Verify(gomock.Any(), gomock.Any()).Return(nil)
 				deployer.EXPECT().UploadArtifacts().Return(nil, errors.New("some error"))
 
 				return &packageEnvOpts{
@@ -230,6 +259,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				caller := mocks.NewMockidentityService(ctrl)
 				caller.EXPECT().Get().Return(identity.Caller{}, nil)
 				deployer := mocks.NewMockenvPackager(ctrl)
+				deployer.EXPECT().Verify(gomock.Any(), gomock.Any()).Return(nil)
 				deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(nil, errors.New("some error"))
 
 				return &packageEnvOpts{
@@ -258,6 +288,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				caller := mocks.NewMockidentityService(ctrl)
 				caller.EXPECT().Get().Return(identity.Caller{}, nil)
 				deployer := mocks.NewMockenvPackager(ctrl)
+				deployer.EXPECT().Verify(gomock.Any(), gomock.Any()).Return(nil)
 				deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{
 					Template:   "template",
 					Parameters: "parameters",

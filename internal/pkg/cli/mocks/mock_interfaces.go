@@ -6914,3 +6914,17 @@ func (mr *MockenvPackagerMockRecorder) UploadArtifacts() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockenvPackager)(nil).UploadArtifacts))
 }
+
+// Verify mocks base method.
+func (m *MockenvPackager) Verify(ctx context.Context, mft *manifest.Environment) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Verify", ctx, mft)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Verify indicates an expected call of Verify.
+func (mr *MockenvPackagerMockRecorder) Verify(ctx, mft interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockenvPackager)(nil).Verify), ctx, mft)
+}

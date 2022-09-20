@@ -4,6 +4,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -154,7 +155,9 @@ func (o *packageEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-
+	if err := deployer.Verify(context.Background(), mft); err != nil {
+		return err
+	}
 	var urls map[string]string
 	if o.uploadAssets {
 		urls, err = deployer.UploadArtifacts()
