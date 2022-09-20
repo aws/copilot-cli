@@ -29,6 +29,7 @@ const (
 	disabled = "DISABLED"
 )
 
+// SQS Queue configs
 const (
 	sqsStandardQueueType                    = "standard"
 	sqsFifoQueueType                        = "fifo"
@@ -876,39 +877,26 @@ func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
 		return nil
 	}
 
+	queue := &template.SQSQueue{
+		Retention:  convertRetention(q.Retention),
+		Delay:      convertDelay(q.Delay),
+		Timeout:    convertTimeout(q.Timeout),
+		DeadLetter: convertDeadLetter(q.DeadLetter),
+		Type:       q.Type,
+	}
+
 	if aws.StringValue(q.Type) == sqsStandardQueueType {
-		return &template.SQSQueue{
-			Retention:  convertRetention(q.Retention),
-			Delay:      convertDelay(q.Delay),
-			Timeout:    convertTimeout(q.Timeout),
-			DeadLetter: convertDeadLetter(q.DeadLetter),
-			Type:       q.Type,
-		}
+		return queue
 	}
 
-	var fifoThroughputLimit, deduplicationScope *string
-	if !aws.BoolValue(q.HighThroughputFifo) {
-		if q.FifoThroughputLimit != nil {
-			fifoThroughputLimit = q.FifoThroughputLimit
-		}
-		if q.DeduplicationScope != nil {
-			deduplicationScope = q.DeduplicationScope
-		}
-	} else if aws.BoolValue(q.HighThroughputFifo) {
-		fifoThroughputLimit = aws.String(sqsFIFOThroughputLimitPerMessageGroupId)
-		deduplicationScope = aws.String(sqsDedupeScopeMessageGroup)
+	queue.ContentBasedDeduplication = q.ContentBasedDeduplication
+	queue.DeduplicationScope = q.DeduplicationScope
+	queue.FifoThroughputLimit = q.FifoThroughputLimit
+	if aws.BoolValue(q.HighThroughputFifo) {
+		queue.FifoThroughputLimit = aws.String(sqsFIFOThroughputLimitPerMessageGroupId)
+		queue.DeduplicationScope = aws.String(sqsDedupeScopeMessageGroup)
 	}
-
-	return &template.SQSQueue{
-		Retention:                 convertRetention(q.Retention),
-		Delay:                     convertDelay(q.Delay),
-		Timeout:                   convertTimeout(q.Timeout),
-		DeadLetter:                convertDeadLetter(q.DeadLetter),
-		FifoThroughputLimit:       fifoThroughputLimit,
-		ContentBasedDeduplication: q.ContentBasedDeduplication,
-		DeduplicationScope:        deduplicationScope,
-		Type:                      q.Type,
-	}
+	return queue
 }
 
 func convertTime(t *time.Duration) *int64 {

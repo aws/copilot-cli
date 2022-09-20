@@ -24,6 +24,7 @@ const (
 	defaultDockerfileName = "Dockerfile"
 )
 
+// SQS Queue configs
 const (
 	sqsFifoPerMessageGroupID = "perMessageGroupId"
 	sqsFifoPerQueue          = "perQueue"
