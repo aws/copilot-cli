@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 
@@ -59,6 +60,18 @@ type envDescriber interface {
 	Params() (map[string]string, error)
 }
 
+type lbDescriber interface {
+	ListenerRuleIsRedirect(context.Context, string) (bool, error)
+}
+
+type stackDescriber interface {
+	Resources() ([]*stack.Resource, error)
+}
+
+const (
+	svcStackResourceHTTPListenerRuleLogicalID = "HTTPListenerRuleWithDomain"
+)
+
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
@@ -68,12 +81,14 @@ type envDeployer struct {
 	s3               uploader
 	prefixListGetter prefixListGetter
 	// Dependencies to deploy an environment.
-	appCFN             appResourcesGetter
-	envDeployer        environmentDeployer
-	patcher            patcher
-	newStackSerializer func(input *deploy.CreateEnvironmentInput, forceUpdateID string, prevParams []*awscfn.Parameter) stackSerializer
-	envDescriber       envDescriber
-	envManagerSession  *session.Session
+	appCFN                   appResourcesGetter
+	envDeployer              environmentDeployer
+	patcher                  patcher
+	newStackSerializer       func(input *deploy.CreateEnvironmentInput, forceUpdateID string, prevParams []*awscfn.Parameter) stackSerializer
+	envDescriber             envDescriber
+	envManagerSession        *session.Session
+	newLBDescriber           func(*session.Session) lbDescriber
+	newServiceStackDescriber func(string, *session.Session) stackDescriber
 
 	// Cached variables.
 	appRegionalResources *cfnstack.AppRegionalResources
@@ -127,6 +142,12 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		},
 		envDescriber:      envDescriber,
 		envManagerSession: envManagerSession,
+		newLBDescriber: func(sess *session.Session) lbDescriber {
+			return elbv2.New(sess)
+		},
+		newServiceStackDescriber: func(svc string, sess *session.Session) stackDescriber {
+			return stack.NewStackDescriber(cfnstack.NameForService(in.App.Name, in.Env.Name, svc), sess)
+		},
 	}, nil
 }
 
@@ -183,19 +204,21 @@ func (d *envDeployer) verifyALBWorkloadsDontRedirect(ctx context.Context) error 
 		return err
 	}
 	if len(badServices) > 0 {
-		return fmt.Errorf("HTTP traffic redirects to HTTPS in services %v.\nSet http.redirect_to_https to false for those services and redeploy them.", english.OxfordWordSeries(badServices, "and"))
+		sort.Strings(badServices)
+		return fmt.Errorf("HTTP traffic redirects to HTTPS in %v %v.\nSet http.redirect_to_https to false for %v and redeploy %v.",
+			english.PluralWord(len(badServices), "service", "services"),
+			english.OxfordWordSeries(badServices, "and"),
+			english.PluralWord(len(badServices), "that service", "those services"),
+			english.PluralWord(len(badServices), "it", "them"),
+		)
 	}
 
 	return nil
 }
 
-const (
-	svcStackResourceHTTPListenerRuleLogicalID = "HTTPListenerRuleWithDomain"
-)
-
 func (d *envDeployer) lbServiceAllowsHTTP(ctx context.Context, svc string) (bool, error) {
-	cfn := stack.NewStackDescriber(cfnstack.NameForService(d.app.Name, d.env.Name, svc), d.envManagerSession)
-	resources, err := cfn.Resources()
+	stackDescriber := d.newServiceStackDescriber(svc, d.envManagerSession)
+	resources, err := stackDescriber.Resources()
 	if err != nil {
 		return false, fmt.Errorf("get stack resources: %w", err)
 	}
@@ -210,10 +233,10 @@ func (d *envDeployer) lbServiceAllowsHTTP(ctx context.Context, svc string) (bool
 		return false, fmt.Errorf("resource %q not present", svcStackResourceHTTPListenerRuleLogicalID)
 	}
 
-	elbv2 := elbv2.New(d.envManagerSession)
-	isRedirect, err := elbv2.ListenerRuleIsRedirect(ctx, ruleARN)
+	lbDescriber := d.newLBDescriber(d.envManagerSession)
+	isRedirect, err := lbDescriber.ListenerRuleIsRedirect(ctx, ruleARN)
 	if err != nil {
-		return false, fmt.Errorf("verify rule isn't redirect: %w", err)
+		return false, fmt.Errorf("verify http listener doesn't redirect: %w", err)
 	}
 	return !isRedirect, nil
 }
