@@ -328,12 +328,13 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 	}
 	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
-			RootUserARN:        o.rootUserARN,
-			Tags:               targetApp.Tags,
-			ImageDigest:        uploadOut.ImageDigest,
-			EnvFileARN:         uploadOut.EnvFileARN,
-			AddonsURL:          uploadOut.AddonsURL,
-			CustomResourceURLs: uploadOut.CustomResourceURLs,
+			RootUserARN:         o.rootUserARN,
+			Tags:                targetApp.Tags,
+			ImageDigest:         uploadOut.ImageDigest,
+			EnvFileARN:          uploadOut.EnvFileARN,
+			AddonsURL:           uploadOut.AddonsURL,
+			CustomResourceURLs:  uploadOut.CustomResourceURLs,
+			PermissionsBoundary: targetApp.PermissionsBoundary,
 		},
 	})
 	if err != nil {
