@@ -202,7 +202,6 @@ func (cf CloudFormation) getResourcesForStackInstances(app *config.Application, 
 	if region != nil {
 		opts = append(opts, stackset.FilterSummariesByRegion(*region))
 	}
-
 	summaries, err := cf.appStackSet.InstanceSummaries(appConfig.StackSetName(), opts...)
 	if err != nil {
 		return nil, err

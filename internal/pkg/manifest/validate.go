@@ -58,8 +58,10 @@ var (
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
+
 	validDeduplicationScopeValues    = []string{messageGroup, queue}
 	validFIFOThroughputLimitValues   = []string{perMessageGroupID, perQueue}
+	validTopicsTypeValues            = []string{standardTopicType, fifoTopicType}
 )
 
 // Validate returns nil if DynamicLoadBalancedWebService is configured correctly.
@@ -1413,6 +1415,9 @@ func (p PublishConfig) validate() error {
 
 // validate returns nil if Topic is configured correctly.
 func (t Topic) validate() error {
+	if t.Type != nil && !contains(aws.StringValue(t.Type), validTopicsTypeValues) {
+		return fmt.Errorf(`"type" value %q is not allowed; must be one of %s`, aws.StringValue(t.Type), english.WordSeries(validTopicsTypeValues, "or"))
+	}
 	return validatePubSubName(aws.StringValue(t.Name))
 }
 

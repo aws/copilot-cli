@@ -100,7 +100,7 @@ func (c *AppStackConfig) Template() (string, error) {
 		c.dnsDelegationAccounts(),
 		c.DomainName,
 		c.Name,
-		c.PermissionBoundary,
+		c.PermissionsBoundary,
 	}, template.WithFuncs(map[string]any{
 		"join": strings.Join,
 	}))

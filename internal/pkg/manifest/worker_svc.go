@@ -16,6 +16,9 @@ import (
 
 const (
 	workerSvcManifestPath = "workloads/services/worker/manifest.yml"
+	standardTopicType     = "standard"
+	fifoTopicType         = "fifo"
+	defaultTopicType      = standardTopicType
 )
 
 var (
@@ -85,6 +88,18 @@ type SQSQueueOrBool struct {
 // IsEmpty returns empty if the struct has all zero members.
 func (q *SQSQueueOrBool) IsEmpty() bool {
 	return q.Advanced.IsEmpty() && q.Enabled == nil
+}
+
+// UnmarshalYAML implements the yaml(v3) interface. Here it sets default value
+// of the type field if it is not set already.
+func (t *Topic) UnmarshalYAML(value *yaml.Node) error {
+	t.Type = aws.String(defaultTopicType)
+
+	type plain Topic
+	if err := value.Decode((*plain)(t)); err != nil {
+		return err
+	}
+	return nil
 }
 
 // UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueueOrBool to be specified as a

@@ -96,7 +96,7 @@ type EnvOpts struct {
 	EnvName string
 	Version string // The template version to use for the environment. If empty uses the "legacy" template.
 
-	// Custom Resourced backed by Lambda functions.
+	// Custom Resources backed by Lambda functions.
 	CustomResources           map[string]S3ObjectLocation
 	DNSDelegationLambda       string
 	DNSCertValidatorLambda    string
@@ -104,6 +104,7 @@ type EnvOpts struct {
 	CustomDomainLambda        string
 
 	ScriptBucketName     string
+	PermissionsBoundary  string
 	ArtifactBucketARN    string
 	ArtifactBucketKeyARN string
 

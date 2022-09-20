@@ -208,12 +208,14 @@ func TestDeploySelect_Service(t *testing.T) {
 		env        string
 		opts       []GetDeployedWorkloadOpts
 
-		wantErr error
-		wantEnv string
-		wantSvc string
+		wantErr     error
+		wantEnv     string
+		wantSvc     string
+		wantSvcType string
 	}{
 		"return error if fail to retrieve environment": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -224,6 +226,7 @@ func TestDeploySelect_Service(t *testing.T) {
 		},
 		"return error if fail to list deployed services": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -242,6 +245,7 @@ func TestDeploySelect_Service(t *testing.T) {
 		},
 		"return error if no deployed services found": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -260,6 +264,7 @@ func TestDeploySelect_Service(t *testing.T) {
 		},
 		"return error if fail to select": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -283,6 +288,18 @@ func TestDeploySelect_Service(t *testing.T) {
 		},
 		"success": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
+					{
+						App:  testApp,
+						Name: "mockSvc1",
+						Type: "mockSvcType1",
+					},
+					{
+						App:  testApp,
+						Name: "mockSvc2",
+						Type: "mockSvcType2",
+					},
+				}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -302,11 +319,19 @@ func TestDeploySelect_Service(t *testing.T) {
 					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test)", "mockSvc2 (test)"}, gomock.Any()).
 					Return("mockSvc1 (test)", nil)
 			},
-			wantEnv: "test",
-			wantSvc: "mockSvc1",
+			wantEnv:     "test",
+			wantSvc:     "mockSvc1",
+			wantSvcType: "mockSvcType1",
 		},
 		"skip with only one deployed service": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{
+					{
+						App:  testApp,
+						Name: "mockSvc",
+						Type: "mockSvcType",
+					},
+				}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -321,13 +346,15 @@ func TestDeploySelect_Service(t *testing.T) {
 					ListDeployedServices(testApp, "test").
 					Return([]string{"mockSvc"}, nil)
 			},
-			wantEnv: "test",
-			wantSvc: "mockSvc",
+			wantEnv:     "test",
+			wantSvc:     "mockSvc",
+			wantSvcType: "mockSvcType",
 		},
 		"return error if fail to check if service passed in by flag is deployed or not": {
 			env: "test",
 			svc: "mockSvc",
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.deploySvc.
 					EXPECT().
 					IsServiceDeployed(testApp, "test", "mockSvc").
@@ -339,6 +366,7 @@ func TestDeploySelect_Service(t *testing.T) {
 			env: "test",
 			svc: "mockSvc",
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.deploySvc.
 					EXPECT().
 					IsServiceDeployed(testApp, "test", "mockSvc").
@@ -404,8 +432,9 @@ func TestDeploySelect_Service(t *testing.T) {
 					SelectOne("Select a deployed service", "Help text", []string{"mockSvc1 (test1)", "mockSvc2 (test1)"}, gomock.Any()).
 					Return("mockSvc1 (test1)", nil)
 			},
-			wantEnv: "test1",
-			wantSvc: "mockSvc1",
+			wantEnv:     "test1",
+			wantSvc:     "mockSvc1",
+			wantSvcType: manifest.BackendServiceType,
 		},
 		"filter returns error": {
 			opts: []GetDeployedWorkloadOpts{
@@ -489,6 +518,7 @@ func TestDeploySelect_Service(t *testing.T) {
 				require.EqualError(t, err, tc.wantErr.Error())
 			} else {
 				require.Equal(t, tc.wantSvc, gotDeployed.Name)
+				require.Equal(t, tc.wantSvcType, gotDeployed.SvcType)
 				require.Equal(t, tc.wantEnv, gotDeployed.Env)
 			}
 		})
@@ -509,6 +539,7 @@ func TestDeploySelect_Job(t *testing.T) {
 	}{
 		"return error if fail to retrieve environment": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -519,6 +550,7 @@ func TestDeploySelect_Job(t *testing.T) {
 		},
 		"return error if fail to list deployed job": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -537,6 +569,7 @@ func TestDeploySelect_Job(t *testing.T) {
 		},
 		"return error if no deployed jobs found": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -555,6 +588,7 @@ func TestDeploySelect_Job(t *testing.T) {
 		},
 		"return error if fail to select": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -578,6 +612,7 @@ func TestDeploySelect_Job(t *testing.T) {
 		},
 		"success": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -602,6 +637,7 @@ func TestDeploySelect_Job(t *testing.T) {
 		},
 		"skip with only one deployed job": {
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.configSvc.
 					EXPECT().
 					ListEnvironments(testApp).
@@ -623,6 +659,7 @@ func TestDeploySelect_Job(t *testing.T) {
 			env: "test",
 			job: "mockJob",
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.deploySvc.
 					EXPECT().
 					IsJobDeployed(testApp, "test", "mockJob").
@@ -634,6 +671,7 @@ func TestDeploySelect_Job(t *testing.T) {
 			env: "test",
 			job: "mockJob",
 			setupMocks: func(m deploySelectMocks) {
+				m.configSvc.EXPECT().ListWorkloads(testApp).Return([]*config.Workload{}, nil)
 				m.deploySvc.
 					EXPECT().
 					IsJobDeployed(testApp, "test", "mockJob").

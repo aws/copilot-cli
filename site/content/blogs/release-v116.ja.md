@@ -181,6 +181,9 @@ SNS フィルターについてより学びたい場合は、[Copilot のドキ�
 以下のリンクをたどって、新しい Copilot CLI バージョンをダウンロードし、[GitHub](https://github.com/aws/copilot-cli/) や [コミュニティチャット](https://gitter.im/aws/copilot-cli)に
 フィードバックを残してください。
 
-* Download [最新 CLI バージョン](../docs/getting-started/install.ja.md)
-* Try our [スタートガイド](../docs/getting-started/first-app-tutorial.ja.md)
-* Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.16.0)
+* [最新 CLI バージョン](../docs/getting-started/install.ja.md)のダウンロード
+* [スタートガイド](../docs/getting-started/first-app-tutorial.ja.md)を試す
+* [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.16.0) でリリースノートの全文を読む
+
+今回のリリースの翻訳はソリューションアーキテクトの浅野が担当しました。
+

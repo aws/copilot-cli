@@ -804,6 +804,7 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	for _, topic := range topics {
 		publishers.Topics = append(publishers.Topics, &template.Topic{
 			Name:      topic.Name,
+			Type:      aws.StringValue(topic.Type),
 			AccountID: accountID,
 			Partition: partition.ID(),
 			Region:    region,
