@@ -885,14 +885,14 @@ func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
 	}
 
 	var fifoThroughputLimit, deduplicationScope *string
-	if aws.BoolValue(q.HighThroughputFifo) != true {
+	if !aws.BoolValue(q.HighThroughputFifo) {
 		if q.FifoThroughputLimit != nil {
 			fifoThroughputLimit = q.FifoThroughputLimit
 		}
 		if q.DeduplicationScope != nil {
 			deduplicationScope = q.DeduplicationScope
 		}
-	} else if aws.BoolValue(q.HighThroughputFifo) == true {
+	} else if aws.BoolValue(q.HighThroughputFifo) {
 		fifoThroughputLimit = aws.String(perMessageGroupId)
 		deduplicationScope = aws.String(messageGroup)
 	}
