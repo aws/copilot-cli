@@ -192,11 +192,11 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)
 	}
-	overridenTpl, err := j.taskDefOverrideFunc(convertTaskDefOverrideRules(j.manifest.TaskDefOverrides), content.Bytes())
+	overriddenTpl, err := j.taskDefOverrideFunc(convertTaskDefOverrideRules(j.manifest.TaskDefOverrides), content.Bytes())
 	if err != nil {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
-	return string(overridenTpl), nil
+	return string(overriddenTpl), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
