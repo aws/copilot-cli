@@ -49,6 +49,9 @@ StateMachineRole:
     'aws:copilot:description': 'An IAM role for a state machine to run ECS tasks in your cluster'
   Type: AWS::IAM::Role
   Properties:
+    {{- if .PermissionsBoundary}}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+    {{- end}}
     AssumeRolePolicyDocument:
       Version: '2012-10-17'
       Statement:

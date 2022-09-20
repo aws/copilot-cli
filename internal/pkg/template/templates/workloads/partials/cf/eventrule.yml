@@ -24,6 +24,9 @@ RuleRole:
         Principal:
           Service: events.amazonaws.com
         Action: sts:AssumeRole
+    {{- if .PermissionsBoundary}}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+    {{- end}}}
     Policies:
     - PolicyName: EventRulePolicy
       PolicyDocument:

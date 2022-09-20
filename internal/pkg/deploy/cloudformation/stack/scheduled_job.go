@@ -186,7 +186,8 @@ func (j *ScheduledJob) Template() (string, error) {
 		Platform:                 convertPlatform(j.manifest.Platform),
 		EnvVersion:               j.rc.EnvVersion,
 
-		CustomResources: crs,
+		CustomResources:     crs,
+		PermissionsBoundary: j.rc.PermissionsBoundary,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)

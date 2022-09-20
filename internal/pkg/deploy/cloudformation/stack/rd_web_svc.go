@@ -139,6 +139,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
+		PermissionsBoundary: s.rc.PermissionsBoundary,
 	})
 	if err != nil {
 		return "", err
