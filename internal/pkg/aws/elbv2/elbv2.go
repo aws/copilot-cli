@@ -87,7 +87,7 @@ func (e *ELBV2) ListenerRuleIsRedirect(ctx context.Context, ruleARN string) (boo
 
 	rule := resp.Rules[0]
 	for _, action := range rule.Actions {
-		if aws.StringValue(action.Type) == "redirect" {
+		if aws.StringValue(action.Type) == elbv2.ActionTypeEnumRedirect {
 			return true, nil
 		}
 	}

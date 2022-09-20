@@ -4,6 +4,7 @@
 package elbv2
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -214,6 +215,90 @@ func TestELBV2_ListenerRuleHostHeaders(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wanted, got)
+			}
+		})
+	}
+}
+
+func TestELBV2_ListenerRuleIsRedirect(t *testing.T) {
+	mockARN := "mockListenerRuleARN"
+	testCases := map[string]struct {
+		setUpMock func(m *mocks.Mockapi)
+
+		expectedErr string
+		expected    bool
+	}{
+		"fail to describe rules": {
+			setUpMock: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
+					RuleArns: aws.StringSlice([]string{mockARN}),
+				}).Return(nil, errors.New("some error"))
+			},
+			expectedErr: fmt.Sprintf("get listener rule for mockListenerRuleARN: some error"),
+		},
+		"cannot find listener rule": {
+			setUpMock: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
+					RuleArns: aws.StringSlice([]string{mockARN}),
+				}).Return(&elbv2.DescribeRulesOutput{}, nil)
+			},
+			expectedErr: fmt.Sprintf("cannot find listener rule mockListenerRuleARN"),
+		},
+		"rule is redirect": {
+			setUpMock: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
+					RuleArns: aws.StringSlice([]string{mockARN}),
+				}).Return(&elbv2.DescribeRulesOutput{
+					Rules: []*elbv2.Rule{
+						{
+							Actions: []*elbv2.Action{
+								{
+									Type: aws.String(elbv2.ActionTypeEnumRedirect),
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			expected: true,
+		},
+		"rule is not redirect": {
+			setUpMock: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
+					RuleArns: aws.StringSlice([]string{mockARN}),
+				}).Return(&elbv2.DescribeRulesOutput{
+					Rules: []*elbv2.Rule{
+						{
+							Actions: []*elbv2.Action{
+								{
+									Type: aws.String(elbv2.ActionTypeEnumForward),
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+			expected: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAPI := mocks.NewMockapi(ctrl)
+			tc.setUpMock(mockAPI)
+
+			elbv2Client := ELBV2{
+				client: mockAPI,
+			}
+
+			actual, err := elbv2Client.ListenerRuleIsRedirect(context.Background(), mockARN)
+			if tc.expectedErr != "" {
+				require.EqualError(t, err, tc.expectedErr)
+			} else {
+				require.Equal(t, tc.expected, actual)
 			}
 		})
 	}
