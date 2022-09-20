@@ -1360,8 +1360,8 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	hasImportedCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
-	if aws.BoolValue(d.lbMft.RoutingRule.DisableRedirect) && d.app.Domain == "" && !hasImportedCerts {
-		return fmt.Errorf("cannot disable http to https redirect without having a domain associated with the app %q or importing any certificates in env %q", d.app.Name, d.env.Name)
+	if d.lbMft.RoutingRule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
+		return fmt.Errorf("cannot configure http to https redirect without having a domain associated with the app %q or importing any certificates in env %q", d.app.Name, d.env.Name)
 	}
 	if d.lbMft.RoutingRule.Alias.IsEmpty() {
 		if hasImportedCerts {

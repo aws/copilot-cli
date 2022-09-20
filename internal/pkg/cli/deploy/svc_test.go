@@ -473,13 +473,13 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 	mockBeforeTime := time.Unix(1494505743, 0)
 	mockAfterTime := time.Unix(1494505756, 0)
 	tests := map[string]struct {
-		inAliases             manifest.Alias
-		inNLB                 manifest.NetworkLoadBalancerConfiguration
-		inApp                 *config.Application
-		inEnvironment         *config.Environment
-		inForceDeploy         bool
-		inDisableRollback     bool
-		inDisableHTTPRedirect *bool
+		inAliases         manifest.Alias
+		inNLB             manifest.NetworkLoadBalancerConfiguration
+		inApp             *config.Application
+		inEnvironment     *config.Environment
+		inForceDeploy     bool
+		inDisableRollback bool
+		inRedirectToHTTPS *bool
 
 		// Cached variables.
 		inEnvironmentConfig func() *manifest.Environment
@@ -523,8 +523,8 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 			wantErr: fmt.Errorf("cannot deploy service mockWkld without http.alias to environment mockEnv with certificate imported"),
 		},
-		"fail if http redirect disabled without custom domain": {
-			inDisableHTTPRedirect: aws.Bool(true),
+		"fail if http redirect to https configured without custom domain": {
+			inRedirectToHTTPS: aws.Bool(true),
 			inEnvironment: &config.Environment{
 				Name:   mockEnvName,
 				Region: "us-west-2",
@@ -539,7 +539,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 			},
-			wantErr: fmt.Errorf(`cannot disable http to https redirect without having a domain associated with the app "mockApp" or importing any certificates in env "mockEnv"`),
+			wantErr: fmt.Errorf(`cannot configure http to https redirect without having a domain associated with the app "mockApp" or importing any certificates in env "mockEnv"`),
 		},
 		"cannot specify alias hosted zone when no certificates are imported in the env": {
 			inEnvironment: &config.Environment{
@@ -994,7 +994,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 		},
 		"success with http redirect disabled and certs imported": {
-			inDisableHTTPRedirect: aws.Bool(true),
+			inRedirectToHTTPS: aws.Bool(false),
 			inAliases: manifest.Alias{
 				AdvancedAliases: mockMultiAliases,
 			},
@@ -1018,7 +1018,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 			},
 		},
 		"success with http redirect disabled and domain imported": {
-			inDisableHTTPRedirect: aws.Bool(true),
+			inRedirectToHTTPS: aws.Bool(false),
 			inAliases: manifest.Alias{
 				AdvancedAliases: []manifest.AdvancedAlias{
 					{
@@ -1132,7 +1132,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 							RoutingRuleConfiguration: manifest.RoutingRuleConfiguration{
 								Path:            aws.String("/"),
 								Alias:           tc.inAliases,
-								DisableRedirect: tc.inDisableHTTPRedirect,
+								RedirectToHTTPS: tc.inRedirectToHTTPS,
 							},
 						},
 						NLBConfig: tc.inNLB,
