@@ -1175,7 +1175,7 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 		topicARNs = append(topicARNs, topic.ARN())
 	}
 	if !d.wsMft.Subscribe.IsEmpty() {
-		d.wsMft.AttachFIFOSuffixToFIFOQueues()
+		d.wsMft.RetrofitFIFOConfig()
 	}
 	subs := d.wsMft.Subscriptions()
 	if err = validateTopicsExist(subs, topicARNs, d.app.Name, d.env.Name); err != nil {

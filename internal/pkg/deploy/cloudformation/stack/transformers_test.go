@@ -1426,11 +1426,11 @@ func Test_convertSubscribe(t *testing.T) {
 
 		wanted *template.SubscribeOpts
 	}{
-		"empty subscription": {
+		"empty subscription": { //1
 			inSubscribe: manifest.SubscribeConfig{},
 			wanted:      nil,
 		},
-		"valid subscribe": {
+		"valid subscribe": { //2
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
@@ -1445,7 +1445,7 @@ func Test_convertSubscribe(t *testing.T) {
 					DeadLetter: manifest.DeadLetterQueue{
 						Tries: aws.Uint16(35),
 					},
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(standardQueueType),
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1462,11 +1462,11 @@ func Test_convertSubscribe(t *testing.T) {
 					DeadLetter: &template.DeadLetterQueue{
 						Tries: aws.Uint16(35),
 					},
-					Type: aws.String(defaultQueueType),
+					Type: aws.String(standardQueueType),
 				},
 			},
 		},
-		"valid subscribe with no queue configs": {
+		"valid subscribe with default queue configs": { //3
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
@@ -1490,7 +1490,7 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 			},
 		},
-		"valid subscribe with queue enabled": {
+		"valid subscribe with queue enabled": { //4
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
@@ -1502,7 +1502,9 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: mockStruct,
 					},
 				},
-				Queue: manifest.SQSQueue{},
+				Queue: manifest.SQSQueue{
+					Type: aws.String(defaultQueueType),
+				},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1515,10 +1517,12 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
-				Queue: nil,
+				Queue: &template.SQSQueue{
+					Type: aws.String(defaultQueueType),
+				},
 			},
 		},
-		"valid subscribe with minimal queue": {
+		"valid subscribe with minimal queue": { //5
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
@@ -1538,6 +1542,9 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: mockStruct,
 					},
 				},
+				Queue: manifest.SQSQueue{
+					Type: aws.String(defaultQueueType),
+				},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1556,10 +1563,12 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
-				Queue: nil,
+				Queue: &template.SQSQueue{
+					Type: aws.String(defaultQueueType),
+				},
 			},
 		},
-		"valid subscribe with high throughput fifo sqs": {
+		"valid subscribe with high throughput fifo sqs": { //6
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
@@ -1580,7 +1589,9 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: mockStruct,
 					},
 				},
-				Queue: manifest.SQSQueue{},
+				Queue: manifest.SQSQueue{
+					Type: aws.String(defaultQueueType),
+				},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1595,13 +1606,15 @@ func Test_convertSubscribe(t *testing.T) {
 								Tries: aws.Uint16(35),
 							},
 							Type:                aws.String(fifoQueueType),
-							FifoThroughputLimit: aws.String("messageGroup"),
-							DeduplicationScope:  aws.String("perMessageGroupId"),
+							FifoThroughputLimit: aws.String("perMessageGroupId"),
+							DeduplicationScope:  aws.String("messageGroup"),
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
-				Queue: nil,
+				Queue: &template.SQSQueue{
+					Type: aws.String(defaultQueueType),
+				},
 			},
 		},
 		"valid subscribe with custom minimal fifo sqs config values": {
@@ -1624,6 +1637,9 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: mockStruct,
 					},
 				},
+				Queue: manifest.SQSQueue{
+					Type: aws.String(defaultQueueType),
+				},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1645,10 +1661,12 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
-				Queue: nil,
+				Queue: &template.SQSQueue{
+					Type: aws.String(defaultQueueType),
+				},
 			},
 		},
-		"valid subscribe with custom complete fifo sqs config values": {
+		"valid subscribe with custom complete fifo sqs config values": { //7
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
@@ -1671,6 +1689,9 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: mockStruct,
 					},
 				},
+				Queue: manifest.SQSQueue{
+					Type: aws.String(defaultQueueType),
+				},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1692,10 +1713,12 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
 				},
-				Queue: nil,
+				Queue: &template.SQSQueue{
+					Type: aws.String(defaultQueueType),
+				},
 			},
 		},
-		"valid subscribe with custom complete fifo sqs config and standard topic subscription to a default standard queue": {
+		"valid subscribe with custom complete fifo sqs config and standard topic subscription to a default standard queue": { //8
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
@@ -1755,7 +1778,7 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 			},
 		},
-		"valid subscribe with custom complete fifo sqs config and multiple standard topic subscriptions to a default standard queue": {
+		"valid subscribe with custom complete fifo sqs config and multiple standard topic subscriptions to a default standard queue": { //9
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
@@ -1823,7 +1846,7 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 			},
 		},
-		"valid subscribe with standard sqs config and fifo topic subscription to a default fifo queue": {
+		"valid subscribe with standard sqs config and fifo topic subscription to a default fifo queue": { //10
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
@@ -1877,7 +1900,7 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 			},
 		},
-		"valid subscribe with standard sqs config and multiple fifo topic subscriptions to a default fifo queue": {
+		"valid subscribe with standard sqs config and multiple fifo topic subscriptions to a default fifo queue": { //11
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{

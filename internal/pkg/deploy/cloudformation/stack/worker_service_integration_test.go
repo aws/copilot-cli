@@ -46,6 +46,8 @@ func TestWorkerService_Template(t *testing.T) {
 	v, ok := content.(*manifest.WorkerService)
 	require.True(t, ok)
 
+	v.RetrofitFIFOConfig()
+
 	ws, err := workspace.New()
 	require.NoError(t, err)
 

@@ -38,13 +38,6 @@ Conditions:
     !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile:
     !Not [!Equals [!Ref EnvFileARN, ""]]
-  {{- if .Subscribe.Queue }}
-  HasEventsQueue:
-    true
-  {{- else }}
-  HasEventsQueue:
-    false
-  {{- end}}
 
 Resources:
 {{include "loggroup" . | indent 2}}

@@ -1285,7 +1285,7 @@ func TestWorkerService_RequiredEnvironmentFeatures(t *testing.T) {
 	}
 }
 
-func TestWorkerService_AttachFIFOSuffixToFIFOQueues(t *testing.T) {
+func TestWorkerService_RetrofitFIFOConfig(t *testing.T) {
 	duration111Seconds := 111 * time.Second
 	testCases := map[string]struct {
 		input    *WorkerService
@@ -1303,8 +1303,7 @@ func TestWorkerService_AttachFIFOSuffixToFIFOQueues(t *testing.T) {
 				},
 			},
 		},
-		"valid subscribe with one topic specific standard queue and no default queue": {
-
+		"valid subscribe with one topic specific standard queue and a default standard queue": {
 			input: &WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1336,12 +1335,14 @@ func TestWorkerService_AttachFIFOSuffixToFIFOQueues(t *testing.T) {
 								},
 							},
 						},
+						Queue: SQSQueue{
+							Type: aws.String(defaultQueueType),
+						},
 					},
 				},
 			},
 		},
-		"valid subscribe with one topic specific fifo queue and no default queue": {
-
+		"valid subscribe with one topic specific fifo queue and a default standard queue": {
 			input: &WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1365,12 +1366,14 @@ func TestWorkerService_AttachFIFOSuffixToFIFOQueues(t *testing.T) {
 								Queue:   newMockSQSFIFOQueueOrBool(),
 							},
 						},
+						Queue: SQSQueue{
+							Type: aws.String(defaultQueueType),
+						},
 					},
 				},
 			},
 		},
 		"valid subscribe with no topic specific standard queue but with default standard queue with empty config": {
-
 			input: &WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1380,7 +1383,6 @@ func TestWorkerService_AttachFIFOSuffixToFIFOQueues(t *testing.T) {
 								Service: aws.String("svc"),
 							},
 						},
-						Queue: SQSQueue{},
 					},
 				},
 			},
@@ -1401,7 +1403,6 @@ func TestWorkerService_AttachFIFOSuffixToFIFOQueues(t *testing.T) {
 			},
 		},
 		"valid subscribe with no topic specific standard queue but with default standard queue with minimal config": {
-
 			input: &WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1436,7 +1437,6 @@ func TestWorkerService_AttachFIFOSuffixToFIFOQueues(t *testing.T) {
 			},
 		},
 		"valid subscribe with no topic specific fifo queue but with default fifo queue with minimal config": {
-
 			input: &WorkerService{
 				WorkerServiceConfig: WorkerServiceConfig{
 					Subscribe: SubscribeConfig{
@@ -1557,7 +1557,7 @@ func TestWorkerService_AttachFIFOSuffixToFIFOQueues(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			svc.AttachFIFOSuffixToFIFOQueues()
+			svc.RetrofitFIFOConfig()
 
 			// THEN
 			require.Equal(t, tc.expected, svc)

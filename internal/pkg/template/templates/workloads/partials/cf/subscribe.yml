@@ -58,10 +58,9 @@ EventsKMSKey:
             - "kms:Decrypt"
           Resource: '*'
 
-{{- if and .Subscribe .Subscribe.Queue}}
 EventsQueue:
   Metadata:
-    'aws:copilot:description': {{ if eq (deref .Subscribe.Queue.Type) "fifo"}}'An events SQS FIFO queue to buffer messages'{{ else}}'An events SQS queue to buffer messages'{{ end}}
+    'aws:copilot:description': {{ if and  .Subscribe .Subscribe.Queue (eq (deref .Subscribe.Queue.Type) "fifo")}}'An events SQS FIFO queue to buffer messages'{{ else}}'An events SQS queue to buffer messages'{{ end}}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -125,10 +124,8 @@ DeadLetterPolicy:
 {{- end}}{{- end}}
 
 {{- end}}{{/* endif .Subscribe */}}
-{{- end}}{{/* endif and .Subscribe .Subscribe.StandardQueu */}}
 
 
-{{- if and .Subscribe .Subscribe.Queue}}
 QueuePolicy:
   Type: AWS::SQS::QueuePolicy
   Properties:
@@ -159,7 +156,6 @@ QueuePolicy:
         {{- end}}
         {{- end}}
 {{- end}}{{/* if .Subscribe */}}
-{{- end}}{{/* if and .Subscribe .Subscribe.Queue */}}
 
 {{- if .Subscribe }}
 {{- range $topic := .Subscribe.Topics}}
@@ -182,7 +178,7 @@ QueuePolicy:
 {{- if $topic.Queue}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
   Metadata:
-    'aws:copilot:description': 'A SQS queue to buffer messages from the topic {{$topic.Name}}'
+    'aws:copilot:description': {{ if eq (deref $topic.Queue.Type) "fifo"}}'A SQS FIFO queue to buffer messages from the topic {{$topic.Name}}' {{ else }} 'A SQS queue to buffer messages from the topic {{$topic.Name}}' {{ end }}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -216,7 +212,7 @@ QueuePolicy:
 {{- if $topic.Queue.DeadLetter}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue:
   Metadata:
-    'aws:copilot:description': 'A dead letter SQS queue to buffer failed messages from the topic {{$topic.Name}}'
+    'aws:copilot:description': {{ if eq (deref $topic.Queue.Type) "fifo"}} 'A dead letter SQS FIFO queue to buffer failed messages from the topic {{$topic.Name}}' {{ else }} 'A dead letter SQS queue to buffer failed messages from the topic {{$topic.Name}}' {{ end }}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -265,7 +261,7 @@ QueuePolicy:
           Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
           Condition:
             ArnEquals:
-              aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']]
+              aws:SourceArn: {{ if eq (deref $topic.Queue.Type) "fifo"}} !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{$topic.Name}}']] {{ else }} !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']] {{ end }}
 {{- end}}{{/* endif $topic.Queue */}}
 {{- end}}{{/* endrange $topic := .Subscribe.Topics */}}
 {{- end}}{{/* if .Subscribe */}}

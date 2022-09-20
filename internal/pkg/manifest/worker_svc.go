@@ -202,8 +202,8 @@ func (s *WorkerService) Subscriptions() []TopicSubscription {
 	return s.Subscribe.Topics
 }
 
-// Rename is function
-func (s *WorkerService) AttachFIFOSuffixToFIFOQueues() {
+// RetrofitFIFOConfig appends ".fifo" suffix to fifo topics, also adds values to type field.
+func (s *WorkerService) RetrofitFIFOConfig() {
 	for idx, topic := range s.Subscribe.Topics {
 		// if condition appends .fifo suffix to the topic which doesn't have topic specific queue and subscribing to default FIFO queue.
 		if topic.Queue.IsEmpty() && !s.Subscribe.Queue.IsEmpty() && s.Subscribe.Queue.Type != nil && strings.Compare(aws.StringValue(s.Subscribe.Queue.Type), "fifo") == 0 {
@@ -216,11 +216,10 @@ func (s *WorkerService) AttachFIFOSuffixToFIFOQueues() {
 			s.Subscribe.Topics[idx].Queue.Advanced.Type = aws.String(defaultQueueType)
 		}
 	}
-	if s.Subscribe.Queue.IsEmpty() && s.Subscribe.StandardDefaultQueue() {
+	if s.Subscribe.Queue.IsEmpty() && s.Subscribe.Topics != nil {
 		s.Subscribe.Queue = SQSQueue{
 			Type: aws.String(defaultQueueType),
 		}
-		//subscriptions.Queue = &template.SQSQueue{Type: aws.String(defaultQueueType)}
 	} else if !s.Subscribe.Queue.IsEmpty() && s.Subscribe.Queue.Type == nil {
 		s.Subscribe.Queue.Type = aws.String(defaultQueueType)
 	}

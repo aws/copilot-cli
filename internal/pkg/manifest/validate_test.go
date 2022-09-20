@@ -2665,7 +2665,7 @@ func TestTopic_validate(t *testing.T) {
 			in: Topic{
 				Name: aws.String("!@#"),
 			},
-			wanted: errors.New(`"name" can only contain letters, numbers, underscores, hyphens, and .fifo suffix`),
+			wanted: errors.New(`"name" can only contain letters, numbers, underscores, and hyphens`),
 		},
 	}
 	for name, tc := range testCases {
@@ -2764,7 +2764,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 		},
 		"should return error if invalid fifo throughput limit": {
 			in: TopicSubscription{
-				Name:    aws.String("mockTopic.fifo"),
+				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
@@ -2781,7 +2781,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 		},
 		"should not return error if valid fifo throughput limit": {
 			in: TopicSubscription{
-				Name:    aws.String("mockTopic.fifo"),
+				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
@@ -2798,7 +2798,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 		},
 		"should return error if invalid deduplicate scope": {
 			in: TopicSubscription{
-				Name:    aws.String("mockTopic.fifo"),
+				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
@@ -2815,7 +2815,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 		},
 		"should not return error if valid deduplicate scope": {
 			in: TopicSubscription{
-				Name:    aws.String("mockTopic.fifo"),
+				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
@@ -2844,11 +2844,11 @@ func TestTopicSubscription_validate(t *testing.T) {
 					},
 				},
 			},
-			wanted: errors.New(`validate "queue": parameters such as "content_based_deduplication", "deduplication_scope", "fifo_throughput_limit", and "high_throughput_fifo" are only used with FIFO SQS Queue`),
+			wanted: errors.New(`validate "queue": parameters such as "content_based_deduplication", "deduplication_scope", "fifo_throughput_limit", and "high_throughput_fifo" are only used with FIFO SQS Queue; to enable fifo SQS add type: fifo in your topic specific queue`),
 		},
 		"should return error if high_throughput_fifo is defined along with deduplication_scope or fifo_throughput_limit": {
 			in: TopicSubscription{
-				Name:    aws.String("mockTopic.fifo"),
+				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
@@ -2866,7 +2866,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 		},
 		"should return error if invalid combination of fifo_throughput_limit and fifo_throughput_limit is defined": {
 			in: TopicSubscription{
-				Name:    aws.String("mockTopic.fifo"),
+				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{

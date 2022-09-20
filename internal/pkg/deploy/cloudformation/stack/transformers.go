@@ -30,6 +30,8 @@ const (
 	standardQueueType = "standard"
 	fifoQueueType     = "fifo"
 	defaultQueueType  = standardQueueType
+	messageGroup      = "messageGroup"
+	perMessageGroupId = "perMessageGroupId"
 )
 
 // Default values for EFS options
@@ -899,8 +901,8 @@ func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
 			deduplicationScope = q.DeduplicationScope
 		}
 	} else if aws.BoolValue(q.HighThroughputFifo) == true {
-		fifoThroughputLimit = aws.String("messageGroup")
-		deduplicationScope = aws.String("perMessageGroupId")
+		fifoThroughputLimit = aws.String(perMessageGroupId)
+		deduplicationScope = aws.String(messageGroup)
 	}
 
 	return &template.SQSQueue{
