@@ -170,7 +170,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 		},
 		"error if security group ingress is limited to a cdn distribution not enabled": {
 			in: EnvironmentConfig{
-				CDNConfig: environmentCDNConfig{
+				CDNConfig: EnvironmentCDNConfig{
 					Enabled: aws.Bool(false),
 				},
 				HTTPConfig: EnvironmentHTTPConfig{
@@ -216,8 +216,8 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 		},
 		"error if cdn cert specified but public certs not specified": {
 			in: EnvironmentConfig{
-				CDNConfig: environmentCDNConfig{
-					Config: advancedCDNConfig{
+				CDNConfig: EnvironmentCDNConfig{
+					Config: AdvancedCDNConfig{
 						Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 					},
 				},
@@ -226,7 +226,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 		},
 		"error if cdn cert not specified but public certs imported": {
 			in: EnvironmentConfig{
-				CDNConfig: environmentCDNConfig{
+				CDNConfig: EnvironmentCDNConfig{
 					Enabled: aws.Bool(true),
 				},
 				HTTPConfig: EnvironmentHTTPConfig{
@@ -732,52 +732,52 @@ func TestSubnetsConfiguration_validate(t *testing.T) {
 
 func TestCDNConfiguration_validate(t *testing.T) {
 	testCases := map[string]struct {
-		in                   environmentCDNConfig
+		in                   EnvironmentCDNConfig
 		wantedError          error
 		wantedErrorMsgPrefix string
 	}{
 		"valid if empty": {
-			in: environmentCDNConfig{},
+			in: EnvironmentCDNConfig{},
 		},
 		"valid if bool specified": {
-			in: environmentCDNConfig{
+			in: EnvironmentCDNConfig{
 				Enabled: aws.Bool(false),
 			},
 		},
 		"valid if advanced config configured correctly": {
-			in: environmentCDNConfig{
-				Config: advancedCDNConfig{
+			in: EnvironmentCDNConfig{
+				Config: AdvancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				},
 			},
 		},
 		"error if certificate invalid": {
-			in: environmentCDNConfig{
-				Config: advancedCDNConfig{
+			in: EnvironmentCDNConfig{
+				Config: AdvancedCDNConfig{
 					Certificate: aws.String("arn:aws:weird-little-arn"),
 				},
 			},
 			wantedErrorMsgPrefix: "parse cdn certificate:",
 		},
 		"error if certificate in invalid region": {
-			in: environmentCDNConfig{
-				Config: advancedCDNConfig{
+			in: EnvironmentCDNConfig{
+				Config: AdvancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-west-2:1111111:certificate/look-like-a-good-arn"),
 				},
 			},
 			wantedError: errors.New("cdn certificate must be in region us-east-1"),
 		},
 		"error if terminate tls set without cert": {
-			in: environmentCDNConfig{
-				Config: advancedCDNConfig{
+			in: EnvironmentCDNConfig{
+				Config: AdvancedCDNConfig{
 					TerminateTLS: aws.Bool(true),
 				},
 			},
 			wantedError: errors.New(`"certificate" must be specified if "terminate_tls" is specified`),
 		},
 		"success with cert and terminate tls": {
-			in: environmentCDNConfig{
-				Config: advancedCDNConfig{
+			in: EnvironmentCDNConfig{
+				Config: AdvancedCDNConfig{
 					Certificate:  aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 					TerminateTLS: aws.Bool(true),
 				},

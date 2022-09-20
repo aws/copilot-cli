@@ -347,7 +347,7 @@ func (cfg securityGroupsConfig) validate() error {
 }
 
 // validate returns nil if environmentCDNConfig is configured correctly.
-func (cfg environmentCDNConfig) validate() error {
+func (cfg EnvironmentCDNConfig) validate() error {
 	if cfg.Config.isEmpty() {
 		return nil
 	}
@@ -365,7 +365,7 @@ func (i RestrictiveIngress) validate() error {
 }
 
 // validate returns nil if advancedCDNConfig is configured correctly.
-func (cfg advancedCDNConfig) validate() error {
+func (cfg AdvancedCDNConfig) validate() error {
 	if cfg.Certificate == nil {
 		if aws.BoolValue(cfg.TerminateTLS) == true {
 			return &errFieldMustBeSpecified{

@@ -94,7 +94,7 @@ type EnvironmentConfig struct {
 	Network       environmentNetworkConfig `yaml:"network,omitempty,flow"`
 	Observability environmentObservability `yaml:"observability,omitempty,flow"`
 	HTTPConfig    EnvironmentHTTPConfig    `yaml:"http,omitempty,flow"`
-	CDNConfig     environmentCDNConfig     `yaml:"cdn,omitempty,flow"`
+	CDNConfig     EnvironmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
 // IsIngressRestrictedToCDN returns whether or not an environment has its
@@ -184,24 +184,24 @@ func (cfg *EnvironmentConfig) EnvSecurityGroup() (*securityGroupConfig, bool) {
 	return nil, false
 }
 
-type environmentCDNConfig struct {
+type EnvironmentCDNConfig struct {
 	Enabled *bool
-	Config  advancedCDNConfig // mutually exclusive with Enabled
+	Config  AdvancedCDNConfig // mutually exclusive with Enabled
 }
 
-// advancedCDNConfig represents an advanced configuration for a Content Delivery Network.
-type advancedCDNConfig struct {
+// AdvancedCDNConfig represents an advanced configuration for a Content Delivery Network.
+type AdvancedCDNConfig struct {
 	Certificate  *string `yaml:"certificate,omitempty"`
 	TerminateTLS *bool   `yaml:"terminate_tls,omitempty"`
 }
 
 // IsEmpty returns whether environmentCDNConfig is empty.
-func (cfg *environmentCDNConfig) IsEmpty() bool {
+func (cfg *EnvironmentCDNConfig) IsEmpty() bool {
 	return cfg.Enabled == nil && cfg.Config.isEmpty()
 }
 
 // isEmpty returns whether advancedCDNConfig is empty.
-func (cfg *advancedCDNConfig) isEmpty() bool {
+func (cfg *AdvancedCDNConfig) isEmpty() bool {
 	return cfg.Certificate == nil && cfg.TerminateTLS == nil
 }
 
@@ -216,7 +216,7 @@ func (cfg *EnvironmentConfig) CDNEnabled() bool {
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the environmentCDNConfig
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (cfg *environmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
+func (cfg *EnvironmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&cfg.Config); err != nil {
 		var yamlTypeErr *yaml.TypeError
 		if !errors.As(err, &yamlTypeErr) {
