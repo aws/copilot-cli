@@ -142,6 +142,7 @@ func (s *BackendService) Template() (string, error) {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 
+	targetContainerName, targetContainerPort := s.httpLoadBalancerTarget()
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -149,20 +150,24 @@ func (s *BackendService) Template() (string, error) {
 		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
 
-		Variables:                s.manifest.BackendServiceConfig.Variables,
-		Secrets:                  convertSecrets(s.manifest.BackendServiceConfig.Secrets),
-		Aliases:                  aliases,
-		HTTPSListener:            s.httpsEnabled,
-		HTTPRedirect:             s.httpsEnabled,
-		NestedStack:              addonsOutputs,
-		AddonsExtraParams:        addonsParams,
-		Sidecars:                 sidecars,
-		Autoscaling:              autoscaling,
-		CapacityProviders:        capacityProviders,
-		DesiredCountOnSpot:       desiredCountOnSpot,
-		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:             manifest.BackendServiceType,
-		HealthCheck:              convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
+		Variables:          s.manifest.BackendServiceConfig.Variables,
+		Secrets:            convertSecrets(s.manifest.BackendServiceConfig.Secrets),
+		Aliases:            aliases,
+		HTTPSListener:      s.httpsEnabled,
+		HTTPRedirect:       s.httpsEnabled,
+		NestedStack:        addonsOutputs,
+		AddonsExtraParams:  addonsParams,
+		Sidecars:           sidecars,
+		Autoscaling:        autoscaling,
+		CapacityProviders:  capacityProviders,
+		DesiredCountOnSpot: desiredCountOnSpot,
+		ExecuteCommand:     convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:       manifest.BackendServiceType,
+		HealthCheck:        convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
+		HTTPTargetContainer: template.HTTPTargetContainer{
+			Name: aws.StringValue(targetContainerName),
+			Port: aws.StringValue(targetContainerPort),
+		},
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:      deregistrationDelay,
 		AllowedSourceIps:         allowedSourceIPs,
