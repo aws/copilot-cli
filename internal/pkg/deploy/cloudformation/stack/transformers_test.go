@@ -1374,18 +1374,15 @@ func Test_convertPublish(t *testing.T) {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
-					Type: aws.String("standard"),
 				},
 				{
 					Name: aws.String("topic2"),
-					Type: aws.String("standard"),
 				},
 			},
 			wanted: &template.PublishOpts{
 				Topics: []*template.Topic{
 					{
 						Name:      aws.String("topic1"),
-						Type:      "standard",
 						AccountID: accountId,
 						Partition: partition,
 						Region:    region,
@@ -1396,7 +1393,6 @@ func Test_convertPublish(t *testing.T) {
 					{
 
 						Name:      aws.String("topic2"),
-						Type:      "standard",
 						AccountID: accountId,
 						Partition: partition,
 						Region:    region,
@@ -1407,22 +1403,23 @@ func Test_convertPublish(t *testing.T) {
 				},
 			},
 		},
-		"valid publish with fifo and standard topics": {
+		"valid publish with fifo enabled and standard topics": {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
-					Type: aws.String("fifo"),
+					Fifo: manifest.Fifo{Enable: aws.Bool(true)},
 				},
 				{
 					Name: aws.String("topic2"),
-					Type: aws.String("standard"),
 				},
 			},
 			wanted: &template.PublishOpts{
 				Topics: []*template.Topic{
 					{
-						Name:      aws.String("topic1"),
-						Type:      "fifo",
+						Name: aws.String("topic1"),
+						Fifo: template.Fifo{
+							Enable: true,
+						},
 						AccountID: accountId,
 						Partition: partition,
 						Region:    region,
@@ -1433,7 +1430,47 @@ func Test_convertPublish(t *testing.T) {
 					{
 
 						Name:      aws.String("topic2"),
-						Type:      "standard",
+						AccountID: accountId,
+						Partition: partition,
+						Region:    region,
+						App:       app,
+						Env:       env,
+						Svc:       svc,
+					},
+				},
+			},
+		},
+		"valid publish with advanced fifo and standard topics": {
+			inTopics: []manifest.Topic{
+				{
+					Name: aws.String("topic1"),
+					Fifo: manifest.Fifo{
+						Advanced: manifest.FifoAdvanceConfig{
+							ContentBasedDeduplication: aws.Bool(true),
+						},
+					},
+				},
+				{
+					Name: aws.String("topic2"),
+				},
+			},
+			wanted: &template.PublishOpts{
+				Topics: []*template.Topic{
+					{
+						Name: aws.String("topic1"),
+						Fifo: template.Fifo{
+							ContentBasedDeduplication: true,
+						},
+						AccountID: accountId,
+						Partition: partition,
+						Region:    region,
+						App:       app,
+						Env:       env,
+						Svc:       svc,
+					},
+					{
+
+						Name:      aws.String("topic2"),
 						AccountID: accountId,
 						Partition: partition,
 						Region:    region,

@@ -44,6 +44,7 @@ var (
 	errUnmarshalSecurityGroupOpts = errors.New(`unable to unmarshal "security_groups" field into slice of strings or compose-style map`)
 	errUnmarshalPlacementOpts     = errors.New("unable to unmarshal placement field into string or compose-style map")
 	errUnmarshalSubnetsOpts       = errors.New("unable to unmarshal subnets field into string slice or compose-style map")
+	errUnmarshalFifoConfig        = errors.New("unable to unmarshal fifo field into boolean or compose-style map")
 	errUnmarshalCountOpts         = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts         = errors.New(`unable to unmarshal "range" field`)
 
@@ -400,7 +401,43 @@ type PublishConfig struct {
 // Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
 	Name *string `yaml:"name"`
-	Type *string `yaml:"type"`
+	Fifo Fifo    `yaml:"fifo"`
+}
+
+// Fifo represents the configurable options for fifo topics.
+type Fifo struct {
+	Enable   *bool
+	Advanced FifoAdvanceConfig
+}
+
+// IsEmpty returns true if the struct has all nil values.
+func (f *Fifo) IsEmpty() bool {
+	return f.Enable == nil && f.Advanced.IsEmpty()
+}
+
+type FifoAdvanceConfig struct {
+	ContentBasedDeduplication *bool `yaml:"content_based_deduplication"`
+}
+
+// IsEmpty returns true if the struct has all nil values.
+func (a *FifoAdvanceConfig) IsEmpty() bool {
+	return a.ContentBasedDeduplication == nil
+}
+
+func (t *Fifo) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&t.Advanced); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+	if !t.Advanced.IsEmpty() {
+		return nil
+	}
+	if err := value.Decode(&t.Enable); err != nil {
+		return errUnmarshalFifoConfig
+	}
+	return nil
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.

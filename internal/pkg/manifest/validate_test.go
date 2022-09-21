@@ -580,22 +580,6 @@ func TestBackendService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "publish": `,
 		},
-		"error if invalid type is defined": {
-			config: BackendService{
-				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: testImageConfig,
-					PublishConfig: PublishConfig{
-						Topics: []Topic{
-							{
-								Name: aws.String("mytopic"),
-								Type: aws.String("incorrectValue"),
-							},
-						},
-					},
-				},
-			},
-			wantedErrorMsgPrefix: `validate "publish": validate "topics[0]": "type" value "incorrectValue" is not allowed`,
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

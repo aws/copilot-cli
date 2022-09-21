@@ -58,7 +58,6 @@ var (
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
-	validTopicsTypeValues            = []string{standardTopicType, fifoTopicType}
 )
 
 // Validate returns nil if DynamicLoadBalancedWebService is configured correctly.
@@ -1412,10 +1411,32 @@ func (p PublishConfig) validate() error {
 
 // validate returns nil if Topic is configured correctly.
 func (t Topic) validate() error {
-	if t.Type != nil && !contains(aws.StringValue(t.Type), validTopicsTypeValues) {
-		return fmt.Errorf(`"type" value %q is not allowed; must be one of %s`, aws.StringValue(t.Type), english.WordSeries(validTopicsTypeValues, "or"))
+	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
+		return err
 	}
-	return validatePubSubName(aws.StringValue(t.Name))
+	if t.Fifo.IsEmpty() {
+		return nil
+	}
+	if t.Fifo.Enable != nil {
+		return nil
+	}
+	if err := t.Fifo.Advanced.validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validate returns true if Fifo configuration is empty.
+func (f Fifo) validate() error {
+	return nil
+}
+
+// validate returns nil if FifoAdvanceConfig is configured correctly.
+func (a FifoAdvanceConfig) validate() error {
+	if a.IsEmpty() {
+		return fmt.Errorf("content_based_deduplication is not defined correctly")
+	}
+	return nil
 }
 
 // validate returns nil if SubscribeConfig is configured correctly.

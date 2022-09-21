@@ -389,7 +389,7 @@ type PublishOpts struct {
 // Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
 	Name *string
-	Type string
+	Fifo Fifo
 
 	Region    string
 	Partition string
@@ -397,6 +397,12 @@ type Topic struct {
 	App       string
 	Env       string
 	Svc       string
+}
+
+// Fifo holds configuration needed if the topic is FIFO.
+type Fifo struct {
+	Enable                    bool
+	ContentBasedDeduplication bool
 }
 
 // SubscribeOpts holds configuration needed if the service has subscriptions.
