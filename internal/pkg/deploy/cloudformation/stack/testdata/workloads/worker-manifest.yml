@@ -23,6 +23,11 @@ exec: true     # Enable running commands in your container.
 publish:
   topics:
     - name: givesOtherdogs
+    - name: mytopic
+      fifo: true
+    - name: yourtopic
+      fifo:
+        content_based_deduplication: true
 
 subscribe:
   queue:

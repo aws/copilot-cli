@@ -1407,7 +1407,7 @@ func Test_convertPublish(t *testing.T) {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
-					Fifo: manifest.FifoAdvanceConfigOrBool{Enable: aws.Bool(true)},
+					FIFO: manifest.FIFOAdvanceConfigOrBool{Enable: aws.Bool(true)},
 				},
 				{
 					Name: aws.String("topic2"),
@@ -1417,8 +1417,8 @@ func Test_convertPublish(t *testing.T) {
 				Topics: []*template.Topic{
 					{
 						Name: aws.String("topic1"),
-						Fifo: template.Fifo{
-							Enable: true,
+						FIFOTopicConfig: &template.FIFOTopicConfig{
+							Enable: aws.Bool(true),
 						},
 						AccountID: accountId,
 						Partition: partition,
@@ -1429,13 +1429,14 @@ func Test_convertPublish(t *testing.T) {
 					},
 					{
 
-						Name:      aws.String("topic2"),
-						AccountID: accountId,
-						Partition: partition,
-						Region:    region,
-						App:       app,
-						Env:       env,
-						Svc:       svc,
+						Name:            aws.String("topic2"),
+						FIFOTopicConfig: nil,
+						AccountID:       accountId,
+						Partition:       partition,
+						Region:          region,
+						App:             app,
+						Env:             env,
+						Svc:             svc,
 					},
 				},
 			},
@@ -1444,8 +1445,8 @@ func Test_convertPublish(t *testing.T) {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
-					Fifo: manifest.FifoAdvanceConfigOrBool{
-						Advanced: manifest.FifoAdvanceConfig{
+					FIFO: manifest.FIFOAdvanceConfigOrBool{
+						Advanced: manifest.FIFOAdvanceConfig{
 							ContentBasedDeduplication: aws.Bool(true),
 						},
 					},
@@ -1458,8 +1459,8 @@ func Test_convertPublish(t *testing.T) {
 				Topics: []*template.Topic{
 					{
 						Name: aws.String("topic1"),
-						Fifo: template.Fifo{
-							ContentBasedDeduplication: true,
+						FIFOTopicConfig: &template.FIFOTopicConfig{
+							ContentBasedDeduplication: aws.Bool(true),
 						},
 						AccountID: accountId,
 						Partition: partition,

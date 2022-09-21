@@ -29,6 +29,11 @@ Metadata:
     publish:
       topics:
         - name: givesOtherdogs
+        - name: mytopic
+          fifo: true
+        - name: yourtopic
+          fifo:
+            content_based_deduplication: true
 
     subscribe:
       queue:
@@ -137,7 +142,7 @@ Resources:
             - Name: COPILOT_SERVICE_NAME
               Value: !Sub '${WorkloadName}'
             - Name: COPILOT_SNS_TOPIC_ARNS
-              Value: '{"givesOtherdogs":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-givesOtherdogs"}'
+              Value: '{"givesOtherdogs":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-givesOtherdogs","mytopic":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-mytopic.fifo","yourtopic":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-yourtopic.fifo"}'
             - Name: COPILOT_QUEUE_URI
               Value: !Ref EventsQueue
             - Name: COPILOT_TOPIC_QUEUE_URIS
@@ -266,6 +271,8 @@ Resources:
                 Action: 'sns:Publish'
                 Resource:
                   - !Ref givesOtherdogsSNSTopic
+                  - !Ref mytopicSNSTopic
+                  - !Ref yourtopicSNSTopic
   DynamicDesiredCountAction:
     Metadata:
       'aws:copilot:description': "A custom resource returning the ECS service's running task count"
@@ -721,6 +728,59 @@ Resources:
             Action:
               - sns:Subscribe
             Resource: !Ref givesOtherdogsSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
+  mytopicSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A FIFO SNS topic to broadcast mytopic events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-mytopic.fifo'
+      FifoTopic: true
+      KmsMasterKeyId: 'alias/aws/sns'
+  mytopicSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: mytopicSNSTopic
+    Properties:
+      Topics:
+        - !Ref mytopicSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref mytopicSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
+  yourtopicSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A FIFO SNS topic to broadcast yourtopic events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-yourtopic.fifo'
+      FifoTopic: true
+      ContentBasedDeduplication: true
+      KmsMasterKeyId: 'alias/aws/sns'
+  yourtopicSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: yourtopicSNSTopic
+    Properties:
+      Topics:
+        - !Ref yourtopicSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref yourtopicSNSTopic
             Condition:
               StringEquals:
                 "sns:Protocol": "sqs"

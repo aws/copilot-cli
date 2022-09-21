@@ -797,24 +797,24 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	var publishers template.PublishOpts
 	// convert the topics to template Topics
 	for _, topic := range topics {
-		var fifo template.Fifo
-		if !topic.Fifo.IsEmpty() {
-			if aws.BoolValue(topic.Fifo.Enable) {
-				fifo.Enable = aws.BoolValue(topic.Fifo.Enable)
+		var fifoConfig *template.FIFOTopicConfig
+		if !topic.FIFO.IsEmpty() {
+			fifoConfig = &template.FIFOTopicConfig{
+				Enable: topic.FIFO.Enable,
 			}
-			if !topic.Fifo.Advanced.IsEmpty() {
-				fifo.ContentBasedDeduplication = aws.BoolValue(topic.Fifo.Advanced.ContentBasedDeduplication)
+			if !topic.FIFO.Advanced.IsEmpty() {
+				fifoConfig.ContentBasedDeduplication = topic.FIFO.Advanced.ContentBasedDeduplication
 			}
 		}
 		publishers.Topics = append(publishers.Topics, &template.Topic{
-			Name:      topic.Name,
-			Fifo:      fifo,
-			AccountID: accountID,
-			Partition: partition.ID(),
-			Region:    region,
-			App:       app,
-			Env:       env,
-			Svc:       svc,
+			Name:            topic.Name,
+			FIFOTopicConfig: fifoConfig,
+			AccountID:       accountID,
+			Partition:       partition.ID(),
+			Region:          region,
+			App:             app,
+			Env:             env,
+			Svc:             svc,
 		})
 	}
 

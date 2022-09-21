@@ -1414,31 +1414,22 @@ func (t Topic) validate() error {
 	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
 		return err
 	}
-	if err := t.Fifo.validate(); err != nil {
+	if err := t.FIFO.validate(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // validate returns nil if FifoAdvanceConfigOrBool is configured correctly.
-func (f FifoAdvanceConfigOrBool) validate() error {
+func (f FIFOAdvanceConfigOrBool) validate() error {
 	if f.IsEmpty() {
 		return nil
 	}
-	if f.Enable != nil {
-		return nil
-	}
-	if err := f.Advanced.validate(); err != nil {
-		return err
-	}
-	return nil
+	return f.Advanced.validate()
 }
 
 // validate returns nil if FifoAdvanceConfig is configured correctly.
-func (a FifoAdvanceConfig) validate() error {
-	if a.IsEmpty() {
-		return fmt.Errorf("content_based_deduplication is not defined correctly")
-	}
+func (a FIFOAdvanceConfig) validate() error {
 	return nil
 }
 

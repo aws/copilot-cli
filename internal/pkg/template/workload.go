@@ -388,8 +388,8 @@ type PublishOpts struct {
 
 // Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
-	Name *string
-	Fifo Fifo
+	Name            *string
+	FIFOTopicConfig *FIFOTopicConfig
 
 	Region    string
 	Partition string
@@ -400,9 +400,9 @@ type Topic struct {
 }
 
 // Fifo holds configuration needed if the topic is FIFO.
-type Fifo struct {
-	Enable                    bool
-	ContentBasedDeduplication bool
+type FIFOTopicConfig struct {
+	Enable                    *bool
+	ContentBasedDeduplication *bool
 }
 
 // SubscribeOpts holds configuration needed if the service has subscriptions.
@@ -698,5 +698,8 @@ func contains(list []string, s string) bool {
 
 // ARN determines the arn for a topic using the SNSTopic name and account information
 func (t Topic) ARN() string {
+	if t.FIFOTopicConfig != nil {
+		return fmt.Sprintf(snsARNPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name)+".fifo")
+	}
 	return fmt.Sprintf(snsARNPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
 }

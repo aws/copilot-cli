@@ -44,7 +44,7 @@ var (
 	errUnmarshalSecurityGroupOpts = errors.New(`unable to unmarshal "security_groups" field into slice of strings or compose-style map`)
 	errUnmarshalPlacementOpts     = errors.New("unable to unmarshal placement field into string or compose-style map")
 	errUnmarshalSubnetsOpts       = errors.New("unable to unmarshal subnets field into string slice or compose-style map")
-	errUnmarshalFifoConfig        = errors.New("unable to unmarshal fifo field into boolean or compose-style map")
+	errUnmarshalFifoConfig        = errors.New(`unable to unmarshal "fifo" field into boolean or compose-style map`)
 	errUnmarshalCountOpts         = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts         = errors.New(`unable to unmarshal "range" field`)
 
@@ -401,34 +401,34 @@ type PublishConfig struct {
 // Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
 	Name *string                 `yaml:"name"`
-	Fifo FifoAdvanceConfigOrBool `yaml:"fifo"`
+	FIFO FIFOAdvanceConfigOrBool `yaml:"fifo"`
 }
 
-// FifoAdvanceConfigOrBool represents the configurable options for fifo topics.
-type FifoAdvanceConfigOrBool struct {
+// FIFOAdvanceConfigOrBool represents the configurable options for fifo topics.
+type FIFOAdvanceConfigOrBool struct {
 	Enable   *bool
-	Advanced FifoAdvanceConfig
+	Advanced FIFOAdvanceConfig
 }
 
 // IsEmpty returns true if the FifoAdvanceConfigOrBool struct has all nil values.
-func (f *FifoAdvanceConfigOrBool) IsEmpty() bool {
+func (f *FIFOAdvanceConfigOrBool) IsEmpty() bool {
 	return f.Enable == nil && f.Advanced.IsEmpty()
 }
 
-// FifoAdvanceConfig represents the advanced fifo topic config.
-type FifoAdvanceConfig struct {
+// FIFOAdvanceConfig represents the advanced fifo topic config.
+type FIFOAdvanceConfig struct {
 	ContentBasedDeduplication *bool `yaml:"content_based_deduplication"`
 }
 
 // IsEmpty returns true if the FifoAdvanceConfig struct has all nil values.
-func (a *FifoAdvanceConfig) IsEmpty() bool {
+func (a *FIFOAdvanceConfig) IsEmpty() bool {
 	return a.ContentBasedDeduplication == nil
 }
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the FifoAdvanceConfigOrBool
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the FIFOAdvanceConfigOrBool
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (t *FifoAdvanceConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
+func (t *FIFOAdvanceConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&t.Advanced); err != nil {
 		var yamlTypeErr *yaml.TypeError
 		if !errors.As(err, &yamlTypeErr) {

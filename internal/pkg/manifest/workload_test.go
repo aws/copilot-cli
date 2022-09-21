@@ -1083,7 +1083,7 @@ topics:
 				Topics: []Topic{
 					{
 						Name: aws.String("tests"),
-						Fifo: FifoAdvanceConfigOrBool{
+						FIFO: FIFOAdvanceConfigOrBool{
 							Enable: aws.Bool(true),
 						},
 					},
@@ -1101,8 +1101,8 @@ topics:
 				Topics: []Topic{
 					{
 						Name: aws.String("tests"),
-						Fifo: FifoAdvanceConfigOrBool{
-							Advanced: FifoAdvanceConfig{
+						FIFO: FIFOAdvanceConfigOrBool{
+							Advanced: FIFOAdvanceConfig{
 								ContentBasedDeduplication: aws.Bool(true),
 							},
 						},
@@ -1116,7 +1116,7 @@ topics:
   - name: tests
     fifo: apple
 `,
-			wantedErr: errors.New("unable to unmarshal fifo field into boolean or compose-style map"),
+			wantedErr: errors.New(`unable to unmarshal "fifo" field into boolean or compose-style map`),
 		},
 
 		"Error when unmarshalable": {
