@@ -189,6 +189,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if s.manifest.RoutingRule.RedirectToHTTPS != nil {
 		httpRedirect = aws.BoolValue(s.manifest.RoutingRule.RedirectToHTTPS)
 	}
+	targetContainerName, targetContainerPort := s.httpLoadBalancerTarget()
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -196,21 +197,25 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
 
-		Variables:                s.manifest.TaskConfig.Variables,
-		Secrets:                  convertSecrets(s.manifest.TaskConfig.Secrets),
-		Aliases:                  aliases,
-		HTTPSListener:            s.httpsEnabled,
-		HTTPRedirect:             httpRedirect,
-		NestedStack:              addonsOutputs,
-		AddonsExtraParams:        addonsParams,
-		Sidecars:                 sidecars,
-		LogConfig:                convertLogging(s.manifest.Logging),
-		DockerLabels:             s.manifest.ImageConfig.Image.DockerLabels,
-		Autoscaling:              autoscaling,
-		CapacityProviders:        capacityProviders,
-		DesiredCountOnSpot:       desiredCountOnSpot,
-		ExecuteCommand:           convertExecuteCommand(&s.manifest.ExecuteCommand),
-		WorkloadType:             manifest.LoadBalancedWebServiceType,
+		Variables:          s.manifest.TaskConfig.Variables,
+		Secrets:            convertSecrets(s.manifest.TaskConfig.Secrets),
+		Aliases:            aliases,
+		HTTPSListener:      s.httpsEnabled,
+		HTTPRedirect:       httpRedirect,
+		NestedStack:        addonsOutputs,
+		AddonsExtraParams:  addonsParams,
+		Sidecars:           sidecars,
+		LogConfig:          convertLogging(s.manifest.Logging),
+		DockerLabels:       s.manifest.ImageConfig.Image.DockerLabels,
+		Autoscaling:        autoscaling,
+		CapacityProviders:  capacityProviders,
+		DesiredCountOnSpot: desiredCountOnSpot,
+		ExecuteCommand:     convertExecuteCommand(&s.manifest.ExecuteCommand),
+		WorkloadType:       manifest.LoadBalancedWebServiceType,
+		HTTPTargetContainer: template.HTTPTargetContainer{
+			Name: aws.StringValue(targetContainerName),
+			Port: aws.StringValue(targetContainerPort),
+		},
 		HealthCheck:              convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:      deregistrationDelay,
