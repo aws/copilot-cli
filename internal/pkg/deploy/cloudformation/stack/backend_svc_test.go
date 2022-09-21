@@ -255,6 +255,7 @@ Outputs:
 		_, err = svc.Template()
 
 		// THEN
+		require.NoError(t, err)
 		require.Equal(t, template.WorkloadOpts{
 			AppName:      "phonetool",
 			EnvName:      "test",
@@ -415,6 +416,7 @@ Outputs:
 		_, err = svc.Template()
 
 		// THEN
+		require.NoError(t, err)
 		require.Equal(t, template.WorkloadOpts{
 			AppName:      "phonetool",
 			EnvName:      "test",
