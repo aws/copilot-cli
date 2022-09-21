@@ -61,7 +61,7 @@ type envDescriber interface {
 }
 
 type lbDescriber interface {
-	ListenerRuleIsRedirect(context.Context, string) (bool, error)
+	DescribeRule(context.Context, string) (elbv2.Rule, error)
 }
 
 type stackDescriber interface {
@@ -87,8 +87,8 @@ type envDeployer struct {
 	newStackSerializer       func(input *deploy.CreateEnvironmentInput, forceUpdateID string, prevParams []*awscfn.Parameter) stackSerializer
 	envDescriber             envDescriber
 	envManagerSession        *session.Session
-	newLBDescriber           func(*session.Session) lbDescriber
-	newServiceStackDescriber func(string, *session.Session) stackDescriber
+	lbDescriber              lbDescriber
+	newServiceStackDescriber func(string) stackDescriber
 
 	// Cached variables.
 	appRegionalResources *cfnstack.AppRegionalResources
@@ -145,11 +145,9 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		},
 		envDescriber:      envDescriber,
 		envManagerSession: envManagerSession,
-		newLBDescriber: func(sess *session.Session) lbDescriber {
-			return elbv2.New(sess)
-		},
-		newServiceStackDescriber: func(svc string, sess *session.Session) stackDescriber {
-			return stack.NewStackDescriber(cfnstack.NameForService(in.App.Name, in.Env.Name, svc), sess)
+		lbDescriber:       elbv2.New(envManagerSession),
+		newServiceStackDescriber: func(svc string) stackDescriber {
+			return stack.NewStackDescriber(cfnstack.NameForService(in.App.Name, in.Env.Name, svc), envManagerSession)
 		},
 	}, nil
 }
@@ -226,7 +224,7 @@ func (d *envDeployer) verifyALBWorkloadsDontRedirect(ctx context.Context) error 
 
 // lbServiceRedirects returns true if svc's HTTP listener rule redirects.
 func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool, error) {
-	stackDescriber := d.newServiceStackDescriber(svc, d.envManagerSession)
+	stackDescriber := d.newServiceStackDescriber(svc)
 	resources, err := stackDescriber.Resources()
 	if err != nil {
 		return false, fmt.Errorf("get stack resources: %w", err)
@@ -239,15 +237,16 @@ func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool,
 		}
 	}
 	if ruleARN == "" {
-		return false, fmt.Errorf("resource %q not present", svcStackResourceHTTPListenerRuleLogicalID)
+		// TODO
+		// return false, fmt.Errorf("resource %q not present", svcStackResourceHTTPListenerRuleLogicalID)
+		return false, fmt.Errorf("http listener not found on service %q", svc)
 	}
 
-	lbDescriber := d.newLBDescriber(d.envManagerSession)
-	isRedirect, err := lbDescriber.ListenerRuleIsRedirect(ctx, ruleARN)
+	rule, err := d.lbDescriber.DescribeRule(ctx, ruleARN)
 	if err != nil {
-		return false, fmt.Errorf("verify http listener doesn't redirect: %w", err)
+		return false, fmt.Errorf("get listener rule %q: %w", ruleARN, err)
 	}
-	return isRedirect, nil
+	return rule.HasRedirectAction(), nil
 }
 
 // UploadArtifacts uploads the deployment artifacts for the environment.

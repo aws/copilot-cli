@@ -6,6 +6,7 @@ package elbv2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -74,25 +75,31 @@ func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
 	return hostHeaders, nil
 }
 
-// ListenerRuleIsRedirect returns true if ruleARN has an action to redirect.
-func (e *ELBV2) ListenerRuleIsRedirect(ctx context.Context, ruleARN string) (bool, error) {
+type Rule elbv2.Rule
+
+// DescribeRule returns the Rule with ruleARN.
+func (e *ELBV2) DescribeRule(ctx context.Context, ruleARN string) (Rule, error) {
 	resp, err := e.client.DescribeRules(&elbv2.DescribeRulesInput{
 		RuleArns: aws.StringSlice([]string{ruleARN}),
 	})
 	switch {
 	case err != nil:
-		return false, fmt.Errorf("get listener rule for %s: %w", ruleARN, err)
+		return Rule{}, err
 	case len(resp.Rules) == 0:
-		return false, fmt.Errorf("cannot find listener rule %s", ruleARN)
+		return Rule{}, errors.New("not found")
 	}
 
-	rule := resp.Rules[0]
-	for _, action := range rule.Actions {
+	return Rule(*resp.Rules[0]), nil
+}
+
+// HasRedirectAction returns true if the rule has a redirect action.
+func (r *Rule) HasRedirectAction() bool {
+	for _, action := range r.Actions {
 		if aws.StringValue(action.Type) == elbv2.ActionTypeEnumRedirect {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
 // TargetHealth wraps up elbv2.TargetHealthDescription.

@@ -12,8 +12,9 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
+	awselb "github.com/aws/aws-sdk-go/service/elbv2"
+	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -399,6 +400,20 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 }
 
 func TestEnvDeployer_Verify(t *testing.T) {
+	listenerRuleNoRedirect := elbv2.Rule{
+		Actions: []*awselb.Action{
+			{
+				Type: aws.String(awselb.ActionTypeEnumForward),
+			},
+		},
+	}
+	listenerRuleWithRedirect := elbv2.Rule{
+		Actions: []*awselb.Action{
+			{
+				Type: aws.String(awselb.ActionTypeEnumRedirect),
+			},
+		},
+	}
 	tests := map[string]struct {
 		app        *config.Application
 		mft        *manifest.Environment
@@ -500,9 +515,9 @@ func TestEnvDeployer_Verify(t *testing.T) {
 						PhysicalID: "svc1RuleARN",
 					},
 				}, nil)
-				m.lbDescriber.EXPECT().ListenerRuleIsRedirect(gomock.Any(), "svc1RuleARN").Return(false, errors.New("some error"))
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc1RuleARN").Return(elbv2.Rule{}, errors.New("some error"))
 			},
-			expected: `can't enable TLS termination on CDN: verify service "svc1": verify http listener doesn't redirect: some error`,
+			expected: `can't enable TLS termination on CDN: verify service "svc1": get listener rule "svc1RuleARN": some error`,
 		},
 		"cdn tls termination enabled, fail with one service that redirects": {
 			app: &config.Application{},
@@ -529,7 +544,7 @@ func TestEnvDeployer_Verify(t *testing.T) {
 						PhysicalID: "svc1RuleARN",
 					},
 				}, nil)
-				m.lbDescriber.EXPECT().ListenerRuleIsRedirect(gomock.Any(), "svc1RuleARN").Return(true, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc1RuleARN").Return(listenerRuleWithRedirect, nil)
 			},
 			expected: "can't enable TLS termination on CDN: HTTP traffic redirects to HTTPS in service svc1.\nSet http.redirect_to_https to false for that service and redeploy it.",
 		},
@@ -572,9 +587,9 @@ func TestEnvDeployer_Verify(t *testing.T) {
 						PhysicalID: "svc3RuleARN",
 					},
 				}, nil)
-				m.lbDescriber.EXPECT().ListenerRuleIsRedirect(gomock.Any(), "svc1RuleARN").Return(true, nil)
-				m.lbDescriber.EXPECT().ListenerRuleIsRedirect(gomock.Any(), "svc2RuleARN").Return(false, nil)
-				m.lbDescriber.EXPECT().ListenerRuleIsRedirect(gomock.Any(), "svc3RuleARN").Return(true, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc1RuleARN").Return(listenerRuleWithRedirect, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc2RuleARN").Return(listenerRuleNoRedirect, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc3RuleARN").Return(listenerRuleWithRedirect, nil)
 			},
 			expected: "can't enable TLS termination on CDN: HTTP traffic redirects to HTTPS in services svc1 and svc3.\nSet http.redirect_to_https to false for those services and redeploy them.",
 		},
@@ -617,9 +632,9 @@ func TestEnvDeployer_Verify(t *testing.T) {
 						PhysicalID: "svc3RuleARN",
 					},
 				}, nil)
-				m.lbDescriber.EXPECT().ListenerRuleIsRedirect(gomock.Any(), "svc1RuleARN").Return(false, nil)
-				m.lbDescriber.EXPECT().ListenerRuleIsRedirect(gomock.Any(), "svc2RuleARN").Return(false, nil)
-				m.lbDescriber.EXPECT().ListenerRuleIsRedirect(gomock.Any(), "svc3RuleARN").Return(false, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc1RuleARN").Return(listenerRuleNoRedirect, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc2RuleARN").Return(listenerRuleNoRedirect, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc3RuleARN").Return(listenerRuleNoRedirect, nil)
 			},
 		},
 	}
@@ -643,10 +658,8 @@ func TestEnvDeployer_Verify(t *testing.T) {
 					Name: aws.StringValue(tc.mft.Name),
 				},
 				envDescriber: m.envDescriber,
-				newLBDescriber: func(*session.Session) lbDescriber {
-					return m.lbDescriber
-				},
-				newServiceStackDescriber: func(svc string, sess *session.Session) stackDescriber {
+				lbDescriber:  m.lbDescriber,
+				newServiceStackDescriber: func(svc string) stackDescriber {
 					return m.stackDescribers[svc]
 				},
 			}

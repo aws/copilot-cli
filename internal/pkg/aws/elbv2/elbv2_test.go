@@ -220,13 +220,13 @@ func TestELBV2_ListenerRuleHostHeaders(t *testing.T) {
 	}
 }
 
-func TestELBV2_ListenerRuleIsRedirect(t *testing.T) {
+func TestELBV2_DescribeRule(t *testing.T) {
 	mockARN := "mockListenerRuleARN"
 	testCases := map[string]struct {
 		setUpMock func(m *mocks.Mockapi)
 
 		expectedErr string
-		expected    bool
+		expected    Rule
 	}{
 		"fail to describe rules": {
 			setUpMock: func(m *mocks.Mockapi) {
@@ -242,43 +242,23 @@ func TestELBV2_ListenerRuleIsRedirect(t *testing.T) {
 					RuleArns: aws.StringSlice([]string{mockARN}),
 				}).Return(&elbv2.DescribeRulesOutput{}, nil)
 			},
-			expectedErr: "cannot find listener rule mockListenerRuleARN",
+			expectedErr: `listener rule "mockListenerRuleARN" not found`,
 		},
-		"rule is redirect": {
+		"success": {
 			setUpMock: func(m *mocks.Mockapi) {
 				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
 					RuleArns: aws.StringSlice([]string{mockARN}),
 				}).Return(&elbv2.DescribeRulesOutput{
 					Rules: []*elbv2.Rule{
 						{
-							Actions: []*elbv2.Action{
-								{
-									Type: aws.String(elbv2.ActionTypeEnumRedirect),
-								},
-							},
+							RuleArn: aws.String(mockARN),
 						},
 					},
 				}, nil)
 			},
-			expected: true,
-		},
-		"rule is not redirect": {
-			setUpMock: func(m *mocks.Mockapi) {
-				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
-					RuleArns: aws.StringSlice([]string{mockARN}),
-				}).Return(&elbv2.DescribeRulesOutput{
-					Rules: []*elbv2.Rule{
-						{
-							Actions: []*elbv2.Action{
-								{
-									Type: aws.String(elbv2.ActionTypeEnumForward),
-								},
-							},
-						},
-					},
-				}, nil)
-			},
-			expected: false,
+			expected: Rule(elbv2.Rule{
+				RuleArn: aws.String(mockARN),
+			}),
 		},
 	}
 
@@ -294,12 +274,45 @@ func TestELBV2_ListenerRuleIsRedirect(t *testing.T) {
 				client: mockAPI,
 			}
 
-			actual, err := elbv2Client.ListenerRuleIsRedirect(context.Background(), mockARN)
+			actual, err := elbv2Client.DescribeRule(context.Background(), mockARN)
 			if tc.expectedErr != "" {
 				require.EqualError(t, err, tc.expectedErr)
 			} else {
 				require.Equal(t, tc.expected, actual)
 			}
+		})
+	}
+}
+
+func TestELBV2Rule_HasRedirectAction(t *testing.T) {
+	testCases := map[string]struct {
+		rule     Rule
+		expected bool
+	}{
+		"rule doesn't have redirect": {
+			rule: Rule(elbv2.Rule{
+				Actions: []*elbv2.Action{
+					{
+						Type: aws.String(elbv2.ActionTypeEnumForward),
+					},
+				},
+			}),
+		},
+		"rule has redirect": {
+			rule: Rule(elbv2.Rule{
+				Actions: []*elbv2.Action{
+					{
+						Type: aws.String(elbv2.ActionTypeEnumRedirect),
+					},
+				},
+			}),
+			expected: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.rule.HasRedirectAction())
 		})
 	}
 }

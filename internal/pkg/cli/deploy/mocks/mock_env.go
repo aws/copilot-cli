@@ -10,6 +10,7 @@ import (
 
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	elbv2 "github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	cloudformation1 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
@@ -277,19 +278,19 @@ func (m *MocklbDescriber) EXPECT() *MocklbDescriberMockRecorder {
 	return m.recorder
 }
 
-// ListenerRuleIsRedirect mocks base method.
-func (m *MocklbDescriber) ListenerRuleIsRedirect(arg0 context.Context, arg1 string) (bool, error) {
+// DescribeRule mocks base method.
+func (m *MocklbDescriber) DescribeRule(arg0 context.Context, arg1 string) (elbv2.Rule, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListenerRuleIsRedirect", arg0, arg1)
-	ret0, _ := ret[0].(bool)
+	ret := m.ctrl.Call(m, "DescribeRule", arg0, arg1)
+	ret0, _ := ret[0].(elbv2.Rule)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListenerRuleIsRedirect indicates an expected call of ListenerRuleIsRedirect.
-func (mr *MocklbDescriberMockRecorder) ListenerRuleIsRedirect(arg0, arg1 interface{}) *gomock.Call {
+// DescribeRule indicates an expected call of DescribeRule.
+func (mr *MocklbDescriberMockRecorder) DescribeRule(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListenerRuleIsRedirect", reflect.TypeOf((*MocklbDescriber)(nil).ListenerRuleIsRedirect), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRule", reflect.TypeOf((*MocklbDescriber)(nil).DescribeRule), arg0, arg1)
 }
 
 // MockstackDescriber is a mock of stackDescriber interface.
