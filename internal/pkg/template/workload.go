@@ -519,6 +519,7 @@ type WorkloadOpts struct {
 	ALBEnabled               bool
 	HostedZoneAliases        AliasesForHostedZone
 	CredentialsParameter     string
+	PermissionsBoundary      string
 	HTTPRedirect             bool
 
 	// Additional options for service templates.
