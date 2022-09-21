@@ -6848,18 +6848,18 @@ func (mr *MockenvDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockenvDeployer)(nil).UploadArtifacts))
 }
 
-// Verify mocks base method.
-func (m *MockenvDeployer) Verify(ctx context.Context, mft *manifest.Environment) error {
+// Validate mocks base method.
+func (m *MockenvDeployer) Validate(ctx context.Context, mft *manifest.Environment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Verify", ctx, mft)
+	ret := m.ctrl.Call(m, "Validate", ctx, mft)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Verify indicates an expected call of Verify.
-func (mr *MockenvDeployerMockRecorder) Verify(ctx, mft interface{}) *gomock.Call {
+// Validate indicates an expected call of Validate.
+func (mr *MockenvDeployerMockRecorder) Validate(ctx, mft interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockenvDeployer)(nil).Verify), ctx, mft)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockenvDeployer)(nil).Validate), ctx, mft)
 }
 
 // MockenvPackager is a mock of envPackager interface.
@@ -6915,16 +6915,16 @@ func (mr *MockenvPackagerMockRecorder) UploadArtifacts() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadArtifacts", reflect.TypeOf((*MockenvPackager)(nil).UploadArtifacts))
 }
 
-// Verify mocks base method.
-func (m *MockenvPackager) Verify(ctx context.Context, mft *manifest.Environment) error {
+// Validate mocks base method.
+func (m *MockenvPackager) Validate(ctx context.Context, mft *manifest.Environment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Verify", ctx, mft)
+	ret := m.ctrl.Call(m, "Validate", ctx, mft)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Verify indicates an expected call of Verify.
-func (mr *MockenvPackagerMockRecorder) Verify(ctx, mft interface{}) *gomock.Call {
+// Validate indicates an expected call of Validate.
+func (mr *MockenvPackagerMockRecorder) Validate(ctx, mft interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockenvPackager)(nil).Verify), ctx, mft)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockenvPackager)(nil).Validate), ctx, mft)
 }

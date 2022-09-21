@@ -399,7 +399,7 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 	}
 }
 
-func TestEnvDeployer_Verify(t *testing.T) {
+func TestEnvDeployer_Validate(t *testing.T) {
 	listenerRuleNoRedirect := elbv2.Rule{
 		Actions: []*awselb.Action{
 			{
@@ -664,7 +664,7 @@ func TestEnvDeployer_Verify(t *testing.T) {
 				},
 			}
 
-			err := d.Verify(context.Background(), tc.mft)
+			err := d.Validate(context.Background(), tc.mft)
 			if tc.expected != "" {
 				require.EqualError(t, err, tc.expected)
 			} else {
