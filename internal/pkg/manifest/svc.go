@@ -118,7 +118,7 @@ func (r *RangeConfig) IsEmpty() bool {
 }
 
 // Count is a custom type which supports unmarshaling yaml which
-// can either be of type int or type AdvantedCount.
+// can either be of type int or type AdvancedCount.
 type Count struct {
 	Value         *int          // 0 is a valid value, so we want the default value to be nil.
 	AdvancedCount AdvancedCount // Mutually exclusive with Value.

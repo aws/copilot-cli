@@ -6,6 +6,7 @@
 package stack_test
 
 import (
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -54,7 +55,9 @@ func TestScheduledJob_Template(t *testing.T) {
 	require.ErrorAs(t, err, &notFound)
 
 	serializer, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
-		App:      appName,
+		App: &config.Application{
+			Name: appName,
+		},
 		Env:      envName,
 		Manifest: v,
 		RuntimeConfig: stack.RuntimeConfig{

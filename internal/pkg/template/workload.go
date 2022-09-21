@@ -203,6 +203,17 @@ type LogConfigOpts struct {
 	Secrets        map[string]Secret
 }
 
+// HTTPTargetContainer represents the target group of a load balancer that points to a container.
+type HTTPTargetContainer struct {
+	Name string // Name of the container.
+	Port string // Port of the container.
+}
+
+// IsHTTPS returns true if the target container's port is 443.
+func (tg HTTPTargetContainer) IsHTTPS() bool {
+	return tg.Port == "443"
+}
+
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
 	HealthCheckPath     string
@@ -533,11 +544,13 @@ type WorkloadOpts struct {
 	ALBEnabled               bool
 	HostedZoneAliases        AliasesForHostedZone
 	CredentialsParameter     string
+	PermissionsBoundary      string
 	HTTPRedirect             bool
 
 	// Additional options for service templates.
 	WorkloadType            string
 	HealthCheck             *ContainerHealthCheck
+	HTTPTargetContainer     HTTPTargetContainer
 	HTTPHealthCheck         HTTPHealthCheckOpts
 	DeregistrationDelay     *int64
 	AllowedSourceIps        []string

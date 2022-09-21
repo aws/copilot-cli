@@ -247,14 +247,15 @@ func (o *deployPipelineOpts) Execute() error {
 		return err
 	}
 	deployPipelineInput := &deploy.CreatePipelineInput{
-		AppName:         o.appName,
-		Name:            pipeline.Name,
-		IsLegacy:        isLegacy,
-		Source:          source,
-		Build:           &build,
-		Stages:          stages,
-		ArtifactBuckets: artifactBuckets,
-		AdditionalTags:  o.app.Tags,
+		AppName:             o.appName,
+		Name:                pipeline.Name,
+		IsLegacy:            isLegacy,
+		Source:              source,
+		Build:               &build,
+		Stages:              stages,
+		ArtifactBuckets:     artifactBuckets,
+		AdditionalTags:      o.app.Tags,
+		PermissionsBoundary: o.app.PermissionsBoundary,
 	}
 
 	if err := o.deployPipeline(deployPipelineInput); err != nil {
