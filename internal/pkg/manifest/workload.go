@@ -400,31 +400,35 @@ type PublishConfig struct {
 
 // Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
-	Name *string `yaml:"name"`
-	Fifo Fifo    `yaml:"fifo"`
+	Name *string                 `yaml:"name"`
+	Fifo FifoAdvanceConfigOrBool `yaml:"fifo"`
 }
 
-// Fifo represents the configurable options for fifo topics.
-type Fifo struct {
+// FifoAdvanceConfigOrBool represents the configurable options for fifo topics.
+type FifoAdvanceConfigOrBool struct {
 	Enable   *bool
 	Advanced FifoAdvanceConfig
 }
 
-// IsEmpty returns true if the struct has all nil values.
-func (f *Fifo) IsEmpty() bool {
+// IsEmpty returns true if the FifoAdvanceConfigOrBool struct has all nil values.
+func (f *FifoAdvanceConfigOrBool) IsEmpty() bool {
 	return f.Enable == nil && f.Advanced.IsEmpty()
 }
 
+// FifoAdvanceConfig represents the advanced fifo topic config.
 type FifoAdvanceConfig struct {
 	ContentBasedDeduplication *bool `yaml:"content_based_deduplication"`
 }
 
-// IsEmpty returns true if the struct has all nil values.
+// IsEmpty returns true if the FifoAdvanceConfig struct has all nil values.
 func (a *FifoAdvanceConfig) IsEmpty() bool {
 	return a.ContentBasedDeduplication == nil
 }
 
-func (t *Fifo) UnmarshalYAML(value *yaml.Node) error {
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the FifoAdvanceConfigOrBool
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (t *FifoAdvanceConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&t.Advanced); err != nil {
 		var yamlTypeErr *yaml.TypeError
 		if !errors.As(err, &yamlTypeErr) {

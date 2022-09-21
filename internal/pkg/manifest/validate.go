@@ -1414,20 +1414,23 @@ func (t Topic) validate() error {
 	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
 		return err
 	}
-	if t.Fifo.IsEmpty() {
-		return nil
-	}
-	if t.Fifo.Enable != nil {
-		return nil
-	}
-	if err := t.Fifo.Advanced.validate(); err != nil {
+	if err := t.Fifo.validate(); err != nil {
 		return err
 	}
 	return nil
 }
 
-// validate returns true if Fifo configuration is empty.
-func (f Fifo) validate() error {
+// validate returns nil if FifoAdvanceConfigOrBool is configured correctly.
+func (f FifoAdvanceConfigOrBool) validate() error {
+	if f.IsEmpty() {
+		return nil
+	}
+	if f.Enable != nil {
+		return nil
+	}
+	if err := f.Advanced.validate(); err != nil {
+		return err
+	}
 	return nil
 }
 
