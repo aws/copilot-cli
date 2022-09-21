@@ -6,6 +6,7 @@ package stack
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"regexp"
 	"strings"
 	"time"
@@ -90,11 +91,10 @@ func (e errDurationInvalid) Error() string {
 
 // ScheduledJobConfig contains data required to initialize a scheduled job stack.
 type ScheduledJobConfig struct {
-	App                 string
+	App                 *config.Application
 	Env                 string
 	Manifest            *manifest.ScheduledJob
 	RawManifest         []byte
-	PermissionsBoundary string
 	RuntimeConfig       RuntimeConfig
 	Addons              addons
 }
@@ -107,8 +107,8 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 			wkld: &wkld{
 				name:        aws.StringValue(cfg.Manifest.Name),
 				env:         cfg.Env,
-				app:         cfg.App,
-				permBound:   cfg.PermissionsBoundary,
+				app:         cfg.App.Name,
+				permBound:   cfg.App.PermissionsBoundary,
 				rc:          cfg.RuntimeConfig,
 				image:       cfg.Manifest.ImageConfig.Image,
 				rawManifest: cfg.RawManifest,

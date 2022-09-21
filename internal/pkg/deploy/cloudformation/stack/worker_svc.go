@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -29,9 +30,8 @@ type WorkerService struct {
 
 // WorkerServiceConfig contains data required to initialize a scheduled job stack.
 type WorkerServiceConfig struct {
-	App                 string
+	App                 *config.Application
 	Env                 string
-	PermissionsBoundary string
 	Manifest            *manifest.WorkerService
 	RawManifest         []byte
 	RuntimeConfig       RuntimeConfig
@@ -46,8 +46,8 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 			wkld: &wkld{
 				name:        aws.StringValue(cfg.Manifest.Name),
 				env:         cfg.Env,
-				app:         cfg.App,
-				permBound:   cfg.PermissionsBoundary,
+				app:         cfg.App.Name,
+				permBound:   cfg.App.PermissionsBoundary,
 				rc:          cfg.RuntimeConfig,
 				image:       cfg.Manifest.ImageConfig.Image,
 				rawManifest: cfg.RawManifest,

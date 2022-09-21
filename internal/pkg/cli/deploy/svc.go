@@ -1176,11 +1176,10 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 		return nil, err
 	}
 	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
-		App:                 d.app.Name,
+		App:                 d.app,
 		Env:                 d.env.Name,
 		Manifest:            d.wsMft,
 		RawManifest:         d.rawMft,
-		PermissionsBoundary: d.app.PermissionsBoundary,
 		RuntimeConfig:       *rc,
 		Addons:              d.addons,
 	})
@@ -1208,11 +1207,10 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 		return nil, err
 	}
 	conf, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
-		App:                 d.app.Name,
+		App:                 d.app,
 		Env:                 d.env.Name,
 		Manifest:            d.jobMft,
 		RawManifest:         d.rawMft,
-		PermissionsBoundary: d.app.PermissionsBoundary,
 		RuntimeConfig:       *rc,
 		Addons:              d.addons,
 	})
