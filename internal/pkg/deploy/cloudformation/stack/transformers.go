@@ -808,7 +808,6 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	for _, topic := range topics {
 		publishers.Topics = append(publishers.Topics, &template.Topic{
 			Name:      topic.Name,
-			Type:      aws.StringValue(topic.Type),
 			AccountID: accountID,
 			Partition: partition.ID(),
 			Region:    region,
@@ -845,11 +844,9 @@ func convertTopicSubscription(t manifest.TopicSubscription) (
 	}
 	if aws.BoolValue(t.Queue.Enabled) {
 		return &template.TopicSubscription{
-			Name:    t.Name,
-			Service: t.Service,
-			Queue: &template.SQSQueue{
-				Type: aws.String(sqsDefaultQueueType),
-			},
+			Name:         t.Name,
+			Service:      t.Service,
+			Queue:        &template.SQSQueue{},
 			FilterPolicy: filterPolicy,
 		}, nil
 	}
@@ -882,20 +879,43 @@ func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
 		Delay:      convertDelay(q.Delay),
 		Timeout:    convertTimeout(q.Timeout),
 		DeadLetter: convertDeadLetter(q.DeadLetter),
-		Type:       q.Type,
 	}
 
-	if aws.StringValue(q.Type) == sqsStandardQueueType {
+	if q.FIFO.IsEmpty() {
 		return queue
 	}
 
-	queue.ContentBasedDeduplication = q.ContentBasedDeduplication
-	queue.DeduplicationScope = q.DeduplicationScope
-	queue.FifoThroughputLimit = q.FifoThroughputLimit
-	if aws.BoolValue(q.HighThroughputFifo) {
-		queue.FifoThroughputLimit = aws.String(sqsFIFOThroughputLimitPerMessageGroupId)
-		queue.DeduplicationScope = aws.String(sqsDedupeScopeMessageGroup)
+	if aws.BoolValue(q.FIFO.Enable) {
+		queue.FIFOQueueConfig = &template.FIFOQueueConfig{
+			Enable: nil,
+		}
+		queue.FIFOQueueConfig.Enable = aws.Bool(true)
+		return queue
 	}
+
+	if !q.FIFO.Advanced.IsEmpty() {
+		queue.FIFOQueueConfig = &template.FIFOQueueConfig{
+			Advanced: &template.FIFOAdvanceConfig{
+				ContentBasedDeduplication: nil,
+				DeduplicationScope:        nil,
+				FIFOThroughputLimit:       nil,
+			},
+		}
+		if q.FIFO.Advanced.ContentBasedDeduplication != nil {
+			queue.FIFOQueueConfig.Advanced.ContentBasedDeduplication = q.FIFO.Advanced.ContentBasedDeduplication
+		}
+		if q.FIFO.Advanced.DeduplicationScope != nil {
+			queue.FIFOQueueConfig.Advanced.DeduplicationScope = q.FIFO.Advanced.DeduplicationScope
+		}
+		if q.FIFO.Advanced.FIFOThroughputLimit != nil {
+			queue.FIFOQueueConfig.Advanced.FIFOThroughputLimit = q.FIFO.Advanced.FIFOThroughputLimit
+		}
+		if aws.BoolValue(q.FIFO.Advanced.HighThroughputFifo) {
+			queue.FIFOQueueConfig.Advanced.FIFOThroughputLimit = aws.String(sqsFIFOThroughputLimitPerMessageGroupId)
+			queue.FIFOQueueConfig.Advanced.DeduplicationScope = aws.String(sqsDedupeScopeMessageGroup)
+		}
+	}
+
 	return queue
 }
 

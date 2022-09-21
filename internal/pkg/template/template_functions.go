@@ -59,14 +59,16 @@ func EnvVarNameFunc(s string) string {
 	return StripNonAlphaNumFunc(s) + "Name"
 }
 
+// IsFIFO checks if the given queue has FIFO config.
+func (s SQSQueue) IsFIFO() bool {
+	return s.FIFOQueueConfig != nil
+}
+
 // EnvVarSecretFunc converts an input resource name to LogicalIDSafe, then appends
 // "Secret" to the end.
 func EnvVarSecretFunc(s string) string {
 	return StripNonAlphaNumFunc(s) + "Secret"
 }
-
-// Deref dereferences the pointer.
-func Deref(i *string) string { return *i }
 
 // Grabs word boundaries in default CamelCase. Matches lowercase letters & numbers
 // before the next capital as capturing group 1, and the first capital in the

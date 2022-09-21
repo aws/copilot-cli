@@ -425,14 +425,24 @@ type TopicSubscription struct {
 
 // SQSQueue holds information needed to render a SQS Queue in a container definition.
 type SQSQueue struct {
-	Retention                 *int64
-	Delay                     *int64
-	Timeout                   *int64
-	DeadLetter                *DeadLetterQueue
-	FifoThroughputLimit       *string
+	Retention       *int64
+	Delay           *int64
+	Timeout         *int64
+	DeadLetter      *DeadLetterQueue
+	FIFOQueueConfig *FIFOQueueConfig
+}
+
+// FifoAdvanceConfigOrBool holds information needed to render a FIFO SQS Queue in a container definition.
+type FIFOQueueConfig struct {
+	Enable   *bool
+	Advanced *FIFOAdvanceConfig
+}
+
+// FifoAdvanceConfig holds information needed to render a advanced FIFO SQS Queue in a container definition.
+type FIFOAdvanceConfig struct {
+	FIFOThroughputLimit       *string
 	ContentBasedDeduplication *bool
 	DeduplicationScope        *string
-	Type                      *string
 }
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
@@ -633,7 +643,6 @@ func withSvcParsingFuncs() ParseOption {
 			"pluralWord":           english.PluralWord,
 			"contains":             contains,
 			"requiresVPCConnector": requiresVPCConnector,
-			"deref":                Deref,
 		})
 	}
 }

@@ -38,12 +38,15 @@ func newMockSQSFIFOQueueOrBool() SQSQueueOrBool {
 func newMockSQSFIFOQueue() SQSQueue {
 	duration111Seconds := 111 * time.Second
 	return SQSQueue{
-		Retention:           &duration111Seconds,
-		Delay:               &duration111Seconds,
-		Timeout:             &duration111Seconds,
-		DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
-		FifoThroughputLimit: aws.String("perMessageID"),
-		Type:                aws.String(sqsFifoQueueType),
+		Retention:  &duration111Seconds,
+		Delay:      &duration111Seconds,
+		Timeout:    &duration111Seconds,
+		DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+		FIFO: FIFOAdvanceConfigOrBool{
+			Advanced: FIFOAdvanceConfig{
+				FIFOThroughputLimit: aws.String("perMessageID"),
+			},
+		},
 	}
 }
 
@@ -1330,14 +1333,11 @@ func TestWorkerService_RetrofitFIFOConfig(t *testing.T) {
 										Delay:      &duration111Seconds,
 										Timeout:    &duration111Seconds,
 										DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-										Type:       aws.String(sqsDefaultQueueType),
 									},
 								},
 							},
 						},
-						Queue: SQSQueue{
-							Type: aws.String(sqsDefaultQueueType),
-						},
+						Queue: SQSQueue{},
 					},
 				},
 			},
@@ -1366,9 +1366,7 @@ func TestWorkerService_RetrofitFIFOConfig(t *testing.T) {
 								Queue:   newMockSQSFIFOQueueOrBool(),
 							},
 						},
-						Queue: SQSQueue{
-							Type: aws.String(sqsDefaultQueueType),
-						},
+						Queue: SQSQueue{},
 					},
 				},
 			},
@@ -1395,9 +1393,7 @@ func TestWorkerService_RetrofitFIFOConfig(t *testing.T) {
 								Service: aws.String("svc"),
 							},
 						},
-						Queue: SQSQueue{
-							Type: aws.String(sqsDefaultQueueType),
-						},
+						Queue: SQSQueue{},
 					},
 				},
 			},
@@ -1430,7 +1426,6 @@ func TestWorkerService_RetrofitFIFOConfig(t *testing.T) {
 							Delay:      &duration111Seconds,
 							Timeout:    &duration111Seconds,
 							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-							Type:       aws.String(sqsDefaultQueueType),
 						},
 					},
 				},
@@ -1497,7 +1492,6 @@ func TestWorkerService_RetrofitFIFOConfig(t *testing.T) {
 										Delay:      &duration111Seconds,
 										Timeout:    &duration111Seconds,
 										DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
-										Type:       aws.String(sqsDefaultQueueType),
 									},
 								},
 							},
@@ -1544,9 +1538,7 @@ func TestWorkerService_RetrofitFIFOConfig(t *testing.T) {
 								Queue:   newMockSQSFIFOQueueOrBool(),
 							},
 						},
-						Queue: SQSQueue{
-							Type: aws.String(sqsDefaultQueueType),
-						},
+						Queue: SQSQueue{},
 					},
 				},
 			},

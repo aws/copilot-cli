@@ -580,22 +580,6 @@ func TestBackendService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "publish": `,
 		},
-		"error if invalid type is defined": {
-			config: BackendService{
-				BackendServiceConfig: BackendServiceConfig{
-					ImageConfig: testImageConfig,
-					PublishConfig: PublishConfig{
-						Topics: []Topic{
-							{
-								Name: aws.String("mytopic"),
-								Type: aws.String("incorrectValue"),
-							},
-						},
-					},
-				},
-			},
-			wantedErrorMsgPrefix: `validate "publish": validate "topics[0]": "type" value "incorrectValue" is not allowed`,
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -2802,17 +2786,19 @@ func TestTopicSubscription_validate(t *testing.T) {
 			},
 			wanted: nil,
 		},
-		"should return error if invalid queue type is provided": {
+		"should not return error if fifo queue is enabled": {
 			in: TopicSubscription{
 				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
-						Type: aws.String("FIFO"), // it is case-sensitive, correct values are standard or fifo.
+						FIFO: FIFOAdvanceConfigOrBool{
+							Enable: aws.Bool(true),
+						},
 					},
 				},
 			},
-			wanted: errors.New(`validate "queue": validate "type": type value must be one of standard or fifo`),
+			wanted: nil,
 		},
 		"should return error if invalid fifo throughput limit": {
 			in: TopicSubscription{
@@ -2820,12 +2806,15 @@ func TestTopicSubscription_validate(t *testing.T) {
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
-						Retention:           &duration111Seconds,
-						Delay:               &duration111Seconds,
-						Timeout:             &duration111Seconds,
-						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
-						FifoThroughputLimit: aws.String("incorrectFIFOThoughoutLimit"),
-						Type:                aws.String(sqsFifoQueueType),
+						Retention:  &duration111Seconds,
+						Delay:      &duration111Seconds,
+						Timeout:    &duration111Seconds,
+						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+						FIFO: FIFOAdvanceConfigOrBool{
+							Advanced: FIFOAdvanceConfig{
+								FIFOThroughputLimit: aws.String("incorrectFIFOThoughoutLimit"),
+							},
+						},
 					},
 				},
 			},
@@ -2837,12 +2826,15 @@ func TestTopicSubscription_validate(t *testing.T) {
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
-						Retention:           &duration111Seconds,
-						Delay:               &duration111Seconds,
-						Timeout:             &duration111Seconds,
-						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
-						FifoThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
-						Type:                aws.String(sqsFifoQueueType),
+						Retention:  &duration111Seconds,
+						Delay:      &duration111Seconds,
+						Timeout:    &duration111Seconds,
+						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+						FIFO: FIFOAdvanceConfigOrBool{
+							Advanced: FIFOAdvanceConfig{
+								FIFOThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
+							},
+						},
 					},
 				},
 			},
@@ -2854,12 +2846,15 @@ func TestTopicSubscription_validate(t *testing.T) {
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
-						Retention:          &duration111Seconds,
-						Delay:              &duration111Seconds,
-						Timeout:            &duration111Seconds,
-						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
-						DeduplicationScope: aws.String("incorrectDeduplicateScope"),
-						Type:               aws.String(sqsFifoQueueType),
+						Retention:  &duration111Seconds,
+						Delay:      &duration111Seconds,
+						Timeout:    &duration111Seconds,
+						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+						FIFO: FIFOAdvanceConfigOrBool{
+							Advanced: FIFOAdvanceConfig{
+								DeduplicationScope: aws.String("incorrectDeduplicateScope"),
+							},
+						},
 					},
 				},
 			},
@@ -2871,32 +2866,19 @@ func TestTopicSubscription_validate(t *testing.T) {
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
-						Retention:          &duration111Seconds,
-						Delay:              &duration111Seconds,
-						Timeout:            &duration111Seconds,
-						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
-						DeduplicationScope: aws.String(sqsFifoMessageGroup),
-						Type:               aws.String(sqsFifoQueueType),
+						Retention:  &duration111Seconds,
+						Delay:      &duration111Seconds,
+						Timeout:    &duration111Seconds,
+						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+						FIFO: FIFOAdvanceConfigOrBool{
+							Advanced: FIFOAdvanceConfig{
+								DeduplicationScope: aws.String(sqsFifoMessageGroup),
+							},
+						},
 					},
 				},
 			},
 			wanted: nil,
-		},
-		"should return error if standard queue config has fifo queue parameters defined": {
-			in: TopicSubscription{
-				Name:    aws.String("mockTopic"),
-				Service: aws.String("mockservice"),
-				Queue: SQSQueueOrBool{
-					Advanced: SQSQueue{
-						Retention:          &duration111Seconds,
-						Delay:              &duration111Seconds,
-						Timeout:            &duration111Seconds,
-						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
-						DeduplicationScope: aws.String(sqsFifoMessageGroup),
-					},
-				},
-			},
-			wanted: errors.New(`validate "queue": parameters such as "content_based_deduplication", "deduplication_scope", "fifo_throughput_limit", and "high_throughput_fifo" are only used with FIFO SQS Queue; to enable fifo SQS add type: fifo in your topic specific queue`),
 		},
 		"should return error if high_throughput_fifo is defined along with deduplication_scope": {
 			in: TopicSubscription{
@@ -2904,13 +2886,16 @@ func TestTopicSubscription_validate(t *testing.T) {
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
-						Retention:          &duration111Seconds,
-						Delay:              &duration111Seconds,
-						Timeout:            &duration111Seconds,
-						DeadLetter:         DeadLetterQueue{Tries: aws.Uint16(10)},
-						HighThroughputFifo: aws.Bool(true),
-						DeduplicationScope: aws.String(sqsFifoMessageGroup),
-						Type:               aws.String(sqsFifoQueueType),
+						Retention:  &duration111Seconds,
+						Delay:      &duration111Seconds,
+						Timeout:    &duration111Seconds,
+						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+						FIFO: FIFOAdvanceConfigOrBool{
+							Advanced: FIFOAdvanceConfig{
+								HighThroughputFifo: aws.Bool(true),
+								DeduplicationScope: aws.String(sqsFifoMessageGroup),
+							},
+						},
 					},
 				},
 			},
@@ -2922,13 +2907,16 @@ func TestTopicSubscription_validate(t *testing.T) {
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
-						Retention:           &duration111Seconds,
-						Delay:               &duration111Seconds,
-						Timeout:             &duration111Seconds,
-						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
-						HighThroughputFifo:  aws.Bool(true),
-						FifoThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
-						Type:                aws.String(sqsFifoQueueType),
+						Retention:  &duration111Seconds,
+						Delay:      &duration111Seconds,
+						Timeout:    &duration111Seconds,
+						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+						FIFO: FIFOAdvanceConfigOrBool{
+							Advanced: FIFOAdvanceConfig{
+								HighThroughputFifo:  aws.Bool(true),
+								FIFOThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
+							},
+						},
 					},
 				},
 			},
@@ -2940,13 +2928,16 @@ func TestTopicSubscription_validate(t *testing.T) {
 				Service: aws.String("mockservice"),
 				Queue: SQSQueueOrBool{
 					Advanced: SQSQueue{
-						Retention:           &duration111Seconds,
-						Delay:               &duration111Seconds,
-						Timeout:             &duration111Seconds,
-						DeadLetter:          DeadLetterQueue{Tries: aws.Uint16(10)},
-						FifoThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
-						DeduplicationScope:  aws.String(sqsFifoQueue),
-						Type:                aws.String(sqsFifoQueueType),
+						Retention:  &duration111Seconds,
+						Delay:      &duration111Seconds,
+						Timeout:    &duration111Seconds,
+						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+						FIFO: FIFOAdvanceConfigOrBool{
+							Advanced: FIFOAdvanceConfig{
+								FIFOThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
+								DeduplicationScope:  aws.String(sqsFifoQueue),
+							},
+						},
 					},
 				},
 			},

@@ -60,7 +60,7 @@ EventsKMSKey:
 
 EventsQueue:
   Metadata:
-    'aws:copilot:description': {{ if and  .Subscribe .Subscribe.Queue (eq (deref .Subscribe.Queue.Type) "fifo")}}'An events SQS FIFO queue to buffer messages'{{ else}}'An events SQS queue to buffer messages'{{ end}}
+    'aws:copilot:description': {{ if and  .Subscribe .Subscribe.Queue .Subscribe.Queue.IsFIFO }}'An events SQS FIFO queue to buffer messages'{{ else}}'An events SQS queue to buffer messages'{{ end}}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -80,29 +80,31 @@ EventsQueue:
       deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
       maxReceiveCount: {{.Subscribe.Queue.DeadLetter.Tries}}
     {{- end}}
-    {{- if eq (deref .Subscribe.Queue.Type) "fifo"}}
+    {{- if .Subscribe.Queue.IsFIFO }}
     FifoQueue: true
+    {{- if .Subscribe.Queue.FIFOQueueConfig.Advanced }}
+    {{- if .Subscribe.Queue.FIFOQueueConfig.Advanced.FIFOThroughputLimit }}
+    FifoThroughputLimit: {{.Subscribe.Queue.FIFOQueueConfig.Advanced.FIFOThroughputLimit}}
     {{- end}}
-    {{- if .Subscribe.Queue.FifoThroughputLimit }}
-    FifoThroughputLimit: {{.Subscribe.Queue.FifoThroughputLimit}}
-    {{- end}}
-    {{- if .Subscribe.Queue.DeduplicationScope }}
-    DeduplicationScope: {{.Subscribe.Queue.DeduplicationScope}}
+    {{- if .Subscribe.Queue.FIFOQueueConfig.Advanced.DeduplicationScope }}
+    DeduplicationScope: {{.Subscribe.Queue.FIFOQueueConfig.Advanced.DeduplicationScope}}
     {{- end }}
-    {{- if .Subscribe.Queue.ContentBasedDeduplication }}
-    ContentBasedDeduplication: {{.Subscribe.Queue.ContentBasedDeduplication}}
+    {{- if .Subscribe.Queue.FIFOQueueConfig.Advanced.ContentBasedDeduplication }}
+    ContentBasedDeduplication: {{.Subscribe.Queue.FIFOQueueConfig.Advanced.ContentBasedDeduplication}}
+    {{- end}}
+    {{- end}}
     {{- end}}
   {{- end}}
 
 {{- if .Subscribe.Queue}}{{- if .Subscribe.Queue.DeadLetter}}
 DeadLetterQueue:
   Metadata:
-    'aws:copilot:description': {{ if eq (deref .Subscribe.Queue.Type) "fifo"}}'A dead letter SQS FIFO queue to buffer failed messages from the events queue'{{ else}} 'A dead letter SQS queue to buffer failed messages from the events queue'{{ end}}
+    'aws:copilot:description': {{ if .Subscribe.Queue.IsFIFO }}'A dead letter SQS FIFO queue to buffer failed messages from the events queue'{{ else}} 'A dead letter SQS queue to buffer failed messages from the events queue'{{ end}}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
     MessageRetentionPeriod: 1209600 # 14 days
-    {{- if eq (deref .Subscribe.Queue.Type) "fifo" }}
+    {{- if .Subscribe.Queue.IsFIFO}}
     FifoQueue: true
     {{- end }}
 
@@ -178,7 +180,7 @@ QueuePolicy:
 {{- if $topic.Queue}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue:
   Metadata:
-    'aws:copilot:description': {{ if eq (deref $topic.Queue.Type) "fifo"}}'A SQS FIFO queue to buffer messages from the topic {{$topic.Name}}' {{ else }} 'A SQS queue to buffer messages from the topic {{$topic.Name}}' {{ end }}
+    'aws:copilot:description': {{ if $topic.Queue.IsFIFO }}'A SQS FIFO queue to buffer messages from the topic {{$topic.Name}}' {{ else }} 'A SQS queue to buffer messages from the topic {{$topic.Name}}' {{ end }}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
@@ -196,28 +198,30 @@ QueuePolicy:
       deadLetterTargetArn: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue.Arn
       maxReceiveCount: {{$topic.Queue.DeadLetter.Tries}}
     {{- end}}
-    {{- if eq (deref $topic.Queue.Type) "fifo"}}
+    {{- if $topic.Queue.IsFIFO }}
     FifoQueue: true
+    {{- if $topic.Queue.FIFOQueueConfig.Advanced}}
+    {{- if $topic.Queue.FIFOQueueConfig.Advanced.FIFOThroughputLimit }}
+    FifoThroughputLimit: {{$topic.Queue.FIFOQueueConfig.Advanced.FIFOThroughputLimit}}
     {{- end}}
-    {{- if $topic.Queue.FifoThroughputLimit }}
-    FifoThroughputLimit: {{$topic.Queue.FifoThroughputLimit}}
-    {{- end}}
-    {{- if $topic.Queue.DeduplicationScope }}
-    DeduplicationScope: {{$topic.Queue.DeduplicationScope}}
+    {{- if $topic.Queue.FIFOQueueConfig.Advanced.DeduplicationScope }}
+    DeduplicationScope: {{$topic.Queue.FIFOQueueConfig.Advanced.DeduplicationScope}}
     {{- end }}
-    {{- if $topic.Queue.ContentBasedDeduplication }}
-    ContentBasedDeduplication: {{$topic.Queue.ContentBasedDeduplication}}
+    {{- if $topic.Queue.FIFOQueueConfig.Advanced.ContentBasedDeduplication }}
+    ContentBasedDeduplication: {{$topic.Queue.FIFOQueueConfig.Advanced.ContentBasedDeduplication}}
+    {{- end}}
+    {{- end}}
     {{- end}}
 
 {{- if $topic.Queue.DeadLetter}}
 {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}DeadLetterQueue:
   Metadata:
-    'aws:copilot:description': {{ if eq (deref $topic.Queue.Type) "fifo"}} 'A dead letter SQS FIFO queue to buffer failed messages from the topic {{$topic.Name}}' {{ else }} 'A dead letter SQS queue to buffer failed messages from the topic {{$topic.Name}}' {{ end }}
+    'aws:copilot:description': {{ if $topic.Queue.IsFIFO }} 'A dead letter SQS FIFO queue to buffer failed messages from the topic {{$topic.Name}}' {{ else }} 'A dead letter SQS queue to buffer failed messages from the topic {{$topic.Name}}' {{ end }}
   Type: AWS::SQS::Queue
   Properties:
     KmsMasterKeyId: !Ref EventsKMSKey
     MessageRetentionPeriod: 1209600 # 14 days
-    {{- if eq (deref $topic.Queue.Type) "fifo"}}
+    {{- if $topic.Queue.IsFIFO}}
     FifoQueue: true
     {{- end}}
 
@@ -261,7 +265,7 @@ QueuePolicy:
           Resource: !GetAtt {{logicalIDSafe $topic.Service}}{{logicalIDSafe $topic.Name}}EventsQueue.Arn
           Condition:
             ArnEquals:
-              aws:SourceArn: {{ if eq (deref $topic.Queue.Type) "fifo"}} !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{$topic.Name}}']] {{ else }} !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']] {{ end }}
+              aws:SourceArn: {{ if $topic.Queue.IsFIFO }} !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{$topic.Name}}']] {{ else }} !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-{{$topic.Service}}-{{logicalIDSafe $topic.Name}}']] {{ end }}
 {{- end}}{{/* endif $topic.Queue */}}
 {{- end}}{{/* endrange $topic := .Subscribe.Topics */}}
 {{- end}}{{/* if .Subscribe */}}

@@ -5,7 +5,6 @@ package manifest
 
 import (
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,7 +21,8 @@ const (
 )
 
 var (
-	errUnmarshalQueueOpts = errors.New(`cannot unmarshal "queue" field into bool or map`)
+	errUnmarshalQueueOpts  = errors.New(`cannot unmarshal "queue" field into bool or map`)
+	errUnmarshalFifoConfig = errors.New("unable to unmarshal fifo field into boolean or compose-style map")
 )
 
 // WorkerService holds the configuration to create a worker service.
@@ -90,18 +90,6 @@ func (q *SQSQueueOrBool) IsEmpty() bool {
 	return q.Advanced.IsEmpty() && q.Enabled == nil
 }
 
-// UnmarshalYAML implements the yaml(v3) interface. Here it sets default value
-// of the type field if it is not set already.
-func (t *Topic) UnmarshalYAML(value *yaml.Node) error {
-	t.Type = aws.String(defaultTopicType)
-
-	type plain Topic
-	if err := value.Decode((*plain)(t)); err != nil {
-		return err
-	}
-	return nil
-}
-
 // UnmarshalYAML implements the yaml(v3) interface. It allows SQSQueueOrBool to be specified as a
 // string or a struct alternately.
 func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
@@ -126,22 +114,61 @@ func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
 
 // SQSQueue represents the configurable options for setting up a SQS Queue.
 type SQSQueue struct {
-	Retention                 *time.Duration  `yaml:"retention"`
-	Delay                     *time.Duration  `yaml:"delay"`
-	Timeout                   *time.Duration  `yaml:"timeout"`
-	DeadLetter                DeadLetterQueue `yaml:"dead_letter"`
-	ContentBasedDeduplication *bool           `yaml:"content_based_deduplication"`
-	DeduplicationScope        *string         `yaml:"deduplication_scope"`
-	FifoThroughputLimit       *string         `yaml:"fifo_throughput_limit"`
-	HighThroughputFifo        *bool           `yaml:"high_throughput_fifo"`
-	Type                      *string         `yaml:"type"`
+	Retention  *time.Duration          `yaml:"retention"`
+	Delay      *time.Duration          `yaml:"delay"`
+	Timeout    *time.Duration          `yaml:"timeout"`
+	DeadLetter DeadLetterQueue         `yaml:"dead_letter"`
+	FIFO       FIFOAdvanceConfigOrBool `yaml:"fifo"`
+}
+
+// FIFOAdvanceConfigOrBool represents the configurable options for fifo queues.
+type FIFOAdvanceConfigOrBool struct {
+	Enable   *bool
+	Advanced FIFOAdvanceConfig
+}
+
+// IsEmpty returns true if the FifoAdvanceConfigOrBool struct has all nil values.
+func (f *FIFOAdvanceConfigOrBool) IsEmpty() bool {
+	return f.Enable == nil && f.Advanced.IsEmpty()
+}
+
+// FifoAdvanceConfig represents the advanced fifo queue config.
+type FIFOAdvanceConfig struct {
+	ContentBasedDeduplication *bool   `yaml:"content_based_deduplication"`
+	DeduplicationScope        *string `yaml:"deduplication_scope"`
+	FIFOThroughputLimit       *string `yaml:"fifo_throughput_limit"`
+	HighThroughputFifo        *bool   `yaml:"high_throughput_fifo"`
+}
+
+// IsEmpty returns true if the FifoAdvanceConfig struct has all nil values.
+func (f *FIFOAdvanceConfig) IsEmpty() bool {
+	return f.FIFOThroughputLimit == nil && f.HighThroughputFifo == nil &&
+		f.DeduplicationScope == nil && f.ContentBasedDeduplication == nil
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the FifoAdvanceConfigOrBool
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (t *FIFOAdvanceConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&t.Advanced); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+	if !t.Advanced.IsEmpty() {
+		return nil
+	}
+	if err := value.Decode(&t.Enable); err != nil {
+		return errUnmarshalFifoConfig
+	}
+	return nil
 }
 
 // IsEmpty returns empty if the struct has all zero members.
 func (q *SQSQueue) IsEmpty() bool {
 	return q.Retention == nil && q.Delay == nil && q.Timeout == nil &&
-		q.DeadLetter.IsEmpty() && q.FifoThroughputLimit == nil && q.HighThroughputFifo == nil &&
-		q.DeduplicationScope == nil && q.ContentBasedDeduplication == nil && q.Type == nil
+		q.DeadLetter.IsEmpty() && q.FIFO.IsEmpty()
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
@@ -221,22 +248,11 @@ func (s *WorkerService) Subscriptions() []TopicSubscription {
 func (s *WorkerService) RetrofitFIFOConfig() {
 	for idx, topic := range s.Subscribe.Topics {
 		// if condition appends .fifo suffix to the topic which doesn't have topic specific queue and subscribing to default FIFO queue.
-		if topic.Queue.IsEmpty() && !s.Subscribe.Queue.IsEmpty() && s.Subscribe.Queue.Type != nil && strings.Compare(aws.StringValue(s.Subscribe.Queue.Type), "fifo") == 0 {
+		if topic.Queue.IsEmpty() && !s.Subscribe.Queue.IsEmpty() && !s.Subscribe.Queue.FIFO.IsEmpty() {
 			s.Subscribe.Topics[idx].Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
-		} else if !topic.Queue.IsEmpty() && !topic.Queue.Advanced.IsEmpty() && topic.Queue.Advanced.Type != nil && strings.Compare(aws.StringValue(topic.Queue.Advanced.Type), "fifo") == 0 { // else if condition appends .fifo suffix to the topic which has topic specific FIFO queue configuration.
+		} else if !topic.Queue.IsEmpty() && !topic.Queue.Advanced.IsEmpty() && !topic.Queue.Advanced.FIFO.IsEmpty() { // else if condition appends .fifo suffix to the topic which has topic specific FIFO queue configuration.
 			s.Subscribe.Topics[idx].Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
 		}
-		// if condition sets topic specific type to defaultQueueType (i.e. standard) in case customer doesn't define it in their topic specific queue.
-		if !topic.Queue.IsEmpty() && !topic.Queue.Advanced.IsEmpty() && topic.Queue.Advanced.Type == nil {
-			s.Subscribe.Topics[idx].Queue.Advanced.Type = aws.String(sqsDefaultQueueType)
-		}
-	}
-	if s.Subscribe.Queue.IsEmpty() && s.Subscribe.Topics != nil {
-		s.Subscribe.Queue = SQSQueue{
-			Type: aws.String(sqsDefaultQueueType),
-		}
-	} else if !s.Subscribe.Queue.IsEmpty() && s.Subscribe.Queue.Type == nil {
-		s.Subscribe.Queue.Type = aws.String(sqsDefaultQueueType)
 	}
 }
 

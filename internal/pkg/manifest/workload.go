@@ -412,7 +412,6 @@ type PublishConfig struct {
 // Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
 	Name *string `yaml:"name"`
-	Type *string `yaml:"type"`
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
