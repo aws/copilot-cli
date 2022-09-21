@@ -152,9 +152,8 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 	}, nil
 }
 
-// Verify checks that the manifest configuration is valid to deploy alongside
-// the currently deployed resources.
-func (d *envDeployer) Verify(ctx context.Context, mft *manifest.Environment) error {
+// Validate returns an error if the environment manifest is incompatible with services and application configurations.
+func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment) error {
 	if mft.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && d.app.Domain != "" {
 		// With managed domain, if the customer isn't using `alias` the A-records are inserted in the service stack as each service domain is unique.
 		// However, when clients enable CloudFront, they would need to update all their existing records to now point to the distribution.
