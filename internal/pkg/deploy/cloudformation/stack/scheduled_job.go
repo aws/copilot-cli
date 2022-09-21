@@ -90,12 +90,13 @@ func (e errDurationInvalid) Error() string {
 
 // ScheduledJobConfig contains data required to initialize a scheduled job stack.
 type ScheduledJobConfig struct {
-	App           string
-	Env           string
-	Manifest      *manifest.ScheduledJob
-	RawManifest   []byte
-	RuntimeConfig RuntimeConfig
-	Addons        addons
+	App                 string
+	Env                 string
+	Manifest            *manifest.ScheduledJob
+	RawManifest         []byte
+	PermissionsBoundary string
+	RuntimeConfig       RuntimeConfig
+	Addons              addons
 }
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
@@ -107,6 +108,7 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 				name:        aws.StringValue(cfg.Manifest.Name),
 				env:         cfg.Env,
 				app:         cfg.App,
+				permBound:   cfg.PermissionsBoundary,
 				rc:          cfg.RuntimeConfig,
 				image:       cfg.Manifest.ImageConfig.Image,
 				rawManifest: cfg.RawManifest,
@@ -187,7 +189,7 @@ func (j *ScheduledJob) Template() (string, error) {
 		EnvVersion:               j.rc.EnvVersion,
 
 		CustomResources:     crs,
-		PermissionsBoundary: j.rc.PermissionsBoundary,
+		PermissionsBoundary: j.permBound,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)

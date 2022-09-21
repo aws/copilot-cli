@@ -221,13 +221,12 @@ func (o *deploySvcOpts) Execute() error {
 	}
 	deployRecs, err := deployer.DeployWorkload(&clideploy.DeployWorkloadInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
-			ImageDigest:         uploadOut.ImageDigest,
-			EnvFileARN:          uploadOut.EnvFileARN,
-			AddonsURL:           uploadOut.AddonsURL,
-			RootUserARN:         o.rootUserARN,
-			PermissionsBoundary: targetApp.PermissionsBoundary,
-			Tags:                tags.Merge(targetApp.Tags, o.resourceTags),
-			CustomResourceURLs:  uploadOut.CustomResourceURLs,
+			ImageDigest:        uploadOut.ImageDigest,
+			EnvFileARN:         uploadOut.EnvFileARN,
+			AddonsURL:          uploadOut.AddonsURL,
+			RootUserARN:        o.rootUserARN,
+			Tags:               tags.Merge(targetApp.Tags, o.resourceTags),
+			CustomResourceURLs: uploadOut.CustomResourceURLs,
 		},
 		Options: clideploy.Options{
 			ForceNewUpdate:  o.forceNewUpdate,

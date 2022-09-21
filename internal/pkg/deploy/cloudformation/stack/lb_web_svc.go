@@ -53,14 +53,13 @@ func WithNLB(cidrBlocks []string) func(s *LoadBalancedWebService) {
 
 // LoadBalancedWebServiceConfig contains fields to configure LoadBalancedWebService.
 type LoadBalancedWebServiceConfig struct {
-	App                 *config.Application
-	PermissionsBoundary string
-	EnvManifest         *manifest.Environment
-	Manifest            *manifest.LoadBalancedWebService
-	RawManifest         []byte // Content of the manifest file without any transformations.
-	RuntimeConfig       RuntimeConfig
-	RootUserARN         string
-	Addons              addons
+	App           *config.Application
+	EnvManifest   *manifest.Environment
+	Manifest      *manifest.LoadBalancedWebService
+	RawManifest   []byte // Content of the manifest file without any transformations.
+	RuntimeConfig RuntimeConfig
+	RootUserARN   string
+	Addons        addons
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
@@ -93,6 +92,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				name:        aws.StringValue(conf.Manifest.Name),
 				env:         aws.StringValue(conf.EnvManifest.Name),
 				app:         conf.App.Name,
+				permBound:   conf.App.PermissionsBoundary,
 				rc:          conf.RuntimeConfig,
 				image:       conf.Manifest.ImageConfig.Image,
 				rawManifest: conf.RawManifest,
@@ -235,8 +235,8 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		HostedZoneAliases: aliasesFor,
-		PermissionsBoundary:     s.rc.PermissionsBoundary,
+		HostedZoneAliases:   aliasesFor,
+		PermissionsBoundary: s.permBound,
 	})
 	if err != nil {
 		return "", err

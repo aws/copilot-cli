@@ -538,13 +538,12 @@ type StackRuntimeConfiguration struct {
 	// Use *string for three states (see https://github.com/aws/copilot-cli/pull/3268#discussion_r806060230)
 	// This is mainly to keep the `workload package` behavior backward-compatible, otherwise our old pipeline buildspec would break,
 	// since previously we parsed the env region from a mock ECR URL that we generated from `workload package``.
-	ImageDigest         *string
-	EnvFileARN          string
-	AddonsURL           string
-	RootUserARN         string
-	PermissionsBoundary string
-	Tags                map[string]string
-	CustomResourceURLs  map[string]string
+	ImageDigest        *string
+	EnvFileARN         string
+	AddonsURL          string
+	RootUserARN        string
+	Tags               map[string]string
+	CustomResourceURLs map[string]string
 }
 
 // DeployWorkloadInput is the input of DeployWorkload.
@@ -1005,7 +1004,6 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 			Region:                   d.env.Region,
 			CustomResourcesURL:       in.CustomResourceURLs,
 			EnvVersion:               envVersion,
-			PermissionsBoundary:      in.PermissionsBoundary,
 		}, nil
 	}
 	return &stack.RuntimeConfig{
@@ -1022,7 +1020,6 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 		Region:                   d.env.Region,
 		CustomResourcesURL:       in.CustomResourceURLs,
 		EnvVersion:               envVersion,
-		PermissionsBoundary:      in.PermissionsBoundary,
 	}, nil
 }
 
@@ -1051,13 +1048,13 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 		opts = append(opts, stack.WithNLB(cidrBlocks))
 	}
 	conf, err := stack.NewLoadBalancedWebService(stack.LoadBalancedWebServiceConfig{
-		App:                 d.app,
-		EnvManifest:         d.envConfig,
-		Manifest:            d.lbMft,
-		RawManifest:         d.rawMft,
-		RuntimeConfig:       *rc,
-		RootUserARN:         in.RootUserARN,
-		Addons:              d.addons,
+		App:           d.app,
+		EnvManifest:   d.envConfig,
+		Manifest:      d.lbMft,
+		RawManifest:   d.rawMft,
+		RuntimeConfig: *rc,
+		RootUserARN:   in.RootUserARN,
+		Addons:        d.addons,
 	}, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1117,6 +1114,7 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		App: deploy.AppInformation{
 			Name:                d.app.Name,
 			Domain:              d.app.Domain,
+			PermissionsBoundary: d.app.PermissionsBoundary,
 			AccountPrincipalARN: in.RootUserARN,
 		},
 		Env:           d.env.Name,
@@ -1178,12 +1176,13 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 		return nil, err
 	}
 	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
-		App:           d.app.Name,
-		Env:           d.env.Name,
-		Manifest:      d.wsMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
+		App:                 d.app.Name,
+		Env:                 d.env.Name,
+		Manifest:            d.wsMft,
+		RawManifest:         d.rawMft,
+		PermissionsBoundary: d.app.PermissionsBoundary,
+		RuntimeConfig:       *rc,
+		Addons:              d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1209,12 +1208,13 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 		return nil, err
 	}
 	conf, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
-		App:           d.app.Name,
-		Env:           d.env.Name,
-		Manifest:      d.jobMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
+		App:                 d.app.Name,
+		Env:                 d.env.Name,
+		Manifest:            d.jobMft,
+		RawManifest:         d.rawMft,
+		PermissionsBoundary: d.app.PermissionsBoundary,
+		RuntimeConfig:       *rc,
+		Addons:              d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)

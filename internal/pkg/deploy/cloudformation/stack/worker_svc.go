@@ -29,12 +29,13 @@ type WorkerService struct {
 
 // WorkerServiceConfig contains data required to initialize a scheduled job stack.
 type WorkerServiceConfig struct {
-	App           string
-	Env           string
-	Manifest      *manifest.WorkerService
-	RawManifest   []byte
-	RuntimeConfig RuntimeConfig
-	Addons        addons
+	App                 string
+	Env                 string
+	PermissionsBoundary string
+	Manifest            *manifest.WorkerService
+	RawManifest         []byte
+	RuntimeConfig       RuntimeConfig
+	Addons              addons
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
@@ -46,6 +47,7 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 				name:        aws.StringValue(cfg.Manifest.Name),
 				env:         cfg.Env,
 				app:         cfg.App,
+				permBound:   cfg.PermissionsBoundary,
 				rc:          cfg.RuntimeConfig,
 				image:       cfg.Manifest.ImageConfig.Image,
 				rawManifest: cfg.RawManifest,
@@ -145,7 +147,7 @@ func (s *WorkerService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		PermissionsBoundary: s.rc.PermissionsBoundary,
+		PermissionsBoundary: s.permBound,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)

@@ -55,6 +55,7 @@ func NewBackendService(conf BackendServiceConfig) (*BackendService, error) {
 				name:        aws.StringValue(conf.Manifest.Name),
 				env:         aws.StringValue(conf.EnvManifest.Name),
 				app:         conf.App.Name,
+				permBound:   conf.App.PermissionsBoundary,
 				rc:          conf.RuntimeConfig,
 				image:       conf.Manifest.ImageConfig.Image,
 				rawManifest: conf.RawManifest,
@@ -184,7 +185,7 @@ func (s *BackendService) Template() (string, error) {
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
 		HostedZoneAliases:   hostedZoneAliases,
-		PermissionsBoundary: s.rc.PermissionsBoundary,
+		PermissionsBoundary: s.permBound,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
