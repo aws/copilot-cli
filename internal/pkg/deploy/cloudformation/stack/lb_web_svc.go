@@ -92,6 +92,7 @@ func NewLoadBalancedWebService(conf LoadBalancedWebServiceConfig,
 				name:        aws.StringValue(conf.Manifest.Name),
 				env:         aws.StringValue(conf.EnvManifest.Name),
 				app:         conf.App.Name,
+				permBound:   conf.App.PermissionsBoundary,
 				rc:          conf.RuntimeConfig,
 				image:       conf.Manifest.ImageConfig.Image,
 				rawManifest: conf.RawManifest,
@@ -239,16 +240,17 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		HostedZoneAliases: aliasesFor,
+		HostedZoneAliases:   aliasesFor,
+		PermissionsBoundary: s.permBound,
 	})
 	if err != nil {
 		return "", err
 	}
-	overridenTpl, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
+	overriddenTpl, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
 	if err != nil {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
-	return string(overridenTpl), nil
+	return string(overriddenTpl), nil
 }
 
 func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {

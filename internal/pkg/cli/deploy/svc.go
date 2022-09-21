@@ -1114,6 +1114,7 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		App: deploy.AppInformation{
 			Name:                d.app.Name,
 			Domain:              d.app.Domain,
+			PermissionsBoundary: d.app.PermissionsBoundary,
 			AccountPrincipalARN: in.RootUserARN,
 		},
 		Env:           d.env.Name,
@@ -1175,12 +1176,12 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 		return nil, err
 	}
 	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
-		App:           d.app.Name,
-		Env:           d.env.Name,
-		Manifest:      d.wsMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
+		App:                 d.app,
+		Env:                 d.env.Name,
+		Manifest:            d.wsMft,
+		RawManifest:         d.rawMft,
+		RuntimeConfig:       *rc,
+		Addons:              d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
@@ -1206,12 +1207,12 @@ func (d *jobDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*jobSta
 		return nil, err
 	}
 	conf, err := stack.NewScheduledJob(stack.ScheduledJobConfig{
-		App:           d.app.Name,
-		Env:           d.env.Name,
-		Manifest:      d.jobMft,
-		RawManifest:   d.rawMft,
-		RuntimeConfig: *rc,
-		Addons:        d.addons,
+		App:                 d.app,
+		Env:                 d.env.Name,
+		Manifest:            d.jobMft,
+		RawManifest:         d.rawMft,
+		RuntimeConfig:       *rc,
+		Addons:              d.addons,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
