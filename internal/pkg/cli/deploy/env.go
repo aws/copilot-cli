@@ -121,6 +121,9 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		Env:         in.Env.Name,
 		ConfigStore: in.ConfigStore,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("get env describer: %w", err)
+	}
 	cfnClient := deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr))
 	return &envDeployer{
 		app: in.App,

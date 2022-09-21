@@ -367,7 +367,7 @@ func (i RestrictiveIngress) validate() error {
 // validate returns nil if advancedCDNConfig is configured correctly.
 func (cfg AdvancedCDNConfig) validate() error {
 	if cfg.Certificate == nil {
-		if aws.BoolValue(cfg.TerminateTLS) == true {
+		if aws.BoolValue(cfg.TerminateTLS) {
 			return &errFieldMustBeSpecified{
 				missingField:      "certificate",
 				conditionalFields: []string{"terminate_tls"},

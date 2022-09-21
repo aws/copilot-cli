@@ -234,7 +234,7 @@ func TestELBV2_ListenerRuleIsRedirect(t *testing.T) {
 					RuleArns: aws.StringSlice([]string{mockARN}),
 				}).Return(nil, errors.New("some error"))
 			},
-			expectedErr: fmt.Sprintf("get listener rule for mockListenerRuleARN: some error"),
+			expectedErr: "get listener rule for mockListenerRuleARN: some error",
 		},
 		"cannot find listener rule": {
 			setUpMock: func(m *mocks.Mockapi) {
@@ -242,7 +242,7 @@ func TestELBV2_ListenerRuleIsRedirect(t *testing.T) {
 					RuleArns: aws.StringSlice([]string{mockARN}),
 				}).Return(&elbv2.DescribeRulesOutput{}, nil)
 			},
-			expectedErr: fmt.Sprintf("cannot find listener rule mockListenerRuleARN"),
+			expectedErr: "cannot find listener rule mockListenerRuleARN",
 		},
 		"rule is redirect": {
 			setUpMock: func(m *mocks.Mockapi) {
