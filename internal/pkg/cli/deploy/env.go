@@ -173,7 +173,7 @@ func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment) e
 	return nil
 }
 
-// verifyALBWorkloadsDontRedirect verifies that none of the ALB Workloads
+// verifyALBWorkloadsDontRedirect verifies that none of the public ALB Workloads
 // in this environment have a redirect in their HTTPWithDomain listener.
 // If any services redirect, an error is returned.
 func (d *envDeployer) verifyALBWorkloadsDontRedirect(ctx context.Context) error {
