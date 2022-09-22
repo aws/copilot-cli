@@ -73,10 +73,6 @@ type Warner interface {
 	Warning() string
 }
 
-const (
-	svcStackResourceHTTPListenerRuleLogicalID = "HTTPListenerRuleWithDomain"
-)
-
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
@@ -169,9 +165,8 @@ func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment) e
 		}
 	}
 
-	if mft.CDNEnabled() && mft.CDNDoesTLSTermination() {
-		// ensure all services _are not_ doing http->https redirect
-		if err := d.verifyALBWorkloadsDontRedirect(ctx); err != nil {
+	if mft.CDNEnabled() && mft.CDNDoesTLSTermination() && mft.HasImportedPublicALBCerts() {
+		if err := d.validateALBWorkloadsDontRedirect(ctx); err != nil {
 			if warn, ok := err.(Warner); ok {
 				fmt.Println(warn.Warning())
 			} else {
@@ -215,10 +210,10 @@ If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.
 	)
 }
 
-// verifyALBWorkloadsDontRedirect verifies that none of the public ALB Workloads
+// validateALBWorkloadsDontRedirect verifies that none of the public ALB Workloads
 // in this environment have a redirect in their HTTPWithDomain listener.
 // If any services redirect, an error is returned.
-func (d *envDeployer) verifyALBWorkloadsDontRedirect(ctx context.Context) error {
+func (d *envDeployer) validateALBWorkloadsDontRedirect(ctx context.Context) error {
 	params, err := d.envDescriber.Params()
 	if err != nil {
 		return fmt.Errorf("get env params: %w", err)
@@ -273,7 +268,7 @@ func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool,
 
 	var ruleARN string
 	for _, res := range resources {
-		if res.LogicalID == svcStackResourceHTTPListenerRuleLogicalID {
+		if res.LogicalID == template.LogicalIDHTTPListenerRuleWithDomain {
 			ruleARN = res.PhysicalID
 			break
 		}

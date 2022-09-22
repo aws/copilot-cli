@@ -62,6 +62,11 @@ const (
 	snsARNPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
 )
 
+// Constants for stack resource logical ID's
+const (
+	LogicalIDHTTPListenerRuleWithDomain = "HTTPListenerRuleWithDomain"
+)
+
 var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
