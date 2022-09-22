@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.22: Try out IAM Permission Boundaries and more!'
+title: 'AWS Copilot v1.22: Try out IAM Permissions Boundaries and more!'
 twitter_title: 'AWS Copilot v1.22'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.22: Try out IAM Permission Boundaries and more!
+# AWS Copilot v1.22: Try out IAM Permissions Boundaries and more!
 
 Posted On: Sep 27, 2022
 
@@ -33,6 +33,19 @@ Copilot v1.22 brings several new features and improvements:
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## IAM Role Permissions Boundary
+Whether you have an AWS Organizations Service Control Policy that requires an attached permissions boundary for IAM role creation, or simply want to want to add some guardrails to your application, Copilot can help. By using the `--permissions-boundary` flag with the `copilot app init` command, you can specify your existing IAM policy. That policy will get attached to any and all IAM roles that Copilot creates (within that application) as a permissions boundary. 
+  
+If you init your application like this:
+```console
+copilot app init --permissions-boundary examplePermissionsBoundaryPolicy
+```
+Copilot will attach the permissions boundary to every IAM role created in the app like this:
+```yaml
+ExampleIAMRole
+  Type: AWS::IAM::Role
+  Properties:
+    PermissionsBoundary: 'arn:aws:iam::123456789012:policy/examplePermissionsBoundaryPolicy'
+```
 
 ## FIFO SNS/SQS
 
