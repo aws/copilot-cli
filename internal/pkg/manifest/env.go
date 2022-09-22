@@ -213,6 +213,14 @@ func (cfg *EnvironmentConfig) CDNEnabled() bool {
 	return aws.BoolValue(cfg.CDNConfig.Enabled)
 }
 
+func (cfg *EnvironmentConfig) HasImportedPublicALBCerts() bool {
+	return cfg.HTTPConfig.Public.Certificates != nil
+}
+
+func (cfg *EnvironmentConfig) CDNDoesTLSTermination() bool {
+	return aws.BoolValue(cfg.CDNConfig.Config.TerminateTLS)
+}
+
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the environmentCDNConfig
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.

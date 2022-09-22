@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -154,7 +153,8 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 
 // Validate returns an error if the environment manifest is incompatible with services and application configurations.
 func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment) error {
-	if mft.CDNEnabled() && mft.HTTPConfig.Public.Certificates == nil && d.app.Domain != "" {
+	isManagedCDNEnabled := mft.CDNEnabled() && !mft.HasImportedPublicALBCerts() && d.app.Domain != ""
+	if isManagedCDNEnabled {
 		// With managed domain, if the customer isn't using `alias` the A-records are inserted in the service stack as each service domain is unique.
 		// However, when clients enable CloudFront, they would need to update all their existing records to now point to the distribution.
 		// Hence, we force users to use `alias` and let the records be written in the environment stack instead.
@@ -163,7 +163,7 @@ func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment) e
 		}
 	}
 
-	if mft.CDNEnabled() && aws.BoolValue(mft.CDNConfig.Config.TerminateTLS) {
+	if mft.CDNEnabled() && mft.CDNDoesTLSTermination() {
 		// ensure all services _are not_ doing http->https redirect
 		if err := d.verifyALBWorkloadsDontRedirect(ctx); err != nil {
 			return fmt.Errorf("can't enable TLS termination on CDN: %w", err)
