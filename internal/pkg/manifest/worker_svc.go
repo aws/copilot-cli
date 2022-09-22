@@ -238,6 +238,7 @@ func (s *WorkerService) EnvFile() string {
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
 // receives messages from.
 func (s *WorkerService) Subscriptions() []TopicSubscription {
+	s.RetrofitFIFOConfig()
 	return s.Subscribe.Topics
 }
 

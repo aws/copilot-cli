@@ -30,12 +30,12 @@ type WorkerService struct {
 
 // WorkerServiceConfig contains data required to initialize a scheduled job stack.
 type WorkerServiceConfig struct {
-	App                 *config.Application
-	Env                 string
-	Manifest            *manifest.WorkerService
-	RawManifest         []byte
-	RuntimeConfig       RuntimeConfig
-	Addons              addons
+	App           *config.Application
+	Env           string
+	Manifest      *manifest.WorkerService
+	RawManifest   []byte
+	RuntimeConfig RuntimeConfig
+	Addons        addons
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
