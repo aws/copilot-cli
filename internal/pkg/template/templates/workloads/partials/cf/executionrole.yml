@@ -10,6 +10,9 @@ ExecutionRole:
           Principal:
             Service: ecs-tasks.amazonaws.com
           Action: 'sts:AssumeRole'
+    {{- if .PermissionsBoundary}}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+    {{- end}}
     Policies:
       - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, SecretsPolicy]]
         PolicyDocument:

@@ -256,6 +256,12 @@ func TestRuntimePlatformOpts_IsDefault(t *testing.T) {
 	}
 }
 
+func TestHTTPTargetContainer_IsHTTPS(t *testing.T) {
+	require.True(t, HTTPTargetContainer{Port: "443"}.IsHTTPS())
+	require.False(t, HTTPTargetContainer{}.IsHTTPS())
+	require.False(t, HTTPTargetContainer{Port: "8080"}.IsHTTPS())
+}
+
 func TestSsmOrSecretARN_RequiresSub(t *testing.T) {
 	require.False(t, ssmOrSecretARN{}.RequiresSub(), "SSM Parameter Store or secret ARNs do not require !Sub")
 }
