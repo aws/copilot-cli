@@ -229,7 +229,7 @@ func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool,
 		return false, fmt.Errorf("get stack resources: %w", err)
 	}
 
-	ruleARN := ""
+	var ruleARN string
 	for _, res := range resources {
 		if res.LogicalID == svcStackResourceHTTPListenerRuleLogicalID {
 			ruleARN = res.PhysicalID
