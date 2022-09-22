@@ -554,7 +554,8 @@ http:
   redirect_to_https: true
 %s
 and run %scopilot svc deploy%s.
-If you'd like to use these services without a CDN, ensure each service's A record is pointed to the ALB.`,
+If you'd like to use these services without a CDN, ensure each service's A record is pointed to the ALB.
+`,
 				"```", "```", "`", "`"), // ugh
 		},
 		"cdn tls termination enabled, warn with one service that doesn't redirect, two that do redirect, alb ingress restricted to cdn": {

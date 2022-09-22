@@ -169,7 +169,7 @@ func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment, o
 		case errors.As(err, &redirErr) && mft.ALBIngressRestrictedToCDN():
 			return err
 		case errors.As(err, &redirErr):
-			fmt.Fprintf(output, redirErr.Warning())
+			fmt.Fprintln(output, redirErr.Warning())
 		case err != nil:
 			return fmt.Errorf("can't enable TLS termination on CDN: %w", err)
 		}
