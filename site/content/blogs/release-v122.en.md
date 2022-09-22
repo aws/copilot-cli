@@ -47,7 +47,7 @@ cdn:
 
 The configuration above uses CloudFront for TLS termination, which means the traffic from `CF → ALB → ECS` will be HTTP only. This brings faster TLS termination and shorter page loading for viewers, since the CloudFront edges are usually geographically closer to them.
 
-However, if your services have HTTPS enabled (you have either an app domain or imported certificates in the environment), you must turn off ALB http redirect by updating your LBWS manifests.
+However, if your services have HTTPS enabled (you have either an app domain or imported certificates in the environment), you must turn off ALB http redirect by updating your [Load Balanced Web Service manifests](../docs/manifest/lb-web-service.en.md).
 
 ```yaml
 http:
