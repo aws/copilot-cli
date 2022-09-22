@@ -120,6 +120,7 @@ type wkld struct {
 	name        string
 	env         string
 	app         string
+	permBound   string
 	rc          RuntimeConfig
 	image       location
 	rawManifest []byte // Content of the manifest file without any transformations.

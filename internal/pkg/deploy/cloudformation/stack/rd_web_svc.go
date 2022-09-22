@@ -72,6 +72,7 @@ func NewRequestDrivenWebService(cfg RequestDrivenWebServiceConfig) (*RequestDriv
 				name:        aws.StringValue(cfg.Manifest.Name),
 				env:         cfg.Env,
 				app:         cfg.App.Name,
+				permBound:   cfg.App.PermissionsBoundary,
 				rc:          cfg.RuntimeConfig,
 				image:       cfg.Manifest.ImageConfig.Image,
 				rawManifest: cfg.RawManifest,
@@ -139,6 +140,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
+		PermissionsBoundary: s.permBound,
 	})
 	if err != nil {
 		return "", err

@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -29,12 +30,12 @@ type WorkerService struct {
 
 // WorkerServiceConfig contains data required to initialize a scheduled job stack.
 type WorkerServiceConfig struct {
-	App           string
-	Env           string
-	Manifest      *manifest.WorkerService
-	RawManifest   []byte
-	RuntimeConfig RuntimeConfig
-	Addons        addons
+	App                 *config.Application
+	Env                 string
+	Manifest            *manifest.WorkerService
+	RawManifest         []byte
+	RuntimeConfig       RuntimeConfig
+	Addons              addons
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
@@ -45,7 +46,8 @@ func NewWorkerService(cfg WorkerServiceConfig) (*WorkerService, error) {
 			wkld: &wkld{
 				name:        aws.StringValue(cfg.Manifest.Name),
 				env:         cfg.Env,
-				app:         cfg.App,
+				app:         cfg.App.Name,
+				permBound:   cfg.App.PermissionsBoundary,
 				rc:          cfg.RuntimeConfig,
 				image:       cfg.Manifest.ImageConfig.Image,
 				rawManifest: cfg.RawManifest,
@@ -145,15 +147,16 @@ func (s *WorkerService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
+		PermissionsBoundary: s.permBound,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse worker service template: %w", err)
 	}
-	overridenTpl, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
+	overriddenTpl, err := s.taskDefOverrideFunc(convertTaskDefOverrideRules(s.manifest.TaskDefOverrides), content.Bytes())
 	if err != nil {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
-	return string(overridenTpl), nil
+	return string(overriddenTpl), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.

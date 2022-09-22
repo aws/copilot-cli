@@ -315,6 +315,8 @@ An application is a collection of containerized services that operate together.`
   /code $ copilot app init test
   Create a new application with an existing domain name in Amazon Route53.
   /code $ copilot app init --domain example.com
+  Create a new application with an existing IAM policy as the permissions boundary for roles.
+  /code $ copilot app init --permissions-boundary myPermissionsBoundaryPolicy
   Create a new application with resource tags.
   /code $ copilot app init --resource-tags department=MyDept,team=MyTeam`,
 		Args: reservedArgs,
@@ -330,6 +332,7 @@ An application is a collection of containerized services that operate together.`
 		}),
 	}
 	cmd.Flags().StringVar(&vars.domainName, domainNameFlag, "", domainNameFlagDescription)
+	cmd.Flags().StringVar(&vars.permissionsBoundary, permissionsBoundaryFlag, "", permissionsBoundaryFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	return cmd
 }
