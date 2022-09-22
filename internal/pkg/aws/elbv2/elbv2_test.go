@@ -234,7 +234,7 @@ func TestELBV2_DescribeRule(t *testing.T) {
 					RuleArns: aws.StringSlice([]string{mockARN}),
 				}).Return(nil, errors.New("some error"))
 			},
-			expectedErr: "get listener rule for mockListenerRuleARN: some error",
+			expectedErr: "some error",
 		},
 		"cannot find listener rule": {
 			setUpMock: func(m *mocks.Mockapi) {
@@ -242,7 +242,7 @@ func TestELBV2_DescribeRule(t *testing.T) {
 					RuleArns: aws.StringSlice([]string{mockARN}),
 				}).Return(&elbv2.DescribeRulesOutput{}, nil)
 			},
-			expectedErr: `listener rule "mockListenerRuleARN" not found`,
+			expectedErr: `not found`,
 		},
 		"success": {
 			setUpMock: func(m *mocks.Mockapi) {
