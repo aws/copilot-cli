@@ -183,10 +183,6 @@ type errEnvHasPublicServicesWithRedirect struct {
 }
 
 func (e *errEnvHasPublicServicesWithRedirect) Error() string {
-	return e.message()
-}
-
-func (e *errEnvHasPublicServicesWithRedirect) message() string {
 	n := len(e.services)
 	quoted := make([]string, len(e.services))
 	for i := range e.services {
@@ -206,13 +202,12 @@ and run %s.`,
 		color.HighlightCodeBlock("http:\n  redirect_to_https: true"),
 		color.HighlightCode("copilot svc deploy"),
 	)
-
 }
 
 func (e *errEnvHasPublicServicesWithRedirect) Warning() string {
 	return fmt.Sprintf(`%s
 If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.`,
-		e.message(),
+		e.Error(),
 		english.PluralWord(len(e.services), "this service", "these services"),
 		english.PluralWord(len(e.services), "its", "each service's"),
 	)
