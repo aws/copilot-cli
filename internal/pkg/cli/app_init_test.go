@@ -290,8 +290,9 @@ func TestInitAppOpts_Execute(t *testing.T) {
 	mockError := fmt.Errorf("error")
 
 	testCases := map[string]struct {
-		inDomainName         string
-		inDomainHostedZoneID string
+		inDomainName                string
+		inDomainHostedZoneID        string
+		inPermissionsBoundaryPolicy string
 
 		expectedError error
 		mocking       func(t *testing.T,
@@ -300,8 +301,9 @@ func TestInitAppOpts_Execute(t *testing.T) {
 			mockProgress *mocks.Mockprogress)
 	}{
 		"with a successful call to add app": {
-			inDomainName:         "amazon.com",
-			inDomainHostedZoneID: "mockID",
+			inDomainName:                "amazon.com",
+			inDomainHostedZoneID:        "mockID",
+			inPermissionsBoundaryPolicy: "mockPolicy",
 
 			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
 				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
@@ -315,10 +317,11 @@ func TestInitAppOpts_Execute(t *testing.T) {
 				mockstore.
 					EXPECT().
 					CreateApplication(&config.Application{
-						AccountID:          "12345",
-						Name:               "myapp",
-						Domain:             "amazon.com",
-						DomainHostedZoneID: "mockID",
+						AccountID:           "12345",
+						Name:                "myapp",
+						Domain:              "amazon.com",
+						DomainHostedZoneID:  "mockID",
+						PermissionsBoundary: "mockPolicy",
 						Tags: map[string]string{
 							"owner": "boss",
 						},
@@ -335,7 +338,8 @@ func TestInitAppOpts_Execute(t *testing.T) {
 						AdditionalTags: map[string]string{
 							"owner": "boss",
 						},
-						Version: deploy.LatestAppTemplateVersion,
+						Version:             deploy.LatestAppTemplateVersion,
+						PermissionsBoundary: "mockPolicy",
 					}).Return(nil)
 			},
 		},
@@ -410,8 +414,9 @@ func TestInitAppOpts_Execute(t *testing.T) {
 
 			opts := &initAppOpts{
 				initAppVars: initAppVars{
-					name:       "myapp",
-					domainName: tc.inDomainName,
+					name:                "myapp",
+					domainName:          tc.inDomainName,
+					permissionsBoundary: tc.inPermissionsBoundaryPolicy,
 					resourceTags: map[string]string{
 						"owner": "boss",
 					},

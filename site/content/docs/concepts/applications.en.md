@@ -27,11 +27,13 @@ You can also provide more granular configuration for your application by running
 
 * Tag all application, service and environment resources with an additional set of [aws resource tags](https://docs.aws.amazon.com/general/latest/gr/aws_tagging.html)
 * Use a custom domain name for Load Balanced services
+* Pass in an existing IAM policy with which to set a permissions boundary for all roles created within the application.
 
 ```bash
-$ copilot app init                             \
-  --domain my-awesome-app.aws                  \
-  --resource-tags department=MyDept,team=MyTeam
+$ copilot app init                                \
+  --domain my-awesome-app.aws                     \
+  --resource-tags department=MyDept,team=MyTeam   \
+  --permissions-boundary my-pb-policy
 ```
 
 ## App Infrastructure

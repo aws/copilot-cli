@@ -6,6 +6,7 @@ package stack
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"regexp"
 	"strings"
 	"time"
@@ -90,12 +91,12 @@ func (e errDurationInvalid) Error() string {
 
 // ScheduledJobConfig contains data required to initialize a scheduled job stack.
 type ScheduledJobConfig struct {
-	App           string
-	Env           string
-	Manifest      *manifest.ScheduledJob
-	RawManifest   []byte
-	RuntimeConfig RuntimeConfig
-	Addons        addons
+	App                 *config.Application
+	Env                 string
+	Manifest            *manifest.ScheduledJob
+	RawManifest         []byte
+	RuntimeConfig       RuntimeConfig
+	Addons              addons
 }
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
@@ -106,7 +107,8 @@ func NewScheduledJob(cfg ScheduledJobConfig) (*ScheduledJob, error) {
 			wkld: &wkld{
 				name:        aws.StringValue(cfg.Manifest.Name),
 				env:         cfg.Env,
-				app:         cfg.App,
+				app:         cfg.App.Name,
+				permBound:   cfg.App.PermissionsBoundary,
 				rc:          cfg.RuntimeConfig,
 				image:       cfg.Manifest.ImageConfig.Image,
 				rawManifest: cfg.RawManifest,
@@ -186,16 +188,17 @@ func (j *ScheduledJob) Template() (string, error) {
 		Platform:                 convertPlatform(j.manifest.Platform),
 		EnvVersion:               j.rc.EnvVersion,
 
-		CustomResources: crs,
+		CustomResources:     crs,
+		PermissionsBoundary: j.permBound,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse scheduled job template: %w", err)
 	}
-	overridenTpl, err := j.taskDefOverrideFunc(convertTaskDefOverrideRules(j.manifest.TaskDefOverrides), content.Bytes())
+	overriddenTpl, err := j.taskDefOverrideFunc(convertTaskDefOverrideRules(j.manifest.TaskDefOverrides), content.Bytes())
 	if err != nil {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
-	return string(overridenTpl), nil
+	return string(overriddenTpl), nil
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.

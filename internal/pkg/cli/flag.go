@@ -127,6 +127,8 @@ const (
 	inputFilePathFlag = "cli-input-yaml"
 
 	includeStateMachineLogsFlag = "include-state-machine"
+
+	permissionsBoundaryFlag = "permissions-boundary"
 )
 
 // Short flag names.
@@ -344,4 +346,7 @@ are also accepted.`
 	containerFlagDescription   = "Optional. The specific container you want to exec in. By default the first essential container will be used."
 
 	secretOverwriteFlagDescription = "Optional. Whether to overwrite an existing secret."
+
+	permissionsBoundaryFlagDescription = `Optional. The name of an existing IAM policy with which to set a
+permissions boundary for all roles generated within the application.`
 )
