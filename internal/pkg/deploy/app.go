@@ -39,6 +39,7 @@ type AppInformation struct {
 	AccountPrincipalARN string
 	Domain              string
 	Name                string
+	PermissionsBoundary string
 }
 
 // DNSDelegationRole returns the ARN of the app's DNS delegation role.

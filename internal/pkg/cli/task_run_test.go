@@ -1008,6 +1008,23 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 			},
 			wantedError: errors.New("write events: error writing events"),
 		},
+		"error getting app config (to look for permissions boundary policy)": {
+			inApp: "my-app",
+			inEnv: "test",
+			setupMocks: func(m runTaskMocks) {
+				m.store.EXPECT().GetEnvironment(gomock.Any(), "test").
+					Return(&config.Environment{
+						ExecutionRoleARN: "env execution role",
+					}, nil)
+				m.provider.EXPECT().FromRole(gomock.Any(), gomock.Any())
+				m.store.EXPECT().GetApplication("my-app").Return(nil, errors.New("some error"))
+				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Len(1)).AnyTimes() // NOTE: matching length because gomock is unable to match function arguments.
+				mockRepositoryAnytime(m)
+				m.runner.EXPECT().Run().AnyTimes()
+				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Times(0)
+			},
+			wantedError: fmt.Errorf("provision resources for task %s: get application: some error", "my-task"),
+		},
 		"env file happy path": {
 			inEnvFile: "testdir/../magic.env",
 			inApp:     "my-app",
@@ -1027,6 +1044,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
 				info := deploy.TaskStackInfo{BucketName: "arn:aws:s3:::bigbucket"}
+				m.store.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil).Times(2)
 				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(&info, nil)
 				key := "manual/env-files/magic.env/4963d64294508aa3fa103ccac5ad1537944c577d469608ddccad09b6f79b6406.env"
 				arn := "arn:aws:s3:::bigbucket/" + key
@@ -1051,6 +1069,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
 				info := deploy.TaskStackInfo{BucketName: "arn:aws:s3:::bigbucket"}
+				m.store.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(&info, nil)
 				m.deployer.EXPECT().DeployTask(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -1074,6 +1093,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 					},
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
+				m.store.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(nil, errors.New("hull breach in sector 3"))
 			},
 			wantedError: errors.New("deploy env file testdir/../magic.env: deploy env file: hull breach in sector 3"),
@@ -1097,6 +1117,7 @@ func TestTaskRunOpts_Execute(t *testing.T) {
 				}, nil)
 				m.defaultClusterGetter.EXPECT().HasDefaultCluster().Return(true, nil)
 				info := deploy.TaskStackInfo{BucketName: "arn:aws:s3:::bigbucket"}
+				m.store.EXPECT().GetApplication("my-app").Return(&config.Application{Name: "my-app"}, nil)
 				m.deployer.EXPECT().GetTaskStack(inGroupName).Return(&info, nil)
 
 				key := "manual/env-files/magic.env/4963d64294508aa3fa103ccac5ad1537944c577d469608ddccad09b6f79b6406.env"
