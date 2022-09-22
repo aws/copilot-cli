@@ -53,14 +53,14 @@ With both of these setups, Copilot will provision CloudFront to use the [SSL/TLS
 
 ## What is ingress restriction?
 
-You can restrict incoming traffic to come from a certain source. For CloudFront, Copilot uses an [AWS managed prefix list](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html) to restrict allowed traffic to a set of CIDR IP addresses associated with CloudFront edge locations. When you specify `restrict_to.cdn: true`, your Public Load Balancer is no longer fully publicly accessible, and can only be accessed through the CloudFront distribution, guarding against security threats to your services.
+You can restrict incoming traffic to come from a certain source. For CloudFront, Copilot uses an [AWS managed prefix list](https://docs.aws.amazon.com/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html) to restrict allowed traffic to a set of CIDR IP addresses associated with CloudFront edge locations. When you specify `restrict_to.cdn: true`, your Public Load Balancer is no longer publicly accessible, and can only be accessed through the CloudFront distribution, guarding against security threats to your services.
 
 ## How do I use CloudFront to terminate TLS?
 
 !!! attention
-    1. First, disabling [HTTP to HTTPS redirection](../manifest/lb-web-service/#http-redirect-to-https) for your Load Balanced Web Services first.
-    2. And then run `svc deploy` to redeploy all the Load Balanced Web Services before `env deploy` to enable CloudFront TLS termination.
-    3. Once all your Load Balanced Web Services no longer redirect HTTP to HTTPS, you can safely enable CloudFront TLS termination in the env manifest.
+    1. First, disable [HTTP to HTTPS redirection](../manifest/lb-web-service/#http-redirect-to-https) for your Load Balanced Web Services.
+    2. Run `svc deploy` individually to redeploy all the Load Balanced Web Services before enabling CloudFront TLS termination.
+    3. Once all your Load Balanced Web Services no longer redirect HTTP to HTTPS, you can safely enable CloudFront TLS termination in the env manifest and run `env deploy`.
 
 
 You can optionally use CloudFront for TLS termination by configuring the env manifest as
