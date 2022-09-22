@@ -259,8 +259,8 @@ http:
   hosted_zone: Z0873220N255IR3MTNR4
 # Also see http.alias array of maps example, above.
 ```
-<span class="parent-field">http.</span><a id="http-disable-redirect" href="#http-disable-redirect" class="field">`disable_redirect`</a> <span class="type">Boolean</span>  
-Disable automatic Application Load Balancer redirect from HTTP to HTTPS.
+<span class="parent-field">http.</span><a id="http-redirect-to-https" href="#http-redirect-to-https" class="field">`redirect_to_https`</a> <span class="type">Boolean</span>  
+Automatically redirect Application Load Balancer from HTTP to HTTPS.
 
 <span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
 The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. If omitted, then `'http1'` is assumed.

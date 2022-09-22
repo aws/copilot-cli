@@ -57,6 +57,12 @@ You can restrict incoming traffic to come from a certain source. For CloudFront,
 
 ## How do I use CloudFront to terminate TLS?
 
+!!! attention
+    1. First, disabling [HTTP to HTTPS redirection](../manifest/lb-web-service/#http-redirect-to-https) for your Load Balanced Web Services first.
+    2. And then run `svc deploy` to redeploy all the Load Balanced Web Services before `env deploy` to enable CloudFront TLS termination.
+    3. Once all your Load Balanced Web Services no longer redirect HTTP to HTTPS, you can safely enable CloudFront TLS termination in the env manifest.
+
+
 You can optionally use CloudFront for TLS termination by configuring the env manifest as
 
 ```yaml
@@ -64,13 +70,4 @@ cdn:
   tls_termination: true
 ```
 
-And traffic from `CloudFront → Application Load Balancer (ALB) → ECS` will be HTTP only. This brings a very important benefit which is faster TLS termination, since the CloudFront edges are usually closer to the viewers.
-
-However, if HTTPS is enabled by either having the app domain or importing any certificates in the environment, you must turn off ALB http redirect by updating the service manifests as
-
-```yaml
-http:
-  disable_redirect: true
-```
-
-And then redeploy all the Load Balanced Web Services before `env deploy` to enable CloudFront TLS termination.
+And traffic from `CloudFront → Application Load Balancer (ALB) → ECS` will be HTTP only. This brings the benefit of terminating TLS at a geographically closer endpoint to the end user for faster TLS handshakes.
