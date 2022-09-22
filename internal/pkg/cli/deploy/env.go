@@ -162,7 +162,7 @@ func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment, o
 		}
 	}
 
-	if mft.CDNEnabled() && mft.CDNDoesTLSTermination() && mft.HasImportedPublicALBCerts() {
+	if mft.CDNEnabled() && mft.CDNDoesTLSTermination() && (mft.HasImportedPublicALBCerts() || d.app.Domain != "") {
 		err := d.validateALBWorkloadsDontRedirect(ctx)
 		var redirErr *errEnvHasPublicServicesWithRedirect
 		switch {
