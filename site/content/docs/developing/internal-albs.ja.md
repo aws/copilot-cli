@@ -14,7 +14,7 @@ resp, err := http.Get(endpoint)
 ```
 ## Service
 
-内部ロードバランサーの背後に設置できる唯一の Service タイプは [Backend Service](../docs/concepts/services.ja.md#backend-service) です。Service をデプロイした Environment で ALB を作成する様に Copilot に指示をする為に、`http` フィールドを Backend Service ワークロードの Manifest に追加してください。
+内部ロードバランサーの背後に設置できる唯一の Service タイプは [Backend Service](../concepts/services.ja.md#backend-service) です。Service をデプロイした Environment で ALB を作成する様に Copilot に指示をする為に、`http` フィールドを Backend Service ワークロードの Manifest に追加してください。
 
 ```yaml
 # in copilot/{service name}/manifest.yml
