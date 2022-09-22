@@ -417,7 +417,7 @@ func (f *FIFOAdvanceConfigOrBool) IsEmpty() bool {
 
 // IsEnabled returns true if the FIFO is enabled on the SQS queue.
 func (f *FIFOAdvanceConfigOrBool) IsEnabled() bool {
-	return aws.BoolValue(f.Enable)
+	return aws.BoolValue(f.Enable) || !f.Advanced.IsEmpty()
 }
 
 // FIFOAdvanceConfig represents the advanced fifo topic config.

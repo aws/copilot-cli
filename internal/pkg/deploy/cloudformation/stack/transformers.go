@@ -798,10 +798,8 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	// convert the topics to template Topics
 	for _, topic := range topics {
 		var fifoConfig *template.FIFOTopicConfig
-		if !topic.FIFO.IsEmpty() {
-			if topic.FIFO.IsEnabled() {
-				fifoConfig = &template.FIFOTopicConfig{}
-			}
+		if topic.FIFO.IsEnabled() {
+			fifoConfig = &template.FIFOTopicConfig{}
 			if !topic.FIFO.Advanced.IsEmpty() {
 				fifoConfig = &template.FIFOTopicConfig{
 					ContentBasedDeduplication: topic.FIFO.Advanced.ContentBasedDeduplication,
