@@ -649,12 +649,12 @@ type runner interface {
 
 type envDeployer interface {
 	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
-	Validate(ctx context.Context, mft *manifest.Environment) error
+	Validate(context.Context, *manifest.Environment, io.Writer) error
 	UploadArtifacts() (map[string]string, error)
 }
 
 type envPackager interface {
 	GenerateCloudFormationTemplate(in *clideploy.DeployEnvironmentInput) (*clideploy.GenerateCloudFormationTemplateOutput, error)
-	Validate(ctx context.Context, mft *manifest.Environment) error
+	Validate(context.Context, *manifest.Environment, io.Writer) error
 	UploadArtifacts() (map[string]string, error)
 }

@@ -133,7 +133,7 @@ func (o *deployEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	if err := deployer.Validate(context.Background(), mft); err != nil {
+	if err := deployer.Validate(context.Background(), mft, os.Stderr); err != nil {
 		return err
 	}
 	urls, err := deployer.UploadArtifacts()

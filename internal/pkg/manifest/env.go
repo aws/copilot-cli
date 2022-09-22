@@ -504,6 +504,10 @@ type Ingress struct {
 	VPCIngress         *bool              `yaml:"from_vpc"`
 }
 
+func (cfg *EnvironmentConfig) ALBIngressRestrictedToCDN() bool {
+	return aws.BoolValue(cfg.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress)
+}
+
 // RestrictiveIngress represents ingress fields which restrict
 // default behavior of allowing all public ingress.
 type RestrictiveIngress struct {

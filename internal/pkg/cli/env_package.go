@@ -155,7 +155,7 @@ func (o *packageEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-	if err := deployer.Validate(context.Background(), mft); err != nil {
+	if err := deployer.Validate(context.Background(), mft, os.Stderr); err != nil {
 		return err
 	}
 	var urls map[string]string

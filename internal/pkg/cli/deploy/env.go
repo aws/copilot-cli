@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -67,10 +68,6 @@ type lbDescriber interface {
 
 type stackDescriber interface {
 	Resources() ([]*stack.Resource, error)
-}
-
-type Warner interface {
-	Warning() string
 }
 
 type envDeployer struct {
@@ -154,7 +151,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 }
 
 // Validate returns an error if the environment manifest is incompatible with services and application configurations.
-func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment) error {
+func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment, output io.Writer) error {
 	isManagedCDNEnabled := mft.CDNEnabled() && !mft.HasImportedPublicALBCerts() && d.app.Domain != ""
 	if isManagedCDNEnabled {
 		// With managed domain, if the customer isn't using `alias` the A-records are inserted in the service stack as each service domain is unique.
@@ -166,12 +163,15 @@ func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment) e
 	}
 
 	if mft.CDNEnabled() && mft.CDNDoesTLSTermination() && mft.HasImportedPublicALBCerts() {
-		if err := d.validateALBWorkloadsDontRedirect(ctx); err != nil {
-			if warn, ok := err.(Warner); ok {
-				fmt.Println(warn.Warning())
-			} else {
-				return fmt.Errorf("can't enable TLS termination on CDN: %w", err)
-			}
+		err := d.validateALBWorkloadsDontRedirect(ctx)
+		var redirErr *errEnvHasPublicServicesWithRedirect
+		switch {
+		case errors.As(err, &redirErr) && mft.ALBIngressRestrictedToCDN():
+			return err
+		case errors.As(err, &redirErr):
+			fmt.Fprintf(output, redirErr.Warning())
+		case err != nil:
+			return fmt.Errorf("can't enable TLS termination on CDN: %w", err)
 		}
 	}
 
@@ -183,28 +183,38 @@ type errEnvHasPublicServicesWithRedirect struct {
 }
 
 func (e *errEnvHasPublicServicesWithRedirect) Error() string {
+	return e.message()
+}
+
+func (e *errEnvHasPublicServicesWithRedirect) message() string {
+	n := len(e.services)
 	quoted := make([]string, len(e.services))
 	for i := range e.services {
 		quoted[i] = strconv.Quote(e.services[i])
 	}
-	return fmt.Sprintf("%s %s %s HTTP traffic to HTTPS",
-		english.PluralWord(len(e.services), "Service", "Services"),
-		english.OxfordWordSeries(quoted, "and"),
-		english.PluralWord(len(e.services), "redirects", "redirect"))
-}
 
-func (e *errEnvHasPublicServicesWithRedirect) Warning() string {
-	return fmt.Sprintf(`%s.
+	return fmt.Sprintf(`%s %s %s HTTP traffic to HTTPS.
 %s
 To fix this, set the following field in %s manifest:
 %s
 and run %s.
-If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.
-	`, e.Error(),
-		color.Emphasize(english.PluralWord(len(e.services), "This service", "These services")+" will not be reachable through the CDN."),
-		english.PluralWord(len(e.services), "its", "each"),
+	`,
+		english.PluralWord(n, "Service", "Services"),
+		english.OxfordWordSeries(quoted, "and"),
+		english.PluralWord(n, "redirects", "redirect"),
+		color.Emphasize(english.PluralWord(n, "This service", "These services")+" will not be reachable through the CDN."),
+		english.PluralWord(n, "its", "each"),
 		color.HighlightCodeBlock("http:\n  redirect_to_https: true"),
 		color.HighlightCode("copilot svc deploy"),
+	)
+
+}
+
+func (e *errEnvHasPublicServicesWithRedirect) Warning() string {
+	return fmt.Sprintf(`%s
+If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.
+`,
+		e.message(),
 		english.PluralWord(len(e.services), "this service", "these services"),
 		english.PluralWord(len(e.services), "its", "each service's"),
 	)
