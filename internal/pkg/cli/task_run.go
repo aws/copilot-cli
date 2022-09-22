@@ -10,6 +10,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
+	"golang.org/x/mod/semver"
 	"os"
 	"path/filepath"
 	"strings"
@@ -178,12 +179,11 @@ type runTaskOpts struct {
 	runTaskRequestFromService    func(client ecs.ServiceDescriber, app, env, svc string) (*ecs.RunTaskRequest, error)
 	runTaskRequestFromJob        func(client ecs.JobDescriber, app, env, job string) (*ecs.RunTaskRequest, error)
 
-	// Cached variables to hold SSM Param and Secrets Manager Secrets
-	ssmParamSecrets       map[string]string
-	secretsManagerSecrets map[string]string
-
-	// Cached variable for uploaded env file ARN
-	envFileARN string
+	// Cached variables.
+	ssmParamSecrets         map[string]string
+	secretsManagerSecrets   map[string]string
+	envFileARN              string
+	envCompatibilityChecker func(app, env string) (versionCompatibilityChecker, error)
 }
 
 func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
@@ -240,6 +240,17 @@ func newTaskRunOpts(vars runTaskVars) (*runTaskOpts, error) {
 	}
 	opts.configureUploader = func(session *session.Session) uploader {
 		return s3.New(session)
+	}
+	opts.envCompatibilityChecker = func(app, env string) (versionCompatibilityChecker, error) {
+		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         app,
+			Env:         env,
+			ConfigStore: opts.store,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("new environment compatibility checker: %v", err)
+		}
+		return envDescriber, nil
 	}
 
 	opts.runTaskRequestFromECSService = ecs.RunTaskRequestFromECSService
@@ -498,6 +509,27 @@ func (o *runTaskOpts) confirmSecretsAccess() error {
 		return errors.New("access to secrets denied")
 	}
 
+	return nil
+}
+
+func (o *runTaskOpts) validateEnvCompatibilityForGenerateJobCmd(app, env string) error {
+	envStack, err := o.envCompatibilityChecker(app, env)
+	if err != nil {
+		return err
+	}
+	version, err := envStack.Version()
+	if err != nil {
+		return fmt.Errorf("retrieve version of environment stack %q in application %q: %v", env, app, err)
+	}
+	// The '--generate-cmd' flag was introduced in env v1.4.0. In env v1.8.0, EnvManagerRole took over, but 
+	//"states:DescribeStateMachine" permissions weren't added until 1.12.2.
+	if semver.Compare(version, "v1.12.2") < 0 {
+		return &errFeatureIncompatibleWithEnvironment{
+			missingFeature: "task run --generate-cmd",
+			envName:        env,
+			curVersion:     version,
+		}
+	}
 	return nil
 }
 
@@ -826,6 +858,9 @@ func (o *runTaskOpts) runTaskCommandFromWorkload(sess *session.Session, appName,
 	var cmd cliStringer
 	switch workloadType {
 	case workloadTypeJob:
+		if err := o.validateEnvCompatibilityForGenerateJobCmd(appName, envName); err != nil {
+			return nil, err
+		}
 		cmd, err = o.runTaskRequestFromJob(o.configureJobDescriber(sess), appName, envName, workloadName)
 		if err != nil {
 			return nil, fmt.Errorf("generate task run command from job %s of application %s deployed in environment %s: %w", workloadName, appName, envName, err)
