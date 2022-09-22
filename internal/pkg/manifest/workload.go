@@ -30,9 +30,6 @@ const (
 	sqsFifoPerQueue          = "perQueue"
 	sqsFifoMessageGroup      = "messageGroup"
 	sqsFifoQueue             = "queue"
-	sqsStandardQueueType     = "standard"
-	sqsFifoQueueType         = "fifo"
-	sqsDefaultQueueType      = sqsStandardQueueType
 )
 
 const (
@@ -43,8 +40,7 @@ const (
 
 // All placement options.
 var (
-	subnetPlacements        = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
-	sqsValidQueueTypeValues = []string{sqsStandardQueueType, sqsFifoQueueType}
+	subnetPlacements = []string{string(PublicSubnetPlacement), string(PrivateSubnetPlacement)}
 )
 
 // Error definitions.

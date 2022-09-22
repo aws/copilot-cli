@@ -58,7 +58,6 @@ var (
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
 	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
-	validTopicsTypeValues            = []string{standardTopicType, fifoTopicType}
 	validDeduplicationScopeValues    = []string{sqsFifoMessageGroup, sqsFifoQueue}
 	validFIFOThroughputLimitValues   = []string{sqsFifoPerMessageGroupID, sqsFifoPerQueue}
 )
@@ -1474,14 +1473,9 @@ func (q SQSQueueOrBool) isFIFO() bool {
 	return !q.Advanced.IsEmpty() && !q.Advanced.FIFO.IsEmpty()
 }
 
-// no-op for now.
+// FIFOAdvanceConfigOrBool no-op for now.
 func (q FIFOAdvanceConfigOrBool) validate() error {
 	return nil
-}
-
-func (q FIFOAdvanceConfig) hasFIFOFieldsEnabledOnStandardQueue() bool {
-	return q.FIFOThroughputLimit != nil || q.HighThroughputFifo != nil ||
-		q.DeduplicationScope != nil || q.ContentBasedDeduplication != nil
 }
 
 // validate returns nil if SQSQueue is configured correctly.
@@ -1524,7 +1518,7 @@ func (q SQSQueue) validateFIFO() error {
 	if err := q.DeadLetter.validate(); err != nil {
 		return fmt.Errorf(`validate "dead_letter": %w`, err)
 	}
-	return nil
+	return q.FIFO.validate()
 }
 
 func (q FIFOAdvanceConfig) validateHighThroughputFifo() error {

@@ -31,9 +31,6 @@ const (
 
 // SQS Queue configs
 const (
-	sqsStandardQueueType                    = "standard"
-	sqsFifoQueueType                        = "fifo"
-	sqsDefaultQueueType                     = sqsStandardQueueType
 	sqsDedupeScopeMessageGroup              = "messageGroup"
 	sqsFIFOThroughputLimitPerMessageGroupId = "perMessageGroupId"
 )
