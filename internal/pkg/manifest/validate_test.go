@@ -2832,7 +2832,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 						FIFO: FIFOAdvanceConfigOrBool{
 							Advanced: FIFOAdvanceConfig{
-								FIFOThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
+								FIFOThroughputLimit: aws.String(sqsFIFOThroughputLimitPerMessageGroupID),
 							},
 						},
 					},
@@ -2872,7 +2872,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 						FIFO: FIFOAdvanceConfigOrBool{
 							Advanced: FIFOAdvanceConfig{
-								DeduplicationScope: aws.String(sqsFifoMessageGroup),
+								DeduplicationScope: aws.String(sqsDeduplicationScopeMessageGroup),
 							},
 						},
 					},
@@ -2893,7 +2893,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						FIFO: FIFOAdvanceConfigOrBool{
 							Advanced: FIFOAdvanceConfig{
 								HighThroughputFifo: aws.Bool(true),
-								DeduplicationScope: aws.String(sqsFifoMessageGroup),
+								DeduplicationScope: aws.String(sqsDeduplicationScopeMessageGroup),
 							},
 						},
 					},
@@ -2914,7 +2914,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 						FIFO: FIFOAdvanceConfigOrBool{
 							Advanced: FIFOAdvanceConfig{
 								HighThroughputFifo:  aws.Bool(true),
-								FIFOThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
+								FIFOThroughputLimit: aws.String(sqsFIFOThroughputLimitPerMessageGroupID),
 							},
 						},
 					},
@@ -2934,8 +2934,8 @@ func TestTopicSubscription_validate(t *testing.T) {
 						DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
 						FIFO: FIFOAdvanceConfigOrBool{
 							Advanced: FIFOAdvanceConfig{
-								FIFOThroughputLimit: aws.String(sqsFifoPerMessageGroupID),
-								DeduplicationScope:  aws.String(sqsFifoQueue),
+								FIFOThroughputLimit: aws.String(sqsFIFOThroughputLimitPerMessageGroupID),
+								DeduplicationScope:  aws.String(sqsDeduplicationScopeQueue),
 							},
 						},
 					},

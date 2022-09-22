@@ -47,7 +47,7 @@ func TestWorkerService_Template(t *testing.T) {
 	v, ok := content.(*manifest.WorkerService)
 	require.True(t, ok)
 
-	v.RetrofitFIFOConfig()
+	v.Subscribe.Topics = v.Subscribe.Subscriptions()
 
 	ws, err := workspace.New()
 	require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestWorkerService_Template(t *testing.T) {
 	require.ErrorAs(t, err, &notFound)
 
 	serializer, err := stack.NewWorkerService(stack.WorkerServiceConfig{
-		App:         &config.Application{
+		App: &config.Application{
 			Name: appName,
 		},
 		Env:         envName,

@@ -59,6 +59,10 @@ subscribe:
         fifo:
           content_based_deduplication: true
           high_throughput_fifo: true
+    - name: nonfifotopic
+      service: nonfifotopic
+      queue:
+        fifo: false
 
 # Optional fields for more advanced use-cases.
 #

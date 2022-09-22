@@ -57,9 +57,9 @@ var (
 
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
-	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
-	validDeduplicationScopeValues    = []string{sqsFifoMessageGroup, sqsFifoQueue}
-	validFIFOThroughputLimitValues   = []string{sqsFifoPerMessageGroupID, sqsFifoPerQueue}
+	invalidTaskDefOverridePathRegexp  = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
+	validSQSDeduplicationScopeValues  = []string{sqsDeduplicationScopeMessageGroup, sqsDeduplicationScopeQueue}
+	validSQSFIFOThroughputLimitValues = []string{sqsFIFOThroughputLimitPerMessageGroupID, sqsFIFOThroughputLimitPerQueue}
 )
 
 // Validate returns nil if DynamicLoadBalancedWebService is configured correctly.
@@ -1457,16 +1457,10 @@ func (q SQSQueueOrBool) validate() error {
 	if q.IsEmpty() {
 		return nil
 	}
-	if q.Enabled != nil {
-		return nil
-	}
 	if err := q.Advanced.validate(); err != nil {
 		return err
 	}
-	if q.isFIFO() {
-		return q.Advanced.FIFO.validate()
-	}
-	return nil
+	return q.Advanced.FIFO.validate()
 }
 
 func (q SQSQueueOrBool) isFIFO() bool {
@@ -1490,16 +1484,16 @@ func (q FIFOAdvanceConfig) validate() error {
 		return nil
 	}
 
-	if err := q.validateHighThroughputFifo(); err != nil {
+	if err := q.validateHighThroughputFIFO(); err != nil {
 		return err
 	}
 	if err := q.validateDeduplicationScope(); err != nil {
 		return err
 	}
-	if err := q.validateFifoThroughputLimit(); err != nil {
+	if err := q.validateFIFOThroughputLimit(); err != nil {
 		return err
 	}
-	if aws.StringValue(q.FIFOThroughputLimit) == sqsFifoPerMessageGroupID && aws.StringValue(q.DeduplicationScope) == sqsFifoQueue {
+	if aws.StringValue(q.FIFOThroughputLimit) == sqsFIFOThroughputLimitPerMessageGroupID && aws.StringValue(q.DeduplicationScope) == sqsDeduplicationScopeQueue {
 		return fmt.Errorf(`"fifo_throughput_limit" must be set to "perQueue" when "deduplication_scope" is set to "queue"`)
 	}
 	return nil
@@ -1513,37 +1507,38 @@ func (q FIFOAdvanceConfigOrBool) validate() error {
 	return q.Advanced.validate()
 }
 
-func (q FIFOAdvanceConfig) validateHighThroughputFifo() error {
-	if q.HighThroughputFifo != nil {
-		if q.FIFOThroughputLimit != nil {
-			return &errFieldMutualExclusive{
-				firstField:  "high_throughput_fifo",
-				secondField: "fifo_throughput_limit",
-				mustExist:   false,
-			}
+func (q FIFOAdvanceConfig) validateHighThroughputFIFO() error {
+	if q.HighThroughputFifo == nil {
+		return nil
+	}
+	if q.FIFOThroughputLimit != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "high_throughput_fifo",
+			secondField: "fifo_throughput_limit",
+			mustExist:   false,
 		}
+	}
 
-		if q.DeduplicationScope != nil {
-			return &errFieldMutualExclusive{
-				firstField:  "high_throughput_fifo",
-				secondField: "deduplication_scope",
-				mustExist:   false,
-			}
+	if q.DeduplicationScope != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "high_throughput_fifo",
+			secondField: "deduplication_scope",
+			mustExist:   false,
 		}
 	}
 	return nil
 }
 
 func (q FIFOAdvanceConfig) validateDeduplicationScope() error {
-	if q.DeduplicationScope != nil && !contains(aws.StringValue(q.DeduplicationScope), validDeduplicationScopeValues) {
-		return fmt.Errorf(`validate "deduplication_scope": deduplication scope value must be one of %s`, english.WordSeries(validDeduplicationScopeValues, "or"))
+	if q.DeduplicationScope != nil && !contains(aws.StringValue(q.DeduplicationScope), validSQSDeduplicationScopeValues) {
+		return fmt.Errorf(`validate "deduplication_scope": deduplication scope value must be one of %s`, english.WordSeries(validSQSDeduplicationScopeValues, "or"))
 	}
 	return nil
 }
 
-func (q FIFOAdvanceConfig) validateFifoThroughputLimit() error {
-	if q.FIFOThroughputLimit != nil && !contains(aws.StringValue(q.FIFOThroughputLimit), validFIFOThroughputLimitValues) {
-		return fmt.Errorf(`validate "fifo_throughput_limit": fifo throughput limit value must be one of %s`, english.WordSeries(validFIFOThroughputLimitValues, "or"))
+func (q FIFOAdvanceConfig) validateFIFOThroughputLimit() error {
+	if q.FIFOThroughputLimit != nil && !contains(aws.StringValue(q.FIFOThroughputLimit), validSQSFIFOThroughputLimitValues) {
+		return fmt.Errorf(`validate "fifo_throughput_limit": fifo throughput limit value must be one of %s`, english.WordSeries(validSQSFIFOThroughputLimitValues, "or"))
 	}
 	return nil
 }

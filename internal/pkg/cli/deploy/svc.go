@@ -1171,7 +1171,7 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 	for _, topic := range topics {
 		topicARNs = append(topicARNs, topic.ARN())
 	}
-	subs := d.wsMft.Subscriptions()
+	subs := d.wsMft.Subscribe.Subscriptions()
 	if err = validateTopicsExist(subs, topicARNs, d.app.Name, d.env.Name); err != nil {
 		return nil, err
 	}

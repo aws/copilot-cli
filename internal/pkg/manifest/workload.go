@@ -24,12 +24,12 @@ const (
 	defaultDockerfileName = "Dockerfile"
 )
 
-// SQS Queue configs
+// SQS Queue field options.
 const (
-	sqsFifoPerMessageGroupID = "perMessageGroupId"
-	sqsFifoPerQueue          = "perQueue"
-	sqsFifoMessageGroup      = "messageGroup"
-	sqsFifoQueue             = "queue"
+	sqsFIFOThroughputLimitPerMessageGroupID = "perMessageGroupId"
+	sqsFIFOThroughputLimitPerQueue          = "perQueue"
+	sqsDeduplicationScopeMessageGroup       = "messageGroup"
+	sqsDeduplicationScopeQueue              = "queue"
 )
 
 const (

@@ -1618,10 +1618,8 @@ func Test_convertSubscribe(t *testing.T) {
 								Tries: aws.Uint16(35),
 							},
 							FIFOQueueConfig: &template.FIFOQueueConfig{
-								Advanced: &template.FIFOAdvanceConfig{
-									FIFOThroughputLimit: aws.String("perMessageGroupId"),
-									DeduplicationScope:  aws.String("messageGroup"),
-								},
+								FIFOThroughputLimit: aws.String("perMessageGroupId"),
+								DeduplicationScope:  aws.String("messageGroup"),
 							},
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
@@ -1664,10 +1662,7 @@ func Test_convertSubscribe(t *testing.T) {
 							DeadLetter: &template.DeadLetterQueue{
 								Tries: aws.Uint16(35),
 							},
-							FIFOQueueConfig: &template.FIFOQueueConfig{
-								Enable:   aws.Bool(true),
-								Advanced: nil,
-							},
+							FIFOQueueConfig: &template.FIFOQueueConfig{},
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
 					},
@@ -1716,11 +1711,9 @@ func Test_convertSubscribe(t *testing.T) {
 								Tries: aws.Uint16(35),
 							},
 							FIFOQueueConfig: &template.FIFOQueueConfig{
-								Advanced: &template.FIFOAdvanceConfig{
-									FIFOThroughputLimit:       aws.String("queue"),
-									DeduplicationScope:        aws.String("perQueue"),
-									ContentBasedDeduplication: aws.Bool(true),
-								},
+								FIFOThroughputLimit:       aws.String("queue"),
+								DeduplicationScope:        aws.String("perQueue"),
+								ContentBasedDeduplication: aws.Bool(true),
 							},
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
@@ -1774,11 +1767,9 @@ func Test_convertSubscribe(t *testing.T) {
 								Tries: aws.Uint16(35),
 							},
 							FIFOQueueConfig: &template.FIFOQueueConfig{
-								Advanced: &template.FIFOAdvanceConfig{
-									FIFOThroughputLimit:       aws.String("queue"),
-									DeduplicationScope:        aws.String("perQueue"),
-									ContentBasedDeduplication: aws.Bool(true),
-								},
+								FIFOThroughputLimit:       aws.String("queue"),
+								DeduplicationScope:        aws.String("perQueue"),
+								ContentBasedDeduplication: aws.Bool(true),
 							},
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
@@ -1840,11 +1831,9 @@ func Test_convertSubscribe(t *testing.T) {
 								Tries: aws.Uint16(35),
 							},
 							FIFOQueueConfig: &template.FIFOQueueConfig{
-								Advanced: &template.FIFOAdvanceConfig{
-									FIFOThroughputLimit:       aws.String("queue"),
-									DeduplicationScope:        aws.String("perQueue"),
-									ContentBasedDeduplication: aws.Bool(true),
-								},
+								FIFOThroughputLimit:       aws.String("queue"),
+								DeduplicationScope:        aws.String("perQueue"),
+								ContentBasedDeduplication: aws.Bool(true),
 							},
 						},
 						FilterPolicy: aws.String(`{"store":["example_corp"]}`),
@@ -1909,7 +1898,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &template.SQSQueue{
-					FIFOQueueConfig: &template.FIFOQueueConfig{Enable: aws.Bool(true)},
+					FIFOQueueConfig: &template.FIFOQueueConfig{},
 				},
 			},
 		},
@@ -1969,7 +1958,7 @@ func Test_convertSubscribe(t *testing.T) {
 					},
 				},
 				Queue: &template.SQSQueue{
-					FIFOQueueConfig: &template.FIFOQueueConfig{Enable: aws.Bool(true)},
+					FIFOQueueConfig: &template.FIFOQueueConfig{},
 				},
 			},
 		},

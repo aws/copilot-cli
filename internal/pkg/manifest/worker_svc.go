@@ -19,7 +19,7 @@ const (
 
 var (
 	errUnmarshalQueueOpts  = errors.New(`cannot unmarshal "queue" field into bool or map`)
-	errUnmarshalFifoConfig = errors.New("unable to unmarshal fifo field into boolean or compose-style map")
+	errUnmarshalFifoConfig = errors.New(`unable to unmarshal "fifo" field into boolean or compose-style map`)
 )
 
 // WorkerService holds the configuration to create a worker service.
@@ -129,6 +129,11 @@ func (f *FIFOAdvanceConfigOrBool) IsEmpty() bool {
 	return f.Enable == nil && f.Advanced.IsEmpty()
 }
 
+// IsEmpty returns true if the FifoAdvanceConfigOrBool struct has all nil values.
+func (f *FIFOAdvanceConfigOrBool) IsEnabled() bool {
+	return aws.BoolValue(f.Enable) || !f.Advanced.IsEmpty()
+}
+
 // FifoAdvanceConfig represents the advanced fifo queue config.
 type FIFOAdvanceConfig struct {
 	ContentBasedDeduplication *bool   `yaml:"content_based_deduplication"`
@@ -236,22 +241,20 @@ func (s *WorkerService) EnvFile() string {
 }
 
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
-// receives messages from.
-func (s *WorkerService) Subscriptions() []TopicSubscription {
-	s.RetrofitFIFOConfig()
-	return s.Subscribe.Topics
-}
-
-// RetrofitFIFOConfig appends ".fifo" suffix to fifo topics.
-func (s *WorkerService) RetrofitFIFOConfig() {
-	for idx, topic := range s.Subscribe.Topics {
+// receives messages from. This method also appends ".fifo" to the topics and returns a new set of subs.
+func (s *SubscribeConfig) Subscriptions() []TopicSubscription {
+	var subs []TopicSubscription
+	for _, topic := range s.Topics {
+		topicSubscription := topic
 		// if condition appends .fifo suffix to the topic which doesn't have topic specific queue and subscribing to default FIFO queue.
-		if topic.Queue.IsEmpty() && !s.Subscribe.Queue.IsEmpty() && !s.Subscribe.Queue.FIFO.IsEmpty() {
-			s.Subscribe.Topics[idx].Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
-		} else if !topic.Queue.IsEmpty() && !topic.Queue.Advanced.IsEmpty() && !topic.Queue.Advanced.FIFO.IsEmpty() { // else if condition appends .fifo suffix to the topic which has topic specific FIFO queue configuration.
-			s.Subscribe.Topics[idx].Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		if topic.Queue.IsEmpty() && !s.Queue.IsEmpty() && s.Queue.FIFO.IsEnabled() {
+			topicSubscription.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		} else if !topic.Queue.IsEmpty() && !topic.Queue.Advanced.IsEmpty() && topic.Queue.Advanced.FIFO.IsEnabled() { // else if condition appends .fifo suffix to the topic which has topic specific FIFO queue configuration.
+			topicSubscription.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
 		}
+		subs = append(subs, topicSubscription)
 	}
+	return subs
 }
 
 func (s WorkerService) applyEnv(envName string) (workloadManifest, error) {

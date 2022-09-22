@@ -1288,7 +1288,7 @@ func TestWorkerService_RequiredEnvironmentFeatures(t *testing.T) {
 	}
 }
 
-func TestWorkerService_RetrofitFIFOConfig(t *testing.T) {
+func TestWorkerService_Subscriptions(t *testing.T) {
 	duration111Seconds := 111 * time.Second
 	testCases := map[string]struct {
 		input    *WorkerService
@@ -1549,7 +1549,7 @@ func TestWorkerService_RetrofitFIFOConfig(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			svc.RetrofitFIFOConfig()
+			svc.Subscribe.Topics = svc.Subscribe.Subscriptions()
 
 			// THEN
 			require.Equal(t, tc.expected, svc)

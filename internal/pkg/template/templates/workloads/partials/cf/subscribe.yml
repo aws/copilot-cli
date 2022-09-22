@@ -82,15 +82,15 @@ EventsQueue:
     {{- end}}
     {{- if .Subscribe.Queue.IsFIFO }}
     FifoQueue: true
-    {{- if .Subscribe.Queue.FIFOQueueConfig.Advanced }}
-    {{- if .Subscribe.Queue.FIFOQueueConfig.Advanced.FIFOThroughputLimit }}
-    FifoThroughputLimit: {{.Subscribe.Queue.FIFOQueueConfig.Advanced.FIFOThroughputLimit}}
+    {{- if .Subscribe.Queue.FIFOQueueConfig }}
+    {{- if .Subscribe.Queue.FIFOQueueConfig.FIFOThroughputLimit }}
+    FifoThroughputLimit: {{.Subscribe.Queue.FIFOQueueConfig.FIFOThroughputLimit}}
     {{- end}}
-    {{- if .Subscribe.Queue.FIFOQueueConfig.Advanced.DeduplicationScope }}
-    DeduplicationScope: {{.Subscribe.Queue.FIFOQueueConfig.Advanced.DeduplicationScope}}
+    {{- if .Subscribe.Queue.FIFOQueueConfig.DeduplicationScope }}
+    DeduplicationScope: {{.Subscribe.Queue.FIFOQueueConfig.DeduplicationScope}}
     {{- end }}
-    {{- if .Subscribe.Queue.FIFOQueueConfig.Advanced.ContentBasedDeduplication }}
-    ContentBasedDeduplication: {{.Subscribe.Queue.FIFOQueueConfig.Advanced.ContentBasedDeduplication}}
+    {{- if .Subscribe.Queue.FIFOQueueConfig.ContentBasedDeduplication }}
+    ContentBasedDeduplication: {{.Subscribe.Queue.FIFOQueueConfig.ContentBasedDeduplication}}
     {{- end}}
     {{- end}}
     {{- end}}
@@ -200,15 +200,15 @@ QueuePolicy:
     {{- end}}
     {{- if $topic.Queue.IsFIFO }}
     FifoQueue: true
-    {{- if $topic.Queue.FIFOQueueConfig.Advanced}}
-    {{- if $topic.Queue.FIFOQueueConfig.Advanced.FIFOThroughputLimit }}
-    FifoThroughputLimit: {{$topic.Queue.FIFOQueueConfig.Advanced.FIFOThroughputLimit}}
+    {{- if $topic.Queue.FIFOQueueConfig}}
+    {{- if $topic.Queue.FIFOQueueConfig.FIFOThroughputLimit }}
+    FifoThroughputLimit: {{$topic.Queue.FIFOQueueConfig.FIFOThroughputLimit}}
     {{- end}}
-    {{- if $topic.Queue.FIFOQueueConfig.Advanced.DeduplicationScope }}
-    DeduplicationScope: {{$topic.Queue.FIFOQueueConfig.Advanced.DeduplicationScope}}
+    {{- if $topic.Queue.FIFOQueueConfig.DeduplicationScope }}
+    DeduplicationScope: {{$topic.Queue.FIFOQueueConfig.DeduplicationScope}}
     {{- end }}
-    {{- if $topic.Queue.FIFOQueueConfig.Advanced.ContentBasedDeduplication }}
-    ContentBasedDeduplication: {{$topic.Queue.FIFOQueueConfig.Advanced.ContentBasedDeduplication}}
+    {{- if $topic.Queue.FIFOQueueConfig.ContentBasedDeduplication }}
+    ContentBasedDeduplication: {{$topic.Queue.FIFOQueueConfig.ContentBasedDeduplication}}
     {{- end}}
     {{- end}}
     {{- end}}
