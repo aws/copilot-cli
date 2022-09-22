@@ -241,7 +241,7 @@ func (s *WorkerService) Subscriptions() []TopicSubscription {
 	return s.Subscribe.Topics
 }
 
-// RetrofitFIFOConfig appends ".fifo" suffix to fifo topics, also adds values to type field.
+// RetrofitFIFOConfig appends ".fifo" suffix to fifo topics.
 func (s *WorkerService) RetrofitFIFOConfig() {
 	for idx, topic := range s.Subscribe.Topics {
 		// if condition appends .fifo suffix to the topic which doesn't have topic specific queue and subscribing to default FIFO queue.

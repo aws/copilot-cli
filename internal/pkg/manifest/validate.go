@@ -1460,22 +1460,17 @@ func (q SQSQueueOrBool) validate() error {
 	if q.Enabled != nil {
 		return nil
 	}
-	if q.isFIFO() {
-		if q.Advanced.FIFO.Enable != nil {
-			return nil
-		}
-		return q.Advanced.validateFIFO()
+	if err := q.Advanced.validate(); err != nil {
+		return err
 	}
-	return q.Advanced.validate()
+	if q.isFIFO() {
+		return q.Advanced.FIFO.validate()
+	}
+	return nil
 }
 
 func (q SQSQueueOrBool) isFIFO() bool {
 	return !q.Advanced.IsEmpty() && !q.Advanced.FIFO.IsEmpty()
-}
-
-// FIFOAdvanceConfigOrBool no-op for now.
-func (q FIFOAdvanceConfigOrBool) validate() error {
-	return nil
 }
 
 // validate returns nil if SQSQueue is configured correctly.
@@ -1489,7 +1484,7 @@ func (q SQSQueue) validate() error {
 	return nil
 }
 
-// validate returns nil if SQSQueue is configured correctly.
+// validate returns nil if FIFOAdvanceConfig is configured correctly.
 func (q FIFOAdvanceConfig) validate() error {
 	if q.IsEmpty() {
 		return nil
@@ -1510,15 +1505,12 @@ func (q FIFOAdvanceConfig) validate() error {
 	return nil
 }
 
-// validateFIFO returns nil if FIFO SQSQueue is configured correctly.
-func (q SQSQueue) validateFIFO() error {
-	if err := q.FIFO.Advanced.validate(); err != nil {
-		return err
+// validateFIFO returns nil if FIFOAdvanceConfigOrBool is configured correctly.
+func (q FIFOAdvanceConfigOrBool) validate() error {
+	if q.Enable != nil {
+		return nil
 	}
-	if err := q.DeadLetter.validate(); err != nil {
-		return fmt.Errorf(`validate "dead_letter": %w`, err)
-	}
-	return q.FIFO.validate()
+	return q.Advanced.validate()
 }
 
 func (q FIFOAdvanceConfig) validateHighThroughputFifo() error {

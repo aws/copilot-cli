@@ -884,9 +884,8 @@ func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
 
 	if aws.BoolValue(q.FIFO.Enable) {
 		queue.FIFOQueueConfig = &template.FIFOQueueConfig{
-			Enable: nil,
+			Enable: q.FIFO.Enable,
 		}
-		queue.FIFOQueueConfig.Enable = aws.Bool(true)
 		return queue
 	}
 
