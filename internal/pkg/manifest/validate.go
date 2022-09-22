@@ -1414,10 +1414,7 @@ func (t Topic) validate() error {
 	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
 		return err
 	}
-	if err := t.FIFO.validate(); err != nil {
-		return err
-	}
-	return nil
+	return t.FIFO.validate()
 }
 
 // validate returns nil if FifoAdvanceConfigOrBool is configured correctly.

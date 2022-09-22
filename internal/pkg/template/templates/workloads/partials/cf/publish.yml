@@ -2,7 +2,7 @@
 {{- range $topic := .Publish.Topics}}
 {{logicalIDSafe $topic.Name}}SNSTopic:
   Metadata:
-    'aws:copilot:description': {{ if or $topic.FIFOTopicConfig }} 'A FIFO SNS topic to broadcast {{$topic.Name}} events' {{ else}} 'A SNS topic to broadcast {{$topic.Name}} events'{{ end}}
+    'aws:copilot:description': {{ if $topic.FIFOTopicConfig }} 'A FIFO SNS topic to broadcast {{$topic.Name}} events' {{ else}} 'A SNS topic to broadcast {{$topic.Name}} events'{{ end}}
   Type: AWS::SNS::Topic
   Properties:
     {{- if $topic.FIFOTopicConfig }}

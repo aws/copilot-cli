@@ -415,6 +415,11 @@ func (f *FIFOAdvanceConfigOrBool) IsEmpty() bool {
 	return f.Enable == nil && f.Advanced.IsEmpty()
 }
 
+// IsEnabled returns true if the FIFO is enabled on the SQS queue.
+func (f *FIFOAdvanceConfigOrBool) IsEnabled() bool {
+	return aws.BoolValue(f.Enable)
+}
+
 // FIFOAdvanceConfig represents the advanced fifo topic config.
 type FIFOAdvanceConfig struct {
 	ContentBasedDeduplication *bool `yaml:"content_based_deduplication"`

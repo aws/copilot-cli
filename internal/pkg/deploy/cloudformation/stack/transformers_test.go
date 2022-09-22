@@ -1416,16 +1416,14 @@ func Test_convertPublish(t *testing.T) {
 			wanted: &template.PublishOpts{
 				Topics: []*template.Topic{
 					{
-						Name: aws.String("topic1"),
-						FIFOTopicConfig: &template.FIFOTopicConfig{
-							Enable: aws.Bool(true),
-						},
-						AccountID: accountId,
-						Partition: partition,
-						Region:    region,
-						App:       app,
-						Env:       env,
-						Svc:       svc,
+						Name:            aws.String("topic1"),
+						FIFOTopicConfig: &template.FIFOTopicConfig{},
+						AccountID:       accountId,
+						Partition:       partition,
+						Region:          region,
+						App:             app,
+						Env:             env,
+						Svc:             svc,
 					},
 					{
 

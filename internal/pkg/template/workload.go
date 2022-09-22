@@ -401,7 +401,6 @@ type Topic struct {
 
 // Fifo holds configuration needed if the topic is FIFO.
 type FIFOTopicConfig struct {
-	Enable                    *bool
 	ContentBasedDeduplication *bool
 }
 

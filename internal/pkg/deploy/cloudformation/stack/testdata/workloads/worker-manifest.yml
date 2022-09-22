@@ -28,6 +28,8 @@ publish:
     - name: yourtopic
       fifo:
         content_based_deduplication: true
+    - name: nonfifotopic
+      fifo: false
 
 subscribe:
   queue:

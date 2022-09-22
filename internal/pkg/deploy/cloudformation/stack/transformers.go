@@ -799,11 +799,13 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	for _, topic := range topics {
 		var fifoConfig *template.FIFOTopicConfig
 		if !topic.FIFO.IsEmpty() {
-			fifoConfig = &template.FIFOTopicConfig{
-				Enable: topic.FIFO.Enable,
+			if topic.FIFO.IsEnabled() {
+				fifoConfig = &template.FIFOTopicConfig{}
 			}
 			if !topic.FIFO.Advanced.IsEmpty() {
-				fifoConfig.ContentBasedDeduplication = topic.FIFO.Advanced.ContentBasedDeduplication
+				fifoConfig = &template.FIFOTopicConfig{
+					ContentBasedDeduplication: topic.FIFO.Advanced.ContentBasedDeduplication,
+				}
 			}
 		}
 		publishers.Topics = append(publishers.Topics, &template.Topic{
