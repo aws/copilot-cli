@@ -1463,10 +1463,6 @@ func (q SQSQueueOrBool) validate() error {
 	return q.Advanced.FIFO.validate()
 }
 
-func (q SQSQueueOrBool) isFIFO() bool {
-	return !q.Advanced.IsEmpty() && !q.Advanced.FIFO.IsEmpty()
-}
-
 // validate returns nil if SQSQueue is configured correctly.
 func (q SQSQueue) validate() error {
 	if q.IsEmpty() {
