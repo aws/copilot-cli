@@ -197,8 +197,7 @@ func (e *errEnvHasPublicServicesWithRedirect) message() string {
 %s
 To fix this, set the following field in %s manifest:
 %s
-and run %s.
-	`,
+and run %s.`,
 		english.PluralWord(n, "Service", "Services"),
 		english.OxfordWordSeries(quoted, "and"),
 		english.PluralWord(n, "redirects", "redirect"),
@@ -212,8 +211,7 @@ and run %s.
 
 func (e *errEnvHasPublicServicesWithRedirect) Warning() string {
 	return fmt.Sprintf(`%s
-If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.
-`,
+If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.`,
 		e.message(),
 		english.PluralWord(len(e.services), "this service", "these services"),
 		english.PluralWord(len(e.services), "its", "each service's"),

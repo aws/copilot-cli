@@ -546,7 +546,81 @@ func TestEnvDeployer_Validate(t *testing.T) {
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc2RuleARN").Return(listenerRuleNoRedirect, nil)
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc3RuleARN").Return(listenerRuleWithRedirect, nil)
 			},
-			expected: "can't enable TLS termination on CDN: HTTP traffic redirects to HTTPS in services svc1 and svc3.\nSet http.redirect_to_https to false for those services and redeploy them.",
+			expectedStdErr: fmt.Sprintf(`Services "svc1" and "svc3" redirect HTTP traffic to HTTPS.
+These services will not be reachable through the CDN.
+To fix this, set the following field in each manifest:
+%s
+http:
+  redirect_to_https: true
+%s
+and run %scopilot svc deploy%s.
+If you'd like to use these services without a CDN, ensure each service's A record is pointed to the ALB.`,
+				"```", "```", "`", "`"), // ugh
+		},
+		"cdn tls termination enabled, warn with one service that doesn't redirect, two that do redirect, alb ingress restricted to cdn": {
+			app: &config.Application{},
+			mft: &manifest.Environment{
+				EnvironmentConfig: manifest.EnvironmentConfig{
+					HTTPConfig: manifest.EnvironmentHTTPConfig{
+						Public: manifest.PublicHTTPConfig{
+							Certificates: []string{"mockCertARN"},
+							SecurityGroupConfig: manifest.ALBSecurityGroupsConfig{
+								Ingress: manifest.Ingress{
+									RestrictiveIngress: manifest.RestrictiveIngress{
+										CDNIngress: aws.Bool(true),
+									},
+								},
+							},
+						},
+					},
+					CDNConfig: manifest.EnvironmentCDNConfig{
+						Config: manifest.AdvancedCDNConfig{
+							TerminateTLS: aws.Bool(true),
+						},
+					},
+				},
+			},
+			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
+				m.stackDescribers = map[string]*mocks.MockstackDescriber{
+					"svc1": mocks.NewMockstackDescriber(ctrl),
+					"svc2": mocks.NewMockstackDescriber(ctrl),
+					"svc3": mocks.NewMockstackDescriber(ctrl),
+				}
+
+				m.envDescriber.EXPECT().Params().Return(map[string]string{
+					"ALBWorkloads": "svc1,svc2,svc3",
+				}, nil)
+				m.stackDescribers["svc1"].EXPECT().Resources().Return([]*stack.Resource{
+					{
+						LogicalID:  "HTTPListenerRuleWithDomain",
+						PhysicalID: "svc1RuleARN",
+					},
+				}, nil)
+				m.stackDescribers["svc2"].EXPECT().Resources().Return([]*stack.Resource{
+					{
+						LogicalID:  "HTTPListenerRuleWithDomain",
+						PhysicalID: "svc2RuleARN",
+					},
+				}, nil)
+				m.stackDescribers["svc3"].EXPECT().Resources().Return([]*stack.Resource{
+					{
+						LogicalID:  "HTTPListenerRuleWithDomain",
+						PhysicalID: "svc3RuleARN",
+					},
+				}, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc1RuleARN").Return(listenerRuleWithRedirect, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc2RuleARN").Return(listenerRuleNoRedirect, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc3RuleARN").Return(listenerRuleWithRedirect, nil)
+			},
+			expected: fmt.Sprintf(`Services "svc1" and "svc3" redirect HTTP traffic to HTTPS.
+These services will not be reachable through the CDN.
+To fix this, set the following field in each manifest:
+%s
+http:
+  redirect_to_https: true
+%s
+and run %scopilot svc deploy%s.`,
+				"```", "```", "`", "`"),
 		},
 		"cdn tls termination enabled, success with three services that don't redirect": {
 			app: &config.Application{},
