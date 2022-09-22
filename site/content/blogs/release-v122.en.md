@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.22: Try out IAM Permission Boundary and more!'
+title: 'AWS Copilot v1.22: Try out IAM Permission Boundaries and more!'
 twitter_title: 'AWS Copilot v1.22'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.22: Try out IAM Permission Boundary and more!
+# AWS Copilot v1.22: Try out IAM Permission Boundaries and more!
 
 Posted On: Sep 27, 2022
 
@@ -38,23 +38,23 @@ Copilot v1.22 brings several new features and improvements:
 
 ## CloudFront TLS Termination
 
-You can now configure env manifest to have CloudFront terminate TLS for your Load Balanced Web Services (LBWS):
+You can now configure your env manifest to have CloudFront terminate TLS for your Load Balanced Web Services (LBWS):
 
 ```yaml
 cdn:
   tls_termination: true
 ```
 
-The configuration above uses CloudFront for TLS termination, which means the traffic from `CF → ALB → ECS` will be HTTP only. This brings faster TLS termination and shorter page loading for viewers, since the CloudFront edges are usually geographically closer to the them.
+The configuration above uses CloudFront for TLS termination, which means the traffic from `CF → ALB → ECS` will be HTTP only. This brings faster TLS termination and shorter page loading for viewers, since the CloudFront edges are usually geographically closer to them.
 
-However, if your services have HTTPS enabled (either you have an app domain or imported certificates in the environment), you must turn off ALB http redirect by updating your LBWS manifests.
+However, if your services have HTTPS enabled (you have either an app domain or imported certificates in the environment), you must turn off ALB http redirect by updating your LBWS manifests.
 
 ```yaml
 http:
-  disable_redirect: true
+  redirect_to_https: false
 ```
 
-And then redeploy the services before using `env deploy` to enable CloudFront TLS termination.
+And then redeploy the services with `svc deploy` before using `env deploy` to enable CloudFront TLS termination.
 
 ## What’s next?
 
