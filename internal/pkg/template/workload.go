@@ -62,7 +62,7 @@ const (
 	snsARNPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
 )
 
-// Constants for stack resource logical ID's
+// Constants for stack resource logical IDs
 const (
 	LogicalIDHTTPListenerRuleWithDomain = "HTTPListenerRuleWithDomain"
 )
