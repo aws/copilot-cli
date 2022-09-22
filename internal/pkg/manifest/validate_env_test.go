@@ -744,7 +744,7 @@ func TestCDNConfiguration_validate(t *testing.T) {
 				Enabled: aws.Bool(false),
 			},
 		},
-		"valid if advanced config configured correctly": {
+		"success with cert without tls termination": {
 			in: EnvironmentCDNConfig{
 				Config: AdvancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),

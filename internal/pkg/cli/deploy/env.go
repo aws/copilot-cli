@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
 	"github.com/dustin/go-humanize/english"
@@ -65,6 +67,10 @@ type lbDescriber interface {
 
 type stackDescriber interface {
 	Resources() ([]*stack.Resource, error)
+}
+
+type Warner interface {
+	Warning() string
 }
 
 const (
@@ -166,11 +172,47 @@ func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment) e
 	if mft.CDNEnabled() && mft.CDNDoesTLSTermination() {
 		// ensure all services _are not_ doing http->https redirect
 		if err := d.verifyALBWorkloadsDontRedirect(ctx); err != nil {
-			return fmt.Errorf("can't enable TLS termination on CDN: %w", err)
+			if warn, ok := err.(Warner); ok {
+				fmt.Println(warn.Warning())
+			} else {
+				return fmt.Errorf("can't enable TLS termination on CDN: %w", err)
+			}
 		}
 	}
 
 	return nil
+}
+
+type errEnvHasPublicServicesWithRedirect struct {
+	services []string
+}
+
+func (e *errEnvHasPublicServicesWithRedirect) Error() string {
+	quoted := make([]string, len(e.services))
+	for i := range e.services {
+		quoted[i] = strconv.Quote(e.services[i])
+	}
+	return fmt.Sprintf("%s %s %s HTTP traffic to HTTPS",
+		english.PluralWord(len(e.services), "Service", "Services"),
+		english.OxfordWordSeries(quoted, "and"),
+		english.PluralWord(len(e.services), "redirects", "redirect"))
+}
+
+func (e *errEnvHasPublicServicesWithRedirect) Warning() string {
+	return fmt.Sprintf(`%s.
+%s
+To fix this, set the following field in %s manifest:
+%s
+and run %s.
+If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.
+	`, e.Error(),
+		color.Emphasize(english.PluralWord(len(e.services), "This service", "These services")+" will not be reachable through the CDN."),
+		english.PluralWord(len(e.services), "its", "each"),
+		color.HighlightCodeBlock("http:\n  redirect_to_https: true"),
+		color.HighlightCode("copilot svc deploy"),
+		english.PluralWord(len(e.services), "this service", "these services"),
+		english.PluralWord(len(e.services), "its", "each service's"),
+	)
 }
 
 // verifyALBWorkloadsDontRedirect verifies that none of the public ALB Workloads
@@ -210,18 +252,18 @@ func (d *envDeployer) verifyALBWorkloadsDontRedirect(ctx context.Context) error 
 	}
 	if len(badServices) > 0 {
 		sort.Strings(badServices)
-		return fmt.Errorf("HTTP traffic redirects to HTTPS in %v %v.\nSet http.redirect_to_https to false for %v and redeploy %v.",
-			english.PluralWord(len(badServices), "service", "services"),
-			english.OxfordWordSeries(badServices, "and"),
-			english.PluralWord(len(badServices), "that service", "those services"),
-			english.PluralWord(len(badServices), "it", "them"),
-		)
+		return &errEnvHasPublicServicesWithRedirect{
+			services: badServices,
+		}
 	}
 
 	return nil
 }
 
-// lbServiceRedirects returns true if svc's HTTP listener rule redirects.
+// lbServiceRedirects returns true if svc's HTTP listener rule redirects. We only check
+// HTTPListenerRuleWithDomain because HTTPListenerRule:
+// a) doesn't ever redirect
+// b) won't work with cloudfront anyways (can't point ALB default DNS to CF)
 func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool, error) {
 	stackDescriber := d.newServiceStackDescriber(svc)
 	resources, err := stackDescriber.Resources()
@@ -237,8 +279,6 @@ func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool,
 		}
 	}
 	if ruleARN == "" {
-		// TODO
-		// return false, fmt.Errorf("resource %q not present", svcStackResourceHTTPListenerRuleLogicalID)
 		return false, fmt.Errorf("http listener not found on service %q", svc)
 	}
 
