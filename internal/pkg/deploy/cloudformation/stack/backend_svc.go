@@ -142,7 +142,7 @@ func (s *BackendService) Template() (string, error) {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 
-	targetContainerName, targetContainerPort := s.httpLoadBalancerTarget()
+	_, targetContainerPort := s.httpLoadBalancerTarget()
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -165,7 +165,6 @@ func (s *BackendService) Template() (string, error) {
 		WorkloadType:       manifest.BackendServiceType,
 		HealthCheck:        convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
 		HTTPTargetContainer: template.HTTPTargetContainer{
-			Name: aws.StringValue(targetContainerName),
 			Port: aws.StringValue(targetContainerPort),
 		},
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),

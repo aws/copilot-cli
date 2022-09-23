@@ -190,7 +190,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if s.manifest.RoutingRule.RedirectToHTTPS != nil {
 		httpRedirect = aws.BoolValue(s.manifest.RoutingRule.RedirectToHTTPS)
 	}
-	targetContainerName, targetContainerPort := s.httpLoadBalancerTarget()
+	_, targetContainerPort := s.httpLoadBalancerTarget()
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -214,7 +214,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		ExecuteCommand:     convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:       manifest.LoadBalancedWebServiceType,
 		HTTPTargetContainer: template.HTTPTargetContainer{
-			Name: aws.StringValue(targetContainerName),
 			Port: aws.StringValue(targetContainerPort),
 		},
 		HealthCheck:              convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
