@@ -134,6 +134,40 @@ Retention specifies the time a message will remain in the queue before being del
 <span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-timeout" href="#subscribe-queue-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
 Timeout defines the length of time a message is unavailable after being delivered. Default 30s. Range 0s-12h.
 
+<span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-fifo" href="#subscribe-queue-fifo" class="field">`fifo`</a> <span class="type">Boolean or Map</span>  
+The fifo defines the SQS FIFO Queue configurations for your default queue.   
+If you specify true, Copilot will create SQS FIFO Queue the default FIFO settings.
+
+```yaml
+subscribe:
+  topics:
+    - name: events
+      service: api
+      queue: # Define a topic-specific queue for the api-events topic.
+        timeout: 20s
+    - name: events
+      service: fe
+  queue: # By default, messages from all topics will go to a shared queue.
+    fifo: true
+```
+
+Alternativey, you can also specify the advanced SQS FIFO Queue configurations. 
+```yaml
+subscribe:
+  topics:
+    - name: events
+      service: api
+      queue: # Define a topic-specific queue for the api-events topic.
+        timeout: 20s
+    - name: events
+      service: fe
+  queue: # By default, messages from all topics will go to a shared queue.
+    fifo:
+      content_based_deduplication: true
+      deduplication_scope: messageGroup
+      fifo_throughput_limit: perMessageGroupId
+```
+
 <span class="parent-field">subscribe.queue.dead_letter.</span><a id="subscribe-queue-dead-letter-tries" href="#subscribe-queue-dead-letter-tries" class="field">`tries`</a> <span class="type">Integer</span>  
 If specified, creates a dead letter queue and a redrive policy which routes messages to the DLQ after `tries` attempts. That is, if a worker service fails to process a message successfully `tries` times, it will be routed to the DLQ for examination instead of redriven.
 
@@ -172,6 +206,11 @@ For additional information on how to write filter policies, see the [SNS documen
 
 <span class="parent-field">subscribe.topics.topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>  
 Optional. Specify SQS queue configuration for the topic. If specified as `true`, the queue will be created  with default configuration. Specify this field as a map for customization of certain attributes for this topic-specific queue.
+
+<span class="parent-field">subscribe.topics.topic.</span><a id="topic-fifo" href="#topic-fifo" class="field">`fifo`</a> <span class="type">Boolean or Map</span>   
+Optional. Specify SQS FIFO queue configuration for the topic. If specified as `true`, the FIFO queue will be created with default FIFO configuration. 
+Specify this field as a map for customization of certain attributes for this topic-specific queue.
+
 
 {% include 'image-config.en.md' %}
 

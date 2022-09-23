@@ -25,3 +25,26 @@ Holds configuration for a single SNS topic.
 
 <span class="parent-field">publish.topics.topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
 Required. The name of the SNS topic. Must contain only upper and lowercase letters, numbers, hyphens, and underscores.
+
+<span class="parent-field">publish.topics.topic.</span><a id="fifo" href="#fifi" class="field">`fifo`</a> <span class="type">Boolean or Map</span>  
+The FIFO SNS Topics configuration.   
+If you specify true, Copilot will create SNS FIFO Topic with the given name and default FIFO settings.
+
+```yaml
+publish:
+  topics:
+    - name: mytopic
+      fifo: true
+```
+
+Alternatively, you can also configure the advanced SNS FIFO Topic configurations.
+```yaml
+publish:
+  topics:
+    - name: mytopic
+      fifo:
+        content_based_deduplication: true
+```
+
+<span class="parent-field">publish.topics.fifo</span><a id="ContentBasedDeduplication" href="#fifi" class="field">`content_based_deduplication`</a> <span class="type">Boolean</span>   
+content-based deduplication for FIFO topics
