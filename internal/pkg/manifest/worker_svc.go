@@ -138,8 +138,8 @@ func (f *FIFOAdvanceConfigOrBool) IsEnabled() bool {
 type FIFOAdvanceConfig struct {
 	ContentBasedDeduplication *bool   `yaml:"content_based_deduplication"`
 	DeduplicationScope        *string `yaml:"deduplication_scope"`
-	FIFOThroughputLimit       *string `yaml:"fifo_throughput_limit"`
-	HighThroughputFifo        *bool   `yaml:"high_throughput_fifo"`
+	FIFOThroughputLimit       *string `yaml:"throughput_limit"`
+	HighThroughputFifo        *bool   `yaml:"high_throughput"`
 }
 
 // IsEmpty returns true if the FifoAdvanceConfig struct has all nil values.

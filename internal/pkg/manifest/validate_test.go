@@ -2818,7 +2818,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 					},
 				},
 			},
-			wanted: errors.New(`validate "queue": validate "fifo_throughput_limit": fifo throughput limit value must be one of perMessageGroupId or perQueue`),
+			wanted: errors.New(`validate "queue": validate "throughput_limit": fifo throughput limit value must be one of perMessageGroupId or perQueue`),
 		},
 		"should not return error if valid fifo throughput limit": {
 			in: TopicSubscription{
@@ -2880,7 +2880,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 			},
 			wanted: nil,
 		},
-		"should return error if high_throughput_fifo is defined along with deduplication_scope": {
+		"should return error if high_throughput is defined along with deduplication_scope": {
 			in: TopicSubscription{
 				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
@@ -2899,9 +2899,9 @@ func TestTopicSubscription_validate(t *testing.T) {
 					},
 				},
 			},
-			wanted: errors.New(`validate "queue": must specify one, not both, of "high_throughput_fifo" and "deduplication_scope"`),
+			wanted: errors.New(`validate "queue": must specify one, not both, of "high_throughput" and "deduplication_scope"`),
 		},
-		"should return error if high_throughput_fifo is defined along with  fifo_throughput_limit": {
+		"should return error if high_throughput is defined along with  throughput_limit": {
 			in: TopicSubscription{
 				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
@@ -2920,9 +2920,9 @@ func TestTopicSubscription_validate(t *testing.T) {
 					},
 				},
 			},
-			wanted: errors.New(`validate "queue": must specify one, not both, of "high_throughput_fifo" and "fifo_throughput_limit"`),
+			wanted: errors.New(`validate "queue": must specify one, not both, of "high_throughput" and "throughput_limit"`),
 		},
-		"should return error if invalid combination of deduplication_scope and fifo_throughput_limit is defined": {
+		"should return error if invalid combination of deduplication_scope and throughput_limit is defined": {
 			in: TopicSubscription{
 				Name:    aws.String("mockTopic"),
 				Service: aws.String("mockservice"),
@@ -2941,7 +2941,7 @@ func TestTopicSubscription_validate(t *testing.T) {
 					},
 				},
 			},
-			wanted: errors.New(`validate "queue": "fifo_throughput_limit" must be set to "perQueue" when "deduplication_scope" is set to "queue"`),
+			wanted: errors.New(`validate "queue": "throughput_limit" must be set to "perQueue" when "deduplication_scope" is set to "queue"`),
 		},
 		"should not return error if valid standard queue config defined": {
 			in: TopicSubscription{

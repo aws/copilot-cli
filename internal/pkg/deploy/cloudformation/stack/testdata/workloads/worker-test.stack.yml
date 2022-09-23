@@ -64,7 +64,7 @@ Metadata:
           queue:
             fifo:
               content_based_deduplication: true
-              high_throughput_fifo: true
+              high_throughput: true
         - name: nonfifotopic
           service: nonfifotopic
           queue:
