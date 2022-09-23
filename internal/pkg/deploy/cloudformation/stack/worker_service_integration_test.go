@@ -47,8 +47,6 @@ func TestWorkerService_Template(t *testing.T) {
 	v, ok := content.(*manifest.WorkerService)
 	require.True(t, ok)
 
-	v.Subscribe.Topics = v.Subscribe.Subscriptions()
-
 	ws, err := workspace.New()
 	require.NoError(t, err)
 

@@ -1608,7 +1608,7 @@ func Test_convertSubscribe(t *testing.T) {
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
-						Name:    aws.String("name"),
+						Name:    aws.String("name.fifo"),
 						Service: aws.String("svc"),
 						Queue: &template.SQSQueue{
 							Retention: aws.Int64(111),
@@ -1653,7 +1653,7 @@ func Test_convertSubscribe(t *testing.T) {
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
 					{
-						Name:    aws.String("name"),
+						Name:    aws.String("name.fifo"),
 						Service: aws.String("svc"),
 						Queue: &template.SQSQueue{
 							Retention: aws.Int64(111),
@@ -1674,7 +1674,7 @@ func Test_convertSubscribe(t *testing.T) {
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
-						Name:    aws.String("name.fifo"),
+						Name:    aws.String("name"),
 						Service: aws.String("svc"),
 						Queue: manifest.SQSQueueOrBool{
 							Advanced: manifest.SQSQueue{
@@ -1726,7 +1726,7 @@ func Test_convertSubscribe(t *testing.T) {
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
-						Name:    aws.String("name.fifo"),
+						Name:    aws.String("name"),
 						Service: aws.String("svc"),
 						Queue: manifest.SQSQueueOrBool{
 							Advanced: manifest.SQSQueue{
@@ -1786,7 +1786,7 @@ func Test_convertSubscribe(t *testing.T) {
 			inSubscribe: manifest.SubscribeConfig{
 				Topics: []manifest.TopicSubscription{
 					{
-						Name:    aws.String("name.fifo"),
+						Name:    aws.String("name"),
 						Service: aws.String("svc"),
 						Queue: manifest.SQSQueueOrBool{
 							Advanced: manifest.SQSQueue{
@@ -1869,7 +1869,7 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: mockStruct,
 					},
 					{
-						Name:    aws.String("name.fifo"),
+						Name:    aws.String("name"),
 						Service: aws.String("svc"),
 					},
 				},
@@ -1921,11 +1921,11 @@ func Test_convertSubscribe(t *testing.T) {
 						FilterPolicy: mockStruct,
 					},
 					{
-						Name:    aws.String("name.fifo"),
+						Name:    aws.String("name"),
 						Service: aws.String("svc"),
 					},
 					{
-						Name:    aws.String("name1.fifo"),
+						Name:    aws.String("name1"),
 						Service: aws.String("svc"),
 					},
 				},

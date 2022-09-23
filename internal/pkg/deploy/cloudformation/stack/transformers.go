@@ -822,7 +822,7 @@ func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, erro
 		return nil, nil
 	}
 	var subscriptions template.SubscribeOpts
-	for _, sb := range s.Topics {
+	for _, sb := range s.Subscriptions() {
 		ts, err := convertTopicSubscription(sb)
 		if err != nil {
 			return nil, err
