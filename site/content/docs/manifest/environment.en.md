@@ -256,7 +256,7 @@ http:
 ```
 
 <span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-bucket-name" href="#http-public-access-logs-bucket-name" class="field">`bucket_name`</a> <span class="type">String</span>   
-The name of an existing S3 bucket to which to store the access logs.
+The name of an existing S3 bucket in which to store the access logs.
 
 <span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-prefix" href="#http-public-access-logs-prefix" class="field">`prefix`</a> <span class="type">String</span>   
 The prefix for the log objects.
