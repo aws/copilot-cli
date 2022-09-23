@@ -24,6 +24,14 @@ const (
 	defaultDockerfileName = "Dockerfile"
 )
 
+// SQS Queue field options.
+const (
+	sqsFIFOThroughputLimitPerMessageGroupID = "perMessageGroupId"
+	sqsFIFOThroughputLimitPerQueue          = "perQueue"
+	sqsDeduplicationScopeMessageGroup       = "messageGroup"
+	sqsDeduplicationScopeQueue              = "queue"
+)
+
 const (
 	// AWS VPC subnet placement options.
 	PublicSubnetPlacement  = PlacementString("public")
