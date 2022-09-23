@@ -1549,7 +1549,7 @@ func TestWorkerService_Subscriptions(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			svc.Subscribe.Topics = svc.Subscribe.Subscriptions()
+			svc.Subscribe.Topics = svc.Subscriptions()
 
 			// THEN
 			require.Equal(t, tc.expected, svc)

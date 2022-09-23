@@ -1455,28 +1455,32 @@ func Test_convertSubscribe(t *testing.T) {
 		"store": []string{"example_corp"},
 	}
 	testCases := map[string]struct {
-		inSubscribe manifest.SubscribeConfig
+		inSubscribe *manifest.WorkerService
 
 		wanted *template.SubscribeOpts
 	}{
 		"empty subscription": { //1
-			inSubscribe: manifest.SubscribeConfig{},
+			inSubscribe: &manifest.WorkerService{},
 			wanted:      nil,
 		},
 		"valid subscribe": { //2
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-					},
-				},
-				Queue: manifest.SQSQueue{
-					Retention: &duration111Seconds,
-					Delay:     &duration111Seconds,
-					Timeout:   &duration111Seconds,
-					DeadLetter: manifest.DeadLetterQueue{
-						Tries: aws.Uint16(35),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+						},
+						Queue: manifest.SQSQueue{
+							Retention: &duration111Seconds,
+							Delay:     &duration111Seconds,
+							Timeout:   &duration111Seconds,
+							DeadLetter: manifest.DeadLetterQueue{
+								Tries: aws.Uint16(35),
+							},
+						},
 					},
 				},
 			},
@@ -1498,14 +1502,18 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with default queue configs": { //3
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+						},
+						Queue: manifest.SQSQueue{},
 					},
 				},
-				Queue: manifest.SQSQueue{},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1518,18 +1526,22 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with queue enabled": { //4
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue: manifest.SQSQueueOrBool{
-							Enabled: aws.Bool(true),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: manifest.SQSQueueOrBool{
+									Enabled: aws.Bool(true),
+								},
+								FilterPolicy: mockStruct,
+							},
 						},
-						FilterPolicy: mockStruct,
+						Queue: manifest.SQSQueue{},
 					},
 				},
-				Queue: manifest.SQSQueue{},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1544,25 +1556,29 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with minimal queue": { //5
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue: manifest.SQSQueueOrBool{
-							Advanced: manifest.SQSQueue{
-								Retention: &duration111Seconds,
-								Delay:     &duration111Seconds,
-								Timeout:   &duration111Seconds,
-								DeadLetter: manifest.DeadLetterQueue{
-									Tries: aws.Uint16(35),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: manifest.SQSQueueOrBool{
+									Advanced: manifest.SQSQueue{
+										Retention: &duration111Seconds,
+										Delay:     &duration111Seconds,
+										Timeout:   &duration111Seconds,
+										DeadLetter: manifest.DeadLetterQueue{
+											Tries: aws.Uint16(35),
+										},
+									},
 								},
+								FilterPolicy: mockStruct,
 							},
 						},
-						FilterPolicy: mockStruct,
+						Queue: manifest.SQSQueue{},
 					},
 				},
-				Queue: manifest.SQSQueue{},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1584,26 +1600,30 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with high throughput fifo sqs": { //6
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue: manifest.SQSQueueOrBool{
-							Advanced: manifest.SQSQueue{
-								Retention: &duration111Seconds,
-								Delay:     &duration111Seconds,
-								Timeout:   &duration111Seconds,
-								DeadLetter: manifest.DeadLetterQueue{
-									Tries: aws.Uint16(35),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: manifest.SQSQueueOrBool{
+									Advanced: manifest.SQSQueue{
+										Retention: &duration111Seconds,
+										Delay:     &duration111Seconds,
+										Timeout:   &duration111Seconds,
+										DeadLetter: manifest.DeadLetterQueue{
+											Tries: aws.Uint16(35),
+										},
+										FIFO: manifest.FIFOAdvanceConfigOrBool{Advanced: manifest.FIFOAdvanceConfig{HighThroughputFifo: aws.Bool(true)}},
+									},
 								},
-								FIFO: manifest.FIFOAdvanceConfigOrBool{Advanced: manifest.FIFOAdvanceConfig{HighThroughputFifo: aws.Bool(true)}},
+								FilterPolicy: mockStruct,
 							},
 						},
-						FilterPolicy: mockStruct,
+						Queue: manifest.SQSQueue{},
 					},
 				},
-				Queue: manifest.SQSQueue{},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1629,26 +1649,30 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with custom minimal fifo sqs config values": {
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue: manifest.SQSQueueOrBool{
-							Advanced: manifest.SQSQueue{
-								Retention: &duration111Seconds,
-								Delay:     &duration111Seconds,
-								Timeout:   &duration111Seconds,
-								DeadLetter: manifest.DeadLetterQueue{
-									Tries: aws.Uint16(35),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: manifest.SQSQueueOrBool{
+									Advanced: manifest.SQSQueue{
+										Retention: &duration111Seconds,
+										Delay:     &duration111Seconds,
+										Timeout:   &duration111Seconds,
+										DeadLetter: manifest.DeadLetterQueue{
+											Tries: aws.Uint16(35),
+										},
+										FIFO: manifest.FIFOAdvanceConfigOrBool{Enable: aws.Bool(true)},
+									},
 								},
-								FIFO: manifest.FIFOAdvanceConfigOrBool{Enable: aws.Bool(true)},
+								FilterPolicy: mockStruct,
 							},
 						},
-						FilterPolicy: mockStruct,
+						Queue: manifest.SQSQueue{},
 					},
 				},
-				Queue: manifest.SQSQueue{},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1671,32 +1695,36 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with custom complete fifo sqs config values": { //7
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue: manifest.SQSQueueOrBool{
-							Advanced: manifest.SQSQueue{
-								Retention: &duration111Seconds,
-								Delay:     &duration111Seconds,
-								Timeout:   &duration111Seconds,
-								DeadLetter: manifest.DeadLetterQueue{
-									Tries: aws.Uint16(35),
-								},
-								FIFO: manifest.FIFOAdvanceConfigOrBool{
-									Advanced: manifest.FIFOAdvanceConfig{
-										FIFOThroughputLimit:       aws.String("queue"),
-										DeduplicationScope:        aws.String("perQueue"),
-										ContentBasedDeduplication: aws.Bool(true),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: manifest.SQSQueueOrBool{
+									Advanced: manifest.SQSQueue{
+										Retention: &duration111Seconds,
+										Delay:     &duration111Seconds,
+										Timeout:   &duration111Seconds,
+										DeadLetter: manifest.DeadLetterQueue{
+											Tries: aws.Uint16(35),
+										},
+										FIFO: manifest.FIFOAdvanceConfigOrBool{
+											Advanced: manifest.FIFOAdvanceConfig{
+												FIFOThroughputLimit:       aws.String("queue"),
+												DeduplicationScope:        aws.String("perQueue"),
+												ContentBasedDeduplication: aws.Bool(true),
+											},
+										},
 									},
 								},
+								FilterPolicy: mockStruct,
 							},
 						},
-						FilterPolicy: mockStruct,
+						Queue: manifest.SQSQueue{},
 					},
 				},
-				Queue: manifest.SQSQueue{},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1723,36 +1751,40 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with custom complete fifo sqs config and standard topic subscription to a default standard queue": { //8
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue: manifest.SQSQueueOrBool{
-							Advanced: manifest.SQSQueue{
-								Retention: &duration111Seconds,
-								Delay:     &duration111Seconds,
-								Timeout:   &duration111Seconds,
-								DeadLetter: manifest.DeadLetterQueue{
-									Tries: aws.Uint16(35),
-								},
-								FIFO: manifest.FIFOAdvanceConfigOrBool{
-									Advanced: manifest.FIFOAdvanceConfig{
-										FIFOThroughputLimit:       aws.String("queue"),
-										DeduplicationScope:        aws.String("perQueue"),
-										ContentBasedDeduplication: aws.Bool(true),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: manifest.SQSQueueOrBool{
+									Advanced: manifest.SQSQueue{
+										Retention: &duration111Seconds,
+										Delay:     &duration111Seconds,
+										Timeout:   &duration111Seconds,
+										DeadLetter: manifest.DeadLetterQueue{
+											Tries: aws.Uint16(35),
+										},
+										FIFO: manifest.FIFOAdvanceConfigOrBool{
+											Advanced: manifest.FIFOAdvanceConfig{
+												FIFOThroughputLimit:       aws.String("queue"),
+												DeduplicationScope:        aws.String("perQueue"),
+												ContentBasedDeduplication: aws.Bool(true),
+											},
+										},
 									},
 								},
+								FilterPolicy: mockStruct,
+							},
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
 							},
 						},
-						FilterPolicy: mockStruct,
-					},
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
+						Queue: manifest.SQSQueue{},
 					},
 				},
-				Queue: manifest.SQSQueue{},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1783,40 +1815,44 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with custom complete fifo sqs config and multiple standard topic subscriptions to a default standard queue": { //9
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue: manifest.SQSQueueOrBool{
-							Advanced: manifest.SQSQueue{
-								Retention: &duration111Seconds,
-								Delay:     &duration111Seconds,
-								Timeout:   &duration111Seconds,
-								DeadLetter: manifest.DeadLetterQueue{
-									Tries: aws.Uint16(35),
-								},
-								FIFO: manifest.FIFOAdvanceConfigOrBool{
-									Advanced: manifest.FIFOAdvanceConfig{
-										FIFOThroughputLimit:       aws.String("queue"),
-										DeduplicationScope:        aws.String("perQueue"),
-										ContentBasedDeduplication: aws.Bool(true),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: manifest.SQSQueueOrBool{
+									Advanced: manifest.SQSQueue{
+										Retention: &duration111Seconds,
+										Delay:     &duration111Seconds,
+										Timeout:   &duration111Seconds,
+										DeadLetter: manifest.DeadLetterQueue{
+											Tries: aws.Uint16(35),
+										},
+										FIFO: manifest.FIFOAdvanceConfigOrBool{
+											Advanced: manifest.FIFOAdvanceConfig{
+												FIFOThroughputLimit:       aws.String("queue"),
+												DeduplicationScope:        aws.String("perQueue"),
+												ContentBasedDeduplication: aws.Bool(true),
+											},
+										},
 									},
 								},
+								FilterPolicy: mockStruct,
+							},
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+							{
+								Name:    aws.String("name1"),
+								Service: aws.String("svc"),
 							},
 						},
-						FilterPolicy: mockStruct,
-					},
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-					},
-					{
-						Name:    aws.String("name1"),
-						Service: aws.String("svc"),
+						Queue: manifest.SQSQueue{},
 					},
 				},
-				Queue: manifest.SQSQueue{},
 			},
 			wanted: &template.SubscribeOpts{
 				Topics: []*template.TopicSubscription{
@@ -1851,30 +1887,34 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with standard sqs config and fifo topic subscription to a default fifo queue": { //10
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue: manifest.SQSQueueOrBool{
-							Advanced: manifest.SQSQueue{
-								Retention: &duration111Seconds,
-								Delay:     &duration111Seconds,
-								Timeout:   &duration111Seconds,
-								DeadLetter: manifest.DeadLetterQueue{
-									Tries: aws.Uint16(35),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: manifest.SQSQueueOrBool{
+									Advanced: manifest.SQSQueue{
+										Retention: &duration111Seconds,
+										Delay:     &duration111Seconds,
+										Timeout:   &duration111Seconds,
+										DeadLetter: manifest.DeadLetterQueue{
+											Tries: aws.Uint16(35),
+										},
+									},
 								},
+								FilterPolicy: mockStruct,
+							},
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
 							},
 						},
-						FilterPolicy: mockStruct,
+						Queue: manifest.SQSQueue{
+							FIFO: manifest.FIFOAdvanceConfigOrBool{Enable: aws.Bool(true)},
+						},
 					},
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-					},
-				},
-				Queue: manifest.SQSQueue{
-					FIFO: manifest.FIFOAdvanceConfigOrBool{Enable: aws.Bool(true)},
 				},
 			},
 			wanted: &template.SubscribeOpts{
@@ -1903,34 +1943,38 @@ func Test_convertSubscribe(t *testing.T) {
 			},
 		},
 		"valid subscribe with standard sqs config and multiple fifo topic subscriptions to a default fifo queue": { //11
-			inSubscribe: manifest.SubscribeConfig{
-				Topics: []manifest.TopicSubscription{
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-						Queue: manifest.SQSQueueOrBool{
-							Advanced: manifest.SQSQueue{
-								Retention: &duration111Seconds,
-								Delay:     &duration111Seconds,
-								Timeout:   &duration111Seconds,
-								DeadLetter: manifest.DeadLetterQueue{
-									Tries: aws.Uint16(35),
+			inSubscribe: &manifest.WorkerService{
+				WorkerServiceConfig: manifest.WorkerServiceConfig{
+					Subscribe: manifest.SubscribeConfig{
+						Topics: []manifest.TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: manifest.SQSQueueOrBool{
+									Advanced: manifest.SQSQueue{
+										Retention: &duration111Seconds,
+										Delay:     &duration111Seconds,
+										Timeout:   &duration111Seconds,
+										DeadLetter: manifest.DeadLetterQueue{
+											Tries: aws.Uint16(35),
+										},
+									},
 								},
+								FilterPolicy: mockStruct,
+							},
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+							{
+								Name:    aws.String("name1"),
+								Service: aws.String("svc"),
 							},
 						},
-						FilterPolicy: mockStruct,
+						Queue: manifest.SQSQueue{
+							FIFO: manifest.FIFOAdvanceConfigOrBool{Enable: aws.Bool(true)},
+						},
 					},
-					{
-						Name:    aws.String("name"),
-						Service: aws.String("svc"),
-					},
-					{
-						Name:    aws.String("name1"),
-						Service: aws.String("svc"),
-					},
-				},
-				Queue: manifest.SQSQueue{
-					FIFO: manifest.FIFOAdvanceConfigOrBool{Enable: aws.Bool(true)},
 				},
 			},
 			wanted: &template.SubscribeOpts{

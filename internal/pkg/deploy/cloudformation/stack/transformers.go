@@ -817,8 +817,8 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	return &publishers, nil
 }
 
-func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, error) {
-	if s.Topics == nil {
+func convertSubscribe(s *manifest.WorkerService) (*template.SubscribeOpts, error) {
+	if s.Subscribe.Topics == nil {
 		return nil, nil
 	}
 	var subscriptions template.SubscribeOpts
@@ -829,7 +829,7 @@ func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, erro
 		}
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
-	subscriptions.Queue = convertQueue(s.Queue)
+	subscriptions.Queue = convertQueue(s.Subscribe.Queue)
 	return &subscriptions, nil
 }
 

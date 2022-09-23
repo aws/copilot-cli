@@ -242,12 +242,12 @@ func (s *WorkerService) EnvFile() string {
 
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
 // receives messages from. This method also appends ".fifo" to the topics and returns a new set of subs.
-func (s *SubscribeConfig) Subscriptions() []TopicSubscription {
+func (s *WorkerService) Subscriptions() []TopicSubscription {
 	var subs []TopicSubscription
-	for _, topic := range s.Topics {
+	for _, topic := range s.Subscribe.Topics {
 		topicSubscription := topic
 		// if condition appends .fifo suffix to the topic which doesn't have topic specific queue and subscribing to default FIFO queue.
-		if topic.Queue.IsEmpty() && !s.Queue.IsEmpty() && s.Queue.FIFO.IsEnabled() {
+		if topic.Queue.IsEmpty() && !s.Subscribe.Queue.IsEmpty() && s.Subscribe.Queue.FIFO.IsEnabled() {
 			topicSubscription.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
 		} else if !topic.Queue.IsEmpty() && !topic.Queue.Advanced.IsEmpty() && topic.Queue.Advanced.FIFO.IsEnabled() { // else if condition appends .fifo suffix to the topic which has topic specific FIFO queue configuration.
 			topicSubscription.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
