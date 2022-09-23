@@ -439,10 +439,18 @@ type TopicSubscription struct {
 
 // SQSQueue holds information needed to render a SQS Queue in a container definition.
 type SQSQueue struct {
-	Retention  *int64
-	Delay      *int64
-	Timeout    *int64
-	DeadLetter *DeadLetterQueue
+	Retention       *int64
+	Delay           *int64
+	Timeout         *int64
+	DeadLetter      *DeadLetterQueue
+	FIFOQueueConfig *FIFOQueueConfig
+}
+
+// FifoAdvanceConfigOrBool holds information needed to render a FIFO SQS Queue in a container definition.
+type FIFOQueueConfig struct {
+	FIFOThroughputLimit       *string
+	ContentBasedDeduplication *bool
+	DeduplicationScope        *string
 }
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.

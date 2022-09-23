@@ -49,6 +49,20 @@ subscribe:
       service: dogsvc
       queue:
         timeout: 1s
+    - name: mytopic
+      service: mytopic
+      queue:
+        fifo: true
+    - name: yourtopic
+      service: yourtopic
+      queue:
+        fifo:
+          content_based_deduplication: true
+          high_throughput: true
+    - name: nonfifotopic
+      service: nonfifotopic
+      queue:
+        fifo: false
 
 # Optional fields for more advanced use-cases.
 #

@@ -30,12 +30,12 @@ type WorkerService struct {
 
 // WorkerServiceConfig contains data required to initialize a scheduled job stack.
 type WorkerServiceConfig struct {
-	App                 *config.Application
-	Env                 string
-	Manifest            *manifest.WorkerService
-	RawManifest         []byte
-	RuntimeConfig       RuntimeConfig
-	Addons              addons
+	App           *config.Application
+	Env           string
+	Manifest      *manifest.WorkerService
+	RawManifest   []byte
+	RuntimeConfig RuntimeConfig
+	Addons        addons
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
@@ -104,7 +104,7 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	subscribe, err := convertSubscribe(s.manifest.Subscribe)
+	subscribe, err := convertSubscribe(s.manifest)
 	if err != nil {
 		return "", err
 	}
