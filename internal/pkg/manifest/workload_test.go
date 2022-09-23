@@ -1069,7 +1069,6 @@ topics:
 				Topics: []Topic{
 					{
 						Name: aws.String("tests"),
-						Type: aws.String("standard"),
 					},
 				},
 			},

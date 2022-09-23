@@ -221,7 +221,11 @@ func (tg HTTPTargetContainer) IsHTTPS() bool {
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
-	HealthCheckPath     string
+	// Fields with defaults always set.
+	HealthCheckPath string
+	GracePeriod     int64
+
+	// Optional.
 	Port                string
 	SuccessCodes        string
 	HealthyThreshold    *int64
@@ -229,7 +233,6 @@ type HTTPHealthCheckOpts struct {
 	Interval            *int64
 	Timeout             *int64
 	DeregistrationDelay *int64
-	GracePeriod         *int64
 }
 
 // A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
@@ -441,10 +444,18 @@ type TopicSubscription struct {
 
 // SQSQueue holds information needed to render a SQS Queue in a container definition.
 type SQSQueue struct {
-	Retention  *int64
-	Delay      *int64
-	Timeout    *int64
-	DeadLetter *DeadLetterQueue
+	Retention       *int64
+	Delay           *int64
+	Timeout         *int64
+	DeadLetter      *DeadLetterQueue
+	FIFOQueueConfig *FIFOQueueConfig
+}
+
+// FifoAdvanceConfigOrBool holds information needed to render a FIFO SQS Queue in a container definition.
+type FIFOQueueConfig struct {
+	FIFOThroughputLimit       *string
+	ContentBasedDeduplication *bool
+	DeduplicationScope        *string
 }
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.
