@@ -13,17 +13,13 @@ The AWS Copilot CLI executables are cryptographically signed using PGP signature
     ```sh
     gpg --keyserver hkps://keyserver.ubuntu.com --recv BCE9D9A42D51784F
     ```
-    Historical note only: ~~`keys.gnupg.net`~~ does NOT exist any more.<br>
 
-    Notes to **ADVANCED** Users **ONLY**:
-    *   Let's all switch to use HKPS (HKP over TLS)
-    *   `keyserver.ubuntu.com` is only reachable via IPv4.
-    *   Other EXCELLENT Alternative keyservers are:
-        *   `hkps://keys.openpgp.org`
-        *   `hkps://pgp.mit.edu`
-        *   ~~`hkps://subkeys.pgp.net`~~<BR>
-    *   Since the release of GnuPG 2.1.9 (2015-10-09), the `--keyserver` option for `gpg` has been deprecated and users are recommended to use the `--keyserver` in  `~/.gnupg/dirmngr.conf` instead.<BR>See more in https://unix.stackexchange.com/a/683639
-    *   In the future, if you have to switch KeyServers (again), use this command to verify stored-key using this command 1st -> `gpg --keyserver ${KEYSERVER} --verbose --import-options show-only --recv BCE9D9A42D51784F`
+    ???- note "Notes on key servers (optional)"
+
+        * Some alternative key servers are:
+            *   `hkps://keys.openpgp.org`
+            *   `hkps://pgp.mit.edu`
+        * To switch to a different key server, verify the stored-key using this command first: `gpg --keyserver ${KEYSERVER} --verbose --import-options show-only --recv BCE9D9A42D51784F`.
 
     * Option 2: Create a file with the following contents of the Amazon ECS PGP public key and then import it.
     ```
