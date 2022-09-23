@@ -1083,7 +1083,7 @@ topics:
 				Topics: []Topic{
 					{
 						Name: aws.String("tests"),
-						FIFO: FIFOAdvanceConfigOrBool{
+						FIFO: FIFOTopicAdvanceConfigOrBool{
 							Enable: aws.Bool(true),
 						},
 					},
@@ -1101,8 +1101,8 @@ topics:
 				Topics: []Topic{
 					{
 						Name: aws.String("tests"),
-						FIFO: FIFOAdvanceConfigOrBool{
-							Advanced: FIFOAdvanceConfig{
+						FIFO: FIFOTopicAdvanceConfigOrBool{
+							Advanced: FIFOTopicAdvanceConfig{
 								ContentBasedDeduplication: aws.Bool(true),
 							},
 						},

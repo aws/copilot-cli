@@ -1407,7 +1407,7 @@ func Test_convertPublish(t *testing.T) {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
-					FIFO: manifest.FIFOAdvanceConfigOrBool{Enable: aws.Bool(true)},
+					FIFO: manifest.FIFOTopicAdvanceConfigOrBool{Enable: aws.Bool(true)},
 				},
 				{
 					Name: aws.String("topic2"),
@@ -1443,8 +1443,8 @@ func Test_convertPublish(t *testing.T) {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
-					FIFO: manifest.FIFOAdvanceConfigOrBool{
-						Advanced: manifest.FIFOAdvanceConfig{
+					FIFO: manifest.FIFOTopicAdvanceConfigOrBool{
+						Advanced: manifest.FIFOTopicAdvanceConfig{
 							ContentBasedDeduplication: aws.Bool(true),
 						},
 					},

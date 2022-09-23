@@ -2711,7 +2711,7 @@ func TestTopic_validate(t *testing.T) {
 		"should not return an error if name is valid with fifo enabled": {
 			in: Topic{
 				Name: aws.String("validtopic"),
-				FIFO: FIFOAdvanceConfigOrBool{
+				FIFO: FIFOTopicAdvanceConfigOrBool{
 					Enable: aws.Bool(true),
 				},
 			},
@@ -2720,8 +2720,8 @@ func TestTopic_validate(t *testing.T) {
 		"should not return an error if name is valid with advanced fifo config": {
 			in: Topic{
 				Name: aws.String("validtopic"),
-				FIFO: FIFOAdvanceConfigOrBool{
-					Advanced: FIFOAdvanceConfig{
+				FIFO: FIFOTopicAdvanceConfigOrBool{
+					Advanced: FIFOTopicAdvanceConfig{
 						ContentBasedDeduplication: aws.Bool(true),
 					},
 				},
