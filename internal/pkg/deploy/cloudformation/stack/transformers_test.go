@@ -660,7 +660,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
-				GracePeriod:     aws.Int64(60),
+				GracePeriod:     60,
 			},
 		},
 		"just HealthyThreshold": {
@@ -675,7 +675,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:  "/",
 				HealthyThreshold: aws.Int64(5),
-				GracePeriod:      aws.Int64(60),
+				GracePeriod:      60,
 			},
 		},
 		"just UnhealthyThreshold": {
@@ -690,7 +690,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/",
 				UnhealthyThreshold: aws.Int64(5),
-				GracePeriod:        aws.Int64(60),
+				GracePeriod:        60,
 			},
 		},
 		"just Interval": {
@@ -705,7 +705,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				Interval:        aws.Int64(15),
-				GracePeriod:     aws.Int64(60),
+				GracePeriod:     60,
 			},
 		},
 		"just Timeout": {
@@ -720,7 +720,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				Timeout:         aws.Int64(15),
-				GracePeriod:     aws.Int64(60),
+				GracePeriod:     60,
 			},
 		},
 		"just SuccessCodes": {
@@ -735,7 +735,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				SuccessCodes:    "200,301",
-				GracePeriod:     aws.Int64(60),
+				GracePeriod:     60,
 			},
 		},
 		"just Port": {
@@ -745,7 +745,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				Port:            "8000",
-				GracePeriod:     aws.Int64(60),
+				GracePeriod:     60,
 			},
 		},
 		"all values changed in manifest": {
@@ -766,7 +766,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 				UnhealthyThreshold: aws.Int64(3),
 				Interval:           aws.Int64(60),
 				Timeout:            aws.Int64(60),
-				GracePeriod:        aws.Int64(15),
+				GracePeriod:        15,
 			},
 		},
 	}

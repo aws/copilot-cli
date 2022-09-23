@@ -321,7 +321,7 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 		HealthCheckPath:    manifest.DefaultHealthCheckPath,
 		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,
 		UnhealthyThreshold: hc.HealthCheckArgs.UnhealthyThreshold,
-		GracePeriod:        aws.Int64(manifest.DefaultHealthCheckGracePeriod),
+		GracePeriod:        manifest.DefaultHealthCheckGracePeriod,
 	}
 	if hc.HealthCheckArgs.Path != nil {
 		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
@@ -341,7 +341,7 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 		opts.Timeout = aws.Int64(int64(hc.HealthCheckArgs.Timeout.Seconds()))
 	}
 	if hc.HealthCheckArgs.GracePeriod != nil {
-		opts.GracePeriod = aws.Int64(int64(hc.HealthCheckArgs.GracePeriod.Seconds()))
+		opts.GracePeriod = int64(hc.HealthCheckArgs.GracePeriod.Seconds())
 	}
 	return opts
 }
