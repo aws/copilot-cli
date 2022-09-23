@@ -1403,10 +1403,11 @@ func Test_convertPublish(t *testing.T) {
 				},
 			},
 		},
-		"valid publish with fifo and standard topics": {
+		"valid publish with fifo enabled and standard topics": {
 			inTopics: []manifest.Topic{
 				{
 					Name: aws.String("topic1"),
+					FIFO: manifest.FIFOTopicAdvanceConfigOrBool{Enable: aws.Bool(true)},
 				},
 				{
 					Name: aws.String("topic2"),
@@ -1415,7 +1416,50 @@ func Test_convertPublish(t *testing.T) {
 			wanted: &template.PublishOpts{
 				Topics: []*template.Topic{
 					{
-						Name:      aws.String("topic1"),
+						Name:            aws.String("topic1"),
+						FIFOTopicConfig: &template.FIFOTopicConfig{},
+						AccountID:       accountId,
+						Partition:       partition,
+						Region:          region,
+						App:             app,
+						Env:             env,
+						Svc:             svc,
+					},
+					{
+
+						Name:            aws.String("topic2"),
+						FIFOTopicConfig: nil,
+						AccountID:       accountId,
+						Partition:       partition,
+						Region:          region,
+						App:             app,
+						Env:             env,
+						Svc:             svc,
+					},
+				},
+			},
+		},
+		"valid publish with advanced fifo and standard topics": {
+			inTopics: []manifest.Topic{
+				{
+					Name: aws.String("topic1"),
+					FIFO: manifest.FIFOTopicAdvanceConfigOrBool{
+						Advanced: manifest.FIFOTopicAdvanceConfig{
+							ContentBasedDeduplication: aws.Bool(true),
+						},
+					},
+				},
+				{
+					Name: aws.String("topic2"),
+				},
+			},
+			wanted: &template.PublishOpts{
+				Topics: []*template.Topic{
+					{
+						Name: aws.String("topic1"),
+						FIFOTopicConfig: &template.FIFOTopicConfig{
+							ContentBasedDeduplication: aws.Bool(true),
+						},
 						AccountID: accountId,
 						Partition: partition,
 						Region:    region,

@@ -803,14 +803,24 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	var publishers template.PublishOpts
 	// convert the topics to template Topics
 	for _, topic := range topics {
+		var fifoConfig *template.FIFOTopicConfig
+		if topic.FIFO.IsEnabled() {
+			fifoConfig = &template.FIFOTopicConfig{}
+			if !topic.FIFO.Advanced.IsEmpty() {
+				fifoConfig = &template.FIFOTopicConfig{
+					ContentBasedDeduplication: topic.FIFO.Advanced.ContentBasedDeduplication,
+				}
+			}
+		}
 		publishers.Topics = append(publishers.Topics, &template.Topic{
-			Name:      topic.Name,
-			AccountID: accountID,
-			Partition: partition.ID(),
-			Region:    region,
-			App:       app,
-			Env:       env,
-			Svc:       svc,
+			Name:            topic.Name,
+			FIFOTopicConfig: fifoConfig,
+			AccountID:       accountID,
+			Partition:       partition.ID(),
+			Region:          region,
+			App:             app,
+			Env:             env,
+			Svc:             svc,
 		})
 	}
 

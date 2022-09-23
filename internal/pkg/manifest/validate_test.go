@@ -2702,6 +2702,32 @@ func TestTopic_validate(t *testing.T) {
 			},
 			wanted: errors.New(`"name" can only contain letters, numbers, underscores, and hyphens`),
 		},
+		"should not return an error if name is valid": {
+			in: Topic{
+				Name: aws.String("validtopic"),
+			},
+			wanted: nil,
+		},
+		"should not return an error if name is valid with fifo enabled": {
+			in: Topic{
+				Name: aws.String("validtopic"),
+				FIFO: FIFOTopicAdvanceConfigOrBool{
+					Enable: aws.Bool(true),
+				},
+			},
+			wanted: nil,
+		},
+		"should not return an error if name is valid with advanced fifo config": {
+			in: Topic{
+				Name: aws.String("validtopic"),
+				FIFO: FIFOTopicAdvanceConfigOrBool{
+					Advanced: FIFOTopicAdvanceConfig{
+						ContentBasedDeduplication: aws.Bool(true),
+					},
+				},
+			},
+			wanted: nil,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
