@@ -91,7 +91,7 @@ To learn more about Copilot environments, see [Environments](../concepts/environ
         http:
           public:
             security_groups:
-             ingress: 
+             ingress:
                restrict_to:
                  cdn: true
         ```
@@ -204,12 +204,21 @@ The cdn section contains parameters related to integrating your service with a C
 
 <span class="parent-field">cdn.</span><a id="cdn-certificate" href="#cdn-certificate" class="field">`certificate`</a> <span class="type">String</span>  
 A certificate by which to enable HTTPS traffic on a CloudFront distribution.
-CloudFront requires imported certificates to be in the `us-east-1` region.
+CloudFront requires imported certificates to be in the `us-east-1` region. For example:
+
+```yaml
+cdn:
+  certificate: "arn:aws:acm:us-east-1:1234567890:certificate/e5a6e114-b022-45b1-9339-38fbfd6db3e2"
+```
+
+<span class="parent-field">cdn.</span><a id="cdn-tls-termination" href="#cdn-tls-termination" class="field">`tls_termination`</a> <span class="type">Boolean</span>  
+Enable TLS termination for CloudFront.
+
 
 <div class="separator"></div>
 
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
-The http section contains parameters to configure the public load balancer shared by [Load Balanced Web Services](./lb-web-service.en.md) 
+The http section contains parameters to configure the public load balancer shared by [Load Balanced Web Services](./lb-web-service.en.md)
 and the internal load balancer shared by [Backend Services](./backend-service.en.md).
 
 <span class="parent-field">http.</span><a id="http-public" href="#http-public" class="field">`public`</a> <span class="type">Map</span>  
@@ -217,7 +226,7 @@ Configuration for the public load balancer.
 
 <span class="parent-field">http.public.</span><a id="http-public-certificates" href="#http-public-certificates" class="field">`certificates`</a> <span class="type">Array of Strings</span>  
 List of [public AWS Certificate Manager certificate](https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-request-public.html) ARNs.    
-By attaching public certificates to your load balancer, you can associate your Load Balanced Web Services with a domain name and reach them with HTTPS. 
+By attaching public certificates to your load balancer, you can associate your Load Balanced Web Services with a domain name and reach them with HTTPS.
 See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-existing-validated-certificates) guide to learn more about how to redeploy services using [`http.alias`](./lb-web-service.en.md#http-alias).
 
 <span class="parent-field">http.public.</span><a id="http-public-access-logs" href="#http-public-access-logs" class="field">`access_logs`</a> <span class="type">Boolean or Map</span>   
@@ -227,7 +236,7 @@ If you specify `true`, Copilot will create an S3 bucket where the Public Load Ba
 ```yaml
 http:
   public:
-    access_logs: true 
+    access_logs: true
 ```
 You can customize the log prefix:
 ```yaml
@@ -247,7 +256,7 @@ http:
 ```
 
 <span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-bucket-name" href="#http-public-access-logs-bucket-name" class="field">`bucket_name`</a> <span class="type">String</span>   
-The name of an existing S3 bucket to which to store the access logs. 
+The name of an existing S3 bucket in which to store the access logs.
 
 <span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-prefix" href="#http-public-access-logs-prefix" class="field">`prefix`</a> <span class="type">String</span>   
 The prefix for the log objects.
@@ -261,7 +270,7 @@ Ingress rules to allow for the public load balancer.
 http:
   public:
     security_groups:
-      ingress: 
+      ingress:
         restrict_to:
           cdn: true
 ```
@@ -302,7 +311,7 @@ Enable traffic from within the VPC to the internal load balancer.
 <div class="separator"></div>
 
 <a id="observability" href="#observability" class="field">`observability`</a> <span class="type">Map</span>  
-The observability section lets you configure ways to collect data about the services and jobs deployed in your environment. 
+The observability section lets you configure ways to collect data about the services and jobs deployed in your environment.
 
 <span class="parent-field">observability.</span><a id="http-container-insights" href="#http-container-insights" class="field">`container_insights`</a> <span class="type">Bool</span>  
 Whether to enable [CloudWatch container insights](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/ContainerInsights.html) in your environment's ECS cluster.
