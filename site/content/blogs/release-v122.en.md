@@ -21,6 +21,7 @@ Copilot v1.22 brings several new features and improvements:
 - **IAM Role Permissions Boundary**: [See detailed section](#iam-role-permissions-boundary).
 - **FIFO SNS/SQS**: [See detailed section](#fifo-snssqs).
 - **CloudFront TLS Termination**: You can now use CloudFront to perform faster TLS termination! [See detailed section](#cloudfront-tls-termination).
+- **TLS connection between the Application Load Balancer and Fargate tasks**: Copilot now sets the target group's protocol and health check protocol to HTTPS if the target container's port is set to `443`.  [See manifest sample](../docs/manifest/lb-web-service.en.md#__tabbed_1_8)
 
 ???+ note "What’s AWS Copilot?"
 

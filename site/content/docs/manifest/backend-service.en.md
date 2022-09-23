@@ -160,7 +160,9 @@ Requests to this path will be forwarded to your service. Each Backend Service sh
 The amount of time to wait for targets to drain connections during deregistration. The default is 60s. Setting this to a larger value gives targets more time to gracefully drain connections, but increases the time required for new deployments. Range 0s-3600s.
 
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
-A sidecar container that takes the place of a service container.
+A sidecar container that requests are routed to instead of the main service container.  
+If the target container's port is set to `443`, then the protocol is set to `HTTPS` so that the load balancer establishes
+TLS connections with the Fargate tasks using certificates that you install on the target container.
 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 Indicates whether sticky sessions are enabled.
@@ -201,7 +203,9 @@ http:
 The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. If omitted, then `'http1'` is assumed.
 If using gRPC, please note that a domain must be associated with your application.
 
-{% include 'image-config-with-port.en.md' %}
+{% include 'image-config-with-port.en.md' %}  
+If the port is set to `443` and an internal load balancer is enabled with `http`, then the protocol is set to `HTTPS` so that the load balancer establishes
+TLS connections with the Fargate tasks using certificates that you install on the container.
 
 {% include 'image-healthcheck.en.md' %}
 
