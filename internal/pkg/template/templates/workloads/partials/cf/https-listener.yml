@@ -77,6 +77,7 @@ HTTPListenerRuleWithDomain:
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
     Actions:
+      {{- if .HTTPRedirect}}
       - Type: redirect
         RedirectConfig:
           Protocol: HTTPS
@@ -85,12 +86,24 @@ HTTPListenerRuleWithDomain:
           Path: "/#{path}"
           Query: "#{query}"
           StatusCode: HTTP_301
+      {{- else}}
+      - TargetGroupArn: !Ref TargetGroup
+        Type: forward
+      {{- end}}
     Conditions:
-{{- if .Aliases }}
+      {{- if .AllowedSourceIps}}
+      - Field: 'source-ip'
+        SourceIpConfig:
+          Values:
+            {{- range $sourceIP := .AllowedSourceIps}}
+            - {{$sourceIP}}
+            {{- end}}
+      {{- end}}
+      {{- if .Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
           Values: {{ fmtSlice (quoteSlice .Aliases) }}
-{{- else }}
+      {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
           Values:
@@ -99,7 +112,7 @@ HTTPListenerRuleWithDomain:
               - - !Ref WorkloadName
                 - Fn::ImportValue:
                     !Sub "${AppName}-${EnvName}-SubDomain"
-{{- end}}
+      {{- end}}
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:
@@ -126,19 +139,19 @@ HTTPSListenerRule:
       - TargetGroupArn: !Ref TargetGroup
         Type: forward
     Conditions:
-{{- if .AllowedSourceIps}}
+      {{- if .AllowedSourceIps}}
       - Field: 'source-ip'
         SourceIpConfig:
           Values:
-{{- range $sourceIP := .AllowedSourceIps}}
-          - {{$sourceIP}}
-{{- end}}
-{{- end}}
-{{- if .Aliases }}
+          {{- range $sourceIP := .AllowedSourceIps}}
+            - {{$sourceIP}}
+          {{- end}}
+      {{- end}}
+      {{- if .Aliases }}
       - Field: 'host-header'
         HostHeaderConfig:
           Values: {{ fmtSlice (quoteSlice .Aliases) }}
-{{- else }}
+      {{- else }}
       - Field: 'host-header'
         HostHeaderConfig:
           Values:
@@ -147,7 +160,7 @@ HTTPSListenerRule:
               - - !Ref WorkloadName
                 - Fn::ImportValue:
                     !Sub "${AppName}-${EnvName}-SubDomain"
-{{- end}}
+      {{- end}}
       - Field: 'path-pattern'
         PathPatternConfig:
           Values:

@@ -57,7 +57,9 @@ var (
 
 	httpProtocolVersions = []string{"GRPC", "HTTP1", "HTTP2"}
 
-	invalidTaskDefOverridePathRegexp = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
+	invalidTaskDefOverridePathRegexp  = []string{`Family`, `ContainerDefinitions\[\d+\].Name`}
+	validSQSDeduplicationScopeValues  = []string{sqsDeduplicationScopeMessageGroup, sqsDeduplicationScopeQueue}
+	validSQSFIFOThroughputLimitValues = []string{sqsFIFOThroughputLimitPerMessageGroupID, sqsFIFOThroughputLimitPerQueue}
 )
 
 // Validate returns nil if DynamicLoadBalancedWebService is configured correctly.
@@ -1411,7 +1413,23 @@ func (p PublishConfig) validate() error {
 
 // validate returns nil if Topic is configured correctly.
 func (t Topic) validate() error {
-	return validatePubSubName(aws.StringValue(t.Name))
+	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
+		return err
+	}
+	return t.FIFO.validate()
+}
+
+// validate returns nil if FIFOTopicAdvanceConfigOrBool is configured correctly.
+func (f FIFOTopicAdvanceConfigOrBool) validate() error {
+	if f.IsEmpty() {
+		return nil
+	}
+	return f.Advanced.validate()
+}
+
+// validate returns nil if FIFOTopicAdvanceConfig is configured correctly.
+func (a FIFOTopicAdvanceConfig) validate() error {
+	return nil
 }
 
 // validate returns nil if SubscribeConfig is configured correctly.
@@ -1465,6 +1483,71 @@ func (q SQSQueue) validate() error {
 	}
 	if err := q.DeadLetter.validate(); err != nil {
 		return fmt.Errorf(`validate "dead_letter": %w`, err)
+	}
+	return q.FIFO.validate()
+}
+
+// validate returns nil if FIFOAdvanceConfig is configured correctly.
+func (q FIFOAdvanceConfig) validate() error {
+	if q.IsEmpty() {
+		return nil
+	}
+
+	if err := q.validateHighThroughputFIFO(); err != nil {
+		return err
+	}
+	if err := q.validateDeduplicationScope(); err != nil {
+		return err
+	}
+	if err := q.validateFIFOThroughputLimit(); err != nil {
+		return err
+	}
+	if aws.StringValue(q.FIFOThroughputLimit) == sqsFIFOThroughputLimitPerMessageGroupID && aws.StringValue(q.DeduplicationScope) == sqsDeduplicationScopeQueue {
+		return fmt.Errorf(`"throughput_limit" must be set to "perQueue" when "deduplication_scope" is set to "queue"`)
+	}
+	return nil
+}
+
+// validateFIFO returns nil if FIFOAdvanceConfigOrBool is configured correctly.
+func (q FIFOAdvanceConfigOrBool) validate() error {
+	if q.IsEmpty() {
+		return nil
+	}
+	return q.Advanced.validate()
+}
+
+func (q FIFOAdvanceConfig) validateHighThroughputFIFO() error {
+	if q.HighThroughputFifo == nil {
+		return nil
+	}
+	if q.FIFOThroughputLimit != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "high_throughput",
+			secondField: "throughput_limit",
+			mustExist:   false,
+		}
+	}
+
+	if q.DeduplicationScope != nil {
+		return &errFieldMutualExclusive{
+			firstField:  "high_throughput",
+			secondField: "deduplication_scope",
+			mustExist:   false,
+		}
+	}
+	return nil
+}
+
+func (q FIFOAdvanceConfig) validateDeduplicationScope() error {
+	if q.DeduplicationScope != nil && !contains(aws.StringValue(q.DeduplicationScope), validSQSDeduplicationScopeValues) {
+		return fmt.Errorf(`validate "deduplication_scope": deduplication scope value must be one of %s`, english.WordSeries(validSQSDeduplicationScopeValues, "or"))
+	}
+	return nil
+}
+
+func (q FIFOAdvanceConfig) validateFIFOThroughputLimit() error {
+	if q.FIFOThroughputLimit != nil && !contains(aws.StringValue(q.FIFOThroughputLimit), validSQSFIFOThroughputLimitValues) {
+		return fmt.Errorf(`validate "throughput_limit": fifo throughput limit value must be one of %s`, english.WordSeries(validSQSFIFOThroughputLimitValues, "or"))
 	}
 	return nil
 }
@@ -1634,9 +1717,9 @@ func validatePubSubName(name string) error {
 			missingField: "name",
 		}
 	}
-	// Name must contain letters, numbers, and can't use special characters besides underscores and hyphens.
+	// Name must contain letters, numbers, and can't use special characters besides underscores, and hyphens.
 	if !awsSNSTopicRegexp.MatchString(name) {
-		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, and hypthens`)
+		return fmt.Errorf(`"name" can only contain letters, numbers, underscores, and hyphens`)
 	}
 	return nil
 }

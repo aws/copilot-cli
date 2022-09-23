@@ -1073,6 +1073,52 @@ topics:
 				},
 			},
 		},
+		"Valid publish yaml with fifo topic enabled": {
+			inContent: `
+topics:
+  - name: tests
+    fifo: true
+`,
+			wantedPublish: PublishConfig{
+				Topics: []Topic{
+					{
+						Name: aws.String("tests"),
+						FIFO: FIFOTopicAdvanceConfigOrBool{
+							Enable: aws.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		"Valid publish yaml with advanced fifo topic": {
+			inContent: `
+topics:
+  - name: tests
+    fifo:
+      content_based_deduplication: true
+`,
+			wantedPublish: PublishConfig{
+				Topics: []Topic{
+					{
+						Name: aws.String("tests"),
+						FIFO: FIFOTopicAdvanceConfigOrBool{
+							Advanced: FIFOTopicAdvanceConfig{
+								ContentBasedDeduplication: aws.Bool(true),
+							},
+						},
+					},
+				},
+			},
+		},
+		"Invalid publish yaml with advanced fifo topic": {
+			inContent: `
+topics:
+  - name: tests
+    fifo: apple
+`,
+			wantedErr: errors.New(`unable to unmarshal "fifo" field into boolean or compose-style map`),
+		},
+
 		"Error when unmarshalable": {
 			inContent: `
 topics: abc

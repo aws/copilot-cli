@@ -28,6 +28,9 @@ Resources:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess' # for env ls
         - 'arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess' # for service package
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+      {{- end}}
       Policies:
         - PolicyName: assume-env-manager
           PolicyDocument:
@@ -181,6 +184,9 @@ Resources:
             Action:
               - sts:AssumeRole
       Path: /
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+      {{- end}}
   PipelineRolePolicy:
     Type: AWS::IAM::Policy
     Properties:

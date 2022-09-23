@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/config"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
@@ -101,165 +103,212 @@ func TestLoadBalancedWebService_StackName(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_Template(t *testing.T) {
-	var overridenContainerHealthCheck = template.ContainerHealthCheck{
-		Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-		Interval:    aws.Int64(10),
-		StartPeriod: aws.Int64(0),
-		Timeout:     aws.Int64(5),
-		Retries:     aws.Int64(5),
-	}
-	var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
-		WorkloadProps: &manifest.WorkloadProps{
-			Name:       "frontend",
-			Dockerfile: "frontend/Dockerfile",
-		},
-		Path: "frontend",
-		Port: 80,
-	})
-	testLBWebServiceManifest.ImageConfig.HealthCheck = manifest.ContainerHealthCheck{
-		Retries: aws.Int(5),
-	}
-	testLBWebServiceManifest.RoutingRule.Alias = manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
-		{
-			Alias:      aws.String("mockAlias"),
-			HostedZone: aws.String("mockHostedZone"),
-		},
-	}}
-	testLBWebServiceManifest.EntryPoint = manifest.EntryPointOverride{
-		String:      nil,
-		StringSlice: []string{"/bin/echo", "hello"},
-	}
-	testLBWebServiceManifest.Command = manifest.CommandOverride{
-		String:      nil,
-		StringSlice: []string{"world"},
-	}
+	t.Run("returns a wrapped error when addons template parsing fails", func(t *testing.T) {
+		// GIVEN
+		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
+			App:         &config.Application{},
+			EnvManifest: &manifest.Environment{},
+			Manifest: &manifest.LoadBalancedWebService{
+				Workload: manifest.Workload{
+					Name: aws.String("frontend"),
+				},
+			},
+			Addons: mockAddons{tplErr: errors.New("some error")},
+		})
+		require.NoError(t, err)
 
-	testCases := map[string]struct {
-		mockDependencies func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService)
-		wantedTemplate   string
-		wantedError      error
-	}{
-		"unexpected addons template parsing error": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				addons := mockAddons{tplErr: errors.New("some error")}
-				c.wkld.addons = addons
+		// WHEN
+		_, err = lbws.Template()
+
+		// THEN
+		require.EqualError(t, err, "generate addons template for frontend: some error")
+	})
+
+	t.Run("returns a wrapped error when addons parameter parsing fails", func(t *testing.T) {
+		// GIVEN
+		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
+			App:         &config.Application{},
+			EnvManifest: &manifest.Environment{},
+			Manifest: &manifest.LoadBalancedWebService{
+				Workload: manifest.Workload{
+					Name: aws.String("frontend"),
+				},
 			},
-			wantedError: fmt.Errorf("generate addons template for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
-		},
-		"unexpected addons parameter parsing error": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				addons := mockAddons{paramsErr: errors.New("some error")}
-				c.wkld.addons = addons
-			},
-			wantedError: fmt.Errorf("parse addons parameters for %s: %w", aws.StringValue(testLBWebServiceManifest.Name), errors.New("some error")),
-		},
-		"failed parsing svc template": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
-				addons := mockAddons{
-					tpl: `
+			Addons: mockAddons{paramsErr: errors.New("some error")},
+		})
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = lbws.Template()
+
+		// THEN
+		require.EqualError(t, err, "parse addons parameters for frontend: some error")
+	})
+
+	t.Run("returns the error when parsing the service template fails", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		parser := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+		parser.EXPECT().ParseLoadBalancedWebService(gomock.Any()).Return(nil, errors.New("some error"))
+		addons := mockAddons{
+			tpl: `
 Resources:
   AdditionalResourcesPolicy:
     Type: AWS::IAM::ManagedPolicy
 Outputs:
   AdditionalResourcesPolicyArn:
     Value: hello`,
-				}
-				c.parser = m
-				c.wkld.addons = addons
+		}
+		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
+			App:         &config.Application{},
+			EnvManifest: &manifest.Environment{},
+			Manifest:    &manifest.LoadBalancedWebService{},
+			Addons:      addons,
+		}, func(s *LoadBalancedWebService) {
+			s.parser = parser
+		})
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = lbws.Template()
+
+		// THEN
+		require.EqualError(t, err, "some error")
+	})
+
+	t.Run("renders all manifest fields into template without any addons", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mft := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+			WorkloadProps: &manifest.WorkloadProps{
+				Name:       "frontend",
+				Dockerfile: "frontend/Dockerfile",
 			},
-
-			wantedTemplate: "",
-			wantedError:    fmt.Errorf("some error"),
-		},
-		"render template without addons": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
-					require.Equal(t, template.WorkloadOpts{
-						AppName:      "phonetool",
-						EnvName:      "test",
-						WorkloadName: "frontend",
-						WorkloadType: manifest.LoadBalancedWebServiceType,
-						HTTPHealthCheck: template.HTTPHealthCheckOpts{
-							HealthCheckPath: "/",
-							GracePeriod:     aws.Int64(60),
-						},
-						HostedZoneAliases: template.AliasesForHostedZone{
-							"mockHostedZone": []string{"mockAlias"},
-						},
-						Aliases:             []string{"mockAlias"},
-						HTTPSListener:       true,
-						DeregistrationDelay: aws.Int64(60),
-						HealthCheck:         &overridenContainerHealthCheck,
-						CustomResources:     make(map[string]template.S3ObjectLocation),
-						Network: template.NetworkOpts{
-							AssignPublicIP: template.EnablePublicIP,
-							SubnetsType:    template.PublicSubnetsPlacement,
-						},
-						DeploymentConfiguration: template.DeploymentConfigurationOpts{
-							MinHealthyPercent: 100,
-							MaxPercent:        200,
-						},
-						EntryPoint: []string{"/bin/echo", "hello"},
-						Command:    []string{"world"},
-						ALBEnabled: true,
-					}, actual)
-					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
-				})
-
-				addons := mockAddons{}
-				c.parser = m
-				c.wkld.addons = addons
+			Path: "frontend",
+			Port: 80,
+		})
+		mft.ImageConfig.HealthCheck = manifest.ContainerHealthCheck{
+			Retries: aws.Int(5),
+		}
+		mft.RoutingRule.Alias = manifest.Alias{AdvancedAliases: []manifest.AdvancedAlias{
+			{
+				Alias:      aws.String("mockAlias"),
+				HostedZone: aws.String("mockHostedZone"),
 			},
+		}}
+		mft.EntryPoint = manifest.EntryPointOverride{
+			String:      nil,
+			StringSlice: []string{"/bin/echo", "hello"},
+		}
+		mft.Command = manifest.CommandOverride{
+			String:      nil,
+			StringSlice: []string{"world"},
+		}
 
-			wantedTemplate: "template",
-		},
-		"render template with addons": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
-					require.Equal(t, template.WorkloadOpts{
-						AppName:      "phonetool",
-						EnvName:      "test",
-						WorkloadName: "frontend",
-						NestedStack: &template.WorkloadNestedStackOpts{
-							StackName:       addon.StackName,
-							VariableOutputs: []string{"Hello"},
-							SecretOutputs:   []string{"MySecretArn"},
-							PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
-						},
-						HostedZoneAliases: template.AliasesForHostedZone{
-							"mockHostedZone": []string{"mockAlias"},
-						},
-						Aliases:           []string{"mockAlias"},
-						HTTPSListener:     true,
-						AddonsExtraParams: "ServiceName: !GetAtt Service.Name",
-						WorkloadType:      manifest.LoadBalancedWebServiceType,
-						HTTPHealthCheck: template.HTTPHealthCheckOpts{
-							HealthCheckPath: "/",
-							GracePeriod:     aws.Int64(60),
-						},
-						DeregistrationDelay: aws.Int64(60),
-						HealthCheck:         &overridenContainerHealthCheck,
-						CustomResources:     make(map[string]template.S3ObjectLocation),
-						Network: template.NetworkOpts{
-							AssignPublicIP: template.EnablePublicIP,
-							SubnetsType:    template.PublicSubnetsPlacement,
-						},
-						DeploymentConfiguration: template.DeploymentConfigurationOpts{
-							MinHealthyPercent: 100,
-							MaxPercent:        200,
-						},
-						EntryPoint: []string{"/bin/echo", "hello"},
-						Command:    []string{"world"},
-						ALBEnabled: true,
-					}, actual)
-					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
-				})
-				addons := mockAddons{
-					tpl: `Resources:
+		var actual template.WorkloadOpts
+		parser := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+		parser.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(in template.WorkloadOpts) (*template.Content, error) {
+			actual = in // Capture the translated object.
+			return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+		})
+
+		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
+			App: &config.Application{
+				Name:   "phonetool",
+				Domain: "phonetool.com",
+			},
+			EnvManifest: &manifest.Environment{
+				Workload: manifest.Workload{
+					Name: aws.String("test"),
+				},
+			},
+			Manifest: mft,
+			RuntimeConfig: RuntimeConfig{
+				Image: &ECRImage{
+					RepoURL:  testImageRepoURL,
+					ImageTag: testImageTag,
+				},
+				AccountID: "0123456789012",
+				Region:    "us-west-2",
+			},
+			Addons: mockAddons{},
+		}, func(s *LoadBalancedWebService) {
+			s.parser = parser
+		})
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = lbws.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, template.WorkloadOpts{
+			AppName:      "phonetool",
+			EnvName:      "test",
+			WorkloadName: "frontend",
+			WorkloadType: manifest.LoadBalancedWebServiceType,
+			HTTPHealthCheck: template.HTTPHealthCheckOpts{
+				HealthCheckPath: "/",
+				GracePeriod:     60,
+			},
+			HostedZoneAliases: template.AliasesForHostedZone{
+				"mockHostedZone": []string{"mockAlias"},
+			},
+			Aliases:             []string{"mockAlias"},
+			HTTPSListener:       true,
+			HTTPRedirect:        true,
+			DeregistrationDelay: aws.Int64(60),
+			HTTPTargetContainer: template.HTTPTargetContainer{
+				Name: "frontend",
+				Port: "80",
+			},
+			HealthCheck: &template.ContainerHealthCheck{
+				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+				Interval:    aws.Int64(10),
+				StartPeriod: aws.Int64(0),
+				Timeout:     aws.Int64(5),
+				Retries:     aws.Int64(5),
+			},
+			CustomResources: make(map[string]template.S3ObjectLocation),
+			Network: template.NetworkOpts{
+				AssignPublicIP: template.EnablePublicIP,
+				SubnetsType:    template.PublicSubnetsPlacement,
+			},
+			DeploymentConfiguration: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: 100,
+				MaxPercent:        200,
+			},
+			EntryPoint: []string{"/bin/echo", "hello"},
+			Command:    []string{"world"},
+			ALBEnabled: true,
+		}, actual)
+	})
+
+	t.Run("renders a template with addons", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mft := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+			WorkloadProps: &manifest.WorkloadProps{
+				Name:       "frontend",
+				Dockerfile: "frontend/Dockerfile",
+			},
+			Path: "frontend",
+			Port: 80,
+		})
+
+		var actual template.WorkloadOpts
+		parser := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+		parser.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(in template.WorkloadOpts) (*template.Content, error) {
+			actual = in // Capture the translated object.
+			return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+		})
+		addons := mockAddons{
+			tpl: `Resources:
   AdditionalResourcesPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -284,53 +333,92 @@ Outputs:
     Value: !Ref MySecret
   Hello:
     Value: hello`,
-					params: "ServiceName: !GetAtt Service.Name",
-				}
-				c.parser = m
-				c.addons = addons
+			params: "ServiceName: !GetAtt Service.Name",
+		}
+
+		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
+			App: &config.Application{
+				Name: "phonetool",
 			},
-			wantedTemplate: "template",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			conf := &LoadBalancedWebService{
-				ecsWkld: &ecsWkld{
-					wkld: &wkld{
-						name: aws.StringValue(testLBWebServiceManifest.Name),
-						env:  testEnvName,
-						app:  testAppName,
-						rc: RuntimeConfig{
-							Image: &ECRImage{
-								RepoURL:  testImageRepoURL,
-								ImageTag: testImageTag,
-							},
-							AccountID: "0123456789012",
-							Region:    "us-west-2",
-						},
-					},
-					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
+			EnvManifest: &manifest.Environment{
+				Workload: manifest.Workload{
+					Name: aws.String("test"),
 				},
-				httpsEnabled: true,
-				manifest:     testLBWebServiceManifest,
-			}
-			tc.mockDependencies(t, ctrl, conf)
-			// WHEN
-			template, err := conf.Template()
-
-			// THEN
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedTemplate, template)
-			}
+			},
+			Manifest: mft,
+			Addons:   addons,
+		}, func(s *LoadBalancedWebService) {
+			s.parser = parser
 		})
-	}
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = lbws.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, "ServiceName: !GetAtt Service.Name", actual.AddonsExtraParams)
+		require.Equal(t, &template.WorkloadNestedStackOpts{
+			StackName:       addon.StackName,
+			VariableOutputs: []string{"Hello"},
+			SecretOutputs:   []string{"MySecretArn"},
+			PolicyOutputs:   []string{"AdditionalResourcesPolicyArn"},
+		}, actual.NestedStack)
+	})
+
+	t.Run("should set the target group container to sidecar", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mft := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+			WorkloadProps: &manifest.WorkloadProps{
+				Name:       "frontend",
+				Dockerfile: "frontend/Dockerfile",
+			},
+			Path: "frontend",
+			Port: 80,
+		})
+		mft.RoutingRule.TargetContainer = aws.String("envoy")
+		mft.Sidecars = map[string]*manifest.SidecarConfig{
+			"envoy": {
+				Port: aws.String("443"),
+			},
+		}
+
+		var actual template.WorkloadOpts
+		parser := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
+		parser.EXPECT().ParseLoadBalancedWebService(gomock.Any()).DoAndReturn(func(in template.WorkloadOpts) (*template.Content, error) {
+			actual = in // Capture the translated object.
+			return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+		})
+
+		lbws, err := NewLoadBalancedWebService(LoadBalancedWebServiceConfig{
+			App: &config.Application{
+				Name: "phonetool",
+			},
+			EnvManifest: &manifest.Environment{
+				Workload: manifest.Workload{
+					Name: aws.String("test"),
+				},
+			},
+			Manifest: mft,
+			Addons:   mockAddons{},
+		}, func(s *LoadBalancedWebService) {
+			s.parser = parser
+		})
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = lbws.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, template.HTTPTargetContainer{
+			Name: "envoy",
+			Port: "443",
+		}, actual.HTTPTargetContainer)
+	})
 }
 
 func TestLoadBalancedWebService_Parameters(t *testing.T) {
@@ -405,7 +493,6 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 					},
 				}
 			},
-
 			expectedParams: append(expectedParams, []*cloudformation.Parameter{
 				{
 					ParameterKey:   aws.String(WorkloadHTTPSParamKey),

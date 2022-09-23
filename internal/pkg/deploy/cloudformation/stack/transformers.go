@@ -29,6 +29,12 @@ const (
 	disabled = "DISABLED"
 )
 
+// SQS Queue field values.
+const (
+	sqsDedupeScopeMessageGroup              = "messageGroup"
+	sqsFIFOThroughputLimitPerMessageGroupId = "perMessageGroupId"
+)
+
 // Default values for EFS options
 const (
 	defaultRootDirectory   = "/"
@@ -321,7 +327,7 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 		HealthCheckPath:    manifest.DefaultHealthCheckPath,
 		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,
 		UnhealthyThreshold: hc.HealthCheckArgs.UnhealthyThreshold,
-		GracePeriod:        aws.Int64(manifest.DefaultHealthCheckGracePeriod),
+		GracePeriod:        manifest.DefaultHealthCheckGracePeriod,
 	}
 	if hc.HealthCheckArgs.Path != nil {
 		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
@@ -341,7 +347,7 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 		opts.Timeout = aws.Int64(int64(hc.HealthCheckArgs.Timeout.Seconds()))
 	}
 	if hc.HealthCheckArgs.GracePeriod != nil {
-		opts.GracePeriod = aws.Int64(int64(hc.HealthCheckArgs.GracePeriod.Seconds()))
+		opts.GracePeriod = int64(hc.HealthCheckArgs.GracePeriod.Seconds())
 	}
 	return opts
 }
@@ -797,33 +803,43 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	var publishers template.PublishOpts
 	// convert the topics to template Topics
 	for _, topic := range topics {
+		var fifoConfig *template.FIFOTopicConfig
+		if topic.FIFO.IsEnabled() {
+			fifoConfig = &template.FIFOTopicConfig{}
+			if !topic.FIFO.Advanced.IsEmpty() {
+				fifoConfig = &template.FIFOTopicConfig{
+					ContentBasedDeduplication: topic.FIFO.Advanced.ContentBasedDeduplication,
+				}
+			}
+		}
 		publishers.Topics = append(publishers.Topics, &template.Topic{
-			Name:      topic.Name,
-			AccountID: accountID,
-			Partition: partition.ID(),
-			Region:    region,
-			App:       app,
-			Env:       env,
-			Svc:       svc,
+			Name:            topic.Name,
+			FIFOTopicConfig: fifoConfig,
+			AccountID:       accountID,
+			Partition:       partition.ID(),
+			Region:          region,
+			App:             app,
+			Env:             env,
+			Svc:             svc,
 		})
 	}
 
 	return &publishers, nil
 }
 
-func convertSubscribe(s manifest.SubscribeConfig) (*template.SubscribeOpts, error) {
-	if s.Topics == nil {
+func convertSubscribe(s *manifest.WorkerService) (*template.SubscribeOpts, error) {
+	if s.Subscribe.Topics == nil {
 		return nil, nil
 	}
 	var subscriptions template.SubscribeOpts
-	for _, sb := range s.Topics {
+	for _, sb := range s.Subscriptions() {
 		ts, err := convertTopicSubscription(sb)
 		if err != nil {
 			return nil, err
 		}
 		subscriptions.Topics = append(subscriptions.Topics, ts)
 	}
-	subscriptions.Queue = convertQueue(s.Queue)
+	subscriptions.Queue = convertQueue(s.Subscribe.Queue)
 	return &subscriptions, nil
 }
 
@@ -860,16 +876,39 @@ func convertFilterPolicy(filterPolicy map[string]interface{}) (*string, error) {
 	return aws.String(string(bytes)), nil
 }
 
-func convertQueue(q manifest.SQSQueue) *template.SQSQueue {
-	if q.IsEmpty() {
+func convertQueue(in manifest.SQSQueue) *template.SQSQueue {
+	if in.IsEmpty() {
 		return nil
 	}
-	return &template.SQSQueue{
-		Retention:  convertRetention(q.Retention),
-		Delay:      convertDelay(q.Delay),
-		Timeout:    convertTimeout(q.Timeout),
-		DeadLetter: convertDeadLetter(q.DeadLetter),
+
+	queue := &template.SQSQueue{
+		Retention:  convertRetention(in.Retention),
+		Delay:      convertDelay(in.Delay),
+		Timeout:    convertTimeout(in.Timeout),
+		DeadLetter: convertDeadLetter(in.DeadLetter),
 	}
+
+	if !in.FIFO.IsEnabled() {
+		return queue
+	}
+
+	if aws.BoolValue(in.FIFO.Enable) {
+		queue.FIFOQueueConfig = &template.FIFOQueueConfig{}
+		return queue
+	}
+
+	if !in.FIFO.Advanced.IsEmpty() {
+		queue.FIFOQueueConfig = &template.FIFOQueueConfig{
+			ContentBasedDeduplication: in.FIFO.Advanced.ContentBasedDeduplication,
+			DeduplicationScope:        in.FIFO.Advanced.DeduplicationScope,
+			FIFOThroughputLimit:       in.FIFO.Advanced.FIFOThroughputLimit,
+		}
+		if aws.BoolValue(in.FIFO.Advanced.HighThroughputFifo) {
+			queue.FIFOQueueConfig.FIFOThroughputLimit = aws.String(sqsFIFOThroughputLimitPerMessageGroupId)
+			queue.FIFOQueueConfig.DeduplicationScope = aws.String(sqsDedupeScopeMessageGroup)
+		}
+	}
+	return queue
 }
 
 func convertTime(t *time.Duration) *int64 {

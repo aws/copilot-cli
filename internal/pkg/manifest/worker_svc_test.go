@@ -29,6 +29,27 @@ func newMockSQSQueue() SQSQueue {
 	}
 }
 
+func newMockSQSFIFOQueueOrBool() SQSQueueOrBool {
+	return SQSQueueOrBool{
+		Advanced: newMockSQSFIFOQueue(),
+	}
+}
+
+func newMockSQSFIFOQueue() SQSQueue {
+	duration111Seconds := 111 * time.Second
+	return SQSQueue{
+		Retention:  &duration111Seconds,
+		Delay:      &duration111Seconds,
+		Timeout:    &duration111Seconds,
+		DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+		FIFO: FIFOAdvanceConfigOrBool{
+			Advanced: FIFOAdvanceConfig{
+				FIFOThroughputLimit: aws.String("perMessageID"),
+			},
+		},
+	}
+}
+
 func TestNewWorkerSvc(t *testing.T) {
 	testCases := map[string]struct {
 		inProps WorkerServiceProps
@@ -1263,6 +1284,275 @@ func TestWorkerService_RequiredEnvironmentFeatures(t *testing.T) {
 			tc.mft(&inSvc)
 			got := inSvc.requiredEnvironmentFeatures()
 			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestWorkerService_Subscriptions(t *testing.T) {
+	duration111Seconds := 111 * time.Second
+	testCases := map[string]struct {
+		input    *WorkerService
+		expected *WorkerService
+	}{
+		"empty subscription": {
+			input: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{},
+				},
+			},
+			expected: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{},
+				},
+			},
+		},
+		"valid subscribe with one topic specific standard queue and a default standard queue": {
+			input: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
+							},
+						},
+					},
+				},
+			},
+			expected: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: SQSQueueOrBool{
+									Advanced: SQSQueue{
+										Retention:  &duration111Seconds,
+										Delay:      &duration111Seconds,
+										Timeout:    &duration111Seconds,
+										DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+									},
+								},
+							},
+						},
+						Queue: SQSQueue{},
+					},
+				},
+			},
+		},
+		"valid subscribe with one topic specific fifo queue and a default standard queue": {
+			input: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSFIFOQueueOrBool(),
+							},
+						},
+					},
+				},
+			},
+			expected: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name.fifo"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSFIFOQueueOrBool(),
+							},
+						},
+						Queue: SQSQueue{},
+					},
+				},
+			},
+		},
+		"valid subscribe with no topic specific standard queue but with default standard queue with empty config": {
+			input: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+						},
+					},
+				},
+			},
+			expected: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+						},
+						Queue: SQSQueue{},
+					},
+				},
+			},
+		},
+		"valid subscribe with no topic specific standard queue but with default standard queue with minimal config": {
+			input: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+						},
+						Queue: newMockSQSQueue(),
+					},
+				},
+			},
+			expected: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+						},
+						Queue: SQSQueue{
+							Retention:  &duration111Seconds,
+							Delay:      &duration111Seconds,
+							Timeout:    &duration111Seconds,
+							DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+						},
+					},
+				},
+			},
+		},
+		"valid subscribe with no topic specific fifo queue but with default fifo queue with minimal config": {
+			input: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+						},
+						Queue: newMockSQSFIFOQueue(),
+					},
+				},
+			},
+			expected: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name.fifo"),
+								Service: aws.String("svc"),
+							},
+						},
+						Queue: newMockSQSFIFOQueue(),
+					},
+				},
+			},
+		},
+		"valid subscribe with one topic specific standard queue and another subscription for the default fifo queue": {
+
+			input: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSQueueOrBool(),
+							},
+							{
+								Name:    aws.String("name2"),
+								Service: aws.String("svc"),
+							},
+						},
+						Queue: newMockSQSFIFOQueue(),
+					},
+				},
+			},
+			expected: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+								Queue: SQSQueueOrBool{
+									Advanced: SQSQueue{
+										Retention:  &duration111Seconds,
+										Delay:      &duration111Seconds,
+										Timeout:    &duration111Seconds,
+										DeadLetter: DeadLetterQueue{Tries: aws.Uint16(10)},
+									},
+								},
+							},
+							{
+								Name:    aws.String("name2.fifo"),
+								Service: aws.String("svc"),
+							},
+						},
+						Queue: newMockSQSFIFOQueue(),
+					},
+				},
+			},
+		},
+		"valid subscribe with one topic specific fifo queue and another subscription for the default standard queue": {
+
+			input: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+							{
+								Name:    aws.String("name2"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSFIFOQueueOrBool(),
+							},
+						},
+					},
+				},
+			},
+			expected: &WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("name"),
+								Service: aws.String("svc"),
+							},
+							{
+								Name:    aws.String("name2.fifo"),
+								Service: aws.String("svc"),
+								Queue:   newMockSQSFIFOQueueOrBool(),
+							},
+						},
+						Queue: SQSQueue{},
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		svc := tc.input
+
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			svc.Subscribe.Topics = svc.Subscriptions()
+
+			// THEN
+			require.Equal(t, tc.expected, svc)
 		})
 	}
 }

@@ -75,6 +75,9 @@ type CreatePipelineInput struct {
 
 	// AdditionalTags are labels applied to resources under the application.
 	AdditionalTags map[string]string
+
+	// PermissionsBoundary is the name of an IAM policy to set a permissions boundary.
+	PermissionsBoundary string
 }
 
 // Build represents CodeBuild project used in the CodePipeline
