@@ -85,10 +85,9 @@ func (e *ELBV2) DescribeRule(ctx context.Context, ruleARN string) (Rule, error) 
 	resp, err := e.client.DescribeRulesWithContext(ctx, &elbv2.DescribeRulesInput{
 		RuleArns: aws.StringSlice([]string{ruleARN}),
 	})
-	switch {
-	case err != nil:
+	if err != nil {
 		return Rule{}, err
-	case len(resp.Rules) == 0:
+	} else if len(resp.Rules) == 0 {
 		return Rule{}, errors.New("not found")
 	}
 
