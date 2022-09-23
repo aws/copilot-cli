@@ -5,7 +5,6 @@ package deploy
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -688,7 +687,7 @@ and run %scopilot svc deploy%s.`,
 
 			buf := &bytes.Buffer{}
 
-			err := d.Validate(context.Background(), tc.mft, buf)
+			err := d.Validate(tc.mft, buf)
 			if tc.expected != "" {
 				require.EqualError(t, err, tc.expected)
 			} else {

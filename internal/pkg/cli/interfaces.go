@@ -4,7 +4,6 @@
 package cli
 
 import (
-	"context"
 	"encoding"
 	"io"
 
@@ -649,12 +648,12 @@ type runner interface {
 
 type envDeployer interface {
 	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
-	Validate(context.Context, *manifest.Environment, io.Writer) error
+	Validate(*manifest.Environment, io.Writer) error
 	UploadArtifacts() (map[string]string, error)
 }
 
 type envPackager interface {
 	GenerateCloudFormationTemplate(in *clideploy.DeployEnvironmentInput) (*clideploy.GenerateCloudFormationTemplateOutput, error)
-	Validate(context.Context, *manifest.Environment, io.Writer) error
+	Validate(*manifest.Environment, io.Writer) error
 	UploadArtifacts() (map[string]string, error)
 }

@@ -204,7 +204,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				caller := mocks.NewMockidentityService(ctrl)
 				caller.EXPECT().Get().Return(identity.Caller{}, nil)
 				deployer := mocks.NewMockenvPackager(ctrl)
-				deployer.EXPECT().Validate(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("mock error"))
+				deployer.EXPECT().Validate(gomock.Any(), gomock.Any()).Return(errors.New("mock error"))
 
 				return &packageEnvOpts{
 					packageEnvVars: packageEnvVars{
@@ -232,7 +232,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				caller := mocks.NewMockidentityService(ctrl)
 				caller.EXPECT().Get().Return(identity.Caller{}, nil)
 				deployer := mocks.NewMockenvPackager(ctrl)
-				deployer.EXPECT().Validate(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				deployer.EXPECT().Validate(gomock.Any(), gomock.Any()).Return(nil)
 				deployer.EXPECT().UploadArtifacts().Return(nil, errors.New("some error"))
 
 				return &packageEnvOpts{
@@ -262,7 +262,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				caller := mocks.NewMockidentityService(ctrl)
 				caller.EXPECT().Get().Return(identity.Caller{}, nil)
 				deployer := mocks.NewMockenvPackager(ctrl)
-				deployer.EXPECT().Validate(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				deployer.EXPECT().Validate(gomock.Any(), gomock.Any()).Return(nil)
 				deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(nil, errors.New("some error"))
 
 				return &packageEnvOpts{
@@ -292,7 +292,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				caller := mocks.NewMockidentityService(ctrl)
 				caller.EXPECT().Get().Return(identity.Caller{}, nil)
 				deployer := mocks.NewMockenvPackager(ctrl)
-				deployer.EXPECT().Validate(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				deployer.EXPECT().Validate(gomock.Any(), gomock.Any()).Return(nil)
 				deployer.EXPECT().GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
 					RootUserARN:         "",
 					CustomResourcesURLs: nil,

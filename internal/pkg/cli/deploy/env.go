@@ -148,7 +148,11 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 }
 
 // Validate returns an error if the environment manifest is incompatible with services and application configurations.
-func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment, output io.Writer) error {
+func (d *envDeployer) Validate(mft *manifest.Environment, output io.Writer) error {
+	return d.validateCDN(mft, output)
+}
+
+func (d *envDeployer) validateCDN(mft *manifest.Environment, output io.Writer) error {
 	isManagedCDNEnabled := mft.CDNEnabled() && !mft.HasImportedPublicALBCerts() && d.app.Domain != ""
 	if isManagedCDNEnabled {
 		// With managed domain, if the customer isn't using `alias` the A-records are inserted in the service stack as each service domain is unique.
@@ -160,7 +164,7 @@ func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment, o
 	}
 
 	if mft.CDNEnabled() && mft.CDNDoesTLSTermination() && (mft.HasImportedPublicALBCerts() || d.app.Domain != "") {
-		err := d.validateALBWorkloadsDontRedirect(ctx)
+		err := d.validateALBWorkloadsDontRedirect()
 		var redirErr *errEnvHasPublicServicesWithRedirect
 		switch {
 		case errors.As(err, &redirErr) && mft.ALBIngressRestrictedToCDN():
@@ -178,14 +182,14 @@ func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment, o
 // validateALBWorkloadsDontRedirect verifies that none of the public ALB Workloads
 // in this environment have a redirect in their HTTPWithDomain listener.
 // If any services redirect, an error is returned.
-func (d *envDeployer) validateALBWorkloadsDontRedirect(ctx context.Context) error {
+func (d *envDeployer) validateALBWorkloadsDontRedirect() error {
 	params, err := d.envDescriber.Params()
 	if err != nil {
 		return fmt.Errorf("get env params: %w", err)
 	}
 
 	services := strings.Split(params[cfnstack.EnvParamALBWorkloadsKey], ",")
-	g, ctx := errgroup.WithContext(ctx)
+	g, ctx := errgroup.WithContext(context.Background())
 
 	var badServices []string
 	var badServicesMu sync.Mutex
