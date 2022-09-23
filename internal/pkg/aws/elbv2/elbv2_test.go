@@ -230,7 +230,7 @@ func TestELBV2_DescribeRule(t *testing.T) {
 	}{
 		"fail to describe rules": {
 			setUpMock: func(m *mocks.Mockapi) {
-				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
+				m.EXPECT().DescribeRulesWithContext(gomock.Any(), &elbv2.DescribeRulesInput{
 					RuleArns: aws.StringSlice([]string{mockARN}),
 				}).Return(nil, errors.New("some error"))
 			},
@@ -238,7 +238,7 @@ func TestELBV2_DescribeRule(t *testing.T) {
 		},
 		"cannot find listener rule": {
 			setUpMock: func(m *mocks.Mockapi) {
-				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
+				m.EXPECT().DescribeRulesWithContext(gomock.Any(), &elbv2.DescribeRulesInput{
 					RuleArns: aws.StringSlice([]string{mockARN}),
 				}).Return(&elbv2.DescribeRulesOutput{}, nil)
 			},
@@ -246,7 +246,7 @@ func TestELBV2_DescribeRule(t *testing.T) {
 		},
 		"success": {
 			setUpMock: func(m *mocks.Mockapi) {
-				m.EXPECT().DescribeRules(&elbv2.DescribeRulesInput{
+				m.EXPECT().DescribeRulesWithContext(gomock.Any(), &elbv2.DescribeRulesInput{
 					RuleArns: aws.StringSlice([]string{mockARN}),
 				}).Return(&elbv2.DescribeRulesOutput{
 					Rules: []*elbv2.Rule{

@@ -5,8 +5,10 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
+	request "github.com/aws/aws-sdk-go/aws/request"
 	elbv2 "github.com/aws/aws-sdk-go/service/elbv2"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -35,31 +37,51 @@ func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 }
 
 // DescribeRules mocks base method.
-func (m *Mockapi) DescribeRules(input *elbv2.DescribeRulesInput) (*elbv2.DescribeRulesOutput, error) {
+func (m *Mockapi) DescribeRules(arg0 *elbv2.DescribeRulesInput) (*elbv2.DescribeRulesOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeRules", input)
+	ret := m.ctrl.Call(m, "DescribeRules", arg0)
 	ret0, _ := ret[0].(*elbv2.DescribeRulesOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DescribeRules indicates an expected call of DescribeRules.
-func (mr *MockapiMockRecorder) DescribeRules(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DescribeRules(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRules", reflect.TypeOf((*Mockapi)(nil).DescribeRules), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRules", reflect.TypeOf((*Mockapi)(nil).DescribeRules), arg0)
+}
+
+// DescribeRulesWithContext mocks base method.
+func (m *Mockapi) DescribeRulesWithContext(arg0 context.Context, arg1 *elbv2.DescribeRulesInput, arg2 ...request.Option) (*elbv2.DescribeRulesOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeRulesWithContext", varargs...)
+	ret0, _ := ret[0].(*elbv2.DescribeRulesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeRulesWithContext indicates an expected call of DescribeRulesWithContext.
+func (mr *MockapiMockRecorder) DescribeRulesWithContext(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRulesWithContext", reflect.TypeOf((*Mockapi)(nil).DescribeRulesWithContext), varargs...)
 }
 
 // DescribeTargetHealth mocks base method.
-func (m *Mockapi) DescribeTargetHealth(input *elbv2.DescribeTargetHealthInput) (*elbv2.DescribeTargetHealthOutput, error) {
+func (m *Mockapi) DescribeTargetHealth(arg0 *elbv2.DescribeTargetHealthInput) (*elbv2.DescribeTargetHealthOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeTargetHealth", input)
+	ret := m.ctrl.Call(m, "DescribeTargetHealth", arg0)
 	ret0, _ := ret[0].(*elbv2.DescribeTargetHealthOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DescribeTargetHealth indicates an expected call of DescribeTargetHealth.
-func (mr *MockapiMockRecorder) DescribeTargetHealth(input interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) DescribeTargetHealth(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTargetHealth", reflect.TypeOf((*Mockapi)(nil).DescribeTargetHealth), input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeTargetHealth", reflect.TypeOf((*Mockapi)(nil).DescribeTargetHealth), arg0)
 }

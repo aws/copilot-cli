@@ -11,6 +11,7 @@ import (
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/elbv2"
 )
@@ -21,8 +22,9 @@ const (
 )
 
 type api interface {
-	DescribeTargetHealth(input *elbv2.DescribeTargetHealthInput) (*elbv2.DescribeTargetHealthOutput, error)
-	DescribeRules(input *elbv2.DescribeRulesInput) (*elbv2.DescribeRulesOutput, error)
+	DescribeTargetHealth(*elbv2.DescribeTargetHealthInput) (*elbv2.DescribeTargetHealthOutput, error)
+	DescribeRules(*elbv2.DescribeRulesInput) (*elbv2.DescribeRulesOutput, error)
+	DescribeRulesWithContext(context.Context, *elbv2.DescribeRulesInput, ...request.Option) (*elbv2.DescribeRulesOutput, error)
 }
 
 // ELBV2 wraps an AWS ELBV2 client.
@@ -79,7 +81,7 @@ type Rule elbv2.Rule
 
 // DescribeRule returns the Rule with ruleARN.
 func (e *ELBV2) DescribeRule(ctx context.Context, ruleARN string) (Rule, error) {
-	resp, err := e.client.DescribeRules(&elbv2.DescribeRulesInput{
+	resp, err := e.client.DescribeRulesWithContext(ctx, &elbv2.DescribeRulesInput{
 		RuleArns: aws.StringSlice([]string{ruleARN}),
 	})
 	switch {
