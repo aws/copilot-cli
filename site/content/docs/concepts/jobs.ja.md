@@ -38,7 +38,7 @@ Copilot では内部的に CloudFormation を利用しているため、作成�
 
 ### Job のログを確認したい
 
-Job のログの確認も簡単です。[`copilot job logs`](../commands/job-log.ja.md) を実行すると、Job の最新のログが表示されます。`--follow` フラグを指定すると、コマンドを実行した後に新しく呼び出された Job のログを表示し、ログを追跡できます。
+Job のログの確認も簡単です。[`copilot job logs`](../commands/job-logs.ja.md) を実行すると、Job の最新のログが表示されます。`--follow` フラグを指定すると、コマンドを実行した後に新しく呼び出された Job のログを表示し、ログを追跡できます。
 
 ```bash
 $ copilot job logs

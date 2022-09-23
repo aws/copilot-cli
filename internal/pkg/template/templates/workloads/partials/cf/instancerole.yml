@@ -11,6 +11,9 @@ InstanceRole:
     {{- end}}
     {{- end}}
   {{- end}}
+  {{- if .PermissionsBoundary}}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+  {{- end}}
     AssumeRolePolicyDocument:
       Version: '2012-10-17'
       Statement:

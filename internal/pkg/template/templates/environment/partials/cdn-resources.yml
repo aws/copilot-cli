@@ -15,6 +15,9 @@ UniqueJSONValuesFunctionRole:
           Action:
             - sts:AssumeRole
     Path: /
+    {{- if .PermissionsBoundary}}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+    {{- end}}
     ManagedPolicyArns:
       - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
 

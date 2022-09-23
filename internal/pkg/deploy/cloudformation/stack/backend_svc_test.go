@@ -38,369 +38,449 @@ var (
 )
 
 func TestBackendService_Template(t *testing.T) {
-	baseProps := manifest.BackendServiceProps{
-		WorkloadProps: manifest.WorkloadProps{
-			Name:       testServiceName,
-			Dockerfile: testDockerfile,
-		},
-		Port: 8080,
-	}
-
-	testCases := map[string]struct {
-		mockDependencies func(t *testing.T, ctrl *gomock.Controller, svc *BackendService)
-		setUpManifest    func(svc *BackendService)
-		wantedTemplate   string
-		wantedErr        error
-	}{
-		"unexpected addons parsing error": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				svc.addons = mockAddons{tplErr: errors.New("some error")}
-			},
-			wantedErr: fmt.Errorf("generate addons template for %s: %w", testServiceName, errors.New("some error")),
-		},
-		"unexpected addons parameter parsing error": {
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				svc.addons = mockAddons{paramsErr: errors.New("some error")}
-			},
-			wantedErr: fmt.Errorf("parse addons parameters for %s: %w", testServiceName, errors.New("some error")),
-		},
-		"failed parsing sidecars template": {
-			setUpManifest: func(svc *BackendService) {
-				testBackendSvcManifestWithBadSidecar := manifest.NewBackendService(baseProps)
-				testBackendSvcManifestWithBadSidecar.Sidecars = map[string]*manifest.SidecarConfig{
-					"xray": {
-						Port: aws.String("80/80/80"),
-					},
-				}
-				svc.manifest = testBackendSvcManifestWithBadSidecar
-			},
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				svc.parser = m
-				svc.addons = mockAddons{
-					tpl: `
-Resources:
-  AdditionalResourcesPolicy:
-    Type: AWS::IAM::ManagedPolicy
-Outputs:
-  AdditionalResourcesPolicyArn:
-    Value: hello`,
-				}
-			},
-			wantedErr: fmt.Errorf("convert the sidecar configuration for service frontend: %w", errors.New("cannot parse port mapping from 80/80/80")),
-		},
-		"failed parsing Auto Scaling template": {
-			setUpManifest: func(svc *BackendService) {
-				testBackendSvcManifestWithBadAutoScaling := manifest.NewBackendService(baseProps)
-				badRange := manifest.IntRangeBand("badRange")
-				testBackendSvcManifestWithBadAutoScaling.Count.AdvancedCount = manifest.AdvancedCount{
-					Range: manifest.Range{
-						Value: &badRange,
-					},
-				}
-				svc.manifest = testBackendSvcManifestWithBadAutoScaling
-			},
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				svc.parser = m
-				svc.addons = mockAddons{
-					tpl: `
-Resources:
-  AdditionalResourcesPolicy:
-    Type: AWS::IAM::ManagedPolicy
-Outputs:
-  AdditionalResourcesPolicyArn:
-    Value: hello`,
-				}
-			},
-			wantedErr: fmt.Errorf("convert the advanced count configuration for service frontend: %w", errors.New("invalid range value badRange. Should be in format of ${min}-${max}")),
-		},
-		"failed parsing svc template": {
-			setUpManifest: func(svc *BackendService) {
-				svc.manifest = manifest.NewBackendService(baseProps)
-			},
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
-				svc.parser = m
-				svc.addons = mockAddons{
-					tpl: `
-Resources:
-  AdditionalResourcesPolicy:
-    Type: AWS::IAM::ManagedPolicy
-Outputs:
-  AdditionalResourcesPolicyArn:
-    Value: hello`,
-				}
-			},
-			wantedErr: fmt.Errorf("parse backend service template: %w", errors.New("some error")),
-		},
-		"render template": {
-			setUpManifest: func(svc *BackendService) {
-				svc.manifest = manifest.NewBackendService(manifest.BackendServiceProps{
-					WorkloadProps: manifest.WorkloadProps{
-						Name:       testServiceName,
-						Dockerfile: testDockerfile,
-					},
-					Port: 8080,
-					HealthCheck: manifest.ContainerHealthCheck{
-						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-						Interval:    &testInterval,
-						Retries:     &testRetries,
-						Timeout:     &testTimeout,
-						StartPeriod: &testStartPeriod,
-					},
-				})
-				svc.manifest.EntryPoint = manifest.EntryPointOverride{
-					String:      nil,
-					StringSlice: []string{"enter", "from"},
-				}
-				svc.manifest.Command = manifest.CommandOverride{
-					String:      nil,
-					StringSlice: []string{"here"},
-				}
-				svc.manifest.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
-				svc.manifest.DeployConfig = manifest.DeploymentConfiguration{
-					Rolling: aws.String("recreate"),
-				}
-			},
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
-					require.Equal(t, template.WorkloadOpts{
-						AppName:      "phonetool",
-						EnvName:      "test",
-						WorkloadName: "frontend",
-						WorkloadType: manifest.BackendServiceType,
-						HealthCheck: &template.ContainerHealthCheck{
-							Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-							Interval:    aws.Int64(5),
-							Retries:     aws.Int64(3),
-							StartPeriod: aws.Int64(0),
-							Timeout:     aws.Int64(10),
-						},
-						HostedZoneAliases: make(template.AliasesForHostedZone),
-						HTTPHealthCheck: template.HTTPHealthCheckOpts{
-							HealthCheckPath: manifest.DefaultHealthCheckPath,
-							GracePeriod:     aws.Int64(manifest.DefaultHealthCheckGracePeriod),
-						},
-						DeregistrationDelay: aws.Int64(60), // defaults to 60
-						CustomResources: map[string]template.S3ObjectLocation{
-							"EnvControllerFunction": {
-								Bucket: "my-bucket",
-								Key:    "sha1/envcontroller.zip",
-							},
-							"DynamicDesiredCountFunction": {
-								Bucket: "my-bucket",
-								Key:    "sha2/count.zip",
-							},
-						},
-						ExecuteCommand: &template.ExecuteCommandOpts{},
-						NestedStack: &template.WorkloadNestedStackOpts{
-							StackName:       addon.StackName,
-							VariableOutputs: []string{"MyTable"},
-						},
-						Network: template.NetworkOpts{
-							AssignPublicIP: template.DisablePublicIP,
-							SubnetsType:    template.PrivateSubnetsPlacement,
-							SecurityGroups: []string{"sg-1234"},
-						},
-						DeploymentConfiguration: template.DeploymentConfigurationOpts{
-							MinHealthyPercent: 0,
-							MaxPercent:        100,
-						},
-						EntryPoint: []string{"enter", "from"},
-						Command:    []string{"here"},
-					}, actual)
-					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
-				})
-				svc.parser = m
-				svc.addons = mockAddons{
-					tpl: `
-Resources:
-  MyTable:
-    Type: AWS::DynamoDB::Table
-Outputs:
-  MyTable:
-    Value: !Ref MyTable`,
-					params: "",
-				}
-			},
-			wantedTemplate: "template",
-		},
-		"render template with internal alb": {
-			setUpManifest: func(svc *BackendService) {
-				svc.manifest = manifest.NewBackendService(manifest.BackendServiceProps{
-					WorkloadProps: manifest.WorkloadProps{
-						Name:       testServiceName,
-						Dockerfile: testDockerfile,
-					},
-					Port: 8080,
-					HealthCheck: manifest.ContainerHealthCheck{
-						Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-						Interval:    &testInterval,
-						Retries:     &testRetries,
-						Timeout:     &testTimeout,
-						StartPeriod: &testStartPeriod,
-					},
-				})
-				svc.manifest.EntryPoint = manifest.EntryPointOverride{
-					String:      nil,
-					StringSlice: []string{"enter", "from"},
-				}
-				svc.manifest.Command = manifest.CommandOverride{
-					String:      nil,
-					StringSlice: []string{"here"},
-				}
-				svc.manifest.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
-				svc.manifest.DeployConfig = manifest.DeploymentConfiguration{
-					Rolling: aws.String("recreate"),
-				}
-				svc.manifest.RoutingRule = manifest.RoutingRuleConfiguration{
-					Path: aws.String("/albPath"),
-					HealthCheck: manifest.HealthCheckArgsOrString{
-						HealthCheckArgs: manifest.HTTPHealthCheckArgs{
-							Path:               aws.String("/healthz"),
-							Port:               aws.Int(4200),
-							SuccessCodes:       aws.String("418"),
-							HealthyThreshold:   aws.Int64(64),
-							UnhealthyThreshold: aws.Int64(63),
-							Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
-							Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
-							GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
-						},
-					},
-					Stickiness:          aws.Bool(true),
-					DeregistrationDelay: (*time.Duration)(aws.Int64(int64(59 * time.Second))),
-					AllowedSourceIps:    []manifest.IPNet{"10.0.1.0/24"},
-				}
-				svc.albEnabled = true
-			},
-			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *BackendService) {
-				m := mocks.NewMockbackendSvcReadParser(ctrl)
-				m.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
-					require.Equal(t, template.WorkloadOpts{
-						AppName:      "phonetool",
-						EnvName:      "test",
-						WorkloadName: "frontend",
-						WorkloadType: manifest.BackendServiceType,
-						HealthCheck: &template.ContainerHealthCheck{
-							Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
-							Interval:    aws.Int64(5),
-							Retries:     aws.Int64(3),
-							StartPeriod: aws.Int64(0),
-							Timeout:     aws.Int64(10),
-						},
-						HTTPHealthCheck: template.HTTPHealthCheckOpts{
-							HealthCheckPath:    "/healthz",
-							Port:               "4200",
-							SuccessCodes:       "418",
-							HealthyThreshold:   aws.Int64(64),
-							UnhealthyThreshold: aws.Int64(63),
-							Timeout:            aws.Int64(62),
-							Interval:           aws.Int64(61),
-							GracePeriod:        aws.Int64(60),
-						},
-						HostedZoneAliases:   make(template.AliasesForHostedZone),
-						DeregistrationDelay: aws.Int64(59),
-						AllowedSourceIps:    []string{"10.0.1.0/24"},
-						CustomResources: map[string]template.S3ObjectLocation{
-							"EnvControllerFunction": {
-								Bucket: "my-bucket",
-								Key:    "sha1/envcontroller.zip",
-							},
-							"DynamicDesiredCountFunction": {
-								Bucket: "my-bucket",
-								Key:    "sha2/count.zip",
-							},
-						},
-						ExecuteCommand: &template.ExecuteCommandOpts{},
-						NestedStack: &template.WorkloadNestedStackOpts{
-							StackName:       addon.StackName,
-							VariableOutputs: []string{"MyTable"},
-						},
-						Network: template.NetworkOpts{
-							AssignPublicIP: template.DisablePublicIP,
-							SubnetsType:    template.PrivateSubnetsPlacement,
-							SecurityGroups: []string{"sg-1234"},
-						},
-						DeploymentConfiguration: template.DeploymentConfigurationOpts{
-							MinHealthyPercent: 0,
-							MaxPercent:        100,
-						},
-						EntryPoint: []string{"enter", "from"},
-						Command:    []string{"here"},
-						ALBEnabled: true,
-					}, actual)
-					return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
-				})
-				svc.parser = m
-				svc.addons = mockAddons{
-					tpl: `
-Resources:
-  MyTable:
-    Type: AWS::DynamoDB::Table
-Outputs:
-  MyTable:
-    Value: !Ref MyTable`,
-					params: "",
-				}
-			},
-			wantedTemplate: "template",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			conf := &BackendService{
-				ecsWkld: &ecsWkld{
-					wkld: &wkld{
-						name: testServiceName,
-						env:  testEnvName,
-						app:  testAppName,
-						rc: RuntimeConfig{
-							Image: &ECRImage{
-								RepoURL:  testImageRepoURL,
-								ImageTag: testImageTag,
-							},
-							CustomResourcesURL: map[string]string{
-								"EnvControllerFunction":       "https://my-bucket.s3.Region.amazonaws.com/sha1/envcontroller.zip",
-								"DynamicDesiredCountFunction": "https://my-bucket.s3.Region.amazonaws.com/sha2/count.zip",
-							},
-						},
-					},
-					taskDefOverrideFunc: mockCloudFormationOverrideFunc,
+	t.Run("returns a wrapped error when addons template parsing fails", func(t *testing.T) {
+		// GIVEN
+		svc, err := NewBackendService(BackendServiceConfig{
+			App:         &config.Application{},
+			EnvManifest: &manifest.Environment{},
+			Manifest: &manifest.BackendService{
+				Workload: manifest.Workload{
+					Name: aws.String("api"),
 				},
-			}
-
-			if tc.setUpManifest != nil {
-				tc.setUpManifest(conf)
-				privatePlacement := manifest.PlacementString(manifest.PrivateSubnetPlacement)
-				conf.manifest.Network.VPC.Placement = manifest.PlacementArgOrString{
-					PlacementString: &privatePlacement,
-				}
-				conf.manifest.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{
-					IDs: []string{"sg-1234"},
-				}
-			}
-
-			tc.mockDependencies(t, ctrl, conf)
-
-			// WHEN
-			template, err := conf.Template()
-
-			// THEN
-			if tc.wantedErr != nil {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedTemplate, template)
-			}
+			},
+			Addons: mockAddons{tplErr: errors.New("some error")},
 		})
-	}
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = svc.Template()
+
+		// THEN
+		require.EqualError(t, err, "generate addons template for api: some error")
+	})
+
+	t.Run("returns a wrapped error when addons parameter parsing fails", func(t *testing.T) {
+		// GIVEN
+		svc, err := NewBackendService(BackendServiceConfig{
+			App:         &config.Application{},
+			EnvManifest: &manifest.Environment{},
+			Manifest: &manifest.BackendService{
+				Workload: manifest.Workload{
+					Name: aws.String("api"),
+				},
+			},
+			Addons: mockAddons{paramsErr: errors.New("some error")},
+		})
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = svc.Template()
+
+		// THEN
+		require.EqualError(t, err, "parse addons parameters for api: some error")
+	})
+
+	t.Run("returns an error when failed to convert sidecar configuration", func(t *testing.T) {
+		// GIVEN
+		mft := manifest.NewBackendService(manifest.BackendServiceProps{
+			WorkloadProps: manifest.WorkloadProps{
+				Name:       "api",
+				Dockerfile: testDockerfile,
+			},
+			Port: 8080,
+		})
+		mft.Sidecars = map[string]*manifest.SidecarConfig{
+			"xray": {
+				Port: aws.String("80/80/80"),
+			},
+		}
+		svc, err := NewBackendService(BackendServiceConfig{
+			App:         &config.Application{},
+			EnvManifest: &manifest.Environment{},
+			Manifest:    mft,
+			Addons:      mockAddons{},
+		})
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = svc.Template()
+
+		// THEN
+		require.EqualError(t, err, "convert the sidecar configuration for service api: cannot parse port mapping from 80/80/80")
+	})
+
+	t.Run("returns an error when failed to parse autoscaling template", func(t *testing.T) {
+		// GIVEN
+		mft := manifest.NewBackendService(manifest.BackendServiceProps{
+			WorkloadProps: manifest.WorkloadProps{
+				Name:       "api",
+				Dockerfile: testDockerfile,
+			},
+			Port: 8080,
+		})
+		badRange := manifest.IntRangeBand("badRange")
+		mft.Count.AdvancedCount = manifest.AdvancedCount{
+			Range: manifest.Range{
+				Value: &badRange,
+			},
+		}
+		svc, err := NewBackendService(BackendServiceConfig{
+			App:         &config.Application{},
+			EnvManifest: &manifest.Environment{},
+			Manifest:    mft,
+			Addons:      mockAddons{},
+		})
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = svc.Template()
+
+		// THEN
+		require.EqualError(t, err, "convert the advanced count configuration for service api: invalid range value badRange. Should be in format of ${min}-${max}")
+	})
+
+	t.Run("returns wrapped error when failed to parse the template", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		parser := mocks.NewMockbackendSvcReadParser(ctrl)
+		parser.EXPECT().ParseBackendService(gomock.Any()).Return(nil, errors.New("some error"))
+
+		mft := manifest.NewBackendService(manifest.BackendServiceProps{
+			WorkloadProps: manifest.WorkloadProps{
+				Name:       "api",
+				Dockerfile: testDockerfile,
+			},
+			Port: 8080,
+		})
+		svc, err := NewBackendService(BackendServiceConfig{
+			App:         &config.Application{},
+			EnvManifest: &manifest.Environment{},
+			Manifest:    mft,
+			Addons:      mockAddons{},
+		})
+		svc.parser = parser
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = svc.Template()
+
+		// THEN
+		require.EqualError(t, err, "parse backend service template: some error")
+	})
+
+	t.Run("renders template without a load balancer", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mft := manifest.NewBackendService(manifest.BackendServiceProps{
+			WorkloadProps: manifest.WorkloadProps{
+				Name:       "api",
+				Dockerfile: testDockerfile,
+			},
+			Port: 8080,
+			HealthCheck: manifest.ContainerHealthCheck{
+				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+				Interval:    &testInterval,
+				Retries:     &testRetries,
+				Timeout:     &testTimeout,
+				StartPeriod: &testStartPeriod,
+			},
+		})
+		mft.EntryPoint = manifest.EntryPointOverride{
+			String:      nil,
+			StringSlice: []string{"enter", "from"},
+		}
+		mft.Command = manifest.CommandOverride{
+			String:      nil,
+			StringSlice: []string{"here"},
+		}
+		mft.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
+		mft.DeployConfig = manifest.DeploymentConfiguration{
+			Rolling: aws.String("recreate"),
+		}
+		privatePlacement := manifest.PrivateSubnetPlacement
+		mft.Network.VPC.Placement = manifest.PlacementArgOrString{
+			PlacementString: &privatePlacement,
+		}
+		mft.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{
+			IDs: []string{"sg-1234"},
+		}
+
+		var actual template.WorkloadOpts
+		parser := mocks.NewMockbackendSvcReadParser(ctrl)
+		parser.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(in template.WorkloadOpts) (*template.Content, error) {
+			actual = in // Capture the translated object.
+			return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+		})
+		addons := mockAddons{
+			tpl: `
+Resources:
+  MyTable:
+    Type: AWS::DynamoDB::Table
+Outputs:
+  MyTable:
+    Value: !Ref MyTable`,
+			params: "",
+		}
+
+		svc, err := NewBackendService(BackendServiceConfig{
+			App: &config.Application{
+				Name: "phonetool",
+			},
+			EnvManifest: &manifest.Environment{
+				Workload: manifest.Workload{
+					Name: aws.String("test"),
+				},
+			},
+			Manifest: mft,
+			RuntimeConfig: RuntimeConfig{
+				Image: &ECRImage{
+					RepoURL:  testImageRepoURL,
+					ImageTag: testImageTag,
+				},
+				CustomResourcesURL: map[string]string{
+					"EnvControllerFunction":       "https://my-bucket.s3.Region.amazonaws.com/sha1/envcontroller.zip",
+					"DynamicDesiredCountFunction": "https://my-bucket.s3.Region.amazonaws.com/sha2/count.zip",
+				},
+			},
+			Addons: addons,
+		})
+		svc.parser = parser
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = svc.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, template.WorkloadOpts{
+			AppName:      "phonetool",
+			EnvName:      "test",
+			WorkloadName: "api",
+			WorkloadType: manifest.BackendServiceType,
+			HealthCheck: &template.ContainerHealthCheck{
+				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+				Interval:    aws.Int64(5),
+				Retries:     aws.Int64(3),
+				StartPeriod: aws.Int64(0),
+				Timeout:     aws.Int64(10),
+			},
+			HostedZoneAliases: make(template.AliasesForHostedZone),
+			HTTPTargetContainer: template.HTTPTargetContainer{
+				Name: "api",
+				Port: "8080",
+			},
+			HTTPHealthCheck: template.HTTPHealthCheckOpts{
+				HealthCheckPath: manifest.DefaultHealthCheckPath,
+				GracePeriod:     aws.Int64(manifest.DefaultHealthCheckGracePeriod),
+			},
+			DeregistrationDelay: aws.Int64(60), // defaults to 60
+			CustomResources: map[string]template.S3ObjectLocation{
+				"EnvControllerFunction": {
+					Bucket: "my-bucket",
+					Key:    "sha1/envcontroller.zip",
+				},
+				"DynamicDesiredCountFunction": {
+					Bucket: "my-bucket",
+					Key:    "sha2/count.zip",
+				},
+			},
+			ExecuteCommand: &template.ExecuteCommandOpts{},
+			NestedStack: &template.WorkloadNestedStackOpts{
+				StackName:       addon.StackName,
+				VariableOutputs: []string{"MyTable"},
+			},
+			Network: template.NetworkOpts{
+				AssignPublicIP: template.DisablePublicIP,
+				SubnetsType:    template.PrivateSubnetsPlacement,
+				SecurityGroups: []string{"sg-1234"},
+			},
+			DeploymentConfiguration: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: 0,
+				MaxPercent:        100,
+			},
+			EntryPoint: []string{"enter", "from"},
+			Command:    []string{"here"},
+		}, actual)
+	})
+
+	t.Run("renders template with internal load balancer", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mft := manifest.NewBackendService(manifest.BackendServiceProps{
+			WorkloadProps: manifest.WorkloadProps{
+				Name:       "api",
+				Dockerfile: testDockerfile,
+			},
+			Port: 8080,
+			HealthCheck: manifest.ContainerHealthCheck{
+				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+				Interval:    &testInterval,
+				Retries:     &testRetries,
+				Timeout:     &testTimeout,
+				StartPeriod: &testStartPeriod,
+			},
+		})
+		mft.EntryPoint = manifest.EntryPointOverride{
+			String:      nil,
+			StringSlice: []string{"enter", "from"},
+		}
+		mft.Command = manifest.CommandOverride{
+			String:      nil,
+			StringSlice: []string{"here"},
+		}
+		mft.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
+		mft.DeployConfig = manifest.DeploymentConfiguration{
+			Rolling: aws.String("recreate"),
+		}
+		mft.RoutingRule = manifest.RoutingRuleConfiguration{
+			Path: aws.String("/albPath"),
+			HealthCheck: manifest.HealthCheckArgsOrString{
+				HealthCheckArgs: manifest.HTTPHealthCheckArgs{
+					Path:               aws.String("/healthz"),
+					Port:               aws.Int(4200),
+					SuccessCodes:       aws.String("418"),
+					HealthyThreshold:   aws.Int64(64),
+					UnhealthyThreshold: aws.Int64(63),
+					Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
+					Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
+					GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
+				},
+			},
+			Stickiness:          aws.Bool(true),
+			DeregistrationDelay: (*time.Duration)(aws.Int64(int64(59 * time.Second))),
+			AllowedSourceIps:    []manifest.IPNet{"10.0.1.0/24"},
+			TargetContainer:     aws.String("envoy"),
+		}
+		mft.Sidecars = map[string]*manifest.SidecarConfig{
+			"envoy": {
+				Port: aws.String("443"),
+			},
+		}
+		privatePlacement := manifest.PrivateSubnetPlacement
+		mft.Network.VPC.Placement = manifest.PlacementArgOrString{
+			PlacementString: &privatePlacement,
+		}
+		mft.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{
+			IDs: []string{"sg-1234"},
+		}
+
+		var actual template.WorkloadOpts
+		parser := mocks.NewMockbackendSvcReadParser(ctrl)
+		parser.EXPECT().ParseBackendService(gomock.Any()).DoAndReturn(func(in template.WorkloadOpts) (*template.Content, error) {
+			actual = in // Capture the translated object.
+			return &template.Content{Buffer: bytes.NewBufferString("template")}, nil
+		})
+		addons := mockAddons{
+			tpl: `
+Resources:
+  MyTable:
+    Type: AWS::DynamoDB::Table
+Outputs:
+  MyTable:
+    Value: !Ref MyTable`,
+			params: "",
+		}
+
+		svc, err := NewBackendService(BackendServiceConfig{
+			App: &config.Application{
+				Name: "phonetool",
+			},
+			EnvManifest: &manifest.Environment{
+				Workload: manifest.Workload{
+					Name: aws.String("test"),
+				},
+			},
+			Manifest: mft,
+			RuntimeConfig: RuntimeConfig{
+				Image: &ECRImage{
+					RepoURL:  testImageRepoURL,
+					ImageTag: testImageTag,
+				},
+				CustomResourcesURL: map[string]string{
+					"EnvControllerFunction":       "https://my-bucket.s3.Region.amazonaws.com/sha1/envcontroller.zip",
+					"DynamicDesiredCountFunction": "https://my-bucket.s3.Region.amazonaws.com/sha2/count.zip",
+				},
+			},
+			Addons: addons,
+		})
+		svc.parser = parser
+		require.NoError(t, err)
+
+		// WHEN
+		_, err = svc.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, template.WorkloadOpts{
+			AppName:      "phonetool",
+			EnvName:      "test",
+			WorkloadName: "api",
+			WorkloadType: manifest.BackendServiceType,
+			HealthCheck: &template.ContainerHealthCheck{
+				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
+				Interval:    aws.Int64(5),
+				Retries:     aws.Int64(3),
+				StartPeriod: aws.Int64(0),
+				Timeout:     aws.Int64(10),
+			},
+			Sidecars: []*template.SidecarOpts{
+				{
+					Name: aws.String("envoy"),
+					Port: aws.String("443"),
+				},
+			},
+			HTTPTargetContainer: template.HTTPTargetContainer{
+				Name: "envoy",
+				Port: "443",
+			},
+			HTTPHealthCheck: template.HTTPHealthCheckOpts{
+				HealthCheckPath:    "/healthz",
+				Port:               "4200",
+				SuccessCodes:       "418",
+				HealthyThreshold:   aws.Int64(64),
+				UnhealthyThreshold: aws.Int64(63),
+				Timeout:            aws.Int64(62),
+				Interval:           aws.Int64(61),
+				GracePeriod:        aws.Int64(60),
+			},
+			HostedZoneAliases:   make(template.AliasesForHostedZone),
+			DeregistrationDelay: aws.Int64(59),
+			AllowedSourceIps:    []string{"10.0.1.0/24"},
+			CustomResources: map[string]template.S3ObjectLocation{
+				"EnvControllerFunction": {
+					Bucket: "my-bucket",
+					Key:    "sha1/envcontroller.zip",
+				},
+				"DynamicDesiredCountFunction": {
+					Bucket: "my-bucket",
+					Key:    "sha2/count.zip",
+				},
+			},
+			ExecuteCommand: &template.ExecuteCommandOpts{},
+			NestedStack: &template.WorkloadNestedStackOpts{
+				StackName:       addon.StackName,
+				VariableOutputs: []string{"MyTable"},
+			},
+			Network: template.NetworkOpts{
+				AssignPublicIP: template.DisablePublicIP,
+				SubnetsType:    template.PrivateSubnetsPlacement,
+				SecurityGroups: []string{"sg-1234"},
+			},
+			DeploymentConfiguration: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: 0,
+				MaxPercent:        100,
+			},
+			EntryPoint: []string{"enter", "from"},
+			Command:    []string{"here"},
+			ALBEnabled: true,
+		}, actual)
+	})
 }
 
 func TestBackendService_Parameters(t *testing.T) {
