@@ -73,7 +73,11 @@ HTTPRuleWithDomainPriorityAction:
 
 HTTPListenerRuleWithDomain:
   Metadata:
+    {{- if .HTTPRedirect}}
     'aws:copilot:description': 'An HTTP listener rule that redirects HTTP to HTTPS'
+    {{- else}}
+    'aws:copilot:description': 'An HTTP listener rule for forwarding HTTP traffic to your tasks'
+    {{- end}}
   Type: AWS::ElasticLoadBalancingV2::ListenerRule
   Properties:
     Actions:
