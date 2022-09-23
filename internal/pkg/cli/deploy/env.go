@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -32,10 +31,8 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
-	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
-	"github.com/dustin/go-humanize/english"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -120,7 +117,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		ConfigStore: in.ConfigStore,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get env describer: %w", err)
+		return nil, fmt.Errorf("initialize env describer: %w", err)
 	}
 	cfnClient := deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr))
 	return &envDeployer{
@@ -176,41 +173,6 @@ func (d *envDeployer) Validate(ctx context.Context, mft *manifest.Environment, o
 	}
 
 	return nil
-}
-
-type errEnvHasPublicServicesWithRedirect struct {
-	services []string
-}
-
-func (e *errEnvHasPublicServicesWithRedirect) Error() string {
-	n := len(e.services)
-	quoted := make([]string, len(e.services))
-	for i := range e.services {
-		quoted[i] = strconv.Quote(e.services[i])
-	}
-
-	return fmt.Sprintf(`%s %s %s HTTP traffic to HTTPS.
-%s
-To fix this, set the following field in %s manifest:
-%s
-and run %s.`,
-		english.PluralWord(n, "Service", "Services"),
-		english.OxfordWordSeries(quoted, "and"),
-		english.PluralWord(n, "redirects", "redirect"),
-		color.Emphasize(english.PluralWord(n, "This service", "These services")+" will not be reachable through the CDN."),
-		english.PluralWord(n, "its", "each"),
-		color.HighlightCodeBlock("http:\n  redirect_to_https: true"),
-		color.HighlightCode("copilot svc deploy"),
-	)
-}
-
-func (e *errEnvHasPublicServicesWithRedirect) Warning() string {
-	return fmt.Sprintf(`%s
-If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.`,
-		e.Error(),
-		english.PluralWord(len(e.services), "this service", "these services"),
-		english.PluralWord(len(e.services), "its", "each service's"),
-	)
 }
 
 // validateALBWorkloadsDontRedirect verifies that none of the public ALB Workloads
@@ -282,7 +244,7 @@ func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool,
 
 	rule, err := d.lbDescriber.DescribeRule(ctx, ruleARN)
 	if err != nil {
-		return false, fmt.Errorf("get listener rule %q: %w", ruleARN, err)
+		return false, fmt.Errorf("describe listener rule %q: %w", ruleARN, err)
 	}
 	return rule.HasRedirectAction(), nil
 }

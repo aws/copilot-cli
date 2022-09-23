@@ -77,6 +77,7 @@ func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
 	return hostHeaders, nil
 }
 
+// Rule wraps an elbv2.Rule to add some nice functionality to it.
 type Rule elbv2.Rule
 
 // DescribeRule returns the Rule with ruleARN.

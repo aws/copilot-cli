@@ -509,7 +509,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 				}, nil)
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc1RuleARN").Return(elbv2.Rule{}, errors.New("some error"))
 			},
-			expected: `can't enable TLS termination on CDN: verify service "svc1": get listener rule "svc1RuleARN": some error`,
+			expected: `can't enable TLS termination on CDN: verify service "svc1": describe listener rule "svc1RuleARN": some error`,
 		},
 		"cdn tls termination enabled, warn with one service that doesn't redirect, two that do redirect": {
 			app: &config.Application{},
