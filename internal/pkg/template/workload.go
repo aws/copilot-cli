@@ -216,7 +216,11 @@ func (tg HTTPTargetContainer) IsHTTPS() bool {
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
-	HealthCheckPath     string
+	// Fields with defaults always set.
+	HealthCheckPath string
+	GracePeriod     int64
+
+	// Optional.
 	Port                string
 	SuccessCodes        string
 	HealthyThreshold    *int64
@@ -224,7 +228,6 @@ type HTTPHealthCheckOpts struct {
 	Interval            *int64
 	Timeout             *int64
 	DeregistrationDelay *int64
-	GracePeriod         *int64
 }
 
 // A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.

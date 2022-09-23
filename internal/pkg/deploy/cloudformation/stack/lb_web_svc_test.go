@@ -252,7 +252,7 @@ Outputs:
 			WorkloadType: manifest.LoadBalancedWebServiceType,
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
-				GracePeriod:     aws.Int64(60),
+				GracePeriod:     60,
 			},
 			HostedZoneAliases: template.AliasesForHostedZone{
 				"mockHostedZone": []string{"mockAlias"},

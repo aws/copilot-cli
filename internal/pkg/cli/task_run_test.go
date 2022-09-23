@@ -1209,8 +1209,9 @@ type mockRunTaskRequester struct {
 }
 
 type taskRunMocks struct {
-	store    *mocks.Mockstore
-	provider *mocks.MocksessionProvider
+	store                   *mocks.Mockstore
+	provider                *mocks.MocksessionProvider
+	envCompatibilityChecker *mocks.MockversionCompatibilityChecker
 }
 
 func TestTaskRunOpts_runTaskCommand(t *testing.T) {
@@ -1237,7 +1238,7 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 			},
 			wantedCommand: &wantedCommand,
 		},
-		"fail to generate a command given an service ARN": {
+		"fail to generate a command given a service ARN": {
 			inGenerateCommandTarget: "arn:aws:ecs:us-east-1:123456789012:service/crowded-cluster/good-service",
 			setUpMocks: func(m *taskRunMocks) {
 				m.provider.EXPECT().Default()
@@ -1318,6 +1319,7 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 				}, nil)
 				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "good-job").Return(&config.Workload{}, nil)
+				m.envCompatibilityChecker.EXPECT().Version().Return("v1.12.2", nil)
 			},
 			mockRunTaskRequester: mockRunTaskRequester{
 				mockRunTaskRequestFromJob: func(client ecs.JobDescriber, app, env, svc string) (*ecs.RunTaskRequest, error) {
@@ -1335,6 +1337,7 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 				}, nil)
 				m.provider.EXPECT().FromRole("mock-role", "mock-region")
 				m.store.EXPECT().GetJob("good-app", "good-job").Return(&config.Workload{}, nil)
+				m.envCompatibilityChecker.EXPECT().Version().Return("v1.12.2", nil)
 			},
 			mockRunTaskRequester: mockRunTaskRequester{
 				mockRunTaskRequestFromJob: func(client ecs.JobDescriber, app, env, svc string) (*ecs.RunTaskRequest, error) {
@@ -1342,6 +1345,34 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 				},
 			},
 			wantedError: fmt.Errorf("generate task run command from job good-job of application good-app deployed in environment good-env: some error"),
+		},
+		"error out if fail to get env version when target is job": {
+			inGenerateCommandTarget: "good-app/good-env/good-job",
+			setUpMocks: func(m *taskRunMocks) {
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
+				m.store.EXPECT().GetJob("good-app", "good-job").Return(&config.Workload{}, nil)
+				m.envCompatibilityChecker.EXPECT().Version().Return("", errors.New("some error"))
+			},
+
+			wantedError: fmt.Errorf(`retrieve version of environment stack "good-env" in application "good-app": some error`),
+		},
+		"error out if env version doesn't support `--generate-cmd` for jobs": {
+			inGenerateCommandTarget: "good-app/good-env/good-job",
+			setUpMocks: func(m *taskRunMocks) {
+				m.store.EXPECT().GetEnvironment("good-app", "good-env").Return(&config.Environment{
+					ManagerRoleARN: "mock-role",
+					Region:         "mock-region",
+				}, nil)
+				m.provider.EXPECT().FromRole("mock-role", "mock-region")
+				m.store.EXPECT().GetJob("good-app", "good-job").Return(&config.Workload{}, nil)
+				m.envCompatibilityChecker.EXPECT().Version().Return("v1.9.0", nil)
+			},
+
+			wantedError: fmt.Errorf(`environment "good-env" is on version "v1.9.0" which does not support the "task run --generate-cmd" feature`),
 		},
 		"fail to determine if the workload is a job given an app/env/workload target": {
 			inGenerateCommandTarget: "good-app/good-env/bad-workload",
@@ -1393,8 +1424,9 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &taskRunMocks{
-				store:    mocks.NewMockstore(ctrl),
-				provider: mocks.NewMocksessionProvider(ctrl),
+				store:                   mocks.NewMockstore(ctrl),
+				provider:                mocks.NewMocksessionProvider(ctrl),
+				envCompatibilityChecker: mocks.NewMockversionCompatibilityChecker(ctrl),
 			}
 			if tc.setUpMocks != nil {
 				tc.setUpMocks(m)
@@ -1415,15 +1447,17 @@ func TestTaskRunOpts_runTaskCommand(t *testing.T) {
 				configureServiceDescriber: func(session *session.Session) ecs.ServiceDescriber {
 					return ecsMocks.NewMockServiceDescriber(ctrl)
 				},
-
 				runTaskRequestFromECSService: tc.mockRunTaskRequester.mockRunTaskRequestFromECSService,
 				runTaskRequestFromService:    tc.mockRunTaskRequester.mockRunTaskRequestFromService,
 				runTaskRequestFromJob:        tc.mockRunTaskRequester.mockRunTaskRequestFromJob,
+				envCompatibilityChecker: func(app, env string) (versionCompatibilityChecker, error) {
+					return m.envCompatibilityChecker, nil
+				},
 			}
 
 			got, err := opts.runTaskCommand()
 			if tc.wantedError != nil {
-				require.EqualError(t, tc.wantedError, err.Error())
+				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedCommand, got)

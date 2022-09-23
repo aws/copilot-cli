@@ -275,7 +275,7 @@ Outputs:
 			},
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
 				HealthCheckPath: manifest.DefaultHealthCheckPath,
-				GracePeriod:     aws.Int64(manifest.DefaultHealthCheckGracePeriod),
+				GracePeriod:     manifest.DefaultHealthCheckGracePeriod,
 			},
 			DeregistrationDelay: aws.Int64(60), // defaults to 60
 			CustomResources: map[string]template.S3ObjectLocation{
@@ -447,7 +447,7 @@ Outputs:
 				UnhealthyThreshold: aws.Int64(63),
 				Timeout:            aws.Int64(62),
 				Interval:           aws.Int64(61),
-				GracePeriod:        aws.Int64(60),
+				GracePeriod:        60,
 			},
 			HostedZoneAliases:   make(template.AliasesForHostedZone),
 			DeregistrationDelay: aws.Int64(59),
