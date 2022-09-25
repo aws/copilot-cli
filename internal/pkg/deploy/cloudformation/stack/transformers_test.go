@@ -1416,7 +1416,7 @@ func Test_convertPublish(t *testing.T) {
 			wanted: &template.PublishOpts{
 				Topics: []*template.Topic{
 					{
-						Name:            aws.String("topic1"),
+						Name:            aws.String("topic1.fifo"),
 						FIFOTopicConfig: &template.FIFOTopicConfig{},
 						AccountID:       accountId,
 						Partition:       partition,
@@ -1456,7 +1456,7 @@ func Test_convertPublish(t *testing.T) {
 			wanted: &template.PublishOpts{
 				Topics: []*template.Topic{
 					{
-						Name: aws.String("topic1"),
+						Name: aws.String("topic1.fifo"),
 						FIFOTopicConfig: &template.FIFOTopicConfig{
 							ContentBasedDeduplication: aws.Bool(true),
 						},

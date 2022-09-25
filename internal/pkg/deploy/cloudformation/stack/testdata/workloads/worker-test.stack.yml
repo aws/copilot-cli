@@ -31,6 +31,7 @@ Metadata:
         - name: givesOtherdogs
         - name: mytopic
           fifo: true
+        - name: mytopic
         - name: yourtopic
           fifo:
             content_based_deduplication: true
@@ -158,7 +159,7 @@ Resources:
             - Name: COPILOT_SERVICE_NAME
               Value: !Sub '${WorkloadName}'
             - Name: COPILOT_SNS_TOPIC_ARNS
-              Value: '{"givesOtherdogs":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-givesOtherdogs","mytopic":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-mytopic.fifo","nonfifotopic":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-nonfifotopic","yourtopic":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-yourtopic.fifo"}'
+              Value: '{"givesOtherdogs":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-givesOtherdogs","mytopic":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-mytopic","mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-mytopic.fifo","nonfifotopic":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-nonfifotopic","yourtopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-yourtopic.fifo"}'
             - Name: COPILOT_QUEUE_URI
               Value: !Ref EventsQueue
             - Name: COPILOT_TOPIC_QUEUE_URIS
@@ -290,8 +291,9 @@ Resources:
                 Action: 'sns:Publish'
                 Resource:
                   - !Ref givesOtherdogsSNSTopic
+                  - !Ref mytopicfifoSNSTopic
                   - !Ref mytopicSNSTopic
-                  - !Ref yourtopicSNSTopic
+                  - !Ref yourtopicfifoSNSTopic
                   - !Ref nonfifotopicSNSTopic
   DynamicDesiredCountAction:
     Metadata:
@@ -936,13 +938,38 @@ Resources:
             Condition:
               StringEquals:
                 "sns:Protocol": "sqs"
-  mytopicSNSTopic:
+  mytopicfifoSNSTopic:
     Metadata:
-      'aws:copilot:description': 'A FIFO SNS topic to broadcast mytopic events'
+      'aws:copilot:description': 'A FIFO SNS topic to broadcast mytopic.fifo events'
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub '${AWS::StackName}-mytopic.fifo'
       FifoTopic: true
+      KmsMasterKeyId: 'alias/aws/sns'
+  mytopicfifoSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: mytopicfifoSNSTopic
+    Properties:
+      Topics:
+        - !Ref mytopicfifoSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref mytopicfifoSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
+  mytopicSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A SNS topic to broadcast mytopic events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-mytopic'
       KmsMasterKeyId: 'alias/aws/sns'
   mytopicSNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
@@ -962,21 +989,21 @@ Resources:
             Condition:
               StringEquals:
                 "sns:Protocol": "sqs"
-  yourtopicSNSTopic:
+  yourtopicfifoSNSTopic:
     Metadata:
-      'aws:copilot:description': 'A FIFO SNS topic to broadcast yourtopic events'
+      'aws:copilot:description': 'A FIFO SNS topic to broadcast yourtopic.fifo events'
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub '${AWS::StackName}-yourtopic.fifo'
       FifoTopic: true
       ContentBasedDeduplication: true
       KmsMasterKeyId: 'alias/aws/sns'
-  yourtopicSNSTopicPolicy:
+  yourtopicfifoSNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
-    DependsOn: yourtopicSNSTopic
+    DependsOn: yourtopicfifoSNSTopic
     Properties:
       Topics:
-        - !Ref yourtopicSNSTopic
+        - !Ref yourtopicfifoSNSTopic
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -985,7 +1012,7 @@ Resources:
               AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
             Action:
               - sns:Subscribe
-            Resource: !Ref yourtopicSNSTopic
+            Resource: !Ref yourtopicfifoSNSTopic
             Condition:
               StringEquals:
                 "sns:Protocol": "sqs"

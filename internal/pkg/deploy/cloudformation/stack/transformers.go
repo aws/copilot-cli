@@ -804,7 +804,9 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 	// convert the topics to template Topics
 	for _, topic := range topics {
 		var fifoConfig *template.FIFOTopicConfig
+		topicName := aws.StringValue(topic.Name)
 		if topic.FIFO.IsEnabled() {
+			topicName += ".fifo"
 			fifoConfig = &template.FIFOTopicConfig{}
 			if !topic.FIFO.Advanced.IsEmpty() {
 				fifoConfig = &template.FIFOTopicConfig{
@@ -813,7 +815,7 @@ func convertPublish(topics []manifest.Topic, accountID, region, app, env, svc st
 			}
 		}
 		publishers.Topics = append(publishers.Topics, &template.Topic{
-			Name:            topic.Name,
+			Name:            aws.String(topicName),
 			FIFOTopicConfig: fifoConfig,
 			AccountID:       accountID,
 			Partition:       partition.ID(),
