@@ -184,6 +184,7 @@ func (cfg *EnvironmentConfig) EnvSecurityGroup() (*securityGroupConfig, bool) {
 	return nil, false
 }
 
+// EnvironmentCDNConfig represents configuration of a CDN.
 type EnvironmentCDNConfig struct {
 	Enabled *bool
 	Config  AdvancedCDNConfig // mutually exclusive with Enabled
@@ -213,10 +214,14 @@ func (cfg *EnvironmentConfig) CDNEnabled() bool {
 	return aws.BoolValue(cfg.CDNConfig.Enabled)
 }
 
+// HasImportedPublicALBCerts returns true when the environment's ALB
+// is configured with certs for the public listener.
 func (cfg *EnvironmentConfig) HasImportedPublicALBCerts() bool {
 	return cfg.HTTPConfig.Public.Certificates != nil
 }
 
+// CDNDoesTLSTermination returns true when the environment's CDN
+// is configured to terminate incoming TLS connections.
 func (cfg *EnvironmentConfig) CDNDoesTLSTermination() bool {
 	return aws.BoolValue(cfg.CDNConfig.Config.TerminateTLS)
 }
@@ -504,6 +509,8 @@ type Ingress struct {
 	VPCIngress         *bool              `yaml:"from_vpc"`
 }
 
+// ALBIngressRestrictedToCDN returns true when the environment is configured
+// to only allow ALB ingress from the CDN.
 func (cfg *EnvironmentConfig) ALBIngressRestrictedToCDN() bool {
 	return aws.BoolValue(cfg.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress)
 }
