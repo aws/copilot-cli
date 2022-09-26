@@ -96,14 +96,14 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"wrap error from ListPolicies": {
 			inPBPolicyName: "nonexistentPolicyName",
 			mock: func(m *initAppMocks) {
-				m.mockPolicyLister.EXPECT().ListPolicies().Return(nil, errors.New("some error"))
+				m.mockPolicyLister.EXPECT().ListPermBoundPolicyNames().Return(nil, errors.New("some error"))
 			},
 			wantedError: errors.New("list permissions boundary policies: some error"),
 		},
 		"invalid permissions boundary policy name": {
 			inPBPolicyName: "nonexistentPolicyName",
 			mock: func(m *initAppMocks) {
-				m.mockPolicyLister.EXPECT().ListPolicies().Return(
+				m.mockPolicyLister.EXPECT().ListPermBoundPolicyNames().Return(
 					[]*string{
 						aws.String("existentPolicyName"),
 					}, nil)

@@ -5914,19 +5914,19 @@ func (m *MockpolicyLister) EXPECT() *MockpolicyListerMockRecorder {
 	return m.recorder
 }
 
-// ListPolicies mocks base method.
-func (m *MockpolicyLister) ListPolicies() ([]*string, error) {
+// ListPermBoundPolicyNames mocks base method.
+func (m *MockpolicyLister) ListPermBoundPolicyNames() ([]*string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPolicies")
+	ret := m.ctrl.Call(m, "ListPermBoundPolicyNames")
 	ret0, _ := ret[0].([]*string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListPolicies indicates an expected call of ListPolicies.
-func (mr *MockpolicyListerMockRecorder) ListPolicies() *gomock.Call {
+// ListPermBoundPolicyNames indicates an expected call of ListPermBoundPolicyNames.
+func (mr *MockpolicyListerMockRecorder) ListPermBoundPolicyNames() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPolicies", reflect.TypeOf((*MockpolicyLister)(nil).ListPolicies))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPermBoundPolicyNames", reflect.TypeOf((*MockpolicyLister)(nil).ListPermBoundPolicyNames))
 }
 
 // MockserviceDescriber is a mock of serviceDescriber interface.

@@ -99,7 +99,8 @@ func (c *IAM) CreateECSServiceLinkedRole() error {
 	return nil
 }
 
-func (c *IAM) ListPolicies() ([]*string, error) {
+// ListPermBoundPolicyNames returns a list of permissions boundary policy names.
+func (c *IAM) ListPermBoundPolicyNames() ([]*string, error) {
 	policies, err := c.client.ListPolicies(&iam.ListPoliciesInput{
 		PolicyUsageFilter: aws.String("PermissionsBoundary"),
 	})

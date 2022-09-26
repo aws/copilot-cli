@@ -243,7 +243,7 @@ func (o *initAppOpts) validateAppName(name string) error {
 }
 
 func (o *initAppOpts) validatePermBound(policyName string) error {
-	IAMPolicies, err := o.iam.ListPolicies()
+	IAMPolicies, err := o.iam.ListPermBoundPolicyNames()
 	if err != nil {
 		return fmt.Errorf("list permissions boundary policies: %w", err)
 	}
