@@ -568,7 +568,7 @@ type WorkloadOpts struct {
 	AllowedSourceIps        []string
 	NLB                     *NetworkLoadBalancer
 	DeploymentConfiguration DeploymentConfigurationOpts
-	ServiceConect           *ServiceConnect
+	ServiceConnect          *ServiceConnect
 
 	// Custom Resources backed by Lambda functions.
 	CustomResources map[string]S3ObjectLocation
