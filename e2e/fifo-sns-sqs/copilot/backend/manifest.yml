@@ -1,0 +1,23 @@
+name: backend
+type: backend Service
+image:
+  build:
+    dockerfile: src/Dockerfile
+    context: src
+  port: 80
+
+http:
+  path: '/'
+
+cpu: 256
+memory: 512
+count: 1
+
+publish:
+  topics:
+    - name: mytopic
+    - name: mytopic
+      fifo: true
+    - name: yourtopic
+      fifo:
+        content_based_deduplication: true
