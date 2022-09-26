@@ -819,3 +819,14 @@ func placementStringP(p PlacementString) *PlacementString {
 	placement := p
 	return &placement
 }
+
+func (cfg PublishConfig) publishedTopics() []Topic {
+	var pubs []Topic
+	for _, topic := range cfg.Topics {
+		if topic.FIFO.IsEnabled() {
+			topic.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		}
+		pubs = append(pubs, topic)
+	}
+	return pubs
+}

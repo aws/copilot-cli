@@ -34,15 +34,7 @@ type WorkerService struct {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *WorkerService) Publish() []Topic {
-	var pubs []Topic
-	for _, topic := range s.WorkerServiceConfig.PublishConfig.Topics {
-		tempTopic := topic
-		if topic.FIFO.IsEnabled() {
-			tempTopic.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
-		}
-		pubs = append(pubs, tempTopic)
-	}
-	return pubs
+	return s.WorkerServiceConfig.PublishConfig.publishedTopics()
 }
 
 func (s *WorkerService) subnets() *SubnetListOrArgs {
