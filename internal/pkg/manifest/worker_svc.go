@@ -34,7 +34,7 @@ type WorkerService struct {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *WorkerService) Publish() []Topic {
-	return s.WorkerServiceConfig.PublishConfig.Topics
+	return s.WorkerServiceConfig.PublishConfig.publishedTopics()
 }
 
 func (s *WorkerService) subnets() *SubnetListOrArgs {

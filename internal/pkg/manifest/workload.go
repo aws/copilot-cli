@@ -819,3 +819,17 @@ func placementStringP(p PlacementString) *PlacementString {
 	placement := p
 	return &placement
 }
+
+func (cfg PublishConfig) publishedTopics() []Topic {
+	if len(cfg.Topics) == 0 {
+		return nil
+	}
+	pubs := make([]Topic, len(cfg.Topics))
+	for i, topic := range cfg.Topics {
+		if topic.FIFO.IsEnabled() {
+			topic.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		}
+		pubs[i] = topic
+	}
+	return pubs
+}

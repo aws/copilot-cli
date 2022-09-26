@@ -25,6 +25,7 @@ publish:
     - name: givesOtherdogs
     - name: mytopic
       fifo: true
+    - name: mytopic
     - name: yourtopic
       fifo:
         content_based_deduplication: true
