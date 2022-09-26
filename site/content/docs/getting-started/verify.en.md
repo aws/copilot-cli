@@ -11,8 +11,16 @@ The AWS Copilot CLI executables are cryptographically signed using PGP signature
 2. Retrieve the Amazon ECS PGP public key. You can use a command to do this or manually create the key and then import it.
     * Option 1: Retrieve the key with the following command.
     ```sh
-    gpg --keyserver hkp://keys.gnupg.net --recv BCE9D9A42D51784F
+    gpg --keyserver hkps://keyserver.ubuntu.com --recv BCE9D9A42D51784F
     ```
+
+    ???- note "Notes on key servers (optional)"
+
+        * Some alternative key servers are:
+            *   `hkps://keys.openpgp.org`
+            *   `hkps://pgp.mit.edu`
+        * To switch to a different key server, verify the stored-key using this command first: `gpg --keyserver ${KEYSERVER} --verbose --import-options show-only --recv BCE9D9A42D51784F`.
+
     * Option 2: Create a file with the following contents of the Amazon ECS PGP public key and then import it.
     ```
     -----BEGIN PGP PUBLIC KEY BLOCK-----

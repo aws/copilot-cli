@@ -107,6 +107,8 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
         publish:
           topics:
             - name: 'inventory'
+            - name: 'orders'
+              fifo: true
 
         variables:
           DDB_TABLE_NAME: 'inventory'
