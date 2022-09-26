@@ -49,6 +49,8 @@ func (e *errEnvHasPublicServicesWithRedirect) Error() string {
 	return fmt.Sprintf("%v services redirect HTTP to HTTPS", len(e.services))
 }
 
+// RecommendActions returns recommended actions to be taken after the error.
+// Implements main.actionRecommender interface.
 func (e *errEnvHasPublicServicesWithRedirect) RecommendActions() string {
 	n := len(e.services)
 	quoted := make([]string, len(e.services))
