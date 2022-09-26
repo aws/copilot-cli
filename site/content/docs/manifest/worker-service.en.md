@@ -175,7 +175,7 @@ For high throughput for FIFO queues, specifies whether message deduplication occ
 For high throughput for FIFO queues, specifies whether the FIFO queue throughput quota applies to the entire queue or per message group. Valid values are "perQueue" and "perMessageGroupId".
 
 <span class="parent-field">subscribe.queue.fifo.</span><a id="subscribe-queue-fifo-high-throughput" href="#subscribe-queue-fifo-high-throughput" class="field">`high_throughput`</a> <span class="type">Boolean</span>  
-If enabled, provides higher transactions per second (TPS) for messages in FIFO queues.
+If enabled, provides higher transactions per second (TPS) for messages in FIFO queues. Mutually exclusive with `deduplication_scope` and `throughput_limit`.
 
 
 <span class="parent-field">subscribe.queue.dead_letter.</span><a id="subscribe-queue-dead-letter-tries" href="#subscribe-queue-dead-letter-tries" class="field">`tries`</a> <span class="type">Integer</span>  
