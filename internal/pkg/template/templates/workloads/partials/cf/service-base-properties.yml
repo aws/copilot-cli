@@ -52,7 +52,7 @@ ServiceConnectConfiguration:
           {{- if .ServiceConnect.Alias }}
           DnsName: {{.ServiceConnect.Alias}}
           {{- else}}
-          DnsName: !Join [".", [!Ref WorkloadName, {{.ServiceConnect.Namespace}}]]
+          DnsName: !Ref WorkloadName
           {{- end}}
 {{- end}}
 NetworkConfiguration:
