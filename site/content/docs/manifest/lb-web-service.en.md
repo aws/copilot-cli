@@ -7,20 +7,20 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         ```yaml
             name: 'frontend'
             type: 'Load Balanced Web Service'
-    
+
             image:
               build: './frontend/Dockerfile'
               port: 8080
-    
+
             http:
               path: '/'
               healthcheck: '/_healthcheck'
-    
+
             cpu: 256
             memory: 512
             count: 3
             exec: true
-    
+
             variables:
               LOG_LEVEL: info
             secrets:
@@ -34,11 +34,11 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         ```yaml
             name: 'frontend'
             type: 'Load Balanced Web Service'
-    
+
             image:
               build: './frontend/Dockerfile'
               port: 8080
-    
+
             http:
               path: '/'
               alias: 'example.com'
@@ -105,7 +105,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         cpu: 512
         memory: 1024
         count:
-          range: 1-10 
+          range: 1-10
           cooldown:
             in: 60s
             out: 30s
@@ -176,7 +176,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
           port: 80
           depends_on:
             bootstrap: success
-        
+
         http:
           path: '/'
 
@@ -261,6 +261,9 @@ http:
   hosted_zone: Z0873220N255IR3MTNR4
 # Also see http.alias array of maps example, above.
 ```
+<span class="parent-field">http.</span><a id="http-redirect-to-https" href="#http-redirect-to-https" class="field">`redirect_to_https`</a> <span class="type">Boolean</span>  
+Automatically redirect the Application Load Balancer from HTTP to HTTPS. By default it is `true`.
+
 <span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
 The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. If omitted, then `'http1'` is assumed.
 If using gRPC, please note that a domain must be associated with your application.
