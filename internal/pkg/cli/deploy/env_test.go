@@ -473,7 +473,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
 				m.envDescriber.EXPECT().Params().Return(nil, errors.New("some error"))
 			},
-			expected: "can't enable TLS termination on CDN: get env params: some error",
+			expected: "enable TLS termination on CDN: get env params: some error",
 		},
 		"cdn tls termination enabled, fail to get service resources": {
 			app: &config.Application{},
@@ -488,7 +488,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 				}, nil)
 				m.stackDescribers["svc1"].EXPECT().Resources().Return(nil, errors.New("some error"))
 			},
-			expected: `can't enable TLS termination on CDN: verify service "svc1": get stack resources: some error`,
+			expected: `enable TLS termination on CDN: verify service "svc1": get stack resources: some error`,
 		},
 		"cdn tls termination enabled, fail to check listener rule": {
 			app: &config.Application{},
@@ -509,7 +509,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 				}, nil)
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc1RuleARN").Return(elbv2.Rule{}, errors.New("some error"))
 			},
-			expected: `can't enable TLS termination on CDN: verify service "svc1": describe listener rule "svc1RuleARN": some error`,
+			expected: `enable TLS termination on CDN: verify service "svc1": describe listener rule "svc1RuleARN": some error`,
 		},
 		"cdn tls termination enabled, warn with one service that doesn't redirect, two that do redirect": {
 			app: &config.Application{},
@@ -546,7 +546,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc2RuleARN").Return(listenerRuleNoRedirect, nil)
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc3RuleARN").Return(listenerRuleWithRedirect, nil)
 			},
-			expectedStdErr: fmt.Sprintf(`Services "svc1" and "svc3" redirect HTTP traffic to HTTPS.
+			expectedStdErr: fmt.Sprintf(`Note: Services "svc1" and "svc3" redirect HTTP traffic to HTTPS.
 These services will not be reachable through the CDN.
 To fix this, set the following field in each manifest:
 %s
@@ -613,15 +613,7 @@ If you'd like to use these services without a CDN, ensure each service's A recor
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc2RuleARN").Return(listenerRuleNoRedirect, nil)
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc3RuleARN").Return(listenerRuleWithRedirect, nil)
 			},
-			expected: fmt.Sprintf(`Services "svc1" and "svc3" redirect HTTP traffic to HTTPS.
-These services will not be reachable through the CDN.
-To fix this, set the following field in each manifest:
-%s
-http:
-  redirect_to_https: true
-%s
-and run %scopilot svc deploy%s.`,
-				"```", "```", "`", "`"),
+			expected: "2 services redirect HTTP to HTTPS",
 		},
 		"cdn tls termination enabled, success with three services that don't redirect": {
 			app: &config.Application{},

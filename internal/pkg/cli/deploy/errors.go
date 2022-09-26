@@ -46,6 +46,10 @@ type errEnvHasPublicServicesWithRedirect struct {
 }
 
 func (e *errEnvHasPublicServicesWithRedirect) Error() string {
+	return fmt.Sprintf("%v services redirect HTTP to HTTPS", len(e.services))
+}
+
+func (e *errEnvHasPublicServicesWithRedirect) RecommendActions() string {
 	n := len(e.services)
 	quoted := make([]string, len(e.services))
 	for i := range e.services {
@@ -70,7 +74,7 @@ and run %s.`,
 func (e *errEnvHasPublicServicesWithRedirect) warning() string {
 	return fmt.Sprintf(`%s
 If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.`,
-		e.Error(),
+		e.RecommendActions(),
 		english.PluralWord(len(e.services), "this service", "these services"),
 		english.PluralWord(len(e.services), "its", "each service's"),
 	)
