@@ -25,6 +25,7 @@ type api interface {
 	ListRolePolicies(input *iam.ListRolePoliciesInput) (*iam.ListRolePoliciesOutput, error)
 	DeleteRole(input *iam.DeleteRoleInput) (*iam.DeleteRoleOutput, error)
 	CreateServiceLinkedRole(input *iam.CreateServiceLinkedRoleInput) (*iam.CreateServiceLinkedRoleOutput, error)
+	ListPolicies(input *iam.ListPoliciesInput) (*iam.ListPoliciesOutput, error)
 }
 
 // IAM wraps the AWS SDK's IAM client.
@@ -96,6 +97,20 @@ func (c *IAM) CreateECSServiceLinkedRole() error {
 		return fmt.Errorf("create service linked role for %s: %w", ecsServiceName, err)
 	}
 	return nil
+}
+
+func (c *IAM) ListPolicies() ([]*string, error) {
+	policies, err := c.client.ListPolicies(&iam.ListPoliciesInput{
+		PolicyUsageFilter: aws.String("PermissionsBoundary"),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list IAM policies: %w", err)
+	}
+	var policyNames = make([]*string, len(policies.Policies))
+	for i, policy := range policies.Policies {
+		policyNames[i] = policy.PolicyName
+	}
+	return policyNames, nil
 }
 
 func (c *IAM) deleteRolePolicies(roleName string) error {
