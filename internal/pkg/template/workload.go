@@ -322,6 +322,12 @@ type NetworkLoadBalancer struct {
 	MainContainerPort string
 }
 
+// ServiceConnect holds configuration for ECS Service Connect.
+type ServiceConnect struct {
+	Namespace string
+	Alias     *string
+}
+
 // AdvancedCount holds configuration for autoscaling and capacity provider
 // parameters.
 type AdvancedCount struct {
@@ -562,6 +568,7 @@ type WorkloadOpts struct {
 	AllowedSourceIps        []string
 	NLB                     *NetworkLoadBalancer
 	DeploymentConfiguration DeploymentConfigurationOpts
+	ServiceConect           *ServiceConnect
 
 	// Custom Resources backed by Lambda functions.
 	CustomResources map[string]S3ObjectLocation
