@@ -12,6 +12,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"golang.org/x/mod/semver"
 	"gopkg.in/yaml.v3"
@@ -121,6 +122,10 @@ func isManagerRoleAllowedToUpload(body string) (bool, error) {
 	var tpl Template
 	if err := yaml.Unmarshal([]byte(body), &tpl); err != nil {
 		return false, fmt.Errorf("unmarshal environment template to detect Metadata.Version: %v", err)
+	}
+	if tpl.Metadata.Version == deploy.EnvTemplateVersionBootstrap {
+		// "bootstrap" version is introduced after v1.9.0. The environment manager roles must have had the permissions.
+		return true, nil
 	}
 	if !semver.IsValid(tpl.Metadata.Version) { // The template doesn't contain a version.
 		return false, nil

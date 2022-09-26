@@ -69,6 +69,7 @@ func (t *taskStackConfig) Template() (string, error) {
 		App                   string
 		Env                   string
 		ExecutionRole         string
+		PermissionsBoundary   string
 	}{
 		EnvVars:               t.EnvVars,
 		SSMParamSecrets:       t.SSMParamSecrets,
@@ -76,6 +77,7 @@ func (t *taskStackConfig) Template() (string, error) {
 		App:                   t.App,
 		Env:                   t.Env,
 		ExecutionRole:         t.ExecutionRole,
+		PermissionsBoundary:   t.PermissionsBoundary,
 	}, template.WithFuncs(cfnFuntion))
 	if err != nil {
 		return "", fmt.Errorf("read template for task stack: %w", err)

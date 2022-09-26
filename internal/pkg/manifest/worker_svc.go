@@ -18,7 +18,8 @@ const (
 )
 
 var (
-	errUnmarshalQueueOpts = errors.New(`cannot unmarshal "queue" field into bool or map`)
+	errUnmarshalQueueOpts  = errors.New(`cannot unmarshal "queue" field into bool or map`)
+	errUnmarshalFifoConfig = errors.New(`unable to unmarshal "fifo" field into boolean or compose-style map`)
 )
 
 // WorkerService holds the configuration to create a worker service.
@@ -110,16 +111,66 @@ func (q *SQSQueueOrBool) UnmarshalYAML(value *yaml.Node) error {
 
 // SQSQueue represents the configurable options for setting up a SQS Queue.
 type SQSQueue struct {
-	Retention  *time.Duration  `yaml:"retention"`
-	Delay      *time.Duration  `yaml:"delay"`
-	Timeout    *time.Duration  `yaml:"timeout"`
-	DeadLetter DeadLetterQueue `yaml:"dead_letter"`
+	Retention  *time.Duration          `yaml:"retention"`
+	Delay      *time.Duration          `yaml:"delay"`
+	Timeout    *time.Duration          `yaml:"timeout"`
+	DeadLetter DeadLetterQueue         `yaml:"dead_letter"`
+	FIFO       FIFOAdvanceConfigOrBool `yaml:"fifo"`
+}
+
+// FIFOAdvanceConfigOrBool represents the configurable options for fifo queues.
+type FIFOAdvanceConfigOrBool struct {
+	Enable   *bool
+	Advanced FIFOAdvanceConfig
+}
+
+// IsEmpty returns true if the FifoAdvanceConfigOrBool struct has all nil values.
+func (f *FIFOAdvanceConfigOrBool) IsEmpty() bool {
+	return f.Enable == nil && f.Advanced.IsEmpty()
+}
+
+// IsEmpty returns true if the FifoAdvanceConfigOrBool struct has all nil values.
+func (f *FIFOAdvanceConfigOrBool) IsEnabled() bool {
+	return aws.BoolValue(f.Enable) || !f.Advanced.IsEmpty()
+}
+
+// FifoAdvanceConfig represents the advanced fifo queue config.
+type FIFOAdvanceConfig struct {
+	ContentBasedDeduplication *bool   `yaml:"content_based_deduplication"`
+	DeduplicationScope        *string `yaml:"deduplication_scope"`
+	FIFOThroughputLimit       *string `yaml:"throughput_limit"`
+	HighThroughputFifo        *bool   `yaml:"high_throughput"`
+}
+
+// IsEmpty returns true if the FifoAdvanceConfig struct has all nil values.
+func (f *FIFOAdvanceConfig) IsEmpty() bool {
+	return f.FIFOThroughputLimit == nil && f.HighThroughputFifo == nil &&
+		f.DeduplicationScope == nil && f.ContentBasedDeduplication == nil
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the FifoAdvanceConfigOrBool
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (t *FIFOAdvanceConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&t.Advanced); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+	if !t.Advanced.IsEmpty() {
+		return nil
+	}
+	if err := value.Decode(&t.Enable); err != nil {
+		return errUnmarshalFifoConfig
+	}
+	return nil
 }
 
 // IsEmpty returns empty if the struct has all zero members.
 func (q *SQSQueue) IsEmpty() bool {
 	return q.Retention == nil && q.Delay == nil && q.Timeout == nil &&
-		q.DeadLetter.IsEmpty()
+		q.DeadLetter.IsEmpty() && q.FIFO.IsEmpty()
 }
 
 // DeadLetterQueue represents the configurable options for setting up a Dead-Letter Queue.
@@ -190,9 +241,20 @@ func (s *WorkerService) EnvFile() string {
 }
 
 // Subscriptions returns a list of TopicSubscriotion objects which represent the SNS topics the service
-// receives messages from.
+// receives messages from. This method also appends ".fifo" to the topics and returns a new set of subs.
 func (s *WorkerService) Subscriptions() []TopicSubscription {
-	return s.Subscribe.Topics
+	var subs []TopicSubscription
+	for _, topic := range s.Subscribe.Topics {
+		topicSubscription := topic
+		// if condition appends .fifo suffix to the topic which doesn't have topic specific queue and subscribing to default FIFO queue.
+		if topic.Queue.IsEmpty() && !s.Subscribe.Queue.IsEmpty() && s.Subscribe.Queue.FIFO.IsEnabled() {
+			topicSubscription.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		} else if !topic.Queue.IsEmpty() && !topic.Queue.Advanced.IsEmpty() && topic.Queue.Advanced.FIFO.IsEnabled() { // else if condition appends .fifo suffix to the topic which has topic specific FIFO queue configuration.
+			topicSubscription.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		}
+		subs = append(subs, topicSubscription)
+	}
+	return subs
 }
 
 func (s WorkerService) applyEnv(envName string) (workloadManifest, error) {

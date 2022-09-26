@@ -702,6 +702,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 		AdditionalTags:       app.Tags,
 		ArtifactBucketARN:    artifactBucketARN,
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
+		PermissionsBoundary:  app.PermissionsBoundary,
 	}
 
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {

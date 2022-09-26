@@ -23,8 +23,15 @@ TargetGroup:
     {{- if .HTTPHealthCheck.Timeout}}
     HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
     {{- end}}
+    {{- if .HTTPTargetContainer.IsHTTPS }}
+    HealthCheckProtocol: HTTPS
+    {{- end}}
     Port: !Ref ContainerPort
+    {{- if .HTTPTargetContainer.IsHTTPS }}
+    Protocol: HTTPS
+    {{- else }}
     Protocol: HTTP
+    {{- end }}
     {{- if .HTTPVersion}}
     ProtocolVersion: {{.HTTPVersion}}
     {{- end}}
@@ -66,6 +73,9 @@ RulePriorityFunctionRole:
               - lambda.amazonaws.com
           Action:
             - sts:AssumeRole
+    {{- if .PermissionsBoundary}}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+    {{- end}}
     Path: /
     ManagedPolicyArns:
       - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole

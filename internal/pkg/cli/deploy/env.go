@@ -32,7 +32,7 @@ type appResourcesGetter interface {
 
 type environmentDeployer interface {
 	UpdateAndRenderEnvironment(conf deploycfn.StackConfiguration, bucketARN string, opts ...cloudformation.StackOption) error
-	EnvironmentParameters(app, env string) ([]*awscfn.Parameter, error)
+	DeployedEnvironmentParameters(app, env string) ([]*awscfn.Parameter, error)
 	ForceUpdateOutputID(app, env string) (string, error)
 }
 
@@ -89,7 +89,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		env: in.Env,
 
 		templateFS:       template.New(),
-		s3:               s3.New(envRegionSession),
+		s3:               s3.New(envManagerSession),
 		prefixListGetter: ec2.New(envRegionSession),
 
 		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
@@ -120,7 +120,7 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, error) {
 	crs, err := customresource.Env(d.templateFS)
 	if err != nil {
-		return nil, fmt.Errorf("read custom resources for environments: %w", err)
+		return nil, fmt.Errorf("read custom resources for environment %s: %w", d.env.Name, err)
 	}
 	urls, err := customresource.Upload(func(key string, dat io.Reader) (url string, err error) {
 		return d.s3.Upload(bucket, key, dat)
@@ -163,6 +163,7 @@ type DeployEnvironmentInput struct {
 	Manifest            *manifest.Environment
 	ForceNewUpdate      bool
 	RawManifest         []byte
+	PermissionsBoundary string
 }
 
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
@@ -171,7 +172,7 @@ func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput)
 	if err != nil {
 		return nil, err
 	}
-	oldParams, err := d.envDeployer.EnvironmentParameters(d.app.Name, d.env.Name)
+	oldParams, err := d.envDeployer.DeployedEnvironmentParameters(d.app.Name, d.env.Name)
 	if err != nil {
 		return nil, fmt.Errorf("describe environment stack parameters: %w", err)
 	}
@@ -200,7 +201,7 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if err != nil {
 		return err
 	}
-	oldParams, err := d.envDeployer.EnvironmentParameters(d.app.Name, d.env.Name)
+	oldParams, err := d.envDeployer.DeployedEnvironmentParameters(d.app.Name, d.env.Name)
 	if err != nil {
 		return fmt.Errorf("describe environment stack parameters: %w", err)
 	}
@@ -254,6 +255,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		Mft:                  in.Manifest,
 		ForceUpdate:          in.ForceNewUpdate,
 		RawMft:               in.RawManifest,
+		PermissionsBoundary:  in.PermissionsBoundary,
 		Version:              deploy.LatestEnvTemplateVersion,
 	}, nil
 }

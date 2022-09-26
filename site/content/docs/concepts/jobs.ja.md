@@ -35,3 +35,18 @@ $ copilot deploy
 ### Job に含まれるものを確認したい
 
 Copilot では内部的に CloudFormation を利用しているため、作成されるすべてのリソースは Copilot によってタグ付けされています。"Scheduled Jobs" には、Amazon ECS タスク定義、タスクロール、タスク実行ロール、タスクの処理が失敗した際にリトライを可能にする Step Functions ステートマシン、そしてステートマシンを実行する EventBridge ルールといったものが含まれます。
+
+### Job のログを確認したい
+
+Job のログの確認も簡単です。[`copilot job logs`](../commands/job-logs.ja.md) を実行すると、Job の最新のログが表示されます。`--follow` フラグを指定すると、コマンドを実行した後に新しく呼び出された Job のログを表示し、ログを追跡できます。
+
+```bash
+$ copilot job logs
+copilot/myjob/37236ed Doing some work
+copilot/myjob/37236ed Did some work
+copilot/myjob/37236ed Exited...
+copilot/myjob/123e300 Doing some work
+copilot/myjob/123e300 Did some work
+copilot/myjob/123e300 Did some additional work
+copilot/myjob/123e300 Exited
+```

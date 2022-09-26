@@ -34,9 +34,10 @@ const (
 )
 
 type initAppVars struct {
-	name         string
-	domainName   string
-	resourceTags map[string]string
+	name                string
+	permissionsBoundary string
+	domainName          string
+	resourceTags        map[string]string
 }
 
 type initAppOpts struct {
@@ -188,23 +189,25 @@ func (o *initAppOpts) Execute() error {
 		}
 	}
 	err = o.cfn.DeployApp(&deploy.CreateAppInput{
-		Name:               o.name,
-		AccountID:          caller.Account,
-		DomainName:         o.domainName,
-		DomainHostedZoneID: hostedZoneID,
-		AdditionalTags:     o.resourceTags,
-		Version:            deploy.LatestAppTemplateVersion,
+		Name:                o.name,
+		AccountID:           caller.Account,
+		DomainName:          o.domainName,
+		DomainHostedZoneID:  hostedZoneID,
+		PermissionsBoundary: o.permissionsBoundary,
+		AdditionalTags:      o.resourceTags,
+		Version:             deploy.LatestAppTemplateVersion,
 	})
 	if err != nil {
 		return err
 	}
 
 	if err := o.store.CreateApplication(&config.Application{
-		AccountID:          caller.Account,
-		Name:               o.name,
-		Domain:             o.domainName,
-		DomainHostedZoneID: hostedZoneID,
-		Tags:               o.resourceTags,
+		AccountID:           caller.Account,
+		Name:                o.name,
+		Domain:              o.domainName,
+		DomainHostedZoneID:  hostedZoneID,
+		PermissionsBoundary: o.permissionsBoundary,
+		Tags:                o.resourceTags,
 	}); err != nil {
 		return err
 	}
@@ -312,6 +315,8 @@ An application is a collection of containerized services that operate together.`
   /code $ copilot app init test
   Create a new application with an existing domain name in Amazon Route53.
   /code $ copilot app init --domain example.com
+  Create a new application with an existing IAM policy as the permissions boundary for roles.
+  /code $ copilot app init --permissions-boundary myPermissionsBoundaryPolicy
   Create a new application with resource tags.
   /code $ copilot app init --resource-tags department=MyDept,team=MyTeam`,
 		Args: reservedArgs,
@@ -327,6 +332,7 @@ An application is a collection of containerized services that operate together.`
 		}),
 	}
 	cmd.Flags().StringVar(&vars.domainName, domainNameFlag, "", domainNameFlagDescription)
+	cmd.Flags().StringVar(&vars.permissionsBoundary, permissionsBoundaryFlag, "", permissionsBoundaryFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	return cmd
 }

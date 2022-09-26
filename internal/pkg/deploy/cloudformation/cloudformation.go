@@ -79,6 +79,7 @@ type cfnClient interface {
 	ErrorEvents(stackName string) ([]cloudformation.StackEvent, error)
 	Outputs(stack *cloudformation.Stack) (map[string]string, error)
 	StackResources(name string) ([]*cloudformation.StackResource, error)
+	Metadata(opts cloudformation.MetadataOpts) (string, error)
 
 	// Methods vended by the aws sdk struct.
 	DescribeStackEvents(*sdkcloudformation.DescribeStackEventsInput) (*sdkcloudformation.DescribeStackEventsOutput, error)

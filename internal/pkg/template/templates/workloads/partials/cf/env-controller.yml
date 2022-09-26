@@ -41,6 +41,9 @@ EnvControllerRole:
               - lambda.amazonaws.com
           Action:
             - sts:AssumeRole
+    {{- if .PermissionsBoundary}}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+    {{- end}}
     Path: /
     Policies:
       - PolicyName: "EnvControllerStackUpdate"

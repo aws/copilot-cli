@@ -13,6 +13,9 @@ EnvironmentManagerRole:
         Principal:
           AWS: !Sub ${ToolsAccountPrincipalARN}
         Action: sts:AssumeRole
+{{- if .PermissionsBoundary }}
+    PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+{{- end }}
     Path: /
     Policies:
     - PolicyName: root

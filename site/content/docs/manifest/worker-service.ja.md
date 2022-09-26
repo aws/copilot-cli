@@ -1,24 +1,26 @@
 以下は `'Worker Service'` Manifest で利用できるすべてのプロパティのリストです。[Service の概念](../concepts/services.ja.md)説明のページも合わせてご覧ください。
 
-???+ note "Worker Service の Manifest のサンプル"
+???+ note "Worker Service の サンプル Manifest"
 
-    ```yaml
-        # Service 名は、ロググループや ECS サービスなどのリソースの命名に使用されます。
-        name: orders-worker
+    === "Single queue"
+
+        ```yaml
+        # 他の Service から発行された複数のトピックから、単一の SQS キューにメッセージを集めます。
+        name: cost-analyzer
         type: Worker Service
 
         image:
-          build: ./orders/Dockerfile
+          build: ./cost-analyzer/Dockerfile
 
         subscribe:
           topics:
-            - name: events
-              service: api
+            - name: products
+              service: orders
               filter_policy:
                 event:
                 - anything-but: order_cancelled
-            - name: events
-              service: fe
+            - name: inventory
+              service: warehouse
           queue:
             retention: 96h
             timeout: 30s
@@ -27,27 +29,70 @@
 
         cpu: 256
         memory: 512
-        count: 1
+        count: 3
         exec: true
 
-        variables:
-          LOG_LEVEL: info
-        env_file: log.env
         secrets:
-          GITHUB_TOKEN: GITHUB_TOKEN
+          DB:
+            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+        ```
 
-        # 上記で定義された値は、environment で上書きすることができます。
-        environments:
-          production:
-            count:
-              range:
-                min: 1
-                max: 50
-                spot_from: 26
-              queue_delay:
-                acceptable_latency: 1m
-                msg_processing_time: 250ms
-    ```
+    === "Spot autoscaling"
+
+        ```yaml
+        # キャパシティに余裕がある場合は、Fargate Spot のタスクにバーストします。
+        name: cost-analyzer
+        type: Worker Service
+
+        image:
+          build: ./cost-analyzer/Dockerfile
+
+        subscribe:
+          topics:
+            - name: products
+              service: orders
+            - name: inventory
+              service: warehouse
+
+        cpu: 256
+        memory: 512
+        count:
+          range:
+            min: 1
+            max: 10
+            spot_from: 2
+          queue_delay: # 1 つのメッセージ処理に 250ms かかると仮定して、10 分以内にメッセージが処理されることを確認します。
+            acceptable_latency: 10m
+            msg_processing_time: 250ms
+        exec: true
+        ```
+
+    === "Separate queues"
+
+        ```yaml
+        # 各トピックに個別のキューを割り当てます。
+        name: cost-analyzer
+        type: Worker Service
+
+        image:
+          build: ./cost-analyzer/Dockerfile
+
+        subscribe:
+          topics:
+            - name: products
+              service: orders
+              queue:
+                retention: 5d
+                timeout: 1h
+                dead_letter:
+                  tries: 3
+            - name: inventory
+              service: warehouse
+              queue:
+                retention: 1d
+                timeout: 5m
+        count: 1
+        ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。
@@ -97,13 +142,13 @@ Timeout はメッセージが配信された後に利用できない時間の長
 <span class="parent-field">subscribe.</span><a id="subscribe-topics" href="#subscribe-topics" class="field">`topics`</a> <span class="type">Array of `topic`s</span>  
 Worker Service がサブスクライブすべき SNS トピックの情報が含まれています。
 
-<span class="parent-field">topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
+<span class="parent-field">subscribe.topics.topic</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
 必須項目。サブスクライブする SNS トピックの名前。
 
-<span class="parent-field">topic.</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>  
+<span class="parent-field">subscribe.topics.topic</span><a id="topic-service" href="#topic-service" class="field">`service`</a> <span class="type">String</span>  
 必須項目。この SNS トピックが公開されているサービスです。トピック名と合わせて、Copilot Environment 内で SNS トピックを一意に識別します。
 
-<span class="parent-field">topic.</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
+<span class="parent-field">subscribe.topics.topic</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
 任意項目。SNS サブスクリプションフィルターポリシーを指定します。このポリシーは、着信メッセージの属性を評価します。フィルターポリシーは JSON で指定します。例えば以下の様になります。
 
 ```json
@@ -129,7 +174,7 @@ filter_policy:
 フィルターポリシーの書き方に関するさらに詳しい情報については、[SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html)を確認してください。
 
 
-<span class="parent-field">topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>
+<span class="parent-field">subscribe.topics.topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>
 任意項目。トピックに対する SQS キューの設定です。`true` を指定した場合、キューはデフォルト設定で作成されます。トピックに対応したキューに関する特性の属性についてカスタマイズする場合は、このフィールドを Map で指定します。
 
 {% include 'image-config.ja.md' %}
@@ -164,10 +209,17 @@ count:
 count:
   range: 1-10
   cpu_percentage: 70
-  memory_percentage: 80
+  memory_percentage:
+    value: 80
+    cooldown:
+      in: 80s
+      out: 160s
   queue_delay:
     acceptable_latency: 10m
     msg_processing_time: 250ms
+    cooldown:
+      in: 30s
+      out: 60s
 ```
 
 <span class="parent-field">count.</span><a id="count-range" href="#count-range" class="field">`range`</a> <span class="type">String or Map</span>
@@ -190,16 +242,34 @@ count:
 
 上記の例では Application Auto Scaling は 1-10 の範囲で設定されますが、最初の２タスクはオンデマンド Fargate キャパシティに配置されます。Service が３つ以上のタスクを実行するようにスケールした場合、３つ目以降のタスクは最大タスク数に達するまで Fargate Spot に配置されます。
 
-<span class="parent-field">range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-min" href="#count-range-min" class="field">`min`</a> <span class="type">Integer</span>
 Service がオートスケーリングを利用する場合の最小タスク数。
 
-<span class="parent-field">range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-max" href="#count-range-max" class="field">`max`</a> <span class="type">Integer</span>
 Service がオートスケーリングを利用する場合の最大タスク数。
 
-<span class="parent-field">range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
+<span class="parent-field">count.range.</span><a id="count-range-spot-from" href="#count-range-spot-from" class="field">`spot_from`</a> <span class="type">Integer</span>
 Service の何個目のタスクから Fargate Spot キャパシティプロバイダーを利用するか。
 
-<span class="parent-field">count.</span><a id="count-cpu-percentage" href="#count-cpu-percentage" class="field">`cpu_percentage`</a> <span class="type">Integer</span>
+<span class="parent-field">count.</span><a id="count-cooldown" href="#count-cooldown" class="field">`cooldown`</a> <span class="type">Map</span>
+指定されたすべてのオートスケーリングフィールドのデフォルトクールダウンとして使用されるクールダウンスケーリングフィールド。
+
+<span class="parent-field">count.cooldown.</span><a id="count-cooldown-in" href="#count-cooldown-in" class="field">`in`</a> <span class="type">Duration</span>
+Service をスケールアップするためのオートスケーリングクールダウン時間。
+
+<span class="parent-field">count.cooldown.</span><a id="count-cooldown-out" href="#count-cooldown-out" class="field">`out`</a> <span class="type">Duration</span>
+Service をスケールダウンさせるためのオートスケーリングクールダウン時間。
+
+`cpu_percentage` および `memory_percentage`  は `count` のオートスケーリングフィールドであり、フィールドの値として定義するか、または `value` と `cooldown` にて関連する詳細情報を含むマップとして定義することができます。
+```yaml
+value: 50
+cooldown:
+  in: 30s
+  out: 60s
+```
+The cooldown specified here will override the default cooldown.
+
+<span class="parent-field">count.</span><a id="count-cpu-percentage" href="#count-cpu-percentage" class="field">`cpu_percentage`</a> <span class="type">Integer or Map</span>
 Service が保つべき平均 CPU 使用率を指定し、それによってスケールアップ・ダウンします。
 
 <span class="parent-field">count.</span><a id="count-memory-percentage" href="#count-memory-percentage" class="field">`memory_percentage`</a> <span class="type">Integer</span>

@@ -466,7 +466,7 @@ func TestPlatformArgsOrString_OS(t *testing.T) {
 			},
 			wanted: "linux",
 		},
-		"should return OS when platform is a map": {
+		"should return OS when platform is a map 2019 core": {
 			in: &PlatformArgsOrString{
 				PlatformArgs: PlatformArgs{
 					OSFamily: aws.String("windows_server_2019_core"),
@@ -475,7 +475,7 @@ func TestPlatformArgsOrString_OS(t *testing.T) {
 			},
 			wanted: "windows_server_2019_core",
 		},
-		"should return lowercase OS": {
+		"should return lowercase OS 2019 core": {
 			in: &PlatformArgsOrString{
 				PlatformArgs: PlatformArgs{
 					OSFamily: aws.String("wINdows_sERver_2019_cORe"),
@@ -483,6 +483,60 @@ func TestPlatformArgsOrString_OS(t *testing.T) {
 				},
 			},
 			wanted: "windows_server_2019_core",
+		},
+		"should return OS when platform is a map 2019 full": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_2019_full"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2019_full",
+		},
+		"should return lowercase OS 2019 full": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("wINdows_sERver_2019_fUll"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2019_full",
+		},
+		"should return OS when platform is a map 2022 core": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_2022_core"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2022_core",
+		},
+		"should return lowercase OS 2022 core": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("wINdows_sERver_2022_cORe"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2022_core",
+		},
+		"should return OS when platform is a map 2022 full": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_2022_full"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2022_full",
+		},
+		"should return lowercase OS 2022 full": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("wINdows_sERver_2022_fUll"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "windows_server_2022_full",
 		},
 	}
 	for name, tc := range testCases {
@@ -503,10 +557,37 @@ func TestPlatformArgsOrString_Arch(t *testing.T) {
 			},
 			wanted: "arm",
 		},
-		"should return arch when platform is a map": {
+		"should return arch when platform is a map 2019 core": {
 			in: &PlatformArgsOrString{
 				PlatformArgs: PlatformArgs{
 					OSFamily: aws.String("windows_server_2019_core"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "x86_64",
+		},
+		"should return arch when platform is a map 2019 full": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_2019_full"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "x86_64",
+		},
+		"should return arch when platform is a map 2022 core": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_2022_core"),
+					Arch:     aws.String("x86_64"),
+				},
+			},
+			wanted: "x86_64",
+		},
+		"should return arch when platform is a map 2022 full": {
+			in: &PlatformArgsOrString{
+				PlatformArgs: PlatformArgs{
+					OSFamily: aws.String("windows_server_2022_full"),
 					Arch:     aws.String("x86_64"),
 				},
 			},
@@ -992,6 +1073,52 @@ topics:
 				},
 			},
 		},
+		"Valid publish yaml with fifo topic enabled": {
+			inContent: `
+topics:
+  - name: tests
+    fifo: true
+`,
+			wantedPublish: PublishConfig{
+				Topics: []Topic{
+					{
+						Name: aws.String("tests"),
+						FIFO: FIFOTopicAdvanceConfigOrBool{
+							Enable: aws.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		"Valid publish yaml with advanced fifo topic": {
+			inContent: `
+topics:
+  - name: tests
+    fifo:
+      content_based_deduplication: true
+`,
+			wantedPublish: PublishConfig{
+				Topics: []Topic{
+					{
+						Name: aws.String("tests"),
+						FIFO: FIFOTopicAdvanceConfigOrBool{
+							Advanced: FIFOTopicAdvanceConfig{
+								ContentBasedDeduplication: aws.Bool(true),
+							},
+						},
+					},
+				},
+			},
+		},
+		"Invalid publish yaml with advanced fifo topic": {
+			inContent: `
+topics:
+  - name: tests
+    fifo: apple
+`,
+			wantedErr: errors.New(`unable to unmarshal "fifo" field into boolean or compose-style map`),
+		},
+
 		"Error when unmarshalable": {
 			inContent: `
 topics: abc

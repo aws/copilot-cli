@@ -14,7 +14,8 @@ const (
 	// LegacyEnvTemplateVersion is the version associated with the environment template before we started versioning.
 	LegacyEnvTemplateVersion = "v0.0.0"
 	// LatestEnvTemplateVersion is the latest version number available for environment templates.
-	LatestEnvTemplateVersion = "v1.12.2"
+	LatestEnvTemplateVersion    = "v1.12.2"
+	EnvTemplateVersionBootstrap = "bootstrap"
 )
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.
@@ -44,7 +45,8 @@ type CreateEnvironmentInput struct {
 	RawMft             []byte                // Content of the environment manifest without any modifications.
 	ForceUpdate        bool
 
-	CFNServiceRoleARN string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
+	CFNServiceRoleARN   string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
+	PermissionsBoundary string // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.
 }
 
 // CreateEnvironmentResponse holds the created environment on successful deployment.

@@ -20,6 +20,7 @@ type CreateTaskResourcesInput struct {
 	Memory int
 
 	Image                 string
+	PermissionsBoundary   string
 	TaskRole              string
 	ExecutionRole         string
 	Command               []string
