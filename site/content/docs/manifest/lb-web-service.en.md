@@ -134,6 +134,8 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         publish:
           topics:
             - name: 'products'
+            - name: 'orders'
+              fifo: true
         ```
 
     === "Network Load Balancer"
