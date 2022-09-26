@@ -13,7 +13,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -81,7 +80,6 @@ type envDeployer struct {
 	patcher                  patcher
 	newStackSerializer       func(input *deploy.CreateEnvironmentInput, forceUpdateID string, prevParams []*awscfn.Parameter) stackSerializer
 	envDescriber             envDescriber
-	envManagerSession        *session.Session
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
 
@@ -138,9 +136,8 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		newStackSerializer: func(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
 			return cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
 		},
-		envDescriber:      envDescriber,
-		envManagerSession: envManagerSession,
-		lbDescriber:       elbv2.New(envManagerSession),
+		envDescriber: envDescriber,
+		lbDescriber:  elbv2.New(envManagerSession),
 		newServiceStackDescriber: func(svc string) stackDescriber {
 			return stack.NewStackDescriber(cfnstack.NameForService(in.App.Name, in.Env.Name, svc), envManagerSession)
 		},
@@ -148,11 +145,11 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 }
 
 // Validate returns an error if the environment manifest is incompatible with services and application configurations.
-func (d *envDeployer) Validate(mft *manifest.Environment, output io.Writer) error {
-	return d.validateCDN(mft, output)
+func (d *envDeployer) Validate(mft *manifest.Environment) error {
+	return d.validateCDN(mft)
 }
 
-func (d *envDeployer) validateCDN(mft *manifest.Environment, output io.Writer) error {
+func (d *envDeployer) validateCDN(mft *manifest.Environment) error {
 	isManagedCDNEnabled := mft.CDNEnabled() && !mft.HasImportedPublicALBCerts() && d.app.Domain != ""
 	if isManagedCDNEnabled {
 		// With managed domain, if the customer isn't using `alias` the A-records are inserted in the service stack as each service domain is unique.
@@ -170,9 +167,9 @@ func (d *envDeployer) validateCDN(mft *manifest.Environment, output io.Writer) e
 		case errors.As(err, &redirErr) && mft.ALBIngressRestrictedToCDN():
 			return err
 		case errors.As(err, &redirErr):
-			fmt.Fprintln(output, redirErr.Warning())
+			log.Warningln(redirErr.warning())
 		case err != nil:
-			return fmt.Errorf("can't enable TLS termination on CDN: %w", err)
+			return fmt.Errorf("enable TLS termination on CDN: %w", err)
 		}
 	}
 

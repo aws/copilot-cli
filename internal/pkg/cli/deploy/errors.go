@@ -67,7 +67,7 @@ and run %s.`,
 	)
 }
 
-func (e *errEnvHasPublicServicesWithRedirect) Warning() string {
+func (e *errEnvHasPublicServicesWithRedirect) warning() string {
 	return fmt.Sprintf(`%s
 If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.`,
 		e.Error(),

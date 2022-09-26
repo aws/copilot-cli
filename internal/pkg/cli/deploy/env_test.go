@@ -22,6 +22,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -686,8 +687,9 @@ and run %scopilot svc deploy%s.`,
 			}
 
 			buf := &bytes.Buffer{}
+			log.DiagnosticWriter = buf
 
-			err := d.Validate(tc.mft, buf)
+			err := d.Validate(tc.mft)
 			if tc.expected != "" {
 				require.EqualError(t, err, tc.expected)
 			} else {

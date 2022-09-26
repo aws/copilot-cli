@@ -6848,17 +6848,17 @@ func (mr *MockenvDeployerMockRecorder) UploadArtifacts() *gomock.Call {
 }
 
 // Validate mocks base method.
-func (m *MockenvDeployer) Validate(arg0 *manifest.Environment, arg1 io.Writer) error {
+func (m *MockenvDeployer) Validate(arg0 *manifest.Environment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Validate", arg0, arg1)
+	ret := m.ctrl.Call(m, "Validate", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Validate indicates an expected call of Validate.
-func (mr *MockenvDeployerMockRecorder) Validate(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockenvDeployerMockRecorder) Validate(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockenvDeployer)(nil).Validate), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockenvDeployer)(nil).Validate), arg0)
 }
 
 // MockenvPackager is a mock of envPackager interface.
@@ -6915,15 +6915,15 @@ func (mr *MockenvPackagerMockRecorder) UploadArtifacts() *gomock.Call {
 }
 
 // Validate mocks base method.
-func (m *MockenvPackager) Validate(arg0 *manifest.Environment, arg1 io.Writer) error {
+func (m *MockenvPackager) Validate(arg0 *manifest.Environment) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Validate", arg0, arg1)
+	ret := m.ctrl.Call(m, "Validate", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Validate indicates an expected call of Validate.
-func (mr *MockenvPackagerMockRecorder) Validate(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockenvPackagerMockRecorder) Validate(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockenvPackager)(nil).Validate), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockenvPackager)(nil).Validate), arg0)
 }
