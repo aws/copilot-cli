@@ -940,7 +940,7 @@ Resources:
                 "sns:Protocol": "sqs"
   mytopicfifoSNSTopic:
     Metadata:
-      'aws:copilot:description': 'A FIFO SNS topic to broadcast mytopic.fifo events'
+      'aws:copilot:description': 'A SNS FIFO topic to broadcast mytopic.fifo events'
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub '${AWS::StackName}-mytopic.fifo'
@@ -991,7 +991,7 @@ Resources:
                 "sns:Protocol": "sqs"
   yourtopicfifoSNSTopic:
     Metadata:
-      'aws:copilot:description': 'A FIFO SNS topic to broadcast yourtopic.fifo events'
+      'aws:copilot:description': 'A SNS FIFO topic to broadcast yourtopic.fifo events'
     Type: AWS::SNS::Topic
     Properties:
       TopicName: !Sub '${AWS::StackName}-yourtopic.fifo'

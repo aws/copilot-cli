@@ -171,7 +171,15 @@ func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *LoadBalancedWebService) Publish() []Topic {
-	return s.LoadBalancedWebServiceConfig.PublishConfig.Topics
+	var pubs []Topic
+	for _, topic := range s.LoadBalancedWebServiceConfig.PublishConfig.Topics {
+		tempTopic := topic
+		if topic.FIFO.IsEnabled() {
+			tempTopic.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		}
+		pubs = append(pubs, tempTopic)
+	}
+	return pubs
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.

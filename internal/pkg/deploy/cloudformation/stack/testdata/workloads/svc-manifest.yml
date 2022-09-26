@@ -38,6 +38,8 @@ storage:
 publish:
   topics:
     - name: givesdogs
+    - name: mytopic
+      fifo: true
 # Optional fields for more advanced use-cases.
 #
 variables:                    # Pass environment variables as key value pairs.

@@ -100,7 +100,15 @@ func (s *BackendService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *BackendService) Publish() []Topic {
-	return s.BackendServiceConfig.PublishConfig.Topics
+	var pubs []Topic
+	for _, topic := range s.BackendServiceConfig.PublishConfig.Topics {
+		tempTopic := topic
+		if topic.FIFO.IsEnabled() {
+			tempTopic.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		}
+		pubs = append(pubs, tempTopic)
+	}
+	return pubs
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.
