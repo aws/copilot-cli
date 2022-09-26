@@ -35,11 +35,11 @@ Copilot v1.22 brings several new features and improvements:
 ## IAM Role Permissions Boundary
 
 ## FIFO SNS/SQS
-SNS FIFO Topics and SQS FIFO Queues for your FIFO publish subscribe architecture is now available using Copilot.
+SNS FIFO Topics and SQS FIFO Queues for your FIFO publish subscribe architecture is now available in Copilot.
 
-####You can configure your manifest to have SNS FIFO Topics enabled for your services. 
+###You can configure your service manifest to have SNS FIFO Topics enabled for your services. 
 
-You can specify `fifo: true` in your environment manifest under `publish.topics` as shown below and Copilot will create FIFO SNS Topic for you with the default settings given by the CFN.
+You can specify `fifo: true` in your service manifest under `publish.topics` as shown below and Copilot will create a FIFO SNS Topic for you.
 
 ```yaml
 publish:
@@ -57,8 +57,8 @@ publish:
         content_based_deduplication: true
 ```
 
-#### SQS FIFO Queues are also configurable for your worker service.
-You can specify `fifo: true` in your environment manifest under `subscribe.topics.queue` or `subscribe.queue` as shown below and Copilot will create FIFO SQS Queue for you with the default settings given by the CFN.
+### SQS FIFO Queues are also configurable for your worker service.
+You can specify `fifo: true` in your worker service manifest under `subscribe.topics.queue` or `subscribe.queue` as shown below and Copilot will create a FIFO SQS Queue and Subscriptions for you.
 
 ```yaml
 subscribe:
@@ -81,10 +81,10 @@ subscribe:
         fifo:
           content_based_deduplication: true
           deduplication_scope: messageGroup
-          fifo_throughput_limit: perMessageGroupId
+          throughput_limit: perMessageGroupId
   queue:
     fifo:
-      high_throughput_fifo: true
+      high_throughput: true
 ```
 
 
