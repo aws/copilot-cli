@@ -205,7 +205,6 @@ type LogConfigOpts struct {
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
 type HTTPTargetContainer struct {
-	Name string // Name of the container.
 	Port string // Port of the container.
 }
 

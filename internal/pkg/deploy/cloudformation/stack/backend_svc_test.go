@@ -270,7 +270,6 @@ Outputs:
 			},
 			HostedZoneAliases: make(template.AliasesForHostedZone),
 			HTTPTargetContainer: template.HTTPTargetContainer{
-				Name: "api",
 				Port: "8080",
 			},
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
@@ -436,7 +435,6 @@ Outputs:
 				},
 			},
 			HTTPTargetContainer: template.HTTPTargetContainer{
-				Name: "envoy",
 				Port: "443",
 			},
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
