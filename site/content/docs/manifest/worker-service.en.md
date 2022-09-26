@@ -135,7 +135,7 @@ Retention specifies the time a message will remain in the queue before being del
 Timeout defines the length of time a message is unavailable after being delivered. Default 30s. Range 0s-12h.
 
 <span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-fifo" href="#subscribe-queue-fifo" class="field">`fifo`</a> <span class="type">Boolean or Map</span>  
-Enable FIFO (first in, first out) capabilities for your SQS queue to handle scenarios where the order of operations and events is critical, or where duplicates can't be tolerated.
+Enable FIFO (first in, first out) ordering on your SQS queue to handle scenarios where the order of operations and events is critical, or where duplicates can't be tolerated.
 
 ```yaml
 subscribe:
@@ -147,7 +147,7 @@ subscribe:
   queue: # Messages from both FIFO SNS Topics go to the shared FIFO SQS Queue.
     fifo: true
 ```
-When the queue is enabled with FIFO capabilities, Copilot understands that the source SNS topics must also be FIFO.
+When the queue is enabled with FIFO capabilities, Copilot requires that the source SNS topics [are also FIFO](../include/publish.en.md#publish-topics-topic-fifo).
 
 Alternatively, you can also specify advanced SQS FIFO queue configurations:
 ```yaml
@@ -169,13 +169,13 @@ subscribe:
 If the message body is guaranteed to be unique for each published message, you can enable content-based deduplication for the SNS FIFO topic.
 
 <span class="parent-field">subscribe.queue.fifo.</span><a id="subscribe-queue-fifo-deduplication-scope" href="#subscribe-queue-fifo-deduplication-scope" class="field">`deduplication_scope`</a> <span class="type">String</span>  
-For high throughput for FIFO queues, specifies whether message deduplication occurs at the message group or queue level. Valid values are messageGroup and queue.
+For high throughput for FIFO queues, specifies whether message deduplication occurs at the message group or queue level. Valid values are "messageGroup" and "queue".
 
 <span class="parent-field">subscribe.queue.fifo.</span><a id="subscribe-queue-fifo-throughput-limit" href="#subscribe-queue-fifo-throughput-limit" class="field">`throughput_limit`</a> <span class="type">String</span>  
-For high throughput for FIFO queues, specifies whether the FIFO queue throughput quota applies to the entire queue or per message group. Valid values are perQueue and perMessageGroupId.
+For high throughput for FIFO queues, specifies whether the FIFO queue throughput quota applies to the entire queue or per message group. Valid values are "perQueue" and "perMessageGroupId".
 
 <span class="parent-field">subscribe.queue.fifo.</span><a id="subscribe-queue-fifo-high-throughput" href="#subscribe-queue-fifo-high-throughput" class="field">`high_throughput`</a> <span class="type">Boolean</span>  
-If specified, provides higher transactions per second (TPS) for messages in FIFO queues.
+If enabled, provides higher transactions per second (TPS) for messages in FIFO queues.
 
 
 <span class="parent-field">subscribe.queue.dead_letter.</span><a id="subscribe-queue-dead-letter-tries" href="#subscribe-queue-dead-letter-tries" class="field">`tries`</a> <span class="type">Integer</span>  
@@ -218,7 +218,7 @@ For additional information on how to write filter policies, see the [SNS documen
 Optional. Specify SQS queue configuration for the topic. If specified as `true`, the queue will be created  with default configuration. Specify this field as a map for customization of certain attributes for this topic-specific queue.
 
 <span class="parent-field">subscribe.topics.topic.queue.</span><a id="subscribe-topics-topic-queue-fifo" href="#subscribe-topics-topic-queue-fifo" class="field">`fifo`</a> <span class="type">Boolean or Map</span>   
-Optional. Specify SQS FIFO queue configuration for the topic. If specified as `true`, the FIFO queue will be created with default FIFO configuration. 
+Optional. Specify SQS FIFO queue configuration for the topic. If specified as `true`, the FIFO queue will be created with the default FIFO configuration. 
 Specify this field as a map for customization of certain attributes for this topic-specific queue.
 
 

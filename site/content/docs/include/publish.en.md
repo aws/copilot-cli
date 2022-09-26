@@ -23,12 +23,12 @@ List of [`topic`](#publish-topics-topic) objects.
 <span class="parent-field">publish.topics.</span><a id="publish-topics-topic" href="#publish-topics-topic" class="field">`topic`</a> <span class="type">Map</span>  
 Holds configuration for a single SNS topic.
 
-<span class="parent-field">publish.topics.topic.</span><a id="publish-topics-topic-topic-name" href="#publish-topics-topic-topic-name" class="field">`name`</a> <span class="type">String</span>  
+<span class="parent-field">publish.topics.topic.</span><a id="publish-topics-topic-name" href="#publish-topics-topic-name" class="field">`name`</a> <span class="type">String</span>  
 Required. The name of the SNS topic. Must contain only upper and lowercase letters, numbers, hyphens, and underscores.
 
 <span class="parent-field">publish.topics.topic.</span><a id="publish-topics-topic-fifo" href="#publish-topics-topic-fifo" class="field">`fifo`</a> <span class="type">Boolean or Map</span>  
 FIFO (first in, first out) SNS topic configuration.  
-If you specify `true`, Copilot will create the topic with FIFO capabilities.
+If you specify `true`, Copilot will create the topic with FIFO ordering.
 
 ```yaml
 publish:
@@ -37,7 +37,7 @@ publish:
       fifo: true
 ```
 
-Alternatively, you can also configure the advanced SNS FIFO Topic configurations.
+Alternatively, you can also configure advanced SNS FIFO topic settings.
 ```yaml
 publish:
   topics:
