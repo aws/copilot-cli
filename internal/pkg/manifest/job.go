@@ -134,7 +134,7 @@ func (s *ScheduledJob) requiredEnvironmentFeatures() []string {
 
 // Publish returns the list of topics where notifications can be published.
 func (j *ScheduledJob) Publish() []Topic {
-	return j.ScheduledJobConfig.PublishConfig.Topics
+	return j.ScheduledJobConfig.PublishConfig.publishedTopics()
 }
 
 // BuildArgs returns a docker.BuildArguments object for the job given a workspace root.

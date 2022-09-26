@@ -1413,7 +1413,23 @@ func (p PublishConfig) validate() error {
 
 // validate returns nil if Topic is configured correctly.
 func (t Topic) validate() error {
-	return validatePubSubName(aws.StringValue(t.Name))
+	if err := validatePubSubName(aws.StringValue(t.Name)); err != nil {
+		return err
+	}
+	return t.FIFO.validate()
+}
+
+// validate returns nil if FIFOTopicAdvanceConfigOrBool is configured correctly.
+func (f FIFOTopicAdvanceConfigOrBool) validate() error {
+	if f.IsEmpty() {
+		return nil
+	}
+	return f.Advanced.validate()
+}
+
+// validate returns nil if FIFOTopicAdvanceConfig is configured correctly.
+func (a FIFOTopicAdvanceConfig) validate() error {
+	return nil
 }
 
 // validate returns nil if SubscribeConfig is configured correctly.

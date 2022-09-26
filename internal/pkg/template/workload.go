@@ -210,7 +210,6 @@ type LogConfigOpts struct {
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
 type HTTPTargetContainer struct {
-	Name string // Name of the container.
 	Port string // Port of the container.
 }
 
@@ -407,8 +406,8 @@ type PublishOpts struct {
 
 // Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
-	Name *string
-	Type string
+	Name            *string
+	FIFOTopicConfig *FIFOTopicConfig
 
 	Region    string
 	Partition string
@@ -416,6 +415,11 @@ type Topic struct {
 	App       string
 	Env       string
 	Svc       string
+}
+
+// Fifo holds configuration needed if the topic is FIFO.
+type FIFOTopicConfig struct {
+	ContentBasedDeduplication *bool
 }
 
 // SubscribeOpts holds configuration needed if the service has subscriptions.

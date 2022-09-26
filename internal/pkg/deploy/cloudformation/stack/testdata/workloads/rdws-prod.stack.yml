@@ -112,6 +112,7 @@ Resources:
                 Action: 'sns:Publish'
                 Resource:
                 - !Ref customersSNSTopic
+                - !Ref mytopicfifoSNSTopic
   Service:
     Metadata:
       'aws:copilot:description': 'An App Runner service to run and manage your containers'
@@ -139,7 +140,7 @@ Resources:
               - Name: COPILOT_SERVICE_DISCOVERY_ENDPOINT
                 Value: 
               - Name: COPILOT_SNS_TOPIC_ARNS
-                Value: '{"customers":"arn:aws:sns:us-west-2:123456789123:my-app-prod-frontend-customers"}'
+                Value: '{"customers":"arn:aws:sns:us-west-2:123456789123:my-app-prod-frontend-customers","mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-prod-frontend-mytopic.fifo"}'
             StartCommand: shine on you
       InstanceConfiguration:
         Cpu: !Ref InstanceCPU
@@ -194,6 +195,33 @@ Resources:
             Action:
               - sns:Subscribe
             Resource: !Ref customersSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
+  mytopicfifoSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A SNS FIFO topic to broadcast mytopic.fifo events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-mytopic.fifo'
+      FifoTopic: true
+      KmsMasterKeyId: 'alias/aws/sns'
+
+  mytopicfifoSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: mytopicfifoSNSTopic
+    Properties:
+      Topics:
+        - !Ref mytopicfifoSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref mytopicfifoSNSTopic
             Condition:
               StringEquals:
                 "sns:Protocol": "sqs"
