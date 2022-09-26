@@ -23,12 +23,12 @@ List of [`topic`](#publish-topics-topic) objects.
 <span class="parent-field">publish.topics.</span><a id="publish-topics-topic" href="#publish-topics-topic" class="field">`topic`</a> <span class="type">Map</span>  
 Holds configuration for a single SNS topic.
 
-<span class="parent-field">publish.topics.topic.</span><a id="topic-name" href="#topic-name" class="field">`name`</a> <span class="type">String</span>  
+<span class="parent-field">publish.topics.topic.</span><a id="publish-topics-topic-topic-name" href="#publish-topics-topic-topic-name" class="field">`name`</a> <span class="type">String</span>  
 Required. The name of the SNS topic. Must contain only upper and lowercase letters, numbers, hyphens, and underscores.
 
-<span class="parent-field">publish.topics.topic.</span><a id="fifo" href="#fifi" class="field">`fifo`</a> <span class="type">Boolean or Map</span>  
-The FIFO SNS Topics configuration.   
-If you specify true, Copilot will create SNS FIFO Topic with the given name and default FIFO settings.
+<span class="parent-field">publish.topics.topic.</span><a id="publish-topics-topic-fifo" href="#publish-topics-topic-fifo" class="field">`fifo`</a> <span class="type">Boolean or Map</span>  
+FIFO (first in, first out) SNS topic configuration.  
+If you specify `true`, Copilot will create the topic with FIFO capabilities.
 
 ```yaml
 publish:
@@ -46,5 +46,5 @@ publish:
         content_based_deduplication: true
 ```
 
-<span class="parent-field">publish.topics.fifo</span><a id="ContentBasedDeduplication" href="#fifi" class="field">`content_based_deduplication`</a> <span class="type">Boolean</span>   
-content-based deduplication for FIFO topics
+<span class="parent-field">publish.topics.topic.fifo.</span><a id="publish-topics-topic-fifo-content-based-deduplication" href="#publish-topics-topic-fifo-content-based-deduplication" class="field">`content_based_deduplication`</a> <span class="type">Boolean</span>   
+If the message body is guaranteed to be unique for each published message, you can enable content-based deduplication for the SNS FIFO topic.
