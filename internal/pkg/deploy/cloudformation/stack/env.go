@@ -392,6 +392,7 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 	}
 	return &template.CDNConfig{
 		ImportedCertificate: e.in.Mft.CDNConfig.Config.Certificate,
+		TerminateTLS:        aws.BoolValue(e.in.Mft.CDNConfig.Config.TerminateTLS),
 	}
 }
 
