@@ -39,7 +39,7 @@ To have strict message ordering and message deduplication for your publish-subsc
 
 ### You can configure your manifest to have SNS FIFO Topics for your services.
 
-You can specify `fifo: true` in your service manifest under `publish.topics` as shown below and Copilot will create a FIFO SNS topic for you.
+You can specify `fifo: true` in your service manifest under `publish.topics` as shown below and Copilot will create a SNS FIFO topic for you.
 
 ```yaml
 publish:
@@ -48,7 +48,7 @@ publish:
       fifo: true
 ```
 
-Alternatively, you can also specify the advanced FIFO SNS Topic configuration as:
+Alternatively, you can also specify the advanced SNS FIFO Topic configuration as:
 ```yaml
 publish:
   topics:
@@ -56,6 +56,8 @@ publish:
       fifo:
         content_based_deduplication: true
 ```
+
+For the full specification of FIFO topics, see [manifest specification](../docs/include/publish.en.md#publish-topics-topic-fifo)
 
 ### SQS FIFO queues for worker services
 You can specify `fifo: true` in your worker service manifest under `subscribe.topics.queue` or `subscribe.queue` as shown below and Copilot will create a FIFO SQS Queue and Subscriptions for you.
@@ -66,9 +68,9 @@ subscribe:
     - name: mytopic
       service: myservice
       queue: 
-        fifo: true # topics specific SQS FIFO Queue
+        fifo: true # topics specific SQS FIFO queue
   queue:
-    fifo: true # default SQS FIFO Queue
+    fifo: true # Configure the default SQS queue to be FIFO.
 ```
 Alternatively, you can also specify the advanced FIFO SQS Queue configuration as:
 
@@ -86,7 +88,7 @@ subscribe:
     fifo:
       high_throughput: true
 ```
-
+For the full specification of FIFO queues, see [manifest specification](../docs/manifest/worker-service.en.md#subscribe-queue-fifo)
 
 ## CloudFront TLS Termination
 
