@@ -5,13 +5,16 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	cloudformation "github.com/aws/aws-sdk-go/service/cloudformation"
 	cloudformation0 "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	elbv2 "github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	config "github.com/aws/copilot-cli/internal/pkg/config"
 	cloudformation1 "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	stack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	stack0 "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -198,4 +201,132 @@ func (m *MockprefixListGetter) CloudFrontManagedPrefixListID() (string, error) {
 func (mr *MockprefixListGetterMockRecorder) CloudFrontManagedPrefixListID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloudFrontManagedPrefixListID", reflect.TypeOf((*MockprefixListGetter)(nil).CloudFrontManagedPrefixListID))
+}
+
+// MockenvDescriber is a mock of envDescriber interface.
+type MockenvDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockenvDescriberMockRecorder
+}
+
+// MockenvDescriberMockRecorder is the mock recorder for MockenvDescriber.
+type MockenvDescriberMockRecorder struct {
+	mock *MockenvDescriber
+}
+
+// NewMockenvDescriber creates a new mock instance.
+func NewMockenvDescriber(ctrl *gomock.Controller) *MockenvDescriber {
+	mock := &MockenvDescriber{ctrl: ctrl}
+	mock.recorder = &MockenvDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockenvDescriber) EXPECT() *MockenvDescriberMockRecorder {
+	return m.recorder
+}
+
+// Params mocks base method.
+func (m *MockenvDescriber) Params() (map[string]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Params")
+	ret0, _ := ret[0].(map[string]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Params indicates an expected call of Params.
+func (mr *MockenvDescriberMockRecorder) Params() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Params", reflect.TypeOf((*MockenvDescriber)(nil).Params))
+}
+
+// ValidateCFServiceDomainAliases mocks base method.
+func (m *MockenvDescriber) ValidateCFServiceDomainAliases() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateCFServiceDomainAliases")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateCFServiceDomainAliases indicates an expected call of ValidateCFServiceDomainAliases.
+func (mr *MockenvDescriberMockRecorder) ValidateCFServiceDomainAliases() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateCFServiceDomainAliases", reflect.TypeOf((*MockenvDescriber)(nil).ValidateCFServiceDomainAliases))
+}
+
+// MocklbDescriber is a mock of lbDescriber interface.
+type MocklbDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MocklbDescriberMockRecorder
+}
+
+// MocklbDescriberMockRecorder is the mock recorder for MocklbDescriber.
+type MocklbDescriberMockRecorder struct {
+	mock *MocklbDescriber
+}
+
+// NewMocklbDescriber creates a new mock instance.
+func NewMocklbDescriber(ctrl *gomock.Controller) *MocklbDescriber {
+	mock := &MocklbDescriber{ctrl: ctrl}
+	mock.recorder = &MocklbDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocklbDescriber) EXPECT() *MocklbDescriberMockRecorder {
+	return m.recorder
+}
+
+// DescribeRule mocks base method.
+func (m *MocklbDescriber) DescribeRule(arg0 context.Context, arg1 string) (elbv2.Rule, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeRule", arg0, arg1)
+	ret0, _ := ret[0].(elbv2.Rule)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeRule indicates an expected call of DescribeRule.
+func (mr *MocklbDescriberMockRecorder) DescribeRule(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeRule", reflect.TypeOf((*MocklbDescriber)(nil).DescribeRule), arg0, arg1)
+}
+
+// MockstackDescriber is a mock of stackDescriber interface.
+type MockstackDescriber struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackDescriberMockRecorder
+}
+
+// MockstackDescriberMockRecorder is the mock recorder for MockstackDescriber.
+type MockstackDescriberMockRecorder struct {
+	mock *MockstackDescriber
+}
+
+// NewMockstackDescriber creates a new mock instance.
+func NewMockstackDescriber(ctrl *gomock.Controller) *MockstackDescriber {
+	mock := &MockstackDescriber{ctrl: ctrl}
+	mock.recorder = &MockstackDescriberMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackDescriber) EXPECT() *MockstackDescriberMockRecorder {
+	return m.recorder
+}
+
+// Resources mocks base method.
+func (m *MockstackDescriber) Resources() ([]*stack0.Resource, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Resources")
+	ret0, _ := ret[0].([]*stack0.Resource)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Resources indicates an expected call of Resources.
+func (mr *MockstackDescriberMockRecorder) Resources() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resources", reflect.TypeOf((*MockstackDescriber)(nil).Resources))
 }

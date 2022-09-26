@@ -468,7 +468,7 @@ cdn: true
 					Type: aws.String("Environment"),
 				},
 				EnvironmentConfig: EnvironmentConfig{
-					CDNConfig: environmentCDNConfig{
+					CDNConfig: EnvironmentCDNConfig{
 						Enabled: aws.Bool(true),
 					},
 				},
@@ -855,22 +855,22 @@ func TestEnvironmentObservability_IsEmpty(t *testing.T) {
 
 func TestEnvironmentCDNConfig_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
-		in     environmentCDNConfig
+		in     EnvironmentCDNConfig
 		wanted bool
 	}{
 		"empty": {
-			in:     environmentCDNConfig{},
+			in:     EnvironmentCDNConfig{},
 			wanted: true,
 		},
 		"not empty": {
-			in: environmentCDNConfig{
+			in: EnvironmentCDNConfig{
 				Enabled: aws.Bool(false),
 			},
 			wanted: false,
 		},
 		"advanced not empty": {
-			in: environmentCDNConfig{
-				Config: advancedCDNConfig{
+			in: EnvironmentCDNConfig{
+				Config: AdvancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				},
 			},
@@ -893,7 +893,7 @@ func TestEnvironmentConfig_CDNEnabled(t *testing.T) {
 	}{
 		"enabled via bool": {
 			in: EnvironmentConfig{
-				CDNConfig: environmentCDNConfig{
+				CDNConfig: EnvironmentCDNConfig{
 					Enabled: aws.Bool(true),
 				},
 			},
@@ -901,8 +901,8 @@ func TestEnvironmentConfig_CDNEnabled(t *testing.T) {
 		},
 		"enabled via config": {
 			in: EnvironmentConfig{
-				CDNConfig: environmentCDNConfig{
-					Config: advancedCDNConfig{
+				CDNConfig: EnvironmentCDNConfig{
+					Config: AdvancedCDNConfig{
 						Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 					},
 				},
@@ -915,7 +915,7 @@ func TestEnvironmentConfig_CDNEnabled(t *testing.T) {
 		},
 		"not enabled via bool": {
 			in: EnvironmentConfig{
-				CDNConfig: environmentCDNConfig{
+				CDNConfig: EnvironmentCDNConfig{
 					Enabled: aws.Bool(false),
 				},
 			},
