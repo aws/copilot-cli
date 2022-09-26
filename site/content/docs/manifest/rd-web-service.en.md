@@ -68,6 +68,8 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
         publish:
           topics:
             - name: 'refunds'
+            - name: 'orders'
+              fifo: true
         ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  

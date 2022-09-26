@@ -205,7 +205,6 @@ type LogConfigOpts struct {
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
 type HTTPTargetContainer struct {
-	Name string // Name of the container.
 	Port string // Port of the container.
 }
 
@@ -216,7 +215,11 @@ func (tg HTTPTargetContainer) IsHTTPS() bool {
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
 type HTTPHealthCheckOpts struct {
-	HealthCheckPath     string
+	// Fields with defaults always set.
+	HealthCheckPath string
+	GracePeriod     int64
+
+	// Optional.
 	Port                string
 	SuccessCodes        string
 	HealthyThreshold    *int64
@@ -224,7 +227,6 @@ type HTTPHealthCheckOpts struct {
 	Interval            *int64
 	Timeout             *int64
 	DeregistrationDelay *int64
-	GracePeriod         *int64
 }
 
 // A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
@@ -399,8 +401,8 @@ type PublishOpts struct {
 
 // Topic holds information needed to render a SNSTopic in a container definition.
 type Topic struct {
-	Name *string
-	Type string
+	Name            *string
+	FIFOTopicConfig *FIFOTopicConfig
 
 	Region    string
 	Partition string
@@ -408,6 +410,11 @@ type Topic struct {
 	App       string
 	Env       string
 	Svc       string
+}
+
+// Fifo holds configuration needed if the topic is FIFO.
+type FIFOTopicConfig struct {
+	ContentBasedDeduplication *bool
 }
 
 // SubscribeOpts holds configuration needed if the service has subscriptions.
@@ -436,10 +443,18 @@ type TopicSubscription struct {
 
 // SQSQueue holds information needed to render a SQS Queue in a container definition.
 type SQSQueue struct {
-	Retention  *int64
-	Delay      *int64
-	Timeout    *int64
-	DeadLetter *DeadLetterQueue
+	Retention       *int64
+	Delay           *int64
+	Timeout         *int64
+	DeadLetter      *DeadLetterQueue
+	FIFOQueueConfig *FIFOQueueConfig
+}
+
+// FifoAdvanceConfigOrBool holds information needed to render a FIFO SQS Queue in a container definition.
+type FIFOQueueConfig struct {
+	FIFOThroughputLimit       *string
+	ContentBasedDeduplication *bool
+	DeduplicationScope        *string
 }
 
 // DeadLetterQueue holds information needed to render a dead-letter SQS Queue in a container definition.

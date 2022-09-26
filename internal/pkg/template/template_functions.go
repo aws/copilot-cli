@@ -59,6 +59,11 @@ func EnvVarNameFunc(s string) string {
 	return StripNonAlphaNumFunc(s) + "Name"
 }
 
+// IsFIFO checks if the given queue has FIFO config.
+func (s SQSQueue) IsFIFO() bool {
+	return s.FIFOQueueConfig != nil
+}
+
 // EnvVarSecretFunc converts an input resource name to LogicalIDSafe, then appends
 // "Secret" to the end.
 func EnvVarSecretFunc(s string) string {

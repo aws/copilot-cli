@@ -29,6 +29,14 @@ Metadata:
     publish:
       topics:
         - name: givesOtherdogs
+        - name: mytopic
+          fifo: true
+        - name: mytopic
+        - name: yourtopic
+          fifo:
+            content_based_deduplication: true
+        - name: nonfifotopic
+          fifo: false
 
     subscribe:
       queue:
@@ -55,6 +63,20 @@ Metadata:
           service: dogsvc
           queue:
             timeout: 1s
+        - name: mytopic
+          service: mytopic
+          queue:
+            fifo: true
+        - name: yourtopic
+          service: yourtopic
+          queue:
+            fifo:
+              content_based_deduplication: true
+              high_throughput: true
+        - name: nonfifotopic
+          service: nonfifotopic
+          queue:
+            fifo: false
 
     # Optional fields for more advanced use-cases.
     #
@@ -137,13 +159,16 @@ Resources:
             - Name: COPILOT_SERVICE_NAME
               Value: !Sub '${WorkloadName}'
             - Name: COPILOT_SNS_TOPIC_ARNS
-              Value: '{"givesOtherdogs":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-givesOtherdogs"}'
+              Value: '{"givesOtherdogs":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-givesOtherdogs","mytopic":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-mytopic","mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-mytopic.fifo","nonfifotopic":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-nonfifotopic","yourtopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-test-dogworker-yourtopic.fifo"}'
             - Name: COPILOT_QUEUE_URI
               Value: !Ref EventsQueue
             - Name: COPILOT_TOPIC_QUEUE_URIS
               Value: !Sub
-                - '{"dogsvcGiveshuskiesEventsQueue":"${dogsvcgiveshuskiesURL}"}'
+                - '{"dogsvcGiveshuskiesEventsQueue":"${dogsvcgiveshuskiesURL}","mytopicMytopicfifoEventsQueue":"${mytopicmytopicfifoURL}","nonfifotopicNonfifotopicEventsQueue":"${nonfifotopicnonfifotopicURL}","yourtopicYourtopicfifoEventsQueue":"${yourtopicyourtopicfifoURL}"}'
                 - dogsvcgiveshuskiesURL: !Ref dogsvcgiveshuskiesEventsQueue
+                  mytopicmytopicfifoURL: !Ref mytopicmytopicfifoEventsQueue
+                  yourtopicyourtopicfifoURL: !Ref yourtopicyourtopicfifoEventsQueue
+                  nonfifotopicnonfifotopicURL: !Ref nonfifotopicnonfifotopicEventsQueue
           EnvironmentFiles:
           - !If
             - HasEnvFile
@@ -266,6 +291,10 @@ Resources:
                 Action: 'sns:Publish'
                 Resource:
                   - !Ref givesOtherdogsSNSTopic
+                  - !Ref mytopicfifoSNSTopic
+                  - !Ref mytopicSNSTopic
+                  - !Ref yourtopicfifoSNSTopic
+                  - !Ref nonfifotopicSNSTopic
   DynamicDesiredCountAction:
     Metadata:
       'aws:copilot:description': "A custom resource returning the ECS service's running task count"
@@ -399,6 +428,9 @@ Resources:
               - ','
               - - !GetAtt EventsQueue.QueueName
                 - !GetAtt dogsvcgiveshuskiesEventsQueue.QueueName
+                - !GetAtt mytopicmytopicfifoEventsQueue.QueueName
+                - !GetAtt yourtopicyourtopicfifoEventsQueue.QueueName
+                - !GetAtt nonfifotopicnonfifotopicEventsQueue.QueueName
   BacklogPerTaskCalculatorRole:
     Metadata:
       'aws:copilot:description': 'An IAM role for BacklogPerTaskCalculatorFunction'
@@ -439,6 +471,9 @@ Resources:
                 Resource:
                   - !GetAtt EventsQueue.Arn
                   - !GetAtt dogsvcgiveshuskiesEventsQueue.Arn
+                  - !GetAtt mytopicmytopicfifoEventsQueue.Arn
+                  - !GetAtt yourtopicyourtopicfifoEventsQueue.Arn
+                  - !GetAtt nonfifotopicnonfifotopicEventsQueue.Arn
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
   BacklogPerTaskScheduledRule:
@@ -498,6 +533,66 @@ Resources:
           Dimensions:
             - Name: QueueName
               Value: !GetAtt dogsvcgiveshuskiesEventsQueue.QueueName
+          Unit: Count
+        TargetValue: 900
+  AutoScalingPolicymytopicmytopicfifoEventsQueue:
+    Metadata:
+      'aws:copilot:description': "An autoscaling policy to maintain 900 messages/task for mytopicmytopicfifoEventsQueue"
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Join [ '-', [ !Ref WorkloadName, BacklogPerTask, !GetAtt mytopicmytopicfifoEventsQueue.QueueName ] ]
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        ScaleInCooldown: 120
+        ScaleOutCooldown: 60
+        CustomizedMetricSpecification:
+          Namespace: !Sub '${AppName}-${EnvName}-${WorkloadName}'
+          MetricName: BacklogPerTask
+          Statistic: Average
+          Dimensions:
+            - Name: QueueName
+              Value: !GetAtt mytopicmytopicfifoEventsQueue.QueueName
+          Unit: Count
+        TargetValue: 900
+  AutoScalingPolicyyourtopicyourtopicfifoEventsQueue:
+    Metadata:
+      'aws:copilot:description': "An autoscaling policy to maintain 900 messages/task for yourtopicyourtopicfifoEventsQueue"
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Join [ '-', [ !Ref WorkloadName, BacklogPerTask, !GetAtt yourtopicyourtopicfifoEventsQueue.QueueName ] ]
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        ScaleInCooldown: 120
+        ScaleOutCooldown: 60
+        CustomizedMetricSpecification:
+          Namespace: !Sub '${AppName}-${EnvName}-${WorkloadName}'
+          MetricName: BacklogPerTask
+          Statistic: Average
+          Dimensions:
+            - Name: QueueName
+              Value: !GetAtt yourtopicyourtopicfifoEventsQueue.QueueName
+          Unit: Count
+        TargetValue: 900
+  AutoScalingPolicynonfifotopicnonfifotopicEventsQueue:
+    Metadata:
+      'aws:copilot:description': "An autoscaling policy to maintain 900 messages/task for nonfifotopicnonfifotopicEventsQueue"
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Join [ '-', [ !Ref WorkloadName, BacklogPerTask, !GetAtt nonfifotopicnonfifotopicEventsQueue.QueueName ] ]
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        ScaleInCooldown: 120
+        ScaleOutCooldown: 60
+        CustomizedMetricSpecification:
+          Namespace: !Sub '${AppName}-${EnvName}-${WorkloadName}'
+          MetricName: BacklogPerTask
+          Statistic: Average
+          Dimensions:
+            - Name: QueueName
+              Value: !GetAtt nonfifotopicnonfifotopicEventsQueue.QueueName
           Unit: Count
         TargetValue: 900
   Service:
@@ -699,6 +794,125 @@ Resources:
             Condition:
               ArnEquals:
                 aws:SourceArn: !Join ['', [!Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-dogsvc-giveshuskies']]
+  mytopicmytopicfifoSNSTopicSubscription:
+    Metadata:
+      'aws:copilot:description': 'A SNS subscription to topic mytopic.fifo from service mytopic'
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Join [ '', [ !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-mytopic-mytopic.fifo' ] ]
+      Protocol: 'sqs'
+      Endpoint: !GetAtt mytopicmytopicfifoEventsQueue.Arn
+  mytopicmytopicfifoEventsQueue:
+    Metadata:
+      'aws:copilot:description': 'A SQS FIFO queue to buffer messages from the topic mytopic.fifo'
+    Type: AWS::SQS::Queue
+    Properties:
+      KmsMasterKeyId: !Ref EventsKMSKey
+      FifoQueue: true
+  mytopicmytopicfifoQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [ !Ref 'mytopicmytopicfifoEventsQueue' ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !GetAtt TaskRole.Arn
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+            Resource: !GetAtt mytopicmytopicfifoEventsQueue.Arn
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt mytopicmytopicfifoEventsQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Join [ '', [ !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-mytopic-mytopic.fifo' ] ]
+  yourtopicyourtopicfifoSNSTopicSubscription:
+    Metadata:
+      'aws:copilot:description': 'A SNS subscription to topic yourtopic.fifo from service yourtopic'
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Join [ '', [ !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-yourtopic-yourtopic.fifo' ] ]
+      Protocol: 'sqs'
+      Endpoint: !GetAtt yourtopicyourtopicfifoEventsQueue.Arn
+  yourtopicyourtopicfifoEventsQueue:
+    Metadata:
+      'aws:copilot:description': 'A SQS FIFO queue to buffer messages from the topic yourtopic.fifo'
+    Type: AWS::SQS::Queue
+    Properties:
+      KmsMasterKeyId: !Ref EventsKMSKey
+      FifoQueue: true
+      FifoThroughputLimit: perMessageGroupId
+      DeduplicationScope: messageGroup
+      ContentBasedDeduplication: true
+  yourtopicyourtopicfifoQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [ !Ref 'yourtopicyourtopicfifoEventsQueue' ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !GetAtt TaskRole.Arn
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+            Resource: !GetAtt yourtopicyourtopicfifoEventsQueue.Arn
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt yourtopicyourtopicfifoEventsQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Join [ '', [ !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-yourtopic-yourtopic.fifo' ] ]
+  nonfifotopicnonfifotopicSNSTopicSubscription:
+    Metadata:
+      'aws:copilot:description': 'A SNS subscription to topic nonfifotopic from service nonfifotopic'
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Join [ '', [ !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-nonfifotopic-nonfifotopic' ] ]
+      Protocol: 'sqs'
+      Endpoint: !GetAtt nonfifotopicnonfifotopicEventsQueue.Arn
+  nonfifotopicnonfifotopicEventsQueue:
+    Metadata:
+      'aws:copilot:description': 'A SQS queue to buffer messages from the topic nonfifotopic'
+    Type: AWS::SQS::Queue
+    Properties:
+      KmsMasterKeyId: !Ref EventsKMSKey
+  nonfifotopicnonfifotopicQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [ !Ref 'nonfifotopicnonfifotopicEventsQueue' ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !GetAtt TaskRole.Arn
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+            Resource: !GetAtt nonfifotopicnonfifotopicEventsQueue.Arn
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt nonfifotopicnonfifotopicEventsQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Join [ '', [ !Sub 'arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:', !Ref AppName, '-', !Ref EnvName, '-nonfifotopic-nonfifotopic' ] ]
   givesOtherdogsSNSTopic:
     Metadata:
       'aws:copilot:description': 'A SNS topic to broadcast givesOtherdogs events'
@@ -721,6 +935,109 @@ Resources:
             Action:
               - sns:Subscribe
             Resource: !Ref givesOtherdogsSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
+  mytopicfifoSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A SNS FIFO topic to broadcast mytopic.fifo events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-mytopic.fifo'
+      FifoTopic: true
+      KmsMasterKeyId: 'alias/aws/sns'
+  mytopicfifoSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: mytopicfifoSNSTopic
+    Properties:
+      Topics:
+        - !Ref mytopicfifoSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref mytopicfifoSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
+  mytopicSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A SNS topic to broadcast mytopic events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-mytopic'
+      KmsMasterKeyId: 'alias/aws/sns'
+  mytopicSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: mytopicSNSTopic
+    Properties:
+      Topics:
+        - !Ref mytopicSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref mytopicSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
+  yourtopicfifoSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A SNS FIFO topic to broadcast yourtopic.fifo events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-yourtopic.fifo'
+      FifoTopic: true
+      ContentBasedDeduplication: true
+      KmsMasterKeyId: 'alias/aws/sns'
+  yourtopicfifoSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: yourtopicfifoSNSTopic
+    Properties:
+      Topics:
+        - !Ref yourtopicfifoSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref yourtopicfifoSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
+  nonfifotopicSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A SNS topic to broadcast nonfifotopic events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-nonfifotopic'
+      KmsMasterKeyId: 'alias/aws/sns'
+  nonfifotopicSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: nonfifotopicSNSTopic
+    Properties:
+      Topics:
+        - !Ref nonfifotopicSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref nonfifotopicSNSTopic
             Condition:
               StringEquals:
                 "sns:Protocol": "sqs"

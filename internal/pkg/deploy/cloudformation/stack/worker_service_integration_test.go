@@ -55,7 +55,7 @@ func TestWorkerService_Template(t *testing.T) {
 	require.ErrorAs(t, err, &notFound)
 
 	serializer, err := stack.NewWorkerService(stack.WorkerServiceConfig{
-		App:         &config.Application{
+		App: &config.Application{
 			Name: appName,
 		},
 		Env:         envName,
