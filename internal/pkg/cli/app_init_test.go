@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -104,9 +103,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			inPBPolicyName: "nonexistentPolicyName",
 			mock: func(m *initAppMocks) {
 				m.mockPolicyLister.EXPECT().ListPermBoundPolicyNames().Return(
-					[]*string{
-						aws.String("existentPolicyName"),
-					}, nil)
+					[]string{"existentPolicyName"}, nil)
 			},
 			wantedError: errors.New("IAM policy 'nonexistentPolicyName' not found in this account"),
 		},
