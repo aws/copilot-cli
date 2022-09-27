@@ -29,7 +29,7 @@
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
   PortMappings:
     - ContainerPort: !Ref ContainerPort
-{{- if .ServiceConnect }}
+{{- if .ServiceConnect }} # remove when release
       Name: !Ref WorkloadName
 {{- end}}
 {{- if .NLB}} {{ $nlbListener := .NLB.Listener }} 
@@ -41,7 +41,7 @@
 {{- end}}
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
 {{- if eq .WorkloadType "Backend Service"}}
-{{- if .ServiceConnect }}
+{{- if .ServiceConnect }} # remove when release
   PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort, Name: !Ref WorkloadName}], !Ref "AWS::NoValue"]
 {{- else}}
   PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
