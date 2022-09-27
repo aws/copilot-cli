@@ -100,7 +100,7 @@ func (s *BackendService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *BackendService) Publish() []Topic {
-	return s.BackendServiceConfig.PublishConfig.Topics
+	return s.BackendServiceConfig.PublishConfig.publishedTopics()
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.

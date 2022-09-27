@@ -262,7 +262,6 @@ Outputs:
 			HTTPRedirect:        true,
 			DeregistrationDelay: aws.Int64(60),
 			HTTPTargetContainer: template.HTTPTargetContainer{
-				Name: "frontend",
 				Port: "80",
 			},
 			HealthCheck: &template.ContainerHealthCheck{
@@ -415,7 +414,6 @@ Outputs:
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, template.HTTPTargetContainer{
-			Name: "envoy",
 			Port: "443",
 		}, actual.HTTPTargetContainer)
 	})

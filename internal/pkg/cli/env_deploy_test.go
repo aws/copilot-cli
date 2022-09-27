@@ -5,7 +5,6 @@ package cli
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -143,7 +142,6 @@ type deployEnvExecuteMocks struct {
 	deployer     *mocks.MockenvDeployer
 	identity     *mocks.MockidentityService
 	interpolator *mocks.Mockinterpolator
-	describer    *mocks.MockenvDescriber
 }
 
 func TestDeployEnvOpts_Execute(t *testing.T) {
@@ -172,14 +170,6 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErr: errors.New(`unmarshal environment manifest for "mockEnv"`),
 		},
-		"fail to validate cdn": {
-			setUpMocks: func(m *deployEnvExecuteMocks) {
-				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\ncdn: true\n"), nil)
-				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\ncdn: true\n", nil)
-				m.describer.EXPECT().ValidateCFServiceDomainAliases().Return(fmt.Errorf("mock error"))
-			},
-			wantedErr: errors.New("mock error"),
-		},
 		"fail to get caller identity": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
@@ -188,6 +178,17 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErr: errors.New("get identity: some error"),
 		},
+		"fail to verify env": {
+			setUpMocks: func(m *deployEnvExecuteMocks) {
+				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\ncdn: true\n"), nil)
+				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\ncdn: true\n", nil)
+				m.identity.EXPECT().Get().Return(identity.Caller{
+					RootUserARN: "mockRootUserARN",
+				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(errors.New("mock error"))
+			},
+			wantedErr: errors.New("mock error"),
+		},
 		"fail to upload manifest": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
@@ -195,6 +196,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.identity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "mockRootUserARN",
 				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().UploadArtifacts().Return(nil, errors.New("some error"))
 			},
 			wantedErr: errors.New("upload artifacts for environment mockEnv: some error"),
@@ -206,6 +208,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.identity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "mockRootUserARN",
 				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().UploadArtifacts().Return(map[string]string{
 					"mockResource": "mockURL",
 				}, nil)
@@ -222,6 +225,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				m.identity.EXPECT().Get().Return(identity.Caller{
 					RootUserARN: "mockRootUserARN",
 				}, nil)
+				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().UploadArtifacts().Return(map[string]string{
 					"mockResource": "mockURL",
 				}, nil)
@@ -250,7 +254,6 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				deployer:     mocks.NewMockenvDeployer(ctrl),
 				identity:     mocks.NewMockidentityService(ctrl),
 				interpolator: mocks.NewMockinterpolator(ctrl),
-				describer:    mocks.NewMockenvDescriber(ctrl),
 			}
 			tc.setUpMocks(m)
 			opts := deployEnvOpts{
@@ -264,9 +267,6 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				},
 				newInterpolator: func(s string, s2 string) interpolator {
 					return m.interpolator
-				},
-				newEnvDescriber: func() (envDescriber, error) {
-					return m.describer, nil
 				},
 				targetApp: &config.Application{
 					Name:   "mockApp",

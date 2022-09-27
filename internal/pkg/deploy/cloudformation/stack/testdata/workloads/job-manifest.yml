@@ -36,6 +36,11 @@ storage:
       read_only: false
       efs: true
 
+publish:
+  topics:
+    - name: mytopic
+      fifo: true
+
 sidecars:
   nginx:
     essential: true

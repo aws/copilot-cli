@@ -103,6 +103,8 @@ func TestScheduledJob_Validate(t *testing.T) {
 			CustomResourcesURL: map[string]string{
 				"EnvControllerFunction": "https://my-bucket.s3.us-west-2.amazonaws.com/code.zip",
 			},
+			AccountID:  "123456789123",
+			Region:     "us-west-2",
 			EnvVersion: "v1.42.0",
 		},
 	})

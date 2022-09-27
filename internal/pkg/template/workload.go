@@ -62,6 +62,11 @@ const (
 	snsARNPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
 )
 
+// Constants for stack resource logical IDs
+const (
+	LogicalIDHTTPListenerRuleWithDomain = "HTTPListenerRuleWithDomain"
+)
+
 var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
@@ -205,7 +210,6 @@ type LogConfigOpts struct {
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
 type HTTPTargetContainer struct {
-	Name string // Name of the container.
 	Port string // Port of the container.
 }
 
@@ -721,8 +725,5 @@ func contains(list []string, s string) bool {
 
 // ARN determines the arn for a topic using the SNSTopic name and account information
 func (t Topic) ARN() string {
-	if t.FIFOTopicConfig != nil {
-		return fmt.Sprintf(snsARNPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name)+".fifo")
-	}
 	return fmt.Sprintf(snsARNPattern, t.Partition, t.Region, t.AccountID, t.App, t.Env, t.Svc, aws.StringValue(t.Name))
 }

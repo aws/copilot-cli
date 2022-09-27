@@ -143,6 +143,8 @@ Resources:
             Value: !Sub '${EnvName}'
           - Name: COPILOT_SERVICE_NAME
             Value: !Sub '${WorkloadName}'
+          - Name: COPILOT_SNS_TOPIC_ARNS
+            Value: '{"mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-test-job-mytopic.fifo"}'
           - Name: COPILOT_MOUNT_POINTS
             Value: '{"managedEFSVolume":"/etc/mount1"}'
           EnvironmentFiles:
@@ -190,6 +192,8 @@ Resources:
               Value: !Sub '${EnvName}'
             - Name: COPILOT_SERVICE_NAME
               Value: !Sub '${WorkloadName}'
+            - Name: COPILOT_SNS_TOPIC_ARNS
+              Value: '{"mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-test-job-mytopic.fifo"}'
             - Name: NGINX_PORT
               Value: '8080'
             - Name: COPILOT_MOUNT_POINTS
@@ -320,7 +324,14 @@ Resources:
                       region: !Ref AWS::Region
                       account: !Ref AWS::AccountId
                       fsid: !GetAtt EnvControllerAction.ManagedFileSystemID
-
+        - PolicyName: 'Publish2SNS'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'sns:Publish'
+                Resource:
+                  - !Ref mytopicfifoSNSTopic
 
   Rule:
     Metadata:
@@ -518,3 +529,30 @@ Resources:
         Name: !Ref WorkloadName
       TemplateURL:
         !Ref AddonsTemplateURL
+
+  mytopicfifoSNSTopic:
+    Metadata:
+      'aws:copilot:description': 'A SNS FIFO topic to broadcast mytopic.fifo events'
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}-mytopic.fifo'
+      FifoTopic: true
+      KmsMasterKeyId: 'alias/aws/sns'
+  mytopicfifoSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    DependsOn: mytopicfifoSNSTopic
+    Properties:
+      Topics:
+        - !Ref mytopicfifoSNSTopic
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:root'
+            Action:
+              - sns:Subscribe
+            Resource: !Ref mytopicfifoSNSTopic
+            Condition:
+              StringEquals:
+                "sns:Protocol": "sqs"
