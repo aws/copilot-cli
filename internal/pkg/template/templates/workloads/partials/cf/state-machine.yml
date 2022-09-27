@@ -46,11 +46,7 @@ StateMachine:
       
 StateMachineRole:
   Metadata:
-    {{- if .PermissionsBoundary}}
-    'aws:copilot:description': 'An IAM role with permissions boundary {{.PermissionsBoundary}} for a state machine to run ECS tasks in your cluster'
-    {{- else}}
-    'aws:copilot:description': 'An IAM role for a state machine to run ECS tasks in your cluster'
-    {{- end}}
+    'aws:copilot:description': 'An IAM role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for a state machine to run ECS tasks in your cluster'
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

@@ -30,11 +30,7 @@ DynamicDesiredCountFunction:
 
 DynamicDesiredCountFunctionRole:
   Metadata:
-    {{- if .PermissionsBoundary}}
-    'aws:copilot:description': "An IAM Role with permissions boundary {{.PermissionsBoundary}} for describing number of running tasks in your ECS service"
-    {{- else}}
-    'aws:copilot:description': "An IAM Role for describing number of running tasks in your ECS service"
-    {{- end}}
+    'aws:copilot:description': "An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for describing number of running tasks in your ECS service"
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
@@ -83,11 +79,7 @@ DynamicDesiredCountFunctionRole:
 
 AutoScalingRole:
   Metadata:
-    {{- if .PermissionsBoundary}}
-    'aws:copilot:description': 'An IAM role with permissions boundary {{.PermissionsBoundary}} for container auto scaling'
-    {{- else}}
-    'aws:copilot:description': 'An IAM role for container auto scaling'
-    {{- end}}
+    'aws:copilot:description': 'An IAM role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for container auto scaling'
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
@@ -212,11 +204,7 @@ BacklogPerTaskCalculatorFunction:
 
 BacklogPerTaskCalculatorRole:
   Metadata:
-    {{- if .PermissionsBoundary}}
-    'aws:copilot:description': 'An IAM role with permissions boundary {{.PermissionsBoundary}} for BacklogPerTaskCalculatorFunction'
-    {{- else}}
-    'aws:copilot:description': 'An IAM role for BacklogPerTaskCalculatorFunction'
-    {{- end}}
+    'aws:copilot:description': 'An IAM role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for BacklogPerTaskCalculatorFunction'
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

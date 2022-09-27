@@ -2,11 +2,7 @@
 # See #1533.
 CloudformationExecutionRole:
   Metadata:
-    {{- if .PermissionsBoundary}}
-    'aws:copilot:description': 'An IAM Role with permissions boundary {{.PermissionsBoundary}} for AWS CloudFormation to manage resources'
-    {{- else}}
-    'aws:copilot:description': 'An IAM Role for AWS CloudFormation to manage resources'
-    {{- end}}
+    'aws:copilot:description': 'An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for AWS CloudFormation to manage resources'
   DeletionPolicy: Retain
   Type: AWS::IAM::Role
   Properties:

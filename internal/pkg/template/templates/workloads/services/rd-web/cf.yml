@@ -186,11 +186,7 @@ Resources:
 
   CustomResourceRole:
     Metadata:
-      {{- if .PermissionsBoundary}}
-      'aws:copilot:description': 'An IAM role with permissions boundary {{.PermissionsBoundary}} used by custom resources to associate the custom domain'
-      {{- else}}
-      'aws:copilot:description': 'An IAM role used by custom resources to associate the custom domain'
-      {{- end}}
+      'aws:copilot:description': 'An IAM role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} used by custom resources to associate the custom domain'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:

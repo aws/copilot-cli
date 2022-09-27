@@ -1,10 +1,6 @@
 EnvironmentManagerRole:
   Metadata:
-    {{- if .PermissionsBoundary}}
-    'aws:copilot:description': 'An IAM Role with permissions boundary {{.PermissionsBoundary}} to describe resources in your environment'
-    {{- else}}
-    'aws:copilot:description': 'An IAM Role to describe resources in your environment'
-    {{- end}}
+    'aws:copilot:description': 'An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} to describe resources in your environment'
   DeletionPolicy: Retain
   Type: AWS::IAM::Role
   DependsOn: CloudformationExecutionRole

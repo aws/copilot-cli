@@ -89,11 +89,7 @@ Resources:
   {{- if eq .ExecutionRole "" }}
   DefaultExecutionRole:
     Metadata:
-      {{- if .PermissionsBoundary}}
-      'aws:copilot:description': 'An IAM Role with permissions boundary {{.PermissionsBoundary}} for the Fargate agent to make AWS API calls on your behalf'
-      {{- else}}
-      'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
-      {{- end}}
+      'aws:copilot:description': 'An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for the Fargate agent to make AWS API calls on your behalf'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -202,11 +198,7 @@ Resources:
 
   DefaultTaskRole:
     Metadata:
-      {{- if .PermissionsBoundary}}
-      'aws:copilot:description': 'An IAM Role with permissions boundary {{.PermissionsBoundary}} for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'
-      {{- else}}
-      'aws:copilot:description': 'An IAM Role for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'
-      {{- end}}
+      'aws:copilot:description': 'An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
