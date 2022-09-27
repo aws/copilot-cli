@@ -248,7 +248,7 @@ func (o *initAppOpts) validatePermBound(policyName string) error {
 		return fmt.Errorf("list permissions boundary policies: %w", err)
 	}
 	for _, policy := range IAMPolicies {
-		if aws.StringValue(policy) == policyName {
+		if policy == policyName {
 			return nil
 		}
 	}

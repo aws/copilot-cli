@@ -247,7 +247,7 @@ func TestIAM_ListPolicies(t *testing.T) {
 	testCases := map[string]struct {
 		inClient func(ctrl *gomock.Controller) *mocks.Mockapi
 
-		wantedPolicies []*string
+		wantedPolicies []string
 		wantedErr      error
 	}{
 		"wraps error on failure": {
@@ -278,7 +278,7 @@ func TestIAM_ListPolicies(t *testing.T) {
 					}, nil)
 				return m
 			},
-			wantedPolicies: []*string{aws.String("myFirstPolicyName"), aws.String("mySecondPolicyName")},
+			wantedPolicies: []string{"myFirstPolicyName", "mySecondPolicyName"},
 		},
 	}
 	for name, tc := range testCases {

@@ -556,7 +556,7 @@ type roleDeleter interface {
 }
 
 type policyLister interface {
-	ListPermBoundPolicyNames() ([]*string, error)
+	ListPermBoundPolicyNames() ([]string, error)
 }
 
 type serviceDescriber interface {
