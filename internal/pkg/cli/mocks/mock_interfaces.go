@@ -5915,10 +5915,10 @@ func (m *MockpolicyLister) EXPECT() *MockpolicyListerMockRecorder {
 }
 
 // ListPermBoundPolicyNames mocks base method.
-func (m *MockpolicyLister) ListPermBoundPolicyNames() ([]*string, error) {
+func (m *MockpolicyLister) ListPermBoundPolicyNames() ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPermBoundPolicyNames")
-	ret0, _ := ret[0].([]*string)
+	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
