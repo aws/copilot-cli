@@ -1,6 +1,10 @@
 TaskRole:
   Metadata:
+    {{- if .PermissionsBoundary}}
+    'aws:copilot:description': 'An IAM role with permissions boundary {{.PermissionsBoundary}} to control permissions for the containers in your tasks'
+    {{- else}}
     'aws:copilot:description': 'An IAM role to control permissions for the containers in your tasks'
+    {{- end}}
   Type: AWS::IAM::Role
   Properties:{{if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{if gt (len .NestedStack.PolicyOutputs) 0}}
     ManagedPolicyArns:{{range $managedPolicy := .NestedStack.PolicyOutputs}}

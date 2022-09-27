@@ -1,6 +1,10 @@
 AccessRole:
   Metadata:
+    {{- if .PermissionsBoundary}}
+    'aws:copilot:description': 'An IAM Role with permissions boundary {{.PermissionsBoundary}} for App Runner to use on your behalf to pull your image from ECR'
+    {{- else}}
     'aws:copilot:description': 'An IAM Role for App Runner to use on your behalf to pull your image from ECR'
+    {{- end}}
   Type: AWS::IAM::Role
   Condition: NeedsAccessRole
   Properties:

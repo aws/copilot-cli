@@ -2,7 +2,11 @@
 # See #1533.
 CloudformationExecutionRole:
   Metadata:
+    {{- if .PermissionsBoundary}}
+    'aws:copilot:description': 'An IAM Role with permissions boundary {{.PermissionsBoundary}} for AWS CloudFormation to manage resources'
+    {{- else}}
     'aws:copilot:description': 'An IAM Role for AWS CloudFormation to manage resources'
+    {{- end}}
   DeletionPolicy: Retain
   Type: AWS::IAM::Role
   Properties:
@@ -16,9 +20,9 @@ CloudformationExecutionRole:
           - 'cloudformation.amazonaws.com'
           - 'lambda.amazonaws.com'
         Action: sts:AssumeRole
-  {{- if .PermissionsBoundary }}
+  {{- if .PermissionsBoundary}}
     PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
-  {{- end }}
+  {{- end}}
     Path: /
     Policies:
       - PolicyName: executeCfn

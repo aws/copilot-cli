@@ -1,6 +1,10 @@
 InstanceRole:
   Metadata:
+    {{- if .PermissionsBoundary}}
+    'aws:copilot:description': 'An IAM role with permissions boundary {{.PermissionsBoundary}} to control permissions for the containers in your service'
+    {{- else}}
     'aws:copilot:description': 'An IAM role to control permissions for the containers in your service'
+    {{- end}}
   Type: AWS::IAM::Role
   Properties:
   {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}

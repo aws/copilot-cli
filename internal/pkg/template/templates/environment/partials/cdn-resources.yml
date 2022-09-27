@@ -1,7 +1,11 @@
 {{- if or .CDNConfig.ImportedCertificate .DelegateDNS}}
 UniqueJSONValuesFunctionRole:
   Metadata:
+    {{- if .PermissionsBoundary}}
+    'aws:copilot:description': 'An IAM Role with permissions boundary {{.PermissionsBoundary}} for the unique json values lambda'
+    {{- else}}
     'aws:copilot:description': 'An IAM Role for the unique json values lambda'
+    {{- end}}
   Type: AWS::IAM::Role
   Condition: CreateALB
   Properties:

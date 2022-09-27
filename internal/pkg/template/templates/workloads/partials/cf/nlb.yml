@@ -149,7 +149,11 @@ NLBCustomDomainFunction:
 
 NLBCustomDomainRole:
   Metadata:
+    {{- if .PermissionsBoundary}}
+    'aws:copilot:description': "An IAM role with permissions boundary {{.PermissionsBoundary}} to update the environment Route 53 hosted zone"
+    {{- else}}
     'aws:copilot:description': "An IAM role to update the environment Route 53 hosted zone"
+    {{- end}}
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
@@ -229,7 +233,11 @@ NLBCertValidatorFunction:
 
 NLBCertValidatorRole:
   Metadata:
+    {{- if .PermissionsBoundary}}
+    'aws:copilot:description': "An IAM role with permissions boundary {{.PermissionsBoundary}} to request and validate a certificate for your service"
+    {{- else}}
     'aws:copilot:description': "An IAM role to request and validate a certificate for your service"
+    {{- end}}
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

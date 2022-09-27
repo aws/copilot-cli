@@ -1,7 +1,11 @@
 
 CustomResourceRole:
   Metadata:
+    {{- if .PermissionsBoundary}}
+    'aws:copilot:description': 'An IAM role with permissions boundary {{.PermissionsBoundary}} to manage certificates and Route53 hosted zones'
+    {{- else}}
     'aws:copilot:description': 'An IAM role to manage certificates and Route53 hosted zones'
+    {{- end}}
   Type: AWS::IAM::Role
   Condition: DelegateDNS
   Properties:
@@ -15,9 +19,9 @@ CustomResourceRole:
               - lambda.amazonaws.com
           Action:
             - sts:AssumeRole
-{{- if .PermissionsBoundary }}
+    {{- if .PermissionsBoundary}}
     PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
-{{- end }}
+    {{- end}}
     Path: /
     Policies:
       - PolicyName: "DNSandACMAccess"

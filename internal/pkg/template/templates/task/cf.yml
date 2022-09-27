@@ -89,7 +89,11 @@ Resources:
   {{- if eq .ExecutionRole "" }}
   DefaultExecutionRole:
     Metadata:
+      {{- if .PermissionsBoundary}}
+      'aws:copilot:description': 'An IAM Role with permissions boundary {{.PermissionsBoundary}} for the Fargate agent to make AWS API calls on your behalf'
+      {{- else}}
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
+      {{- end}}
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -101,9 +105,9 @@ Resources:
             Action: 'sts:AssumeRole'
       ManagedPolicyArns:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
-      {{- if .PermissionsBoundary }}
+      {{- if .PermissionsBoundary}}
       PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
-      {{- end }}
+      {{- end}}
       Policies:
         - !If
           # Optional IAM permission required by ECS task def env file
@@ -198,7 +202,11 @@ Resources:
 
   DefaultTaskRole:
     Metadata:
+      {{- if .PermissionsBoundary}}
+      'aws:copilot:description': 'An IAM Role with permissions boundary {{.PermissionsBoundary}} for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'
+      {{- else}}
       'aws:copilot:description': 'An IAM Role for the task to make AWS API calls on your behalf. Policies are required by ECS Exec'
+      {{- end}}
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -208,9 +216,9 @@ Resources:
             Principal:
               Service: ecs-tasks.amazonaws.com
             Action: 'sts:AssumeRole'
-      {{- if .PermissionsBoundary }}
+      {{- if .PermissionsBoundary}}
       PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
-      {{- end }}
+      {{- end}}
       Policies:
         - PolicyName: 'ExecuteCommand'
           PolicyDocument:

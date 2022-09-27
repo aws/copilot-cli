@@ -1,6 +1,10 @@
 ExecutionRole:
   Metadata:
+    {{- if .PermissionsBoundary}}
+    'aws:copilot:description': 'An IAM Role with permissions boundary {{.PermissionsBoundary}} for the Fargate agent to make AWS API calls on your behalf'
+    {{- else}}
     'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'
+    {{- end}}
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

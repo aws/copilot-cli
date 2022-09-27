@@ -61,7 +61,11 @@ RulePriorityFunction:
 
 RulePriorityFunctionRole:
   Metadata:
+    {{- if .PermissionsBoundary}}
+    'aws:copilot:description': "An IAM Role with permissions boundary {{.PermissionsBoundary}} to describe load balancer rules for assigning a priority"
+    {{- else}}
     'aws:copilot:description': "An IAM Role to describe load balancer rules for assigning a priority"
+    {{- end}}
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:

@@ -30,7 +30,11 @@ Conditions:
 Resources:
   AdministrationRole:
     Metadata:
+      {{- if .PermissionsBoundary}}
+      'aws:copilot:description': 'A StackSet admin role with permissions boundary {{.PermissionsBoundary}} assumed by CloudFormation to manage regional stacks'
+      {{- else}}
       'aws:copilot:description': 'A StackSet admin role assumed by CloudFormation to manage regional stacks'
+      {{- end}}
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Ref AdminRoleName
@@ -42,9 +46,9 @@ Resources:
               Service: cloudformation.amazonaws.com
             Action:
               - sts:AssumeRole
-{{- if .PermissionsBoundary }}
+      {{- if .PermissionsBoundary}}
       PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
-{{- end }} 
+      {{- end}} 
       Path: /
       Policies:
         - PolicyName: AssumeRole-AWSCloudFormationStackSetExecutionRole
@@ -58,7 +62,11 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:iam::*:role/${ExecutionRoleName}'
   ExecutionRole:
     Metadata:
+      {{- if .PermissionsBoundary}}
+      'aws:copilot:description': 'An IAM role assumed by the admin role with permissions boundary {{.PermissionsBoundary}} to create ECR repositories, KMS keys, and S3 buckets'
+      {{- else}}
       'aws:copilot:description': 'An IAM role assumed by the admin role to create ECR repositories, KMS keys, and S3 buckets'
+      {{- end}}
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Ref ExecutionRoleName
@@ -70,9 +78,9 @@ Resources:
               AWS: !GetAtt AdministrationRole.Arn
             Action:
               - sts:AssumeRole
-{{- if .PermissionsBoundary }}
+      {{- if .PermissionsBoundary}}
       PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
-{{- end }}
+      {{- end}}
       Path: /
       Policies:
       - PolicyName: ExecutionRolePolicy
@@ -128,7 +136,11 @@ Resources:
 
   DNSDelegationRole:
     Metadata:
+      {{- if .PermissionsBoundary}}
+      'aws:copilot:description': 'A DNS delegation role with permissions boundary {{.PermissionsBoundary}} to allow accounts: {{join .AppDNSDelegatedAccounts ", "}} to manage your domain'
+      {{- else}}
       'aws:copilot:description': 'A DNS delegation role to allow accounts: {{join .AppDNSDelegatedAccounts ", "}} to manage your domain'
+      {{- end}}
     Type: AWS::IAM::Role
     Condition: DelegateDNS
     Properties:
@@ -149,9 +161,9 @@ Resources:
 {{- end}}
             Action:
               - sts:AssumeRole
-{{- if .PermissionsBoundary }}
+      {{- if .PermissionsBoundary}}
       PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
-{{- end }}
+      {{- end}}
       Path: /
       Policies:
       - PolicyName: DNSDelegationPolicy
