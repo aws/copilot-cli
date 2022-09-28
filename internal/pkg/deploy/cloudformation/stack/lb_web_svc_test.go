@@ -262,7 +262,8 @@ Outputs:
 			HTTPRedirect:        true,
 			DeregistrationDelay: aws.Int64(60),
 			HTTPTargetContainer: template.HTTPTargetContainer{
-				Port: "80",
+				Container: "frontend",
+				Port:      "80",
 			},
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
@@ -414,7 +415,8 @@ Outputs:
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, template.HTTPTargetContainer{
-			Port: "443",
+			Port:      "443",
+			Container: "envoy",
 		}, actual.HTTPTargetContainer)
 	})
 }

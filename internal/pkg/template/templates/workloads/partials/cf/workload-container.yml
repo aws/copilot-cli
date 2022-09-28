@@ -30,7 +30,9 @@
   PortMappings:
     - ContainerPort: !Ref ContainerPort
 {{- if .ServiceConnect }} # remove when release
-      Name: !Ref WorkloadName
+{{- if eq .HTTPTargetContainer.Container .WorkloadName}}
+      Name: TargetPort
+{{- end}}
 {{- end}}
 {{- if .NLB}} {{ $nlbListener := .NLB.Listener }} 
   {{- if and (eq $nlbListener.TargetContainer .WorkloadName) (ne $nlbListener.TargetPort .NLB.MainContainerPort)}}

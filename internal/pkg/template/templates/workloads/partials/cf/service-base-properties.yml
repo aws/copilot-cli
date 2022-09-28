@@ -44,11 +44,11 @@ ServiceConnectConfiguration:
       awslogs-group: !Ref LogGroup
       awslogs-stream-prefix: copilot
   Services:
-    - PortName: !Ref WorkloadName
+    - PortName: TargetPort
       # Avoid using the same service with Service Discovery in a namespace.
       DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]] 
       ClientAliases:
-        - Port: !Ref ContainerPort
+        - Port: !Ref TargetPort
           {{- if .ServiceConnect.Alias }}
           DnsName: {{.ServiceConnect.Alias}}
           {{- else}}
