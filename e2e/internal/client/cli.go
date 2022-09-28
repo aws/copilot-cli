@@ -93,6 +93,7 @@ type SvcInitRequest struct {
 	Image              string
 	SvcPort            string
 	TopicSubscriptions []string
+	NoSubscriptions    bool
 }
 
 // SvcShowRequest contains the parameters for calling copilot svc show.
@@ -351,6 +352,9 @@ func (cli *CLI) SvcInit(opts *SvcInitRequest) (string, error) {
 	}
 	if len(opts.TopicSubscriptions) > 0 {
 		args = append(args, "--subscribe-topics", strings.Join(opts.TopicSubscriptions, ","))
+	}
+	if opts.NoSubscriptions {
+		args = append(args, "--no-subscribe")
 	}
 	return cli.exec(
 		exec.Command(cli.path, args...))

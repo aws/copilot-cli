@@ -78,6 +78,12 @@ var _ = Describe("Worker Service E2E Test", func() {
 publish:
   topics:
   - name: events
+  - name: mytopic
+  - name: mytopic
+    fifo: true
+  - name: yourtopic
+    fifo:
+      content_based_deduplication: true
 `)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -160,11 +166,40 @@ publish:
 	Context("deploys the counter service", func() {
 		It("svc init should succeed", func() {
 			_, err := cli.SvcInit(&client.SvcInitRequest{
-				Name:               counterServiceName,
-				SvcType:            "Worker Service",
-				Dockerfile:         "./counter/Dockerfile",
-				TopicSubscriptions: []string{fmt.Sprintf("%s:%s", workerServiceName, "processed-msg-count")},
+				Name:            counterServiceName,
+				SvcType:         "Worker Service",
+				Dockerfile:      "./counter/Dockerfile",
+				NoSubscriptions: true,
 			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("adds a topic and queues to push to the service", func() {
+			Expect("./copilot/counter/manifest.yml").Should(BeAnExistingFile())
+			f, err := os.OpenFile("./copilot/counter/manifest.yml", os.O_APPEND|os.O_WRONLY, 0644)
+			Expect(err).NotTo(HaveOccurred())
+			defer f.Close()
+			// Append subscribe section to manifest.
+			_, err = f.WriteString(`
+subscribe:
+  topics:
+    - name: processed-msg-count
+      service: worker
+    - name: events
+      service: frontend
+    - name: mytopic
+      service: frontend
+    - name: mytopic
+      service: frontend
+      queue:
+        fifo: true
+    - name: yourtopic
+      service: frontend
+      queue:
+        fifo:
+          content_based_deduplication: true
+          high_throughput: true
+`)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -180,17 +215,20 @@ publish:
 		It("should have the SQS queue and service discovery injected as env vars", func() {
 			svc, err := cli.SvcShow(&client.SvcShowRequest{
 				AppName: appName,
-				Name:    workerServiceName,
+				Name:    counterServiceName,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			var hasQueueURI bool
 			var svcDiscovery bool
+			var hasTopicQueueURI bool
 			for _, envVar := range svc.Variables {
 				switch envVar.Name {
 				case "COPILOT_QUEUE_URI":
 					hasQueueURI = true
 				case "COPILOT_SERVICE_DISCOVERY_ENDPOINT":
 					svcDiscovery = true
+				case "COPILOT_TOPIC_QUEUE_URIS":
+					hasTopicQueueURI = true
 				}
 			}
 			if !hasQueueURI {
@@ -198,6 +236,9 @@ publish:
 			}
 			if !svcDiscovery {
 				Expect(errors.New("worker service is missing env var 'COPILOT_SERVICE_DISCOVERY_ENDPOINT'")).NotTo(HaveOccurred())
+			}
+			if !hasTopicQueueURI {
+				Expect(errors.New("worker service is missing env var 'COPILOT_TOPIC_QUEUE_URIS'")).NotTo(HaveOccurred())
 			}
 		})
 	})
