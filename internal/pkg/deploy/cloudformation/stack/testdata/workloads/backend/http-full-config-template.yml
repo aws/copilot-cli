@@ -304,7 +304,7 @@ Resources:
           [
             {
               RegistryArn: !GetAtt DiscoveryService.Arn,
-              Port: !Ref ContainerPort,
+              Port: !Ref TargetPort,
             },
           ],
           !Ref "AWS::NoValue",
@@ -327,7 +327,7 @@ Resources:
       UnhealthyThresholdCount: 2
       HealthCheckIntervalSeconds: 15
       HealthCheckTimeoutSeconds: 10
-      Port: !Ref ContainerPort
+      Port: !Ref TargetPort
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds

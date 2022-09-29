@@ -426,7 +426,7 @@ Resources:
           [
             {
               RegistryArn: !GetAtt DiscoveryService.Arn,
-              Port: !Ref ContainerPort,
+              Port: !Ref TargetPort,
             },
           ],
           !Ref "AWS::NoValue",
@@ -442,7 +442,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
-      Port: !Ref ContainerPort
+      Port: !Ref TargetPort
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds

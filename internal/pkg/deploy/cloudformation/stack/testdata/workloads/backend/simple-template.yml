@@ -290,7 +290,7 @@ Resources:
           [
             {
               RegistryArn: !GetAtt DiscoveryService.Arn,
-              Port: !Ref ContainerPort,
+              Port: !Ref TargetPort,
             },
           ],
           !Ref "AWS::NoValue",
