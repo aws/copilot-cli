@@ -11,8 +11,8 @@
 		"LogRetention": "30",
 		"ContainerPort": "8080",
 		"EnvFileARN": "",
-    "TargetContainer": "simple-backend",
-    "TargetPort": "8080"
+		"TargetContainer": "simple-backend",
+		"TargetPort": "8080"
 	},
 	"Tags": {
 		"copilot-application": "my-app",

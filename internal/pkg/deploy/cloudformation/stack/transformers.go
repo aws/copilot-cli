@@ -497,7 +497,7 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 }
 
 func convertServiceConnect(s manifest.ServiceConnect) *template.ServiceConnect {
-	if s.EnableServiceConnect != nil && *s.EnableServiceConnect {
+	if aws.BoolValue(s.EnableServiceConnect) {
 		return &template.ServiceConnect{}
 	}
 	if !s.ServiceConnectArgs.IsEmpty() {

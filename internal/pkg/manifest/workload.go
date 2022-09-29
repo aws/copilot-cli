@@ -475,14 +475,14 @@ func (c *NetworkConfig) requiredEnvFeatures() []string {
 	return nil
 }
 
-// ServiceConnect represents ECS Service Connect.
+// ServiceConnect represents ECS Service Connect configuration.
 type ServiceConnect struct {
 	EnableServiceConnect *bool
 	ServiceConnectArgs
 }
 
 func (s *ServiceConnect) enabled() bool {
-	if s.EnableServiceConnect != nil && *s.EnableServiceConnect {
+	if aws.BoolValue(s.EnableServiceConnect) {
 		return true
 	}
 	return !s.ServiceConnectArgs.IsEmpty()
@@ -508,12 +508,12 @@ func (s *ServiceConnect) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// ServiceConnectArgs represents the configuration for ECS Service Connect.
+// ServiceConnectArgs includes the advanced configuration for ECS Service Connect.
 type ServiceConnectArgs struct {
 	Alias *string
 }
 
-// IsEmpty returns if ServiceConnectArgs is empty.
+// IsEmpty returns empty if the struct has all zero members.
 func (s *ServiceConnectArgs) IsEmpty() bool {
 	return s.Alias == nil
 }
