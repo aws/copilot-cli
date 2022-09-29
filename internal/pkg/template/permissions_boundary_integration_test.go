@@ -7,6 +7,7 @@ package template
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/stretchr/testify/require"
 	"os"
 	"os/exec"
@@ -21,17 +22,15 @@ func TestPermissions_Boundary(t *testing.T) {
 		require.NoError(t, err, "should return output of 'find' command")
 		
 		files := strings.Fields(string(output))
-		var totalIAMRoles int
-		var totalPermissionsBoundaryFields int
 		for _, file := range files {
 			contents, err := os.ReadFile(file)
 			require.NoError(t, err, "should read file")
 			IAMRoles := bytes.Count(contents, []byte("AWS::IAM::Role"))
 			permissionsBoundaryFields := bytes.Count(contents, []byte("PermissionsBoundary:"))
-				
-			totalIAMRoles += IAMRoles
-			totalPermissionsBoundaryFields += permissionsBoundaryFields
+			
+			msg := fmt.Sprintf("number of IAM roles (%d) does not equal number of permissions boundary fields (%d) in file '%s'", IAMRoles, permissionsBoundaryFields, file)
+			require.True(t, IAMRoles == permissionsBoundaryFields, msg)
+
 		}
-		require.True(t, totalIAMRoles == totalPermissionsBoundaryFields, "number of IAM roles does not equal number of permissions boundary fields")
 	})
 }
