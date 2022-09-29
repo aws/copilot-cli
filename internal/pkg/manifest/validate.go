@@ -1245,6 +1245,19 @@ func (n NetworkConfig) validate() error {
 	if err := n.VPC.validate(); err != nil {
 		return fmt.Errorf(`validate "vpc": %w`, err)
 	}
+	if err := n.Connect.validate(); err != nil {
+		return fmt.Errorf(`validate "connect": %w`, err)
+	}
+	return nil
+}
+
+// validate returns nil if ServiceConnect is configured correctly.
+func (s ServiceConnect) validate() error {
+	return s.ServiceConnectArgs.validate()
+}
+
+// validate is a no-op for ServiceConnectArgs.
+func (ServiceConnectArgs) validate() error {
 	return nil
 }
 

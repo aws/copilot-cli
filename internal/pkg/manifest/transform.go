@@ -23,6 +23,7 @@ var defaultTransformers = []mergo.Transformers{
 	stringSliceOrStringTransformer{},
 	platformArgsOrStringTransformer{},
 	securityGroupsIDsOrConfigTransformer{},
+	serviceConnectTransformer{},
 	placementArgOrStringTransformer{},
 	subnetListOrArgsTransformer{},
 	healthCheckArgsOrStringTransformer{},
@@ -229,6 +230,32 @@ func (t placementArgOrStringTransformer) Transformer(typ reflect.Type) func(dst,
 
 		if !srcStruct.PlacementArgs.isEmpty() {
 			dstStruct.PlacementString = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
+type serviceConnectTransformer struct{}
+
+// Transformer returns custom merge logic for serviceConnectTransformer's fields.
+func (t serviceConnectTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(ServiceConnect{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(ServiceConnect), src.Interface().(ServiceConnect)
+
+		if srcStruct.EnableServiceConnect != nil {
+			dstStruct.ServiceConnectArgs = ServiceConnectArgs{}
+		}
+
+		if !srcStruct.ServiceConnectArgs.IsEmpty() {
+			dstStruct.EnableServiceConnect = nil
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

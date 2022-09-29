@@ -49,7 +49,7 @@
   PortMappings:
     - ContainerPort: {{$sidecar.Port}}
     {{- if $.ServiceConnect }} # remove when release
-    {{- if eq $.HTTPTargetContainer.Container $sidecar.Name}}
+    {{- if eq $.HTTPTargetContainer.Name $sidecar.Name}}
     {{- if eq $.HTTPTargetContainer.Port $sidecar.Port}}
       Name: TargetPort
     {{- end}}

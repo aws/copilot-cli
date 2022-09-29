@@ -496,6 +496,18 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 	return &template.ExecuteCommandOpts{}
 }
 
+func convertServiceConnect(s manifest.ServiceConnect) *template.ServiceConnect {
+	if s.EnableServiceConnect != nil && *s.EnableServiceConnect {
+		return &template.ServiceConnect{}
+	}
+	if !s.ServiceConnectArgs.IsEmpty() {
+		return &template.ServiceConnect{
+			Alias: s.ServiceConnectArgs.Alias,
+		}
+	}
+	return nil
+}
+
 func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
 	if lc.IsEmpty() {
 		return nil

@@ -210,8 +210,8 @@ type LogConfigOpts struct {
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
 type HTTPTargetContainer struct {
-	Container string
-	Port      string // Port of the container.
+	Name string
+	Port string
 }
 
 // IsHTTPS returns true if the target container's port is 443.
@@ -325,8 +325,7 @@ type NetworkLoadBalancer struct {
 
 // ServiceConnect holds configuration for ECS Service Connect.
 type ServiceConnect struct {
-	Namespace string
-	Alias     *string
+	Alias *string
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider

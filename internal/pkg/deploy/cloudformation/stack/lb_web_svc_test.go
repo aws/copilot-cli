@@ -207,6 +207,11 @@ Outputs:
 			String:      nil,
 			StringSlice: []string{"world"},
 		}
+		mft.Network.Connect = manifest.ServiceConnect{
+			ServiceConnectArgs: manifest.ServiceConnectArgs{
+				Alias: aws.String("frontend"),
+			},
+		}
 
 		var actual template.WorkloadOpts
 		parser := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
@@ -262,8 +267,11 @@ Outputs:
 			HTTPRedirect:        true,
 			DeregistrationDelay: aws.Int64(60),
 			HTTPTargetContainer: template.HTTPTargetContainer{
-				Container: "frontend",
-				Port:      "80",
+				Name: "frontend",
+				Port: "80",
+			},
+			ServiceConnect: &template.ServiceConnect{
+				Alias: aws.String("frontend"),
 			},
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
@@ -415,8 +423,8 @@ Outputs:
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, template.HTTPTargetContainer{
-			Port:      "443",
-			Container: "envoy",
+			Port: "443",
+			Name: "envoy",
 		}, actual.HTTPTargetContainer)
 	})
 }

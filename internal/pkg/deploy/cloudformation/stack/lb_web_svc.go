@@ -214,9 +214,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		ExecuteCommand:     convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:       manifest.LoadBalancedWebServiceType,
 		HTTPTargetContainer: template.HTTPTargetContainer{
-			Port:      aws.StringValue(targetContainerPort),
-			Container: aws.StringValue(targetContainer),
+			Port: aws.StringValue(targetContainerPort),
+			Name: aws.StringValue(targetContainer),
 		},
+		ServiceConnect:           convertServiceConnect(s.manifest.Network.Connect),
 		HealthCheck:              convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:      deregistrationDelay,

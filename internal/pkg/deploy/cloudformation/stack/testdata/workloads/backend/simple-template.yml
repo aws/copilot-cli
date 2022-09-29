@@ -30,6 +30,10 @@ Parameters:
   LogRetention:
     Type: Number
     Default: 30
+  TargetContainer:
+    Type: String
+  TargetPort:
+    Type: Number
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
@@ -85,12 +89,7 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
-          PortMappings:
-            !If [
-              ExposePort,
-              [{ ContainerPort: !Ref ContainerPort }],
-              !Ref "AWS::NoValue",
-            ]
+          PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort, Name: TargetPort}], !Ref "AWS::NoValue"]
   ExecutionRole:
     Metadata:
       "aws:copilot:description": "An IAM Role for the Fargate agent to make AWS API calls on your behalf"
@@ -275,6 +274,22 @@ Resources:
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       LaunchType: FARGATE
+      ServiceConnectConfiguration:
+        Enabled: True
+        Namespace: my-env.my-app.local
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-region: !Ref AWS::Region
+            awslogs-group: !Ref LogGroup
+            awslogs-stream-prefix: copilot
+        Services:
+          - PortName: TargetPort
+            # Avoid using the same service with Service Discovery in a namespace.
+            DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]]
+            ClientAliases:
+              - Port: !Ref TargetPort
+                DnsName: !Ref WorkloadName
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED

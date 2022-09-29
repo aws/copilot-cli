@@ -36,7 +36,7 @@ CapacityProviderStrategy:
 {{- if .ServiceConnect }}
 ServiceConnectConfiguration:
   Enabled: True
-  Namespace: {{.ServiceConnect.Namespace}}
+  Namespace: {{.ServiceDiscoveryEndpoint}}
   LogConfiguration:
     LogDriver: awslogs
     Options:

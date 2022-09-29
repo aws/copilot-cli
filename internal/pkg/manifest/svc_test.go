@@ -41,6 +41,8 @@ cpu: 512
 memory: 1024
 count: 1
 exec: true
+network:
+  connect: true
 http:
   path: "svc"
   target_container: "frontend"
@@ -160,6 +162,9 @@ environments:
 								Placement: PlacementArgOrString{
 									PlacementString: placementStringP(PublicSubnetPlacement),
 								},
+							},
+							Connect: ServiceConnect{
+								EnableServiceConnect: aws.Bool(true),
 							},
 						},
 						TaskDefOverrides: []OverrideRule{

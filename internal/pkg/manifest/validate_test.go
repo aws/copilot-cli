@@ -82,7 +82,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
-						vpcConfig{
+						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: (*PlacementString)(aws.String("")),
 							},
@@ -409,7 +409,7 @@ func TestBackendService_validate(t *testing.T) {
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
-						vpcConfig{
+						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: (*PlacementString)(aws.String("")),
 							},
@@ -786,7 +786,7 @@ func TestWorkerService_validate(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
-						vpcConfig{
+						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: (*PlacementString)(aws.String("")),
 							},
@@ -992,7 +992,7 @@ func TestScheduledJob_validate(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
-						vpcConfig{
+						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: (*PlacementString)(aws.String("")),
 							},
