@@ -26,7 +26,7 @@ TargetGroup:
     {{- if .HTTPTargetContainer.IsHTTPS }}
     HealthCheckProtocol: HTTPS
     {{- end}}
-    Port: !Ref ContainerPort
+    Port: !Ref TargetPort
     {{- if .HTTPTargetContainer.IsHTTPS }}
     Protocol: HTTPS
     {{- else }}
