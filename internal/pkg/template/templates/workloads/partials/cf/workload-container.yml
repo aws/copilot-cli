@@ -31,7 +31,7 @@
     - ContainerPort: !Ref ContainerPort
     {{- if .ServiceConnect }} # remove when release
     {{- if eq .HTTPTargetContainer.Name .WorkloadName}}
-      Name: TargetPort
+      Name: target
     {{- end}}
     {{- end}}
 {{- if .NLB}} {{ $nlbListener := .NLB.Listener }} 
@@ -44,7 +44,7 @@
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
 {{- if eq .WorkloadType "Backend Service"}}
 {{- if and .ServiceConnect (eq .HTTPTargetContainer.Name .WorkloadName)}} # remove when release
-  PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort, Name: TargetPort}], !Ref "AWS::NoValue"]
+  PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort, Name: target}], !Ref "AWS::NoValue"]
 {{- else}}
   PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
 {{- end}}

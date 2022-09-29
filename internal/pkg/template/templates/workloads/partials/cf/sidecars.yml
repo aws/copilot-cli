@@ -50,7 +50,7 @@
     - ContainerPort: {{$sidecar.Port}}
     {{- if $.ServiceConnect }} # remove when release
     {{- if eq $.HTTPTargetContainer.Name $sidecar.Name}}
-      Name: TargetPort
+      Name: target
     {{- end}}
     {{- end}}
     {{- if $sidecar.Protocol}}
