@@ -190,6 +190,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if s.manifest.RoutingRule.RedirectToHTTPS != nil {
 		httpRedirect = aws.BoolValue(s.manifest.RoutingRule.RedirectToHTTPS)
 	}
+	var scConfig *template.ServiceConnect
+	if s.manifest.ServiceConnectEnabled() {
+		scConfig = convertServiceConnect(s.manifest.Network.Connect)
+	}
 	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		AppName:            s.app,
@@ -217,7 +221,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 			Port: aws.StringValue(targetContainerPort),
 			Name: aws.StringValue(targetContainer),
 		},
-		ServiceConnect:           convertServiceConnect(s.manifest.Network.Connect),
+		ServiceConnect:           scConfig,
 		HealthCheck:              convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:      deregistrationDelay,

@@ -169,6 +169,14 @@ func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
 	return aws.Uint16Value(s.ImageConfig.Port), true
 }
 
+// ServiceConnectEnabled returns if ServiceConnect is enabled or not.
+func (s *LoadBalancedWebService) ServiceConnectEnabled() bool {
+	if s.Network.Connect.EnableServiceConnect != nil && !*s.Network.Connect.EnableServiceConnect {
+		return false
+	}
+	return true
+}
+
 // Publish returns the list of topics where notifications can be published.
 func (s *LoadBalancedWebService) Publish() []Topic {
 	return s.LoadBalancedWebServiceConfig.PublishConfig.publishedTopics()

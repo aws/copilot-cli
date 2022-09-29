@@ -288,6 +288,7 @@ Outputs:
 					Key:    "sha2/count.zip",
 				},
 			},
+			ServiceConnect: &template.ServiceConnect{},
 			ExecuteCommand: &template.ExecuteCommandOpts{},
 			NestedStack: &template.WorkloadNestedStackOpts{
 				StackName:       addon.StackName,
@@ -431,7 +432,7 @@ Outputs:
 			},
 			Sidecars: []*template.SidecarOpts{
 				{
-					Name: aws.String("envoy"),
+					Name: "envoy",
 					Port: aws.String("443"),
 				},
 			},
@@ -439,6 +440,7 @@ Outputs:
 				Name: "envoy",
 				Port: "443",
 			},
+			ServiceConnect: &template.ServiceConnect{},
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/healthz",
 				Port:               "4200",

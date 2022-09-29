@@ -254,7 +254,7 @@ func (t serviceConnectTransformer) Transformer(typ reflect.Type) func(dst, src r
 			dstStruct.ServiceConnectArgs = ServiceConnectArgs{}
 		}
 
-		if !srcStruct.ServiceConnectArgs.IsEmpty() {
+		if !srcStruct.ServiceConnectArgs.isEmpty() {
 			dstStruct.EnableServiceConnect = nil
 		}
 

@@ -481,13 +481,6 @@ type ServiceConnect struct {
 	ServiceConnectArgs
 }
 
-func (s *ServiceConnect) enabled() bool {
-	if aws.BoolValue(s.EnableServiceConnect) {
-		return true
-	}
-	return !s.ServiceConnectArgs.IsEmpty()
-}
-
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the ServiceConnect
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
@@ -498,7 +491,7 @@ func (s *ServiceConnect) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		}
 	}
-	if !s.ServiceConnectArgs.IsEmpty() {
+	if !s.ServiceConnectArgs.isEmpty() {
 		s.EnableServiceConnect = nil
 		return nil
 	}
@@ -513,8 +506,7 @@ type ServiceConnectArgs struct {
 	Alias *string
 }
 
-// IsEmpty returns empty if the struct has all zero members.
-func (s *ServiceConnectArgs) IsEmpty() bool {
+func (s *ServiceConnectArgs) isEmpty() bool {
 	return s.Alias == nil
 }
 

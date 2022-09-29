@@ -96,7 +96,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		}
 		mp := convertSidecarMountPoints(config.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:       aws.String(name),
+			Name:       name,
 			Image:      config.Image,
 			Essential:  config.Essential,
 			Port:       port,
@@ -497,15 +497,9 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 }
 
 func convertServiceConnect(s manifest.ServiceConnect) *template.ServiceConnect {
-	if aws.BoolValue(s.EnableServiceConnect) {
-		return &template.ServiceConnect{}
+	return &template.ServiceConnect{
+		Alias: s.ServiceConnectArgs.Alias,
 	}
-	if !s.ServiceConnectArgs.IsEmpty() {
-		return &template.ServiceConnect{
-			Alias: s.ServiceConnectArgs.Alias,
-		}
-	}
-	return nil
 }
 
 func convertLogging(lc manifest.Logging) *template.LogConfigOpts {

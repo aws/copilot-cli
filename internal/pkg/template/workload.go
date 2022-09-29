@@ -121,7 +121,7 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name         *string
+	Name         string
 	Image        *string
 	Essential    *bool
 	Port         *string
