@@ -481,6 +481,13 @@ type ServiceConnect struct {
 	ServiceConnectArgs
 }
 
+func (s *ServiceConnect) enabled() bool {
+	if s.EnableServiceConnect != nil && *s.EnableServiceConnect {
+		return true
+	}
+	return !s.ServiceConnectArgs.IsEmpty()
+}
+
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the ServiceConnect
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
