@@ -31,6 +31,8 @@ command: "shine on you"
 publish:
   topics:
     - name: customers
+    - name: mytopic
+      fifo: true
 
 network:
   vpc:

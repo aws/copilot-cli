@@ -146,6 +146,7 @@ func (elb *ELBAccessLogs) ShouldCreateBucket() bool {
 // CDNConfig represents a Content Delivery Network deployed by CloudFront.
 type CDNConfig struct {
 	ImportedCertificate *string
+	TerminateTLS        bool
 }
 
 type VPCConfig struct {

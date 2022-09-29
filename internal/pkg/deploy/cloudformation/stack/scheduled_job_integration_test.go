@@ -62,6 +62,8 @@ func TestScheduledJob_Template(t *testing.T) {
 		Manifest: v,
 		RuntimeConfig: stack.RuntimeConfig{
 			ServiceDiscoveryEndpoint: "test.my-app.local",
+			AccountID:                "123456789123",
+			Region:                   "us-west-2",
 			EnvVersion:               "v1.42.0",
 		},
 	})

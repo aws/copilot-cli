@@ -252,7 +252,7 @@ Outputs:
 			WorkloadType: manifest.LoadBalancedWebServiceType,
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
-				GracePeriod:     aws.Int64(60),
+				GracePeriod:     60,
 			},
 			HostedZoneAliases: template.AliasesForHostedZone{
 				"mockHostedZone": []string{"mockAlias"},
@@ -262,8 +262,8 @@ Outputs:
 			HTTPRedirect:        true,
 			DeregistrationDelay: aws.Int64(60),
 			HTTPTargetContainer: template.HTTPTargetContainer{
-				Name: "frontend",
-				Port: "80",
+				Container: "frontend",
+				Port:      "80",
 			},
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
@@ -415,8 +415,8 @@ Outputs:
 		// THEN
 		require.NoError(t, err)
 		require.Equal(t, template.HTTPTargetContainer{
-			Name: "envoy",
-			Port: "443",
+			Port:      "443",
+			Container: "envoy",
 		}, actual.HTTPTargetContainer)
 	})
 }

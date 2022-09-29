@@ -171,7 +171,7 @@ func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *LoadBalancedWebService) Publish() []Topic {
-	return s.LoadBalancedWebServiceConfig.PublishConfig.Topics
+	return s.LoadBalancedWebServiceConfig.PublishConfig.publishedTopics()
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.

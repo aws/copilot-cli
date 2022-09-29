@@ -5,50 +5,50 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
     === "Basic"
 
         ```yaml
-            name: 'frontend'
-            type: 'Load Balanced Web Service'
-    
-            image:
-              build: './frontend/Dockerfile'
-              port: 8080
-    
-            http:
-              path: '/'
-              healthcheck: '/_healthcheck'
-    
-            cpu: 256
-            memory: 512
-            count: 3
-            exec: true
-    
-            variables:
-              LOG_LEVEL: info
-            secrets:
-              GITHUB_TOKEN: GITHUB_TOKEN
-              DB_SECRET:
-                secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: './frontend/Dockerfile'
+          port: 8080
+
+        http:
+          path: '/'
+          healthcheck: '/_healthcheck'
+
+        cpu: 256
+        memory: 512
+        count: 3
+        exec: true
+
+        variables:
+          LOG_LEVEL: info
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
+          DB_SECRET:
+            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
         ```
 
     === "With a domain"
 
         ```yaml
-            name: 'frontend'
-            type: 'Load Balanced Web Service'
-    
-            image:
-              build: './frontend/Dockerfile'
-              port: 8080
-    
-            http:
-              path: '/'
-              alias: 'example.com'
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
 
-            environments:
-              qa:
-                http:
-                  alias: # The "qa" environment imported a certificate.
-                    - name: 'qa.example.com'
-                      hosted_zone: Z0873220N255IR3MTNR4
+        image:
+          build: './frontend/Dockerfile'
+          port: 8080
+
+        http:
+          path: '/'
+          alias: 'example.com'
+
+        environments:
+          qa:
+            http:
+              alias: # The "qa" environment imported a certificate.
+                - name: 'qa.example.com'
+                  hosted_zone: Z0873220N255IR3MTNR4
         ```
 
     === "Larger containers"
@@ -105,7 +105,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         cpu: 512
         memory: 1024
         count:
-          range: 1-10 
+          range: 1-10
           cooldown:
             in: 60s
             out: 30s
@@ -134,6 +134,8 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
         publish:
           topics:
             - name: 'products'
+            - name: 'orders'
+              fifo: true
         ```
 
     === "Network Load Balancer"
@@ -174,7 +176,7 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
           port: 80
           depends_on:
             bootstrap: success
-        
+
         http:
           path: '/'
 
@@ -194,6 +196,37 @@ List of all available properties for a `'Load Balanced Web Service'` manifest. T
               - source_volume: wp
                 path: /bitnami/wordpress
                 read_only: false
+        ```
+
+    === "End-to-end encryption"
+
+        ```yaml
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: Dockerfile
+          port: 8080
+
+        http:
+          alias: 'example.com'
+          path: '/'
+          healthcheck:
+            path: '/_health'
+
+          # The envoy container's port is 443 resulting in the protocol and health check protocol to be to "HTTPS" 
+          # so that the load balancer establishes TLS connections with the Fargate tasks using certificates that you 
+          # install on the envoy container. These certificates can be self-signed.
+          target_container: envoy
+
+        sidecars:
+          envoy:
+            port: 443
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/envoy-proxy-with-selfsigned-certs:v1
+
+        network:
+          vpc:
+            placement: 'private'
         ```
 
 
@@ -222,7 +255,9 @@ Requests to this path will be forwarded to your service. Each Load Balanced Web 
 The amount of time to wait for targets to drain connections during deregistration. The default is 60s. Setting this to a larger value gives targets more time to gracefully drain connections, but increases the time required for new deployments. Range 0s-3600s.
 
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
-A sidecar container that takes the place of a service container.
+A sidecar container that requests are routed to instead of the main service container.  
+If the target container's port is set to `443`, then the protocol is set to `HTTPS` so that the load balancer establishes 
+TLS connections with the Fargate tasks using certificates that you install on the target container.
 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 Indicates whether sticky sessions are enabled.
@@ -259,13 +294,18 @@ http:
   hosted_zone: Z0873220N255IR3MTNR4
 # Also see http.alias array of maps example, above.
 ```
+<span class="parent-field">http.</span><a id="http-redirect-to-https" href="#http-redirect-to-https" class="field">`redirect_to_https`</a> <span class="type">Boolean</span>  
+Automatically redirect the Application Load Balancer from HTTP to HTTPS. By default it is `true`.
+
 <span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
 The HTTP(S) protocol version. Must be one of `'grpc'`, `'http1'`, or `'http2'`. If omitted, then `'http1'` is assumed.
 If using gRPC, please note that a domain must be associated with your application.
 
 {% include 'nlb.en.md' %}
 
-{% include 'image-config-with-port.en.md' %}
+{% include 'image-config-with-port.en.md' %}  
+If the port is set to `443`, then the protocol is set to `HTTPS` so that the load balancer establishes
+TLS connections with the Fargate tasks using certificates that you install on the container.
 
 {% include 'image-healthcheck.en.md' %}
 

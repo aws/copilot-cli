@@ -24,6 +24,14 @@ const (
 	defaultDockerfileName = "Dockerfile"
 )
 
+// SQS Queue field options.
+const (
+	sqsFIFOThroughputLimitPerMessageGroupID = "perMessageGroupId"
+	sqsFIFOThroughputLimitPerQueue          = "perQueue"
+	sqsDeduplicationScopeMessageGroup       = "messageGroup"
+	sqsDeduplicationScopeQueue              = "queue"
+)
+
 const (
 	// AWS VPC subnet placement options.
 	PublicSubnetPlacement  = PlacementString("public")
@@ -399,8 +407,53 @@ type PublishConfig struct {
 
 // Topic represents the configurable options for setting up a SNS Topic.
 type Topic struct {
-	Name *string `yaml:"name"`
-	Type *string `yaml:"type"`
+	Name *string                      `yaml:"name"`
+	FIFO FIFOTopicAdvanceConfigOrBool `yaml:"fifo"`
+}
+
+// FIFOTopicAdvanceConfigOrBool represents the configurable options for fifo topics.
+type FIFOTopicAdvanceConfigOrBool struct {
+	Enable   *bool
+	Advanced FIFOTopicAdvanceConfig
+}
+
+// IsEmpty returns true if the FifoAdvanceConfigOrBool struct has all nil values.
+func (f *FIFOTopicAdvanceConfigOrBool) IsEmpty() bool {
+	return f.Enable == nil && f.Advanced.IsEmpty()
+}
+
+// IsEnabled returns true if the FIFO is enabled on the SQS queue.
+func (f *FIFOTopicAdvanceConfigOrBool) IsEnabled() bool {
+	return aws.BoolValue(f.Enable) || !f.Advanced.IsEmpty()
+}
+
+// FIFOTopicAdvanceConfig represents the advanced fifo topic config.
+type FIFOTopicAdvanceConfig struct {
+	ContentBasedDeduplication *bool `yaml:"content_based_deduplication"`
+}
+
+// IsEmpty returns true if the FifoAdvanceConfig struct has all nil values.
+func (a *FIFOTopicAdvanceConfig) IsEmpty() bool {
+	return a.ContentBasedDeduplication == nil
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the FIFOTopicAdvanceConfigOrBool
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (t *FIFOTopicAdvanceConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&t.Advanced); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+	if !t.Advanced.IsEmpty() {
+		return nil
+	}
+	if err := value.Decode(&t.Enable); err != nil {
+		return errUnmarshalFifoConfig
+	}
+	return nil
 }
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
@@ -765,4 +818,18 @@ func placementStringP(p PlacementString) *PlacementString {
 	}
 	placement := p
 	return &placement
+}
+
+func (cfg PublishConfig) publishedTopics() []Topic {
+	if len(cfg.Topics) == 0 {
+		return nil
+	}
+	pubs := make([]Topic, len(cfg.Topics))
+	for i, topic := range cfg.Topics {
+		if topic.FIFO.IsEnabled() {
+			topic.Name = aws.String(aws.StringValue(topic.Name) + ".fifo")
+		}
+		pubs[i] = topic
+	}
+	return pubs
 }
