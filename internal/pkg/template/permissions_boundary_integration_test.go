@@ -24,8 +24,8 @@ func TestPermissions_Boundary(t *testing.T) {
 			IAMRoles := bytes.Count(contents, []byte("AWS::IAM::Role"))
 			permissionsBoundaryFields := bytes.Count(contents, []byte("PermissionsBoundary:"))
 				
-			totalIAMRoles = totalIAMRoles + IAMRoles
-			totalPermissionsBoundaryFields = totalPermissionsBoundaryFields + permissionsBoundaryFields
+			totalIAMRoles += IAMRoles
+			totalPermissionsBoundaryFields += permissionsBoundaryFields
 		}
 		require.True(t, totalIAMRoles == totalPermissionsBoundaryFields, "number of IAM roles does not equal number of permissions boundary fields")
 	})
