@@ -9,28 +9,23 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/stretchr/testify/require"
+	"io/fs"
 	"os"
-	"os/exec"
-	"strings"
+	"path/filepath"
 	"testing"
 )
 
 func TestPermissions_Boundary(t *testing.T) {
 	t.Run("every CloudFormation template must contain conditional permissions boundary field for all IAM roles", func(t *testing.T) {
-		cmd := exec.Command("find", "templates", "-name", "*yml")
-		output, err := cmd.Output()
-		require.NoError(t, err, "should return output of 'find' command")
-		
-		files := strings.Fields(string(output))
-		for _, file := range files {
-			contents, err := os.ReadFile(file)
-			require.NoError(t, err, "should read file")
+		err := filepath.WalkDir("templates", func(path string, di fs.DirEntry, err error) error {
+			contents, _ := os.ReadFile(path)
 			IAMRoles := bytes.Count(contents, []byte("AWS::IAM::Role"))
 			permissionsBoundaryFields := bytes.Count(contents, []byte("PermissionsBoundary:"))
-			
-			msg := fmt.Sprintf("number of IAM roles (%d) does not equal number of permissions boundary fields (%d) in file '%s'", IAMRoles, permissionsBoundaryFields, file)
-			require.True(t, IAMRoles == permissionsBoundaryFields, msg)
 
-		}
+			msg := fmt.Sprintf("number of IAM roles (%d) does not equal number of permissions boundary fields (%d) in file '%s'", IAMRoles, permissionsBoundaryFields, path)
+			require.True(t, IAMRoles == permissionsBoundaryFields, msg)
+			return nil
+		})
+		require.NoError(t, err, "should walk templates dir for template files")
 	})
 }
