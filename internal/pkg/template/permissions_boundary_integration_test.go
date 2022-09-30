@@ -17,11 +17,14 @@ import (
 func TestPermissions_Boundary(t *testing.T) {
 	t.Run("every CloudFormation template must contain conditional permissions boundary field for all IAM roles", func(t *testing.T) {
 		err := filepath.WalkDir("templates", func(path string, di fs.DirEntry, err error) error {
-			contents, _ := os.ReadFile(path)
-			roleCount := bytes.Count(contents, []byte("AWS::IAM::Role"))
-			pbFieldCount := bytes.Count(contents, []byte("PermissionsBoundary:"))
+			if !di.IsDir() {
+				contents, err := os.ReadFile(path)
+				require.NoError(t, err, "read file at %s", path)
+				roleCount := bytes.Count(contents, []byte("AWS::IAM::Role"))
+				pbFieldCount := bytes.Count(contents, []byte("PermissionsBoundary:"))
 
-			require.Equal(t, roleCount, pbFieldCount, "number of IAM roles does not equal number of permissions boundary fields in file '%s'", path)
+				require.Equal(t, roleCount, pbFieldCount, "number of IAM roles does not equal number of permissions boundary fields in file '%s'", path)
+			}
 			return nil
 		})
 		require.NoError(t, err, "should walk templates dir for template files")
