@@ -55,7 +55,7 @@ Conditions:
   HasEnvFile:
     !Not [!Equals [!Ref EnvFileARN, ""]]
   ExposePort:
-    !Not [!Equals [!Ref ContainerPort, -1]]
+    !Not [!Equals [!Ref TrafficPort, -1]]
   {{- if .ALBEnabled}}
   IsDefaultRootPath:
     !Equals [!Ref RulePath, "/"]
