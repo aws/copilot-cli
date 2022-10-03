@@ -45,7 +45,7 @@ Parameters:
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
-  ExposePort: !Not [!Equals [!Ref ContainerPort, -1]]
+  ExposePort: !Not [!Equals [!Ref TargetPort, -1]]
   IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
 Resources:
   LogGroup:

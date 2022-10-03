@@ -10,7 +10,9 @@
 		"TaskCount": "1",
 		"LogRetention": "30",
 		"ContainerPort": "8080",
-		"EnvFileARN": ""
+		"EnvFileARN": "",
+		"TargetContainer": "simple-backend",
+		"TargetPort": "8080"
 	},
 	"Tags": {
 		"copilot-application": "my-app",
