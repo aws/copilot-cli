@@ -2101,6 +2101,12 @@ func TestStorage_validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`validate "ephemeral": ephemeral storage must be between 20 GiB and 200 GiB`),
 		},
+		"error if readonlyfs is invalid": {
+			Storage: Storage{
+				ReadonlyRootFS: aws.Bool(false),
+			},
+			wantedError: fmt.Errorf(`validate "readOnlyRootFs": readonlyRootFS must be true`),
+		},
 		"error if fail to validate volumes": {
 			Storage: Storage{
 				Volumes: map[string]*Volume{

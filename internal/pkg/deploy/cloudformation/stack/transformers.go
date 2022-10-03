@@ -531,6 +531,7 @@ func convertStorageOpts(wlName *string, in manifest.Storage) *template.StorageOp
 	}
 	return &template.StorageOpts{
 		Ephemeral:         convertEphemeral(in.Ephemeral),
+		ReadonlyRootFS:    convertReadOnlyFS(in.ReadonlyRootFS),
 		Volumes:           convertVolumes(in.Volumes),
 		MountPoints:       convertMountPoints(in.Volumes),
 		EFSPerms:          convertEFSPermissions(in.Volumes),
@@ -543,6 +544,13 @@ func convertEphemeral(in *int) *int {
 	// we shouldn't let CF error out. Instead, we'll just omit it from the config.
 	if aws.IntValue(in) == 20 {
 		return nil
+	}
+	return in
+}
+
+func convertReadOnlyFS(in *bool) *bool {
+	if in != nil {
+		in = aws.Bool(defaultReadOnly)
 	}
 	return in
 }

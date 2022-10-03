@@ -257,6 +257,11 @@ func TestStorage_IsEmpty(t *testing.T) {
 			in:     Storage{},
 			wanted: true,
 		},
+		"non empty storage with ReadOnlyFS": {
+			in: Storage{
+				ReadonlyRootFS: aws.Bool(true),
+			},
+		},
 		"non empty storage": {
 			in: Storage{
 				Volumes: map[string]*Volume{

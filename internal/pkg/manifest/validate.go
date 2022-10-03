@@ -1106,6 +1106,12 @@ func (s Storage) validate() error {
 			return fmt.Errorf(`validate "ephemeral": ephemeral storage must be between 20 GiB and 200 GiB`)
 		}
 	}
+	if s.ReadonlyRootFS != nil {
+		readOnlyRootFs := aws.BoolValue(s.ReadonlyRootFS)
+		if !readOnlyRootFs {
+			return fmt.Errorf(`validate "readOnlyRootFs": readonlyRootFS must be true`)
+		}
+	}
 	var hasManagedVolume bool
 	for k, v := range s.Volumes {
 		if err := v.validate(); err != nil {
