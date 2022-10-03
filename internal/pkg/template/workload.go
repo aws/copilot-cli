@@ -235,6 +235,10 @@ type HTTPHealthCheckOpts struct {
 	DeregistrationDelay *int64
 }
 
+func (h HTTPHealthCheckOpts) IsHTTPS() bool {
+	return h.Port == "443"
+}
+
 // A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
 type Secret interface {
 	RequiresSub() bool

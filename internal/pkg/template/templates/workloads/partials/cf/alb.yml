@@ -23,8 +23,12 @@ TargetGroup:
     {{- if .HTTPHealthCheck.Timeout}}
     HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
     {{- end}}
-    {{- if .HTTPTargetContainer.IsHTTPS }}
+    {{/* if health check port is configured to 443, or if health check port not specified and target container is https */}}
+    {{- if or (and .HTTPHealthCheck.Port .HTTPHealthCheck.IsHTTPS) (and (not .HTTPHealthCheck.Port) .HTTPTargetContainer.IsHTTPS)}}
     HealthCheckProtocol: HTTPS
+    {{/* for backwards compat, only specify health check protocol as http if target container is https but specified health check port is not */}}
+    {{- else if and .HTTPHealthCheck.Port (not .HTTPHealthCheck.IsHTTPS) .HTTPTargetContainer.IsHTTPS}}
+    HealthCheckProtocol: HTTP
     {{- end}}
     Port: !Ref TargetPort
     {{- if .HTTPTargetContainer.IsHTTPS }}
