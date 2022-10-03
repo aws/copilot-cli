@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -190,6 +191,7 @@ type WorkerServiceProps struct {
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
 	Topics      []TopicSubscription  // Optional topics for subscriptions
+	Queue       SQSQueue             // Optional queue configuration.
 }
 
 // NewWorkerService applies the props to a default Worker service configuration with
@@ -205,6 +207,14 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	if isWindowsPlatform(props.Platform) {
 		svc.WorkerServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
 		svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
+	}
+	if len(props.Topics) > 0 {
+		for idx, topic := range props.Topics {
+			if strings.Contains(aws.StringValue(topic.Name), ".fifo") {
+				props.Topics[idx].Name = aws.String(strings.TrimSuffix(aws.StringValue(topic.Name), ".fifo"))
+				svc.WorkerServiceConfig.Subscribe.Queue.FIFO.Enable = aws.Bool(true)
+			}
+		}
 	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform

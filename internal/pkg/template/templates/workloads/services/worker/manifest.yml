@@ -42,6 +42,10 @@ subscribe:
     - name: {{$topic.Name}}
       service: {{$topic.Service}}
 {{- end}}
+  {{- if and .Subscribe.Queue .Subscribe.Queue.FIFO .Subscribe.Queue.FIFO.Enable }}
+  queue:
+    fifo: true
+  {{- end }}
 {{- else}}
 # You can register to topics from other services.
 # The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
