@@ -49,11 +49,8 @@ func (e EnvironmentConfig) validate() error {
 	if e.CDNEnabled() {
 		cdnCert := e.CDNConfig.Config.Certificate
 		if e.HTTPConfig.Public.Certificates == nil {
-			if cdnCert != nil {
-				return &errFieldMustBeSpecified{
-					missingField:      "http.public.certificates",
-					conditionalFields: []string{"cdn.certificate"},
-				}
+			if cdnCert != nil && !aws.BoolValue(e.CDNConfig.Config.TerminateTLS) {
+				return errors.New("cdn.terminate_tls must be true if cdn.certificate is set without http.public.certificates")
 			}
 		} else {
 			if cdnCert == nil {
