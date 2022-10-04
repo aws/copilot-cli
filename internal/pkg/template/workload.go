@@ -591,7 +591,7 @@ type WorkloadOpts struct {
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
 
-	FeatureFlag bool
+	SCFeatureFlag bool
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template

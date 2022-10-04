@@ -38,8 +38,8 @@ type LoadBalancedWebService struct {
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
 
-	parser      loadBalancedWebSvcReadParser
-	FeatureFlag bool
+	parser        loadBalancedWebSvcReadParser
+	SCFeatureFlag bool
 }
 
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
@@ -248,7 +248,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		},
 		HostedZoneAliases:   aliasesFor,
 		PermissionsBoundary: s.permBound,
-		FeatureFlag:         s.FeatureFlag,
+		SCFeatureFlag:       s.SCFeatureFlag,
 	})
 	if err != nil {
 		return "", err
