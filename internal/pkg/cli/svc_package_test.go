@@ -232,7 +232,6 @@ count: 1`
 				m.generator.EXPECT().AddonsTemplate().Return("", nil)
 				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
-						ImageDigest: aws.String(""),
 						RootUserARN: mockARN,
 					},
 				}).Return(&deploy.GenerateCloudFormationTemplateOutput{
