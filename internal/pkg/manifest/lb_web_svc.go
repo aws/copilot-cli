@@ -171,10 +171,7 @@ func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
 
 // ServiceConnectEnabled returns if ServiceConnect is enabled or not.
 func (s *LoadBalancedWebService) ServiceConnectEnabled() bool {
-	if s.Network.Connect.EnableServiceConnect != nil && !*s.Network.Connect.EnableServiceConnect {
-		return false
-	}
-	return true
+	return s.Network.Connect.EnableServiceConnect == nil || *s.Network.Connect.EnableServiceConnect
 }
 
 // Publish returns the list of topics where notifications can be published.
