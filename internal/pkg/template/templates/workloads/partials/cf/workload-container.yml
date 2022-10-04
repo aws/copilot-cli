@@ -29,7 +29,7 @@
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
   PortMappings:
     - ContainerPort: !Ref ContainerPort
-    {{- if .ServiceConnect }} # remove when release
+    {{- if and .ServiceConnect .FeatureFlag}} # remove when release
     {{- if eq .HTTPTargetContainer.Name .WorkloadName}}
       Name: target
     {{- end}}
@@ -43,10 +43,12 @@
 {{- end}}
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
 {{- if eq .WorkloadType "Backend Service"}}
-{{- if and .ServiceConnect (eq .HTTPTargetContainer.Name .WorkloadName)}} # remove when release
+{{- if eq .HTTPTargetContainer.Name .WorkloadName}} 
+{{- if and .ServiceConnect .FeatureFlag}} # remove when release
   PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort, Name: target}], !Ref "AWS::NoValue"]
 {{- else}}
   PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .HealthCheck}}

@@ -33,7 +33,7 @@ CapacityProviderStrategy:
     {{- end}}
   {{- end}}
 {{- end }}
-{{- if .ServiceConnect }}
+{{- if and .ServiceConnect .FeatureFlag }}
 ServiceConnectConfiguration:
   Enabled: True
   Namespace: {{.ServiceDiscoveryEndpoint}}

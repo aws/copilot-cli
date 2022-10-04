@@ -33,7 +33,8 @@ type BackendService struct {
 	httpsEnabled bool
 	albEnabled   bool
 
-	parser backendSvcReadParser
+	parser      backendSvcReadParser
+	FeatureFlag bool
 }
 
 // BackendServiceConfig contains data required to initialize a backend service stack.
@@ -195,6 +196,7 @@ func (s *BackendService) Template() (string, error) {
 		},
 		HostedZoneAliases:   hostedZoneAliases,
 		PermissionsBoundary: s.permBound,
+		FeatureFlag:         s.FeatureFlag,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
