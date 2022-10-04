@@ -33,6 +33,28 @@ CapacityProviderStrategy:
     {{- end}}
   {{- end}}
 {{- end }}
+{{- if .ServiceConnect }}
+ServiceConnectConfiguration:
+  Enabled: True
+  Namespace: {{.ServiceConnect.Namespace}}
+  LogConfiguration:
+    LogDriver: awslogs
+    Options:
+      awslogs-region: !Ref AWS::Region
+      awslogs-group: !Ref LogGroup
+      awslogs-stream-prefix: copilot
+  Services:
+    - PortName: TargetPort
+      # Avoid using the same service with Service Discovery in a namespace.
+      DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]] 
+      ClientAliases:
+        - Port: !Ref TargetPort
+          {{- if .ServiceConnect.Alias }}
+          DnsName: {{.ServiceConnect.Alias}}
+          {{- else}}
+          DnsName: !Ref WorkloadName
+          {{- end}}
+{{- end}}
 NetworkConfiguration:
   AwsvpcConfiguration:
     AssignPublicIp: {{.Network.AssignPublicIP}}
