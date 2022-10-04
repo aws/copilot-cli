@@ -210,7 +210,8 @@ type LogConfigOpts struct {
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
 type HTTPTargetContainer struct {
-	Port string // Port of the container.
+	Container string
+	Port      string // Port of the container.
 }
 
 // IsHTTPS returns true if the target container's port is 443.
@@ -320,6 +321,12 @@ type NetworkLoadBalancer struct {
 	PublicSubnetCIDRs []string
 	Listener          NetworkLoadBalancerListener
 	MainContainerPort string
+}
+
+// ServiceConnect holds configuration for ECS Service Connect.
+type ServiceConnect struct {
+	Namespace string
+	Alias     *string
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
@@ -562,6 +569,7 @@ type WorkloadOpts struct {
 	AllowedSourceIps        []string
 	NLB                     *NetworkLoadBalancer
 	DeploymentConfiguration DeploymentConfigurationOpts
+	ServiceConnect          *ServiceConnect
 
 	// Custom Resources backed by Lambda functions.
 	CustomResources map[string]S3ObjectLocation

@@ -48,6 +48,13 @@
 {{- if $sidecar.Port}}
   PortMappings:
     - ContainerPort: {{$sidecar.Port}}
+    {{- if $.ServiceConnect }} # remove when release
+    {{- if eq $.HTTPTargetContainer.Container $sidecar.Name}}
+    {{- if eq $.HTTPTargetContainer.Port $sidecar.Port}}
+      Name: TargetPort
+    {{- end}}
+    {{- end}}
+    {{- end}}
     {{- if $sidecar.Protocol}}
       Protocol: {{$sidecar.Protocol}}
     {{- end}}
