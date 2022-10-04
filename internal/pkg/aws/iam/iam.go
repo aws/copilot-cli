@@ -99,8 +99,8 @@ func (c *IAM) CreateECSServiceLinkedRole() error {
 	return nil
 }
 
-// ListPermBoundPolicyNames returns a list of permissions boundary policy names.
-func (c *IAM) ListPermBoundPolicyNames() ([]string, error) {
+// ListPolicyNames returns a list of local policy names.
+func (c *IAM) ListPolicyNames() ([]string, error) {
 	var policies []*iam.Policy
 	var marker *string
 	for {

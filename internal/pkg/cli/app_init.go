@@ -243,7 +243,7 @@ func (o *initAppOpts) validateAppName(name string) error {
 }
 
 func (o *initAppOpts) validatePermBound(policyName string) error {
-	IAMPolicies, err := o.iam.ListPermBoundPolicyNames()
+	IAMPolicies, err := o.iam.ListPolicyNames()
 	if err != nil {
 		return fmt.Errorf("list permissions boundary policies: %w", err)
 	}
@@ -252,7 +252,7 @@ func (o *initAppOpts) validatePermBound(policyName string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("IAM policy '%s' not found in this account", policyName)
+	return fmt.Errorf("IAM policy %q not found in this account", policyName)
 }
 
 func (o *initAppOpts) isDomainOwned() error {

@@ -95,17 +95,17 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"wrap error from ListPolicies": {
 			inPBPolicyName: "nonexistentPolicyName",
 			mock: func(m *initAppMocks) {
-				m.mockPolicyLister.EXPECT().ListPermBoundPolicyNames().Return(nil, errors.New("some error"))
+				m.mockPolicyLister.EXPECT().ListPolicyNames().Return(nil, errors.New("some error"))
 			},
 			wantedError: errors.New("list permissions boundary policies: some error"),
 		},
 		"invalid permissions boundary policy name": {
 			inPBPolicyName: "nonexistentPolicyName",
 			mock: func(m *initAppMocks) {
-				m.mockPolicyLister.EXPECT().ListPermBoundPolicyNames().Return(
+				m.mockPolicyLister.EXPECT().ListPolicyNames().Return(
 					[]string{"existentPolicyName"}, nil)
 			},
-			wantedError: errors.New("IAM policy 'nonexistentPolicyName' not found in this account"),
+			wantedError: errors.New("IAM policy \"nonexistentPolicyName\" not found in this account"),
 		},
 		"invalid domain name that doesn't have a hosted zone": {
 			inDomainName: "badMockDomain.com",

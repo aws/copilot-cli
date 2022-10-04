@@ -291,7 +291,7 @@ func TestIAM_ListPolicies(t *testing.T) {
 			}
 
 			// WHEN
-			output, err := iam.ListPermBoundPolicyNames()
+			output, err := iam.ListPolicyNames()
 
 			// THEN
 			if tc.wantedErr != nil {
