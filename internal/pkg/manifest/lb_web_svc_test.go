@@ -1352,7 +1352,7 @@ func TestLoadBalancedWebService_ServiceConnectEnabled(t *testing.T) {
 			mft: &LoadBalancedWebService{
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					Network: NetworkConfig{
-						Connect: ServiceConnect{
+						Connect: ServiceConnectBoolOrArgs{
 							EnableServiceConnect: aws.Bool(false),
 						},
 					},

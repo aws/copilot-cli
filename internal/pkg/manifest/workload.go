@@ -459,8 +459,8 @@ func (t *FIFOTopicAdvanceConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
-	VPC     vpcConfig      `yaml:"vpc"`
-	Connect ServiceConnect `yaml:"connect"`
+	VPC     vpcConfig                `yaml:"vpc"`
+	Connect ServiceConnectBoolOrArgs `yaml:"connect"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
@@ -475,8 +475,8 @@ func (c *NetworkConfig) requiredEnvFeatures() []string {
 	return nil
 }
 
-// ServiceConnect represents ECS Service Connect configuration.
-type ServiceConnect struct {
+// ServiceConnectBoolOrArgs represents ECS Service Connect configuration.
+type ServiceConnectBoolOrArgs struct {
 	EnableServiceConnect *bool
 	ServiceConnectArgs
 }
@@ -484,7 +484,7 @@ type ServiceConnect struct {
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the ServiceConnect
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.
-func (s *ServiceConnect) UnmarshalYAML(value *yaml.Node) error {
+func (s *ServiceConnectBoolOrArgs) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&s.ServiceConnectArgs); err != nil {
 		var yamlTypeErr *yaml.TypeError
 		if !errors.As(err, &yamlTypeErr) {

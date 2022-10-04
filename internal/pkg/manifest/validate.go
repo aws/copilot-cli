@@ -1266,8 +1266,8 @@ func (n NetworkConfig) validate() error {
 	return nil
 }
 
-// validate returns nil if ServiceConnect is configured correctly.
-func (s ServiceConnect) validate() error {
+// validate returns nil if ServiceConnectBoolOrArgs is configured correctly.
+func (s ServiceConnectBoolOrArgs) validate() error {
 	return s.ServiceConnectArgs.validate()
 }
 

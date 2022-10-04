@@ -496,7 +496,7 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 	return &template.ExecuteCommandOpts{}
 }
 
-func convertServiceConnect(s manifest.ServiceConnect) *template.ServiceConnect {
+func convertServiceConnect(s manifest.ServiceConnectBoolOrArgs) *template.ServiceConnect {
 	return &template.ServiceConnect{
 		Alias: s.ServiceConnectArgs.Alias,
 	}

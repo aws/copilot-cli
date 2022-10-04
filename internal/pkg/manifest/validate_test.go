@@ -600,7 +600,7 @@ func TestBackendService_validate(t *testing.T) {
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
-						Connect: ServiceConnect{
+						Connect: ServiceConnectBoolOrArgs{
 							EnableServiceConnect: aws.Bool(true),
 						},
 					},

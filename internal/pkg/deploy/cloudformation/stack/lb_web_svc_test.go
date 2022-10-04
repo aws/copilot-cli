@@ -207,7 +207,7 @@ Outputs:
 			String:      nil,
 			StringSlice: []string{"world"},
 		}
-		mft.Network.Connect = manifest.ServiceConnect{
+		mft.Network.Connect = manifest.ServiceConnectBoolOrArgs{
 			ServiceConnectArgs: manifest.ServiceConnectArgs{
 				Alias: aws.String("frontend"),
 			},

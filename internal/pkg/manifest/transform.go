@@ -243,12 +243,12 @@ type serviceConnectTransformer struct{}
 
 // Transformer returns custom merge logic for serviceConnectTransformer's fields.
 func (t serviceConnectTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(ServiceConnect{}) {
+	if typ != reflect.TypeOf(ServiceConnectBoolOrArgs{}) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(ServiceConnect), src.Interface().(ServiceConnect)
+		dstStruct, srcStruct := dst.Interface().(ServiceConnectBoolOrArgs), src.Interface().(ServiceConnectBoolOrArgs)
 
 		if srcStruct.EnableServiceConnect != nil {
 			dstStruct.ServiceConnectArgs = ServiceConnectArgs{}

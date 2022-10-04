@@ -329,7 +329,7 @@ func TestBackendService_ServiceConnectEnabled(t *testing.T) {
 			mft: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					Network: NetworkConfig{
-						Connect: ServiceConnect{},
+						Connect: ServiceConnectBoolOrArgs{},
 					},
 				},
 			},
@@ -339,7 +339,7 @@ func TestBackendService_ServiceConnectEnabled(t *testing.T) {
 			mft: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					Network: NetworkConfig{
-						Connect: ServiceConnect{
+						Connect: ServiceConnectBoolOrArgs{
 							EnableServiceConnect: aws.Bool(true),
 						},
 					},
@@ -351,7 +351,7 @@ func TestBackendService_ServiceConnectEnabled(t *testing.T) {
 			mft: &BackendService{
 				BackendServiceConfig: BackendServiceConfig{
 					Network: NetworkConfig{
-						Connect: ServiceConnect{
+						Connect: ServiceConnectBoolOrArgs{
 							ServiceConnectArgs: ServiceConnectArgs{
 								Alias: aws.String("api"),
 							},

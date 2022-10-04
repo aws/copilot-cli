@@ -594,35 +594,35 @@ func TestSubnetListOrArgsTransformer_Transformer(t *testing.T) {
 
 func TestServiceConnectTransformer_Transformer(t *testing.T) {
 	testCases := map[string]struct {
-		original func(p *ServiceConnect)
-		override func(p *ServiceConnect)
-		wanted   func(p *ServiceConnect)
+		original func(p *ServiceConnectBoolOrArgs)
+		override func(p *ServiceConnectBoolOrArgs)
+		wanted   func(p *ServiceConnectBoolOrArgs)
 	}{
 		"bool set to empty if args is not nil": {
-			original: func(s *ServiceConnect) {
+			original: func(s *ServiceConnectBoolOrArgs) {
 				s.EnableServiceConnect = aws.Bool(false)
 			},
-			override: func(s *ServiceConnect) {
+			override: func(s *ServiceConnectBoolOrArgs) {
 				s.ServiceConnectArgs = ServiceConnectArgs{
 					Alias: aws.String("api"),
 				}
 			},
-			wanted: func(s *ServiceConnect) {
+			wanted: func(s *ServiceConnectBoolOrArgs) {
 				s.ServiceConnectArgs = ServiceConnectArgs{
 					Alias: aws.String("api"),
 				}
 			},
 		},
 		"args set to empty if bool is not nil": {
-			original: func(s *ServiceConnect) {
+			original: func(s *ServiceConnectBoolOrArgs) {
 				s.ServiceConnectArgs = ServiceConnectArgs{
 					Alias: aws.String("api"),
 				}
 			},
-			override: func(s *ServiceConnect) {
+			override: func(s *ServiceConnectBoolOrArgs) {
 				s.EnableServiceConnect = aws.Bool(true)
 			},
-			wanted: func(s *ServiceConnect) {
+			wanted: func(s *ServiceConnectBoolOrArgs) {
 				s.EnableServiceConnect = aws.Bool(true)
 			},
 		},
@@ -630,7 +630,7 @@ func TestServiceConnectTransformer_Transformer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var dst, override, wanted ServiceConnect
+			var dst, override, wanted ServiceConnectBoolOrArgs
 
 			tc.original(&dst)
 			tc.override(&override)

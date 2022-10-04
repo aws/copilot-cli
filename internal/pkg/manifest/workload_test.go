@@ -358,7 +358,7 @@ func TestServiceConnect_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
 
-		wantedStruct ServiceConnect
+		wantedStruct ServiceConnectBoolOrArgs
 		wantedError  error
 	}{
 		"returns error if both bool and args specified": {
@@ -376,7 +376,7 @@ func TestServiceConnect_UnmarshalYAML(t *testing.T) {
 		"success": {
 			inContent: []byte(`connect:
   alias: api`),
-			wantedStruct: ServiceConnect{
+			wantedStruct: ServiceConnectBoolOrArgs{
 				ServiceConnectArgs: ServiceConnectArgs{
 					Alias: aws.String("api"),
 				},

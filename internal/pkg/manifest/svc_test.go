@@ -163,7 +163,7 @@ environments:
 									PlacementString: placementStringP(PublicSubnetPlacement),
 								},
 							},
-							Connect: ServiceConnect{
+							Connect: ServiceConnectBoolOrArgs{
 								EnableServiceConnect: aws.Bool(true),
 							},
 						},
