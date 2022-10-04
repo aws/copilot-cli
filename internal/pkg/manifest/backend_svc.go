@@ -99,6 +99,7 @@ func (s *BackendService) Port() (port uint16, ok bool) {
 }
 
 // ServiceConnectEnabled returns if ServiceConnect is enabled or not.
+// Unless explicitly disabled in the manifest or if no server is configured we default to true.
 func (s *BackendService) ServiceConnectEnabled() bool {
 	if s.Network.Connect.EnableServiceConnect != nil {
 		return *s.Network.Connect.EnableServiceConnect

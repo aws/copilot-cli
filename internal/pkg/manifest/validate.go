@@ -1639,7 +1639,7 @@ func validateTargetContainer(opts validateTargetContainerOpts) error {
 	targetContainer := aws.StringValue(opts.targetContainer)
 	if targetContainer == opts.mainContainerName {
 		if opts.mainContainerPort == nil {
-			return fmt.Errorf("target container %q doesn't expose any port", targetContainer)
+			return fmt.Errorf("target container %q doesn't expose a port", targetContainer)
 		}
 		return nil
 	}
@@ -1648,7 +1648,7 @@ func validateTargetContainer(opts validateTargetContainerOpts) error {
 		return fmt.Errorf("target container %q doesn't exist", targetContainer)
 	}
 	if sidecar.Port == nil {
-		return fmt.Errorf("target container %q doesn't expose any port", targetContainer)
+		return fmt.Errorf("target container %q doesn't expose a port", targetContainer)
 	}
 	return nil
 }

@@ -593,7 +593,7 @@ func TestBackendService_validate(t *testing.T) {
 					Name: aws.String("api"),
 				},
 			},
-			wantedError: fmt.Errorf(`validate HTTP load balancer target: target container "api" doesn't expose any port`),
+			wantedError: fmt.Errorf(`validate HTTP load balancer target: target container "api" doesn't expose a port`),
 		},
 		"error if service connect is enabled without any port exposed": {
 			config: BackendService{
@@ -3066,7 +3066,7 @@ func TestValidateLoadBalancerTarget(t *testing.T) {
 			},
 			wanted: fmt.Errorf(`target container "foo" doesn't exist`),
 		},
-		"should return an error if target container doesn't expose any port": {
+		"should return an error if target container doesn't expose a port": {
 			in: validateTargetContainerOpts{
 				mainContainerName: "mockMainContainer",
 				targetContainer:   aws.String("foo"),
@@ -3074,7 +3074,7 @@ func TestValidateLoadBalancerTarget(t *testing.T) {
 					"foo": {},
 				},
 			},
-			wanted: fmt.Errorf(`target container "foo" doesn't expose any port`),
+			wanted: fmt.Errorf(`target container "foo" doesn't expose a port`),
 		},
 		"success with no target container set": {
 			in: validateTargetContainerOpts{

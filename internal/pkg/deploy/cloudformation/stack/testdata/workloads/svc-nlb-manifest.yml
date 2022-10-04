@@ -28,6 +28,8 @@ environments:
     nlb:
       healthcheck:
         port: 80
+    network:
+      connect: true
   dev:
     http:
       path: '/'
