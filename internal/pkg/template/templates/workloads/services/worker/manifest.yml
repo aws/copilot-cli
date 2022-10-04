@@ -44,7 +44,7 @@ subscribe:
 {{- end}}
   {{- if and .Subscribe.Queue .Subscribe.Queue.FIFO .Subscribe.Queue.FIFO.Enable }}
   queue:
-    fifo: true
+    fifo: {{ .Subscribe.Queue.FIFO.Enable }}
   {{- end }}
 {{- else}}
 # You can register to topics from other services.

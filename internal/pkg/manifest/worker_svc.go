@@ -209,17 +209,25 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 		svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	if len(props.Topics) > 0 {
-		for idx, topic := range props.Topics {
-			if strings.Contains(aws.StringValue(topic.Name), ".fifo") {
-				props.Topics[idx].Name = aws.String(strings.TrimSuffix(aws.StringValue(topic.Name), ".fifo"))
-				svc.WorkerServiceConfig.Subscribe.Queue.FIFO.Enable = aws.Bool(true)
-			}
+		if aws.BoolValue(fifoEnabled(props.Topics)) {
+			svc.WorkerServiceConfig.Subscribe.Queue.FIFO.Enable = aws.Bool(true)
 		}
 	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
+}
+
+func fifoEnabled(topics []TopicSubscription) *bool {
+	var isFIFOEnabled bool
+	for idx, topic := range topics {
+		if strings.HasSuffix(aws.StringValue(topic.Name), ".fifo") {
+			topics[idx].Name = aws.String(strings.TrimSuffix(aws.StringValue(topic.Name), ".fifo"))
+			isFIFOEnabled = true
+		}
+	}
+	return &isFIFOEnabled
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
