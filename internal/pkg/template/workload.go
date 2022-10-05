@@ -599,6 +599,24 @@ type WorkloadOpts struct {
 	Subscribe *SubscribeOpts
 }
 
+// HealthCheckProtocol returns the protocol for the Load Balancer health check,
+// or an empty string if it shouldn't be configured, defaulting to the
+// target protocol. (which is what happens, even if it isn't documented as such :))
+// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html#cfn-elasticloadbalancingv2-targetgroup-healthcheckprotocol
+func (w WorkloadOpts) HealthCheckProtocol() string {
+	switch {
+	case w.HTTPHealthCheck.Port == "443":
+		return "HTTPS"
+	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port == "":
+		return "HTTPS"
+	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port != "443":
+		// for backwards compatability, only set HTTP if target
+		// container is https but the specified health check port is not
+		return "HTTP"
+	}
+	return ""
+}
+
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template
 // with the specified data object and returns its content.
 func (t *Template) ParseLoadBalancedWebService(data WorkloadOpts) (*Content, error) {
