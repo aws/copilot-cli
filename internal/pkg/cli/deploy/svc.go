@@ -1362,11 +1362,12 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	hasALBCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
 	hasCDNCerts := d.envConfig.CDNConfig.Config.Certificate != nil
-	if d.lbMft.RoutingRule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasALBCerts && !hasCDNCerts {
+	hasImportedCerts := hasALBCerts || hasCDNCerts
+	if d.lbMft.RoutingRule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
 		return fmt.Errorf("cannot configure http to https redirect without having a domain associated with the app %q or importing any certificates in env %q", d.app.Name, d.env.Name)
 	}
 	if d.lbMft.RoutingRule.Alias.IsEmpty() {
-		if hasALBCerts || hasCDNCerts {
+		if hasImportedCerts {
 			return &errSvcWithNoALBAliasDeployingToEnvWithImportedCerts{
 				name:    d.name,
 				envName: d.env.Name,
@@ -1376,7 +1377,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 	}
 	importedHostedZones := d.lbMft.RoutingRule.Alias.HostedZones()
 	if len(importedHostedZones) != 0 {
-		if !hasALBCerts && !hasCDNCerts {
+		if !hasImportedCerts {
 			return fmt.Errorf("cannot specify alias hosted zones %v when no certificates are imported in environment %q", importedHostedZones, d.env.Name)
 		}
 		if d.envConfig.CDNEnabled() {
@@ -1385,7 +1386,7 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			}
 		}
 	}
-	if hasALBCerts || hasCDNCerts {
+	if hasImportedCerts {
 		aliases, err := d.lbMft.RoutingRule.Alias.ToStringSlice()
 		if err != nil {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
