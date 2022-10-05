@@ -23,10 +23,10 @@ TargetGroup:
     {{- if .HTTPHealthCheck.Timeout}}
     HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
     {{- end}}
-    {{- if .HTTPTargetContainer.IsHTTPS }}
-    HealthCheckProtocol: HTTPS
+    {{- if .HealthCheckProtocol}}
+    HealthCheckProtocol: {{.HealthCheckProtocol}}
     {{- end}}
-    Port: !Ref ContainerPort
+    Port: !Ref TargetPort
     {{- if .HTTPTargetContainer.IsHTTPS }}
     Protocol: HTTPS
     {{- else }}

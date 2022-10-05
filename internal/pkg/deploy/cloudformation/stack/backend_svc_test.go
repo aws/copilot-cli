@@ -538,6 +538,14 @@ func TestBackendService_Parameters(t *testing.T) {
 			ParameterValue: aws.String("8080"),
 		},
 		{
+			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
+			ParameterValue: aws.String("frontend"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
+			ParameterValue: aws.String("8080"),
+		},
+		{
 			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
 			ParameterValue: aws.String("256"),
 		},
