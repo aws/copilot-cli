@@ -235,6 +235,8 @@ type HTTPHealthCheckOpts struct {
 	DeregistrationDelay *int64
 }
 
+// IsHTTPS returns true if the Health Check Port is configured
+// as a HTTPS port.
 func (h HTTPHealthCheckOpts) IsHTTPS() bool {
 	return h.Port == "443"
 }
