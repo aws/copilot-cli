@@ -994,7 +994,7 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	if err != nil {
 		return nil, fmt.Errorf("get version of environment %q: %w", d.env.Name, err)
 	}
-	if in.ImageDigest == nil {
+	if len(aws.StringValue(in.ImageDigest)) == 0 {
 		return &stack.RuntimeConfig{
 			AddonsTemplateURL:        in.AddonsURL,
 			EnvFileARN:               in.EnvFileARN,

@@ -4,7 +4,7 @@ Sound fun? Let’s do it!
 
 ## Step 1: Download & Configure AWS Copilot
 
-You’ll need a few things to use AWS Copilot - the AWS Copilot binary, AWS CLI, Docker Desktop and AWS credentials.
+You’ll need a few things to use AWS Copilot - the AWS Copilot binary, AWS CLI, Docker Desktop (needs to be running) and AWS credentials.
 
 Follow our instructions here on how to set up and configure all these tools.
 
