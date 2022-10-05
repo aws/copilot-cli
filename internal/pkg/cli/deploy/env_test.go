@@ -561,7 +561,7 @@ These services will not be reachable through the CDN.
 To fix this, set the following field in each manifest:
 %s
 http:
-  redirect_to_https: true
+  redirect_to_https: false
 %s
 and run %scopilot svc deploy%s.
 If you'd like to use these services without a CDN, ensure each service's A record is pointed to the ALB.
