@@ -46,7 +46,10 @@ type errEnvHasPublicServicesWithRedirect struct {
 }
 
 func (e *errEnvHasPublicServicesWithRedirect) Error() string {
-	return fmt.Sprintf("%v services redirect HTTP to HTTPS", len(e.services))
+	return fmt.Sprintf("%v %s HTTP to HTTPS",
+		len(e.services),
+		english.PluralWord(len(e.services), "service redirects", "services redirect"),
+	)
 }
 
 // RecommendActions returns recommended actions to be taken after the error.
