@@ -44,6 +44,7 @@ UniqueAliasesAction:
   Properties:
     ServiceToken: !GetAtt UniqueJSONValuesFunction.Arn
     Aliases: !Ref Aliases
+    FilterFor: !Ref ALBWorkloads
 {{- end}}{{/* endif or .CDNConfig.ImportedCertificate .DelegateDNS */}}
 
 CloudFrontDistribution:

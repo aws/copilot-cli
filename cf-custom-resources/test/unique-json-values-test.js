@@ -75,8 +75,8 @@ describe("Unique Aliases", () => {
       });
   });
 
-  const aliasTest = (name, input, expectedOutput) => {
-    const tt = (name, reqType, input, expectedOutput) => {
+  const aliasTest = (name, props, expectedOutput) => {
+    const tt = (name, reqType, props, expectedOutput) => {
       test(name, () => {
         const request = nock(responseURL)
           .put("/", (body) => {
@@ -95,9 +95,7 @@ describe("Unique Aliases", () => {
             ResponseURL: responseURL,
             RequestType: reqType,
             RequestId: testRequestId,
-            ResourceProperties: {
-              Aliases: JSON.stringify(input), // aliases get passed as a string
-            },
+            ResourceProperties: props,
             LogicalResourceId: "mockID",
           })
           .expectResolve(() => {
@@ -106,28 +104,80 @@ describe("Unique Aliases", () => {
       });
     };
 
-    tt(`Create/${name}`, "Create", input, expectedOutput);
-    tt(`Update/${name}`, "Update", input, expectedOutput);
+    tt(`Create/${name}`, "Create", props, expectedOutput);
+    tt(`Update/${name}`, "Update", props, expectedOutput);
   };
 
-  aliasTest("no aliases", {}, []);
+  aliasTest("no aliases", {
+    Aliases: "",
+    FilterFor: ""
+  }, []);
 
   aliasTest("one service", {
-    "svc1": ["svc1.com", "example.com"],
+    Aliases: JSON.stringify({
+      "svc1": ["svc1.com", "example.com"]
+    }),
+    FilterFor: "svc1",
   }, ["example.com", "svc1.com"]);
 
+  aliasTest("one service excluded", {
+    Aliases: JSON.stringify({
+      "svc1": ["svc1.com", "example.com"]
+    }),
+    FilterFor: "svc2",
+  }, []);
+
+  aliasTest("one service empty filter for", {
+    Aliases: JSON.stringify({
+      "svc1": ["svc1.com", "example.com"]
+    }),
+    FilterFor: "",
+  }, []);
+
   aliasTest("two services no common aliases", {
-    "svc1": ["svc1.com"],
-    "svc2": ["svc2.com"]
+    Aliases: JSON.stringify({
+      "svc1": ["svc1.com"],
+      "svc2": ["svc2.com"]
+    }),
+    FilterFor: "svc1,svc2",
   }, ["svc1.com", "svc2.com"]);
 
   aliasTest("two services, one with multiple common aliases", {
-    "svc1": ["svc1.com"],
-    "svc2": ["svc2.com", "example.com"]
+    Aliases: JSON.stringify({
+      "svc1": ["svc1.com"],
+      "svc2": ["svc2.com", "example.com"]
+    }),
+    FilterFor: "svc1,svc2",
   }, ["example.com", "svc1.com", "svc2.com"]);
 
   aliasTest("two services with a common alias", {
-    "svc1": ["svc1.com", "example.com"],
-    "svc2": ["svc2.com", "example.com"]
+    Aliases: JSON.stringify({
+      "svc1": ["svc1.com", "example.com"],
+      "svc2": ["svc2.com", "example.com"]
+    }),
+    FilterFor: "svc1,svc2",
   }, ["example.com", "svc1.com", "svc2.com"]);
+
+  aliasTest("three services with a common alias one service filtered out", {
+    Aliases: JSON.stringify({
+      "svc1": ["svc1.com", "example.com"],
+      "svc2": ["svc2.com", "example.com", "example2.com"],
+      "svc3": ["svc3.com", "example.com", "example2.com"]
+    }),
+    FilterFor: "svc2,svc1",
+  }, ["example.com", "example2.com", "svc1.com", "svc2.com"]);
+
+  aliasTest("bunch of services with single alias, some filtered out, out of order", {
+    Aliases: JSON.stringify({
+      "lbws3": ["three.lbws.com"],
+      "backend1": ["one.backend.internal"],
+      "lbws1": ["one.lbws.com"],
+      "lbws4": ["four.lbws.com"],
+      "backend2": ["two.backend.internal"],
+      "lbws2": ["two.lbws.com"],
+      "lbws6": ["lbws.com"],
+      "lbws5": ["lbws.com"],
+    }),
+    FilterFor: "lbws2,lbws3,lbws4,lbws1,lbws5,lbws6",
+  }, ["four.lbws.com", "lbws.com", "one.lbws.com", "three.lbws.com", "two.lbws.com"]);
 });

@@ -222,9 +222,7 @@ func (d *envDeployer) validateALBWorkloadsDontRedirect() error {
 }
 
 // lbServiceRedirects returns true if svc's HTTP listener rule redirects. We only check
-// HTTPListenerRuleWithDomain because HTTPListenerRule:
-// a) doesn't ever redirect
-// b) won't work with cloudfront anyways (can't point ALB default DNS to CF)
+// HTTPListenerRuleWithDomain because HTTPListenerRule doesn't ever redirect.
 func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool, error) {
 	stackDescriber := d.newServiceStackDescriber(svc)
 	resources, err := stackDescriber.Resources()
