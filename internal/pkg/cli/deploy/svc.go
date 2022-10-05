@@ -1391,15 +1391,14 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
 
-		albCertValidator := d.newAliasCertValidator(nil)
-		cfCertValidator := d.newAliasCertValidator(aws.String(cloudfront.CertRegion))
-
 		if hasALBCerts {
+			albCertValidator := d.newAliasCertValidator(nil)
 			if err := albCertValidator.ValidateCertAliases(aliases, d.envConfig.HTTPConfig.Public.Certificates); err != nil {
 				return fmt.Errorf("validate aliases against the imported public ALB certificate for env %s: %w", d.env.Name, err)
 			}
 		}
 		if hasCDNCerts {
+			cfCertValidator := d.newAliasCertValidator(aws.String(cloudfront.CertRegion))
 			if err := cfCertValidator.ValidateCertAliases(aliases, []string{*d.envConfig.CDNConfig.Config.Certificate}); err != nil {
 				return fmt.Errorf("validate aliases against the imported CDN certificate for env %s: %w", d.env.Name, err)
 			}
