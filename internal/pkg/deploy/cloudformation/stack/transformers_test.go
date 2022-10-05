@@ -1349,33 +1349,6 @@ func Test_convertEphemeral(t *testing.T) {
 	}
 }
 
-func Test_convertReadOnlyFS(t *testing.T) {
-	testCases := map[string]struct {
-		inReadonly_rootfs *bool
-		wanted            *bool
-		wantedError       error
-	}{
-		"without readonlyfs enabled": {
-			inReadonly_rootfs: nil,
-			wanted:            nil,
-		},
-		"readonlyfs specified true": {
-			inReadonly_rootfs: aws.Bool(true),
-			wanted:            aws.Bool(true),
-		},
-		"readonlyrootfs specified false": {
-			inReadonly_rootfs: aws.Bool(false),
-			wanted:            aws.Bool(true),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got := convertReadOnlyFS(tc.inReadonly_rootfs)
-			require.Equal(t, got, tc.wanted)
-		})
-	}
-}
-
 func Test_convertPublish(t *testing.T) {
 	accountId := "123456789123"
 	partition := "aws"

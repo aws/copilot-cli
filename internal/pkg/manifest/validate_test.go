@@ -211,16 +211,17 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{Volumes: map[string]*Volume{
-							"foo": {
-								EFS: EFSConfigOrBool{
-									Enabled: aws.Bool(true),
-								},
-								MountPointOpts: MountPointOpts{
-									ContainerPath: aws.String("mockPath"),
+						Storage: Storage{ReadonlyRootFS: aws.Bool(false),
+							Volumes: map[string]*Volume{
+								"foo": {
+									EFS: EFSConfigOrBool{
+										Enabled: aws.Bool(true),
+									},
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("mockPath"),
+									},
 								},
 							},
-						},
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
@@ -477,16 +478,17 @@ func TestBackendService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{Volumes: map[string]*Volume{
-							"foo": {
-								EFS: EFSConfigOrBool{
-									Enabled: aws.Bool(true),
-								},
-								MountPointOpts: MountPointOpts{
-									ContainerPath: aws.String("mockPath"),
+						Storage: Storage{ReadonlyRootFS: aws.Bool(false),
+							Volumes: map[string]*Volume{
+								"foo": {
+									EFS: EFSConfigOrBool{
+										Enabled: aws.Bool(true),
+									},
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("mockPath"),
+									},
 								},
 							},
-						},
 						},
 					},
 				},
@@ -869,16 +871,17 @@ func TestWorkerService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{Volumes: map[string]*Volume{
-							"foo": {
-								EFS: EFSConfigOrBool{
-									Enabled: aws.Bool(true),
-								},
-								MountPointOpts: MountPointOpts{
-									ContainerPath: aws.String("mockPath"),
+						Storage: Storage{ReadonlyRootFS: aws.Bool(false),
+							Volumes: map[string]*Volume{
+								"foo": {
+									EFS: EFSConfigOrBool{
+										Enabled: aws.Bool(true),
+									},
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("mockPath"),
+									},
 								},
 							},
-						},
 						},
 					},
 				},
@@ -1084,16 +1087,17 @@ func TestScheduledJob_validate(t *testing.T) {
 					},
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{Volumes: map[string]*Volume{
-							"foo": {
-								EFS: EFSConfigOrBool{
-									Enabled: aws.Bool(true),
-								},
-								MountPointOpts: MountPointOpts{
-									ContainerPath: aws.String("mockPath"),
+						Storage: Storage{ReadonlyRootFS: aws.Bool(false),
+							Volumes: map[string]*Volume{
+								"foo": {
+									EFS: EFSConfigOrBool{
+										Enabled: aws.Bool(true),
+									},
+									MountPointOpts: MountPointOpts{
+										ContainerPath: aws.String("mockPath"),
+									},
 								},
 							},
-						},
 						},
 					},
 				},
@@ -2100,12 +2104,6 @@ func TestStorage_validate(t *testing.T) {
 				Ephemeral: aws.Int(19),
 			},
 			wantedError: fmt.Errorf(`validate "ephemeral": ephemeral storage must be between 20 GiB and 200 GiB`),
-		},
-		"error if readonlyfs is invalid": {
-			Storage: Storage{
-				ReadonlyRootFS: aws.Bool(false),
-			},
-			wantedError: fmt.Errorf(`validate "readOnlyRootFs": readonlyRootFS must be true`),
 		},
 		"error if fail to validate volumes": {
 			Storage: Storage{
@@ -3246,6 +3244,18 @@ func TestValidateWindows(t *testing.T) {
 		},
 		"should return nil efs not specified": {
 			in:          validateWindowsOpts{},
+			wantedError: nil,
+		},
+		"error if readonlyfs is true": {
+			in: validateWindowsOpts{
+				readOnlyFS: aws.Bool(true),
+			},
+			wantedError: errors.New(`'ReadOnlyFS' can not be set to true when deploying a Windows container`),
+		},
+		"should return nil readonlyfs is false or nil": {
+			in: validateWindowsOpts{
+				readOnlyFS: aws.Bool(false),
+			},
 			wantedError: nil,
 		},
 	}

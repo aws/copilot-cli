@@ -49,7 +49,9 @@
     Timeout: {{.HealthCheck.Timeout}}
 {{- end}}
 {{- if .Storage}}
+{{- if .Storage.ReadonlyRootFS}}
   ReadonlyRootFilesystem: {{.Storage.ReadonlyRootFS}}
+{{- end}}
 {{- end}}
 {{- if .CredentialsParameter}}
   RepositoryCredentials:
