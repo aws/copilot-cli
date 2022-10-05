@@ -180,4 +180,14 @@ describe("Unique Aliases", () => {
     }),
     FilterFor: "lbws2,lbws3,lbws4,lbws1,lbws5,lbws6",
   }, ["four.lbws.com", "lbws.com", "one.lbws.com", "three.lbws.com", "two.lbws.com"]);
+
+  aliasTest("bunch of services with single alias, some FilterFor services don't exist", {
+    Aliases: JSON.stringify({
+      "lbws1": ["lbws1.com"],
+      "lbws2": ["lbws2.com"],
+      "lbws3": ["lbws3.com"],
+      "lbws4": ["lbws4.com"],
+    }),
+    FilterFor: "lbws1,lbws5,lbws6,lbws3",
+  }, ["lbws1.com", "lbws3.com"]);
 });
