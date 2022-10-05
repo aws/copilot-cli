@@ -121,6 +121,14 @@ type EnvOpts struct {
 	DelegateDNS bool
 }
 
+// HasImportedCerts returns true if any https certificates have been
+// imported to the environment.
+func (e *EnvOpts) HasImportedCerts() bool {
+	return len(e.PublicHTTPConfig.ImportedCertARNs) > 0 ||
+		len(e.PrivateHTTPConfig.ImportedCertARNs) > 0 ||
+		(e.CDNConfig != nil && e.CDNConfig.ImportedCertificate != nil)
+}
+
 // HTTPConfig represents configuration for a Load Balancer.
 type HTTPConfig struct {
 	CIDRPrefixListIDs []string

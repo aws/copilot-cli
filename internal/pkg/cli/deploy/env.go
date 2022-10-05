@@ -160,7 +160,7 @@ func (d *envDeployer) validateCDN(mft *manifest.Environment) error {
 		}
 	}
 
-	if mft.CDNEnabled() && mft.CDNDoesTLSTermination() && (mft.HasImportedPublicALBCerts() || d.app.Domain != "") {
+	if mft.CDNEnabled() && mft.CDNDoesTLSTermination() {
 		err := d.validateALBWorkloadsDontRedirect()
 		var redirErr *errEnvHasPublicServicesWithRedirect
 		switch {
@@ -240,7 +240,8 @@ func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool,
 		}
 	}
 	if ruleARN == "" {
-		return false, fmt.Errorf("http listener not found on service %q", svc)
+		// this will happen if the service doesn't support https.
+		return false, nil
 	}
 
 	rule, err := d.lbDescriber.DescribeRule(ctx, ruleARN)
