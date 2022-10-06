@@ -410,8 +410,9 @@ func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
 
 func (e *EnvStackConfig) privateHTTPConfig() template.HTTPConfig {
 	return template.HTTPConfig{
-		ImportedCertARNs: e.importPrivateCertARNs(),
-		CustomALBSubnets: e.internalALBSubnets(),
+		ImportedCertARNs:            e.importPrivateCertARNs(),
+		CustomALBSubnets:            e.internalALBSubnets(),
+		EnableInternalALBVPCIngress: aws.Bool(e.in.AllowVPCIngress),
 	}
 }
 

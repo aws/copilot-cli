@@ -42,7 +42,7 @@ func (c *CustomizeEnv) IsEmpty() bool {
 	if c == nil {
 		return true
 	}
-	return c.ImportVPC == nil && c.VPCConfig == nil && len(c.ImportCertARNs) == 0 && len(c.InternalALBSubnets) == 0
+	return c.ImportVPC == nil && c.VPCConfig == nil && len(c.ImportCertARNs) == 0 && len(c.InternalALBSubnets) == 0 && !c.EnableInternalALBVPCIngress
 }
 
 // ImportVPC holds the fields to import VPC resources.

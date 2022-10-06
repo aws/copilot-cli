@@ -123,10 +123,11 @@ type EnvOpts struct {
 
 // HTTPConfig represents configuration for a Load Balancer.
 type HTTPConfig struct {
-	CIDRPrefixListIDs []string
-	ImportedCertARNs  []string
-	CustomALBSubnets  []string
-	ELBAccessLogs     *ELBAccessLogs
+	CIDRPrefixListIDs           []string
+	ImportedCertARNs            []string
+	CustomALBSubnets            []string
+	ELBAccessLogs               *ELBAccessLogs
+	EnableInternalALBVPCIngress *bool
 }
 
 // ELBAccessLogs represents configuration for ELB access logs S3 bucket.
