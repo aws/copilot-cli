@@ -202,7 +202,7 @@ func serializeTemplateConfig(parser template.Parser, stack templateConfigurer) (
 
 	str, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("marshal stack parameters to JSON: %v", err)
 	}
 
 	return string(str), nil
