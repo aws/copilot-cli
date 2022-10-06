@@ -1,24 +1,24 @@
 {
-  "Parameters" : { 
-    "AppName": "my-app",
-    "EnvName": "test",
-    "WorkloadName": "gRPC",
-    "ContainerImage": "",
+  "Parameters": {
     "AddonsTemplateURL": "",
-    "TaskCPU": "256",
-    "TaskMemory": "512",
-    "TaskCount": "2",
-    "LogRetention": "30",
+    "AppName": "my-app",
+    "ContainerImage": "",
     "ContainerPort": "50051",
     "DNSDelegated": "false",
+    "EnvFileARN": "",
+    "EnvName": "test",
+    "HTTPSEnabled": "true",
+    "LogRetention": "30",
+    "RulePath": "/",
+    "Stickiness": "false",
     "TargetContainer": "gRPC",
     "TargetPort": "50051",
-    "EnvFileARN": "",
-    "RulePath": "/",
-    "HTTPSEnabled": "true",
-    "Stickiness": "false"
+    "TaskCPU": "256",
+    "TaskCount": "2",
+    "TaskMemory": "512",
+    "WorkloadName": "gRPC"
   },
-  "Tags": { 
+  "Tags": {
     "copilot-application": "my-app",
     "copilot-environment": "test",
     "copilot-service": "gRPC"
