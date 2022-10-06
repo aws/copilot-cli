@@ -1,6 +1,6 @@
 EnvironmentManagerRole:
   Metadata:
-    'aws:copilot:description': 'An IAM Role to describe resources in your environment'
+    'aws:copilot:description': 'An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} to describe resources in your environment'
   DeletionPolicy: Retain
   Type: AWS::IAM::Role
   DependsOn: CloudformationExecutionRole
@@ -13,9 +13,9 @@ EnvironmentManagerRole:
         Principal:
           AWS: !Sub ${ToolsAccountPrincipalARN}
         Action: sts:AssumeRole
-{{- if .PermissionsBoundary }}
+    {{- if .PermissionsBoundary}}
     PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
-{{- end }}
+    {{- end}}
     Path: /
     Policies:
     - PolicyName: root
