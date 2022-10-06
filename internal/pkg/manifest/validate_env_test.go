@@ -222,7 +222,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: "cdn.terminate_tls must be true if cdn.certificate is set without http.public.certificates",
+			wantedError: `"cdn.terminate_tls" must be true if "cdn.certificate" is set without "http.public.certificates"`,
 		},
 		"success if cdn cert specified, cdn terminating tls, and no public certs": {
 			in: EnvironmentConfig{
