@@ -12,7 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	ecs "github.com/aws/copilot-cli/internal/pkg/ecssdk"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

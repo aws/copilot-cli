@@ -14,7 +14,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ecs"
+	ecs "github.com/aws/copilot-cli/internal/pkg/ecssdk"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 )
 
@@ -75,10 +75,14 @@ type ExecuteCommandInput struct {
 
 // New returns a Service configured against the input session.
 func New(s *session.Session) *ECS {
+	sess, _ := session.NewSession(&aws.Config{
+		Region:   aws.String("us-west-2"),
+		Endpoint: aws.String("https://madison.us-west-2.amazonaws.com"),
+	})
 	return &ECS{
-		client: ecs.New(s),
+		client: ecs.New(sess),
 		newSessStarter: func() ssmSessionStarter {
-			return exec.NewSSMPluginCommand(s)
+			return exec.NewSSMPluginCommand(sess)
 		},
 		maxServiceStableTries: waitServiceStableMaxTry,
 		pollIntervalDuration:  waitServiceStablePollingInterval,
