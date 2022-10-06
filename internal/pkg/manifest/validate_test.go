@@ -211,17 +211,16 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{
-							Volumes: map[string]*Volume{
-								"foo": {
-									EFS: EFSConfigOrBool{
-										Enabled: aws.Bool(true),
-									},
-									MountPointOpts: MountPointOpts{
-										ContainerPath: aws.String("mockPath"),
-									},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
 								},
 							},
+						},
 						},
 					},
 					RoutingRule: RoutingRuleConfigOrBool{
@@ -478,17 +477,16 @@ func TestBackendService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{
-							Volumes: map[string]*Volume{
-								"foo": {
-									EFS: EFSConfigOrBool{
-										Enabled: aws.Bool(true),
-									},
-									MountPointOpts: MountPointOpts{
-										ContainerPath: aws.String("mockPath"),
-									},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
 								},
 							},
+						},
 						},
 					},
 				},
@@ -1087,17 +1085,16 @@ func TestScheduledJob_validate(t *testing.T) {
 					},
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{
-							Volumes: map[string]*Volume{
-								"foo": {
-									EFS: EFSConfigOrBool{
-										Enabled: aws.Bool(true),
-									},
-									MountPointOpts: MountPointOpts{
-										ContainerPath: aws.String("mockPath"),
-									},
+						Storage: Storage{Volumes: map[string]*Volume{
+							"foo": {
+								EFS: EFSConfigOrBool{
+									Enabled: aws.Bool(true),
+								},
+								MountPointOpts: MountPointOpts{
+									ContainerPath: aws.String("mockPath"),
 								},
 							},
+						},
 						},
 					},
 				},

@@ -48,10 +48,8 @@
     StartPeriod: {{.HealthCheck.StartPeriod}}
     Timeout: {{.HealthCheck.Timeout}}
 {{- end}}
-{{- if .Storage}}
-{{- if .Storage.ReadonlyRootFS}}
+{{- if and .Storage .Storage.ReadonlyRootFS}}
   ReadonlyRootFilesystem: {{.Storage.ReadonlyRootFS}}
-{{- end}}
 {{- end}}
 {{- if .CredentialsParameter}}
   RepositoryCredentials:
