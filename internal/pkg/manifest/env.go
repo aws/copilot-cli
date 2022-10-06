@@ -425,7 +425,7 @@ func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	if env.ImportVPC != nil && len(env.ImportVPC.PublicSubnetIDs) == 0 {
 		cfg.Private.InternalALBSubnets = env.InternalALBSubnets
 		cfg.Private.Certificates = env.ImportCertARNs
-		cfg.Private.SecurityGroupsConfig.Ingress.VPCIngress = aws.Bool(env.EnableInternalALBVPCIngress)
+		cfg.Private.Ingress.VPCIngress = aws.Bool(env.EnableInternalALBVPCIngress)
 		return
 	}
 	cfg.Public.Certificates = env.ImportCertARNs
