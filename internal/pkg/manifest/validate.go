@@ -1746,7 +1746,7 @@ func isValidSubSvcName(name string) bool {
 
 func validateWindows(opts validateWindowsOpts) error {
 	if aws.BoolValue(opts.readOnlyFS) {
-		return errors.New(`'ReadOnlyFS' can not be set to true when deploying a Windows container`)
+		return fmt.Errorf(`%q can not be set to 'true' when deploying a Windows container`, "readonly_fs")
 	}
 	for _, volume := range opts.efsVolumes {
 		if !volume.EmptyVolume() {

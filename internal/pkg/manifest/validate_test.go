@@ -211,7 +211,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{ReadonlyRootFS: aws.Bool(false),
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"foo": {
 									EFS: EFSConfigOrBool{
@@ -478,7 +478,7 @@ func TestBackendService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{ReadonlyRootFS: aws.Bool(false),
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"foo": {
 									EFS: EFSConfigOrBool{
@@ -871,7 +871,7 @@ func TestWorkerService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{ReadonlyRootFS: aws.Bool(false),
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"foo": {
 									EFS: EFSConfigOrBool{
@@ -1087,7 +1087,7 @@ func TestScheduledJob_validate(t *testing.T) {
 					},
 					TaskConfig: TaskConfig{
 						Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-						Storage: Storage{ReadonlyRootFS: aws.Bool(false),
+						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"foo": {
 									EFS: EFSConfigOrBool{
@@ -3242,7 +3242,7 @@ func TestValidateWindows(t *testing.T) {
 			},
 			wantedError: errors.New(`'EFS' is not supported when deploying a Windows container`),
 		},
-		"should return nil efs not specified": {
+		"should return nil when no fields are specified": {
 			in:          validateWindowsOpts{},
 			wantedError: nil,
 		},
@@ -3250,9 +3250,9 @@ func TestValidateWindows(t *testing.T) {
 			in: validateWindowsOpts{
 				readOnlyFS: aws.Bool(true),
 			},
-			wantedError: errors.New(`'ReadOnlyFS' can not be set to true when deploying a Windows container`),
+			wantedError: fmt.Errorf(`%q can not be set to 'true' when deploying a Windows container`, "readonly_fs"),
 		},
-		"should return nil readonlyfs is false or nil": {
+		"should return nil if readonly_fs is false": {
 			in: validateWindowsOpts{
 				readOnlyFS: aws.Bool(false),
 			},
