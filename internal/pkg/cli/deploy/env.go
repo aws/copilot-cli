@@ -280,7 +280,7 @@ func (d *envDeployer) cidrPrefixLists(in *DeployEnvironmentInput) ([]string, err
 	var cidrPrefixListIDs []string
 
 	// Check if ingress is allowed from cloudfront
-	if in.Manifest == nil || !in.Manifest.IsIngressRestrictedToCDN() {
+	if in.Manifest == nil || !in.Manifest.ALBIngressRestrictedToCDN() {
 		return nil, nil
 	}
 	cfManagedPrefixListID, err := d.cfManagedPrefixListID()

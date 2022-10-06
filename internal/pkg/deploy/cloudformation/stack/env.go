@@ -423,7 +423,7 @@ func (e *EnvStackConfig) vpcConfig() (template.VPCConfig, error) {
 	return template.VPCConfig{
 		Imported:            e.importVPC(),
 		Managed:             e.managedVPC(),
-		AllowVPCIngress:     aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
+		AllowVPCIngress:     aws.BoolValue(e.in.Mft.HTTPConfig.Private.Ingress.VPCIngress) || aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
 		SecurityGroupConfig: securityGroupConfig,
 	}, nil
 }

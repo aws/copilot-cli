@@ -37,7 +37,7 @@ type CustomizeEnv struct {
 	EnableInternalALBVPCIngress bool       `json:"enableInternalALBVPCIngress,omitempty"`
 }
 
-// IsEmpty returns if CustomizeEnv is an empty struct.
+// IsEmpty returns true if CustomizeEnv is an empty struct.
 func (c *CustomizeEnv) IsEmpty() bool {
 	if c == nil {
 		return true

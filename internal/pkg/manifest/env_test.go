@@ -276,13 +276,9 @@ func TestFromEnvConfig(t *testing.T) {
 					},
 					HTTPConfig: EnvironmentHTTPConfig{
 						Private: privateHTTPConfig{
-							InternalALBSubnets: []string{"subnet2"},
-							Certificates:       []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
-							SecurityGroupsConfig: securityGroupsConfig{
-								Ingress: Ingress{
-									VPCIngress: aws.Bool(false),
-								},
-							},
+							InternalALBSubnets:   []string{"subnet2"},
+							Certificates:         []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+							SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{Ingress: DeprecatedIngress{VPCIngress: aws.Bool(false)}},
 						},
 					},
 				},
@@ -499,8 +495,8 @@ http:
 							Certificates: []string{"cert-1", "cert-2"},
 						},
 						Private: privateHTTPConfig{
-							SecurityGroupsConfig: securityGroupsConfig{
-								Ingress: Ingress{
+							SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{
+								Ingress: DeprecatedIngress{
 									VPCIngress: aws.Bool(false),
 								},
 							},

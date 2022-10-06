@@ -175,8 +175,8 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				},
 				HTTPConfig: EnvironmentHTTPConfig{
 					Public: PublicHTTPConfig{
-						SecurityGroupConfig: ALBSecurityGroupsConfig{
-							Ingress: Ingress{
+						SecurityGroupConfig: DeprecatedALBSecurityGroupsConfig{
+							Ingress: DeprecatedIngress{
 								RestrictiveIngress: RestrictiveIngress{
 									CDNIngress: aws.Bool(true),
 								},
@@ -278,6 +278,67 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				HTTPConfig: EnvironmentHTTPConfig{
 					Private: privateHTTPConfig{
 						InternalALBSubnets: []string{"existentSubnet", "anotherExistentSubnet"},
+					},
+				},
+			},
+		},
+		"returns error when http private config with deprecated and a new ingress field": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Private: privateHTTPConfig{
+						Ingress: RelaxedIngress{
+							VPCIngress: aws.Bool(true),
+						},
+						SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{
+							Ingress: DeprecatedIngress{
+								VPCIngress: aws.Bool(true),
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"http config\": validate \"private\": must specify one, not both, of \"private.http.security_groups.ingress\" and \"private.http.ingress\"",
+		},
+		"no error when http private config with a new ingress field": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Private: privateHTTPConfig{
+						Ingress: RelaxedIngress{
+							VPCIngress: aws.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		"returns error when http public config with deprecated and a new ingress field": {
+			in: EnvironmentConfig{
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						Ingress: RestrictiveIngress{
+							CDNIngress: aws.Bool(true),
+						},
+						SecurityGroupConfig: DeprecatedALBSecurityGroupsConfig{
+							Ingress: DeprecatedIngress{
+								RestrictiveIngress: RestrictiveIngress{
+									CDNIngress: aws.Bool(true),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantedError: "validate \"http config\": validate \"public\": must specify one, not both, of \"public.http.security_groups.ingress\" and \"public.http.ingress\"",
+		},
+		"no error when http public config with a new ingress field": {
+			in: EnvironmentConfig{
+				CDNConfig: EnvironmentCDNConfig{
+					Enabled: aws.Bool(true),
+				},
+				HTTPConfig: EnvironmentHTTPConfig{
+					Public: PublicHTTPConfig{
+						Ingress: RestrictiveIngress{
+							CDNIngress: aws.Bool(true),
+						},
 					},
 				},
 			},
@@ -902,8 +963,8 @@ func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 		"public http config with invalid security group ingress": {
 			in: EnvironmentHTTPConfig{
 				Public: PublicHTTPConfig{
-					SecurityGroupConfig: ALBSecurityGroupsConfig{
-						Ingress: Ingress{
+					SecurityGroupConfig: DeprecatedALBSecurityGroupsConfig{
+						Ingress: DeprecatedIngress{
 							VPCIngress: aws.Bool(true),
 						},
 					},
@@ -914,8 +975,8 @@ func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 		"private http config with invalid security group ingress": {
 			in: EnvironmentHTTPConfig{
 				Private: privateHTTPConfig{
-					SecurityGroupsConfig: securityGroupsConfig{
-						Ingress: Ingress{
+					SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{
+						Ingress: DeprecatedIngress{
 							RestrictiveIngress: RestrictiveIngress{
 								CDNIngress: aws.Bool(true),
 							},

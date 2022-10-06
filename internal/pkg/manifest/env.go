@@ -97,9 +97,12 @@ type EnvironmentConfig struct {
 	CDNConfig     EnvironmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
-// IsIngressRestrictedToCDN returns whether or not an environment has its
+// ALBIngressRestrictedToCDN returns whether an environment has its
 // Public Load Balancer ingress restricted to a Content Delivery Network.
-func (mft *EnvironmentConfig) IsIngressRestrictedToCDN() bool {
+func (mft *EnvironmentConfig) ALBIngressRestrictedToCDN() bool {
+	if !mft.HTTPConfig.Public.Ingress.IsEmpty() {
+		return aws.BoolValue(mft.HTTPConfig.Public.Ingress.CDNIngress)
+	}
 	return aws.BoolValue(mft.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress)
 }
 
@@ -430,9 +433,10 @@ func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 
 // PublicHTTPConfig represents the configuration settings for an environment public ALB.
 type PublicHTTPConfig struct {
-	SecurityGroupConfig ALBSecurityGroupsConfig `yaml:"security_groups,omitempty"`
-	Certificates        []string                `yaml:"certificates,omitempty"`
-	ELBAccessLogs       ELBAccessLogsArgsOrBool `yaml:"access_logs,omitempty"`
+	SecurityGroupConfig DeprecatedALBSecurityGroupsConfig `yaml:"security_groups,omitempty"`
+	Certificates        []string                          `yaml:"certificates,omitempty"`
+	ELBAccessLogs       ELBAccessLogsArgsOrBool           `yaml:"access_logs,omitempty"`
+	Ingress             RestrictiveIngress
 }
 
 // ELBAccessLogsArgsOrBool is a custom type which supports unmarshaling yaml which
@@ -494,25 +498,20 @@ func (cfg *EnvironmentConfig) ELBAccessLogs() (*ELBAccessLogsArgs, bool) {
 	return &accessLogs.AdvancedConfig, true
 }
 
-// ALBSecurityGroupsConfig represents security group configuration settings for an ALB.
-type ALBSecurityGroupsConfig struct {
-	Ingress Ingress `yaml:"ingress"`
+// DeprecatedALBSecurityGroupsConfig represents security group configuration settings for an ALB.
+type DeprecatedALBSecurityGroupsConfig struct {
+	Ingress DeprecatedIngress `yaml:"ingress"`
 }
 
-func (cfg ALBSecurityGroupsConfig) IsEmpty() bool {
+// IsEmpty returns true if there are no specified fields for ingress.
+func (cfg DeprecatedALBSecurityGroupsConfig) IsEmpty() bool {
 	return cfg.Ingress.IsEmpty()
 }
 
-// Ingress represents allowed ingress traffic from specified fields.
-type Ingress struct {
+// DeprecatedIngress represents allowed ingress traffic from specified fields.
+type DeprecatedIngress struct {
 	RestrictiveIngress RestrictiveIngress `yaml:"restrict_to"`
 	VPCIngress         *bool              `yaml:"from_vpc"`
-}
-
-// ALBIngressRestrictedToCDN returns true when the environment is configured
-// to only allow ALB ingress from the CDN.
-func (cfg *EnvironmentConfig) ALBIngressRestrictedToCDN() bool {
-	return aws.BoolValue(cfg.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress)
 }
 
 // RestrictiveIngress represents ingress fields which restrict
@@ -521,13 +520,24 @@ type RestrictiveIngress struct {
 	CDNIngress *bool `yaml:"cdn"`
 }
 
+// RelaxedIngress represents ingress field which relaxes default
+// behavior of not allowing any public ingress.
+type RelaxedIngress struct {
+	VPCIngress *bool `yaml:"from_vpc"`
+}
+
+// IsEmpty returns true if there are no specified fields for relaxed ingress.
+func (i RelaxedIngress) IsEmpty() bool {
+	return i.VPCIngress == nil
+}
+
 // IsEmpty returns true if there are no specified fields for restrictive ingress.
 func (i RestrictiveIngress) IsEmpty() bool {
 	return i.CDNIngress == nil
 }
 
 // IsEmpty returns true if there are no specified fields for ingress.
-func (i Ingress) IsEmpty() bool {
+func (i DeprecatedIngress) IsEmpty() bool {
 	return i.VPCIngress == nil && i.RestrictiveIngress.IsEmpty()
 }
 
@@ -537,20 +547,13 @@ func (cfg PublicHTTPConfig) IsEmpty() bool {
 }
 
 type privateHTTPConfig struct {
-	InternalALBSubnets   []string             `yaml:"subnets,omitempty"`
-	Certificates         []string             `yaml:"certificates,omitempty"`
-	SecurityGroupsConfig securityGroupsConfig `yaml:"security_groups,omitempty"`
+	InternalALBSubnets   []string                          `yaml:"subnets,omitempty"`
+	Certificates         []string                          `yaml:"certificates,omitempty"`
+	SecurityGroupsConfig DeprecatedALBSecurityGroupsConfig `yaml:"security_groups,omitempty"`
+	Ingress              RelaxedIngress
 }
 
 // IsEmpty returns true if there is no customization to the internal ALB.
 func (cfg privateHTTPConfig) IsEmpty() bool {
-	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0 && cfg.SecurityGroupsConfig.isEmpty()
-}
-
-type securityGroupsConfig struct {
-	Ingress Ingress `yaml:"ingress"`
-}
-
-func (cfg securityGroupsConfig) isEmpty() bool {
-	return cfg.Ingress.IsEmpty()
+	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0 && cfg.SecurityGroupsConfig.IsEmpty() && cfg.Ingress.IsEmpty()
 }

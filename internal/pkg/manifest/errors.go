@@ -5,11 +5,11 @@ package manifest
 
 import (
 	"fmt"
-	"strconv"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/dustin/go-humanize/english"
+	"strconv"
+	"strings"
 )
 
 // ErrInvalidWorkloadType occurs when a user requested a manifest template type that doesn't exist.
@@ -96,6 +96,29 @@ func (e *errFieldMutualExclusive) Error() string {
 		return fmt.Sprintf(`must specify one of "%s" and "%s"`, e.firstField, e.secondField)
 	}
 	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
+}
+
+type errSpecifiedBothIngressFields struct {
+	firstField  string
+	secondField string
+}
+
+func (e *errSpecifiedBothIngressFields) Error() string {
+	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
+}
+
+func (e *errSpecifiedBothIngressFields) RecommendActions() string {
+	privateOrPublicField := strings.Split(e.firstField, ".")[0]
+	return fmt.Sprintf(`
+It looks like you have specified mutually exclusive fields for Load Balancer configuration.
+The "%s.http.security_group.ingress" has been deprecated and we encourage you to use "%s.http.ingress".
+Following is the example manifest fields that we recommend you to use for your environment.
+
+http:
+  %s:
+    ingress:
+      cdn: true
+`, privateOrPublicField, privateOrPublicField, privateOrPublicField)
 }
 
 type errMinGreaterThanMax struct {

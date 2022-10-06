@@ -34,13 +34,11 @@ cdn:
   certificate: viewer-cert
 http:
   public:
+    ingress:
+      cdn: true
     access_logs:
       bucket_name: accesslogsbucket
       prefix: accesslogsbucketprefix
-    security_groups:
-      ingress:
-        restrict_to:
-          cdn: true
     certificates:
       - cert-1
       - cert-2
