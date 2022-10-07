@@ -1,18 +1,18 @@
 {
-  "Parameters" : { 
-    "AppName": "my-app",
-    "EnvName": "test",
-    "WorkloadName": "job",
-    "ContainerImage": "alpine",
+  "Parameters": {
     "AddonsTemplateURL": "",
-    "TaskCPU": "256",
-    "TaskMemory": "512",
-    "TaskCount": "1",
+    "AppName": "my-app",
+    "ContainerImage": "alpine",
+    "EnvFileARN": "",
+    "EnvName": "test",
     "LogRetention": "30",
     "Schedule": "cron(0 12 ? * MON *)",
-    "EnvFileARN": ""
+    "TaskCPU": "256",
+    "TaskCount": "1",
+    "TaskMemory": "512",
+    "WorkloadName": "job"
   },
-  "Tags": { 
+  "Tags": {
     "copilot-application": "my-app",
     "copilot-environment": "test",
     "copilot-service": "job"
