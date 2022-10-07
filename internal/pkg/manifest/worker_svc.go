@@ -209,9 +209,7 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 		svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	if len(props.Topics) > 0 {
-		if aws.BoolValue(FIFOEnabled(props.Topics)) {
-			svc.WorkerServiceConfig.Subscribe.Queue.FIFO.Enable = aws.Bool(true)
-		}
+		setSubscriptionQueueDefaults(props.Topics, &svc.WorkerServiceConfig.Subscribe.Queue)
 	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform
@@ -219,7 +217,7 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	return svc
 }
 
-func FIFOEnabled(topics []TopicSubscription) *bool {
+func setSubscriptionQueueDefaults(topics []TopicSubscription, eventsQueue *SQSQueue) {
 	var isFIFOEnabled bool
 	for _, topic := range topics {
 		if strings.HasSuffix(aws.StringValue(topic.Name), ".fifo") {
@@ -228,17 +226,16 @@ func FIFOEnabled(topics []TopicSubscription) *bool {
 		}
 	}
 	if !isFIFOEnabled {
-		return aws.Bool(isFIFOEnabled)
-	} else {
-		for idx, topic := range topics {
-			if strings.HasSuffix(aws.StringValue(topic.Name), ".fifo") {
-				topics[idx].Name = aws.String(strings.TrimSuffix(aws.StringValue(topic.Name), ".fifo"))
-			} else {
-				topics[idx].Queue.Enabled = aws.Bool(true)
-			}
+		return
+	}
+	eventsQueue.FIFO.Enable = aws.Bool(true)
+	for idx, topic := range topics {
+		if strings.HasSuffix(aws.StringValue(topic.Name), ".fifo") {
+			topics[idx].Name = aws.String(strings.TrimSuffix(aws.StringValue(topic.Name), ".fifo"))
+		} else {
+			topics[idx].Queue.Enabled = aws.Bool(true)
 		}
 	}
-	return aws.Bool(isFIFOEnabled)
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
