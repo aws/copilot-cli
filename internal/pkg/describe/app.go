@@ -26,7 +26,7 @@ type App struct {
 	Name                string                   `json:"name"`
 	Version             string                   `json:"version"`
 	URI                 string                   `json:"uri"`
-	PermissionsBoundary string                   `json:"permissionsBoundary"`
+	PermissionsBoundary string                   `json:"permissionsboundary"`
 	Envs                []*config.Environment    `json:"environments"`
 	Services            []*config.Workload       `json:"services"`
 	Jobs                []*config.Workload       `json:"jobs"`
