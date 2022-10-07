@@ -41,6 +41,9 @@ subscribe:
 {{- range $topic := .Subscribe.Topics}}
     - name: {{$topic.Name}}
       service: {{$topic.Service}}
+      {{- if $topic.Queue.Enabled }}
+      queue: {{ $topic.Queue.Enabled }}
+      {{- end }}
 {{- end}}
   {{- if and .Subscribe.Queue .Subscribe.Queue.FIFO .Subscribe.Queue.FIFO.Enable }}
   queue:

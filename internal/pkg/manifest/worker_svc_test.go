@@ -142,6 +142,223 @@ func TestNewWorkerSvc(t *testing.T) {
 				},
 			},
 		},
+		"should return a worker service instance with 2 subscriptions to the default fifo queue and 2 standard topic specific queues": {
+			inProps: WorkerServiceProps{
+				WorkloadProps: WorkloadProps{
+					Name:       "testers",
+					Dockerfile: "./testers/Dockerfile",
+				},
+				Topics: []TopicSubscription{
+					{
+						Name:    aws.String("fifoTopic1.fifo"),
+						Service: aws.String("fifoService1"),
+					},
+					{
+						Name:    aws.String("fifoTopic2.fifo"),
+						Service: aws.String("fifoService2"),
+					},
+					{
+						Name:    aws.String("standardTopic1"),
+						Service: aws.String("standardService1"),
+					},
+					{
+						Name:    aws.String("standardTopic2"),
+						Service: aws.String("standardService2"),
+					},
+				},
+			},
+			wantedManifest: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("testers"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./testers/Dockerfile"),
+								},
+							},
+						},
+					},
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("fifoTopic1"),
+								Service: aws.String("fifoService1"),
+							},
+							{
+								Name:    aws.String("fifoTopic2"),
+								Service: aws.String("fifoService2"),
+							},
+							{
+								Name:    aws.String("standardTopic1"),
+								Service: aws.String("standardService1"),
+								Queue:   SQSQueueOrBool{Enabled: aws.Bool(true)},
+							},
+							{
+								Name:    aws.String("standardTopic2"),
+								Service: aws.String("standardService2"),
+								Queue:   SQSQueueOrBool{Enabled: aws.Bool(true)},
+							},
+						},
+						Queue: SQSQueue{
+							FIFO: FIFOAdvanceConfigOrBool{Enable: aws.Bool(true)},
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(256),
+						Memory: aws.Int(512),
+						Count: Count{
+							Value: aws.Int(1),
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+			},
+		},
+		"should return a worker service instance with 2 subscriptions to the default fifo queue": {
+			inProps: WorkerServiceProps{
+				WorkloadProps: WorkloadProps{
+					Name:       "testers",
+					Dockerfile: "./testers/Dockerfile",
+				},
+				Topics: []TopicSubscription{
+					{
+						Name:    aws.String("fifoTopic1.fifo"),
+						Service: aws.String("fifoService1"),
+					},
+					{
+						Name:    aws.String("fifoTopic2.fifo"),
+						Service: aws.String("fifoService2"),
+					},
+				},
+			},
+			wantedManifest: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("testers"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./testers/Dockerfile"),
+								},
+							},
+						},
+					},
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("fifoTopic1"),
+								Service: aws.String("fifoService1"),
+							},
+							{
+								Name:    aws.String("fifoTopic2"),
+								Service: aws.String("fifoService2"),
+							},
+						},
+						Queue: SQSQueue{
+							FIFO: FIFOAdvanceConfigOrBool{Enable: aws.Bool(true)},
+						},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(256),
+						Memory: aws.Int(512),
+						Count: Count{
+							Value: aws.Int(1),
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+			},
+		},
+		"should return a worker service instance with 2 subscriptions to the default standard queue": {
+			inProps: WorkerServiceProps{
+				WorkloadProps: WorkloadProps{
+					Name:       "testers",
+					Dockerfile: "./testers/Dockerfile",
+				},
+				Topics: []TopicSubscription{
+					{
+						Name:    aws.String("standardTopic1"),
+						Service: aws.String("standardService1"),
+					},
+					{
+						Name:    aws.String("standardTopic2"),
+						Service: aws.String("standardService2"),
+					},
+				},
+			},
+			wantedManifest: &WorkerService{
+				Workload: Workload{
+					Name: aws.String("testers"),
+					Type: aws.String(WorkerServiceType),
+				},
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: ImageWithHealthcheck{
+						Image: Image{
+							Build: BuildArgsOrString{
+								BuildArgs: DockerBuildArgs{
+									Dockerfile: aws.String("./testers/Dockerfile"),
+								},
+							},
+						},
+					},
+					Subscribe: SubscribeConfig{
+						Topics: []TopicSubscription{
+							{
+								Name:    aws.String("standardTopic1"),
+								Service: aws.String("standardService1"),
+							},
+							{
+								Name:    aws.String("standardTopic2"),
+								Service: aws.String("standardService2"),
+							},
+						},
+						Queue: SQSQueue{},
+					},
+					TaskConfig: TaskConfig{
+						CPU:    aws.Int(256),
+						Memory: aws.Int(512),
+						Count: Count{
+							Value: aws.Int(1),
+						},
+						ExecuteCommand: ExecuteCommand{
+							Enable: aws.Bool(false),
+						},
+					},
+					Network: NetworkConfig{
+						VPC: vpcConfig{
+							Placement: PlacementArgOrString{
+								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for name, tc := range testCases {
