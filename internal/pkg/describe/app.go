@@ -23,14 +23,15 @@ import (
 
 // App contains serialized parameters for an application.
 type App struct {
-	Name               string                   `json:"name"`
-	Version            string                   `json:"version"`
-	URI                string                   `json:"uri"`
-	Envs               []*config.Environment    `json:"environments"`
-	Services           []*config.Workload       `json:"services"`
-	Jobs               []*config.Workload       `json:"jobs"`
-	Pipelines          []*codepipeline.Pipeline `json:"pipelines"`
-	WkldDeployedtoEnvs map[string][]string      `json:"-"`
+	Name                string                   `json:"name"`
+	Version             string                   `json:"version"`
+	URI                 string                   `json:"uri"`
+	PermissionsBoundary string                   `json:"permissionsBoundary"`
+	Envs                []*config.Environment    `json:"environments"`
+	Services            []*config.Workload       `json:"services"`
+	Jobs                []*config.Workload       `json:"jobs"`
+	Pipelines           []*codepipeline.Pipeline `json:"pipelines"`
+	WkldDeployedtoEnvs  map[string][]string      `json:"-"`
 }
 
 // JSONString returns the stringified App struct with json format.
@@ -55,6 +56,7 @@ func (a *App) HumanString() string {
 	}
 	fmt.Fprintf(writer, "  %s\t%s %s\n", "Version", a.Version, availableVersion)
 	fmt.Fprintf(writer, "  %s\t%s\n", "URI", a.URI)
+	fmt.Fprintf(writer, "  %s\t%s\n", "Permissions Boundary", a.PermissionsBoundary)
 	fmt.Fprint(writer, color.Bold.Sprint("\nEnvironments\n\n"))
 	writer.Flush()
 	headers := []string{"Name", "AccountID", "Region"}

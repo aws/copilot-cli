@@ -188,8 +188,9 @@ func TestShowAppOpts_Execute(t *testing.T) {
 
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
 					{
@@ -231,13 +232,14 @@ func TestShowAppOpts_Execute(t *testing.T) {
 				m.versionGetter.EXPECT().Version().Return("v0.0.0", nil)
 			},
 
-			wantedContent: "{\"name\":\"my-app\",\"version\":\"v0.0.0\",\"uri\":\"example.com\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}],\"jobs\":[{\"app\":\"\",\"name\":\"my-job\",\"type\":\"Scheduled Job\"}],\"pipelines\":[{\"pipelineName\":\"my-pipeline-repo\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"pipelineName\":\"bad-goose\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
+			wantedContent: "{\"name\":\"my-app\",\"version\":\"v0.0.0\",\"uri\":\"example.com\",\"permissionsBoundary\":\"examplePermissionsBoundaryPolicy\",\"environments\":[{\"app\":\"\",\"name\":\"test\",\"region\":\"us-west-2\",\"accountID\":\"123456789\",\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"},{\"app\":\"\",\"name\":\"prod\",\"region\":\"us-west-1\",\"accountID\":\"123456789\",\"registryURL\":\"\",\"executionRoleARN\":\"\",\"managerRoleARN\":\"\"}],\"services\":[{\"app\":\"\",\"name\":\"my-svc\",\"type\":\"lb-web-svc\"}],\"jobs\":[{\"app\":\"\",\"name\":\"my-job\",\"type\":\"Scheduled Job\"}],\"pipelines\":[{\"pipelineName\":\"my-pipeline-repo\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"},{\"pipelineName\":\"bad-goose\",\"region\":\"\",\"accountId\":\"\",\"stages\":null,\"createdAt\":\"0001-01-01T00:00:00Z\",\"updatedAt\":\"0001-01-01T00:00:00Z\"}]}\n",
 		},
 		"correctly shows human output": {
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
 					{
@@ -281,9 +283,10 @@ func TestShowAppOpts_Execute(t *testing.T) {
 
 			wantedContent: `About
 
-  Name     my-app
-  Version  v0.0.0 (latest available: v1.1.0)
-  URI      example.com
+  Name                  my-app
+  Version               v0.0.0 (latest available: v1.1.0)
+  URI                   example.com
+  Permissions Boundary  examplePermissionsBoundaryPolicy
 
 Environments
 
@@ -310,8 +313,9 @@ Pipelines
 		"correctly shows human output with latest version": {
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
 					{
@@ -347,9 +351,10 @@ Pipelines
 
 			wantedContent: `About
 
-  Name     my-app
-  Version  v1.1.0 
-  URI      example.com
+  Name                  my-app
+  Version               v1.1.0 
+  URI                   example.com
+  Permissions Boundary  examplePermissionsBoundaryPolicy
 
 Environments
 
@@ -374,8 +379,9 @@ Pipelines
 		"when service/job is not deployed": {
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
 					{
@@ -415,9 +421,10 @@ Pipelines
 
 			wantedContent: `About
 
-  Name     my-app
-  Version  v1.1.0 
-  URI      example.com
+  Name                  my-app
+  Version               v1.1.0 
+  URI                   example.com
+  Permissions Boundary  examplePermissionsBoundaryPolicy
 
 Environments
 
@@ -442,8 +449,9 @@ Pipelines
 		}, "when multiple services/jobs are deployed": {
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListServices("my-app").Return([]*config.Workload{
 					{
@@ -504,9 +512,10 @@ Pipelines
 
 			wantedContent: `About
 
-  Name     my-app
-  Version  v1.1.0 
-  URI      example.com
+  Name                  my-app
+  Version               v1.1.0 
+  URI                   example.com
+  Permissions Boundary  examplePermissionsBoundaryPolicy
 
 Environments
 
@@ -544,8 +553,9 @@ Pipelines
 		"returns error if fail to list environment": {
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListEnvironments("my-app").Return(nil, testError)
 			},
@@ -557,8 +567,9 @@ Pipelines
 
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
 					{
@@ -582,8 +593,9 @@ Pipelines
 
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
 					{
@@ -613,8 +625,9 @@ Pipelines
 
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
 					{
@@ -653,8 +666,9 @@ Pipelines
 
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
 					{
@@ -695,8 +709,9 @@ Pipelines
 
 			setupMocks: func(m showAppMocks) {
 				m.storeSvc.EXPECT().GetApplication("my-app").Return(&config.Application{
-					Name:   "my-app",
-					Domain: "example.com",
+					Name:                "my-app",
+					Domain:              "example.com",
+					PermissionsBoundary: "examplePermissionsBoundaryPolicy",
 				}, nil)
 				m.storeSvc.EXPECT().ListEnvironments("my-app").Return([]*config.Environment{
 					{
