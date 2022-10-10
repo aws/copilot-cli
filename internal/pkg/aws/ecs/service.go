@@ -70,6 +70,44 @@ func (s *Service) ServiceStatus() ServiceStatus {
 	}
 }
 
+// ServiceConnectAliases returns the ECS Service Connect client aliases for a service.
+func (s *Service) ServiceConnectAliases() []string {
+	if len(s.Deployments) == 0 {
+		return nil
+	}
+	lastDeployment := s.Deployments[0]
+	scConfig := lastDeployment.ServiceConnectConfiguration
+	if scConfig == nil || !aws.BoolValue(scConfig.Enabled) {
+		return nil
+	}
+	ns := aws.StringValue(scConfig.Namespace)
+	var aliases []string
+	for _, service := range scConfig.Services {
+		defaultName := aws.StringValue(service.PortName)
+		if aws.StringValue(service.DiscoveryName) != "" {
+			defaultName = aws.StringValue(service.DiscoveryName)
+		}
+		defaultAlias := fmt.Sprintf("%s.%s", defaultName, ns)
+		if len(service.ClientAliases) == 0 {
+			aliases = append(aliases, defaultAlias)
+			continue
+		}
+		for _, clientAlias := range service.ClientAliases {
+			alias := defaultAlias
+			if aws.StringValue(clientAlias.DnsName) != "" {
+				alias = aws.StringValue(clientAlias.DnsName)
+			}
+			aliases = append(aliases, fmt.Sprintf("%s:%v", alias, aws.Int64Value(clientAlias.Port)))
+		}
+	}
+	return aliases
+}
+
+// LastUpdatedAt returns the last updated time of the ECS service.
+func (s *Service) LastUpdatedAt() time.Time {
+	return aws.TimeValue(s.Deployments[0].UpdatedAt)
+}
+
 // TargetGroups returns the ARNs of target groups attached to the service.
 func (s *Service) TargetGroups() []string {
 	var targetGroupARNs []string

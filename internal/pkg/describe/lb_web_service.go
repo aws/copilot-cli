@@ -129,7 +129,8 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	var routes []*WebServiceRoute
 	var configs []*ECSServiceConfig
-	var serviceDiscoveries []*ServiceDiscovery
+	var serviceDiscoveries serviceDiscoveries
+	var serviceConnects serviceConnects
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -180,6 +181,13 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			Port:     svcParams[cfnstack.WorkloadContainerPortParamKey],
 			Endpoint: endpoint,
 		}, env)
+		scDNSNames, err := svcDescr.ServiceConnectDNSNames()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve service connect DNS names: %w", err)
+		}
+		for _, dnsName := range scDNSNames {
+			serviceConnects = appendServiceConnect(serviceConnects, dnsName, env)
+		}
 		envVars = append(envVars, flattenContainerEnvVars(env, webSvcEnvVars)...)
 		webSvcSecrets, err := svcDescr.Secrets()
 		if err != nil {
@@ -203,17 +211,20 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}
 
 	return &webSvcDesc{
-		Service:          d.svc,
-		Type:             manifest.LoadBalancedWebServiceType,
-		App:              d.app,
-		Configurations:   configs,
-		Routes:           routes,
-		ServiceDiscovery: serviceDiscoveries,
-		Variables:        envVars,
-		Secrets:          secrets,
-		Resources:        resources,
+		ecsSvcDesc: ecsSvcDesc{
+			Service:          d.svc,
+			Type:             manifest.LoadBalancedWebServiceType,
+			App:              d.app,
+			Configurations:   configs,
+			Routes:           routes,
+			ServiceDiscovery: serviceDiscoveries,
+			ServiceConnect:   serviceConnects,
+			Variables:        envVars,
+			Secrets:          secrets,
+			Resources:        resources,
 
-		environments: environments,
+			environments: environments,
+		},
 	}, nil
 }
 
@@ -289,36 +300,79 @@ type WebServiceRoute struct {
 	URL         string `json:"url"`
 }
 
-// ServiceDiscovery contains serialized service discovery info for an service.
+// ServiceDiscovery contains serialized service discovery info for an ECS service.
 type ServiceDiscovery struct {
 	Environment []string `json:"environment"`
-	Namespace   string   `json:"namespace"`
+	// Namespace is not an accurate name but unfortunately we can't take it back.
+	Namespace string `json:"namespace"`
 }
 
 type serviceDiscoveries []*ServiceDiscovery
 
-func (s serviceDiscoveries) humanString(w io.Writer) {
-	headers := []string{"Environment", "Namespace"}
+// ServiceConnect contains serialized service connect info for an ECS service.
+type ServiceConnect struct {
+	Environment []string `json:"environment"`
+	DNSName     string   `json:"dnsName"`
+}
+
+type serviceConnects []*ServiceConnect
+
+type serviceEndpoints struct {
+	discoveries serviceDiscoveries
+	connects    serviceConnects
+}
+
+func (s serviceEndpoints) humanString(w io.Writer) {
+	headers := []string{"Environment", "Endpoint", "Type"}
 	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
-	for _, sd := range s {
-		fmt.Fprintf(w, "  %s\t%s\n", strings.Join(sd.Environment, ", "), sd.Namespace)
+	scEnvToEndpoints := make(map[string]map[string]struct{})
+	for _, sc := range s.connects {
+		envs := strings.Join(sc.Environment, ", ")
+		if _, ok := scEnvToEndpoints[envs]; !ok {
+			scEnvToEndpoints[envs] = make(map[string]struct{})
+		}
+		scEnvToEndpoints[envs][sc.DNSName] = struct{}{}
+	}
+	var scEnvs []string
+	for env := range scEnvToEndpoints {
+		scEnvs = append(scEnvs, env)
+	}
+	sort.SliceStable(scEnvs, func(i int, j int) bool { return scEnvs[i] < scEnvs[j] })
+	for _, env := range scEnvs {
+		var endpoints []string
+		for endpoint := range scEnvToEndpoints[env] {
+			endpoints = append(endpoints, endpoint)
+		}
+		sort.SliceStable(endpoints, func(i int, j int) bool { return endpoints[i] < endpoints[j] })
+		fmt.Fprintf(w, "  %s\t%s\t%s\n", env, strings.Join(endpoints, ", "), "Service Connect")
+	}
+	sdEnvToEndpoints := make(map[string]map[string]struct{})
+	for _, sd := range s.discoveries {
+		envs := strings.Join(sd.Environment, ", ")
+		if _, ok := sdEnvToEndpoints[envs]; !ok {
+			sdEnvToEndpoints[envs] = make(map[string]struct{})
+		}
+		sdEnvToEndpoints[envs][sd.Namespace] = struct{}{}
+	}
+	var sdEnvs []string
+	for env := range sdEnvToEndpoints {
+		sdEnvs = append(sdEnvs, env)
+	}
+	sort.SliceStable(sdEnvs, func(i int, j int) bool { return sdEnvs[i] < sdEnvs[j] })
+	for _, env := range sdEnvs {
+		var endpoints []string
+		for endpoint := range sdEnvToEndpoints[env] {
+			endpoints = append(endpoints, endpoint)
+		}
+		sort.SliceStable(endpoints, func(i int, j int) bool { return endpoints[i] < endpoints[j] })
+		fmt.Fprintf(w, "  %s\t%s\t%s\n", env, strings.Join(endpoints, ", "), "Service Discovery")
 	}
 }
 
 // webSvcDesc contains serialized parameters for a web service.
 type webSvcDesc struct {
-	Service          string               `json:"service"`
-	Type             string               `json:"type"`
-	App              string               `json:"application"`
-	Configurations   ecsConfigurations    `json:"configurations"`
-	Routes           []*WebServiceRoute   `json:"routes"`
-	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
-	Variables        containerEnvVars     `json:"variables"`
-	Secrets          secrets              `json:"secrets,omitempty"`
-	Resources        deployedSvcResources `json:"resources,omitempty"`
-
-	environments []string
+	ecsSvcDesc
 }
 
 // JSONString returns the stringified webSvcDesc struct in json format.
@@ -350,9 +404,15 @@ func (w *webSvcDesc) HumanString() string {
 	for _, route := range w.Routes {
 		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 	}
-	fmt.Fprint(writer, color.Bold.Sprint("\nService Discovery\n\n"))
-	writer.Flush()
-	w.ServiceDiscovery.humanString(writer)
+	if len(w.ServiceConnect) > 0 || len(w.ServiceDiscovery) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nService Endpoint\n\n"))
+		writer.Flush()
+		endpoints := serviceEndpoints{
+			discoveries: w.ServiceDiscovery,
+			connects:    w.ServiceConnect,
+		}
+		endpoints.humanString(writer)
+	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	w.Variables.humanString(writer)
@@ -395,7 +455,7 @@ func IsStackNotExistsErr(err error) bool {
 	return true
 }
 
-func appendServiceDiscovery(sds []*ServiceDiscovery, sd serviceDiscovery, env string) []*ServiceDiscovery {
+func appendServiceDiscovery(sds serviceDiscoveries, sd serviceDiscovery, env string) serviceDiscoveries {
 	exist := false
 	for _, s := range sds {
 		if s.Namespace == sd.String() {
@@ -410,4 +470,21 @@ func appendServiceDiscovery(sds []*ServiceDiscovery, sd serviceDiscovery, env st
 		})
 	}
 	return sds
+}
+
+func appendServiceConnect(scs serviceConnects, dnsName string, env string) serviceConnects {
+	exist := false
+	for _, s := range scs {
+		if s.DNSName == dnsName {
+			s.Environment = append(s.Environment, env)
+			exist = true
+		}
+	}
+	if !exist {
+		scs = append(scs, &ServiceConnect{
+			Environment: []string{env},
+			DNSName:     dnsName,
+		})
+	}
+	return scs
 }

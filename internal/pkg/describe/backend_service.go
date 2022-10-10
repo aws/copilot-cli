@@ -104,7 +104,8 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	var routes []*WebServiceRoute
 	var configs []*ECSServiceConfig
-	var services []*ServiceDiscovery
+	var sds serviceDiscoveries
+	var scs serviceConnects
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -137,11 +138,18 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 				return nil, err
 			}
 			port = svcParams[cfnstack.WorkloadContainerPortParamKey]
-			services = appendServiceDiscovery(services, serviceDiscovery{
+			sds = appendServiceDiscovery(sds, serviceDiscovery{
 				Service:  d.svc,
 				Port:     port,
 				Endpoint: endpoint,
 			}, env)
+			scDNSNames, err := svcDescr.ServiceConnectDNSNames()
+			if err != nil {
+				return nil, fmt.Errorf("retrieve service connect DNS names: %w", err)
+			}
+			for _, dnsName := range scDNSNames {
+				scs = appendServiceConnect(scs, dnsName, env)
+			}
 		}
 		containerPlatform, err := svcDescr.Platform()
 		if err != nil {
@@ -185,17 +193,20 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}
 
 	return &backendSvcDesc{
-		Service:          d.svc,
-		Type:             manifest.BackendServiceType,
-		App:              d.app,
-		Configurations:   configs,
-		Routes:           routes,
-		ServiceDiscovery: services,
-		Variables:        envVars,
-		Secrets:          secrets,
-		Resources:        resources,
+		ecsSvcDesc: ecsSvcDesc{
+			Service:          d.svc,
+			Type:             manifest.BackendServiceType,
+			App:              d.app,
+			Configurations:   configs,
+			Routes:           routes,
+			ServiceDiscovery: sds,
+			ServiceConnect:   scs,
+			Variables:        envVars,
+			Secrets:          secrets,
+			Resources:        resources,
 
-		environments: environments,
+			environments: environments,
+		},
 	}, nil
 }
 
@@ -211,12 +222,17 @@ func (d *BackendServiceDescriber) Manifest(env string) ([]byte, error) {
 
 // backendSvcDesc contains serialized parameters for a backend service.
 type backendSvcDesc struct {
+	ecsSvcDesc
+}
+
+type ecsSvcDesc struct {
 	Service          string               `json:"service"`
 	Type             string               `json:"type"`
 	App              string               `json:"application"`
 	Configurations   ecsConfigurations    `json:"configurations"`
 	Routes           []*WebServiceRoute   `json:"routes"`
 	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
+	ServiceConnect   serviceConnects      `json:"serviceConnect,omitempty"`
 	Variables        containerEnvVars     `json:"variables"`
 	Secrets          secrets              `json:"secrets,omitempty"`
 	Resources        deployedSvcResources `json:"resources,omitempty"`
@@ -255,9 +271,15 @@ func (w *backendSvcDesc) HumanString() string {
 			fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 		}
 	}
-	fmt.Fprint(writer, color.Bold.Sprint("\nService Discovery\n\n"))
-	writer.Flush()
-	w.ServiceDiscovery.humanString(writer)
+	if len(w.ServiceConnect) > 0 || len(w.ServiceDiscovery) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nService Endpoint\n\n"))
+		writer.Flush()
+		endpoints := serviceEndpoints{
+			discoveries: w.ServiceDiscovery,
+			connects:    w.ServiceConnect,
+		}
+		endpoints.humanString(writer)
+	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	w.Variables.humanString(writer)

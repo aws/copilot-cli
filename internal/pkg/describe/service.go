@@ -48,6 +48,7 @@ type DeployedEnvServicesLister interface {
 
 type ecsClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
+	Service(app, env, svc string) (*awsecs.Service, error)
 }
 
 type apprunnerClient interface {
@@ -63,7 +64,7 @@ type workloadStackDescriber interface {
 
 type ecsDescriber interface {
 	workloadStackDescriber
-
+	ServiceConnectDNSNames() ([]string, error)
 	Platform() (*awsecs.ContainerPlatform, error)
 	EnvVars() ([]*awsecs.ContainerEnvVar, error)
 	Secrets() ([]*awsecs.ContainerSecret, error)
@@ -261,6 +262,15 @@ func (d *ecsServiceDescriber) Platform() (*awsecs.ContainerPlatform, error) {
 		}, nil
 	}
 	return platform, nil
+}
+
+// ServiceConnectDNSNames returns the service connect dns names of a service.
+func (d *ecsServiceDescriber) ServiceConnectDNSNames() ([]string, error) {
+	service, err := d.ecsClient.Service(d.app, d.env, d.service)
+	if err != nil {
+		return nil, fmt.Errorf("get service %s: %w", d.service, err)
+	}
+	return service.ServiceConnectAliases(), nil
 }
 
 // ServiceARN retrieves the ARN of the app runner service.

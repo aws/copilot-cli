@@ -179,6 +179,37 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve environment variables: some error"),
 		},
+		"return error if fail to retrieve service connect DNS names": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
+						{
+							LogicalID: svcStackResourceALBTargetGroupLogicalID,
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
+					m.envDescriber.EXPECT().Outputs().Return(map[string]string{
+						envOutputPublicLoadBalancerDNSName: testEnvLBDNSName,
+					}, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
+						OperatingSystem: "LINUX",
+						Architecture:    "X86_64",
+					}, nil),
+					m.ecsDescriber.EXPECT().EnvVars().Return([]*ecs.ContainerEnvVar{
+						{
+							Name:      "COPILOT_ENVIRONMENT_NAME",
+							Container: "container",
+							Value:     "prod",
+						},
+					}, nil),
+					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, mockErr),
+				)
+			},
+			wantedError: fmt.Errorf("retrieve service connect DNS names: some error"),
+		},
 		"return error if fail to retrieve secrets": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				gomock.InOrder(
@@ -205,6 +236,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return(nil, mockErr),
 				)
 			},
@@ -237,6 +269,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "GITHUB_WEBHOOK_SECRET",
@@ -282,6 +315,7 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return([]string{testSvc}, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "GITHUB_WEBHOOK_SECRET",
@@ -312,6 +346,8 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(mockProdParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().
+						Return([]string{testSvc}, nil),
 					m.ecsDescriber.EXPECT().Secrets().Return([]*ecs.ContainerSecret{
 						{
 							Name:      "SOME_OTHER_SECRET",
@@ -334,98 +370,106 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedWebSvc: &webSvcDesc{
-				Service: testSvc,
-				Type:    "Load Balanced Web Service",
-				App:     testApp,
-				Configurations: []*ECSServiceConfig{
-					{
-						ServiceConfig: &ServiceConfig{
-							CPU:         "256",
-							Environment: "test",
-							Memory:      "512",
-							Platform:    "LINUX/X86_64",
-							Port:        "80",
-						},
-						Tasks: "1",
-					},
-					{
-						ServiceConfig: &ServiceConfig{
-							CPU:         "512",
-							Environment: "prod",
-							Memory:      "1024",
-							Platform:    "LINUX/ARM64",
-							Port:        "5000",
-						},
-						Tasks: "2",
-					},
-				},
-				Routes: []*WebServiceRoute{
-					{
-						Environment: "test",
-						URL:         "http://abc.us-west-1.elb.amazonaws.com/*",
-					},
-					{
-						Environment: "prod",
-						URL:         "http://abc.us-west-1.elb.amazonaws.com/*",
-					},
-				},
-				ServiceDiscovery: []*ServiceDiscovery{
-					{
-						Environment: []string{"test"},
-						Namespace:   "jobs.test.phonetool.local:80",
-					},
-					{
-						Environment: []string{"prod"},
-						Namespace:   "jobs.prod.phonetool.local:5000",
-					},
-				},
-				Variables: []*containerEnvVar{
-					{
-						envVar: &envVar{
-							Environment: "test",
-							Name:        "COPILOT_ENVIRONMENT_NAME",
-							Value:       "test",
-						},
-						Container: "container1",
-					},
-					{
-						envVar: &envVar{
-							Environment: "prod",
-							Name:        "COPILOT_ENVIRONMENT_NAME",
-							Value:       "prod",
-						},
-						Container: "container2",
-					},
-				},
-				Secrets: []*secret{
-					{
-						Name:        "GITHUB_WEBHOOK_SECRET",
-						Container:   "container",
-						Environment: "test",
-						ValueFrom:   "GH_WEBHOOK_SECRET",
-					},
-					{
-						Name:        "SOME_OTHER_SECRET",
-						Container:   "container",
-						Environment: "prod",
-						ValueFrom:   "SHHHHHHHH",
-					},
-				},
-				Resources: map[string][]*stack.Resource{
-					"test": {
+				ecsSvcDesc: ecsSvcDesc{
+					Service: testSvc,
+					Type:    "Load Balanced Web Service",
+					App:     testApp,
+					Configurations: []*ECSServiceConfig{
 						{
-							Type:       "AWS::EC2::SecurityGroupIngress",
-							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+							ServiceConfig: &ServiceConfig{
+								CPU:         "256",
+								Environment: "test",
+								Memory:      "512",
+								Platform:    "LINUX/X86_64",
+								Port:        "80",
+							},
+							Tasks: "1",
 						},
-					},
-					"prod": {
 						{
-							Type:       "AWS::EC2::SecurityGroup",
-							PhysicalID: "sg-0758ed6b233743530",
+							ServiceConfig: &ServiceConfig{
+								CPU:         "512",
+								Environment: "prod",
+								Memory:      "1024",
+								Platform:    "LINUX/ARM64",
+								Port:        "5000",
+							},
+							Tasks: "2",
 						},
 					},
+					Routes: []*WebServiceRoute{
+						{
+							Environment: "test",
+							URL:         "http://abc.us-west-1.elb.amazonaws.com/*",
+						},
+						{
+							Environment: "prod",
+							URL:         "http://abc.us-west-1.elb.amazonaws.com/*",
+						},
+					},
+					ServiceDiscovery: serviceDiscoveries{
+						{
+							Environment: []string{"test"},
+							Namespace:   "jobs.test.phonetool.local:80",
+						},
+						{
+							Environment: []string{"prod"},
+							Namespace:   "jobs.prod.phonetool.local:5000",
+						},
+					},
+					ServiceConnect: serviceConnects{
+						{
+							Environment: []string{"test", "prod"},
+							DNSName:     testSvc,
+						},
+					},
+					Variables: []*containerEnvVar{
+						{
+							envVar: &envVar{
+								Environment: "test",
+								Name:        "COPILOT_ENVIRONMENT_NAME",
+								Value:       "test",
+							},
+							Container: "container1",
+						},
+						{
+							envVar: &envVar{
+								Environment: "prod",
+								Name:        "COPILOT_ENVIRONMENT_NAME",
+								Value:       "prod",
+							},
+							Container: "container2",
+						},
+					},
+					Secrets: []*secret{
+						{
+							Name:        "GITHUB_WEBHOOK_SECRET",
+							Container:   "container",
+							Environment: "test",
+							ValueFrom:   "GH_WEBHOOK_SECRET",
+						},
+						{
+							Name:        "SOME_OTHER_SECRET",
+							Container:   "container",
+							Environment: "prod",
+							ValueFrom:   "SHHHHHHHH",
+						},
+					},
+					Resources: map[string][]*stack.Resource{
+						"test": {
+							{
+								Type:       "AWS::EC2::SecurityGroupIngress",
+								PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+							},
+						},
+						"prod": {
+							{
+								Type:       "AWS::EC2::SecurityGroup",
+								PhysicalID: "sg-0758ed6b233743530",
+							},
+						},
+					},
+					environments: []string{"test", "prod"},
 				},
-				environments: []string{"test", "prod"},
 			},
 		},
 	}
@@ -495,12 +539,14 @@ Routes
   test         http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend
   prod         http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
 
-Service Discovery
+Service Endpoint
 
-  Environment  Namespace
-  -----------  ---------
-  test         http://my-svc.test.my-app.local:5000
-  prod         http://my-svc.prod.my-app.local:5000
+  Environment  Endpoint                              Type
+  -----------  --------                              ----
+  prod         api, my-svc:5000                      Service Connect
+  test         my-svc                                Service Connect
+  prod         http://my-svc.prod.my-app.local:5000  Service Discovery
+  test         http://my-svc.test.my-app.local:5000  Service Discovery
 
 Variables
 
@@ -525,7 +571,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Load Balanced Web Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\"],\"namespace\":\"http://my-svc.test.my-app.local:5000\"},{\"environment\":[\"prod\"],\"namespace\":\"http://my-svc.prod.my-app.local:5000\"}],\"variables\":[{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"containerA\"},{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"containerB\"},{\"environment\":\"prod\",\"name\":\"DIFFERENT_ENV_VAR\",\"value\":\"prod\",\"container\":\"containerB\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"containerA\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"containerB\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Load Balanced Web Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\"],\"namespace\":\"http://my-svc.test.my-app.local:5000\"},{\"environment\":[\"prod\"],\"namespace\":\"http://my-svc.prod.my-app.local:5000\"}],\"serviceConnect\":[{\"environment\":[\"test\"],\"dnsName\":\"my-svc\"},{\"environment\":[\"prod\"],\"dnsName\":\"my-svc:5000\"},{\"environment\":[\"prod\"],\"dnsName\":\"api\"}],\"variables\":[{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"containerA\"},{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"containerB\"},{\"environment\":\"prod\",\"name\":\"DIFFERENT_ENV_VAR\",\"value\":\"prod\",\"container\":\"containerB\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"containerA\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"containerB\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -603,7 +649,7 @@ Resources
 					URL:         "http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend",
 				},
 			}
-			sds := []*ServiceDiscovery{
+			sds := serviceDiscoveries{
 				{
 					Environment: []string{"test"},
 					Namespace:   "http://my-svc.test.my-app.local:5000",
@@ -611,6 +657,20 @@ Resources
 				{
 					Environment: []string{"prod"},
 					Namespace:   "http://my-svc.prod.my-app.local:5000",
+				},
+			}
+			scs := serviceConnects{
+				{
+					Environment: []string{"test"},
+					DNSName:     "my-svc",
+				},
+				{
+					Environment: []string{"prod"},
+					DNSName:     "my-svc:5000",
+				},
+				{
+					Environment: []string{"prod"},
+					DNSName:     "api",
 				},
 			}
 			resources := map[string][]*stack.Resource{
@@ -628,16 +688,19 @@ Resources
 				},
 			}
 			webSvc := &webSvcDesc{
-				Service:          "my-svc",
-				Type:             "Load Balanced Web Service",
-				Configurations:   config,
-				App:              "my-app",
-				Variables:        envVars,
-				Secrets:          secrets,
-				Routes:           routes,
-				ServiceDiscovery: sds,
-				Resources:        resources,
-				environments:     []string{"test", "prod"},
+				ecsSvcDesc: ecsSvcDesc{
+					Service:          "my-svc",
+					Type:             "Load Balanced Web Service",
+					Configurations:   config,
+					App:              "my-app",
+					Variables:        envVars,
+					Secrets:          secrets,
+					Routes:           routes,
+					ServiceDiscovery: sds,
+					ServiceConnect:   scs,
+					Resources:        resources,
+					environments:     []string{"test", "prod"},
+				},
 			}
 			human := webSvc.HumanString()
 			json, _ := webSvc.JSONString()

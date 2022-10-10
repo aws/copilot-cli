@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
-
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
@@ -69,6 +68,26 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve service URI: retrieve service discovery endpoint for environment test: some error"),
 		},
+		"return error if fail to retrieve service connect dns names": {
+			setupMocks: func(m lbWebSvcDescriberMocks) {
+				params := map[string]string{
+					cfnstack.WorkloadContainerPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:     "1",
+					cfnstack.WorkloadTaskCPUParamKey:       "256",
+					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+				}
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().Params().Return(params, nil),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, mockErr),
+				)
+			},
+			wantedError: fmt.Errorf("retrieve service connect DNS names: some error"),
+		},
 		"return error if fail to retrieve platform": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				params := map[string]string{
@@ -84,7 +103,8 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
-					m.ecsDescriber.EXPECT().Platform().Return(nil, errors.New("some error")),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
+					m.ecsDescriber.EXPECT().Platform().Return(nil, mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve platform: some error"),
@@ -104,6 +124,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
@@ -128,6 +149,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
@@ -172,6 +194,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Params().Return(testParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
@@ -195,6 +218,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
 					m.ecsDescriber.EXPECT().Params().Return(prodParams, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("prod.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "ARM64",
@@ -250,112 +274,114 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedBackendSvc: &backendSvcDesc{
-				Service: testSvc,
-				Type:    "Backend Service",
-				App:     testApp,
-				Configurations: []*ECSServiceConfig{
-					{
-						ServiceConfig: &ServiceConfig{
-							CPU:         "256",
+				ecsSvcDesc: ecsSvcDesc{
+					Service: testSvc,
+					Type:    "Backend Service",
+					App:     testApp,
+					Configurations: []*ECSServiceConfig{
+						{
+							ServiceConfig: &ServiceConfig{
+								CPU:         "256",
+								Environment: "test",
+								Memory:      "512",
+								Platform:    "LINUX/X86_64",
+								Port:        "5000",
+							},
+							Tasks: "1",
+						},
+						{
+							ServiceConfig: &ServiceConfig{
+								CPU:         "512",
+								Environment: "prod",
+								Memory:      "1024",
+								Platform:    "LINUX/ARM64",
+								Port:        "5000",
+							},
+							Tasks: "2",
+						},
+						{
+							ServiceConfig: &ServiceConfig{
+								CPU:         "512",
+								Environment: "mockEnv",
+								Memory:      "1024",
+								Platform:    "LINUX/X86_64",
+								Port:        "-",
+							},
+							Tasks: "2",
+						},
+					},
+					ServiceDiscovery: []*ServiceDiscovery{
+						{
+							Environment: []string{"test"},
+							Namespace:   "jobs.test.phonetool.local:5000",
+						},
+						{
+							Environment: []string{"prod"},
+							Namespace:   "jobs.prod.phonetool.local:5000",
+						},
+					},
+					Variables: []*containerEnvVar{
+						{
+							envVar: &envVar{
+								Environment: "test",
+								Name:        "COPILOT_ENVIRONMENT_NAME",
+								Value:       "test",
+							},
+							Container: "container",
+						},
+						{
+							envVar: &envVar{
+								Environment: "prod",
+								Name:        "COPILOT_ENVIRONMENT_NAME",
+								Value:       "prod",
+							},
+							Container: "container",
+						},
+						{
+							envVar: &envVar{
+								Environment: "mockEnv",
+								Name:        "COPILOT_ENVIRONMENT_NAME",
+								Value:       "mockEnv",
+							},
+							Container: "container",
+						},
+					},
+					Secrets: []*secret{
+						{
+							Name:        "GITHUB_WEBHOOK_SECRET",
+							Container:   "container",
 							Environment: "test",
-							Memory:      "512",
-							Platform:    "LINUX/X86_64",
-							Port:        "5000",
+							ValueFrom:   "GH_WEBHOOK_SECRET",
 						},
-						Tasks: "1",
-					},
-					{
-						ServiceConfig: &ServiceConfig{
-							CPU:         "512",
+						{
+							Name:        "SOME_OTHER_SECRET",
+							Container:   "container",
 							Environment: "prod",
-							Memory:      "1024",
-							Platform:    "LINUX/ARM64",
-							Port:        "5000",
+							ValueFrom:   "SHHHHHHHH",
 						},
-						Tasks: "2",
 					},
-					{
-						ServiceConfig: &ServiceConfig{
-							CPU:         "512",
-							Environment: "mockEnv",
-							Memory:      "1024",
-							Platform:    "LINUX/X86_64",
-							Port:        "-",
+					Resources: map[string][]*stack.Resource{
+						"test": {
+							{
+								Type:       "AWS::EC2::SecurityGroupIngress",
+								PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
+							},
 						},
-						Tasks: "2",
+						"prod": {
+							{
+								Type:       "AWS::EC2::SecurityGroup",
+								PhysicalID: "sg-0758ed6b233743530",
+							},
+						},
+						"mockEnv": {
+							{
+								Type:       "AWS::EC2::SecurityGroup",
+								PhysicalID: "sg-2337435300758ed6b",
+							},
+						},
 					},
+					environments: []string{"test", "prod", "mockEnv"},
 				},
-				ServiceDiscovery: []*ServiceDiscovery{
-					{
-						Environment: []string{"test"},
-						Namespace:   "jobs.test.phonetool.local:5000",
-					},
-					{
-						Environment: []string{"prod"},
-						Namespace:   "jobs.prod.phonetool.local:5000",
-					},
-				},
-				Variables: []*containerEnvVar{
-					{
-						envVar: &envVar{
-							Environment: "test",
-							Name:        "COPILOT_ENVIRONMENT_NAME",
-							Value:       "test",
-						},
-						Container: "container",
-					},
-					{
-						envVar: &envVar{
-							Environment: "prod",
-							Name:        "COPILOT_ENVIRONMENT_NAME",
-							Value:       "prod",
-						},
-						Container: "container",
-					},
-					{
-						envVar: &envVar{
-							Environment: "mockEnv",
-							Name:        "COPILOT_ENVIRONMENT_NAME",
-							Value:       "mockEnv",
-						},
-						Container: "container",
-					},
-				},
-				Secrets: []*secret{
-					{
-						Name:        "GITHUB_WEBHOOK_SECRET",
-						Container:   "container",
-						Environment: "test",
-						ValueFrom:   "GH_WEBHOOK_SECRET",
-					},
-					{
-						Name:        "SOME_OTHER_SECRET",
-						Container:   "container",
-						Environment: "prod",
-						ValueFrom:   "SHHHHHHHH",
-					},
-				},
-				Resources: map[string][]*stack.Resource{
-					"test": {
-						{
-							Type:       "AWS::EC2::SecurityGroupIngress",
-							PhysicalID: "ContainerSecurityGroupIngressFromPublicALB",
-						},
-					},
-					"prod": {
-						{
-							Type:       "AWS::EC2::SecurityGroup",
-							PhysicalID: "sg-0758ed6b233743530",
-						},
-					},
-					"mockEnv": {
-						{
-							Type:       "AWS::EC2::SecurityGroup",
-							PhysicalID: "sg-2337435300758ed6b",
-						},
-					},
-				},
-				environments: []string{"test", "prod", "mockEnv"},
 			},
 		},
 		"internal alb success http": {
@@ -388,6 +414,7 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.lbDescriber.EXPECT().ListenerRuleHostHeaders("listenerRuleARN").Return([]string{"jobs.test.phonetool.internal"}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(params, nil),
 					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.phonetool.local", nil),
+					m.ecsDescriber.EXPECT().ServiceConnectDNSNames().Return([]string{"jobs"}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
 						Architecture:    "X86_64",
@@ -410,66 +437,74 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 				)
 			},
 			wantedBackendSvc: &backendSvcDesc{
-				Service: testSvc,
-				Type:    "Backend Service",
-				App:     testApp,
-				Configurations: []*ECSServiceConfig{
-					{
-						ServiceConfig: &ServiceConfig{
-							CPU:         "256",
-							Environment: "test",
-							Memory:      "512",
-							Platform:    "LINUX/X86_64",
-							Port:        "5000",
-						},
-						Tasks: "1",
-					},
-				},
-				Routes: []*WebServiceRoute{
-					{
-						Environment: "test",
-						URL:         "http://jobs.test.phonetool.internal/mySvc",
-					},
-				},
-				ServiceDiscovery: []*ServiceDiscovery{
-					{
-						Environment: []string{"test"},
-						Namespace:   "jobs.test.phonetool.local:5000",
-					},
-				},
-				Variables: []*containerEnvVar{
-					{
-						envVar: &envVar{
-							Environment: "test",
-							Name:        "COPILOT_ENVIRONMENT_NAME",
-							Value:       "test",
-						},
-						Container: "container",
-					},
-				},
-				Secrets: []*secret{
-					{
-						Name:        "GITHUB_WEBHOOK_SECRET",
-						Container:   "container",
-						Environment: "test",
-						ValueFrom:   "GH_WEBHOOK_SECRET",
-					},
-				},
-				Resources: map[string][]*stack.Resource{
-					"test": {
+				ecsSvcDesc: ecsSvcDesc{
+					Service: testSvc,
+					Type:    "Backend Service",
+					App:     testApp,
+					Configurations: []*ECSServiceConfig{
 						{
-							Type:       "AWS::ElasticLoadBalancingV2::TargetGroup",
-							LogicalID:  svcStackResourceALBTargetGroupLogicalID,
-							PhysicalID: "targetGroupARN",
-						},
-						{
-							Type:       svcStackResourceListenerRuleResourceType,
-							LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
-							PhysicalID: "listenerRuleARN",
+							ServiceConfig: &ServiceConfig{
+								CPU:         "256",
+								Environment: "test",
+								Memory:      "512",
+								Platform:    "LINUX/X86_64",
+								Port:        "5000",
+							},
+							Tasks: "1",
 						},
 					},
+					Routes: []*WebServiceRoute{
+						{
+							Environment: "test",
+							URL:         "http://jobs.test.phonetool.internal/mySvc",
+						},
+					},
+					ServiceDiscovery: serviceDiscoveries{
+						{
+							Environment: []string{"test"},
+							Namespace:   "jobs.test.phonetool.local:5000",
+						},
+					},
+					ServiceConnect: serviceConnects{
+						{
+							Environment: []string{"test"},
+							DNSName:     "jobs",
+						},
+					},
+					Variables: []*containerEnvVar{
+						{
+							envVar: &envVar{
+								Environment: "test",
+								Name:        "COPILOT_ENVIRONMENT_NAME",
+								Value:       "test",
+							},
+							Container: "container",
+						},
+					},
+					Secrets: []*secret{
+						{
+							Name:        "GITHUB_WEBHOOK_SECRET",
+							Container:   "container",
+							Environment: "test",
+							ValueFrom:   "GH_WEBHOOK_SECRET",
+						},
+					},
+					Resources: map[string][]*stack.Resource{
+						"test": {
+							{
+								Type:       "AWS::ElasticLoadBalancingV2::TargetGroup",
+								LogicalID:  svcStackResourceALBTargetGroupLogicalID,
+								PhysicalID: "targetGroupARN",
+							},
+							{
+								Type:       svcStackResourceListenerRuleResourceType,
+								LogicalID:  svcStackResourceHTTPListenerRuleLogicalID,
+								PhysicalID: "listenerRuleARN",
+							},
+						},
+					},
+					environments: []string{"test"},
 				},
-				environments: []string{"test"},
 			},
 		},
 	}
@@ -531,12 +566,12 @@ Configurations
   test         1         0.25        512           LINUX/X86_64  80
   prod         3         0.5         1024          LINUX/ARM64   5000
 
-Service Discovery
+Service Endpoint
 
-  Environment  Namespace
-  -----------  ---------
-  test         http://my-svc.test.my-app.local:5000
-  prod         http://my-svc.prod.my-app.local:5000
+  Environment  Endpoint                              Type
+  -----------  --------                              ----
+  prod         http://my-svc.prod.my-app.local:5000  Service Discovery
+  test         http://my-svc.test.my-app.local:5000  Service Discovery
 
 Variables
 
@@ -645,15 +680,17 @@ Resources
 				},
 			}
 			backendSvc := &backendSvcDesc{
-				Service:          "my-svc",
-				Type:             "Backend Service",
-				Configurations:   config,
-				App:              "my-app",
-				Variables:        envVars,
-				Secrets:          secrets,
-				ServiceDiscovery: sds,
-				Resources:        resources,
-				environments:     []string{"test", "prod"},
+				ecsSvcDesc: ecsSvcDesc{
+					Service:          "my-svc",
+					Type:             "Backend Service",
+					Configurations:   config,
+					App:              "my-app",
+					Variables:        envVars,
+					Secrets:          secrets,
+					ServiceDiscovery: sds,
+					Resources:        resources,
+					environments:     []string{"test", "prod"},
+				},
 			}
 			human := backendSvc.HumanString()
 			json, _ := backendSvc.JSONString()

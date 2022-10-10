@@ -93,3 +93,88 @@ func TestService_ServiceStatus(t *testing.T) {
 		require.Equal(t, got, wanted)
 	})
 }
+
+func TestService_LastUpdatedAt(t *testing.T) {
+	mockTime1 := time.Unix(14945056, 0)
+	mockTime2 := time.Unix(14945059, 0)
+	t.Run("should return correct last updated value", func(t *testing.T) {
+		s := Service{
+			Deployments: []*ecs.Deployment{
+				{
+					UpdatedAt: &mockTime1,
+				},
+				{
+					UpdatedAt: &mockTime2,
+				},
+			},
+		}
+		got := s.LastUpdatedAt()
+		require.Equal(t, mockTime1, got)
+	})
+}
+
+func TestService_ServiceConnectAliases(t *testing.T) {
+	tests := map[string]struct {
+		inService *Service
+
+		wantedError error
+		wanted      []string
+	}{
+		"quit early if not enabled": {
+			inService: &Service{
+				Deployments: []*ecs.Deployment{
+					{
+						ServiceConnectConfiguration: &ecs.ServiceConnectConfiguration{
+							Enabled: aws.Bool(false),
+						},
+					},
+				},
+			},
+			wanted: []string{},
+		},
+		"success": {
+			inService: &Service{
+				Deployments: []*ecs.Deployment{
+					{
+						ServiceConnectConfiguration: &ecs.ServiceConnectConfiguration{
+							Enabled:   aws.Bool(true),
+							Namespace: aws.String("foobar.local"),
+							Services: []*ecs.ServiceConnectService{
+								{
+									PortName:      aws.String("frontend"),
+									DiscoveryName: aws.String("front"),
+								},
+								{
+									PortName: aws.String("frontend"),
+								},
+								{
+									PortName: aws.String("frontend"),
+									ClientAliases: []*ecs.ServiceConnectClientAlias{
+										{
+											Port: aws.Int64(5000),
+										},
+										{
+											DnsName: aws.String("api"),
+											Port:    aws.Int64(80),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wanted: []string{"front.foobar.local", "frontend.foobar.local", "frontend.foobar.local:5000", "api:80"},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			get := tc.inService.ServiceConnectAliases()
+
+			// THEN
+			require.ElementsMatch(t, get, tc.wanted)
+		})
+	}
+}
