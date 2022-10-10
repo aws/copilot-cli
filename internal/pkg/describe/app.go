@@ -26,7 +26,7 @@ type App struct {
 	Name                string                   `json:"name"`
 	Version             string                   `json:"version"`
 	URI                 string                   `json:"uri"`
-	PermissionsBoundary string                   `json:"permissionsboundary"`
+	PermissionsBoundary string                   `json:"permissionsBoundary"`
 	Envs                []*config.Environment    `json:"environments"`
 	Services            []*config.Workload       `json:"services"`
 	Jobs                []*config.Workload       `json:"jobs"`
@@ -53,6 +53,12 @@ func (a *App) HumanString() string {
 	availableVersion := ""
 	if deploy.LatestAppTemplateVersion != a.Version {
 		availableVersion = color.Yellow.Sprintf("(latest available: %s)", deploy.LatestAppTemplateVersion)
+	}
+	if a.URI == "" {
+		a.URI = "N/A"
+	}
+	if a.PermissionsBoundary == "" {
+		a.PermissionsBoundary = "N/A"
 	}
 	fmt.Fprintf(writer, "  %s\t%s %s\n", "Version", a.Version, availableVersion)
 	fmt.Fprintf(writer, "  %s\t%s\n", "URI", a.URI)
