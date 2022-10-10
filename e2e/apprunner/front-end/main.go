@@ -4,8 +4,10 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -13,11 +15,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 
-	"github.com/julienschmidt/httprouter"
 	_ "github.com/lib/pq" // https://www.calhoun.io/why-we-import-sql-drivers-with-the-blank-identifier/
 )
 
@@ -29,7 +30,7 @@ const (
 )
 
 // SimpleGet just returns true no matter what
-func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+func SimpleGet(w http.ResponseWriter, req *http.Request) {
 	log.Println("Get Succeeded")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(os.Getenv("COPILOT_APPLICATION_NAME") + "-" + os.Getenv("COPILOT_ENVIRONMENT_NAME") + "-" + os.Getenv("COPILOT_SERVICE_NAME")))
@@ -40,11 +41,11 @@ func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 // This test assumes the backend app is called "back-end". The 'service-discovery' endpoint
 // of the back-end service is unreachable from the LB, so the only way to get it is
 // through service discovery. The response should be `back-end-service-discovery`
-func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request) {
 	endpoint := fmt.Sprintf("http://back-end.%s/service-discovery/", os.Getenv("COPILOT_SERVICE_DISCOVERY_ENDPOINT"))
 	resp, err := http.Get(endpoint)
 	if err != nil {
-		log.Printf("🚨 could call service discovery endpoint: err=%s\n", err)
+		log.Printf("🚨 could call service discovery endpoint: err=%s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -64,17 +65,21 @@ type Secret struct {
 }
 
 // DBGet calls an aurora DB and returns a timestamp from the database.
-func DBGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(os.Getenv("AWS_DEFAULT_REGION")),
-	})
+func DBGet(w http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), 20*time.Second)
+	defer cancel()
+
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion(os.Getenv("AWS_DEFAULT_REGION")),
+	)
 	if err != nil {
-		log.Printf("🚨 initial new aws session: err=%s\n", err)
+		log.Printf("🚨 load aws config: %s", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	ssm := secretsmanager.New(sess)
-	out, err := ssm.GetSecretValue(&secretsmanager.GetSecretValueInput{
+
+	mgr := secretsmanager.NewFromConfig(cfg)
+	out, err := mgr.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(os.Getenv("FRONTENDCLUSTER_SECRET_ARN")),
 	})
 	if err != nil {
@@ -82,18 +87,21 @@ func DBGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	secretValue := aws.StringValue(out.SecretString)
+
+	secretValue := aws.ToString(out.SecretString)
 	if secretValue == "" {
 		log.Print("🚨 empty aurora secret value\n")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	secret := Secret{}
 	if err := json.Unmarshal([]byte(secretValue), &secret); err != nil {
 		log.Printf("🚨 unmarshal rds secret: err=%s\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	source := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s",
 		secret.Host, secret.Port, secret.Username, secret.Password, secret.DBName)
@@ -103,29 +111,26 @@ func DBGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = db.Ping() // Force open a connection to the database.
-	if err != nil {
+	defer db.Close()
+
+	// Force open a connection to the database.
+	if err := db.Ping(); err != nil {
 		log.Printf("🚨 ping: err=%s\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	close := func() error {
-		err := db.Close()
-		if err != nil {
-			return fmt.Errorf("close db: %w", err)
-		}
-		return nil
-	}
-	defer close()
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(fmt.Sprint(time.Now())))
 }
 
 func main() {
-	router := httprouter.New()
-	router.GET("/", SimpleGet)
-	router.GET("/service-discovery-test", ServiceDiscoveryGet)
-	router.GET("/db", DBGet)
+	http.Handle("/", http.HandlerFunc(SimpleGet))
+	http.Handle("/service-discovery-test", http.HandlerFunc(ServiceDiscoveryGet))
+	http.Handle("/db", http.HandlerFunc(DBGet))
 
-	log.Fatal(http.ListenAndServe(":80", router))
+	err := http.ListenAndServe(":80", nil)
+	if !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("listen and serve: %s", err)
+	}
 }

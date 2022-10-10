@@ -22,7 +22,7 @@ EnvironmentManagerRole:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-{{- if or .PublicHTTPConfig.ImportedCertARNs .PrivateHTTPConfig.ImportedCertARNs}}
+{{- if .HasImportedCerts}}
         - Sid: ImportedCertificates
           Effect: Allow
           Action: [

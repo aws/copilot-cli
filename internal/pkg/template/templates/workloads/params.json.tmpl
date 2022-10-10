@@ -1,8 +1,0 @@
-{
-  "Parameters" : { {{$paramsSize := len .Parameters}}{{range $i, $p := .Parameters}}
-    {{if eq (inc $i) $paramsSize}}"{{$p.ParameterKey}}": "{{$p.ParameterValue}}"{{else}}"{{$p.ParameterKey}}": "{{$p.ParameterValue}}",{{end}}{{end}}
-  },{{$n := len .Tags}}{{if gt $n 0}}
-  "Tags": { {{range $i, $t := .Tags}}
-    {{if eq (inc $i) $n}}"{{$t.Key}}": "{{$t.Value}}"{{else}}"{{$t.Key}}": "{{$t.Value}}",{{end}}{{end}}
-  }{{end}}
-}
