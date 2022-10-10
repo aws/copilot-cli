@@ -64,15 +64,16 @@ const (
 	noSubscriptionFlag  = "no-subscribe"
 	subscribeTopicsFlag = "subscribe-topics"
 
-	storageTypeFlag              = "storage-type"
-	storagePartitionKeyFlag      = "partition-key"
-	storageSortKeyFlag           = "sort-key"
-	storageNoSortFlag            = "no-sort"
-	storageLSIConfigFlag         = "lsi"
-	storageNoLSIFlag             = "no-lsi"
-	storageRDSEngineFlag         = "engine"
-	storageRDSInitialDBFlag      = "initial-db"
-	storageRDSParameterGroupFlag = "parameter-group"
+	storageTypeFlag                 = "storage-type"
+	storagePartitionKeyFlag         = "partition-key"
+	storageSortKeyFlag              = "sort-key"
+	storageNoSortFlag               = "no-sort"
+	storageLSIConfigFlag            = "lsi"
+	storageNoLSIFlag                = "no-lsi"
+	storageRDSServerlessVersionFlag = "serverless-version"
+	storageRDSEngineFlag            = "engine"
+	storageRDSInitialDBFlag         = "initial-db"
+	storageRDSParameterGroupFlag    = "parameter-group"
 
 	taskGroupNameFlag            = "task-group-name"
 	countFlag                    = "count"
@@ -278,6 +279,8 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageNoLSIFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
+	storageRDSServerlessVersionFlagDescription = `Aurora Serverless version.
+Must be of either "V1" or "V2"`
 	storageRDSEngineFlagDescription = `The database engine used in the cluster.
 Must be either "MySQL" or "PostgreSQL".`
 	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."

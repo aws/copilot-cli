@@ -1,0 +1,183 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  Name:
+    Type: String
+    Description: The name of the service, job, or workflow being deployed.
+  ServiceSecurityGroupId:
+    Type: String
+    Description: The security group associated with the VPC connector.
+  # Customize your Aurora Serverless cluster by setting the default value of the following parameters.
+  {{logicalIDSafe .ClusterName}}DBName:
+    Type: String
+    Description: The name of the initial database to be created in the Aurora Serverless v2 cluster.
+    Default: {{.InitialDBName}}
+    # Cannot have special characters
+    # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
+Mappings:
+  {{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap: {{range $env := .Envs}}
+    {{$env}}:
+      {{- if eq $.Engine "MySQL"}}
+      "DBMinCapacity": 0.5 # AllowedValues: from 0.5 through 128
+      "DBMaxCapacity": 8   # AllowedValues: from 0.5 through 128
+      {{- else}}
+      "DBMinCapacity": 0.5 # AllowedValues: from 0.5 through 128
+      "DBMaxCapacity": 8   # AllowedValues: from 0.5 through 128
+      {{end -}}
+    {{end}}
+    All:
+      {{- if eq $.Engine "MySQL"}}
+      "DBMinCapacity": 0.5 # AllowedValues: from 0.5 through 128
+      "DBMaxCapacity": 8   # AllowedValues: from 0.5 through 128
+      {{- else}}
+      "DBMinCapacity": 0.5 # AllowedValues: from 0.5 through 128
+      "DBMaxCapacity": 8   # AllowedValues: from 0.5 through 128
+      {{end}}
+
+Resources:
+  {{logicalIDSafe .ClusterName}}DBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: Group of Copilot private subnets for Aurora Serverless v2 cluster.
+      SubnetIds:
+        !Split [',', { 'Fn::ImportValue': !Sub '${App}-${Env}-PrivateSubnets' }]
+  {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}'
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: The Security Group for the Aurora Serverless v2 cluster.
+      SecurityGroupIngress:
+        {{- if eq .Engine "MySQL"}}
+        - ToPort: 3306
+          FromPort: 3306
+        {{- else}}
+        - ToPort: 5432
+          FromPort: 5432
+        {{- end}}
+          IpProtocol: tcp
+          Description: !Sub 'From the Aurora Security Group of the workload ${Name}.'
+          SourceSecurityGroupId: !Ref ServiceSecurityGroupId
+      VpcId:
+        Fn::ImportValue:
+          !Sub '${App}-${Env}-VpcId'
+
+  {{logicalIDSafe .ClusterName}}AuroraSecret:
+    Metadata:
+      'aws:copilot:description': 'A Secrets Manager secret to store your DB credentials'
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub Aurora main user secret for ${AWS::StackName}
+      GenerateSecretString:
+        {{- if eq .Engine "MySQL"}}
+        SecretStringTemplate: '{"username": "admin"}'
+        {{- else}}
+        SecretStringTemplate: '{"username": "postgres"}'
+        {{- end}}
+        GenerateStringKey: "password"
+        ExcludePunctuation: true
+        IncludeSpace: false
+        PasswordLength: 16
+
+  {{logicalIDSafe .ClusterName}}AuroraSecretAccessPolicy:
+    Metadata:
+      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the DB credentials secret'
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - Grants read access to the ${Secret} secret
+        - { Secret: !Ref {{logicalIDSafe .ClusterName}}AuroraSecret }
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: SecretActions
+            Effect: Allow
+            Action:
+              - 'secretsmanager:GetSecretValue'
+            Resource:
+              - !Ref {{logicalIDSafe .ClusterName}}AuroraSecret
+
+  {{- if .ParameterGroup}}
+  # {{logicalIDSafe .ClusterName}}DBClusterParameterGroup:
+  #   Type: 'AWS::RDS::DBClusterParameterGroup'
+  #   Properties:
+  #     Description: !Ref 'AWS::StackName'
+  #     Family: 'aurora-mysql8.0'
+  #     Parameters:
+  #       character_set_client: 'utf8'
+  {{- else}}
+  {{logicalIDSafe .ClusterName}}DBClusterParameterGroup:
+    Metadata:
+      'aws:copilot:description': 'A DB parameter group for engine configuration values'
+    Type: 'AWS::RDS::DBClusterParameterGroup'
+    Properties:
+      Description: !Ref 'AWS::StackName'
+      {{- if eq .Engine "MySQL"}}
+      Family: 'aurora-mysql8.0'
+      Parameters:
+        character_set_client: 'utf8'
+      {{- else}}
+      Family: 'aurora-postgresql14'
+      Parameters:
+        client_encoding: 'UTF8'
+      {{- end}}
+  {{- end}}
+  {{logicalIDSafe .ClusterName}}DBCluster:
+    Metadata:
+      'aws:copilot:description': 'The {{logicalIDSafe .ClusterName}} Aurora Serverless v2 database cluster'
+    Type: 'AWS::RDS::DBCluster'
+    Properties:
+      MasterUsername:
+        !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref {{logicalIDSafe .ClusterName}}AuroraSecret, ":SecretString:username}}" ]]
+      MasterUserPassword:
+        !Join [ "",  [ {{`'{{resolve:secretsmanager:'`}}, !Ref {{logicalIDSafe .ClusterName}}AuroraSecret, ":SecretString:password}}" ]]
+      DatabaseName: !Ref {{logicalIDSafe .ClusterName}}DBName
+      {{- if eq .Engine "MySQL"}}
+      Engine: 'aurora-mysql'
+      EngineVersion: '8.0.mysql_aurora.3.02.0'
+      {{- else}}
+      Engine: 'aurora-postgresql'
+      EngineVersion: '14.4'
+      {{- end}}
+      DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref {{logicalIDSafe .ClusterName}}DBClusterParameterGroup {{- end}}
+      DBSubnetGroupName: !Ref {{logicalIDSafe .ClusterName}}DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup
+      ServerlessV2ScalingConfiguration:
+        # Replace "All" below with "!Ref Env" to set different autoscaling limits per environment.
+        MinCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, All, DBMinCapacity]
+        MaxCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, All, DBMaxCapacity]
+  {{logicalIDSafe .ClusterName}}DBWriterInstance:
+    Metadata:
+      'aws:copilot:description': 'The {{logicalIDSafe .ClusterName}} Aurora Serverless v2 writer instance'
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      DBClusterIdentifier: !Ref {{logicalIDSafe .ClusterName}}DBCluster
+      DBInstanceClass: db.serverless
+      {{- if eq .Engine "MySQL"}}
+      Engine: 'aurora-mysql'
+      {{- else}}
+      Engine: 'aurora-postgresql'
+      {{- end}}
+      PromotionTier: 1
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: AWS::Region
+  {{logicalIDSafe .ClusterName}}SecretAuroraClusterAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref {{logicalIDSafe .ClusterName}}AuroraSecret
+      TargetId: !Ref {{logicalIDSafe .ClusterName}}DBCluster
+      TargetType: AWS::RDS::DBCluster
+Outputs:
+  {{logicalIDSafe .ClusterName}}AuroraSecretAccessPolicy: # Automatically augment your instance role with this managed policy.
+    Description: "Add the IAM ManagedPolicy to your instance role"
+    Value: !Ref {{logicalIDSafe .ClusterName}}AuroraSecretAccessPolicy
+  {{logicalIDSafe .ClusterName}}Secret: # Inject this secret ARN in your manifest file.
+    Description: "The secret ARN that holds the database username and password in JSON format. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier' and 'engine'"
+    Value: !Ref {{logicalIDSafe .ClusterName}}AuroraSecret

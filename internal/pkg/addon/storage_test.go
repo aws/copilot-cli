@@ -111,6 +111,7 @@ func TestS3Template_MarshalBinary(t *testing.T) {
 func TestRDSTemplate_MarshalBinary(t *testing.T) {
 	testCases := map[string]struct {
 		workloadType     string
+		version          string
 		engine           string
 		mockDependencies func(ctrl *gomock.Controller, r *RDSTemplate)
 
@@ -118,7 +119,8 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 		wantedError  error
 	}{
 		"error parsing template": {
-			engine: RDSEngineTypePostgreSQL,
+			version: ServerlessVersionV1,
+			engine:  RDSEngineTypePostgreSQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
@@ -126,8 +128,9 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			},
 			wantedError: errors.New("some error"),
 		},
-		"renders postgresql content": {
-			engine: RDSEngineTypePostgreSQL,
+		"renders postgresql v1 content": {
+			version: ServerlessVersionV1,
+			engine:  RDSEngineTypePostgreSQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
@@ -137,8 +140,9 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			},
 			wantedBinary: []byte("psql"),
 		},
-		"renders mysql content": {
-			engine: RDSEngineTypeMySQL,
+		"renders mysql v1 content": {
+			version: ServerlessVersionV1,
+			engine:  RDSEngineTypeMySQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
@@ -148,13 +152,50 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			},
 			wantedBinary: []byte("mysql"),
 		},
-		"renders rdws rds template": {
+		"renders rdws rds v1 template": {
 			workloadType: "Request-Driven Web Service",
+			version:      ServerlessVersionV1,
 			engine:       RDSEngineTypeMySQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
 				r.parser = m
 				m.EXPECT().Parse(gomock.Eq(rdsRDWSTemplatePath), *r, gomock.Any()).
+					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
+			},
+			wantedBinary: []byte("mysql"),
+		},
+		"renders postgresql v2 content": {
+			version: ServerlessVersionV2,
+			engine:  RDSEngineTypePostgreSQL,
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Eq(rdsV2TemplatePath), *r, gomock.Any()).
+					Return(&template.Content{Buffer: bytes.NewBufferString("psql")}, nil)
+
+			},
+			wantedBinary: []byte("psql"),
+		},
+		"renders mysql v2 content": {
+			version: ServerlessVersionV2,
+			engine:  RDSEngineTypeMySQL,
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Eq(rdsV2TemplatePath), *r, gomock.Any()).
+					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
+
+			},
+			wantedBinary: []byte("mysql"),
+		},
+		"renders rdws rds v2 template": {
+			workloadType: "Request-Driven Web Service",
+			version:      ServerlessVersionV2,
+			engine:       RDSEngineTypeMySQL,
+			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
+				m := mocks.NewMockParser(ctrl)
+				r.parser = m
+				m.EXPECT().Parse(gomock.Eq(rdsRDWSV2TemplatePath), *r, gomock.Any()).
 					Return(&template.Content{Buffer: bytes.NewBufferString("mysql")}, nil)
 			},
 			wantedBinary: []byte("mysql"),
@@ -168,8 +209,9 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			defer ctrl.Finish()
 			addon := &RDSTemplate{
 				RDSProps: RDSProps{
-					WorkloadType: tc.workloadType,
-					Engine:       tc.engine,
+					WorkloadType:      tc.workloadType,
+					ServerlessVersion: tc.version,
+					Engine:            tc.engine,
 				},
 			}
 			tc.mockDependencies(ctrl, addon)

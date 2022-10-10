@@ -61,6 +61,7 @@ var (
 	// Aurora-Serverless-specific errors.
 	errInvalidRDSNameCharacters    = errors.New("value must start with a letter")
 	errRDWSNotConnectedToVPC       = fmt.Errorf("%s requires a VPC connection", manifest.RequestDrivenWebServiceType)
+	fmtErrInvalidServerlessVersion = "invalid Aurora Serverless version %s: must be one of %s"
 	fmtErrInvalidEngineType        = "invalid engine type %s: must be one of %s"
 	fmtErrInvalidDBNameCharacters  = "invalid database name %s: must contain only alphanumeric characters and underscore; should start with a letter"
 	errInvalidSecretNameCharacters = errors.New("value must contain only letters, numbers, periods, hyphens and underscores")
@@ -436,6 +437,19 @@ func validateDBNameCharacters(name string) error {
 	}
 
 	return fmt.Errorf(fmtErrInvalidDBNameCharacters, name)
+}
+
+func validateServerlessVersion(val interface{}) error {
+	version, ok := val.(string)
+	if !ok {
+		return errValueNotAString
+	}
+	for _, valid := range serverlessVersions {
+		if version == valid {
+			return nil
+		}
+	}
+	return fmt.Errorf(fmtErrInvalidServerlessVersion, version, prettify(serverlessVersions))
 }
 
 func validateEngine(val interface{}) error {

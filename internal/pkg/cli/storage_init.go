@@ -126,17 +126,26 @@ var attributeTypes = []string{
 
 // RDS Aurora Serverless specific questions and help prompts.
 var (
-	storageInitRDSInitialDBNamePrompt = "What would you like to name the initial database in your cluster?"
-	storageInitRDSDBEnginePrompt      = "Which database engine would you like to use?"
+	storageInitRDSServerlessVersionPrompt = "Which Aurora Serverless version would you like to use?"
+	storageInitRDSInitialDBNamePrompt     = "What would you like to name the initial database in your cluster?"
+	storageInitRDSDBEnginePrompt          = "Which database engine would you like to use?"
 )
 
 // RDS Aurora Serverless specific constants and variables.
 const (
+	serverlessVersionV1 = "V1"
+	serverlessVersionV2 = "V2"
+
 	fmtRDSStorageNameDefault = "%s-cluster"
 
 	engineTypeMySQL      = "MySQL"
 	engineTypePostgreSQL = "PostgreSQL"
 )
+
+var serverlessVersions = []string{
+	serverlessVersionV1,
+	serverlessVersionV2,
+}
 
 var engineTypes = []string{
 	engineTypeMySQL,
@@ -158,9 +167,10 @@ type initStorageVars struct {
 	noSort       bool
 
 	// RDS Aurora Serverless specific values collected via flags or prompts
-	rdsEngine         string
-	rdsParameterGroup string
-	rdsInitialDBName  string
+	rdsServerlessVersion string
+	rdsEngine            string
+	rdsParameterGroup    string
+	rdsInitialDBName     string
 }
 
 type initStorageOpts struct {
@@ -239,6 +249,12 @@ func (o *initStorageOpts) Validate() error {
 		return err
 	}
 
+	if o.rdsServerlessVersion != "" {
+		if err := validateServerlessVersion(o.rdsServerlessVersion); err != nil {
+			return err
+		}
+	}
+
 	if o.rdsEngine != "" {
 		if err := validateEngine(o.rdsEngine); err != nil {
 			return err
@@ -299,6 +315,9 @@ func (o *initStorageOpts) Ask() error {
 			return err
 		}
 	case rdsStorageType:
+		if err := o.askAuroraServerlessVersion(); err != nil {
+			return err
+		}
 		if err := o.askAuroraEngineType(); err != nil {
 			return err
 		}
@@ -544,6 +563,21 @@ func (o *initStorageOpts) askDynamoLSIConfig() error {
 	}
 }
 
+func (o *initStorageOpts) askAuroraServerlessVersion() error {
+	if o.rdsServerlessVersion != "" {
+		return nil
+	}
+	version, err := o.prompt.SelectOne(storageInitRDSServerlessVersionPrompt,
+		"",
+		serverlessVersions,
+		prompt.WithFinalMessage("Aurora Serverless version:"))
+	if err != nil {
+		return fmt.Errorf("select Aurora Serverless version: %w", err)
+	}
+	o.rdsServerlessVersion = version
+	return nil
+}
+
 func (o *initStorageOpts) askAuroraEngineType() error {
 	if o.rdsEngine != "" {
 		return nil
@@ -722,6 +756,15 @@ func (o *initStorageOpts) newS3Template() (*addon.S3Template, error) {
 }
 
 func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
+	var version string
+	switch o.rdsServerlessVersion {
+	case serverlessVersionV1:
+		version = addon.ServerlessVersionV1
+	case serverlessVersionV2:
+		version = addon.ServerlessVersionV2
+	default:
+		return nil, errors.New("unknown serverless version")
+	}
 	var engine string
 	switch o.rdsEngine {
 	case engineTypeMySQL:
@@ -738,12 +781,13 @@ func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
 	}
 
 	return addon.NewRDSTemplate(addon.RDSProps{
-		ClusterName:    o.storageName,
-		Engine:         engine,
-		InitialDBName:  o.rdsInitialDBName,
-		ParameterGroup: o.rdsParameterGroup,
-		Envs:           envs,
-		WorkloadType:   o.workloadType,
+		ClusterName:       o.storageName,
+		ServerlessVersion: version,
+		Engine:            engine,
+		InitialDBName:     o.rdsInitialDBName,
+		ParameterGroup:    o.rdsParameterGroup,
+		Envs:              envs,
+		WorkloadType:      o.workloadType,
 	}), nil
 }
 
@@ -829,7 +873,7 @@ Resource names are injected into your containers as environment variables for ea
   Create a DynamoDB table with multiple alternate sort keys.
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N
   Create an RDS Aurora Serverless cluster using PostgreSQL as the database engine.
-  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --engine PostgreSQL`,
+  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --serverless-version V2 --engine PostgreSQL --initial-db testdb`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {
@@ -848,6 +892,7 @@ Resource names are injected into your containers as environment variables for ea
 	cmd.Flags().BoolVar(&vars.noLSI, storageNoLSIFlag, false, storageNoLSIFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSort, storageNoSortFlag, false, storageNoSortFlagDescription)
 
+	cmd.Flags().StringVar(&vars.rdsServerlessVersion, storageRDSServerlessVersionFlag, "", storageRDSServerlessVersionFlagDescription)
 	cmd.Flags().StringVar(&vars.rdsEngine, storageRDSEngineFlag, "", storageRDSEngineFlagDescription)
 	cmd.Flags().StringVar(&vars.rdsInitialDBName, storageRDSInitialDBFlag, "", storageRDSInitialDBFlagDescription)
 	cmd.Flags().StringVar(&vars.rdsParameterGroup, storageRDSParameterGroupFlag, "", storageRDSParameterGroupFlagDescription)
@@ -865,6 +910,7 @@ Resource names are injected into your containers as environment variables for ea
 	ddbFlags.AddFlag(cmd.Flags().Lookup(storageNoLSIFlag))
 
 	auroraFlags := pflag.NewFlagSet("Aurora Serverless", pflag.ContinueOnError)
+	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSServerlessVersionFlag))
 	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSEngineFlag))
 	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSInitialDBFlag))
 	auroraFlags.AddFlag(cmd.Flags().Lookup(storageRDSParameterGroupFlag))

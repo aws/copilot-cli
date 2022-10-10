@@ -715,6 +715,33 @@ func TestValidateCron(t *testing.T) {
 	}
 }
 
+func TestValidateServerlessVersion(t *testing.T) {
+	testCases := map[string]testCase{
+		"v1": {
+			input: "V1",
+			want:  nil,
+		},
+		"v2": {
+			input: "V2",
+			want:  nil,
+		},
+		"invalid serverless-version": {
+			input: "weird-serverless-version",
+			want:  errors.New("invalid Aurora Serverless version weird-serverless-version: must be one of \"V1\", \"V2\""),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := validateServerlessVersion(tc.input)
+			if tc.want != nil {
+				require.EqualError(t, got, tc.want.Error())
+			} else {
+				require.NoError(t, got)
+			}
+		})
+	}
+}
+
 func TestValidateEngine(t *testing.T) {
 	testCases := map[string]testCase{
 		"mysql": {
