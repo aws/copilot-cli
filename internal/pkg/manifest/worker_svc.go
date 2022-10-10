@@ -217,10 +217,15 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	return svc
 }
 
+// setSubscriptionQueueDefaults function modifies the manifest to have
+// 1. FIFO Topic names without ".fifo" suffix.
+// 2. If there are both FIFO and Standard topic subscriptions are specified then set
+//    default events queue to FIFO and add standard topic-specific queue for all the standard topic subscriptions.
+// 3. If there are only Standard topic subscriptions are specified then do nothing and return.
 func setSubscriptionQueueDefaults(topics []TopicSubscription, eventsQueue *SQSQueue) {
 	var isFIFOEnabled bool
 	for _, topic := range topics {
-		if strings.HasSuffix(aws.StringValue(topic.Name), ".fifo") {
+		if isFIFO(aws.StringValue(topic.Name)) {
 			isFIFOEnabled = true
 			break
 		}
@@ -230,12 +235,16 @@ func setSubscriptionQueueDefaults(topics []TopicSubscription, eventsQueue *SQSQu
 	}
 	eventsQueue.FIFO.Enable = aws.Bool(true)
 	for idx, topic := range topics {
-		if strings.HasSuffix(aws.StringValue(topic.Name), ".fifo") {
+		if isFIFO(aws.StringValue(topic.Name)) {
 			topics[idx].Name = aws.String(strings.TrimSuffix(aws.StringValue(topic.Name), ".fifo"))
 		} else {
 			topics[idx].Queue.Enabled = aws.Bool(true)
 		}
 	}
+}
+
+func isFIFO(topic string) bool {
+	return strings.HasSuffix(topic, ".fifo")
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.
