@@ -241,18 +241,18 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(s.rc.EnvFileARN),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
+			ParameterValue: targetContainer,
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
+			ParameterValue: targetPort,
+		},
 	}...)
 
 	if !s.manifest.RoutingRule.IsEmpty() {
 		params = append(params, []*cloudformation.Parameter{
-			{
-				ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
-				ParameterValue: targetContainer,
-			},
-			{
-				ParameterKey:   aws.String(WorkloadTargetPortParamKey),
-				ParameterValue: targetPort,
-			},
 			{
 				ParameterKey:   aws.String(WorkloadRulePathParamKey),
 				ParameterValue: s.manifest.RoutingRule.Path,

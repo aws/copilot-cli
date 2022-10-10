@@ -535,14 +535,14 @@ Resources: # If a bucket URL is specified, that means the template exists.
           TargetGroupArn: !Ref TargetGroup
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
-          Port: !Ref ContainerPort
+          Port: !Ref TargetPort
   TargetGroup:
     Metadata:
       'aws:copilot:description': 'A target group to connect the load balancer to your service'
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
-      Port: !Ref ContainerPort
+      Port: !Ref TargetPort
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds

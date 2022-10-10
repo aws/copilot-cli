@@ -415,7 +415,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 			},
 		},
 	}
-	mftCDNTerminateTLS := &manifest.Environment{
+	mftCDNTerminateTLSAndHTTPCert := &manifest.Environment{
 		EnvironmentConfig: manifest.EnvironmentConfig{
 			HTTPConfig: manifest.EnvironmentHTTPConfig{
 				Public: manifest.PublicHTTPConfig{
@@ -429,6 +429,16 @@ func TestEnvDeployer_Validate(t *testing.T) {
 			},
 		},
 	}
+	mftCDNTerminateTLS := &manifest.Environment{
+		EnvironmentConfig: manifest.EnvironmentConfig{
+			CDNConfig: manifest.EnvironmentCDNConfig{
+				Config: manifest.AdvancedCDNConfig{
+					Certificate:  aws.String("mockCDNCertARN"),
+					TerminateTLS: aws.Bool(true),
+				},
+			},
+		},
+	}
 	tests := map[string]struct {
 		app            *config.Application
 		mft            *manifest.Environment
@@ -436,7 +446,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 		expected       string
 		expectedStdErr string
 	}{
-		"cdn enabled, domain imported, no public http certs and validate aliases fails": {
+		"cdn enabled, domain imported, no public http certs, and validate aliases fails": {
 			app: &config.Application{
 				Domain: "example.com",
 			},
@@ -452,7 +462,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 			},
 			expected: "some error",
 		},
-		"cdn enabled, domain imported, no public http certs and validate aliases succeeds": {
+		"cdn enabled, domain imported, no public http certs, and validate aliases succeeds": {
 			app: &config.Application{
 				Domain: "example.com",
 			},
@@ -469,7 +479,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 		},
 		"cdn tls termination enabled, fail to get env stack params": {
 			app: &config.Application{},
-			mft: mftCDNTerminateTLS,
+			mft: mftCDNTerminateTLSAndHTTPCert,
 			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
 				m.envDescriber.EXPECT().Params().Return(nil, errors.New("some error"))
 			},
@@ -477,7 +487,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 		},
 		"cdn tls termination enabled, fail to get service resources": {
 			app: &config.Application{},
-			mft: mftCDNTerminateTLS,
+			mft: mftCDNTerminateTLSAndHTTPCert,
 			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
 				m.stackDescribers = map[string]*mocks.MockstackDescriber{
 					"svc1": mocks.NewMockstackDescriber(ctrl),
@@ -492,7 +502,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 		},
 		"cdn tls termination enabled, fail to check listener rule": {
 			app: &config.Application{},
-			mft: mftCDNTerminateTLS,
+			mft: mftCDNTerminateTLSAndHTTPCert,
 			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
 				m.stackDescribers = map[string]*mocks.MockstackDescriber{
 					"svc1": mocks.NewMockstackDescriber(ctrl),
@@ -513,7 +523,7 @@ func TestEnvDeployer_Validate(t *testing.T) {
 		},
 		"cdn tls termination enabled, warn with one service that doesn't redirect, two that do redirect": {
 			app: &config.Application{},
-			mft: mftCDNTerminateTLS,
+			mft: mftCDNTerminateTLSAndHTTPCert,
 			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
 				m.stackDescribers = map[string]*mocks.MockstackDescriber{
 					"svc1": mocks.NewMockstackDescriber(ctrl),
@@ -551,7 +561,7 @@ These services will not be reachable through the CDN.
 To fix this, set the following field in each manifest:
 %s
 http:
-  redirect_to_https: true
+  redirect_to_https: false
 %s
 and run %scopilot svc deploy%s.
 If you'd like to use these services without a CDN, ensure each service's A record is pointed to the ALB.
@@ -617,7 +627,7 @@ If you'd like to use these services without a CDN, ensure each service's A recor
 		},
 		"cdn tls termination enabled, success with three services that don't redirect": {
 			app: &config.Application{},
-			mft: mftCDNTerminateTLS,
+			mft: mftCDNTerminateTLSAndHTTPCert,
 			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
 				m.stackDescribers = map[string]*mocks.MockstackDescriber{
 					"svc1": mocks.NewMockstackDescriber(ctrl),
@@ -649,6 +659,25 @@ If you'd like to use these services without a CDN, ensure each service's A recor
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc1RuleARN").Return(listenerRuleNoRedirect, nil)
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc2RuleARN").Return(listenerRuleNoRedirect, nil)
 				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc3RuleARN").Return(listenerRuleNoRedirect, nil)
+			},
+		},
+		"cdn tls termination enabled, one http only service deployed": {
+			app: &config.Application{},
+			mft: mftCDNTerminateTLS,
+			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
+				m.stackDescribers = map[string]*mocks.MockstackDescriber{
+					"svc1": mocks.NewMockstackDescriber(ctrl),
+				}
+				m.envDescriber.EXPECT().Params().Return(map[string]string{
+					"ALBWorkloads": "svc1",
+				}, nil)
+				m.stackDescribers["svc1"].EXPECT().Resources().Return([]*stack.Resource{
+					{
+						LogicalID:  "HTTPListenerRuleWithDomain",
+						PhysicalID: "svc1RuleARN",
+					},
+				}, nil)
+				m.lbDescriber.EXPECT().DescribeRule(gomock.Any(), "svc1RuleARN").Return(listenerRuleNoRedirect, nil)
 			},
 		},
 	}

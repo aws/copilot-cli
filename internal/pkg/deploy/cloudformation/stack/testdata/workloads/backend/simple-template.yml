@@ -33,7 +33,7 @@ Parameters:
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
-  ExposePort: !Not [!Equals [!Ref ContainerPort, -1]]
+  ExposePort: !Not [!Equals [!Ref TargetPort, -1]]
 Resources:
   LogGroup:
     Metadata:
@@ -290,7 +290,7 @@ Resources:
           [
             {
               RegistryArn: !GetAtt DiscoveryService.Arn,
-              Port: !Ref ContainerPort,
+              Port: !Ref TargetPort,
             },
           ],
           !Ref "AWS::NoValue",
