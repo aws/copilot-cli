@@ -993,7 +993,7 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
 			},
 		},
-		"success with http redirect disabled and certs imported": {
+		"success with http redirect disabled and alb certs imported": {
 			inRedirectToHTTPS: aws.Bool(false),
 			inAliases: manifest.Alias{
 				AdvancedAliases: mockMultiAliases,
@@ -1014,6 +1014,29 @@ func TestWorkloadDeployer_DeployWorkload(t *testing.T) {
 				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
 				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
 				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, mockCertARNs).Return(nil)
+				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
+			},
+		},
+		"success with only cdn certs imported": {
+			inAliases: manifest.Alias{
+				AdvancedAliases: mockMultiAliases,
+			},
+			inEnvironment: &config.Environment{
+				Name:   mockEnvName,
+				Region: "us-west-2",
+			},
+			inEnvironmentConfig: func() *manifest.Environment {
+				envConfig := &manifest.Environment{}
+				envConfig.CDNConfig.Config.Certificate = aws.String(mockCDNCertARN)
+				return envConfig
+			},
+			inApp: &config.Application{
+				Name: mockAppName,
+			},
+			mock: func(m *deployMocks) {
+				m.mockEndpointGetter.EXPECT().ServiceDiscoveryEndpoint().Return("mockApp.local", nil)
+				m.mockEnvVersionGetter.EXPECT().Version().Return("v1.42.0", nil)
+				m.mockValidator.EXPECT().ValidateCertAliases([]string{"example.com", "foobar.com"}, []string{mockCDNCertARN}).Return(nil)
 				m.mockServiceDeployer.EXPECT().DeployService(gomock.Any(), "mockBucket", gomock.Any()).Return(nil)
 			},
 		},

@@ -129,7 +129,7 @@ func (s *RequestDrivenWebService) Port() (port uint16, ok bool) {
 
 // Publish returns the list of topics where notifications can be published.
 func (s *RequestDrivenWebService) Publish() []Topic {
-	return s.RequestDrivenWebServiceConfig.PublishConfig.Topics
+	return s.RequestDrivenWebServiceConfig.PublishConfig.publishedTopics()
 }
 
 // BuildRequired returns if the service requires building from the local Dockerfile.

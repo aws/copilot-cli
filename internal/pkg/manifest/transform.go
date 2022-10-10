@@ -522,19 +522,19 @@ type environmentCDNConfigTransformer struct{}
 
 // Transformer returns custom merge logic for environmentCDNConfig's fields.
 func (t environmentCDNConfigTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(environmentCDNConfig{}) {
+	if typ != reflect.TypeOf(EnvironmentCDNConfig{}) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(environmentCDNConfig), src.Interface().(environmentCDNConfig)
+		dstStruct, srcStruct := dst.Interface().(EnvironmentCDNConfig), src.Interface().(EnvironmentCDNConfig)
 
 		if !srcStruct.Config.isEmpty() {
 			dstStruct.Enabled = nil
 		}
 
 		if srcStruct.Enabled != nil {
-			dstStruct.Config = advancedCDNConfig{}
+			dstStruct.Config = AdvancedCDNConfig{}
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

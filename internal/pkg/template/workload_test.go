@@ -281,3 +281,54 @@ func TestSecretsManagerName_Service(t *testing.T) {
 func TestSecretsManagerName_ValueFrom(t *testing.T) {
 	require.Equal(t, "secret:aes128-1a2b3c", SecretFromSecretsManager("aes128-1a2b3c").ValueFrom())
 }
+
+func TestWorkload_HealthCheckProtocol(t *testing.T) {
+	testCases := map[string]struct {
+		opts     WorkloadOpts
+		expected string
+	}{
+		"target port 80, health check port unset": {
+			opts: WorkloadOpts{
+				HTTPTargetContainer: HTTPTargetContainer{
+					Port: "80",
+				},
+			},
+		},
+		"target port 80, health check port 443": {
+			opts: WorkloadOpts{
+				HTTPTargetContainer: HTTPTargetContainer{
+					Port: "80",
+				},
+				HTTPHealthCheck: HTTPHealthCheckOpts{
+					Port: "443",
+				},
+			},
+			expected: "HTTPS",
+		},
+		"target port 443, health check port unset": {
+			opts: WorkloadOpts{
+				HTTPTargetContainer: HTTPTargetContainer{
+					Port: "443",
+				},
+			},
+			expected: "HTTPS",
+		},
+		"target port 443, health check port 80": {
+			opts: WorkloadOpts{
+				HTTPTargetContainer: HTTPTargetContainer{
+					Port: "443",
+				},
+				HTTPHealthCheck: HTTPHealthCheckOpts{
+					Port: "80",
+				},
+			},
+			expected: "HTTP",
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, tc.opts.HealthCheckProtocol())
+		})
+	}
+}

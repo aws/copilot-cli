@@ -554,64 +554,48 @@ func TestScheduledJob_SerializedParameters(t *testing.T) {
 		Timeout:  "1h30m",
 		Retries:  3,
 	})
-	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, c *ScheduledJob)
 
-		wantedParams string
-		wantedError  error
-	}{
-		"unavailable template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *ScheduledJob) {
-				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Parse(wkldParamsTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
-				c.wkld.parser = m
-			},
-			wantedParams: "",
-			wantedError:  errors.New("some error"),
-		},
-		"render params template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *ScheduledJob) {
-				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Parse(wkldParamsTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
-				c.wkld.parser = m
-			},
-			wantedParams: "params",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			c := &ScheduledJob{
-				ecsWkld: &ecsWkld{
-					wkld: &wkld{
-						name: aws.StringValue(testScheduledJobManifest.Name),
-						env:  testEnvName,
-						app:  testAppName,
-						rc: RuntimeConfig{
-							Image: &ECRImage{
-								RepoURL:  testImageRepoURL,
-								ImageTag: testImageTag,
-							},
-							AdditionalTags: map[string]string{
-								"owner": "boss",
-							},
-						},
+	c := &ScheduledJob{
+		ecsWkld: &ecsWkld{
+			wkld: &wkld{
+				name: aws.StringValue(testScheduledJobManifest.Name),
+				env:  testEnvName,
+				app:  testAppName,
+				rc: RuntimeConfig{
+					Image: &ECRImage{
+						RepoURL:  testImageRepoURL,
+						ImageTag: testImageTag,
 					},
-					tc: testScheduledJobManifest.TaskConfig,
+					AdditionalTags: map[string]string{
+						"owner": "boss",
+					},
 				},
-				manifest: testScheduledJobManifest,
-			}
-			tc.mockDependencies(ctrl, c)
-
-			// WHEN
-			params, err := c.SerializedParameters()
-
-			// THEN
-			require.Equal(t, tc.wantedError, err)
-			require.Equal(t, tc.wantedParams, params)
-		})
+			},
+			tc: testScheduledJobManifest.TaskConfig,
+		},
+		manifest: testScheduledJobManifest,
 	}
+	params, err := c.SerializedParameters()
+	require.NoError(t, err)
+	require.Equal(t, params, `{
+  "Parameters": {
+    "AddonsTemplateURL": "",
+    "AppName": "phonetool",
+    "ContainerImage": "111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
+    "EnvFileARN": "",
+    "EnvName": "test",
+    "LogRetention": "30",
+    "Schedule": "cron(0 0 * * ? *)",
+    "TaskCPU": "256",
+    "TaskCount": "1",
+    "TaskMemory": "512",
+    "WorkloadName": "mailer"
+  },
+  "Tags": {
+    "copilot-application": "phonetool",
+    "copilot-environment": "test",
+    "copilot-service": "mailer",
+    "owner": "boss"
+  }
+}`)
 }

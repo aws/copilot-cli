@@ -1197,34 +1197,34 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 
 func TestEnvironmentCDNConfigTransformer_Transformer(t *testing.T) {
 	testCases := map[string]struct {
-		original func(cfg *environmentCDNConfig)
-		override func(cfg *environmentCDNConfig)
-		wanted   func(cfg *environmentCDNConfig)
+		original func(cfg *EnvironmentCDNConfig)
+		override func(cfg *EnvironmentCDNConfig)
+		wanted   func(cfg *EnvironmentCDNConfig)
 	}{
 		"cdnconfig set to empty if enabled is not nil": {
-			original: func(cfg *environmentCDNConfig) {
-				cfg.Config = advancedCDNConfig{
+			original: func(cfg *EnvironmentCDNConfig) {
+				cfg.Config = AdvancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				}
 			},
-			override: func(cfg *environmentCDNConfig) {
+			override: func(cfg *EnvironmentCDNConfig) {
 				cfg.Enabled = aws.Bool(true)
 			},
-			wanted: func(cfg *environmentCDNConfig) {
+			wanted: func(cfg *EnvironmentCDNConfig) {
 				cfg.Enabled = aws.Bool(true)
 			},
 		},
 		"enabled set to nil if cdnconfig is not empty": {
-			original: func(cfg *environmentCDNConfig) {
+			original: func(cfg *EnvironmentCDNConfig) {
 				cfg.Enabled = aws.Bool(true)
 			},
-			override: func(cfg *environmentCDNConfig) {
-				cfg.Config = advancedCDNConfig{
+			override: func(cfg *EnvironmentCDNConfig) {
+				cfg.Config = AdvancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				}
 			},
-			wanted: func(cfg *environmentCDNConfig) {
-				cfg.Config = advancedCDNConfig{
+			wanted: func(cfg *EnvironmentCDNConfig) {
+				cfg.Config = AdvancedCDNConfig{
 					Certificate: aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
 				}
 			},
@@ -1233,7 +1233,7 @@ func TestEnvironmentCDNConfigTransformer_Transformer(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var dst, override, wanted environmentCDNConfig
+			var dst, override, wanted EnvironmentCDNConfig
 
 			tc.original(&dst)
 			tc.override(&override)

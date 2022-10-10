@@ -1,17 +1,17 @@
 {
-  "Parameters" : { 
-    "AppName": "my-app",
-    "EnvName": "test",
-    "WorkloadName": "dogworker",
-    "ContainerImage": "amazon/ecs-example",
+  "Parameters": {
     "AddonsTemplateURL": "",
-    "TaskCPU": "256",
-    "TaskMemory": "512",
-    "TaskCount": "1",
+    "AppName": "my-app",
+    "ContainerImage": "amazon/ecs-example",
+    "EnvFileARN": "",
+    "EnvName": "test",
     "LogRetention": "30",
-    "EnvFileARN": ""
+    "TaskCPU": "256",
+    "TaskCount": "1",
+    "TaskMemory": "512",
+    "WorkloadName": "dogworker"
   },
-  "Tags": { 
+  "Tags": {
     "copilot-application": "my-app",
     "copilot-environment": "test",
     "copilot-service": "dogworker"

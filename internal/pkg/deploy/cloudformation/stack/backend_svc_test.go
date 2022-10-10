@@ -270,7 +270,6 @@ Outputs:
 			},
 			HostedZoneAliases: make(template.AliasesForHostedZone),
 			HTTPTargetContainer: template.HTTPTargetContainer{
-				Name: "api",
 				Port: "8080",
 			},
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
@@ -436,7 +435,6 @@ Outputs:
 				},
 			},
 			HTTPTargetContainer: template.HTTPTargetContainer{
-				Name: "envoy",
 				Port: "443",
 			},
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
@@ -537,6 +535,14 @@ func TestBackendService_Parameters(t *testing.T) {
 		},
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
+			ParameterValue: aws.String("8080"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
+			ParameterValue: aws.String("frontend"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
 			ParameterValue: aws.String("8080"),
 		},
 		{

@@ -142,7 +142,7 @@ func (s *BackendService) Template() (string, error) {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 
-	targetContainerName, targetContainerPort := s.httpLoadBalancerTarget()
+	_, targetContainerPort := s.httpLoadBalancerTarget()
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -165,7 +165,6 @@ func (s *BackendService) Template() (string, error) {
 		WorkloadType:       manifest.BackendServiceType,
 		HealthCheck:        convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
 		HTTPTargetContainer: template.HTTPTargetContainer{
-			Name: aws.StringValue(targetContainerName),
 			Port: aws.StringValue(targetContainerPort),
 		},
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
@@ -242,18 +241,18 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(s.rc.EnvFileARN),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
+			ParameterValue: targetContainer,
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
+			ParameterValue: targetPort,
+		},
 	}...)
 
 	if !s.manifest.RoutingRule.IsEmpty() {
 		params = append(params, []*cloudformation.Parameter{
-			{
-				ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
-				ParameterValue: targetContainer,
-			},
-			{
-				ParameterKey:   aws.String(WorkloadTargetPortParamKey),
-				ParameterValue: targetPort,
-			},
 			{
 				ParameterKey:   aws.String(WorkloadRulePathParamKey),
 				ParameterValue: s.manifest.RoutingRule.Path,

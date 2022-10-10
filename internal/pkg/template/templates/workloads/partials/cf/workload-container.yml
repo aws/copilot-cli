@@ -29,6 +29,11 @@
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
   PortMappings:
     - ContainerPort: !Ref ContainerPort
+    {{- if .ServiceConnect }} # remove when release
+    {{- if eq .HTTPTargetContainer.Container .WorkloadName}}
+      Name: TargetPort
+    {{- end}}
+    {{- end}}
 {{- if .NLB}} {{ $nlbListener := .NLB.Listener }} 
   {{- if and (eq $nlbListener.TargetContainer .WorkloadName) (ne $nlbListener.TargetPort .NLB.MainContainerPort)}}
   {{/*No need to add additional port if the target port is the same as image port*/}}
@@ -38,7 +43,11 @@
 {{- end}}
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
 {{- if eq .WorkloadType "Backend Service"}}
+{{- if .ServiceConnect }} # remove when release
+  PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort, Name: !Ref WorkloadName}], !Ref "AWS::NoValue"]
+{{- else}}
   PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
+{{- end}}
 {{- end}}
 {{- if .HealthCheck}}
   HealthCheck:
