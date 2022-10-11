@@ -539,7 +539,7 @@ Routes
   test         http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend
   prod         http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend
 
-Service Endpoint
+Internal Service Endpoint
 
   Environment  Endpoint                              Type
   -----------  --------                              ----

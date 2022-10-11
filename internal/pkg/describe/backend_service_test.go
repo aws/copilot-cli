@@ -566,7 +566,7 @@ Configurations
   test         1         0.25        512           LINUX/X86_64  80
   prod         3         0.5         1024          LINUX/ARM64   5000
 
-Service Endpoint
+Internal Service Endpoint
 
   Environment  Endpoint                              Type
   -----------  --------                              ----

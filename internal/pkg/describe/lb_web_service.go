@@ -315,9 +315,9 @@ func (sds *serviceDiscoveries) collectServiceDiscoveryEndpoints(descr envDescrib
 
 func (sds *serviceDiscoveries) appendServiceDiscovery(sd serviceDiscovery, env string) {
 	exist := false
-	for _, s := range *sds {
-		if s.Namespace == sd.String() {
-			s.Environment = append(s.Environment, env)
+	for _, svcDiscovery := range *sds {
+		if svcDiscovery.Namespace == sd.String() {
+			svcDiscovery.Environment = append(svcDiscovery.Environment, env)
 			exist = true
 		}
 	}
@@ -351,9 +351,9 @@ func (scs *serviceConnects) collectServiceConnectEndpoints(descr ecsDescriber, e
 
 func (scs *serviceConnects) appendServiceConnect(dnsName string, env string) {
 	exist := false
-	for _, s := range *scs {
-		if s.DNSName == dnsName {
-			s.Environment = append(s.Environment, env)
+	for _, svcConnect := range *scs {
+		if svcConnect.DNSName == dnsName {
+			svcConnect.Environment = append(svcConnect.Environment, env)
 			exist = true
 		}
 	}
@@ -454,7 +454,7 @@ func (w *webSvcDesc) HumanString() string {
 		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 	}
 	if len(w.ServiceConnect) > 0 || len(w.ServiceDiscovery) > 0 {
-		fmt.Fprint(writer, color.Bold.Sprint("\nService Endpoint\n\n"))
+		fmt.Fprint(writer, color.Bold.Sprint("\nInternal Service Endpoint\n\n"))
 		writer.Flush()
 		endpoints := serviceEndpoints{
 			discoveries: w.ServiceDiscovery,
