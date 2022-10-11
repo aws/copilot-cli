@@ -133,8 +133,8 @@ var (
 
 // RDS Aurora Serverless specific constants and variables.
 const (
-	serverlessVersionV1 = "V1"
-	serverlessVersionV2 = "V2"
+	serverlessVersionV1 = "v1"
+	serverlessVersionV2 = "v2"
 
 	fmtRDSStorageNameDefault = "%s-cluster"
 
@@ -873,7 +873,7 @@ Resource names are injected into your containers as environment variables for ea
   Create a DynamoDB table with multiple alternate sort keys.
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N
   Create an RDS Aurora Serverless cluster using PostgreSQL as the database engine.
-  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --serverless-version V2 --engine PostgreSQL --initial-db testdb`,
+  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --serverless-version v2 --engine PostgreSQL --initial-db testdb`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {

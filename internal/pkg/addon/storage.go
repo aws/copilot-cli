@@ -26,8 +26,8 @@ const (
 
 const (
 	// Aurora Serverless versions.
-	ServerlessVersionV1 = "V1"
-	ServerlessVersionV2 = "V2"
+	ServerlessVersionV1 = "v1"
+	ServerlessVersionV2 = "v2"
 )
 
 const (

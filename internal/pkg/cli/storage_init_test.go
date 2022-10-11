@@ -1157,5 +1157,4 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			}
 		})
 	}
-
 }
