@@ -104,8 +104,8 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	var routes []*WebServiceRoute
 	var configs []*ECSServiceConfig
-	var sds serviceDiscoveries
-	var scs serviceConnects
+	var sdEndpoints serviceDiscoveries
+	var scEndpoints serviceConnects
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -132,23 +132,13 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			return nil, err
 		}
 		port := blankContainerPort
-		if svcParams[cfnstack.WorkloadContainerPortParamKey] != cfnstack.NoExposedContainerPort {
-			endpoint, err := envDescr.ServiceDiscoveryEndpoint()
-			if err != nil {
+		if isReachableWithinVPC(svcParams) {
+			port = svcParams[cfnstack.WorkloadTargetPortParamKey]
+			if err := sdEndpoints.collectServiceDiscoveryEndpoints(envDescr, d.svc, env, port); err != nil {
 				return nil, err
 			}
-			port = svcParams[cfnstack.WorkloadContainerPortParamKey]
-			sds = appendServiceDiscovery(sds, serviceDiscovery{
-				Service:  d.svc,
-				Port:     port,
-				Endpoint: endpoint,
-			}, env)
-			scDNSNames, err := svcDescr.ServiceConnectDNSNames()
-			if err != nil {
-				return nil, fmt.Errorf("retrieve service connect DNS names: %w", err)
-			}
-			for _, dnsName := range scDNSNames {
-				scs = appendServiceConnect(scs, dnsName, env)
+			if err := scEndpoints.collectServiceConnectEndpoints(svcDescr, env); err != nil {
+				return nil, err
 			}
 		}
 		containerPlatform, err := svcDescr.Platform()
@@ -199,8 +189,8 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			App:              d.app,
 			Configurations:   configs,
 			Routes:           routes,
-			ServiceDiscovery: sds,
-			ServiceConnect:   scs,
+			ServiceDiscovery: sdEndpoints,
+			ServiceConnect:   scEndpoints,
 			Variables:        envVars,
 			Secrets:          secrets,
 			Resources:        resources,
@@ -296,4 +286,8 @@ func (w *backendSvcDesc) HumanString() string {
 	}
 	writer.Flush()
 	return b.String()
+}
+
+func isReachableWithinVPC(params map[string]string) bool {
+	return params[cfnstack.WorkloadTargetPortParamKey] != cfnstack.NoExposedContainerPort
 }

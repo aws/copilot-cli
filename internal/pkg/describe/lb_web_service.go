@@ -129,8 +129,8 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	var routes []*WebServiceRoute
 	var configs []*ECSServiceConfig
-	var serviceDiscoveries serviceDiscoveries
-	var serviceConnects serviceConnects
+	var svcDiscoveries serviceDiscoveries
+	var svcConnects serviceConnects
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -161,7 +161,7 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		configs = append(configs, &ECSServiceConfig{
 			ServiceConfig: &ServiceConfig{
 				Environment: env,
-				Port:        svcParams[cfnstack.WorkloadContainerPortParamKey],
+				Port:        svcParams[cfnstack.WorkloadTargetPortParamKey],
 				CPU:         svcParams[cfnstack.WorkloadTaskCPUParamKey],
 				Memory:      svcParams[cfnstack.WorkloadTaskMemoryParamKey],
 				Platform:    dockerengine.PlatformString(containerPlatform.OperatingSystem, containerPlatform.Architecture),
@@ -172,21 +172,12 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		endpoint, err := envDescr.ServiceDiscoveryEndpoint()
-		if err != nil {
+		if err := svcDiscoveries.collectServiceDiscoveryEndpoints(
+			envDescr, d.svc, env, svcParams[cfnstack.WorkloadTargetPortParamKey]); err != nil {
 			return nil, err
 		}
-		serviceDiscoveries = appendServiceDiscovery(serviceDiscoveries, serviceDiscovery{
-			Service:  d.svc,
-			Port:     svcParams[cfnstack.WorkloadContainerPortParamKey],
-			Endpoint: endpoint,
-		}, env)
-		scDNSNames, err := svcDescr.ServiceConnectDNSNames()
-		if err != nil {
-			return nil, fmt.Errorf("retrieve service connect DNS names: %w", err)
-		}
-		for _, dnsName := range scDNSNames {
-			serviceConnects = appendServiceConnect(serviceConnects, dnsName, env)
+		if err := svcConnects.collectServiceConnectEndpoints(svcDescr, env); err != nil {
+			return nil, err
 		}
 		envVars = append(envVars, flattenContainerEnvVars(env, webSvcEnvVars)...)
 		webSvcSecrets, err := svcDescr.Secrets()
@@ -217,8 +208,8 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 			App:              d.app,
 			Configurations:   configs,
 			Routes:           routes,
-			ServiceDiscovery: serviceDiscoveries,
-			ServiceConnect:   serviceConnects,
+			ServiceDiscovery: svcDiscoveries,
+			ServiceConnect:   svcConnects,
 			Variables:        envVars,
 			Secrets:          secrets,
 			Resources:        resources,
@@ -309,6 +300,36 @@ type ServiceDiscovery struct {
 
 type serviceDiscoveries []*ServiceDiscovery
 
+func (sds *serviceDiscoveries) collectServiceDiscoveryEndpoints(descr envDescriber, svc, env, port string) error {
+	endpoint, err := descr.ServiceDiscoveryEndpoint()
+	if err != nil {
+		return err
+	}
+	sds.appendServiceDiscovery(serviceDiscovery{
+		Service:  svc,
+		Port:     port,
+		Endpoint: endpoint,
+	}, env)
+	return nil
+}
+
+func (sds *serviceDiscoveries) appendServiceDiscovery(sd serviceDiscovery, env string) {
+	exist := false
+	for _, s := range *sds {
+		if s.Namespace == sd.String() {
+			s.Environment = append(s.Environment, env)
+			exist = true
+		}
+	}
+	if !exist {
+		*sds = append(*sds, &ServiceDiscovery{
+			Environment: []string{env},
+			Namespace:   sd.String(),
+		})
+	}
+	return
+}
+
 // ServiceConnect contains serialized service connect info for an ECS service.
 type ServiceConnect struct {
 	Environment []string `json:"environment"`
@@ -316,6 +337,34 @@ type ServiceConnect struct {
 }
 
 type serviceConnects []*ServiceConnect
+
+func (scs *serviceConnects) collectServiceConnectEndpoints(descr ecsDescriber, env string) error {
+	scDNSNames, err := descr.ServiceConnectDNSNames()
+	if err != nil {
+		return fmt.Errorf("retrieve service connect DNS names: %w", err)
+	}
+	for _, dnsName := range scDNSNames {
+		scs.appendServiceConnect(dnsName, env)
+	}
+	return nil
+}
+
+func (scs *serviceConnects) appendServiceConnect(dnsName string, env string) {
+	exist := false
+	for _, s := range *scs {
+		if s.DNSName == dnsName {
+			s.Environment = append(s.Environment, env)
+			exist = true
+		}
+	}
+	if !exist {
+		*scs = append(*scs, &ServiceConnect{
+			Environment: []string{env},
+			DNSName:     dnsName,
+		})
+	}
+	return
+}
 
 type serviceEndpoints struct {
 	discoveries serviceDiscoveries
@@ -453,38 +502,4 @@ func IsStackNotExistsErr(err error) bool {
 		return IsStackNotExistsErr(errors.Unwrap(err))
 	}
 	return true
-}
-
-func appendServiceDiscovery(sds serviceDiscoveries, sd serviceDiscovery, env string) serviceDiscoveries {
-	exist := false
-	for _, s := range sds {
-		if s.Namespace == sd.String() {
-			s.Environment = append(s.Environment, env)
-			exist = true
-		}
-	}
-	if !exist {
-		sds = append(sds, &ServiceDiscovery{
-			Environment: []string{env},
-			Namespace:   sd.String(),
-		})
-	}
-	return sds
-}
-
-func appendServiceConnect(scs serviceConnects, dnsName string, env string) serviceConnects {
-	exist := false
-	for _, s := range scs {
-		if s.DNSName == dnsName {
-			s.Environment = append(s.Environment, env)
-			exist = true
-		}
-	}
-	if !exist {
-		scs = append(scs, &ServiceConnect{
-			Environment: []string{env},
-			DNSName:     dnsName,
-		})
-	}
-	return scs
 }

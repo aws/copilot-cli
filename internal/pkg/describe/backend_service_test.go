@@ -58,12 +58,12 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "80",
-						cfnstack.WorkloadTaskCountParamKey:     "1",
-						cfnstack.WorkloadTaskMemoryParamKey:    "512",
-						cfnstack.WorkloadTaskCPUParamKey:       "256",
+						cfnstack.WorkloadTargetPortParamKey: "80",
+						cfnstack.WorkloadTaskCountParamKey:  "1",
+						cfnstack.WorkloadTaskMemoryParamKey: "512",
+						cfnstack.WorkloadTaskCPUParamKey:    "256",
 					}, nil),
-					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("", errors.New("some error")),
+					m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("", mockErr),
 				)
 			},
 			wantedError: fmt.Errorf("retrieve service URI: retrieve service discovery endpoint for environment test: some error"),
@@ -71,10 +71,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		"return error if fail to retrieve service connect dns names": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				params := map[string]string{
-					cfnstack.WorkloadContainerPortParamKey: "5000",
-					cfnstack.WorkloadTaskCountParamKey:     "1",
-					cfnstack.WorkloadTaskCPUParamKey:       "256",
-					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+					cfnstack.WorkloadTargetPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:  "1",
+					cfnstack.WorkloadTaskCPUParamKey:    "256",
+					cfnstack.WorkloadTaskMemoryParamKey: "512",
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
@@ -91,10 +91,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		"return error if fail to retrieve platform": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				params := map[string]string{
-					cfnstack.WorkloadContainerPortParamKey: "5000",
-					cfnstack.WorkloadTaskCountParamKey:     "1",
-					cfnstack.WorkloadTaskCPUParamKey:       "256",
-					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+					cfnstack.WorkloadTargetPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:  "1",
+					cfnstack.WorkloadTaskCPUParamKey:    "256",
+					cfnstack.WorkloadTaskMemoryParamKey: "512",
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
@@ -112,10 +112,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		"return error if fail to retrieve environment variables": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				params := map[string]string{
-					cfnstack.WorkloadContainerPortParamKey: "5000",
-					cfnstack.WorkloadTaskCountParamKey:     "1",
-					cfnstack.WorkloadTaskCPUParamKey:       "256",
-					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+					cfnstack.WorkloadTargetPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:  "1",
+					cfnstack.WorkloadTaskCPUParamKey:    "256",
+					cfnstack.WorkloadTaskMemoryParamKey: "512",
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
@@ -137,10 +137,10 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 		"return error if fail to retrieve secrets": {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				params := map[string]string{
-					cfnstack.WorkloadContainerPortParamKey: "80",
-					cfnstack.WorkloadTaskCountParamKey:     "1",
-					cfnstack.WorkloadTaskCPUParamKey:       "256",
-					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+					cfnstack.WorkloadTargetPortParamKey: "80",
+					cfnstack.WorkloadTaskCountParamKey:  "1",
+					cfnstack.WorkloadTaskCPUParamKey:    "256",
+					cfnstack.WorkloadTaskMemoryParamKey: "512",
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
@@ -170,22 +170,22 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				testParams := map[string]string{
-					cfnstack.WorkloadContainerPortParamKey: "5000",
-					cfnstack.WorkloadTaskCountParamKey:     "1",
-					cfnstack.WorkloadTaskCPUParamKey:       "256",
-					cfnstack.WorkloadTaskMemoryParamKey:    "512",
+					cfnstack.WorkloadTargetPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:  "1",
+					cfnstack.WorkloadTaskCPUParamKey:    "256",
+					cfnstack.WorkloadTaskMemoryParamKey: "512",
 				}
 				prodParams := map[string]string{
-					cfnstack.WorkloadContainerPortParamKey: "5000",
-					cfnstack.WorkloadTaskCountParamKey:     "2",
-					cfnstack.WorkloadTaskCPUParamKey:       "512",
-					cfnstack.WorkloadTaskMemoryParamKey:    "1024",
+					cfnstack.WorkloadTargetPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:  "2",
+					cfnstack.WorkloadTaskCPUParamKey:    "512",
+					cfnstack.WorkloadTaskMemoryParamKey: "1024",
 				}
 				mockParams := map[string]string{
-					cfnstack.WorkloadContainerPortParamKey: "-1",
-					cfnstack.WorkloadTaskCountParamKey:     "2",
-					cfnstack.WorkloadTaskCPUParamKey:       "512",
-					cfnstack.WorkloadTaskMemoryParamKey:    "1024",
+					cfnstack.WorkloadTargetPortParamKey: "-1",
+					cfnstack.WorkloadTaskCountParamKey:  "2",
+					cfnstack.WorkloadTaskCPUParamKey:    "512",
+					cfnstack.WorkloadTaskMemoryParamKey: "1024",
 				}
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
@@ -388,11 +388,11 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 			shouldOutputResources: true,
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				params := map[string]string{
-					cfnstack.WorkloadContainerPortParamKey: "5000",
-					cfnstack.WorkloadTaskCountParamKey:     "1",
-					cfnstack.WorkloadTaskCPUParamKey:       "256",
-					cfnstack.WorkloadTaskMemoryParamKey:    "512",
-					cfnstack.WorkloadRulePathParamKey:      "mySvc",
+					cfnstack.WorkloadTargetPortParamKey: "5000",
+					cfnstack.WorkloadTaskCountParamKey:  "1",
+					cfnstack.WorkloadTaskCPUParamKey:    "256",
+					cfnstack.WorkloadTaskMemoryParamKey: "512",
+					cfnstack.WorkloadRulePathParamKey:   "mySvc",
 				}
 				resources := []*describeStack.Resource{
 					{

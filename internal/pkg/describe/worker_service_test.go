@@ -56,10 +56,9 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:     "1",
-						cfnstack.WorkloadTaskCPUParamKey:       "256",
-						cfnstack.WorkloadTaskMemoryParamKey:    "512",
+						cfnstack.WorkloadTaskCountParamKey:  "1",
+						cfnstack.WorkloadTaskCPUParamKey:    "256",
+						cfnstack.WorkloadTaskMemoryParamKey: "512",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(nil, errors.New("some error")),
 				)
@@ -71,10 +70,9 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:     "1",
-						cfnstack.WorkloadTaskMemoryParamKey:    "512",
-						cfnstack.WorkloadTaskCPUParamKey:       "256",
+						cfnstack.WorkloadTaskCountParamKey:  "1",
+						cfnstack.WorkloadTaskMemoryParamKey: "512",
+						cfnstack.WorkloadTaskCPUParamKey:    "256",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -91,10 +89,9 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:     "1",
-						cfnstack.WorkloadTaskCPUParamKey:       "256",
-						cfnstack.WorkloadTaskMemoryParamKey:    "512",
+						cfnstack.WorkloadTaskCountParamKey:  "1",
+						cfnstack.WorkloadTaskCPUParamKey:    "256",
+						cfnstack.WorkloadTaskMemoryParamKey: "512",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -119,10 +116,9 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv, prodEnv, mockEnv}, nil),
 
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:     "1",
-						cfnstack.WorkloadTaskCPUParamKey:       "256",
-						cfnstack.WorkloadTaskMemoryParamKey:    "512",
+						cfnstack.WorkloadTaskCountParamKey:  "1",
+						cfnstack.WorkloadTaskCPUParamKey:    "256",
+						cfnstack.WorkloadTaskMemoryParamKey: "512",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -143,10 +139,9 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:     "2",
-						cfnstack.WorkloadTaskCPUParamKey:       "512",
-						cfnstack.WorkloadTaskMemoryParamKey:    "1024",
+						cfnstack.WorkloadTaskCountParamKey:  "2",
+						cfnstack.WorkloadTaskCPUParamKey:    "512",
+						cfnstack.WorkloadTaskMemoryParamKey: "1024",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
@@ -167,10 +162,9 @@ func TestWorkerServiceDescriber_Describe(t *testing.T) {
 						},
 					}, nil),
 					m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-						cfnstack.WorkloadContainerPortParamKey: "-",
-						cfnstack.WorkloadTaskCountParamKey:     "2",
-						cfnstack.WorkloadTaskCPUParamKey:       "512",
-						cfnstack.WorkloadTaskMemoryParamKey:    "1024",
+						cfnstack.WorkloadTaskCountParamKey:  "2",
+						cfnstack.WorkloadTaskCPUParamKey:    "512",
+						cfnstack.WorkloadTaskMemoryParamKey: "1024",
 					}, nil),
 					m.ecsDescriber.EXPECT().Platform().Return(&ecs.ContainerPlatform{
 						OperatingSystem: "LINUX",
