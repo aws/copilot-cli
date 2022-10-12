@@ -126,7 +126,6 @@ var attributeTypes = []string{
 
 // RDS Aurora Serverless specific questions and help prompts.
 var (
-	storageInitRDSServerlessVersionPrompt = "Which Aurora Serverless version would you like to use?"
 	storageInitRDSInitialDBNamePrompt     = "What would you like to name the initial database in your cluster?"
 	storageInitRDSDBEnginePrompt          = "Which database engine would you like to use?"
 )
