@@ -291,52 +291,48 @@ type WebServiceRoute struct {
 	URL         string `json:"url"`
 }
 
-// ServiceDiscovery contains serialized service discovery info for an ECS service.
-type ServiceDiscovery struct {
+// InternalEndpoint contains serialized internal endpoint (for both service connect and service discovery) info for an ECS service.
+type InternalEndpoint struct {
 	Environment []string `json:"environment"`
-	// Namespace is not an accurate name but unfortunately we can't take it back.
-	Namespace string `json:"namespace"`
+	Endpoint    string   `json:"endpoint"`
 }
 
-type serviceDiscoveries []*ServiceDiscovery
+type internalEndpoints []*InternalEndpoint
+
+type serviceDiscoveries internalEndpoints
 
 func (sds *serviceDiscoveries) collectServiceDiscoveryEndpoints(descr envDescriber, svc, env, port string) error {
 	endpoint, err := descr.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return err
 	}
-	sds.appendServiceDiscovery(serviceDiscovery{
+	sd := serviceDiscovery{
 		Service:  svc,
 		Port:     port,
 		Endpoint: endpoint,
-	}, env)
+	}
+	(*internalEndpoints)(sds).appendInternalEndpoints(sd.String(), env)
 	return nil
 }
 
-func (sds *serviceDiscoveries) appendServiceDiscovery(sd serviceDiscovery, env string) {
+func (ies *internalEndpoints) appendInternalEndpoints(endpoint string, env string) {
 	exist := false
-	for _, svcDiscovery := range *sds {
-		if svcDiscovery.Namespace == sd.String() {
-			svcDiscovery.Environment = append(svcDiscovery.Environment, env)
+	for _, ie := range *ies {
+		if ie.Endpoint == endpoint {
+			ie.Environment = append(ie.Environment, env)
 			exist = true
 		}
 	}
 	if !exist {
-		*sds = append(*sds, &ServiceDiscovery{
+		*ies = append(*ies, &InternalEndpoint{
 			Environment: []string{env},
-			Namespace:   sd.String(),
+			Endpoint:    endpoint,
 		})
 	}
 	return
 }
 
-// ServiceConnect contains serialized service connect info for an ECS service.
-type ServiceConnect struct {
-	Environment []string `json:"environment"`
-	DNSName     string   `json:"dnsName"`
-}
-
-type serviceConnects []*ServiceConnect
+type serviceConnects internalEndpoints
 
 func (scs *serviceConnects) collectServiceConnectEndpoints(descr ecsDescriber, env string) error {
 	scDNSNames, err := descr.ServiceConnectDNSNames()
@@ -344,26 +340,9 @@ func (scs *serviceConnects) collectServiceConnectEndpoints(descr ecsDescriber, e
 		return fmt.Errorf("retrieve service connect DNS names: %w", err)
 	}
 	for _, dnsName := range scDNSNames {
-		scs.appendServiceConnect(dnsName, env)
+		(*internalEndpoints)(scs).appendInternalEndpoints(dnsName, env)
 	}
 	return nil
-}
-
-func (scs *serviceConnects) appendServiceConnect(dnsName string, env string) {
-	exist := false
-	for _, svcConnect := range *scs {
-		if svcConnect.DNSName == dnsName {
-			svcConnect.Environment = append(svcConnect.Environment, env)
-			exist = true
-		}
-	}
-	if !exist {
-		*scs = append(*scs, &ServiceConnect{
-			Environment: []string{env},
-			DNSName:     dnsName,
-		})
-	}
-	return
 }
 
 type serviceEndpoints struct {
@@ -376,10 +355,10 @@ func (s serviceEndpoints) humanString(w io.Writer) {
 	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, sc := range s.connects {
-		fmt.Fprintf(w, "  %s\t%s\t%s\n", sc.DNSName, strings.Join(sc.Environment, ", "), "Service Connect")
+		fmt.Fprintf(w, "  %s\t%s\t%s\n", sc.Endpoint, strings.Join(sc.Environment, ", "), "Service Connect")
 	}
 	for _, sd := range s.discoveries {
-		fmt.Fprintf(w, "  %s\t%s\t%s\n", sd.Namespace, strings.Join(sd.Environment, ", "), "Service Discovery")
+		fmt.Fprintf(w, "  %s\t%s\t%s\n", sd.Endpoint, strings.Join(sd.Environment, ", "), "Service Discovery")
 	}
 }
 

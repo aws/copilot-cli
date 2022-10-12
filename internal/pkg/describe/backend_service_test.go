@@ -310,14 +310,14 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 							Tasks: "2",
 						},
 					},
-					ServiceDiscovery: []*ServiceDiscovery{
+					ServiceDiscovery: serviceDiscoveries{
 						{
 							Environment: []string{"test"},
-							Namespace:   "jobs.test.phonetool.local:5000",
+							Endpoint:    "jobs.test.phonetool.local:5000",
 						},
 						{
 							Environment: []string{"prod"},
-							Namespace:   "jobs.prod.phonetool.local:5000",
+							Endpoint:    "jobs.prod.phonetool.local:5000",
 						},
 					},
 					Variables: []*containerEnvVar{
@@ -462,13 +462,13 @@ func TestBackendServiceDescriber_Describe(t *testing.T) {
 					ServiceDiscovery: serviceDiscoveries{
 						{
 							Environment: []string{"test"},
-							Namespace:   "jobs.test.phonetool.local:5000",
+							Endpoint:    "jobs.test.phonetool.local:5000",
 						},
 					},
 					ServiceConnect: serviceConnects{
 						{
 							Environment: []string{"test"},
-							DNSName:     "jobs",
+							Endpoint:    "jobs",
 						},
 					},
 					Variables: []*containerEnvVar{
@@ -595,7 +595,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"routes\":null,\"serviceDiscovery\":[{\"environment\":[\"test\"],\"namespace\":\"http://my-svc.test.my-app.local:5000\"},{\"environment\":[\"prod\"],\"namespace\":\"http://my-svc.prod.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Backend Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"routes\":null,\"serviceDiscovery\":[{\"environment\":[\"test\"],\"endpoint\":\"http://my-svc.test.my-app.local:5000\"},{\"environment\":[\"prod\"],\"endpoint\":\"http://my-svc.prod.my-app.local:5000\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"container\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"container\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"container\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"container\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -655,14 +655,14 @@ Resources
 					ValueFrom:   "SHHHHH",
 				},
 			}
-			sds := []*ServiceDiscovery{
+			sds := serviceDiscoveries{
 				{
 					Environment: []string{"test"},
-					Namespace:   "http://my-svc.test.my-app.local:5000",
+					Endpoint:    "http://my-svc.test.my-app.local:5000",
 				},
 				{
 					Environment: []string{"prod"},
-					Namespace:   "http://my-svc.prod.my-app.local:5000",
+					Endpoint:    "http://my-svc.prod.my-app.local:5000",
 				},
 			}
 			resources := map[string][]*stack.Resource{
