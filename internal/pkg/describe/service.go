@@ -500,6 +500,10 @@ func (e *endpointToEnvs) marshalJSON() ([]byte, error) {
 	return json.Marshal(&internalEndpoints)
 }
 
+func (e *endpointToEnvs) add(endpoint string, env string) {
+	(*e)[endpoint] = append((*e)[endpoint], env)
+}
+
 type serviceDiscoveries endpointToEnvs
 
 // MarshalJSON overrides the default JSON marshaling logic for the serviceDiscoveries
@@ -520,10 +524,6 @@ func (sds *serviceDiscoveries) collectEndpoints(descr envDescriber, svc, env, po
 	}
 	(*endpointToEnvs)(sds).add(sd.String(), env)
 	return nil
-}
-
-func (e *endpointToEnvs) add(endpoint string, env string) {
-	(*e)[endpoint] = append((*e)[endpoint], env)
 }
 
 type serviceConnects endpointToEnvs
