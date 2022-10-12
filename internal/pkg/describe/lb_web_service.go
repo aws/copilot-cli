@@ -310,11 +310,11 @@ func (sds *serviceDiscoveries) collectEndpoints(descr envDescriber, svc, env, po
 		Port:     port,
 		Endpoint: endpoint,
 	}
-	(*internalEndpoints)(sds).appendInternalEndpoints(sd.String(), env)
+	(*internalEndpoints)(sds).append(sd.String(), env)
 	return nil
 }
 
-func (ies *internalEndpoints) appendInternalEndpoints(endpoint string, env string) {
+func (ies *internalEndpoints) append(endpoint string, env string) {
 	for _, ie := range *ies {
 		if ie.Endpoint == endpoint {
 			ie.Environment = append(ie.Environment, env)
@@ -325,7 +325,6 @@ func (ies *internalEndpoints) appendInternalEndpoints(endpoint string, env strin
 		Environment: []string{env},
 		Endpoint:    endpoint,
 	})
-	return
 }
 
 type serviceConnects internalEndpoints
@@ -336,7 +335,7 @@ func (scs *serviceConnects) collectEndpoints(descr ecsDescriber, env string) err
 		return fmt.Errorf("retrieve service connect DNS names: %w", err)
 	}
 	for _, dnsName := range scDNSNames {
-		(*internalEndpoints)(scs).appendInternalEndpoints(dnsName, env)
+		(*internalEndpoints)(scs).append(dnsName, env)
 	}
 	return nil
 }
