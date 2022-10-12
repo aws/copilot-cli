@@ -568,10 +568,10 @@ Configurations
 
 Internal Service Endpoint
 
-  Environment  Endpoint                              Type
-  -----------  --------                              ----
-  prod         http://my-svc.prod.my-app.local:5000  Service Discovery
-  test         http://my-svc.test.my-app.local:5000  Service Discovery
+  Endpoint                              Environment  Type
+  --------                              -----------  ----
+  http://my-svc.test.my-app.local:5000  test         Service Discovery
+  http://my-svc.prod.my-app.local:5000  prod         Service Discovery
 
 Variables
 

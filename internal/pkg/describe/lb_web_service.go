@@ -372,50 +372,14 @@ type serviceEndpoints struct {
 }
 
 func (s serviceEndpoints) humanString(w io.Writer) {
-	headers := []string{"Environment", "Endpoint", "Type"}
+	headers := []string{"Endpoint", "Environment", "Type"}
 	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
-	scEnvToEndpoints := make(map[string]map[string]struct{})
 	for _, sc := range s.connects {
-		envs := strings.Join(sc.Environment, ", ")
-		if _, ok := scEnvToEndpoints[envs]; !ok {
-			scEnvToEndpoints[envs] = make(map[string]struct{})
-		}
-		scEnvToEndpoints[envs][sc.DNSName] = struct{}{}
+		fmt.Fprintf(w, "  %s\t%s\t%s\n", sc.DNSName, strings.Join(sc.Environment, ", "), "Service Connect")
 	}
-	var scEnvs []string
-	for env := range scEnvToEndpoints {
-		scEnvs = append(scEnvs, env)
-	}
-	sort.SliceStable(scEnvs, func(i int, j int) bool { return scEnvs[i] < scEnvs[j] })
-	for _, env := range scEnvs {
-		var endpoints []string
-		for endpoint := range scEnvToEndpoints[env] {
-			endpoints = append(endpoints, endpoint)
-		}
-		sort.SliceStable(endpoints, func(i int, j int) bool { return endpoints[i] < endpoints[j] })
-		fmt.Fprintf(w, "  %s\t%s\t%s\n", env, strings.Join(endpoints, ", "), "Service Connect")
-	}
-	sdEnvToEndpoints := make(map[string]map[string]struct{})
 	for _, sd := range s.discoveries {
-		envs := strings.Join(sd.Environment, ", ")
-		if _, ok := sdEnvToEndpoints[envs]; !ok {
-			sdEnvToEndpoints[envs] = make(map[string]struct{})
-		}
-		sdEnvToEndpoints[envs][sd.Namespace] = struct{}{}
-	}
-	var sdEnvs []string
-	for env := range sdEnvToEndpoints {
-		sdEnvs = append(sdEnvs, env)
-	}
-	sort.SliceStable(sdEnvs, func(i int, j int) bool { return sdEnvs[i] < sdEnvs[j] })
-	for _, env := range sdEnvs {
-		var endpoints []string
-		for endpoint := range sdEnvToEndpoints[env] {
-			endpoints = append(endpoints, endpoint)
-		}
-		sort.SliceStable(endpoints, func(i int, j int) bool { return endpoints[i] < endpoints[j] })
-		fmt.Fprintf(w, "  %s\t%s\t%s\n", env, strings.Join(endpoints, ", "), "Service Discovery")
+		fmt.Fprintf(w, "  %s\t%s\t%s\n", sd.Namespace, strings.Join(sd.Environment, ", "), "Service Discovery")
 	}
 }
 
