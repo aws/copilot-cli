@@ -133,8 +133,9 @@ var (
 
 // RDS Aurora Serverless specific constants and variables.
 const (
-	serverlessVersionV1 = "v1"
-	serverlessVersionV2 = "v2"
+	serverlessVersionV1            = "v1"
+	serverlessVersionV2            = "v2"
+	defaultServerlessVersionString = "v2"
 
 	fmtRDSStorageNameDefault = "%s-cluster"
 
@@ -567,14 +568,9 @@ func (o *initStorageOpts) askAuroraServerlessVersion() error {
 	if o.rdsServerlessVersion != "" {
 		return nil
 	}
-	version, err := o.prompt.SelectOne(storageInitRDSServerlessVersionPrompt,
-		"",
-		serverlessVersions,
-		prompt.WithFinalMessage("Aurora Serverless version:"))
-	if err != nil {
-		return fmt.Errorf("select Aurora Serverless version: %w", err)
-	}
-	o.rdsServerlessVersion = version
+	// If the user has not specified aurora serverless version we treat aurora serverless version as v2.
+	defaultServerlessVersion := defaultServerlessVersionString
+	o.rdsServerlessVersion = defaultServerlessVersion
 	return nil
 }
 
@@ -872,8 +868,10 @@ Resource names are injected into your containers as environment variables for ea
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --no-lsi
   Create a DynamoDB table with multiple alternate sort keys.
   /code $ copilot storage init -n my-table -t DynamoDB -w frontend --partition-key Email:S --sort-key UserId:N --lsi Points:N --lsi Goodness:N
-  Create an RDS Aurora Serverless cluster using PostgreSQL as the database engine.
-  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --serverless-version v2 --engine PostgreSQL --initial-db testdb`,
+  Create an RDS Aurora Serverless v2 cluster using PostgreSQL as the database engine.
+  /code $ copilot storage init -n my-cluster -t Aurora -w frontend --engine PostgreSQL --initial-db testdb
+  Create an RDS Aurora Serverless v1 cluster using MySQL as the database engine.
+  /code $ copilot storage init -n my-cluster -t Aurora --serverless-version v1 -w frontend --engine MySQL --initial-db testdb`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
 			opts, err := newStorageInitOpts(vars)
 			if err != nil {

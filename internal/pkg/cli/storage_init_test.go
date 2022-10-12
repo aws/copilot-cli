@@ -768,7 +768,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockCfg:    func(m *mocks.MockwsSelector) {},
 			wantedErr:  nil,
 		},
-		"asks for serverless version if not specified": {
+		"don't ask about serverless version if not specified": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
 			inStorageName: wantedBucketName,
@@ -777,15 +777,8 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			inDBEngine:      wantedDBEngine,
 			inInitialDBName: wantedInitialDBName,
 
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(
-					gomock.Eq(storageInitRDSServerlessVersionPrompt),
-					gomock.Any(),
-					gomock.Any(),
-					gomock.Any(),
-				).Return(wantedServerlessVersion, nil)
-			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
+			mockPrompt: func(m *mocks.Mockprompter) {},
+			mockCfg:    func(m *mocks.MockwsSelector) {},
 			mockWS: func(m *mocks.MockwsAddonManager) {
 				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
 			},
@@ -798,25 +791,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 				rdsEngine:            wantedDBEngine,
 				rdsInitialDBName:     wantedInitialDBName,
 			},
-		},
-		"error if serverless version not gotten": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			inStorageType:   rdsStorageType,
-			inDBEngine:      wantedDBEngine,
-			inInitialDBName: wantedInitialDBName,
-
-			mockPrompt: func(m *mocks.Mockprompter) {
-				m.EXPECT().SelectOne(storageInitRDSServerlessVersionPrompt, gomock.Any(), gomock.Any(), gomock.Any()).Return("", errors.New("some error"))
-			},
-			mockCfg: func(m *mocks.MockwsSelector) {},
-			mockWS: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-			},
-
-			wantedErr: fmt.Errorf("select Aurora Serverless version: some error"),
 		},
 		"asks for engine if not specified": {
 			inAppName:     wantedAppName,
