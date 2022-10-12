@@ -47,13 +47,14 @@ var (
 var (
 	ErrAppRunnerInvalidPlatformWindows = errors.New("Windows is not supported for App Runner services")
 
-	errUnmarshalBuildOpts         = errors.New("unable to unmarshal build field into string or compose-style map")
-	errUnmarshalPlatformOpts      = errors.New("unable to unmarshal platform field into string or compose-style map")
-	errUnmarshalSecurityGroupOpts = errors.New(`unable to unmarshal "security_groups" field into slice of strings or compose-style map`)
-	errUnmarshalPlacementOpts     = errors.New("unable to unmarshal placement field into string or compose-style map")
-	errUnmarshalSubnetsOpts       = errors.New("unable to unmarshal subnets field into string slice or compose-style map")
-	errUnmarshalCountOpts         = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
-	errUnmarshalRangeOpts         = errors.New(`unable to unmarshal "range" field`)
+	errUnmarshalBuildOpts          = errors.New("unable to unmarshal build field into string or compose-style map")
+	errUnmarshalPlatformOpts       = errors.New("unable to unmarshal platform field into string or compose-style map")
+	errUnmarshalSecurityGroupOpts  = errors.New(`unable to unmarshal "security_groups" field into slice of strings or compose-style map`)
+	errUnmarshalPlacementOpts      = errors.New("unable to unmarshal placement field into string or compose-style map")
+	errUnmarshalServiceConnectOpts = errors.New(`unable to unmarshal "connect" field into boolean or compose-style map`)
+	errUnmarshalSubnetsOpts        = errors.New("unable to unmarshal subnets field into string slice or compose-style map")
+	errUnmarshalCountOpts          = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
+	errUnmarshalRangeOpts          = errors.New(`unable to unmarshal "range" field`)
 
 	errUnmarshalExec       = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
 	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
@@ -458,7 +459,8 @@ func (t *FIFOTopicAdvanceConfigOrBool) UnmarshalYAML(value *yaml.Node) error {
 
 // NetworkConfig represents options for network connection to AWS resources within a VPC.
 type NetworkConfig struct {
-	VPC vpcConfig `yaml:"vpc"`
+	VPC     vpcConfig                `yaml:"vpc"`
+	Connect ServiceConnectBoolOrArgs `yaml:"connect"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
@@ -471,6 +473,41 @@ func (c *NetworkConfig) requiredEnvFeatures() []string {
 		return []string{template.NATFeatureName}
 	}
 	return nil
+}
+
+// ServiceConnectBoolOrArgs represents ECS Service Connect configuration.
+type ServiceConnectBoolOrArgs struct {
+	EnableServiceConnect *bool
+	ServiceConnectArgs
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the ServiceConnect
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (s *ServiceConnectBoolOrArgs) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&s.ServiceConnectArgs); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+	if !s.ServiceConnectArgs.isEmpty() {
+		s.EnableServiceConnect = nil
+		return nil
+	}
+	if err := value.Decode(&s.EnableServiceConnect); err != nil {
+		return errUnmarshalServiceConnectOpts
+	}
+	return nil
+}
+
+// ServiceConnectArgs includes the advanced configuration for ECS Service Connect.
+type ServiceConnectArgs struct {
+	Alias *string
+}
+
+func (s *ServiceConnectArgs) isEmpty() bool {
+	return s.Alias == nil
 }
 
 // PlacementArgOrString represents where to place tasks.
