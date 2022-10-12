@@ -407,20 +407,11 @@ func TestLBWebServiceDescriber_Describe(t *testing.T) {
 						},
 					},
 					ServiceDiscovery: serviceDiscoveries{
-						{
-							Environment: []string{"test"},
-							Endpoint:    "jobs.test.phonetool.local:80",
-						},
-						{
-							Environment: []string{"prod"},
-							Endpoint:    "jobs.prod.phonetool.local:5000",
-						},
+						"jobs.test.phonetool.local:80":   []string{"test"},
+						"jobs.prod.phonetool.local:5000": []string{"prod"},
 					},
 					ServiceConnect: serviceConnects{
-						{
-							Environment: []string{"test", "prod"},
-							Endpoint:    testSvc,
-						},
+						testSvc: []string{"test", "prod"},
 					},
 					Variables: []*containerEnvVar{
 						{
@@ -544,8 +535,8 @@ Internal Service Endpoint
   Endpoint                              Environment  Type
   --------                              -----------  ----
   my-svc                                test, prod   Service Connect
-  http://my-svc.test.my-app.local:5000  test         Service Discovery
   http://my-svc.prod.my-app.local:5000  prod         Service Discovery
+  http://my-svc.test.my-app.local:5000  test         Service Discovery
 
 Variables
 
@@ -570,7 +561,7 @@ Resources
   prod
     AWS::EC2::SecurityGroupIngress  ContainerSecurityGroupIngressFromPublicALB
 `,
-			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Load Balanced Web Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"test\"],\"endpoint\":\"http://my-svc.test.my-app.local:5000\"},{\"environment\":[\"prod\"],\"endpoint\":\"http://my-svc.prod.my-app.local:5000\"}],\"serviceConnect\":[{\"environment\":[\"test\",\"prod\"],\"endpoint\":\"my-svc\"}],\"variables\":[{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"containerA\"},{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"containerB\"},{\"environment\":\"prod\",\"name\":\"DIFFERENT_ENV_VAR\",\"value\":\"prod\",\"container\":\"containerB\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"containerA\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"containerB\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
+			wantedJSONString: "{\"service\":\"my-svc\",\"type\":\"Load Balanced Web Service\",\"application\":\"my-app\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"256\",\"memory\":\"512\",\"platform\":\"LINUX/X86_64\",\"tasks\":\"1\"},{\"environment\":\"prod\",\"port\":\"5000\",\"cpu\":\"512\",\"memory\":\"1024\",\"platform\":\"LINUX/ARM64\",\"tasks\":\"3\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/frontend\"},{\"environment\":\"prod\",\"url\":\"http://my-pr-Publi.us-west-2.elb.amazonaws.com/backend\"}],\"serviceDiscovery\":[{\"environment\":[\"prod\"],\"endpoint\":\"http://my-svc.prod.my-app.local:5000\"},{\"environment\":[\"test\"],\"endpoint\":\"http://my-svc.test.my-app.local:5000\"}],\"serviceConnect\":[{\"environment\":[\"test\",\"prod\"],\"endpoint\":\"my-svc\"}],\"variables\":[{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\",\"container\":\"containerA\"},{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\",\"container\":\"containerB\"},{\"environment\":\"prod\",\"name\":\"DIFFERENT_ENV_VAR\",\"value\":\"prod\",\"container\":\"containerB\"}],\"secrets\":[{\"name\":\"GITHUB_WEBHOOK_SECRET\",\"container\":\"containerA\",\"environment\":\"test\",\"valueFrom\":\"GH_WEBHOOK_SECRET\"},{\"name\":\"SOME_OTHER_SECRET\",\"container\":\"containerB\",\"environment\":\"prod\",\"valueFrom\":\"SHHHHH\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::EC2::SecurityGroupIngress\",\"physicalID\":\"ContainerSecurityGroupIngressFromPublicALB\"}],\"test\":[{\"type\":\"AWS::EC2::SecurityGroup\",\"physicalID\":\"sg-0758ed6b233743530\"}]}}\n",
 		},
 	}
 
@@ -649,20 +640,11 @@ Resources
 				},
 			}
 			sds := serviceDiscoveries{
-				{
-					Environment: []string{"test"},
-					Endpoint:    "http://my-svc.test.my-app.local:5000",
-				},
-				{
-					Environment: []string{"prod"},
-					Endpoint:    "http://my-svc.prod.my-app.local:5000",
-				},
+				"http://my-svc.test.my-app.local:5000": []string{"test"},
+				"http://my-svc.prod.my-app.local:5000": []string{"prod"},
 			}
 			scs := serviceConnects{
-				{
-					Environment: []string{"test", "prod"},
-					Endpoint:    "my-svc",
-				},
+				"my-svc": []string{"test", "prod"},
 			}
 			resources := map[string][]*stack.Resource{
 				"test": {

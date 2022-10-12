@@ -8,15 +8,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"sort"
 	"strconv"
 	"strings"
 	"text/tabwriter"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 
@@ -129,8 +126,8 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	var routes []*WebServiceRoute
 	var configs []*ECSServiceConfig
-	var svcDiscoveries serviceDiscoveries
-	var svcConnects serviceConnects
+	svcDiscoveries := make(serviceDiscoveries)
+	svcConnects := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -229,132 +226,10 @@ func (d *LBWebServiceDescriber) Manifest(env string) ([]byte, error) {
 	return cfn.Manifest()
 }
 
-type secret struct {
-	Name        string `json:"name"`
-	Container   string `json:"container"`
-	Environment string `json:"environment"`
-	ValueFrom   string `json:"valueFrom"`
-}
-
-type secrets []*secret
-
-func (s secrets) humanString(w io.Writer) {
-	headers := []string{"Name", "Container", "Environment", "Value From"}
-	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
-	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
-	sort.SliceStable(s, func(i, j int) bool { return s[i].Environment < s[j].Environment })
-	sort.SliceStable(s, func(i, j int) bool { return s[i].Container < s[j].Container })
-	sort.SliceStable(s, func(i, j int) bool { return s[i].Name < s[j].Name })
-	if len(s) > 0 {
-		valueFrom := s[0].ValueFrom
-		if _, err := arn.Parse(s[0].ValueFrom); err != nil {
-			// If the valueFrom is not an ARN, preface it with "parameter/"
-			valueFrom = fmt.Sprintf("parameter/%s", s[0].ValueFrom)
-		}
-		fmt.Fprintf(w, "  %s\n", strings.Join([]string{s[0].Name, s[0].Container, s[0].Environment, valueFrom}, "\t"))
-	}
-	for prev, cur := 0, 1; cur < len(s); prev, cur = prev+1, cur+1 {
-		valueFrom := s[cur].ValueFrom
-		if _, err := arn.Parse(s[cur].ValueFrom); err != nil {
-			// If the valueFrom is not an ARN, preface it with "parameter/"
-			valueFrom = fmt.Sprintf("parameter/%s", s[cur].ValueFrom)
-		}
-		cols := []string{s[cur].Name, s[cur].Container, s[cur].Environment, valueFrom}
-		if s[prev].Name == s[cur].Name {
-			cols[0] = dittoSymbol
-		}
-		if s[prev].Container == s[cur].Container {
-			cols[1] = dittoSymbol
-		}
-		if s[prev].Environment == s[cur].Environment {
-			cols[2] = dittoSymbol
-		}
-		if s[prev].ValueFrom == s[cur].ValueFrom {
-			cols[3] = dittoSymbol
-		}
-		fmt.Fprintf(w, "  %s\n", strings.Join(cols, "\t"))
-	}
-}
-
-func underline(headings []string) []string {
-	var lines []string
-	for _, heading := range headings {
-		line := strings.Repeat("-", len(heading))
-		lines = append(lines, line)
-	}
-	return lines
-}
-
 // WebServiceRoute contains serialized route parameters for a web service.
 type WebServiceRoute struct {
 	Environment string `json:"environment"`
 	URL         string `json:"url"`
-}
-
-type internalEndpoint struct {
-	Environment []string `json:"environment"`
-	Endpoint    string   `json:"endpoint"`
-}
-
-type internalEndpoints []*internalEndpoint
-
-type serviceDiscoveries internalEndpoints
-
-func (sds *serviceDiscoveries) collectEndpoints(descr envDescriber, svc, env, port string) error {
-	endpoint, err := descr.ServiceDiscoveryEndpoint()
-	if err != nil {
-		return err
-	}
-	sd := serviceDiscovery{
-		Service:  svc,
-		Port:     port,
-		Endpoint: endpoint,
-	}
-	(*internalEndpoints)(sds).append(sd.String(), env)
-	return nil
-}
-
-func (ies *internalEndpoints) append(endpoint string, env string) {
-	for _, ie := range *ies {
-		if ie.Endpoint == endpoint {
-			ie.Environment = append(ie.Environment, env)
-			return
-		}
-	}
-	*ies = append(*ies, &internalEndpoint{
-		Environment: []string{env},
-		Endpoint:    endpoint,
-	})
-}
-
-type serviceConnects internalEndpoints
-
-func (scs *serviceConnects) collectEndpoints(descr ecsDescriber, env string) error {
-	scDNSNames, err := descr.ServiceConnectDNSNames()
-	if err != nil {
-		return fmt.Errorf("retrieve service connect DNS names: %w", err)
-	}
-	for _, dnsName := range scDNSNames {
-		(*internalEndpoints)(scs).append(dnsName, env)
-	}
-	return nil
-}
-
-type serviceEndpoints struct {
-	discoveries serviceDiscoveries
-	connects    serviceConnects
-}
-
-func (s serviceEndpoints) humanString(w io.Writer) {
-	headers := []string{"Endpoint", "Environment", "Type"}
-	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
-	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
-	for _, sc := range s.connects {
-		fmt.Fprintf(w, "  %s\t%s\t%s\n", sc.Endpoint, strings.Join(sc.Environment, ", "), "Service Connect")
-	}
-	for _, sd := range s.discoveries {
-		fmt.Fprintf(w, "  %s\t%s\t%s\n", sd.Endpoint, strings.Join(sd.Environment, ", "), "Service Discovery")
-	}
 }
 
 // webSvcDesc contains serialized parameters for a web service.

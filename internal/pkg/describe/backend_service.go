@@ -104,8 +104,8 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	var routes []*WebServiceRoute
 	var configs []*ECSServiceConfig
-	var sdEndpoints serviceDiscoveries
-	var scEndpoints serviceConnects
+	sdEndpoints := make(serviceDiscoveries)
+	scEndpoints := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -213,21 +213,6 @@ func (d *BackendServiceDescriber) Manifest(env string) ([]byte, error) {
 // backendSvcDesc contains serialized parameters for a backend service.
 type backendSvcDesc struct {
 	ecsSvcDesc
-}
-
-type ecsSvcDesc struct {
-	Service          string               `json:"service"`
-	Type             string               `json:"type"`
-	App              string               `json:"application"`
-	Configurations   ecsConfigurations    `json:"configurations"`
-	Routes           []*WebServiceRoute   `json:"routes"`
-	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
-	ServiceConnect   serviceConnects      `json:"serviceConnect,omitempty"`
-	Variables        containerEnvVars     `json:"variables"`
-	Secrets          secrets              `json:"secrets,omitempty"`
-	Resources        deployedSvcResources `json:"resources,omitempty"`
-
-	environments []string `json:"-"`
 }
 
 // JSONString returns the stringified backendService struct with json format.
