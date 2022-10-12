@@ -110,7 +110,7 @@ You can now configure your env manifest to have CloudFront terminate TLS for you
 
 ```yaml
 cdn:
-  tls_termination: true
+  terminate_tls: true
 ```
 
 The configuration above uses CloudFront for TLS termination, which means the traffic from `CF → ALB → ECS` will be HTTP only. This brings faster TLS termination and shorter page loading for viewers, since the CloudFront edges are usually geographically closer to them.
