@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -190,6 +191,7 @@ type WorkerServiceProps struct {
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
 	Topics      []TopicSubscription  // Optional topics for subscriptions
+	Queue       SQSQueue             // Optional queue configuration.
 }
 
 // NewWorkerService applies the props to a default Worker service configuration with
@@ -206,10 +208,43 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 		svc.WorkerServiceConfig.TaskConfig.CPU = aws.Int(MinWindowsTaskCPU)
 		svc.WorkerServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
+	if len(props.Topics) > 0 {
+		setSubscriptionQueueDefaults(props.Topics, &svc.WorkerServiceConfig.Subscribe.Queue)
+	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform
 	svc.parser = template.New()
 	return svc
+}
+
+// setSubscriptionQueueDefaults function modifies the manifest to have
+// 1. FIFO Topic names without ".fifo" suffix.
+// 2. If there are both FIFO and Standard topic subscriptions are specified then set
+//    default events queue to FIFO and add standard topic-specific queue for all the standard topic subscriptions.
+// 3. If there are only Standard topic subscriptions are specified then do nothing and return.
+func setSubscriptionQueueDefaults(topics []TopicSubscription, eventsQueue *SQSQueue) {
+	var isFIFOEnabled bool
+	for _, topic := range topics {
+		if isFIFO(aws.StringValue(topic.Name)) {
+			isFIFOEnabled = true
+			break
+		}
+	}
+	if !isFIFOEnabled {
+		return
+	}
+	eventsQueue.FIFO.Enable = aws.Bool(true)
+	for idx, topic := range topics {
+		if isFIFO(aws.StringValue(topic.Name)) {
+			topics[idx].Name = aws.String(strings.TrimSuffix(aws.StringValue(topic.Name), ".fifo"))
+		} else {
+			topics[idx].Queue.Enabled = aws.Bool(true)
+		}
+	}
+}
+
+func isFIFO(topic string) bool {
+	return strings.HasSuffix(topic, ".fifo")
 }
 
 // MarshalBinary serializes the manifest object into a binary YAML document.

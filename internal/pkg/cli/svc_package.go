@@ -316,9 +316,7 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 	if err != nil {
 		return nil, err
 	}
-	uploadOut := clideploy.UploadArtifactsOutput{
-		ImageDigest: aws.String(""),
-	}
+	var uploadOut clideploy.UploadArtifactsOutput
 	if o.uploadAssets {
 		out, err := generator.UploadArtifacts()
 		if err != nil {
@@ -334,7 +332,7 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 			EnvFileARN:         uploadOut.EnvFileARN,
 			AddonsURL:          uploadOut.AddonsURL,
 			CustomResourceURLs: uploadOut.CustomResourceURLs,
- 		},
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("generate workload %s template against environment %s: %w", o.name, o.envName, err)

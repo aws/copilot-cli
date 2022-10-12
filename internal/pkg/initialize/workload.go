@@ -67,6 +67,7 @@ type WorkloadProps struct {
 	Image          string
 	Platform       manifest.PlatformArgsOrString
 	Topics         []manifest.TopicSubscription
+	Queue          manifest.SQSQueue
 }
 
 // JobProps contains the information needed to represent a Job.
@@ -370,6 +371,7 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 		HealthCheck: i.HealthCheck,
 		Platform:    i.Platform,
 		Topics:      i.Topics,
+		Queue:       i.Queue,
 	}), nil
 }
 

@@ -235,6 +235,12 @@ type HTTPHealthCheckOpts struct {
 	DeregistrationDelay *int64
 }
 
+// IsHTTPS returns true if the Health Check Port is configured
+// as a HTTPS port.
+func (h HTTPHealthCheckOpts) IsHTTPS() bool {
+	return h.Port == "443"
+}
+
 // A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
 type Secret interface {
 	RequiresSub() bool
@@ -592,6 +598,24 @@ type WorkloadOpts struct {
 	Subscribe *SubscribeOpts
 
 	SCFeatureFlag bool
+}
+
+// HealthCheckProtocol returns the protocol for the Load Balancer health check,
+// or an empty string if it shouldn't be configured, defaulting to the
+// target protocol. (which is what happens, even if it isn't documented as such :))
+// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html#cfn-elasticloadbalancingv2-targetgroup-healthcheckprotocol
+func (w WorkloadOpts) HealthCheckProtocol() string {
+	switch {
+	case w.HTTPHealthCheck.Port == "443":
+		return "HTTPS"
+	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port == "":
+		return "HTTPS"
+	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port != "443":
+		// for backwards compatability, only set HTTP if target
+		// container is https but the specified health check port is not
+		return "HTTP"
+	}
+	return ""
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template

@@ -23,10 +23,10 @@ TargetGroup:
     {{- if .HTTPHealthCheck.Timeout}}
     HealthCheckTimeoutSeconds: {{.HTTPHealthCheck.Timeout}}
     {{- end}}
-    {{- if .HTTPTargetContainer.IsHTTPS }}
-    HealthCheckProtocol: HTTPS
+    {{- if .HealthCheckProtocol}}
+    HealthCheckProtocol: {{.HealthCheckProtocol}}
     {{- end}}
-    Port: !Ref ContainerPort
+    Port: !Ref TargetPort
     {{- if .HTTPTargetContainer.IsHTTPS }}
     Protocol: HTTPS
     {{- else }}
@@ -61,7 +61,7 @@ RulePriorityFunction:
 
 RulePriorityFunctionRole:
   Metadata:
-    'aws:copilot:description': "An IAM Role to describe load balancer rules for assigning a priority"
+    'aws:copilot:description': "An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} to describe load balancer rules for assigning a priority"
   Type: AWS::IAM::Role
   Properties:
     AssumeRolePolicyDocument:
