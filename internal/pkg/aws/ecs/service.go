@@ -80,14 +80,13 @@ func (s *Service) ServiceConnectAliases() []string {
 	if scConfig == nil || !aws.BoolValue(scConfig.Enabled) {
 		return nil
 	}
-	ns := aws.StringValue(scConfig.Namespace)
 	var aliases []string
 	for _, service := range scConfig.Services {
 		defaultName := aws.StringValue(service.PortName)
 		if aws.StringValue(service.DiscoveryName) != "" {
 			defaultName = aws.StringValue(service.DiscoveryName)
 		}
-		defaultAlias := fmt.Sprintf("%s.%s", defaultName, ns)
+		defaultAlias := fmt.Sprintf("%s.%s", defaultName, aws.StringValue(scConfig.Namespace))
 		if len(service.ClientAliases) == 0 {
 			aliases = append(aliases, defaultAlias)
 			continue

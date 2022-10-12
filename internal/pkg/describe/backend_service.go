@@ -134,10 +134,10 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 		port := blankContainerPort
 		if isReachableWithinVPC(svcParams) {
 			port = svcParams[cfnstack.WorkloadTargetPortParamKey]
-			if err := sdEndpoints.collectServiceDiscoveryEndpoints(envDescr, d.svc, env, port); err != nil {
+			if err := sdEndpoints.collectEndpoints(envDescr, d.svc, env, port); err != nil {
 				return nil, err
 			}
-			if err := scEndpoints.collectServiceConnectEndpoints(svcDescr, env); err != nil {
+			if err := scEndpoints.collectEndpoints(svcDescr, env); err != nil {
 				return nil, err
 			}
 		}

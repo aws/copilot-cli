@@ -172,11 +172,11 @@ func (d *LBWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := svcDiscoveries.collectServiceDiscoveryEndpoints(
+		if err := svcDiscoveries.collectEndpoints(
 			envDescr, d.svc, env, svcParams[cfnstack.WorkloadTargetPortParamKey]); err != nil {
 			return nil, err
 		}
-		if err := svcConnects.collectServiceConnectEndpoints(svcDescr, env); err != nil {
+		if err := svcConnects.collectEndpoints(svcDescr, env); err != nil {
 			return nil, err
 		}
 		envVars = append(envVars, flattenContainerEnvVars(env, webSvcEnvVars)...)
@@ -291,17 +291,16 @@ type WebServiceRoute struct {
 	URL         string `json:"url"`
 }
 
-// InternalEndpoint contains serialized internal endpoint (for both service connect and service discovery) info for an ECS service.
-type InternalEndpoint struct {
+type internalEndpoint struct {
 	Environment []string `json:"environment"`
 	Endpoint    string   `json:"endpoint"`
 }
 
-type internalEndpoints []*InternalEndpoint
+type internalEndpoints []*internalEndpoint
 
 type serviceDiscoveries internalEndpoints
 
-func (sds *serviceDiscoveries) collectServiceDiscoveryEndpoints(descr envDescriber, svc, env, port string) error {
+func (sds *serviceDiscoveries) collectEndpoints(descr envDescriber, svc, env, port string) error {
 	endpoint, err := descr.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return err
@@ -316,25 +315,22 @@ func (sds *serviceDiscoveries) collectServiceDiscoveryEndpoints(descr envDescrib
 }
 
 func (ies *internalEndpoints) appendInternalEndpoints(endpoint string, env string) {
-	exist := false
 	for _, ie := range *ies {
 		if ie.Endpoint == endpoint {
 			ie.Environment = append(ie.Environment, env)
-			exist = true
+			return
 		}
 	}
-	if !exist {
-		*ies = append(*ies, &InternalEndpoint{
-			Environment: []string{env},
-			Endpoint:    endpoint,
-		})
-	}
+	*ies = append(*ies, &internalEndpoint{
+		Environment: []string{env},
+		Endpoint:    endpoint,
+	})
 	return
 }
 
 type serviceConnects internalEndpoints
 
-func (scs *serviceConnects) collectServiceConnectEndpoints(descr ecsDescriber, env string) error {
+func (scs *serviceConnects) collectEndpoints(descr ecsDescriber, env string) error {
 	scDNSNames, err := descr.ServiceConnectDNSNames()
 	if err != nil {
 		return fmt.Errorf("retrieve service connect DNS names: %w", err)
