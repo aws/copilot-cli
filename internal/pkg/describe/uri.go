@@ -192,7 +192,6 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	if err != nil {
 		return URI{}, fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
-	port := svcStackParams[stack.WorkloadTargetPortParamKey]
 	if !isReachableWithinVPC(svcStackParams) {
 		return URI{
 			URI:        BlankServiceDiscoveryURI,
@@ -205,7 +204,7 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	}
 	s := serviceDiscovery{
 		Service:  d.svc,
-		Port:     port,
+		Port:     svcStackParams[stack.WorkloadTargetPortParamKey],
 		Endpoint: endpoint,
 	}
 	return URI{
