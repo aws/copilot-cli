@@ -211,7 +211,7 @@ cdn:
   certificate: "arn:aws:acm:us-east-1:1234567890:certificate/e5a6e114-b022-45b1-9339-38fbfd6db3e2"
 ```
 
-<span class="parent-field">cdn.</span><a id="cdn-tls-termination" href="#cdn-tls-termination" class="field">`tls_termination`</a> <span class="type">Boolean</span>  
+<span class="parent-field">cdn.</span><a id="cdn-tls-termination" href="#cdn-tls-termination" class="field">`terminate_tls`</a> <span class="type">Boolean</span>  
 Enable TLS termination for CloudFront.
 
 
