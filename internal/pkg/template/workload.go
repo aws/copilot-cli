@@ -121,7 +121,7 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name         *string
+	Name         string
 	Image        *string
 	Essential    *bool
 	Port         *string
@@ -210,8 +210,8 @@ type LogConfigOpts struct {
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
 type HTTPTargetContainer struct {
-	Container string
-	Port      string // Port of the container.
+	Name string
+	Port string
 }
 
 // IsHTTPS returns true if the target container's port is 443.
@@ -331,8 +331,7 @@ type NetworkLoadBalancer struct {
 
 // ServiceConnect holds configuration for ECS Service Connect.
 type ServiceConnect struct {
-	Namespace string
-	Alias     *string
+	Alias *string
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
@@ -597,6 +596,8 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
+
+	SCFeatureFlag bool
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,

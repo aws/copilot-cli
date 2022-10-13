@@ -735,6 +735,54 @@ func TestWorkloadInitializer_Service(t *testing.T) {
 				}, "worker")
 			},
 		},
+		"topic subscriptions enabled with default fifo queue": {
+			inSvcType:        manifest.WorkerServiceType,
+			inAppName:        "app",
+			inSvcName:        "worker",
+			inDockerfilePath: "worker/Dockerfile",
+			inSvcPort:        80,
+			inTopics: []manifest.TopicSubscription{
+				{
+					Name:    aws.String("theTopic.fifo"),
+					Service: aws.String("publisher"),
+				},
+			},
+
+			mockWriter: func(m *mocks.MockWorkspace) {
+				// workspace root: "/worker"
+				gomock.InOrder(
+					m.EXPECT().Rel("worker/Dockerfile").Return("Dockerfile", nil),
+					m.EXPECT().Rel("/worker/manifest.yml").Return("manifest.yml", nil))
+				m.EXPECT().WriteServiceManifest(gomock.Any(), "worker").
+					Do(func(m *manifest.WorkerService, _ string) {
+						require.Equal(t, *m.Workload.Type, manifest.WorkerServiceType)
+						require.Equal(t, *m.Subscribe.Queue.FIFO.Enable, true)
+						require.Empty(t, m.ImageConfig.HealthCheck)
+					}).Return("/worker/manifest.yml", nil)
+			},
+			mockstore: func(m *mocks.MockStore) {
+				m.EXPECT().CreateService(gomock.Any()).
+					Do(func(app *config.Workload) {
+						require.Equal(t, &config.Workload{
+							Name: "worker",
+							App:  "app",
+							Type: manifest.WorkerServiceType,
+						}, app)
+					}).
+					Return(nil)
+
+				m.EXPECT().GetApplication("app").Return(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, nil)
+			},
+			mockappDeployer: func(m *mocks.MockWorkloadAdder) {
+				m.EXPECT().AddServiceToApp(&config.Application{
+					Name:      "app",
+					AccountID: "1234",
+				}, "worker")
+			},
+		},
 	}
 
 	for name, tc := range testCases {
