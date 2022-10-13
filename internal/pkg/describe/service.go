@@ -480,15 +480,14 @@ func underline(headings []string) []string {
 	return lines
 }
 
-type internalEndpoint struct {
-	Environment []string `json:"environment"`
-	Endpoint    string   `json:"endpoint"`
-}
-
 // endpointToEnvs is a mapping of endpoint to environments.
 type endpointToEnvs map[string][]string
 
 func (e *endpointToEnvs) marshalJSON() ([]byte, error) {
+	type internalEndpoint struct {
+		Environment []string `json:"environment"`
+		Endpoint    string   `json:"endpoint"`
+	}
 	var internalEndpoints []internalEndpoint
 	for endpoint := range *e {
 		internalEndpoints = append(internalEndpoints, internalEndpoint{
@@ -500,8 +499,8 @@ func (e *endpointToEnvs) marshalJSON() ([]byte, error) {
 	return json.Marshal(&internalEndpoints)
 }
 
-func (e *endpointToEnvs) add(endpoint string, env string) {
-	(*e)[endpoint] = append((*e)[endpoint], env)
+func (e endpointToEnvs) add(endpoint string, env string) {
+	e[endpoint] = append(e[endpoint], env)
 }
 
 type serviceDiscoveries endpointToEnvs
