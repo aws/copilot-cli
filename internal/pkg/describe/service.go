@@ -4,12 +4,14 @@
 package describe
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
 	"sort"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -48,6 +50,7 @@ type DeployedEnvServicesLister interface {
 
 type ecsClient interface {
 	TaskDefinition(app, env, svc string) (*awsecs.TaskDefinition, error)
+	Service(app, env, svc string) (*awsecs.Service, error)
 }
 
 type apprunnerClient interface {
@@ -63,7 +66,7 @@ type workloadStackDescriber interface {
 
 type ecsDescriber interface {
 	workloadStackDescriber
-
+	ServiceConnectDNSNames() ([]string, error)
 	Platform() (*awsecs.ContainerPlatform, error)
 	EnvVars() ([]*awsecs.ContainerEnvVar, error)
 	Secrets() ([]*awsecs.ContainerSecret, error)
@@ -75,6 +78,21 @@ type apprunnerDescriber interface {
 	Service() (*apprunner.Service, error)
 	ServiceARN() (string, error)
 	ServiceURL() (string, error)
+}
+
+type ecsSvcDesc struct {
+	Service          string               `json:"service"`
+	Type             string               `json:"type"`
+	App              string               `json:"application"`
+	Configurations   ecsConfigurations    `json:"configurations"`
+	Routes           []*WebServiceRoute   `json:"routes"`
+	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
+	ServiceConnect   serviceConnects      `json:"serviceConnect,omitempty"`
+	Variables        containerEnvVars     `json:"variables"`
+	Secrets          secrets              `json:"secrets,omitempty"`
+	Resources        deployedSvcResources `json:"resources,omitempty"`
+
+	environments []string `json:"-"`
 }
 
 // serviceStackDescriber provides base functionality for retrieving info about a service.
@@ -263,6 +281,15 @@ func (d *ecsServiceDescriber) Platform() (*awsecs.ContainerPlatform, error) {
 	return platform, nil
 }
 
+// ServiceConnectDNSNames returns the service connect dns names of a service.
+func (d *ecsServiceDescriber) ServiceConnectDNSNames() ([]string, error) {
+	service, err := d.ecsClient.Service(d.app, d.env, d.service)
+	if err != nil {
+		return nil, fmt.Errorf("get service %s: %w", d.service, err)
+	}
+	return service.ServiceConnectAliases(), nil
+}
+
 // ServiceARN retrieves the ARN of the app runner service.
 func (d *appRunnerServiceDescriber) ServiceARN() (string, error) {
 	serviceStackResources, err := d.ServiceStackResources()
@@ -395,4 +422,151 @@ func (e containerEnvVars) humanString(w io.Writer) {
 	}
 
 	printTable(w, headers, rows)
+}
+
+type secret struct {
+	Name        string `json:"name"`
+	Container   string `json:"container"`
+	Environment string `json:"environment"`
+	ValueFrom   string `json:"valueFrom"`
+}
+
+type secrets []*secret
+
+func (s secrets) humanString(w io.Writer) {
+	headers := []string{"Name", "Container", "Environment", "Value From"}
+	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
+	sort.SliceStable(s, func(i, j int) bool { return s[i].Environment < s[j].Environment })
+	sort.SliceStable(s, func(i, j int) bool { return s[i].Container < s[j].Container })
+	sort.SliceStable(s, func(i, j int) bool { return s[i].Name < s[j].Name })
+	if len(s) > 0 {
+		valueFrom := s[0].ValueFrom
+		if _, err := arn.Parse(s[0].ValueFrom); err != nil {
+			// If the valueFrom is not an ARN, preface it with "parameter/"
+			valueFrom = fmt.Sprintf("parameter/%s", s[0].ValueFrom)
+		}
+		fmt.Fprintf(w, "  %s\n", strings.Join([]string{s[0].Name, s[0].Container, s[0].Environment, valueFrom}, "\t"))
+	}
+	for prev, cur := 0, 1; cur < len(s); prev, cur = prev+1, cur+1 {
+		valueFrom := s[cur].ValueFrom
+		if _, err := arn.Parse(s[cur].ValueFrom); err != nil {
+			// If the valueFrom is not an ARN, preface it with "parameter/"
+			valueFrom = fmt.Sprintf("parameter/%s", s[cur].ValueFrom)
+		}
+		cols := []string{s[cur].Name, s[cur].Container, s[cur].Environment, valueFrom}
+		if s[prev].Name == s[cur].Name {
+			cols[0] = dittoSymbol
+		}
+		if s[prev].Container == s[cur].Container {
+			cols[1] = dittoSymbol
+		}
+		if s[prev].Environment == s[cur].Environment {
+			cols[2] = dittoSymbol
+		}
+		if s[prev].ValueFrom == s[cur].ValueFrom {
+			cols[3] = dittoSymbol
+		}
+		fmt.Fprintf(w, "  %s\n", strings.Join(cols, "\t"))
+	}
+}
+
+func underline(headings []string) []string {
+	var lines []string
+	for _, heading := range headings {
+		line := strings.Repeat("-", len(heading))
+		lines = append(lines, line)
+	}
+	return lines
+}
+
+// endpointToEnvs is a mapping of endpoint to environments.
+type endpointToEnvs map[string][]string
+
+func (e *endpointToEnvs) marshalJSON() ([]byte, error) {
+	type internalEndpoint struct {
+		Environment []string `json:"environment"`
+		Endpoint    string   `json:"endpoint"`
+	}
+	var internalEndpoints []internalEndpoint
+	for endpoint := range *e {
+		internalEndpoints = append(internalEndpoints, internalEndpoint{
+			Environment: (*e)[endpoint],
+			Endpoint:    endpoint,
+		})
+	}
+	sort.Slice(internalEndpoints, func(i, j int) bool { return internalEndpoints[i].Endpoint < internalEndpoints[j].Endpoint })
+	return json.Marshal(&internalEndpoints)
+}
+
+func (e endpointToEnvs) add(endpoint string, env string) {
+	e[endpoint] = append(e[endpoint], env)
+}
+
+type serviceDiscoveries endpointToEnvs
+
+// MarshalJSON overrides the default JSON marshaling logic for the serviceDiscoveries
+// struct, allowing it to perform more complex marshaling behavior.
+func (sds *serviceDiscoveries) MarshalJSON() ([]byte, error) {
+	return (*endpointToEnvs)(sds).marshalJSON()
+}
+
+func (sds *serviceDiscoveries) collectEndpoints(descr envDescriber, svc, env, port string) error {
+	endpoint, err := descr.ServiceDiscoveryEndpoint()
+	if err != nil {
+		return err
+	}
+	sd := serviceDiscovery{
+		Service:  svc,
+		Port:     port,
+		Endpoint: endpoint,
+	}
+	(*endpointToEnvs)(sds).add(sd.String(), env)
+	return nil
+}
+
+type serviceConnects endpointToEnvs
+
+// MarshalJSON overrides the default JSON marshaling logic for the serviceConnects
+// struct, allowing it to perform more complex marshaling behavior.
+func (scs *serviceConnects) MarshalJSON() ([]byte, error) {
+	return (*endpointToEnvs)(scs).marshalJSON()
+}
+
+func (scs *serviceConnects) collectEndpoints(descr ecsDescriber, env string) error {
+	scDNSNames, err := descr.ServiceConnectDNSNames()
+	if err != nil {
+		return fmt.Errorf("retrieve service connect DNS names: %w", err)
+	}
+	for _, dnsName := range scDNSNames {
+		(*endpointToEnvs)(scs).add(dnsName, env)
+	}
+	return nil
+}
+
+type serviceEndpoints struct {
+	discoveries serviceDiscoveries
+	connects    serviceConnects
+}
+
+func (s serviceEndpoints) humanString(w io.Writer) {
+	headers := []string{"Endpoint", "Environment", "Type"}
+	fmt.Fprintf(w, "  %s\n", strings.Join(headers, "\t"))
+	fmt.Fprintf(w, "  %s\n", strings.Join(underline(headers), "\t"))
+	var scEndpoints []string
+	for endpoint := range s.connects {
+		scEndpoints = append(scEndpoints, endpoint)
+	}
+	sort.Slice(scEndpoints, func(i, j int) bool { return scEndpoints[i] < scEndpoints[j] })
+	for _, endpoint := range scEndpoints {
+		fmt.Fprintf(w, "  %s\t%s\t%s\n", endpoint, strings.Join(s.connects[endpoint], ", "), "Service Connect")
+	}
+	var sdEndpoints []string
+	for endpoint := range s.discoveries {
+		sdEndpoints = append(sdEndpoints, endpoint)
+	}
+	sort.Slice(sdEndpoints, func(i, j int) bool { return sdEndpoints[i] < sdEndpoints[j] })
+	for _, endpoint := range sdEndpoints {
+		fmt.Fprintf(w, "  %s\t%s\t%s\n", endpoint, strings.Join(s.discoveries[endpoint], ", "), "Service Discovery")
+	}
 }

@@ -372,7 +372,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
 				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-					stack.WorkloadContainerPortParamKey: stack.NoExposedContainerPort, // No port is set for the backend service.
+					stack.WorkloadTargetPortParamKey: stack.NoExposedContainerPort, // No port is set for the backend service.
 				}, nil)
 			},
 			wantedURI: BlankServiceDiscoveryURI,
@@ -381,7 +381,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
 				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-					stack.WorkloadContainerPortParamKey: "8080",
+					stack.WorkloadTargetPortParamKey: "8080",
 				}, nil)
 				m.envDescriber.EXPECT().ServiceDiscoveryEndpoint().Return("test.app.local", nil)
 			},

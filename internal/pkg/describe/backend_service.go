@@ -104,7 +104,8 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 
 	var routes []*WebServiceRoute
 	var configs []*ECSServiceConfig
-	var services []*ServiceDiscovery
+	sdEndpoints := make(serviceDiscoveries)
+	scEndpoints := make(serviceConnects)
 	var envVars []*containerEnvVar
 	var secrets []*secret
 	for _, env := range environments {
@@ -131,17 +132,14 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 			return nil, err
 		}
 		port := blankContainerPort
-		if svcParams[cfnstack.WorkloadContainerPortParamKey] != cfnstack.NoExposedContainerPort {
-			endpoint, err := envDescr.ServiceDiscoveryEndpoint()
-			if err != nil {
+		if isReachableWithinVPC(svcParams) {
+			port = svcParams[cfnstack.WorkloadTargetPortParamKey]
+			if err := sdEndpoints.collectEndpoints(envDescr, d.svc, env, port); err != nil {
 				return nil, err
 			}
-			port = svcParams[cfnstack.WorkloadContainerPortParamKey]
-			services = appendServiceDiscovery(services, serviceDiscovery{
-				Service:  d.svc,
-				Port:     port,
-				Endpoint: endpoint,
-			}, env)
+			if err := scEndpoints.collectEndpoints(svcDescr, env); err != nil {
+				return nil, err
+			}
 		}
 		containerPlatform, err := svcDescr.Platform()
 		if err != nil {
@@ -185,17 +183,20 @@ func (d *BackendServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}
 
 	return &backendSvcDesc{
-		Service:          d.svc,
-		Type:             manifest.BackendServiceType,
-		App:              d.app,
-		Configurations:   configs,
-		Routes:           routes,
-		ServiceDiscovery: services,
-		Variables:        envVars,
-		Secrets:          secrets,
-		Resources:        resources,
+		ecsSvcDesc: ecsSvcDesc{
+			Service:          d.svc,
+			Type:             manifest.BackendServiceType,
+			App:              d.app,
+			Configurations:   configs,
+			Routes:           routes,
+			ServiceDiscovery: sdEndpoints,
+			ServiceConnect:   scEndpoints,
+			Variables:        envVars,
+			Secrets:          secrets,
+			Resources:        resources,
 
-		environments: environments,
+			environments: environments,
+		},
 	}, nil
 }
 
@@ -211,17 +212,7 @@ func (d *BackendServiceDescriber) Manifest(env string) ([]byte, error) {
 
 // backendSvcDesc contains serialized parameters for a backend service.
 type backendSvcDesc struct {
-	Service          string               `json:"service"`
-	Type             string               `json:"type"`
-	App              string               `json:"application"`
-	Configurations   ecsConfigurations    `json:"configurations"`
-	Routes           []*WebServiceRoute   `json:"routes"`
-	ServiceDiscovery serviceDiscoveries   `json:"serviceDiscovery"`
-	Variables        containerEnvVars     `json:"variables"`
-	Secrets          secrets              `json:"secrets,omitempty"`
-	Resources        deployedSvcResources `json:"resources,omitempty"`
-
-	environments []string `json:"-"`
+	ecsSvcDesc
 }
 
 // JSONString returns the stringified backendService struct with json format.
@@ -255,9 +246,15 @@ func (w *backendSvcDesc) HumanString() string {
 			fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
 		}
 	}
-	fmt.Fprint(writer, color.Bold.Sprint("\nService Discovery\n\n"))
-	writer.Flush()
-	w.ServiceDiscovery.humanString(writer)
+	if len(w.ServiceConnect) > 0 || len(w.ServiceDiscovery) > 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nInternal Service Endpoint\n\n"))
+		writer.Flush()
+		endpoints := serviceEndpoints{
+			discoveries: w.ServiceDiscovery,
+			connects:    w.ServiceConnect,
+		}
+		endpoints.humanString(writer)
+	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	w.Variables.humanString(writer)
@@ -274,4 +271,8 @@ func (w *backendSvcDesc) HumanString() string {
 	}
 	writer.Flush()
 	return b.String()
+}
+
+func isReachableWithinVPC(params map[string]string) bool {
+	return params[cfnstack.WorkloadTargetPortParamKey] != cfnstack.NoExposedContainerPort
 }

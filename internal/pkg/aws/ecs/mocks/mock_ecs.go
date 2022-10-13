@@ -7,7 +7,7 @@ package mocks
 import (
 	reflect "reflect"
 
-	ecs "github.com/aws/copilot-cli/internal/pkg/ecssdk"
+	ecssdk "github.com/aws/copilot-cli/internal/pkg/ecssdk"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -35,10 +35,10 @@ func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 }
 
 // DescribeClusters mocks base method.
-func (m *Mockapi) DescribeClusters(input *ecs.DescribeClustersInput) (*ecs.DescribeClustersOutput, error) {
+func (m *Mockapi) DescribeClusters(input *ecssdk.DescribeClustersInput) (*ecssdk.DescribeClustersOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeClusters", input)
-	ret0, _ := ret[0].(*ecs.DescribeClustersOutput)
+	ret0, _ := ret[0].(*ecssdk.DescribeClustersOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -50,10 +50,10 @@ func (mr *MockapiMockRecorder) DescribeClusters(input interface{}) *gomock.Call 
 }
 
 // DescribeServices mocks base method.
-func (m *Mockapi) DescribeServices(input *ecs.DescribeServicesInput) (*ecs.DescribeServicesOutput, error) {
+func (m *Mockapi) DescribeServices(input *ecssdk.DescribeServicesInput) (*ecssdk.DescribeServicesOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeServices", input)
-	ret0, _ := ret[0].(*ecs.DescribeServicesOutput)
+	ret0, _ := ret[0].(*ecssdk.DescribeServicesOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -65,10 +65,10 @@ func (mr *MockapiMockRecorder) DescribeServices(input interface{}) *gomock.Call 
 }
 
 // DescribeTaskDefinition mocks base method.
-func (m *Mockapi) DescribeTaskDefinition(input *ecs.DescribeTaskDefinitionInput) (*ecs.DescribeTaskDefinitionOutput, error) {
+func (m *Mockapi) DescribeTaskDefinition(input *ecssdk.DescribeTaskDefinitionInput) (*ecssdk.DescribeTaskDefinitionOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeTaskDefinition", input)
-	ret0, _ := ret[0].(*ecs.DescribeTaskDefinitionOutput)
+	ret0, _ := ret[0].(*ecssdk.DescribeTaskDefinitionOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -80,10 +80,10 @@ func (mr *MockapiMockRecorder) DescribeTaskDefinition(input interface{}) *gomock
 }
 
 // DescribeTasks mocks base method.
-func (m *Mockapi) DescribeTasks(input *ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error) {
+func (m *Mockapi) DescribeTasks(input *ecssdk.DescribeTasksInput) (*ecssdk.DescribeTasksOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DescribeTasks", input)
-	ret0, _ := ret[0].(*ecs.DescribeTasksOutput)
+	ret0, _ := ret[0].(*ecssdk.DescribeTasksOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -95,10 +95,10 @@ func (mr *MockapiMockRecorder) DescribeTasks(input interface{}) *gomock.Call {
 }
 
 // ExecuteCommand mocks base method.
-func (m *Mockapi) ExecuteCommand(input *ecs.ExecuteCommandInput) (*ecs.ExecuteCommandOutput, error) {
+func (m *Mockapi) ExecuteCommand(input *ecssdk.ExecuteCommandInput) (*ecssdk.ExecuteCommandOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ExecuteCommand", input)
-	ret0, _ := ret[0].(*ecs.ExecuteCommandOutput)
+	ret0, _ := ret[0].(*ecssdk.ExecuteCommandOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -110,10 +110,10 @@ func (mr *MockapiMockRecorder) ExecuteCommand(input interface{}) *gomock.Call {
 }
 
 // ListTasks mocks base method.
-func (m *Mockapi) ListTasks(input *ecs.ListTasksInput) (*ecs.ListTasksOutput, error) {
+func (m *Mockapi) ListTasks(input *ecssdk.ListTasksInput) (*ecssdk.ListTasksOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListTasks", input)
-	ret0, _ := ret[0].(*ecs.ListTasksOutput)
+	ret0, _ := ret[0].(*ecssdk.ListTasksOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -125,10 +125,10 @@ func (mr *MockapiMockRecorder) ListTasks(input interface{}) *gomock.Call {
 }
 
 // RunTask mocks base method.
-func (m *Mockapi) RunTask(input *ecs.RunTaskInput) (*ecs.RunTaskOutput, error) {
+func (m *Mockapi) RunTask(input *ecssdk.RunTaskInput) (*ecssdk.RunTaskOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunTask", input)
-	ret0, _ := ret[0].(*ecs.RunTaskOutput)
+	ret0, _ := ret[0].(*ecssdk.RunTaskOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -140,10 +140,10 @@ func (mr *MockapiMockRecorder) RunTask(input interface{}) *gomock.Call {
 }
 
 // StopTask mocks base method.
-func (m *Mockapi) StopTask(input *ecs.StopTaskInput) (*ecs.StopTaskOutput, error) {
+func (m *Mockapi) StopTask(input *ecssdk.StopTaskInput) (*ecssdk.StopTaskOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StopTask", input)
-	ret0, _ := ret[0].(*ecs.StopTaskOutput)
+	ret0, _ := ret[0].(*ecssdk.StopTaskOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -155,10 +155,10 @@ func (mr *MockapiMockRecorder) StopTask(input interface{}) *gomock.Call {
 }
 
 // UpdateService mocks base method.
-func (m *Mockapi) UpdateService(input *ecs.UpdateServiceInput) (*ecs.UpdateServiceOutput, error) {
+func (m *Mockapi) UpdateService(input *ecssdk.UpdateServiceInput) (*ecssdk.UpdateServiceOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateService", input)
-	ret0, _ := ret[0].(*ecs.UpdateServiceOutput)
+	ret0, _ := ret[0].(*ecssdk.UpdateServiceOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -170,7 +170,7 @@ func (mr *MockapiMockRecorder) UpdateService(input interface{}) *gomock.Call {
 }
 
 // WaitUntilTasksRunning mocks base method.
-func (m *Mockapi) WaitUntilTasksRunning(input *ecs.DescribeTasksInput) error {
+func (m *Mockapi) WaitUntilTasksRunning(input *ecssdk.DescribeTasksInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WaitUntilTasksRunning", input)
 	ret0, _ := ret[0].(error)
@@ -207,7 +207,7 @@ func (m *MockssmSessionStarter) EXPECT() *MockssmSessionStarterMockRecorder {
 }
 
 // StartSession mocks base method.
-func (m *MockssmSessionStarter) StartSession(ssmSession *ecs.Session) error {
+func (m *MockssmSessionStarter) StartSession(ssmSession *ecssdk.Session) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StartSession", ssmSession)
 	ret0, _ := ret[0].(error)
