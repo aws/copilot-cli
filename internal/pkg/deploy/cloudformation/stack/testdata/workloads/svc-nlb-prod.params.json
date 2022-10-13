@@ -1,23 +1,23 @@
 {
-  "Parameters" : { 
-    "AppName": "my-app",
-    "EnvName": "prod",
-    "WorkloadName": "fe",
-    "ContainerImage": "",
+  "Parameters": {
     "AddonsTemplateURL": "",
-    "TaskCPU": "256",
-    "TaskMemory": "512",
-    "TaskCount": "5",
-    "LogRetention": "30",
+    "AppName": "my-app",
+    "ContainerImage": "",
     "ContainerPort": "80",
     "DNSDelegated": "true",
+    "EnvFileARN": "",
+    "EnvName": "prod",
+    "LogRetention": "30",
+    "NLBAliases": "nlb.example.com",
+    "NLBPort": "443",
     "TargetContainer": "fe",
     "TargetPort": "80",
-    "EnvFileARN": "",
-    "NLBAliases": "nlb.example.com",
-    "NLBPort": "443"
+    "TaskCPU": "256",
+    "TaskCount": "5",
+    "TaskMemory": "512",
+    "WorkloadName": "fe"
   },
-  "Tags": { 
+  "Tags": {
     "copilot-application": "my-app",
     "copilot-environment": "prod",
     "copilot-service": "fe"

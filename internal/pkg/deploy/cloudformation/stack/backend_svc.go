@@ -33,7 +33,8 @@ type BackendService struct {
 	httpsEnabled bool
 	albEnabled   bool
 
-	parser backendSvcReadParser
+	parser        backendSvcReadParser
+	SCFeatureFlag bool
 }
 
 // BackendServiceConfig contains data required to initialize a backend service stack.
@@ -141,8 +142,11 @@ func (s *BackendService) Template() (string, error) {
 	for _, ipNet := range s.manifest.RoutingRule.AllowedSourceIps {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
-
-	_, targetContainerPort := s.httpLoadBalancerTarget()
+	var scConfig *template.ServiceConnect
+	if s.manifest.ServiceConnectEnabled() {
+		scConfig = convertServiceConnect(s.manifest.Network.Connect)
+	}
+	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -166,7 +170,9 @@ func (s *BackendService) Template() (string, error) {
 		HealthCheck:        convertContainerHealthCheck(s.manifest.BackendServiceConfig.ImageConfig.HealthCheck),
 		HTTPTargetContainer: template.HTTPTargetContainer{
 			Port: aws.StringValue(targetContainerPort),
+			Name: aws.StringValue(targetContainer),
 		},
+		ServiceConnect:           scConfig,
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:      deregistrationDelay,
 		AllowedSourceIps:         allowedSourceIPs,
@@ -190,6 +196,7 @@ func (s *BackendService) Template() (string, error) {
 		},
 		HostedZoneAliases:   hostedZoneAliases,
 		PermissionsBoundary: s.permBound,
+		SCFeatureFlag:       s.SCFeatureFlag,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -241,18 +248,18 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(s.rc.EnvFileARN),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
+			ParameterValue: targetContainer,
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
+			ParameterValue: targetPort,
+		},
 	}...)
 
 	if !s.manifest.RoutingRule.IsEmpty() {
 		params = append(params, []*cloudformation.Parameter{
-			{
-				ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
-				ParameterValue: targetContainer,
-			},
-			{
-				ParameterKey:   aws.String(WorkloadTargetPortParamKey),
-				ParameterValue: targetPort,
-			},
 			{
 				ParameterKey:   aws.String(WorkloadRulePathParamKey),
 				ParameterValue: s.manifest.RoutingRule.Path,

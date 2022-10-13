@@ -271,6 +271,7 @@ Outputs:
 			HostedZoneAliases: make(template.AliasesForHostedZone),
 			HTTPTargetContainer: template.HTTPTargetContainer{
 				Port: "8080",
+				Name: "api",
 			},
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
 				HealthCheckPath: manifest.DefaultHealthCheckPath,
@@ -287,6 +288,7 @@ Outputs:
 					Key:    "sha2/count.zip",
 				},
 			},
+			ServiceConnect: &template.ServiceConnect{},
 			ExecuteCommand: &template.ExecuteCommandOpts{},
 			NestedStack: &template.WorkloadNestedStackOpts{
 				StackName:       addon.StackName,
@@ -430,13 +432,15 @@ Outputs:
 			},
 			Sidecars: []*template.SidecarOpts{
 				{
-					Name: aws.String("envoy"),
+					Name: "envoy",
 					Port: aws.String("443"),
 				},
 			},
 			HTTPTargetContainer: template.HTTPTargetContainer{
+				Name: "envoy",
 				Port: "443",
 			},
+			ServiceConnect: &template.ServiceConnect{},
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/healthz",
 				Port:               "4200",
@@ -561,6 +565,14 @@ func TestBackendService_Parameters(t *testing.T) {
 			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
 			ParameterValue: aws.String(""),
 		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
+			ParameterValue: aws.String("frontend"),
+		},
+		{
+			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
+			ParameterValue: aws.String("8080"),
+		},
 	}, params)
 }
 
@@ -642,6 +654,7 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 					EnvVersion:               "v1.42.0",
 				},
 			})
+			serializer.SCFeatureFlag = true
 			require.NoError(t, err)
 
 			// mock parser for lambda functions

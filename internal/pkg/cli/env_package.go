@@ -113,6 +113,7 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 			App:             appCfg,
 			Env:             envCfg,
 			SessionProvider: sessProvider,
+			ConfigStore:     opts.cfgStore,
 		})
 	}
 	return opts, nil
@@ -154,7 +155,9 @@ func (o *packageEnvOpts) Execute() error {
 	if err != nil {
 		return err
 	}
-
+	if err := deployer.Validate(mft); err != nil {
+		return err
+	}
 	var urls map[string]string
 	if o.uploadAssets {
 		urls, err = deployer.UploadArtifacts()

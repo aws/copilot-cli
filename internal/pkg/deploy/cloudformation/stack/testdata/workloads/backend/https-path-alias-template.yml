@@ -45,7 +45,7 @@ Parameters:
 Conditions:
   HasAddons: !Not [!Equals [!Ref AddonsTemplateURL, ""]]
   HasEnvFile: !Not [!Equals [!Ref EnvFileARN, ""]]
-  ExposePort: !Not [!Equals [!Ref ContainerPort, -1]]
+  ExposePort: !Not [!Equals [!Ref TargetPort, -1]]
   IsDefaultRootPath: !Equals [!Ref RulePath, "/"]
 Resources:
   LogGroup:
@@ -223,7 +223,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: / # Default is '/'.
-      Port: !Ref ContainerPort
+      Port: !Ref TargetPort
       Protocol: HTTP
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
@@ -399,7 +399,7 @@ Resources:
               - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
           SecurityGroups:
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
-      ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref ContainerPort}], !Ref "AWS::NoValue"]
+      ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref TargetPort}], !Ref "AWS::NoValue"]
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
         - ContainerName: !Ref TargetContainer

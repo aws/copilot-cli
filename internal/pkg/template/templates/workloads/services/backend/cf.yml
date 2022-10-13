@@ -35,11 +35,11 @@ Parameters:
   LogRetention:
     Type: Number
     Default: 30
-  {{- if .ALBEnabled}}
   TargetContainer:
     Type: String
   TargetPort:
     Type: Number
+  {{- if .ALBEnabled}}
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]
@@ -55,7 +55,7 @@ Conditions:
   HasEnvFile:
     !Not [!Equals [!Ref EnvFileARN, ""]]
   ExposePort:
-    !Not [!Equals [!Ref ContainerPort, -1]]
+    !Not [!Equals [!Ref TargetPort, -1]]
   {{- if .ALBEnabled}}
   IsDefaultRootPath:
     !Equals [!Ref RulePath, "/"]
@@ -102,7 +102,7 @@ Resources:
       {{- end}}
     Properties:
       {{- "\n"}}{{ include "service-base-properties" . | indent 6 }}
-      ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref ContainerPort}], !Ref "AWS::NoValue"]
+      ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref TargetPort}], !Ref "AWS::NoValue"]
       {{- if .ALBEnabled}}
       {{- if .HTTPHealthCheck.GracePeriod }}
       HealthCheckGracePeriodSeconds: {{.HTTPHealthCheck.GracePeriod}}

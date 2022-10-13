@@ -5,10 +5,13 @@
 package elbv2
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"sort"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/elbv2"
 )
@@ -19,8 +22,9 @@ const (
 )
 
 type api interface {
-	DescribeTargetHealth(input *elbv2.DescribeTargetHealthInput) (*elbv2.DescribeTargetHealthOutput, error)
-	DescribeRules(input *elbv2.DescribeRulesInput) (*elbv2.DescribeRulesOutput, error)
+	DescribeTargetHealth(*elbv2.DescribeTargetHealthInput) (*elbv2.DescribeTargetHealthOutput, error)
+	DescribeRules(*elbv2.DescribeRulesInput) (*elbv2.DescribeRulesOutput, error)
+	DescribeRulesWithContext(context.Context, *elbv2.DescribeRulesInput, ...request.Option) (*elbv2.DescribeRulesOutput, error)
 }
 
 // ELBV2 wraps an AWS ELBV2 client.
@@ -71,6 +75,33 @@ func (e *ELBV2) ListenerRuleHostHeaders(ruleARN string) ([]string, error) {
 	}
 	sort.Slice(hostHeaders, func(i, j int) bool { return hostHeaders[i] < hostHeaders[j] })
 	return hostHeaders, nil
+}
+
+// Rule wraps an elbv2.Rule to add some nice functionality to it.
+type Rule elbv2.Rule
+
+// DescribeRule returns the Rule with ruleARN.
+func (e *ELBV2) DescribeRule(ctx context.Context, ruleARN string) (Rule, error) {
+	resp, err := e.client.DescribeRulesWithContext(ctx, &elbv2.DescribeRulesInput{
+		RuleArns: aws.StringSlice([]string{ruleARN}),
+	})
+	if err != nil {
+		return Rule{}, err
+	} else if len(resp.Rules) == 0 {
+		return Rule{}, errors.New("not found")
+	}
+
+	return Rule(*resp.Rules[0]), nil
+}
+
+// HasRedirectAction returns true if the rule has a redirect action.
+func (r *Rule) HasRedirectAction() bool {
+	for _, action := range r.Actions {
+		if aws.StringValue(action.Type) == elbv2.ActionTypeEnumRedirect {
+			return true
+		}
+	}
+	return false
 }
 
 // TargetHealth wraps up elbv2.TargetHealthDescription.

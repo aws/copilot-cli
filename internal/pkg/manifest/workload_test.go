@@ -354,6 +354,49 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 	}
 }
 
+func TestServiceConnect_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct ServiceConnectBoolOrArgs
+		wantedError  error
+	}{
+		"returns error if both bool and args specified": {
+			inContent: []byte(`connect: true
+  alias: api`),
+
+			wantedError: errors.New("yaml: line 2: mapping values are not allowed in this context"),
+		},
+		"error if unmarshalable": {
+			inContent: []byte(`connect:
+  ohess: linus
+  archie: leg64`),
+			wantedError: errUnmarshalServiceConnectOpts,
+		},
+		"success": {
+			inContent: []byte(`connect:
+  alias: api`),
+			wantedStruct: ServiceConnectBoolOrArgs{
+				ServiceConnectArgs: ServiceConnectArgs{
+					Alias: aws.String("api"),
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			v := NetworkConfig{}
+			err := yaml.Unmarshal(tc.inContent, &v)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedStruct, v.Connect)
+			}
+		})
+	}
+}
+
 func TestPlacementArgOrString_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte

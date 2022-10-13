@@ -49,11 +49,8 @@ func (e EnvironmentConfig) validate() error {
 	if e.CDNEnabled() {
 		cdnCert := e.CDNConfig.Config.Certificate
 		if e.HTTPConfig.Public.Certificates == nil {
-			if cdnCert != nil {
-				return &errFieldMustBeSpecified{
-					missingField:      "http.public.certificates",
-					conditionalFields: []string{"cdn.certificate"},
-				}
+			if cdnCert != nil && !aws.BoolValue(e.CDNConfig.Config.TerminateTLS) {
+				return errors.New(`"cdn.terminate_tls" must be true if "cdn.certificate" is set without "http.public.certificates"`)
 			}
 		} else {
 			if cdnCert == nil {
@@ -347,7 +344,7 @@ func (cfg securityGroupsConfig) validate() error {
 }
 
 // validate returns nil if environmentCDNConfig is configured correctly.
-func (cfg environmentCDNConfig) validate() error {
+func (cfg EnvironmentCDNConfig) validate() error {
 	if cfg.Config.isEmpty() {
 		return nil
 	}
@@ -365,8 +362,14 @@ func (i RestrictiveIngress) validate() error {
 }
 
 // validate returns nil if advancedCDNConfig is configured correctly.
-func (cfg advancedCDNConfig) validate() error {
+func (cfg AdvancedCDNConfig) validate() error {
 	if cfg.Certificate == nil {
+		if aws.BoolValue(cfg.TerminateTLS) {
+			return &errFieldMustBeSpecified{
+				missingField:      "certificate",
+				conditionalFields: []string{"terminate_tls"},
+			}
+		}
 		return nil
 	}
 	certARN, err := arn.Parse(*cfg.Certificate)

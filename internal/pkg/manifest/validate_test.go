@@ -82,7 +82,7 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
-						vpcConfig{
+						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: (*PlacementString)(aws.String("")),
 							},
@@ -409,7 +409,7 @@ func TestBackendService_validate(t *testing.T) {
 				BackendServiceConfig: BackendServiceConfig{
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
-						vpcConfig{
+						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: (*PlacementString)(aws.String("")),
 							},
@@ -579,6 +579,37 @@ func TestBackendService_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "publish": `,
+		},
+		"error if target container not found": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					RoutingRule: RoutingRuleConfiguration{
+						TargetContainer: aws.String("api"),
+						Path:            aws.String("/"),
+					},
+				},
+				Workload: Workload{
+					Name: aws.String("api"),
+				},
+			},
+			wantedError: fmt.Errorf(`validate HTTP load balancer target: target container "api" doesn't expose a port`),
+		},
+		"error if service connect is enabled without any port exposed": {
+			config: BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: testImageConfig,
+					Network: NetworkConfig{
+						Connect: ServiceConnectBoolOrArgs{
+							EnableServiceConnect: aws.Bool(true),
+						},
+					},
+				},
+				Workload: Workload{
+					Name: aws.String("api"),
+				},
+			},
+			wantedError: fmt.Errorf(`cannot enable "network.connect" when no port exposed`),
 		},
 	}
 	for name, tc := range testCases {
@@ -786,7 +817,7 @@ func TestWorkerService_validate(t *testing.T) {
 				WorkerServiceConfig: WorkerServiceConfig{
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
-						vpcConfig{
+						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: (*PlacementString)(aws.String("")),
 							},
@@ -992,7 +1023,7 @@ func TestScheduledJob_validate(t *testing.T) {
 				ScheduledJobConfig: ScheduledJobConfig{
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
-						vpcConfig{
+						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: (*PlacementString)(aws.String("")),
 							},
@@ -3033,9 +3064,9 @@ func TestValidateLoadBalancerTarget(t *testing.T) {
 				mainContainerName: "mockMainContainer",
 				targetContainer:   aws.String("foo"),
 			},
-			wanted: fmt.Errorf("target container foo doesn't exist"),
+			wanted: fmt.Errorf(`target container "foo" doesn't exist`),
 		},
-		"should return an error if target container doesn't expose any port": {
+		"should return an error if target container doesn't expose a port": {
 			in: validateTargetContainerOpts{
 				mainContainerName: "mockMainContainer",
 				targetContainer:   aws.String("foo"),
@@ -3043,7 +3074,7 @@ func TestValidateLoadBalancerTarget(t *testing.T) {
 					"foo": {},
 				},
 			},
-			wanted: fmt.Errorf("target container foo doesn't expose any port"),
+			wanted: fmt.Errorf(`target container "foo" doesn't expose a port`),
 		},
 		"success with no target container set": {
 			in: validateTargetContainerOpts{

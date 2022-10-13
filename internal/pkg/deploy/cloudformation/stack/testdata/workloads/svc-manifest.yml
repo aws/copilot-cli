@@ -60,6 +60,8 @@ environments:
         path: /
         grace_period: 30s
       deregistration_delay: 30s
+    network:
+      connect: false
   prod:
     count:
       range:
@@ -80,9 +82,16 @@ environments:
         TEST: TEST
       secrets:
         GITHUB_TOKEN: GITHUB_TOKEN
+    http:
+      path: '/'
+      alias: example.com
+      target_container: nginx
+    network:
+      connect:
+        alias: api
     sidecars:
       nginx:
-        port: 80
+        port: 8080
         image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
         variables:
           NGINX_PORT: 80

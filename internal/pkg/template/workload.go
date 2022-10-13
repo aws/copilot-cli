@@ -62,6 +62,11 @@ const (
 	snsARNPattern = "arn:%s:sns:%s:%s:%s-%s-%s-%s"
 )
 
+// Constants for stack resource logical IDs
+const (
+	LogicalIDHTTPListenerRuleWithDomain = "HTTPListenerRuleWithDomain"
+)
+
 var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
@@ -116,7 +121,7 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name         *string
+	Name         string
 	Image        *string
 	Essential    *bool
 	Port         *string
@@ -206,7 +211,8 @@ type LogConfigOpts struct {
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
 type HTTPTargetContainer struct {
-	Port string // Port of the container.
+	Name string
+	Port string
 }
 
 // IsHTTPS returns true if the target container's port is 443.
@@ -228,6 +234,12 @@ type HTTPHealthCheckOpts struct {
 	Interval            *int64
 	Timeout             *int64
 	DeregistrationDelay *int64
+}
+
+// IsHTTPS returns true if the Health Check Port is configured
+// as a HTTPS port.
+func (h HTTPHealthCheckOpts) IsHTTPS() bool {
+	return h.Port == "443"
 }
 
 // A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
@@ -316,6 +328,11 @@ type NetworkLoadBalancer struct {
 	PublicSubnetCIDRs []string
 	Listener          NetworkLoadBalancerListener
 	MainContainerPort string
+}
+
+// ServiceConnect holds configuration for ECS Service Connect.
+type ServiceConnect struct {
+	Alias *string
 }
 
 // AdvancedCount holds configuration for autoscaling and capacity provider
@@ -558,6 +575,7 @@ type WorkloadOpts struct {
 	AllowedSourceIps        []string
 	NLB                     *NetworkLoadBalancer
 	DeploymentConfiguration DeploymentConfigurationOpts
+	ServiceConnect          *ServiceConnect
 
 	// Custom Resources backed by Lambda functions.
 	CustomResources map[string]S3ObjectLocation
@@ -579,6 +597,26 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
+
+	SCFeatureFlag bool
+}
+
+// HealthCheckProtocol returns the protocol for the Load Balancer health check,
+// or an empty string if it shouldn't be configured, defaulting to the
+// target protocol. (which is what happens, even if it isn't documented as such :))
+// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html#cfn-elasticloadbalancingv2-targetgroup-healthcheckprotocol
+func (w WorkloadOpts) HealthCheckProtocol() string {
+	switch {
+	case w.HTTPHealthCheck.Port == "443":
+		return "HTTPS"
+	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port == "":
+		return "HTTPS"
+	case w.HTTPTargetContainer.IsHTTPS() && w.HTTPHealthCheck.Port != "443":
+		// for backwards compatability, only set HTTP if target
+		// container is https but the specified health check port is not
+		return "HTTP"
+	}
+	return ""
 }
 
 // ParseLoadBalancedWebService parses a load balanced web service's CloudFormation template

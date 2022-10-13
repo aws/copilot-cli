@@ -5,9 +5,11 @@ package deploy
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
+	"github.com/dustin/go-humanize/english"
 )
 
 type errSvcWithNoALBAliasDeployingToEnvWithImportedCerts struct {
@@ -37,4 +39,48 @@ func (e *errSvcWithALBAliasHostedZoneWithCDNEnabled) RecommendActions() string {
 		fmt.Sprintf(" 3. Redeploying the service via %s.", color.HighlightCode("copilot svc deploy")),
 	}
 	return strings.Join(msgs, "\n")
+}
+
+type errEnvHasPublicServicesWithRedirect struct {
+	services []string
+}
+
+func (e *errEnvHasPublicServicesWithRedirect) Error() string {
+	return fmt.Sprintf("%v %s HTTP to HTTPS",
+		len(e.services),
+		english.PluralWord(len(e.services), "service redirects", "services redirect"),
+	)
+}
+
+// RecommendActions returns recommended actions to be taken after the error.
+// Implements main.actionRecommender interface.
+func (e *errEnvHasPublicServicesWithRedirect) RecommendActions() string {
+	n := len(e.services)
+	quoted := make([]string, len(e.services))
+	for i := range e.services {
+		quoted[i] = strconv.Quote(e.services[i])
+	}
+
+	return fmt.Sprintf(`%s %s %s HTTP traffic to HTTPS.
+%s
+To fix this, set the following field in %s manifest:
+%s
+and run %s.`,
+		english.PluralWord(n, "Service", "Services"),
+		english.OxfordWordSeries(quoted, "and"),
+		english.PluralWord(n, "redirects", "redirect"),
+		color.Emphasize(english.PluralWord(n, "This service", "These services")+" will not be reachable through the CDN."),
+		english.PluralWord(n, "its", "each"),
+		color.HighlightCodeBlock("http:\n  redirect_to_https: false"),
+		color.HighlightCode("copilot svc deploy"),
+	)
+}
+
+func (e *errEnvHasPublicServicesWithRedirect) warning() string {
+	return fmt.Sprintf(`%s
+If you'd like to use %s without a CDN, ensure %s A record is pointed to the ALB.`,
+		e.RecommendActions(),
+		english.PluralWord(len(e.services), "this service", "these services"),
+		english.PluralWord(len(e.services), "its", "each service's"),
+	)
 }

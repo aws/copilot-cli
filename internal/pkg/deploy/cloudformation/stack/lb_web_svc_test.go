@@ -207,6 +207,11 @@ Outputs:
 			String:      nil,
 			StringSlice: []string{"world"},
 		}
+		mft.Network.Connect = manifest.ServiceConnectBoolOrArgs{
+			ServiceConnectArgs: manifest.ServiceConnectArgs{
+				Alias: aws.String("frontend"),
+			},
+		}
 
 		var actual template.WorkloadOpts
 		parser := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
@@ -262,7 +267,11 @@ Outputs:
 			HTTPRedirect:        true,
 			DeregistrationDelay: aws.Int64(60),
 			HTTPTargetContainer: template.HTTPTargetContainer{
+				Name: "frontend",
 				Port: "80",
+			},
+			ServiceConnect: &template.ServiceConnect{
+				Alias: aws.String("frontend"),
 			},
 			HealthCheck: &template.ContainerHealthCheck{
 				Command:     []string{"CMD-SHELL", "curl -f http://localhost/ || exit 1"},
@@ -415,6 +424,7 @@ Outputs:
 		require.NoError(t, err)
 		require.Equal(t, template.HTTPTargetContainer{
 			Port: "443",
+			Name: "envoy",
 		}, actual.HTTPTargetContainer)
 	})
 }
@@ -903,7 +913,7 @@ func TestLoadBalancedWebService_Parameters(t *testing.T) {
 }
 
 func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
-	var testLBWebServiceManifest = manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
+	testLBWebServiceManifest := manifest.NewLoadBalancedWebService(&manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
 			Name:       "frontend",
 			Dockerfile: "frontend/Dockerfile",
@@ -911,66 +921,57 @@ func TestLoadBalancedWebService_SerializedParameters(t *testing.T) {
 		Path: "frontend",
 		Port: 80,
 	})
-	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, c *LoadBalancedWebService)
 
-		wantedParams string
-		wantedError  error
-	}{
-		"unavailable template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Parse(wkldParamsTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
-				c.wkld.parser = m
-			},
-			wantedParams: "",
-			wantedError:  errors.New("some error"),
-		},
-		"render params template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *LoadBalancedWebService) {
-				m := mocks.NewMockloadBalancedWebSvcReadParser(ctrl)
-				m.EXPECT().Parse(wkldParamsTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
-				c.wkld.parser = m
-			},
-			wantedParams: "params",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			c := &LoadBalancedWebService{
-				ecsWkld: &ecsWkld{
-					wkld: &wkld{
-						name: aws.StringValue(testLBWebServiceManifest.Name),
-						env:  testEnvName,
-						app:  testAppName,
-						rc: RuntimeConfig{
-							Image: &ECRImage{
-								RepoURL:  testImageRepoURL,
-								ImageTag: testImageTag,
-							},
-							AdditionalTags: map[string]string{
-								"owner": "boss",
-							},
-						},
+	c := &LoadBalancedWebService{
+		ecsWkld: &ecsWkld{
+			wkld: &wkld{
+				name: "frontend",
+				env:  testEnvName,
+				app:  testAppName,
+				rc: RuntimeConfig{
+					Image: &ECRImage{
+						RepoURL:  testImageRepoURL,
+						ImageTag: testImageTag,
 					},
-					tc: testLBWebServiceManifest.TaskConfig,
+					AdditionalTags: map[string]string{
+						"owner": "boss",
+					},
 				},
-				manifest: testLBWebServiceManifest,
-			}
-			tc.mockDependencies(ctrl, c)
-
-			// WHEN
-			params, err := c.SerializedParameters()
-
-			// THEN
-			require.Equal(t, tc.wantedError, err)
-			require.Equal(t, tc.wantedParams, params)
-		})
+			},
+			tc: testLBWebServiceManifest.TaskConfig,
+		},
+		manifest: testLBWebServiceManifest,
 	}
+
+	params, err := c.SerializedParameters()
+	require.NoError(t, err)
+	require.Equal(t, params, `{
+  "Parameters": {
+    "AddonsTemplateURL": "",
+    "AppName": "phonetool",
+    "ContainerImage": "111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
+    "ContainerPort": "80",
+    "DNSDelegated": "false",
+    "EnvFileARN": "",
+    "EnvName": "test",
+    "HTTPSEnabled": "false",
+    "LogRetention": "30",
+    "RulePath": "frontend",
+    "Stickiness": "false",
+    "TargetContainer": "frontend",
+    "TargetPort": "80",
+    "TaskCPU": "256",
+    "TaskCount": "1",
+    "TaskMemory": "512",
+    "WorkloadName": "frontend"
+  },
+  "Tags": {
+    "copilot-application": "phonetool",
+    "copilot-environment": "test",
+    "copilot-service": "frontend",
+    "owner": "boss"
+  }
+}`)
 }
 
 func TestLoadBalancedWebService_Tags(t *testing.T) {
