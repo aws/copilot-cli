@@ -33,8 +33,9 @@ CapacityProviderStrategy:
     {{- end}}
   {{- end}}
 {{- end }}
-{{- if and .ServiceConnect .SCFeatureFlag }}
+{{- if .SCFeatureFlag }}
 ServiceConnectConfiguration:
+  {{- if .ServiceConnect }}
   Enabled: True
   Namespace: {{.ServiceDiscoveryEndpoint}}
   LogConfiguration:
@@ -54,6 +55,9 @@ ServiceConnectConfiguration:
           {{- else}}
           DnsName: !Ref WorkloadName
           {{- end}}
+  {{- else}}
+  Enabled: False
+  {{- end}}
 {{- end}}
 NetworkConfiguration:
   AwsvpcConfiguration:
