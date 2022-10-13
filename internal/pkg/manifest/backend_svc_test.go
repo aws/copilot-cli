@@ -297,6 +297,83 @@ func TestBackendService_Port(t *testing.T) {
 	}
 }
 
+func TestBackendService_ServiceConnectEnabled(t *testing.T) {
+	testCases := map[string]struct {
+		mft *BackendService
+
+		wanted bool
+	}{
+		"enabled by default if main container exposes port": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: uint16P(80),
+						},
+					},
+				},
+			},
+			wanted: true,
+		},
+		"enabled by default if target container is set": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					RoutingRule: RoutingRuleConfiguration{
+						TargetContainer: aws.String("nginx"),
+					},
+				},
+			},
+			wanted: true,
+		},
+		"disabled by default if no exposed port or no target container": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					Network: NetworkConfig{
+						Connect: ServiceConnectBoolOrArgs{},
+					},
+				},
+			},
+			wanted: false,
+		},
+		"set by bool": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					Network: NetworkConfig{
+						Connect: ServiceConnectBoolOrArgs{
+							EnableServiceConnect: aws.Bool(true),
+						},
+					},
+				},
+			},
+			wanted: true,
+		},
+		"set by args": {
+			mft: &BackendService{
+				BackendServiceConfig: BackendServiceConfig{
+					Network: NetworkConfig{
+						Connect: ServiceConnectBoolOrArgs{
+							ServiceConnectArgs: ServiceConnectArgs{
+								Alias: aws.String("api"),
+							},
+						},
+					},
+				},
+			},
+			wanted: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			enabled := tc.mft.ServiceConnectEnabled()
+
+			// THEN
+			require.Equal(t, tc.wanted, enabled)
+		})
+	}
+}
+
 func TestBackendService_Publish(t *testing.T) {
 	testCases := map[string]struct {
 		mft *BackendService

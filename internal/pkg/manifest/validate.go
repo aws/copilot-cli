@@ -78,6 +78,7 @@ func (l LoadBalancedWebService) validate() error {
 	}
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
+		mainContainerPort: l.ImageConfig.Port,
 		targetContainer:   l.RoutingRule.GetTargetContainer(),
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
@@ -85,6 +86,7 @@ func (l LoadBalancedWebService) validate() error {
 	}
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
+		mainContainerPort: l.ImageConfig.Port,
 		targetContainer:   l.NLBConfig.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
@@ -192,6 +194,19 @@ func (b BackendService) validate() error {
 	}
 	if err = b.Workload.validate(); err != nil {
 		return err
+	}
+	if err = validateTargetContainer(validateTargetContainerOpts{
+		mainContainerName: aws.StringValue(b.Name),
+		mainContainerPort: b.ImageConfig.Port,
+		targetContainer:   b.RoutingRule.GetTargetContainer(),
+		sidecarConfig:     b.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate HTTP load balancer target: %w", err)
+	}
+	if b.ServiceConnectEnabled() {
+		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
+			return fmt.Errorf(`cannot enable "network.connect" when no port exposed`)
+		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     b.Sidecars,
@@ -1245,6 +1260,19 @@ func (n NetworkConfig) validate() error {
 	if err := n.VPC.validate(); err != nil {
 		return fmt.Errorf(`validate "vpc": %w`, err)
 	}
+	if err := n.Connect.validate(); err != nil {
+		return fmt.Errorf(`validate "connect": %w`, err)
+	}
+	return nil
+}
+
+// validate returns nil if ServiceConnectBoolOrArgs is configured correctly.
+func (s ServiceConnectBoolOrArgs) validate() error {
+	return s.ServiceConnectArgs.validate()
+}
+
+// validate is a no-op for ServiceConnectArgs.
+func (ServiceConnectArgs) validate() error {
 	return nil
 }
 
@@ -1590,6 +1618,7 @@ type containerDependency struct {
 
 type validateTargetContainerOpts struct {
 	mainContainerName string
+	mainContainerPort *uint16
 	targetContainer   *string
 	sidecarConfig     map[string]*SidecarConfig
 }
@@ -1609,14 +1638,17 @@ func validateTargetContainer(opts validateTargetContainerOpts) error {
 	}
 	targetContainer := aws.StringValue(opts.targetContainer)
 	if targetContainer == opts.mainContainerName {
+		if opts.mainContainerPort == nil {
+			return fmt.Errorf("target container %q doesn't expose a port", targetContainer)
+		}
 		return nil
 	}
 	sidecar, ok := opts.sidecarConfig[targetContainer]
 	if !ok {
-		return fmt.Errorf("target container %s doesn't exist", targetContainer)
+		return fmt.Errorf("target container %q doesn't exist", targetContainer)
 	}
 	if sidecar.Port == nil {
-		return fmt.Errorf("target container %s doesn't expose any port", targetContainer)
+		return fmt.Errorf("target container %q doesn't expose a port", targetContainer)
 	}
 	return nil
 }

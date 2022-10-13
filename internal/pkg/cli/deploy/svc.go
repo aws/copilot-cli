@@ -1360,7 +1360,9 @@ func (d *backendSvcDeployer) validateALBRuntime() error {
 }
 
 func (d *lbWebSvcDeployer) validateALBRuntime() error {
-	hasImportedCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
+	hasALBCerts := len(d.envConfig.HTTPConfig.Public.Certificates) != 0
+	hasCDNCerts := d.envConfig.CDNConfig.Config.Certificate != nil
+	hasImportedCerts := hasALBCerts || hasCDNCerts
 	if d.lbMft.RoutingRule.RedirectToHTTPS != nil && d.app.Domain == "" && !hasImportedCerts {
 		return fmt.Errorf("cannot configure http to https redirect without having a domain associated with the app %q or importing any certificates in env %q", d.app.Name, d.env.Name)
 	}
@@ -1390,14 +1392,15 @@ func (d *lbWebSvcDeployer) validateALBRuntime() error {
 			return fmt.Errorf("convert aliases to string slice: %w", err)
 		}
 
-		cdnCert := d.envConfig.CDNConfig.Config.Certificate
-		albCertValidator := d.newAliasCertValidator(nil)
-		cfCertValidator := d.newAliasCertValidator(aws.String(cloudfront.CertRegion))
-		if err := albCertValidator.ValidateCertAliases(aliases, d.envConfig.HTTPConfig.Public.Certificates); err != nil {
-			return fmt.Errorf("validate aliases against the imported public ALB certificate for env %s: %w", d.env.Name, err)
+		if hasALBCerts {
+			albCertValidator := d.newAliasCertValidator(nil)
+			if err := albCertValidator.ValidateCertAliases(aliases, d.envConfig.HTTPConfig.Public.Certificates); err != nil {
+				return fmt.Errorf("validate aliases against the imported public ALB certificate for env %s: %w", d.env.Name, err)
+			}
 		}
-		if cdnCert != nil {
-			if err := cfCertValidator.ValidateCertAliases(aliases, []string{*cdnCert}); err != nil {
+		if hasCDNCerts {
+			cfCertValidator := d.newAliasCertValidator(aws.String(cloudfront.CertRegion))
+			if err := cfCertValidator.ValidateCertAliases(aliases, []string{*d.envConfig.CDNConfig.Config.Certificate}); err != nil {
 				return fmt.Errorf("validate aliases against the imported CDN certificate for env %s: %w", d.env.Name, err)
 			}
 		}

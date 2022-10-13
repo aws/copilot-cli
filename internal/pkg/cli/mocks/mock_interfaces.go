@@ -5891,6 +5891,44 @@ func (mr *MockroleDeleterMockRecorder) DeleteRole(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRole", reflect.TypeOf((*MockroleDeleter)(nil).DeleteRole), arg0)
 }
 
+// MockpolicyLister is a mock of policyLister interface.
+type MockpolicyLister struct {
+	ctrl     *gomock.Controller
+	recorder *MockpolicyListerMockRecorder
+}
+
+// MockpolicyListerMockRecorder is the mock recorder for MockpolicyLister.
+type MockpolicyListerMockRecorder struct {
+	mock *MockpolicyLister
+}
+
+// NewMockpolicyLister creates a new mock instance.
+func NewMockpolicyLister(ctrl *gomock.Controller) *MockpolicyLister {
+	mock := &MockpolicyLister{ctrl: ctrl}
+	mock.recorder = &MockpolicyListerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockpolicyLister) EXPECT() *MockpolicyListerMockRecorder {
+	return m.recorder
+}
+
+// ListPolicyNames mocks base method.
+func (m *MockpolicyLister) ListPolicyNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPolicyNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPolicyNames indicates an expected call of ListPolicyNames.
+func (mr *MockpolicyListerMockRecorder) ListPolicyNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPolicyNames", reflect.TypeOf((*MockpolicyLister)(nil).ListPolicyNames))
+}
+
 // MockserviceDescriber is a mock of serviceDescriber interface.
 type MockserviceDescriber struct {
 	ctrl     *gomock.Controller

@@ -555,6 +555,10 @@ type roleDeleter interface {
 	DeleteRole(string) error
 }
 
+type policyLister interface {
+	ListPolicyNames() ([]string, error)
+}
+
 type serviceDescriber interface {
 	DescribeService(app, env, svc string) (*ecs.ServiceDesc, error)
 }
