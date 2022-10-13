@@ -537,6 +537,7 @@ func convertStorageOpts(wlName *string, in manifest.Storage) *template.StorageOp
 	}
 	return &template.StorageOpts{
 		Ephemeral:         convertEphemeral(in.Ephemeral),
+		ReadonlyRootFS:    in.ReadonlyRootFS,
 		Volumes:           convertVolumes(in.Volumes),
 		MountPoints:       convertMountPoints(in.Volumes),
 		EFSPerms:          convertEFSPermissions(in.Volumes),
