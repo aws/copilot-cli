@@ -162,6 +162,7 @@ type VPCConfig struct {
 	Managed             ManagedVPC
 	AllowVPCIngress     bool
 	SecurityGroupConfig *SecurityGroupConfig
+	Flowlogs            bool
 }
 
 // ImportVPC holds the fields to import VPC resources.

@@ -557,6 +557,62 @@ Resources:
 {{include "lambdas" . | indent 2}}
 {{include "custom-resources" . | indent 2}}
 {{- end}}
+{{- if .VPCConfig.Flowlogs }}
+  Flowlog:
+    Metadata:
+      'aws:copilot:description': "A Flowlog for the VPC to capture information about the IP traffic"
+    Type: AWS::EC2::FlowLog
+    Properties:
+      DeliverLogsPermissionArn: !GetAtt Flowlogrole.Arn
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
+      MaxAggregationInterval: 60
+{{- if .VPCConfig.Imported}}
+      ResourceId: {{.VPCConfig.Imported.ID}}
+{{- else}}
+      ResourceId: !Ref VPC
+{{- end}}                 
+      ResourceType: VPC
+      TrafficType:  ALL
+  Flowlogrole:
+    Metadata:
+      'aws:copilot:description': "A IAM Role for AWS EC2 to publish flow logs to a CloudWatch log group " 
+    Type: AWS::IAM::Role
+    Properties:
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+      {{- end}}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: vpc-flow-logs.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn:
+                  - Fn::Sub:
+                      - 'arn:aws:ec2:${region}:${account}:vpc-flow-log/*'
+                      - region: !Ref AWS::Region
+                        account: !Ref AWS::AccountId
+                        flowlogid: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
+      Policies:
+        - PolicyName: 'GrantAccesstoEC2toPublishFlowlogs'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+                Resource: "*"
+{{- end}}
 Outputs:
   VpcId:
 {{- if .VPCConfig.Imported}}
@@ -742,3 +798,15 @@ Outputs:
   LastForceDeployID:
     Value: {{quote .ForceUpdateID}}
     Description: Optionally force the template to update when no immediate resource change is present.
+{{- if .VPCConfig.Flowlogs }}
+  FlowLogID:
+    Value: !Ref Flowlog
+    Description: VPC Flow Log to capture information about the IP traffic going to and from network interfaces in your VPC.
+    Export:
+      Name: !Sub ${AWS::StackName}-FlowlogID
+  FlowLogRoleID:
+    Value: !Ref  Flowlogrole
+    Description: An IAM Role for EC2 to publish flow logs to a CloudWatch Logs log group  
+    Export:
+      Name: !Sub ${AWS::StackName}-FlowlogRoleID
+{{- end}}
