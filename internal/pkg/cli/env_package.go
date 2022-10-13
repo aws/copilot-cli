@@ -113,6 +113,7 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 			App:             appCfg,
 			Env:             envCfg,
 			SessionProvider: sessProvider,
+			ConfigStore:     opts.cfgStore,
 		})
 	}
 	return opts, nil

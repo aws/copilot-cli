@@ -38,7 +38,8 @@ type LoadBalancedWebService struct {
 	publicSubnetCIDRBlocks []string
 	appInfo                deploy.AppInformation
 
-	parser loadBalancedWebSvcReadParser
+	parser        loadBalancedWebSvcReadParser
+	SCFeatureFlag bool
 }
 
 // LoadBalancedWebServiceOption is used to configuring an optional field for LoadBalancedWebService.
@@ -190,6 +191,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if s.manifest.RoutingRule.RedirectToHTTPS != nil {
 		httpRedirect = aws.BoolValue(s.manifest.RoutingRule.RedirectToHTTPS)
 	}
+	var scConfig *template.ServiceConnect
+	if s.manifest.ServiceConnectEnabled() {
+		scConfig = convertServiceConnect(s.manifest.Network.Connect)
+	}
 	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		AppName:            s.app,
@@ -214,9 +219,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		ExecuteCommand:     convertExecuteCommand(&s.manifest.ExecuteCommand),
 		WorkloadType:       manifest.LoadBalancedWebServiceType,
 		HTTPTargetContainer: template.HTTPTargetContainer{
-			Port:      aws.StringValue(targetContainerPort),
-			Container: aws.StringValue(targetContainer),
+			Port: aws.StringValue(targetContainerPort),
+			Name: aws.StringValue(targetContainer),
 		},
+		ServiceConnect:           scConfig,
 		HealthCheck:              convertContainerHealthCheck(s.manifest.ImageConfig.HealthCheck),
 		HTTPHealthCheck:          convertHTTPHealthCheck(&s.manifest.RoutingRule.HealthCheck),
 		DeregistrationDelay:      deregistrationDelay,
@@ -242,6 +248,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		},
 		HostedZoneAliases:   aliasesFor,
 		PermissionsBoundary: s.permBound,
+		SCFeatureFlag:       s.SCFeatureFlag,
 	})
 	if err != nil {
 		return "", err

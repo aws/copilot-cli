@@ -444,62 +444,43 @@ func TestRequestDrivenWebService_Parameters(t *testing.T) {
 }
 
 func TestRequestDrivenWebService_SerializedParameters(t *testing.T) {
-	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, c *RequestDrivenWebService)
-
-		wantedParams string
-		wantedError  error
-	}{
-		"unavailable template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *RequestDrivenWebService) {
-				m := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				m.EXPECT().Parse(wkldParamsTemplatePath, gomock.Any(), gomock.Any()).Return(nil, errors.New("serialization error"))
-				c.wkld.parser = m
-			},
-			wantedParams: "",
-			wantedError:  errors.New("serialization error"),
-		},
-		"render params template": {
-			mockDependencies: func(ctrl *gomock.Controller, c *RequestDrivenWebService) {
-				m := mocks.NewMockrequestDrivenWebSvcReadParser(ctrl)
-				m.EXPECT().Parse(wkldParamsTemplatePath, gomock.Any(), gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("params")}, nil)
-				c.wkld.parser = m
-			},
-			wantedParams: "params",
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			c := &RequestDrivenWebService{
-				appRunnerWkld: &appRunnerWkld{
-					wkld: &wkld{
-						name: aws.StringValue(testRDWebServiceManifest.Name),
-						env:  testEnvName,
-						app:  testAppName,
-						rc: RuntimeConfig{
-							Image: &ECRImage{
-								RepoURL:  testImageRepoURL,
-								ImageTag: testImageTag,
-							},
-						},
+	c := &RequestDrivenWebService{
+		appRunnerWkld: &appRunnerWkld{
+			wkld: &wkld{
+				name: aws.StringValue(testRDWebServiceManifest.Name),
+				env:  testEnvName,
+				app:  testAppName,
+				rc: RuntimeConfig{
+					Image: &ECRImage{
+						RepoURL:  testImageRepoURL,
+						ImageTag: testImageTag,
 					},
-					instanceConfig: testRDWebServiceManifest.InstanceConfig,
-					imageConfig:    testRDWebServiceManifest.ImageConfig,
 				},
-				manifest: testRDWebServiceManifest,
-			}
-			tc.mockDependencies(ctrl, c)
-
-			// WHEN
-			params, err := c.SerializedParameters()
-
-			// THEN
-			require.Equal(t, tc.wantedError, err)
-			require.Equal(t, tc.wantedParams, params)
-		})
+			},
+			instanceConfig: testRDWebServiceManifest.InstanceConfig,
+			imageConfig:    testRDWebServiceManifest.ImageConfig,
+		},
+		manifest: testRDWebServiceManifest,
 	}
+
+	params, err := c.SerializedParameters()
+	require.NoError(t, err)
+	require.Equal(t, params, `{
+  "Parameters": {
+    "AddonsTemplateURL": "",
+    "AppName": "phonetool",
+    "ContainerImage": "111111111111.dkr.ecr.us-west-2.amazonaws.com/phonetool/frontend:manual-bf3678c",
+    "ContainerPort": "80",
+    "EnvName": "test",
+    "ImageRepositoryType": "ECR",
+    "InstanceCPU": "256",
+    "InstanceMemory": "512",
+    "WorkloadName": "frontend"
+  },
+  "Tags": {
+    "copilot-application": "phonetool",
+    "copilot-environment": "test",
+    "copilot-service": "frontend"
+  }
+}`)
 }

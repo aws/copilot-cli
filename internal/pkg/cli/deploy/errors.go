@@ -46,7 +46,10 @@ type errEnvHasPublicServicesWithRedirect struct {
 }
 
 func (e *errEnvHasPublicServicesWithRedirect) Error() string {
-	return fmt.Sprintf("%v services redirect HTTP to HTTPS", len(e.services))
+	return fmt.Sprintf("%v %s HTTP to HTTPS",
+		len(e.services),
+		english.PluralWord(len(e.services), "service redirects", "services redirect"),
+	)
 }
 
 // RecommendActions returns recommended actions to be taken after the error.
@@ -68,7 +71,7 @@ and run %s.`,
 		english.PluralWord(n, "redirects", "redirect"),
 		color.Emphasize(english.PluralWord(n, "This service", "These services")+" will not be reachable through the CDN."),
 		english.PluralWord(n, "its", "each"),
-		color.HighlightCodeBlock("http:\n  redirect_to_https: true"),
+		color.HighlightCodeBlock("http:\n  redirect_to_https: false"),
 		color.HighlightCode("copilot svc deploy"),
 	)
 }

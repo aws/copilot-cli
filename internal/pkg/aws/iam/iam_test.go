@@ -242,3 +242,64 @@ func TestIAM_CreateECSServiceLinkedRole(t *testing.T) {
 		})
 	}
 }
+
+func TestIAM_ListPolicies(t *testing.T) {
+	testCases := map[string]struct {
+		inClient func(ctrl *gomock.Controller) *mocks.Mockapi
+
+		wantedPolicies []string
+		wantedErr      error
+	}{
+		"wraps error on failure": {
+			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().
+					ListPolicies(gomock.Any()).
+					Return(nil, errors.New("some error"))
+				return m
+			},
+
+			wantedErr: errors.New("list IAM policies: some error"),
+		},
+		"returns list of policy names": {
+			inClient: func(ctrl *gomock.Controller) *mocks.Mockapi {
+				m := mocks.NewMockapi(ctrl)
+				m.EXPECT().
+					ListPolicies(gomock.Any()).
+					Return(&iam.ListPoliciesOutput{
+						Policies: []*iam.Policy{
+							{
+								PolicyName: aws.String("myFirstPolicyName"),
+							},
+							{
+								PolicyName: aws.String("mySecondPolicyName"),
+							},
+						},
+					}, nil)
+				return m
+			},
+			wantedPolicies: []string{"myFirstPolicyName", "mySecondPolicyName"},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			iam := &IAM{
+				client: tc.inClient(ctrl),
+			}
+
+			// WHEN
+			output, err := iam.ListPolicyNames()
+
+			// THEN
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedPolicies, output)
+			}
+		})
+	}
+}

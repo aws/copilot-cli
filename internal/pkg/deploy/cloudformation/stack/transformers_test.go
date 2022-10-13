@@ -44,7 +44,7 @@ func Test_convertSidecar(t *testing.T) {
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
@@ -58,7 +58,7 @@ func Test_convertSidecar(t *testing.T) {
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				Port:       aws.String("2000"),
 				Protocol:   aws.String("udp"),
 				CredsParam: mockCredsParam,
@@ -76,7 +76,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
@@ -96,7 +96,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
@@ -110,7 +110,7 @@ func Test_convertSidecar(t *testing.T) {
 		},
 		"do not specify image override": {
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -126,7 +126,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -142,7 +142,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -158,7 +158,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -174,7 +174,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -190,7 +190,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
