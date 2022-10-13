@@ -480,6 +480,8 @@ Resources:
       SubnetId: !Ref PublicSubnet2
   
   NatGateway1Attachment:
+    Metadata:
+      'aws:copilot:description': 'Creating an Elastic IP #1 for the NAT Gateway'
     Type: AWS::EC2::EIP
     Condition: CreateNATGateways
     DependsOn: InternetGatewayAttachment
@@ -515,6 +517,8 @@ Resources:
       RouteTableId: !Ref PrivateRouteTable1
       SubnetId: !Ref PrivateSubnet1
   NatGateway2Attachment:
+    Metadata:
+      'aws:copilot:description': 'Creating an Elastic IP #2 for the NAT Gateway'
     Type: AWS::EC2::EIP
     Condition: CreateNATGateways
     DependsOn: InternetGatewayAttachment
