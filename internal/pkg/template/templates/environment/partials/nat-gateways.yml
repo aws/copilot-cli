@@ -1,7 +1,7 @@
 {{- range $ind, $cidr := .PrivateSubnetCIDRs}}
 NatGateway{{inc $ind}}Attachment:
   Metadata:
-    'aws:copilot:description': 'Creating an Elastic IP #{{inc $ind}} for the NAT Gateway'
+    'aws:copilot:description': 'An Elastic IP for NAT Gateway {{inc $ind}}'
   Type: AWS::EC2::EIP
   Condition: CreateNATGateways
   DependsOn: InternetGatewayAttachment
