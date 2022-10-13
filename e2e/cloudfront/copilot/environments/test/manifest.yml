@@ -10,4 +10,5 @@ http:
         restrict_to:
           cdn: true
 
-cdn: true
+cdn:
+  terminate_tls: true
