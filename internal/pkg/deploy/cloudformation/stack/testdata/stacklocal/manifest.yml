@@ -31,6 +31,8 @@ count:
   memory_percentage: 80
 # Enable running commands in your container.
 exec: true
+network:
+  connect: false
 
 taskdef_overrides:
   - path: "ContainerDefinitions[0].Ulimits[-].Name"

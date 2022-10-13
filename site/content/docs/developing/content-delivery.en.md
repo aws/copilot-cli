@@ -67,7 +67,7 @@ You can optionally use CloudFront for TLS termination by configuring the env man
 
 ```yaml
 cdn:
-  tls_termination: true
+  terminate_tls: true
 ```
 
 And traffic from `CloudFront → Application Load Balancer (ALB) → ECS` will be HTTP only. This brings the benefit of terminating TLS at a geographically closer endpoint to the end user for faster TLS handshakes.

@@ -79,6 +79,21 @@ func (mr *MockapiMockRecorder) DeleteRolePolicy(input interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRolePolicy", reflect.TypeOf((*Mockapi)(nil).DeleteRolePolicy), input)
 }
 
+// ListPolicies mocks base method.
+func (m *Mockapi) ListPolicies(input *iam.ListPoliciesInput) (*iam.ListPoliciesOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPolicies", input)
+	ret0, _ := ret[0].(*iam.ListPoliciesOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPolicies indicates an expected call of ListPolicies.
+func (mr *MockapiMockRecorder) ListPolicies(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPolicies", reflect.TypeOf((*Mockapi)(nil).ListPolicies), input)
+}
+
 // ListRolePolicies mocks base method.
 func (m *Mockapi) ListRolePolicies(input *iam.ListRolePoliciesInput) (*iam.ListRolePoliciesOutput, error) {
 	m.ctrl.T.Helper()

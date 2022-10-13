@@ -22,12 +22,14 @@ type initAppMocks struct {
 	mockRoute53Svc       *mocks.MockdomainHostedZoneGetter
 	mockStore            *mocks.Mockstore
 	mockDomainInfoGetter *mocks.MockdomainInfoGetter
+	mockPolicyLister     *mocks.MockpolicyLister
 }
 
 func TestInitAppOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inAppName    string
-		inDomainName string
+		inAppName      string
+		inDomainName   string
+		inPBPolicyName string
 
 		mock func(m *initAppMocks)
 
@@ -90,6 +92,21 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			},
 			wantedError: errors.New("check if domain is owned by the account: some error"),
 		},
+		"wrap error from ListPolicies": {
+			inPBPolicyName: "nonexistentPolicyName",
+			mock: func(m *initAppMocks) {
+				m.mockPolicyLister.EXPECT().ListPolicyNames().Return(nil, errors.New("some error"))
+			},
+			wantedError: errors.New("list permissions boundary policies: some error"),
+		},
+		"invalid permissions boundary policy name": {
+			inPBPolicyName: "nonexistentPolicyName",
+			mock: func(m *initAppMocks) {
+				m.mockPolicyLister.EXPECT().ListPolicyNames().Return(
+					[]string{"existentPolicyName"}, nil)
+			},
+			wantedError: errors.New("IAM policy \"nonexistentPolicyName\" not found in this account"),
+		},
 		"invalid domain name that doesn't have a hosted zone": {
 			inDomainName: "badMockDomain.com",
 			mock: func(m *initAppMocks) {
@@ -132,6 +149,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				mockStore:            mocks.NewMockstore(ctrl),
 				mockRoute53Svc:       mocks.NewMockdomainHostedZoneGetter(ctrl),
 				mockDomainInfoGetter: mocks.NewMockdomainInfoGetter(ctrl),
+				mockPolicyLister:     mocks.NewMockpolicyLister(ctrl),
 			}
 			tc.mock(m)
 
@@ -139,9 +157,11 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				route53:          m.mockRoute53Svc,
 				domainInfoGetter: m.mockDomainInfoGetter,
 				store:            m.mockStore,
+				iam:              m.mockPolicyLister,
 				initAppVars: initAppVars{
-					name:       tc.inAppName,
-					domainName: tc.inDomainName,
+					name:                tc.inAppName,
+					domainName:          tc.inDomainName,
+					permissionsBoundary: tc.inPBPolicyName,
 				},
 			}
 
