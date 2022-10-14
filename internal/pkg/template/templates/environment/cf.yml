@@ -560,7 +560,7 @@ Resources:
 {{- if .VPCConfig.Flowlogs }}
   Flowlog:
     Metadata:
-      'aws:copilot:description': "A Flowlog for the VPC to capture information about the IP traffic"
+      'aws:copilot:description': 'A Flowlog for the VPC to capture information about the IP traffic'
     Type: AWS::EC2::FlowLog
     Properties:
       DeliverLogsPermissionArn: !GetAtt Flowlogrole.Arn
@@ -576,7 +576,7 @@ Resources:
       TrafficType:  ALL
   Flowlogrole:
     Metadata:
-      'aws:copilot:description': "A IAM Role for AWS EC2 to publish flow logs to a CloudWatch log group " 
+      'aws:copilot:description': 'A IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for AWS EC2 to publish flow logs to a CloudWatch log group'
     Type: AWS::IAM::Role
     Properties:
       {{- if .PermissionsBoundary}}
