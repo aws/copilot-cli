@@ -1,4 +1,6 @@
-This section explains our recommendations around credentials to provide the best experience with the AWS Copilot CLI.
+AWS Copilot uses AWS credentials to access AWS API, store and look up an [application's metadata](concepts/applications.en.md), and deploy and operate application's workloads.
+
+You can learn more on how to configure AWS credentials at [Quick configuration with `aws configure`](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html#cli-configure-quickstart-config).
 
 ## Application credentials
 Copilot uses the AWS credentials from the [default credential provider chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials) to store and look up your [application's metadata](concepts/applications.en.md): which services and environments belong to it. 
