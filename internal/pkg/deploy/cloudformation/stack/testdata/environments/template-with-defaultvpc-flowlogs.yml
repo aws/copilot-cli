@@ -485,7 +485,7 @@ Resources:
   
   NatGateway1Attachment:
     Metadata:
-      'aws:copilot:description':'An Elastic IP for NAT Gateway 1'
+      'aws:copilot:description': 'An Elastic IP for NAT Gateway 1'
     Type: AWS::EC2::EIP
     Condition: CreateNATGateways
     DependsOn: InternetGatewayAttachment
@@ -522,7 +522,7 @@ Resources:
       SubnetId: !Ref PrivateSubnet1
   NatGateway2Attachment:
     Metadata:
-      'aws:copilot:description':'An Elastic IP for NAT Gateway 2'
+      'aws:copilot:description': 'An Elastic IP for NAT Gateway 2'
     Type: AWS::EC2::EIP
     Condition: CreateNATGateways
     DependsOn: InternetGatewayAttachment
@@ -1010,7 +1010,7 @@ Resources:
       ResourceId: !Ref VPC                 
       ResourceType: VPC
       TrafficType:  ALL
-# Reference to IAM Role policy for flowlogs: https://go.aws/3euClbg     
+# Reference to IAM Role policy for Publish flow logs to CloudWatch Logs: https://go.aws/3euClbg     
   FlowlogRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for AWS EC2 to publish flow logs to a CloudWatch log group'
