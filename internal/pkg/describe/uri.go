@@ -20,6 +20,7 @@ const (
 	URIAccessTypeInternet
 	URIAccessTypeInternal
 	URIAccessTypeServiceDiscovery
+	URIAccessTypeServiceConnect
 )
 
 var (
@@ -196,6 +197,16 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 		return URI{
 			URI:        BlankServiceDiscoveryURI,
 			AccessType: URIAccessTypeNone,
+		}, nil
+	}
+	scDNSNames, err := svcDescr.ServiceConnectDNSNames()
+	if err != nil {
+		return URI{}, fmt.Errorf("retrieve service connect DNS names: %w", err)
+	}
+	if len(scDNSNames) > 0 {
+		return URI{
+			URI:        english.OxfordWordSeries(scDNSNames, "or"),
+			AccessType: URIAccessTypeServiceConnect,
 		}, nil
 	}
 	endpoint, err := envDescr.ServiceDiscoveryEndpoint()

@@ -454,6 +454,8 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 		network = "from your internal network."
 	case describe.URIAccessTypeServiceDiscovery:
 		network = "with service discovery."
+	case describe.URIAccessTypeServiceConnect:
+		network = "with service connect."
 	}
 
 	return []string{
