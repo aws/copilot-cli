@@ -20,16 +20,17 @@ import (
 
 func TestStorageInitOpts_Validate(t *testing.T) {
 	testCases := map[string]struct {
-		inAppName     string
-		inStorageType string
-		inSvcName     string
-		inStorageName string
-		inPartition   string
-		inSort        string
-		inLSISorts    []string
-		inNoSort      bool
-		inNoLSI       bool
-		inEngine      string
+		inAppName           string
+		inStorageType       string
+		inSvcName           string
+		inStorageName       string
+		inPartition         string
+		inSort              string
+		inLSISorts          []string
+		inNoSort            bool
+		inNoLSI             bool
+		inServerlessVersion string
+		inEngine            string
 
 		mockWs    func(m *mocks.MockwsAddonManager)
 		mockStore func(m *mocks.Mockstore)
@@ -173,6 +174,30 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 
 			wantedErr: errors.New("invalid engine type mysql: must be one of \"MySQL\", \"PostgreSQL\""),
 		},
+		"successfully validates aurora serverless version v1": {
+			mockWs:              func(m *mocks.MockwsAddonManager) {},
+			mockStore:           func(m *mocks.Mockstore) {},
+			inAppName:           "bowie",
+			inStorageType:       rdsStorageType,
+			inServerlessVersion: auroraServerlessVersionV1,
+			wantedErr:           nil,
+		},
+		"successfully validates aurora serverless version v2": {
+			mockWs:              func(m *mocks.MockwsAddonManager) {},
+			mockStore:           func(m *mocks.Mockstore) {},
+			inAppName:           "bowie",
+			inStorageType:       rdsStorageType,
+			inServerlessVersion: auroraServerlessVersionV2,
+			wantedErr:           nil,
+		},
+		"invalid aurora serverless version": {
+			mockWs:              func(m *mocks.MockwsAddonManager) {},
+			mockStore:           func(m *mocks.Mockstore) {},
+			inAppName:           "bowie",
+			inStorageType:       rdsStorageType,
+			inServerlessVersion: "weird-serverless-version",
+			wantedErr:           errors.New("invalid Aurora Serverless version weird-serverless-version: must be one of \"v1\", \"v2\""),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -185,15 +210,16 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			tc.mockStore(mockStore)
 			opts := initStorageOpts{
 				initStorageVars: initStorageVars{
-					storageType:  tc.inStorageType,
-					storageName:  tc.inStorageName,
-					workloadName: tc.inSvcName,
-					partitionKey: tc.inPartition,
-					sortKey:      tc.inSort,
-					lsiSorts:     tc.inLSISorts,
-					noLSI:        tc.inNoLSI,
-					noSort:       tc.inNoSort,
-					rdsEngine:    tc.inEngine,
+					storageType:             tc.inStorageType,
+					storageName:             tc.inStorageName,
+					workloadName:            tc.inSvcName,
+					partitionKey:            tc.inPartition,
+					sortKey:                 tc.inSort,
+					lsiSorts:                tc.inLSISorts,
+					noLSI:                   tc.inNoLSI,
+					noSort:                  tc.inNoSort,
+					auroraServerlessVersion: tc.inServerlessVersion,
+					rdsEngine:               tc.inEngine,
 				},
 				appName: tc.inAppName,
 				ws:      mockWs,
@@ -222,7 +248,7 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 		wantedPartitionKey = "DogName:String"
 		wantedSortKey      = "PhotoId:Number"
 
-		wantedServerlessVersion = serverlessVersionV2
+		wantedServerlessVersion = auroraServerlessVersionV2
 		wantedInitialDBName     = "mydb"
 		wantedDBEngine          = engineTypePostgreSQL
 	)
@@ -354,12 +380,12 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 
 			wantedErr: nil,
 			wantedVars: &initStorageVars{
-				storageType:          rdsStorageType,
-				storageName:          wantedBucketName,
-				workloadName:         wantedSvcName,
-				rdsServerlessVersion: wantedServerlessVersion,
-				rdsEngine:            wantedDBEngine,
-				rdsInitialDBName:     wantedInitialDBName,
+				storageType:             rdsStorageType,
+				storageName:             wantedBucketName,
+				workloadName:            wantedSvcName,
+				auroraServerlessVersion: wantedServerlessVersion,
+				rdsEngine:               wantedDBEngine,
+				rdsInitialDBName:        wantedInitialDBName,
 			},
 		},
 		"error if storage name not returned": {
@@ -768,30 +794,6 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			mockCfg:    func(m *mocks.MockwsSelector) {},
 			wantedErr:  nil,
 		},
-		"don't ask about serverless version if not specified": {
-			inAppName:     wantedAppName,
-			inSvcName:     wantedSvcName,
-			inStorageName: wantedBucketName,
-
-			inStorageType:   rdsStorageType,
-			inDBEngine:      wantedDBEngine,
-			inInitialDBName: wantedInitialDBName,
-
-			mockPrompt: func(m *mocks.Mockprompter) {},
-			mockCfg:    func(m *mocks.MockwsSelector) {},
-			mockWS: func(m *mocks.MockwsAddonManager) {
-				m.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(workspace.WorkloadManifest("type: Load Balanced Web Service"), nil)
-			},
-
-			wantedVars: &initStorageVars{
-				storageType:          rdsStorageType,
-				storageName:          wantedBucketName,
-				workloadName:         wantedSvcName,
-				rdsServerlessVersion: wantedServerlessVersion,
-				rdsEngine:            wantedDBEngine,
-				rdsInitialDBName:     wantedInitialDBName,
-			},
-		},
 		"asks for engine if not specified": {
 			inAppName:     wantedAppName,
 			inSvcName:     wantedSvcName,
@@ -811,12 +813,12 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 
 			wantedVars: &initStorageVars{
-				storageType:          rdsStorageType,
-				storageName:          wantedBucketName,
-				workloadName:         wantedSvcName,
-				rdsServerlessVersion: wantedServerlessVersion,
-				rdsInitialDBName:     wantedInitialDBName,
-				rdsEngine:            wantedDBEngine,
+				storageType:             rdsStorageType,
+				storageName:             wantedBucketName,
+				workloadName:            wantedSvcName,
+				auroraServerlessVersion: wantedServerlessVersion,
+				rdsInitialDBName:        wantedInitialDBName,
+				rdsEngine:               wantedDBEngine,
 			},
 		},
 		"error if engine not gotten": {
@@ -857,12 +859,12 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 			},
 
 			wantedVars: &initStorageVars{
-				storageType:          rdsStorageType,
-				storageName:          wantedBucketName,
-				workloadName:         wantedSvcName,
-				rdsServerlessVersion: wantedServerlessVersion,
-				rdsEngine:            wantedDBEngine,
-				rdsInitialDBName:     wantedInitialDBName,
+				storageType:             rdsStorageType,
+				storageName:             wantedBucketName,
+				workloadName:            wantedSvcName,
+				auroraServerlessVersion: wantedServerlessVersion,
+				rdsEngine:               wantedDBEngine,
+				rdsInitialDBName:        wantedInitialDBName,
 			},
 		},
 		"error if initial database name not gotten": {
@@ -906,9 +908,9 @@ func TestStorageInitOpts_Ask(t *testing.T) {
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
 
-					rdsServerlessVersion: tc.inServerlessVersion,
-					rdsEngine:            tc.inDBEngine,
-					rdsInitialDBName:     tc.inInitialDBName,
+					auroraServerlessVersion: tc.inServerlessVersion,
+					rdsEngine:               tc.inDBEngine,
+					rdsInitialDBName:        tc.inInitialDBName,
 				},
 				appName: tc.inAppName,
 				sel:     mockConfig,
@@ -1015,7 +1017,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inSvcName:           wantedSvcName,
 			inStorageType:       rdsStorageType,
 			inStorageName:       "mycluster",
-			inServerlessVersion: serverlessVersionV1,
+			inServerlessVersion: auroraServerlessVersionV1,
 			inEngine:            engineTypeMySQL,
 			inParameterGroup:    "mygroup",
 
@@ -1032,7 +1034,7 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 			inSvcName:           wantedSvcName,
 			inStorageType:       rdsStorageType,
 			inStorageName:       "mycluster",
-			inServerlessVersion: serverlessVersionV1,
+			inServerlessVersion: auroraServerlessVersionV1,
 			inEngine:            engineTypeMySQL,
 			inParameterGroup:    "mygroup",
 
@@ -1107,9 +1109,9 @@ func TestStorageInitOpts_Execute(t *testing.T) {
 					noLSI:        tc.inNoLSI,
 					noSort:       tc.inNoSort,
 
-					rdsServerlessVersion: tc.inServerlessVersion,
-					rdsEngine:            tc.inEngine,
-					rdsParameterGroup:    tc.inParameterGroup,
+					auroraServerlessVersion: tc.inServerlessVersion,
+					rdsEngine:               tc.inEngine,
+					rdsParameterGroup:       tc.inParameterGroup,
 				},
 				appName: tc.inAppName,
 				ws:      mockAddon,

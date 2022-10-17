@@ -21,22 +21,12 @@ Parameters:
 Mappings:
   {{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap: {{range $env := .Envs}}
     {{$env}}:
-      {{- if eq $.Engine "MySQL"}}
       "DBMinCapacity": 0.5 # AllowedValues: from 0.5 through 128
       "DBMaxCapacity": 8   # AllowedValues: from 0.5 through 128
-      {{- else}}
-      "DBMinCapacity": 0.5 # AllowedValues: from 0.5 through 128
-      "DBMaxCapacity": 8   # AllowedValues: from 0.5 through 128
-      {{end -}}
     {{end}}
     All:
-      {{- if eq $.Engine "MySQL"}}
       "DBMinCapacity": 0.5 # AllowedValues: from 0.5 through 128
       "DBMaxCapacity": 8   # AllowedValues: from 0.5 through 128
-      {{- else}}
-      "DBMinCapacity": 0.5 # AllowedValues: from 0.5 through 128
-      "DBMaxCapacity": 8   # AllowedValues: from 0.5 through 128
-      {{end}}
 
 Resources:
   {{logicalIDSafe .ClusterName}}DBSubnetGroup:
