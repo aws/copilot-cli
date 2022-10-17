@@ -223,7 +223,7 @@ type: Environment`
 			}(),
 			wantedFileName: "template-with-basic-manifest.yml",
 		},
-		"generate template with flowlogs is on": {
+		"generate template with default vpc and flowlogs is on": {
 			input: func() *deploy.CreateEnvironmentInput {
 				rawMft := `name: test
 type: Environment
@@ -254,7 +254,7 @@ network:
 			wantedFileName: "template-with-defaultvpc-flowlogs.yml",
 		},
 
-		"generate template with importedVPC and flowlogs is on": {
+		"generate template with imported vpc and flowlogs is on": {
 			input: func() *deploy.CreateEnvironmentInput {
 				rawMft := `name: test
 type: Environment
