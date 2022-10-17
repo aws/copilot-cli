@@ -203,7 +203,7 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	if err != nil {
 		return URI{}, fmt.Errorf("retrieve service connect DNS names: %w", err)
 	}
-	if len(scDNSNames) != 0 {
+	if len(scDNSNames) > 0 {
 		return URI{
 			URI:        english.OxfordWordSeries(scDNSNames, "or"),
 			AccessType: URIAccessTypeServiceConnect,
