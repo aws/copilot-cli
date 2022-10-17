@@ -24,7 +24,7 @@ func TestAddons(t *testing.T) {
 		outFileName    string
 	}{
 		"aurora": {
-			addonMarshaler: addon.NewRDSTemplate(addon.RDSProps{
+			addonMarshaler: addon.NewServerlessV2Template(addon.RDSProps{
 				ClusterName:   "aurora",
 				Engine:        "MySQL",
 				InitialDBName: "main",
