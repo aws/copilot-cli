@@ -333,7 +333,7 @@ func (cfg DeprecatedALBSecurityGroupsConfig) validate() error {
 
 // validate returns nil if privateHTTPConfig is configured correctly.
 func (cfg privateHTTPConfig) validate() error {
-	if !cfg.SecurityGroupsConfig.DeprecatedIngress.IsEmpty() && !cfg.Ingress.IsEmpty() {
+	if !cfg.DeprecatedSG.DeprecatedIngress.IsEmpty() && !cfg.Ingress.IsEmpty() {
 		return &errSpecifiedBothIngressFields{
 			firstField:  "private.http.security_groups.ingress",
 			secondField: "private.http.ingress",
@@ -344,10 +344,10 @@ func (cfg privateHTTPConfig) validate() error {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
-	if !cfg.SecurityGroupsConfig.DeprecatedIngress.RestrictiveIngress.IsEmpty() {
+	if !cfg.DeprecatedSG.DeprecatedIngress.RestrictiveIngress.IsEmpty() {
 		return fmt.Errorf("an internal load balancer cannot have restrictive ingress fields")
 	}
-	if err := cfg.SecurityGroupsConfig.validate(); err != nil {
+	if err := cfg.DeprecatedSG.validate(); err != nil {
 		return fmt.Errorf(`validate "security_groups: %w`, err)
 	}
 	return cfg.Ingress.validate()

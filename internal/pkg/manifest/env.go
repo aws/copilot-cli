@@ -428,7 +428,9 @@ func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	if env.ImportVPC != nil && len(env.ImportVPC.PublicSubnetIDs) == 0 {
 		cfg.Private.InternalALBSubnets = env.InternalALBSubnets
 		cfg.Private.Certificates = env.ImportCertARNs
-		cfg.Private.Ingress.VPCIngress = aws.Bool(env.EnableInternalALBVPCIngress)
+		if env.EnableInternalALBVPCIngress {
+			cfg.Private.Ingress.VPCIngress = aws.Bool(true)
+		}
 		return
 	}
 	cfg.Public.Certificates = env.ImportCertARNs
@@ -439,7 +441,7 @@ type PublicHTTPConfig struct {
 	DeprecatedSG  DeprecatedALBSecurityGroupsConfig `yaml:"security_groups,omitempty"` // Deprecated. This configuration is now available inside Ingress field.
 	Certificates  []string                          `yaml:"certificates,omitempty"`
 	ELBAccessLogs ELBAccessLogsArgsOrBool           `yaml:"access_logs,omitempty"`
-	Ingress       RestrictiveIngress
+	Ingress       RestrictiveIngress                `yaml:"ingress,omitempty"`
 }
 
 // ELBAccessLogsArgsOrBool is a custom type which supports unmarshaling yaml which
@@ -524,17 +526,22 @@ func (i RestrictiveIngress) IsEmpty() bool {
 
 // IsEmpty returns true if there is no customization to the public ALB.
 func (cfg PublicHTTPConfig) IsEmpty() bool {
-	return len(cfg.Certificates) == 0 && cfg.DeprecatedSG.IsEmpty() && cfg.ELBAccessLogs.isEmpty()
+	return len(cfg.Certificates) == 0 && cfg.DeprecatedSG.IsEmpty() && cfg.ELBAccessLogs.isEmpty() && cfg.Ingress.IsEmpty()
 }
 
 type privateHTTPConfig struct {
-	InternalALBSubnets   []string                          `yaml:"subnets,omitempty"`
-	Certificates         []string                          `yaml:"certificates,omitempty"`
-	SecurityGroupsConfig DeprecatedALBSecurityGroupsConfig `yaml:"security_groups,omitempty"` // Deprecated. This field is now available in Ingress.
-	Ingress              RelaxedIngress                    `yaml:"ingress,omitempty"`
+	InternalALBSubnets []string                          `yaml:"subnets,omitempty"`
+	Certificates       []string                          `yaml:"certificates,omitempty"`
+	DeprecatedSG       DeprecatedALBSecurityGroupsConfig `yaml:"security_groups,omitempty"` // Deprecated. This field is now available in Ingress.
+	Ingress            RelaxedIngress                    `yaml:"ingress,omitempty"`
 }
 
 // IsEmpty returns true if there is no customization to the internal ALB.
 func (cfg privateHTTPConfig) IsEmpty() bool {
-	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0 && cfg.SecurityGroupsConfig.IsEmpty() && cfg.Ingress.IsEmpty()
+	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0 && cfg.DeprecatedSG.IsEmpty() && cfg.Ingress.IsEmpty()
+}
+
+// HasVPCIngress returns true if the private ALB allows ingress from within the VPC.
+func (cfg privateHTTPConfig) HasVPCIngress() bool {
+	return aws.BoolValue(cfg.Ingress.VPCIngress) || aws.BoolValue(cfg.DeprecatedSG.DeprecatedIngress.VPCIngress)
 }

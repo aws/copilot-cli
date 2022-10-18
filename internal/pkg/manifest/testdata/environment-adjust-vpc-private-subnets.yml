@@ -20,8 +20,6 @@ http:
   private:
     certificates: [mock-cert-1, mock-cert-2]
     subnets: [mock-subnet-id-3 mock-subnet-id-4]
-    ingress:
-      from_vpc: false
 
 # Configure observability for your environment resources.
 observability:

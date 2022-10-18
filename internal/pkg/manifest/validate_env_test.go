@@ -289,7 +289,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 						Ingress: RelaxedIngress{
 							VPCIngress: aws.Bool(true),
 						},
-						SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{
+						DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
 							DeprecatedIngress: DeprecatedIngress{
 								VPCIngress: aws.Bool(true),
 							},
@@ -975,7 +975,7 @@ func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 		"private http config with invalid security group ingress": {
 			in: EnvironmentHTTPConfig{
 				Private: privateHTTPConfig{
-					SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{
+					DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
 						DeprecatedIngress: DeprecatedIngress{
 							RestrictiveIngress: RestrictiveIngress{
 								CDNIngress: aws.Bool(true),
