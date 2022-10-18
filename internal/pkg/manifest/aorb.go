@@ -6,16 +6,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// aOrB is a type used for yaml keys that may be of type A or B.
+// AOrB is a type used for yaml keys that may be of type A or B.
 // After calling yaml.Unmarshal(), you can check which type
 // the yaml satisified by calling IsA() or IsB(), and get the value
-// with A() or B(). aOrB will only ever match type A or B, never both.
+// with A() or B(). AOrB will only ever match type A or B, never both.
 //
 // YAML is unmarshaled in the order A -> B. That means if both A and B are
 // structs, and have common fields, A will get set and B will remain unset.
 // If A is a string, B is a struct, and the yaml is an Object that doesn't match
 // any keys of B, B will be set with all fields set to their zero values.
-type aOrB[A, B any] struct {
+type AOrB[A, B any] struct {
 	// IsA is true if yaml.Unmarshal successfully unmarshalled the input into A.
 	//
 	// Exported for testing, typically shouldn't be set directly outside of tests.
@@ -45,7 +45,7 @@ type aOrB[A, B any] struct {
 // Value returns either the underlying value of A or B, depending on
 // which was filled by yaml.Unmarshal. If neither have been/were set,
 // Value returns nil.
-func (t *aOrB[A, B]) Value() any {
+func (t *AOrB[A, B]) Value() any {
 	switch {
 	case t.IsA:
 		return t.A
@@ -56,7 +56,7 @@ func (t *aOrB[A, B]) Value() any {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
-func (t *aOrB[A, B]) UnmarshalYAML(value *yaml.Node) error {
+func (t *AOrB[A, B]) UnmarshalYAML(value *yaml.Node) error {
 	// reset struct
 	var a A
 	var b B
@@ -88,11 +88,11 @@ func (t *aOrB[A, B]) UnmarshalYAML(value *yaml.Node) error {
 }
 
 // MarshalYAML implements yaml.Marshaler.
-func (t aOrB[_, _]) MarshalYAML() (interface{}, error) {
+func (t AOrB[_, _]) MarshalYAML() (interface{}, error) {
 	return t.Value(), nil
 }
 
 // IsZero implements yaml.IsZeroer.
-func (t aOrB[_, _]) IsZero() bool {
+func (t AOrB[_, _]) IsZero() bool {
 	return !t.IsA && !t.IsB
 }

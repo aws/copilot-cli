@@ -208,7 +208,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 			wantedStruct: RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
-						HealthCheckConfiguration: aOrB[string, HTTPHealthCheckArgs]{
+						HealthCheckConfiguration: AOrB[string, HTTPHealthCheckArgs]{
 							IsB: true,
 							B: HTTPHealthCheckArgs{
 								Path:               aws.String("/healthcheck"),
@@ -232,7 +232,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 			wantedStruct: RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
-						HealthCheckConfiguration: aOrB[string, HTTPHealthCheckArgs]{
+						HealthCheckConfiguration: AOrB[string, HTTPHealthCheckArgs]{
 							IsA: true,
 							A:   "/healthcheck",
 						},

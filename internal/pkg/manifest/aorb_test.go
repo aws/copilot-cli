@@ -11,7 +11,7 @@ import (
 )
 
 type yamlTestStruct[A, B any] struct {
-	Key aOrB[A, B] `yaml:"key,omitempty"`
+	Key AOrB[A, B] `yaml:"key,omitempty"`
 }
 
 func (k *yamlTestStruct[A, B]) KeyValue() any {
