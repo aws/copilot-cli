@@ -557,7 +557,7 @@ Resources:
 {{include "lambdas" . | indent 2}}
 {{include "custom-resources" . | indent 2}}
 {{- end}}
-{{- if .VPCConfig.Flowlogs }}
+{{- if .VPCConfig.FlowLogs }}
   FlowLog:
     Metadata:
       'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'
