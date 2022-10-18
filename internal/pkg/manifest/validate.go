@@ -1400,8 +1400,8 @@ func (r AppRunnerInstanceConfig) validate() error {
 // validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
 func (r RequestDrivenWebServiceHttpConfig) validate() error {
 	// TODO what if neither are set?
-	if r.HealthCheckConfiguration.IsB() {
-		return r.HealthCheckConfiguration.b.validate()
+	if r.HealthCheckConfiguration.IsB {
+		return r.HealthCheckConfiguration.B.validate()
 	}
 	return nil
 }

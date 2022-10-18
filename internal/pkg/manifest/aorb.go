@@ -16,37 +16,30 @@ import (
 // If A is a string, B is a struct, and the yaml is an Object that doesn't match
 // any keys of B, B will be set with all fields set to their zero values.
 type aOrB[A, B any] struct {
-	isA bool
-	a   A
+	// IsA is true if yaml.Unmarshal successfully unmarshalled the input into A.
+	//
+	// Exported for testing, typically shouldn't be set directly outside of tests.
+	IsA bool
 
-	isB bool
-	b   B
-}
+	// A holds the value of type A. If IsA is true, this representation
+	// has been filled by yaml.Unmarshal. If IsA is false, or yaml.Unmarshal
+	// has not been called, this is the zero value of type A.
+	//
+	// Exported for testing, typically shouldn't be set directly outside of tests.
+	A A
 
-// IsA returns true if, yaml.Unmarshal successfully unmarshalled the input
-// into type A.
-func (t *aOrB[A, B]) IsA() bool {
-	return t.isA
-}
+	// IsB is true if yaml.Unmarshal was unable to unmarshal the input into A,
+	// but successfully unmarshalled the input into B.
+	//
+	// Exported for testing, typically shouldn't be set directly outside of tests.
+	IsB bool
 
-// IsA returns true if, yaml.Unmarshal was unable to unmarshal the input
-// into type B, but successfully unmarshalled into type B.
-func (t *aOrB[A, B]) IsB() bool {
-	return t.isB
-}
-
-// A returns the underlying value of A. If IsA() returns true, this is
-// the representation filled by yaml.Unmarshal. If IsA() returns false,
-// or yaml.Unmarshal has not been called, this is the zero value of A.
-func (t *aOrB[A, B]) A() A {
-	return t.a
-}
-
-// B returns the underlying value of B. If IsB() returns true, this is
-// the representation filled by yaml.Unmarshal. If IsB() returns false,
-// or yaml.Unmarshal has not been called, this is the zero value of B.
-func (t *aOrB[A, B]) B() B {
-	return t.b
+	// B holds the value of type B. If IsB is true, this representation
+	// has been filled by yaml.Unmarshal. If IsB is false, or yaml.Unmarshal
+	// has not been called, this is the zero value of type B.
+	//
+	// Exported for testing, typically shouldn't be set directly outside of tests.
+	B B
 }
 
 // Value returns either the underlying value of A or B, depending on
@@ -54,10 +47,10 @@ func (t *aOrB[A, B]) B() B {
 // Value returns nil.
 func (t *aOrB[A, B]) Value() any {
 	switch {
-	case t.IsA():
-		return t.A()
-	case t.IsB():
-		return t.B()
+	case t.IsA:
+		return t.A
+	case t.IsB:
+		return t.B
 	}
 	return nil
 }
@@ -67,20 +60,20 @@ func (t *aOrB[A, B]) UnmarshalYAML(value *yaml.Node) error {
 	// reset struct
 	var a A
 	var b B
-	t.isA = false
-	t.a = a
-	t.isB = false
-	t.b = b
+	t.IsA = false
+	t.A = a
+	t.IsB = false
+	t.B = b
 
 	err := value.Decode(&a)
 	if err == nil {
-		t.isA = true
-		t.a = a
+		t.IsA = true
+		t.A = a
 		return nil
 	}
 
 	// if the error wasn't just the inability to unmarshal
-	// into a, then return that error
+	// into A, then return that error
 	var te *yaml.TypeError
 	if !errors.As(err, &te) {
 		return err
@@ -88,8 +81,8 @@ func (t *aOrB[A, B]) UnmarshalYAML(value *yaml.Node) error {
 
 	err = value.Decode(&b)
 	if err == nil {
-		t.isB = true
-		t.b = b
+		t.IsB = true
+		t.B = b
 	}
 	return err
 }
@@ -101,5 +94,5 @@ func (t aOrB[_, _]) MarshalYAML() (interface{}, error) {
 
 // IsZero implements yaml.IsZeroer.
 func (t aOrB[_, _]) IsZero() bool {
-	return !t.IsA() && !t.IsB()
+	return !t.IsA && !t.IsB
 }
