@@ -74,6 +74,7 @@ func TestNewRequestDrivenWebService(t *testing.T) {
 }
 
 func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
+
 	testCases := map[string]struct {
 		inContent []byte
 
@@ -232,6 +233,29 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
 						HealthCheckConfiguration: HealthCheckArgsOrString{
 							HealthCheckPath: aws.String("/healthcheck"),
+						},
+					},
+				},
+			},
+		},
+		"should unmarshal private http configuration": {
+			inContent: []byte(`
+http:
+  healthcheck:
+    path: /healthcheck
+  private: true
+`),
+			wantedStruct: RequestDrivenWebService{
+				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
+					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
+						HealthCheckConfiguration: HealthCheckArgsOrString{
+							HealthCheckArgs: HTTPHealthCheckArgs{
+								Path: aws.String("/healthcheck"),
+							},
+						},
+						Private: aOrB[bool, VPCEndpoint]{
+							isA: true,
+							a:   true,
 						},
 					},
 				},
