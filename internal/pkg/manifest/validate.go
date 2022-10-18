@@ -1399,16 +1399,10 @@ func (r AppRunnerInstanceConfig) validate() error {
 
 // validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
 func (r RequestDrivenWebServiceHttpConfig) validate() error {
-	if err := r.HealthCheckConfiguration.validate(); err != nil {
-		return err
+	// TODO what if neither are set?
+	if r.HealthCheckConfiguration.IsB() {
+		return r.HealthCheckConfiguration.b.validate()
 	}
-	if r.Private.IsB() {
-		return r.Private.B().validate()
-	}
-	return nil
-}
-
-func (v VPCEndpoint) validate() error {
 	return nil
 }
 

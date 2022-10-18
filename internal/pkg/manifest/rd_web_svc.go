@@ -81,13 +81,8 @@ func (c *rdwsVpcConfig) isEmpty() bool {
 
 // RequestDrivenWebServiceHttpConfig represents options for configuring http.
 type RequestDrivenWebServiceHttpConfig struct {
-	HealthCheckConfiguration HealthCheckArgsOrString `yaml:"healthcheck"`
-	Alias                    *string                 `yaml:"alias"`
-	Private                  aOrB[bool, VPCEndpoint] `yaml:"private"`
-}
-
-type VPCEndpoint struct {
-	Endpoint string `yaml:"endpoint"`
+	HealthCheckConfiguration aOrB[string, HTTPHealthCheckArgs] `yaml:"healthcheck"`
+	Alias                    *string                           `yaml:"alias"`
 }
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
