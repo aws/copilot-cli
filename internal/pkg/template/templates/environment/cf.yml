@@ -558,12 +558,12 @@ Resources:
 {{include "custom-resources" . | indent 2}}
 {{- end}}
 {{- if .VPCConfig.Flowlogs }}
-  Flowlog:
+  FlowLog:
     Metadata:
       'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'
     Type: AWS::EC2::FlowLog
     Properties:
-      DeliverLogsPermissionArn: !GetAtt FlowlogRole.Arn
+      DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
       LogDestinationType: cloud-watch-logs
       LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
       MaxAggregationInterval: 60
@@ -575,7 +575,7 @@ Resources:
       ResourceType: VPC
       TrafficType:  ALL
 # Reference to IAM Role policy for Publish flow logs to CloudWatch Logs: https://go.aws/3euClbg     
-  FlowlogRole:
+  FlowLogRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for AWS EC2 to publish flow logs to a CloudWatch log group'
     Type: AWS::IAM::Role
@@ -594,12 +594,7 @@ Resources:
               StringEquals:
                 aws:SourceAccount: !Ref AWS::AccountId
               ArnLike:
-                aws:SourceArn:
-                  - Fn::Sub:
-                      - 'arn:${partition}:ec2:${region}:${account}:vpc-flow-log/*'
-                      - region: !Ref AWS::Region
-                        partition: !Ref AWS::Partition
-                        account: !Ref AWS::AccountId
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:vpc-flow-log/*'
       Policies:
         - PolicyName: 'GrantAccesstoEC2toPublishFlowlogs'
           PolicyDocument:
