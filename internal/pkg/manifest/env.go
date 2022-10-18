@@ -97,13 +97,16 @@ type EnvironmentConfig struct {
 	CDNConfig     EnvironmentCDNConfig     `yaml:"cdn,omitempty,flow"`
 }
 
-// ALBIngressRestrictedToCDN returns whether an environment has its
+// IsPublicLBIngressRestrictedToCDN returns whether an environment has its
 // Public Load Balancer ingress restricted to a Content Delivery Network.
-func (mft *EnvironmentConfig) ALBIngressRestrictedToCDN() bool {
+func (mft *EnvironmentConfig) IsPublicLBIngressRestrictedToCDN() bool {
+	// Check the fixed manifest first. This would be `http.public.ingress.cdn`.
+	// For more information, see https://github.com/aws/copilot-cli/pull/4068#issuecomment-1275080333
 	if !mft.HTTPConfig.Public.Ingress.IsEmpty() {
 		return aws.BoolValue(mft.HTTPConfig.Public.Ingress.CDNIngress)
 	}
-	return aws.BoolValue(mft.HTTPConfig.Public.SecurityGroupConfig.Ingress.RestrictiveIngress.CDNIngress)
+	// Fall through to the old manifest: `http.public.security_groups.ingress.cdn`.
+	return aws.BoolValue(mft.HTTPConfig.Public.DeprecatedSG.DeprecatedIngress.RestrictiveIngress.CDNIngress)
 }
 
 type environmentNetworkConfig struct {
@@ -433,10 +436,10 @@ func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 
 // PublicHTTPConfig represents the configuration settings for an environment public ALB.
 type PublicHTTPConfig struct {
-	SecurityGroupConfig DeprecatedALBSecurityGroupsConfig `yaml:"security_groups,omitempty"` // Deprecated. This configuration is now available inside Ingress field.
-	Certificates        []string                          `yaml:"certificates,omitempty"`
-	ELBAccessLogs       ELBAccessLogsArgsOrBool           `yaml:"access_logs,omitempty"`
-	Ingress             RestrictiveIngress
+	DeprecatedSG  DeprecatedALBSecurityGroupsConfig `yaml:"security_groups,omitempty"` // Deprecated. This configuration is now available inside Ingress field.
+	Certificates  []string                          `yaml:"certificates,omitempty"`
+	ELBAccessLogs ELBAccessLogsArgsOrBool           `yaml:"access_logs,omitempty"`
+	Ingress       RestrictiveIngress
 }
 
 // ELBAccessLogsArgsOrBool is a custom type which supports unmarshaling yaml which
@@ -498,30 +501,13 @@ func (cfg *EnvironmentConfig) ELBAccessLogs() (*ELBAccessLogsArgs, bool) {
 	return &accessLogs.AdvancedConfig, true
 }
 
-// DeprecatedALBSecurityGroupsConfig represents security group configuration settings for an ALB.
-type DeprecatedALBSecurityGroupsConfig struct {
-	Ingress DeprecatedIngress `yaml:"ingress"` // Deprecated. This field not available inside PublicHTTPConfig.Ingress and privateHTTPConfig.Ingress field.
-}
-
-// IsEmpty returns true if there are no specified fields for ingress.
-func (cfg DeprecatedALBSecurityGroupsConfig) IsEmpty() bool {
-	return cfg.Ingress.IsEmpty()
-}
-
-// DeprecatedIngress represents allowed ingress traffic from specified fields.
-type DeprecatedIngress struct {
-	RestrictiveIngress RestrictiveIngress `yaml:"restrict_to"` // Deprecated. This field is no more available in any other field.
-	VPCIngress         *bool              `yaml:"from_vpc"`    //Deprecated. This field is now available in privateHTTPConfig.Ingress.VPCIngress
-}
-
 // RestrictiveIngress represents ingress fields which restrict
 // default behavior of allowing all public ingress.
 type RestrictiveIngress struct {
 	CDNIngress *bool `yaml:"cdn"`
 }
 
-// RelaxedIngress represents ingress field which relaxes default
-// behavior of not allowing any public ingress.
+// RelaxedIngress contains ingress configuration to add to a security group.
 type RelaxedIngress struct {
 	VPCIngress *bool `yaml:"from_vpc"`
 }
@@ -536,21 +522,16 @@ func (i RestrictiveIngress) IsEmpty() bool {
 	return i.CDNIngress == nil
 }
 
-// IsEmpty returns true if there are no specified fields for ingress.
-func (i DeprecatedIngress) IsEmpty() bool {
-	return i.VPCIngress == nil && i.RestrictiveIngress.IsEmpty()
-}
-
 // IsEmpty returns true if there is no customization to the public ALB.
 func (cfg PublicHTTPConfig) IsEmpty() bool {
-	return len(cfg.Certificates) == 0 && cfg.SecurityGroupConfig.IsEmpty() && cfg.ELBAccessLogs.isEmpty()
+	return len(cfg.Certificates) == 0 && cfg.DeprecatedSG.IsEmpty() && cfg.ELBAccessLogs.isEmpty()
 }
 
 type privateHTTPConfig struct {
 	InternalALBSubnets   []string                          `yaml:"subnets,omitempty"`
 	Certificates         []string                          `yaml:"certificates,omitempty"`
-	SecurityGroupsConfig DeprecatedALBSecurityGroupsConfig `yaml:"security_groups,omitempty"`
-	Ingress              RelaxedIngress
+	SecurityGroupsConfig DeprecatedALBSecurityGroupsConfig `yaml:"security_groups,omitempty"` // Deprecated. This field is now available in Ingress.
+	Ingress              RelaxedIngress                    `yaml:"ingress,omitempty"`
 }
 
 // IsEmpty returns true if there is no customization to the internal ALB.

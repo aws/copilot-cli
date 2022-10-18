@@ -146,9 +146,8 @@ network:
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					AllowVPCIngress: true,
-					Mft:             &mft,
-					RawMft:          []byte(rawMft),
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
 				}
 			}(),
 
@@ -186,9 +185,8 @@ security_group:
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					AllowVPCIngress: true,
-					Mft:             &mft,
-					RawMft:          []byte(rawMft),
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
 				}
 			}(),
 

@@ -175,8 +175,8 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				},
 				HTTPConfig: EnvironmentHTTPConfig{
 					Public: PublicHTTPConfig{
-						SecurityGroupConfig: DeprecatedALBSecurityGroupsConfig{
-							Ingress: DeprecatedIngress{
+						DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+							DeprecatedIngress: DeprecatedIngress{
 								RestrictiveIngress: RestrictiveIngress{
 									CDNIngress: aws.Bool(true),
 								},
@@ -290,7 +290,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 							VPCIngress: aws.Bool(true),
 						},
 						SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{
-							Ingress: DeprecatedIngress{
+							DeprecatedIngress: DeprecatedIngress{
 								VPCIngress: aws.Bool(true),
 							},
 						},
@@ -317,8 +317,8 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 						Ingress: RestrictiveIngress{
 							CDNIngress: aws.Bool(true),
 						},
-						SecurityGroupConfig: DeprecatedALBSecurityGroupsConfig{
-							Ingress: DeprecatedIngress{
+						DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+							DeprecatedIngress: DeprecatedIngress{
 								RestrictiveIngress: RestrictiveIngress{
 									CDNIngress: aws.Bool(true),
 								},
@@ -963,8 +963,8 @@ func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 		"public http config with invalid security group ingress": {
 			in: EnvironmentHTTPConfig{
 				Public: PublicHTTPConfig{
-					SecurityGroupConfig: DeprecatedALBSecurityGroupsConfig{
-						Ingress: DeprecatedIngress{
+					DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+						DeprecatedIngress: DeprecatedIngress{
 							VPCIngress: aws.Bool(true),
 						},
 					},
@@ -976,7 +976,7 @@ func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 			in: EnvironmentHTTPConfig{
 				Private: privateHTTPConfig{
 					SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{
-						Ingress: DeprecatedIngress{
+						DeprecatedIngress: DeprecatedIngress{
 							RestrictiveIngress: RestrictiveIngress{
 								CDNIngress: aws.Bool(true),
 							},

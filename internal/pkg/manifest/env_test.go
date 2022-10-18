@@ -276,9 +276,9 @@ func TestFromEnvConfig(t *testing.T) {
 					},
 					HTTPConfig: EnvironmentHTTPConfig{
 						Private: privateHTTPConfig{
-							InternalALBSubnets:   []string{"subnet2"},
-							Certificates:         []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
-							SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{Ingress: DeprecatedIngress{VPCIngress: aws.Bool(false)}},
+							InternalALBSubnets: []string{"subnet2"},
+							Certificates:       []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
+							Ingress:            RelaxedIngress{VPCIngress: aws.Bool(false)},
 						},
 					},
 				},
@@ -496,10 +496,107 @@ http:
 						},
 						Private: privateHTTPConfig{
 							SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{
-								Ingress: DeprecatedIngress{
+								DeprecatedIngress: DeprecatedIngress{
 									VPCIngress: aws.Bool(false),
 								},
 							},
+						},
+					},
+				},
+			},
+		},
+		"unmarshal with new http fields": {
+			inContent: `name: prod
+type: Environment
+http:
+    public:
+        certificates:
+            - cert-1
+            - cert-2
+    private:
+      ingress:
+        from_vpc: true
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
+							Certificates: []string{"cert-1", "cert-2"},
+						},
+						Private: privateHTTPConfig{
+							Ingress: RelaxedIngress{VPCIngress: aws.Bool(true)},
+						},
+					},
+				},
+			},
+		},
+		"unmarshal with new and old private http fields": {
+			inContent: `name: prod
+type: Environment
+http:
+    public:
+        certificates:
+            - cert-1
+            - cert-2
+    private:
+      security_groups:
+        ingress:
+          from_vpc: true
+      ingress:
+        from_vpc: true
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
+							Certificates: []string{"cert-1", "cert-2"},
+						},
+						Private: privateHTTPConfig{
+							Ingress: RelaxedIngress{VPCIngress: aws.Bool(true)},
+							SecurityGroupsConfig: DeprecatedALBSecurityGroupsConfig{
+								DeprecatedIngress: DeprecatedIngress{
+									VPCIngress: aws.Bool(true),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"unmarshal with new and old public http fields": {
+			inContent: `name: prod
+type: Environment
+http:
+    public:
+      certificates:
+        - cert-1
+        - cert-2
+      security_groups:
+        ingress:
+          restrict_to:
+            cdn: true
+      ingress:
+        cdn: true
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
+							Certificates: []string{"cert-1", "cert-2"},
+							DeprecatedSG: DeprecatedALBSecurityGroupsConfig{DeprecatedIngress: DeprecatedIngress{RestrictiveIngress: RestrictiveIngress{CDNIngress: aws.Bool(true)}}},
+							Ingress:      RestrictiveIngress{CDNIngress: aws.Bool(true)},
 						},
 					},
 				},

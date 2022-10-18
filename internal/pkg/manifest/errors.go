@@ -107,6 +107,7 @@ func (e *errSpecifiedBothIngressFields) Error() string {
 	return fmt.Sprintf(`must specify one, not both, of "%s" and "%s"`, e.firstField, e.secondField)
 }
 
+// RecommendActions returns recommended actions to be taken after the error.
 func (e *errSpecifiedBothIngressFields) RecommendActions() string {
 	privateOrPublicField := strings.Split(e.firstField, ".")[0]
 	return fmt.Sprintf(`

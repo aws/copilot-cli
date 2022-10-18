@@ -292,6 +292,25 @@ func TestEnvironment_InitialManifestIntegration(t *testing.T) {
 			},
 			wantedTestData: "environment-adjust-vpc.yml",
 		},
+		"fully configured with customized vpc resources including imported private subnets": {
+			inProps: EnvironmentProps{
+				Name: "test",
+				CustomConfig: &config.CustomizeEnv{
+					ImportVPC: &config.ImportVPC{
+						ID:               "mock-vpc-id",
+						PrivateSubnetIDs: []string{"mock-subnet-id-3", "mock-subnet-id-4"},
+					},
+					ImportCertARNs:              []string{"mock-cert-1", "mock-cert-2"},
+					InternalALBSubnets:          []string{"mock-subnet-id-3", "mock-subnet-id-4"},
+					EnableInternalALBVPCIngress: false,
+				},
+
+				Telemetry: &config.Telemetry{
+					EnableContainerInsights: false,
+				},
+			},
+			wantedTestData: "environment-adjust-vpc-private-subnets.yml",
+		},
 		"fully configured with imported vpc resources": {
 			inProps: EnvironmentProps{
 				Name: "test",

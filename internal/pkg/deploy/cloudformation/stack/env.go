@@ -410,9 +410,8 @@ func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
 
 func (e *EnvStackConfig) privateHTTPConfig() template.HTTPConfig {
 	return template.HTTPConfig{
-		ImportedCertARNs:            e.importPrivateCertARNs(),
-		CustomALBSubnets:            e.internalALBSubnets(),
-		EnableInternalALBVPCIngress: aws.Bool(e.in.AllowVPCIngress),
+		ImportedCertARNs: e.importPrivateCertARNs(),
+		CustomALBSubnets: e.internalALBSubnets(),
 	}
 }
 
@@ -424,7 +423,7 @@ func (e *EnvStackConfig) vpcConfig() (template.VPCConfig, error) {
 	return template.VPCConfig{
 		Imported:            e.importVPC(),
 		Managed:             e.managedVPC(),
-		AllowVPCIngress:     aws.BoolValue(e.in.Mft.HTTPConfig.Private.Ingress.VPCIngress) || aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
+		AllowVPCIngress:     aws.BoolValue(e.in.Mft.HTTPConfig.Private.Ingress.VPCIngress) || aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.DeprecatedIngress.VPCIngress),
 		SecurityGroupConfig: securityGroupConfig,
 	}, nil
 }

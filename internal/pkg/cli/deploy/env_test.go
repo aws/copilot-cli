@@ -293,8 +293,8 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				EnvironmentConfig: manifest.EnvironmentConfig{
 					HTTPConfig: manifest.EnvironmentHTTPConfig{
 						Public: manifest.PublicHTTPConfig{
-							SecurityGroupConfig: manifest.DeprecatedALBSecurityGroupsConfig{
-								Ingress: manifest.DeprecatedIngress{
+							DeprecatedSG: manifest.DeprecatedALBSecurityGroupsConfig{
+								DeprecatedIngress: manifest.DeprecatedIngress{
 									RestrictiveIngress: manifest.RestrictiveIngress{
 										CDNIngress: aws.Bool(true),
 									},
@@ -565,8 +565,8 @@ If you'd like to use these services without a CDN, ensure each service's A recor
 					HTTPConfig: manifest.EnvironmentHTTPConfig{
 						Public: manifest.PublicHTTPConfig{
 							Certificates: []string{"mockCertARN"},
-							SecurityGroupConfig: manifest.DeprecatedALBSecurityGroupsConfig{
-								Ingress: manifest.DeprecatedIngress{
+							DeprecatedSG: manifest.DeprecatedALBSecurityGroupsConfig{
+								DeprecatedIngress: manifest.DeprecatedIngress{
 									RestrictiveIngress: manifest.RestrictiveIngress{
 										CDNIngress: aws.Bool(true),
 									},

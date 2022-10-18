@@ -43,7 +43,7 @@ func (e EnvironmentConfig) validate() error {
 	if err := e.CDNConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "cdn": %w`, err)
 	}
-	if e.ALBIngressRestrictedToCDN() && !e.CDNEnabled() {
+	if e.IsPublicLBIngressRestrictedToCDN() && !e.CDNEnabled() {
 		return errors.New("CDN must be enabled to limit security group ingress to CloudFront")
 	}
 	if e.CDNEnabled() {
@@ -290,7 +290,7 @@ func (cfg EnvironmentHTTPConfig) validate() error {
 
 // validate returns nil if PublicHTTPConfig is configured correctly.
 func (cfg PublicHTTPConfig) validate() error {
-	if !cfg.SecurityGroupConfig.Ingress.IsEmpty() && !cfg.Ingress.IsEmpty() {
+	if !cfg.DeprecatedSG.DeprecatedIngress.IsEmpty() && !cfg.Ingress.IsEmpty() {
 		return &errSpecifiedBothIngressFields{
 			firstField:  "public.http.security_groups.ingress",
 			secondField: "public.http.ingress",
@@ -301,13 +301,13 @@ func (cfg PublicHTTPConfig) validate() error {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
-	if cfg.SecurityGroupConfig.Ingress.VPCIngress != nil {
+	if cfg.DeprecatedSG.DeprecatedIngress.VPCIngress != nil {
 		return fmt.Errorf("a public load balancer already allows vpc ingress")
 	}
 	if err := cfg.ELBAccessLogs.validate(); err != nil {
 		return fmt.Errorf(`validate "access_logs": %w`, err)
 	}
-	if err := cfg.SecurityGroupConfig.validate(); err != nil {
+	if err := cfg.DeprecatedSG.validate(); err != nil {
 		return err
 	}
 	return cfg.Ingress.validate()
@@ -328,15 +328,12 @@ func (al ELBAccessLogsArgs) validate() error {
 
 // validate returns nil if ALBSecurityGroupsConfig is configured correctly.
 func (cfg DeprecatedALBSecurityGroupsConfig) validate() error {
-	if cfg.Ingress.IsEmpty() {
-		return nil
-	}
-	return cfg.Ingress.validate()
+	return cfg.DeprecatedIngress.validate()
 }
 
 // validate returns nil if privateHTTPConfig is configured correctly.
 func (cfg privateHTTPConfig) validate() error {
-	if !cfg.SecurityGroupsConfig.Ingress.IsEmpty() && !cfg.Ingress.IsEmpty() {
+	if !cfg.SecurityGroupsConfig.DeprecatedIngress.IsEmpty() && !cfg.Ingress.IsEmpty() {
 		return &errSpecifiedBothIngressFields{
 			firstField:  "private.http.security_groups.ingress",
 			secondField: "private.http.ingress",
@@ -347,7 +344,7 @@ func (cfg privateHTTPConfig) validate() error {
 			return fmt.Errorf(`parse "certificates[%d]": %w`, idx, err)
 		}
 	}
-	if !cfg.SecurityGroupsConfig.Ingress.RestrictiveIngress.IsEmpty() {
+	if !cfg.SecurityGroupsConfig.DeprecatedIngress.RestrictiveIngress.IsEmpty() {
 		return fmt.Errorf("an internal load balancer cannot have restrictive ingress fields")
 	}
 	if err := cfg.SecurityGroupsConfig.validate(); err != nil {
@@ -366,6 +363,9 @@ func (cfg EnvironmentCDNConfig) validate() error {
 
 // validate returns nil if Ingress is configured correctly.
 func (i DeprecatedIngress) validate() error {
+	if i.IsEmpty() {
+		return nil
+	}
 	return i.RestrictiveIngress.validate()
 }
 
