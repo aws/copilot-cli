@@ -109,6 +109,11 @@ func (mft *EnvironmentConfig) IsPublicLBIngressRestrictedToCDN() bool {
 	return aws.BoolValue(mft.HTTPConfig.Public.DeprecatedSG.DeprecatedIngress.RestrictiveIngress.CDNIngress)
 }
 
+// GetPublicALBSourceIPs returns whether true if source ips exist.
+func (mft *EnvironmentConfig) GetPublicALBSourceIPs() []IPNet {
+	return mft.HTTPConfig.Public.Ingress.SourceIPs
+}
+
 type environmentNetworkConfig struct {
 	VPC environmentVPCConfig `yaml:"vpc,omitempty"`
 }
@@ -507,22 +512,24 @@ func (cfg *EnvironmentConfig) ELBAccessLogs() (*ELBAccessLogsArgs, bool) {
 // RestrictiveIngress represents ingress fields which restrict
 // default behavior of allowing all public ingress.
 type RestrictiveIngress struct {
-	CDNIngress *bool `yaml:"cdn"`
+	CDNIngress *bool   `yaml:"cdn"`
+	SourceIPs  []IPNet `yaml:"source_ips"`
 }
 
 // RelaxedIngress contains ingress configuration to add to a security group.
 type RelaxedIngress struct {
-	VPCIngress *bool `yaml:"vpc"`
+	VPCIngress *bool   `yaml:"vpc"`
+	SourceIPs  []IPNet `yaml:"source_ips"`
 }
 
 // IsEmpty returns true if there are no specified fields for relaxed ingress.
 func (i RelaxedIngress) IsEmpty() bool {
-	return i.VPCIngress == nil
+	return i.VPCIngress == nil && len(i.SourceIPs) == 0
 }
 
 // IsEmpty returns true if there are no specified fields for restrictive ingress.
 func (i RestrictiveIngress) IsEmpty() bool {
-	return i.CDNIngress == nil
+	return i.CDNIngress == nil && len(i.SourceIPs) == 0
 }
 
 // IsEmpty returns true if there is no customization to the public ALB.

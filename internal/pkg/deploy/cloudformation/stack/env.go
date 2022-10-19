@@ -402,9 +402,10 @@ func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
 		return template.HTTPConfig{}, err
 	}
 	return template.HTTPConfig{
-		CIDRPrefixListIDs: e.in.CIDRPrefixListIDs,
-		ImportedCertARNs:  e.importPublicCertARNs(),
-		ELBAccessLogs:     elbAccessLogsConfig,
+		CIDRPrefixListIDs:  e.in.CIDRPrefixListIDs,
+		ImportedCertARNs:   e.importPublicCertARNs(),
+		ELBAccessLogs:      elbAccessLogsConfig,
+		PublicALBSourceIPs: e.in.PublicALBSourceIPs,
 	}, nil
 }
 

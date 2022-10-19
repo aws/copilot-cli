@@ -368,11 +368,21 @@ func (i DeprecatedIngress) validate() error {
 
 // validate is a no-op for RestrictiveIngress.
 func (i RestrictiveIngress) validate() error {
+	for _, sourceIP := range i.SourceIPs {
+		if err := sourceIP.validate(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 // validate is a no-op for RelaxedIngress.
 func (i RelaxedIngress) validate() error {
+	for _, sourceIP := range i.SourceIPs {
+		if err := sourceIP.validate(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

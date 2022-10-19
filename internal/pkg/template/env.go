@@ -131,10 +131,11 @@ func (e *EnvOpts) HasImportedCerts() bool {
 
 // HTTPConfig represents configuration for a Load Balancer.
 type HTTPConfig struct {
-	CIDRPrefixListIDs []string
-	ImportedCertARNs  []string
-	CustomALBSubnets  []string
-	ELBAccessLogs     *ELBAccessLogs
+	CIDRPrefixListIDs  []string
+	ImportedCertARNs   []string
+	CustomALBSubnets   []string
+	ELBAccessLogs      *ELBAccessLogs
+	PublicALBSourceIPs []string
 }
 
 // ELBAccessLogs represents configuration for ELB access logs S3 bucket.
