@@ -4,6 +4,7 @@
 package stack
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -15,11 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
-)
-
-// Template rendering configuration common across workloads.
-const (
-	wkldParamsTemplatePath = "workloads/params.json.tmpl"
 )
 
 // Parameter logical IDs common across workloads.
@@ -186,19 +182,30 @@ func serializeTemplateConfig(parser template.Parser, stack templateConfigurer) (
 	if err != nil {
 		return "", err
 	}
-	doc, err := parser.Parse(wkldParamsTemplatePath, struct {
-		Parameters []*cloudformation.Parameter
-		Tags       []*cloudformation.Tag
+
+	tags := stack.Tags()
+
+	config := struct {
+		Parameters map[string]*string `json:"Parameters"`
+		Tags       map[string]*string `json:"Tags,omitempty"`
 	}{
-		Parameters: params,
-		Tags:       stack.Tags(),
-	}, template.WithFuncs(map[string]interface{}{
-		"inc": template.IncFunc,
-	}))
-	if err != nil {
-		return "", err
+		Parameters: make(map[string]*string, len(params)),
+		Tags:       make(map[string]*string, len(tags)),
 	}
-	return doc.String(), nil
+
+	for _, param := range params {
+		config.Parameters[aws.StringValue(param.ParameterKey)] = param.ParameterValue
+	}
+	for _, tag := range tags {
+		config.Tags[aws.StringValue(tag.Key)] = tag.Value
+	}
+
+	str, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal stack parameters to JSON: %v", err)
+	}
+
+	return string(str), nil
 }
 
 func (w *wkld) addonsOutputs() (*template.WorkloadNestedStackOpts, error) {

@@ -557,6 +557,58 @@ Resources:
 {{include "lambdas" . | indent 2}}
 {{include "custom-resources" . | indent 2}}
 {{- end}}
+{{- if .VPCConfig.FlowLogs }}
+  FlowLog:
+    Metadata:
+      'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'
+    Type: AWS::EC2::FlowLog
+    Properties:
+      DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
+      MaxAggregationInterval: 60
+{{- if .VPCConfig.Imported}}
+      ResourceId: {{.VPCConfig.Imported.ID}}
+{{- else}}
+      ResourceId: !Ref VPC
+{{- end}}                 
+      ResourceType: VPC
+      TrafficType:  ALL
+# Reference to IAM Role policy for Publish flow logs to CloudWatch Logs: https://go.aws/3euClbg     
+  FlowLogRole:
+    Metadata:
+      'aws:copilot:description': 'An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for AWS EC2 to publish flow logs to a CloudWatch log group'
+    Type: AWS::IAM::Role
+    Properties:
+      {{- if .PermissionsBoundary}}
+      PermissionsBoundary: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/{{.PermissionsBoundary}}'
+      {{- end}}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: vpc-flow-logs.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:vpc-flow-log/*'
+      Policies:
+        - PolicyName: 'GrantAccesstoEC2toPublishFlowlogs'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource: "*"
+{{- end}}
 Outputs:
   VpcId:
 {{- if .VPCConfig.Imported}}

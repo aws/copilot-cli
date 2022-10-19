@@ -214,7 +214,7 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 				},
 			},
 		},
-		"error if cdn cert specified but public certs not specified": {
+		"error if cdn cert specified, cdn not terminating tls, and public certs not specified": {
 			in: EnvironmentConfig{
 				CDNConfig: EnvironmentCDNConfig{
 					Config: AdvancedCDNConfig{
@@ -222,7 +222,17 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 					},
 				},
 			},
-			wantedError: "\"http.public.certificates\" must be specified if \"cdn.certificate\" is specified",
+			wantedError: `"cdn.terminate_tls" must be true if "cdn.certificate" is set without "http.public.certificates"`,
+		},
+		"success if cdn cert specified, cdn terminating tls, and no public certs": {
+			in: EnvironmentConfig{
+				CDNConfig: EnvironmentCDNConfig{
+					Config: AdvancedCDNConfig{
+						Certificate:  aws.String("arn:aws:acm:us-east-1:1111111:certificate/look-like-a-good-arn"),
+						TerminateTLS: aws.Bool(true),
+					},
+				},
+			},
 		},
 		"error if cdn cert not specified but public certs imported": {
 			in: EnvironmentConfig{
@@ -827,14 +837,6 @@ func TestCDNConfiguration_validate(t *testing.T) {
 				},
 			},
 			wantedError: errors.New("cdn certificate must be in region us-east-1"),
-		},
-		"error if terminate tls set without cert": {
-			in: EnvironmentCDNConfig{
-				Config: AdvancedCDNConfig{
-					TerminateTLS: aws.Bool(true),
-				},
-			},
-			wantedError: errors.New(`"certificate" must be specified if "terminate_tls" is specified`),
 		},
 		"success with cert and terminate tls": {
 			in: EnvironmentCDNConfig{

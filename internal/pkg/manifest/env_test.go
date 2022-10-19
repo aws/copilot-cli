@@ -812,9 +812,14 @@ func TestEnvironmentVPCConfig_IsEmpty(t *testing.T) {
 		"empty": {
 			wanted: true,
 		},
-		"not empty": {
+		"not empty when VPC ID is provided": {
 			in: environmentVPCConfig{
 				ID: aws.String("mock-vpc-id"),
+			},
+		},
+		"not empty when flowlog is on": {
+			in: environmentVPCConfig{
+				Flowlogs: aws.Bool(true),
 			},
 		},
 	}

@@ -161,6 +161,28 @@ func TestWorkerSvc_InitialManifestIntegration(t *testing.T) {
 			},
 			wantedTestdata: "worker-svc-subscribe.yml",
 		},
+		"with fifo topic subscription with default fifo queue": {
+			inProps: WorkerServiceProps{
+				WorkloadProps: WorkloadProps{
+					Name:       "testers",
+					Dockerfile: "./testers/Dockerfile",
+				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs: PlatformArgs{
+						OSFamily: nil,
+						Arch:     nil,
+					},
+				},
+				Topics: []TopicSubscription{
+					{
+						Name:    aws.String("testTopic.fifo"),
+						Service: aws.String("service4TestTopic"),
+					},
+				},
+			},
+			wantedTestdata: "worker-svc-with-default-fifo-queue.yml",
+		},
 	}
 
 	for name, tc := range testCases {

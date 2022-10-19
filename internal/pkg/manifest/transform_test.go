@@ -592,6 +592,64 @@ func TestSubnetListOrArgsTransformer_Transformer(t *testing.T) {
 	}
 }
 
+func TestServiceConnectTransformer_Transformer(t *testing.T) {
+	testCases := map[string]struct {
+		original func(p *ServiceConnectBoolOrArgs)
+		override func(p *ServiceConnectBoolOrArgs)
+		wanted   func(p *ServiceConnectBoolOrArgs)
+	}{
+		"bool set to empty if args is not nil": {
+			original: func(s *ServiceConnectBoolOrArgs) {
+				s.EnableServiceConnect = aws.Bool(false)
+			},
+			override: func(s *ServiceConnectBoolOrArgs) {
+				s.ServiceConnectArgs = ServiceConnectArgs{
+					Alias: aws.String("api"),
+				}
+			},
+			wanted: func(s *ServiceConnectBoolOrArgs) {
+				s.ServiceConnectArgs = ServiceConnectArgs{
+					Alias: aws.String("api"),
+				}
+			},
+		},
+		"args set to empty if bool is not nil": {
+			original: func(s *ServiceConnectBoolOrArgs) {
+				s.ServiceConnectArgs = ServiceConnectArgs{
+					Alias: aws.String("api"),
+				}
+			},
+			override: func(s *ServiceConnectBoolOrArgs) {
+				s.EnableServiceConnect = aws.Bool(true)
+			},
+			wanted: func(s *ServiceConnectBoolOrArgs) {
+				s.EnableServiceConnect = aws.Bool(true)
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var dst, override, wanted ServiceConnectBoolOrArgs
+
+			tc.original(&dst)
+			tc.override(&override)
+			tc.wanted(&wanted)
+
+			// Perform default merge.
+			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(serviceConnectTransformer{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, wanted, dst)
+		})
+	}
+}
+
 func TestHealthCheckArgsOrStringTransformer_Transformer(t *testing.T) {
 	testCases := map[string]struct {
 		original func(h *HealthCheckArgsOrString)

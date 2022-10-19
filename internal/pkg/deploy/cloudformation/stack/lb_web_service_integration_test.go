@@ -105,6 +105,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				EnvVersion:               "v1.42.0",
 			},
 		})
+		serializer.SCFeatureFlag = true
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids

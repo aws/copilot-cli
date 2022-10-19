@@ -130,7 +130,7 @@ Resources:
   {{- end}}
       ServiceRegistries:
         - RegistryArn: !GetAtt DiscoveryService.Arn
-          Port: !Ref ContainerPort
+          Port: !Ref TargetPort
 
 {{- if .ALBEnabled}}
 {{include "alb" . | indent 2}}

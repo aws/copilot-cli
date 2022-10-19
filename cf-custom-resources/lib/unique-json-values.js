@@ -81,10 +81,20 @@ const deadlineExpired = function () {
  * {
  *  "svc1": ["svc1.com", "example.com"],
  *  "svc2": ["example.com"]
+ *  "svc3": ["svc3.com"]
  * }
  * 
- * This function returns a list of unique values found in that list.
- * From the previous example, UniqueValues would be:
+ * The input event.ResourceProperties.FilterFor is a comma delimated list
+ * of keys in event.ResourceProperties.Aliases to filter for.
+ * Taking the above map, and event.ResourceProperties.FilterFor = "svc1,svc2"
+ * The services considered for uniqueness is:
+ * {
+ *  "svc1": ["svc1.com", "example.com"],
+ *  "svc2": ["example.com"]
+ * }
+ *  
+ * This function returns a list of unique values found in this map.
+ * For this example, UniqueValues would be:
  * ["svc1.com", "example.com"]
  */
 exports.handler = async function (event, context) {
@@ -96,7 +106,13 @@ exports.handler = async function (event, context) {
       case "Create":
       case "Update":
         const aliasesForService = JSON.parse(event.ResourceProperties.Aliases || "{}");
-        const unique = new Set(Object.values(aliasesForService).flat());
+        const filterFor = new Set(event.ResourceProperties.FilterFor.split(","));
+        const filteredAliasesForService = Object.fromEntries(
+          Object.entries(aliasesForService).filter(
+            ([key]) => filterFor.has(key)
+          )
+        );
+        const unique = new Set(Object.values(filteredAliasesForService).flat());
         responseData.UniqueValues = Array.from(unique).sort();
         break;
       case "Delete":
@@ -104,8 +120,9 @@ exports.handler = async function (event, context) {
         break;
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
-    }
+    };
   };
+
 
   try {
     await Promise.race([deadlineExpired(), handler()]);
