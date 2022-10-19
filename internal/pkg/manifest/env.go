@@ -112,6 +112,7 @@ type environmentVPCConfig struct {
 	CIDR                *IPNet               `yaml:"cidr,omitempty"`
 	Subnets             subnetsConfiguration `yaml:"subnets,omitempty"`
 	SecurityGroupConfig securityGroupConfig  `yaml:"security_group,omitempty"`
+	Flowlogs            *bool                `yaml:"flow_logs,omitempty"`
 }
 
 type securityGroupConfig struct {
@@ -250,7 +251,7 @@ func (cfg *EnvironmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 
 // IsEmpty returns true if vpc is not configured.
 func (cfg environmentVPCConfig) IsEmpty() bool {
-	return cfg.ID == nil && cfg.CIDR == nil && cfg.Subnets.IsEmpty()
+	return cfg.ID == nil && cfg.CIDR == nil && cfg.Subnets.IsEmpty() && cfg.Flowlogs == nil
 }
 
 func (cfg *environmentVPCConfig) loadVPCConfig(env *config.CustomizeEnv) {
