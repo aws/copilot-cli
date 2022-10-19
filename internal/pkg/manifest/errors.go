@@ -111,7 +111,7 @@ func (e *errSpecifiedBothIngressFields) Error() string {
 func (e *errSpecifiedBothIngressFields) RecommendActions() string {
 	privateOrPublicField := strings.Split(e.firstField, ".")[0]
 	if privateOrPublicField == "public" {
-		return fmt.Sprintf(`
+		return fmt.Sprint(`
 It looks like you specified ingress under both "http.public.security_groups.ingress"" and "http.public.ingress"".
 After Copilot v1.23.0, we have deprecated "http.public.security_groups.ingress" in favor of "http.public.ingress". 
 This means that "http.public.security_groups.ingress.cdn"" is removed in favor of "http.public.ingress.cdn".
@@ -124,7 +124,7 @@ http:
 `)
 	}
 
-	return fmt.Sprintf(`
+	return fmt.Sprint(`
 It looks like you specified ingress under both "http.private.security_groups.ingress"" and "http.private.ingress"".
 After Copilot v1.23.0, we have deprecated "http.private.security_groups.ingress" in favor of "http.private.ingress". 
 This means that "http.private.security_groups.ingress.from_vpc"" is removed in favor of "http.private.ingress.vpc".
