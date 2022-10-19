@@ -425,6 +425,7 @@ func (e *EnvStackConfig) vpcConfig() (template.VPCConfig, error) {
 		Managed:             e.managedVPC(),
 		AllowVPCIngress:     aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
 		SecurityGroupConfig: securityGroupConfig,
+		FlowLogs:            aws.BoolValue(e.in.Mft.Network.VPC.Flowlogs),
 	}, nil
 }
 
