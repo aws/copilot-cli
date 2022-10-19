@@ -514,7 +514,7 @@ http:
             - cert-2
     private:
       ingress:
-        from_vpc: true
+        vpc: true
 `,
 			wantedStruct: &Environment{
 				Workload: Workload{
@@ -546,7 +546,7 @@ http:
         ingress:
           from_vpc: true
       ingress:
-        from_vpc: true
+        vpc: true
 `,
 			wantedStruct: &Environment{
 				Workload: Workload{

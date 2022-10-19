@@ -110,16 +110,31 @@ func (e *errSpecifiedBothIngressFields) Error() string {
 // RecommendActions returns recommended actions to be taken after the error.
 func (e *errSpecifiedBothIngressFields) RecommendActions() string {
 	privateOrPublicField := strings.Split(e.firstField, ".")[0]
-	return fmt.Sprintf(`
-It looks like you have specified mutually exclusive fields for Load Balancer configuration.
-The "%s.http.security_group.ingress" has been deprecated and we encourage you to use "%s.http.ingress".
-Following is the example manifest fields that we recommend you to use for your environment.
+	if privateOrPublicField == "public" {
+		return fmt.Sprintf(`
+It looks like you specified ingress under both "http.public.security_groups.ingress"" and "http.public.ingress"".
+After Copilot v1.23.0, we have deprecated "http.public.security_groups.ingress" in favor of "http.public.ingress". 
+This means that "http.public.security_groups.ingress.cdn"" is removed in favor of "http.public.ingress.cdn".
+With the new release manifest configuration for cdn looks like:
 
 http:
-  %s:
+  public:
     ingress:
       cdn: true
-`, privateOrPublicField, privateOrPublicField, privateOrPublicField)
+`)
+	}
+
+	return fmt.Sprintf(`
+It looks like you specified ingress under both "http.private.security_groups.ingress"" and "http.private.ingress"".
+After Copilot v1.23.0, we have deprecated "http.private.security_groups.ingress" in favor of "http.private.ingress". 
+This means that "http.private.security_groups.ingress.from_vpc"" is removed in favor of "http.private.ingress.vpc".
+With the new release manifest configuration for cdn looks like:
+
+http:
+  private:
+    ingress:
+      vpc: true
+`)
 }
 
 type errMinGreaterThanMax struct {

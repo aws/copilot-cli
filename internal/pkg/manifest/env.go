@@ -511,7 +511,7 @@ type RestrictiveIngress struct {
 
 // RelaxedIngress contains ingress configuration to add to a security group.
 type RelaxedIngress struct {
-	VPCIngress *bool `yaml:"from_vpc"`
+	VPCIngress *bool `yaml:"vpc"`
 }
 
 // IsEmpty returns true if there are no specified fields for relaxed ingress.
