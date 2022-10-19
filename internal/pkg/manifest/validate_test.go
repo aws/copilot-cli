@@ -3269,8 +3269,20 @@ func TestValidateWindows(t *testing.T) {
 			},
 			wantedError: errors.New(`'EFS' is not supported when deploying a Windows container`),
 		},
-		"should return nil efs not specified": {
+		"should return nil when no fields are specified": {
 			in:          validateWindowsOpts{},
+			wantedError: nil,
+		},
+		"error if readonlyfs is true": {
+			in: validateWindowsOpts{
+				readOnlyFS: aws.Bool(true),
+			},
+			wantedError: fmt.Errorf(`%q can not be set to 'true' when deploying a Windows container`, "readonly_fs"),
+		},
+		"should return nil if readonly_fs is false": {
+			in: validateWindowsOpts{
+				readOnlyFS: aws.Bool(false),
+			},
 			wantedError: nil,
 		},
 	}

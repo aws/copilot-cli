@@ -162,6 +162,7 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 	if l.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			efsVolumes: l.Storage.Volumes,
+			readOnlyFS: l.Storage.ReadonlyRootFS,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -262,6 +263,7 @@ func (b BackendServiceConfig) validate() error {
 	if b.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			efsVolumes: b.Storage.Volumes,
+			readOnlyFS: b.Storage.ReadonlyRootFS,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -374,6 +376,7 @@ func (w WorkerServiceConfig) validate() error {
 	if w.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			efsVolumes: w.Storage.Volumes,
+			readOnlyFS: w.Storage.ReadonlyRootFS,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -449,6 +452,7 @@ func (s ScheduledJobConfig) validate() error {
 	if s.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			efsVolumes: s.Storage.Volumes,
+			readOnlyFS: s.Storage.ReadonlyRootFS,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -1624,6 +1628,7 @@ type validateTargetContainerOpts struct {
 }
 
 type validateWindowsOpts struct {
+	readOnlyFS *bool
 	efsVolumes map[string]*Volume
 }
 
@@ -1772,6 +1777,9 @@ func isValidSubSvcName(name string) bool {
 }
 
 func validateWindows(opts validateWindowsOpts) error {
+	if aws.BoolValue(opts.readOnlyFS) {
+		return fmt.Errorf(`%q can not be set to 'true' when deploying a Windows container`, "readonly_fs")
+	}
 	for _, volume := range opts.efsVolumes {
 		if !volume.EmptyVolume() {
 			return errors.New(`'EFS' is not supported when deploying a Windows container`)
