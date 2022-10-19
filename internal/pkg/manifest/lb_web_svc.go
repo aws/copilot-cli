@@ -4,7 +4,6 @@
 package manifest
 
 import (
-	"errors"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -25,10 +24,6 @@ const (
 
 const (
 	GRPCProtocol = "gRPC" // GRPCProtocol is the HTTP protocol version for gRPC.
-)
-
-var (
-	errUnmarshalHealthCheckArgs = errors.New("can't unmarshal healthcheck field into string or compose-style map")
 )
 
 // durationp is a utility function used to convert a time.Duration to a pointer. Useful for YAML unmarshaling

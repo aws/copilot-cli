@@ -701,14 +701,6 @@ func (r RoutingRuleConfiguration) validate() error {
 	return nil
 }
 
-// validate returns nil if HealthCheckArgsOrString is configured correctly.
-func (h HealthCheckArgsOrString) validate() error {
-	if h.IsB {
-		return h.B.validate()
-	}
-	return nil
-}
-
 // validate returns nil if HTTPHealthCheckArgs is configured correctly.
 func (h HTTPHealthCheckArgs) validate() error {
 	if h.isEmpty() {
@@ -1399,11 +1391,7 @@ func (r AppRunnerInstanceConfig) validate() error {
 
 // validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
 func (r RequestDrivenWebServiceHttpConfig) validate() error {
-	// TODO what if neither are set?
-	if r.HealthCheckConfiguration.IsB {
-		return r.HealthCheckConfiguration.B.validate()
-	}
-	return nil
+	return r.HealthCheckConfiguration.validate()
 }
 
 // validate returns nil if Observability is configured correctly.

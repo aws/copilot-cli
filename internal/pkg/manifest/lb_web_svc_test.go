@@ -181,7 +181,6 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 		inContent []byte
 
 		wantedStruct HealthCheckArgsOrString
-		wantedError  error
 	}{
 		"non-args path string": {
 			inContent: []byte(`  healthcheck: /testing`),
@@ -213,28 +212,18 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 				},
 			},
 		},
-		"error if unmarshalable": {
-			inContent: []byte(`  healthcheck:
-    bath: to ruin
-    unwealthy_threshold: berry`),
-			wantedError: errUnmarshalHealthCheckArgs,
-		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			rr := newDefaultHTTPLoadBalancedWebService().RoutingRule
 			err := yaml.Unmarshal(tc.inContent, &rr)
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedStruct.B, rr.HealthCheck.B)
-				require.Equal(t, tc.wantedStruct.B.Path, rr.HealthCheck.B.Path)
-				require.Equal(t, tc.wantedStruct.B.HealthyThreshold, rr.HealthCheck.B.HealthyThreshold)
-				require.Equal(t, tc.wantedStruct.B.UnhealthyThreshold, rr.HealthCheck.B.UnhealthyThreshold)
-				require.Equal(t, tc.wantedStruct.B.Interval, rr.HealthCheck.B.Interval)
-				require.Equal(t, tc.wantedStruct.B.Timeout, rr.HealthCheck.B.Timeout)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedStruct.B, rr.HealthCheck.B)
+			require.Equal(t, tc.wantedStruct.B.Path, rr.HealthCheck.B.Path)
+			require.Equal(t, tc.wantedStruct.B.HealthyThreshold, rr.HealthCheck.B.HealthyThreshold)
+			require.Equal(t, tc.wantedStruct.B.UnhealthyThreshold, rr.HealthCheck.B.UnhealthyThreshold)
+			require.Equal(t, tc.wantedStruct.B.Interval, rr.HealthCheck.B.Interval)
+			require.Equal(t, tc.wantedStruct.B.Timeout, rr.HealthCheck.B.Timeout)
 		})
 	}
 }

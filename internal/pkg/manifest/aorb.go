@@ -60,10 +60,8 @@ func (t *AOrB[A, B]) UnmarshalYAML(value *yaml.Node) error {
 	// reset struct
 	var a A
 	var b B
-	t.IsA = false
-	t.A = a
-	t.IsB = false
-	t.B = b
+	t.IsA, t.A = false, a
+	t.IsB, t.B = false, b
 
 	err := value.Decode(&a)
 	if err == nil {
@@ -95,4 +93,23 @@ func (t AOrB[_, _]) MarshalYAML() (interface{}, error) {
 // IsZero implements yaml.IsZeroer.
 func (t AOrB[_, _]) IsZero() bool {
 	return !t.IsA && !t.IsB
+}
+
+func (t AOrB[A, B]) validate() error {
+	// type declarations inside generic functions not currently supported,
+	// so we use an inline validate() interface
+	if t.IsA {
+		if v, ok := any(t.A).(interface{ validate() error }); ok {
+			return v.validate()
+		}
+		return nil
+	}
+
+	if t.IsB {
+		if v, ok := any(t.B).(interface{ validate() error }); ok {
+			return v.validate()
+		}
+		return nil
+	}
+	return nil
 }
