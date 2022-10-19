@@ -184,7 +184,9 @@ func (d *envDeployer) validateALBWorkloadsDontRedirect() error {
 	if err != nil {
 		return fmt.Errorf("get env params: %w", err)
 	}
-
+	if params[cfnstack.EnvParamALBWorkloadsKey] == "" {
+		return nil
+	}
 	services := strings.Split(params[cfnstack.EnvParamALBWorkloadsKey], ",")
 	g, ctx := errgroup.WithContext(context.Background())
 
