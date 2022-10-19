@@ -26,7 +26,7 @@ var defaultTransformers = []mergo.Transformers{
 	serviceConnectTransformer{},
 	placementArgOrStringTransformer{},
 	subnetListOrArgsTransformer{},
-	healthCheckArgsOrStringTransformer{},
+	aOrBTransformer[string, HTTPHealthCheckArgs]{},
 	countTransformer{},
 	advancedCountTransformer{},
 	scalingConfigOrTTransformer[Percentage]{},
@@ -291,23 +291,22 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 	}
 }
 
-type healthCheckArgsOrStringTransformer struct{}
+type aOrBTransformer[A, B any] struct{}
 
-// Transformer returns custom merge logic for HealthCheckArgsOrString's fields.
-func (t healthCheckArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(HealthCheckArgsOrString{}) {
+func (t aOrBTransformer[A, B]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(AOrB[A, B]{}) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(HealthCheckArgsOrString), src.Interface().(HealthCheckArgsOrString)
+		dstStruct, srcStruct := dst.Interface().(AOrB[A, B]), src.Interface().(AOrB[A, B])
 
-		if srcStruct.HealthCheckPath != nil {
-			dstStruct.HealthCheckArgs = HTTPHealthCheckArgs{}
-		}
-
-		if !srcStruct.HealthCheckArgs.isEmpty() {
-			dstStruct.HealthCheckPath = nil
+		if srcStruct.IsA {
+			var zero B
+			dstStruct.IsB, dstStruct.B = false, zero
+		} else if srcStruct.IsB {
+			var zero A
+			dstStruct.IsA, dstStruct.A = false, zero
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

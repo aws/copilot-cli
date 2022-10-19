@@ -342,15 +342,18 @@ Outputs:
 		mft.RoutingRule = manifest.RoutingRuleConfiguration{
 			Path: aws.String("/albPath"),
 			HealthCheck: manifest.HealthCheckArgsOrString{
-				HealthCheckArgs: manifest.HTTPHealthCheckArgs{
-					Path:               aws.String("/healthz"),
-					Port:               aws.Int(4200),
-					SuccessCodes:       aws.String("418"),
-					HealthyThreshold:   aws.Int64(64),
-					UnhealthyThreshold: aws.Int64(63),
-					Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
-					Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
-					GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
+				AOrB: manifest.AOrB[string, manifest.HTTPHealthCheckArgs]{
+					IsB: true,
+					B: manifest.HTTPHealthCheckArgs{
+						Path:               aws.String("/healthz"),
+						Port:               aws.Int(4200),
+						SuccessCodes:       aws.String("418"),
+						HealthyThreshold:   aws.Int64(64),
+						UnhealthyThreshold: aws.Int64(63),
+						Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
+						Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
+						GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
+					},
 				},
 			},
 			Stickiness:          aws.Bool(true),

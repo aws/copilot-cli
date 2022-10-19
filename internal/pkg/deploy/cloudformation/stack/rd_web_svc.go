@@ -125,7 +125,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		Tags:                 s.manifest.Tags,
 		NestedStack:          addonsOutputs,
 		AddonsExtraParams:    addonsParams,
-		EnableHealthCheck:    !s.healthCheckConfig.IsEmpty(),
+		EnableHealthCheck:    !s.healthCheckConfig.IsZero(),
 		WorkloadType:         manifest.RequestDrivenWebServiceType,
 		Alias:                s.manifest.Alias,
 		CustomResources:      crs,

@@ -208,14 +208,16 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 			wantedStruct: RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
-						HealthCheckConfiguration: AOrB[string, HTTPHealthCheckArgs]{
-							IsB: true,
-							B: HTTPHealthCheckArgs{
-								Path:               aws.String("/healthcheck"),
-								HealthyThreshold:   aws.Int64(3),
-								UnhealthyThreshold: aws.Int64(5),
-								Interval:           durationp(10 * time.Second),
-								Timeout:            durationp(5 * time.Second),
+						HealthCheckConfiguration: HealthCheckArgsOrString{
+							AOrB: AOrB[string, HTTPHealthCheckArgs]{
+								IsB: true,
+								B: HTTPHealthCheckArgs{
+									Path:               aws.String("/healthcheck"),
+									HealthyThreshold:   aws.Int64(3),
+									UnhealthyThreshold: aws.Int64(5),
+									Interval:           durationp(10 * time.Second),
+									Timeout:            durationp(5 * time.Second),
+								},
 							},
 						},
 						Alias: aws.String("convex.domain.com"),
@@ -232,9 +234,11 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 			wantedStruct: RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
-						HealthCheckConfiguration: AOrB[string, HTTPHealthCheckArgs]{
-							IsA: true,
-							A:   "/healthcheck",
+						HealthCheckConfiguration: HealthCheckArgsOrString{
+							AOrB: AOrB[string, HTTPHealthCheckArgs]{
+								IsA: true,
+								A:   "/healthcheck",
+							},
 						},
 					},
 				},

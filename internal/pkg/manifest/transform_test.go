@@ -650,63 +650,156 @@ func TestServiceConnectTransformer_Transformer(t *testing.T) {
 	}
 }
 
-func TestHealthCheckArgsOrStringTransformer_Transformer(t *testing.T) {
-	testCases := map[string]struct {
-		original func(h *HealthCheckArgsOrString)
-		override func(h *HealthCheckArgsOrString)
-		wanted   func(h *HealthCheckArgsOrString)
-	}{
-		"string set to empty if args is not nil": {
-			original: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckPath = aws.String("mockPath")
-			},
-			override: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckArgs = HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
-				}
-			},
-			wanted: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckArgs = HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
-				}
-			},
-		},
-		"args set to empty if string is not nil": {
-			original: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckArgs = HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
-				}
-			},
-			override: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckPath = aws.String("mockPath")
-			},
-			wanted: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckPath = aws.String("mockPath")
-			},
-		},
-	}
+type aOrBTransformerTest[A, B any] struct {
+	original AOrB[A, B]
+	override AOrB[A, B]
+	expected AOrB[A, B]
+}
 
-	for name, tc := range testCases {
+func TestTransformer_Generic(t *testing.T) {
+	runAOrBTransformerTests(t, map[string]aOrBTransformerTest[any, any]{
+		"switches to A from B if a overridden": {
+			original: AOrB[any, any]{
+				IsB: true,
+			},
+			override: AOrB[any, any]{
+				IsA: true,
+			},
+			expected: AOrB[any, any]{
+				IsA: true,
+				IsB: false,
+			},
+		},
+		"switches to B from A if B overridden": {
+			original: AOrB[any, any]{
+				IsA: true,
+			},
+			override: AOrB[any, any]{
+				IsB: true,
+			},
+			expected: AOrB[any, any]{
+				IsA: false,
+				IsB: true,
+			},
+		},
+		"switches to A if original unset": {
+			original: AOrB[any, any]{},
+			override: AOrB[any, any]{
+				IsA: true,
+			},
+			expected: AOrB[any, any]{
+				IsA: true,
+				IsB: false,
+			},
+		},
+		"switches to B if original unset": {
+			original: AOrB[any, any]{},
+			override: AOrB[any, any]{
+				IsB: true,
+			},
+			expected: AOrB[any, any]{
+				IsA: false,
+				IsB: true,
+			},
+		},
+	})
+}
+
+func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
+	runAOrBTransformerTests(t, map[string]aOrBTransformerTest[string, HTTPHealthCheckArgs]{
+		"string unset if args set": {
+			original: AOrB[string, HTTPHealthCheckArgs]{
+				IsA: true,
+				A:   "mockPath",
+			},
+			override: AOrB[string, HTTPHealthCheckArgs]{
+				IsB: true,
+				B: HTTPHealthCheckArgs{
+					Path:         aws.String("mockPathArgs"),
+					SuccessCodes: aws.String("200"),
+				},
+			},
+			expected: AOrB[string, HTTPHealthCheckArgs]{
+				IsB: true,
+				B: HTTPHealthCheckArgs{
+					Path:         aws.String("mockPathArgs"),
+					SuccessCodes: aws.String("200"),
+				},
+			},
+		},
+		"args unset if string set": {
+			original: AOrB[string, HTTPHealthCheckArgs]{
+				IsB: true,
+				B: HTTPHealthCheckArgs{
+					Path:         aws.String("mockPathArgs"),
+					SuccessCodes: aws.String("200"),
+				},
+			},
+			override: AOrB[string, HTTPHealthCheckArgs]{
+				IsA: true,
+				A:   "mockPath",
+			},
+			expected: AOrB[string, HTTPHealthCheckArgs]{
+				IsA: true,
+				A:   "mockPath",
+			},
+		},
+		"string merges correctly": {
+			original: AOrB[string, HTTPHealthCheckArgs]{
+				IsA: true,
+				A:   "path",
+			},
+			override: AOrB[string, HTTPHealthCheckArgs]{
+				IsA: true,
+				A:   "newPath",
+			},
+			expected: AOrB[string, HTTPHealthCheckArgs]{
+				IsA: true,
+				A:   "newPath",
+			},
+		},
+		"args merge correctly": {
+			original: AOrB[string, HTTPHealthCheckArgs]{
+				IsB: true,
+				B: HTTPHealthCheckArgs{
+					Path:             aws.String("mockPathArgs"),
+					SuccessCodes:     aws.String("200"),
+					HealthyThreshold: aws.Int64(10),
+				},
+			},
+			override: AOrB[string, HTTPHealthCheckArgs]{
+				IsB: true,
+				B: HTTPHealthCheckArgs{
+					SuccessCodes:       aws.String("420"),
+					UnhealthyThreshold: aws.Int64(20),
+				},
+			},
+			expected: AOrB[string, HTTPHealthCheckArgs]{
+				IsB: true,
+				B: HTTPHealthCheckArgs{
+					Path:               aws.String("mockPathArgs"), // merged unchanged
+					SuccessCodes:       aws.String("420"),          // updated
+					HealthyThreshold:   aws.Int64(10),              // comes from original
+					UnhealthyThreshold: aws.Int64(20),              // comes from override
+				},
+			},
+		},
+	})
+}
+
+func runAOrBTransformerTests[A, B any](t *testing.T, tests map[string]aOrBTransformerTest[A, B]) {
+	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			var dst, override, wanted HealthCheckArgsOrString
-
-			tc.original(&dst)
-			tc.override(&override)
-			tc.wanted(&wanted)
-
 			// Perform default merge.
-			err := mergo.Merge(&dst, override, mergo.WithOverride)
+			err := mergo.Merge(&tc.original, tc.override, mergo.WithOverride)
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(healthCheckArgsOrStringTransformer{}))
+			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(aOrBTransformer[A, B]{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)
-			require.Equal(t, wanted, dst)
+			require.Equal(t, tc.expected, tc.original)
 		})
 	}
 }

@@ -101,28 +101,30 @@ func TestApplyEnv_Int(t *testing.T) {
 		},
 		"int64 overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
-				svc.Environments["test"].RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(42)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
+				svc.Environments["test"].RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(42)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(42)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(42)
 			},
 		},
 		"int64 overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
-				svc.Environments["test"].RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(0)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
+				svc.Environments["test"].RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(0)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(0)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(0)
 			},
 		},
 		"int64 not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
+				// TODO: what should i do about this? like what if A was set and override is B?
+				// probably need to fix transformer?
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
 			},
 		},
 		"uint16 overridden": {
@@ -252,28 +254,28 @@ func TestApplyEnv_Int64(t *testing.T) {
 	}{
 		"int64 overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
-				svc.Environments["test"].RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(42)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
+				svc.Environments["test"].RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(42)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(42)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(42)
 			},
 		},
 		"int64 overridden by zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
-				svc.Environments["test"].RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(0)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
+				svc.Environments["test"].RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(0)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(0)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(0)
 			},
 		},
 		"int64 not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.HealthCheckArgs.HealthyThreshold = aws.Int64(24)
+				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
 			},
 		},
 	}

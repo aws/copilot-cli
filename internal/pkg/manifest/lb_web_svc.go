@@ -104,7 +104,10 @@ func newDefaultHTTPLoadBalancedWebService() *LoadBalancedWebService {
 	lbws.RoutingRule = RoutingRuleConfigOrBool{
 		RoutingRuleConfiguration: RoutingRuleConfiguration{
 			HealthCheck: HealthCheckArgsOrString{
-				HealthCheckPath: aws.String(DefaultHealthCheckPath),
+				AOrB: AOrB[string, HTTPHealthCheckArgs]{
+					IsA: true,
+					A:   DefaultHealthCheckPath,
+				},
 			},
 		},
 	}

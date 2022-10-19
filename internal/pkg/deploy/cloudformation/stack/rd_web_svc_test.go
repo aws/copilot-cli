@@ -44,7 +44,10 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 		},
 		RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
 			HealthCheckConfiguration: manifest.HealthCheckArgsOrString{
-				HealthCheckPath: aws.String("/"),
+				AOrB: manifest.AOrB[string, manifest.HTTPHealthCheckArgs]{
+					IsA: true,
+					A:   "/",
+				},
 			},
 		},
 		Tags: map[string]string{

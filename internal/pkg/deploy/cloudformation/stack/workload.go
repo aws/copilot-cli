@@ -395,34 +395,34 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	}
 
 	// Optional HealthCheckInterval parameter
-	if w.healthCheckConfig.HealthCheckArgs.Interval != nil {
+	if w.healthCheckConfig.B.Interval != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(RDWkldHealthCheckIntervalParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.HealthCheckArgs.Interval.Seconds()))),
+			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.B.Interval.Seconds()))),
 		})
 	}
 
 	// Optional HealthCheckTimeout parameter
-	if w.healthCheckConfig.HealthCheckArgs.Timeout != nil {
+	if w.healthCheckConfig.B.Timeout != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(RDWkldHealthCheckTimeoutParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.HealthCheckArgs.Timeout.Seconds()))),
+			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.B.Timeout.Seconds()))),
 		})
 	}
 
 	// Optional HealthCheckHealthyThreshold parameter
-	if w.healthCheckConfig.HealthCheckArgs.HealthyThreshold != nil {
+	if w.healthCheckConfig.B.HealthyThreshold != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(RDWkldHealthCheckHealthyThresholdParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.HealthyThreshold))),
+			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.B.HealthyThreshold))),
 		})
 	}
 
 	// Optional HealthCheckUnhealthyThreshold parameter
-	if w.healthCheckConfig.HealthCheckArgs.UnhealthyThreshold != nil {
+	if w.healthCheckConfig.B.UnhealthyThreshold != nil {
 		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
 			ParameterKey:   aws.String(RDWkldHealthCheckUnhealthyThresholdParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.HealthCheckArgs.UnhealthyThreshold))),
+			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.B.UnhealthyThreshold))),
 		})
 	}
 

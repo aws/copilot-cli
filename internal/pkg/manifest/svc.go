@@ -373,49 +373,15 @@ func (h *HTTPHealthCheckArgs) isEmpty() bool {
 // HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which
 // can either be of type string or type HealthCheckArgs.
 type HealthCheckArgsOrString struct {
-	HealthCheckPath *string
-	HealthCheckArgs HTTPHealthCheckArgs
-}
-
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the HealthCheckArgsOrString
-// struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v3) interface.
-func (hc *HealthCheckArgsOrString) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&hc.HealthCheckArgs); err != nil {
-		switch err.(type) {
-		case *yaml.TypeError:
-			break
-		default:
-			return err
-		}
-	}
-
-	if !hc.HealthCheckArgs.isEmpty() {
-		// Unmarshaled successfully to hc.HealthCheckArgs, reset hc.HealthCheckPath, and return.
-		hc.HealthCheckPath = nil
-		return nil
-	}
-
-	if err := value.Decode(&hc.HealthCheckPath); err != nil {
-		return errUnmarshalHealthCheckArgs
-	}
-	return nil
-}
-
-// IsEmpty returns true if there are no health check configuration set.
-func (hc *HealthCheckArgsOrString) IsEmpty() bool {
-	if hc.HealthCheckPath != nil {
-		return false
-	}
-	return hc.HealthCheckArgs.isEmpty()
+	AOrB[string, HTTPHealthCheckArgs]
 }
 
 // Path returns the default health check path if provided otherwise, returns the path from the advanced configuration.
 func (hc *HealthCheckArgsOrString) Path() *string {
-	if hc.HealthCheckPath != nil {
-		return hc.HealthCheckPath
+	if hc.IsA {
+		return aws.String(hc.A)
 	}
-	return hc.HealthCheckArgs.Path
+	return hc.B.Path
 }
 
 // NLBHealthCheckArgs holds the configuration to determine if the network load balanced web service is healthy.
