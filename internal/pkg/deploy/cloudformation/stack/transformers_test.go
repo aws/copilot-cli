@@ -774,17 +774,24 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			hc := manifest.HealthCheckArgsOrString{
-				HealthCheckPath: tc.inputPath,
-				HealthCheckArgs: manifest.HTTPHealthCheckArgs{
-					Path:               tc.inputPath,
-					Port:               tc.inputPort,
-					SuccessCodes:       tc.inputSuccessCodes,
-					HealthyThreshold:   tc.inputHealthyThreshold,
-					UnhealthyThreshold: tc.inputUnhealthyThreshold,
-					Timeout:            tc.inputTimeout,
-					Interval:           tc.inputInterval,
-					GracePeriod:        tc.inputGracePeriod,
+				AOrB: manifest.AOrB[string, manifest.HTTPHealthCheckArgs]{
+					A: aws.StringValue(tc.inputPath),
+					B: manifest.HTTPHealthCheckArgs{
+						Path:               tc.inputPath,
+						Port:               tc.inputPort,
+						SuccessCodes:       tc.inputSuccessCodes,
+						HealthyThreshold:   tc.inputHealthyThreshold,
+						UnhealthyThreshold: tc.inputUnhealthyThreshold,
+						Timeout:            tc.inputTimeout,
+						Interval:           tc.inputInterval,
+						GracePeriod:        tc.inputGracePeriod,
+					},
 				},
+			}
+			if tc.inputPath != nil {
+				hc.IsA = true
+			} else {
+				hc.IsB = true
 			}
 			// WHEN
 			actualOpts := convertHTTPHealthCheck(&hc)
