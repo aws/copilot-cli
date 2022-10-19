@@ -241,3 +241,42 @@ key:
 		})
 	}
 }
+
+func TestAOrB_EmbeddedType(t *testing.T) {
+	type embeddedType struct {
+		AOrB[string, []string]
+	}
+
+	type keyValue struct {
+		Key embeddedType `yaml:"key,omitempty"`
+	}
+
+	// test []string
+	in := `
+key:
+  - asdf
+`
+	var kv keyValue
+	require.NoError(t, yaml.Unmarshal([]byte(in), &kv))
+	require.Equal(t, keyValue{
+		Key: embeddedType{AOrB[string, []string]{
+			IsB: true,
+			B: []string{
+				"asdf",
+			},
+		}},
+	}, kv)
+
+	// test string
+	in = `
+key: qwerty
+`
+	kv = keyValue{}
+	require.NoError(t, yaml.Unmarshal([]byte(in), &kv))
+	require.Equal(t, keyValue{
+		Key: embeddedType{AOrB[string, []string]{
+			IsA: true,
+			A:   "qwerty",
+		}},
+	}, kv)
+}
