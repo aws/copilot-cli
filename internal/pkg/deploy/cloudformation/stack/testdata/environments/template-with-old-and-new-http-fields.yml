@@ -156,6 +156,8 @@ Resources:
       SubnetId: !Ref PublicSubnet2
 
   NatGateway1Attachment:
+    Metadata:
+      'aws:copilot:description': 'An Elastic IP for NAT Gateway 1'
     Type: AWS::EC2::EIP
     Condition: CreateNATGateways
     DependsOn: InternetGatewayAttachment
@@ -191,6 +193,8 @@ Resources:
       RouteTableId: !Ref PrivateRouteTable1
       SubnetId: !Ref PrivateSubnet1
   NatGateway2Attachment:
+    Metadata:
+      'aws:copilot:description': 'An Elastic IP for NAT Gateway 2'
     Type: AWS::EC2::EIP
     Condition: CreateNATGateways
     DependsOn: InternetGatewayAttachment
@@ -285,6 +289,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt UniqueJSONValuesFunction.Arn
       Aliases: !Ref Aliases
+      FilterFor: !Ref ALBWorkloads
   CloudFrontDistribution:
     Metadata:
       'aws:copilot:description': 'A CloudFront distribution for global content delivery'
