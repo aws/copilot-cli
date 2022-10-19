@@ -607,6 +607,39 @@ http:
 				},
 			},
 		},
+		"unmarshal with source_ips field in http.public": {
+			inContent: `name: prod
+type: Environment
+http:
+    public:
+      certificates:
+        - cert-1
+        - cert-2
+      security_groups:
+        ingress:
+          restrict_to:
+            cdn: true
+      ingress:
+        source_ips:
+          - 1.1.1.1
+          - 2.2.2.2
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
+							Certificates: []string{"cert-1", "cert-2"},
+							DeprecatedSG: DeprecatedALBSecurityGroupsConfig{DeprecatedIngress: DeprecatedIngress{RestrictiveIngress: RestrictiveIngress{CDNIngress: aws.Bool(true)}}},
+							Ingress:      RestrictiveIngress{SourceIPs: []IPNet{"1.1.1.1", "2.2.2.2"}},
+						},
+					},
+				},
+			},
+		},
 		"fail to unmarshal": {
 			inContent:       `watermelon in easter hay`,
 			wantedErrPrefix: "unmarshal environment manifest: ",

@@ -518,13 +518,12 @@ type RestrictiveIngress struct {
 
 // RelaxedIngress contains ingress configuration to add to a security group.
 type RelaxedIngress struct {
-	VPCIngress *bool   `yaml:"vpc"`
-	SourceIPs  []IPNet `yaml:"source_ips"`
+	VPCIngress *bool `yaml:"vpc"`
 }
 
 // IsEmpty returns true if there are no specified fields for relaxed ingress.
 func (i RelaxedIngress) IsEmpty() bool {
-	return i.VPCIngress == nil && len(i.SourceIPs) == 0
+	return i.VPCIngress == nil
 }
 
 // IsEmpty returns true if there are no specified fields for restrictive ingress.
