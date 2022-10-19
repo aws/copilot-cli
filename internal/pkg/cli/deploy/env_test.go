@@ -485,6 +485,17 @@ func TestEnvDeployer_Validate(t *testing.T) {
 			},
 			expected: "enable TLS termination on CDN: get env params: some error",
 		},
+		"cdn tls termination enabled, skip if no services deployed": {
+			app: &config.Application{},
+			mft: mftCDNTerminateTLSAndHTTPCert,
+			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
+				m.stackDescribers = map[string]*mocks.MockstackDescriber{
+					"svc1": mocks.NewMockstackDescriber(ctrl),
+				}
+
+				m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil)
+			},
+		},
 		"cdn tls termination enabled, fail to get service resources": {
 			app: &config.Application{},
 			mft: mftCDNTerminateTLSAndHTTPCert,
