@@ -315,13 +315,13 @@ network:
 	}
 }
 
-func TestEnvStack_Template_WithoutMetadata(t *testing.T) {
+func TestEnvStack_Regression(t *testing.T) {
 	testCases := map[string]struct {
-		input          *deploy.CreateEnvironmentInput
-		wantedFileName string
+		originalManifest *deploy.CreateEnvironmentInput
+		newManifest      *deploy.CreateEnvironmentInput
 	}{
-		"generate template with embedded manifest file with the old deprecated http manifest fields": {
-			input: func() *deploy.CreateEnvironmentInput {
+		"produce the same template after migrating environment manifest to the new field hierarchy": {
+			originalManifest: func() *deploy.CreateEnvironmentInput {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
@@ -368,10 +368,7 @@ observability:
 					RawMft: []byte(rawMft),
 				}
 			}(),
-			wantedFileName: "template-with-old-and-new-http-fields.yml",
-		},
-		"generate template with embedded manifest file with the new http manifest fields": {
-			input: func() *deploy.CreateEnvironmentInput {
+			newManifest: func() *deploy.CreateEnvironmentInput {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
@@ -415,26 +412,27 @@ observability:
 					RawMft: []byte(rawMft),
 				}
 			}(),
-			wantedFileName: "template-with-old-and-new-http-fields.yml",
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			wanted, err := os.ReadFile(filepath.Join("testdata", "environments", tc.wantedFileName))
-			require.NoError(t, err, "read wanted template")
-			wantedObj := make(map[any]any)
-			require.NoError(t, yaml.Unmarshal(wanted, wantedObj))
-
 			// WHEN
-			envStack := stack.NewEnvStackConfig(tc.input)
-			actual, err := envStack.Template()
-			require.NoError(t, err, "serialize template")
-			actualObj := make(map[any]any)
-			require.NoError(t, yaml.Unmarshal([]byte(actual), actualObj))
-			delete(actualObj, "Metadata")
-			// THEN
-			require.Equal(t, wantedObj, actualObj)
+			originalStack := stack.NewEnvStackConfig(tc.originalManifest)
+			originalTmpl, err := originalStack.Template()
+			require.NoError(t, err, "should serialize the template given the original environment manifest")
+			originalObj := make(map[any]any)
+			require.NoError(t, yaml.Unmarshal([]byte(originalTmpl), originalObj))
+
+			newStack := stack.NewEnvStackConfig(tc.newManifest)
+			newTmpl, err := newStack.Template()
+			require.NoError(t, err, "should serialize the template given a migrated environment manifest")
+			newObj := make(map[any]any)
+			require.NoError(t, yaml.Unmarshal([]byte(newTmpl), newObj))
+
+			delete(originalObj, "Metadata")
+			delete(newObj, "Metadata")
+
+			require.Equal(t, originalObj, newObj)
 		})
 	}
 }
