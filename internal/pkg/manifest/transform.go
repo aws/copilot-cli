@@ -304,9 +304,11 @@ func (t unionTransformer[A, B]) Transformer(typ reflect.Type) func(dst, src refl
 		if srcStruct.IsA() {
 			var zero B
 			dstStruct.isB, dstStruct.B = false, zero
+			dstStruct.isA = true
 		} else if srcStruct.IsB() {
 			var zero A
 			dstStruct.isA, dstStruct.A = false, zero
+			dstStruct.isB = true
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

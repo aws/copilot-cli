@@ -242,6 +242,7 @@ key:
 	}
 }
 
+// TODO struct or struct? if no fields are set in either struct, it will always to zero value of B.
 func TestUnion_EmbeddedType(t *testing.T) {
 	type embeddedType struct {
 		Union[string, []string]
@@ -271,6 +272,6 @@ key: qwerty
 	kv = keyValue{}
 	require.NoError(t, yaml.Unmarshal([]byte(in), &kv))
 	require.Equal(t, keyValue{
-		Key: embeddedType{NewUnionA[string, []string]("querty")},
+		Key: embeddedType{NewUnionA[string, []string]("qwerty")},
 	}, kv)
 }
