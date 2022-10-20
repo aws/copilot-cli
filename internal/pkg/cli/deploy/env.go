@@ -164,7 +164,7 @@ func (d *envDeployer) validateCDN(mft *manifest.Environment) error {
 		err := d.validateALBWorkloadsDontRedirect()
 		var redirErr *errEnvHasPublicServicesWithRedirect
 		switch {
-		case errors.As(err, &redirErr) && mft.ALBIngressRestrictedToCDN():
+		case errors.As(err, &redirErr) && mft.IsPublicLBIngressRestrictedToCDN():
 			return err
 		case errors.As(err, &redirErr):
 			log.Warningln(redirErr.warning())
@@ -281,7 +281,7 @@ func (d *envDeployer) cidrPrefixLists(in *DeployEnvironmentInput) ([]string, err
 	var cidrPrefixListIDs []string
 
 	// Check if ingress is allowed from cloudfront
-	if in.Manifest == nil || !in.Manifest.IsIngressRestrictedToCDN() {
+	if in.Manifest == nil || !in.Manifest.IsPublicLBIngressRestrictedToCDN() {
 		return nil, nil
 	}
 	cfManagedPrefixListID, err := d.cfManagedPrefixListID()
