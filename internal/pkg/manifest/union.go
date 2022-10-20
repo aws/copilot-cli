@@ -4,8 +4,6 @@
 package manifest
 
 import (
-	"errors"
-
 	"gopkg.in/yaml.v3"
 )
 
@@ -81,11 +79,11 @@ func (t *Union[A, B]) Value() any {
 }
 
 // UnmarshalYAML decodes value into either type A or B, and stores that value
-// on t. value is first decoded into type A, and t will hold type A if:
-//   - there was no error decoding value into type A
+// in t. value is first decoded into type A, and t will hold type A if:
+//   - There was no error decoding value into type A
 //   - A.IsZero() returns false OR A does not support IsZero()
 //
-// If there was an error or A IsZero, then value is decoded into type B.
+// If A didn't meet the above criteria, then value is decoded into type B.
 // t will hold type B if B meets the same conditions that were required for type A.
 //
 // If value fails to decode into either type, or both types are zero after
@@ -97,26 +95,22 @@ func (t *Union[A, B]) UnmarshalYAML(value *yaml.Node) error {
 	t.isA, t.A = false, a
 	t.isB, t.B = false, b
 
-	err := value.Decode(&a)
-	if err == nil && !isZeroerAndZero(a) {
-		t.isA = true
-		t.A = a
+	aErr := value.Decode(&a)
+	if aErr == nil && !isZeroerAndZero(a) {
+		t.isA, t.A = true, a
 		return nil
 	}
 
-	// if the error wasn't just the inability to unmarshal
-	// into A, then return that error
-	var te *yaml.TypeError
-	if !errors.As(err, &te) {
-		return err
+	bErr := value.Decode(&b)
+	if bErr == nil && !isZeroerAndZero(b) {
+		t.isB, t.B = true, b
+		return nil
 	}
 
-	err = value.Decode(&b)
-	if err == nil && !isZeroerAndZero(b) {
-		t.isB = true
-		t.B = b
+	if aErr != nil {
+		return aErr
 	}
-	return err
+	return bErr
 }
 
 // isZeroerAndZero returns true if v is a yaml.Zeroer
