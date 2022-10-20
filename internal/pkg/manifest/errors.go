@@ -112,9 +112,9 @@ func (e *errSpecifiedBothIngressFields) RecommendActions() string {
 	privateOrPublicField := strings.Split(e.firstField, ".")[0]
 	if privateOrPublicField == "public" {
 		return `
-It looks like you specified ingress under both "http.public.security_groups.ingress"" and "http.public.ingress"".
+It looks like you specified ingress under both "http.public.security_groups.ingress" and "http.public.ingress".
 After Copilot v1.23.0, we have deprecated "http.public.security_groups.ingress" in favor of "http.public.ingress". 
-This means that "http.public.security_groups.ingress.cdn"" is removed in favor of "http.public.ingress.cdn".
+This means that "http.public.security_groups.ingress.cdn" is removed in favor of "http.public.ingress.cdn".
 With the new release manifest configuration for cdn looks like:
 
 http:
@@ -125,10 +125,10 @@ http:
 	}
 
 	return `
-It looks like you specified ingress under both "http.private.security_groups.ingress"" and "http.private.ingress"".
+It looks like you specified ingress under both "http.private.security_groups.ingress" and "http.private.ingress".
 After Copilot v1.23.0, we have deprecated "http.private.security_groups.ingress" in favor of "http.private.ingress". 
-This means that "http.private.security_groups.ingress.from_vpc"" is removed in favor of "http.private.ingress.vpc".
-With the new release manifest configuration for cdn looks like:
+This means that "http.private.security_groups.ingress.from_vpc" is removed in favor of "http.private.ingress.vpc".
+With the new release manifest configuration for vpc looks like:
 
 http:
   private:

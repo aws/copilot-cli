@@ -594,8 +594,14 @@ http:
 					HTTPConfig: EnvironmentHTTPConfig{
 						Public: PublicHTTPConfig{
 							Certificates: []string{"cert-1", "cert-2"},
-							DeprecatedSG: DeprecatedALBSecurityGroupsConfig{DeprecatedIngress: DeprecatedIngress{RestrictiveIngress: RestrictiveIngress{CDNIngress: aws.Bool(true)}}},
-							Ingress:      RestrictiveIngress{CDNIngress: aws.Bool(true)},
+							DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+								DeprecatedIngress: DeprecatedIngress{
+									RestrictiveIngress: RestrictiveIngress{
+										CDNIngress: aws.Bool(true),
+									},
+								},
+							},
+							Ingress: RestrictiveIngress{CDNIngress: aws.Bool(true)},
 						},
 					},
 				},

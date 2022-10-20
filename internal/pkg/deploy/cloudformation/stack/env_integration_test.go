@@ -320,7 +320,7 @@ func TestEnvStack_Regression(t *testing.T) {
 		originalManifest *deploy.CreateEnvironmentInput
 		newManifest      *deploy.CreateEnvironmentInput
 	}{
-		"produce the same template after migrating environment manifest to the new field hierarchy": {
+		"should produce the same template after migrating load balancer ingress fields": {
 			originalManifest: func() *deploy.CreateEnvironmentInput {
 				rawMft := `name: test
 type: Environment

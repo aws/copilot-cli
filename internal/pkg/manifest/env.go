@@ -429,7 +429,7 @@ func (cfg *EnvironmentHTTPConfig) loadLBConfig(env *config.CustomizeEnv) {
 	if env.ImportVPC != nil && len(env.ImportVPC.PublicSubnetIDs) == 0 {
 		cfg.Private.InternalALBSubnets = env.InternalALBSubnets
 		cfg.Private.Certificates = env.ImportCertARNs
-		if env.EnableInternalALBVPCIngress {
+		if env.EnableInternalALBVPCIngress { // NOTE: Do not load the configuration unless it's positive, so that the default manifest does not contain the unnecessary line `http.private.ingress.vpc: false`.
 			cfg.Private.Ingress.VPCIngress = aws.Bool(true)
 		}
 		return
