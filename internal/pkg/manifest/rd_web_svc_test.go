@@ -74,7 +74,6 @@ func TestNewRequestDrivenWebService(t *testing.T) {
 }
 
 func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
-
 	testCases := map[string]struct {
 		inContent []byte
 

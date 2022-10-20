@@ -7,46 +7,37 @@ import (
 )
 
 // Union is a type used for yaml keys that may be of type A or B.
-// After calling yaml.Unmarshal(), you can check which type
-// the yaml satisified by calling IsA() or IsB(), and get the value
-// with A() or B(). Union will only ever match type A or B, never both.
+// Union will only ever hold one of the underlying types, never both.
 //
-// YAML is unmarshaled in the order A -> B. That means if both A and B are
-// structs, and have common fields, A will get set and B will remain unset.
-// If A is a string, B is a struct, and the yaml is an Object that doesn't match
-// any keys of B, B will be set with all fields set to their zero values.
+// Use NewUnionA() and NewUnionB() to create a Union with an underlying
+// type already set. See Unmarshal() for details on how yaml is decoded
+// into Union.
 //
-// TODO exported so it can be embedded. yaml tag 'inline' could help, but would require Type.Union.A on every reference
+// Union is exported to enable type embedding.
 type Union[A, B any] struct {
-	// IsA is true if yaml.Unmarshal successfully unmarshalled the input into A.
-	//
-	// Exported for testing, typically shouldn't be set directly outside of tests.
+	// isA is true if the underlying type of Union is A.
 	isA bool
 
-	// A holds the value of type A. If IsA is true, this representation
-	// has been filled by yaml.Unmarshal. If IsA is false, or yaml.Unmarshal
-	// has not been called, this is the zero value of type A.
+	// A holds the value of Union if IsA() is true.
+	// If IsA() is false, this is the zero value of type A.
 	//
-	// Exported for testing, typically shouldn't be set directly outside of tests.
-	// TODO:
-	// - exported for mergo
+	// A is exported to support mergo. It should not be set
+	// directly. Use NewUnionA() to create a Union with A set.
 	A A
 
-	// IsB is true if yaml.Unmarshal was unable to unmarshal the input into A,
-	// but successfully unmarshalled the input into B.
-	//
-	// Exported for testing, typically shouldn't be set directly outside of tests.
+	// isB is true if the underlying type of Union is B.
 	isB bool
 
-	// B holds the value of type B. If IsB is true, this representation
-	// has been filled by yaml.Unmarshal. If IsB is false, or yaml.Unmarshal
-	// has not been called, this is the zero value of type B.
+	// B holds the value of Union if IsB() is true.
+	// If IsB() is false, this is the zero value of type B.
 	//
-	// Exported for testing, typically shouldn't be set directly outside of tests.
+	// B is exported to support mergo. It should not be set
+	// directly. Use NewUnionB() to create a Union with B set.
 	B B
 }
 
-// NewUnionA is nice for tests.
+// NewUnionA creates a new Union[A, B] with the underlying
+// type set to A, holding val.
 func NewUnionA[A, B any](val A) Union[A, B] {
 	return Union[A, B]{
 		isA: true,
@@ -54,7 +45,8 @@ func NewUnionA[A, B any](val A) Union[A, B] {
 	}
 }
 
-// NewUnionB is nice for tests.
+// NewUnionB creates a new Union[A, B] with the underlying
+// type set to B, holding val.
 func NewUnionB[A, B any](val B) Union[A, B] {
 	return Union[A, B]{
 		isB: true,
@@ -62,19 +54,19 @@ func NewUnionB[A, B any](val B) Union[A, B] {
 	}
 }
 
+// IsA returns true if the underlying value of t is type A.
 func (t *Union[_, _]) IsA() bool {
 	return t.isA
 }
 
+// IsB returns true if the underlying value of t is type B.
 func (t *Union[_, _]) IsB() bool {
 	return t.isB
 }
 
-// TODO (t *Union) SetA()/SetB()?
-
-// Value returns either the underlying value of A or B, depending on
-// which was filled by yaml.Unmarshal. If neither have been/were set,
-// Value returns nil.
+// Value returns either the underlying value of t, which is either type
+// A or B, depending on which was filled by yaml.Unmarshal or created
+// with NewUnionA/B(). If neither have been/were set, Value returns nil.
 func (t *Union[A, B]) Value() any {
 	switch {
 	case t.IsA():
@@ -85,7 +77,16 @@ func (t *Union[A, B]) Value() any {
 	return nil
 }
 
-// UnmarshalYAML implements yaml.Unmarshaler.
+// UnmarshalYAML decodes value into either type A or B, and stores that value
+// on t. value is first decoded into type A, and t will hold type A if:
+//   - there was no error decoding value into type A
+//   - A.IsZero() returns false OR A does not support IsZero()
+//
+// If there was an error or A IsZero, then value is decoded into type B.
+// t will hold type B if B meets the same conditions that were required for type A.
+//
+// If value fails to decode into either type, or both types are zero after
+// decoding, t will not hold any value.
 func (t *Union[A, B]) UnmarshalYAML(value *yaml.Node) error {
 	// reset struct
 	var a A
@@ -94,7 +95,7 @@ func (t *Union[A, B]) UnmarshalYAML(value *yaml.Node) error {
 	t.isB, t.B = false, b
 
 	err := value.Decode(&a)
-	if err == nil {
+	if err == nil && !isZeroerAndZero(a) {
 		t.isA = true
 		t.A = a
 		return nil
@@ -108,11 +109,21 @@ func (t *Union[A, B]) UnmarshalYAML(value *yaml.Node) error {
 	}
 
 	err = value.Decode(&b)
-	if err == nil {
+	if err == nil && !isZeroerAndZero(b) {
 		t.isB = true
 		t.B = b
 	}
 	return err
+}
+
+// isZeroerAndZero returns true if v is a yaml.Zeroer
+// _and_ is zero, as determined by v.IsZero().
+func isZeroerAndZero(v any) bool {
+	z, ok := v.(yaml.IsZeroer)
+	if !ok {
+		return false
+	}
+	return z.IsZero()
 }
 
 // MarshalYAML implements yaml.Marshaler.
@@ -120,12 +131,21 @@ func (t Union[_, _]) MarshalYAML() (interface{}, error) {
 	return t.Value(), nil
 }
 
-// IsZero implements yaml.IsZeroer.
+// IsZero returns true if the set value of t implements
+// yaml.IsZeroer and IsZero. It also returns true if
+// neither value for t is set.
 func (t Union[_, _]) IsZero() bool {
-	return !t.IsA() && !t.IsB()
+	if t.IsA() {
+		return isZeroerAndZero(t.A)
+	}
+	if t.IsB() {
+		return isZeroerAndZero(t.B)
+	}
+	return true
 }
 
-// validate TODO
+// validate calls t.validate() on the set value of t. If the
+// current value doesn't have a validate() function, it returns nil.
 func (t Union[A, B]) validate() error {
 	// type declarations inside generic functions not currently supported,
 	// so we use an inline validate() interface
