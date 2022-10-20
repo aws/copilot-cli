@@ -797,7 +797,7 @@ func TestPublicHTTPConfig_IsEmpty(t *testing.T) {
 		"empty": {
 			wanted: true,
 		},
-		"not empty when Certificates are attached ": {
+		"not empty when Certificates are attached": {
 			in: PublicHTTPConfig{
 				Certificates: []string{"mock-cert-1"},
 			},
