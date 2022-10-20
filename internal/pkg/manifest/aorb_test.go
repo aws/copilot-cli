@@ -11,7 +11,7 @@ import (
 )
 
 type yamlTestStruct[A, B any] struct {
-	Key AOrB[A, B] `yaml:"key,omitempty"`
+	Key Union[A, B] `yaml:"key,omitempty"`
 }
 
 func (k *yamlTestStruct[A, B]) KeyValue() any {
@@ -244,7 +244,7 @@ key:
 
 func TestAOrB_EmbeddedType(t *testing.T) {
 	type embeddedType struct {
-		AOrB[string, []string]
+		Union[string, []string]
 	}
 
 	type keyValue struct {
@@ -259,12 +259,9 @@ key:
 	var kv keyValue
 	require.NoError(t, yaml.Unmarshal([]byte(in), &kv))
 	require.Equal(t, keyValue{
-		Key: embeddedType{AOrB[string, []string]{
-			IsB: true,
-			B: []string{
-				"asdf",
-			},
-		}},
+		Key: embeddedType{NewUnionB[string]([]string{
+			"asdf",
+		})},
 	}, kv)
 
 	// test string
@@ -274,9 +271,6 @@ key: qwerty
 	kv = keyValue{}
 	require.NoError(t, yaml.Unmarshal([]byte(in), &kv))
 	require.Equal(t, keyValue{
-		Key: embeddedType{AOrB[string, []string]{
-			IsA: true,
-			A:   "qwerty",
-		}},
+		Key: embeddedType{NewUnionA[string, []string]("querty")},
 	}, kv)
 }

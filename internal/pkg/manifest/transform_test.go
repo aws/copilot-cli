@@ -651,55 +651,55 @@ func TestServiceConnectTransformer_Transformer(t *testing.T) {
 }
 
 type aOrBTransformerTest[A, B any] struct {
-	original AOrB[A, B]
-	override AOrB[A, B]
-	expected AOrB[A, B]
+	original Union[A, B]
+	override Union[A, B]
+	expected Union[A, B]
 }
 
 func TestTransformer_Generic(t *testing.T) {
 	runAOrBTransformerTests(t, map[string]aOrBTransformerTest[any, any]{
 		"switches to A from B if a overridden": {
-			original: AOrB[any, any]{
-				IsB: true,
+			original: Union[any, any]{
+				isB: true,
 			},
-			override: AOrB[any, any]{
-				IsA: true,
+			override: Union[any, any]{
+				isA: true,
 			},
-			expected: AOrB[any, any]{
-				IsA: true,
-				IsB: false,
+			expected: Union[any, any]{
+				isA: true,
+				isB: false,
 			},
 		},
 		"switches to B from A if B overridden": {
-			original: AOrB[any, any]{
-				IsA: true,
+			original: Union[any, any]{
+				isA: true,
 			},
-			override: AOrB[any, any]{
-				IsB: true,
+			override: Union[any, any]{
+				isB: true,
 			},
-			expected: AOrB[any, any]{
-				IsA: false,
-				IsB: true,
+			expected: Union[any, any]{
+				isA: false,
+				isB: true,
 			},
 		},
 		"switches to A if original unset": {
-			original: AOrB[any, any]{},
-			override: AOrB[any, any]{
-				IsA: true,
+			original: Union[any, any]{},
+			override: Union[any, any]{
+				isA: true,
 			},
-			expected: AOrB[any, any]{
-				IsA: true,
-				IsB: false,
+			expected: Union[any, any]{
+				isA: true,
+				isB: false,
 			},
 		},
 		"switches to B if original unset": {
-			original: AOrB[any, any]{},
-			override: AOrB[any, any]{
-				IsB: true,
+			original: Union[any, any]{},
+			override: Union[any, any]{
+				isB: true,
 			},
-			expected: AOrB[any, any]{
-				IsA: false,
-				IsB: true,
+			expected: Union[any, any]{
+				isA: false,
+				isB: true,
 			},
 		},
 	})
@@ -708,81 +708,45 @@ func TestTransformer_Generic(t *testing.T) {
 func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
 	runAOrBTransformerTests(t, map[string]aOrBTransformerTest[string, HTTPHealthCheckArgs]{
 		"string unset if args set": {
-			original: AOrB[string, HTTPHealthCheckArgs]{
-				IsA: true,
-				A:   "mockPath",
-			},
-			override: AOrB[string, HTTPHealthCheckArgs]{
-				IsB: true,
-				B: HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
-				},
-			},
-			expected: AOrB[string, HTTPHealthCheckArgs]{
-				IsB: true,
-				B: HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
-				},
-			},
+			original: NewUnionA[string, HTTPHealthCheckArgs]("mockPath"),
+			override: NewUnionB[string](HTTPHealthCheckArgs{
+				Path:         aws.String("mockPathArgs"),
+				SuccessCodes: aws.String("200"),
+			}),
+			expected: NewUnionB[string](HTTPHealthCheckArgs{
+				Path:         aws.String("mockPathArgs"),
+				SuccessCodes: aws.String("200"),
+			}),
 		},
 		"args unset if string set": {
-			original: AOrB[string, HTTPHealthCheckArgs]{
-				IsB: true,
-				B: HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
-				},
-			},
-			override: AOrB[string, HTTPHealthCheckArgs]{
-				IsA: true,
-				A:   "mockPath",
-			},
-			expected: AOrB[string, HTTPHealthCheckArgs]{
-				IsA: true,
-				A:   "mockPath",
-			},
+			original: NewUnionB[string](HTTPHealthCheckArgs{
+				Path:         aws.String("mockPathArgs"),
+				SuccessCodes: aws.String("200"),
+			}),
+			override: NewUnionA[string, HTTPHealthCheckArgs]("mockPath"),
+			expected: NewUnionA[string, HTTPHealthCheckArgs]("mockPath"),
 		},
 		"string merges correctly": {
-			original: AOrB[string, HTTPHealthCheckArgs]{
-				IsA: true,
-				A:   "path",
-			},
-			override: AOrB[string, HTTPHealthCheckArgs]{
-				IsA: true,
-				A:   "newPath",
-			},
-			expected: AOrB[string, HTTPHealthCheckArgs]{
-				IsA: true,
-				A:   "newPath",
-			},
+			original: NewUnionA[string, HTTPHealthCheckArgs]("path"),
+			override: NewUnionA[string, HTTPHealthCheckArgs]("newPath"),
+			expected: NewUnionA[string, HTTPHealthCheckArgs]("newPath"),
 		},
 		"args merge correctly": {
-			original: AOrB[string, HTTPHealthCheckArgs]{
-				IsB: true,
-				B: HTTPHealthCheckArgs{
-					Path:             aws.String("mockPathArgs"),
-					SuccessCodes:     aws.String("200"),
-					HealthyThreshold: aws.Int64(10),
-				},
-			},
-			override: AOrB[string, HTTPHealthCheckArgs]{
-				IsB: true,
-				B: HTTPHealthCheckArgs{
-					SuccessCodes:       aws.String("420"),
-					UnhealthyThreshold: aws.Int64(20),
-				},
-			},
-			expected: AOrB[string, HTTPHealthCheckArgs]{
-				IsB: true,
-				B: HTTPHealthCheckArgs{
-					Path:               aws.String("mockPathArgs"), // merged unchanged
-					SuccessCodes:       aws.String("420"),          // updated
-					HealthyThreshold:   aws.Int64(10),              // comes from original
-					UnhealthyThreshold: aws.Int64(20),              // comes from override
-				},
-			},
+			original: NewUnionB[string](HTTPHealthCheckArgs{
+				Path:             aws.String("mockPathArgs"),
+				SuccessCodes:     aws.String("200"),
+				HealthyThreshold: aws.Int64(10),
+			}),
+			override: NewUnionB[string](HTTPHealthCheckArgs{
+				SuccessCodes:       aws.String("420"),
+				UnhealthyThreshold: aws.Int64(20),
+			}),
+			expected: NewUnionB[string](HTTPHealthCheckArgs{
+				Path:               aws.String("mockPathArgs"), // merged unchanged
+				SuccessCodes:       aws.String("420"),          // updated
+				HealthyThreshold:   aws.Int64(10),              // comes from original
+				UnhealthyThreshold: aws.Int64(20),              // comes from override
+			}),
 		},
 	})
 }
@@ -795,7 +759,7 @@ func runAOrBTransformerTests[A, B any](t *testing.T, tests map[string]aOrBTransf
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(aOrBTransformer[A, B]{}))
+			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(unionTransformer[A, B]{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)

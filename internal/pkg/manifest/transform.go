@@ -26,7 +26,7 @@ var defaultTransformers = []mergo.Transformers{
 	serviceConnectTransformer{},
 	placementArgOrStringTransformer{},
 	subnetListOrArgsTransformer{},
-	aOrBTransformer[string, HTTPHealthCheckArgs]{},
+	unionTransformer[string, HTTPHealthCheckArgs]{},
 	countTransformer{},
 	advancedCountTransformer{},
 	scalingConfigOrTTransformer[Percentage]{},
@@ -291,22 +291,22 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 	}
 }
 
-type aOrBTransformer[A, B any] struct{}
+type unionTransformer[A, B any] struct{}
 
-func (t aOrBTransformer[A, B]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(AOrB[A, B]{}) {
+func (t unionTransformer[A, B]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Union[A, B]{}) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(AOrB[A, B]), src.Interface().(AOrB[A, B])
+		dstStruct, srcStruct := dst.Interface().(Union[A, B]), src.Interface().(Union[A, B])
 
-		if srcStruct.IsA {
+		if srcStruct.IsA() {
 			var zero B
-			dstStruct.IsB, dstStruct.B = false, zero
-		} else if srcStruct.IsB {
+			dstStruct.isB, dstStruct.B = false, zero
+		} else if srcStruct.IsB() {
 			var zero A
-			dstStruct.IsA, dstStruct.A = false, zero
+			dstStruct.isA, dstStruct.A = false, zero
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

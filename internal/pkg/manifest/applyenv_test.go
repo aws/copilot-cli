@@ -70,229 +70,231 @@ func TestApplyEnv_Bool(t *testing.T) {
 
 func TestApplyEnv_Int(t *testing.T) {
 	testCases := map[string]struct {
+		in       LoadBalancedWebServiceConfig
+		env      LoadBalancedWebServiceConfig
+		expected LoadBalancedWebServiceConfig
+
 		inSvc  func(svc *LoadBalancedWebService)
 		wanted func(svc *LoadBalancedWebService)
 	}{
 		"int overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.CPU = aws.Int(24)
-				svc.Environments["test"].TaskConfig.CPU = aws.Int(42)
+			in: LoadBalancedWebServiceConfig{
+				TaskConfig: TaskConfig{
+					CPU: aws.Int(24),
+				},
 			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.CPU = aws.Int(42)
+			env: LoadBalancedWebServiceConfig{
+				TaskConfig: TaskConfig{
+					CPU: aws.Int(42),
+				},
+			},
+			expected: LoadBalancedWebServiceConfig{
+				TaskConfig: TaskConfig{
+					CPU: aws.Int(42),
+				},
 			},
 		},
 		"int overridden by zero value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.CPU = aws.Int(24)
-				svc.Environments["test"].TaskConfig.CPU = aws.Int(0)
+			in: LoadBalancedWebServiceConfig{
+				TaskConfig: TaskConfig{
+					CPU: aws.Int(24),
+				},
 			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.CPU = aws.Int(0)
+			env: LoadBalancedWebServiceConfig{
+				TaskConfig: TaskConfig{
+					CPU: aws.Int(0),
+				},
+			},
+			expected: LoadBalancedWebServiceConfig{
+				TaskConfig: TaskConfig{
+					CPU: aws.Int(0),
+				},
 			},
 		},
 		"int not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.CPU = aws.Int(24)
+			in: LoadBalancedWebServiceConfig{
+				TaskConfig: TaskConfig{
+					CPU: aws.Int(24),
+				},
 			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.CPU = aws.Int(24)
+			expected: LoadBalancedWebServiceConfig{
+				TaskConfig: TaskConfig{
+					CPU: aws.Int(24),
+				},
 			},
 		},
 		"int64 overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
-				svc.Environments["test"].RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(42)
+			in: LoadBalancedWebServiceConfig{
+				RoutingRule: RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HealthCheck: HealthCheckArgsOrString{
+							NewUnionB[string](HTTPHealthCheckArgs{
+								HealthyThreshold: aws.Int64(24),
+							}),
+						},
+					},
+				},
 			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(42)
+			env: LoadBalancedWebServiceConfig{
+				RoutingRule: RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HealthCheck: HealthCheckArgsOrString{
+							NewUnionB[string](HTTPHealthCheckArgs{
+								HealthyThreshold: aws.Int64(42),
+							}),
+						},
+					},
+				},
 			},
-		},
-		"int64 overridden by zero value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
-				svc.Environments["test"].RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(0)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(0)
-			},
-		},
-		"int64 not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				// TODO: what should i do about this? like what if A was set and override is B?
-				// probably need to fix transformer?
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
-			},
-		},
-		"uint16 overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-				svc.Environments["test"].ImageConfig.Port = aws.Uint16(42)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(42)
-			},
-		},
-		"uint16 overridden by zero value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-				svc.Environments["test"].ImageConfig.Port = aws.Uint16(0)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(0)
-			},
-		},
-		"uint16 not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-			},
-		},
-		"uint32 overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.Environments["test"].ImageConfig.Port = aws.Uint16(42)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(42)
-			},
-		},
-		"uint32 overridden by zero value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-				svc.Environments["test"].ImageConfig.Port = aws.Uint16(0)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(0)
-			},
-		},
-		"uint32 not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			var inSvc, wantedSvc LoadBalancedWebService
-			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
-				"test": {},
-			}
-
-			tc.inSvc(&inSvc)
-			tc.wanted(&wantedSvc)
-
-			got, err := inSvc.applyEnv("test")
-
-			require.NoError(t, err)
-			require.Equal(t, &wantedSvc, got)
-		})
-	}
-}
-
-func TestApplyEnv_UInt16(t *testing.T) {
-	testCases := map[string]struct {
-		inSvc  func(svc *LoadBalancedWebService)
-		wanted func(svc *LoadBalancedWebService)
-	}{
-		"uint16 overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-				svc.Environments["test"].ImageConfig.Port = aws.Uint16(42)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(42)
-			},
-		},
-		"uint16 overridden by zero value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-				svc.Environments["test"].ImageConfig.Port = aws.Uint16(0)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(0)
-			},
-		},
-		"uint16 not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.ImageConfig.Port = aws.Uint16(24)
-			},
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			var inSvc, wantedSvc LoadBalancedWebService
-			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
-				"test": {},
-			}
-
-			tc.inSvc(&inSvc)
-			tc.wanted(&wantedSvc)
-
-			got, err := inSvc.applyEnv("test")
-
-			require.NoError(t, err)
-			require.Equal(t, &wantedSvc, got)
-		})
-	}
-}
-
-func TestApplyEnv_Int64(t *testing.T) {
-	testCases := map[string]struct {
-		inSvc  func(svc *LoadBalancedWebService)
-		wanted func(svc *LoadBalancedWebService)
-	}{
-		"int64 overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
-				svc.Environments["test"].RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(42)
-			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(42)
+			expected: LoadBalancedWebServiceConfig{
+				RoutingRule: RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HealthCheck: HealthCheckArgsOrString{
+							NewUnionB[string](HTTPHealthCheckArgs{
+								HealthyThreshold: aws.Int64(42),
+							}),
+						},
+					},
+				},
 			},
 		},
 		"int64 overridden by zero value": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
-				svc.Environments["test"].RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(0)
+			in: LoadBalancedWebServiceConfig{
+				RoutingRule: RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HealthCheck: HealthCheckArgsOrString{
+							NewUnionB[string](HTTPHealthCheckArgs{
+								HealthyThreshold: aws.Int64(24),
+							}),
+						},
+					},
+				},
 			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(0)
+			env: LoadBalancedWebServiceConfig{
+				RoutingRule: RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HealthCheck: HealthCheckArgsOrString{
+							NewUnionB[string](HTTPHealthCheckArgs{
+								HealthyThreshold: aws.Int64(0),
+							}),
+						},
+					},
+				},
+			},
+			expected: LoadBalancedWebServiceConfig{
+				RoutingRule: RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HealthCheck: HealthCheckArgsOrString{
+							NewUnionB[string](HTTPHealthCheckArgs{
+								HealthyThreshold: aws.Int64(0),
+							}),
+						},
+					},
+				},
 			},
 		},
 		"int64 not overridden": {
-			inSvc: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
+			in: LoadBalancedWebServiceConfig{
+				RoutingRule: RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HealthCheck: HealthCheckArgsOrString{
+							NewUnionB[string](HTTPHealthCheckArgs{
+								HealthyThreshold: aws.Int64(24),
+							}),
+						},
+					},
+				},
 			},
-			wanted: func(svc *LoadBalancedWebService) {
-				svc.RoutingRule.HealthCheck.B.HealthyThreshold = aws.Int64(24)
+			expected: LoadBalancedWebServiceConfig{
+				RoutingRule: RoutingRuleConfigOrBool{
+					RoutingRuleConfiguration: RoutingRuleConfiguration{
+						HealthCheck: HealthCheckArgsOrString{
+							NewUnionB[string](HTTPHealthCheckArgs{
+								HealthyThreshold: aws.Int64(24),
+							}),
+						},
+					},
+				},
+			},
+		},
+		"uint16 overridden": {
+			in: LoadBalancedWebServiceConfig{
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Port: aws.Uint16(24),
+					},
+				},
+			},
+			env: LoadBalancedWebServiceConfig{
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Port: aws.Uint16(42),
+					},
+				},
+			},
+			expected: LoadBalancedWebServiceConfig{
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Port: aws.Uint16(42),
+					},
+				},
+			},
+		},
+		"uint16 overridden by zero value": {
+			in: LoadBalancedWebServiceConfig{
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Port: aws.Uint16(24),
+					},
+				},
+			},
+			env: LoadBalancedWebServiceConfig{
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Port: aws.Uint16(0),
+					},
+				},
+			},
+			expected: LoadBalancedWebServiceConfig{
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Port: aws.Uint16(0),
+					},
+				},
+			},
+		},
+		"uint16 not overridden": {
+			in: LoadBalancedWebServiceConfig{
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Port: aws.Uint16(24),
+					},
+				},
+			},
+			expected: LoadBalancedWebServiceConfig{
+				ImageConfig: ImageWithPortAndHealthcheck{
+					ImageWithPort: ImageWithPort{
+						Port: aws.Uint16(24),
+					},
+				},
 			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var inSvc, wantedSvc LoadBalancedWebService
-			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
-				"test": {},
+			in := LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: tc.in,
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"test": &tc.env,
+				},
+			}
+			expected := LoadBalancedWebService{
+				LoadBalancedWebServiceConfig: tc.expected,
 			}
 
-			tc.inSvc(&inSvc)
-			tc.wanted(&wantedSvc)
-
-			got, err := inSvc.applyEnv("test")
-
+			got, err := in.applyEnv("test")
 			require.NoError(t, err)
-			require.Equal(t, &wantedSvc, got)
+			require.Equal(t, &expected, got)
 		})
 	}
 }
