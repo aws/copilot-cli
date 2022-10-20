@@ -135,6 +135,7 @@ type HTTPConfig struct {
 	ImportedCertARNs  []string
 	CustomALBSubnets  []string
 	ELBAccessLogs     *ELBAccessLogs
+	SecurityPolicy    *string
 }
 
 // ELBAccessLogs represents configuration for ELB access logs S3 bucket.

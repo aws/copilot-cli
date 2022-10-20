@@ -425,6 +425,7 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
+      SslPolicy: 'ELBSecurityPolicy-2016-08'
   HTTPSImportCertificate2:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
     Condition: ExportHTTPSListener
@@ -481,6 +482,7 @@ Resources:
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 443
       Protocol: HTTPS
+      SslPolicy: 'ELBSecurityPolicy-2016-08'
   InternalWorkloadsHostedZone:
     Metadata:
       'aws:copilot:description': 'A hosted zone named test.demo.internal for backends behind a private load balancer'
