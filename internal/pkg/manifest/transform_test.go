@@ -650,14 +650,14 @@ func TestServiceConnectTransformer_Transformer(t *testing.T) {
 	}
 }
 
-type aOrBTransformerTest[A, B any] struct {
+type unionTransformerTest[A, B any] struct {
 	original Union[A, B]
 	override Union[A, B]
 	expected Union[A, B]
 }
 
 func TestTransformer_Generic(t *testing.T) {
-	runAOrBTransformerTests(t, map[string]aOrBTransformerTest[any, any]{
+	runUnionTransformerTests(t, map[string]unionTransformerTest[any, any]{
 		"switches to A from B if a overridden": {
 			original: Union[any, any]{
 				isB: true,
@@ -706,7 +706,7 @@ func TestTransformer_Generic(t *testing.T) {
 }
 
 func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
-	runAOrBTransformerTests(t, map[string]aOrBTransformerTest[string, HTTPHealthCheckArgs]{
+	runUnionTransformerTests(t, map[string]unionTransformerTest[string, HTTPHealthCheckArgs]{
 		"string unset if args set": {
 			original: NewUnionA[string, HTTPHealthCheckArgs]("mockPath"),
 			override: NewUnionB[string](HTTPHealthCheckArgs{
@@ -751,7 +751,7 @@ func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
 	})
 }
 
-func runAOrBTransformerTests[A, B any](t *testing.T, tests map[string]aOrBTransformerTest[A, B]) {
+func runUnionTransformerTests[A, B any](t *testing.T, tests map[string]unionTransformerTest[A, B]) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// Perform default merge.

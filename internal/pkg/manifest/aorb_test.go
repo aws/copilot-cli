@@ -242,7 +242,7 @@ key:
 	}
 }
 
-func TestAOrB_EmbeddedType(t *testing.T) {
+func TestUnion_EmbeddedType(t *testing.T) {
 	type embeddedType struct {
 		Union[string, []string]
 	}
