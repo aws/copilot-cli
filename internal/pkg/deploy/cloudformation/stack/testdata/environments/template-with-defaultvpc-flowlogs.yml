@@ -729,7 +729,6 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
-      SslPolicy: 'ELBSecurityPolicy-2016-08'
   InternalLoadBalancer:
     Metadata:
       'aws:copilot:description': 'An internal Application Load Balancer to distribute private traffic from within the VPC to your services'
@@ -781,7 +780,6 @@ Resources:
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 443
       Protocol: HTTPS
-      SslPolicy: 'ELBSecurityPolicy-2016-08'
   InternalWorkloadsHostedZone:
     Metadata:
       'aws:copilot:description': 'A hosted zone named test.demo.internal for backends behind a private load balancer'

@@ -434,7 +434,7 @@ type PublicHTTPConfig struct {
 	SecurityGroupConfig ALBSecurityGroupsConfig `yaml:"security_groups,omitempty"`
 	Certificates        []string                `yaml:"certificates,omitempty"`
 	ELBAccessLogs       ELBAccessLogsArgsOrBool `yaml:"access_logs,omitempty"`
-	SecurityPolicy      *string                 `yaml:"security_policy,omitempty"`
+	SSLPolicy           *string                 `yaml:"ssl_policy,omitempty"`
 }
 
 // ELBAccessLogsArgsOrBool is a custom type which supports unmarshaling yaml which
@@ -535,19 +535,19 @@ func (i Ingress) IsEmpty() bool {
 
 // IsEmpty returns true if there is no customization to the public ALB.
 func (cfg PublicHTTPConfig) IsEmpty() bool {
-	return len(cfg.Certificates) == 0 && cfg.SecurityGroupConfig.IsEmpty() && cfg.ELBAccessLogs.isEmpty() && cfg.SecurityPolicy == nil
+	return len(cfg.Certificates) == 0 && cfg.SecurityGroupConfig.IsEmpty() && cfg.ELBAccessLogs.isEmpty() && cfg.SSLPolicy == nil
 }
 
 type privateHTTPConfig struct {
 	InternalALBSubnets   []string             `yaml:"subnets,omitempty"`
 	Certificates         []string             `yaml:"certificates,omitempty"`
 	SecurityGroupsConfig securityGroupsConfig `yaml:"security_groups,omitempty"`
-	SecurityPolicy       *string              `yaml:"security_policy,omitempty"`
+	SSLPolicy            *string              `yaml:"ssl_policy,omitempty"`
 }
 
 // IsEmpty returns true if there is no customization to the internal ALB.
 func (cfg privateHTTPConfig) IsEmpty() bool {
-	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0 && cfg.SecurityGroupsConfig.isEmpty() && cfg.SecurityPolicy == nil
+	return len(cfg.InternalALBSubnets) == 0 && len(cfg.Certificates) == 0 && cfg.SecurityGroupsConfig.isEmpty() && cfg.SSLPolicy == nil
 }
 
 type securityGroupsConfig struct {

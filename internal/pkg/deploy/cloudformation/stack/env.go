@@ -405,7 +405,7 @@ func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
 		CIDRPrefixListIDs: e.in.CIDRPrefixListIDs,
 		ImportedCertARNs:  e.importPublicCertARNs(),
 		ELBAccessLogs:     elbAccessLogsConfig,
-		SecurityPolicy:    e.getPublicSecurityPolicy(),
+		SSLPolicy:         e.getPublicSslPolicy(),
 	}, nil
 }
 
@@ -413,7 +413,7 @@ func (e *EnvStackConfig) privateHTTPConfig() template.HTTPConfig {
 	return template.HTTPConfig{
 		ImportedCertARNs: e.importPrivateCertARNs(),
 		CustomALBSubnets: e.internalALBSubnets(),
-		SecurityPolicy:   e.getPrivateSecurityPolicy(),
+		SSLPolicy:        e.getPrivateSslPolicy(),
 	}
 }
 
@@ -527,10 +527,10 @@ func (e *EnvStackConfig) internalALBSubnets() []string {
 	return e.in.InternalALBSubnets
 }
 
-func (e *EnvStackConfig) getPublicSecurityPolicy() *string {
-	return e.in.Mft.EnvironmentConfig.HTTPConfig.Public.SecurityPolicy
+func (e *EnvStackConfig) getPublicSslPolicy() *string {
+	return e.in.Mft.EnvironmentConfig.HTTPConfig.Public.SSLPolicy
 }
 
-func (e *EnvStackConfig) getPrivateSecurityPolicy() *string {
-	return e.in.Mft.EnvironmentConfig.HTTPConfig.Public.SecurityPolicy
+func (e *EnvStackConfig) getPrivateSslPolicy() *string {
+	return e.in.Mft.EnvironmentConfig.HTTPConfig.Public.SSLPolicy
 }

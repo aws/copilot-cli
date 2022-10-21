@@ -356,7 +356,9 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
-      SslPolicy: {{ if .PublicHTTPConfig.SecurityPolicy }}{{ .PublicHTTPConfig.SecurityPolicy }}{{ else }} ELBSecurityPolicy-2016-08 {{ end }} 
+{{ if .PublicHTTPConfig.SSLPolicy }}
+      SslPolicy: {{ .PublicHTTPConfig.SSLPolicy }}
+{{ end }} 
 {{- range $ind, $arn := .PublicHTTPConfig.ImportedCertARNs}}
 {{- if gt $ind 0}}
   HTTPSImportCertificate{{inc $ind}}:
@@ -433,7 +435,9 @@ Resources:
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 443
       Protocol: HTTPS
-      SslPolicy: {{ if .PrivateHTTPConfig.SecurityPolicy }}{{ .PrivateHTTPConfig.SecurityPolicy }}{{ else }} ELBSecurityPolicy-2016-08 {{ end }} 
+{{ if .PublicHTTPConfig.SSLPolicy }}
+      SslPolicy: {{ .PublicHTTPConfig.SSLPolicy }}
+{{ end }}
 {{- range $ind, $arn := .PrivateHTTPConfig.ImportedCertARNs}}
 {{- if gt $ind 0}}
   InternalHTTPSImportCertificate{{inc $ind}}:
