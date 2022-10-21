@@ -10,10 +10,6 @@ import (
 // Union is a type used for yaml keys that may be of type Simple or Advanced.
 // Union will only ever hold one of the underlying types, never both.
 //
-// Use NewUnionSimple() and NewUnionAdvanced() to create a Union with an underlying
-// type already set. See Unmarshal() for details on how yaml is decoded
-// into Union.
-//
 // Union is exported to enable type embedding.
 type Union[Simple, Advanced any] struct {
 	// isSimple is true if the underlying type of Union is Simple.
