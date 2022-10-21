@@ -34,10 +34,11 @@ count: {{.Count.Value}}       # Number of tasks that should be running in your s
 {{- if not .TaskConfig.IsWindows }}
 exec: true     # Enable running commands in your container.
 {{- end}}
-
-storage:
+  
 {{- if not .TaskConfig.IsWindows}}
-  readonly_fs: true       # Limit to read-only access to mounted root filesystems by default.
+
+# storage:
+  # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
 {{- end}}
 
 {{if .Subscribe}}{{- if .Subscribe.Topics}}

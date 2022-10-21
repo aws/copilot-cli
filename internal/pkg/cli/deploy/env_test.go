@@ -293,8 +293,8 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				EnvironmentConfig: manifest.EnvironmentConfig{
 					HTTPConfig: manifest.EnvironmentHTTPConfig{
 						Public: manifest.PublicHTTPConfig{
-							SecurityGroupConfig: manifest.ALBSecurityGroupsConfig{
-								Ingress: manifest.Ingress{
+							DeprecatedSG: manifest.DeprecatedALBSecurityGroupsConfig{
+								DeprecatedIngress: manifest.DeprecatedIngress{
 									RestrictiveIngress: manifest.RestrictiveIngress{
 										CDNIngress: aws.Bool(true),
 									},
@@ -485,6 +485,17 @@ func TestEnvDeployer_Validate(t *testing.T) {
 			},
 			expected: "enable TLS termination on CDN: get env params: some error",
 		},
+		"cdn tls termination enabled, skip if no services deployed": {
+			app: &config.Application{},
+			mft: mftCDNTerminateTLSAndHTTPCert,
+			setUpMocks: func(m *envDeployerMocks, ctrl *gomock.Controller) {
+				m.stackDescribers = map[string]*mocks.MockstackDescriber{
+					"svc1": mocks.NewMockstackDescriber(ctrl),
+				}
+
+				m.envDescriber.EXPECT().Params().Return(map[string]string{}, nil)
+			},
+		},
 		"cdn tls termination enabled, fail to get service resources": {
 			app: &config.Application{},
 			mft: mftCDNTerminateTLSAndHTTPCert,
@@ -575,8 +586,8 @@ If you'd like to use these services without a CDN, ensure each service's A recor
 					HTTPConfig: manifest.EnvironmentHTTPConfig{
 						Public: manifest.PublicHTTPConfig{
 							Certificates: []string{"mockCertARN"},
-							SecurityGroupConfig: manifest.ALBSecurityGroupsConfig{
-								Ingress: manifest.Ingress{
+							DeprecatedSG: manifest.DeprecatedALBSecurityGroupsConfig{
+								DeprecatedIngress: manifest.DeprecatedIngress{
 									RestrictiveIngress: manifest.RestrictiveIngress{
 										CDNIngress: aws.Bool(true),
 									},
