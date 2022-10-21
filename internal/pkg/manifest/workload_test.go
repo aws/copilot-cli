@@ -383,7 +383,7 @@ func TestServiceConnectBoolOrArgs_ServiceConnectEnabled(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			enabled := tc.mft.ServiceConnectEnabled()
+			enabled := tc.mft.Enabled()
 
 			// THEN
 			require.Equal(t, tc.wanted, enabled)

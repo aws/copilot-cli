@@ -481,8 +481,8 @@ type ServiceConnectBoolOrArgs struct {
 	ServiceConnectArgs
 }
 
-// ServiceConnectEnabled returns if ServiceConnect is enabled or not.
-func (s *ServiceConnectBoolOrArgs) ServiceConnectEnabled() bool {
+// Enabled returns if ServiceConnect is enabled or not.
+func (s *ServiceConnectBoolOrArgs) Enabled() bool {
 	return aws.BoolValue(s.EnableServiceConnect) || !s.ServiceConnectArgs.isEmpty()
 }
 
