@@ -42,9 +42,9 @@ func BasicToUnion[Basic, Advanced any](val Basic) Union[Basic, Advanced] {
 	}
 }
 
-// NewUnionAdvanced creates a new Union[Basic, Advanced] with the underlying
+// AdvancedToUnion creates a new Union[Basic, Advanced] with the underlying
 // type set to Advanced, holding val.
-func NewUnionAdvanced[Basic, Advanced any](val Advanced) Union[Basic, Advanced] {
+func AdvancedToUnion[Basic, Advanced any](val Advanced) Union[Basic, Advanced] {
 	return Union[Basic, Advanced]{
 		isAdvanced: true,
 		Advanced:   val,
@@ -135,14 +135,14 @@ func (t Union[_, _]) IsZero() bool {
 func (t Union[_, _]) validate() error {
 	// type declarations inside generic functions not currently supported,
 	// so we use an inline validate() interface
-	if t.isBasic {
+	if t.IsBasic() {
 		if v, ok := any(t.Basic).(interface{ validate() error }); ok {
 			return v.validate()
 		}
 		return nil
 	}
 
-	if t.isAdvanced {
+	if t.IsAdvanced() {
 		if v, ok := any(t.Advanced).(interface{ validate() error }); ok {
 			return v.validate()
 		}

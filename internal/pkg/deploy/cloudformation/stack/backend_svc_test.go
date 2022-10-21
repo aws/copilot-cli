@@ -342,7 +342,7 @@ Outputs:
 		mft.RoutingRule = manifest.RoutingRuleConfiguration{
 			Path: aws.String("/albPath"),
 			HealthCheck: manifest.HealthCheckArgsOrString{
-				Union: manifest.NewUnionAdvanced[string](manifest.HTTPHealthCheckArgs{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
 					Path:               aws.String("/healthz"),
 					Port:               aws.Int(4200),
 					SuccessCodes:       aws.String("418"),

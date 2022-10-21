@@ -36,7 +36,7 @@ func TestUnion(t *testing.T) {
 key:
   - asdf
   - jkl;`,
-		expectedValue: NewUnionAdvanced[string]([]string{"asdf", "jkl;"}),
+		expectedValue: AdvancedToUnion[string]([]string{"asdf", "jkl;"}),
 	})
 	runUnionTest(t, "bool or semiComplexStruct, is false bool", unionTest[bool, semiComplexStruct]{
 		yaml:          `key: false`,
@@ -55,7 +55,7 @@ key:
   str_ptr: jkl;
   bool_ptr: false
   int_ptr: 70`,
-		expectedValue: NewUnionAdvanced[bool](semiComplexStruct{
+		expectedValue: AdvancedToUnion[bool](semiComplexStruct{
 			Str:     "asdf",
 			Bool:    true,
 			Int:     420,
@@ -71,7 +71,7 @@ key:
   int: 420
   bool_ptr: false
   int_ptr: 70`,
-		expectedValue: NewUnionAdvanced[bool](semiComplexStruct{
+		expectedValue: AdvancedToUnion[bool](semiComplexStruct{
 			Bool:    true,
 			Int:     420,
 			BoolPtr: aws.Bool(false),
@@ -145,7 +145,7 @@ key:
 		yaml: `
 key:
   randomkey: hello`,
-		expectedValue: NewUnionAdvanced[isZeroer](notIsZeroer{}),
+		expectedValue: AdvancedToUnion[isZeroer](notIsZeroer{}),
 		expectedYAML: `
 key:
   subkey: ""`,
@@ -177,7 +177,7 @@ key:
   bool: true
   int: 420`,
 		strict: true,
-		expectedValue: NewUnionAdvanced[string](semiComplexStruct{
+		expectedValue: AdvancedToUnion[string](semiComplexStruct{
 			Bool: true,
 			Int:  420,
 		}),
@@ -192,7 +192,7 @@ key:
 		// value.Decode() don't inherit the parent decoder's settings:
 		// https://github.com/go-yaml/yaml/issues/460
 		strict: true,
-		expectedValue: NewUnionAdvanced[string](semiComplexStruct{
+		expectedValue: AdvancedToUnion[string](semiComplexStruct{
 			Bool: true,
 			Int:  420,
 		}),
@@ -212,7 +212,7 @@ key:
 key:
   bool: true
   int: 420`,
-		expectedValue: NewUnionAdvanced[[]string](semiComplexStruct{
+		expectedValue: AdvancedToUnion[[]string](semiComplexStruct{
 			Bool: true,
 			Int:  420,
 		}),
@@ -283,7 +283,7 @@ key:
 	var kv keyValue
 	require.NoError(t, yaml.Unmarshal([]byte(in), &kv))
 	require.Equal(t, keyValue{
-		Key: embeddedType{NewUnionAdvanced[string]([]string{
+		Key: embeddedType{AdvancedToUnion[string]([]string{
 			"asdf",
 		})},
 	}, kv)

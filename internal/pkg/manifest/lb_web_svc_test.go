@@ -191,7 +191,7 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
     interval: 78s
     timeout: 9s`),
 			wantedStruct: HealthCheckArgsOrString{
-				Union: NewUnionAdvanced[string](HTTPHealthCheckArgs{
+				Union: AdvancedToUnion[string](HTTPHealthCheckArgs{
 					Path:               aws.String("/testing"),
 					HealthyThreshold:   aws.Int64(5),
 					UnhealthyThreshold: aws.Int64(6),
