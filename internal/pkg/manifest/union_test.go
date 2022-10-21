@@ -14,7 +14,8 @@ import (
 )
 
 type unionTest[A, B any] struct {
-	yaml string
+	yaml   string
+	strict bool
 
 	expectedValue        Union[A, B]
 	expectedUnmarshalErr string
@@ -170,6 +171,36 @@ key:
 		expectedUnmarshalErr: "yaml: unmarshal errors:\n  line 3: cannot unmarshal !!map into int",
 		expectedYAML:         `key: null`,
 	})
+	runUnionTest(t, "strict mode, string or semiComplexStruct, is semiComplexStruct with a few fields set", unionTest[string, semiComplexStruct]{
+		yaml: `
+key:
+  bool: true
+  int: 420`,
+		strict: true,
+		expectedValue: NewUnionB[string](semiComplexStruct{
+			Bool: true,
+			Int:  420,
+		}),
+	})
+	runUnionTest(t, "strict mode, string or semiComplexStruct, is semiComplexStruct with an invalid field set, error", unionTest[string, semiComplexStruct]{
+		yaml: `
+key:
+  bool: true
+  int: 420
+  bad: true`,
+		// This test _should_ have an unmarshal error, but decoders created through
+		// value.Decode() don't inherit the parent decoder's settings:
+		// https://github.com/go-yaml/yaml/issues/460
+		strict: true,
+		expectedValue: NewUnionB[string](semiComplexStruct{
+			Bool: true,
+			Int:  420,
+		}),
+		expectedYAML: `
+key:
+  bool: true
+  int: 420`,
+	})
 }
 
 type keyValue[A, B any] struct {
@@ -179,7 +210,10 @@ type keyValue[A, B any] struct {
 func runUnionTest[A, B any](t *testing.T, name string, test unionTest[A, B]) {
 	t.Run(name, func(t *testing.T) {
 		var kv keyValue[A, B]
-		err := yaml.Unmarshal([]byte(test.yaml), &kv)
+		dec := yaml.NewDecoder(strings.NewReader(test.yaml))
+		dec.KnownFields(test.strict)
+
+		err := dec.Decode(&kv)
 		if test.expectedUnmarshalErr != "" {
 			require.EqualError(t, err, test.expectedUnmarshalErr)
 		} else {
