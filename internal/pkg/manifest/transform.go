@@ -291,23 +291,23 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 	}
 }
 
-type unionTransformer[Simple, Advanced any] struct{}
+type unionTransformer[Basic, Advanced any] struct{}
 
-func (t unionTransformer[Simple, Advanced]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(Union[Simple, Advanced]{}) {
+func (t unionTransformer[Basic, Advanced]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Union[Basic, Advanced]{}) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(Union[Simple, Advanced]), src.Interface().(Union[Simple, Advanced])
+		dstStruct, srcStruct := dst.Interface().(Union[Basic, Advanced]), src.Interface().(Union[Basic, Advanced])
 
-		if srcStruct.IsSimple() {
+		if srcStruct.IsBasic() {
 			var zero Advanced
 			dstStruct.isAdvanced, dstStruct.Advanced = false, zero
-			dstStruct.isSimple = true
+			dstStruct.isBasic = true
 		} else if srcStruct.IsAdvanced() {
-			var zero Simple
-			dstStruct.isSimple, dstStruct.Simple = false, zero
+			var zero Basic
+			dstStruct.isBasic, dstStruct.Basic = false, zero
 			dstStruct.isAdvanced = true
 		}
 

@@ -7,20 +7,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Union is a type used for yaml keys that may be of type Simple or Advanced.
+// Union is a type used for yaml keys that may be of type Basic or Advanced.
 // Union will only ever hold one of the underlying types, never both.
 //
 // Union is exported to enable type embedding.
-type Union[Simple, Advanced any] struct {
-	// isSimple is true if the underlying type of Union is Simple.
-	isSimple bool
+type Union[Basic, Advanced any] struct {
+	// isBasic is true if the underlying type of Union is Basic.
+	isBasic bool
 
-	// Simple holds the value of Union if IsSimple() is true.
-	// If IsSimple() is false, this is the zero value of type Simple.
+	// Basic holds the value of Union if IsBasic() is true.
+	// If IsBasic() is false, this is the zero value of type Basic.
 	//
-	// Simple is exported to support mergo. It should not be set
-	// directly. Use NewUnionSimple() to create a Union with Simple set.
-	Simple Simple
+	// Basic is exported to support mergo. It should not be set
+	// directly. Use NewUnionBasic() to create a Union with Basic set.
+	Basic Basic
 
 	// isAdvanced is true if the underlying type of Union is Advanced.
 	isAdvanced bool
@@ -33,27 +33,27 @@ type Union[Simple, Advanced any] struct {
 	Advanced Advanced
 }
 
-// NewUnionSimple creates a new Union[Simple, Advanced] with the underlying
-// type set to Simple, holding val.
-func NewUnionSimple[Simple, Advanced any](val Simple) Union[Simple, Advanced] {
-	return Union[Simple, Advanced]{
-		isSimple: true,
-		Simple:   val,
+// BasicToUnion creates a new Union[Basic, Advanced] with the underlying
+// type set to Basic, holding val.
+func BasicToUnion[Basic, Advanced any](val Basic) Union[Basic, Advanced] {
+	return Union[Basic, Advanced]{
+		isBasic: true,
+		Basic:   val,
 	}
 }
 
-// NewUnionAdvanced creates a new Union[Simple, Advanced] with the underlying
+// NewUnionAdvanced creates a new Union[Basic, Advanced] with the underlying
 // type set to Advanced, holding val.
-func NewUnionAdvanced[Simple, Advanced any](val Advanced) Union[Simple, Advanced] {
-	return Union[Simple, Advanced]{
+func NewUnionAdvanced[Basic, Advanced any](val Advanced) Union[Basic, Advanced] {
+	return Union[Basic, Advanced]{
 		isAdvanced: true,
 		Advanced:   val,
 	}
 }
 
-// IsSimple returns true if the underlying value of t is type Simple.
-func (t *Union[_, _]) IsSimple() bool {
-	return t.isSimple
+// IsBasic returns true if the underlying value of t is type Basic.
+func (t *Union[_, _]) IsBasic() bool {
+	return t.isBasic
 }
 
 // IsAdvanced returns true if the underlying value of t is type Advanced.
@@ -61,26 +61,26 @@ func (t *Union[_, _]) IsAdvanced() bool {
 	return t.isAdvanced
 }
 
-// UnmarshalYAML decodes value into either type Simple or Advanced, and stores that value
-// in t. value is first decoded into type Simple, and t will hold type Simple if:
-//   - There was no error decoding value into type Simple
-//   - Simple.IsZero() returns false OR Simple does not support IsZero()
+// UnmarshalYAML decodes value into either type Basic or Advanced, and stores that value
+// in t. value is first decoded into type Basic, and t will hold type Basic if:
+//   - There was no error decoding value into type Basic
+//   - Basic.IsZero() returns false OR Basic does not support IsZero()
 //
-// If Simple didn't meet the above criteria, then value is decoded into type Advanced.
-// t will hold type Advanced if Advanced meets the same conditions that were required for type Simple.
+// If Basic didn't meet the above criteria, then value is decoded into type Advanced.
+// t will hold type Advanced if Advanced meets the same conditions that were required for type Basic.
 //
 // If value fails to decode into either type, or both types are zero after
 // decoding, t will not hold any value.
-func (t *Union[Simple, Advanced]) UnmarshalYAML(value *yaml.Node) error {
+func (t *Union[Basic, Advanced]) UnmarshalYAML(value *yaml.Node) error {
 	// reset struct
-	var simple Simple
+	var simple Basic
 	var advanced Advanced
-	t.isSimple, t.Simple = false, simple
+	t.isBasic, t.Basic = false, simple
 	t.isAdvanced, t.Advanced = false, advanced
 
 	sErr := value.Decode(&simple)
 	if sErr == nil && !isZeroerAndZero(simple) {
-		t.isSimple, t.Simple = true, simple
+		t.isBasic, t.Basic = true, simple
 		return nil
 	}
 
@@ -109,8 +109,8 @@ func isZeroerAndZero(v any) bool {
 // MarshalYAML implements yaml.Marshaler.
 func (t Union[_, _]) MarshalYAML() (interface{}, error) {
 	switch {
-	case t.IsSimple():
-		return t.Simple, nil
+	case t.IsBasic():
+		return t.Basic, nil
 	case t.IsAdvanced():
 		return t.Advanced, nil
 	}
@@ -121,8 +121,8 @@ func (t Union[_, _]) MarshalYAML() (interface{}, error) {
 // yaml.IsZeroer and IsZero. It also returns true if
 // neither value for t is set.
 func (t Union[_, _]) IsZero() bool {
-	if t.IsSimple() {
-		return isZeroerAndZero(t.Simple)
+	if t.IsBasic() {
+		return isZeroerAndZero(t.Basic)
 	}
 	if t.IsAdvanced() {
 		return isZeroerAndZero(t.Advanced)
@@ -135,8 +135,8 @@ func (t Union[_, _]) IsZero() bool {
 func (t Union[_, _]) validate() error {
 	// type declarations inside generic functions not currently supported,
 	// so we use an inline validate() interface
-	if t.isSimple {
-		if v, ok := any(t.Simple).(interface{ validate() error }); ok {
+	if t.isBasic {
+		if v, ok := any(t.Basic).(interface{ validate() error }); ok {
 			return v.validate()
 		}
 		return nil

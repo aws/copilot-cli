@@ -334,8 +334,8 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 	if hc.IsZero() {
 		return opts
 	}
-	if hc.IsSimple() {
-		opts.HealthCheckPath = hc.Simple
+	if hc.IsBasic() {
+		opts.HealthCheckPath = hc.Basic
 		return opts
 	}
 

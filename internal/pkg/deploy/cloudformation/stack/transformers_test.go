@@ -649,7 +649,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Path": {
 			input: manifest.HealthCheckArgsOrString{
-				Union: manifest.NewUnionSimple[string, manifest.HTTPHealthCheckArgs]("path"),
+				Union: manifest.BasicToUnion[string, manifest.HTTPHealthCheckArgs]("path"),
 			},
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "path",

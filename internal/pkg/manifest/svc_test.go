@@ -768,13 +768,13 @@ func TestHealthCheckArgsOrString_IsEmpty(t *testing.T) {
 		},
 		"should return false if a path is set via the basic configuration": {
 			hc: HealthCheckArgsOrString{
-				Union: NewUnionSimple[string, HTTPHealthCheckArgs]("/"),
+				Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 			},
 			wanted: false,
 		},
 		"should return false if a value is set via the advanced configuration": {
 			hc: HealthCheckArgsOrString{
-				Union: NewUnionSimple[string, HTTPHealthCheckArgs]("/"),
+				Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 			},
 			wanted: false,
 		},

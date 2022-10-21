@@ -650,28 +650,28 @@ func TestServiceConnectTransformer_Transformer(t *testing.T) {
 	}
 }
 
-type unionTransformerTest[A, B any] struct {
-	original Union[A, B]
-	override Union[A, B]
-	expected Union[A, B]
+type unionTransformerTest[Basic, Advanced any] struct {
+	original Union[Basic, Advanced]
+	override Union[Basic, Advanced]
+	expected Union[Basic, Advanced]
 }
 
 func TestTransformer_Generic(t *testing.T) {
 	runUnionTransformerTests(t, map[string]unionTransformerTest[any, any]{
 		"switches to Simple from Advanced if overridden": {
 			original: NewUnionAdvanced[any, any](nil),
-			override: NewUnionSimple[any, any](nil),
-			expected: NewUnionSimple[any, any](nil),
+			override: BasicToUnion[any, any](nil),
+			expected: BasicToUnion[any, any](nil),
 		},
 		"switches to Advanced from Simple if overridden": {
-			original: NewUnionSimple[any, any](nil),
+			original: BasicToUnion[any, any](nil),
 			override: NewUnionAdvanced[any, any](nil),
 			expected: NewUnionAdvanced[any, any](nil),
 		},
 		"switches to Simple if original unset": {
 			original: Union[any, any]{},
-			override: NewUnionSimple[any, any](nil),
-			expected: NewUnionSimple[any, any](nil),
+			override: BasicToUnion[any, any](nil),
+			expected: BasicToUnion[any, any](nil),
 		},
 		"switches to Advanced if original unset": {
 			original: Union[any, any]{},
@@ -684,7 +684,7 @@ func TestTransformer_Generic(t *testing.T) {
 func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
 	runUnionTransformerTests(t, map[string]unionTransformerTest[string, HTTPHealthCheckArgs]{
 		"string unset if args set": {
-			original: NewUnionSimple[string, HTTPHealthCheckArgs]("mockPath"),
+			original: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
 			override: NewUnionAdvanced[string](HTTPHealthCheckArgs{
 				Path:         aws.String("mockPathArgs"),
 				SuccessCodes: aws.String("200"),
@@ -699,13 +699,13 @@ func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
 				Path:         aws.String("mockPathArgs"),
 				SuccessCodes: aws.String("200"),
 			}),
-			override: NewUnionSimple[string, HTTPHealthCheckArgs]("mockPath"),
-			expected: NewUnionSimple[string, HTTPHealthCheckArgs]("mockPath"),
+			override: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
+			expected: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
 		},
 		"string merges correctly": {
-			original: NewUnionSimple[string, HTTPHealthCheckArgs]("path"),
-			override: NewUnionSimple[string, HTTPHealthCheckArgs]("newPath"),
-			expected: NewUnionSimple[string, HTTPHealthCheckArgs]("newPath"),
+			original: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
+			override: BasicToUnion[string, HTTPHealthCheckArgs]("newPath"),
+			expected: BasicToUnion[string, HTTPHealthCheckArgs]("newPath"),
 		},
 		"args merge correctly": {
 			original: NewUnionAdvanced[string](HTTPHealthCheckArgs{
@@ -727,7 +727,7 @@ func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
 	})
 }
 
-func runUnionTransformerTests[A, B any](t *testing.T, tests map[string]unionTransformerTest[A, B]) {
+func runUnionTransformerTests[Basic, Advanced any](t *testing.T, tests map[string]unionTransformerTest[Basic, Advanced]) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// Perform default merge.
@@ -735,7 +735,7 @@ func runUnionTransformerTests[A, B any](t *testing.T, tests map[string]unionTran
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(unionTransformer[A, B]{}))
+			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(unionTransformer[Basic, Advanced]{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)

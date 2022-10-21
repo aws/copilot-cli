@@ -25,11 +25,11 @@ type unionTest[A, B any] struct {
 func TestUnion(t *testing.T) {
 	runUnionTest(t, "string or []string, is string", unionTest[string, []string]{
 		yaml:          `key: hello`,
-		expectedValue: NewUnionSimple[string, []string]("hello"),
+		expectedValue: BasicToUnion[string, []string]("hello"),
 	})
 	runUnionTest(t, "string or []string, is empty string", unionTest[string, []string]{
 		yaml:          `key: ""`,
-		expectedValue: NewUnionSimple[string, []string](""),
+		expectedValue: BasicToUnion[string, []string](""),
 	})
 	runUnionTest(t, "string or []string, is []string", unionTest[string, []string]{
 		yaml: `
@@ -40,11 +40,11 @@ key:
 	})
 	runUnionTest(t, "bool or semiComplexStruct, is false bool", unionTest[bool, semiComplexStruct]{
 		yaml:          `key: false`,
-		expectedValue: NewUnionSimple[bool, semiComplexStruct](false),
+		expectedValue: BasicToUnion[bool, semiComplexStruct](false),
 	})
 	runUnionTest(t, "bool or semiComplexStruct, is true bool", unionTest[bool, semiComplexStruct]{
 		yaml:          `key: true`,
-		expectedValue: NewUnionSimple[bool, semiComplexStruct](true),
+		expectedValue: BasicToUnion[bool, semiComplexStruct](true),
 	})
 	runUnionTest(t, "bool or semiComplexStruct, is semiComplexStruct with all fields set", unionTest[bool, semiComplexStruct]{
 		yaml: `
@@ -89,7 +89,7 @@ key:
     str_ptr: jkl;
     bool_ptr: false
     int_ptr: 70`,
-		expectedValue: NewUnionSimple[complexStruct, semiComplexStruct](complexStruct{
+		expectedValue: BasicToUnion[complexStruct, semiComplexStruct](complexStruct{
 			StrPtr: aws.String("qwerty"),
 			SemiComplexStruct: semiComplexStruct{
 				Str:     "asdf",
@@ -110,7 +110,7 @@ key:
   str_ptr: jkl;
   bool_ptr: false
   int_ptr: 70`,
-		expectedValue: NewUnionSimple[complexStruct, semiComplexStruct](complexStruct{
+		expectedValue: BasicToUnion[complexStruct, semiComplexStruct](complexStruct{
 			StrPtr: aws.String("jkl;"),
 		}),
 		expectedYAML: `
@@ -120,28 +120,28 @@ key:
     bool: false
     int: 0`,
 	})
-	runUnionTest(t, "two structs, type A doesn't support IsZero, correct yaml", unionTest[notIsZeroer, isZeroer]{
+	runUnionTest(t, "two structs, basic type doesn't support IsZero, correct yaml", unionTest[notIsZeroer, isZeroer]{
 		yaml: `
 key:
   subkey: hello`,
-		expectedValue: NewUnionSimple[notIsZeroer, isZeroer](notIsZeroer{"hello"}),
+		expectedValue: BasicToUnion[notIsZeroer, isZeroer](notIsZeroer{"hello"}),
 	})
-	runUnionTest(t, "two structs, type A doesn't support IsZero, incorrect yaml", unionTest[notIsZeroer, isZeroer]{
+	runUnionTest(t, "two structs, basic type doesn't support IsZero, incorrect yaml", unionTest[notIsZeroer, isZeroer]{
 		yaml: `
 key:
   randomkey: hello`,
-		expectedValue: NewUnionSimple[notIsZeroer, isZeroer](notIsZeroer{}),
+		expectedValue: BasicToUnion[notIsZeroer, isZeroer](notIsZeroer{}),
 		expectedYAML: `
 key:
   subkey: ""`,
 	})
-	runUnionTest(t, "two structs, type A supports IsZero, correct yaml", unionTest[isZeroer, notIsZeroer]{
+	runUnionTest(t, "two structs, basic type supports IsZero, correct yaml", unionTest[isZeroer, notIsZeroer]{
 		yaml: `
 key:
   subkey: hello`,
-		expectedValue: NewUnionSimple[isZeroer, notIsZeroer](isZeroer{"hello"}),
+		expectedValue: BasicToUnion[isZeroer, notIsZeroer](isZeroer{"hello"}),
 	})
-	runUnionTest(t, "two structs, type A supports IsZero, incorrect yaml", unionTest[isZeroer, notIsZeroer]{
+	runUnionTest(t, "two structs, basic type supports IsZero, incorrect yaml", unionTest[isZeroer, notIsZeroer]{
 		yaml: `
 key:
   randomkey: hello`,
@@ -205,7 +205,7 @@ key:
 		yaml: `
 key:
   - asdf`,
-		expectedValue: NewUnionSimple[[]string, semiComplexStruct]([]string{"asdf"}),
+		expectedValue: BasicToUnion[[]string, semiComplexStruct]([]string{"asdf"}),
 	})
 	runUnionTest(t, "[]string or semiComplexStruct, is semiComplexStruct", unionTest[[]string, semiComplexStruct]{
 		yaml: `
@@ -229,13 +229,13 @@ key:
 	})
 }
 
-type keyValue[A, B any] struct {
-	Key Union[A, B] `yaml:"key"`
+type keyValue[Basic, Advanced any] struct {
+	Key Union[Basic, Advanced] `yaml:"key"`
 }
 
-func runUnionTest[A, B any](t *testing.T, name string, test unionTest[A, B]) {
+func runUnionTest[Basic, Advanced any](t *testing.T, name string, test unionTest[Basic, Advanced]) {
 	t.Run(name, func(t *testing.T) {
-		var kv keyValue[A, B]
+		var kv keyValue[Basic, Advanced]
 		dec := yaml.NewDecoder(strings.NewReader(test.yaml))
 		dec.KnownFields(test.strict)
 
@@ -295,7 +295,7 @@ key: qwerty
 	kv = keyValue{}
 	require.NoError(t, yaml.Unmarshal([]byte(in), &kv))
 	require.Equal(t, keyValue{
-		Key: embeddedType{NewUnionSimple[string, []string]("qwerty")},
+		Key: embeddedType{BasicToUnion[string, []string]("qwerty")},
 	}, kv)
 }
 

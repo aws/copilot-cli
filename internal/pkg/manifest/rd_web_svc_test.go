@@ -231,7 +231,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
 						HealthCheckConfiguration: HealthCheckArgsOrString{
-							Union: NewUnionSimple[string, HTTPHealthCheckArgs]("/healthcheck"),
+							Union: BasicToUnion[string, HTTPHealthCheckArgs]("/healthcheck"),
 						},
 					},
 				},

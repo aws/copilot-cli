@@ -379,8 +379,8 @@ type HealthCheckArgsOrString struct {
 
 // Path returns the default health check path if provided otherwise, returns the path from the advanced configuration.
 func (hc *HealthCheckArgsOrString) Path() *string {
-	if hc.IsSimple() {
-		return aws.String(hc.Simple)
+	if hc.IsBasic() {
+		return aws.String(hc.Basic)
 	}
 	return hc.Advanced.Path
 }
