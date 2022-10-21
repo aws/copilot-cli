@@ -64,6 +64,10 @@ http:
     {{- if $privateHTTP.InternalALBSubnets}}
     subnets: {{$privateHTTP.InternalALBSubnets}}
     {{- end}}
+    {{- if and $privateHTTP.Ingress $privateHTTP.Ingress.VPCIngress}}
+    ingress:
+      from_vpc: {{ $privateHTTP.Ingress.VPCIngress }}
+    {{- end }}
   {{- end}}
 {{- end}}
 

@@ -58,7 +58,7 @@ You can restrict incoming traffic to come from a certain source. For CloudFront,
 ## How do I use CloudFront to terminate TLS?
 
 !!! attention
-    1. Disable [HTTP to HTTPS redirection](../manifest/lb-web-service/#http-redirect-to-https) for your Load Balanced Web Services.
+    1. Disable [HTTP to HTTPS redirection](../../manifest/lb-web-service/#http-redirect-to-https) for your Load Balanced Web Services.
     2. Run `svc deploy` individually to redeploy all the Load Balanced Web Services before enabling CloudFront TLS termination.
     3. Once all your Load Balanced Web Services no longer redirect HTTP to HTTPS, you can safely enable CloudFront TLS termination in the env manifest and run `env deploy`.
 

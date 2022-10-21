@@ -28,8 +28,8 @@ exec: true     # Enable running commands in your container.
 network:
   connect: true # Enable Service Connect for in-VPC traffic between services.
 
-storage:
-  readonly_fs: true       # Limit to read-only access to mounted root filesystems by default.
+# storage:
+  # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
 
 # Optional fields for more advanced use-cases.
 #

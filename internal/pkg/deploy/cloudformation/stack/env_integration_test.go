@@ -34,13 +34,11 @@ cdn:
   certificate: viewer-cert
 http:
   public:
+    ingress:
+      cdn: true
     access_logs:
       bucket_name: accesslogsbucket
       prefix: accesslogsbucketprefix
-    security_groups:
-      ingress:
-        restrict_to:
-          cdn: true
     certificates:
       - cert-1
       - cert-2
@@ -148,9 +146,8 @@ network:
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					AllowVPCIngress: true,
-					Mft:             &mft,
-					RawMft:          []byte(rawMft),
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
 				}
 			}(),
 
@@ -188,9 +185,8 @@ security_group:
 						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
 						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
 					},
-					AllowVPCIngress: true,
-					Mft:             &mft,
-					RawMft:          []byte(rawMft),
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
 				}
 			}(),
 
@@ -223,6 +219,75 @@ type: Environment`
 			}(),
 			wantedFileName: "template-with-basic-manifest.yml",
 		},
+		"generate template with default vpc and flowlogs is on": {
+			input: func() *deploy.CreateEnvironmentInput {
+				rawMft := `name: test
+type: Environment
+network:
+  vpc:
+    flow_logs: on`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+					},
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
+				}
+			}(),
+			wantedFileName: "template-with-defaultvpc-flowlogs.yml",
+		},
+
+		"generate template with imported vpc and flowlogs is on": {
+			input: func() *deploy.CreateEnvironmentInput {
+				rawMft := `name: test
+type: Environment
+network:
+  vpc:
+    id: 'vpc-12345'
+    subnets:
+      public:
+        - id: 'subnet-11111'
+        - id: 'subnet-22222'
+      private:
+        - id: 'subnet-33333'
+        - id: 'subnet-44444'
+    flow_logs: on`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+					},
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
+				}
+			}(),
+			wantedFileName: "template-with-importedvpc-flowlogs.yml",
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -246,6 +311,128 @@ type: Environment`
 
 			// THEN
 			require.Equal(t, wantedObj, actualObj)
+		})
+	}
+}
+
+func TestEnvStack_Regression(t *testing.T) {
+	testCases := map[string]struct {
+		originalManifest *deploy.CreateEnvironmentInput
+		newManifest      *deploy.CreateEnvironmentInput
+	}{
+		"should produce the same template after migrating load balancer ingress fields": {
+			originalManifest: func() *deploy.CreateEnvironmentInput {
+				rawMft := `name: test
+type: Environment
+# Create the public ALB with certificates attached.
+cdn:
+  certificate: viewer-cert
+http:
+  public:
+    security_groups:
+      ingress:
+        restrict_to:
+          cdn: true
+    access_logs:
+      bucket_name: accesslogsbucket
+      prefix: accesslogsbucketprefix
+    certificates:
+      - cert-1
+      - cert-2
+  private:
+    security_groups:
+      ingress:
+        from_vpc: true
+observability:
+  container_insights: true # Enable container insights.`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					CIDRPrefixListIDs:    []string{"pl-mockid"},
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+						"UniqueJSONValuesFunction":      "https://mockbucket.s3-us-west-2.amazonaws.com/unique-json-values",
+					},
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
+				}
+			}(),
+			newManifest: func() *deploy.CreateEnvironmentInput {
+				rawMft := `name: test
+type: Environment
+# Create the public ALB with certificates attached.
+cdn:
+  certificate: viewer-cert
+http:
+  public:
+    ingress:
+      cdn: true
+    access_logs:
+      bucket_name: accesslogsbucket
+      prefix: accesslogsbucketprefix
+    certificates:
+      - cert-1
+      - cert-2
+  private:
+    ingress:
+      vpc: true
+observability:
+  container_insights: true # Enable container insights.`
+				var mft manifest.Environment
+				err := yaml.Unmarshal([]byte(rawMft), &mft)
+				require.NoError(t, err)
+				return &deploy.CreateEnvironmentInput{
+					Version: "1.x",
+					App: deploy.AppInformation{
+						AccountPrincipalARN: "arn:aws:iam::000000000:root",
+						Name:                "demo",
+					},
+					Name:                 "test",
+					CIDRPrefixListIDs:    []string{"pl-mockid"},
+					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
+					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
+					CustomResourcesURLs: map[string]string{
+						"CertificateValidationFunction": "https://mockbucket.s3-us-west-2.amazonaws.com/dns-cert-validator",
+						"DNSDelegationFunction":         "https://mockbucket.s3-us-west-2.amazonaws.com/dns-delegation",
+						"CustomDomainFunction":          "https://mockbucket.s3-us-west-2.amazonaws.com/custom-domain",
+						"UniqueJSONValuesFunction":      "https://mockbucket.s3-us-west-2.amazonaws.com/unique-json-values",
+					},
+					Mft:    &mft,
+					RawMft: []byte(rawMft),
+				}
+			}(),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			originalStack := stack.NewEnvStackConfig(tc.originalManifest)
+			originalTmpl, err := originalStack.Template()
+			require.NoError(t, err, "should serialize the template given the original environment manifest")
+			originalObj := make(map[any]any)
+			require.NoError(t, yaml.Unmarshal([]byte(originalTmpl), originalObj))
+
+			newStack := stack.NewEnvStackConfig(tc.newManifest)
+			newTmpl, err := newStack.Template()
+			require.NoError(t, err, "should serialize the template given a migrated environment manifest")
+			newObj := make(map[any]any)
+			require.NoError(t, yaml.Unmarshal([]byte(newTmpl), newObj))
+
+			delete(originalObj, "Metadata")
+			delete(newObj, "Metadata")
+
+			require.Equal(t, originalObj, newObj)
 		})
 	}
 }
