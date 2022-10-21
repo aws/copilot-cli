@@ -44,7 +44,7 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 		},
 		RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
 			HealthCheckConfiguration: manifest.HealthCheckArgsOrString{
-				Union: manifest.NewUnionA[string, manifest.HTTPHealthCheckArgs]("/"),
+				Union: manifest.NewUnionSimple[string, manifest.HTTPHealthCheckArgs]("/"),
 			},
 		},
 		Tags: map[string]string{

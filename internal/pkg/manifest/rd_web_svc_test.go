@@ -208,7 +208,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
 						HealthCheckConfiguration: HealthCheckArgsOrString{
-							Union: NewUnionB[string](HTTPHealthCheckArgs{
+							Union: NewUnionAdvanced[string](HTTPHealthCheckArgs{
 								Path:               aws.String("/healthcheck"),
 								HealthyThreshold:   aws.Int64(3),
 								UnhealthyThreshold: aws.Int64(5),
@@ -231,7 +231,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
 					RequestDrivenWebServiceHttpConfig: RequestDrivenWebServiceHttpConfig{
 						HealthCheckConfiguration: HealthCheckArgsOrString{
-							Union: NewUnionA[string, HTTPHealthCheckArgs]("/healthcheck"),
+							Union: NewUnionSimple[string, HTTPHealthCheckArgs]("/healthcheck"),
 						},
 					},
 				},

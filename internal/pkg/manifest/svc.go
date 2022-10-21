@@ -378,10 +378,10 @@ type HealthCheckArgsOrString struct {
 
 // Path returns the default health check path if provided otherwise, returns the path from the advanced configuration.
 func (hc *HealthCheckArgsOrString) Path() *string {
-	if hc.IsA() {
-		return aws.String(hc.A)
+	if hc.IsSimple() {
+		return aws.String(hc.Simple)
 	}
-	return hc.B.Path
+	return hc.Advanced.Path
 }
 
 // NLBHealthCheckArgs holds the configuration to determine if the network load balanced web service is healthy.

@@ -325,36 +325,34 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPHealthCheckOpts {
 	opts := template.HTTPHealthCheckOpts{
 		HealthCheckPath:    manifest.DefaultHealthCheckPath,
-		HealthyThreshold:   hc.B.HealthyThreshold,
-		UnhealthyThreshold: hc.B.UnhealthyThreshold,
 		GracePeriod:        manifest.DefaultHealthCheckGracePeriod,
+		HealthyThreshold:   hc.Advanced.HealthyThreshold,
+		UnhealthyThreshold: hc.Advanced.UnhealthyThreshold,
+		SuccessCodes:       aws.StringValue(hc.Advanced.SuccessCodes),
 	}
 
 	if hc.IsZero() {
 		return opts
 	}
-	if hc.IsA() {
-		opts.HealthCheckPath = hc.A
+	if hc.IsSimple() {
+		opts.HealthCheckPath = hc.Simple
 		return opts
 	}
 
-	if hc.B.Path != nil {
-		opts.HealthCheckPath = *hc.B.Path
+	if hc.Advanced.Path != nil {
+		opts.HealthCheckPath = *hc.Advanced.Path
 	}
-	if hc.B.Port != nil {
-		opts.Port = strconv.Itoa(aws.IntValue(hc.B.Port))
+	if hc.Advanced.Port != nil {
+		opts.Port = strconv.Itoa(aws.IntValue(hc.Advanced.Port))
 	}
-	if hc.B.SuccessCodes != nil {
-		opts.SuccessCodes = *hc.B.SuccessCodes
+	if hc.Advanced.Interval != nil {
+		opts.Interval = aws.Int64(int64(hc.Advanced.Interval.Seconds()))
 	}
-	if hc.B.Interval != nil {
-		opts.Interval = aws.Int64(int64(hc.B.Interval.Seconds()))
+	if hc.Advanced.Timeout != nil {
+		opts.Timeout = aws.Int64(int64(hc.Advanced.Timeout.Seconds()))
 	}
-	if hc.B.Timeout != nil {
-		opts.Timeout = aws.Int64(int64(hc.B.Timeout.Seconds()))
-	}
-	if hc.B.GracePeriod != nil {
-		opts.GracePeriod = int64(hc.B.GracePeriod.Seconds())
+	if hc.Advanced.GracePeriod != nil {
+		opts.GracePeriod = int64(hc.Advanced.GracePeriod.Seconds())
 	}
 	return opts
 }

@@ -291,24 +291,24 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 	}
 }
 
-type unionTransformer[A, B any] struct{}
+type unionTransformer[Simple, Advanced any] struct{}
 
-func (t unionTransformer[A, B]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(Union[A, B]{}) {
+func (t unionTransformer[Simple, Advanced]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Union[Simple, Advanced]{}) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(Union[A, B]), src.Interface().(Union[A, B])
+		dstStruct, srcStruct := dst.Interface().(Union[Simple, Advanced]), src.Interface().(Union[Simple, Advanced])
 
-		if srcStruct.IsA() {
-			var zero B
-			dstStruct.isB, dstStruct.B = false, zero
-			dstStruct.isA = true
-		} else if srcStruct.IsB() {
-			var zero A
-			dstStruct.isA, dstStruct.A = false, zero
-			dstStruct.isB = true
+		if srcStruct.IsSimple() {
+			var zero Advanced
+			dstStruct.isAdvanced, dstStruct.Advanced = false, zero
+			dstStruct.isSimple = true
+		} else if srcStruct.IsAdvanced() {
+			var zero Simple
+			dstStruct.isSimple, dstStruct.Simple = false, zero
+			dstStruct.isAdvanced = true
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

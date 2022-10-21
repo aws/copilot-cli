@@ -25,26 +25,26 @@ type unionTest[A, B any] struct {
 func TestUnion(t *testing.T) {
 	runUnionTest(t, "string or []string, is string", unionTest[string, []string]{
 		yaml:          `key: hello`,
-		expectedValue: NewUnionA[string, []string]("hello"),
+		expectedValue: NewUnionSimple[string, []string]("hello"),
 	})
 	runUnionTest(t, "string or []string, is empty string", unionTest[string, []string]{
 		yaml:          `key: ""`,
-		expectedValue: NewUnionA[string, []string](""),
+		expectedValue: NewUnionSimple[string, []string](""),
 	})
 	runUnionTest(t, "string or []string, is []string", unionTest[string, []string]{
 		yaml: `
 key:
   - asdf
   - jkl;`,
-		expectedValue: NewUnionB[string]([]string{"asdf", "jkl;"}),
+		expectedValue: NewUnionAdvanced[string]([]string{"asdf", "jkl;"}),
 	})
 	runUnionTest(t, "bool or semiComplexStruct, is false bool", unionTest[bool, semiComplexStruct]{
 		yaml:          `key: false`,
-		expectedValue: NewUnionA[bool, semiComplexStruct](false),
+		expectedValue: NewUnionSimple[bool, semiComplexStruct](false),
 	})
 	runUnionTest(t, "bool or semiComplexStruct, is true bool", unionTest[bool, semiComplexStruct]{
 		yaml:          `key: true`,
-		expectedValue: NewUnionA[bool, semiComplexStruct](true),
+		expectedValue: NewUnionSimple[bool, semiComplexStruct](true),
 	})
 	runUnionTest(t, "bool or semiComplexStruct, is semiComplexStruct with all fields set", unionTest[bool, semiComplexStruct]{
 		yaml: `
@@ -55,7 +55,7 @@ key:
   str_ptr: jkl;
   bool_ptr: false
   int_ptr: 70`,
-		expectedValue: NewUnionB[bool](semiComplexStruct{
+		expectedValue: NewUnionAdvanced[bool](semiComplexStruct{
 			Str:     "asdf",
 			Bool:    true,
 			Int:     420,
@@ -71,7 +71,7 @@ key:
   int: 420
   bool_ptr: false
   int_ptr: 70`,
-		expectedValue: NewUnionB[bool](semiComplexStruct{
+		expectedValue: NewUnionAdvanced[bool](semiComplexStruct{
 			Bool:    true,
 			Int:     420,
 			BoolPtr: aws.Bool(false),
@@ -89,7 +89,7 @@ key:
     str_ptr: jkl;
     bool_ptr: false
     int_ptr: 70`,
-		expectedValue: NewUnionA[complexStruct, semiComplexStruct](complexStruct{
+		expectedValue: NewUnionSimple[complexStruct, semiComplexStruct](complexStruct{
 			StrPtr: aws.String("qwerty"),
 			SemiComplexStruct: semiComplexStruct{
 				Str:     "asdf",
@@ -110,7 +110,7 @@ key:
   str_ptr: jkl;
   bool_ptr: false
   int_ptr: 70`,
-		expectedValue: NewUnionA[complexStruct, semiComplexStruct](complexStruct{
+		expectedValue: NewUnionSimple[complexStruct, semiComplexStruct](complexStruct{
 			StrPtr: aws.String("jkl;"),
 		}),
 		expectedYAML: `
@@ -124,13 +124,13 @@ key:
 		yaml: `
 key:
   subkey: hello`,
-		expectedValue: NewUnionA[notIsZeroer, isZeroer](notIsZeroer{"hello"}),
+		expectedValue: NewUnionSimple[notIsZeroer, isZeroer](notIsZeroer{"hello"}),
 	})
 	runUnionTest(t, "two structs, type A doesn't support IsZero, incorrect yaml", unionTest[notIsZeroer, isZeroer]{
 		yaml: `
 key:
   randomkey: hello`,
-		expectedValue: NewUnionA[notIsZeroer, isZeroer](notIsZeroer{}),
+		expectedValue: NewUnionSimple[notIsZeroer, isZeroer](notIsZeroer{}),
 		expectedYAML: `
 key:
   subkey: ""`,
@@ -139,13 +139,13 @@ key:
 		yaml: `
 key:
   subkey: hello`,
-		expectedValue: NewUnionA[isZeroer, notIsZeroer](isZeroer{"hello"}),
+		expectedValue: NewUnionSimple[isZeroer, notIsZeroer](isZeroer{"hello"}),
 	})
 	runUnionTest(t, "two structs, type A supports IsZero, incorrect yaml", unionTest[isZeroer, notIsZeroer]{
 		yaml: `
 key:
   randomkey: hello`,
-		expectedValue: NewUnionB[isZeroer](notIsZeroer{}),
+		expectedValue: NewUnionAdvanced[isZeroer](notIsZeroer{}),
 		expectedYAML: `
 key:
   subkey: ""`,
@@ -177,7 +177,7 @@ key:
   bool: true
   int: 420`,
 		strict: true,
-		expectedValue: NewUnionB[string](semiComplexStruct{
+		expectedValue: NewUnionAdvanced[string](semiComplexStruct{
 			Bool: true,
 			Int:  420,
 		}),
@@ -192,7 +192,7 @@ key:
 		// value.Decode() don't inherit the parent decoder's settings:
 		// https://github.com/go-yaml/yaml/issues/460
 		strict: true,
-		expectedValue: NewUnionB[string](semiComplexStruct{
+		expectedValue: NewUnionAdvanced[string](semiComplexStruct{
 			Bool: true,
 			Int:  420,
 		}),
@@ -200,6 +200,27 @@ key:
 key:
   bool: true
   int: 420`,
+	})
+	runUnionTest(t, "[]string or semiComplexStruct, is []string", unionTest[[]string, semiComplexStruct]{
+		yaml: `
+key:
+  - asdf`,
+		expectedValue: NewUnionSimple[[]string, semiComplexStruct]([]string{"asdf"}),
+	})
+	runUnionTest(t, "[]string or semiComplexStruct, is semiComplexStruct", unionTest[[]string, semiComplexStruct]{
+		yaml: `
+key:
+  bool: true
+  int: 420`,
+		expectedValue: NewUnionAdvanced[[]string](semiComplexStruct{
+			Bool: true,
+			Int:  420,
+		}),
+	})
+	runUnionTest(t, "[]string or semiComplexStruct, is string, error", unionTest[[]string, semiComplexStruct]{
+		yaml:                 `key: asdf`,
+		expectedUnmarshalErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `asdf` into []string",
+		expectedYAML:         `key: null`,
 	})
 }
 
@@ -257,7 +278,7 @@ key:
 	var kv keyValue
 	require.NoError(t, yaml.Unmarshal([]byte(in), &kv))
 	require.Equal(t, keyValue{
-		Key: embeddedType{NewUnionB[string]([]string{
+		Key: embeddedType{NewUnionAdvanced[string]([]string{
 			"asdf",
 		})},
 	}, kv)
@@ -269,7 +290,7 @@ key: qwerty
 	kv = keyValue{}
 	require.NoError(t, yaml.Unmarshal([]byte(in), &kv))
 	require.Equal(t, keyValue{
-		Key: embeddedType{NewUnionA[string, []string]("qwerty")},
+		Key: embeddedType{NewUnionSimple[string, []string]("qwerty")},
 	}, kv)
 }
 

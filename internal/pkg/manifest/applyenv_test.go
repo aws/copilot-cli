@@ -128,7 +128,7 @@ func TestApplyEnv_Int(t *testing.T) {
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
 						HealthCheck: HealthCheckArgsOrString{
-							NewUnionB[string](HTTPHealthCheckArgs{
+							NewUnionAdvanced[string](HTTPHealthCheckArgs{
 								HealthyThreshold: aws.Int64(24),
 							}),
 						},
@@ -139,7 +139,7 @@ func TestApplyEnv_Int(t *testing.T) {
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
 						HealthCheck: HealthCheckArgsOrString{
-							NewUnionB[string](HTTPHealthCheckArgs{
+							NewUnionAdvanced[string](HTTPHealthCheckArgs{
 								HealthyThreshold: aws.Int64(42),
 							}),
 						},
@@ -150,7 +150,7 @@ func TestApplyEnv_Int(t *testing.T) {
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
 						HealthCheck: HealthCheckArgsOrString{
-							NewUnionB[string](HTTPHealthCheckArgs{
+							NewUnionAdvanced[string](HTTPHealthCheckArgs{
 								HealthyThreshold: aws.Int64(42),
 							}),
 						},
@@ -163,7 +163,7 @@ func TestApplyEnv_Int(t *testing.T) {
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
 						HealthCheck: HealthCheckArgsOrString{
-							NewUnionB[string](HTTPHealthCheckArgs{
+							NewUnionAdvanced[string](HTTPHealthCheckArgs{
 								HealthyThreshold: aws.Int64(24),
 							}),
 						},
@@ -174,7 +174,7 @@ func TestApplyEnv_Int(t *testing.T) {
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
 						HealthCheck: HealthCheckArgsOrString{
-							NewUnionB[string](HTTPHealthCheckArgs{
+							NewUnionAdvanced[string](HTTPHealthCheckArgs{
 								HealthyThreshold: aws.Int64(0),
 							}),
 						},
@@ -185,7 +185,7 @@ func TestApplyEnv_Int(t *testing.T) {
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
 						HealthCheck: HealthCheckArgsOrString{
-							NewUnionB[string](HTTPHealthCheckArgs{
+							NewUnionAdvanced[string](HTTPHealthCheckArgs{
 								HealthyThreshold: aws.Int64(0),
 							}),
 						},
@@ -198,7 +198,7 @@ func TestApplyEnv_Int(t *testing.T) {
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
 						HealthCheck: HealthCheckArgsOrString{
-							NewUnionB[string](HTTPHealthCheckArgs{
+							NewUnionAdvanced[string](HTTPHealthCheckArgs{
 								HealthyThreshold: aws.Int64(24),
 							}),
 						},
@@ -209,7 +209,7 @@ func TestApplyEnv_Int(t *testing.T) {
 				RoutingRule: RoutingRuleConfigOrBool{
 					RoutingRuleConfiguration: RoutingRuleConfiguration{
 						HealthCheck: HealthCheckArgsOrString{
-							NewUnionB[string](HTTPHealthCheckArgs{
+							NewUnionAdvanced[string](HTTPHealthCheckArgs{
 								HealthyThreshold: aws.Int64(24),
 							}),
 						},
