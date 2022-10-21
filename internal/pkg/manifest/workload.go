@@ -481,6 +481,11 @@ type ServiceConnectBoolOrArgs struct {
 	ServiceConnectArgs
 }
 
+// ServiceConnectEnabled returns if ServiceConnect is enabled or not.
+func (s *ServiceConnectBoolOrArgs) ServiceConnectEnabled() bool {
+	return aws.BoolValue(s.EnableServiceConnect) || !s.ServiceConnectArgs.isEmpty()
+}
+
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the ServiceConnect
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.

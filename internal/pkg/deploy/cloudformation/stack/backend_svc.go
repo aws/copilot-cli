@@ -143,7 +143,7 @@ func (s *BackendService) Template() (string, error) {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 	var scConfig *template.ServiceConnect
-	if s.manifest.ServiceConnectEnabled() {
+	if s.manifest.Network.Connect.ServiceConnectEnabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()

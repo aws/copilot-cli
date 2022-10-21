@@ -10,9 +10,6 @@ http:
     - name: "*.foobar.com"
   hosted_zone: mockHostedZone1
 
-network:
-  connect: false
-
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
   build: Dockerfile

@@ -43,6 +43,10 @@ count: {{.Count.Value}}       # Number of tasks that should be running in your s
 {{- if not .TaskConfig.IsWindows }}
 exec: true     # Enable running commands in your container.
 {{- end}}
+{{- if .ImageConfig.Port}}
+network:
+  connect: true # Enable Service Connect for in-VPC traffic between services.
+{{- end}}
 
 storage:
 {{- if not .TaskConfig.IsWindows}}

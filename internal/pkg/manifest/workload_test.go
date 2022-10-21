@@ -354,6 +354,43 @@ func TestPlatformArgsOrString_UnmarshalYAML(t *testing.T) {
 	}
 }
 
+func TestServiceConnectBoolOrArgs_ServiceConnectEnabled(t *testing.T) {
+	testCases := map[string]struct {
+		mft *ServiceConnectBoolOrArgs
+
+		wanted bool
+	}{
+		"disabled by default": {
+			mft:    &ServiceConnectBoolOrArgs{},
+			wanted: false,
+		},
+		"set by bool": {
+			mft: &ServiceConnectBoolOrArgs{
+				EnableServiceConnect: aws.Bool(true),
+			},
+			wanted: true,
+		},
+		"set by args": {
+			mft: &ServiceConnectBoolOrArgs{
+				ServiceConnectArgs: ServiceConnectArgs{
+					Alias: aws.String("api"),
+				},
+			},
+			wanted: true,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			enabled := tc.mft.ServiceConnectEnabled()
+
+			// THEN
+			require.Equal(t, tc.wanted, enabled)
+		})
+	}
+}
+
 func TestServiceConnect_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		inContent []byte
