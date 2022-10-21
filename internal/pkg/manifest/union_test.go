@@ -222,6 +222,11 @@ key:
 		expectedUnmarshalErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `asdf` into []string",
 		expectedYAML:         `key: null`,
 	})
+	runUnionTest(t, "string or semiComplexStruct, never instantiated", unionTest[string, semiComplexStruct]{
+		yaml:          `wrongkey: asdf`,
+		expectedValue: Union[string, semiComplexStruct]{},
+		expectedYAML:  `key: null`,
+	})
 }
 
 type keyValue[A, B any] struct {

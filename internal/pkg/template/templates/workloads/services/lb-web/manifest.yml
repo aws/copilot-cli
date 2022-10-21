@@ -15,7 +15,7 @@ http:
   # To match all requests you can use the "/" path.
   path: '{{.RoutingRule.Path}}'
   # You can specify a custom health check path. The default is "/".
-  # healthcheck: '{{.RoutingRule.HealthCheck.A}}'
+  # healthcheck: '{{.RoutingRule.HealthCheck.Simple}}'
 
 # Configuration for your containers and service.
 image:
