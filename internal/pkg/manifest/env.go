@@ -109,7 +109,7 @@ func (mft *EnvironmentConfig) IsPublicLBIngressRestrictedToCDN() bool {
 	return aws.BoolValue(mft.HTTPConfig.Public.DeprecatedSG.DeprecatedIngress.RestrictiveIngress.CDNIngress)
 }
 
-// GetPublicALBSourceIPs returns whether true if source ips exist.
+// GetPublicALBSourceIPs returns list of IPNet.
 func (mft *EnvironmentConfig) GetPublicALBSourceIPs() []IPNet {
 	return mft.HTTPConfig.Public.Ingress.SourceIPs
 }
