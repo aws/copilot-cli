@@ -703,9 +703,6 @@ func (r RoutingRuleConfiguration) validate() error {
 
 // validate returns nil if HTTPHealthCheckArgs is configured correctly.
 func (h HTTPHealthCheckArgs) validate() error {
-	if h.isEmpty() {
-		return nil
-	}
 	return nil
 }
 
