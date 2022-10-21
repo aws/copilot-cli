@@ -365,6 +365,7 @@ type HTTPHealthCheckArgs struct {
 	GracePeriod        *time.Duration `yaml:"grace_period"`
 }
 
+// IsZero returns true if all of h's fields are unset. Implements yaml.IsZeroer.
 func (h *HTTPHealthCheckArgs) IsZero() bool {
 	return h.Path == nil && h.Port == nil && h.SuccessCodes == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil &&
 		h.Interval == nil && h.Timeout == nil && h.GracePeriod == nil
