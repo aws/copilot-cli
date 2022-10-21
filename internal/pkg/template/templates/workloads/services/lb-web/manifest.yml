@@ -40,7 +40,6 @@ exec: true     # Enable running commands in your container.
 {{- end}}
 network:
   connect: true # Enable Service Connect for in-VPC traffic between services.
-
 {{- if not .TaskConfig.IsWindows}}
 
 # storage:

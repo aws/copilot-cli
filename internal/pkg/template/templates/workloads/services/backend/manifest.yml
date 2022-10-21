@@ -47,8 +47,8 @@ exec: true     # Enable running commands in your container.
 network:
   connect: true # Enable Service Connect for in-VPC traffic between services.
 {{- end}}
-
 {{- if not .TaskConfig.IsWindows}}
+
 # storage:
   # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
 {{- end}}
