@@ -532,5 +532,5 @@ func (e *EnvStackConfig) getPublicSSLPolicy() *string {
 }
 
 func (e *EnvStackConfig) getPrivateSSLPolicy() *string {
-	return e.in.Mft.EnvironmentConfig.HTTPConfig.Public.SSLPolicy
+	return e.in.Mft.EnvironmentConfig.HTTPConfig.Private.SSLPolicy
 }
