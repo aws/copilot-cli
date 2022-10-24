@@ -895,9 +895,14 @@ func TestPublicHTTPConfig_IsEmpty(t *testing.T) {
 		"empty": {
 			wanted: true,
 		},
-		"not empty": {
+		"not empty when Certificates are attached": {
 			in: PublicHTTPConfig{
 				Certificates: []string{"mock-cert-1"},
+			},
+		},
+		"not empty when SSL Policy is present": {
+			in: PublicHTTPConfig{
+				SSLPolicy: aws.String("mock-ELB-ELBSecurityPolicy"),
 			},
 		},
 	}
@@ -917,9 +922,14 @@ func TestPrivateHTTPConfig_IsEmpty(t *testing.T) {
 		"empty": {
 			wanted: true,
 		},
-		"not empty": {
+		"not empty when Certificates are attached": {
 			in: privateHTTPConfig{
 				InternalALBSubnets: []string{"mock-subnet-1"},
+			},
+		},
+		"not empty when SSL Policy is present": {
+			in: privateHTTPConfig{
+				SSLPolicy: aws.String("mock-ELB-ELBSecurityPolicy"),
 			},
 		},
 	}

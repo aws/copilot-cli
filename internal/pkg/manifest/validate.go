@@ -701,19 +701,8 @@ func (r RoutingRuleConfiguration) validate() error {
 	return nil
 }
 
-// validate returns nil if HealthCheckArgsOrString is configured correctly.
-func (h HealthCheckArgsOrString) validate() error {
-	if h.IsEmpty() {
-		return nil
-	}
-	return h.HealthCheckArgs.validate()
-}
-
 // validate returns nil if HTTPHealthCheckArgs is configured correctly.
 func (h HTTPHealthCheckArgs) validate() error {
-	if h.isEmpty() {
-		return nil
-	}
 	return nil
 }
 

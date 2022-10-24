@@ -52,7 +52,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							Path: stringP("/"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: stringP("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 						},
 					},
@@ -121,7 +121,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 							Path:            stringP("/"),
 							ProtocolVersion: aws.String("gRPC"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: stringP("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 						},
 					},
@@ -175,13 +175,12 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
 		inContent []byte
 
 		wantedStruct HealthCheckArgsOrString
-		wantedError  error
 	}{
 		"non-args path string": {
 			inContent: []byte(`  healthcheck: /testing`),
 
 			wantedStruct: HealthCheckArgsOrString{
-				HealthCheckPath: aws.String("/testing"),
+				Union: BasicToUnion[string, HTTPHealthCheckArgs]("/testing"),
 			},
 		},
 		"should use custom healthcheck configuration when provided and set default path to nil": {
@@ -192,38 +191,27 @@ func TestNewLoadBalancedWebService_UnmarshalYaml(t *testing.T) {
     interval: 78s
     timeout: 9s`),
 			wantedStruct: HealthCheckArgsOrString{
-				HealthCheckArgs: HTTPHealthCheckArgs{
+				Union: AdvancedToUnion[string](HTTPHealthCheckArgs{
 					Path:               aws.String("/testing"),
 					HealthyThreshold:   aws.Int64(5),
 					UnhealthyThreshold: aws.Int64(6),
 					Interval:           durationp(78 * time.Second),
 					Timeout:            durationp(9 * time.Second),
-				},
-				HealthCheckPath: nil,
+				}),
 			},
-		},
-		"error if unmarshalable": {
-			inContent: []byte(`  healthcheck:
-    bath: to ruin
-    unwealthy_threshold: berry`),
-			wantedError: errUnmarshalHealthCheckArgs,
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			rr := newDefaultHTTPLoadBalancedWebService().RoutingRule
 			err := yaml.Unmarshal(tc.inContent, &rr)
-			if tc.wantedError != nil {
-				require.EqualError(t, err, tc.wantedError.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedStruct.HealthCheckPath, rr.HealthCheck.HealthCheckPath)
-				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Path, rr.HealthCheck.HealthCheckArgs.Path)
-				require.Equal(t, tc.wantedStruct.HealthCheckArgs.HealthyThreshold, rr.HealthCheck.HealthCheckArgs.HealthyThreshold)
-				require.Equal(t, tc.wantedStruct.HealthCheckArgs.UnhealthyThreshold, rr.HealthCheck.HealthCheckArgs.UnhealthyThreshold)
-				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Interval, rr.HealthCheck.HealthCheckArgs.Interval)
-				require.Equal(t, tc.wantedStruct.HealthCheckArgs.Timeout, rr.HealthCheck.HealthCheckArgs.Timeout)
-			}
+			require.NoError(t, err)
+			require.Equal(t, tc.wantedStruct.Advanced, rr.HealthCheck.Advanced)
+			require.Equal(t, tc.wantedStruct.Advanced.Path, rr.HealthCheck.Advanced.Path)
+			require.Equal(t, tc.wantedStruct.Advanced.HealthyThreshold, rr.HealthCheck.Advanced.HealthyThreshold)
+			require.Equal(t, tc.wantedStruct.Advanced.UnhealthyThreshold, rr.HealthCheck.Advanced.UnhealthyThreshold)
+			require.Equal(t, tc.wantedStruct.Advanced.Interval, rr.HealthCheck.Advanced.Interval)
+			require.Equal(t, tc.wantedStruct.Advanced.Timeout, rr.HealthCheck.Advanced.Timeout)
 		})
 	}
 }
@@ -267,7 +255,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							Path: aws.String("/awards/*"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 						},
 					},
@@ -319,7 +307,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							Path: aws.String("/awards/*"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 						},
 					},
@@ -371,7 +359,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							Path: aws.String("/awards/*"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 						},
 					},
@@ -525,7 +513,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							Path: aws.String("/awards/*"),
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("/"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 							},
 							TargetContainer: aws.String("xray"),
 						},
@@ -1175,7 +1163,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 							},
 							AllowedSourceIps: []IPNet{mockIPNet1},
 						},
@@ -1202,7 +1190,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 							},
 							AllowedSourceIps: []IPNet{mockIPNet2},
 						},
@@ -1220,7 +1208,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 							},
 							AllowedSourceIps: []IPNet{mockIPNet1, mockIPNet2},
 						},
@@ -1231,7 +1219,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
 								HealthCheck: HealthCheckArgsOrString{
-									HealthCheckPath: aws.String("another-path"),
+									Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 								},
 							},
 						},
@@ -1249,7 +1237,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("another-path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 							},
 							AllowedSourceIps: []IPNet{mockIPNet1, mockIPNet2},
 						},
@@ -1267,7 +1255,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
 							},
 							AllowedSourceIps: []IPNet{mockIPNet1, mockIPNet2},
 						},
@@ -1278,7 +1266,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						RoutingRule: RoutingRuleConfigOrBool{
 							RoutingRuleConfiguration: RoutingRuleConfiguration{
 								HealthCheck: HealthCheckArgsOrString{
-									HealthCheckPath: aws.String("another-path"),
+									Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 								},
 								AllowedSourceIps: []IPNet{},
 							},
@@ -1297,7 +1285,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					RoutingRule: RoutingRuleConfigOrBool{
 						RoutingRuleConfiguration: RoutingRuleConfiguration{
 							HealthCheck: HealthCheckArgsOrString{
-								HealthCheckPath: aws.String("another-path"),
+								Union: BasicToUnion[string, HTTPHealthCheckArgs]("another-path"),
 							},
 							AllowedSourceIps: []IPNet{},
 						},
