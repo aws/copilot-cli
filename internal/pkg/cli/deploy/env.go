@@ -394,10 +394,10 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		return nil, err
 	}
 	cidrPrefixListIDs, err := d.cidrPrefixLists(in)
-	publicALBSourceIPs := d.publicALBSourceIPList(in)
 	if err != nil {
 		return nil, err
 	}
+	publicALBSourceIPs := d.publicALBSourceIPList(in)
 	return &deploy.CreateEnvironmentInput{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
