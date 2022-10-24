@@ -6,8 +6,10 @@
 package stack_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -311,7 +313,7 @@ network:
 			wantedObj["Metadata"].(map[string]any)["Manifest"] = strings.TrimSpace(wantedObj["Metadata"].(map[string]any)["Manifest"].(string))
 
 			// THEN
-			require.Equal(t, wantedObj, actualObj)
+			compareStackTemplate(t, actualObj, wantedObj)
 		})
 	}
 }
@@ -430,10 +432,37 @@ observability:
 			newObj := make(map[any]any)
 			require.NoError(t, yaml.Unmarshal([]byte(newTmpl), newObj))
 
-			delete(originalObj, "Metadata")
-			delete(newObj, "Metadata")
+			originalObj["Metadata"].(map[string]any)["Manifest"] = "any metadata because manifest could be different"
+			newObj["Metadata"].(map[string]any)["Manifest"] = "any metadata because manifest could be different"
 
-			require.Equal(t, originalObj, newObj)
+			compareStackTemplate(t, newObj, originalObj)
 		})
 	}
+}
+
+func compareStackTemplate(t *testing.T, actualObj, wantedObj map[any]any) {
+	actual, wanted := reflect.ValueOf(actualObj), reflect.ValueOf(wantedObj)
+	compareStackTemplateSection(t, reflect.ValueOf("Description"), actual, wanted)
+	compareStackTemplateSection(t, reflect.ValueOf("Metadata"), actual, wanted)
+	compareStackTemplateSection(t, reflect.ValueOf("Parameters"), actual, wanted)
+	compareStackTemplateSection(t, reflect.ValueOf("Conditions"), actual, wanted)
+	compareStackTemplateSection(t, reflect.ValueOf("Outputs"), actual, wanted)
+	// Compare each resource.
+	actualResources, wantedResources := actual.MapIndex(reflect.ValueOf("Resources")).Elem(), wanted.MapIndex(reflect.ValueOf("Resources")).Elem()
+	actualResourceNames, wantedResourceNames := actualResources.MapKeys(), wantedResources.MapKeys()
+	for _, key := range actualResourceNames {
+		compareStackTemplateSection(t, key, actualResources, wantedResources)
+	}
+	for _, key := range wantedResourceNames {
+		compareStackTemplateSection(t, key, actualResources, wantedResources)
+	}
+}
+
+func compareStackTemplateSection(t *testing.T, key, actual, wanted reflect.Value) {
+	require.True(t, actual.MapIndex(key).IsValid(),
+		fmt.Sprintf("%q does not exist in the actual template", key.Interface()))
+	require.True(t, wanted.MapIndex(key).IsValid(),
+		fmt.Sprintf("%q does not exist in the expected template", key.Interface()))
+	require.Equal(t, actual.MapIndex(key).Interface(), wanted.MapIndex(key).Interface(),
+		fmt.Sprintf("Comparing %q", key.Interface()))
 }
