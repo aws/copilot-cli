@@ -45,7 +45,7 @@ exec: true     # Enable running commands in your container.
 {{- end}}
 {{- if .ImageConfig.Port}}
 network:
-  connect: true # Enable Service Connect for in-environment traffic between services.
+  connect: true # Enable Service Connect for intra-environment traffic between services.
 {{- end}}
 {{- if not .TaskConfig.IsWindows}}
 
