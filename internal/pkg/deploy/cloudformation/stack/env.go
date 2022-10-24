@@ -406,6 +406,7 @@ func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
 		ImportedCertARNs:   e.importPublicCertARNs(),
 		ELBAccessLogs:      elbAccessLogsConfig,
 		PublicALBSourceIPs: e.in.PublicALBSourceIPs,
+		SSLPolicy:         e.getPublicSSLPolicy(),
 	}, nil
 }
 
@@ -413,6 +414,7 @@ func (e *EnvStackConfig) privateHTTPConfig() template.HTTPConfig {
 	return template.HTTPConfig{
 		ImportedCertARNs: e.importPrivateCertARNs(),
 		CustomALBSubnets: e.internalALBSubnets(),
+		SSLPolicy:        e.getPrivateSSLPolicy(),
 	}
 }
 
@@ -524,4 +526,12 @@ func (e *EnvStackConfig) internalALBSubnets() []string {
 	}
 	// Fallthrough to SSM config.
 	return e.in.InternalALBSubnets
+}
+
+func (e *EnvStackConfig) getPublicSSLPolicy() *string {
+	return e.in.Mft.EnvironmentConfig.HTTPConfig.Public.SSLPolicy
+}
+
+func (e *EnvStackConfig) getPrivateSSLPolicy() *string {
+	return e.in.Mft.EnvironmentConfig.HTTPConfig.Private.SSLPolicy
 }

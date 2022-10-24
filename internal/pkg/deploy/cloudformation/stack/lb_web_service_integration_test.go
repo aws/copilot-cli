@@ -30,7 +30,7 @@ const (
 	svcManifestPath = "svc-manifest.yml"
 )
 
-func TestLoadBalancedWebService_Template(t *testing.T) {
+func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 	testCases := map[string]struct {
 		envName       string
 		svcStackPath  string

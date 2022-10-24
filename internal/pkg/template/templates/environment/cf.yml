@@ -370,6 +370,9 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
+{{- if .PublicHTTPConfig.SSLPolicy }}
+      SSLPolicy: {{ .PublicHTTPConfig.SSLPolicy }}
+{{- end }} 
 {{- range $ind, $arn := .PublicHTTPConfig.ImportedCertARNs}}
 {{- if gt $ind 0}}
   HTTPSImportCertificate{{inc $ind}}:
@@ -446,6 +449,9 @@ Resources:
       LoadBalancerArn: !Ref InternalLoadBalancer
       Port: 443
       Protocol: HTTPS
+{{- if .PrivateHTTPConfig.SSLPolicy }}
+      SSLPolicy: {{ .PrivateHTTPConfig.SSLPolicy }}
+{{- end}}      
 {{- range $ind, $arn := .PrivateHTTPConfig.ImportedCertARNs}}
 {{- if gt $ind 0}}
   InternalHTTPSImportCertificate{{inc $ind}}:

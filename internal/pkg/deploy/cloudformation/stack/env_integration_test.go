@@ -157,7 +157,7 @@ network:
 
 			wantedFileName: "template-with-custom-security-group.yml",
 		},
-		"generate template with embedded manifest file with empty security groups rules added by the customer": {
+		"generate template with embedded manifest file with imported certificates and SSL Policy and empty security groups rules added by the customer": {
 			input: func() *deploy.CreateEnvironmentInput {
 				rawMft := `name: test
 type: Environment
@@ -167,6 +167,7 @@ http:
     certificates:
       - cert-1
       - cert-2
+    ssl_policy: ELBSecurityPolicy-FS-1-1-2019-08
 observability:
   container_insights: true # Enable container insights.
 security_group:
@@ -194,7 +195,7 @@ security_group:
 				}
 			}(),
 
-			wantedFileName: "template-with-custom-empty-security-group.yml",
+			wantedFileName: "template-with-imported-certs-sslpolicy-custom-empty-security-group.yml",
 		},
 		"generate template with custom resources": {
 			input: func() *deploy.CreateEnvironmentInput {

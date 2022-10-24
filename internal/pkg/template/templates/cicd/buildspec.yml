@@ -49,7 +49,7 @@ phases:
       # Check if the `svc package` commanded exited with a non-zero status. If so, echo error msg and exit.
       - >
         for env in $pl_envs; do
-          tag=$(sed 's/:/-/g' <<<"${CODEBUILD_BUILD_ID##*:}-${env}" | rev | cut -c 1-128 | rev)
+          tag=$(echo ${CODEBUILD_BUILD_ID##*:}-$env | sed 's/:/-/g' | rev | cut -c 1-128 | rev)
           for svc in $svcs; do
           ./copilot-linux svc package -n $svc -e $env --output-dir './infrastructure' --tag $tag --upload-assets;
           if [ $? -ne 0 ]; then

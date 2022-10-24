@@ -136,6 +136,7 @@ type HTTPConfig struct {
 	CustomALBSubnets   []string
 	ELBAccessLogs      *ELBAccessLogs
 	PublicALBSourceIPs []string
+	SSLPolicy         *string
 }
 
 // ELBAccessLogs represents configuration for ELB access logs S3 bucket.

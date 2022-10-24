@@ -342,7 +342,7 @@ Outputs:
 		mft.RoutingRule = manifest.RoutingRuleConfiguration{
 			Path: aws.String("/albPath"),
 			HealthCheck: manifest.HealthCheckArgsOrString{
-				HealthCheckArgs: manifest.HTTPHealthCheckArgs{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
 					Path:               aws.String("/healthz"),
 					Port:               aws.Int(4200),
 					SuccessCodes:       aws.String("418"),
@@ -351,7 +351,7 @@ Outputs:
 					Timeout:            (*time.Duration)(aws.Int64(int64(62 * time.Second))),
 					Interval:           (*time.Duration)(aws.Int64(int64(61 * time.Second))),
 					GracePeriod:        (*time.Duration)(aws.Int64(int64(1 * time.Minute))),
-				},
+				}),
 			},
 			Stickiness:          aws.Bool(true),
 			DeregistrationDelay: (*time.Duration)(aws.Int64(int64(59 * time.Second))),

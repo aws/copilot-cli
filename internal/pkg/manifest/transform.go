@@ -26,7 +26,7 @@ var defaultTransformers = []mergo.Transformers{
 	serviceConnectTransformer{},
 	placementArgOrStringTransformer{},
 	subnetListOrArgsTransformer{},
-	healthCheckArgsOrStringTransformer{},
+	unionTransformer[string, HTTPHealthCheckArgs]{},
 	countTransformer{},
 	advancedCountTransformer{},
 	scalingConfigOrTTransformer[Percentage]{},
@@ -291,23 +291,24 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 	}
 }
 
-type healthCheckArgsOrStringTransformer struct{}
+type unionTransformer[Basic, Advanced any] struct{}
 
-// Transformer returns custom merge logic for HealthCheckArgsOrString's fields.
-func (t healthCheckArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(HealthCheckArgsOrString{}) {
+func (t unionTransformer[Basic, Advanced]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Union[Basic, Advanced]{}) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(HealthCheckArgsOrString), src.Interface().(HealthCheckArgsOrString)
+		dstStruct, srcStruct := dst.Interface().(Union[Basic, Advanced]), src.Interface().(Union[Basic, Advanced])
 
-		if srcStruct.HealthCheckPath != nil {
-			dstStruct.HealthCheckArgs = HTTPHealthCheckArgs{}
-		}
-
-		if !srcStruct.HealthCheckArgs.isEmpty() {
-			dstStruct.HealthCheckPath = nil
+		if srcStruct.IsBasic() {
+			var zero Advanced
+			dstStruct.isAdvanced, dstStruct.Advanced = false, zero
+			dstStruct.isBasic = true
+		} else if srcStruct.IsAdvanced() {
+			var zero Basic
+			dstStruct.isBasic, dstStruct.Basic = false, zero
+			dstStruct.isAdvanced = true
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

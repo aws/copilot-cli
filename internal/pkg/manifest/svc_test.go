@@ -111,11 +111,9 @@ environments:
 										},
 									},
 								},
-								Path:            aws.String("svc"),
-								TargetContainer: aws.String("frontend"),
-								HealthCheck: HealthCheckArgsOrString{
-									HealthCheckPath: nil,
-								},
+								Path:             aws.String("svc"),
+								TargetContainer:  aws.String("frontend"),
+								HealthCheck:      HealthCheckArgsOrString{},
 								AllowedSourceIps: []IPNet{IPNet("10.1.0.0/24"), IPNet("10.1.1.0/24")},
 							},
 						},
@@ -770,15 +768,13 @@ func TestHealthCheckArgsOrString_IsEmpty(t *testing.T) {
 		},
 		"should return false if a path is set via the basic configuration": {
 			hc: HealthCheckArgsOrString{
-				HealthCheckPath: aws.String("/"),
+				Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 			},
 			wanted: false,
 		},
 		"should return false if a value is set via the advanced configuration": {
 			hc: HealthCheckArgsOrString{
-				HealthCheckArgs: HTTPHealthCheckArgs{
-					Path: aws.String("/"),
-				},
+				Union: BasicToUnion[string, HTTPHealthCheckArgs]("/"),
 			},
 			wanted: false,
 		},
@@ -786,7 +782,7 @@ func TestHealthCheckArgsOrString_IsEmpty(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, tc.hc.IsEmpty())
+			require.Equal(t, tc.wanted, tc.hc.IsZero())
 		})
 	}
 }
