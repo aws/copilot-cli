@@ -204,7 +204,7 @@ func (b BackendService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate HTTP load balancer target: %w", err)
 	}
-	if b.ServiceConnectEnabled() {
+	if b.Network.Connect.Enabled() {
 		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
 			return fmt.Errorf(`cannot enable "network.connect" when no port exposed`)
 		}

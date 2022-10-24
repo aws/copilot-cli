@@ -43,16 +43,14 @@ count: {{.Count.Value}}       # Number of tasks that should be running in your s
 {{- if not .TaskConfig.IsWindows }}
 exec: true     # Enable running commands in your container.
 {{- end}}
-  
+{{- if .ImageConfig.Port}}
+network:
+  connect: true # Enable Service Connect for intra-environment traffic between services.
+{{- end}}
 {{- if not .TaskConfig.IsWindows}}
 
 # storage:
   # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
-{{- end}}
-
-storage:
-{{- if not .TaskConfig.IsWindows}}
-  readonly_fs: true       # Limit to read-only access to mounted root filesystems by default.
 {{- end}}
 
 # Optional fields for more advanced use-cases.

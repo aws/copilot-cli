@@ -192,7 +192,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		httpRedirect = aws.BoolValue(s.manifest.RoutingRule.RedirectToHTTPS)
 	}
 	var scConfig *template.ServiceConnect
-	if s.manifest.ServiceConnectEnabled() {
+	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
