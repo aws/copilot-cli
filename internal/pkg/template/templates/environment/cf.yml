@@ -111,7 +111,7 @@ Resources:
     Properties:
       GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if .PublicHTTPConfig.CIDRPrefixListIDs}}
+        {{- if .PublicHTTPConfig.HasCustomIngress}}
         {{- range $id := .PublicHTTPConfig.CIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 80
@@ -119,6 +119,13 @@ Resources:
           IpProtocol: tcp
           ToPort: 80
         {{- end}}
+        {{- range $cidr := .PublicHTTPConfig.PublicALBSourceIPs }}
+        - CidrIp: {{$cidr}}
+          Description: Allow ingress from source IP {{$cidr}} on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        {{- end }}
         {{- else}}
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 80
@@ -142,7 +149,7 @@ Resources:
     Properties:
       GroupDescription: HTTPS access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if .PublicHTTPConfig.CIDRPrefixListIDs}}
+        {{- if .PublicHTTPConfig.HasCustomIngress}}
         {{- range $id := .PublicHTTPConfig.CIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 443
@@ -150,6 +157,13 @@ Resources:
           IpProtocol: tcp
           ToPort: 443
         {{- end}}
+        {{- range $cidr := .PublicHTTPConfig.PublicALBSourceIPs }}
+        - CidrIp: {{$cidr}}
+          Description: Allow ingress from source IP {{$cidr}} on port 443
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        {{- end }}
         {{- else}}
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 443
