@@ -42,6 +42,7 @@ const (
 	envParamInternalALBWorkloadsKey        = "InternalALBWorkloads"
 	envParamEFSWorkloadsKey                = "EFSWorkloads"
 	envParamNATWorkloadsKey                = "NATWorkloads"
+	envParamAppRunnerPrivateWorkloadsKey   = "AppRunnerPrivateWorkloads"
 	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
 	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
 	EnvParamServiceDiscoveryEndpoint       = "ServiceDiscoveryEndpoint"
@@ -192,6 +193,10 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 		},
 		{
 			ParameterKey:   aws.String(envParamNATWorkloadsKey),
+			ParameterValue: aws.String(""),
+		},
+		{
+			ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 			ParameterValue: aws.String(""),
 		},
 	}

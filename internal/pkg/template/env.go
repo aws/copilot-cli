@@ -18,35 +18,38 @@ const (
 
 // Available env-controller managed feature names.
 const (
-	ALBFeatureName         = "ALBWorkloads"
-	EFSFeatureName         = "EFSWorkloads"
-	NATFeatureName         = "NATWorkloads"
-	InternalALBFeatureName = "InternalALBWorkloads"
-	AliasesFeatureName     = "Aliases"
+	ALBFeatureName                     = "ALBWorkloads"
+	EFSFeatureName                     = "EFSWorkloads"
+	NATFeatureName                     = "NATWorkloads"
+	InternalALBFeatureName             = "InternalALBWorkloads"
+	AliasesFeatureName                 = "Aliases"
+	AppRunnerPrivateServiceFeatureName = "AppRunnerPrivateWorkloads"
 )
 
 // LastForceDeployIDOutputName is the logical ID of the deployment controller output.
 const LastForceDeployIDOutputName = "LastForceDeployID"
 
 var friendlyEnvFeatureName = map[string]string{
-	ALBFeatureName:         "ALB",
-	EFSFeatureName:         "EFS",
-	NATFeatureName:         "NAT Gateway",
-	InternalALBFeatureName: "Internal ALB",
-	AliasesFeatureName:     "Aliases",
+	ALBFeatureName:                     "ALB",
+	EFSFeatureName:                     "EFS",
+	NATFeatureName:                     "NAT Gateway",
+	InternalALBFeatureName:             "Internal ALB",
+	AliasesFeatureName:                 "Aliases",
+	AppRunnerPrivateServiceFeatureName: "App Runner Private Services",
 }
 
 var leastVersionForFeature = map[string]string{
-	ALBFeatureName:         "v1.0.0",
-	EFSFeatureName:         "v1.3.0",
-	NATFeatureName:         "v1.3.0",
-	InternalALBFeatureName: "v1.10.0",
-	AliasesFeatureName:     "v1.4.0",
+	ALBFeatureName:                     "v1.0.0",
+	EFSFeatureName:                     "v1.3.0",
+	NATFeatureName:                     "v1.3.0",
+	InternalALBFeatureName:             "v1.10.0",
+	AliasesFeatureName:                 "v1.4.0",
+	AppRunnerPrivateServiceFeatureName: "v1.23.0",
 }
 
 // AvailableEnvFeatures returns a list of the latest available feature, named after their corresponding parameter names.
 func AvailableEnvFeatures() []string {
-	return []string{ALBFeatureName, EFSFeatureName, NATFeatureName, InternalALBFeatureName, AliasesFeatureName}
+	return []string{ALBFeatureName, EFSFeatureName, NATFeatureName, InternalALBFeatureName, AliasesFeatureName, AppRunnerPrivateServiceFeatureName}
 }
 
 // FriendlyEnvFeatureName returns a user-friendly feature name given a env-controller managed parameter name.
@@ -78,6 +81,7 @@ var (
 		"bootstrap-resources",
 		"elb-access-logs",
 		"mappings-regional-configs",
+		"ar-vpc-connector",
 	}
 )
 

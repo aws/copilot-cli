@@ -22,6 +22,8 @@ Parameters:
     Type: String
   NATWorkloads:
     Type: String
+  AppRunnerPrivateWorkloads:
+    Type: String
   ToolsAccountPrincipalARN:
     Type: String
   AppDNSName:
@@ -55,6 +57,8 @@ Conditions:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
+  CreateAppRunnerVPCEndpoint:
+    !Not [!Equals [ !Ref AppRunnerPrivateWorkloads, ""]]
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
@@ -1041,6 +1045,42 @@ Resources:
                   - logs:DescribeLogGroups
                   - logs:DescribeLogStreams
                 Resource: "*"
+  AppRunnerVpcEndpointSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group to services in this environment talk to App Runner private services'
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateAppRunnerVPCEndpoint
+    Properties:
+      GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, AppRunnerVpcEndpointSecurityGroup]]
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-app-runner-vpc-endpoint'
+  
+  AppRunnerVpcEndpointSecurityGroupIngressFromEnvironment:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateAppRunnerVPCEndpoint
+    Properties:
+      Description: Ingress from services in the environment
+      GroupId: !Ref AppRunnerVpcEndpointSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+  
+  AppRunnerVpcEndpoint:
+    Metadata:
+      'aws:copilot:description': 'VPC Endpoint in private subnets to App Runner for private services'
+    Type: AWS::EC2::VPCEndpoint
+    Condition: CreateAppRunnerVPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC
+      SecurityGroupIds:
+        - !Ref AppRunnerVpcEndpointSecurityGroup
+      # ServiceName: !Sub 'com.amazonaws.${AWS::Region}.apprunner'
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.apprunner.requests.beta" # TODO switch to non-beta on release
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -1172,7 +1212,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-SubDomain
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases},${AppRunnerPrivateWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
@@ -1186,3 +1226,10 @@ Outputs:
   LastForceDeployID:
     Value: ""
     Description: Optionally force the template to update when no immediate resource change is present.
+  AppRunnerVpcEndpointId:
+    Condition: CreateAppRunnerVPCEndpoint
+    Value: !Ref AppRunnerVpcEndpoint
+    Description: VPC Endpoint to App Runner for private services
+    Export:
+      Name: !Sub ${AWS::StackName}-AppRunnerVpcEndpointId
+
