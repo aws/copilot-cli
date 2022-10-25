@@ -621,6 +621,8 @@ Resources:
         - CapacityProvider: FARGATE
           Weight: 0
           Base: 5
+      ServiceConnectConfiguration:
+        Enabled: False
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED

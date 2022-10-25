@@ -652,7 +652,6 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 					EnvVersion:               "v1.42.0",
 				},
 			})
-			serializer.SCFeatureFlag = true
 			require.NoError(t, err)
 
 			// mock parser for lambda functions
