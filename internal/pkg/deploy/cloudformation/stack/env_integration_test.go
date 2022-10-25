@@ -432,8 +432,9 @@ observability:
 			newObj := make(map[any]any)
 			require.NoError(t, yaml.Unmarshal([]byte(newTmpl), newObj))
 
-			originalObj["Metadata"].(map[string]any)["Manifest"] = "any metadata because manifest could be different"
-			newObj["Metadata"].(map[string]any)["Manifest"] = "any metadata because manifest could be different"
+			// Delete because manifest could be different.
+			delete(originalObj["Metadata"].(map[string]any), "Manifest")
+			delete(newObj["Metadata"].(map[string]any), "Manifest")
 
 			compareStackTemplate(t, newObj, originalObj)
 		})
