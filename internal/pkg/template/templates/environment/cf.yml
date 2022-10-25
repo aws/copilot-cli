@@ -111,7 +111,7 @@ Resources:
     Properties:
       GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if or .PublicHTTPConfig.CIDRPrefixListIDs .PublicHTTPConfig.PublicALBSourceIPs}}
+        {{- if .PublicHTTPConfig.HasCustomIngress}}
         {{- range $id := .PublicHTTPConfig.CIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 80
@@ -149,7 +149,7 @@ Resources:
     Properties:
       GroupDescription: HTTPS access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if or .PublicHTTPConfig.CIDRPrefixListIDs .PublicHTTPConfig.PublicALBSourceIPs}}
+        {{- if .PublicHTTPConfig.HasCustomIngress}}
         {{- range $id := .PublicHTTPConfig.CIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 443

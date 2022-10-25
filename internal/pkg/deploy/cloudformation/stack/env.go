@@ -396,25 +396,30 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 	}
 }
 
-func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
+func (e *EnvStackConfig) publicHTTPConfig() (template.PublicHTTPConfig, error) {
 	elbAccessLogsConfig, err := convertELBAccessLogsConfig(e.in.Mft)
 	if err != nil {
-		return template.HTTPConfig{}, err
+		return template.PublicHTTPConfig{}, err
 	}
-	return template.HTTPConfig{
-		CIDRPrefixListIDs:  e.in.CIDRPrefixListIDs,
-		ImportedCertARNs:   e.importPublicCertARNs(),
-		ELBAccessLogs:      elbAccessLogsConfig,
+
+	return template.PublicHTTPConfig{
+		HTTPConfig: template.HTTPConfig{
+			ImportedCertARNs: e.importPublicCertARNs(),
+			SSLPolicy:        e.getPublicSSLPolicy(),
+		},
 		PublicALBSourceIPs: e.in.PublicALBSourceIPs,
-		SSLPolicy:         e.getPublicSSLPolicy(),
+		CIDRPrefixListIDs:  e.in.CIDRPrefixListIDs,
+		ELBAccessLogs:      elbAccessLogsConfig,
 	}, nil
 }
 
-func (e *EnvStackConfig) privateHTTPConfig() template.HTTPConfig {
-	return template.HTTPConfig{
-		ImportedCertARNs: e.importPrivateCertARNs(),
+func (e *EnvStackConfig) privateHTTPConfig() template.PrivateHTTPConfig {
+	return template.PrivateHTTPConfig{
+		HTTPConfig: template.HTTPConfig{
+			ImportedCertARNs: e.importPrivateCertARNs(),
+			SSLPolicy:        e.getPrivateSSLPolicy(),
+		},
 		CustomALBSubnets: e.internalALBSubnets(),
-		SSLPolicy:        e.getPrivateSSLPolicy(),
 	}
 }
 

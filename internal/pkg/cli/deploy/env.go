@@ -293,15 +293,15 @@ func (d *envDeployer) cidrPrefixLists(in *DeployEnvironmentInput) ([]string, err
 	return cidrPrefixListIDs, nil
 }
 
-func (d *envDeployer) publicALBSourceIPList(in *DeployEnvironmentInput) []string {
+func (d *envDeployer) publicALBSourceIPs(in *DeployEnvironmentInput) []string {
 	if in.Manifest == nil || len(in.Manifest.GetPublicALBSourceIPs()) == 0 {
 		return nil
 	}
-	var publicALBSourceIPList []string
-	for _, sourceIP := range in.Manifest.GetPublicALBSourceIPs() {
-		publicALBSourceIPList = append(publicALBSourceIPList, string(sourceIP))
+	ips := make([]string, len(in.Manifest.GetPublicALBSourceIPs()))
+	for i, sourceIP := range in.Manifest.GetPublicALBSourceIPs() {
+		ips[i] = string(sourceIP)
 	}
-	return publicALBSourceIPList
+	return ips
 }
 
 func (d *envDeployer) cfManagedPrefixListID() (string, error) {
@@ -397,7 +397,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 	if err != nil {
 		return nil, err
 	}
-	publicALBSourceIPs := d.publicALBSourceIPList(in)
+
 	return &deploy.CreateEnvironmentInput{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
@@ -410,7 +410,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
 		CIDRPrefixListIDs:    cidrPrefixListIDs,
-		PublicALBSourceIPs:   publicALBSourceIPs,
+		PublicALBSourceIPs:   d.publicALBSourceIPs(in),
 		Mft:                  in.Manifest,
 		ForceUpdate:          in.ForceNewUpdate,
 		RawMft:               in.RawManifest,
