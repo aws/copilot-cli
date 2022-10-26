@@ -26,6 +26,7 @@ func TestTemplate_ParseEnv(t *testing.T) {
 				"templates/environment/partials/bootstrap-resources.yml":       []byte("bootstrap"),
 				"templates/environment/partials/elb-access-logs.yml":           []byte("elb-access-logs"),
 				"templates/environment/partials/mappings-regional-configs.yml": []byte("mappings-regional-configs"),
+				"templates/environment/partials/ar-vpc-connector.yml":          []byte("ar-vpc-connector"),
 			},
 		},
 	}

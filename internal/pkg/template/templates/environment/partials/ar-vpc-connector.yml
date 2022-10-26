@@ -43,6 +43,3 @@ AppRunnerVpcEndpoint:
       {{- range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}
       - !Ref PrivateSubnet{{inc $ind}}
       {{- end}}
-    Tags:
-      - Key: Name
-        Value: !Sub 'copilot-${AppName}-${EnvironmentName}-app-runner-vpc-endpoint'
