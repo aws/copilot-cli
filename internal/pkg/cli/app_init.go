@@ -6,8 +6,9 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"os"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -237,10 +238,11 @@ func (o *initAppOpts) validateAppName(name string) error {
 		if errors.As(err, &noSuchAppErr) {
 			roleName := fmt.Sprintf("%s-adminrole", name)
 			tags, err := o.iamRoleManager.ListRoleTags(roleName)
+			// return nil when both adminrole and application does not exists then it is a valid app name
 			if err != nil {
 				return nil
 			}
-			if _, hasTag := tags[deploy.AppTagKey]; hasTag {
+			if tags != nil {
 				return fmt.Errorf("application named %s already exists in another region", name)
 			}
 			return nil
