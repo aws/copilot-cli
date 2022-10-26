@@ -70,6 +70,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	}
 
 	identity := identity.New(sess)
+	iam := iam.New(sess)
 	return &initAppOpts{
 		initAppVars:      vars,
 		identity:         identity,
@@ -80,8 +81,8 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		cfn:              cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 		prompt:           prompt.New(),
 		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
-		iam:              iam.New(sess),
-		iamRoleManager:   iam.New(sess),
+		iam:              iam,
+		iamRoleManager:   iam,
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
