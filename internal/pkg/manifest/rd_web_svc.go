@@ -86,10 +86,12 @@ type RequestDrivenWebServiceHttpConfig struct {
 	Private                  Union[bool, VPCEndpoint] `yaml:"private"`
 }
 
+// VPCEndpoint is used to configure a pre-existing VPC endpoint.
 type VPCEndpoint struct {
 	Endpoint *string `yaml:"endpoint"`
 }
 
+// IsZero implements yaml.IsZeroer.
 func (v VPCEndpoint) IsZero() bool {
 	return v.Endpoint == nil
 }

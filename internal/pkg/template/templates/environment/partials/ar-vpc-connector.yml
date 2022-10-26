@@ -1,6 +1,6 @@
 AppRunnerVpcEndpointSecurityGroup:
   Metadata:
-    'aws:copilot:description': 'A security group to services in this environment talk to App Runner private services'
+    'aws:copilot:description': 'A security group for App Runner private services'
   Type: AWS::EC2::SecurityGroup
   Condition: CreateAppRunnerVPCEndpoint
   Properties:
@@ -22,10 +22,6 @@ AppRunnerVpcEndpointSecurityGroupIngressFromEnvironment:
     GroupId: !Ref AppRunnerVpcEndpointSecurityGroup
     IpProtocol: -1
     SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-
-# TODO should we remove condition on security group, so that it's always created?
-# TODO does ingress from another app runner private service work? It comes through it's VPC connector.
-# re: above: maybe need to add a IngressRule to AppRunnerVpcEndpointSecurityGroup in vpc-connector.yml to enable connection
 
 AppRunnerVpcEndpoint:
   Metadata:
