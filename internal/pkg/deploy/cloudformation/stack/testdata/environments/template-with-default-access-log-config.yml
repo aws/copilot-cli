@@ -1095,15 +1095,15 @@ Resources:
       PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
   AppRunnerVpcEndpointSecurityGroup:
     Metadata:
-      'aws:copilot:description': 'A security group to services in this environment talk to App Runner private services'
+      'aws:copilot:description': 'A security group for App Runner private services'
     Type: AWS::EC2::SecurityGroup
     Condition: CreateAppRunnerVPCEndpoint
     Properties:
-      GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, AppRunnerVpcEndpointSecurityGroup]]
+      GroupDescription: demo-test-AppRunnerVpcEndpointSecurityGroup
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${AppName}-${EnvironmentName}-app-runner-vpc-endpoint'
+          Value: copilot-demo-test-app-runner-vpc-endpoint
   
   AppRunnerVpcEndpointSecurityGroupIngressFromEnvironment:
     Type: AWS::EC2::SecurityGroupIngress
@@ -1116,7 +1116,7 @@ Resources:
   
   AppRunnerVpcEndpoint:
     Metadata:
-      'aws:copilot:description': 'VPC Endpoint in private subnets to App Runner for private services'
+      'aws:copilot:description': 'VPC Endpoint to connect environment to App Runner for private services'
     Type: AWS::EC2::VPCEndpoint
     Condition: CreateAppRunnerVPCEndpoint
     Properties:
