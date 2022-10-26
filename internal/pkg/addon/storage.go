@@ -15,11 +15,19 @@ import (
 )
 
 const (
-	dynamoDbTemplatePath = "addons/ddb/cf.yml"
-	s3TemplatePath       = "addons/s3/cf.yml"
-	rdsTemplatePath      = "addons/aurora/cf.yml"
-	rdsRDWSTemplatePath  = "addons/aurora/rdws/cf.yml"
-	rdsRDWSParamsPath    = "addons/aurora/rdws/addons.parameters.yml"
+	dynamoDbTemplatePath  = "addons/ddb/cf.yml"
+	s3TemplatePath        = "addons/s3/cf.yml"
+	rdsTemplatePath       = "addons/aurora/cf.yml"
+	rdsV2TemplatePath     = "addons/aurora/serverlessv2.yml"
+	rdsRDWSTemplatePath   = "addons/aurora/rdws/cf.yml"
+	rdsRDWSV2TemplatePath = "addons/aurora/rdws/serverlessv2.yml"
+	rdsRDWSParamsPath     = "addons/aurora/rdws/addons.parameters.yml"
+)
+
+const (
+	// Aurora Serverless versions.
+	auroraServerlessVersionV1 = "v1"
+	auroraServerlessVersionV2 = "v2"
 )
 
 const (
@@ -82,8 +90,12 @@ type RDSTemplate struct {
 // MarshalBinary serializes the content of the template into binary.
 func (r *RDSTemplate) MarshalBinary() ([]byte, error) {
 	path := rdsTemplatePath
-	if r.WorkloadType == manifest.RequestDrivenWebServiceType {
+	if r.WorkloadType != manifest.RequestDrivenWebServiceType && r.auroraServerlessVersion == auroraServerlessVersionV2 {
+		path = rdsV2TemplatePath
+	} else if r.WorkloadType == manifest.RequestDrivenWebServiceType && r.auroraServerlessVersion == auroraServerlessVersionV1 {
 		path = rdsRDWSTemplatePath
+	} else if r.WorkloadType == manifest.RequestDrivenWebServiceType && r.auroraServerlessVersion == auroraServerlessVersionV2 {
+		path = rdsRDWSV2TemplatePath
 	}
 	content, err := r.parser.Parse(path, *r, template.WithFuncs(storageTemplateFunctions))
 	if err != nil {
@@ -147,16 +159,28 @@ func NewDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 
 // RDSProps holds RDS-specific properties for addon.NewRDSTemplate().
 type RDSProps struct {
-	WorkloadType   string   // The type of the workload associated with the RDS addon.
-	ClusterName    string   // The name of the cluster.
-	Engine         string   // The engine type of the RDS Aurora Serverless cluster.
-	InitialDBName  string   // The name of the initial database created inside the cluster.
-	ParameterGroup string   // The parameter group to use for the cluster.
-	Envs           []string // The copilot environments found inside the current app.
+	WorkloadType            string   // The type of the workload associated with the RDS addon.
+	ClusterName             string   // The name of the cluster.
+	auroraServerlessVersion string   // The version of Aurora Serverless.
+	Engine                  string   // The engine type of the RDS Aurora Serverless cluster.
+	InitialDBName           string   // The name of the initial database created inside the cluster.
+	ParameterGroup          string   // The parameter group to use for the cluster.
+	Envs                    []string // The copilot environments found inside the current app.
 }
 
-// NewRDSTemplate creates a new RDS marshaler which can be used to write a RDS CloudFormation template.
-func NewRDSTemplate(input RDSProps) *RDSTemplate {
+// NewServerlessV1Template creates a new RDS marshaler which can be used to write an Aurora Serverless v1 CloudFormation template.
+func NewServerlessV1Template(input RDSProps) *RDSTemplate {
+	input.auroraServerlessVersion = auroraServerlessVersionV1
+	return &RDSTemplate{
+		RDSProps: input,
+
+		parser: template.New(),
+	}
+}
+
+// NewServerlessV2Template creates a new RDS marshaler which can be used to write an Aurora Serverless v2 CloudFormation template.
+func NewServerlessV2Template(input RDSProps) *RDSTemplate {
+	input.auroraServerlessVersion = auroraServerlessVersionV2
 	return &RDSTemplate{
 		RDSProps: input,
 
