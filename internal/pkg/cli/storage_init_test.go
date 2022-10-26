@@ -180,7 +180,6 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inAppName:           "bowie",
 			inStorageType:       rdsStorageType,
 			inServerlessVersion: auroraServerlessVersionV1,
-			wantedErr:           nil,
 		},
 		"successfully validates aurora serverless version v2": {
 			mockWs:              func(m *mocks.MockwsAddonManager) {},
@@ -188,7 +187,6 @@ func TestStorageInitOpts_Validate(t *testing.T) {
 			inAppName:           "bowie",
 			inStorageType:       rdsStorageType,
 			inServerlessVersion: auroraServerlessVersionV2,
-			wantedErr:           nil,
 		},
 		"invalid aurora serverless version": {
 			mockWs:              func(m *mocks.MockwsAddonManager) {},

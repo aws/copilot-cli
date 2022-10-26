@@ -762,33 +762,22 @@ func (o *initStorageOpts) newRDSTemplate() (*addon.RDSTemplate, error) {
 	if err != nil {
 		return nil, err
 	}
+	props := addon.RDSProps{
+		ClusterName:    o.storageName,
+		Engine:         engine,
+		InitialDBName:  o.rdsInitialDBName,
+		ParameterGroup: o.rdsParameterGroup,
+		Envs:           envs,
+		WorkloadType:   o.workloadType,
+	}
 
-	var version string
-	switch o.auroraServerlessVersion {
+	switch v := o.auroraServerlessVersion; v {
 	case auroraServerlessVersionV1:
-		version = addon.AuroraServerlessVersionV1
-		return addon.NewServerlessV1Template(addon.RDSProps{
-			ClusterName:             o.storageName,
-			AuroraServerlessVersion: version,
-			Engine:                  engine,
-			InitialDBName:           o.rdsInitialDBName,
-			ParameterGroup:          o.rdsParameterGroup,
-			Envs:                    envs,
-			WorkloadType:            o.workloadType,
-		}), nil
+		return addon.NewServerlessV1Template(props), nil
 	case auroraServerlessVersionV2:
-		version = addon.AuroraServerlessVersionV2
-		return addon.NewServerlessV2Template(addon.RDSProps{
-			ClusterName:             o.storageName,
-			AuroraServerlessVersion: version,
-			Engine:                  engine,
-			InitialDBName:           o.rdsInitialDBName,
-			ParameterGroup:          o.rdsParameterGroup,
-			Envs:                    envs,
-			WorkloadType:            o.workloadType,
-		}), nil
+		return addon.NewServerlessV2Template(props), nil
 	default:
-		return nil, errors.New("unknown serverless version")
+		return nil, fmt.Errorf("unknown Aurora serverless version %q", v)
 	}
 }
 

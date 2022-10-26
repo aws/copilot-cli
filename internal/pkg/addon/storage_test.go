@@ -119,7 +119,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 		wantedError  error
 	}{
 		"error parsing template": {
-			version: AuroraServerlessVersionV1,
+			version: auroraServerlessVersionV1,
 			engine:  RDSEngineTypePostgreSQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
@@ -129,7 +129,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			wantedError: errors.New("some error"),
 		},
 		"renders postgresql v1 content": {
-			version: AuroraServerlessVersionV1,
+			version: auroraServerlessVersionV1,
 			engine:  RDSEngineTypePostgreSQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
@@ -141,7 +141,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			wantedBinary: []byte("psql"),
 		},
 		"renders mysql v1 content": {
-			version: AuroraServerlessVersionV1,
+			version: auroraServerlessVersionV1,
 			engine:  RDSEngineTypeMySQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
@@ -154,7 +154,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 		},
 		"renders rdws rds v1 template": {
 			workloadType: "Request-Driven Web Service",
-			version:      AuroraServerlessVersionV1,
+			version:      auroraServerlessVersionV1,
 			engine:       RDSEngineTypeMySQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
@@ -165,7 +165,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			wantedBinary: []byte("mysql"),
 		},
 		"renders postgresql v2 content": {
-			version: AuroraServerlessVersionV2,
+			version: auroraServerlessVersionV2,
 			engine:  RDSEngineTypePostgreSQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
@@ -177,7 +177,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			wantedBinary: []byte("psql"),
 		},
 		"renders mysql v2 content": {
-			version: AuroraServerlessVersionV2,
+			version: auroraServerlessVersionV2,
 			engine:  RDSEngineTypeMySQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
@@ -190,7 +190,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 		},
 		"renders rdws rds v2 template": {
 			workloadType: "Request-Driven Web Service",
-			version:      AuroraServerlessVersionV2,
+			version:      auroraServerlessVersionV2,
 			engine:       RDSEngineTypeMySQL,
 			mockDependencies: func(ctrl *gomock.Controller, r *RDSTemplate) {
 				m := mocks.NewMockParser(ctrl)
@@ -210,7 +210,7 @@ func TestRDSTemplate_MarshalBinary(t *testing.T) {
 			addon := &RDSTemplate{
 				RDSProps: RDSProps{
 					WorkloadType:            tc.workloadType,
-					AuroraServerlessVersion: tc.version,
+					auroraServerlessVersion: tc.version,
 					Engine:                  tc.engine,
 				},
 			}

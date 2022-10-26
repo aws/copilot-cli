@@ -26,8 +26,8 @@ const (
 
 const (
 	// Aurora Serverless versions.
-	AuroraServerlessVersionV1 = "v1"
-	AuroraServerlessVersionV2 = "v2"
+	auroraServerlessVersionV1 = "v1"
+	auroraServerlessVersionV2 = "v2"
 )
 
 const (
@@ -90,11 +90,11 @@ type RDSTemplate struct {
 // MarshalBinary serializes the content of the template into binary.
 func (r *RDSTemplate) MarshalBinary() ([]byte, error) {
 	path := rdsTemplatePath
-	if r.WorkloadType != manifest.RequestDrivenWebServiceType && r.AuroraServerlessVersion == AuroraServerlessVersionV2 {
+	if r.WorkloadType != manifest.RequestDrivenWebServiceType && r.auroraServerlessVersion == auroraServerlessVersionV2 {
 		path = rdsV2TemplatePath
-	} else if r.WorkloadType == manifest.RequestDrivenWebServiceType && r.AuroraServerlessVersion == AuroraServerlessVersionV1 {
+	} else if r.WorkloadType == manifest.RequestDrivenWebServiceType && r.auroraServerlessVersion == auroraServerlessVersionV1 {
 		path = rdsRDWSTemplatePath
-	} else if r.WorkloadType == manifest.RequestDrivenWebServiceType && r.AuroraServerlessVersion == AuroraServerlessVersionV2 {
+	} else if r.WorkloadType == manifest.RequestDrivenWebServiceType && r.auroraServerlessVersion == auroraServerlessVersionV2 {
 		path = rdsRDWSV2TemplatePath
 	}
 	content, err := r.parser.Parse(path, *r, template.WithFuncs(storageTemplateFunctions))
@@ -161,7 +161,7 @@ func NewDDBTemplate(input *DynamoDBProps) *DynamoDBTemplate {
 type RDSProps struct {
 	WorkloadType            string   // The type of the workload associated with the RDS addon.
 	ClusterName             string   // The name of the cluster.
-	AuroraServerlessVersion string   // The version of Aurora Serverless
+	auroraServerlessVersion string   // The version of Aurora Serverless.
 	Engine                  string   // The engine type of the RDS Aurora Serverless cluster.
 	InitialDBName           string   // The name of the initial database created inside the cluster.
 	ParameterGroup          string   // The parameter group to use for the cluster.
@@ -170,7 +170,7 @@ type RDSProps struct {
 
 // NewServerlessV1Template creates a new RDS marshaler which can be used to write an Aurora Serverless v1 CloudFormation template.
 func NewServerlessV1Template(input RDSProps) *RDSTemplate {
-	input.AuroraServerlessVersion = AuroraServerlessVersionV1
+	input.auroraServerlessVersion = auroraServerlessVersionV1
 	return &RDSTemplate{
 		RDSProps: input,
 
@@ -180,7 +180,7 @@ func NewServerlessV1Template(input RDSProps) *RDSTemplate {
 
 // NewServerlessV2Template creates a new RDS marshaler which can be used to write an Aurora Serverless v2 CloudFormation template.
 func NewServerlessV2Template(input RDSProps) *RDSTemplate {
-	input.AuroraServerlessVersion = AuroraServerlessVersionV2
+	input.auroraServerlessVersion = auroraServerlessVersionV2
 	return &RDSTemplate{
 		RDSProps: input,
 
