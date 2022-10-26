@@ -287,6 +287,7 @@ func underline(headings []string) []string {
 type WebServiceRoute struct {
 	Environment string `json:"environment"`
 	URL         string `json:"url"`
+	Public      *bool  `json:"public,omitempty"`
 }
 
 // ServiceDiscovery contains serialized service discovery info for an service.

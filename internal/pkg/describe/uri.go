@@ -318,9 +318,19 @@ func (d *RDWebServiceDescriber) URI(envName string) (URI, error) {
 		return URI{}, fmt.Errorf("get outputs for service %s: %w", d.svc, err)
 	}
 
+	isPrivate, err := describer.IsPrivate()
+	if err != nil {
+		return URI{}, fmt.Errorf("check if service %q is private: %w", d.svc, err)
+	}
+
+	accessType := URIAccessTypeInternet
+	if isPrivate {
+		accessType = URIAccessTypeInternal
+	}
+
 	return URI{
 		URI:        serviceURL,
-		AccessType: URIAccessTypeInternet,
+		AccessType: accessType,
 	}, nil
 }
 

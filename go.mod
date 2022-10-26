@@ -58,3 +58,5 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 )
+
+replace github.com/aws/aws-sdk-go => /Users/dnrnd/Downloads/aws-sdk-go

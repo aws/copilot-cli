@@ -4,6 +4,7 @@
 package describe
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -28,7 +29,10 @@ const (
 	waitConditionHandle  = "AWS::CloudFormation::WaitConditionHandle"
 )
 
-const apprunnerServiceType = "AWS::AppRunner::Service"
+const (
+	apprunnerServiceType              = "AWS::AppRunner::Service"
+	apprunnerVPCIngressConnectionType = "AWS::AppRunner::VpcIngressConnection"
+)
 
 // ConfigStoreSvc wraps methods of config store.
 type ConfigStoreSvc interface {
@@ -52,6 +56,7 @@ type ecsClient interface {
 
 type apprunnerClient interface {
 	DescribeService(svcArn string) (*apprunner.Service, error)
+	PrivateURL(ctx context.Context, vicArn string) (string, error)
 }
 
 type workloadStackDescriber interface {
@@ -75,6 +80,7 @@ type apprunnerDescriber interface {
 	Service() (*apprunner.Service, error)
 	ServiceARN() (string, error)
 	ServiceURL() (string, error)
+	IsPrivate() (bool, error)
 }
 
 // serviceStackDescriber provides base functionality for retrieving info about a service.
@@ -280,6 +286,22 @@ func (d *appRunnerServiceDescriber) ServiceARN() (string, error) {
 	return "", fmt.Errorf("no App Runner Service in service stack")
 }
 
+func (d *appRunnerServiceDescriber) vpcIngressConnectionARN() (*string, error) {
+	serviceStackResources, err := d.ServiceStackResources()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, resource := range serviceStackResources {
+		arn := resource.PhysicalID
+		if resource.Type == apprunnerVPCIngressConnectionType && arn != "" {
+			return &arn, nil
+		}
+	}
+
+	return nil, nil
+}
+
 // Service retrieves an app runner service.
 func (d *appRunnerServiceDescriber) Service() (*apprunner.Service, error) {
 	serviceARN, err := d.ServiceARN()
@@ -294,13 +316,34 @@ func (d *appRunnerServiceDescriber) Service() (*apprunner.Service, error) {
 	return service, nil
 }
 
+func (d *appRunnerServiceDescriber) IsPrivate() (bool, error) {
+	vicArn, err := d.vpcIngressConnectionARN()
+	if err != nil {
+		return false, err
+	}
+
+	return vicArn != nil, nil
+}
+
 // ServiceURL retrieves the app runner service URL.
 func (d *appRunnerServiceDescriber) ServiceURL() (string, error) {
-	service, err := d.Service()
+	vicArn, err := d.vpcIngressConnectionARN()
 	if err != nil {
 		return "", err
 	}
 
+	if vicArn != nil {
+		url, err := d.apprunnerClient.PrivateURL(context.Background(), *vicArn)
+		if err != nil {
+			return "", err
+		}
+		return formatAppRunnerUrl(url), nil
+	}
+
+	service, err := d.Service()
+	if err != nil {
+		return "", err
+	}
 	return formatAppRunnerUrl(service.ServiceURL), nil
 }
 

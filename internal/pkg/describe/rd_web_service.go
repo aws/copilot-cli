@@ -88,10 +88,18 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service configuration: %w", err)
 		}
-		webServiceURI := formatAppRunnerUrl(service.ServiceURL)
+		url, err := describer.ServiceURL()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve service url: %w", err)
+		}
+		private, err := describer.IsPrivate()
+		if err != nil {
+			return nil, fmt.Errorf("check if service is private: %w", err)
+		}
 		routes = append(routes, &WebServiceRoute{
 			Environment: env,
-			URL:         webServiceURI,
+			URL:         url,
+			Public:      aws.Bool(!private),
 		})
 		configs = append(configs, &ServiceConfig{
 			Environment: env,
@@ -238,11 +246,11 @@ func (w *rdWebSvcDesc) HumanString() string {
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
-	headers := []string{"Environment", "URL"}
+	headers := []string{"Environment", "Public", "URL"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, route := range w.Routes {
-		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
+		fmt.Fprintf(writer, "  %s\t%t\t%s\n", route.Environment, aws.BoolValue(route.Public), route.URL)
 	}
 
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
