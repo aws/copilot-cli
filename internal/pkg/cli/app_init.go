@@ -6,9 +6,8 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
-
 	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
