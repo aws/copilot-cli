@@ -53,6 +53,7 @@ type initAppOpts struct {
 	prompt               prompter
 	prog                 progress
 	iam                  policyLister
+	iamRoleManager       roleManager
 	isSessionFromEnvVars func() (bool, error)
 
 	cachedHostedZoneID string
@@ -80,6 +81,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		prompt:           prompt.New(),
 		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
 		iam:              iam.New(sess),
+		iamRoleManager:   iam.New(sess),
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
@@ -232,6 +234,14 @@ func (o *initAppOpts) validateAppName(name string) error {
 	if err != nil {
 		var noSuchAppErr *config.ErrNoSuchApplication
 		if errors.As(err, &noSuchAppErr) {
+			roleName := fmt.Sprintf("%s-adminrole", name)
+			tags, err := o.iamRoleManager.ListRoleTags(roleName)
+			if err != nil {
+				return nil
+			}
+			if _, hasTag := tags[deploy.AppTagKey]; hasTag {
+				return fmt.Errorf("application named %s already exists in another region", name)
+			}
 			return nil
 		}
 		return fmt.Errorf("get application %s: %w", name, err)

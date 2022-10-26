@@ -23,6 +23,7 @@ type initAppMocks struct {
 	mockStore            *mocks.Mockstore
 	mockDomainInfoGetter *mocks.MockdomainInfoGetter
 	mockPolicyLister     *mocks.MockpolicyLister
+	mockRoleManager      *mocks.MockroleManager
 }
 
 func TestInitAppOpts_Validate(t *testing.T) {
@@ -38,13 +39,27 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"skip everything": {
 			mock: func(m *initAppMocks) {},
 		},
-		"valid app name": {
+		"valid app name without application in SSM and without IAM adminrole": {
 			inAppName: "metrics",
 			mock: func(m *initAppMocks) {
 				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
 					ApplicationName: "metrics",
 				})
+				m.mockRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(nil, errors.New("role not found"))
 			},
+		},
+		"valid app name without application in SSM and with IAM adminrole": {
+			inAppName: "metrics",
+			mock: func(m *initAppMocks) {
+				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.mockRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"copilot-application": "metrics",
+					}, nil)
+			},
+			wantedError: errors.New("application named metrics already exists in another region"),
 		},
 		"invalid app name": {
 			inAppName: "123chicken",
@@ -150,6 +165,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				mockRoute53Svc:       mocks.NewMockdomainHostedZoneGetter(ctrl),
 				mockDomainInfoGetter: mocks.NewMockdomainInfoGetter(ctrl),
 				mockPolicyLister:     mocks.NewMockpolicyLister(ctrl),
+				mockRoleManager:      mocks.NewMockroleManager(ctrl),
 			}
 			tc.mock(m)
 
@@ -158,6 +174,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				domainInfoGetter: m.mockDomainInfoGetter,
 				store:            m.mockStore,
 				iam:              m.mockPolicyLister,
+				iamRoleManager:   m.mockRoleManager,
 				initAppVars: initAppVars{
 					name:                tc.inAppName,
 					domainName:          tc.inDomainName,
