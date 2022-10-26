@@ -592,48 +592,45 @@ func TestSubnetListOrArgsTransformer_Transformer(t *testing.T) {
 	}
 }
 
-func TestHealthCheckArgsOrStringTransformer_Transformer(t *testing.T) {
+func TestServiceConnectTransformer_Transformer(t *testing.T) {
 	testCases := map[string]struct {
-		original func(h *HealthCheckArgsOrString)
-		override func(h *HealthCheckArgsOrString)
-		wanted   func(h *HealthCheckArgsOrString)
+		original func(p *ServiceConnectBoolOrArgs)
+		override func(p *ServiceConnectBoolOrArgs)
+		wanted   func(p *ServiceConnectBoolOrArgs)
 	}{
-		"string set to empty if args is not nil": {
-			original: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckPath = aws.String("mockPath")
+		"bool set to empty if args is not nil": {
+			original: func(s *ServiceConnectBoolOrArgs) {
+				s.EnableServiceConnect = aws.Bool(false)
 			},
-			override: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckArgs = HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
+			override: func(s *ServiceConnectBoolOrArgs) {
+				s.ServiceConnectArgs = ServiceConnectArgs{
+					Alias: aws.String("api"),
 				}
 			},
-			wanted: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckArgs = HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
+			wanted: func(s *ServiceConnectBoolOrArgs) {
+				s.ServiceConnectArgs = ServiceConnectArgs{
+					Alias: aws.String("api"),
 				}
 			},
 		},
-		"args set to empty if string is not nil": {
-			original: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckArgs = HTTPHealthCheckArgs{
-					Path:         aws.String("mockPathArgs"),
-					SuccessCodes: aws.String("200"),
+		"args set to empty if bool is not nil": {
+			original: func(s *ServiceConnectBoolOrArgs) {
+				s.ServiceConnectArgs = ServiceConnectArgs{
+					Alias: aws.String("api"),
 				}
 			},
-			override: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckPath = aws.String("mockPath")
+			override: func(s *ServiceConnectBoolOrArgs) {
+				s.EnableServiceConnect = aws.Bool(true)
 			},
-			wanted: func(h *HealthCheckArgsOrString) {
-				h.HealthCheckPath = aws.String("mockPath")
+			wanted: func(s *ServiceConnectBoolOrArgs) {
+				s.EnableServiceConnect = aws.Bool(true)
 			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			var dst, override, wanted HealthCheckArgsOrString
+			var dst, override, wanted ServiceConnectBoolOrArgs
 
 			tc.original(&dst)
 			tc.override(&override)
@@ -644,11 +641,105 @@ func TestHealthCheckArgsOrStringTransformer_Transformer(t *testing.T) {
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(healthCheckArgsOrStringTransformer{}))
+			err = mergo.Merge(&dst, override, mergo.WithOverride, mergo.WithTransformers(serviceConnectTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)
 			require.Equal(t, wanted, dst)
+		})
+	}
+}
+
+type unionTransformerTest[Basic, Advanced any] struct {
+	original Union[Basic, Advanced]
+	override Union[Basic, Advanced]
+	expected Union[Basic, Advanced]
+}
+
+func TestTransformer_Generic(t *testing.T) {
+	runUnionTransformerTests(t, map[string]unionTransformerTest[any, any]{
+		"switches to Simple from Advanced if overridden": {
+			original: AdvancedToUnion[any, any](nil),
+			override: BasicToUnion[any, any](nil),
+			expected: BasicToUnion[any, any](nil),
+		},
+		"switches to Advanced from Simple if overridden": {
+			original: BasicToUnion[any, any](nil),
+			override: AdvancedToUnion[any, any](nil),
+			expected: AdvancedToUnion[any, any](nil),
+		},
+		"switches to Simple if original unset": {
+			original: Union[any, any]{},
+			override: BasicToUnion[any, any](nil),
+			expected: BasicToUnion[any, any](nil),
+		},
+		"switches to Advanced if original unset": {
+			original: Union[any, any]{},
+			override: AdvancedToUnion[any, any](nil),
+			expected: AdvancedToUnion[any, any](nil),
+		},
+	})
+}
+
+func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
+	runUnionTransformerTests(t, map[string]unionTransformerTest[string, HTTPHealthCheckArgs]{
+		"string unset if args set": {
+			original: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
+			override: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				Path:         aws.String("mockPathArgs"),
+				SuccessCodes: aws.String("200"),
+			}),
+			expected: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				Path:         aws.String("mockPathArgs"),
+				SuccessCodes: aws.String("200"),
+			}),
+		},
+		"args unset if string set": {
+			original: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				Path:         aws.String("mockPathArgs"),
+				SuccessCodes: aws.String("200"),
+			}),
+			override: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
+			expected: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
+		},
+		"string merges correctly": {
+			original: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
+			override: BasicToUnion[string, HTTPHealthCheckArgs]("newPath"),
+			expected: BasicToUnion[string, HTTPHealthCheckArgs]("newPath"),
+		},
+		"args merge correctly": {
+			original: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				Path:             aws.String("mockPathArgs"),
+				SuccessCodes:     aws.String("200"),
+				HealthyThreshold: aws.Int64(10),
+			}),
+			override: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				SuccessCodes:       aws.String("420"),
+				UnhealthyThreshold: aws.Int64(20),
+			}),
+			expected: AdvancedToUnion[string](HTTPHealthCheckArgs{
+				Path:               aws.String("mockPathArgs"), // merged unchanged
+				SuccessCodes:       aws.String("420"),          // updated
+				HealthyThreshold:   aws.Int64(10),              // comes from original
+				UnhealthyThreshold: aws.Int64(20),              // comes from override
+			}),
+		},
+	})
+}
+
+func runUnionTransformerTests[Basic, Advanced any](t *testing.T, tests map[string]unionTransformerTest[Basic, Advanced]) {
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Perform default merge.
+			err := mergo.Merge(&tc.original, tc.override, mergo.WithOverride)
+			require.NoError(t, err)
+
+			// Use custom transformer.
+			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(unionTransformer[Basic, Advanced]{}))
+			require.NoError(t, err)
+
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, tc.original)
 		})
 	}
 }

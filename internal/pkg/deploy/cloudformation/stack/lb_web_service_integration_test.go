@@ -30,7 +30,7 @@ const (
 	svcManifestPath = "svc-manifest.yml"
 )
 
-func TestLoadBalancedWebService_Template(t *testing.T) {
+func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 	testCases := map[string]struct {
 		envName       string
 		svcStackPath  string
@@ -105,6 +105,7 @@ func TestLoadBalancedWebService_Template(t *testing.T) {
 				EnvVersion:               "v1.42.0",
 			},
 		})
+		serializer.SCFeatureFlag = true
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids

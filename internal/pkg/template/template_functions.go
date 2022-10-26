@@ -59,6 +59,11 @@ func EnvVarNameFunc(s string) string {
 	return StripNonAlphaNumFunc(s) + "Name"
 }
 
+// HasCustomIngress returns true if there is any ingress specified by the customer.
+func (cfg *PublicHTTPConfig) HasCustomIngress() bool {
+	return len(cfg.PublicALBSourceIPs) > 0 || len(cfg.CIDRPrefixListIDs) > 0
+}
+
 // IsFIFO checks if the given queue has FIFO config.
 func (s SQSQueue) IsFIFO() bool {
 	return s.FIFOQueueConfig != nil

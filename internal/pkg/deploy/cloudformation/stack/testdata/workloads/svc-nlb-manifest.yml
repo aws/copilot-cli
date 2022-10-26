@@ -10,6 +10,8 @@ image:
   build: ./Dockerfile
   port: 80
 http: false
+network:
+  connect: false
 nlb:
   port: 443/tls
 count: 5
@@ -26,6 +28,8 @@ environments:
     nlb:
       healthcheck:
         port: 80
+    network:
+      connect: true
   dev:
     http:
       path: '/'

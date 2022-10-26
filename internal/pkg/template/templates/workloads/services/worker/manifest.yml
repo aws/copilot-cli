@@ -34,6 +34,13 @@ count: {{.Count.Value}}       # Number of tasks that should be running in your s
 {{- if not .TaskConfig.IsWindows }}
 exec: true     # Enable running commands in your container.
 {{- end}}
+  
+{{- if not .TaskConfig.IsWindows}}
+
+# storage:
+  # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
+{{- end}}
+
 {{if .Subscribe}}{{- if .Subscribe.Topics}}
 # The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 subscribe:
@@ -41,7 +48,14 @@ subscribe:
 {{- range $topic := .Subscribe.Topics}}
     - name: {{$topic.Name}}
       service: {{$topic.Service}}
+      {{- if $topic.Queue.Enabled }}
+      queue: {{ $topic.Queue.Enabled }}
+      {{- end }}
 {{- end}}
+  {{- if .Subscribe.Queue.FIFO.Enable }}
+  queue:
+    fifo: {{ .Subscribe.Queue.FIFO.Enable }}
+  {{- end }}
 {{- else}}
 # You can register to topics from other services.
 # The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.

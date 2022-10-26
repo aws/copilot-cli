@@ -35,11 +35,11 @@ Parameters:
   LogRetention:
     Type: Number
     Default: 30
-  {{- if .ALBEnabled}}
   TargetContainer:
     Type: String
   TargetPort:
     Type: Number
+  {{- if .ALBEnabled}}
   HTTPSEnabled:
     Type: String
     AllowedValues: [true, false]

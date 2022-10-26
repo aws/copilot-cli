@@ -1,25 +1,15 @@
-# The manifest for the "frontend" service.
-# Read the full specification for the "Load Balanced Web Service" type at:
-#  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
+# The manifest for the "testers" service.
+# Read the full specification for the "Worker Service" type at:
+# https://aws.github.io/copilot-cli/docs/manifest/worker-service/
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
-name: frontend
-type: Load Balanced Web Service
-
-# Distribute traffic to your service.
-http:
-  # Requests to this path will be forwarded to your service.
-  # To match all requests you can use the "/" path.
-  path: ''
-  # You can specify a custom health check path. The default is "/".
-  # healthcheck: '/'
+name: testers
+type: Worker Service
 
 # Configuration for your containers and service.
 image:
-  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#image-build
-  build: ./frontend/Dockerfile
-  # Port exposed through your container to route traffic to it.
-  port: 0
+  # Docker build arguments.
+  build: ./testers/Dockerfile
 
 cpu: 256       # Number of CPU units for the task.
 memory: 512    # Amount of memory in MiB used by the task.
@@ -28,7 +18,16 @@ exec: true     # Enable running commands in your container.
 
 # storage:
   # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
- 
+
+
+# The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
+subscribe:
+  topics:
+    - name: testTopic
+      service: service4TestTopic
+  queue:
+    fifo: true
+
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.

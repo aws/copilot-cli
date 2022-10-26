@@ -278,11 +278,6 @@ func TestFromEnvConfig(t *testing.T) {
 						Private: privateHTTPConfig{
 							InternalALBSubnets: []string{"subnet2"},
 							Certificates:       []string{"arn:aws:acm:region:account:certificate/certificate_ID_1", "arn:aws:acm:region:account:certificate/certificate_ID_2"},
-							SecurityGroupsConfig: securityGroupsConfig{
-								Ingress: Ingress{
-									VPCIngress: aws.Bool(false),
-								},
-							},
 						},
 					},
 				},
@@ -499,11 +494,147 @@ http:
 							Certificates: []string{"cert-1", "cert-2"},
 						},
 						Private: privateHTTPConfig{
-							SecurityGroupsConfig: securityGroupsConfig{
-								Ingress: Ingress{
+							DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+								DeprecatedIngress: DeprecatedIngress{
 									VPCIngress: aws.Bool(false),
 								},
 							},
+						},
+					},
+				},
+			},
+		},
+		"unmarshal with new http fields": {
+			inContent: `name: prod
+type: Environment
+http:
+    public:
+        certificates:
+            - cert-1
+            - cert-2
+    private:
+      ingress:
+        vpc: true
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
+							Certificates: []string{"cert-1", "cert-2"},
+						},
+						Private: privateHTTPConfig{
+							Ingress: RelaxedIngress{VPCIngress: aws.Bool(true)},
+						},
+					},
+				},
+			},
+		},
+		"unmarshal with new and old private http fields": {
+			inContent: `name: prod
+type: Environment
+http:
+    public:
+        certificates:
+            - cert-1
+            - cert-2
+    private:
+      security_groups:
+        ingress:
+          from_vpc: true
+      ingress:
+        vpc: true
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
+							Certificates: []string{"cert-1", "cert-2"},
+						},
+						Private: privateHTTPConfig{
+							Ingress: RelaxedIngress{VPCIngress: aws.Bool(true)},
+							DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+								DeprecatedIngress: DeprecatedIngress{
+									VPCIngress: aws.Bool(true),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		"unmarshal with new and old public http fields": {
+			inContent: `name: prod
+type: Environment
+http:
+    public:
+      certificates:
+        - cert-1
+        - cert-2
+      security_groups:
+        ingress:
+          restrict_to:
+            cdn: true
+      ingress:
+        cdn: true
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
+							Certificates: []string{"cert-1", "cert-2"},
+							DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+								DeprecatedIngress: DeprecatedIngress{
+									RestrictiveIngress: RestrictiveIngress{
+										CDNIngress: aws.Bool(true),
+									},
+								},
+							},
+							Ingress: RestrictiveIngress{CDNIngress: aws.Bool(true)},
+						},
+					},
+				},
+			},
+		},
+		"unmarshal with source_ips field in http.public": {
+			inContent: `name: prod
+type: Environment
+http:
+    public:
+      certificates:
+        - cert-1
+        - cert-2
+      security_groups:
+        ingress:
+          restrict_to:
+            cdn: true
+      ingress:
+        source_ips:
+          - 1.1.1.1
+          - 2.2.2.2
+`,
+			wantedStruct: &Environment{
+				Workload: Workload{
+					Name: aws.String("prod"),
+					Type: aws.String("Environment"),
+				},
+				EnvironmentConfig: EnvironmentConfig{
+					HTTPConfig: EnvironmentHTTPConfig{
+						Public: PublicHTTPConfig{
+							Certificates: []string{"cert-1", "cert-2"},
+							DeprecatedSG: DeprecatedALBSecurityGroupsConfig{DeprecatedIngress: DeprecatedIngress{RestrictiveIngress: RestrictiveIngress{CDNIngress: aws.Bool(true)}}},
+							Ingress:      RestrictiveIngress{SourceIPs: []IPNet{"1.1.1.1", "2.2.2.2"}},
 						},
 					},
 				},
@@ -720,9 +851,14 @@ func TestEnvironmentVPCConfig_IsEmpty(t *testing.T) {
 		"empty": {
 			wanted: true,
 		},
-		"not empty": {
+		"not empty when VPC ID is provided": {
 			in: environmentVPCConfig{
 				ID: aws.String("mock-vpc-id"),
+			},
+		},
+		"not empty when flowlog is on": {
+			in: environmentVPCConfig{
+				Flowlogs: aws.Bool(true),
 			},
 		},
 	}
@@ -792,9 +928,14 @@ func TestPublicHTTPConfig_IsEmpty(t *testing.T) {
 		"empty": {
 			wanted: true,
 		},
-		"not empty": {
+		"not empty when Certificates are attached": {
 			in: PublicHTTPConfig{
 				Certificates: []string{"mock-cert-1"},
+			},
+		},
+		"not empty when SSL Policy is present": {
+			in: PublicHTTPConfig{
+				SSLPolicy: aws.String("mock-ELB-ELBSecurityPolicy"),
 			},
 		},
 	}
@@ -814,9 +955,14 @@ func TestPrivateHTTPConfig_IsEmpty(t *testing.T) {
 		"empty": {
 			wanted: true,
 		},
-		"not empty": {
+		"not empty when Certificates are attached": {
 			in: privateHTTPConfig{
 				InternalALBSubnets: []string{"mock-subnet-1"},
+			},
+		},
+		"not empty when SSL Policy is present": {
+			in: privateHTTPConfig{
+				SSLPolicy: aws.String("mock-ELB-ELBSecurityPolicy"),
 			},
 		},
 	}

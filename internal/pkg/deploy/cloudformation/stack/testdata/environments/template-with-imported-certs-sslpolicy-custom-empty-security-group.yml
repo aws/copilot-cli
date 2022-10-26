@@ -11,6 +11,7 @@ Metadata:
         certificates:
           - cert-1
           - cert-2
+        ssl_policy: ELBSecurityPolicy-FS-1-1-2019-08
     observability:
       container_insights: true # Enable container insights.
     security_group:
@@ -171,6 +172,8 @@ Resources:
       SubnetId: !Ref PublicSubnet2
 
   NatGateway1Attachment:
+    Metadata:
+      'aws:copilot:description': 'An Elastic IP for NAT Gateway 1'
     Type: AWS::EC2::EIP
     Condition: CreateNATGateways
     DependsOn: InternetGatewayAttachment
@@ -206,6 +209,8 @@ Resources:
       RouteTableId: !Ref PrivateRouteTable1
       SubnetId: !Ref PrivateSubnet1
   NatGateway2Attachment:
+    Metadata:
+      'aws:copilot:description': 'An Elastic IP for NAT Gateway 2'
     Type: AWS::EC2::EIP
     Condition: CreateNATGateways
     DependsOn: InternetGatewayAttachment
@@ -396,6 +401,7 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
+      SSLPolicy:  ELBSecurityPolicy-FS-1-1-2019-08
   HTTPSImportCertificate2:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
     Condition: ExportHTTPSListener

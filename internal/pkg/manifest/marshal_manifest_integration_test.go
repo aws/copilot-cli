@@ -1,3 +1,5 @@
+//go:build localintegration
+
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
@@ -161,6 +163,28 @@ func TestWorkerSvc_InitialManifestIntegration(t *testing.T) {
 			},
 			wantedTestdata: "worker-svc-subscribe.yml",
 		},
+		"with fifo topic subscription with default fifo queue": {
+			inProps: WorkerServiceProps{
+				WorkloadProps: WorkloadProps{
+					Name:       "testers",
+					Dockerfile: "./testers/Dockerfile",
+				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs: PlatformArgs{
+						OSFamily: nil,
+						Arch:     nil,
+					},
+				},
+				Topics: []TopicSubscription{
+					{
+						Name:    aws.String("testTopic.fifo"),
+						Service: aws.String("service4TestTopic"),
+					},
+				},
+			},
+			wantedTestdata: "worker-svc-with-default-fifo-queue.yml",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -291,6 +315,25 @@ func TestEnvironment_InitialManifestIntegration(t *testing.T) {
 				},
 			},
 			wantedTestData: "environment-adjust-vpc.yml",
+		},
+		"fully configured with customized vpc resources including imported private subnets": {
+			inProps: EnvironmentProps{
+				Name: "test",
+				CustomConfig: &config.CustomizeEnv{
+					ImportVPC: &config.ImportVPC{
+						ID:               "mock-vpc-id",
+						PrivateSubnetIDs: []string{"mock-subnet-id-3", "mock-subnet-id-4"},
+					},
+					ImportCertARNs:              []string{"mock-cert-1", "mock-cert-2"},
+					InternalALBSubnets:          []string{"mock-subnet-id-3", "mock-subnet-id-4"},
+					EnableInternalALBVPCIngress: false,
+				},
+
+				Telemetry: &config.Telemetry{
+					EnableContainerInsights: false,
+				},
+			},
+			wantedTestData: "environment-adjust-vpc-private-subnets.yml",
 		},
 		"fully configured with imported vpc resources": {
 			inProps: EnvironmentProps{

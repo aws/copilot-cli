@@ -44,7 +44,7 @@ func Test_convertSidecar(t *testing.T) {
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
@@ -58,7 +58,7 @@ func Test_convertSidecar(t *testing.T) {
 			inEssential: true,
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				Port:       aws.String("2000"),
 				Protocol:   aws.String("udp"),
 				CredsParam: mockCredsParam,
@@ -76,7 +76,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
@@ -96,7 +96,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				Port:       aws.String("2000"),
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
@@ -110,7 +110,7 @@ func Test_convertSidecar(t *testing.T) {
 		},
 		"do not specify image override": {
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -126,7 +126,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -142,7 +142,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -158,7 +158,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -174,7 +174,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -190,7 +190,7 @@ func Test_convertSidecar(t *testing.T) {
 			},
 
 			wanted: &template.SidecarOpts{
-				Name:       aws.String("foo"),
+				Name:       "foo",
 				CredsParam: mockCredsParam,
 				Image:      mockImage,
 				Secrets:    mockSecrets,
@@ -638,40 +638,30 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 	duration15Seconds := 15 * time.Second
 	duration60Seconds := 60 * time.Second
 	testCases := map[string]struct {
-		inputPath               *string
-		inputPort               *int
-		inputSuccessCodes       *string
-		inputHealthyThreshold   *int64
-		inputUnhealthyThreshold *int64
-		inputInterval           *time.Duration
-		inputTimeout            *time.Duration
-		inputGracePeriod        *time.Duration
-
+		input      manifest.HealthCheckArgsOrString
 		wantedOpts template.HTTPHealthCheckOpts
 	}{
 		"no fields indicated in manifest": {
-			inputPath:               nil,
-			inputSuccessCodes:       nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: nil,
-			inputInterval:           nil,
-			inputTimeout:            nil,
-			inputGracePeriod:        nil,
-
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				GracePeriod:     60,
 			},
 		},
+		"just Path": {
+			input: manifest.HealthCheckArgsOrString{
+				Union: manifest.BasicToUnion[string, manifest.HTTPHealthCheckArgs]("path"),
+			},
+			wantedOpts: template.HTTPHealthCheckOpts{
+				HealthCheckPath: "path",
+				GracePeriod:     60,
+			},
+		},
 		"just HealthyThreshold": {
-			inputPath:               nil,
-			inputSuccessCodes:       nil,
-			inputHealthyThreshold:   aws.Int64(5),
-			inputUnhealthyThreshold: nil,
-			inputInterval:           nil,
-			inputTimeout:            nil,
-			inputGracePeriod:        nil,
-
+			input: manifest.HealthCheckArgsOrString{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
+					HealthyThreshold: aws.Int64(5),
+				}),
+			},
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:  "/",
 				HealthyThreshold: aws.Int64(5),
@@ -679,14 +669,11 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			},
 		},
 		"just UnhealthyThreshold": {
-			inputPath:               nil,
-			inputSuccessCodes:       nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: aws.Int64(5),
-			inputInterval:           nil,
-			inputTimeout:            nil,
-			inputGracePeriod:        nil,
-
+			input: manifest.HealthCheckArgsOrString{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
+					UnhealthyThreshold: aws.Int64(5),
+				}),
+			},
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/",
 				UnhealthyThreshold: aws.Int64(5),
@@ -694,14 +681,11 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			},
 		},
 		"just Interval": {
-			inputPath:               nil,
-			inputSuccessCodes:       nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: nil,
-			inputInterval:           &duration15Seconds,
-			inputTimeout:            nil,
-			inputGracePeriod:        nil,
-
+			input: manifest.HealthCheckArgsOrString{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
+					Interval: &duration15Seconds,
+				}),
+			},
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				Interval:        aws.Int64(15),
@@ -709,14 +693,11 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			},
 		},
 		"just Timeout": {
-			inputPath:               nil,
-			inputSuccessCodes:       nil,
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: nil,
-			inputInterval:           nil,
-			inputTimeout:            &duration15Seconds,
-			inputGracePeriod:        nil,
-
+			input: manifest.HealthCheckArgsOrString{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
+					Timeout: &duration15Seconds,
+				}),
+			},
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				Timeout:         aws.Int64(15),
@@ -724,14 +705,11 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			},
 		},
 		"just SuccessCodes": {
-			inputPath:               nil,
-			inputSuccessCodes:       aws.String("200,301"),
-			inputHealthyThreshold:   nil,
-			inputUnhealthyThreshold: nil,
-			inputInterval:           nil,
-			inputTimeout:            nil,
-			inputGracePeriod:        nil,
-
+			input: manifest.HealthCheckArgsOrString{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
+					SuccessCodes: aws.String("200,301"),
+				}),
+			},
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				SuccessCodes:    "200,301",
@@ -739,9 +717,11 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			},
 		},
 		"just Port": {
-			inputPath: nil,
-			inputPort: aws.Int(8000),
-
+			input: manifest.HealthCheckArgsOrString{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
+					Port: aws.Int(8000),
+				}),
+			},
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "/",
 				Port:            "8000",
@@ -749,15 +729,18 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 			},
 		},
 		"all values changed in manifest": {
-			inputPath:               aws.String("/road/to/nowhere"),
-			inputPort:               aws.Int(8080),
-			inputSuccessCodes:       aws.String("200-299"),
-			inputHealthyThreshold:   aws.Int64(3),
-			inputUnhealthyThreshold: aws.Int64(3),
-			inputInterval:           &duration60Seconds,
-			inputTimeout:            &duration60Seconds,
-			inputGracePeriod:        &duration15Seconds,
-
+			input: manifest.HealthCheckArgsOrString{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
+					Path:               aws.String("/road/to/nowhere"),
+					Port:               aws.Int(8080),
+					SuccessCodes:       aws.String("200-299"),
+					HealthyThreshold:   aws.Int64(3),
+					UnhealthyThreshold: aws.Int64(3),
+					Interval:           &duration60Seconds,
+					Timeout:            &duration60Seconds,
+					GracePeriod:        &duration15Seconds,
+				}),
+			},
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/road/to/nowhere",
 				Port:               "8080",
@@ -772,25 +755,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			hc := manifest.HealthCheckArgsOrString{
-				HealthCheckPath: tc.inputPath,
-				HealthCheckArgs: manifest.HTTPHealthCheckArgs{
-					Path:               tc.inputPath,
-					Port:               tc.inputPort,
-					SuccessCodes:       tc.inputSuccessCodes,
-					HealthyThreshold:   tc.inputHealthyThreshold,
-					UnhealthyThreshold: tc.inputUnhealthyThreshold,
-					Timeout:            tc.inputTimeout,
-					Interval:           tc.inputInterval,
-					GracePeriod:        tc.inputGracePeriod,
-				},
-			}
-			// WHEN
-			actualOpts := convertHTTPHealthCheck(&hc)
-
-			// THEN
-			require.Equal(t, tc.wantedOpts, actualOpts)
+			require.Equal(t, tc.wantedOpts, convertHTTPHealthCheck(&tc.input))
 		})
 	}
 }

@@ -23,9 +23,10 @@ var defaultTransformers = []mergo.Transformers{
 	stringSliceOrStringTransformer{},
 	platformArgsOrStringTransformer{},
 	securityGroupsIDsOrConfigTransformer{},
+	serviceConnectTransformer{},
 	placementArgOrStringTransformer{},
 	subnetListOrArgsTransformer{},
-	healthCheckArgsOrStringTransformer{},
+	unionTransformer[string, HTTPHealthCheckArgs]{},
 	countTransformer{},
 	advancedCountTransformer{},
 	scalingConfigOrTTransformer[Percentage]{},
@@ -238,6 +239,32 @@ func (t placementArgOrStringTransformer) Transformer(typ reflect.Type) func(dst,
 	}
 }
 
+type serviceConnectTransformer struct{}
+
+// Transformer returns custom merge logic for serviceConnectTransformer's fields.
+func (t serviceConnectTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(ServiceConnectBoolOrArgs{}) {
+		return nil
+	}
+
+	return func(dst, src reflect.Value) error {
+		dstStruct, srcStruct := dst.Interface().(ServiceConnectBoolOrArgs), src.Interface().(ServiceConnectBoolOrArgs)
+
+		if srcStruct.EnableServiceConnect != nil {
+			dstStruct.ServiceConnectArgs = ServiceConnectArgs{}
+		}
+
+		if !srcStruct.ServiceConnectArgs.isEmpty() {
+			dstStruct.EnableServiceConnect = nil
+		}
+
+		if dst.CanSet() { // For extra safety to prevent panicking.
+			dst.Set(reflect.ValueOf(dstStruct))
+		}
+		return nil
+	}
+}
+
 type subnetListOrArgsTransformer struct{}
 
 // Transformer returns custom merge logic for subnetListOrArgsTransformer's fields.
@@ -264,23 +291,24 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 	}
 }
 
-type healthCheckArgsOrStringTransformer struct{}
+type unionTransformer[Basic, Advanced any] struct{}
 
-// Transformer returns custom merge logic for HealthCheckArgsOrString's fields.
-func (t healthCheckArgsOrStringTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(HealthCheckArgsOrString{}) {
+func (t unionTransformer[Basic, Advanced]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	if typ != reflect.TypeOf(Union[Basic, Advanced]{}) {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(HealthCheckArgsOrString), src.Interface().(HealthCheckArgsOrString)
+		dstStruct, srcStruct := dst.Interface().(Union[Basic, Advanced]), src.Interface().(Union[Basic, Advanced])
 
-		if srcStruct.HealthCheckPath != nil {
-			dstStruct.HealthCheckArgs = HTTPHealthCheckArgs{}
-		}
-
-		if !srcStruct.HealthCheckArgs.isEmpty() {
-			dstStruct.HealthCheckPath = nil
+		if srcStruct.IsBasic() {
+			var zero Advanced
+			dstStruct.isAdvanced, dstStruct.Advanced = false, zero
+			dstStruct.isBasic = true
+		} else if srcStruct.IsAdvanced() {
+			var zero Basic
+			dstStruct.isBasic, dstStruct.Basic = false, zero
+			dstStruct.isAdvanced = true
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.

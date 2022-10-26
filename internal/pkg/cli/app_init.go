@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -51,6 +52,7 @@ type initAppOpts struct {
 	cfn                  appDeployer
 	prompt               prompter
 	prog                 progress
+	iam                  policyLister
 	isSessionFromEnvVars func() (bool, error)
 
 	cachedHostedZoneID string
@@ -77,6 +79,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		cfn:              cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 		prompt:           prompt.New(),
 		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
+		iam:              iam.New(sess),
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
@@ -87,6 +90,11 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 func (o *initAppOpts) Validate() error {
 	if o.name != "" {
 		if err := o.validateAppName(o.name); err != nil {
+			return err
+		}
+	}
+	if o.permissionsBoundary != "" {
+		if err := o.validatePermBound(o.permissionsBoundary); err != nil {
 			return err
 		}
 	}
@@ -232,6 +240,19 @@ func (o *initAppOpts) validateAppName(name string) error {
 		return fmt.Errorf("application named %s already exists with a different domain name %s", name, app.Domain)
 	}
 	return nil
+}
+
+func (o *initAppOpts) validatePermBound(policyName string) error {
+	IAMPolicies, err := o.iam.ListPolicyNames()
+	if err != nil {
+		return fmt.Errorf("list permissions boundary policies: %w", err)
+	}
+	for _, policy := range IAMPolicies {
+		if policy == policyName {
+			return nil
+		}
+	}
+	return fmt.Errorf("IAM policy %q not found in this account", policyName)
 }
 
 func (o *initAppOpts) isDomainOwned() error {

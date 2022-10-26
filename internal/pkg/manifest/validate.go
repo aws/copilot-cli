@@ -78,6 +78,7 @@ func (l LoadBalancedWebService) validate() error {
 	}
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
+		mainContainerPort: l.ImageConfig.Port,
 		targetContainer:   l.RoutingRule.GetTargetContainer(),
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
@@ -85,6 +86,7 @@ func (l LoadBalancedWebService) validate() error {
 	}
 	if err = validateTargetContainer(validateTargetContainerOpts{
 		mainContainerName: aws.StringValue(l.Name),
+		mainContainerPort: l.ImageConfig.Port,
 		targetContainer:   l.NLBConfig.TargetContainer,
 		sidecarConfig:     l.Sidecars,
 	}); err != nil {
@@ -160,6 +162,7 @@ func (l LoadBalancedWebServiceConfig) validate() error {
 	if l.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			efsVolumes: l.Storage.Volumes,
+			readOnlyFS: l.Storage.ReadonlyRootFS,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -192,6 +195,19 @@ func (b BackendService) validate() error {
 	}
 	if err = b.Workload.validate(); err != nil {
 		return err
+	}
+	if err = validateTargetContainer(validateTargetContainerOpts{
+		mainContainerName: aws.StringValue(b.Name),
+		mainContainerPort: b.ImageConfig.Port,
+		targetContainer:   b.RoutingRule.GetTargetContainer(),
+		sidecarConfig:     b.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate HTTP load balancer target: %w", err)
+	}
+	if b.ServiceConnectEnabled() {
+		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
+			return fmt.Errorf(`cannot enable "network.connect" when no port exposed`)
+		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     b.Sidecars,
@@ -247,6 +263,7 @@ func (b BackendServiceConfig) validate() error {
 	if b.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			efsVolumes: b.Storage.Volumes,
+			readOnlyFS: b.Storage.ReadonlyRootFS,
 		}); err != nil {
 			return fmt.Errorf("validate Windows: %w", err)
 		}
@@ -359,6 +376,7 @@ func (w WorkerServiceConfig) validate() error {
 	if w.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			efsVolumes: w.Storage.Volumes,
+			readOnlyFS: w.Storage.ReadonlyRootFS,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -434,6 +452,7 @@ func (s ScheduledJobConfig) validate() error {
 	if s.TaskConfig.IsWindows() {
 		if err = validateWindows(validateWindowsOpts{
 			efsVolumes: s.Storage.Volumes,
+			readOnlyFS: s.Storage.ReadonlyRootFS,
 		}); err != nil {
 			return fmt.Errorf(`validate Windows: %w`, err)
 		}
@@ -682,19 +701,8 @@ func (r RoutingRuleConfiguration) validate() error {
 	return nil
 }
 
-// validate returns nil if HealthCheckArgsOrString is configured correctly.
-func (h HealthCheckArgsOrString) validate() error {
-	if h.IsEmpty() {
-		return nil
-	}
-	return h.HealthCheckArgs.validate()
-}
-
 // validate returns nil if HTTPHealthCheckArgs is configured correctly.
 func (h HTTPHealthCheckArgs) validate() error {
-	if h.isEmpty() {
-		return nil
-	}
 	return nil
 }
 
@@ -1245,6 +1253,19 @@ func (n NetworkConfig) validate() error {
 	if err := n.VPC.validate(); err != nil {
 		return fmt.Errorf(`validate "vpc": %w`, err)
 	}
+	if err := n.Connect.validate(); err != nil {
+		return fmt.Errorf(`validate "connect": %w`, err)
+	}
+	return nil
+}
+
+// validate returns nil if ServiceConnectBoolOrArgs is configured correctly.
+func (s ServiceConnectBoolOrArgs) validate() error {
+	return s.ServiceConnectArgs.validate()
+}
+
+// validate is a no-op for ServiceConnectArgs.
+func (ServiceConnectArgs) validate() error {
 	return nil
 }
 
@@ -1590,11 +1611,13 @@ type containerDependency struct {
 
 type validateTargetContainerOpts struct {
 	mainContainerName string
+	mainContainerPort *uint16
 	targetContainer   *string
 	sidecarConfig     map[string]*SidecarConfig
 }
 
 type validateWindowsOpts struct {
+	readOnlyFS *bool
 	efsVolumes map[string]*Volume
 }
 
@@ -1609,14 +1632,17 @@ func validateTargetContainer(opts validateTargetContainerOpts) error {
 	}
 	targetContainer := aws.StringValue(opts.targetContainer)
 	if targetContainer == opts.mainContainerName {
+		if opts.mainContainerPort == nil {
+			return fmt.Errorf("target container %q doesn't expose a port", targetContainer)
+		}
 		return nil
 	}
 	sidecar, ok := opts.sidecarConfig[targetContainer]
 	if !ok {
-		return fmt.Errorf("target container %s doesn't exist", targetContainer)
+		return fmt.Errorf("target container %q doesn't exist", targetContainer)
 	}
 	if sidecar.Port == nil {
-		return fmt.Errorf("target container %s doesn't expose any port", targetContainer)
+		return fmt.Errorf("target container %q doesn't expose a port", targetContainer)
 	}
 	return nil
 }
@@ -1740,6 +1766,9 @@ func isValidSubSvcName(name string) bool {
 }
 
 func validateWindows(opts validateWindowsOpts) error {
+	if aws.BoolValue(opts.readOnlyFS) {
+		return fmt.Errorf(`%q can not be set to 'true' when deploying a Windows container`, "readonly_fs")
+	}
 	for _, volume := range opts.efsVolumes {
 		if !volume.EmptyVolume() {
 			return errors.New(`'EFS' is not supported when deploying a Windows container`)

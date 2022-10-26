@@ -96,7 +96,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 		}
 		mp := convertSidecarMountPoints(config.MountPoints)
 		sidecars = append(sidecars, &template.SidecarOpts{
-			Name:       aws.String(name),
+			Name:       name,
 			Image:      config.Image,
 			Essential:  config.Essential,
 			Port:       port,
@@ -325,29 +325,34 @@ func convertAutoscaling(a manifest.AdvancedCount) (*template.AutoscalingOpts, er
 func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPHealthCheckOpts {
 	opts := template.HTTPHealthCheckOpts{
 		HealthCheckPath:    manifest.DefaultHealthCheckPath,
-		HealthyThreshold:   hc.HealthCheckArgs.HealthyThreshold,
-		UnhealthyThreshold: hc.HealthCheckArgs.UnhealthyThreshold,
 		GracePeriod:        manifest.DefaultHealthCheckGracePeriod,
+		HealthyThreshold:   hc.Advanced.HealthyThreshold,
+		UnhealthyThreshold: hc.Advanced.UnhealthyThreshold,
+		SuccessCodes:       aws.StringValue(hc.Advanced.SuccessCodes),
 	}
-	if hc.HealthCheckArgs.Path != nil {
-		opts.HealthCheckPath = *hc.HealthCheckArgs.Path
-	} else if hc.HealthCheckPath != nil {
-		opts.HealthCheckPath = *hc.HealthCheckPath
+
+	if hc.IsZero() {
+		return opts
 	}
-	if hc.HealthCheckArgs.Port != nil {
-		opts.Port = strconv.Itoa(aws.IntValue(hc.HealthCheckArgs.Port))
+	if hc.IsBasic() {
+		opts.HealthCheckPath = hc.Basic
+		return opts
 	}
-	if hc.HealthCheckArgs.SuccessCodes != nil {
-		opts.SuccessCodes = *hc.HealthCheckArgs.SuccessCodes
+
+	if hc.Advanced.Path != nil {
+		opts.HealthCheckPath = *hc.Advanced.Path
 	}
-	if hc.HealthCheckArgs.Interval != nil {
-		opts.Interval = aws.Int64(int64(hc.HealthCheckArgs.Interval.Seconds()))
+	if hc.Advanced.Port != nil {
+		opts.Port = strconv.Itoa(aws.IntValue(hc.Advanced.Port))
 	}
-	if hc.HealthCheckArgs.Timeout != nil {
-		opts.Timeout = aws.Int64(int64(hc.HealthCheckArgs.Timeout.Seconds()))
+	if hc.Advanced.Interval != nil {
+		opts.Interval = aws.Int64(int64(hc.Advanced.Interval.Seconds()))
 	}
-	if hc.HealthCheckArgs.GracePeriod != nil {
-		opts.GracePeriod = int64(hc.HealthCheckArgs.GracePeriod.Seconds())
+	if hc.Advanced.Timeout != nil {
+		opts.Timeout = aws.Int64(int64(hc.Advanced.Timeout.Seconds()))
+	}
+	if hc.Advanced.GracePeriod != nil {
+		opts.GracePeriod = int64(hc.Advanced.GracePeriod.Seconds())
 	}
 	return opts
 }
@@ -496,6 +501,12 @@ func convertExecuteCommand(e *manifest.ExecuteCommand) *template.ExecuteCommandO
 	return &template.ExecuteCommandOpts{}
 }
 
+func convertServiceConnect(s manifest.ServiceConnectBoolOrArgs) *template.ServiceConnect {
+	return &template.ServiceConnect{
+		Alias: s.ServiceConnectArgs.Alias,
+	}
+}
+
 func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
 	if lc.IsEmpty() {
 		return nil
@@ -531,6 +542,7 @@ func convertStorageOpts(wlName *string, in manifest.Storage) *template.StorageOp
 	}
 	return &template.StorageOpts{
 		Ephemeral:         convertEphemeral(in.Ephemeral),
+		ReadonlyRootFS:    in.ReadonlyRootFS,
 		Volumes:           convertVolumes(in.Volumes),
 		MountPoints:       convertMountPoints(in.Volumes),
 		EFSPerms:          convertEFSPermissions(in.Volumes),

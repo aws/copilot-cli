@@ -396,21 +396,29 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 	}
 }
 
-func (e *EnvStackConfig) publicHTTPConfig() (template.HTTPConfig, error) {
+func (e *EnvStackConfig) publicHTTPConfig() (template.PublicHTTPConfig, error) {
 	elbAccessLogsConfig, err := convertELBAccessLogsConfig(e.in.Mft)
 	if err != nil {
-		return template.HTTPConfig{}, err
+		return template.PublicHTTPConfig{}, err
 	}
-	return template.HTTPConfig{
-		CIDRPrefixListIDs: e.in.CIDRPrefixListIDs,
-		ImportedCertARNs:  e.importPublicCertARNs(),
-		ELBAccessLogs:     elbAccessLogsConfig,
+
+	return template.PublicHTTPConfig{
+		HTTPConfig: template.HTTPConfig{
+			ImportedCertARNs: e.importPublicCertARNs(),
+			SSLPolicy:        e.getPublicSSLPolicy(),
+		},
+		PublicALBSourceIPs: e.in.PublicALBSourceIPs,
+		CIDRPrefixListIDs:  e.in.CIDRPrefixListIDs,
+		ELBAccessLogs:      elbAccessLogsConfig,
 	}, nil
 }
 
-func (e *EnvStackConfig) privateHTTPConfig() template.HTTPConfig {
-	return template.HTTPConfig{
-		ImportedCertARNs: e.importPrivateCertARNs(),
+func (e *EnvStackConfig) privateHTTPConfig() template.PrivateHTTPConfig {
+	return template.PrivateHTTPConfig{
+		HTTPConfig: template.HTTPConfig{
+			ImportedCertARNs: e.importPrivateCertARNs(),
+			SSLPolicy:        e.getPrivateSSLPolicy(),
+		},
 		CustomALBSubnets: e.internalALBSubnets(),
 	}
 }
@@ -423,8 +431,9 @@ func (e *EnvStackConfig) vpcConfig() (template.VPCConfig, error) {
 	return template.VPCConfig{
 		Imported:            e.importVPC(),
 		Managed:             e.managedVPC(),
-		AllowVPCIngress:     aws.BoolValue(e.in.Mft.HTTPConfig.Private.SecurityGroupsConfig.Ingress.VPCIngress),
+		AllowVPCIngress:     e.in.Mft.HTTPConfig.Private.HasVPCIngress(),
 		SecurityGroupConfig: securityGroupConfig,
+		FlowLogs:            aws.BoolValue(e.in.Mft.Network.VPC.Flowlogs),
 	}, nil
 }
 
@@ -522,4 +531,12 @@ func (e *EnvStackConfig) internalALBSubnets() []string {
 	}
 	// Fallthrough to SSM config.
 	return e.in.InternalALBSubnets
+}
+
+func (e *EnvStackConfig) getPublicSSLPolicy() *string {
+	return e.in.Mft.EnvironmentConfig.HTTPConfig.Public.SSLPolicy
+}
+
+func (e *EnvStackConfig) getPrivateSSLPolicy() *string {
+	return e.in.Mft.EnvironmentConfig.HTTPConfig.Private.SSLPolicy
 }

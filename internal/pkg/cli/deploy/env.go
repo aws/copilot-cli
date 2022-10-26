@@ -164,7 +164,7 @@ func (d *envDeployer) validateCDN(mft *manifest.Environment) error {
 		err := d.validateALBWorkloadsDontRedirect()
 		var redirErr *errEnvHasPublicServicesWithRedirect
 		switch {
-		case errors.As(err, &redirErr) && mft.ALBIngressRestrictedToCDN():
+		case errors.As(err, &redirErr) && mft.IsPublicLBIngressRestrictedToCDN():
 			return err
 		case errors.As(err, &redirErr):
 			log.Warningln(redirErr.warning())
@@ -184,7 +184,9 @@ func (d *envDeployer) validateALBWorkloadsDontRedirect() error {
 	if err != nil {
 		return fmt.Errorf("get env params: %w", err)
 	}
-
+	if params[cfnstack.EnvParamALBWorkloadsKey] == "" {
+		return nil
+	}
 	services := strings.Split(params[cfnstack.EnvParamALBWorkloadsKey], ",")
 	g, ctx := errgroup.WithContext(context.Background())
 
@@ -279,7 +281,7 @@ func (d *envDeployer) cidrPrefixLists(in *DeployEnvironmentInput) ([]string, err
 	var cidrPrefixListIDs []string
 
 	// Check if ingress is allowed from cloudfront
-	if in.Manifest == nil || !in.Manifest.IsIngressRestrictedToCDN() {
+	if in.Manifest == nil || !in.Manifest.IsPublicLBIngressRestrictedToCDN() {
 		return nil, nil
 	}
 	cfManagedPrefixListID, err := d.cfManagedPrefixListID()
@@ -289,6 +291,17 @@ func (d *envDeployer) cidrPrefixLists(in *DeployEnvironmentInput) ([]string, err
 	cidrPrefixListIDs = append(cidrPrefixListIDs, cfManagedPrefixListID)
 
 	return cidrPrefixListIDs, nil
+}
+
+func (d *envDeployer) publicALBSourceIPs(in *DeployEnvironmentInput) []string {
+	if in.Manifest == nil || len(in.Manifest.GetPublicALBSourceIPs()) == 0 {
+		return nil
+	}
+	ips := make([]string, len(in.Manifest.GetPublicALBSourceIPs()))
+	for i, sourceIP := range in.Manifest.GetPublicALBSourceIPs() {
+		ips[i] = string(sourceIP)
+	}
+	return ips
 }
 
 func (d *envDeployer) cfManagedPrefixListID() (string, error) {
@@ -384,6 +397,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 	if err != nil {
 		return nil, err
 	}
+
 	return &deploy.CreateEnvironmentInput{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
@@ -396,6 +410,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
 		CIDRPrefixListIDs:    cidrPrefixListIDs,
+		PublicALBSourceIPs:   d.publicALBSourceIPs(in),
 		Mft:                  in.Manifest,
 		ForceUpdate:          in.ForceNewUpdate,
 		RawMft:               in.RawManifest,

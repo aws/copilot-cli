@@ -217,14 +217,15 @@ func (o *showAppOpts) description() (*describe.App, error) {
 		return nil, fmt.Errorf("get version for application %s: %w", o.name, err)
 	}
 	return &describe.App{
-		Name:               app.Name,
-		Version:            version,
-		URI:                app.Domain,
-		Envs:               trimmedEnvs,
-		Services:           trimmedSvcs,
-		Jobs:               trimmedJobs,
-		Pipelines:          pipelineInfo,
-		WkldDeployedtoEnvs: wkldDeployedtoEnvs,
+		Name:                app.Name,
+		Version:             version,
+		URI:                 app.Domain,
+		PermissionsBoundary: app.PermissionsBoundary,
+		Envs:                trimmedEnvs,
+		Services:            trimmedSvcs,
+		Jobs:                trimmedJobs,
+		Pipelines:           pipelineInfo,
+		WkldDeployedtoEnvs:  wkldDeployedtoEnvs,
 	}, nil
 }
 

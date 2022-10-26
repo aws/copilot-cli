@@ -143,7 +143,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - Name: nginx
           Image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
           PortMappings:
-            - ContainerPort: 80
+            - ContainerPort: 8080
+              Name: target
           HealthCheck:
             Command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
             Interval: 10
@@ -190,11 +191,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
             - Name: COPILOT_LB_DNS
               Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
           LogConfiguration:
-              LogDriver: awslogs
-              Options:
-                awslogs-region: !Ref AWS::Region
-                awslogs-group: !Ref LogGroup
-                awslogs-stream-prefix: copilot
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: copilot
       Volumes:
         - Name: persistence
   ExecutionRole:
@@ -518,6 +519,22 @@ Resources: # If a bucket URL is specified, that means the template exists.
         - CapacityProvider: FARGATE
           Weight: 0
           Base: 5
+      ServiceConnectConfiguration:
+        Enabled: True
+        Namespace: prod.my-app.local
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-region: !Ref AWS::Region
+            awslogs-group: !Ref LogGroup
+            awslogs-stream-prefix: copilot
+        Services:
+          - PortName: target
+            # Avoid using the same service with Service Discovery in a namespace.
+            DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]]
+            ClientAliases:
+              - Port: !Ref TargetPort
+                DnsName: api
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
