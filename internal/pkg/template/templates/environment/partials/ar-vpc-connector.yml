@@ -4,7 +4,7 @@ AppRunnerVpcEndpointSecurityGroup:
   Type: AWS::EC2::SecurityGroup
   Condition: CreateAppRunnerVPCEndpoint
   Properties:
-    GroupDescription: !Join ['', [!Ref AppName, '-', !Ref EnvironmentName, AppRunnerVpcEndpointSecurityGroup]]
+    GroupDescription: {{truncate (printf "%s-%s-AppRunnerVpcEndpointSecurityGroup" .AppName .EnvName) 255}}
     {{- if .VPCConfig.Imported}}
     VpcId: {{.VPCConfig.Imported.ID}}
     {{- else}}
@@ -12,7 +12,7 @@ AppRunnerVpcEndpointSecurityGroup:
     {{- end}}
     Tags:
       - Key: Name
-        Value: !Sub 'copilot-${AppName}-${EnvironmentName}-app-runner-vpc-endpoint'
+        Value: {{truncate (printf "copilot-%s-%s-app-runner-vpc-endpoint" .AppName .EnvName) 255}}
 
 AppRunnerVpcEndpointSecurityGroupIngressFromEnvironment:
   Type: AWS::EC2::SecurityGroupIngress

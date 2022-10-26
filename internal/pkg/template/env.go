@@ -256,6 +256,14 @@ func withEnvParsingFuncs() ParseOption {
 			"inc":      IncFunc,
 			"fmtSlice": FmtSliceFunc,
 			"quote":    strconv.Quote,
+			"truncate": truncate,
 		})
 	}
+}
+
+func truncate(s string, maxLen int) string {
+	if len(s) < maxLen {
+		return s
+	}
+	return s[:maxLen]
 }

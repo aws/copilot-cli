@@ -137,8 +137,7 @@ Resources:
         EgressConfiguration:
           {{- if requiresVPCConnector .}}
           EgressType: VPC
-          VpcConnectorArn: "arn:aws:apprunner:us-east-1:699021122737:vpcconnector/dnrnd-beta-vpc-connector/1/121655395516478fb8fdd78f5a3e0133" # TODO switch on release
-          # VpcConnectorArn: !Ref VpcConnector
+          VpcConnectorArn: !Ref VpcConnector
           {{- else }}
           EgressType: DEFAULT
           {{- end}}
