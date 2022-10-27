@@ -4,6 +4,7 @@
 package describe
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -285,20 +286,22 @@ func (d *appRunnerServiceDescriber) ServiceARN() (string, error) {
 	return "", fmt.Errorf("no App Runner Service in service stack")
 }
 
-func (d *appRunnerServiceDescriber) vpcIngressConnectionARN() (*string, error) {
+// vpcIngressConnectionARN returns the ARN of the VPC Ingress Connection
+// for this service. If one does not exist, it returns errVPCIngressConnectionNotFound.
+func (d *appRunnerServiceDescriber) vpcIngressConnectionARN() (string, error) {
 	serviceStackResources, err := d.ServiceStackResources()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	for _, resource := range serviceStackResources {
 		arn := resource.PhysicalID
 		if resource.Type == apprunnerVPCIngressConnectionType && arn != "" {
-			return &arn, nil
+			return arn, nil
 		}
 	}
 
-	return nil, nil
+	return "", &errVPCIngressConnectionNotFound{}
 }
 
 // Service retrieves an app runner service.
@@ -317,23 +320,30 @@ func (d *appRunnerServiceDescriber) Service() (*apprunner.Service, error) {
 
 // IsPrivate returns true if the service is configured as non-public.
 func (d *appRunnerServiceDescriber) IsPrivate() (bool, error) {
-	vicARN, err := d.vpcIngressConnectionARN()
+	_, err := d.vpcIngressConnectionARN()
 	if err != nil {
+		var errNotFound *errVPCIngressConnectionNotFound
+		if errors.As(err, &errNotFound) {
+			return false, nil
+		}
+
 		return false, err
 	}
 
-	return vicARN != nil, nil
+	return true, nil
 }
 
 // ServiceURL retrieves the app runner service URL.
 func (d *appRunnerServiceDescriber) ServiceURL() (string, error) {
 	vicARN, err := d.vpcIngressConnectionARN()
-	if err != nil {
+	var errNotFound *errVPCIngressConnectionNotFound
+	isErrNotFound := errors.As(err, &errNotFound)
+	if err != nil && !isErrNotFound {
 		return "", err
 	}
 
-	if vicARN != nil {
-		url, err := d.apprunnerClient.PrivateURL(*vicARN)
+	if !isErrNotFound {
+		url, err := d.apprunnerClient.PrivateURL(vicARN)
 		if err != nil {
 			return "", err
 		}

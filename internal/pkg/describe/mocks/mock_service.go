@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	context "context"
 	reflect "reflect"
 
 	apprunner "github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -243,33 +242,33 @@ func (m *MockapprunnerClient) EXPECT() *MockapprunnerClientMockRecorder {
 }
 
 // DescribeService mocks base method.
-func (m *MockapprunnerClient) DescribeService(svcArn string) (*apprunner.Service, error) {
+func (m *MockapprunnerClient) DescribeService(svcARN string) (*apprunner.Service, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DescribeService", svcArn)
+	ret := m.ctrl.Call(m, "DescribeService", svcARN)
 	ret0, _ := ret[0].(*apprunner.Service)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DescribeService indicates an expected call of DescribeService.
-func (mr *MockapprunnerClientMockRecorder) DescribeService(svcArn interface{}) *gomock.Call {
+func (mr *MockapprunnerClientMockRecorder) DescribeService(svcARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockapprunnerClient)(nil).DescribeService), svcArn)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockapprunnerClient)(nil).DescribeService), svcARN)
 }
 
 // PrivateURL mocks base method.
-func (m *MockapprunnerClient) PrivateURL(ctx context.Context, vicArn string) (string, error) {
+func (m *MockapprunnerClient) PrivateURL(vicARN string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrivateURL", ctx, vicArn)
+	ret := m.ctrl.Call(m, "PrivateURL", vicARN)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PrivateURL indicates an expected call of PrivateURL.
-func (mr *MockapprunnerClientMockRecorder) PrivateURL(ctx, vicArn interface{}) *gomock.Call {
+func (mr *MockapprunnerClientMockRecorder) PrivateURL(vicARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrivateURL", reflect.TypeOf((*MockapprunnerClient)(nil).PrivateURL), ctx, vicArn)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrivateURL", reflect.TypeOf((*MockapprunnerClient)(nil).PrivateURL), vicARN)
 }
 
 // MockworkloadStackDescriber is a mock of workloadStackDescriber interface.

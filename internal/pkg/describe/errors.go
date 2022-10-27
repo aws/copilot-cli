@@ -31,3 +31,9 @@ func (err *errLBWebSvcsOnCFWithoutAlias) Error() string {
 	return fmt.Sprintf("%s %s must have %q specified when CloudFront is enabled", english.PluralWord(len(err.services), "service", "services"),
 		english.WordSeries(template.QuoteSliceFunc(err.services), "and"), err.aliasField)
 }
+
+type errVPCIngressConnectionNotFound struct{}
+
+func (e *errVPCIngressConnectionNotFound) Error() string {
+	return "no vpc ingress connection found"
+}
