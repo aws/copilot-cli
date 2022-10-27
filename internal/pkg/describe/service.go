@@ -316,6 +316,7 @@ func (d *appRunnerServiceDescriber) Service() (*apprunner.Service, error) {
 	return service, nil
 }
 
+// IsPrivate returns true if the service is configured as non-public.
 func (d *appRunnerServiceDescriber) IsPrivate() (bool, error) {
 	vicArn, err := d.vpcIngressConnectionARN()
 	if err != nil {
