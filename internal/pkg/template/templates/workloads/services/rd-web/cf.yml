@@ -133,12 +133,18 @@ Resources:
         HealthyThreshold: !If [HasHealthCheckHealthyThreshold, !Ref HealthCheckHealthyThreshold, !Ref AWS::NoValue]
         UnhealthyThreshold: !If [HasHealthCheckUnhealthyThreshold, !Ref HealthCheckUnhealthyThreshold, !Ref AWS::NoValue]
       {{- end }}
-      {{- if requiresVPCConnector .}}
       NetworkConfiguration:
         EgressConfiguration:
+          {{- if requiresVPCConnector .}}
           EgressType: VPC
           VpcConnectorArn: !Ref VpcConnector
-      {{- end }}
+          {{- else }}
+          EgressType: DEFAULT
+          {{- end}}
+        {{- if .Private}}
+        IngressConfiguration:
+          IsPubliclyAccessible: false
+        {{- end}}
       {{- if eq .Observability.Tracing "AWSXRAY"}}
       ObservabilityConfiguration:
         ObservabilityEnabled: true
@@ -153,6 +159,34 @@ Resources:
           Value: !Ref WorkloadName{{if .Tags}}{{range $name, $value := .Tags}}
         - Key: {{$name}}
           Value: {{$value}}{{end}}{{end}}
+
+  {{- if .Private}}
+  AppRunnerVpcIngressConnection:
+    Type: AWS::AppRunner::VpcIngressConnection
+    Properties:
+      ServiceArn: !GetAtt Service.ServiceArn
+      IngressVpcConfiguration:
+        VpcId:
+          Fn::ImportValue: !Sub '${AppName}-${EnvName}-VpcId'
+        {{- if .AppRunnerVPCEndpoint}}
+        VpcEndpointId: {{.AppRunnerVPCEndpoint}}
+        {{- else}}
+        VpcEndpointId: !GetAtt EnvControllerAction.AppRunnerVpcEndpointId
+        {{- end}}
+      Tags:
+        - Key: copilot-application
+          Value: !Ref AppName
+        - Key: copilot-environment
+          Value: !Ref EnvName
+        - Key: copilot-service
+          Value: !Ref WorkloadName
+        {{- if .Tags}}
+        {{- range $name, $value := .Tags}}
+        - Key: {{$name}}
+          Value: {{$value}}
+        {{- end}}
+        {{- end}}
+  {{- end}}
 
 {{include "addons" . | indent 2}}
 {{if .Alias}}
@@ -230,3 +264,10 @@ Resources:
 {{- if requiresVPCConnector .}}
 {{include "vpc-connector" . | indent 2 }}
 {{- end }}
+
+{{- if .Private}}
+# TODO remove after beta SDK works
+Outputs:
+  DomainName:
+    Value: !GetAtt AppRunnerVpcIngressConnection.DomainName
+{{- end}}
