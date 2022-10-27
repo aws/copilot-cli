@@ -108,6 +108,7 @@ Resources:
       DBSubnetGroupName: !Ref auroraDBSubnetGroup
       VpcSecurityGroupIds:
         - !Ref auroraDBClusterSecurityGroup
+      Port: 3306
       ServerlessV2ScalingConfiguration:
         # Replace "All" below with "!Ref Env" to set different autoscaling limits per environment.
         MinCapacity:
