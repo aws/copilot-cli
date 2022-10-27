@@ -19,6 +19,7 @@ Copilot v1.23 brings several new features and improvements:
 
 - **App Runner private services**: [See detailed section](#app-runner-private-services).
 - **Additional source IPs to public ALB's security group**: [See detailed section](#additional-source-ips-to-public-albs-security-group).
+- **Deprecating environment manifest fields**[See detailed section](#deprecate-environment-manifest-fields).
 
 
 ???+ note "What’s AWS Copilot?"
@@ -31,9 +32,11 @@ Copilot v1.23 brings several new features and improvements:
 
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
-##  App Runner private services
+## App Runner private services
 
 ## Additional source IPs to public ALB's security group
+
+## Deprecate environment manifest fields 
 
 ## What’s next?
 
