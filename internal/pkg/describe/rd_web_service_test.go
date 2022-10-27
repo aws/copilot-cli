@@ -90,12 +90,37 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("retrieve service configuration: some error"),
 		},
+		"return error if fail to get service url": {
+			shouldOutputResources: true,
+			setupMocks: func(m apprunnerSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsSvcDescriber.EXPECT().Service().Return(&apprunner.Service{}, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("", mockErr),
+				)
+			},
+			wantedError: fmt.Errorf("retrieve service url: some error"),
+		},
+		"return error if fail to check if private": {
+			shouldOutputResources: true,
+			setupMocks: func(m apprunnerSvcDescriberMocks) {
+				gomock.InOrder(
+					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
+					m.ecsSvcDescriber.EXPECT().Service().Return(&apprunner.Service{}, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("", nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, mockErr),
+				)
+			},
+			wantedError: fmt.Errorf("check if service is private: some error"),
+		},
 		"return error if fail to retrieve service resources": {
 			shouldOutputResources: true,
 			setupMocks: func(m apprunnerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.storeSvc.EXPECT().ListEnvironmentsDeployedTo(testApp, testSvc).Return([]string{testEnv}, nil),
 					m.ecsSvcDescriber.EXPECT().Service().Return(&apprunner.Service{}, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("", nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return(nil, mockErr),
 				)
 			},
@@ -119,6 +144,8 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("6znxd4ra33.public.us-east-1.apprunner.amazonaws.com", nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(true, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::AppRunner::Service",
@@ -138,6 +165,8 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com", nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::AppRunner::Service",
@@ -168,10 +197,12 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 					{
 						Environment: "test",
 						URL:         "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+						Public:      aws.Bool(false),
 					},
 					{
 						Environment: "prod",
 						URL:         "https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com",
+						Public:      aws.Bool(true),
 					},
 				},
 				Variables: []*envVar{
@@ -226,6 +257,8 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("6znxd4ra33.public.us-east-1.apprunner.amazonaws.com", nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(true, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::AppRunner::Service",
@@ -245,6 +278,8 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com", nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
 							Type:       "AWS::AppRunner::Service",
@@ -275,10 +310,12 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 					{
 						Environment: "test",
 						URL:         "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+						Public:      aws.Bool(false),
 					},
 					{
 						Environment: "prod",
 						URL:         "https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com",
+						Public:      aws.Bool(true),
 					},
 				},
 				Variables: []*envVar{

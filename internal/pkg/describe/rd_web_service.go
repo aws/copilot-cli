@@ -98,7 +98,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		}
 		routes = append(routes, &WebServiceRoute{
 			Environment: env,
-			URL:         url,
+			URL:         formatAppRunnerURL(url),
 			Public:      aws.Bool(!private),
 		})
 		configs = append(configs, &ServiceConfig{

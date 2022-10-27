@@ -337,17 +337,17 @@ func (d *appRunnerServiceDescriber) ServiceURL() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return formatAppRunnerUrl(url), nil
+		return formatAppRunnerURL(url), nil
 	}
 
 	service, err := d.Service()
 	if err != nil {
 		return "", err
 	}
-	return formatAppRunnerUrl(service.ServiceURL), nil
+	return formatAppRunnerURL(service.ServiceURL), nil
 }
 
-func formatAppRunnerUrl(serviceURL string) string {
+func formatAppRunnerURL(serviceURL string) string {
 	svcUrl := &url.URL{
 		Host: serviceURL,
 		// App Runner defaults to https
