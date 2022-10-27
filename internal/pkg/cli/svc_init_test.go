@@ -354,6 +354,44 @@ type: Request-Driven Web Service`), nil)
 			},
 			wantedErr: fmt.Errorf("service name iamoverfortycharacterlongandaninvalidrdwsname is invalid: value must not exceed 40 characters"),
 		},
+		"rdws prompt for ingress type": {
+			inSvcType:        appRunnerSvcType,
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: wantedDockerfilePath,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+				m.mockPrompt.EXPECT().SelectOption(gomock.Eq(svcInitIngressTypePrompt), gomock.Any(), gomock.Eq([]prompt.Option{
+					{
+						Value: "Environment",
+					},
+					{
+						Value: "Internet",
+					},
+				}), gomock.Any()).Return("Environment", nil)
+			},
+		},
+		"rdws prompt for ingress type error": {
+			inSvcType:        appRunnerSvcType,
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: wantedDockerfilePath,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockPrompt.EXPECT().SelectOption(gomock.Eq(svcInitIngressTypePrompt), gomock.Any(), gomock.Eq([]prompt.Option{
+					{
+						Value: "Environment",
+					},
+					{
+						Value: "Internet",
+					},
+				}), gomock.Any()).Return("", errors.New("some error"))
+			},
+			wantedErr: errors.New("select ingress type: some error"),
+		},
 		"skip selecting Dockerfile if image flag is set": {
 			inSvcType:        wantedSvcType,
 			inSvcName:        wantedSvcName,
