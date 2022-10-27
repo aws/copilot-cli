@@ -12,7 +12,7 @@ image_height: '747'
 Posted On: Oct 31, 2022
 
 The AWS Copilot core team is announcing the Copilot v1.23 release.   
-Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 300 people online and over 2.4k stars on [GitHub](http://github.com/aws/copilot-cli/).
+Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 300 people online and nearly 2.5k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.23 brings several new features and improvements:
@@ -44,4 +44,4 @@ Download the new Copilot CLI version by following the link below and leave your 
 
 - Download [the latest CLI version](../docs/getting-started/install.en.md)
 - Try our [Getting Started Guide](../docs/getting-started/first-app-tutorial.en.md)
-- Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.21.0)
+- Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.23.0)
