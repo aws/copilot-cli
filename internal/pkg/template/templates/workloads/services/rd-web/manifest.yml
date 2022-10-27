@@ -19,11 +19,9 @@ image:
 {{- end}}
   # Port exposed through your container to route traffic to it.
   port: {{.ImageConfig.Port}}
-
-{{/* TODO if private service */}}
-{{- if true}}
+{{if and .Private.IsBasic .Private.Basic}}
 http:
-  private: true
+  private: {{.Private.Basic}}
   # healthcheck:
   #   path: /
   #   healthy_threshold: 3
@@ -44,7 +42,6 @@ http:
 cpu: {{.InstanceConfig.CPU}}
 # Amount of memory in MiB used by the task.
 memory: {{.InstanceConfig.Memory}}
-
 {{if .Network.VPC.Placement.PlacementString}}
 # Connect your App Runner service to your environment's VPC.
 network:
