@@ -4,7 +4,6 @@
 package describe
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -56,7 +55,7 @@ type ecsClient interface {
 
 type apprunnerClient interface {
 	DescribeService(svcArn string) (*apprunner.Service, error)
-	PrivateURL(ctx context.Context, vicArn string) (string, error)
+	PrivateURL(vicArn string) (string, error)
 }
 
 type workloadStackDescriber interface {
@@ -328,13 +327,13 @@ func (d *appRunnerServiceDescriber) IsPrivate() (bool, error) {
 
 // ServiceURL retrieves the app runner service URL.
 func (d *appRunnerServiceDescriber) ServiceURL() (string, error) {
-	vicArn, err := d.vpcIngressConnectionARN()
+	vicARN, err := d.vpcIngressConnectionARN()
 	if err != nil {
 		return "", err
 	}
 
-	if vicArn != nil {
-		url, err := d.apprunnerClient.PrivateURL(context.Background(), *vicArn)
+	if vicARN != nil {
+		url, err := d.apprunnerClient.PrivateURL(*vicARN)
 		if err != nil {
 			return "", err
 		}

@@ -5,7 +5,6 @@
 package apprunner
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"sort"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/apprunner"
 )
@@ -44,7 +42,7 @@ type api interface {
 	ResumeService(input *apprunner.ResumeServiceInput) (*apprunner.ResumeServiceOutput, error)
 	StartDeployment(input *apprunner.StartDeploymentInput) (*apprunner.StartDeploymentOutput, error)
 	DescribeObservabilityConfiguration(input *apprunner.DescribeObservabilityConfigurationInput) (*apprunner.DescribeObservabilityConfigurationOutput, error)
-	DescribeVpcIngressConnectionWithContext(ctx aws.Context, input *apprunner.DescribeVpcIngressConnectionInput, opts ...request.Option) (*apprunner.DescribeVpcIngressConnectionOutput, error)
+	DescribeVpcIngressConnection(input *apprunner.DescribeVpcIngressConnectionInput) (*apprunner.DescribeVpcIngressConnectionOutput, error)
 }
 
 // AppRunner wraps an AWS AppRunner client.
@@ -54,8 +52,6 @@ type AppRunner struct {
 
 // New returns a Service configured against the input session.
 func New(s *session.Session) *AppRunner {
-	s.Config.Region = aws.String("us-east-1")
-	s.Config.Endpoint = aws.String("https://fusion.gamma.us-east-1.bullet.aws.dev/")
 	return &AppRunner{
 		client: apprunner.New(s),
 	}
@@ -219,8 +215,8 @@ func (a *AppRunner) WaitForOperation(operationId, svcARN string) error {
 }
 
 // PrivateURL returns the url associated with a VPC Ingress Connection.
-func (a *AppRunner) PrivateURL(ctx context.Context, vicArn string) (string, error) {
-	resp, err := a.client.DescribeVpcIngressConnectionWithContext(ctx, &apprunner.DescribeVpcIngressConnectionInput{
+func (a *AppRunner) PrivateURL(vicArn string) (string, error) {
+	resp, err := a.client.DescribeVpcIngressConnection(&apprunner.DescribeVpcIngressConnectionInput{
 		VpcIngressConnectionArn: aws.String(vicArn),
 	})
 	if err != nil {

@@ -4,7 +4,6 @@
 package apprunner
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -437,7 +436,7 @@ func TestAppRunner_PrivateURL(t *testing.T) {
 				client: mockAppRunnerClient,
 			}
 
-			url, err := service.PrivateURL(context.Background(), mockARN)
+			url, err := service.PrivateURL(mockARN)
 			if tc.expectedErr != "" {
 				require.EqualError(t, err, tc.expectedErr)
 			}
