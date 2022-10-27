@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	apprunner "github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
@@ -256,6 +257,21 @@ func (mr *MockapprunnerClientMockRecorder) DescribeService(svcArn interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*MockapprunnerClient)(nil).DescribeService), svcArn)
 }
 
+// PrivateURL mocks base method.
+func (m *MockapprunnerClient) PrivateURL(ctx context.Context, vicArn string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PrivateURL", ctx, vicArn)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PrivateURL indicates an expected call of PrivateURL.
+func (mr *MockapprunnerClientMockRecorder) PrivateURL(ctx, vicArn interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrivateURL", reflect.TypeOf((*MockapprunnerClient)(nil).PrivateURL), ctx, vicArn)
+}
+
 // MockworkloadStackDescriber is a mock of workloadStackDescriber interface.
 type MockworkloadStackDescriber struct {
 	ctrl     *gomock.Controller
@@ -488,6 +504,21 @@ func NewMockapprunnerDescriber(ctrl *gomock.Controller) *MockapprunnerDescriber 
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockapprunnerDescriber) EXPECT() *MockapprunnerDescriberMockRecorder {
 	return m.recorder
+}
+
+// IsPrivate mocks base method.
+func (m *MockapprunnerDescriber) IsPrivate() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsPrivate")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsPrivate indicates an expected call of IsPrivate.
+func (mr *MockapprunnerDescriberMockRecorder) IsPrivate() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPrivate", reflect.TypeOf((*MockapprunnerDescriber)(nil).IsPrivate))
 }
 
 // Manifest mocks base method.

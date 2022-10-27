@@ -953,7 +953,8 @@ Resources:
                   "apprunner:PauseService",
                   "apprunner:ResumeService",
                   "apprunner:StartDeployment",
-                  "apprunner:DescribeObservabilityConfiguration"
+                  "apprunner:DescribeObservabilityConfiguration",
+                  "apprunner:DescribeVpcIngressConnection"
                 ]
                 Resource: "*"
               - Sid: Tags

@@ -315,7 +315,7 @@ func (d *RDWebServiceDescriber) URI(envName string) (URI, error) {
 
 	serviceURL, err := describer.ServiceURL()
 	if err != nil {
-		return URI{}, fmt.Errorf("get outputs for service %s: %w", d.svc, err)
+		return URI{}, fmt.Errorf("get outputs for service %q: %w", d.svc, err)
 	}
 
 	isPrivate, err := describer.IsPrivate()

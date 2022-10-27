@@ -7,6 +7,8 @@ package mocks
 import (
 	reflect "reflect"
 
+	aws "github.com/aws/aws-sdk-go/aws"
+	request "github.com/aws/aws-sdk-go/aws/request"
 	apprunner "github.com/aws/aws-sdk-go/service/apprunner"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -62,6 +64,26 @@ func (m *Mockapi) DescribeService(input *apprunner.DescribeServiceInput) (*appru
 func (mr *MockapiMockRecorder) DescribeService(input interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*Mockapi)(nil).DescribeService), input)
+}
+
+// DescribeVpcIngressConnectionWithContext mocks base method.
+func (m *Mockapi) DescribeVpcIngressConnectionWithContext(ctx aws.Context, input *apprunner.DescribeVpcIngressConnectionInput, opts ...request.Option) (*apprunner.DescribeVpcIngressConnectionOutput, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, input}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DescribeVpcIngressConnectionWithContext", varargs...)
+	ret0, _ := ret[0].(*apprunner.DescribeVpcIngressConnectionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeVpcIngressConnectionWithContext indicates an expected call of DescribeVpcIngressConnectionWithContext.
+func (mr *MockapiMockRecorder) DescribeVpcIngressConnectionWithContext(ctx, input interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, input}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVpcIngressConnectionWithContext", reflect.TypeOf((*Mockapi)(nil).DescribeVpcIngressConnectionWithContext), varargs...)
 }
 
 // ListOperations mocks base method.
