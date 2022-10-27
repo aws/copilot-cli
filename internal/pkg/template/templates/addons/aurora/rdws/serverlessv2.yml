@@ -135,6 +135,7 @@ Resources:
       {{- end}}
       DBClusterParameterGroupName: {{- if .ParameterGroup}} {{.ParameterGroup}} {{- else}} !Ref {{logicalIDSafe .ClusterName}}DBClusterParameterGroup {{- end}}
       DBSubnetGroupName: !Ref {{logicalIDSafe .ClusterName}}DBSubnetGroup
+      Port: {{if eq .Engine "MySQL"}}3306{{else}}5432{{end}}
       VpcSecurityGroupIds:
         - !Ref {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup
       ServerlessV2ScalingConfiguration:
