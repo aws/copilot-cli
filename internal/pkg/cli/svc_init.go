@@ -48,7 +48,7 @@ const (
 
 var (
 	fmtSvcInitSvcTypePrompt  = "Which %s best represents your service's architecture?"
-	svcInitSvcTypeHelpPrompt = fmt.Sprintf(`A %s is an internet-facing HTTP server managed by AWS App Runner that scales based on incoming requests.
+	svcInitSvcTypeHelpPrompt = fmt.Sprintf(`A %s is an internet-facing or private HTTP server managed by AWS App Runner that scales based on incoming requests.
 To learn more see: https://git.io/JEEfb
 
 A %s is an internet-facing HTTP server managed by Amazon ECS on AWS Fargate behind a load balancer.
@@ -82,7 +82,15 @@ You should set this to the port which your Dockerfile uses to communicate with t
 	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 
 These messages can be consumed by the Worker Service.`
 
+	svcInitIngressTypePrompt     = "Would you like to accept traffic from your environment or the internet?"
+	svcInitIngressTypeHelpPrompt = "Environment will configure your service as private.\nInternet will configure your service as public."
+
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
+)
+
+const (
+	ingressTypeEnvironment = "Environment"
+	ingressTypeInternet    = "Internet"
 )
 
 var serviceTypeHints = map[string]string{
@@ -100,6 +108,7 @@ type initWkldVars struct {
 	image          string
 	subscriptions  []string
 	noSubscribe    bool
+	ingressType    string
 }
 
 type initSvcVars struct {
@@ -253,6 +262,9 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.validateSvc(); err != nil {
 		return err
 	}
+	if err := o.askIngressType(); err != nil {
+		return err
+	}
 	shouldSkipAsking, err := o.shouldSkipAsking()
 	if err != nil {
 		return err
@@ -313,6 +325,7 @@ func (o *initSvcOpts) Execute() error {
 		},
 		Port:        o.port,
 		HealthCheck: hc,
+		Private:     o.ingressType == ingressTypeEnvironment,
 	})
 	if err != nil {
 		return err
@@ -386,6 +399,28 @@ func (o *initSvcOpts) askSvcName() error {
 		return fmt.Errorf("get service name: %w", err)
 	}
 	o.name = name
+	return nil
+}
+
+func (o *initSvcOpts) askIngressType() error {
+	if o.wkldType != manifest.RequestDrivenWebServiceType || o.ingressType != "" {
+		return nil
+	}
+
+	opts := []prompt.Option{
+		{
+			Value: ingressTypeEnvironment,
+		},
+		{
+			Value: ingressTypeInternet,
+		},
+	}
+
+	t, err := o.prompt.SelectOption(svcInitIngressTypePrompt, svcInitIngressTypeHelpPrompt, opts, prompt.WithFinalMessage("Reachable from:"))
+	if err != nil {
+		return fmt.Errorf("select ingress type: %w", err)
+	}
+	o.ingressType = t
 	return nil
 }
 
@@ -712,6 +747,7 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.subscriptions, subscribeTopicsFlag, []string{}, subscribeTopicsFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
+	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)
 
 	return cmd
 }

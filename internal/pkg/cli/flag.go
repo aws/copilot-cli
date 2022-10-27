@@ -64,6 +64,8 @@ const (
 	noSubscriptionFlag  = "no-subscribe"
 	subscribeTopicsFlag = "subscribe-topics"
 
+	ingressTypeFlag = "ingress-type"
+
 	storageTypeFlag              = "storage-type"
 	storagePartitionKeyFlag      = "partition-key"
 	storageSortKeyFlag           = "sort-key"
@@ -263,6 +265,8 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localPipelineFlagDescription     = "Only show pipelines in the workspace."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "The port on which your service listens."
+
+	ingressTypeFlagDescription = "Required for Request-Driven Web Service. Who can send traffic to your service."
 
 	noSubscriptionFlagDescription  = "Optional. Turn off selection for adding subscriptions for worker services."
 	subscribeTopicsFlagDescription = `Optional. SNS Topics to subscribe to from other services in your application.

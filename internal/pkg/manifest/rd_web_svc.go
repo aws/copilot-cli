@@ -97,6 +97,7 @@ type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
 	Port     uint16
 	Platform PlatformArgsOrString
+	Private  bool
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -107,6 +108,12 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Image.Build.BuildArgs.Dockerfile = stringP(props.Dockerfile)
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
+	// TODO update to set new fields once merged
+	svc.RequestDrivenWebServiceHttpConfig.Alias = aws.String("public")
+	if props.Private {
+		svc.RequestDrivenWebServiceHttpConfig.Alias = aws.String("private")
+		svc.RequestDrivenWebServiceConfig.Network.VPC.Placement.PlacementString = (*PlacementString)(aws.String("private"))
+	}
 	svc.parser = template.New()
 	return svc
 }
