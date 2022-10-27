@@ -163,6 +163,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
 			},
 		},
 		"with DNS": {
@@ -219,6 +223,10 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String(""),
 				},
 			},
 		},
@@ -277,6 +285,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("true"),
 				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
 			},
 		},
 		"should use default value for new EnvControllerParameters": {
@@ -330,6 +342,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String("rdws-backend"),
+				},
 			},
 
 			want: []*cloudformation.Parameter{
@@ -384,6 +400,10 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String("rdws-backend"),
 				},
 			},
 		},
@@ -399,6 +419,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterValue: aws.String("backend"),
 				},
 				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String("rdws-backend"),
+				},
+				{
 					ParameterKey:   aws.String(EnvParamAliasesKey),
 					ParameterValue: aws.String(""),
 				},
@@ -496,6 +520,10 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String("rdws-backend"),
 				},
 			},
 		},
@@ -557,6 +585,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
 			},
 
 			want: []*cloudformation.Parameter{
@@ -611,6 +643,10 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String(""),
 				},
 			},
 		},
@@ -669,6 +705,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
 			},
 
 			want: []*cloudformation.Parameter{
@@ -724,6 +764,10 @@ func TestEnv_Parameters(t *testing.T) {
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
 				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String(""),
+				},
 			},
 		},
 		"should use app.local endpoint service discovery endpoint if it is a new parameter": {
@@ -751,6 +795,10 @@ func TestEnv_Parameters(t *testing.T) {
 				},
 				{
 					ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
+					ParameterValue: aws.String(""),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
 					ParameterValue: aws.String(""),
 				},
 			},
@@ -807,6 +855,10 @@ func TestEnv_Parameters(t *testing.T) {
 				{
 					ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
 					ParameterValue: aws.String("false"),
+				},
+				{
+					ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
+					ParameterValue: aws.String(""),
 				},
 			},
 		},
