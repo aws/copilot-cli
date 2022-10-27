@@ -20,7 +20,7 @@ exec: true     # Enable running commands in your container.
   # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
 
 
-# The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
+# The events can be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 subscribe:
   topics:
     - name: testTopic

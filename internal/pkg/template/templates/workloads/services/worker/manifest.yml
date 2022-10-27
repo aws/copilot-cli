@@ -42,7 +42,7 @@ exec: true     # Enable running commands in your container.
 {{- end}}
 
 {{if .Subscribe}}{{- if .Subscribe.Topics}}
-# The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
+# The events can be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 subscribe:
   topics:
 {{- range $topic := .Subscribe.Topics}}
@@ -58,7 +58,7 @@ subscribe:
   {{- end }}
 {{- else}}
 # You can register to topics from other services.
-# The events can be be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
+# The events can be received from an SQS queue via the env var $COPILOT_QUEUE_URI.
 # subscribe:
 #   topics: 
 #     - name: topic-from-another-service
