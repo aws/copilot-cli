@@ -1,6 +1,6 @@
 ---
 title: 'AWS Copilot v1.23: Try out App Runner private services and more!'
-twitter_title: 'AWS Copilot v1.22'
+twitter_title: 'AWS Copilot v1.23'
 image: ''
 image_alt: ''
 image_width: '1051'
