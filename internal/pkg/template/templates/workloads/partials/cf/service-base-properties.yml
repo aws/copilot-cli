@@ -33,7 +33,6 @@ CapacityProviderStrategy:
     {{- end}}
   {{- end}}
 {{- end }}
-{{- if .SCFeatureFlag }}
 ServiceConnectConfiguration:
   {{- if .ServiceConnect }}
   Enabled: True
@@ -58,7 +57,6 @@ ServiceConnectConfiguration:
   {{- else}}
   Enabled: False
   {{- end}}
-{{- end}}
 NetworkConfiguration:
   AwsvpcConfiguration:
     AssignPublicIp: {{.Network.AssignPublicIP}}

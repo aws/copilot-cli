@@ -597,8 +597,6 @@ type WorkloadOpts struct {
 
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
-
-	SCFeatureFlag bool
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,
