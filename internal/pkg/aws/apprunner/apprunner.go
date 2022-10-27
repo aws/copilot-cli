@@ -215,12 +215,12 @@ func (a *AppRunner) WaitForOperation(operationId, svcARN string) error {
 }
 
 // PrivateURL returns the url associated with a VPC Ingress Connection.
-func (a *AppRunner) PrivateURL(vicArn string) (string, error) {
+func (a *AppRunner) PrivateURL(vicARN string) (string, error) {
 	resp, err := a.client.DescribeVpcIngressConnection(&apprunner.DescribeVpcIngressConnectionInput{
-		VpcIngressConnectionArn: aws.String(vicArn),
+		VpcIngressConnectionArn: aws.String(vicARN),
 	})
 	if err != nil {
-		return "", fmt.Errorf("describe vpc ingress connection %q: %w", vicArn, err)
+		return "", fmt.Errorf("describe vpc ingress connection %q: %w", vicARN, err)
 	}
 
 	return aws.StringValue(resp.VpcIngressConnection.DomainName), nil

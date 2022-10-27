@@ -31,10 +31,10 @@ Configurations
 
 Routes
 
-  Environment  Public    URL
-  -----------  ------    ---
-  test         false     https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com
-  prod         true      https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com
+  Environment  Ingress      URL
+  -----------  -------      ---
+  test         environment  https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com
+  prod         internet     https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com
 
 Variables
 
@@ -144,7 +144,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
-					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("6znxd4ra33.public.us-east-1.apprunner.amazonaws.com", nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com", nil),
 					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(true, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
@@ -165,7 +165,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
-					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com", nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com", nil),
 					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
@@ -193,16 +193,16 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 						Port:        "80",
 					},
 				},
-				Routes: []*WebServiceRoute{
+				Routes: []*RDWSRoute{
 					{
 						Environment: "test",
 						URL:         "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
-						Public:      aws.Bool(false),
+						Ingress:     rdwsIngressEnvironment,
 					},
 					{
 						Environment: "prod",
 						URL:         "https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com",
-						Public:      aws.Bool(true),
+						Ingress:     rdwsIngressInternet,
 					},
 				},
 				Variables: []*envVar{
@@ -257,7 +257,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
-					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("6znxd4ra33.public.us-east-1.apprunner.amazonaws.com", nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com", nil),
 					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(true, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
@@ -278,7 +278,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 							},
 						},
 					}, nil),
-					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com", nil),
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com", nil),
 					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, nil),
 					m.ecsSvcDescriber.EXPECT().ServiceStackResources().Return([]*stack.Resource{
 						{
@@ -306,16 +306,16 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 						Port:        "80",
 					},
 				},
-				Routes: []*WebServiceRoute{
+				Routes: []*RDWSRoute{
 					{
 						Environment: "test",
 						URL:         "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
-						Public:      aws.Bool(false),
+						Ingress:     rdwsIngressEnvironment,
 					},
 					{
 						Environment: "prod",
 						URL:         "https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com",
-						Public:      aws.Bool(true),
+						Ingress:     rdwsIngressInternet,
 					},
 				},
 				Variables: []*envVar{
@@ -399,7 +399,7 @@ func TestRDWebServiceDescriber_Describe(t *testing.T) {
 func TestRDWebServiceDesc_String(t *testing.T) {
 	t.Run("correct output including resources", func(t *testing.T) {
 		wantedHumanString := humanStringWithResources
-		wantedJSONString := "{\"service\":\"testsvc\",\"type\":\"Request-Driven Web Service\",\"application\":\"testapp\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"1024\",\"memory\":\"2048\"},{\"environment\":\"prod\",\"port\":\"80\",\"cpu\":\"2048\",\"memory\":\"3072\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com\",\"public\":false},{\"environment\":\"prod\",\"url\":\"https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com\",\"public\":true}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc\"}],\"test\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc\"}]}}\n"
+		wantedJSONString := "{\"service\":\"testsvc\",\"type\":\"Request-Driven Web Service\",\"application\":\"testapp\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"1024\",\"memory\":\"2048\"},{\"environment\":\"prod\",\"port\":\"80\",\"cpu\":\"2048\",\"memory\":\"3072\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com\",\"ingress\":\"environment\"},{\"environment\":\"prod\",\"url\":\"https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com\",\"ingress\":\"internet\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc\"}],\"test\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc\"}]}}\n"
 		svcDesc := &rdWebSvcDesc{
 			Service: "testsvc",
 			Type:    "Request-Driven Web Service",
@@ -418,16 +418,16 @@ func TestRDWebServiceDesc_String(t *testing.T) {
 					Port:        "80",
 				},
 			},
-			Routes: []*WebServiceRoute{
+			Routes: []*RDWSRoute{
 				{
 					Environment: "test",
 					URL:         "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
-					Public:      aws.Bool(false),
+					Ingress:     rdwsIngressEnvironment,
 				},
 				{
 					Environment: "prod",
 					URL:         "https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com",
-					Public:      aws.Bool(true),
+					Ingress:     rdwsIngressInternet,
 				},
 			},
 			Variables: []*envVar{
@@ -488,10 +488,10 @@ Observability
 
 Routes
 
-  Environment  Public    URL
-  -----------  ------    ---
-  test         false     https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com
-  prod         true      https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com
+  Environment  Ingress      URL
+  -----------  -------      ---
+  test         environment  https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com
+  prod         internet     https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com
 
 Variables
 
@@ -508,7 +508,7 @@ Resources
   prod
     AWS::AppRunner::Service  arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc
 `
-		wantedJSONString := "{\"service\":\"testsvc\",\"type\":\"Request-Driven Web Service\",\"application\":\"testapp\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"1024\",\"memory\":\"2048\"},{\"environment\":\"prod\",\"port\":\"80\",\"cpu\":\"2048\",\"memory\":\"3072\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com\",\"public\":false},{\"environment\":\"prod\",\"url\":\"https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com\",\"public\":true}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc\"}],\"test\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc\"}]},\"observability\":[{\"environment\":\"test\",\"tracing\":{\"vendor\":\"mockVendor\"}},{\"environment\":\"prod\"}]}\n"
+		wantedJSONString := "{\"service\":\"testsvc\",\"type\":\"Request-Driven Web Service\",\"application\":\"testapp\",\"configurations\":[{\"environment\":\"test\",\"port\":\"80\",\"cpu\":\"1024\",\"memory\":\"2048\"},{\"environment\":\"prod\",\"port\":\"80\",\"cpu\":\"2048\",\"memory\":\"3072\"}],\"routes\":[{\"environment\":\"test\",\"url\":\"https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com\",\"ingress\":\"environment\"},{\"environment\":\"prod\",\"url\":\"https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com\",\"ingress\":\"internet\"}],\"variables\":[{\"environment\":\"prod\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"prod\"},{\"environment\":\"test\",\"name\":\"COPILOT_ENVIRONMENT_NAME\",\"value\":\"test\"}],\"resources\":{\"prod\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-prod-testsvc\"}],\"test\":[{\"type\":\"AWS::AppRunner::Service\",\"physicalID\":\"arn:aws:apprunner:us-east-1:111111111111:service/testapp-test-testsvc\"}]},\"observability\":[{\"environment\":\"test\",\"tracing\":{\"vendor\":\"mockVendor\"}},{\"environment\":\"prod\"}]}\n"
 		svcDesc := &rdWebSvcDesc{
 			Service: "testsvc",
 			Type:    "Request-Driven Web Service",
@@ -527,16 +527,16 @@ Resources
 					Port:        "80",
 				},
 			},
-			Routes: []*WebServiceRoute{
+			Routes: []*RDWSRoute{
 				{
 					Environment: "test",
 					URL:         "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
-					Public:      aws.Bool(false),
+					Ingress:     rdwsIngressEnvironment,
 				},
 				{
 					Environment: "prod",
 					URL:         "https://tumkjmvjjf.public.us-east-1.apprunner.amazonaws.com",
-					Public:      aws.Bool(true),
+					Ingress:     rdwsIngressInternet,
 				},
 			},
 			Variables: []*envVar{

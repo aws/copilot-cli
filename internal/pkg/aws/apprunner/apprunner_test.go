@@ -404,7 +404,7 @@ func TestAppRunner_PrivateURL(t *testing.T) {
 	}{
 		"error if error from sdk": {
 			mockAppRunnerClient: func(m *mocks.Mockapi) {
-				m.EXPECT().DescribeVpcIngressConnectionWithContext(gomock.Any(), &apprunner.DescribeVpcIngressConnectionInput{
+				m.EXPECT().DescribeVpcIngressConnection(&apprunner.DescribeVpcIngressConnectionInput{
 					VpcIngressConnectionArn: aws.String(mockARN),
 				}).Return(nil, errors.New("some error"))
 			},
@@ -412,7 +412,7 @@ func TestAppRunner_PrivateURL(t *testing.T) {
 		},
 		"success": {
 			mockAppRunnerClient: func(m *mocks.Mockapi) {
-				m.EXPECT().DescribeVpcIngressConnectionWithContext(gomock.Any(), &apprunner.DescribeVpcIngressConnectionInput{
+				m.EXPECT().DescribeVpcIngressConnection(&apprunner.DescribeVpcIngressConnectionInput{
 					VpcIngressConnectionArn: aws.String(mockARN),
 				}).Return(&apprunner.DescribeVpcIngressConnectionOutput{
 					VpcIngressConnection: &apprunner.VpcIngressConnection{

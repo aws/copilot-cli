@@ -54,8 +54,8 @@ type ecsClient interface {
 }
 
 type apprunnerClient interface {
-	DescribeService(svcArn string) (*apprunner.Service, error)
-	PrivateURL(vicArn string) (string, error)
+	DescribeService(svcARN string) (*apprunner.Service, error)
+	PrivateURL(vicARN string) (string, error)
 }
 
 type workloadStackDescriber interface {
@@ -317,12 +317,12 @@ func (d *appRunnerServiceDescriber) Service() (*apprunner.Service, error) {
 
 // IsPrivate returns true if the service is configured as non-public.
 func (d *appRunnerServiceDescriber) IsPrivate() (bool, error) {
-	vicArn, err := d.vpcIngressConnectionARN()
+	vicARN, err := d.vpcIngressConnectionARN()
 	if err != nil {
 		return false, err
 	}
 
-	return vicArn != nil, nil
+	return vicARN != nil, nil
 }
 
 // ServiceURL retrieves the app runner service URL.
