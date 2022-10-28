@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.23: Try out App Runner private services and more!'
+title: 'AWS Copilot v1.23: App Runner private service, Aurora Serverless v2 and more!'
 twitter_title: 'AWS Copilot v1.23'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.23: Try out App Runner private services and more!
+# AWS Copilot v1.23: App Runner private service, Aurora Serverless v2 and more!
 
 Posted On: Oct 31, 2022
 
@@ -18,8 +18,13 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 Copilot v1.23 brings several new features and improvements:
 
 - **App Runner private services**: [See detailed section](#app-runner-private-services).
-- **Additional source IPs to public ALB's security group**: [See detailed section](#additional-source-ips-to-public-albs-security-group).
-- **Deprecating environment manifest fields**[See detailed section](#deprecate-environment-manifest-fields).
+- **Restrict ingress to your ALB through source IPs**: [See detailed section](#restrict-ingress-to-your-alb-through-source-ips).
+- **Support Aurora Serverless v2 in storage init**: [See detailed section](#support-aurora-serverless-v2-in-storage-init).
+- **Moving misplaced `http` fields in environment manifest (backward-compatible!):** [See detailed section](#moving-misplaced-http-fields-in-environment-manifest-backward-compatible).
+- **Restrict container access to root file system to read-only:** [See detailed section](#restrict-container-access-to-root-file-system-to-read-only).
+- **Enable VPC flow logs for environments:** [See detailed section](#enable-VPC-flow-logs-for-environments).
+- **Remove here string from the default buildspec:** [See detailed section](#remove-here-string-from-the-default-buildspec).
+- **Configure SSL policy for your ALB’s HTTPS listener:** [See detailed section](#configure-ssl-policy-for-your-albs-https-listener).
 
 
 ???+ note "What’s AWS Copilot?"
@@ -34,9 +39,19 @@ Copilot v1.23 brings several new features and improvements:
 
 ## App Runner private services
 
-## Additional source IPs to public ALB's security group
+## Restrict ingress to your ALB through source IPs
 
-## Deprecate environment manifest fields 
+## Support Aurora Serverless v2 in storage init
+
+## Moving misplaced `http` fields in environment manifest (backward-compatible!)
+
+## Restrict container access to root file system to read-only
+
+## Enable VPC flow logs for environments
+
+## Remove here string from the default buildspec
+
+## Configure SSL policy for your ALB’s HTTPS listener
 
 ## What’s next?
 
