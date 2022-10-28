@@ -74,6 +74,19 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			},
 			wantedError: errors.New("IAM admin role metrics-adminrole already exists in this account"),
 		},
+		"valid app name without application in SSM and with IAM adminrole with out any tag": {
+			inAppName: "metrics",
+			mock: func(m *initAppMocks) {
+				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.mockRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"mock-application": "metrics",
+					}, nil)
+			},
+			wantedError: errors.New("IAM admin role metrics-adminrole already exists in this account"),
+		},
 		"invalid app name": {
 			inAppName: "123chicken",
 			mock:      func(m *initAppMocks) {},
