@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/dustin/go-humanize/english"
 )
 
 // Long flag names.
@@ -201,6 +202,9 @@ Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag,
 
 	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
 Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
+
+	ingressTypeFlagDescription = fmt.Sprintf(`Required for a Request-Driven Web Service. Allowed source of traffic to your service.
+Must be one of %s`, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 )
 
 const (
@@ -265,9 +269,6 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	localPipelineFlagDescription     = "Only show pipelines in the workspace."
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "The port on which your service listens."
-
-	ingressTypeFlagDescription = `Required for a Request-Driven Web Service. Allowed source of traffic to your service.
-Must be "environment" or "internet."`
 
 	noSubscriptionFlagDescription  = "Optional. Turn off selection for adding subscriptions for worker services."
 	subscribeTopicsFlagDescription = `Optional. SNS Topics to subscribe to from other services in your application.

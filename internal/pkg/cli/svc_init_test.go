@@ -45,6 +45,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 		inSvcPort        uint16
 		inSubscribeTags  []string
 		inNoSubscribe    bool
+		inIngressType    string
 
 		setupMocks     func(mocks initSvcMocks)
 		mockFileSystem func(mockFS afero.Fs)
@@ -103,6 +104,21 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 			},
 			wantedErr: errors.New("validate subscribe configuration: cannot specify both --no-subscribe and --subscribe-topics"),
 		},
+		"rdws invalid ingress type error": {
+			inSvcName:        "frontend",
+			inSvcType:        "Request-Driven Web Service",
+			inDockerfilePath: "./hello/Dockerfile",
+			inIngressType:    "invalid",
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("hello", 0755)
+				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
+			},
+			wantedErr: errors.New(`invalid ingress type "invalid". must be one of Environment or Internet`),
+		},
 		"valid flags": {
 			inSvcName:        "frontend",
 			inSvcType:        "Load Balanced Web Service",
@@ -115,7 +131,20 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 				mockFS.MkdirAll("hello", 0755)
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
 			},
-			wantedErr: nil,
+		},
+		"valid rdws flags": {
+			inSvcName:        "frontend",
+			inSvcType:        "Request-Driven Web Service",
+			inDockerfilePath: "./hello/Dockerfile",
+			inIngressType:    "Internet",
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetApplication("phonetool").Return(&config.Application{}, nil)
+			},
+			mockFileSystem: func(mockFS afero.Fs) {
+				mockFS.MkdirAll("hello", 0755)
+				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
+			},
 		},
 	}
 
@@ -141,6 +170,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 						appName:        tc.inAppName,
 						subscriptions:  tc.inSubscribeTags,
 						noSubscribe:    tc.inNoSubscribe,
+						ingressType:    tc.inIngressType,
 					},
 					port: tc.inSvcPort,
 				},
@@ -404,18 +434,6 @@ type: Request-Driven Web Service`), nil)
 				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
 			},
-		},
-		"rdws invalid ingress type error": {
-			inSvcType:        appRunnerSvcType,
-			inSvcName:        wantedSvcName,
-			inSvcPort:        wantedSvcPort,
-			inDockerfilePath: wantedDockerfilePath,
-			inIngressType:    "invalid",
-
-			setupMocks: func(m initSvcMocks) {
-				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
-			},
-			wantedErr: errors.New(`invalid ingress type "invalid"`),
 		},
 		"skip selecting Dockerfile if image flag is set": {
 			inSvcType:        wantedSvcType,

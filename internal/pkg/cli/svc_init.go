@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
@@ -94,6 +95,11 @@ const (
 	ingressTypeEnvironment = "Environment"
 	ingressTypeInternet    = "Internet"
 )
+
+var rdwsIngressOptions = []string{
+	ingressTypeEnvironment,
+	ingressTypeInternet,
+}
 
 var serviceTypeHints = map[string]string{
 	manifest.RequestDrivenWebServiceType: "App Runner",
@@ -226,6 +232,9 @@ func (o *initSvcOpts) Validate() error {
 	if err := validateSubscribe(o.noSubscribe, o.subscriptions); err != nil {
 		return err
 	}
+	if err := o.validateIngressType(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -265,9 +274,6 @@ func (o *initSvcOpts) Ask() error {
 		return err
 	}
 	if err := o.askIngressType(); err != nil {
-		return err
-	}
-	if err := o.validateIngressType(); err != nil {
 		return err
 	}
 	shouldSkipAsking, err := o.shouldSkipAsking()
@@ -412,13 +418,9 @@ func (o *initSvcOpts) askIngressType() error {
 		return nil
 	}
 
-	opts := []prompt.Option{
-		{
-			Value: ingressTypeEnvironment,
-		},
-		{
-			Value: ingressTypeInternet,
-		},
+	var opts []prompt.Option
+	for _, typ := range rdwsIngressOptions {
+		opts = append(opts, prompt.Option{Value: typ})
 	}
 
 	t, err := o.prompt.SelectOption(svcInitIngressTypePrompt, svcInitIngressTypeHelpPrompt, opts, prompt.WithFinalMessage("Reachable from:"))
@@ -436,7 +438,7 @@ func (o *initSvcOpts) validateIngressType() error {
 	if strings.EqualFold(o.ingressType, "internet") || strings.EqualFold(o.ingressType, "environment") {
 		return nil
 	}
-	return fmt.Errorf("invalid ingress type %q", o.ingressType)
+	return fmt.Errorf("invalid ingress type %q. must be one of %s", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 }
 
 func (o *initSvcOpts) askImage() error {
