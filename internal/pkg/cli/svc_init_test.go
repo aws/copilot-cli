@@ -117,7 +117,7 @@ func TestSvcInitOpts_Validate(t *testing.T) {
 				mockFS.MkdirAll("hello", 0755)
 				afero.WriteFile(mockFS, "hello/Dockerfile", []byte("FROM nginx"), 0644)
 			},
-			wantedErr: errors.New(`invalid ingress type "invalid". must be one of Environment or Internet`),
+			wantedErr: errors.New(`invalid ingress type "invalid": must be one of Environment or Internet`),
 		},
 		"valid flags": {
 			inSvcName:        "frontend",
