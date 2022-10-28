@@ -301,7 +301,7 @@ func (d *appRunnerServiceDescriber) vpcIngressConnectionARN() (string, error) {
 		}
 	}
 
-	return "", &errVPCIngressConnectionNotFound{}
+	return "", errVPCIngressConnectionNotFound
 }
 
 // Service retrieves an app runner service.
@@ -322,8 +322,7 @@ func (d *appRunnerServiceDescriber) Service() (*apprunner.Service, error) {
 func (d *appRunnerServiceDescriber) IsPrivate() (bool, error) {
 	_, err := d.vpcIngressConnectionARN()
 	if err != nil {
-		var errNotFound *errVPCIngressConnectionNotFound
-		if errors.As(err, &errNotFound) {
+		if errors.Is(err, errVPCIngressConnectionNotFound) {
 			return false, nil
 		}
 
@@ -336,8 +335,7 @@ func (d *appRunnerServiceDescriber) IsPrivate() (bool, error) {
 // ServiceURL retrieves the app runner service URL.
 func (d *appRunnerServiceDescriber) ServiceURL() (string, error) {
 	vicARN, err := d.vpcIngressConnectionARN()
-	var errNotFound *errVPCIngressConnectionNotFound
-	isErrNotFound := errors.As(err, &errNotFound)
+	isErrNotFound := errors.Is(err, errVPCIngressConnectionNotFound)
 	if err != nil && !isErrNotFound {
 		return "", err
 	}

@@ -4,6 +4,7 @@
 package describe
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -32,8 +33,4 @@ func (err *errLBWebSvcsOnCFWithoutAlias) Error() string {
 		english.WordSeries(template.QuoteSliceFunc(err.services), "and"), err.aliasField)
 }
 
-type errVPCIngressConnectionNotFound struct{}
-
-func (e *errVPCIngressConnectionNotFound) Error() string {
-	return "no vpc ingress connection found"
-}
+var errVPCIngressConnectionNotFound = errors.New("no vpc ingress connection found")
