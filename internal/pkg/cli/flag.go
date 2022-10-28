@@ -266,7 +266,7 @@ Defaults to all logs. Only one of end-time / follow may be used.`
 	deleteSecretFlagDescription      = "Deletes AWS Secrets Manager secret associated with a pipeline source repository."
 	svcPortFlagDescription           = "The port on which your service listens."
 
-	ingressTypeFlagDescription = "Required for Request-Driven Web Service. Who can send traffic to your service."
+	ingressTypeFlagDescription = "Required for a Request-Driven Web Service. Allowed source of traffic to your service."
 
 	noSubscriptionFlagDescription  = "Optional. Turn off selection for adding subscriptions for worker services."
 	subscribeTopicsFlagDescription = `Optional. SNS Topics to subscribe to from other services in your application.

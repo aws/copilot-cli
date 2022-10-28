@@ -19,7 +19,7 @@ image:
 {{- end}}
   # Port exposed through your container to route traffic to it.
   port: {{.ImageConfig.Port}}
-{{if and .Private.IsBasic .Private.Basic}}
+{{if .Private.IsBasic}}
 http:
   private: {{.Private.Basic}}
   # healthcheck:

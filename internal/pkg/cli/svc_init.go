@@ -83,7 +83,8 @@ You should set this to the port which your Dockerfile uses to communicate with t
 These messages can be consumed by the Worker Service.`
 
 	svcInitIngressTypePrompt     = "Would you like to accept traffic from your environment or the internet?"
-	svcInitIngressTypeHelpPrompt = "Environment will configure your service as private.\nInternet will configure your service as public."
+	svcInitIngressTypeHelpPrompt = `"Environment" will configure your service as private.
+"Internet" will configure your service as public.`
 
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
 )
