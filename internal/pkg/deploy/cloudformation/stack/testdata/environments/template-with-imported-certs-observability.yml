@@ -12,6 +12,9 @@ Metadata:
       public:
         ingress:
           cdn: true
+          source_ips:
+            - 1.1.1.1
+            - 2.2.2.2
         access_logs:
           bucket_name: accesslogsbucket
           prefix: accesslogsbucketprefix
@@ -351,6 +354,16 @@ Resources:
           FromPort: 80
           IpProtocol: tcp
           ToPort: 80
+        - CidrIp: 1.1.1.1
+          Description: Allow ingress from source IP 1.1.1.1 on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        - CidrIp: 2.2.2.2
+          Description: Allow ingress from source IP 2.2.2.2 on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
       VpcId: !Ref VPC
       Tags:
         - Key: Name
@@ -365,6 +378,16 @@ Resources:
       SecurityGroupIngress:
         - SourcePrefixListId: pl-mockid
           Description: Allow ingress from prefix list pl-mockid on port 443
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        - CidrIp: 1.1.1.1
+          Description: Allow ingress from source IP 1.1.1.1 on port 443
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        - CidrIp: 2.2.2.2
+          Description: Allow ingress from source IP 2.2.2.2 on port 443
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443

@@ -36,6 +36,9 @@ http:
   public:
     ingress:
       cdn: true
+      source_ips:
+        - 1.1.1.1
+        - 2.2.2.2
     access_logs:
       bucket_name: accesslogsbucket
       prefix: accesslogsbucketprefix
@@ -59,6 +62,7 @@ observability:
 					},
 					Name:                 "test",
 					CIDRPrefixListIDs:    []string{"pl-mockid"},
+					PublicALBSourceIPs:   []string{"1.1.1.1", "2.2.2.2"},
 					ArtifactBucketARN:    "arn:aws:s3:::mockbucket",
 					ArtifactBucketKeyARN: "arn:aws:kms:us-west-2:000000000:key/1234abcd-12ab-34cd-56ef-1234567890ab",
 					CustomResourcesURLs: map[string]string{
