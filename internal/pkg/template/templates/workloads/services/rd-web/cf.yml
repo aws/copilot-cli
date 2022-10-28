@@ -162,6 +162,8 @@ Resources:
 
   {{- if .Private}}
   AppRunnerVpcIngressConnection:
+    Metadata:
+      'aws:copilot:description': 'The ingress connection from your environment to this service'
     Type: AWS::AppRunner::VpcIngressConnection
     Properties:
       ServiceArn: !GetAtt Service.ServiceArn

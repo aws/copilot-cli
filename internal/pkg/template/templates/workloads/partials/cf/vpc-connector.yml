@@ -42,7 +42,8 @@ VpcConnector:
             !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
     {{- end}}
     SecurityGroups:
-    - !Ref ServiceSecurityGroup
+      - !Ref ServiceSecurityGroup
+      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
     Tags:
       - Key: copilot-application
         Value: !Ref AppName
