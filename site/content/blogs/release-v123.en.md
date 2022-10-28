@@ -21,9 +21,9 @@ Copilot v1.23 brings several new features and improvements:
 - **Support Aurora Serverless v2 in storage init**: [See detailed section](#support-aurora-serverless-v2-in-storage-init).
 - **Moving misplaced `http` fields in environment manifest (backward-compatible!):** [See detailed section](#moving-misplaced-http-fields-in-environment-manifest-backward-compatible).
 - **Enable VPC flow logs for environments:** [See detailed section](#enable-VPC-flow-logs-for-environments).
-- **Restrict container access to root file system to read-only:** [See manifest sample](#<todo>).
-- **Configure SSL policy for your ALB’s HTTPS listener:** [See manifest sample](#<todo>).
-- **Restrict ingress to your ALB through source IPs**: [See manifest sample](#<todo>).
+- **Restrict container access to root file system to read-only:** [See manifest field](#<todo>) [(#4062)](https://github.com/aws/copilot-cli/pull/4062).
+- **Configure SSL policy for your ALB’s HTTPS listener:** [See manifest field](#<todo>) [(#4099)](https://github.com/aws/copilot-cli/pull/4099).
+- **Restrict ingress to your ALB through source IPs**: [See manifest field](#<todo>) [(#4103)](https://github.com/aws/copilot-cli/pull/4103).
 
 
 ???+ note "What’s AWS Copilot?"
