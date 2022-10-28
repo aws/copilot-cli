@@ -68,6 +68,8 @@
         publish:
           topics:
             - name: 'refunds'
+            - name: 'orders'
+              fifo: true
         ```
 
 

@@ -108,7 +108,8 @@
         publish:
           topics:
             - name: 'inventory'
-
+            - name: 'orders'
+              fifo: true
         variables:
           DDB_TABLE_NAME: 'inventory'
 
@@ -160,9 +161,10 @@ http セクションは Service と内部 Application Load Balancer の連携に
 <span class="parent-field">http.</span><a id="http-deregistration-delay" href="#http-deregistration-delay" class="field">`deregistration_delay`</a> <span class="type">Duration</span>  
 登録解除時にターゲットがクライアントとの接続を閉じるのを待つ時間を指定します。デフォルトでは 60 秒です。この値を大きくするとターゲットが安全に接続を閉じるための時間を確保できますが、新バージョンのデプロイに必要となる時間が長くなります。範囲は 0 〜 3600 です。
 
-<span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
-Service 
-サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサからのリクエストを受け取れます。
+<span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>
+サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサーからのリクエストを受け取れます。
+ターゲットコンテナのポートが `443` に設定されている場合、プロトコルは `HTTP` に設定され、ロードバランサーは
+Fargate タスクと TLS 接続します。ターゲットコンテナにインストールされた証明書が利用されます。
 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 スティッキーセッションの有効化、あるいは無効化を指定します。
@@ -204,6 +206,7 @@ HTTP(S) プロトコルのバージョン。 `'grpc'`、 `'http1'`、または `
 gRPC を利用する場合は、Application にドメインが関連付けられていなければなりません。
 
 {% include 'image-config-with-port.ja.md' %}
+ポートを `443` に設定し、 内部ロードバランサーが `http` で有効化されている場合、プロトコルは `HTTPS` に設定され、ロードバランサーは Fargate タスクと TLS 接続します。ターゲットコンテナにインストールされた証明書が利用されます。
 
 {% include 'image-healthcheck.ja.md' %}
 
