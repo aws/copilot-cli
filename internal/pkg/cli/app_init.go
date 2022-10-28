@@ -59,6 +59,34 @@ type initAppOpts struct {
 	cachedHostedZoneID string
 }
 
+type errAppAlreadyExistsInAccount struct {
+	appName string
+}
+
+type errStackSetAdminRoleExistsInAccount struct {
+	roleName string
+}
+
+func (e *errAppAlreadyExistsInAccount) Error() string {
+	return fmt.Sprintf("application named %s already exists in other region", e.appName)
+}
+
+func (e *errAppAlreadyExistsInAccount) RecommendActions() string {
+	return fmt.Sprintf(`
+- If you want to add a workspace, reusing that existing application %s, please switch to that region, and run %s.
+- If you'd like to delete the application and all of its resources, please switch to that region, and run %s.`, e.appName, color.HighlightCode("copilot init"), color.HighlightCode("copilot app delete"))
+}
+
+func (e *errStackSetAdminRoleExistsInAccount) Error() string {
+	return fmt.Sprintf("IAM admin role %s already exists in this account", e.roleName)
+}
+
+func (e *errStackSetAdminRoleExistsInAccount) RecommendActions() string {
+	return fmt.Sprintf(`
+- We create a IAM admin role named %s as applicationname-adminrole in order to have unique application name across regions.
+- Please create the application with a different name, so that the IAM role name does not collide.`, e.roleName)
+}
+
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	sess, err := sessions.ImmutableProvider(sessions.UserAgentExtras("app init")).Default()
 	if err != nil {
@@ -237,12 +265,19 @@ func (o *initAppOpts) validateAppName(name string) error {
 		if errors.As(err, &noSuchAppErr) {
 			roleName := fmt.Sprintf("%s-adminrole", name)
 			tags, err := o.iamRoleManager.ListRoleTags(roleName)
-			// return nil when both adminrole and application does not exists then it is a valid app name
+			// NOTE: This is a best-effort attempt to check if the app exists in other regions.
+			// The error either indicates that the role does not exist, or not.
+			// In the first case, it means that this is a valid app name, hence we don't error out.
+			// In the second case, since this is a best-effort, we don't need to surface the error either.
 			if err != nil {
 				return nil
 			}
-			if tags != nil {
-				return fmt.Errorf("application named %s already exists in another region", name)
+			_, hasTag := tags[deploy.AppTagKey]
+			if hasTag {
+				return &errAppAlreadyExistsInAccount{appName: name}
+			}
+			if !hasTag {
+				return &errStackSetAdminRoleExistsInAccount{roleName: roleName}
 			}
 			return nil
 		}

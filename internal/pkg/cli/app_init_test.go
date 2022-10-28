@@ -48,7 +48,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				m.mockRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(nil, errors.New("role not found"))
 			},
 		},
-		"valid app name without application in SSM and with IAM adminrole": {
+		"valid app name without application in SSM and with IAM adminrole with copliot tag": {
 			inAppName: "metrics",
 			mock: func(m *initAppMocks) {
 				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
@@ -59,7 +59,20 @@ func TestInitAppOpts_Validate(t *testing.T) {
 						"copilot-application": "metrics",
 					}, nil)
 			},
-			wantedError: errors.New("application named metrics already exists in another region"),
+			wantedError: errors.New("application named metrics already exists in other region"),
+		},
+		"valid app name without application in SSM and with IAM adminrole with out copilot tag": {
+			inAppName: "metrics",
+			mock: func(m *initAppMocks) {
+				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.mockRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"mock-application": "metrics",
+					}, nil)
+			},
+			wantedError: errors.New("IAM admin role metrics-adminrole already exists in this account"),
 		},
 		"invalid app name": {
 			inAppName: "123chicken",
