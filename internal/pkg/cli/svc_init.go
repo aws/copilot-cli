@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -266,6 +267,9 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.askIngressType(); err != nil {
 		return err
 	}
+	if err := o.validateIngressType(); err != nil {
+		return err
+	}
 	shouldSkipAsking, err := o.shouldSkipAsking()
 	if err != nil {
 		return err
@@ -326,7 +330,7 @@ func (o *initSvcOpts) Execute() error {
 		},
 		Port:        o.port,
 		HealthCheck: hc,
-		Private:     o.ingressType == ingressTypeEnvironment,
+		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
 	})
 	if err != nil {
 		return err
@@ -423,6 +427,16 @@ func (o *initSvcOpts) askIngressType() error {
 	}
 	o.ingressType = t
 	return nil
+}
+
+func (o *initSvcOpts) validateIngressType() error {
+	if o.wkldType != manifest.RequestDrivenWebServiceType {
+		return nil
+	}
+	if strings.EqualFold(o.ingressType, "internet") || strings.EqualFold(o.ingressType, "environment") {
+		return nil
+	}
+	return fmt.Errorf("invalid ingress type %q", o.ingressType)
 }
 
 func (o *initSvcOpts) askImage() error {

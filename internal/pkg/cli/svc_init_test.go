@@ -186,6 +186,7 @@ func TestSvcInitOpts_Ask(t *testing.T) {
 		inSvcPort        uint16
 		inSubscribeTags  []string
 		inNoSubscribe    bool
+		inIngressType    string
 
 		setupMocks func(mocks initSvcMocks)
 
@@ -391,6 +392,30 @@ type: Request-Driven Web Service`), nil)
 				}), gomock.Any()).Return("", errors.New("some error"))
 			},
 			wantedErr: errors.New("select ingress type: some error"),
+		},
+		"rdws skip ingress type prompt with flag": {
+			inSvcType:        appRunnerSvcType,
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: wantedDockerfilePath,
+			inIngressType:    ingressTypeInternet,
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedSvcName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedSvcName})
+			},
+		},
+		"rdws invalid ingress type error": {
+			inSvcType:        appRunnerSvcType,
+			inSvcName:        wantedSvcName,
+			inSvcPort:        wantedSvcPort,
+			inDockerfilePath: wantedDockerfilePath,
+			inIngressType:    "invalid",
+
+			setupMocks: func(m initSvcMocks) {
+				m.mockStore.EXPECT().GetService(mockAppName, wantedSvcName).Return(nil, &config.ErrNoSuchService{})
+			},
+			wantedErr: errors.New(`invalid ingress type "invalid"`),
 		},
 		"skip selecting Dockerfile if image flag is set": {
 			inSvcType:        wantedSvcType,
@@ -685,6 +710,7 @@ type: Request-Driven Web Service`), nil)
 						dockerfilePath: tc.inDockerfilePath,
 						noSubscribe:    tc.inNoSubscribe,
 						subscriptions:  tc.inSubscribeTags,
+						ingressType:    tc.inIngressType,
 						appName:        mockAppName,
 					},
 					port: tc.inSvcPort,
