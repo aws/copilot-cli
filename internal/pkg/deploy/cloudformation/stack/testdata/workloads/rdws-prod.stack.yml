@@ -263,7 +263,8 @@ Resources:
         - mockSubnetID1
         - mockSubnetID2
       SecurityGroups:
-      - !Ref ServiceSecurityGroup
+        - !Ref ServiceSecurityGroup
+        - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
       Tags:
         - Key: copilot-application
           Value: !Ref AppName

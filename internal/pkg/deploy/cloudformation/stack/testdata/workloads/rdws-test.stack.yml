@@ -336,7 +336,8 @@ Resources:
           - Fn::ImportValue:
               !Sub '${AppName}-${EnvName}-PrivateSubnets'
       SecurityGroups:
-      - !Ref ServiceSecurityGroup
+        - !Ref ServiceSecurityGroup
+        - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
       Tags:
         - Key: copilot-application
           Value: !Ref AppName
