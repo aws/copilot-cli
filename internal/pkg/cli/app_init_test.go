@@ -61,7 +61,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			},
 			wantedError: errors.New("application named metrics already exists in other region"),
 		},
-		"valid app name without application in SSM and with IAM adminrole with out copilot tag": {
+		"valid app name without application in SSM and with IAM adminrole without copilot tag": {
 			inAppName: "metrics",
 			mock: func(m *initAppMocks) {
 				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
@@ -74,7 +74,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			},
 			wantedError: errors.New("IAM admin role metrics-adminrole already exists in this account"),
 		},
-		"valid app name without application in SSM and with IAM adminrole with out any tag": {
+		"valid app name without application in SSM and with IAM adminrole without any tag": {
 			inAppName: "metrics",
 			mock: func(m *initAppMocks) {
 				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
