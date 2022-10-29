@@ -59,7 +59,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 						"copilot-application": "metrics",
 					}, nil)
 			},
-			wantedError: errors.New("application named metrics already exists in other region"),
+			wantedError: errors.New("application named metrics already exists in another region"),
 		},
 		"valid app name without application in SSM and with IAM adminrole without copilot tag": {
 			inAppName: "metrics",

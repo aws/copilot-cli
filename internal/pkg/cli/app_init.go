@@ -64,27 +64,8 @@ type errAppAlreadyExistsInAccount struct {
 }
 
 type errStackSetAdminRoleExistsInAccount struct {
+	appName  string
 	roleName string
-}
-
-func (e *errAppAlreadyExistsInAccount) Error() string {
-	return fmt.Sprintf("application named %s already exists in other region", e.appName)
-}
-
-func (e *errAppAlreadyExistsInAccount) RecommendActions() string {
-	return fmt.Sprintf(`
-- If you want to add a workspace, reusing that existing application %s, please switch to that region, and run %s.
-- If you'd like to delete the application and all of its resources, please switch to that region, and run %s.`, e.appName, color.HighlightCode("copilot init"), color.HighlightCode("copilot app delete"))
-}
-
-func (e *errStackSetAdminRoleExistsInAccount) Error() string {
-	return fmt.Sprintf("IAM admin role %s already exists in this account", e.roleName)
-}
-
-func (e *errStackSetAdminRoleExistsInAccount) RecommendActions() string {
-	return fmt.Sprintf(`
-- We create a IAM admin role named %s as applicationname-adminrole in order to have unique application name across regions.
-- Please create the application with a different name, so that the IAM role name does not collide.`, e.roleName)
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
@@ -276,10 +257,10 @@ func (o *initAppOpts) validateAppName(name string) error {
 			if hasTag {
 				return &errAppAlreadyExistsInAccount{appName: name}
 			}
-			if !hasTag {
-				return &errStackSetAdminRoleExistsInAccount{roleName: roleName}
+			return &errStackSetAdminRoleExistsInAccount{
+				appName:  name,
+				roleName: roleName,
 			}
-			return nil
 		}
 		return fmt.Errorf("get application %s: %w", name, err)
 	}
@@ -368,6 +349,27 @@ func (o *initAppOpts) askSelectExistingAppName(existingApps []*config.Applicatio
 	}
 	o.name = name
 	return nil
+}
+
+func (e *errAppAlreadyExistsInAccount) Error() string {
+	return fmt.Sprintf("application named %s already exists in another region", e.appName)
+}
+
+func (e *errAppAlreadyExistsInAccount) RecommendActions() string {
+	return fmt.Sprintf(`
+- If you want to create a new workspace reusing the existing application %s, please switch to that region, and run %s
+- If you'd like to recreate the application and all of its resources, please switch to that region, and run %s.`, e.appName, color.HighlightCode("copilot init"), color.HighlightCode("copilot app delete"))
+}
+
+func (e *errStackSetAdminRoleExistsInAccount) Error() string {
+	return fmt.Sprintf("IAM admin role %s already exists in this account", e.roleName)
+}
+
+func (e *errStackSetAdminRoleExistsInAccount) RecommendActions() string {
+	return fmt.Sprintf(`
+- Copilot will create an IAM admin role named %s to manage the stack set of the application %s. 
+- You have an existing role with the exact same name in your account, which will collide with the role that Copilot creates.
+- Please create the application with a different name, so that the IAM role name does not collide.`, e.roleName, e.appName)
 }
 
 // buildAppInitCommand builds the command for creating a new application.
