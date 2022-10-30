@@ -253,8 +253,7 @@ func (o *initAppOpts) validateAppName(name string) error {
 			if err != nil {
 				return nil
 			}
-			_, hasTag := tags[deploy.AppTagKey]
-			if hasTag {
+			if _, hasTag := tags[deploy.AppTagKey]; hasTag {
 				return &errAppAlreadyExistsInAccount{appName: name}
 			}
 			return &errStackSetAdminRoleExistsInAccount{
