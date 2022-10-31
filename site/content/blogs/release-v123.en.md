@@ -42,7 +42,7 @@ http:
   private: true
 ```
 And deploy! Your service is now only reachable by other services in your Copilot environment.
-To do this, Copilot creates a VPC Endpoint to App Runner that gets shared accross all private services in your environment.
+Behind the scenes, Copilot creates a VPC Endpoint to App Runner that gets shared across all private services in your environment.
 If you have an existing App Runner VPC Endpoint, you can import it by setting the following in your manifest:
 ```yaml
 http:

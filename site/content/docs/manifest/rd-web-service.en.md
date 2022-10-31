@@ -89,7 +89,7 @@ The http section contains parameters related to the managed load balancer.
 Restrict incoming traffic to only your environment. Defaults to false.
 
 <span class="parent-field">http.private</span><a id="http-private-endpoint" href="#http-private-endpoint" class="field">`endpoint`</a> <span class="type">String</span>
-If you would like to utilize a VPC Endpoint to App Runner that you created outside of Copilot, you can import its ID here and it will be used instead of creating one.
+The ID of an existing VPC Endpoint to App Runner.
 
 <span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>
 If you specify a string, Copilot interprets it as the path exposed in your container to handle target group health check requests. The default is "/".
