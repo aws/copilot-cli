@@ -335,12 +335,12 @@ func (d *appRunnerServiceDescriber) IsPrivate() (bool, error) {
 // ServiceURL retrieves the app runner service URL.
 func (d *appRunnerServiceDescriber) ServiceURL() (string, error) {
 	vicARN, err := d.vpcIngressConnectionARN()
-	isErrNotFound := errors.Is(err, errVPCIngressConnectionNotFound)
-	if err != nil && !isErrNotFound {
+	isVICNotFound := errors.Is(err, errVPCIngressConnectionNotFound)
+	if err != nil && !isVICNotFound {
 		return "", err
 	}
 
-	if !isErrNotFound {
+	if !isVICNotFound {
 		url, err := d.apprunnerClient.PrivateURL(vicARN)
 		if err != nil {
 			return "", err
