@@ -261,8 +261,14 @@ The name of an existing S3 bucket in which to store the access logs.
 <span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-prefix" href="#http-public-access-logs-prefix" class="field">`prefix`</a> <span class="type">String</span>   
 The prefix for the log objects.
 
-<span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-source-ips" href="#http-public-ingress-source-ips" class="field">`source_ips`</a> <span class="type">Boolean</span>    
+<span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-source-ips" href="#http-public-ingress-source-ips" class="field">`source_ips`</a> <span class="type">Array of Strings</span>    
 Restrict ingress traffic for the public load balancer to come from source IPs.
+```yaml
+http:
+  public:
+    ingress:
+      source_ips: ["192.0.2.0/24", "198.51.100.10/32"]  
+```
 
 <span class="parent-field">http.public.</span><a id="http-public-security-groups" href="#http-public-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
 Configure security groups to add to the public load balancer.
