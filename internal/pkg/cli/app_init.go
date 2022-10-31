@@ -59,15 +59,6 @@ type initAppOpts struct {
 	cachedHostedZoneID string
 }
 
-type errAppAlreadyExistsInAccount struct {
-	appName string
-}
-
-type errStackSetAdminRoleExistsInAccount struct {
-	appName  string
-	roleName string
-}
-
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	sess, err := sessions.ImmutableProvider(sessions.UserAgentExtras("app init")).Default()
 	if err != nil {
@@ -329,6 +320,9 @@ func (o *initAppOpts) askAppName(formatMsg string) error {
 	if err != nil {
 		return fmt.Errorf("prompt get application name: %w", err)
 	}
+	if err := o.validateAppName(appName); err != nil {
+		return err
+	}
 	o.name = appName
 	return nil
 }
@@ -350,14 +344,22 @@ func (o *initAppOpts) askSelectExistingAppName(existingApps []*config.Applicatio
 	return nil
 }
 
+type errAppAlreadyExistsInAccount struct {
+	appName string
+}
+
+type errStackSetAdminRoleExistsInAccount struct {
+	appName  string
+	roleName string
+}
+
 func (e *errAppAlreadyExistsInAccount) Error() string {
 	return fmt.Sprintf("application named %s already exists in another region", e.appName)
 }
 
 func (e *errAppAlreadyExistsInAccount) RecommendActions() string {
-	return fmt.Sprintf(`
-- If you want to create a new workspace reusing the existing application %s, please switch to that region, and run %s
-- If you'd like to recreate the application and all of its resources, please switch to that region, and run %s.`, e.appName, color.HighlightCode("copilot init"), color.HighlightCode("copilot app delete"))
+	return fmt.Sprintf(`- If you want to create a new workspace reusing the existing application %s, please switch to the region where you created the application, and run %s.
+- If you'd like to recreate the application and all of its resources, please switch to the region where you created the application, and run %s.`, e.appName, color.HighlightCode("copilot app init"), color.HighlightCode("copilot app delete"))
 }
 
 func (e *errStackSetAdminRoleExistsInAccount) Error() string {
@@ -365,8 +367,7 @@ func (e *errStackSetAdminRoleExistsInAccount) Error() string {
 }
 
 func (e *errStackSetAdminRoleExistsInAccount) RecommendActions() string {
-	return fmt.Sprintf(`
-- Copilot will create an IAM admin role named %s to manage the stack set of the application %s. 
+	return fmt.Sprintf(`- Copilot will create an IAM admin role named %s to manage the stack set of the application %s. 
 - You have an existing role with the exact same name in your account, which will collide with the role that Copilot creates.
 - Please create the application with a different name, so that the IAM role name does not collide.`, e.roleName, e.appName)
 }
