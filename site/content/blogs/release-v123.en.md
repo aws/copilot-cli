@@ -69,7 +69,7 @@ There are two flaws in this hierarchy design:
    the default security group that Copilot applies to an Application Load Balancer.)*
 
 2. **`restrict_to` is redundant.** It should be clearly implied that the `ingress` under `http.public` is restrictive,
-   and the `ingress` under `http.private` is relaxing. The `"from"` in `from_vpc` also suffers the same redundancy issue.
+   and the `ingress` under `http.private` is relaxing. The `"from"` in `from_vpc` also suffers from the same redundancy issue.
 
 To illustrate - fixing them would give us an environment manifest that looks like:
 ```yaml
