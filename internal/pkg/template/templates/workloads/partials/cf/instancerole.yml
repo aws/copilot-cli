@@ -19,7 +19,8 @@ InstanceRole:
       Statement:
         - Effect: Allow
           Principal:
-            Service: tasks.apprunner.amazonaws.com
+            Service:
+              - tasks.apprunner.amazonaws.com
           Action: 'sts:AssumeRole'
     Policies:
       - PolicyName: 'DenyIAMExceptTaggedRoles'

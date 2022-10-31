@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/dustin/go-humanize/english"
 )
 
 // Long flag names.
@@ -63,6 +64,8 @@ const (
 
 	noSubscriptionFlag  = "no-subscribe"
 	subscribeTopicsFlag = "subscribe-topics"
+
+	ingressTypeFlag = "ingress-type"
 
 	storageTypeFlag                    = "storage-type"
 	storagePartitionKeyFlag            = "partition-key"
@@ -200,6 +203,9 @@ Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag,
 
 	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
 Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
+
+	ingressTypeFlagDescription = fmt.Sprintf(`Required for a Request-Driven Web Service. Allowed source of traffic to your service.
+Must be one of %s`, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 )
 
 const (
