@@ -581,7 +581,9 @@ Resources:
 {{include "lambdas" . | indent 2}}
 {{include "custom-resources" . | indent 2}}
 {{- end}}
+{{- if not .VPCConfig.Imported}}
 {{include "ar-vpc-connector" . | indent 2}}
+{{- end}}
 {{- if .VPCConfig.FlowLogs }}
   FlowLog:
     Metadata:
@@ -819,9 +821,11 @@ Outputs:
   LastForceDeployID:
     Value: {{quote .ForceUpdateID}}
     Description: Optionally force the template to update when no immediate resource change is present.
+{{- if not .VPCConfig.Imported}}
   AppRunnerVpcEndpointId:
     Condition: CreateAppRunnerVPCEndpoint
     Value: !Ref AppRunnerVpcEndpoint
     Description: VPC Endpoint to App Runner for private services
     Export:
       Name: !Sub ${AWS::StackName}-AppRunnerVpcEndpointId
+{{- end}}

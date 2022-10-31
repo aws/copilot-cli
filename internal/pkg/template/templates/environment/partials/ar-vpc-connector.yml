@@ -5,11 +5,7 @@ AppRunnerVpcEndpointSecurityGroup:
   Condition: CreateAppRunnerVPCEndpoint
   Properties:
     GroupDescription: {{truncate (printf "%s-%s-AppRunnerVpcEndpointSecurityGroup" .AppName .EnvName) 255}}
-    {{- if .VPCConfig.Imported}}
-    VpcId: {{.VPCConfig.Imported.ID}}
-    {{- else}}
     VpcId: !Ref VPC
-    {{- end}}
     Tags:
       - Key: Name
         Value: {{truncate (printf "copilot-%s-%s-app-runner-vpc-endpoint" .AppName .EnvName) 255}}
