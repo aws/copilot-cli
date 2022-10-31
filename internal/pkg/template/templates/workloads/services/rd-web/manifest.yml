@@ -48,7 +48,7 @@ network:
   vpc:
     placement: {{.Network.VPC.Placement.PlacementString}}
 {{else}}
-# Connect your App Runner service to your environment's VPC.
+# # Connect your App Runner service to your environment's VPC.
 # network:
 #   vpc:
 #     placement: private
