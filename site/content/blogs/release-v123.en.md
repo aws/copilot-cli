@@ -91,7 +91,7 @@ The short answer: nothing, for now.
 
 #### (Recommended) Adapt your manifest to the corrected hierarachy
 While your existing manifest will keep working (we will get to this later) -
-it is recommended to update your manifest to adapt to the corrected hierarchy. 
+it is recommended that you update your manifest to the corrected hierarchy. 
 Below are snippets detailing how to update each of the fields impacted:
 
 ???+ note "Adapt your environment manifest to corrected hierarchy"
