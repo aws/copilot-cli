@@ -232,7 +232,6 @@ jobs:
                 },
               },
             };
-            console.log(JSON.stringify(dat));
             
             const lastRelease = '${{ steps.latestrelease.outputs.VERSION_TAG }}';
             let msg = `
