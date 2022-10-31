@@ -159,10 +159,10 @@ jobs:
         with:
           node-version: 16.x
 
-      - name: Check out HEAD
+      - name: Check out mainline
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: mainline
 
       - name: Compute old release binary sizes
         id: old-bins
@@ -193,8 +193,8 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const diff = (old, new) => {
-              const res = (new-old)/old * 100;
+            const diff = (old, cur) => {
+              const res = (cur-old)/old * 100;
               return res.toFixed(2); // 2 decimal places.
             };
             
@@ -202,27 +202,27 @@ jobs:
               'macOS': {
                 'amd': {
                   'old': parseFloat(${{ steps.old-bins.outputs.MAC_AMD_KIB }}),
-                  'new': parseFloat(${{ steps.new-bins.outputs.MAC_AMD_KIB }}),
+                  'cur': parseFloat(${{ steps.new-bins.outputs.MAC_AMD_KIB }}),
                 },
                 'arm': {
                   'old': parseFloat(${{ steps.old-bins.outputs.MAC_ARM_KIB }}),
-                  'new': parseFloat(${{ steps.new-bins.outputs.MAC_AMD_KIB }}),
-                }
+                  'cur': parseFloat(${{ steps.new-bins.outputs.MAC_AMD_KIB }}),
+                },
               },
               'linux': {
                 'amd': {
                   'old': parseFloat(${{ steps.old-bins.outputs.LINUX_AMD_KIB }}),
-                  'new': parseFloat(${{ steps.new-bins.outputs.LINUX_AMD_KIB }}),
+                  'cur': parseFloat(${{ steps.new-bins.outputs.LINUX_AMD_KIB }}),
                 },
                 'arm': {
                   'old': parseFloat(${{ steps.old-bins.outputs.LINUX_ARM_KIB }}),
-                  'new': parseFloat(${{ steps.new-bins.outputs.LINUX_AMD_KIB }}),
-                }
+                  'cur': parseFloat(${{ steps.new-bins.outputs.LINUX_AMD_KIB }}),
+                },
               },
               'windows': {
                 'amd': {
                   'old': parseFloat(${{ steps.old-bins.outputs.WINDOWS_AMD_KIB }}),
-                  'new': parseFloat(${{ steps.new-bins.outputs.WINDOWS_AMD_KIB }}),
+                  'cur': parseFloat(${{ steps.new-bins.outputs.WINDOWS_AMD_KIB }}),
                 },
               },
             };
@@ -230,14 +230,14 @@ jobs:
             let msg = `
               🍕 Here are the new binary sizes!
             
-              | Name | New size (kiB) | HEAD commit size (kiB) | Delta |
+              | Name | New size (kiB) | mainline size (kiB) | Delta |
               |:--   |:---            |:---                    |:--    |
             `;
             
             for (const os of Object.keys(dat)) {
               for (const arch of Object.keys(dat)) {
-                const delta = diff(dat[os][arch].old, dat[os][arch].new);
-                msg += `| ${os} ($arch)` | ${dat[os][arch].new} | ${dat[os][arch].old} | ${delta} |
+                const delta = diff(dat[os][arch].old, dat[os][arch].cur);
+                msg += `| ${os} (${arch})` | ${dat[os][arch].cur} | ${dat[os][arch].old} | ${delta} |
                 `;
               }
             }
