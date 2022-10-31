@@ -266,10 +266,3 @@ Resources:
 {{- if requiresVPCConnector .}}
 {{include "vpc-connector" . | indent 2 }}
 {{- end }}
-
-{{- if .Private}}
-# TODO remove after beta SDK works
-Outputs:
-  DomainName:
-    Value: !GetAtt AppRunnerVpcIngressConnection.DomainName
-{{- end}}
