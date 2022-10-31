@@ -113,8 +113,8 @@ type EnvOpts struct {
 	ArtifactBucketKeyARN string
 
 	VPCConfig         VPCConfig
-	PublicHTTPConfig  HTTPConfig
-	PrivateHTTPConfig HTTPConfig
+	PublicHTTPConfig  PublicHTTPConfig
+	PrivateHTTPConfig PrivateHTTPConfig
 	Telemetry         *Telemetry
 	CDNConfig         *CDNConfig
 
@@ -123,6 +123,20 @@ type EnvOpts struct {
 	ForceUpdateID      string
 
 	DelegateDNS bool
+}
+
+// PublicHTTPConfig represents configuration for a public facing Load Balancer.
+type PublicHTTPConfig struct {
+	HTTPConfig
+	PublicALBSourceIPs []string
+	CIDRPrefixListIDs  []string
+	ELBAccessLogs      *ELBAccessLogs
+}
+
+// PrivateHTTPConfig represents configuration for an internal Load Balancer.
+type PrivateHTTPConfig struct {
+	HTTPConfig
+	CustomALBSubnets []string
 }
 
 // HasImportedCerts returns true if any https certificates have been
@@ -135,11 +149,8 @@ func (e *EnvOpts) HasImportedCerts() bool {
 
 // HTTPConfig represents configuration for a Load Balancer.
 type HTTPConfig struct {
-	CIDRPrefixListIDs []string
-	ImportedCertARNs  []string
-	CustomALBSubnets  []string
-	ELBAccessLogs     *ELBAccessLogs
-	SSLPolicy         *string
+	SSLPolicy        *string
+	ImportedCertARNs []string
 }
 
 // ELBAccessLogs represents configuration for ELB access logs S3 bucket.

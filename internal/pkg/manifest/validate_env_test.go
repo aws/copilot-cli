@@ -988,6 +988,18 @@ func TestEnvironmentHTTPConfig_validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`validate "private": an internal load balancer cannot have restrictive ingress fields`),
 		},
+		"public http config with invalid source ips": {
+			in: EnvironmentHTTPConfig{
+				Public: PublicHTTPConfig{
+					DeprecatedSG: DeprecatedALBSecurityGroupsConfig{
+						DeprecatedIngress: DeprecatedIngress{
+							RestrictiveIngress: RestrictiveIngress{SourceIPs: []IPNet{"1.1.1.invalidip"}},
+						},
+					},
+				},
+			},
+			wantedError: fmt.Errorf(`validate "public": parse IPNet 1.1.1.invalidip: invalid CIDR address: 1.1.1.invalidip`),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

@@ -97,6 +97,7 @@ nav:
         - env ls: docs/commands/env-ls.en.md
         - env show: docs/commands/env-show.en.md
         - job ls: docs/commands/job-ls.en.md
+        - job logs: docs/commands/job-logs.en.md
         - job run: docs/commands/job-run.en.md
         - svc ls: docs/commands/svc-ls.en.md
         - svc show: docs/commands/svc-show.en.md
@@ -130,6 +131,7 @@ nav:
         - job delete: docs/commands/job-delete.en.md
         - job deploy: docs/commands/job-deploy.en.md
         - job init: docs/commands/job-init.en.md
+        - job logs: docs/commands/job-logs.en.md
         - job ls: docs/commands/job-ls.en.md
         - job package: docs/commands/job-package.en.md
         - job run: docs/commands/job-run.en.md
