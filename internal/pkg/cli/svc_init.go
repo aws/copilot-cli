@@ -116,13 +116,13 @@ type initWkldVars struct {
 	image          string
 	subscriptions  []string
 	noSubscribe    bool
-	ingressType    string
 }
 
 type initSvcVars struct {
 	initWkldVars
 
-	port uint16
+	port        uint16
+	ingressType string
 }
 
 type initSvcOpts struct {

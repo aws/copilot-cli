@@ -56,7 +56,8 @@ type initVars struct {
 	imageTag       string
 
 	// Service specific flags
-	port uint16
+	port        uint16
+	ingressType string
 
 	// Scheduled Job specific flags
 	schedule string
@@ -253,6 +254,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				svcVars := initSvcVars{
 					initWkldVars: wkldVars,
 					port:         vars.port,
+					ingressType:  vars.ingressType,
 				}
 				opts := initSvcOpts{
 					initSvcVars: svcVars,
@@ -517,6 +519,8 @@ func BuildInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&vars.schedule, scheduleFlag, "", scheduleFlagDescription)
 	cmd.Flags().StringVar(&vars.timeout, timeoutFlag, "", timeoutFlagDescription)
 	cmd.Flags().IntVar(&vars.retries, retriesFlag, 0, retriesFlagDescription)
+	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)
+
 	cmd.SetUsageTemplate(cmdtemplate.Usage)
 	cmd.Annotations = map[string]string{
 		"group": group.GettingStarted,
