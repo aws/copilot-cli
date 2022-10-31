@@ -42,7 +42,7 @@ Copilot v1.23 brings several new features and improvements:
 ## Move misplaced `http` fields in environment manifest (backward-compatible!)
 
 In [Copilot v1.23.0](https://github.com/aws/copilot-cli/releases/tag/v1.23.0), we are fixing the hierarchy
-under the `http` field in environment manifests.
+under the `http` field in the environment manifest.
 
 ### What is getting fixed, and why?
 Back in [Copilot v1.20.0](https://aws.github.io/copilot-cli/blogs/release-v120/), we released environment manifest,
@@ -69,7 +69,7 @@ There are two flaws in this hierarchy design:
    the default security group that Copilot applies to an Application Load Balancer.)*
 
 2. **`restrict_to` is redundant.** It should be clearly implied that the `ingress` under `http.public` is restrictive,
-   and the `ingress` under `http.private` is relaxing. The `"from"` in `from_vpc` also suffers the same redundancy issue.
+   and the `ingress` under `http.private` is permissive. The `"from"` in `from_vpc` also suffers the same redundancy issue.
 
 To illustrate - fixing them would give us an environment manifest that looks like:
 ```yaml
