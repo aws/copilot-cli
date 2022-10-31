@@ -90,10 +90,8 @@ To learn more about Copilot environments, see [Environments](../concepts/environ
         cdn: true
         http:
           public:
-            security_groups:
-             ingress:
-               restrict_to:
-                 cdn: true
+            ingress:
+               cdn: true
         ```
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
@@ -261,24 +259,21 @@ The name of an existing S3 bucket in which to store the access logs.
 <span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-prefix" href="#http-public-access-logs-prefix" class="field">`prefix`</a> <span class="type">String</span>   
 The prefix for the log objects.
 
-<span class="parent-field">http.public.</span><a id="http-public-security-groups" href="#http-public-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
-Configure security groups to add to the public load balancer.
+<span class="parent-field">http.public.</span><a id="http-public-ingress" href="#http-public-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>  
+Ingress rules to restrict the Public Load Balancer's traffic.  
 
-<span class="parent-field">http.public.security_groups.</span><a id="http-public-security-groups-ingress" href="#http-public-security-groups-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
-Ingress rules to allow for the public load balancer.  
 ```yaml
 http:
   public:
-    security_groups:
-      ingress:
-        restrict_to:
-          cdn: true
+    ingress:
+      cdn: true
 ```
+???- note "<span class="faint"> "http.public.ingress" was previously "http.public.security_groups.ingress"</span>"  
+    This field was `http.public.security_groups.ingress` until [v1.23.0](../../blogs/release-v123.en.md).
+    This change cascaded to a child field [`cdn`](#http-public-ingress-cdn) (the only child field at the time), which was previously `http.public.security_groups.ingress.restrict_to.cdn`. 
+    For more, see [the blog post for v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible).
 
-<span class="parent-field">http.public.security_groups.ingress.</span><a id="http-public-security-groups-ingress-restrict-to" href="#http-public-security-groups-ingress-restrict-to" class="field">`restrict_to`</a> <span class="type">Map</span>  
-Ingress rules to restrict the Public Load Balancer's traffic.
-
-<span class="parent-field">http.public.security_groups.ingress.restrict_to.</span><a id="http-public-security-groups-ingress-restrict-to-cdn" href="#http-public-security-groups-ingress-restrict-to-cdn" class="field">`cdn`</a> <span class="type">Boolean</span>    
+<span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-cdn" href="#http-public-ingress-cdn" class="field">`cdn`</a> <span class="type">Boolean</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>     
 Restrict ingress traffic for the public load balancer to come from a CloudFront distribution.
 
 <span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Map</span>  
@@ -292,20 +287,21 @@ See the [Developing/Domains](../developing/domain.en.md#use-domain-in-your-exist
 <span class="parent-field">http.private.</span><a id="http-private-subnets" href="#http-private-subnets" class="field">`subnets`</a> <span class="type">Array of Strings</span>   
 The subnet IDs to place the internal load balancer in.
 
-<span class="parent-field">http.private.</span><a id="http-private-security-groups" href="#http-private-security-groups" class="field">`security_groups`</a> <span class="type">Map</span>    
-Configure security groups to add to the internal load balancer.
-
-<span class="parent-field">http.private.security_groups</span><a id="http-private-security-groups-ingress" href="#http-private-security-groups-ingress" class="field">`ingress`</a> <span class="type">Map</span>  
+<span class="parent-field">http.private</span><a id="http-private-ingress" href="#http-private-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>  
 Ingress rules to allow for the internal load balancer.  
 ```yaml
 http:
   private:
-    security_groups:
-      ingress: # Enable incoming traffic within the VPC to the internal load balancer.
-        from_vpc: true
+    ingress: 
+      vpc: true  # Enable incoming traffic within the VPC to the internal load balancer.
 ```
+???- note "<span class="faint"> "http.private.ingress" was previously "http.private.security_groups.ingress"</span>"  
+    This field was `http.private.security_groups.ingress` until [v1.23.0](../../blogs/release-v123.en.md).
+    This change cascaded to a child field [`vpc`](#http-private-ingress-vpc) (the only child field at the time), 
+    which was previously `http.private.security_groups.ingress.from_vpc`.
+    For more, see [the blog post for v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible).
 
-<span class="parent-field">http.private.security_groups.ingress.</span><a id="http-private-security-groups-ingress-from-vpc" href="#http-private-security-groups-ingress-from-vpc" class="field">`from_vpc`</a> <span class="type">Boolean</span>    
+<span class="parent-field">http.private.ingress.</span><a id="http-private-ingress-vpc" href="#http-private-ingress-vpc" class="field">`vpc`</a> <span class="type">Boolean</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>     
 Enable traffic from within the VPC to the internal load balancer.
 
 <div class="separator"></div>
