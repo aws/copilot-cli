@@ -735,7 +735,7 @@ func envControllerParameters(o WorkloadOpts) []string {
 		}
 	}
 	if o.WorkloadType == "Request-Driven Web Service" {
-		if o.Private {
+		if o.Private && o.AppRunnerVPCEndpoint == nil {
 			parameters = append(parameters, "AppRunnerPrivateWorkloads,")
 		}
 	}
