@@ -26,6 +26,7 @@ func TestTemplate_ParseEnv(t *testing.T) {
 				"templates/environment/partials/bootstrap-resources.yml":       []byte("bootstrap"),
 				"templates/environment/partials/elb-access-logs.yml":           []byte("elb-access-logs"),
 				"templates/environment/partials/mappings-regional-configs.yml": []byte("mappings-regional-configs"),
+				"templates/environment/partials/ar-vpc-connector.yml":          []byte("ar-vpc-connector"),
 			},
 		},
 	}
@@ -57,4 +58,40 @@ func TestTemplate_ParseEnvBootstrap(t *testing.T) {
 	// THEN
 	require.NoError(t, err)
 	require.Equal(t, "test", c.String())
+}
+
+func TestTruncate(t *testing.T) {
+	tests := map[string]struct {
+		s      string
+		maxLen int
+
+		expected string
+	}{
+		"empty string": {
+			s:        "",
+			maxLen:   10,
+			expected: "",
+		},
+		"maxLen < len(string)": {
+			s:        "qwerty",
+			maxLen:   4,
+			expected: "qwer",
+		},
+		"maxLen > len(string)": {
+			s:        "qwerty",
+			maxLen:   7,
+			expected: "qwerty",
+		},
+		"maxLen == len(string)": {
+			s:        "qwerty",
+			maxLen:   6,
+			expected: "qwerty",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, truncate(tc.s, tc.maxLen))
+		})
+	}
 }

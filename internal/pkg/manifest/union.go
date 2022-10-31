@@ -52,12 +52,12 @@ func AdvancedToUnion[Basic, Advanced any](val Advanced) Union[Basic, Advanced] {
 }
 
 // IsBasic returns true if the underlying value of t is type Basic.
-func (t *Union[_, _]) IsBasic() bool {
+func (t Union[_, _]) IsBasic() bool {
 	return t.isBasic
 }
 
 // IsAdvanced returns true if the underlying value of t is type Advanced.
-func (t *Union[_, _]) IsAdvanced() bool {
+func (t Union[_, _]) IsAdvanced() bool {
 	return t.isAdvanced
 }
 
