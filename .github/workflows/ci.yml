@@ -237,8 +237,7 @@ jobs:
             for (const os of Object.keys(dat)) {
               for (const arch of Object.keys(dat)) {
                 const delta = diff(dat[os][arch].old, dat[os][arch].cur);
-                msg += `| ${os} (${arch})` | ${dat[os][arch].cur} | ${dat[os][arch].old} | ${delta} |
-                `;
+                msg += `| ${os} (${arch}) | ${dat[os][arch].cur} | ${dat[os][arch].old} | ${delta} |` + "\n";
               }
             }
             
