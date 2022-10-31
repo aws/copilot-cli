@@ -87,11 +87,11 @@ http:
 
 ### What do I need to do?
 
-The short answer is: nothing necessary, yet.
+The short answer: nothing, for now.
 
 #### (Recommended) Adapt your manifest to the corrected hierarachy
 While your existing manifest will keep working (we will get to this later) -
-it is recommended to update your manifest to adapt to the corrected hierarchy. 
+it is recommended that you update your manifest to the corrected hierarchy. 
 Below are snippets detailing how to update each of the fields impacted:
 
 ???+ note "Adapt your environment manifest to corrected hierarchy"
@@ -132,8 +132,7 @@ Below are snippets detailing how to update each of the fields impacted:
 
 
 #### Your existing environment manifest will keep working
-It's okay if you don't adapt your enivonment manifest to the corrected hierarchy immediately. It will keep working - until at
-some point you modify your manifest so that it contains both `http.public.security_groups.ingress` (the flawed version) 
+It's okay if you don't adapt your environment manifest to the corrected hierarchy immediately. It will keep working - unless you modify your manifest so that it contains both `http.public.security_groups.ingress` (the flawed version) 
 and `http.public.ingress` (the corrected version).
 
 For example, say before the release of v1.23.0, your manifest looks like:
@@ -148,7 +147,7 @@ http:
 ```
 The same manifest will keep working after v1.23.0.
 
-However, say at some point, you modify the manifest to:
+However, if at some point you modify the manifest to:
 ```yaml
 # Error! Both flawed hierarchy and corrected hierarchy are present.
 http:
