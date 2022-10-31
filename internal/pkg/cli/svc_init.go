@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
@@ -48,7 +50,7 @@ const (
 
 var (
 	fmtSvcInitSvcTypePrompt  = "Which %s best represents your service's architecture?"
-	svcInitSvcTypeHelpPrompt = fmt.Sprintf(`A %s is an internet-facing HTTP server managed by AWS App Runner that scales based on incoming requests.
+	svcInitSvcTypeHelpPrompt = fmt.Sprintf(`A %s is an internet-facing or private HTTP server managed by AWS App Runner that scales based on incoming requests.
 To learn more see: https://git.io/JEEfb
 
 A %s is an internet-facing HTTP server managed by Amazon ECS on AWS Fargate behind a load balancer.
@@ -82,8 +84,22 @@ You should set this to the port which your Dockerfile uses to communicate with t
 	svcInitPublisherHelpPrompt = `A publisher is an existing SNS Topic to which a service publishes messages. 
 These messages can be consumed by the Worker Service.`
 
+	svcInitIngressTypePrompt     = "Would you like to accept traffic from your environment or the internet?"
+	svcInitIngressTypeHelpPrompt = `"Environment" will configure your service as private.
+"Internet" will configure your service as public.`
+
 	wkldInitImagePrompt = fmt.Sprintf("What's the %s ([registry/]repository[:tag|@digest]) of the image to use?", color.Emphasize("location"))
 )
+
+const (
+	ingressTypeEnvironment = "Environment"
+	ingressTypeInternet    = "Internet"
+)
+
+var rdwsIngressOptions = []string{
+	ingressTypeEnvironment,
+	ingressTypeInternet,
+}
 
 var serviceTypeHints = map[string]string{
 	manifest.RequestDrivenWebServiceType: "App Runner",
@@ -100,6 +116,7 @@ type initWkldVars struct {
 	image          string
 	subscriptions  []string
 	noSubscribe    bool
+	ingressType    string
 }
 
 type initSvcVars struct {
@@ -215,6 +232,9 @@ func (o *initSvcOpts) Validate() error {
 	if err := validateSubscribe(o.noSubscribe, o.subscriptions); err != nil {
 		return err
 	}
+	if err := o.validateIngressType(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -251,6 +271,9 @@ func (o *initSvcOpts) Ask() error {
 		}
 	}
 	if err := o.validateSvc(); err != nil {
+		return err
+	}
+	if err := o.askIngressType(); err != nil {
 		return err
 	}
 	shouldSkipAsking, err := o.shouldSkipAsking()
@@ -313,6 +336,7 @@ func (o *initSvcOpts) Execute() error {
 		},
 		Port:        o.port,
 		HealthCheck: hc,
+		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
 	})
 	if err != nil {
 		return err
@@ -387,6 +411,34 @@ func (o *initSvcOpts) askSvcName() error {
 	}
 	o.name = name
 	return nil
+}
+
+func (o *initSvcOpts) askIngressType() error {
+	if o.wkldType != manifest.RequestDrivenWebServiceType || o.ingressType != "" {
+		return nil
+	}
+
+	var opts []prompt.Option
+	for _, typ := range rdwsIngressOptions {
+		opts = append(opts, prompt.Option{Value: typ})
+	}
+
+	t, err := o.prompt.SelectOption(svcInitIngressTypePrompt, svcInitIngressTypeHelpPrompt, opts, prompt.WithFinalMessage("Reachable from:"))
+	if err != nil {
+		return fmt.Errorf("select ingress type: %w", err)
+	}
+	o.ingressType = t
+	return nil
+}
+
+func (o *initSvcOpts) validateIngressType() error {
+	if o.wkldType != manifest.RequestDrivenWebServiceType {
+		return nil
+	}
+	if strings.EqualFold(o.ingressType, "internet") || strings.EqualFold(o.ingressType, "environment") {
+		return nil
+	}
+	return fmt.Errorf("invalid ingress type %q: must be one of %s", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 }
 
 func (o *initSvcOpts) askImage() error {
@@ -712,6 +764,7 @@ This command is also run as part of "copilot init".`,
 	cmd.Flags().Uint16Var(&vars.port, svcPortFlag, 0, svcPortFlagDescription)
 	cmd.Flags().StringArrayVar(&vars.subscriptions, subscribeTopicsFlag, []string{}, subscribeTopicsFlagDescription)
 	cmd.Flags().BoolVar(&vars.noSubscribe, noSubscriptionFlag, false, noSubscriptionFlagDescription)
+	cmd.Flags().StringVar(&vars.ingressType, ingressTypeFlag, "", ingressTypeFlagDescription)
 
 	return cmd
 }
