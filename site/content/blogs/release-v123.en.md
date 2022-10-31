@@ -45,7 +45,7 @@ In [Copilot v1.23.0](https://github.com/aws/copilot-cli/releases/tag/v1.23.0), w
 under the `http` field in the environment manifest.
 
 ### What is getting fixed, and why?
-Back in [Copilot v1.20.0](https://aws.github.io/copilot-cli/blogs/release-v120/), we released environment manifest,
+Back in [Copilot v1.20.0](https://aws.github.io/copilot-cli/blogs/release-v120/), we released the environment manifest,
 bringing all the benefits of infrastructure as code to environments. At the time, its `http` field hierarchy looked like:
 ```yaml
 name: test
@@ -64,12 +64,12 @@ http:
 ```
 There are two flaws in this hierarchy design:
 
-1. **Putting `ingress` under `security_groups` is ambiguous.** Each security group has their own ingress - it is vague what
-   the "ingress" of several security groups mean. *(Here, it was meant to configure the ingress of
+1. **Putting `ingress` under `security_groups` is ambiguous.** Each security group has its own ingress - it is unclear what
+   the "ingress" of several security groups means. *(Here, it was meant to configure the ingress of
    the default security group that Copilot applies to an Application Load Balancer.)*
 
 2. **`restrict_to` is redundant.** It should be clearly implied that the `ingress` under `http.public` is restrictive,
-   and the `ingress` under `http.private` is permissive. The `"from"` in `from_vpc` also suffers the same redundancy issue.
+   and the `ingress` under `http.private` is permissive. The `"from"` in `from_vpc` also suffers from the same redundancy issue.
 
 To illustrate - fixing them would give us an environment manifest that looks like:
 ```yaml
