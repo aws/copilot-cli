@@ -41,6 +41,140 @@ Copilot v1.23 brings several new features and improvements:
 
 ## Move misplaced `http` fields in environment manifest (backward-compatible!)
 
+In [Copilot v1.23.0](https://github.com/aws/copilot-cli/releases/tag/v1.23.0), we are fixing the hierarchy
+under the `http` field in environment manifests.
+
+### What is getting fixed, and why?
+Back in [Copilot v1.20.0](https://aws.github.io/copilot-cli/blogs/release-v120/), we released environment manifest,
+bringing all the benefits of infrastructure as code to environments. At the time, its `http` field hierarchy looked like:
+```yaml
+name: test
+type: Environment
+
+http:
+  public:
+    security_groups:
+      ingress:         # [Flaw 1]
+        restrict_to:   # [Flaw 2]
+          cdn: true
+  private:
+    security_groups:
+      ingress:         # [Flaw 1]
+        from_vpc: true # [Flaw 2]
+```
+There are two flaws in this hierarchy design:
+
+1. **Putting `ingress` under `security_groups` is ambiguous.** Each security group has their own ingress - it is vague what
+   the "ingress" of several security groups mean. *(Here, it was meant to configure the ingress of
+   the default security group that Copilot applies to an Application Load Balancer.)*
+
+2. **`restrict_to` is redundant.** It should be clearly implied that the `ingress` under `http.public` is restrictive,
+   and the `ingress` under `http.private` is relaxing. The `"from"` in `from_vpc` also suffers the same redundancy issue.
+
+To illustrate - fixing them would give us an environment manifest that looks like:
+```yaml
+name: test
+type: Environment
+
+http:
+  public:
+    ingress:
+      cdn: true
+  private:
+    ingress:
+      vpc: true
+```
+
+### What do I need to do?
+
+The short answer is: nothing necessary, yet.
+
+#### (Recommended) Adapt your manifest to the corrected hierarachy
+While your existing manifest will keep working (we will get to this later) -
+it is recommended to update your manifest to adapt to the corrected hierarchy. 
+Below are snippets detailing how to update each of the fields impacted:
+
+???+ note "Adapt your environment manifest to corrected hierarchy"
+
+    === "CDN for public ALB"
+
+        ```yaml
+        # If you have
+        http:
+          public:
+            security_groups:
+              ingress:      
+                restrict_to: 
+                  cdn: true
+        
+        # Then change it to
+        http:
+          public:
+            ingress:
+              cdn: true
+        ```
+
+    === "VPC ingress for private ALB"
+        ```yaml
+        # If you have
+        http:
+          private:
+            security_groups:
+              ingress:      
+                from_vpc: true
+        
+        # Then change it to
+        http:
+          private:
+            ingress:
+              vpc: true
+        ```
+
+
+#### Your existing environment manifest will keep working
+It's okay if you don't adapt your enivonment manifest to the corrected hierarchy immediately. It will keep working - until at
+some point you modify your manifest so that it contains both `http.public.security_groups.ingress` (the flawed version) 
+and `http.public.ingress` (the corrected version).
+
+For example, say before the release of v1.23.0, your manifest looks like:
+```yaml
+# Flawed hierarchy but will keep working.
+http:
+  public:
+    security_groups:
+      ingress:      
+        restrict_to: 
+          cdn: true
+```
+The same manifest will keep working after v1.23.0.
+
+However, say at some point, you modify the manifest to:
+```yaml
+# Error! Both flawed hierarchy and corrected hierarchy are present.
+http:
+  public:
+    security_groups:
+      ingress:      
+        restrict_to: 
+          cdn: true
+    ingress:
+      source_ips:
+        - 10.0.0.0/24
+        - 10.0.1.0/24
+```
+Copilot will detect that both  `http.public.security_groups.ingress` (the flawed version) and
+`http.public.ingress` exist in the manifest. It will error out, along with a friendly suggestion to update your manifest
+so that only `http.public.ingress`, the corrected version is present:
+```yaml
+# Same configuration but written in the corrected hierarchy.
+http:
+  public:
+    ingress:
+        cdn: true
+        source_ips:
+            - 10.0.0.0/24
+            - 10.0.1.0/24
+```
 ## What’s next?
 
 Download the new Copilot CLI version by following the link below and leave your feedback on [GitHub](https://github.com/aws/copilot-cli/) or our [Community Chat](https://gitter.im/aws/copilot-cli):
