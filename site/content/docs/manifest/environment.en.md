@@ -262,7 +262,7 @@ The name of an existing S3 bucket in which to store the access logs.
 The prefix for the log objects.
 
 <span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-source-ips" href="#http-public-ingress-source-ips" class="field">`source_ips`</a> <span class="type">Array of Strings</span>    
-Restrict ingress traffic for the public load balancer to come from source IPs.
+Restrict public load balancer ingress traffic to source IPs.
 ```yaml
 http:
   public:
