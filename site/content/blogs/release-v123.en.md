@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.23: App Runner private service, Aurora Serverless v2 and more!'
+title: 'AWS Copilot v1.23: App Runner Private Services, Aurora Serverless v2 and more!'
 twitter_title: 'AWS Copilot v1.23'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.23: App Runner private service, Aurora Serverless v2 and more!
+# AWS Copilot v1.23: App Runner Private Services, Aurora Serverless v2 and more!
 
 Posted On: Oct 31, 2022
 
@@ -17,7 +17,7 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.23 brings several new features and improvements:
 
-- **App Runner private services**: [See detailed section](#app-runner-private-services).
+- **App Runner Private Services**: App Runner just launched support for private services, and you can create them by adding `http.private` to your Request-Driven Web Service manifest! [See detailed section](#app-runner-private-services).
 - **Support Aurora Serverless v2 in `storage init`**: [See detailed section](#support-aurora-serverless-v2-in-storage-init).
 - **Move misplaced `http` fields in environment manifest (backward-compatible!):** [See detailed section](#move-misplaced-http-fields-in-environment-manifest-backward-compatible).
 - **Restrict container access to root file system to read-only:** [See manifest field](https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#storage-readonlyfs) [(#4062)](https://github.com/aws/copilot-cli/pull/4062).
@@ -35,7 +35,22 @@ Copilot v1.23 brings several new features and improvements:
 
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
-## App Runner private services
+## App Runner Private Services
+You can now create App Runner private services using Copilot. Simply update your Request-Driven Web Service manifest with:
+```yaml
+http:
+  private: true
+```
+And deploy! Your service is now only reachable by other services in your Copilot environment.
+Behind the scenes, Copilot creates a VPC Endpoint to App Runner that gets shared across all private services in your environment.
+If you have an existing App Runner VPC Endpoint, you can import it by setting the following in your manifest:
+```yaml
+http:
+  private:
+    endpoint: vpce-12345
+```
+By default, your private service can only send traffic to the internet.
+If you'd like to a send traffic to your environment, set [`network.vpc.placement: 'private'`](../../docs/manifest/rd-web-service/#network-vpc-placement) in your manifest.
 
 ## Support Aurora Serverless v2 in `storage init`
 
