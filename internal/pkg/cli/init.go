@@ -253,6 +253,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				svcVars := initSvcVars{
 					initWkldVars: wkldVars,
 					port:         vars.port,
+					ingressType:  ingressTypeInternet,
 				}
 				opts := initSvcOpts{
 					initSvcVars: svcVars,
