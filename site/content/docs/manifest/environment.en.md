@@ -276,6 +276,15 @@ http:
 <span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-cdn" href="#http-public-ingress-cdn" class="field">`cdn`</a> <span class="type">Boolean</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>     
 Restrict ingress traffic for the public load balancer to come from a CloudFront distribution.
 
+<span class="parent-field">http.public.ingress.</span><a id="http-public-ingress-source-ips" href="#http-public-ingress-source-ips" class="field">`source_ips`</a> <span class="type">Array of Strings</span>    
+Restrict public load balancer ingress traffic to source IPs.
+```yaml
+http:
+  public:
+    ingress:
+      source_ips: ["192.0.2.0/24", "198.51.100.10/32"]  
+```
+
 <span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Map</span>  
 Configuration for the internal load balancer.
 
