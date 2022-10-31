@@ -64,8 +64,8 @@ http:
 ```
 There are two flaws in this hierarchy design:
 
-1. **Putting `ingress` under `security_groups` is ambiguous.** Each security group has their own ingress - it is vague what
-   the "ingress" of several security groups mean. *(Here, it was meant to configure the ingress of
+1. **Putting `ingress` under `security_groups` is ambiguous.** Each security group has its own ingress - it is unclear what
+   the "ingress" of several security groups means. *(Here, it was meant to configure the ingress of
    the default security group that Copilot applies to an Application Load Balancer.)*
 
 2. **`restrict_to` is redundant.** It should be clearly implied that the `ingress` under `http.public` is restrictive,
