@@ -93,7 +93,7 @@ The short answer: nothing for now.
 While your existing manifest will keep working (we will get to this later), it is recommended that you update your manifest to the corrected hierarchy. 
 Below are snippets detailing how to update each of the fields impacted:
 
-???+ note "Adapt your environment manifest to corrected hierarchy"
+???+ note "Adapt your environment manifest to the corrected hierarchy"
 
     === "CDN for public ALB"
 
