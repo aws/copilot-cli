@@ -14,8 +14,6 @@ AccessRole:
           Principal:
             Service:
               - build.apprunner.amazonaws.com
-              - !Sub '${AWS::Region}.beta.cells.build.bullet.aws.internal' # TODO remove on release
-              - !Sub '${AWS::Region}.gamma.cells.build.bullet.aws.internal' # TODO remove on release
           Action: sts:AssumeRole
 
     ManagedPolicyArns:

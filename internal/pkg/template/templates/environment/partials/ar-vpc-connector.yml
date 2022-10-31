@@ -33,8 +33,7 @@ AppRunnerVpcEndpoint:
     VpcId: !Ref VPC
     SecurityGroupIds:
       - !Ref AppRunnerVpcEndpointSecurityGroup
-    # ServiceName: !Sub 'com.amazonaws.${AWS::Region}.apprunner'
-    ServiceName: !Sub "com.amazonaws.${AWS::Region}.apprunner.requests.gamma" # TODO switch to non-beta on release
+    ServiceName: !Sub 'com.amazonaws.${AWS::Region}.apprunner.requests'
     SubnetIds:
       {{- range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}
       - !Ref PrivateSubnet{{inc $ind}}

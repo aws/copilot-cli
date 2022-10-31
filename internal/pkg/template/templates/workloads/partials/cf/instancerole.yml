@@ -21,8 +21,6 @@ InstanceRole:
           Principal:
             Service:
               - tasks.apprunner.amazonaws.com
-              - !Sub '${AWS::Region}.beta.credentialvendingserviceproxy.bullet.aws.internal' # TODO remove on release
-              - !Sub '${AWS::Region}.gamma.credentialvendingserviceproxy.bullet.aws.internal' # TODO remove on release
           Action: 'sts:AssumeRole'
     Policies:
       - PolicyName: 'DenyIAMExceptTaggedRoles'
