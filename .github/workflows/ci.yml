@@ -159,10 +159,16 @@ jobs:
         with:
           node-version: 16.x
 
-      - name: Check out mainline
+      - name: Get latest release with tag
+        id: latestrelease
+        run: |
+          echo "VERSION_TAG=$(curl -s https://api.github.com/repos/aws/copilot-cli/releases/latest | jq '.tag_name' | sed 's/\"//g')" >> $GITHUB_OUTPUT
+
+      - name: Check out latest release tag
         uses: actions/checkout@v3
         with:
-          ref: mainline
+          ref: ${{ steps.latestrelease.outputs.VERSION_TAG }}
+          repository: aws/copilot-cli
 
       - name: Compute old release binary sizes
         id: old-bins
@@ -226,18 +232,30 @@ jobs:
                 },
               },
             };
+            console.log(JSON.stringify(dat));
             
+            const lastRelease = '${{ steps.latestrelease.outputs.VERSION_TAG }}';
             let msg = `
               🍕 Here are the new binary sizes!
             
-              | Name | New size (kiB) | mainline size (kiB) | Delta |
+              | Name | New size (kiB) | ${lastRelease} size (kiB) | Delta (%) |
               |:--   |:---            |:---                    |:--    |
             `;
             
             for (const os of Object.keys(dat)) {
-              for (const arch of Object.keys(dat)) {
+              for (const arch of Object.keys(dat[os])) {
                 const delta = diff(dat[os][arch].old, dat[os][arch].cur);
-                msg += `| ${os} (${arch}) | ${dat[os][arch].cur} | ${dat[os][arch].old} | ${delta} |` + "\n";
+                let symbol = "";
+                if (delta > 5) {
+                  symbol = "😭 +";
+                } else if (delta > 1) {
+                  symbol = "🥺 +"
+                } else if (delta > 0) {
+                  symbol = "+";
+                } else if (delta < 0) {
+                  symbol = "❤️ ";
+                }
+                msg += `| ${os} (${arch}) | ${dat[os][arch].cur} | ${dat[os][arch].old} | ${symbol}${delta} |` + "\n";
               }
             }
             
