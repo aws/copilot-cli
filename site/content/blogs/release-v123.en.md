@@ -87,7 +87,7 @@ http:
 
 ### What do I need to do?
 
-The short answer: nothing, for now.
+The short answer: nothing for now.
 
 #### (Recommended) Adapt your manifest to the corrected hierarachy
 While your existing manifest will keep working (we will get to this later) -
