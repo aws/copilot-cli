@@ -147,7 +147,7 @@ http:
 ```
 The same manifest will keep working after v1.23.0.
 
-However, say at some point, you modify the manifest to:
+However, if at some point you modify the manifest to:
 ```yaml
 # Error! Both flawed hierarchy and corrected hierarchy are present.
 http:
