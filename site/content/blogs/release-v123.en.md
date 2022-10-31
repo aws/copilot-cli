@@ -132,8 +132,7 @@ Below are snippets detailing how to update each of the fields impacted:
 
 
 #### Your existing environment manifest will keep working
-It's okay if you don't adapt your enivonment manifest to the corrected hierarchy immediately. It will keep working - until at
-some point you modify your manifest so that it contains both `http.public.security_groups.ingress` (the flawed version) 
+It's okay if you don't adapt your environment manifest to the corrected hierarchy immediately. It will keep working - unless you modify your manifest so that it contains both `http.public.security_groups.ingress` (the flawed version) 
 and `http.public.ingress` (the corrected version).
 
 For example, say before the release of v1.23.0, your manifest looks like:
