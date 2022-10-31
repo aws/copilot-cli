@@ -876,41 +876,6 @@ Resources:
                   - logs:DescribeLogGroups
                   - logs:DescribeLogStreams
                 Resource: "*"
-  AppRunnerVpcEndpointSecurityGroup:
-    Metadata:
-      'aws:copilot:description': 'A security group for App Runner private services'
-    Type: AWS::EC2::SecurityGroup
-    Condition: CreateAppRunnerVPCEndpoint
-    Properties:
-      GroupDescription: demo-test-AppRunnerVpcEndpointSecurityGroup
-      VpcId: vpc-12345
-      Tags:
-        - Key: Name
-          Value: copilot-demo-test-app-runner-vpc-endpoint
-  
-  AppRunnerVpcEndpointSecurityGroupIngressFromEnvironment:
-    Type: AWS::EC2::SecurityGroupIngress
-    Condition: CreateAppRunnerVPCEndpoint
-    Properties:
-      Description: Ingress from services in the environment
-      GroupId: !Ref AppRunnerVpcEndpointSecurityGroup
-      IpProtocol: -1
-      SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
-  
-  AppRunnerVpcEndpoint:
-    Metadata:
-      'aws:copilot:description': 'VPC Endpoint to connect environment to App Runner for private services'
-    Type: AWS::EC2::VPCEndpoint
-    Condition: CreateAppRunnerVPCEndpoint
-    Properties:
-      VpcEndpointType: Interface
-      VpcId: !Ref VPC
-      SecurityGroupIds:
-        - !Ref AppRunnerVpcEndpointSecurityGroup
-      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.apprunner.requests'
-      SubnetIds:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
 Outputs:
   VpcId:
     Value: vpc-12345
@@ -1043,9 +1008,3 @@ Outputs:
   LastForceDeployID:
     Value: ""
     Description: Optionally force the template to update when no immediate resource change is present.
-  AppRunnerVpcEndpointId:
-    Condition: CreateAppRunnerVPCEndpoint
-    Value: !Ref AppRunnerVpcEndpoint
-    Description: VPC Endpoint to App Runner for private services
-    Export:
-      Name: !Sub ${AWS::StackName}-AppRunnerVpcEndpointId

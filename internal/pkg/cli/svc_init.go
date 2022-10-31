@@ -438,7 +438,7 @@ func (o *initSvcOpts) validateIngressType() error {
 	if strings.EqualFold(o.ingressType, "internet") || strings.EqualFold(o.ingressType, "environment") {
 		return nil
 	}
-	return fmt.Errorf("invalid ingress type %q: must be one of %s", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
+	return fmt.Errorf("invalid ingress type %q: must be one of %s.", o.ingressType, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 }
 
 func (o *initSvcOpts) askImage() error {
