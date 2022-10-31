@@ -134,7 +134,7 @@ Below are snippets detailing how to update each of the fields impacted:
 It's okay if you don't adapt your environment manifest to the corrected hierarchy immediately. It will keep working - unless you modify your manifest so that it contains both `http.public.security_groups.ingress` (the flawed version) 
 and `http.public.ingress` (the corrected version).
 
-For example, say before the release of v1.23.0, your manifest looks like:
+For example, say before the release of v1.23.0, your manifest looked like:
 ```yaml
 # Flawed hierarchy but will keep working.
 http:
