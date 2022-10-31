@@ -254,7 +254,6 @@ network:
 			}(),
 			wantedFileName: "template-with-defaultvpc-flowlogs.yml",
 		},
-
 		"generate template with imported vpc and flowlogs is on": {
 			input: func() *deploy.CreateEnvironmentInput {
 				rawMft := `name: test

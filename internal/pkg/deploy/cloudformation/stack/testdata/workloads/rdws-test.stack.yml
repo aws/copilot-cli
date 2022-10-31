@@ -86,7 +86,8 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              Service: tasks.apprunner.amazonaws.com
+              Service:
+                - tasks.apprunner.amazonaws.com
             Action: 'sts:AssumeRole'
       Policies:
         - PolicyName: 'DenyIAMExceptTaggedRoles'
@@ -331,7 +332,8 @@ Resources:
           - Fn::ImportValue:
               !Sub '${AppName}-${EnvName}-PrivateSubnets'
       SecurityGroups:
-      - !Ref ServiceSecurityGroup
+        - !Ref ServiceSecurityGroup
+        - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
       Tags:
         - Key: copilot-application
           Value: !Ref AppName
