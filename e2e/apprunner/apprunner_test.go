@@ -32,7 +32,6 @@ var _ = Describe("App Runner", func() {
 			WorkloadType: "Request-Driven Web Service",
 			Deploy:       true,
 			SvcPort:      "80",
-			IngressType:  "Internet",
 		})
 	})
 
