@@ -20,9 +20,9 @@ Copilot v1.23 brings several new features and improvements:
 - **App Runner Private Services**: App Runner just launched support for private services, and you can create them by adding `http.private` to your Request-Driven Web Service manifest! [See detailed section](#app-runner-private-services).
 - **Support Aurora Serverless v2 in `storage init`**: [See detailed section](#support-aurora-serverless-v2-in-storage-init).
 - **Move misplaced `http` fields in environment manifest (backward-compatible!):** [See detailed section](#move-misplaced-http-fields-in-environment-manifest-backward-compatible).
-- **Restrict container access to root file system to read-only:** [See manifest field](https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#storage-readonlyfs) [(#4062)](https://github.com/aws/copilot-cli/pull/4062).
-- **Configure SSL policy for your ALB’s HTTPS listener:** [See manifest field](https://aws.github.io/copilot-cli/docs/manifest/environment/#http-public-sslpolicy) [(#4099)](https://github.com/aws/copilot-cli/pull/4099).
-- **Restrict ingress to your ALB through source IPs**: [See manifest field](https://aws.github.io/copilot-cli/docs/manifest/environment/#http-public-ingress-source-ips) [(#4103)](https://github.com/aws/copilot-cli/pull/4103).
+- **Restrict container access to root file system to read-only:** [See manifest field](../docs/manifest/lb-web-service#storage-readonlyfs) [(#4062)](https://github.com/aws/copilot-cli/pull/4062).
+- **Configure SSL policy for your ALB’s HTTPS listener:** [See manifest field](../docs/manifest/environment#http-public-sslpolicy) [(#4099)](https://github.com/aws/copilot-cli/pull/4099).
+- **Restrict ingress to your ALB through source IPs**: [See manifest field](../docs/manifest/environment#http-public-ingress-source-ips) [(#4103)](https://github.com/aws/copilot-cli/pull/4103).
 
 
 ???+ note "What’s AWS Copilot?"
@@ -63,7 +63,7 @@ $ copilot storage init --storage-type Aurora
 to generate an addon template for a v1 cluster. Now, **it will generate the template for v2 by default**. 
 However, you can still use `copilot storage init --storage-type Aurora --serverless-version v1` to generate a v1 template.
 
-For more, check out [the doc for `storage init`](../../docs/commands/storage-init/)!
+For more, check out [the doc for `storage init`](../docs/commands/storage-init.en.md)!
 
 
 ## Move misplaced `http` fields in environment manifest (backward-compatible!)
