@@ -1,4 +1,4 @@
-name: ci
+name: ci annotate
 
 on:
   pull_request_target:
@@ -104,9 +104,14 @@ jobs:
               |:--   |:---            |:---                    |:--    |
             `;
 
+            let shouldAcknowledgeSize = false;
             for (const os of Object.keys(dat)) {
               for (const arch of Object.keys(dat[os])) {
                 const delta = diff(dat[os][arch].old, dat[os][arch].cur);
+                if (delta > 10) {
+                  shouldAcknowledgeSize = true;
+                }
+            
                 let symbol = "";
                 if (delta > 5) {
                   symbol = "😭 +";
@@ -119,6 +124,16 @@ jobs:
                 }
                 msg += `| ${os} (${arch}) | ${dat[os][arch].cur} | ${dat[os][arch].old} | ${symbol}${delta} |` + "\n";
               }
+            }
+            
+            if (shouldAcknowledgeSize) {
+              msg += "**The binary size increased more than expected! Applying the `do-not-merge` label.**\n"
+              github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['do-not-merge']
+              });
             }
 
             return msg;
