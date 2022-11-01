@@ -4,6 +4,7 @@
 package describe
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -31,3 +32,5 @@ func (err *errLBWebSvcsOnCFWithoutAlias) Error() string {
 	return fmt.Sprintf("%s %s must have %q specified when CloudFront is enabled", english.PluralWord(len(err.services), "service", "services"),
 		english.WordSeries(template.QuoteSliceFunc(err.services), "and"), err.aliasField)
 }
+
+var errVPCIngressConnectionNotFound = errors.New("no vpc ingress connection found")
