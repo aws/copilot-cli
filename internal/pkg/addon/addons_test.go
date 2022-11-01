@@ -30,7 +30,7 @@ func TestTemplate(t *testing.T) {
 		"return ErrAddonsNotFound if addons doesn't exist in a service": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return(nil, testErr)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return(nil, testErr)
 			},
 			wantedErr: &ErrAddonsNotFound{
 				WlName:    testSvcName,
@@ -40,7 +40,7 @@ func TestTemplate(t *testing.T) {
 		"return ErrAddonsNotFound if addons doesn't exist in a job": {
 			workloadName: testJobName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testJobName).Return(nil, testErr)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testJobName).Return(nil, testErr)
 			},
 			wantedErr: &ErrAddonsNotFound{
 				WlName:    testJobName,
@@ -50,7 +50,7 @@ func TestTemplate(t *testing.T) {
 		"return ErrAddonsNotFound if addons directory is empty in a service": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return([]string{}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{
 				WlName:    testSvcName,
@@ -60,7 +60,7 @@ func TestTemplate(t *testing.T) {
 		"return ErrAddonsNotFound if addons directory does not contain yaml files in a service": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{".gitkeep"}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return([]string{".gitkeep"}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{
 				WlName:    testSvcName,
@@ -70,7 +70,7 @@ func TestTemplate(t *testing.T) {
 		"ignore addons.parameters.yml files": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"addons.parameters.yml", "addons.parameters.yaml"}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return([]string{"addons.parameters.yml", "addons.parameters.yaml"}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{
 				WlName:    testSvcName,
@@ -80,14 +80,14 @@ func TestTemplate(t *testing.T) {
 		"print correct error message for ErrAddonsNotFound": {
 			workloadName: testJobName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testJobName).Return(nil, testErr)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testJobName).Return(nil, testErr)
 			},
 			wantedErr: errors.New("read addons directory for resizer: some error"),
 		},
 		"return err on invalid Metadata fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-metadata.yaml"}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-metadata.yaml"}, nil)
 
 				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
@@ -100,7 +100,7 @@ func TestTemplate(t *testing.T) {
 		"returns err on invalid Parameters fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-parameters.yaml"}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-parameters.yaml"}, nil)
 
 				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
@@ -113,7 +113,7 @@ func TestTemplate(t *testing.T) {
 		"returns err on invalid Mappings fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-mappings.yaml"}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-mappings.yaml"}, nil)
 
 				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
@@ -126,7 +126,7 @@ func TestTemplate(t *testing.T) {
 		"returns err on invalid Conditions fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-conditions.yaml"}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-conditions.yaml"}, nil)
 
 				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
@@ -139,7 +139,7 @@ func TestTemplate(t *testing.T) {
 		"returns err on invalid Resources fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-resources.yaml"}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-resources.yaml"}, nil)
 
 				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
@@ -152,7 +152,7 @@ func TestTemplate(t *testing.T) {
 		"returns err on invalid Outputs fields": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-outputs.yaml"}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-outputs.yaml"}, nil)
 
 				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
@@ -165,7 +165,7 @@ func TestTemplate(t *testing.T) {
 		"merge fields successfully": {
 			workloadName: testSvcName,
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "second.yaml"}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir(testSvcName).Return([]string{"first.yaml", "second.yaml"}, nil)
 
 				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
@@ -217,7 +217,7 @@ func TestParameters(t *testing.T) {
 	}{
 		"returns ErrAddonsNotFound if there is no addons/ directory defined": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir("api").Return(nil, errors.New("some error"))
+				m.ws.EXPECT().ReadWorkloadAddonsDir("api").Return(nil, errors.New("some error"))
 			},
 			wantedErr: (&ErrAddonsNotFound{
 				WlName:    "api",
@@ -226,13 +226,13 @@ func TestParameters(t *testing.T) {
 		},
 		"returns empty string and nil if there are no parameter files under addons/": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir("api").Return([]string{"database.yml"}, nil)
+				m.ws.EXPECT().ReadWorkloadAddonsDir("api").Return([]string{"database.yml"}, nil)
 				m.ws.EXPECT().ReadAddon("api", "database.yml").Return(nil, nil)
 			},
 		},
 		"returns an error if there are multiple parameter files defined under addons/": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir("api").
+				m.ws.EXPECT().ReadWorkloadAddonsDir("api").
 					Return([]string{"database.yml", "addons.parameters.yml", "addons.parameters.yaml"}, nil)
 				m.ws.EXPECT().ReadAddon("api", "database.yml").Return(nil, nil)
 			},
@@ -240,7 +240,7 @@ func TestParameters(t *testing.T) {
 		},
 		"returns an error if cannot read parameter file under addons/": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir("api").
+				m.ws.EXPECT().ReadWorkloadAddonsDir("api").
 					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
 				m.ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
 				m.ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return(nil, errors.New("some error"))
@@ -249,7 +249,7 @@ func TestParameters(t *testing.T) {
 		},
 		"returns an error if there are no 'Parameters' field defined in a parameters file": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir("api").
+				m.ws.EXPECT().ReadWorkloadAddonsDir("api").
 					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
 				m.ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
 				m.ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(""), nil)
@@ -258,7 +258,7 @@ func TestParameters(t *testing.T) {
 		},
 		"returns an error if reserved parameter fields is redefined in a parameters file": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir("api").
+				m.ws.EXPECT().ReadWorkloadAddonsDir("api").
 					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
 				m.ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
 				m.ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(`
@@ -275,7 +275,7 @@ Parameters:
 		},
 		"returns the content of Parameters on success": {
 			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().ReadAddonsDir("api").
+				m.ws.EXPECT().ReadWorkloadAddonsDir("api").
 					Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
 				m.ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
 				m.ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(`

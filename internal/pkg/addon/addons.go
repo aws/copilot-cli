@@ -31,7 +31,7 @@ var (
 )
 
 type workspaceReader interface {
-	ReadAddonsDir(svcName string) ([]string, error)
+	ReadWorkloadAddonsDir(svcName string) ([]string, error)
 	ReadAddon(svcName, fileName string) ([]byte, error)
 }
 
@@ -47,7 +47,7 @@ type Stack struct {
 // files found there. If no addons are found, Parse returns a nil
 // Stack and ErrAddonsNotFound.
 func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
-	fnames, err := ws.ReadAddonsDir(workloadName)
+	fnames, err := ws.ReadWorkloadAddonsDir(workloadName)
 	if err != nil {
 		return nil, &ErrAddonsNotFound{
 			WlName:    workloadName,
