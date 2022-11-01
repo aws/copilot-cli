@@ -86,6 +86,7 @@ type RequestDrivenWebServiceHttpConfig struct {
 	Private                  Union[bool, VPCEndpoint] `yaml:"private"`
 }
 
+// PrivateEnabled returns true if r is configured for private ingress.
 func (r *RequestDrivenWebServiceHttpConfig) PrivateEnabled() bool {
 	return r.Private.Basic || !r.Private.Advanced.IsZero()
 }
