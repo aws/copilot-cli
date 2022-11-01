@@ -234,6 +234,49 @@ func TestInitAppOpts_Ask(t *testing.T) {
 			},
 			wantedErr: "workspace already registered with metrics",
 		},
+		"if summary exists and without application in SSM and without IAM adminrole": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics", Path: "/test"}, nil)
+				opts.store.(*mocks.Mockstore).EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				opts.iamRoleManager.(*mocks.MockroleManager).EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(nil, errors.New("role not found"))
+			},
+			wantedAppName: "metrics",
+		},
+		"if summary exists and with application in SSM and with IAM admin with copilot tag": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics", Path: "/test"}, nil)
+				opts.store.(*mocks.Mockstore).EXPECT().GetApplication("metrics").Return(&config.Application{Name: "metrics"}, nil)
+			},
+			wantedAppName: "metrics",
+		},
+		"errors if summary exists and without application in SSM and with IAM adminrole with copliot tag": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics", Path: "/test"}, nil)
+				opts.store.(*mocks.Mockstore).EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				opts.iamRoleManager.(*mocks.MockroleManager).EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"copilot-application": "metrics",
+					}, nil)
+			},
+			wantedErr: "application named metrics already exists in another region",
+		},
+		"errors if summary exists and without application in SSM and with IAM adminrole without copliot tag": {
+			expect: func(opts *initAppOpts) {
+				opts.ws.(*mocks.MockwsAppManager).EXPECT().Summary().Return(&workspace.Summary{Application: "metrics", Path: "/test"}, nil)
+				opts.store.(*mocks.Mockstore).EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				opts.iamRoleManager.(*mocks.MockroleManager).EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"mock-application": "metrics",
+					}, nil)
+			},
+			wantedErr: "IAM admin role metrics-adminrole already exists in this account",
+		},
 		"use argument if there is no summary": {
 			inAppName: "metrics",
 			expect: func(opts *initAppOpts) {

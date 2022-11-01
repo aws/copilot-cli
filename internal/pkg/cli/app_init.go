@@ -139,6 +139,9 @@ https://aws.github.io/copilot-cli/docs/credentials/`)
 			log.Infoln(fmt.Sprintf(
 				"Your workspace is registered to application %s.",
 				color.HighlightUserInput(summary.Application)))
+			if err := o.validateAppName(summary.Application); err != nil {
+				return err
+			}
 			o.name = summary.Application
 			return nil
 		}
