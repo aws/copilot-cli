@@ -9,7 +9,7 @@ image_height: '747'
 
 # AWS Copilot v1.23: App Runner Private Services, Aurora Serverless v2 and more!
 
-Posted On: Oct 31, 2022
+Posted On: Nov 1, 2022
 
 The AWS Copilot core team is announcing the Copilot v1.23 release.   
 Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 300 people online and nearly 2.5k stars on [GitHub](http://github.com/aws/copilot-cli/).
