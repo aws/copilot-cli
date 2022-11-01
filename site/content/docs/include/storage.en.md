@@ -25,7 +25,7 @@ sidecars:
 ```
 This example will provision 100 GiB of storage to be shared between the sidecar and the task container. This can be useful for large datasets, or for using a sidecar to transfer data from EFS into task storage for workloads with high disk I/O requirements.
 
-<span class="parent-field">storage.</span><a id="storage-readonlyfs" href="#storage-readonlyfs" class="field">`readonly_fs`</a> <span class="type">Boolean</span>  
+<span class="parent-field">storage.</span><a id="storage-readonlyfs" href="#storage-readonlyfs" class="field">`readonly_fs`</a> <span class="type">Boolean</span>
 Specify true to give your container read-only access to its root file system.
 
 <span class="parent-field">storage.</span><a id="volumes" href="#volumes" class="field">`volumes`</a> <span class="type">Map</span>  
