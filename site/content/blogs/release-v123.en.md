@@ -57,7 +57,7 @@ If you'd like to a send traffic to your environment, set [`network.vpc.placement
 and now it is supported as a storage option in Copilot.
 
 Previously, you could run 
-```bash
+```console
 $ copilot storage init --storage-type Aurora
 ``` 
 to generate an addon template for a v1 cluster. Now, **it will generate the template for v2 by default**. 
