@@ -887,6 +887,59 @@ func TestWorkspace_ReadWorkloadAddonsDir(t *testing.T) {
 	}
 }
 
+func TestWorkspace_ReadEnvAddonsDir(t *testing.T) {
+	testCases := map[string]struct {
+		fs func() afero.Fs
+
+		wantedFileNames []string
+		wantedErr       error
+	}{
+		"dir not exist": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/webhook", 0755)
+				return fs
+			},
+			wantedErr: &os.PathError{
+				Op:   "open",
+				Path: filepath.FromSlash("/copilot/environments/addons"),
+				Err:  os.ErrNotExist,
+			},
+		},
+		"retrieves file names": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/environments/addons", 0755)
+				params, _ := fs.Create("/copilot/environments/addons/params.yml")
+				waf, _ := fs.Create("/copilot/environments/addons/waf.yml")
+				defer params.Close()
+				defer waf.Close()
+				return fs
+			},
+			wantedFileNames: []string{"params.yml", "waf.yml"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ws := &Workspace{
+				copilotDirAbs: "/copilot",
+				fs: &afero.Afero{
+					Fs: tc.fs(),
+				},
+			}
+
+			// WHEN
+			actualFileNames, actualErr := ws.ReadEnvAddonsDir()
+
+			// THEN
+			require.Equal(t, tc.wantedErr, actualErr)
+			require.Equal(t, tc.wantedFileNames, actualFileNames)
+		})
+	}
+}
+
 func TestWorkspace_WriteAddon(t *testing.T) {
 	testCases := map[string]struct {
 		marshaler   mockBinaryMarshaler

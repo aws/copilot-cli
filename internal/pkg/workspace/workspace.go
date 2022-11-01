@@ -416,15 +416,16 @@ func (ws *Workspace) ReadWorkloadAddonsDir(svcName string) ([]string, error) {
 		return nil, err
 	}
 
-	var names []string
-	files, err := ws.fs.ReadDir(filepath.Join(copilotPath, svcName, addonsDirName))
+	return ws.readAddonsDir(filepath.Join(copilotPath, svcName, addonsDirName))
+}
+
+// ReadEnvAddonsDir returns a list of file names under "environments/addons/" directory.
+func (ws *Workspace) ReadEnvAddonsDir() ([]string, error) {
+	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return nil, err
 	}
-	for _, f := range files {
-		names = append(names, f.Name())
-	}
-	return names, nil
+	return ws.readAddonsDir(filepath.Join(copilotPath, environmentsDirName, addonsDirName))
 }
 
 // ReadAddon returns the contents of a file under the service's "addons/" directory.
@@ -653,6 +654,18 @@ func (ws *Workspace) ListDockerfiles() ([]string, error) {
 	}
 	sort.Strings(dockerfiles)
 	return dockerfiles, nil
+}
+
+func (ws *Workspace) readAddonsDir(dirName string) ([]string, error) {
+	var names []string
+	files, err := ws.fs.ReadDir(dirName)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		names = append(names, f.Name())
+	}
+	return names, nil
 }
 
 func (ws *Workspace) manifestNameMatchWithDir(mft namedManifest, mftDirName string) error {
