@@ -194,6 +194,9 @@ ports: 80
 <span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-cidr" href="#network-vpc-security-group-cidr" class="field">`cidr`</a> <span class="type">String</span>   
 The IPv4 address range, in CIDR format.
 
+<span class="parent-field">network.vpc.</span><a id="network-vpc-flowlogs" href="#network-vpc-flowlogs" class="field">`flow_logs`</a> <span class="type">Boolean</span>   
+Specify true to enable VPC flow logs to capture information about the IP traffic going in and out of the environment VPC.
+
 
 <div class="separator"></div>
 
@@ -259,6 +262,9 @@ The name of an existing S3 bucket in which to store the access logs.
 <span class="parent-field">http.public.access_logs.</span><a id="http-public-access-logs-prefix" href="#http-public-access-logs-prefix" class="field">`prefix`</a> <span class="type">String</span>   
 The prefix for the log objects.
 
+<span class="parent-field">http.public.</span><a id="http-public-sslpolicy" href="#http-public-sslpolicy" class="field">`ssl_policy`</a> <span class="type">String</span>   
+Optional. Specify an SSL policy for the HTTPS listener of your Public Load Balancer, when applicable.
+
 <span class="parent-field">http.public.</span><a id="http-public-ingress" href="#http-public-ingress" class="field">`ingress`</a> <span class="type">Map</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>  
 Ingress rules to restrict the Public Load Balancer's traffic.  
 
@@ -312,6 +318,9 @@ http:
 
 <span class="parent-field">http.private.ingress.</span><a id="http-private-ingress-vpc" href="#http-private-ingress-vpc" class="field">`vpc`</a> <span class="type">Boolean</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>     
 Enable traffic from within the VPC to the internal load balancer.
+
+<span class="parent-field">http.private.</span><a id="http-private-sslpolicy" href="#http-private-sslpolicy" class="field">`ssl_policy`</a> <span class="type">String</span>   
+Optional. Specify an SSL policy for the HTTPS listener of your Internal Load Balancer, when applicable.
 
 <div class="separator"></div>
 
