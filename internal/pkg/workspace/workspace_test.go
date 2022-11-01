@@ -940,6 +940,59 @@ func TestWorkspace_ReadEnvAddonsDir(t *testing.T) {
 	}
 }
 
+func TestWorkspace_ReadEnvAddon(t *testing.T) {
+	testCases := map[string]struct {
+		fName string
+		fs    func() afero.Fs
+
+		wantedData []byte
+		wantedErr  error
+	}{
+		"return error if file does not exist": {
+			fName: "nowaf.yml",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+
+			wantedErr: fmt.Errorf("file %s does not exists", filepath.FromSlash("/copilot/environments/addons/nowaf.yml")),
+		},
+		"read existing file": {
+			fName: "waf.yml",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/environments/addons", 0755)
+				f, _ := fs.Create("/copilot/environments/addons/waf.yml")
+				defer f.Close()
+				f.Write([]byte("hello"))
+				return fs
+			},
+
+			wantedData: []byte("hello"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				copilotDirAbs: "/copilot",
+				fs: &afero.Afero{
+					Fs: tc.fs(),
+				},
+			}
+
+			data, err := ws.ReadEnvAddon(tc.fName)
+
+			if tc.wantedErr == nil {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedData, data)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+		})
+	}
+}
+
 func TestWorkspace_WriteAddon(t *testing.T) {
 	testCases := map[string]struct {
 		marshaler   mockBinaryMarshaler
