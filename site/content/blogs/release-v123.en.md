@@ -50,7 +50,7 @@ http:
     endpoint: vpce-12345
 ```
 By default, your private service can only send traffic to the internet.
-If you'd like to a send traffic to your environment, set [`network.vpc.placement: 'private'`](../docs/manifest/rd-web-service.en.md/#network-vpc-placement) in your manifest.
+If you'd like to a send traffic to your environment, set [`network.vpc.placement: 'private'`](../docs/manifest/rd-web-service.en.md#network-vpc-placement) in your manifest.
 
 ## Support Aurora Serverless v2 in `storage init`
 [Aurora Serverless v2 was made generally available earlier this year](https://aws.amazon.com/about-aws/whats-new/2022/04/amazon-aurora-serverless-v2/), 
