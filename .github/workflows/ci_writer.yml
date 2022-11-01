@@ -5,7 +5,6 @@ on:
     types:
       - opened
       - edited
-      - reopened
       - synchronize
 
 jobs:
@@ -112,15 +111,13 @@ jobs:
                   shouldAcknowledgeSize = true;
                 }
             
-                let symbol = "";
+                let symbol = "❤️ ";
                 if (delta > 5) {
                   symbol = "😭 +";
                 } else if (delta > 1) {
                   symbol = "🥺 +"
                 } else if (delta > 0) {
                   symbol = "+";
-                } else if (delta < 0) {
-                  symbol = "❤️ ";
                 }
                 msg += `| ${os} (${arch}) | ${dat[os][arch].cur} | ${dat[os][arch].old} | ${symbol}${delta} |` + "\n";
               }
@@ -146,16 +143,10 @@ jobs:
           comment-author: 'github-actions[bot]'
           body-includes: 'Here are the new binary sizes'
 
-      - name: Create comment if it does not exist
-        if: steps.fc.outputs.comment-id == ''
-        uses: peter-evans/create-or-update-comment@v2
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: ${{steps.diff.outputs.result}}
-
-      - name: Update comment if it exists
-        if: steps.fc.outputs.comment-id != ''
+      - name: Create or update comment
         uses: peter-evans/create-or-update-comment@v2
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
           body: ${{steps.diff.outputs.result}}
+          edit-mode: replace
