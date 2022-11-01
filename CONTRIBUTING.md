@@ -53,7 +53,8 @@ Each e2e profile needs to be configured for a different AWS account and a differ
 Below are the different commands which can be run in the root of the project directory.
 
 * Run `make` (This creates a standalone executable in the `bin/local` directory).
-* Run `make run-unit-test` to run the unit tests.
+* Run `make run-unit-test` to run only Go unit tests.
+* Run `make test` to run Go and Node.js unit tests. You'll need Node.js and npm for these tests to run.
 * Run `make integ-test` to run integration tests against your Default AWS profile. **Warning** - this will create AWS resources in your `default` profile.
 * Run `make e2e` to run end to end tests (tests that run commands locally). **Warning** - this will create AWS resources in your account. You'll need Docker running for these tests to run.
 
