@@ -30,7 +30,7 @@ $ copilot storage init -n users -t DynamoDB -w api --partition-key id:N --sort-k
 
 This will create a DynamoDB table called `${app}-${env}-${svc}-users`. Its partition key will be `id`, a `Number` attribute; its sort key will be `email`, a `String` attribute; and it will have a [local secondary index](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/LSI.html) (essentially an alternate sort key) on the `Number` attribute `post-count`.
 
-It is also possible to create an [RDS Aurora Serverless](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless.html) cluster using `copilot storage init`.
+It is also possible to create an [RDS Aurora Serverless v2](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.html) cluster using `copilot storage init`.
 ```bash
 # For a guided experience.
 $ copilot storage init -t Aurora
@@ -38,7 +38,12 @@ $ copilot storage init -t Aurora
 # Or skip the prompts by providing flags.
 $ copilot storage init -n my-cluster -t Aurora -w api --engine PostgreSQL --initial-db my_db
 ```
-This will create an RDS Aurora Serverless cluster that uses PostgreSQL engine with a database named `my_db`. An environment variable named `MYCLUSTER_SECRET` is injected into your workload as a JSON string. The fields are `'host'`, `'port'`, `'dbname'`, `'username'`, `'password'`, `'dbClusterIdentifier'` and `'engine'`.
+This will create an RDS Aurora Serverless v2 cluster that uses PostgreSQL engine with a database named `my_db`. An environment variable named `MYCLUSTER_SECRET` is injected into your workload as a JSON string. The fields are `'host'`, `'port'`, `'dbname'`, `'username'`, `'password'`, `'dbClusterIdentifier'` and `'engine'`.
+
+To create an [RDS Aurora Serverless v1](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless.html) cluster, you can run
+```bash
+$ copilot storage init -n my-cluster -t Aurora --serverless-version v1
+```
 
 ## File Systems
 There are two ways to use an EFS file system with Copilot: using managed EFS, and importing your own filesystem.

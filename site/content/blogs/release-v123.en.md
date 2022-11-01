@@ -53,6 +53,18 @@ By default, your private service can only send traffic to the internet.
 If you'd like to a send traffic to your environment, set [`network.vpc.placement: 'private'`](../../docs/manifest/rd-web-service/#network-vpc-placement) in your manifest.
 
 ## Support Aurora Serverless v2 in `storage init`
+[Aurora Serverless v2 was made generally available earlier this year](https://aws.amazon.com/about-aws/whats-new/2022/04/amazon-aurora-serverless-v2/), 
+and now it is supported as a storage option in Copilot.
+
+Previously, you could run 
+```bash
+$ copilot storage init --storage-type Aurora
+``` 
+to generate an addon template for a v1 cluster. Now, **it will generate the template for v2 by default**. 
+However, you can still use `copilot storage init --storage-type Aurora --serverless-version v1` to generate a v1 template.
+
+For more, check out [the doc for `storage init`](../../docs/commands/storage-init/)!
+
 
 ## Move misplaced `http` fields in environment manifest (backward-compatible!)
 
