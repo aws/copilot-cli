@@ -54,7 +54,7 @@ If you'd like to a send traffic to your environment, set [`network.vpc.placement
 
 ## Support Aurora Serverless v2 in `storage init`
 [Aurora Serverless v2 was made generally available earlier this year](https://aws.amazon.com/about-aws/whats-new/2022/04/amazon-aurora-serverless-v2/), 
-and now it is supported as a storage option in Copilot.
+and is now supported as a storage option in Copilot.
 
 Previously, you could run 
 ```console
