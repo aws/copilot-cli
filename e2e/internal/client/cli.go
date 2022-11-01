@@ -303,7 +303,6 @@ copilot init
 	--deploy (optionally)
 	--schedule $schedule (optionally)
 	--port $port (optionally)
-	--ingress-type $type (optionally)
 */
 func (cli *CLI) Init(opts *InitRequest) (string, error) {
 	var deployOption string
