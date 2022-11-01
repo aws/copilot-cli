@@ -1,0 +1,146 @@
+name: ci
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+jobs:
+  binsize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+
+      - name: Get latest release with tag
+        id: latestrelease
+        run: |
+          echo "VERSION_TAG=$(curl -s https://api.github.com/repos/aws/copilot-cli/releases/latest | jq '.tag_name' | sed 's/\"//g')" >> $GITHUB_OUTPUT
+
+      - name: Check out latest release tag
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ steps.latestrelease.outputs.VERSION_TAG }}
+          repository: aws/copilot-cli
+
+      - name: Compute old release binary sizes
+        id: old-bins
+        run: |
+          make release
+          echo "MAC_AMD_KIB=$(du -k ./bin/local/copilot-darwin-amd64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "MAC_ARM_KIB=$(du -k ./bin/local/copilot-darwin-arm64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "LINUX_AMD_KIB=$(du -k ./bin/local/copilot-linux-amd64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "LINUX_ARM_KIB=$(du -k ./bin/local/copilot-linux-arm64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "WINDOWS_AMD_KIB=$(du -k ./bin/local/copilot.exe | awk '{ print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Check out PR commit
+        uses: actions/checkout@v3
+
+      - name: Compute new release binary sizes
+        id: new-bins
+        run: |
+          make release
+          echo "MAC_AMD_KIB=$(du -k ./bin/local/copilot-darwin-amd64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "MAC_ARM_KIB=$(du -k ./bin/local/copilot-darwin-arm64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "LINUX_AMD_KIB=$(du -k ./bin/local/copilot-linux-amd64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "LINUX_ARM_KIB=$(du -k ./bin/local/copilot-linux-arm64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "WINDOWS_AMD_KIB=$(du -k ./bin/local/copilot.exe | awk '{ print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Calculate size change
+        id: diff
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            const diff = (old, cur) => {
+              const res = (cur-old)/old * 100;
+              return res.toFixed(2); // 2 decimal places.
+            };
+
+            const dat = {
+              'macOS': {
+                'amd': {
+                  'old': parseFloat(${{ steps.old-bins.outputs.MAC_AMD_KIB }}),
+                  'cur': parseFloat(${{ steps.new-bins.outputs.MAC_AMD_KIB }}),
+                },
+                'arm': {
+                  'old': parseFloat(${{ steps.old-bins.outputs.MAC_ARM_KIB }}),
+                  'cur': parseFloat(${{ steps.new-bins.outputs.MAC_AMD_KIB }}),
+                },
+              },
+              'linux': {
+                'amd': {
+                  'old': parseFloat(${{ steps.old-bins.outputs.LINUX_AMD_KIB }}),
+                  'cur': parseFloat(${{ steps.new-bins.outputs.LINUX_AMD_KIB }}),
+                },
+                'arm': {
+                  'old': parseFloat(${{ steps.old-bins.outputs.LINUX_ARM_KIB }}),
+                  'cur': parseFloat(${{ steps.new-bins.outputs.LINUX_AMD_KIB }}),
+                },
+              },
+              'windows': {
+                'amd': {
+                  'old': parseFloat(${{ steps.old-bins.outputs.WINDOWS_AMD_KIB }}),
+                  'cur': parseFloat(${{ steps.new-bins.outputs.WINDOWS_AMD_KIB }}),
+                },
+              },
+            };
+
+            const lastRelease = '${{ steps.latestrelease.outputs.VERSION_TAG }}';
+            let msg = `
+              🍕 Here are the new binary sizes!
+
+              | Name | New size (kiB) | ${lastRelease} size (kiB) | Delta (%) |
+              |:--   |:---            |:---                    |:--    |
+            `;
+
+            for (const os of Object.keys(dat)) {
+              for (const arch of Object.keys(dat[os])) {
+                const delta = diff(dat[os][arch].old, dat[os][arch].cur);
+                let symbol = "";
+                if (delta > 5) {
+                  symbol = "😭 +";
+                } else if (delta > 1) {
+                  symbol = "🥺 +"
+                } else if (delta > 0) {
+                  symbol = "+";
+                } else if (delta < 0) {
+                  symbol = "❤️ ";
+                }
+                msg += `| ${os} (${arch}) | ${dat[os][arch].cur} | ${dat[os][arch].old} | ${symbol}${delta} |` + "\n";
+              }
+            }
+
+            return msg;
+
+      - name: Find comment
+        uses: peter-evans/find-comment@v2
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: 'Here are the new binary sizes'
+
+      - name: Create comment if it does not exist
+        if: steps.fc.outputs.comment-id == ''
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: ${{steps.diff.outputs.result}}
+
+      - name: Update comment if it exists
+        if: steps.fc.outputs.comment-id != ''
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          body: ${{steps.diff.outputs.result}}
