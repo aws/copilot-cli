@@ -940,6 +940,62 @@ func TestWorkspace_ReadEnvAddonsDir(t *testing.T) {
 	}
 }
 
+func TestWorkspace_ReadWorkloadAddon(t *testing.T) {
+	testCases := map[string]struct {
+		svcName string
+		fName   string
+		fs      func() afero.Fs
+
+		wantedData []byte
+		wantedErr  error
+	}{
+		"return error if file does not exist": {
+			svcName: "api",
+			fName:   "db.yml",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				return fs
+			},
+
+			wantedErr: fmt.Errorf("file %s does not exists", filepath.FromSlash("/copilot/api/addons/db.yml")),
+		},
+		"read existing file": {
+			svcName: "api",
+			fName:   "db.yml",
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/api/addons", 0755)
+				f, _ := fs.Create("/copilot/api/addons/db.yml")
+				defer f.Close()
+				f.Write([]byte("mydb"))
+				return fs
+			},
+
+			wantedData: []byte("mydb"),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				copilotDirAbs: "/copilot",
+				fs: &afero.Afero{
+					Fs: tc.fs(),
+				},
+			}
+
+			data, err := ws.ReadWorkloadAddon(tc.svcName, tc.fName)
+
+			if tc.wantedErr == nil {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedData, data)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+		})
+	}
+}
+
 func TestWorkspace_ReadEnvAddon(t *testing.T) {
 	testCases := map[string]struct {
 		fName string
