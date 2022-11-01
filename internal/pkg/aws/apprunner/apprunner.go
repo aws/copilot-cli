@@ -42,6 +42,7 @@ type api interface {
 	ResumeService(input *apprunner.ResumeServiceInput) (*apprunner.ResumeServiceOutput, error)
 	StartDeployment(input *apprunner.StartDeploymentInput) (*apprunner.StartDeploymentOutput, error)
 	DescribeObservabilityConfiguration(input *apprunner.DescribeObservabilityConfigurationInput) (*apprunner.DescribeObservabilityConfigurationOutput, error)
+	DescribeVpcIngressConnection(input *apprunner.DescribeVpcIngressConnectionInput) (*apprunner.DescribeVpcIngressConnectionOutput, error)
 }
 
 // AppRunner wraps an AWS AppRunner client.
@@ -211,6 +212,18 @@ func (a *AppRunner) WaitForOperation(operationId, svcARN string) error {
 		}
 		time.Sleep(3 * time.Second)
 	}
+}
+
+// PrivateURL returns the url associated with a VPC Ingress Connection.
+func (a *AppRunner) PrivateURL(vicARN string) (string, error) {
+	resp, err := a.client.DescribeVpcIngressConnection(&apprunner.DescribeVpcIngressConnectionInput{
+		VpcIngressConnectionArn: aws.String(vicARN),
+	})
+	if err != nil {
+		return "", fmt.Errorf("describe vpc ingress connection %q: %w", vicARN, err)
+	}
+
+	return aws.StringValue(resp.VpcIngressConnection.DomainName), nil
 }
 
 // ParseServiceName returns the service name.

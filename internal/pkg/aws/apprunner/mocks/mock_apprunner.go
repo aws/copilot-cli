@@ -64,6 +64,21 @@ func (mr *MockapiMockRecorder) DescribeService(input interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeService", reflect.TypeOf((*Mockapi)(nil).DescribeService), input)
 }
 
+// DescribeVpcIngressConnection mocks base method.
+func (m *Mockapi) DescribeVpcIngressConnection(input *apprunner.DescribeVpcIngressConnectionInput) (*apprunner.DescribeVpcIngressConnectionOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DescribeVpcIngressConnection", input)
+	ret0, _ := ret[0].(*apprunner.DescribeVpcIngressConnectionOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DescribeVpcIngressConnection indicates an expected call of DescribeVpcIngressConnection.
+func (mr *MockapiMockRecorder) DescribeVpcIngressConnection(input interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DescribeVpcIngressConnection", reflect.TypeOf((*Mockapi)(nil).DescribeVpcIngressConnection), input)
+}
+
 // ListOperations mocks base method.
 func (m *Mockapi) ListOperations(input *apprunner.ListOperationsInput) (*apprunner.ListOperationsOutput, error) {
 	m.ctrl.T.Helper()
