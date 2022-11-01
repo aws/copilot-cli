@@ -32,7 +32,7 @@ var (
 
 type workspaceReader interface {
 	ReadWorkloadAddonsDir(svcName string) ([]string, error)
-	ReadAddon(svcName, fileName string) ([]byte, error)
+	ReadWorkloadAddon(svcName, fileName string) ([]byte, error)
 }
 
 // Stack represents a CloudFormation stack.
@@ -119,7 +119,7 @@ func parseTemplate(fnames []string, workloadName string, ws workspaceReader) (*c
 
 	mergedTemplate := newCFNTemplate("merged")
 	for _, fname := range templateFiles {
-		out, err := ws.ReadAddon(workloadName, fname)
+		out, err := ws.ReadWorkloadAddon(workloadName, fname)
 		if err != nil {
 			return nil, fmt.Errorf("read addon %s under %s: %w", fname, workloadName, err)
 		}
@@ -150,7 +150,7 @@ func parseParameters(fnames []string, workloadName string, ws workspaceReader) (
 		return yaml.Node{}, fmt.Errorf("defining %s is not allowed under %s addons/", english.WordSeries(parameterFileNames, "and"), workloadName)
 	}
 	paramFile := paramFiles[0]
-	raw, err := ws.ReadAddon(workloadName, paramFile)
+	raw, err := ws.ReadWorkloadAddon(workloadName, paramFile)
 	if err != nil {
 		return yaml.Node{}, fmt.Errorf("read parameter file %s under %s addons/: %w", paramFile, workloadName, err)
 	}

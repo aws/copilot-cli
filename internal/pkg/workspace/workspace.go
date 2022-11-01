@@ -428,8 +428,8 @@ func (ws *Workspace) ReadEnvAddonsDir() ([]string, error) {
 	return ws.readAddonsDir(filepath.Join(copilotPath, environmentsDirName, addonsDirName))
 }
 
-// ReadAddon returns the contents of a file under the service's "addons/" directory.
-func (ws *Workspace) ReadAddon(svc, fname string) ([]byte, error) {
+// ReadWorkloadAddon returns the contents of a file under the service's "addons/" directory.
+func (ws *Workspace) ReadWorkloadAddon(svc, fname string) ([]byte, error) {
 	return ws.read(svc, addonsDirName, fname)
 }
 
