@@ -38,7 +38,6 @@ type InitRequest struct {
 	WorkloadType string
 	SvcPort      string
 	Schedule     string
-	IngressType  string
 }
 
 // EnvInitRequest contains the parameters for calling copilot env init.
@@ -304,13 +303,11 @@ copilot init
 	--deploy (optionally)
 	--schedule $schedule (optionally)
 	--port $port (optionally)
-	--ingress-type $type (optionally)
 */
 func (cli *CLI) Init(opts *InitRequest) (string, error) {
 	var deployOption string
 	var scheduleOption string
 	var portOption string
-	var ingressTypeOption string
 
 	if opts.Deploy {
 		deployOption = "--deploy"
@@ -320,9 +317,6 @@ func (cli *CLI) Init(opts *InitRequest) (string, error) {
 	}
 	if opts.SvcPort != "" {
 		portOption = "--port"
-	}
-	if opts.IngressType != "" {
-		ingressTypeOption = "--ingress-type"
 	}
 
 	return cli.exec(
@@ -334,8 +328,7 @@ func (cli *CLI) Init(opts *InitRequest) (string, error) {
 			"--dockerfile", opts.Dockerfile,
 			deployOption,
 			scheduleOption, opts.Schedule,
-			portOption, opts.SvcPort,
-			ingressTypeOption, opts.IngressType))
+			portOption, opts.SvcPort))
 }
 
 /*
