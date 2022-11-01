@@ -319,6 +319,9 @@ http:
 <span class="parent-field">http.private.ingress.</span><a id="http-private-ingress-vpc" href="#http-private-ingress-vpc" class="field">`vpc`</a> <span class="type">Boolean</span><span class="version">Modified in [v1.23.0](../../blogs/release-v123.en.md#move-misplaced-http-fields-in-environment-manifest-backward-compatible)</span>     
 Enable traffic from within the VPC to the internal load balancer.
 
+<span class="parent-field">http.private.</span><a id="http-private-sslpolicy" href="#http-private-sslpolicy" class="field">`ssl_policy`</a> <span class="type">String</span>   
+Optional. Specify an SSL policy for the HTTPS listener of your Internal Load Balancer, when applicable.
+
 <div class="separator"></div>
 
 <a id="observability" href="#observability" class="field">`observability`</a> <span class="type">Map</span>  
