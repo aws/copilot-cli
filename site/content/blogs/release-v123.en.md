@@ -18,7 +18,7 @@ Thanks to every one of you who shows love and support for AWS Copilot.
 Copilot v1.23 brings several new features and improvements:
 
 - **App Runner Private Services**: App Runner just launched support for private services, and you can create them by adding `http.private` to your Request-Driven Web Service manifest! [See detailed section](#app-runner-private-services).
-- **Support Aurora Serverless v2 in `storage init`**: [See detailed section](#support-aurora-serverless-v2-in-storage-init).
+- **Support Aurora Serverless v2 in [`storage init`](../docs/commands/storage-init.en.md)**: [See detailed section](#support-aurora-serverless-v2-in-storage-init).
 - **Move misplaced `http` fields in environment manifest (backward-compatible!):** [See detailed section](#move-misplaced-http-fields-in-environment-manifest-backward-compatible).
 - **Restrict container access to root file system to read-only:** [See manifest field](https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#storage-readonlyfs) [(#4062)](https://github.com/aws/copilot-cli/pull/4062).
 - **Configure SSL policy for your ALB’s HTTPS listener:** [See manifest field](https://aws.github.io/copilot-cli/docs/manifest/environment/#http-public-sslpolicy) [(#4099)](https://github.com/aws/copilot-cli/pull/4099).
@@ -52,7 +52,7 @@ http:
 By default, your private service can only send traffic to the internet.
 If you'd like to a send traffic to your environment, set [`network.vpc.placement: 'private'`](../../docs/manifest/rd-web-service/#network-vpc-placement) in your manifest.
 
-## Support Aurora Serverless v2 in `storage init`
+## Support Aurora Serverless v2 in [`storage init`](../docs/commands/storage-init.en.md)
 
 ## Move misplaced `http` fields in environment manifest (backward-compatible!)
 
