@@ -9,7 +9,7 @@ image_height: '747'
 
 # AWS Copilot v1.23: App Runner Private Services, Aurora Serverless v2 and more!
 
-Posted On: Oct 31, 2022
+Posted On: Nov 1, 2022
 
 The AWS Copilot core team is announcing the Copilot v1.23 release.   
 Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 300 people online and nearly 2.5k stars on [GitHub](http://github.com/aws/copilot-cli/).
@@ -52,7 +52,7 @@ http:
 By default, your private service can only send traffic to the internet.
 If you'd like to a send traffic to your environment, set [`network.vpc.placement: 'private'`](../docs/manifest/rd-web-service.en.md#network-vpc-placement) in your manifest.
 
-## Support Aurora Serverless v2 in `storage init`
+## Support Aurora Serverless v2 in [`storage init`](../docs/commands/storage-init.en.md)
 [Aurora Serverless v2 was made generally available earlier this year](https://aws.amazon.com/about-aws/whats-new/2022/04/amazon-aurora-serverless-v2/), 
 and is now supported as a storage option in Copilot.
 
@@ -116,7 +116,7 @@ http:
 
 The short answer: nothing for now.
 
-#### (Recommended) Adapt your manifest to the corrected hierarachy
+#### (Recommended) Adapt your manifest to the corrected hierarchy
 While your existing manifest will keep working (we will get to this later), it is recommended that you update your manifest to the corrected hierarchy. 
 Below are snippets detailing how to update each of the fields impacted:
 
