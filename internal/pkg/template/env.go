@@ -44,7 +44,7 @@ var leastVersionForFeature = map[string]string{
 	NATFeatureName:                     "v1.3.0",
 	InternalALBFeatureName:             "v1.10.0",
 	AliasesFeatureName:                 "v1.4.0",
-	AppRunnerPrivateServiceFeatureName: "v1.23.0",
+	AppRunnerPrivateServiceFeatureName: "v1.13.0",
 }
 
 // AvailableEnvFeatures returns a list of the latest available feature, named after their corresponding parameter names.

@@ -86,6 +86,10 @@ type RequestDrivenWebServiceHttpConfig struct {
 	Private                  Union[bool, VPCEndpoint] `yaml:"private"`
 }
 
+func (r *RequestDrivenWebServiceHttpConfig) PrivateEnabled() bool {
+	return r.Private.Basic || !r.Private.Advanced.IsZero()
+}
+
 // VPCEndpoint is used to configure a pre-existing VPC endpoint.
 type VPCEndpoint struct {
 	Endpoint *string `yaml:"endpoint"`
@@ -186,6 +190,9 @@ func (s RequestDrivenWebService) applyEnv(envName string) (workloadManifest, err
 
 func (s *RequestDrivenWebService) requiredEnvironmentFeatures() []string {
 	var features []string
+	if s.PrivateEnabled() {
+		features = append(features, template.AppRunnerPrivateServiceFeatureName)
+	}
 	features = append(features, s.Network.requiredEnvFeatures()...)
 	return features
 }
