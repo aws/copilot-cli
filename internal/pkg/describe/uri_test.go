@@ -492,7 +492,7 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 	testCases := map[string]struct {
 		setupMocks func(mocks apprunnerSvcDescriberMocks)
 
-		wantedURI   string
+		wantedURI   URI
 		wantedError error
 	}{
 		"fail to get outputs of service stack": {
@@ -501,16 +501,40 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 					m.ecsSvcDescriber.EXPECT().ServiceURL().Return("", mockErr),
 				)
 			},
-			wantedError: fmt.Errorf("get outputs for service frontend: some error"),
+			wantedError: fmt.Errorf(`get outputs for service "frontend": some error`),
 		},
-		"succeed in getting outputs of service stack": {
+		"fail to check if private": {
 			setupMocks: func(m apprunnerSvcDescriberMocks) {
 				gomock.InOrder(
 					m.ecsSvcDescriber.EXPECT().ServiceURL().Return(testSvcURL, nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, mockErr),
 				)
 			},
-
-			wantedURI: "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+			wantedError: fmt.Errorf(`check if service "frontend" is private: some error`),
+		},
+		"succeed in getting public service uri": {
+			setupMocks: func(m apprunnerSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return(testSvcURL, nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(false, nil),
+				)
+			},
+			wantedURI: URI{
+				URI:        "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+				AccessType: URIAccessTypeInternet,
+			},
+		},
+		"succeed in getting private service uri": {
+			setupMocks: func(m apprunnerSvcDescriberMocks) {
+				gomock.InOrder(
+					m.ecsSvcDescriber.EXPECT().ServiceURL().Return(testSvcURL, nil),
+					m.ecsSvcDescriber.EXPECT().IsPrivate().Return(true, nil),
+				)
+			},
+			wantedURI: URI{
+				URI:        "https://6znxd4ra33.public.us-east-1.apprunner.amazonaws.com",
+				AccessType: URIAccessTypeInternal,
+			},
 		},
 	}
 
@@ -541,7 +565,7 @@ func TestRDWebServiceDescriber_URI(t *testing.T) {
 				require.EqualError(t, err, tc.wantedError.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.wantedURI, actual.URI)
+				require.Equal(t, tc.wantedURI, actual)
 			}
 		})
 	}
