@@ -395,6 +395,56 @@ func TestAppRunner_DescribeOperation(t *testing.T) {
 	}
 }
 
+func TestAppRunner_PrivateURL(t *testing.T) {
+	const mockARN = "mockVicArn"
+	tests := map[string]struct {
+		mockAppRunnerClient func(m *mocks.Mockapi)
+		expectedErr         string
+		expectedURL         string
+	}{
+		"error if error from sdk": {
+			mockAppRunnerClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeVpcIngressConnection(&apprunner.DescribeVpcIngressConnectionInput{
+					VpcIngressConnectionArn: aws.String(mockARN),
+				}).Return(nil, errors.New("some error"))
+			},
+			expectedErr: `describe vpc ingress connection "mockVicArn": some error`,
+		},
+		"success": {
+			mockAppRunnerClient: func(m *mocks.Mockapi) {
+				m.EXPECT().DescribeVpcIngressConnection(&apprunner.DescribeVpcIngressConnectionInput{
+					VpcIngressConnectionArn: aws.String(mockARN),
+				}).Return(&apprunner.DescribeVpcIngressConnectionOutput{
+					VpcIngressConnection: &apprunner.VpcIngressConnection{
+						DomainName: aws.String("example.com"),
+					},
+				}, nil)
+			},
+			expectedURL: "example.com",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAppRunnerClient := mocks.NewMockapi(ctrl)
+			tc.mockAppRunnerClient(mockAppRunnerClient)
+
+			service := AppRunner{
+				client: mockAppRunnerClient,
+			}
+
+			url, err := service.PrivateURL(mockARN)
+			if tc.expectedErr != "" {
+				require.EqualError(t, err, tc.expectedErr)
+			}
+			require.Equal(t, tc.expectedURL, url)
+		})
+	}
+}
+
 func TestAppRunner_PauseService(t *testing.T) {
 	const (
 		mockOperationId = "mock-operation"
