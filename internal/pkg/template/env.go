@@ -17,6 +17,10 @@ const (
 )
 
 // Available env-controller managed feature names.
+//
+// If you add a new feature to this list, make sure you update the
+// relevant services' requiredEnvironmentFeatures() function to
+// determine if the service requires the feature.
 const (
 	ALBFeatureName                     = "ALBWorkloads"
 	EFSFeatureName                     = "EFSWorkloads"
