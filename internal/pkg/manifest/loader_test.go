@@ -90,3 +90,139 @@ func TestDynamicWorkloadManifest_Load(t *testing.T) {
 		})
 	}
 }
+
+func TestDynamicWorkload_ApplyEnv(t *testing.T) {
+	tests := map[string]struct {
+		manifest string
+		expected func() any
+	}{
+		"update rdws http.private true -> false": {
+			manifest: `
+type: Request-Driven Web Service
+
+http:
+  private: true
+
+environments:
+  test:
+    http:
+      private: false
+`,
+			expected: func() any {
+				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
+				c.Private = BasicToUnion[bool, VPCEndpoint](false)
+				return c
+			},
+		},
+		"update rdws http.private false -> true": {
+			manifest: `
+type: Request-Driven Web Service
+
+http:
+  private: false
+
+environments:
+  test:
+    http:
+      private: true
+`,
+			expected: func() any {
+				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
+				c.Private = BasicToUnion[bool, VPCEndpoint](true)
+				return c
+			},
+		},
+		"update rdws http.private false -> VPCEndpoint": {
+			manifest: `
+type: Request-Driven Web Service
+
+http:
+  private: false
+
+environments:
+  test:
+    http:
+      private:
+        endpoint: vpce-1234
+`,
+			expected: func() any {
+				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
+				c.Private = AdvancedToUnion[bool](VPCEndpoint{
+					Endpoint: aws.String("vpce-1234"),
+				})
+				return c
+			},
+		},
+		"update rdws http.private VPCEndpoint -> false": {
+			manifest: `
+type: Request-Driven Web Service
+
+http:
+  private:
+    endpoint: vpce-1234
+
+environments:
+  test:
+    http:
+      private: false
+`,
+			expected: func() any {
+				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
+				c.Private = BasicToUnion[bool, VPCEndpoint](false)
+				return c
+			},
+		},
+		"update rdws alias, no http.private update": {
+			manifest: `
+type: Request-Driven Web Service
+
+http:
+  private: false
+
+environments:
+  test:
+    http:
+      alias: example.com
+`,
+			expected: func() any {
+				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
+				c.Private = BasicToUnion[bool, VPCEndpoint](false)
+				c.Alias = aws.String("example.com")
+				return c
+			},
+		},
+		"update rdws cpu, no http.private update": {
+			manifest: `
+type: Request-Driven Web Service
+
+http:
+  private: true
+
+environments:
+  test:
+    cpu: 2048
+`,
+			expected: func() any {
+				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
+				c.Private = BasicToUnion[bool, VPCEndpoint](true)
+				c.InstanceConfig.CPU = aws.Int(2048)
+				return c
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			mft, err := UnmarshalWorkload([]byte(tc.manifest))
+			require.NoError(t, err)
+
+			mft, err = mft.ApplyEnv("test")
+			require.NoError(t, err)
+
+			switch v := mft.Manifest().(type) {
+			case *RequestDrivenWebService:
+				require.Equal(t, tc.expected(), v.RequestDrivenWebServiceConfig)
+			}
+		})
+	}
+}

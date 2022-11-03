@@ -27,6 +27,7 @@ var defaultTransformers = []mergo.Transformers{
 	placementArgOrStringTransformer{},
 	subnetListOrArgsTransformer{},
 	unionTransformer[string, HTTPHealthCheckArgs]{},
+	unionTransformer[bool, VPCEndpoint]{},
 	countTransformer{},
 	advancedCountTransformer{},
 	scalingConfigOrTTransformer[Percentage]{},
@@ -293,6 +294,13 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 
 type unionTransformer[Basic, Advanced any] struct{}
 
+// Transfomer implements mergo.Transformer and returns a function that merges two
+// Union[Basic, Advanced]. Because Mergo doesn't override destination values if source has a zero
+// value, there is some special logic if Basic or Advanced is a string, bool, or number. Since the Union
+// type defines if a value was set or not, we will overwrite dst's value for those types if src's value
+// was set, as determined by src.IsBasic()/IsAdvanced(). Pointers to zero values is merged by basicTransformer.
+//
+// See https://github.com/imdario/mergo/issues/89.
 func (t unionTransformer[Basic, Advanced]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	if typ != reflect.TypeOf(Union[Basic, Advanced]{}) {
 		return nil
@@ -305,13 +313,23 @@ func (t unionTransformer[Basic, Advanced]) Transformer(typ reflect.Type) func(ds
 			var zero Advanced
 			dstStruct.isAdvanced, dstStruct.Advanced = false, zero
 			dstStruct.isBasic = true
+
+			switch any(srcStruct.Basic).(type) {
+			case string, bool, int, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64, complex64, complex128:
+				dstStruct.Basic = srcStruct.Basic
+			}
 		} else if srcStruct.IsAdvanced() {
 			var zero Basic
 			dstStruct.isBasic, dstStruct.Basic = false, zero
 			dstStruct.isAdvanced = true
+
+			switch any(srcStruct.Advanced).(type) {
+			case string, bool, int, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64, complex64, complex128:
+				dstStruct.Advanced = srcStruct.Advanced
+			}
 		}
 
-		if dst.CanSet() { // For extra safety to prevent panicking.
+		if dst.CanSet() {
 			dst.Set(reflect.ValueOf(dstStruct))
 		}
 		return nil
