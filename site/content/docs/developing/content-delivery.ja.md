@@ -53,7 +53,7 @@ CloudFront で HTTPS を使用する場合、ロードバランサーの `http.c
 
 ## Ingress 制限とは?
 
-特定の送信元からの受信トラフィックを制限できます。CloudFront の場合、Copilot は [AWS マネージドプレフィックスリスト](https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html)を使用して、CloudFront エッジロケーションに関連する CIDR IP アドレスのセットに許可されたトラフィックを制限します。`restrict_to.cdn: true` を指定すると、パブリックロードバランサーはパブリックアクセスできなくなり、CloudFront 配信からのみアクセスできるようになり、Service に対するセキュリティ脅威から保護されます。
+特定の送信元からの受信トラフィックを制限できます。CloudFront の場合、Copilot は [AWS マネージドプレフィックスリスト](https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html)を使用して、CloudFront エッジロケーションに関連する CIDR IP アドレスのセットに許可されたトラフィックを制限します。`restrict_to.cdn: true` を指定すると、パブリックロードバランサーはパブリックアクセスできなくなり、CloudFront ディストリビューションからのみアクセスできるようになり、Service に対するセキュリティ脅威から保護されます。
 
 ## CloudFront で TLS を終端させるには？
 

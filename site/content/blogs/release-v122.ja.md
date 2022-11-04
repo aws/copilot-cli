@@ -21,7 +21,7 @@ Copilot v1.22 では、いくつかの新機能と改良が施されています
 - **IAM ロールパーミッションバウンダリー**: [詳細はこちらをご覧ください](#iam-role-permissions-boundary).
 - **FIFO SNS/SQS**: [詳細はこちらをご覧ください](#fifo-snssqs).
 - **CloudFront TLS ターミネーション**: CloudFront を利用してより高速な TLS ターミネーションが可能になりました![詳細はこちらをご覧ください](#cloudfront-tls-termination).
-- **Application Load Balancer と Fargate タスク間の TLS接続**: ターゲットコンテナのポートが `443` と指定されている場合に、Copilot はターゲットグループのプロトコルとヘルスチェックプロトコルを HPPTS に設定します。[Manifestのサンプルをご覧ください](../docs/manifest/lb-web-service.ja.md#__tabbed_1_8)
+- **Application Load Balancer と Fargate タスク間の TLS接続**: ターゲットコンテナのポートが `443` と指定されている場合に、Copilot はターゲットグループのプロトコルとヘルスチェックプロトコルを HTTPS に設定します。[Manifest のサンプルをご覧ください](../docs/manifest/lb-web-service.ja.md#__tabbed_1_8)
 
 ???+ note "AWS Copilot とは?"
 
@@ -35,7 +35,7 @@ Copilot v1.22 では、いくつかの新機能と改良が施されています
 
 <a id="iam-role-permissions-boundary"></a>
 ## IAM ロールパーミッションバウンダリー
-IAM ロールの作成時に、パーミッションバウンダリーを必要とする AWS Organizations サービスコントロールポリシーが適用されている場合や、単にアプリケーションにいくつかのガードレールを追加したい場合に、Copilot がお役に立ちます。  `--permissions-boundary` フラグを使い、`copilot app init` コマンドを実行すると、既存の IAM ポリシー名を指定できます。指定したポリシーは Copilot が作成する(アプリケーション内)全ての IAM ロールに対してパーミッションバウンダリーとして付加されます。
+IAM ロールの作成時に、パーミッションバウンダリーを必要とする AWS Organizations サービスコントロールポリシーが適用されている場合や、単に Application にいくつかのガードレールを追加したい場合に、Copilot がお役に立ちます。  `--permissions-boundary` フラグを使い、`copilot app init` コマンドを実行すると、既存の IAM ポリシー名を指定できます。指定したポリシーは Copilot が作成する(アプリケーション内)全ての IAM ロールに対してパーミッションバウンダリーとして付加されます。
 
 パーミッションバウンダリーの名前を指定して、アプリケーションを初期化したい場合、次の様に指定します。  
 ```console
@@ -50,7 +50,7 @@ ExampleIAMRole:
 ```
 
 ## FIFO SNS/SQS
-パブリッシュ-サブスクライブアーキテクチャでの、厳密なメッセージ順序と、メッセージ重複排除の為に、SNS FIFO トピックと SQS FIFO キューを利用できます。
+パブリッシュ/サブスクライブアーキテクチャでの、厳密なメッセージ順序と、メッセージ重複排除の為に、SNS FIFO トピックと SQS FIFO キューを利用できます。
 
 ### Manifest を構成して、Service に対して、SNS FIFO トピックを設定します。
 
@@ -74,7 +74,7 @@ publish:
 
 FIFO トピックに関する詳細な仕様については、[Manifest 仕様](../docs/include/publish.ja.md#publish-topics-topic-fifo)をご覧ください。
 
-### ワーカーサービスでのSQS FIFO キュー
+### Worker Service でのSQS FIFO キュー
 Worker Service の Manifest において、 `subscribe.topics.queue` または `subscribe.queue` 配下に、次の様に `fifo: true` と指定します。 Copilot は FIFO SQS キューとサブスクリプションを作成します。
 
 ```yaml
@@ -108,14 +108,14 @@ FIFO キューに関する詳細な仕様については、[Manifest 仕様](../
 <a id="cloudfront-tls-termination"></a>
 ## CloudFront TLS ターミネーション
 
-Load Balance Web Service (LBWS) にて、CloudFront で TLS をターミネーションする様に、Env Manifest を設定します。
+Load Balance Web Service (LBWS) にて、CloudFront で TLS を終端する様に、Environment Manifest を設定します。
 
 ```yaml
 cdn:
   terminate_tls: true
 ```
 
-CloudFront を TLS ターミネーションとして利用する上記の設定は、`CF → ALB → ECS` 間で HTTP のみになる事を意味します。CloudFront のエッジは、通常、閲覧者と地理的に近い為、高速な TLS ターミネーションが行え、閲覧者のページ読み込みが短くなります。
+CloudFront を TLS ターミネーションとして利用する上記の設定は、`CF → ALB → ECS` 間で HTTP のみになる事を意味します。CloudFront のエッジは、通常、閲覧者と地理的に近い為、高速な TLS の終端が行え、閲覧者のページ読み込みが短くなります。
 
 しかし、 Service が HTTPS を有効化している場合(Application にドメインが設定されている、Env に証明書をインポートしている)、[Load Balanced Web Service Manifest](../docs/manifest/lb-web-service.ja.md)を修正し、 ALB の http リダイレクトを off にする必要があります。
 
