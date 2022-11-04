@@ -13,8 +13,16 @@ AWS Copilot CLI の実行可能ファイルは、PGP 署名を使用して暗号
 2. Amazon ECS PGP パブリックキーを取得します。コマンドを使用してこのキーを取得するか、手動でキーを作成してからインポートします。
     * オプション 1: 次のコマンドを使用してキーを取得します。
     ```sh
-    gpg --keyserver hkp://keys.gnupg.net --recv BCE9D9A42D51784F
+    gpg --keyserver hkps://keyserver.ubuntu.com --recv BCE9D9A42D51784F
     ```
+    +
+    ???- note "キーサーバに関する補足(オプション)"
+
+        * その他の代替になるキーサーバには次のものがあります。
+            *   `hkps://keys.openpgp.org`
+            *   `hkps://pgp.mit.edu`
+        * 異なるキーサーバに変更する場合は、次のコマンドを最初に実行し、保存されたキーを検証します。`gpg --keyserver ${KEYSERVER} --verbose --import-options show-only --recv BCE9D9A42D51784F`.
+
     * オプション 2: 次の Amazon ECS PGP パブリックキーの内容でファイルを作成してからインポートします。
     ```
     -----BEGIN PGP PUBLIC KEY BLOCK-----
