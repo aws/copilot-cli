@@ -20,7 +20,7 @@ Copilot v1.22 では、いくつかの新機能と改良が施されています
 
 - **IAM ロールパーミッションバウンダリー**: [詳細はこちらをご覧ください](#iam-role-permissions-boundary).
 - **FIFO SNS/SQS**: [詳細はこちらをご覧ください](#fifo-snssqs).
-- **CloudFront TLS ターミネーション**: CloudFront を利用してより高速な TLS ターミネーションが可能になりました![詳細はこちらをご覧ください](#cloudfront-tls-termination).
+- **CloudFront TLS ターミネーション**: CloudFront を利用してより高速な TLS の終端が可能になりました![詳細はこちらをご覧ください](#cloudfront-tls-termination).
 - **Application Load Balancer と Fargate タスク間の TLS接続**: ターゲットコンテナのポートが `443` と指定されている場合に、Copilot はターゲットグループのプロトコルとヘルスチェックプロトコルを HTTPS に設定します。[Manifest のサンプルをご覧ください](../docs/manifest/lb-web-service.ja.md#__tabbed_1_8)
 
 ???+ note "AWS Copilot とは?"
