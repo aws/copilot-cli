@@ -25,10 +25,11 @@ DynamoDB Flags
       --sort-key string        Optional. Sort key for the DDB table.
                                Must be of the format '<keyName>:<dataType>'.
 Aurora Serverless Flags
-      --engine string           The database engine used in the cluster.
-                                Must be either "MySQL" or "PostgreSQL".
-      --parameter-group string  Optional. The name of the parameter group to associate with the cluster.
-      --initial-db string       The initial database to create in the cluster.
+      --engine string               The database engine used in the cluster.
+                                    Must be either "MySQL" or "PostgreSQL".
+      --initial-db string           The initial database to create in the cluster.
+      --parameter-group string      Optional. The name of the parameter group to associate with the cluster.
+      --serverless-version string   Optional. Aurora Serverless version. Must be either "v1" or "v2". (default "v2")
 ```
 
 ## How can I use it? 
@@ -54,10 +55,16 @@ $ copilot storage init \
   --lsi Goodness:N
 ```
 
-Create an RDS Aurora Serverless cluster using PostgreSQL as the database engine.
+Create an RDS Aurora Serverless v2 cluster using PostgreSQL as the database engine.
 ```console
 $ copilot storage init \
   -n my-cluster -t Aurora -w frontend --engine PostgreSQL
+```
+
+Create an RDS Aurora Serverless v1 cluster using MySQL as the database engine with testdb as initial database name.
+```console
+$ copilot storage init \
+  -n my-cluster -t Aurora --serverless-version v1 -w frontend --engine MySQL --initial-db testdb
 ```
 
 ## What happens under the hood?

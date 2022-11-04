@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -329,6 +330,92 @@ func TestWorkload_HealthCheckProtocol(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tc.expected, tc.opts.HealthCheckProtocol())
+		})
+	}
+}
+
+func TestEnvControllerParameters(t *testing.T) {
+	tests := map[string]struct {
+		opts     WorkloadOpts
+		expected []string
+	}{
+		"LBWS": {
+			opts: WorkloadOpts{
+				WorkloadType: "Load Balanced Web Service",
+			},
+			expected: []string{"Aliases,"},
+		},
+		"LBWS with ALB": {
+			opts: WorkloadOpts{
+				WorkloadType: "Load Balanced Web Service",
+				ALBEnabled:   true,
+			},
+			expected: []string{"ALBWorkloads,", "Aliases,"},
+		},
+		"LBWS with ALB and private placement": {
+			opts: WorkloadOpts{
+				WorkloadType: "Load Balanced Web Service",
+				ALBEnabled:   true,
+				Network: NetworkOpts{
+					SubnetsType: PrivateSubnetsPlacement,
+				},
+			},
+			expected: []string{"ALBWorkloads,", "Aliases,", "NATWorkloads,"},
+		},
+		"LBWS with ALB, private placement, and storage": {
+			opts: WorkloadOpts{
+				WorkloadType: "Load Balanced Web Service",
+				ALBEnabled:   true,
+				Network: NetworkOpts{
+					SubnetsType: PrivateSubnetsPlacement,
+				},
+				Storage: &StorageOpts{
+					ManagedVolumeInfo: &ManagedVolumeCreationInfo{
+						Name: aws.String("hi"),
+					},
+				},
+			},
+			expected: []string{"ALBWorkloads,", "Aliases,", "NATWorkloads,", "EFSWorkloads,"},
+		},
+		"Backend": {
+			opts: WorkloadOpts{
+				WorkloadType: "Backend Service",
+			},
+			expected: []string{},
+		},
+		"Backend with ALB": {
+			opts: WorkloadOpts{
+				WorkloadType: "Backend Service",
+				ALBEnabled:   true,
+			},
+			expected: []string{"InternalALBWorkloads,"},
+		},
+		"RDWS": {
+			opts: WorkloadOpts{
+				WorkloadType: "Request-Driven Web Service",
+			},
+			expected: []string{},
+		},
+		"private RDWS": {
+			opts: WorkloadOpts{
+				WorkloadType: "Request-Driven Web Service",
+				Private:      true,
+			},
+			expected: []string{"AppRunnerPrivateWorkloads,"},
+		},
+		"private RDWS with imported VPC Endpoint": {
+			opts: WorkloadOpts{
+				WorkloadType:         "Request-Driven Web Service",
+				Private:              true,
+				AppRunnerVPCEndpoint: aws.String("vpce-1234"),
+			},
+			expected: []string{},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.expected, envControllerParameters(tc.opts))
 		})
 	}
 }

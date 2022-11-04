@@ -25,9 +25,6 @@ network:
     placement: private
 ```
 
-!!!attention
-    現時点では、まだデプロイされていない新しい Backend Service を利用する必要があります。近いうちに、内部ロードバランサーを既存の Backend Service に追加できる様になります！
-
 ## 高度な設定
 
 ### サブネット配置

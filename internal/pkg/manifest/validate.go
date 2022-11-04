@@ -1388,7 +1388,14 @@ func (r AppRunnerInstanceConfig) validate() error {
 
 // validate returns nil if RequestDrivenWebServiceHttpConfig is configured correctly.
 func (r RequestDrivenWebServiceHttpConfig) validate() error {
-	return r.HealthCheckConfiguration.validate()
+	if err := r.HealthCheckConfiguration.validate(); err != nil {
+		return err
+	}
+	return r.Private.validate()
+}
+
+func (v VPCEndpoint) validate() error {
+	return nil
 }
 
 // validate returns nil if Observability is configured correctly.
