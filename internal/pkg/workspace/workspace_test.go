@@ -828,7 +828,7 @@ func TestIsInGitRepository(t *testing.T) {
 	}
 }
 
-func TestWorkspace_ReadWorkloadAddonsDir(t *testing.T) {
+func TestWorkspace_ReadAddonsDir(t *testing.T) {
 	testCases := map[string]struct {
 		svcName        string
 		copilotDirPath string
@@ -878,7 +878,7 @@ func TestWorkspace_ReadWorkloadAddonsDir(t *testing.T) {
 			}
 
 			// WHEN
-			actualFileNames, actualErr := ws.ReadWorkloadAddonsDir(tc.svcName)
+			actualFileNames, actualErr := ws.ReadAddonsDir(tc.svcName)
 
 			// THEN
 			require.Equal(t, tc.wantedErr, actualErr)

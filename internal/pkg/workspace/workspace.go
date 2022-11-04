@@ -409,8 +409,8 @@ func (ws *Workspace) DeleteWorkspaceFile() error {
 	return ws.fs.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
 
-// ReadWorkloadAddonsDir returns a list of file names under a service's "addons/" directory.
-func (ws *Workspace) ReadWorkloadAddonsDir(svcName string) ([]string, error) {
+// ReadAddonsDir returns a list of file names under a service's "addons/" directory.
+func (ws *Workspace) ReadAddonsDir(svcName string) ([]string, error) {
 	copilotPath, err := ws.copilotDirPath()
 	if err != nil {
 		return nil, err
