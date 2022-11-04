@@ -5,6 +5,7 @@ package describe
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -30,7 +31,10 @@ const (
 	waitConditionHandle  = "AWS::CloudFormation::WaitConditionHandle"
 )
 
-const apprunnerServiceType = "AWS::AppRunner::Service"
+const (
+	apprunnerServiceType              = "AWS::AppRunner::Service"
+	apprunnerVPCIngressConnectionType = "AWS::AppRunner::VpcIngressConnection"
+)
 
 // ConfigStoreSvc wraps methods of config store.
 type ConfigStoreSvc interface {
@@ -54,7 +58,8 @@ type ecsClient interface {
 }
 
 type apprunnerClient interface {
-	DescribeService(svcArn string) (*apprunner.Service, error)
+	DescribeService(svcARN string) (*apprunner.Service, error)
+	PrivateURL(vicARN string) (string, error)
 }
 
 type workloadStackDescriber interface {
@@ -78,6 +83,7 @@ type apprunnerDescriber interface {
 	Service() (*apprunner.Service, error)
 	ServiceARN() (string, error)
 	ServiceURL() (string, error)
+	IsPrivate() (bool, error)
 }
 
 type ecsSvcDesc struct {
@@ -307,6 +313,24 @@ func (d *appRunnerServiceDescriber) ServiceARN() (string, error) {
 	return "", fmt.Errorf("no App Runner Service in service stack")
 }
 
+// vpcIngressConnectionARN returns the ARN of the VPC Ingress Connection
+// for this service. If one does not exist, it returns errVPCIngressConnectionNotFound.
+func (d *appRunnerServiceDescriber) vpcIngressConnectionARN() (string, error) {
+	serviceStackResources, err := d.ServiceStackResources()
+	if err != nil {
+		return "", err
+	}
+
+	for _, resource := range serviceStackResources {
+		arn := resource.PhysicalID
+		if resource.Type == apprunnerVPCIngressConnectionType && arn != "" {
+			return arn, nil
+		}
+	}
+
+	return "", errVPCIngressConnectionNotFound
+}
+
 // Service retrieves an app runner service.
 func (d *appRunnerServiceDescriber) Service() (*apprunner.Service, error) {
 	serviceARN, err := d.ServiceARN()
@@ -321,17 +345,44 @@ func (d *appRunnerServiceDescriber) Service() (*apprunner.Service, error) {
 	return service, nil
 }
 
+// IsPrivate returns true if the service is configured as non-public.
+func (d *appRunnerServiceDescriber) IsPrivate() (bool, error) {
+	_, err := d.vpcIngressConnectionARN()
+	if err != nil {
+		if errors.Is(err, errVPCIngressConnectionNotFound) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
+}
+
 // ServiceURL retrieves the app runner service URL.
 func (d *appRunnerServiceDescriber) ServiceURL() (string, error) {
+	vicARN, err := d.vpcIngressConnectionARN()
+	isVICNotFound := errors.Is(err, errVPCIngressConnectionNotFound)
+	if err != nil && !isVICNotFound {
+		return "", err
+	}
+
+	if !isVICNotFound {
+		url, err := d.apprunnerClient.PrivateURL(vicARN)
+		if err != nil {
+			return "", err
+		}
+		return formatAppRunnerURL(url), nil
+	}
+
 	service, err := d.Service()
 	if err != nil {
 		return "", err
 	}
-
-	return formatAppRunnerUrl(service.ServiceURL), nil
+	return formatAppRunnerURL(service.ServiceURL), nil
 }
 
-func formatAppRunnerUrl(serviceURL string) string {
+func formatAppRunnerURL(serviceURL string) string {
 	svcUrl := &url.URL{
 		Host: serviceURL,
 		// App Runner defaults to https

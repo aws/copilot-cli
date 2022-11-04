@@ -11,6 +11,7 @@ import (
 	ecsapi "github.com/aws/copilot-cli/internal/pkg/ecssdk"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
@@ -627,6 +628,186 @@ func TestServiceDescriber_Platform(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedPlatform, actual)
+			}
+		})
+	}
+}
+
+type apprunnerMocks struct {
+	apprunnerClient *mocks.MockapprunnerClient
+	stackDescriber  *mocks.MockstackDescriber
+}
+
+func TestAppRunnerServiceDescriber_ServiceURL(t *testing.T) {
+	mockErr := errors.New("some error")
+	mockVICARN := "mockVICARN"
+	mockServiceARN := "mockServiceARN"
+	tests := map[string]struct {
+		setupMocks func(m apprunnerMocks)
+
+		expected    string
+		expectedErr string
+	}{
+		"get ingress connection error": {
+			setupMocks: func(m apprunnerMocks) {
+				m.stackDescriber.EXPECT().Resources().Return(nil, mockErr)
+			},
+			expectedErr: "some error",
+		},
+		"get private url error": {
+			setupMocks: func(m apprunnerMocks) {
+				m.stackDescriber.EXPECT().Resources().Return([]*stack.Resource{
+					{
+						Type:       apprunnerVPCIngressConnectionType,
+						PhysicalID: mockVICARN,
+					},
+				}, nil)
+				m.apprunnerClient.EXPECT().PrivateURL(mockVICARN).Return("", mockErr)
+			},
+			expectedErr: "some error",
+		},
+		"private service, success": {
+			setupMocks: func(m apprunnerMocks) {
+				m.stackDescriber.EXPECT().Resources().Return([]*stack.Resource{
+					{
+						Type:       apprunnerVPCIngressConnectionType,
+						PhysicalID: mockVICARN,
+					},
+				}, nil)
+				m.apprunnerClient.EXPECT().PrivateURL(mockVICARN).Return("example.com", nil)
+			},
+			expected: "https://example.com",
+		},
+		"public service, resources fails": {
+			setupMocks: func(m apprunnerMocks) {
+				m.stackDescriber.EXPECT().Resources().Return(nil, nil)
+				m.stackDescriber.EXPECT().Resources().Return(nil, mockErr)
+			},
+			expectedErr: "some error",
+		},
+		"public service, no app runner resource": {
+			setupMocks: func(m apprunnerMocks) {
+				m.stackDescriber.EXPECT().Resources().Return([]*stack.Resource{
+					{
+						Type:       "random",
+						PhysicalID: "random",
+					},
+				}, nil)
+			},
+			expectedErr: "no App Runner Service in service stack",
+		},
+		"public service, describe service fails": {
+			setupMocks: func(m apprunnerMocks) {
+				m.stackDescriber.EXPECT().Resources().Return([]*stack.Resource{
+					{
+						Type:       apprunnerServiceType,
+						PhysicalID: mockServiceARN,
+					},
+				}, nil)
+				m.apprunnerClient.EXPECT().DescribeService(mockServiceARN).Return(nil, mockErr)
+			},
+			expectedErr: "describe service: some error",
+		},
+		"public service, success": {
+			setupMocks: func(m apprunnerMocks) {
+				m.stackDescriber.EXPECT().Resources().Return([]*stack.Resource{
+					{
+						Type:       apprunnerServiceType,
+						PhysicalID: mockServiceARN,
+					},
+				}, nil)
+				m.apprunnerClient.EXPECT().DescribeService(mockServiceARN).Return(&apprunner.Service{
+					ServiceURL: "example.com",
+				}, nil)
+			},
+			expected: "https://example.com",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := apprunnerMocks{
+				apprunnerClient: mocks.NewMockapprunnerClient(ctrl),
+				stackDescriber:  mocks.NewMockstackDescriber(ctrl),
+			}
+			tc.setupMocks(m)
+
+			d := &appRunnerServiceDescriber{
+				serviceStackDescriber: &serviceStackDescriber{
+					cfn: m.stackDescriber,
+				},
+				apprunnerClient: m.apprunnerClient,
+			}
+
+			url, err := d.ServiceURL()
+			if tc.expectedErr != "" {
+				require.EqualError(t, err, tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, url)
+			}
+		})
+	}
+}
+
+func TestAppRunnerServiceDescriber_IsPrivate(t *testing.T) {
+	mockErr := errors.New("some error")
+	tests := map[string]struct {
+		setupMocks func(m apprunnerMocks)
+
+		expected    bool
+		expectedErr string
+	}{
+		"get resources error": {
+			setupMocks: func(m apprunnerMocks) {
+				m.stackDescriber.EXPECT().Resources().Return(nil, mockErr)
+			},
+			expectedErr: "some error",
+		},
+		"is not private": {
+			setupMocks: func(m apprunnerMocks) {
+				m.stackDescriber.EXPECT().Resources().Return(nil, nil)
+			},
+			expected: false,
+		},
+		"is private": {
+			setupMocks: func(m apprunnerMocks) {
+				m.stackDescriber.EXPECT().Resources().Return([]*stack.Resource{
+					{
+						Type:       apprunnerVPCIngressConnectionType,
+						PhysicalID: "arn",
+					},
+				}, nil)
+			},
+			expected: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := apprunnerMocks{
+				stackDescriber: mocks.NewMockstackDescriber(ctrl),
+			}
+			tc.setupMocks(m)
+
+			d := &appRunnerServiceDescriber{
+				serviceStackDescriber: &serviceStackDescriber{
+					cfn: m.stackDescriber,
+				},
+			}
+
+			isPrivate, err := d.IsPrivate()
+			if tc.expectedErr != "" {
+				require.EqualError(t, err, tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, isPrivate)
 			}
 		})
 	}

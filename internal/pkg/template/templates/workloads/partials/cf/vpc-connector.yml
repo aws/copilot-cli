@@ -16,7 +16,7 @@ EnvironmentSecurityGroupIngressFromServiceSecurityGroup:
   Metadata:
     'aws:copilot:description': 'Allow ingress from the app runner service to services in your environment'
   Properties:
-    GroupId: 
+    GroupId:
       Fn::ImportValue:
         !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
     IpProtocol: -1
@@ -42,7 +42,8 @@ VpcConnector:
             !Sub '${AppName}-${EnvName}-{{.Network.SubnetsType}}'
     {{- end}}
     SecurityGroups:
-    - !Ref ServiceSecurityGroup
+      - !Ref ServiceSecurityGroup
+      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
     Tags:
       - Key: copilot-application
         Value: !Ref AppName

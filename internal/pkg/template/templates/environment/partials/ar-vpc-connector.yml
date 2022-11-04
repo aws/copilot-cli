@@ -1,0 +1,36 @@
+AppRunnerVpcEndpointSecurityGroup:
+  Metadata:
+    'aws:copilot:description': 'A security group for App Runner private services'
+  Type: AWS::EC2::SecurityGroup
+  Condition: CreateAppRunnerVPCEndpoint
+  Properties:
+    GroupDescription: {{truncate (printf "%s-%s-AppRunnerVpcEndpointSecurityGroup" .AppName .EnvName) 255}}
+    VpcId: !Ref VPC
+    Tags:
+      - Key: Name
+        Value: {{truncate (printf "copilot-%s-%s-app-runner-vpc-endpoint" .AppName .EnvName) 255}}
+
+AppRunnerVpcEndpointSecurityGroupIngressFromEnvironment:
+  Type: AWS::EC2::SecurityGroupIngress
+  Condition: CreateAppRunnerVPCEndpoint
+  Properties:
+    Description: Ingress from services in the environment
+    GroupId: !Ref AppRunnerVpcEndpointSecurityGroup
+    IpProtocol: -1
+    SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+
+AppRunnerVpcEndpoint:
+  Metadata:
+    'aws:copilot:description': 'VPC Endpoint to connect environment to App Runner for private services'
+  Type: AWS::EC2::VPCEndpoint
+  Condition: CreateAppRunnerVPCEndpoint
+  Properties:
+    VpcEndpointType: Interface
+    VpcId: !Ref VPC
+    SecurityGroupIds:
+      - !Ref AppRunnerVpcEndpointSecurityGroup
+    ServiceName: !Sub 'com.amazonaws.${AWS::Region}.apprunner.requests'
+    SubnetIds:
+      {{- range $ind, $cidr := .VPCConfig.Managed.PrivateSubnetCIDRs}}
+      - !Ref PrivateSubnet{{inc $ind}}
+      {{- end}}
