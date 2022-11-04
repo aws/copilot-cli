@@ -316,7 +316,7 @@ network:
 			wantedObj["Metadata"].(map[string]any)["Manifest"] = strings.TrimSpace(wantedObj["Metadata"].(map[string]any)["Manifest"].(string))
 
 			// THEN
-			compareStackTemplate(t, actualObj, wantedObj)
+			compareStackTemplate(t, wantedObj, actualObj)
 		})
 	}
 }
@@ -439,12 +439,12 @@ observability:
 			delete(originalObj["Metadata"].(map[string]any), "Manifest")
 			delete(newObj["Metadata"].(map[string]any), "Manifest")
 
-			compareStackTemplate(t, newObj, originalObj)
+			compareStackTemplate(t, originalObj, newObj)
 		})
 	}
 }
 
-func compareStackTemplate(t *testing.T, actualObj, wantedObj map[any]any) {
+func compareStackTemplate(t *testing.T, wantedObj, actualObj map[any]any) {
 	actual, wanted := reflect.ValueOf(actualObj), reflect.ValueOf(wantedObj)
 	compareStackTemplateSection(t, reflect.ValueOf("Description"), actual, wanted)
 	compareStackTemplateSection(t, reflect.ValueOf("Metadata"), actual, wanted)
@@ -463,9 +463,13 @@ func compareStackTemplate(t *testing.T, actualObj, wantedObj map[any]any) {
 }
 
 func compareStackTemplateSection(t *testing.T, key, actual, wanted reflect.Value) {
-	require.True(t, actual.MapIndex(key).IsValid(),
+	actualExist, wantedExist := actual.MapIndex(key).IsValid(), wanted.MapIndex(key).IsValid()
+	if !actualExist && !wantedExist {
+		return
+	}
+	require.True(t, actualExist,
 		fmt.Sprintf("%q does not exist in the actual template", key.Interface()))
-	require.True(t, wanted.MapIndex(key).IsValid(),
+	require.True(t, wantedExist,
 		fmt.Sprintf("%q does not exist in the expected template", key.Interface()))
 	require.Equal(t, actual.MapIndex(key).Interface(), wanted.MapIndex(key).Interface(),
 		fmt.Sprintf("Comparing %q", key.Interface()))

@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
@@ -20,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestRDWS_Template(t *testing.T) {
@@ -85,10 +84,8 @@ func TestRDWS_Template(t *testing.T) {
 		// Compare the two.
 		wanted := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(wantedTemplate, wanted), "unmarshal wanted template to map[interface{}]interface{}")
-
 		actual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal([]byte(actualTemplate), actual), "unmarshal actual template to map[interface{}]interface{}")
-
-		require.Equal(t, wanted, actual, "templates do not match")
+		compareStackTemplate(t, wanted, actual)
 	}
 }

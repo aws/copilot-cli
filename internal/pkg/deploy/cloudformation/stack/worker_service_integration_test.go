@@ -6,22 +6,20 @@
 package stack_test
 
 import (
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
+	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -85,7 +83,7 @@ func TestWorkerService_Template(t *testing.T) {
 		mExpected := make(map[interface{}]interface{})
 
 		require.NoError(t, yaml.Unmarshal(expected, mExpected))
-		require.Equal(t, mExpected, mActual)
+		compareStackTemplate(t, mExpected, mActual)
 	})
 
 	t.Run("Parameter values should render properly", func(t *testing.T) {
