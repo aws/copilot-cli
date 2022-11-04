@@ -127,10 +127,11 @@ var _ = Describe("App Runner", func() {
 
 		BeforeAll(func() {
 			_, initErr = cli.SvcInit(&client.SvcInitRequest{
-				Name:       beSvcName,
-				SvcType:    "Backend Service",
-				Dockerfile: "./back-end/Dockerfile",
-				SvcPort:    "80",
+				Name:        beSvcName,
+				SvcType:     "Backend Service",
+				Dockerfile:  "./back-end/Dockerfile",
+				SvcPort:     "80",
+				IngressType: "Internet",
 			})
 			_, deployErr = cli.SvcDeploy(&client.SvcDeployInput{
 				EnvName: envName,

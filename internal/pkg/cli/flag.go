@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/dustin/go-humanize/english"
 )
 
 // Long flag names.
@@ -64,15 +65,18 @@ const (
 	noSubscriptionFlag  = "no-subscribe"
 	subscribeTopicsFlag = "subscribe-topics"
 
-	storageTypeFlag              = "storage-type"
-	storagePartitionKeyFlag      = "partition-key"
-	storageSortKeyFlag           = "sort-key"
-	storageNoSortFlag            = "no-sort"
-	storageLSIConfigFlag         = "lsi"
-	storageNoLSIFlag             = "no-lsi"
-	storageRDSEngineFlag         = "engine"
-	storageRDSInitialDBFlag      = "initial-db"
-	storageRDSParameterGroupFlag = "parameter-group"
+	ingressTypeFlag = "ingress-type"
+
+	storageTypeFlag                    = "storage-type"
+	storagePartitionKeyFlag            = "partition-key"
+	storageSortKeyFlag                 = "sort-key"
+	storageNoSortFlag                  = "no-sort"
+	storageLSIConfigFlag               = "lsi"
+	storageNoLSIFlag                   = "no-lsi"
+	storageAuroraServerlessVersionFlag = "serverless-version"
+	storageRDSEngineFlag               = "engine"
+	storageRDSInitialDBFlag            = "initial-db"
+	storageRDSParameterGroupFlag       = "parameter-group"
 
 	taskGroupNameFlag            = "task-group-name"
 	countFlag                    = "count"
@@ -199,6 +203,9 @@ Mutually exclusive with the -%s ,--%s and --%s flags.`, nameFlagShort, nameFlag,
 
 	repoURLFlagDescription = fmt.Sprintf(`The repository URL to trigger your pipeline.
 Supported providers are: %s.`, strings.Join(manifest.PipelineProviders, ", "))
+
+	ingressTypeFlagDescription = fmt.Sprintf(`Required for a Request-Driven Web Service. Allowed source of traffic to your service.
+Must be one of %s`, english.OxfordWordSeries(rdwsIngressOptions, "or"))
 )
 
 const (
@@ -278,7 +285,8 @@ Must be of the format '<keyName>:<dataType>'.`
 	storageNoLSIFlagDescription     = `Optional. Don't ask about configuring alternate sort keys.`
 	storageLSIConfigFlagDescription = `Optional. Attribute to use as an alternate sort key. May be specified up to 5 times.
 Must be of the format '<keyName>:<dataType>'.`
-	storageRDSEngineFlagDescription = `The database engine used in the cluster.
+	storageAuroraServerlessVersionFlagDescription = `Optional. Aurora Serverless version. Must be either "v1" or "v2".`
+	storageRDSEngineFlagDescription               = `The database engine used in the cluster.
 Must be either "MySQL" or "PostgreSQL".`
 	storageRDSInitialDBFlagDescription      = "The initial database to create in the cluster."
 	storageRDSParameterGroupFlagDescription = "Optional. The name of the parameter group to associate with the cluster."

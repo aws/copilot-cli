@@ -14,7 +14,7 @@ const (
 	// LegacyEnvTemplateVersion is the version associated with the environment template before we started versioning.
 	LegacyEnvTemplateVersion = "v0.0.0"
 	// LatestEnvTemplateVersion is the latest version number available for environment templates.
-	LatestEnvTemplateVersion    = "v1.12.3"
+	LatestEnvTemplateVersion    = "v1.13.0"
 	EnvTemplateVersionBootstrap = "bootstrap"
 )
 
@@ -34,16 +34,18 @@ type CreateEnvironmentInput struct {
 	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// User inputs.
-	ImportVPCConfig    *config.ImportVPC     // Optional configuration if users have an existing VPC.
-	AdjustVPCConfig    *config.AdjustVPC     // Optional configuration if users want to override default VPC configuration.
-	ImportCertARNs     []string              // Optional configuration if users want to import certificates.
-	InternalALBSubnets []string              // Optional configuration if users want to specify internal ALB placement.
-	AllowVPCIngress    bool                  // Optional configuration to allow access to internal ALB from ports 80/443.
-	CIDRPrefixListIDs  []string              // Optional configuration to specify public security group ingress based on prefix lists.
-	Telemetry          *config.Telemetry     // Optional observability and monitoring configuration.
-	Mft                *manifest.Environment // Unmarshaled and interpolated manifest object.
-	RawMft             []byte                // Content of the environment manifest without any modifications.
-	ForceUpdate        bool
+	ImportVPCConfig     *config.ImportVPC     // Optional configuration if users have an existing VPC.
+	AdjustVPCConfig     *config.AdjustVPC     // Optional configuration if users want to override default VPC configuration.
+	ImportCertARNs      []string              // Optional configuration if users want to import certificates.
+	InternalALBSubnets  []string              // Optional configuration if users want to specify internal ALB placement.
+	AllowVPCIngress     bool                  // Optional configuration to allow access to internal ALB from ports 80/443.
+	CIDRPrefixListIDs   []string              // Optional configuration to specify public security group ingress based on prefix lists.
+	PublicALBSourceIPs  []string              // Optional configuration to specify public security group ingress based on customer given source IPs.
+	InternalLBSourceIPs []string              // Optional configuration to specify private security group ingress based on customer given source IPs.
+	Telemetry           *config.Telemetry     // Optional observability and monitoring configuration.
+	Mft                 *manifest.Environment // Unmarshaled and interpolated manifest object.
+	RawMft              []byte                // Content of the environment manifest without any modifications.
+	ForceUpdate         bool
 
 	CFNServiceRoleARN   string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
 	PermissionsBoundary string // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.

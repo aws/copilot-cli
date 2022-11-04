@@ -75,7 +75,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	}
 
 	var observabilities []observabilityInEnv
-	var routes []*WebServiceRoute
+	var routes []*RDWSRoute
 	var configs []*ServiceConfig
 	var envVars envVars
 	resources := make(map[string][]*stack.Resource)
@@ -88,10 +88,22 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		if err != nil {
 			return nil, fmt.Errorf("retrieve service configuration: %w", err)
 		}
-		webServiceURI := formatAppRunnerUrl(service.ServiceURL)
-		routes = append(routes, &WebServiceRoute{
+		url, err := describer.ServiceURL()
+		if err != nil {
+			return nil, fmt.Errorf("retrieve service url: %w", err)
+		}
+		private, err := describer.IsPrivate()
+		if err != nil {
+			return nil, fmt.Errorf("check if service is private: %w", err)
+		}
+		ingress := rdwsIngressInternet
+		if private {
+			ingress = rdwsIngressEnvironment
+		}
+		routes = append(routes, &RDWSRoute{
 			Environment: env,
-			URL:         webServiceURI,
+			URL:         url,
+			Ingress:     ingress,
 		})
 		configs = append(configs, &ServiceConfig{
 			Environment: env,
@@ -196,13 +208,27 @@ func (t *tracing) isEmpty() bool {
 	return t == nil || t.Vendor == ""
 }
 
+type rdwsIngress string
+
+const (
+	rdwsIngressEnvironment rdwsIngress = "environment"
+	rdwsIngressInternet    rdwsIngress = "internet"
+)
+
+// RDWSRoute contains serialized route parameters for a Request-Driven Web Service.
+type RDWSRoute struct {
+	Environment string      `json:"environment"`
+	URL         string      `json:"url"`
+	Ingress     rdwsIngress `json:"ingress"`
+}
+
 // rdWebSvcDesc contains serialized parameters for a web service.
 type rdWebSvcDesc struct {
 	Service                 string                  `json:"service"`
 	Type                    string                  `json:"type"`
 	App                     string                  `json:"application"`
 	AppRunnerConfigurations appRunnerConfigurations `json:"configurations"`
-	Routes                  []*WebServiceRoute      `json:"routes"`
+	Routes                  []*RDWSRoute            `json:"routes"`
 	Variables               envVars                 `json:"variables"`
 	Resources               deployedSvcResources    `json:"resources,omitempty"`
 	Observability           observabilityPerEnv     `json:"observability,omitempty"`
@@ -238,11 +264,11 @@ func (w *rdWebSvcDesc) HumanString() string {
 	}
 	fmt.Fprint(writer, color.Bold.Sprint("\nRoutes\n\n"))
 	writer.Flush()
-	headers := []string{"Environment", "URL"}
+	headers := []string{"Environment", "Ingress", "URL"}
 	fmt.Fprintf(writer, "  %s\n", strings.Join(headers, "\t"))
 	fmt.Fprintf(writer, "  %s\n", strings.Join(underline(headers), "\t"))
 	for _, route := range w.Routes {
-		fmt.Fprintf(writer, "  %s\t%s\n", route.Environment, route.URL)
+		fmt.Fprintf(writer, "  %s\t%s\t%s\n", route.Environment, route.Ingress, route.URL)
 	}
 
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))

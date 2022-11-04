@@ -12,6 +12,9 @@ Metadata:
       public:
         ingress:
           cdn: true
+          source_ips:
+            - 1.1.1.1
+            - 2.2.2.2
         access_logs:
           bucket_name: accesslogsbucket
           prefix: accesslogsbucketprefix
@@ -36,6 +39,8 @@ Parameters:
   EFSWorkloads:
     Type: String
   NATWorkloads:
+    Type: String
+  AppRunnerPrivateWorkloads:
     Type: String
   ToolsAccountPrincipalARN:
     Type: String
@@ -70,6 +75,8 @@ Conditions:
     !Not [!Equals [ !Ref InternalALBWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
+  CreateAppRunnerVPCEndpoint:
+    !Not [!Equals [ !Ref AppRunnerPrivateWorkloads, ""]]
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
@@ -351,6 +358,16 @@ Resources:
           FromPort: 80
           IpProtocol: tcp
           ToPort: 80
+        - CidrIp: 1.1.1.1
+          Description: Allow ingress from source IP 1.1.1.1 on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        - CidrIp: 2.2.2.2
+          Description: Allow ingress from source IP 2.2.2.2 on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
       VpcId: !Ref VPC
       Tags:
         - Key: Name
@@ -365,6 +382,16 @@ Resources:
       SecurityGroupIngress:
         - SourcePrefixListId: pl-mockid
           Description: Allow ingress from prefix list pl-mockid on port 443
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        - CidrIp: 1.1.1.1
+          Description: Allow ingress from source IP 1.1.1.1 on port 443
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        - CidrIp: 2.2.2.2
+          Description: Allow ingress from source IP 2.2.2.2 on port 443
           FromPort: 443
           IpProtocol: tcp
           ToPort: 443
@@ -953,7 +980,8 @@ Resources:
                   "apprunner:PauseService",
                   "apprunner:ResumeService",
                   "apprunner:StartDeployment",
-                  "apprunner:DescribeObservabilityConfiguration"
+                  "apprunner:DescribeObservabilityConfiguration",
+                  "apprunner:DescribeVpcIngressConnection"
                 ]
                 Resource: "*"
               - Sid: Tags
@@ -985,7 +1013,41 @@ Resources:
                   - 'cloudformation:DeleteStack'
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
-
+  AppRunnerVpcEndpointSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for App Runner private services'
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateAppRunnerVPCEndpoint
+    Properties:
+      GroupDescription: demo-test-AppRunnerVpcEndpointSecurityGroup
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: copilot-demo-test-app-runner-vpc-endpoint
+  
+  AppRunnerVpcEndpointSecurityGroupIngressFromEnvironment:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: CreateAppRunnerVPCEndpoint
+    Properties:
+      Description: Ingress from services in the environment
+      GroupId: !Ref AppRunnerVpcEndpointSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref EnvironmentSecurityGroup
+  
+  AppRunnerVpcEndpoint:
+    Metadata:
+      'aws:copilot:description': 'VPC Endpoint to connect environment to App Runner for private services'
+    Type: AWS::EC2::VPCEndpoint
+    Condition: CreateAppRunnerVPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      VpcId: !Ref VPC
+      SecurityGroupIds:
+        - !Ref AppRunnerVpcEndpointSecurityGroup
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.apprunner.requests'
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -1105,7 +1167,7 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-CFNExecutionRoleARN
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases},${AppRunnerPrivateWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
@@ -1125,3 +1187,10 @@ Outputs:
   LastForceDeployID:
     Value: ""
     Description: Optionally force the template to update when no immediate resource change is present.
+  AppRunnerVpcEndpointId:
+    Condition: CreateAppRunnerVPCEndpoint
+    Value: !Ref AppRunnerVpcEndpoint
+    Description: VPC Endpoint to App Runner for private services
+    Export:
+      Name: !Sub ${AWS::StackName}-AppRunnerVpcEndpointId
+

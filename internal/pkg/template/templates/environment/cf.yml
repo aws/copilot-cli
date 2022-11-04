@@ -20,6 +20,8 @@ Parameters:
     Type: String
   NATWorkloads:
     Type: String
+  AppRunnerPrivateWorkloads:
+    Type: String
   ToolsAccountPrincipalARN:
     Type: String
   AppDNSName:
@@ -53,6 +55,8 @@ Conditions:
     !Not [!Equals [ !Ref EFSWorkloads, ""]]
   CreateNATGateways:
     !Not [!Equals [ !Ref NATWorkloads, ""]]
+  CreateAppRunnerVPCEndpoint:
+    !Not [!Equals [ !Ref AppRunnerPrivateWorkloads, ""]]
   ManagedAliases: !And
     - !Condition DelegateDNS
     - !Not [!Equals [ !Ref Aliases, "" ]]
@@ -111,7 +115,7 @@ Resources:
     Properties:
       GroupDescription: HTTP access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if .PublicHTTPConfig.CIDRPrefixListIDs}}
+        {{- if .PublicHTTPConfig.HasCustomIngress}}
         {{- range $id := .PublicHTTPConfig.CIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 80
@@ -119,6 +123,13 @@ Resources:
           IpProtocol: tcp
           ToPort: 80
         {{- end}}
+        {{- range $cidr := .PublicHTTPConfig.PublicALBSourceIPs }}
+        - CidrIp: {{$cidr}}
+          Description: Allow ingress from source IP {{$cidr}} on port 80
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        {{- end }}
         {{- else}}
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 80
@@ -142,7 +153,7 @@ Resources:
     Properties:
       GroupDescription: HTTPS access to the public facing load balancer
       SecurityGroupIngress:
-        {{- if .PublicHTTPConfig.CIDRPrefixListIDs}}
+        {{- if .PublicHTTPConfig.HasCustomIngress}}
         {{- range $id := .PublicHTTPConfig.CIDRPrefixListIDs}}
         - SourcePrefixListId: {{$id}}
           Description: Allow ingress from prefix list {{$id}} on port 443
@@ -150,6 +161,13 @@ Resources:
           IpProtocol: tcp
           ToPort: 443
         {{- end}}
+        {{- range $cidr := .PublicHTTPConfig.PublicALBSourceIPs }}
+        - CidrIp: {{$cidr}}
+          Description: Allow ingress from source IP {{$cidr}} on port 443
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        {{- end }}
         {{- else}}
         - CidrIp: 0.0.0.0/0
           Description: Allow from anyone on port 443
@@ -563,6 +581,9 @@ Resources:
 {{include "lambdas" . | indent 2}}
 {{include "custom-resources" . | indent 2}}
 {{- end}}
+{{- if not .VPCConfig.Imported}}
+{{include "ar-vpc-connector" . | indent 2}}
+{{- end}}
 {{- if .VPCConfig.FlowLogs }}
   FlowLog:
     Metadata:
@@ -774,7 +795,7 @@ Outputs:
       Name: !Sub ${AWS::StackName}-SubDomain
 {{- end}}
   EnabledFeatures:
-    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases}'
+    Value: !Sub '${ALBWorkloads},${InternalALBWorkloads},${EFSWorkloads},${NATWorkloads},${Aliases},${AppRunnerPrivateWorkloads}'
     Description: Required output to force the stack to update if mutating feature params, like ALBWorkloads, does not change the template.
   ManagedFileSystemID:
     Condition: CreateEFS
@@ -800,3 +821,11 @@ Outputs:
   LastForceDeployID:
     Value: {{quote .ForceUpdateID}}
     Description: Optionally force the template to update when no immediate resource change is present.
+{{- if not .VPCConfig.Imported}}
+  AppRunnerVpcEndpointId:
+    Condition: CreateAppRunnerVPCEndpoint
+    Value: !Ref AppRunnerVpcEndpoint
+    Description: VPC Endpoint to App Runner for private services
+    Export:
+      Name: !Sub ${AWS::StackName}-AppRunnerVpcEndpointId
+{{- end}}

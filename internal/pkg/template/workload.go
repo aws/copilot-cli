@@ -585,9 +585,11 @@ type WorkloadOpts struct {
 	StateMachine       *StateMachineOpts
 
 	// Additional options for request driven web service templates.
-	StartCommand      *string
-	EnableHealthCheck bool
-	Observability     ObservabilityOpts
+	StartCommand         *string
+	EnableHealthCheck    bool
+	Observability        ObservabilityOpts
+	Private              bool
+	AppRunnerVPCEndpoint *string
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
@@ -730,6 +732,11 @@ func envControllerParameters(o WorkloadOpts) []string {
 	if o.WorkloadType == "Backend Service" {
 		if o.ALBEnabled {
 			parameters = append(parameters, "InternalALBWorkloads,")
+		}
+	}
+	if o.WorkloadType == "Request-Driven Web Service" {
+		if o.Private && o.AppRunnerVPCEndpoint == nil {
+			parameters = append(parameters, "AppRunnerPrivateWorkloads,")
 		}
 	}
 	if o.Network.SubnetsType == PrivateSubnetsPlacement {
