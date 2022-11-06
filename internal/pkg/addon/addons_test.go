@@ -90,10 +90,10 @@ func TestTemplate(t *testing.T) {
                 m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-metadata.yaml"}, nil)
 
                 first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "first.yaml").Return(first, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
 
                 second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-metadata.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "invalid-metadata.yaml").Return(second, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "invalid-metadata.yaml").Return(second, nil)
             },
             wantedErr: errors.New(`metadata key "Services" defined in "first.yaml" at Ln 4, Col 7 is different than in "invalid-metadata.yaml" at Ln 3, Col 5`),
         },
@@ -103,10 +103,10 @@ func TestTemplate(t *testing.T) {
                 m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-parameters.yaml"}, nil)
 
                 first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "first.yaml").Return(first, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
 
                 second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-parameters.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "invalid-parameters.yaml").Return(second, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "invalid-parameters.yaml").Return(second, nil)
             },
             wantedErr: errors.New(`parameter logical ID "Name" defined in "first.yaml" at Ln 15, Col 9 is different than in "invalid-parameters.yaml" at Ln 3, Col 7`),
         },
@@ -116,10 +116,10 @@ func TestTemplate(t *testing.T) {
                 m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-mappings.yaml"}, nil)
 
                 first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "first.yaml").Return(first, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
 
                 second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-mappings.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "invalid-mappings.yaml").Return(second, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "invalid-mappings.yaml").Return(second, nil)
             },
             wantedErr: errors.New(`mapping "MyTableDynamoDBSettings.test" defined in "first.yaml" at Ln 21, Col 13 is different than in "invalid-mappings.yaml" at Ln 4, Col 7`),
         },
@@ -129,10 +129,10 @@ func TestTemplate(t *testing.T) {
                 m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-conditions.yaml"}, nil)
 
                 first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "first.yaml").Return(first, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
 
                 second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-conditions.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "invalid-conditions.yaml").Return(second, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "invalid-conditions.yaml").Return(second, nil)
             },
             wantedErr: errors.New(`condition "IsProd" defined in "first.yaml" at Ln 28, Col 13 is different than in "invalid-conditions.yaml" at Ln 2, Col 13`),
         },
@@ -142,10 +142,10 @@ func TestTemplate(t *testing.T) {
                 m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-resources.yaml"}, nil)
 
                 first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "first.yaml").Return(first, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
 
                 second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-resources.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "invalid-resources.yaml").Return(second, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "invalid-resources.yaml").Return(second, nil)
             },
             wantedErr: errors.New(`resource "MyTable" defined in "first.yaml" at Ln 34, Col 9 is different than in "invalid-resources.yaml" at Ln 3, Col 5`),
         },
@@ -155,10 +155,10 @@ func TestTemplate(t *testing.T) {
                 m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "invalid-outputs.yaml"}, nil)
 
                 first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "first.yaml").Return(first, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
 
                 second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-outputs.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "invalid-outputs.yaml").Return(second, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "invalid-outputs.yaml").Return(second, nil)
             },
             wantedErr: errors.New(`output "MyTableAccessPolicy" defined in "first.yaml" at Ln 85, Col 9 is different than in "invalid-outputs.yaml" at Ln 3, Col 5`),
         },
@@ -168,10 +168,10 @@ func TestTemplate(t *testing.T) {
                 m.ws.EXPECT().ReadAddonsDir(testSvcName).Return([]string{"first.yaml", "second.yaml"}, nil)
 
                 first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "first.yaml").Return(first, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "first.yaml").Return(first, nil)
 
                 second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "second.yaml"))
-                m.ws.EXPECT().ReadWorkloadAddon(testSvcName, "second.yaml").Return(second, nil)
+                m.ws.EXPECT().ReadAddon(testSvcName, "second.yaml").Return(second, nil)
             },
             wantedTemplate: func() string {
                 wanted, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "wanted.yaml"))
@@ -227,14 +227,14 @@ func TestParameters(t *testing.T) {
         "returns empty string and nil if there are no parameter files under addons/": {
             setupMocks: func(m addonMocks) {
                 m.ws.EXPECT().ReadAddonsDir("api").Return([]string{"database.yml"}, nil)
-                m.ws.EXPECT().ReadWorkloadAddon("api", "database.yml").Return(nil, nil)
+                m.ws.EXPECT().ReadAddon("api", "database.yml").Return(nil, nil)
             },
         },
         "returns an error if there are multiple parameter files defined under addons/": {
             setupMocks: func(m addonMocks) {
                 m.ws.EXPECT().ReadAddonsDir("api").
                     Return([]string{"database.yml", "addons.parameters.yml", "addons.parameters.yaml"}, nil)
-                m.ws.EXPECT().ReadWorkloadAddon("api", "database.yml").Return(nil, nil)
+                m.ws.EXPECT().ReadAddon("api", "database.yml").Return(nil, nil)
             },
             wantedErr: "defining addons.parameters.yaml and addons.parameters.yml is not allowed under api addons/",
         },
@@ -242,8 +242,8 @@ func TestParameters(t *testing.T) {
             setupMocks: func(m addonMocks) {
                 m.ws.EXPECT().ReadAddonsDir("api").
                     Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
-                m.ws.EXPECT().ReadWorkloadAddon("api", "template.yaml").Return(nil, nil)
-                m.ws.EXPECT().ReadWorkloadAddon("api", "addons.parameters.yml").Return(nil, errors.New("some error"))
+                m.ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
+                m.ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return(nil, errors.New("some error"))
             },
             wantedErr: "read parameter file addons.parameters.yml under api addons/: some error",
         },
@@ -251,8 +251,8 @@ func TestParameters(t *testing.T) {
             setupMocks: func(m addonMocks) {
                 m.ws.EXPECT().ReadAddonsDir("api").
                     Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
-                m.ws.EXPECT().ReadWorkloadAddon("api", "template.yaml").Return(nil, nil)
-                m.ws.EXPECT().ReadWorkloadAddon("api", "addons.parameters.yml").Return([]byte(""), nil)
+                m.ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
+                m.ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(""), nil)
             },
             wantedErr: "must define field 'Parameters' in file addons.parameters.yml under api addons/",
         },
@@ -260,8 +260,8 @@ func TestParameters(t *testing.T) {
             setupMocks: func(m addonMocks) {
                 m.ws.EXPECT().ReadAddonsDir("api").
                     Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
-                m.ws.EXPECT().ReadWorkloadAddon("api", "template.yaml").Return(nil, nil)
-                m.ws.EXPECT().ReadWorkloadAddon("api", "addons.parameters.yml").Return([]byte(`
+                m.ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
+                m.ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(`
 Parameters:
   App: !Ref AppName
   Env: !Ref EnvName
@@ -277,8 +277,8 @@ Parameters:
             setupMocks: func(m addonMocks) {
                 m.ws.EXPECT().ReadAddonsDir("api").
                     Return([]string{"addons.parameters.yml", "template.yaml"}, nil)
-                m.ws.EXPECT().ReadWorkloadAddon("api", "template.yaml").Return(nil, nil)
-                m.ws.EXPECT().ReadWorkloadAddon("api", "addons.parameters.yml").Return([]byte(`
+                m.ws.EXPECT().ReadAddon("api", "template.yaml").Return(nil, nil)
+                m.ws.EXPECT().ReadAddon("api", "addons.parameters.yml").Return([]byte(`
 Parameters:
   EventsQueue: 
     !Ref EventsQueue
