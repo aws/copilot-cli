@@ -409,6 +409,24 @@ func (ws *Workspace) DeleteWorkspaceFile() error {
 	return ws.fs.Remove(filepath.Join(CopilotDirName, SummaryFileName))
 }
 
+// EnvAddonsPath returns the addons/ directory file path for environments.
+func (ws *Workspace) EnvAddonsPath() (string, error) {
+	copilotPath, err := ws.copilotDirPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(copilotPath, environmentsDirName, addonsDirName), nil
+}
+
+// WorkloadAddonsPath returns the addons/ directory file path for a given workload.
+func (ws *Workspace) WorkloadAddonsPath(name string) (string, error) {
+	copilotPath, err := ws.copilotDirPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(copilotPath, name, addonsDirName), nil
+}
+
 // ReadAddonsDir returns a list of file names under a service's "addons/" directory.
 func (ws *Workspace) ReadAddonsDir(svcName string) ([]string, error) {
 	copilotPath, err := ws.copilotDirPath()

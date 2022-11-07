@@ -887,55 +887,100 @@ func TestWorkspace_ReadAddonsDir(t *testing.T) {
 	}
 }
 
-func TestWorkspace_ReadEnvAddonsDir(t *testing.T) {
+func TestWorkspace_EnvAddonsPath(t *testing.T) {
+	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {
-		fs func() afero.Fs
-
-		wantedFileNames []string
-		wantedErr       error
+		fs         func() afero.Fs
+		wantedPath string
+		wantedErr  error
 	}{
-		"dir not exist": {
+		"copilot dir not exist": {
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/copilot/webhook", 0755)
+				fs.MkdirAll("/webhook/", 0755)
 				return fs
 			},
-			wantedErr: &os.PathError{
-				Op:   "open",
-				Path: filepath.FromSlash("/copilot/environments/addons"),
-				Err:  os.ErrNotExist,
+			wantedErr: &ErrWorkspaceNotFound{
+				CurrentDirectory:      mockWorkingDirAbs,
+				ManifestDirectoryName: CopilotDirName,
+				NumberOfLevelsChecked: maximumParentDirsToSearch,
 			},
 		},
-		"retrieves file names": {
+		"returns the correct env addons path": {
 			fs: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/copilot/environments/addons", 0755)
-				params, _ := fs.Create("/copilot/environments/addons/params.yml")
-				waf, _ := fs.Create("/copilot/environments/addons/waf.yml")
-				defer params.Close()
-				defer waf.Close()
+				fs.MkdirAll("/copilot/environments/addons/", 0755)
 				return fs
 			},
-			wantedFileNames: []string{"params.yml", "waf.yml"},
+			wantedPath: "/copilot/environments/addons",
 		},
 	}
-
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// GIVEN
 			ws := &Workspace{
-				copilotDirAbs: "/copilot",
+				workingDirAbs: mockWorkingDirAbs,
 				fs: &afero.Afero{
 					Fs: tc.fs(),
 				},
 			}
 
-			// WHEN
-			actualFileNames, actualErr := ws.ReadEnvAddonsDir()
+			got, err := ws.EnvAddonsPath()
 
-			// THEN
-			require.Equal(t, tc.wantedErr, actualErr)
-			require.Equal(t, tc.wantedFileNames, actualFileNames)
+			if tc.wantedErr == nil {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedPath, got)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
+		})
+	}
+}
+
+func TestWorkspace_WorkloadAddonsPath(t *testing.T) {
+	mockWorkingDirAbs := "/app"
+	testCases := map[string]struct {
+		fs         func() afero.Fs
+		wantedPath string
+		wantedErr  error
+	}{
+		"dir not exist": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/webhook/", 0755)
+				return fs
+			},
+			wantedErr: &ErrWorkspaceNotFound{
+				CurrentDirectory:      mockWorkingDirAbs,
+				ManifestDirectoryName: CopilotDirName,
+				NumberOfLevelsChecked: maximumParentDirsToSearch,
+			},
+		},
+		"returns the correct workload addons path": {
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("/copilot/mockSvc/addons/", 0755)
+				return fs
+			},
+			wantedPath: "/copilot/mockSvc/addons",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ws := &Workspace{
+				workingDirAbs: mockWorkingDirAbs,
+				fs: &afero.Afero{
+					Fs: tc.fs(),
+				},
+			}
+
+			got, err := ws.WorkloadAddonsPath("mockSvc")
+
+			if tc.wantedErr == nil {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedPath, got)
+			} else {
+				require.EqualError(t, err, tc.wantedErr.Error())
+			}
 		})
 	}
 }
@@ -984,7 +1029,7 @@ func TestWorkspace_ReadWorkloadAddon(t *testing.T) {
 				},
 			}
 
-			data, err := ws.ReadWorkloadAddon(tc.svcName, tc.fName)
+			data, err := ws.ReadAddon(tc.svcName, tc.fName)
 
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
