@@ -418,6 +418,15 @@ func (ws *Workspace) EnvAddonsPath() (string, error) {
 	return filepath.Join(copilotPath, environmentsDirName, addonsDirName), nil
 }
 
+// EnvAddonFilePath returns the path of an addon file for environments.
+func (ws *Workspace) EnvAddonFilePath(fName string) (string, error) {
+	addonsDir, err := ws.EnvAddonsPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(addonsDir, fName), nil
+}
+
 // WorkloadAddonsPath returns the addons/ directory file path for a given workload.
 func (ws *Workspace) WorkloadAddonsPath(name string) (string, error) {
 	copilotPath, err := ws.copilotDirPath()
@@ -425,6 +434,40 @@ func (ws *Workspace) WorkloadAddonsPath(name string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(copilotPath, name, addonsDirName), nil
+}
+
+// WorkloadAddonFilePath returns the path of an addon file for a given workload.
+func (ws *Workspace) WorkloadAddonFilePath(wkldName, fName string) (string, error) {
+	addonsDir, err := ws.WorkloadAddonsPath(wkldName)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(addonsDir, fName), nil
+}
+
+// ListFiles returns a list of file paths to all the files under the dir.
+func (ws *Workspace) ListFiles(dirPath string) ([]string, error) {
+	var names []string
+	files, err := ws.fs.ReadDir(dirPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		names = append(names, f.Name())
+	}
+	return names, nil
+}
+
+// ReadFile returns the content of a file.
+func (ws *Workspace) ReadFile(fPath string) ([]byte, error) {
+	exist, err := ws.fs.Exists(fPath)
+	if err != nil {
+		return nil, fmt.Errorf("check if manifest file %s exists: %w", fPath, err)
+	}
+	if !exist {
+		return nil, &ErrFileNotExists{FileName: fPath}
+	}
+	return ws.fs.ReadFile(fPath)
 }
 
 // ReadAddonsDir returns a list of file names under a service's "addons/" directory.
