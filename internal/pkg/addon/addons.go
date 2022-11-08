@@ -31,8 +31,10 @@ var (
 )
 
 type workspaceReader interface {
-	ReadAddonsDir(svcName string) ([]string, error)
-	ReadAddon(svcName, fileName string) ([]byte, error)
+	WorkloadAddonsPath(name string) (string, error)
+	WorkloadAddonFilePath(wkldName, fName string) (string, error)
+	ListFiles(dirPath string) ([]string, error)
+	ReadFile(fPath string) ([]byte, error)
 }
 
 // Stack represents a CloudFormation stack.
@@ -47,7 +49,14 @@ type Stack struct {
 // files found there. If no addons are found, Parse returns a nil
 // Stack and ErrAddonsNotFound.
 func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
-	fnames, err := ws.ReadAddonsDir(workloadName)
+	path, err := ws.WorkloadAddonsPath(workloadName)
+	if err != nil {
+		return nil, &ErrAddonsNotFound{
+			WlName:    workloadName,
+			ParentErr: err,
+		}
+	}
+	fNames, err := ws.ListFiles(path)
 	if err != nil {
 		return nil, &ErrAddonsNotFound{
 			WlName:    workloadName,
@@ -55,12 +64,12 @@ func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
 		}
 	}
 
-	template, err := parseTemplate(fnames, workloadName, ws)
+	template, err := parseTemplate(fNames, workloadName, ws)
 	if err != nil {
 		return nil, err
 	}
 
-	params, err := parseParameters(fnames, workloadName, ws)
+	params, err := parseParameters(fNames, workloadName, ws)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +90,7 @@ func (s *Stack) Template() (string, error) {
 	return s.encode(s.template)
 }
 
-// Template returns Stack's CloudFormation parameters as a yaml string.
+// Parameters returns Stack's CloudFormation parameters as a yaml string.
 func (s *Stack) Parameters() (string, error) {
 	if s.parameters.IsZero() {
 		return "", nil
@@ -119,7 +128,11 @@ func parseTemplate(fnames []string, workloadName string, ws workspaceReader) (*c
 
 	mergedTemplate := newCFNTemplate("merged")
 	for _, fname := range templateFiles {
-		out, err := ws.ReadAddon(workloadName, fname)
+		path, err := ws.WorkloadAddonFilePath(workloadName, fname)
+		if err != nil {
+			return nil, fmt.Errorf("get addon %s file path under %s: %w", fname, workloadName, err)
+		}
+		out, err := ws.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("read addon %s under %s: %w", fname, workloadName, err)
 		}
@@ -131,7 +144,6 @@ func parseTemplate(fnames []string, workloadName string, ws workspaceReader) (*c
 			return nil, err
 		}
 	}
-
 	return mergedTemplate, nil
 }
 
@@ -150,7 +162,11 @@ func parseParameters(fnames []string, workloadName string, ws workspaceReader) (
 		return yaml.Node{}, fmt.Errorf("defining %s is not allowed under %s addons/", english.WordSeries(parameterFileNames, "and"), workloadName)
 	}
 	paramFile := paramFiles[0]
-	raw, err := ws.ReadAddon(workloadName, paramFile)
+	path, err := ws.WorkloadAddonFilePath(workloadName, paramFile)
+	if err != nil {
+		return yaml.Node{}, fmt.Errorf("get parameter file %s path under %s addons/: %w", paramFile, workloadName, err)
+	}
+	raw, err := ws.ReadFile(path)
 	if err != nil {
 		return yaml.Node{}, fmt.Errorf("read parameter file %s under %s addons/: %w", paramFile, workloadName, err)
 	}
