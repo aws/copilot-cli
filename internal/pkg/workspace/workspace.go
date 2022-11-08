@@ -462,7 +462,7 @@ func (ws *Workspace) ListFiles(dirPath string) ([]string, error) {
 func (ws *Workspace) ReadFile(fPath string) ([]byte, error) {
 	exist, err := ws.fs.Exists(fPath)
 	if err != nil {
-		return nil, fmt.Errorf("check if manifest file %s exists: %w", fPath, err)
+		return nil, fmt.Errorf("check if file %s exists: %w", fPath, err)
 	}
 	if !exist {
 		return nil, &ErrFileNotExists{FileName: fPath}
