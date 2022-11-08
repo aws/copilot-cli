@@ -51,7 +51,10 @@ type Stack struct {
 func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
 	path, err := ws.WorkloadAddonsPath(workloadName)
 	if err != nil {
-		return nil, err
+		return nil, &ErrAddonsNotFound{
+			WlName:    workloadName,
+			ParentErr: err,
+		}
 	}
 	fNames, err := ws.ListFiles(path)
 	if err != nil {

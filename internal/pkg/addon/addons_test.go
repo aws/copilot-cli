@@ -32,7 +32,10 @@ func TestTemplate(t *testing.T) {
 			setupMocks: func(m addonMocks) {
 				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("", errors.New("some error"))
 			},
-			wantedErr: errors.New("some error"),
+			wantedErr: &ErrAddonsNotFound{
+				WlName:    testSvcName,
+				ParentErr: errors.New("some error"),
+			},
 		},
 		"return ErrAddonsNotFound if addons doesn't exist in a service": {
 			workloadName: testSvcName,
