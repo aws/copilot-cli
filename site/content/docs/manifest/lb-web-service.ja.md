@@ -5,50 +5,50 @@
     === "Basic"
 
         ```yaml
-            name: 'frontend'
-            type: 'Load Balanced Web Service'
-    
-            image:
-              build: './frontend/Dockerfile'
-              port: 8080
-    
-            http:
-              path: '/'
-              healthcheck: '/_healthcheck'
-    
-            cpu: 256
-            memory: 512
-            count: 3
-            exec: true
-    
-            variables:
-              LOG_LEVEL: info
-            secrets:
-              GITHUB_TOKEN: GITHUB_TOKEN
-              DB_SECRET:
-                secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: './frontend/Dockerfile'
+          port: 8080
+
+        http:
+          path: '/'
+          healthcheck: '/_healthcheck'
+
+        cpu: 256
+        memory: 512
+        count: 3
+        exec: true
+
+        variables:
+          LOG_LEVEL: info
+        secrets:
+          GITHUB_TOKEN: GITHUB_TOKEN
+          DB_SECRET:
+            secretsmanager: '${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/mysql'
         ```
 
     === "With a domain"
 
         ```yaml
-            name: 'frontend'
-            type: 'Load Balanced Web Service'
-    
-            image:
-              build: './frontend/Dockerfile'
-              port: 8080
-    
-            http:
-              path: '/'
-              alias: 'example.com'
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
 
-            environments:
-              qa:
-                http:
-                  alias: # 証明書インポート済みの "qa" Environment
-                    - name: 'qa.example.com'
-                      hosted_zone: Z0873220N255IR3MTNR4
+        image:
+          build: './frontend/Dockerfile'
+          port: 8080
+
+        http:
+          path: '/'
+          alias: 'example.com'
+
+        environments:
+          qa:
+            http:
+              alias: # 証明書インポート済みの "qa" Environment
+                - name: 'qa.example.com'
+                  hosted_zone: Z0873220N255IR3MTNR4
         ```
 
     === "Larger containers"
@@ -134,6 +134,8 @@
         publish:
           topics:
             - name: 'products'
+            - name: 'orders'
+              fifo: true
         ```
 
     === "Network Load Balancer"
@@ -196,6 +198,37 @@
                 read_only: false
         ```
 
+    === "End-to-end encryption"
+
+        ```yaml
+        name: 'frontend'
+        type: 'Load Balanced Web Service'
+
+        image:
+          build: Dockerfile
+          port: 8080
+
+        http:
+          alias: 'example.com'
+          path: '/'
+          healthcheck:
+            path: '/_health'
+
+          # プロトコルでの指定の結果により、envoy コンテナのポートは 443 です。ヘルチェックプロトコルは `HTTPS` になります。
+          # ロードバランサーは Fargate タスクと TLS 接続します。envoy コンテナに
+          # インストールした証明書が利用されます。それらの証明書は自己証明書です。
+          target_container: envoy
+
+        sidecars:
+          envoy:
+            port: 443
+            image: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/envoy-proxy-with-selfsigned-certs:v1
+
+        network:
+          vpc:
+            placement: 'private'
+        ```
+
 
 <a id="name" href="#name" class="field">`name`</a> <span class="type">String</span>  
 Service の名前。
@@ -223,6 +256,8 @@ Application Load Balancer を無効化する場合は、 `http: false` と指定
 
 <span class="parent-field">http.</span><a id="http-target-container" href="#http-target-container" class="field">`target_container`</a> <span class="type">String</span>  
 サイドカーコンテナを指定することで、Service のメインコンテナの代わりにサイドカーでロードバランサーからのリクエストを受け取れます。
+ターゲットコンテナのポートが `443` に設定されている場合、プロトコルは `HTTP` に設定され、ロードバランサーは
+Fargate タスクと TLS 接続します。ターゲットコンテナにインストールされた証明書が利用されます。
 
 <span class="parent-field">http.</span><a id="http-stickiness" href="#http-stickiness" class="field">`stickiness`</a> <span class="type">Boolean</span>  
 スティッキーセッションの有効化、あるいは無効化を指定します。
@@ -259,6 +294,9 @@ http:
   hosted_zone: Z0873220N255IR3MTNR4
 # Also see http.alias array of maps example, above.
 ```
+<span class="parent-field">http.</span><a id="http-redirect-to-https" href="#http-redirect-to-https" class="field">`redirect_to_https`</a> <span class="type">Boolean</span>
+Application Load Balancer で、HTTP から HTTPS へ自動的にリダイレクトします。デフォルトは `true` です。
+
 <span class="parent-field">http.</span><a id="http-version" href="#http-version" class="field">`version`</a> <span class="type">String</span>  
 HTTP(S) プロトコルのバージョン。 `'grpc'`、 `'http1'`、または `'http2'` を指定します。省略した場合は、`'http1'` が利用されます。 
 gRPC を利用する場合は、Application にドメインが関連付けられていなければなりません。
@@ -266,6 +304,7 @@ gRPC を利用する場合は、Application にドメインが関連付けられ
 {% include 'nlb.ja.md' %}
 
 {% include 'image-config-with-port.ja.md' %}
+ポートを `443` に設定し、 ロードバランサーが `http` で有効化されている場合、プロトコルは `HTTPS` に設定され、ロードバランサーは Fargate タスクと TLS 接続します。ターゲットコンテナにインストールされた証明書が利用されます。
 
 {% include 'image-healthcheck.ja.md' %}
 

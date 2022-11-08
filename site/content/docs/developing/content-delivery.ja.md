@@ -51,6 +51,23 @@ CloudFront で HTTPS を使用する場合、ロードバランサーの `http.c
 
 この 2 つの設定により、Copilot は CloudFront が [SSL/TLS 証明書](https://docs.aws.amazon.com/ja_jp/AmazonCloudFront/latest/DeveloperGuide/using-https-alternate-domain-names.html)を使用するように設定されます。これにより、ビューワーの証明書を検証し、HTTPS 接続を有効にすることができます。
 
-## Ingress 規制とは?
+## Ingress 制限とは?
 
-特定の送信元からの受信トラフィックを制限することができます。CloudFront の場合、Copilot は [AWS マネージドプレフィックスリスト](https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html)を使用して、CloudFront エッジロケーションに関連する CIDR IP アドレスのセットに許可されたトラフィックを制限します。`restrict_to.cdn: true` を指定すると、パブリックロードバランサーは完全にパブリックアクセスできなくなり、CloudFront 配信からのみアクセスできるようになり、Service に対するセキュリティ脅威から保護されます。
+特定の送信元からの受信トラフィックを制限できます。CloudFront の場合、Copilot は [AWS マネージドプレフィックスリスト](https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/working-with-aws-managed-prefix-lists.html)を使用して、CloudFront エッジロケーションに関連する CIDR IP アドレスのセットに許可されたトラフィックを制限します。`restrict_to.cdn: true` を指定すると、パブリックロードバランサーはパブリックアクセスできなくなり、CloudFront ディストリビューションからのみアクセスできるようになり、Service に対するセキュリティ脅威から保護されます。
+
+## CloudFront で TLS を終端させるには？
+
+!!! attention
+    1. Load Balanced Web Service の [HTTP to HTTPS redirection](../../manifest/lb-web-service/#http-redirect-to-https) を無効化します。
+    2. CloudFront TLS ターミネーションを有効にする前に、全ての Load Balanced Web Service 対して、個別に `svc deploy` を実行して再デプロイを行います。
+    3. 全ての Load Balanced Web Service が HTTP を HTTPS にリダイレクトしなくなったら、Environment Manifest 内で CloudFront TLS ターミネーションを安全に有効化できます。`env deploy` を実行します。
+
+
+Environment Manifest を次の様に設定することで、オプションで CloudFront を TLS ターミネーションに使用できます。
+
+```yaml
+cdn:
+  terminate_tls: true
+```
+
+`CloudFront → Application Load Balancer (ALB) → ECS` の通信は、HTTP のみになります。エンドユーザに地理的に近いエンドポイントで TLS を終端させる事で、 TLS ハンドシェイクを高速化させる利点があります。
