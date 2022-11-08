@@ -1003,6 +1003,12 @@ Resources:
       DomainName: !Ref AppDNSName
       PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
       PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Metadata:
+      'aws:copilot:description': 'A  log group to create a flow log for the VPC'
+    Properties:
+      RetentionInDays: 14
   FlowLog:
     Metadata:
       'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'
@@ -1010,7 +1016,7 @@ Resources:
     Properties:
       DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
       LogDestinationType: cloud-watch-logs
-      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
+      LogGroupName: !Ref LogGroup
       MaxAggregationInterval: 60
       ResourceId: !Ref VPC                 
       ResourceType: VPC
