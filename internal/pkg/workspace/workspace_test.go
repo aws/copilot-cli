@@ -828,65 +828,6 @@ func TestIsInGitRepository(t *testing.T) {
 	}
 }
 
-func TestWorkspace_ReadAddonsDir(t *testing.T) {
-	testCases := map[string]struct {
-		svcName        string
-		copilotDirPath string
-		fs             func() afero.Fs
-
-		wantedFileNames []string
-		wantedErr       error
-	}{
-		"dir not exist": {
-			svcName:        "webhook",
-			copilotDirPath: "/copilot",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/copilot/webhook", 0755)
-				return fs
-			},
-			wantedErr: &os.PathError{
-				Op:   "open",
-				Path: filepath.FromSlash("/copilot/webhook/addons"),
-				Err:  os.ErrNotExist,
-			},
-		},
-		"retrieves file names": {
-			svcName:        "webhook",
-			copilotDirPath: "/copilot",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/copilot/webhook/addons", 0755)
-				params, _ := fs.Create("/copilot/webhook/addons/params.yml")
-				outputs, _ := fs.Create("/copilot/webhook/addons/outputs.yml")
-				defer params.Close()
-				defer outputs.Close()
-				return fs
-			},
-			wantedFileNames: []string{"outputs.yml", "params.yml"},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ws := &Workspace{
-				copilotDirAbs: tc.copilotDirPath,
-				fs: &afero.Afero{
-					Fs: tc.fs(),
-				},
-			}
-
-			// WHEN
-			actualFileNames, actualErr := ws.ReadAddonsDir(tc.svcName)
-
-			// THEN
-			require.Equal(t, tc.wantedErr, actualErr)
-			require.Equal(t, tc.wantedFileNames, actualFileNames)
-		})
-	}
-}
-
 func TestWorkspace_EnvAddonsPath(t *testing.T) {
 	mockWorkingDirAbs := "/app"
 	testCases := map[string]struct {
@@ -1147,62 +1088,6 @@ func TestWorkspace_ListFiles(t *testing.T) {
 	}
 }
 
-func TestWorkspace_ReadWorkloadAddon(t *testing.T) {
-	testCases := map[string]struct {
-		svcName string
-		fName   string
-		fs      func() afero.Fs
-
-		wantedData []byte
-		wantedErr  error
-	}{
-		"return error if file does not exist": {
-			svcName: "api",
-			fName:   "db.yml",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				return fs
-			},
-
-			wantedErr: fmt.Errorf("file %s does not exists", filepath.FromSlash("/copilot/api/addons/db.yml")),
-		},
-		"read existing file": {
-			svcName: "api",
-			fName:   "db.yml",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/copilot/api/addons", 0755)
-				f, _ := fs.Create("/copilot/api/addons/db.yml")
-				defer f.Close()
-				f.Write([]byte("mydb"))
-				return fs
-			},
-
-			wantedData: []byte("mydb"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ws := &Workspace{
-				copilotDirAbs: "/copilot",
-				fs: &afero.Afero{
-					Fs: tc.fs(),
-				},
-			}
-
-			data, err := ws.ReadAddon(tc.svcName, tc.fName)
-
-			if tc.wantedErr == nil {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedData, data)
-			} else {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			}
-		})
-	}
-}
-
 func TestWorkspace_ReadFile(t *testing.T) {
 	testCases := map[string]struct {
 		fPath string
@@ -1243,59 +1128,6 @@ func TestWorkspace_ReadFile(t *testing.T) {
 				},
 			}
 			data, err := ws.ReadFile(tc.fPath)
-			if tc.wantedErr == nil {
-				require.NoError(t, err)
-				require.Equal(t, tc.wantedData, data)
-			} else {
-				require.EqualError(t, err, tc.wantedErr.Error())
-			}
-		})
-	}
-}
-
-func TestWorkspace_ReadEnvAddon(t *testing.T) {
-	testCases := map[string]struct {
-		fName string
-		fs    func() afero.Fs
-
-		wantedData []byte
-		wantedErr  error
-	}{
-		"return error if file does not exist": {
-			fName: "nowaf.yml",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				return fs
-			},
-
-			wantedErr: fmt.Errorf("file %s does not exists", filepath.FromSlash("/copilot/environments/addons/nowaf.yml")),
-		},
-		"read existing file": {
-			fName: "waf.yml",
-			fs: func() afero.Fs {
-				fs := afero.NewMemMapFs()
-				fs.MkdirAll("/copilot/environments/addons", 0755)
-				f, _ := fs.Create("/copilot/environments/addons/waf.yml")
-				defer f.Close()
-				f.Write([]byte("hello"))
-				return fs
-			},
-
-			wantedData: []byte("hello"),
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ws := &Workspace{
-				copilotDirAbs: "/copilot",
-				fs: &afero.Afero{
-					Fs: tc.fs(),
-				},
-			}
-
-			data, err := ws.ReadEnvAddon(tc.fName)
-
 			if tc.wantedErr == nil {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantedData, data)

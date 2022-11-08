@@ -470,34 +470,6 @@ func (ws *Workspace) ReadFile(fPath string) ([]byte, error) {
 	return ws.fs.ReadFile(fPath)
 }
 
-// ReadAddonsDir returns a list of file names under a service's "addons/" directory.
-func (ws *Workspace) ReadAddonsDir(svcName string) ([]string, error) {
-	copilotPath, err := ws.copilotDirPath()
-	if err != nil {
-		return nil, err
-	}
-
-	var names []string
-	files, err := ws.fs.ReadDir(filepath.Join(copilotPath, svcName, addonsDirName))
-	if err != nil {
-		return nil, err
-	}
-	for _, f := range files {
-		names = append(names, f.Name())
-	}
-	return names, nil
-}
-
-// ReadAddon returns the contents of a file under the service's "addons/" directory.
-func (ws *Workspace) ReadAddon(svc, fname string) ([]byte, error) {
-	return ws.read(svc, addonsDirName, fname)
-}
-
-// ReadEnvAddon returns the contents of a file under the environment "addons/" directory.
-func (ws *Workspace) ReadEnvAddon(fname string) ([]byte, error) {
-	return ws.read(environmentsDirName, addonsDirName, fname)
-}
-
 // WriteAddon writes the content of an addon file under "{svc}/addons/{name}.yml".
 // If successful returns the full path of the file, otherwise an empty string and an error.
 func (ws *Workspace) WriteAddon(content encoding.BinaryMarshaler, svc, name string) (string, error) {
