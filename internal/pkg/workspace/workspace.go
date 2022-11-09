@@ -124,13 +124,10 @@ func (ws *Workspace) Create(appName string) error {
 	return err
 }
 
-// Summary returns a summary of the workspace - including the application name.
+// Summary returns a summary of the workspace. The method assumes that the workspace exists and the path is known.
 func (ws *Workspace) Summary() (*Summary, error) {
-	summaryPath, err := ws.summaryPath()
-	if err != nil {
-		return nil, err
-	}
-	summaryFileExists, _ := ws.fs.Exists(summaryPath) // If an err occurs, return no applications.
+	summaryPath := filepath.Join(ws.copilotDirAbs, SummaryFileName) // Assume `copilotDirAbs` is always present.
+	summaryFileExists, _ := ws.fs.Exists(summaryPath)               // If an err occurs, return no applications.
 	if summaryFileExists {
 		value, err := ws.fs.ReadFile(summaryPath)
 		if err != nil {

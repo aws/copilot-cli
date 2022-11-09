@@ -111,20 +111,32 @@ func TestWorkspace_Path(t *testing.T) {
 
 func TestWorkspace_Summary(t *testing.T) {
 	testCases := map[string]struct {
+		workingDir     string
+		mockFileSystem func(fs afero.Fs)
+
 		expectedSummary Summary
-		workingDir      string
 		expectedError   error
-		mockFileSystem  func(fs afero.Fs)
 	}{
 		"existing workspace summary": {
-			expectedSummary: Summary{
-				Application: "DavidsApp",
-				Path:        filepath.FromSlash("test/copilot/.workspace"),
-			},
 			workingDir: "test/",
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll("test/copilot", 0755)
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+			},
+			expectedSummary: Summary{
+				Application: "DavidsApp",
+				Path:        filepath.FromSlash("test/copilot/.workspace"),
+			},
+		},
+		"existing workspace summary in a parent dir": {
+			workingDir: "test/app",
+			mockFileSystem: func(fs afero.Fs) {
+				fs.MkdirAll("test/copilot", 0755)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+			},
+			expectedSummary: Summary{
+				Application: "DavidsApp",
+				Path:        filepath.FromSlash("test/copilot/.workspace"),
 			},
 		},
 		"no existing workspace summary": {
@@ -133,11 +145,6 @@ func TestWorkspace_Summary(t *testing.T) {
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll("test/copilot", 0755)
 			},
-		},
-		"no existing manifest dir": {
-			workingDir:     "test/",
-			expectedError:  fmt.Errorf("couldn't find a directory called copilot up to 5 levels up from test/"),
-			mockFileSystem: func(fs afero.Fs) {},
 		},
 	}
 	for name, tc := range testCases {
@@ -148,6 +155,7 @@ func TestWorkspace_Summary(t *testing.T) {
 			tc.mockFileSystem(fs)
 
 			ws := Workspace{
+				copilotDirAbs: filepath.Join("test", CopilotDirName),
 				workingDirAbs: tc.workingDir,
 				fs:            &afero.Afero{Fs: fs},
 			}
