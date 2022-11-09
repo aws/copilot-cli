@@ -6,8 +6,10 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"os"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -48,14 +50,19 @@ type initAppOpts struct {
 	store                applicationStore
 	route53              domainHostedZoneGetter
 	domainInfoGetter     domainInfoGetter
-	ws                   wsAppManager
 	cfn                  appDeployer
 	prompt               prompter
 	prog                 progress
 	iam                  policyLister
 	isSessionFromEnvVars func() (bool, error)
 
+	existingWorkspace func() (wsAppManager, error)
+	newWorkspace      func(appName string) (wsAppManager, error)
+
+	// Cached variables.
 	cachedHostedZoneID string
+	workingDir         string
+	fs                 afero.Fs
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
@@ -63,11 +70,11 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
-	ws, err := workspace.New()
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, fmt.Errorf("get working directory: %w", err)
 	}
-
+	fs := afero.NewOsFs()
 	identity := identity.New(sess)
 	return &initAppOpts{
 		initAppVars:      vars,
@@ -75,7 +82,6 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		store:            config.NewSSMStore(identity, ssm.New(sess), aws.StringValue(sess.Config.Region)),
 		route53:          route53.New(sess),
 		domainInfoGetter: route53.NewRoute53Domains(sess),
-		ws:               ws,
 		cfn:              cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 		prompt:           prompt.New(),
 		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
@@ -83,6 +89,14 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
+		existingWorkspace: func() (wsAppManager, error) {
+			return workspace.Use(&afero.Afero{Fs: fs}, workingDir)
+		},
+		newWorkspace: func(appName string) (wsAppManager, error) {
+			return workspace.Create(appName, &afero.Afero{Fs: fs}, workingDir)
+		},
+		fs:         fs,
+		workingDir: workingDir,
 	}, nil
 }
 
@@ -130,31 +144,43 @@ https://aws.github.io/copilot-cli/docs/credentials/`)
 	}
 
 	// When there's a local application.
-	summary, err := o.ws.Summary()
+	ws, err := o.existingWorkspace()
 	if err == nil {
-		if o.name == "" {
-			log.Infoln(fmt.Sprintf(
-				"Your workspace is registered to application %s.",
-				color.HighlightUserInput(summary.Application)))
-			o.name = summary.Application
-			return nil
-		}
-		if o.name != summary.Application {
-			summaryPath := displayPath(summary.Path)
-			if summaryPath == "" {
-				summaryPath = summary.Path
+		summary, err := ws.Summary()
+		if err == nil {
+			if o.name == "" {
+				log.Infoln(fmt.Sprintf(
+					"Your workspace is registered to application %s.",
+					color.HighlightUserInput(summary.Application)))
+				o.name = summary.Application
+				return nil
 			}
+			if o.name != summary.Application {
+				summaryPath := displayPath(summary.Path)
+				if summaryPath == "" {
+					summaryPath = summary.Path
+				}
 
-			log.Errorf(`Workspace is already registered with application %s instead of %s.
+				log.Errorf(`Workspace is already registered with application %s instead of %s.
 If you'd like to delete the application locally, you can delete the file at %s.
 If you'd like to delete the application and all of its resources, run %s.
 `,
-				summary.Application,
-				o.name,
-				summaryPath,
-				color.HighlightCode("copilot app delete"))
-			return fmt.Errorf("workspace already registered with %s", summary.Application)
+					summary.Application,
+					o.name,
+					summaryPath,
+					color.HighlightCode("copilot app delete"))
+				return fmt.Errorf("workspace already registered with %s", summary.Application)
+			}
 		}
+
+		var errNoAppSummary *workspace.ErrNoAssociatedApplication
+		if !errors.As(err, &errNoAppSummary) {
+			return err
+		}
+	}
+	var errNoWorkspace *workspace.ErrWorkspaceNotFound
+	if !errors.As(err, &errNoWorkspace) {
+		return err
 	}
 
 	// Flag is set by user.
@@ -185,7 +211,7 @@ func (o *initAppOpts) Execute() error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
-	err = o.ws.Create(o.name)
+	_, err = o.newWorkspace(o.name)
 	if err != nil {
 		return fmt.Errorf("create new workspace with application name %s: %w", o.name, err)
 	}

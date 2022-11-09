@@ -3130,20 +3130,6 @@ func (m *MockwsAppManager) EXPECT() *MockwsAppManagerMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method.
-func (m *MockwsAppManager) Create(appName string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", appName)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Create indicates an expected call of Create.
-func (mr *MockwsAppManagerMockRecorder) Create(appName interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockwsAppManager)(nil).Create), appName)
-}
-
 // Summary mocks base method.
 func (m *MockwsAppManager) Summary() (*workspace.Summary, error) {
 	m.ctrl.T.Helper()

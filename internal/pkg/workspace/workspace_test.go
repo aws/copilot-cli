@@ -144,7 +144,7 @@ func TestWorkspace_Summary(t *testing.T) {
 			mockFileSystem: func(fs afero.Fs) {
 				fs.MkdirAll("test/copilot", 0755)
 			},
-			expectedError: &errNoAssociatedApplication{},
+			expectedError: &ErrNoAssociatedApplication{},
 		},
 	}
 	for name, tc := range testCases {

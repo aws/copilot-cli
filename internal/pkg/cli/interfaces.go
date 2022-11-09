@@ -316,7 +316,6 @@ type wsPipelineGetter interface {
 }
 
 type wsAppManager interface {
-	Create(appName string) error
 	Summary() (*workspace.Summary, error)
 }
 

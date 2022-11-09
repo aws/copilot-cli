@@ -138,7 +138,7 @@ func Create(appName string, fs *afero.Afero, workingDirAbs string) (*Workspace, 
 			// Otherwise our work is all done.
 			return ws, nil
 		}
-		var notFound *errNoAssociatedApplication
+		var notFound *ErrNoAssociatedApplication
 		if !errors.As(err, &notFound) {
 			return nil, err
 		}
@@ -181,7 +181,7 @@ func (ws *Workspace) Create(appName string) error {
 	}
 
 	// If there isn't an existing workspace summary, create it.
-	var notFound *errNoAssociatedApplication
+	var notFound *ErrNoAssociatedApplication
 	if errors.As(err, &notFound) {
 		return ws.writeSummary(appName)
 	}
@@ -203,7 +203,7 @@ func (ws *Workspace) Summary() (*Summary, error) {
 		}
 		return &wsSummary, yaml.Unmarshal(value, &wsSummary)
 	}
-	return nil, &errNoAssociatedApplication{}
+	return nil, &ErrNoAssociatedApplication{}
 }
 
 // ListServices returns the names of the services in the workspace.
