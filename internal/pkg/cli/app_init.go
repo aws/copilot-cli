@@ -235,32 +235,32 @@ func (o *initAppOpts) validateAppName(name string) error {
 		return err
 	}
 	app, err := o.store.GetApplication(name)
-	if err != nil {
-		var noSuchAppErr *config.ErrNoSuchApplication
-		if errors.As(err, &noSuchAppErr) {
-			roleName := fmt.Sprintf("%s-adminrole", name)
-			tags, err := o.iamRoleManager.ListRoleTags(roleName)
-			// NOTE: This is a best-effort attempt to check if the app exists in other regions.
-			// The error either indicates that the role does not exist, or not.
-			// In the first case, it means that this is a valid app name, hence we don't error out.
-			// In the second case, since this is a best-effort, we don't need to surface the error either.
-			if err != nil {
-				return nil
-			}
-			if _, hasTag := tags[deploy.AppTagKey]; hasTag {
-				return &errAppAlreadyExistsInAccount{appName: name}
-			}
-			return &errStackSetAdminRoleExistsInAccount{
-				appName:  name,
-				roleName: roleName,
-			}
+	if err == nil {
+		if o.domainName != "" && app.Domain != o.domainName {
+			return fmt.Errorf("application named %s already exists with a different domain name %s", name, app.Domain)
 		}
-		return fmt.Errorf("get application %s: %w", name, err)
+		return nil
 	}
-	if o.domainName != "" && app.Domain != o.domainName {
-		return fmt.Errorf("application named %s already exists with a different domain name %s", name, app.Domain)
+	var noSuchAppErr *config.ErrNoSuchApplication
+	if errors.As(err, &noSuchAppErr) {
+		roleName := fmt.Sprintf("%s-adminrole", name)
+		tags, err := o.iamRoleManager.ListRoleTags(roleName)
+		// NOTE: This is a best-effort attempt to check if the app exists in other regions.
+		// The error either indicates that the role does not exist, or not.
+		// In the first case, it means that this is a valid app name, hence we don't error out.
+		// In the second case, since this is a best-effort, we don't need to surface the error either.
+		if err != nil {
+			return nil
+		}
+		if _, hasTag := tags[deploy.AppTagKey]; hasTag {
+			return &errAppAlreadyExistsInAccount{appName: name}
+		}
+		return &errStackSetAdminRoleExistsInAccount{
+			appName:  name,
+			roleName: roleName,
+		}
 	}
-	return nil
+	return fmt.Errorf("get application %s: %w", name, err)
 }
 
 func (o *initAppOpts) validatePermBound(policyName string) error {
@@ -357,22 +357,22 @@ type errStackSetAdminRoleExistsInAccount struct {
 }
 
 func (e *errAppAlreadyExistsInAccount) Error() string {
-	return fmt.Sprintf("application named %s already exists in another region", e.appName)
+	return fmt.Sprintf("application named %q already exists in another region", e.appName)
 }
 
 func (e *errAppAlreadyExistsInAccount) RecommendActions() string {
-	return fmt.Sprintf(`- If you want to create a new workspace reusing the existing application %s, please switch to the region where you created the application, and run %s.
-- If you'd like to recreate the application and all of its resources, please switch to the region where you created the application, and run %s.`, e.appName, color.HighlightCode("copilot app init"), color.HighlightCode("copilot app delete"))
+	return fmt.Sprintf(`If you want to create a new workspace reusing the existing application %s, please switch to the region where you created the application, and run %s.
+If you'd like to recreate the application and all of its resources, please switch to the region where you created the application, and run %s.`, e.appName, color.HighlightCode("copilot app init"), color.HighlightCode("copilot app delete"))
 }
 
 func (e *errStackSetAdminRoleExistsInAccount) Error() string {
-	return fmt.Sprintf("IAM admin role %s already exists in this account", e.roleName)
+	return fmt.Sprintf("IAM admin role %q already exists in this account", e.roleName)
 }
 
 func (e *errStackSetAdminRoleExistsInAccount) RecommendActions() string {
-	return fmt.Sprintf(`- Copilot will create an IAM admin role named %s to manage the stack set of the application %s. 
-- You have an existing role with the exact same name in your account, which will collide with the role that Copilot creates.
-- Please create the application with a different name, so that the IAM role name does not collide.`, e.roleName, e.appName)
+	return fmt.Sprintf(`Copilot will create an IAM admin role named %s to manage the stack set of the application %s. 
+You have an existing role with the exact same name in your account, which will collide with the role that Copilot creates.
+Please create the application with a different name, so that the IAM role name does not collide.`, e.roleName, e.appName)
 }
 
 // buildAppInitCommand builds the command for creating a new application.
