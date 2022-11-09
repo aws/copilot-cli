@@ -72,6 +72,22 @@ type Workspace struct {
 	logger        func(format string, args ...interface{})
 }
 
+// Use returns an existing workspace, searching for a copilot/ directory from the current wd,
+// up to 5 levels above. It returns ErrWorkspaceNotFound if no copilot/ directory is found.
+func Use(fs *afero.Afero, workingDirAbs string) (*Workspace, error) {
+	ws := &Workspace{
+		workingDirAbs: workingDirAbs,
+		fs:            fs,
+		logger:        log.Infof,
+	}
+	copilotDirPath, err := ws.copilotDirPath()
+	if err != nil {
+		return nil, err
+	}
+	ws.copilotDirAbs = copilotDirPath
+	return ws, nil
+}
+
 // New returns a workspace, used for reading and writing to user's local workspace.
 func New() (*Workspace, error) {
 	fs := afero.NewOsFs()
