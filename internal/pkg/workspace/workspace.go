@@ -96,7 +96,7 @@ func New() (*Workspace, error) {
 // and saves a summary with the application name.
 func (ws *Workspace) Create(appName string) error {
 	// Create an application directory, if one doesn't exist
-	if err := ws.createCopilotDir(); err != nil {
+	if _, err := ws.createCopilotDir(); err != nil {
 		return err
 	}
 
@@ -536,13 +536,16 @@ func (ws *Workspace) summaryPath() (string, error) {
 	return workspaceSummaryPath, nil
 }
 
-func (ws *Workspace) createCopilotDir() error {
+func (ws *Workspace) createCopilotDir() (string, error) {
 	// First check to see if a manifest directory already exists
 	existingWorkspace, _ := ws.copilotDirPath()
 	if existingWorkspace != "" {
-		return nil
+		return existingWorkspace, nil
 	}
-	return ws.fs.Mkdir(CopilotDirName, 0755)
+	if err := ws.fs.Mkdir(CopilotDirName, 0755); err != nil {
+		return "", err
+	}
+	return filepath.Join(ws.workingDirAbs, CopilotDirName), nil
 }
 
 // Path returns the absolute path to the workspace.
