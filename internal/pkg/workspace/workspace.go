@@ -88,26 +88,6 @@ func Use(fs *afero.Afero, workingDirAbs string) (*Workspace, error) {
 	return ws, nil
 }
 
-// New returns a workspace, used for reading and writing to user's local workspace.
-func New() (*Workspace, error) {
-	fs := afero.NewOsFs()
-	fsUtils := &afero.Afero{Fs: fs}
-	logger := log.Infof
-
-	workingDirAbs, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	ws := Workspace{
-		workingDirAbs: workingDirAbs,
-		fs:            fsUtils,
-		logger:        logger,
-	}
-
-	return &ws, nil
-}
-
 // Create creates a new *Workspace in the current working directory for appName if it doesn't already exist.
 func Create(appName string, fs *afero.Afero, workingDirAbs string) (*Workspace, error) {
 	ws := &Workspace{
@@ -155,38 +135,6 @@ func Create(appName string, fs *afero.Afero, workingDirAbs string) (*Workspace, 
 	}
 
 	return ws, nil
-}
-
-// Create creates the copilot directory (if it doesn't already exist) in the current working directory,
-// and saves a summary with the application name.
-func (ws *Workspace) Create(appName string) error {
-	// Create an application directory, if one doesn't exist
-	if _, err := ws.createCopilotDir(); err != nil {
-		return err
-	}
-
-	// Grab an existing workspace summary, if one exists.
-	summary, err := ws.Summary()
-	if err == nil {
-		// If a summary exists, but is registered to a different application, throw an error.
-		if summary.Application != appName {
-			return &errHasExistingApplication{
-				existingAppName: summary.Application,
-				basePath:        ws.workingDirAbs,
-				summaryPath:     summary.Path,
-			}
-		}
-		// Otherwise our work is all done.
-		return nil
-	}
-
-	// If there isn't an existing workspace summary, create it.
-	var notFound *ErrNoAssociatedApplication
-	if errors.As(err, &notFound) {
-		return ws.writeSummary(appName)
-	}
-
-	return err
 }
 
 // Summary returns a summary of the workspace. The method assumes that the workspace exists and the path is known.
