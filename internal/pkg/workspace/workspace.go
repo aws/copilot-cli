@@ -92,6 +92,55 @@ func New() (*Workspace, error) {
 	return &ws, nil
 }
 
+// Create creates a new *Workspace in the current working directory for appName if it doesn't already exist.
+func Create(appName string, fs *afero.Afero, workingDirAbs string) (*Workspace, error) {
+	ws := &Workspace{
+		workingDirAbs: workingDirAbs,
+		fs:            fs,
+		logger:        log.Infof,
+	}
+
+	// Check if an existing workspace exists.
+	copilotDirPath, err := ws.copilotDirPath()
+	var errWSNotFound *ErrWorkspaceNotFound
+	if err != nil && !errors.As(err, &errWSNotFound) {
+		return nil, err
+	}
+	if err == nil {
+		ws.copilotDirAbs = copilotDirPath
+		// If so, grab the summary
+		summary, err := ws.Summary()
+		if err == nil {
+			// If a summary exists, but is registered to a different application, throw an error.
+			if summary.Application != appName {
+				return nil, &errHasExistingApplication{
+					existingAppName: summary.Application,
+					basePath:        ws.workingDirAbs,
+					summaryPath:     summary.Path,
+				}
+			}
+			// Otherwise our work is all done.
+			return ws, nil
+		}
+		var notFound *errNoAssociatedApplication
+		if !errors.As(err, &notFound) {
+			return nil, err
+		}
+	}
+
+	// Create a workspace, including both the dir and workspace file.
+	copilotDirAbs, err := ws.createCopilotDir()
+	if err != nil {
+		return nil, err
+	}
+	ws.copilotDirAbs = copilotDirAbs
+	if err := ws.writeSummary(appName); err != nil {
+		return nil, err
+	}
+
+	return ws, nil
+}
+
 // Create creates the copilot directory (if it doesn't already exist) in the current working directory,
 // and saves a summary with the application name.
 func (ws *Workspace) Create(appName string) error {

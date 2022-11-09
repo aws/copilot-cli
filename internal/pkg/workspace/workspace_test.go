@@ -174,76 +174,91 @@ func TestWorkspace_Create(t *testing.T) {
 	testCases := map[string]struct {
 		appName        string
 		workingDir     string
-		expectedError  error
-		expectNoWrites bool
-		mockFileSystem func(fs afero.Fs)
+		mockFileSystem func() afero.Fs
+
+		expectedError         error
+		expectedCopilotDirAbs string
 	}{
-		"existing workspace and workspace summary": {
-			workingDir:     "test/",
-			appName:        "DavidsApp",
-			expectNoWrites: true,
-			mockFileSystem: func(fs afero.Fs) {
+		"successful no-op with existing workspace and workspace summary": {
+			workingDir: "test/",
+			appName:    "DavidsApp",
+			mockFileSystem: func() afero.Fs {
+				fs := afero.NewMemMapFs()
 				fs.MkdirAll("test/copilot", 0755)
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+				fs = afero.NewReadOnlyFs(fs) // No write/
+				return fs
 			},
+			expectedCopilotDirAbs: "test/copilot",
 		},
-		"existing workspace and workspace summary in different directory": {
-			workingDir:     "test/app/",
-			appName:        "DavidsApp",
-			expectNoWrites: true,
-			mockFileSystem: func(fs afero.Fs) {
+		"successful no-op existing workspace and workspace summary in a parent directory": {
+			workingDir: "test/app/",
+			appName:    "DavidsApp",
+			mockFileSystem: func() afero.Fs {
+				fs := afero.NewMemMapFs()
 				fs.MkdirAll("test/copilot", 0755)
 				fs.MkdirAll("test/app", 0755)
 				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+				fs = afero.NewReadOnlyFs(fs) // No write.
+				return fs
 			},
+			expectedCopilotDirAbs: "test/copilot",
 		},
-		"existing workspace and different application": {
-			workingDir:    "test/",
-			appName:       "DavidsApp",
-			expectedError: fmt.Errorf("workspace is already registered with application DavidsOtherApp under %s", filepath.FromSlash("copilot/.workspace")),
-			mockFileSystem: func(fs afero.Fs) {
-				fs.MkdirAll("test/copilot", 0755)
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsOtherApp")), 0644)
-			},
-		},
-		"existing workspace but no workspace summary": {
+		"error if workspace exists but associated with different application": {
 			workingDir: "test/",
 			appName:    "DavidsApp",
-			mockFileSystem: func(appFS afero.Fs) {
-				appFS.MkdirAll("test/copilot", 0755)
+			mockFileSystem: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("test/copilot", 0755)
+				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsOtherApp")), 0644)
+				fs = afero.NewReadOnlyFs(fs) // No write.
+				return fs
 			},
+			expectedError: fmt.Errorf("workspace is already registered with application DavidsOtherApp under %s", filepath.FromSlash("copilot/.workspace")),
 		},
-		"no existing workspace or workspace summary": {
-			workingDir:     "test/",
-			appName:        "DavidsApp",
-			mockFileSystem: func(fs afero.Fs) {},
+		"successfully create a work summary if workspace existing but no workspace summary": {
+			workingDir: "test/",
+			appName:    "DavidsApp",
+			mockFileSystem: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				fs.MkdirAll("test/copilot", 0755)
+				return fs
+			},
+			expectedCopilotDirAbs: "test/copilot",
+		},
+		"successfully create both workspace and summary if neither exists": {
+			workingDir: "test/",
+			appName:    "DavidsApp",
+			mockFileSystem: func() afero.Fs {
+				return afero.NewMemMapFs()
+			},
+			expectedCopilotDirAbs: "test/copilot",
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// Create an empty FileSystem
-			fs := afero.NewMemMapFs()
-			// Set it up
-			tc.mockFileSystem(fs)
-			// Throw an error if someone tries to write
-			// if we expect there to be no writes.
-			if tc.expectNoWrites {
-				fs = afero.NewReadOnlyFs(fs)
-			}
-
-			ws := Workspace{
-				workingDirAbs: tc.workingDir,
-				fs:            &afero.Afero{Fs: fs},
-			}
-			err := ws.Create(tc.appName)
+			// Set up filesystem.
+			fs := &afero.Afero{Fs: tc.mockFileSystem()}
+			gotWS, err := Create(tc.appName, fs, tc.workingDir)
 			if tc.expectedError == nil {
 				// an operation not permitted error means
 				// we tried to write to the filesystem, but
 				// the test indicated that we expected no writes.
 				require.NoError(t, err)
-				summary, err := ws.Summary()
+
+				// Validate that the stored copilot dir path is correct.
+				require.Equal(t, tc.expectedCopilotDirAbs, gotWS.copilotDirAbs)
+
+				// Validate that the workspace dir is created.
+				exist, err := fs.Exists(tc.expectedCopilotDirAbs)
 				require.NoError(t, err)
-				require.Equal(t, tc.appName, summary.Application)
+				require.True(t, exist)
+
+				// Validate that the summary file is associated with the app.
+				gotSummary, err := gotWS.Summary()
+				require.NoError(t, err)
+				require.Equal(t, tc.appName, gotSummary.Application)
+
 			} else {
 				require.Equal(t, tc.expectedError.Error(), err.Error())
 			}
