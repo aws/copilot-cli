@@ -306,35 +306,37 @@ func TestInitAppOpts_Ask(t *testing.T) {
 	}
 }
 
+type initAppExecuteMocks struct {
+	store           *mocks.Mockstore
+	ws              *mocks.MockwsAppManager
+	identityService *mocks.MockidentityService
+	deployer        *mocks.MockappDeployer
+	progress        *mocks.Mockprogress
+}
+
 func TestInitAppOpts_Execute(t *testing.T) {
 	mockError := fmt.Errorf("error")
-
 	testCases := map[string]struct {
 		inDomainName                string
 		inDomainHostedZoneID        string
 		inPermissionsBoundaryPolicy string
 
 		expectedError error
-		mocking       func(t *testing.T,
-			mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
-			mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
-			mockProgress *mocks.Mockprogress)
+		mocking       func(m *initAppExecuteMocks)
 	}{
 		"with a successful call to add app": {
 			inDomainName:                "amazon.com",
 			inDomainHostedZoneID:        "mockID",
 			inPermissionsBoundaryPolicy: "mockPolicy",
 
-			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
-				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
-				mockProgress *mocks.Mockprogress) {
-				mockIdentityService.
+			mocking: func(m *initAppExecuteMocks) {
+				m.identityService.
 					EXPECT().
 					Get().
 					Return(identity.Caller{
 						Account: "12345",
 					}, nil)
-				mockstore.
+				m.store.
 					EXPECT().
 					CreateApplication(&config.Application{
 						AccountID:           "12345",
@@ -346,10 +348,10 @@ func TestInitAppOpts_Execute(t *testing.T) {
 							"owner": "boss",
 						},
 					})
-				mockWorkspace.
+				m.ws.
 					EXPECT().
 					Create(gomock.Eq("myapp")).Return(nil)
-				mockDeployer.EXPECT().
+				m.deployer.EXPECT().
 					DeployApp(&deploy.CreateAppInput{
 						Name:               "myapp",
 						AccountID:          "12345",
@@ -365,16 +367,14 @@ func TestInitAppOpts_Execute(t *testing.T) {
 		},
 		"should return error from workspace.Create": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
-				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
-				mockProgress *mocks.Mockprogress) {
-				mockIdentityService.
+			mocking: func(m *initAppExecuteMocks) {
+				m.identityService.
 					EXPECT().
 					Get().
 					Return(identity.Caller{
 						Account: "12345",
 					}, nil)
-				mockWorkspace.
+				m.ws.
 					EXPECT().
 					Create(gomock.Eq("myapp")).
 					Return(mockError)
@@ -382,41 +382,37 @@ func TestInitAppOpts_Execute(t *testing.T) {
 		},
 		"with an error while deploying myapp": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
-				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
-				mockProgress *mocks.Mockprogress) {
-				mockIdentityService.
+			mocking: func(m *initAppExecuteMocks) {
+				m.identityService.
 					EXPECT().
 					Get().
 					Return(identity.Caller{
 						Account: "12345",
 					}, nil)
-				mockWorkspace.
+				m.ws.
 					EXPECT().
 					Create(gomock.Eq("myapp")).Return(nil)
-				mockDeployer.EXPECT().
+				m.deployer.EXPECT().
 					DeployApp(gomock.Any()).Return(mockError)
 			},
 		},
 		"should return error from CreateApplication": {
 			expectedError: mockError,
-			mocking: func(t *testing.T, mockstore *mocks.Mockstore, mockWorkspace *mocks.MockwsAppManager,
-				mockIdentityService *mocks.MockidentityService, mockDeployer *mocks.MockappDeployer,
-				mockProgress *mocks.Mockprogress) {
-				mockIdentityService.
+			mocking: func(m *initAppExecuteMocks) {
+				m.identityService.
 					EXPECT().
 					Get().
 					Return(identity.Caller{
 						Account: "12345",
 					}, nil)
-				mockstore.
+				m.store.
 					EXPECT().
 					CreateApplication(gomock.Any()).
 					Return(mockError)
-				mockWorkspace.
+				m.ws.
 					EXPECT().
 					Create(gomock.Eq("myapp")).Return(nil)
-				mockDeployer.EXPECT().
+				m.deployer.EXPECT().
 					DeployApp(gomock.Any()).Return(nil)
 			},
 		},
@@ -426,11 +422,15 @@ func TestInitAppOpts_Execute(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			mockstore := mocks.NewMockstore(ctrl)
-			mockWorkspace := mocks.NewMockwsAppManager(ctrl)
-			mockIdentityService := mocks.NewMockidentityService(ctrl)
-			mockDeployer := mocks.NewMockappDeployer(ctrl)
-			mockProgress := mocks.NewMockprogress(ctrl)
+
+			m := &initAppExecuteMocks{
+				store:           mocks.NewMockstore(ctrl),
+				ws:              mocks.NewMockwsAppManager(ctrl),
+				identityService: mocks.NewMockidentityService(ctrl),
+				deployer:        mocks.NewMockappDeployer(ctrl),
+				progress:        mocks.NewMockprogress(ctrl),
+			}
+			tc.mocking(m)
 
 			opts := &initAppOpts{
 				initAppVars: initAppVars{
@@ -441,14 +441,13 @@ func TestInitAppOpts_Execute(t *testing.T) {
 						"owner": "boss",
 					},
 				},
-				store:              mockstore,
-				identity:           mockIdentityService,
-				cfn:                mockDeployer,
-				ws:                 mockWorkspace,
-				prog:               mockProgress,
+				store:              m.store,
+				identity:           m.identityService,
+				cfn:                m.deployer,
+				ws:                 m.ws,
+				prog:               m.progress,
 				cachedHostedZoneID: tc.inDomainHostedZoneID,
 			}
-			tc.mocking(t, mockstore, mockWorkspace, mockIdentityService, mockDeployer, mockProgress)
 
 			// WHEN
 			err := opts.Execute()
