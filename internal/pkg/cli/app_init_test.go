@@ -59,7 +59,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 						"copilot-application": "metrics",
 					}, nil)
 			},
-			wantedError: errors.New("application named metrics already exists in another region"),
+			wantedError: errors.New("application named \"metrics\" already exists in another region"),
 		},
 		"valid app name without application in SSM and with IAM adminrole without copilot tag": {
 			inAppName: "metrics",
@@ -72,7 +72,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 						"mock-application": "metrics",
 					}, nil)
 			},
-			wantedError: errors.New("IAM admin role metrics-adminrole already exists in this account"),
+			wantedError: errors.New("IAM admin role \"metrics-adminrole\" already exists in this account"),
 		},
 		"valid app name without application in SSM and with IAM adminrole without any tag": {
 			inAppName: "metrics",
@@ -82,7 +82,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				})
 				m.mockRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(nil, nil)
 			},
-			wantedError: errors.New("IAM admin role metrics-adminrole already exists in this account"),
+			wantedError: errors.New("IAM admin role \"metrics-adminrole\" already exists in this account"),
 		},
 		"invalid app name": {
 			inAppName: "123chicken",
@@ -262,7 +262,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 						"copilot-application": "metrics",
 					}, nil)
 			},
-			wantedErr: "application named metrics already exists in another region",
+			wantedErr: "application named \"metrics\" already exists in another region",
 		},
 		"errors if summary exists and without application in SSM and with IAM adminrole without copliot tag": {
 			expect: func(opts *initAppOpts) {
@@ -275,7 +275,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 						"mock-application": "metrics",
 					}, nil)
 			},
-			wantedErr: "IAM admin role metrics-adminrole already exists in this account",
+			wantedErr: "IAM admin role \"metrics-adminrole\" already exists in this account",
 		},
 		"use argument if there is no summary": {
 			inAppName: "metrics",
@@ -324,7 +324,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantedErr: "application named metrics already exists in another region",
+			wantedErr: "application named \"metrics\" already exists in another region",
 		},
 		"enter new app name if no existing apps and without application in SSM and with IAM adminrole without copilot tag": {
 			expect: func(opts *initAppOpts) {
@@ -341,7 +341,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantedErr: "IAM admin role metrics-adminrole already exists in this account",
+			wantedErr: "IAM admin role \"metrics-adminrole\" already exists in this account",
 		},
 		"enter new app name if no existing apps and without application in SSM and with IAM adminrole without any tag": {
 			expect: func(opts *initAppOpts) {
@@ -355,7 +355,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 				opts.prompt.(*mocks.Mockprompter).EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				opts.prompt.(*mocks.Mockprompter).EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
-			wantedErr: "IAM admin role metrics-adminrole already exists in this account",
+			wantedErr: "IAM admin role \"metrics-adminrole\" already exists in this account",
 		},
 
 		"return error from app selection": {
@@ -433,7 +433,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 						"copilot-application": "mock-app",
 					}, nil)
 			},
-			wantedErr: "application named mock-app already exists in another region",
+			wantedErr: "application named \"mock-app\" already exists in another region",
 		},
 		"enter new app name if user opts out of selection and application does exists in SSM and IAM admin role does exist without copilot tag": {
 			expect: func(opts *initAppOpts) {
@@ -457,7 +457,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 						"mock-application": "mock-app",
 					}, nil)
 			},
-			wantedErr: "IAM admin role mock-app-adminrole already exists in this account",
+			wantedErr: "IAM admin role \"mock-app-adminrole\" already exists in this account",
 		},
 		"enter new app name if user opts out of selection and application does exists in SSM and IAM admin role does exist without any tag": {
 			expect: func(opts *initAppOpts) {
@@ -478,7 +478,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 				})
 				opts.iamRoleManager.(*mocks.MockroleManager).EXPECT().ListRoleTags(gomock.Eq("mock-app-adminrole")).Return(nil, nil)
 			},
-			wantedErr: "IAM admin role mock-app-adminrole already exists in this account",
+			wantedErr: "IAM admin role \"mock-app-adminrole\" already exists in this account",
 		},
 	}
 
