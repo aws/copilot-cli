@@ -199,7 +199,6 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, err
 	}
-	workspacePath := ws.Path()
 	defaultSession, err := in.SessionProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("create default: %w", err)
@@ -255,7 +254,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		env:                in.Env,
 		imageTag:           in.ImageTag,
 		resources:          resources,
-		workspacePath:      workspacePath,
+		workspacePath:      ws.Path(),
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
 		s3Client:           s3.New(envSession),
 		addons:             addons,

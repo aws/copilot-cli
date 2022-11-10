@@ -201,7 +201,6 @@ type initPipelineOpts struct {
 
 	// Cached variables
 	wsAppName    string
-	fs           *afero.Afero
 	buffer       bytes.Buffer
 	envConfigs   []*config.Environment
 	manifestPath string // relative path to pipeline's manifest.yml file
@@ -244,7 +243,6 @@ func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
 		prompt:           prompter,
 		sel:              selector.NewAppEnvSelector(prompter, ssmStore),
 		runner:           exec.NewCmd(),
-		fs:               &afero.Afero{Fs: afero.NewOsFs()},
 		wsAppName:        wsAppName,
 		pipelineLister:   deploy.NewPipelineStore(rg.New(defaultSession)),
 	}, nil

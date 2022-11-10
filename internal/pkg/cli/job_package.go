@@ -91,7 +91,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			newInterpolator:   newManifestInterpolator,
 			paramsWriter:      discardFile{},
 			addonsWriter:      discardFile{},
-			fs:                &afero.Afero{Fs: fs},
+			fs:                fs,
 			sessProvider:      sessProvider,
 			newStackGenerator: newWorkloadStackGenerator,
 		}
