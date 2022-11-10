@@ -16,6 +16,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/config"
+	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
@@ -26,9 +27,10 @@ import (
 )
 
 type deployEnvVars struct {
-	appName        string
-	name           string
-	forceNewUpdate bool
+	appName         string
+	name            string
+	forceNewUpdate  bool
+	disableRollback bool
 }
 
 type deployEnvOpts struct {
@@ -146,6 +148,7 @@ func (o *deployEnvOpts) Execute() error {
 		ForceNewUpdate:      o.forceNewUpdate,
 		RawManifest:         rawMft,
 		PermissionsBoundary: o.targetApp.PermissionsBoundary,
+		DisableRollback:     o.disableRollback,
 	}); err != nil {
 		var errEmptyChangeSet *awscfn.ErrChangeSetEmpty
 		if errors.As(err, &errEmptyChangeSet) {
@@ -155,6 +158,16 @@ necessary by a service deployment.
 
 In this case, you can run %s to push a modified template, even if there are no immediate changes.
 `, color.HighlightCode("copilot env deploy --force"))
+		}
+		if o.disableRollback {
+			stackName := stack.NameForEnv(o.targetApp.Name, o.targetEnv.Name)
+			rollbackCmd := fmt.Sprintf("aws cloudformation rollback-stack --stack-name %s --role-arn %s", stackName, o.targetEnv.ExecutionRoleARN)
+			log.Infof(`It seems like you have disabled automatic stack rollback for this deployment.
+To debug, you can visit the AWS console to inspect the errors.
+After fixing the deployment, you can:
+1. Run %s to rollback the deployment.
+2. Run %s to make a new deployment.
+`, color.HighlightCode(rollbackCmd), color.HighlightCode("copilot env deploy"))
 		}
 		return fmt.Errorf("deploy environment %s: %w", o.name, err)
 	}
@@ -270,5 +283,6 @@ Deploy an environment named "test".
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", envFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceEnvDeployFlagDescription)
+	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)
 	return cmd
 }
