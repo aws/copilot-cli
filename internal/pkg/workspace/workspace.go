@@ -569,11 +569,7 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 
 // write flushes the data to a file under the copilot directory joined by path elements.
 func (ws *Workspace) write(data []byte, elem ...string) (string, error) {
-	copilotPath, err := ws.copilotDirPath()
-	if err != nil {
-		return "", err
-	}
-	pathElems := append([]string{copilotPath}, elem...)
+	pathElems := append([]string{ws.copilotDirAbs}, elem...)
 	filename := filepath.Join(pathElems...)
 
 	if err := ws.fs.MkdirAll(filepath.Dir(filename), 0755 /* -rwxr-xr-x */); err != nil {
@@ -594,11 +590,7 @@ func (ws *Workspace) write(data []byte, elem ...string) (string, error) {
 
 // read returns the contents of the file under the copilot directory joined by path elements.
 func (ws *Workspace) read(elem ...string) ([]byte, error) {
-	copilotPath, err := ws.copilotDirPath()
-	if err != nil {
-		return nil, err
-	}
-	pathElems := append([]string{copilotPath}, elem...)
+	pathElems := append([]string{ws.copilotDirAbs}, elem...)
 	filename := filepath.Join(pathElems...)
 	exist, err := ws.fs.Exists(filename)
 	if err != nil {
