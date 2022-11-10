@@ -87,12 +87,12 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	fs := afero.NewOsFs()
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)
 	}
-	ws, err := workspace.Use(fs, workingDir)
+	ws, err := workspace.Use(afero.NewOsFs(), workingDir)
 	if err != nil {
 		return nil, err
 	}

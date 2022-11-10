@@ -210,8 +210,7 @@ func TestWorkspace_Create(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Set up filesystem.
-			fs := &afero.Afero{Fs: tc.mockFileSystem()}
-			gotWS, err := Create(tc.appName, fs, tc.workingDir)
+			gotWS, err := Create(tc.appName, tc.mockFileSystem(), tc.workingDir)
 			if tc.expectedError == nil {
 				// an operation not permitted error means
 				// we tried to write to the filesystem, but
@@ -222,7 +221,7 @@ func TestWorkspace_Create(t *testing.T) {
 				require.Equal(t, tc.expectedCopilotDirAbs, gotWS.copilotDirAbs)
 
 				// Validate that the workspace dir is created.
-				exist, err := fs.Exists(tc.expectedCopilotDirAbs)
+				exist, err := gotWS.fs.Exists(tc.expectedCopilotDirAbs)
 				require.NoError(t, err)
 				require.True(t, exist)
 
@@ -299,8 +298,7 @@ func TestWorkspace_Use(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Set up filesystem.
-			fs := &afero.Afero{Fs: tc.mockFileSystem()}
-			gotWS, err := Use(fs, tc.workingDir)
+			gotWS, err := Use(tc.mockFileSystem(), tc.workingDir)
 			if tc.expectedError == nil {
 				// an operation not permitted error means
 				// we tried to write to the filesystem, but
@@ -311,7 +309,7 @@ func TestWorkspace_Use(t *testing.T) {
 				require.Equal(t, tc.expectedCopilotDirAbs, gotWS.copilotDirAbs)
 
 				// Validate that the workspace dir is there.
-				exist, err := fs.Exists(tc.expectedCopilotDirAbs)
+				exist, err := gotWS.fs.Exists(tc.expectedCopilotDirAbs)
 				require.NoError(t, err)
 				require.True(t, exist)
 

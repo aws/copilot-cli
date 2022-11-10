@@ -82,7 +82,7 @@ type initJobOpts struct {
 }
 
 func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	fs := afero.NewOsFs()
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)

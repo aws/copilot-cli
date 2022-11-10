@@ -196,7 +196,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		return nil, err
 	}
 
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	fs := afero.NewOsFs()
 	workingDir, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("get working directory: %w", err)

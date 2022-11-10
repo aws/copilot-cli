@@ -90,7 +90,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
 		existingWorkspace: func() (wsAppManager, error) {
-			return workspace.Use(&afero.Afero{Fs: fs}, workingDir)
+			return workspace.Use(fs, workingDir)
 		},
 		newWorkspace: func(appName string) (wsAppManager, error) {
 			return workspace.Create(appName, &afero.Afero{Fs: fs}, workingDir)
