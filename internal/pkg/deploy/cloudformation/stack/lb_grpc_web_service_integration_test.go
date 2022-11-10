@@ -8,10 +8,12 @@ package stack_test
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
 
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -60,9 +62,15 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
-		ws, err := workspace.New()
+		// Create in-memory mock file system.
+		wd, err := os.Getwd()
+		require.NoError(t, err)
+		fs := afero.NewMemMapFs()
+		_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
+		_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", wd), []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
 		require.NoError(t, err)
 
+		ws, err := workspace.Use(fs)
 		_, err = addon.Parse(aws.StringValue(v.Name), ws)
 		var notFound *addon.ErrAddonsNotFound
 		require.ErrorAs(t, err, &notFound)
