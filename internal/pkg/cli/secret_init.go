@@ -6,6 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -86,9 +87,14 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	ws, err := workspace.New()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	ws, err := workspace.Use(fs, workingDir)
+	if err != nil {
+		return nil, err
 	}
 
 	store := config.NewSSMStore(identity.New(defaultSession), awsssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
@@ -96,7 +102,7 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 	opts := secretInitOpts{
 		secretInitVars: vars,
 		store:          store,
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+		fs:             fs,
 		ws:             ws,
 
 		envCompatibilityChecker: make(map[string]versionCompatibilityChecker),

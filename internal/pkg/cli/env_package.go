@@ -49,7 +49,7 @@ func (df discardFile) Write(p []byte) (n int, err error) {
 }
 
 func (df discardFile) Close() error {
-	return nil //noop
+	return nil // noop
 }
 
 type packageEnvOpts struct {
@@ -79,9 +79,14 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 		return nil, fmt.Errorf("default session: %v", err)
 	}
 
-	ws, err := workspace.New()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %v", err)
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	ws, err := workspace.Use(fs, workingDir)
+	if err != nil {
+		return nil, err
 	}
 	cfgStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 
@@ -92,7 +97,7 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 		ws:           ws,
 		sel:          selector.NewLocalEnvironmentSelector(prompt.New(), cfgStore, ws),
 		caller:       identity.New(defaultSess),
-		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		fs:           fs,
 		tplWriter:    os.Stdout,
 		paramsWriter: discardFile{},
 

@@ -5,8 +5,10 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -53,9 +55,14 @@ func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 		return nil, err
 	}
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-	ws, err := workspace.New()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	ws, err := workspace.Use(fs, workingDir)
+	if err != nil {
+		return nil, err
 	}
 	prompter := prompt.New()
 

@@ -14,6 +14,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/dustin/go-humanize/english"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 
@@ -193,9 +194,14 @@ func newInitEnvOpts(vars initEnvVars) (*initEnvOpts, error) {
 
 	prompter := prompt.New()
 
-	ws, err := workspace.New()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("create workspace: %w", err)
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	ws, err := workspace.Use(fs, workingDir)
+	if err != nil {
+		return nil, err
 	}
 	return &initEnvOpts{
 		initEnvVars:  vars,

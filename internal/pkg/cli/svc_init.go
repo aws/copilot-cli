@@ -156,9 +156,14 @@ type initSvcOpts struct {
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
-	ws, err := workspace.New()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	ws, err := workspace.Use(fs, workingDir)
+	if err != nil {
+		return nil, err
 	}
 
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc init"))
@@ -183,7 +188,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
-		fs:           &afero.Afero{Fs: afero.NewOsFs()},
+		fs:           fs,
 		init:         initSvc,
 		prompt:       prompter,
 		sel:          selector.NewWorkspaceSelector(prompter, ws),

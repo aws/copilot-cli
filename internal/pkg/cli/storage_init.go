@@ -7,6 +7,7 @@ import (
 	"encoding"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -195,9 +196,14 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		return nil, err
 	}
 
-	ws, err := workspace.New()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("new workspace client: %w", err)
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	ws, err := workspace.Use(fs, workingDir)
+	if err != nil {
+		return nil, err
 	}
 
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
@@ -206,7 +212,7 @@ func newStorageInitOpts(vars initStorageVars) (*initStorageOpts, error) {
 		initStorageVars: vars,
 		appName:         tryReadingAppName(),
 
-		fs:     &afero.Afero{Fs: afero.NewOsFs()},
+		fs:     fs,
 		store:  store,
 		ws:     ws,
 		sel:    selector.NewLocalWorkloadSelector(prompter, store, ws),

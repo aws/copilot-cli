@@ -82,9 +82,14 @@ type initJobOpts struct {
 }
 
 func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
-	ws, err := workspace.New()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("workspace cannot be created: %w", err)
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	ws, err := workspace.Use(fs, workingDir)
+	if err != nil {
+		return nil, err
 	}
 
 	p := sessions.ImmutableProvider(sessions.UserAgentExtras("job init"))
@@ -93,9 +98,6 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(sess), ssm.New(sess), aws.StringValue(sess.Config.Region))
-
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
-
 	jobInitter := &initialize.WorkloadInitializer{
 		Store:    store,
 		Ws:       ws,

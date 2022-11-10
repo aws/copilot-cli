@@ -92,7 +92,12 @@ type initOpts struct {
 }
 
 func newInitOpts(vars initVars) (*initOpts, error) {
-	ws, err := workspace.New()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	ws, err := workspace.Use(fs, workingDir)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +125,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			name: vars.appName,
 		},
 		store:    configStore,
-		ws:       ws,
 		prompt:   prompt,
 		identity: id,
 		cfn:      deployer,
@@ -197,7 +201,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	deployJobCmd.newJobDeployer = func() (workloadDeployer, error) {
 		return newJobDeployer(deployJobCmd)
 	}
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	cmd := exec.NewCmd()
 	return &initOpts{
 		initVars:     vars,

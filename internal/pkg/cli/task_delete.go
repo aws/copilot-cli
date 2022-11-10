@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
@@ -74,9 +75,14 @@ type deleteTaskOpts struct {
 }
 
 func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
-	ws, err := workspace.New()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	workingDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	ws, err := workspace.Use(fs, workingDir)
+	if err != nil {
+		return nil, err
 	}
 
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("task delete"))

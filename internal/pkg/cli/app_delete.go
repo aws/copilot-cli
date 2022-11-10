@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -69,7 +70,15 @@ type deleteAppOpts struct {
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
-	ws, err := workspace.New()
+	fs := &afero.Afero{Fs: afero.NewOsFs()}
+	workingDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	ws, err := workspace.Use(fs, workingDir)
+	if err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, fmt.Errorf("new workspace: %w", err)
 	}
