@@ -15,7 +15,8 @@ Metadata:
           private:
             - id: 'subnet-33333'
             - id: 'subnet-44444'
-        flow_logs: on
+        flow_logs:
+         retention: 60
     
 Parameters:
   AppName:
@@ -833,12 +834,13 @@ Resources:
       DomainName: !Ref AppDNSName
       PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
       PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
-  LogGroup:
+  VpcFlowLogGroup:
     Type: AWS::Logs::LogGroup
     Metadata:
-      'aws:copilot:description': 'A  log group to create a flow log for the VPC'
+      'aws:copilot:description': 'A CloudWatch log group to store VPC flow log data'
     Properties:
-      RetentionInDays: 14    
+      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
+      RetentionInDays: 60  
   FlowLog:
     Metadata:
       'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'
@@ -846,7 +848,7 @@ Resources:
     Properties:
       DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
       LogDestinationType: cloud-watch-logs
-      LogGroupName: !Ref LogGroup
+      LogGroupName: !Ref VpcFlowLogGroup
       MaxAggregationInterval: 60
       ResourceId: vpc-12345                 
       ResourceType: VPC

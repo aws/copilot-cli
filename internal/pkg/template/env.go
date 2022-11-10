@@ -178,7 +178,7 @@ type VPCConfig struct {
 	Managed             ManagedVPC
 	AllowVPCIngress     bool
 	SecurityGroupConfig *SecurityGroupConfig
-	FlowLogs            bool
+	FlowLogs            *VPCFlowLogs
 }
 
 // ImportVPC holds the fields to import VPC resources.
@@ -213,6 +213,10 @@ type SecurityGroupRule struct {
 	FromPort   int
 	IpProtocol string
 	ToPort     int
+}
+
+type VPCFlowLogs struct {
+	Retention *int
 }
 
 // ParseEnv parses an environment's CloudFormation template with the specified data object and returns its content.

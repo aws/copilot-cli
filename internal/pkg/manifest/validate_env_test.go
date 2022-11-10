@@ -187,6 +187,30 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			},
 			wantedError: "CDN must be enabled to limit security group ingress to CloudFront",
 		},
+		"valid vpc flowlogs with default retention": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						FlowLogs: VPCFlowLogsArgsorBool{
+							Enabled: aws.Bool(true),
+						},
+					},
+				},
+			},
+		},
+		"valid vpc flowlogs with a specified retention": {
+			in: EnvironmentConfig{
+				Network: environmentNetworkConfig{
+					VPC: environmentVPCConfig{
+						FlowLogs: VPCFlowLogsArgsorBool{
+							AdvancedFlowLogConfig: VPCFlowLogsArgs{
+								Retention: aws.Int(30),
+							},
+						},
+					},
+				},
+			},
+		},
 		"valid elb access logs config with bucket_prefix": {
 			in: EnvironmentConfig{
 				HTTPConfig: EnvironmentHTTPConfig{

@@ -381,6 +381,19 @@ func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessL
 	}, nil
 }
 
+func convertFlowLogsConfig(mft *manifest.Environment) (*template.VPCFlowLogs, error) {
+	vpcFlowLogsArgs := mft.EnvironmentConfig.Network.VPC.FlowLogs.AdvancedFlowLogConfig
+	if !mft.VPCFlowLogsEnabled() {
+		return nil, nil
+	}
+	if vpcFlowLogsArgs.Retention == nil {
+		return &template.VPCFlowLogs{}, nil
+	}
+	return &template.VPCFlowLogs{
+		Retention: vpcFlowLogsArgs.Retention,
+	}, nil
+}
+
 func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {
 	securityGroupConfig, isSecurityConfigSet := mft.EnvSecurityGroup()
 	if !isSecurityConfigSet {

@@ -270,7 +270,8 @@ network:
       private:
         - id: 'subnet-33333'
         - id: 'subnet-44444'
-    flow_logs: on`
+    flow_logs:
+     retention: 60`
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)

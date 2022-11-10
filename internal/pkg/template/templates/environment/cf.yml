@@ -584,13 +584,18 @@ Resources:
 {{- if not .VPCConfig.Imported}}
 {{include "ar-vpc-connector" . | indent 2}}
 {{- end}}
-{{- if .VPCConfig.FlowLogs }}
-  LogGroup:
+{{- if .VPCConfig.FlowLogs}}
+  VpcFlowLogGroup:
     Type: AWS::Logs::LogGroup
     Metadata:
-      'aws:copilot:description': 'A  log group to create a flow log for the VPC'
+      'aws:copilot:description': 'A CloudWatch log group to store VPC flow log data'
     Properties:
-      RetentionInDays: 14
+      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
+{{- if .VPCConfig.FlowLogs.Retention}}
+      RetentionInDays: {{.VPCConfig.FlowLogs.Retention}} 
+{{- else}}
+      RetentionInDays: 14           
+{{- end}}        
   FlowLog:
     Metadata:
       'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'
@@ -598,7 +603,7 @@ Resources:
     Properties:
       DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
       LogDestinationType: cloud-watch-logs
-      LogGroupName: !Ref LogGroup
+      LogGroupName: !Ref VpcFlowLogGroup
       MaxAggregationInterval: 60
 {{- if .VPCConfig.Imported}}
       ResourceId: {{.VPCConfig.Imported.ID}}

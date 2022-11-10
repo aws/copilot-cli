@@ -24,6 +24,7 @@ var (
 	errUnmarshalPortsConfig          = errors.New(`unable to unmarshal ports field into int or a range`)
 	errUnmarshalEnvironmentCDNConfig = errors.New(`unable to unmarshal cdn field into bool or composite-style map`)
 	errUnmarshalELBAccessLogs        = errors.New(`unable to unmarshal access_logs field into bool or ELB Access logs config`)
+	errUnmarshalVPCFlowLogs          = errors.New(`unable to unmarshal flow_logs field into bool or composite-style map`)
 )
 
 // Environment is the manifest configuration for an environment.
@@ -119,11 +120,11 @@ type environmentNetworkConfig struct {
 }
 
 type environmentVPCConfig struct {
-	ID                  *string              `yaml:"id,omitempty"`
-	CIDR                *IPNet               `yaml:"cidr,omitempty"`
-	Subnets             subnetsConfiguration `yaml:"subnets,omitempty"`
-	SecurityGroupConfig securityGroupConfig  `yaml:"security_group,omitempty"`
-	Flowlogs            *bool                `yaml:"flow_logs,omitempty"`
+	ID                  *string               `yaml:"id,omitempty"`
+	CIDR                *IPNet                `yaml:"cidr,omitempty"`
+	Subnets             subnetsConfiguration  `yaml:"subnets,omitempty"`
+	SecurityGroupConfig securityGroupConfig   `yaml:"security_group,omitempty"`
+	FlowLogs            VPCFlowLogsArgsorBool `yaml:"flow_logs,omitempty"`
 }
 
 type securityGroupConfig struct {
@@ -185,6 +186,55 @@ func (cfg *portsConfig) UnmarshalYAML(value *yaml.Node) error {
 		return errUnmarshalPortsConfig
 	}
 	return nil
+}
+
+// VPCFlowLogsArgsOrBool is a custom type which supports unmarshaling yaml which
+// can either be of type bool or type VPCFlowLogsArgs.
+type VPCFlowLogsArgsorBool struct {
+	Enabled               *bool
+	AdvancedFlowLogConfig VPCFlowLogsArgs
+}
+
+func (fl *VPCFlowLogsArgsorBool) isEmpty() bool {
+	return fl.Enabled == nil && fl.AdvancedFlowLogConfig.isEmpty()
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the VPCFlowLogsArgsOrBool
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (fl *VPCFlowLogsArgsorBool) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&fl.AdvancedFlowLogConfig); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+	if !fl.AdvancedFlowLogConfig.isEmpty() {
+		// Successfully unmarshalled AdvancedFlowLogConfig fields, return
+		return nil
+	}
+	if err := value.Decode(&fl.Enabled); err != nil {
+		return errUnmarshalVPCFlowLogs
+	}
+	return nil
+
+}
+
+// VPCFlowLogsArgs holds the flow logs configuration
+type VPCFlowLogsArgs struct {
+	Retention *int `yaml:"retention,omitempty"`
+}
+
+func (fl *VPCFlowLogsArgs) isEmpty() bool {
+	return fl.Retention == nil
+}
+
+// VPCFlowLogsEnabled returns whether a VPCFlowLog has been enabled in the Environment Manifest.
+func (cfg *EnvironmentConfig) VPCFlowLogsEnabled() bool {
+	if !cfg.Network.VPC.FlowLogs.AdvancedFlowLogConfig.isEmpty() {
+		return true
+	}
+	return aws.BoolValue(cfg.Network.VPC.FlowLogs.Enabled)
 }
 
 // EnvSecurityGroup returns the security group config if the user has set any values.
@@ -262,7 +312,7 @@ func (cfg *EnvironmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 
 // IsEmpty returns true if vpc is not configured.
 func (cfg environmentVPCConfig) IsEmpty() bool {
-	return cfg.ID == nil && cfg.CIDR == nil && cfg.Subnets.IsEmpty() && cfg.Flowlogs == nil
+	return cfg.ID == nil && cfg.CIDR == nil && cfg.Subnets.IsEmpty() && cfg.FlowLogs.isEmpty()
 }
 
 func (cfg *environmentVPCConfig) loadVPCConfig(env *config.CustomizeEnv) {
