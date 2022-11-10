@@ -92,7 +92,7 @@ func Use(fs afero.Fs) (*Workspace, error) {
 	return ws, nil
 }
 
-// Create creates a new *Workspace in the current working directory for appName if it doesn't already exist.
+// Create creates a new Workspace in the current working directory for appName with summary if it doesn't already exist.
 func Create(appName string, fs afero.Fs) (*Workspace, error) {
 	workingDirAbs, err := os.Getwd()
 	if err != nil {
@@ -533,10 +533,6 @@ func (ws *Workspace) Rel(path string) (string, error) {
 
 // copilotDirPath tries to find the current app's copilot directory from the workspace working directory.
 func (ws *Workspace) copilotDirPath() (string, error) {
-	if ws.copilotDirAbs != "" {
-		return ws.copilotDirAbs, nil
-	}
-
 	// Are we in the application's copilot directory already?
 	//
 	// Note: This code checks for *any* directory named "copilot", but this might not work
@@ -544,8 +540,7 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 	// to name "copilot". It's not clear if there's a good way to avoid that problem, though it
 	// doesn't seem to be a terribly likely issue.
 	if filepath.Base(ws.workingDirAbs) == CopilotDirName {
-		ws.copilotDirAbs = ws.workingDirAbs
-		return ws.copilotDirAbs, nil
+		return ws.workingDirAbs, nil
 	}
 
 	// We might be in the application directory or in a subdirectory of the application
@@ -561,8 +556,7 @@ func (ws *Workspace) copilotDirPath() (string, error) {
 			return "", err
 		}
 		if inCurrentDirPath {
-			ws.copilotDirAbs = currentDirectoryPath
-			return ws.copilotDirAbs, nil
+			return currentDirectoryPath, nil
 		}
 		searchingDir = filepath.Dir(searchingDir)
 	}
