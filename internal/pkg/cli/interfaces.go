@@ -240,7 +240,7 @@ type environmentManifestWriter interface {
 }
 
 type workspacePathGetter interface {
-	Path() (string, error)
+	Path() string
 }
 
 type wsPipelineManifestReader interface {

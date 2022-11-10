@@ -2299,12 +2299,11 @@ func (m *MockworkspacePathGetter) EXPECT() *MockworkspacePathGetterMockRecorder 
 }
 
 // Path mocks base method.
-func (m *MockworkspacePathGetter) Path() (string, error) {
+func (m *MockworkspacePathGetter) Path() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Path")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // Path indicates an expected call of Path.
@@ -2731,12 +2730,11 @@ func (mr *MockwsJobDirReaderMockRecorder) ListJobs() *gomock.Call {
 }
 
 // Path mocks base method.
-func (m *MockwsJobDirReader) Path() (string, error) {
+func (m *MockwsJobDirReader) Path() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Path")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // Path indicates an expected call of Path.
@@ -2859,12 +2857,11 @@ func (mr *MockwsWlDirReaderMockRecorder) ListWorkloads() *gomock.Call {
 }
 
 // Path mocks base method.
-func (m *MockwsWlDirReader) Path() (string, error) {
+func (m *MockwsWlDirReader) Path() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Path")
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // Path indicates an expected call of Path.

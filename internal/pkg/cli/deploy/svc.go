@@ -204,10 +204,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	if err != nil {
 		return nil, err
 	}
-	workspacePath, err := ws.Path()
-	if err != nil {
-		return nil, fmt.Errorf("get workspace path: %w", err)
-	}
+	workspacePath := ws.Path()
 	defaultSession, err := in.SessionProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("create default: %w", err)

@@ -31,8 +31,8 @@ var (
 )
 
 type workspaceReader interface {
-	WorkloadAddonsPath(name string) (string, error)
-	WorkloadAddonFilePath(wkldName, fName string) (string, error)
+	WorkloadAddonsPath(name string) string
+	WorkloadAddonFilePath(wkldName, fName string) string
 	ListFiles(dirPath string) ([]string, error)
 	ReadFile(fPath string) ([]byte, error)
 }
@@ -49,13 +49,7 @@ type Stack struct {
 // files found there. If no addons are found, Parse returns a nil
 // Stack and ErrAddonsNotFound.
 func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
-	path, err := ws.WorkloadAddonsPath(workloadName)
-	if err != nil {
-		return nil, &ErrAddonsNotFound{
-			WlName:    workloadName,
-			ParentErr: err,
-		}
-	}
+	path := ws.WorkloadAddonsPath(workloadName)
 	fNames, err := ws.ListFiles(path)
 	if err != nil {
 		return nil, &ErrAddonsNotFound{
@@ -128,10 +122,7 @@ func parseTemplate(fnames []string, workloadName string, ws workspaceReader) (*c
 
 	mergedTemplate := newCFNTemplate("merged")
 	for _, fname := range templateFiles {
-		path, err := ws.WorkloadAddonFilePath(workloadName, fname)
-		if err != nil {
-			return nil, fmt.Errorf("get addon %s file path under %s: %w", fname, workloadName, err)
-		}
+		path := ws.WorkloadAddonFilePath(workloadName, fname)
 		out, err := ws.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("read addon %s under %s: %w", fname, workloadName, err)
@@ -162,10 +153,7 @@ func parseParameters(fnames []string, workloadName string, ws workspaceReader) (
 		return yaml.Node{}, fmt.Errorf("defining %s is not allowed under %s addons/", english.WordSeries(parameterFileNames, "and"), workloadName)
 	}
 	paramFile := paramFiles[0]
-	path, err := ws.WorkloadAddonFilePath(workloadName, paramFile)
-	if err != nil {
-		return yaml.Node{}, fmt.Errorf("get parameter file %s path under %s addons/: %w", paramFile, workloadName, err)
-	}
+	path := ws.WorkloadAddonFilePath(workloadName, paramFile)
 	raw, err := ws.ReadFile(path)
 	if err != nil {
 		return yaml.Node{}, fmt.Errorf("read parameter file %s under %s addons/: %w", paramFile, workloadName, err)
