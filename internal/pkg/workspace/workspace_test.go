@@ -143,6 +143,9 @@ func TestWorkspace_Summary(t *testing.T) {
 }
 
 func TestWorkspace_Create(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	parent := filepath.Dir(wd)
 	testCases := map[string]struct {
 		appName        string
 		workingDir     string
@@ -151,60 +154,54 @@ func TestWorkspace_Create(t *testing.T) {
 		expectedError         error
 		expectedCopilotDirAbs string
 	}{
-		"successful no-op with existing workspace and workspace summary": {
-			workingDir: "test/",
-			appName:    "DavidsApp",
+		"successful no-op with existing workspace and summary": {
+			appName: "DavidsApp",
 			mockFileSystem: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("test/copilot", 0755)
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+				_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
+				_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", wd), []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
 				fs = afero.NewReadOnlyFs(fs) // No write/
 				return fs
 			},
-			expectedCopilotDirAbs: "test/copilot",
+			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", wd),
 		},
-		"successful no-op existing workspace and workspace summary in a parent directory": {
-			workingDir: "test/app/",
-			appName:    "DavidsApp",
+		"successful no-op with existing workspace and summary in a parent directory": {
+			appName: "DavidsApp",
 			mockFileSystem: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("test/copilot", 0755)
-				fs.MkdirAll("test/app", 0755)
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+				_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", parent), 0755)
+				_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", parent), []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
 				fs = afero.NewReadOnlyFs(fs) // No write.
 				return fs
 			},
-			expectedCopilotDirAbs: "test/copilot",
+			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", parent),
 		},
 		"error if workspace exists but associated with different application": {
-			workingDir: "test/",
-			appName:    "DavidsApp",
+			appName: "DavidsApp",
 			mockFileSystem: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("test/copilot", 0755)
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsOtherApp")), 0644)
+				_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
+				_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", wd), []byte(fmt.Sprintf("---\napplication: %s", "DavidsOtherApp")), 0644)
 				fs = afero.NewReadOnlyFs(fs) // No write.
 				return fs
 			},
 			expectedError: fmt.Errorf("workspace is already registered with application DavidsOtherApp under %s", filepath.FromSlash("copilot/.workspace")),
 		},
 		"successfully create a work summary if workspace existing but no workspace summary": {
-			workingDir: "test/",
-			appName:    "DavidsApp",
+			appName: "DavidsApp",
 			mockFileSystem: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("test/copilot", 0755)
+				_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
 				return fs
 			},
-			expectedCopilotDirAbs: "test/copilot",
+			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", wd),
 		},
 		"successfully create both workspace and summary if neither exists": {
-			workingDir: "test/",
-			appName:    "DavidsApp",
+			appName: "DavidsApp",
 			mockFileSystem: func() afero.Fs {
 				return afero.NewMemMapFs()
 			},
-			expectedCopilotDirAbs: "test/copilot",
+			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", wd),
 		},
 	}
 	for name, tc := range testCases {
@@ -238,6 +235,9 @@ func TestWorkspace_Create(t *testing.T) {
 }
 
 func TestWorkspace_Use(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	parent := filepath.Dir(wd)
 	testCases := map[string]struct {
 		appName        string
 		workingDir     string
@@ -247,49 +247,44 @@ func TestWorkspace_Use(t *testing.T) {
 		expectedCopilotDirAbs string
 	}{
 		"returns the existing workspace that has the summary": {
-			workingDir: "test/",
-			appName:    "DavidsApp",
+			appName: "DavidsApp",
 			mockFileSystem: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("test/copilot", 0755)
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+				_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
+				_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", wd), []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
 				fs = afero.NewReadOnlyFs(fs) // No write/
 				return fs
 			},
-			expectedCopilotDirAbs: "test/copilot",
+			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", wd),
 		},
 		"returns the existing workspace and workspace summary in a parent directory": {
-			workingDir: "test/app/",
-			appName:    "DavidsApp",
+			appName: "DavidsApp",
 			mockFileSystem: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("test/copilot", 0755)
-				fs.MkdirAll("test/app", 0755)
-				afero.WriteFile(fs, "test/copilot/.workspace", []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+				_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", parent), 0755)
+				_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", parent), []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
 				fs = afero.NewReadOnlyFs(fs) // No write.
 				return fs
 			},
-			expectedCopilotDirAbs: "test/copilot",
+			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", parent),
 		},
 		"returns the existing workspace that does not have a workspace summary": {
-			workingDir: "test/",
-			appName:    "DavidsApp",
+			appName: "DavidsApp",
 			mockFileSystem: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("test/copilot", 0755)
+				_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
 				return fs
 			},
-			expectedCopilotDirAbs: "test/copilot",
+			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", wd),
 		},
 		"ErrWorkspaceNotFound if there is no workspace": {
-			workingDir: "test/",
 			mockFileSystem: func() afero.Fs {
 				fs := afero.NewMemMapFs()
-				fs.MkdirAll("test/webhook", 0755)
+				_ = fs.MkdirAll(fmt.Sprintf("%s/webhook", wd), 0755)
 				return fs
 			},
 			expectedError: &ErrWorkspaceNotFound{
-				CurrentDirectory:      "test/",
+				CurrentDirectory:      wd,
 				ManifestDirectoryName: CopilotDirName,
 				NumberOfLevelsChecked: maximumParentDirsToSearch,
 			},
