@@ -97,12 +97,7 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 
 	prompter := prompt.New()
-
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
-	}
-	ws, err := workspace.Use(afero.NewOsFs(), workingDir)
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
 		return nil, err
 	}

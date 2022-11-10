@@ -58,12 +58,8 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
-	}
-	ws, err := workspace.Use(afero.NewOsFs(), workingDir)
+	fs := afero.NewOsFs()
+	ws, err := workspace.Use(fs)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +91,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			newInterpolator:   newManifestInterpolator,
 			paramsWriter:      discardFile{},
 			addonsWriter:      discardFile{},
-			fs:                &afero.Afero{Fs: afero.NewOsFs()},
+			fs:                &afero.Afero{Fs: fs},
 			sessProvider:      sessProvider,
 			newStackGenerator: newWorkloadStackGenerator,
 		}

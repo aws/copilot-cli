@@ -6,7 +6,6 @@ package cli
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -60,12 +59,7 @@ type pipelineStatusOpts struct {
 }
 
 func newPipelineStatusOpts(vars pipelineStatusVars) (*pipelineStatusOpts, error) {
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
-	}
-	ws, err := workspace.Use(fs, workingDir)
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
 		return nil, err
 	}

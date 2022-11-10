@@ -31,12 +31,7 @@ const (
 // tryReadingAppName retrieves the application's name from the workspace if it exists and returns it.
 // If there is an error while retrieving the workspace summary, returns the empty string.
 func tryReadingAppName() string {
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return ""
-	}
-	ws, err := workspace.Use(fs, workingDir)
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
 		return ""
 	}

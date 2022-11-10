@@ -214,11 +214,7 @@ type artifactBucket struct {
 }
 
 func newInitPipelineOpts(vars initPipelineVars) (*initPipelineOpts, error) {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
-	}
-	ws, err := workspace.Use(afero.NewOsFs(), workingDir)
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
 		return nil, err
 	}

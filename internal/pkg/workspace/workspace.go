@@ -74,7 +74,11 @@ type Workspace struct {
 
 // Use returns an existing workspace, searching for a copilot/ directory from the current wd,
 // up to 5 levels above. It returns ErrWorkspaceNotFound if no copilot/ directory is found.
-func Use(fs afero.Fs, workingDirAbs string) (*Workspace, error) {
+func Use(fs afero.Fs) (*Workspace, error) {
+	workingDirAbs, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
 	ws := &Workspace{
 		workingDirAbs: workingDirAbs,
 		fs:            &afero.Afero{Fs: fs},
@@ -89,7 +93,11 @@ func Use(fs afero.Fs, workingDirAbs string) (*Workspace, error) {
 }
 
 // Create creates a new *Workspace in the current working directory for appName if it doesn't already exist.
-func Create(appName string, fs afero.Fs, workingDirAbs string) (*Workspace, error) {
+func Create(appName string, fs afero.Fs) (*Workspace, error) {
+	workingDirAbs, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
 	ws := &Workspace{
 		workingDirAbs: workingDirAbs,
 		fs:            &afero.Afero{Fs: fs},

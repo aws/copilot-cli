@@ -148,7 +148,6 @@ func TestWorkspace_Create(t *testing.T) {
 	parent := filepath.Dir(wd)
 	testCases := map[string]struct {
 		appName        string
-		workingDir     string
 		mockFileSystem func() afero.Fs
 
 		expectedError         error
@@ -207,7 +206,7 @@ func TestWorkspace_Create(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Set up filesystem.
-			gotWS, err := Create(tc.appName, tc.mockFileSystem(), tc.workingDir)
+			gotWS, err := Create(tc.appName, tc.mockFileSystem())
 			if tc.expectedError == nil {
 				// an operation not permitted error means
 				// we tried to write to the filesystem, but
@@ -240,7 +239,6 @@ func TestWorkspace_Use(t *testing.T) {
 	parent := filepath.Dir(wd)
 	testCases := map[string]struct {
 		appName        string
-		workingDir     string
 		mockFileSystem func() afero.Fs
 
 		expectedError         error
@@ -293,7 +291,7 @@ func TestWorkspace_Use(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// Set up filesystem.
-			gotWS, err := Use(tc.mockFileSystem(), tc.workingDir)
+			gotWS, err := Use(tc.mockFileSystem())
 			if tc.expectedError == nil {
 				// an operation not permitted error means
 				// we tried to write to the filesystem, but

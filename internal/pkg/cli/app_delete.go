@@ -70,18 +70,10 @@ type deleteAppOpts struct {
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
-	}
-	ws, err := workspace.Use(afero.NewOsFs(), workingDir)
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
-	}
-
 	provider := sessions.ImmutableProvider(sessions.UserAgentExtras("app delete"))
 	defaultSession, err := provider.Default()
 	if err != nil {

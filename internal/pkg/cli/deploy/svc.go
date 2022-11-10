@@ -195,12 +195,7 @@ type WorkloadDeployerInput struct {
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
 func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
-	}
-	ws, err := workspace.Use(fs, workingDir)
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
 		return nil, err
 	}

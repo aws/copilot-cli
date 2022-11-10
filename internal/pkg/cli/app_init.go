@@ -61,18 +61,12 @@ type initAppOpts struct {
 
 	// Cached variables.
 	cachedHostedZoneID string
-	workingDir         string
-	fs                 afero.Fs
 }
 
 func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	sess, err := sessions.ImmutableProvider(sessions.UserAgentExtras("app init")).Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
-	}
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
 	}
 	fs := afero.NewOsFs()
 	identity := identity.New(sess)
@@ -90,13 +84,11 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
 		existingWorkspace: func() (wsAppManager, error) {
-			return workspace.Use(fs, workingDir)
+			return workspace.Use(fs)
 		},
 		newWorkspace: func(appName string) (wsAppManager, error) {
-			return workspace.Create(appName, &afero.Afero{Fs: fs}, workingDir)
+			return workspace.Create(appName, fs)
 		},
-		fs:         fs,
-		workingDir: workingDir,
 	}, nil
 }
 

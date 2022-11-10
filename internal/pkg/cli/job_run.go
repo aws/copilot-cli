@@ -5,7 +5,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
@@ -55,11 +54,7 @@ func newJobRunOpts(vars jobRunVars) (*jobRunOpts, error) {
 		return nil, err
 	}
 	configStore := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
-	}
-	ws, err := workspace.Use(afero.NewOsFs(), workingDir)
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
 		return nil, err
 	}

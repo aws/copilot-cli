@@ -6,7 +6,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
@@ -88,11 +87,7 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 		return nil, err
 	}
 	fs := afero.NewOsFs()
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
-	}
-	ws, err := workspace.Use(afero.NewOsFs(), workingDir)
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
 		return nil, err
 	}

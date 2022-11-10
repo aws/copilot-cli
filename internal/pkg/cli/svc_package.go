@@ -73,11 +73,7 @@ type packageSvcOpts struct {
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 	fs := afero.NewOsFs()
-	workingDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("get working directory: %w", err)
-	}
-	ws, err := workspace.Use(fs, workingDir)
+	ws, err := workspace.Use(fs)
 	if err != nil {
 		return nil, err
 	}
