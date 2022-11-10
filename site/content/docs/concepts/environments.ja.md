@@ -11,13 +11,19 @@
 ## Environment の作成
 
 Application 内に新しい Environment を作るには、作業ディレクトリにて `copilot env init` コマンドを実行します。コマンドを実行すると、作成する Environment の名前、そしてこの Environment の作成に利用する AWS プロファイルを Copilot が尋ねます。このプロファイルは AWS [名前付きプロファイル](https://docs.aws.amazon.com/ja_jp/cli/latest/userguide/cli-configure-profiles.html)と呼ばれるもので、特定の AWS アカウントやリージョンと紐づいた設定です。プロファイルを選ぶと、その新しい Environment は選択されたプロファイルと紐づいた AWS アカウントとリージョンに作成されます。
-
-
-```bash
+```console
 $ copilot env init
 ```
 
-`copilot env init` コマンドの実行後は、Copilot が数分間に渡って Environment 内のリソースをセットアップしていく様子を確認できます。すべてのリソースが作成されると、この Environment は Application アカウントにリンクされます。これにより、今後 Copilot コマンドを実行するユーザーがこの Environment アカウントそのものにアクセスができなくとも Application にリンクされた Environment として管理できるようになります。このリンク処理の中では、必要に応じて ECR リポジトリの作成と設定も行われます。
+`copilot env init` コマンドの実行後は、Copilot が 2 つの IAM ロールをセットアップしている様子を確認できます。その 2 つのロールは Environment の更新と管理に必要なものです。Environment が Application と異なる AWS アカウントで作成された場合、Envrionment は Application アカウントにリンクされます。これにより、今後 Copilot コマンドを実行するユーザーがこの Environment アカウントそのものにアクセスができなくとも Application にリンクされた Environment として管理できるようになります。Copilot は  `copilot/environments/[env name]/manifest.yml` に [Environment Manifest](../manifest/environment.ja.md) を作成します。
+
+## Environment のデプロイ
+
+デプロイをする前に、必要であれば、[Environment Manifest](../manifest/environment.ja.md)を修正して Environment を設定します。
+```console
+$ copilot env deploy
+```
+このステップでは、 Copilot は Environment のインフラストラクチャーリソース、例えば ECS クラスター、セキュリティグループ、プライベート DNS 名前空間を作成します。デプロイ後は、Envrionment Manifest を修正し、再び [`copilot env deploy`](../commands/env-deploy.ja.md) を実行するだけで、再デプロイできます。
 
 ### Service のデプロイ
 
@@ -56,7 +62,7 @@ Environment のセットアップが完了したので、Copilot を使って確
 
 Application 内にある全ての Environment を確認するには `copilot env ls` コマンドを利用します。
 
-```bash
+```console
 $ copilot env ls
 test
 production
@@ -66,7 +72,7 @@ production
 
 `copilot env show` コマンドを実行すると、Environment のサマリ情報を表示します。以下は _test_ Environment についての情報を確認する出力の例ですが、この Environment が作成されたアカウントやリージョン情報、あるいはデプロイされた Service や Environment 内のリソースに付与されるリソースタグ情報などが含まれます。さらに、`--resources` フラグを利用することでこの Environment に紐づけられたすべての AWS リソースを確認できます。
 
-```bash
+```console
 $ copilot env show --name test
 About
 
@@ -74,7 +80,7 @@ About
   Region            us-west-2
   Account ID        693652174720
 
-Services
+Workloads
 
   Name              Type
   ----              ----
