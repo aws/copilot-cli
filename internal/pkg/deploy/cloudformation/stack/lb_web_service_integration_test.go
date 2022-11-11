@@ -19,6 +19,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -80,7 +81,15 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 		v, ok := content.(*manifest.LoadBalancedWebService)
 		require.True(t, ok)
 
-		ws, err := workspace.New()
+		// Create in-memory mock file system.
+		wd, err := os.Getwd()
+		require.NoError(t, err)
+		fs := afero.NewMemMapFs()
+		_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
+		_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", wd), []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+		require.NoError(t, err)
+
+		ws, err := workspace.Use(fs)
 		require.NoError(t, err)
 
 		_, err = addon.Parse(aws.StringValue(v.Name), ws)

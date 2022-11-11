@@ -26,6 +26,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/term/selector"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 
 	"github.com/spf13/cobra"
 )
@@ -76,9 +77,9 @@ type deletePipelineOpts struct {
 }
 
 func newDeletePipelineOpts(vars deletePipelineVars) (*deletePipelineOpts, error) {
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
-		return nil, fmt.Errorf("new workspace client: %w", err)
+		return nil, err
 	}
 
 	defaultSess, err := sessions.ImmutableProvider(sessions.UserAgentExtras("pipeline delete")).Default()
