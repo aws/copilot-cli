@@ -5,7 +5,7 @@ package override
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -199,14 +199,14 @@ func Test_CloudFormationTemplate(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			in, err := ioutil.ReadFile(filepath.Join("testdata", "original", tc.inTplFileName))
+			in, err := os.ReadFile(filepath.Join("testdata", "original", tc.inTplFileName))
 			require.NoError(t, err)
 
 			got, gotErr := CloudFormationTemplate(tc.inRules, in)
 			if tc.wantedError != nil {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
 			} else {
-				wantedContent, err := ioutil.ReadFile(filepath.Join("testdata", "outputs", tc.wantedTplFileName))
+				wantedContent, err := os.ReadFile(filepath.Join("testdata", "outputs", tc.wantedTplFileName))
 				require.NoError(t, err)
 
 				require.NoError(t, gotErr)

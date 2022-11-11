@@ -5,7 +5,7 @@ package addon
 
 import (
 	"errors"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -126,7 +126,7 @@ Outputs:
 			// GIVEN
 			template := tc.template
 			if tc.testdataFileName != "" {
-				content, err := ioutil.ReadFile(filepath.Join("testdata", "outputs", tc.testdataFileName))
+				content, err := os.ReadFile(filepath.Join("testdata", "outputs", tc.testdataFileName))
 				require.NoError(t, err)
 				template = string(content)
 			}

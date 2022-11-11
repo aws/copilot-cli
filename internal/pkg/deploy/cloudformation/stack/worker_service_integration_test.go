@@ -7,7 +7,6 @@ package stack_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -36,7 +35,7 @@ const (
 
 func TestWorkerService_Template(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", workerManifestPath)
-	manifestBytes, err := ioutil.ReadFile(path)
+	manifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)
@@ -92,7 +91,7 @@ func TestWorkerService_Template(t *testing.T) {
 		mActual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
 
-		expected, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", workerStackPath))
+		expected, err := os.ReadFile(filepath.Join("testdata", "workloads", workerStackPath))
 		require.NoError(t, err, "should be able to read expected bytes")
 		mExpected := make(map[interface{}]interface{})
 
@@ -105,7 +104,7 @@ func TestWorkerService_Template(t *testing.T) {
 		require.NoError(t, err)
 
 		path := filepath.Join("testdata", "workloads", workerParamsPath)
-		wantedCFNParamsBytes, err := ioutil.ReadFile(path)
+		wantedCFNParamsBytes, err := os.ReadFile(path)
 		require.NoError(t, err)
 
 		require.Equal(t, string(wantedCFNParamsBytes), actualParams)

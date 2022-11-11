@@ -8,13 +8,11 @@ package stack_test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/spf13/afero"
-
-	"io/ioutil"
-	"path/filepath"
-	"testing"
 
 	"gopkg.in/yaml.v3"
 
@@ -37,7 +35,7 @@ const (
 
 func TestScheduledJob_Template(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", jobManifestPath)
-	manifestBytes, err := ioutil.ReadFile(path)
+	manifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)
@@ -88,7 +86,7 @@ func TestScheduledJob_Template(t *testing.T) {
 		mActual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
 
-		expected, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", jobStackPath))
+		expected, err := os.ReadFile(filepath.Join("testdata", "workloads", jobStackPath))
 		require.NoError(t, err, "should be able to read expected bytes")
 		expectedBytes := []byte(expected)
 		mExpected := make(map[interface{}]interface{})
@@ -102,7 +100,7 @@ func TestScheduledJob_Template(t *testing.T) {
 		require.NoError(t, err)
 
 		path := filepath.Join("testdata", "workloads", jobParamsPath)
-		wantedCFNParamsBytes, err := ioutil.ReadFile(path)
+		wantedCFNParamsBytes, err := os.ReadFile(path)
 		require.NoError(t, err)
 
 		require.Equal(t, string(wantedCFNParamsBytes), actualParams)

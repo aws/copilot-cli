@@ -6,7 +6,7 @@
 package stack_test
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -23,7 +23,7 @@ import (
 
 func TestAutoscalingIntegration_Validate(t *testing.T) {
 	path := filepath.Join("testdata", "stacklocal", autoScalingManifestPath)
-	wantedManifestBytes, err := ioutil.ReadFile(path)
+	wantedManifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(wantedManifestBytes)
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 
 func TestScheduledJob_Validate(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", jobManifestPath)
-	manifestBytes, err := ioutil.ReadFile(path)
+	manifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)

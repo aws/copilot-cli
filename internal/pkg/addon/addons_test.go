@@ -5,7 +5,7 @@ package addon
 
 import (
 	"errors"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -96,11 +96,11 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-metadata.yaml"}, nil)
 
-				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
-				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-metadata.yaml"))
+				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-metadata.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-metadata.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
@@ -112,11 +112,11 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-parameters.yaml"}, nil)
 
-				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
-				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-parameters.yaml"))
+				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-parameters.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-parameters.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
@@ -128,11 +128,11 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-mappings.yaml"}, nil)
 
-				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
-				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-mappings.yaml"))
+				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-mappings.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-mappings.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
@@ -144,11 +144,11 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-conditions.yaml"}, nil)
 
-				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
-				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-conditions.yaml"))
+				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-conditions.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-conditions.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
@@ -160,11 +160,11 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-resources.yaml"}, nil)
 
-				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
-				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-resources.yaml"))
+				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-resources.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-resources.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
@@ -176,11 +176,11 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "invalid-outputs.yaml"}, nil)
 
-				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
-				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "invalid-outputs.yaml"))
+				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "invalid-outputs.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "invalid-outputs.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
@@ -192,16 +192,16 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "second.yaml"}, nil)
 
-				first, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
-				second, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "second.yaml"))
+				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "second.yaml"))
 				m.ws.EXPECT().WorkloadAddonFilePath(testSvcName, "second.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedTemplate: func() string {
-				wanted, _ := ioutil.ReadFile(filepath.Join("testdata", "merge", "wanted.yaml"))
+				wanted, _ := os.ReadFile(filepath.Join("testdata", "merge", "wanted.yaml"))
 				return string(wanted)
 			}(),
 		},
