@@ -6,7 +6,7 @@
 package stack_test
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -27,7 +27,7 @@ const (
 // TestDD_Pipeline_Template ensures that the CloudFormation template generated for a pipeline matches our pre-defined template.
 func TestDD_Pipeline_Template(t *testing.T) {
 	path := filepath.Join("testdata", "pipeline", pipelineManifestPath)
-	manifestBytes, err := ioutil.ReadFile(path)
+	manifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 
 	pipelineMft, err := manifest.UnmarshalPipeline([]byte(manifestBytes))
@@ -74,7 +74,7 @@ func TestDD_Pipeline_Template(t *testing.T) {
 	m1 := make(map[any]any)
 	require.NoError(t, yaml.Unmarshal(actualInBytes, m1))
 
-	wanted, err := ioutil.ReadFile(filepath.Join("testdata", "pipeline", pipelineStackPath))
+	wanted, err := os.ReadFile(filepath.Join("testdata", "pipeline", pipelineStackPath))
 	require.NoError(t, err, "should be able to read expected template file")
 	wantedInBytes := []byte(wanted)
 	m2 := make(map[any]any)

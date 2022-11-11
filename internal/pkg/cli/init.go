@@ -128,6 +128,12 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(defaultSess)
 		},
+		existingWorkspace: func() (wsAppManager, error) {
+			return workspace.Use(fs)
+		},
+		newWorkspace: func(appName string) (wsAppManager, error) {
+			return workspace.Create(appName, fs)
+		},
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
