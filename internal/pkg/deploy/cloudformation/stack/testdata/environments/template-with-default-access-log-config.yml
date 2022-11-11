@@ -710,6 +710,8 @@ Resources:
       IpProtocol: -1
       SourceSecurityGroupId: !Ref PublicHTTPSLoadBalancerSecurityGroup
   ELBAccessLogsBucket:
+    Metadata:
+      "aws:copilot:description": "A S3 bucket for the Load Balancer's access logs"
     Type: AWS::S3::Bucket
     Condition: CreateALB
     Properties:
@@ -770,6 +772,7 @@ Resources:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'
     Condition: CreateALB
+    DependsOn: ELBAccessLogsBucketPolicy
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       LoadBalancerAttributes:

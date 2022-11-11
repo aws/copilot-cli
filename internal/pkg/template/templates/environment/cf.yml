@@ -300,6 +300,9 @@ Resources:
     Metadata:
       'aws:copilot:description': 'An Application Load Balancer to distribute public traffic to your services'
     Condition: CreateALB
+    {{- if .PublicHTTPConfig.ELBAccessLogs.ShouldCreateBucket}}
+    DependsOn: ELBAccessLogsBucketPolicy
+    {{- end}}
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       {{- if .PublicHTTPConfig.ELBAccessLogs }}
