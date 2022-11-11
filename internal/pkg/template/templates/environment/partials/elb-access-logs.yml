@@ -27,6 +27,8 @@ ELBAccessLogsBucketPolicy:
           Principal:
             AWS: !Join [ "", [ !Sub 'arn:${AWS::Partition}:iam::', !FindInMap [ RegionalConfigs, !Ref 'AWS::Region', ElbAccountId ], ":root" ] ]
 ELBAccessLogsBucket:
+  Metadata:
+    'aws:copilot:description': 'A S3 bucket for the Load Balancer's access logs'
   Type: AWS::S3::Bucket
   Condition: CreateALB
   Properties:
