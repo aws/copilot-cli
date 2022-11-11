@@ -7,7 +7,6 @@ package stack_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -35,7 +34,7 @@ const (
 
 func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", windowsSvcManifestPath)
-	manifestBytes, err := ioutil.ReadFile(path)
+	manifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload([]byte(manifestBytes))
 	require.NoError(t, err)
@@ -93,7 +92,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 		mActual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
 
-		expected, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", windowsSvcStackPath))
+		expected, err := os.ReadFile(filepath.Join("testdata", "workloads", windowsSvcStackPath))
 		require.NoError(t, err, "should be able to read expected bytes")
 		expectedBytes := []byte(expected)
 		mExpected := make(map[interface{}]interface{})
@@ -106,7 +105,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 		require.NoError(t, err)
 
 		path := filepath.Join("testdata", "workloads", windowsSvcParamsPath)
-		wantedCFNParamsBytes, error := ioutil.ReadFile(path)
+		wantedCFNParamsBytes, error := os.ReadFile(path)
 		require.NoError(t, error)
 
 		require.Equal(t, string(wantedCFNParamsBytes), actualParams)

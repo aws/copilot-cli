@@ -111,8 +111,8 @@ func (s *Stack) encode(v any) (string, error) {
 // If the addons directory doesn't exist or no yaml files are found in
 // the addons directory, it returns the empty string and
 // ErrAddonsNotFound.
-func parseTemplate(fnames []string, workloadName string, ws workspaceReader) (*cfnTemplate, error) {
-	templateFiles := filterFiles(fnames, yamlMatcher, nonParamsMatcher)
+func parseTemplate(fNames []string, workloadName string, ws workspaceReader) (*cfnTemplate, error) {
+	templateFiles := filterFiles(fNames, yamlMatcher, nonParamsMatcher)
 	if len(templateFiles) == 0 {
 		return nil, &ErrAddonsNotFound{
 			WlName: workloadName,
@@ -143,8 +143,8 @@ func parseTemplate(fnames []string, workloadName string, ws workspaceReader) (*c
 // If there are addons but no parameters file defined, then returns "" and nil for error.
 // If there are multiple parameters files, then returns "" and cannot define multiple parameter files error.
 // If the addons parameters use the reserved parameter names, then returns "" and a reserved parameter error.
-func parseParameters(fnames []string, workloadName string, ws workspaceReader) (yaml.Node, error) {
-	paramFiles := filterFiles(fnames, paramsMatcher)
+func parseParameters(fNames []string, workloadName string, ws workspaceReader) (yaml.Node, error) {
+	paramFiles := filterFiles(fNames, paramsMatcher)
 	if len(paramFiles) == 0 {
 		return yaml.Node{}, nil
 	}

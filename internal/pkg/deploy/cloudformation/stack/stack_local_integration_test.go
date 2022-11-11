@@ -7,7 +7,6 @@ package stack_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,7 +39,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 	)
 
 	path := filepath.Join("testdata", "stacklocal", autoScalingManifestPath)
-	wantedManifestBytes, err := ioutil.ReadFile(path)
+	wantedManifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(wantedManifestBytes)
 	require.NoError(t, err)
@@ -88,7 +87,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 
 	t.Run("CloudFormation template must contain autoscaling resources", func(t *testing.T) {
 		path := filepath.Join("testdata", "stacklocal", wantedAutoScalingCFNTemplatePath)
-		wantedCFNBytes, err := ioutil.ReadFile(path)
+		wantedCFNBytes, err := os.ReadFile(path)
 		require.NoError(t, err)
 
 		require.Contains(t, tpl, string(wantedCFNBytes))
@@ -96,7 +95,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 
 	t.Run("CloudFormation template must be overridden correctly", func(t *testing.T) {
 		path := filepath.Join("testdata", "stacklocal", wantedOverrideCFNTemplatePath)
-		wantedCFNBytes, err := ioutil.ReadFile(path)
+		wantedCFNBytes, err := os.ReadFile(path)
 		require.NoError(t, err)
 
 		require.Contains(t, tpl, string(wantedCFNBytes))
@@ -107,7 +106,7 @@ func Test_Stack_Local_Integration(t *testing.T) {
 		require.NoError(t, err)
 
 		path := filepath.Join("testdata", "stacklocal", wantedAutoScalingCFNParameterPath)
-		wantedCFNParamsBytes, err := ioutil.ReadFile(path)
+		wantedCFNParamsBytes, err := os.ReadFile(path)
 		require.NoError(t, err)
 
 		require.Equal(t, params, string(wantedCFNParamsBytes))

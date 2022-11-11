@@ -7,7 +7,6 @@ package stack_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -42,7 +41,7 @@ func TestRDWS_Template(t *testing.T) {
 	}
 
 	// Read manifest.
-	manifestBytes, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", manifestFileName))
+	manifestBytes, err := os.ReadFile(filepath.Join("testdata", "workloads", manifestFileName))
 	require.NoError(t, err, "read manifest file")
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err, "unmarshal manifest file")
@@ -74,7 +73,7 @@ func TestRDWS_Template(t *testing.T) {
 		require.ErrorAs(t, err, &notFound)
 
 		// Read wanted stack template.
-		wantedTemplate, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", tc.svcStackPath))
+		wantedTemplate, err := os.ReadFile(filepath.Join("testdata", "workloads", tc.svcStackPath))
 		require.NoError(t, err, "read cloudformation stack")
 
 		// Read actual stack template.

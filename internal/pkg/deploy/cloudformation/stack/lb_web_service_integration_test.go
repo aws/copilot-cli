@@ -7,7 +7,6 @@ package stack_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -63,7 +62,7 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 		require.NoError(t, os.Setenv("TAG", val))
 	}()
 	path := filepath.Join("testdata", "workloads", svcManifestPath)
-	manifestBytes, err := ioutil.ReadFile(path)
+	manifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 	for name, tc := range testCases {
 		interpolated, err := manifest.NewInterpolator(appName, tc.envName).Interpolate(string(manifestBytes))
@@ -127,7 +126,7 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 			mActual := make(map[interface{}]interface{})
 			require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
 
-			expected, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", tc.svcStackPath))
+			expected, err := os.ReadFile(filepath.Join("testdata", "workloads", tc.svcStackPath))
 			require.NoError(t, err, "should be able to read expected bytes")
 			expectedBytes := []byte(expected)
 			mExpected := make(map[interface{}]interface{})
@@ -141,7 +140,7 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 			require.NoError(t, err)
 
 			path := filepath.Join("testdata", "workloads", tc.svcParamsPath)
-			wantedCFNParamsBytes, err := ioutil.ReadFile(path)
+			wantedCFNParamsBytes, err := os.ReadFile(path)
 			require.NoError(t, err)
 
 			require.Equal(t, string(wantedCFNParamsBytes), actualParams)
