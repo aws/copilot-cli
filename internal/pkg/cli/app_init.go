@@ -231,7 +231,7 @@ func (o *initAppOpts) Execute() error {
 }
 
 func (o *initAppOpts) validateAppName(name string) error {
-	if err := validateAppName(name); err != nil {
+	if err := validateAppNameString(name); err != nil {
 		return err
 	}
 	app, err := o.store.GetApplication(name)
@@ -318,7 +318,7 @@ func (o *initAppOpts) askAppName(formatMsg string) error {
 	appName, err := o.prompt.Get(
 		fmt.Sprintf(formatMsg, color.Emphasize("name")),
 		appInitNameHelpPrompt,
-		validateAppName,
+		validateAppNameString,
 		prompt.WithFinalMessage("Application name:"))
 	if err != nil {
 		return fmt.Errorf("prompt get application name: %w", err)
