@@ -49,8 +49,7 @@ type Stack struct {
 // files found there. If no addons are found, Parse returns a nil
 // Stack and ErrAddonsNotFound.
 func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
-	path := ws.WorkloadAddonsPath(workloadName)
-	fNames, err := ws.ListFiles(path)
+	fNames, err := ws.ListFiles(ws.WorkloadAddonsPath(workloadName))
 	if err != nil {
 		return nil, &ErrAddonsNotFound{
 			WlName:    workloadName,
