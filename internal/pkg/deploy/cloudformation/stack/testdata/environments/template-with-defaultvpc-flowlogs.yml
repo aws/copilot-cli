@@ -1008,7 +1008,7 @@ Resources:
     Metadata:
       'aws:copilot:description': 'A CloudWatch log group to store VPC flow log data'
     Properties:
-      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
+      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogs]]
       RetentionInDays: 14
   FlowLog:
     Metadata:
