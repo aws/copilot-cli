@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize/english"
+	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
@@ -30,7 +31,7 @@ const (
 // tryReadingAppName retrieves the application's name from the workspace if it exists and returns it.
 // If there is an error while retrieving the workspace summary, returns the empty string.
 func tryReadingAppName() string {
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
 		return ""
 	}

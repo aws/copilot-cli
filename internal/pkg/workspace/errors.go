@@ -44,10 +44,10 @@ func (e *ErrWorkspaceNotFound) Error() string {
 		e.CurrentDirectory)
 }
 
-// errNoAssociatedApplication means we couldn't locate a workspace summary file.
-type errNoAssociatedApplication struct{}
+// ErrNoAssociatedApplication means we couldn't locate a workspace summary file.
+type ErrNoAssociatedApplication struct{}
 
-func (e *errNoAssociatedApplication) Error() string {
+func (e *ErrNoAssociatedApplication) Error() string {
 	return "couldn't find an application associated with this workspace"
 }
 

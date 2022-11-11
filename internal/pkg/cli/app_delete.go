@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
 	rg "github.com/aws/copilot-cli/internal/pkg/aws/resourcegroups"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
@@ -69,11 +70,10 @@ type deleteAppOpts struct {
 }
 
 func newDeleteAppOpts(vars deleteAppVars) (*deleteAppOpts, error) {
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, err
 	}
-
 	provider := sessions.ImmutableProvider(sessions.UserAgentExtras("app delete"))
 	defaultSession, err := provider.Default()
 	if err != nil {
