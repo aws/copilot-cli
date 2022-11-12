@@ -7,7 +7,7 @@ package stack_test
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
@@ -18,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -33,7 +34,7 @@ const (
 
 func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", windowsSvcManifestPath)
-	manifestBytes, err := ioutil.ReadFile(path)
+	manifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload([]byte(manifestBytes))
 	require.NoError(t, err)
@@ -48,7 +49,15 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.True(t, ok)
 
-	ws, err := workspace.New()
+	// Create in-memory mock file system.
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	fs := afero.NewMemMapFs()
+	_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
+	_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", wd), []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+	require.NoError(t, err)
+
+	ws, err := workspace.Use(fs)
 	require.NoError(t, err)
 
 	_, err = addon.Parse(aws.StringValue(v.Name), ws)
@@ -83,7 +92,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 		mActual := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(actualBytes, mActual))
 
-		expected, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", windowsSvcStackPath))
+		expected, err := os.ReadFile(filepath.Join("testdata", "workloads", windowsSvcStackPath))
 		require.NoError(t, err, "should be able to read expected bytes")
 		expectedBytes := []byte(expected)
 		mExpected := make(map[interface{}]interface{})
@@ -96,7 +105,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 		require.NoError(t, err)
 
 		path := filepath.Join("testdata", "workloads", windowsSvcParamsPath)
-		wantedCFNParamsBytes, error := ioutil.ReadFile(path)
+		wantedCFNParamsBytes, error := os.ReadFile(path)
 		require.NoError(t, error)
 
 		require.Equal(t, string(wantedCFNParamsBytes), actualParams)

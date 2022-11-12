@@ -28,7 +28,8 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
     
         environments:
           test:
-            LOG_LEVEL: debug
+            variables:
+              LOG_LEVEL: debug
         ```
 
     === "Connected to the environment VPC"
@@ -85,7 +86,18 @@ The architecture type for your service. A [Request-Driven Web Service](../concep
 <a id="http" href="#http" class="field">`http`</a> <span class="type">Map</span>  
 The http section contains parameters related to the managed load balancer.
 
-<span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>  
+<span class="parent-field">http.</span><a id="http-private" href="#http-private" class="field">`private`</a> <span class="type">Bool or Map</span>
+Restrict incoming traffic to only your environment. Defaults to false.
+
+<span class="parent-field">http.private</span><a id="http-private-endpoint" href="#http-private-endpoint" class="field">`endpoint`</a> <span class="type">String</span>
+The ID of an existing VPC Endpoint to App Runner.
+```yaml
+http:
+  private:
+    endpoint: vpce-12345
+```
+
+<span class="parent-field">http.</span><a id="http-healthcheck" href="#http-healthcheck" class="field">`healthcheck`</a> <span class="type">String or Map</span>
 If you specify a string, Copilot interprets it as the path exposed in your container to handle target group health check requests. The default is "/".
 ```yaml
 http:

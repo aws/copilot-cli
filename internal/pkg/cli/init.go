@@ -92,7 +92,8 @@ type initOpts struct {
 }
 
 func newInitOpts(vars initVars) (*initOpts, error) {
-	ws, err := workspace.New()
+	fs := afero.NewOsFs()
+	ws, err := workspace.Use(fs)
 	if err != nil {
 		return nil, err
 	}
@@ -120,13 +121,18 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 			name: vars.appName,
 		},
 		store:    configStore,
-		ws:       ws,
 		prompt:   prompt,
 		identity: id,
 		cfn:      deployer,
 		prog:     spin,
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(defaultSess)
+		},
+		existingWorkspace: func() (wsAppManager, error) {
+			return workspace.Use(fs)
+		},
+		newWorkspace: func(appName string) (wsAppManager, error) {
+			return workspace.Create(appName, fs)
 		},
 	}
 	initEnvCmd := &initEnvOpts{
@@ -197,7 +203,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	deployJobCmd.newJobDeployer = func() (workloadDeployer, error) {
 		return newJobDeployer(deployJobCmd)
 	}
-	fs := &afero.Afero{Fs: afero.NewOsFs()}
 	cmd := exec.NewCmd()
 	return &initOpts{
 		initVars:     vars,
@@ -253,6 +258,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 				svcVars := initSvcVars{
 					initWkldVars: wkldVars,
 					port:         vars.port,
+					ingressType:  ingressTypeInternet,
 				}
 				opts := initSvcOpts{
 					initSvcVars: svcVars,

@@ -133,8 +133,51 @@ subscribe:
 <span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-retention" href="#subscribe-queue-retention" class="field">`retention`</a> <span class="type">Duration</span>  
 Retention はメッセージが削除される前にキューに残っている時間を指定します。デフォルトは 4 日です。指定できる範囲は 60 秒 - 336 時間です。
 
-<span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-timeout" href="#subscribe-queue-timeout" class="field">`timeout`</a> <span class="type">Duration</span>  
+<span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-timeout" href="#subscribe-queue-timeout" class="field">`timeout`</a> <span class="type">Duration</span>
 Timeout はメッセージが配信された後に利用できない時間の長さを定義します。デフォルトは 30 秒です。範囲は 0 秒 - 12 時間です。
+
+<span class="parent-field">subscribe.queue.</span><a id="subscribe-queue-fifo" href="#subscribe-queue-fifo" class="field">`fifo`</a> <span class="type">Boolean or Map</span>
+SQS キューで FIFO (first in, first out) 順を有効化します。操作やイベントの順番が重要であったり、重複が許容されないシナリオに対処します。
+
+```yaml
+subscribe:
+  topics:
+    - name: events
+      service: api
+    - name: events
+      service: fe
+  queue: # 両方の FIFO SNS トピックからのメッセージは、 共有の FIFO SQS キューに入ります。
+    fifo: true
+```
+キューで FIFO 機能を有効化する場合、Copilot はソース SNS トピックも[FIFO](../include/publish.ja.md#publish-topics-topic-fifo)であることを要求します。
+
+または、 高度な SQS FIFO キュー設定を指定できます。
+```yaml
+subscribe:
+  topics:
+    - name: events
+      service: api
+      queue: # api-event トピックに対応した標準キューを定義します。
+        timeout: 20s
+    - name: events
+      service: fe
+  queue: # デフォルトでは、全ての FIFO トピックからのメッセージは、共有の FIFO SQS キューに入ります。
+    fifo:
+      content_based_deduplication: true
+      high_throughput: true
+```
+
+<span class="parent-field">subscribe.queue.fifo.</span><a id="subscribe-queue-fifo-content-based-deduplication" href="#subscribe-queue-fifo-content-based-deduplication" class="field">`content_based_deduplication`</a> <span class="type">Boolean</span>
+パブリッシュされたメッセージごとにメッセージ本文が一意である事が保証されている場合、SNS FIFO トピックのコンテンツベースの重複排除を有効化できます。
+
+<span class="parent-field">subscribe.queue.fifo.</span><a id="subscribe-queue-fifo-deduplication-scope" href="#subscribe-queue-fifo-deduplication-scope" class="field">`deduplication_scope`</a> <span class="type">String</span>
+FIFO キューで高スループットが必要な場合、メッセージ重複排除をメッセージグループで行うかキュー全体で行うかを指定します。設定可能な値は、"messageGroup" と "queue" です。
+
+<span class="parent-field">subscribe.queue.fifo.</span><a id="subscribe-queue-fifo-throughput-limit" href="#subscribe-queue-fifo-throughput-limit" class="field">`throughput_limit`</a> <span class="type">String</span>
+FIFO キューで高スループットが必要な場合、FIFO キュースループットの上限をキュー全体に適用するか、メッセージグループ単位で適用するかを指定します。設定可能な値は、"perQueue" と "perMessageGroupId" です。
+
+<span class="parent-field">subscribe.queue.fifo.</span><a id="subscribe-queue-fifo-high-throughput" href="#subscribe-queue-fifo-high-throughput" class="field">`high_throughput`</a> <span class="type">Boolean</span>
+有効にした場合、 FIFO キューにおいて、より高い秒間トランザクション (TPS) が利用できます。`deduplication_scope` および `throughput_limit` と相互排他的です。
 
 <span class="parent-field">subscribe.queue.dead_letter.</span><a id="subscribe-queue-dead-letter-tries" href="#subscribe-queue-dead-letter-tries" class="field">`tries`</a> <span class="type">Integer</span>  
 指定された場合、DLQ(デッドレターキュー)を作成し、メッセージを `tries` 回試行した後に DLQ にルーティングするリドライブポリシーを設定します。つまり、Worker Service がメッセージの処理に `tries` 回成功しなかった場合、メッセージ送信はリトライされません。 メッセージは DLQ にルーティングされるため、あとからメッセージの内容を確認して失敗の原因分析に役立てることができます。
@@ -150,12 +193,10 @@ Worker Service がサブスクライブすべき SNS トピックの情報が含
 
 <span class="parent-field">subscribe.topics.topic</span><a id="topic-filter-policy" href="#topic-filter-policy" class="field">`filter_policy`</a> <span class="type">Map</span>  
 任意項目。SNS サブスクリプションフィルターポリシーを指定します。このポリシーは、着信メッセージの属性を評価します。フィルターポリシーは JSON で指定します。例えば以下の様になります。
-
 ```json
 filter_policy: {"store":["example_corp"],"event":[{"anything-but":"order_cancelled"}],"customer_interests":["rugby","football","baseball"],"price_usd":[{"numeric":[">=",100]}]}
 ```
 または、YAML の MAP を利用して記述します。
-
 ```yaml
 filter_policy:
   store:
@@ -173,9 +214,12 @@ filter_policy:
 ```
 フィルターポリシーの書き方に関するさらに詳しい情報については、[SNS documentation](https://docs.aws.amazon.com/sns/latest/dg/sns-subscription-filter-policies.html)を確認してください。
 
-
 <span class="parent-field">subscribe.topics.topic.</span><a id="topic-queue" href="#topic-queue" class="field">`queue`</a> <span class="type">Boolean or Map</span>
 任意項目。トピックに対する SQS キューの設定です。`true` を指定した場合、キューはデフォルト設定で作成されます。トピックに対応したキューに関する特性の属性についてカスタマイズする場合は、このフィールドを Map で指定します。
+
+<span class="parent-field">subscribe.topics.topic.queue.</span><a id="subscribe-topics-topic-queue-fifo" href="#subscribe-topics-topic-queue-fifo" class="field">`fifo`</a> <span class="type">Boolean or Map</span>
+任意項目。トピックの SQS FIFO キューに対する設定です。`true` を指定した場合、 FIFO キューがデフォルトの FIFO 設定で作成されます。
+トピックに対応したキューに対する特定の属性についてカスタマイズする場合は、このフィールドを Map で指定します。
 
 {% include 'image-config.ja.md' %}
 

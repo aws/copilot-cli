@@ -84,6 +84,7 @@ type ServiceProps struct {
 	WorkloadProps
 	Port        uint16
 	HealthCheck manifest.ContainerHealthCheck
+	Private     bool
 	appDomain   *string
 }
 
@@ -344,6 +345,7 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 		},
 		Port:     i.Port,
 		Platform: i.Platform,
+		Private:  i.Private,
 	}
 	return manifest.NewRequestDrivenWebService(props)
 }

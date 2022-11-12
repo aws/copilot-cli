@@ -33,3 +33,7 @@ span.version {
   font-size: .7rem;
   float: right;
 }
+
+span.faint {
+  color: #8792a2;
+}

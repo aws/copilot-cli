@@ -202,7 +202,18 @@ The cdn section contains parameters related to integrating your service with a C
 cdn セクションには、CloudFront のディストリビューションと Service の統合に関連するパラメータが含まれています。CloudFront ディストリビューションを有効にするには、`cdn: true` と指定します。
 
 <span class="parent-field">cdn.</span><a id="cdn-certificate" href="#cdn-certificate" class="field">`certificate`</a> <span class="type">String</span>  
-CloudFront ディストリビューションで HTTPS トラフィックを有効にするための証明書。CloudFront は、インポートした証明書が `us-east-1` リージョンにあることが必須です。
+CloudFront ディストリビューションで HTTPS トラフィックを有効にするための証明書。
+CloudFront は、インポートした証明書が `us-east-1` リージョンにあることが必須です。
+設定例：
+
+```yaml
+cdn:
+  certificate: "arn:aws:acm:us-east-1:1234567890:certificate/e5a6e114-b022-45b1-9339-38fbfd6db3e2"
+```
+
+<span class="parent-field">cdn.</span><a id="cdn-tls-termination" href="#cdn-tls-termination" class="field">`terminate_tls`</a> <span class="type">Boolean</span>
+CloudFront での TLS ターミネーションを有効化します。
+
 
 <div class="separator"></div>
 

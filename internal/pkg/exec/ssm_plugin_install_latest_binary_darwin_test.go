@@ -6,7 +6,6 @@ package exec
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,7 +58,7 @@ func TestSSMPluginCommand_InstallLatestBinary_darwin(t *testing.T) {
 		},
 	}
 	for name, tc := range tests {
-		mockDir, _ = ioutil.TempDir("", "temp")
+		mockDir, _ = os.MkdirTemp("", "temp")
 		t.Run(name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			tc.setupMocks(ctrl)

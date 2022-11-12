@@ -64,7 +64,7 @@ Job をトリガーするイベントの設定。
 * `"* * * * *"` 標準的な [cron フォーマット](https://en.wikipedia.org/wiki/Cron#Overview)を利用する
 * `"cron({fields})"` 6 つフィールドからなる CloudWatch の[cron 式](https://docs.aws.amazon.com/ja_jp/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions) を利用する
 
-最後に、例えば `schedule` フィールドを `none` に設定することで、Job がトリガーされないようにすることができます。
+最後に、`schedule` フィールドを `none` に設定することで、Job がトリガーされないようにすることができます。
 ```yaml
 on:
   schedule: "none"
