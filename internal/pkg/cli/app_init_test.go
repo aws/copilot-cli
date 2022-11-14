@@ -23,6 +23,7 @@ type initAppMocks struct {
 	mockStore            *mocks.Mockstore
 	mockDomainInfoGetter *mocks.MockdomainInfoGetter
 	mockPolicyLister     *mocks.MockpolicyLister
+	mockRoleManager      *mocks.MockroleManager
 }
 
 func TestInitAppOpts_Validate(t *testing.T) {
@@ -38,13 +39,50 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"skip everything": {
 			mock: func(m *initAppMocks) {},
 		},
-		"valid app name": {
+		"valid app name without application in SSM and without IAM adminrole": {
 			inAppName: "metrics",
 			mock: func(m *initAppMocks) {
 				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
 					ApplicationName: "metrics",
 				})
+				m.mockRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(nil, errors.New("role not found"))
 			},
+		},
+		"valid app name without application in SSM and with IAM adminrole with copliot tag": {
+			inAppName: "metrics",
+			mock: func(m *initAppMocks) {
+				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.mockRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"copilot-application": "metrics",
+					}, nil)
+			},
+			wantedError: errors.New("application named \"metrics\" already exists in another region"),
+		},
+		"valid app name without application in SSM and with IAM adminrole without copilot tag": {
+			inAppName: "metrics",
+			mock: func(m *initAppMocks) {
+				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.mockRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"mock-application": "metrics",
+					}, nil)
+			},
+			wantedError: errors.New("IAM admin role \"metrics-adminrole\" already exists in this account"),
+		},
+		"valid app name without application in SSM and with IAM adminrole without any tag": {
+			inAppName: "metrics",
+			mock: func(m *initAppMocks) {
+				m.mockStore.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.mockRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(nil, nil)
+			},
+			wantedError: errors.New("IAM admin role \"metrics-adminrole\" already exists in this account"),
 		},
 		"invalid app name": {
 			inAppName: "123chicken",
@@ -150,6 +188,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				mockRoute53Svc:       mocks.NewMockdomainHostedZoneGetter(ctrl),
 				mockDomainInfoGetter: mocks.NewMockdomainInfoGetter(ctrl),
 				mockPolicyLister:     mocks.NewMockpolicyLister(ctrl),
+				mockRoleManager:      mocks.NewMockroleManager(ctrl),
 			}
 			tc.mock(m)
 
@@ -158,6 +197,7 @@ func TestInitAppOpts_Validate(t *testing.T) {
 				domainInfoGetter: m.mockDomainInfoGetter,
 				store:            m.mockStore,
 				iam:              m.mockPolicyLister,
+				iamRoleManager:   m.mockRoleManager,
 				initAppVars: initAppVars{
 					name:                tc.inAppName,
 					domainName:          tc.inDomainName,
@@ -183,6 +223,7 @@ type initAppAskMocks struct {
 	ws                *mocks.MockwsAppManager
 	existingWorkspace func() (wsAppManager, error)
 	prompt            *mocks.Mockprompter
+	iamRoleManager    *mocks.MockroleManager
 }
 
 func TestInitAppOpts_Ask(t *testing.T) {
@@ -193,6 +234,61 @@ func TestInitAppOpts_Ask(t *testing.T) {
 		wantedAppName string
 		wantedErr     string
 	}{
+		"if summary exists and without application in SSM and without IAM adminrole": {
+			setupMocks: func(m *initAppAskMocks) {
+				m.existingWorkspace = func() (wsAppManager, error) {
+					m.ws.EXPECT().Summary().Return(&workspace.Summary{Application: "metrics", Path: "/test"}, nil)
+					return m.ws, nil
+				}
+				m.store.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(nil, errors.New("role not found"))
+			},
+			wantedAppName: "metrics",
+		},
+		"if summary exists and with application in SSM and with IAM admin with copilot tag": {
+			setupMocks: func(m *initAppAskMocks) {
+				m.existingWorkspace = func() (wsAppManager, error) {
+					m.ws.EXPECT().Summary().Return(&workspace.Summary{Application: "metrics", Path: "/test"}, nil)
+					return m.ws, nil
+				}
+				m.store.EXPECT().GetApplication("metrics").Return(&config.Application{Name: "metrics"}, nil)
+			},
+			wantedAppName: "metrics",
+		},
+		"errors if summary exists and without application in SSM and with IAM adminrole with copliot tag": {
+			setupMocks: func(m *initAppAskMocks) {
+				m.existingWorkspace = func() (wsAppManager, error) {
+					m.ws.EXPECT().Summary().Return(&workspace.Summary{Application: "metrics", Path: "/test"}, nil)
+					return m.ws, nil
+				}
+				m.store.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"copilot-application": "metrics",
+					}, nil)
+			},
+			wantedErr: "application named \"metrics\" already exists in another region",
+		},
+		"errors if summary exists and without application in SSM and with IAM adminrole without copliot tag": {
+			setupMocks: func(m *initAppAskMocks) {
+				m.existingWorkspace = func() (wsAppManager, error) {
+					m.ws.EXPECT().Summary().Return(&workspace.Summary{Application: "metrics", Path: "/test"}, nil)
+					return m.ws, nil
+				}
+				m.store.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"mock-application": "metrics",
+					}, nil)
+			},
+			wantedErr: "IAM admin role \"metrics-adminrole\" already exists in this account",
+		},
 		"getting an unknown error when trying to use an existing workspace": {
 			inAppName: "metrics",
 			setupMocks: func(m *initAppAskMocks) {
@@ -258,18 +354,78 @@ func TestInitAppOpts_Ask(t *testing.T) {
 			},
 			wantedErr: "prompt get application name: my error",
 		},
-		"enter new app name if no existing apps": {
+
+		"enter new app name if no existing apps and without application in SSM and without IAM adminrole": {
 			setupMocks: func(m *initAppAskMocks) {
 				m.existingWorkspace = func() (wsAppManager, error) {
 					return nil, &workspace.ErrWorkspaceNotFound{}
 				}
 				m.store.EXPECT().ListApplications().Return([]*config.Application{}, nil)
 				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
+				m.store.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(nil, errors.New("role not found"))
 				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantedAppName: "metrics",
 		},
+		"enter new app name if no existing apps and without application in SSM and with IAM adminrole with copilot tag": {
+			setupMocks: func(m *initAppAskMocks) {
+				m.existingWorkspace = func() (wsAppManager, error) {
+					return nil, &workspace.ErrWorkspaceNotFound{}
+				}
+				m.store.EXPECT().ListApplications().Return([]*config.Application{}, nil)
+				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
+				m.store.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"copilot-application": "metrics",
+					}, nil)
+				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedErr: "application named \"metrics\" already exists in another region",
+		},
+		"enter new app name if no existing apps and without application in SSM and with IAM adminrole without copilot tag": {
+			setupMocks: func(m *initAppAskMocks) {
+				m.existingWorkspace = func() (wsAppManager, error) {
+					return nil, &workspace.ErrWorkspaceNotFound{}
+				}
+				m.store.EXPECT().ListApplications().Return([]*config.Application{}, nil)
+				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
+				m.store.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(
+					map[string]string{
+						"mock-application": "metrics",
+					}, nil)
+				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedErr: "IAM admin role \"metrics-adminrole\" already exists in this account",
+		},
+		"enter new app name if no existing apps and without application in SSM and with IAM adminrole without any tag": {
+			setupMocks: func(m *initAppAskMocks) {
+				m.existingWorkspace = func() (wsAppManager, error) {
+					return nil, &workspace.ErrWorkspaceNotFound{}
+				}
+				m.store.EXPECT().ListApplications().Return([]*config.Application{}, nil)
+				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
+				m.store.EXPECT().GetApplication("metrics").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "metrics",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("metrics-adminrole")).Return(nil, nil)
+				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantedErr: "IAM admin role \"metrics-adminrole\" already exists in this account",
+		},
+
 		"return error from app selection": {
 			setupMocks: func(m *initAppAskMocks) {
 				m.existingWorkspace = func() (wsAppManager, error) {
@@ -306,7 +462,7 @@ func TestInitAppOpts_Ask(t *testing.T) {
 			},
 			wantedAppName: "metrics",
 		},
-		"enter new app name if user opts out of selection": {
+		"enter new app name if user opts out of selection and application does exists in SSM and IAM admin role does not exist": {
 			setupMocks: func(m *initAppAskMocks) {
 				m.existingWorkspace = func() (wsAppManager, error) {
 					return nil, &workspace.ErrWorkspaceNotFound{}
@@ -321,9 +477,88 @@ func TestInitAppOpts_Ask(t *testing.T) {
 				}, nil)
 				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
 				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
-				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("metrics", nil)
+				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("mock-app", nil)
+				m.store.EXPECT().GetApplication("mock-app").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "mock-app",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("mock-app-adminrole")).Return(nil, errors.New("role not found"))
 			},
-			wantedAppName: "metrics",
+			wantedAppName: "mock-app",
+		},
+		"enter new app name if user opts out of selection and application does exists in SSM and IAM admin role does exist with copilot tag": {
+			setupMocks: func(m *initAppAskMocks) {
+				m.existingWorkspace = func() (wsAppManager, error) {
+					return nil, &workspace.ErrWorkspaceNotFound{}
+				}
+				m.store.EXPECT().ListApplications().Return([]*config.Application{
+					{
+						Name: "metrics",
+					},
+					{
+						Name: "payments",
+					},
+				}, nil)
+				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("mock-app", nil)
+				m.store.EXPECT().GetApplication("mock-app").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "mock-app",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("mock-app-adminrole")).Return(
+					map[string]string{
+						"copilot-application": "mock-app",
+					}, nil)
+			},
+			wantedErr: "application named \"mock-app\" already exists in another region",
+		},
+		"enter new app name if user opts out of selection and application does exists in SSM and IAM admin role does exist without copilot tag": {
+			setupMocks: func(m *initAppAskMocks) {
+				m.existingWorkspace = func() (wsAppManager, error) {
+					return nil, &workspace.ErrWorkspaceNotFound{}
+				}
+				m.store.EXPECT().ListApplications().Return([]*config.Application{
+					{
+						Name: "metrics",
+					},
+					{
+						Name: "payments",
+					},
+				}, nil)
+				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("mock-app", nil)
+				m.store.EXPECT().GetApplication("mock-app").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "mock-app",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("mock-app-adminrole")).Return(
+					map[string]string{
+						"mock-application": "mock-app",
+					}, nil)
+			},
+			wantedErr: "IAM admin role \"mock-app-adminrole\" already exists in this account",
+		},
+		"enter new app name if user opts out of selection and application does exists in SSM and IAM admin role does exist without any tag": {
+			setupMocks: func(m *initAppAskMocks) {
+				m.existingWorkspace = func() (wsAppManager, error) {
+					return nil, &workspace.ErrWorkspaceNotFound{}
+				}
+				m.store.EXPECT().ListApplications().Return([]*config.Application{
+					{
+						Name: "metrics",
+					},
+					{
+						Name: "payments",
+					},
+				}, nil)
+				m.prompt.EXPECT().Confirm(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+				m.prompt.EXPECT().SelectOne(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				m.prompt.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return("mock-app", nil)
+				m.store.EXPECT().GetApplication("mock-app").Return(nil, &config.ErrNoSuchApplication{
+					ApplicationName: "mock-app",
+				})
+				m.iamRoleManager.EXPECT().ListRoleTags(gomock.Eq("mock-app-adminrole")).Return(nil, nil)
+			},
+			wantedErr: "IAM admin role \"mock-app-adminrole\" already exists in this account",
 		},
 	}
 
@@ -334,9 +569,10 @@ func TestInitAppOpts_Ask(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &initAppAskMocks{
-				store:  mocks.NewMockstore(ctrl),
-				ws:     mocks.NewMockwsAppManager(ctrl),
-				prompt: mocks.NewMockprompter(ctrl),
+				store:          mocks.NewMockstore(ctrl),
+				ws:             mocks.NewMockwsAppManager(ctrl),
+				prompt:         mocks.NewMockprompter(ctrl),
+				iamRoleManager: mocks.NewMockroleManager(ctrl),
 			}
 			tc.setupMocks(m)
 
@@ -344,8 +580,9 @@ func TestInitAppOpts_Ask(t *testing.T) {
 				initAppVars: initAppVars{
 					name: tc.inAppName,
 				},
-				store:  m.store,
-				prompt: m.prompt,
+				store:          m.store,
+				prompt:         m.prompt,
+				iamRoleManager: m.iamRoleManager,
 				isSessionFromEnvVars: func() (bool, error) {
 					return false, nil
 				},
