@@ -192,6 +192,7 @@ type VPCFlowLogsArgs struct {
 	Retention *int `yaml:"retention,omitempty"`
 }
 
+// isEmpty returns whether VPCFlowLogsArgs is empty.
 func (fl *VPCFlowLogsArgs) isEmpty() bool {
 	return fl.Retention == nil
 }
