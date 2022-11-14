@@ -215,6 +215,7 @@ type SecurityGroupRule struct {
 	ToPort     int
 }
 
+// VPCFlowLogs holds the fields to configure a FlowLog
 type VPCFlowLogs struct {
 	Retention *int
 }

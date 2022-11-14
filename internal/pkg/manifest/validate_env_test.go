@@ -191,8 +191,8 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
-						FlowLogs: VPCFlowLogsArgsorBool{
-							Enabled: aws.Bool(true),
+						FlowLogs: Union[bool, VPCFlowLogsArgs]{
+							Basic: true,
 						},
 					},
 				},
@@ -202,8 +202,8 @@ func TestEnvironmentConfig_validate(t *testing.T) {
 			in: EnvironmentConfig{
 				Network: environmentNetworkConfig{
 					VPC: environmentVPCConfig{
-						FlowLogs: VPCFlowLogsArgsorBool{
-							AdvancedFlowLogConfig: VPCFlowLogsArgs{
+						FlowLogs: Union[bool, VPCFlowLogsArgs]{
+							Advanced: VPCFlowLogsArgs{
 								Retention: aws.Int(30),
 							},
 						},

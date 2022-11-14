@@ -381,55 +381,6 @@ network:
 				},
 			},
 		},
-		"unmarshal with enable flowlogs": {
-			inContent: `name: test
-type: Environment
-
-network:
-  vpc:
-    flow_logs: on`,
-			wantedStruct: &Environment{
-				Workload: Workload{
-					Name: aws.String("test"),
-					Type: aws.String("Environment"),
-				},
-				EnvironmentConfig: EnvironmentConfig{
-					Network: environmentNetworkConfig{
-						VPC: environmentVPCConfig{
-							FlowLogs: VPCFlowLogsArgsorBool{
-								Enabled: aws.Bool(true),
-							},
-						},
-					},
-				},
-			},
-		},
-		"unmarshal with advanced config for flowlogs": {
-			inContent: `name: test
-type: Environment
-
-network:
-  vpc:
-    flow_logs:
-        retention: 60`,
-			wantedStruct: &Environment{
-				Workload: Workload{
-					Name: aws.String("test"),
-					Type: aws.String("Environment"),
-				},
-				EnvironmentConfig: EnvironmentConfig{
-					Network: environmentNetworkConfig{
-						VPC: environmentVPCConfig{
-							FlowLogs: VPCFlowLogsArgsorBool{
-								AdvancedFlowLogConfig: VPCFlowLogsArgs{
-									Retention: aws.Int(60),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
 		"unmarshal with enable access logs": {
 			inContent: `name: prod
 type: Environment
@@ -907,15 +858,16 @@ func TestEnvironmentVPCConfig_IsEmpty(t *testing.T) {
 		},
 		"not empty when flowlog is on": {
 			in: environmentVPCConfig{
-				FlowLogs: VPCFlowLogsArgsorBool{
-					Enabled: aws.Bool(true),
+				FlowLogs: Union[bool, VPCFlowLogsArgs]{
+					Basic: true,
 				},
 			},
+			wanted: true,
 		},
 		"not empty when flowlog with specific retention": {
 			in: environmentVPCConfig{
-				FlowLogs: VPCFlowLogsArgsorBool{
-					AdvancedFlowLogConfig: VPCFlowLogsArgs{
+				FlowLogs: Union[bool, VPCFlowLogsArgs]{
+					Advanced: VPCFlowLogsArgs{
 						Retention: aws.Int(60),
 					},
 				},
@@ -1197,61 +1149,4 @@ func TestEnvironmentConfig_ELBAccessLogs(t *testing.T) {
 			require.Equal(t, tc.wantedConfigs, elbAccessLogs)
 		})
 	}
-}
-
-func TestEnivornmentConfig_VPCFlowLogsEnabled(t *testing.T) {
-	testCases := map[string]struct {
-		in     EnvironmentConfig
-		wanted bool
-	}{
-		"enabled via bool": {
-			in: EnvironmentConfig{
-				Network: environmentNetworkConfig{
-					VPC: environmentVPCConfig{
-						FlowLogs: VPCFlowLogsArgsorBool{
-							Enabled: aws.Bool(true),
-						},
-					},
-				},
-			},
-			wanted: true,
-		},
-		"not enabled via bool": {
-			in: EnvironmentConfig{
-				Network: environmentNetworkConfig{
-					VPC: environmentVPCConfig{
-						FlowLogs: VPCFlowLogsArgsorBool{
-							Enabled: aws.Bool(false),
-						},
-					},
-				},
-			},
-			wanted: false,
-		},
-		"enabled via config": {
-			in: EnvironmentConfig{
-				Network: environmentNetworkConfig{
-					VPC: environmentVPCConfig{
-						FlowLogs: VPCFlowLogsArgsorBool{
-							AdvancedFlowLogConfig: VPCFlowLogsArgs{
-								Retention: aws.Int(30),
-							},
-						},
-					},
-				},
-			},
-			wanted: true,
-		},
-		"not enabled because empty": {
-			in:     EnvironmentConfig{},
-			wanted: false,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			got := tc.in.VPCFlowLogsEnabled()
-			require.Equal(t, tc.wanted, got)
-		})
-	}
-
 }

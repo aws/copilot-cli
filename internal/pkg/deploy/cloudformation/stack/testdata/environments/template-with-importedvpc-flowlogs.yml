@@ -15,8 +15,7 @@ Metadata:
           private:
             - id: 'subnet-33333'
             - id: 'subnet-44444'
-        flow_logs:
-         retention: 60
+        flow_logs: on
     
 Parameters:
   AppName:
@@ -840,7 +839,7 @@ Resources:
       'aws:copilot:description': 'A CloudWatch log group to store VPC flow log data'
     Properties:
       LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogs]]
-      RetentionInDays: 60  
+      RetentionInDays: 14  
   FlowLog:
     Metadata:
       'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'

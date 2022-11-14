@@ -433,7 +433,7 @@ func (e *EnvStackConfig) vpcConfig() (template.VPCConfig, error) {
 	if err != nil {
 		return template.VPCConfig{}, err
 	}
-	vpcFlowLogsArgs, err := convertFlowLogsConfig(e.in.Mft)
+	flowLogs, err := convertFlowLogsConfig(e.in.Mft)
 	if err != nil {
 		return template.VPCConfig{}, err
 	}
@@ -442,7 +442,7 @@ func (e *EnvStackConfig) vpcConfig() (template.VPCConfig, error) {
 		Managed:             e.managedVPC(),
 		AllowVPCIngress:     e.in.Mft.HTTPConfig.Private.HasVPCIngress(),
 		SecurityGroupConfig: securityGroupConfig,
-		FlowLogs:            vpcFlowLogsArgs,
+		FlowLogs:            flowLogs,
 	}, nil
 }
 

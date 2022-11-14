@@ -591,11 +591,7 @@ Resources:
       'aws:copilot:description': 'A CloudWatch log group to store VPC flow log data'
     Properties:
       LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogs]]
-{{- if .VPCConfig.FlowLogs.Retention}}
-      RetentionInDays: {{.VPCConfig.FlowLogs.Retention}} 
-{{- else}}
-      RetentionInDays: 14           
-{{- end}}        
+      RetentionInDays: {{.VPCConfig.FlowLogs.Retention}}       
   FlowLog:
     Metadata:
       'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'

@@ -272,14 +272,6 @@ func (c subnetConfiguration) validate() error {
 	return nil
 }
 
-// validate returns nil if VPCFlowLogsArgsorBool is configured correctly.
-func (fl VPCFlowLogsArgsorBool) validate() error {
-	if fl.isEmpty() {
-		return nil
-	}
-	return fl.AdvancedFlowLogConfig.validate()
-}
-
 // validate is a no-op for VPCFlowLogsArgs.
 func (fl VPCFlowLogsArgs) validate() error {
 	return nil

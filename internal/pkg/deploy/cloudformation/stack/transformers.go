@@ -382,15 +382,17 @@ func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessL
 }
 
 func convertFlowLogsConfig(mft *manifest.Environment) (*template.VPCFlowLogs, error) {
-	vpcFlowLogsArgs := mft.EnvironmentConfig.Network.VPC.FlowLogs.AdvancedFlowLogConfig
-	if !mft.VPCFlowLogsEnabled() {
+	vpcFlowLogs := mft.EnvironmentConfig.Network.VPC.FlowLogs
+	if !vpcFlowLogs.Basic && vpcFlowLogs.Advanced.Retention == nil {
 		return nil, nil
 	}
-	if vpcFlowLogsArgs.Retention == nil {
-		return &template.VPCFlowLogs{}, nil
+	if vpcFlowLogs.Advanced.Retention == nil {
+		return &template.VPCFlowLogs{
+			Retention: aws.Int(14),
+		}, nil
 	}
 	return &template.VPCFlowLogs{
-		Retention: vpcFlowLogsArgs.Retention,
+		Retention: vpcFlowLogs.Advanced.Retention,
 	}, nil
 }
 
