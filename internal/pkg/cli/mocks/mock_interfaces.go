@@ -2781,21 +2781,6 @@ func (m *MockwsWlDirReader) EXPECT() *MockwsWlDirReaderMockRecorder {
 	return m.recorder
 }
 
-// ListDockerfiles mocks base method.
-func (m *MockwsWlDirReader) ListDockerfiles() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDockerfiles")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListDockerfiles indicates an expected call of ListDockerfiles.
-func (mr *MockwsWlDirReaderMockRecorder) ListDockerfiles() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MockwsWlDirReader)(nil).ListDockerfiles))
-}
-
 // ListEnvironments mocks base method.
 func (m *MockwsWlDirReader) ListEnvironments() ([]string, error) {
 	m.ctrl.T.Helper()

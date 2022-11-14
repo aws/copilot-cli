@@ -295,7 +295,6 @@ type wsWlDirReader interface {
 	workspacePathGetter
 	wlLister
 	wsEnvironmentsLister
-	ListDockerfiles() ([]string, error)
 	Summary() (*workspace.Summary, error)
 }
 

@@ -7,6 +7,8 @@ package selector
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -18,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 
 	"github.com/lnquy/cron"
 )
@@ -62,6 +65,11 @@ For example: 0 17 ? * MON-FRI (5 pm on weekdays)
 	humanReadableCronConfirmPrompt = "Would you like to use this schedule?"
 	humanReadableCronConfirmHelp   = `Confirm whether the schedule looks right to you.
 (Y)es will continue execution. (N)o will allow you to input a different schedule.`
+)
+
+const (
+	dockerfileName   = "dockerfile"
+	dockerignoreName = ".dockerignore"
 )
 
 // Final messages displayed after prompting.
@@ -142,7 +150,6 @@ type workspaceRetriever interface {
 	wsWorkloadLister
 	wsEnvironmentsLister
 	Summary() (*workspace.Summary, error)
-	ListDockerfiles() ([]string, error)
 }
 
 // deployedWorkloadsRetriever retrieves information about deployed services or jobs.
@@ -194,6 +201,99 @@ type LocalEnvironmentSelector struct {
 type WorkspaceSelector struct {
 	prompt prompter
 	ws     workspaceRetriever
+}
+
+type localFileSelector struct {
+	prompt        prompter
+	fs            *afero.Afero
+	workingDirAbs string
+}
+
+// NewLocalFileSelector constructs a localFileSelector.
+func NewLocalFileSelector(prompt prompter, fs afero.Fs) (*localFileSelector, error) {
+	workingDirAbs, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	return &localFileSelector{
+		prompt:        prompt,
+		fs:            &afero.Afero{Fs: fs},
+		workingDirAbs: workingDirAbs,
+	}, nil
+}
+
+// Dockerfile asks the user to select from a list of Dockerfiles in the current
+// directory or one level down. If no dockerfiles are found, it asks for a custom path.
+func (s *localFileSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
+	dockerfiles, err := s.listDockerfiles()
+	if err != nil {
+		return "", err
+	}
+	var sel string
+	dockerfiles = append(dockerfiles, []string{dockerfilePromptUseCustom, DockerfilePromptUseImage}...)
+	sel, err = s.prompt.SelectOne(
+		selPrompt,
+		selHelp,
+		dockerfiles,
+		prompt.WithFinalMessage(dockerfileFinalMsg),
+	)
+	if err != nil {
+		return "", fmt.Errorf("select Dockerfile: %w", err)
+	}
+	if sel != dockerfilePromptUseCustom {
+		return sel, nil
+	}
+	sel, err = s.prompt.Get(
+		notFoundPrompt,
+		notFoundHelp,
+		pathValidator,
+		prompt.WithFinalMessage(dockerfileFinalMsg))
+	if err != nil {
+		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
+	}
+	return sel, nil
+}
+
+// ListDockerfiles returns the list of Dockerfiles within the current
+// working directory and a sub-directory level below. If an error occurs while
+// reading directories, or no Dockerfiles found returns the error.
+func (s *localFileSelector) listDockerfiles() ([]string, error) {
+	wdFiles, err := s.fs.ReadDir(s.workingDirAbs)
+	if err != nil {
+		return nil, fmt.Errorf("read directory: %w", err)
+	}
+	var dockerfiles = make([]string, 0)
+	for _, wdFile := range wdFiles {
+		// Add current file if it is a Dockerfile and not a directory; otherwise continue.
+		if !wdFile.IsDir() {
+			fname := wdFile.Name()
+			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.HasSuffix(strings.ToLower(fname), dockerignoreName) {
+				path := filepath.Dir(fname) + "/" + fname
+				dockerfiles = append(dockerfiles, path)
+			}
+			continue
+		}
+
+		// Add sub-directories containing a Dockerfile one level below current directory.
+		subFiles, err := s.fs.ReadDir(wdFile.Name())
+		if err != nil {
+			// swallow errors for unreadable directories
+			continue
+		}
+		for _, f := range subFiles {
+			// NOTE: ignore directories in sub-directories.
+			if f.IsDir() {
+				continue
+			}
+			fname := f.Name()
+			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.HasSuffix(strings.ToLower(fname), dockerignoreName) {
+				path := wdFile.Name() + "/" + f.Name()
+				dockerfiles = append(dockerfiles, path)
+			}
+		}
+	}
+	sort.Strings(dockerfiles)
+	return dockerfiles, nil
 }
 
 // WsPipelineSelector is a workspace pipeline selector.
@@ -1054,38 +1154,6 @@ func (s *AppEnvSelector) Application(msg, help string, additionalOpts ...string)
 		return "", fmt.Errorf("select application: %w", err)
 	}
 	return app, nil
-}
-
-// Dockerfile asks the user to select from a list of Dockerfiles in the current
-// directory or one level down. If no dockerfiles are found, it asks for a custom path.
-func (s *WorkspaceSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
-	dockerfiles, err := s.ws.ListDockerfiles()
-	if err != nil {
-		return "", fmt.Errorf("list Dockerfiles: %w", err)
-	}
-	var sel string
-	dockerfiles = append(dockerfiles, []string{dockerfilePromptUseCustom, DockerfilePromptUseImage}...)
-	sel, err = s.prompt.SelectOne(
-		selPrompt,
-		selHelp,
-		dockerfiles,
-		prompt.WithFinalMessage(dockerfileFinalMsg),
-	)
-	if err != nil {
-		return "", fmt.Errorf("select Dockerfile: %w", err)
-	}
-	if sel != dockerfilePromptUseCustom {
-		return sel, nil
-	}
-	sel, err = s.prompt.Get(
-		notFoundPrompt,
-		notFoundHelp,
-		pathValidator,
-		prompt.WithFinalMessage(dockerfileFinalMsg))
-	if err != nil {
-		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
-	}
-	return sel, nil
 }
 
 // Schedule asks the user to select either a rate, preset cron, or custom cron.
