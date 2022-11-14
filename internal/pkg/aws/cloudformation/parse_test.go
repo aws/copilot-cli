@@ -4,7 +4,7 @@
 package cloudformation
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -46,7 +46,7 @@ func TestParseTemplateDescriptions(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
-			body, err := ioutil.ReadFile(filepath.Join("testdata", "parse", tc.testFile))
+			body, err := os.ReadFile(filepath.Join("testdata", "parse", tc.testFile))
 			require.NoError(t, err, tc.testFile, "unexpected error while reading testdata file")
 
 			// WHEN

@@ -195,13 +195,9 @@ type WorkloadDeployerInput struct {
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
 func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
-	}
-	workspacePath, err := ws.Path()
-	if err != nil {
-		return nil, fmt.Errorf("get workspace path: %w", err)
+		return nil, err
 	}
 	defaultSession, err := in.SessionProvider.Default()
 	if err != nil {
@@ -258,7 +254,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		env:                in.Env,
 		imageTag:           in.ImageTag,
 		resources:          resources,
-		workspacePath:      workspacePath,
+		workspacePath:      ws.Path(),
 		fs:                 &afero.Afero{Fs: afero.NewOsFs()},
 		s3Client:           s3.New(envSession),
 		addons:             addons,

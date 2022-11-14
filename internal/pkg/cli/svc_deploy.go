@@ -15,6 +15,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/tags"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/spf13/afero"
 
 	"github.com/spf13/cobra"
 
@@ -72,9 +73,9 @@ type deploySvcOpts struct {
 }
 
 func newSvcDeployOpts(vars deployWkldVars) (*deploySvcOpts, error) {
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, err
 	}
 
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc deploy"))

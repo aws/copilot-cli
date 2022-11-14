@@ -6,7 +6,7 @@
 package manifest
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -42,7 +42,7 @@ func TestLoadBalancedWebService_InitialManifestIntegration(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			path := filepath.Join("testdata", tc.wantedTestdata)
-			wantedBytes, err := ioutil.ReadFile(path)
+			wantedBytes, err := os.ReadFile(path)
 			require.NoError(t, err)
 			manifest := NewLoadBalancedWebService(&tc.inProps)
 
@@ -101,7 +101,7 @@ func TestBackendSvc_InitialManifestIntegration(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			path := filepath.Join("testdata", tc.wantedTestdata)
-			wantedBytes, err := ioutil.ReadFile(path)
+			wantedBytes, err := os.ReadFile(path)
 			require.NoError(t, err)
 			manifest := NewBackendService(tc.inProps)
 
@@ -191,7 +191,7 @@ func TestWorkerSvc_InitialManifestIntegration(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			path := filepath.Join("testdata", tc.wantedTestdata)
-			wantedBytes, err := ioutil.ReadFile(path)
+			wantedBytes, err := os.ReadFile(path)
 			require.NoError(t, err)
 			manifest := NewWorkerService(tc.inProps)
 
@@ -278,7 +278,7 @@ func TestScheduledJob_InitialManifestIntegration(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			path := filepath.Join("testdata", tc.wantedTestData)
-			wantedBytes, err := ioutil.ReadFile(path)
+			wantedBytes, err := os.ReadFile(path)
 			require.NoError(t, err)
 			manifest := NewScheduledJob(&tc.inProps)
 
@@ -363,7 +363,7 @@ func TestEnvironment_InitialManifestIntegration(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			path := filepath.Join("testdata", tc.wantedTestData)
-			wantedBytes, err := ioutil.ReadFile(path)
+			wantedBytes, err := os.ReadFile(path)
 			require.NoError(t, err)
 			manifest := NewEnvironment(&tc.inProps)
 
@@ -441,7 +441,7 @@ func TestPipelineManifest_InitialManifest_Integration(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			path := filepath.Join("testdata", tc.wantedTestData)
-			wantedBytes, err := ioutil.ReadFile(path)
+			wantedBytes, err := os.ReadFile(path)
 			require.NoError(t, err)
 
 			manifest, err := NewPipeline("mock-pipeline", tc.inProvider, tc.inStages)
