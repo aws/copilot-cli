@@ -181,13 +181,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
+	sel, err := selector.NewLocalFileSelector(prompter, fs)
+	if err != nil {
+		return nil, err
+	}
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
 		fs:           fs,
 		init:         initSvc,
 		prompt:       prompter,
-		sel:          selector.NewWorkspaceSelector(prompter, ws),
+		sel:          sel,
 		topicSel:     snsSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
