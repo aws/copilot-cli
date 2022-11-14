@@ -187,13 +187,13 @@ func (cfg *portsConfig) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// VPCFlowLogsArgs holds the flow logs configuration
+// VPCFlowLogsArgs holds the flow logs configuration.
 type VPCFlowLogsArgs struct {
 	Retention *int `yaml:"retention,omitempty"`
 }
 
 // isEmpty returns whether VPCFlowLogsArgs is empty.
-func (fl *VPCFlowLogsArgs) isEmpty() bool {
+func (fl *VPCFlowLogsArgs) IsZero() bool {
 	return fl.Retention == nil
 }
 
@@ -272,7 +272,7 @@ func (cfg *EnvironmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 
 // IsEmpty returns true if vpc is not configured.
 func (cfg environmentVPCConfig) IsEmpty() bool {
-	return cfg.ID == nil && cfg.CIDR == nil && cfg.Subnets.IsEmpty() && cfg.FlowLogs.Advanced.isEmpty()
+	return cfg.ID == nil && cfg.CIDR == nil && cfg.Subnets.IsEmpty() && cfg.FlowLogs.IsZero()
 }
 
 func (cfg *environmentVPCConfig) loadVPCConfig(env *config.CustomizeEnv) {

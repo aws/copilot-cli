@@ -387,14 +387,14 @@ func convertFlowLogsConfig(mft *manifest.Environment) (*template.VPCFlowLogs, er
 	if !vpcFlowLogs.Basic && vpcFlowLogs.Advanced.Retention == nil {
 		return nil, nil
 	}
-	if vpcFlowLogs.Advanced.Retention == nil {
-		return &template.VPCFlowLogs{
-			Retention: aws.Int(14),
-		}, nil
+	retentionInDays := aws.Int(14)
+	if vpcFlowLogs.Advanced.Retention != nil {
+		retentionInDays = vpcFlowLogs.Advanced.Retention
 	}
 	return &template.VPCFlowLogs{
-		Retention: vpcFlowLogs.Advanced.Retention,
+		Retention: retentionInDays,
 	}, nil
+
 }
 
 func convertEnvSecurityGroupCfg(mft *manifest.Environment) (*template.SecurityGroupConfig, error) {

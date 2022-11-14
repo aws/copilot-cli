@@ -872,6 +872,7 @@ func TestEnvironmentVPCConfig_IsEmpty(t *testing.T) {
 					},
 				},
 			},
+			wanted: true,
 		},
 	}
 	for name, tc := range testCases {
