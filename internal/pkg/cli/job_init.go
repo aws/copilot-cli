@@ -175,25 +175,24 @@ func (o *initJobOpts) Ask() error {
 	if err := o.validateDuplicateJob(); err != nil {
 		return err
 	}
-	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
-	if err == nil {
-		jobType, err := localMft.WorkloadType()
-		if err != nil {
-			return fmt.Errorf(`read "type" field for job %s from local manifest: %w`, o.name, err)
+	if !o.wsPendingCreation {
+		localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
+		if err == nil {
+			jobType, err := localMft.WorkloadType()
+			if err != nil {
+				return fmt.Errorf(`read "type" field for job %s from local manifest: %w`, o.name, err)
+			}
+			if o.wkldType != jobType {
+				return fmt.Errorf("manifest file for job %s exists with a different type %s", o.name, jobType)
+			}
+			log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
+			o.manifestExists = true
+			return nil
 		}
-		if o.wkldType != jobType {
-			return fmt.Errorf("manifest file for job %s exists with a different type %s", o.name, jobType)
+		var errNotFound *workspace.ErrFileNotExists
+		if !errors.As(err, &errNotFound) {
+			return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 		}
-		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
-		o.manifestExists = true
-		return nil
-	}
-	var (
-		errNotFound          *workspace.ErrFileNotExists
-		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
-	)
-	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
-		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {

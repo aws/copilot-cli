@@ -472,6 +472,9 @@ func (o *initSvcOpts) askImage() error {
 }
 
 func (o *initSvcOpts) shouldSkipAsking() (bool, error) {
+	if o.wsPendingCreation {
+		return false, nil
+	}
 	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
 	if err != nil {
 		var (
