@@ -296,6 +296,38 @@ func (s *localFileSelector) listDockerfiles() ([]string, error) {
 	return dockerfiles, nil
 }
 
+type configurationSelector struct {
+	prompt prompter
+}
+
+// NewConfigurationSelector constructs a localFconfigurationSelectorileSelector.
+func NewConfigurationSelector(prompt prompter) *configurationSelector {
+	return &configurationSelector{
+		prompt: prompt,
+	}
+}
+
+// Schedule asks the user to select either a rate, preset cron, or custom cron.
+func (s *configurationSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
+	scheduleType, err := s.prompt.SelectOne(
+		scheduleTypePrompt,
+		scheduleTypeHelp,
+		scheduleTypes,
+		prompt.WithFinalMessage("Schedule type:"),
+	)
+	if err != nil {
+		return "", fmt.Errorf("get schedule type: %w", err)
+	}
+	switch scheduleType {
+	case rate:
+		return s.askRate(rateValidator)
+	case fixedSchedule:
+		return s.askCron(scheduleValidator)
+	default:
+		return "", fmt.Errorf("unrecognized schedule type %s", scheduleType)
+	}
+}
+
 // WsPipelineSelector is a workspace pipeline selector.
 type WsPipelineSelector struct {
 	prompt prompter
@@ -1156,27 +1188,6 @@ func (s *AppEnvSelector) Application(msg, help string, additionalOpts ...string)
 	return app, nil
 }
 
-// Schedule asks the user to select either a rate, preset cron, or custom cron.
-func (s *WorkspaceSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
-	scheduleType, err := s.prompt.SelectOne(
-		scheduleTypePrompt,
-		scheduleTypeHelp,
-		scheduleTypes,
-		prompt.WithFinalMessage("Schedule type:"),
-	)
-	if err != nil {
-		return "", fmt.Errorf("get schedule type: %w", err)
-	}
-	switch scheduleType {
-	case rate:
-		return s.askRate(rateValidator)
-	case fixedSchedule:
-		return s.askCron(scheduleValidator)
-	default:
-		return "", fmt.Errorf("unrecognized schedule type %s", scheduleType)
-	}
-}
-
 // Topics asks the user to select from all Copilot-managed SNS topics *which are deployed
 // across all environments* and returns the topic structs.
 func (s *DeploySelector) Topics(promptMsg, help, app string) ([]deploy.Topic, error) {
@@ -1327,7 +1338,7 @@ func (s *WsPipelineSelector) pipelinePath(pipelines []workspace.PipelineManifest
 	return ""
 }
 
-func (s *WorkspaceSelector) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
+func (s *configurationSelector) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
 	rateInput, err := s.prompt.Get(
 		ratePrompt,
 		rateHelp,
@@ -1341,7 +1352,7 @@ func (s *WorkspaceSelector) askRate(rateValidator prompt.ValidatorFunc) (string,
 	return fmt.Sprintf(every, rateInput), nil
 }
 
-func (s *WorkspaceSelector) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
+func (s *configurationSelector) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
 	cronInput, err := s.prompt.SelectOption(
 		schedulePrompt,
 		scheduleHelp,

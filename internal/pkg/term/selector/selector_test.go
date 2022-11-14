@@ -2393,12 +2393,11 @@ func TestSelect_Application(t *testing.T) {
 	}
 }
 
-func TestWorkspaceSelect_Schedule(t *testing.T) {
+func TestConfigurationSelector_Schedule(t *testing.T) {
 	scheduleTypePrompt := "HAY WHAT SCHEDULE"
 	scheduleTypeHelp := "NO"
 
 	testCases := map[string]struct {
-		mockWs         func(retriever *mocks.MockworkspaceRetriever)
 		mockPrompt     func(*mocks.Mockprompter)
 		wantedSchedule string
 		wantedErr      error
@@ -2496,11 +2495,9 @@ func TestWorkspaceSelect_Schedule(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			p := mocks.NewMockprompter(ctrl)
-			cfg := mocks.NewMockworkspaceRetriever(ctrl)
 			tc.mockPrompt(p)
-			sel := WorkspaceSelector{
+			sel := configurationSelector{
 				prompt: p,
-				ws:     cfg,
 			}
 
 			var mockValidator prompt.ValidatorFunc = func(interface{}) error { return nil }
