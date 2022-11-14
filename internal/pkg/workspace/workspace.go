@@ -51,9 +51,6 @@ const (
 	buildspecFileName         = "buildspec.yml"
 
 	ymlFileExtension = ".yml"
-
-	dockerfileName   = "dockerfile"
-	dockerignoreName = ".dockerignore"
 )
 
 // Summary is a description of what's associated with this workspace.
