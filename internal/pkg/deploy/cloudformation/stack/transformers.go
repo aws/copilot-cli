@@ -67,7 +67,7 @@ var (
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBalancedWebService, bsmft *manifest.BackendService) ([]*template.SidecarOpts, error) {
+func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBalancedWebService, bsmft *manifest.BackendService, sjmft *manifest.ScheduledJob, wsmft *manifest.WorkerService) ([]*template.SidecarOpts, error) {
 	sidecars := s
 	if sidecars == nil {
 		return nil, nil
@@ -118,6 +118,22 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBa
 						Name:          name,
 					})
 				}
+			}
+		} else if sjmft != nil {
+			if port != nil {
+				portMappings = append(portMappings, &template.PortMapping{
+					ContainerPort: port,
+					Protocol:      protocol,
+					Name:          name,
+				})
+			}
+		} else if wsmft != nil {
+			if port != nil {
+				portMappings = append(portMappings, &template.PortMapping{
+					ContainerPort: port,
+					Protocol:      protocol,
+					Name:          name,
+				})
 			}
 		}
 

@@ -135,7 +135,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(j.manifest.Sidecars, nil, nil)
+	sidecars, err := convertSidecar(j.manifest.Sidecars, nil, nil, j.manifest, nil)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}

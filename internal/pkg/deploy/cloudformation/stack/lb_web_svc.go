@@ -131,7 +131,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars, s.manifest, nil)
+	sidecars, err := convertSidecar(s.manifest.Sidecars, s.manifest, nil, nil, nil)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}

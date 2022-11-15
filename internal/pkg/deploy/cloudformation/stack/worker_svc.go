@@ -77,7 +77,7 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars, nil, nil)
+	sidecars, err := convertSidecar(s.manifest.Sidecars, nil, nil, nil, s.manifest)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
