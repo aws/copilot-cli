@@ -4,6 +4,9 @@
 package manifest
 
 import (
+	"bytes"
+	"fmt"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -73,27 +76,47 @@ func (t Union[_, _]) IsAdvanced() bool {
 // decoding, t will not hold any value.
 func (t *Union[Basic, Advanced]) UnmarshalYAML(value *yaml.Node) error {
 	// reset struct
-	var simple Basic
+	var basic Basic
 	var advanced Advanced
-	t.isBasic, t.Basic = false, simple
+	t.isBasic, t.Basic = false, basic
 	t.isAdvanced, t.Advanced = false, advanced
 
-	sErr := value.Decode(&simple)
-	if sErr == nil && !isZeroerAndZero(simple) {
-		t.isBasic, t.Basic = true, simple
+	// convert value to []byte so we can use KnownFields()
+	// see https://github.com/go-yaml/yaml/issues/460
+	// side effect: TypeError line numbers are reset.
+	b, err := yaml.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	dec := yaml.NewDecoder(bytes.NewReader(b))
+	dec.KnownFields(true)
+	bErr := dec.Decode(&basic)
+	if bErr == nil && !isZeroerAndZero(basic) {
+		t.isBasic, t.Basic = true, basic
 		return nil
 	}
 
-	aErr := value.Decode(&advanced)
+	dec = yaml.NewDecoder(bytes.NewReader(b))
+	dec.KnownFields(true)
+	aErr := dec.Decode(&advanced)
 	if aErr == nil && !isZeroerAndZero(advanced) {
 		t.isAdvanced, t.Advanced = true, advanced
 		return nil
 	}
 
-	if sErr != nil {
-		return sErr
+	switch {
+	case bErr == nil && aErr == nil:
+		return nil
+	case bErr != nil && aErr == nil:
+		return bErr
+	case aErr != nil && bErr == nil:
+		return aErr
 	}
-	return aErr
+
+	// multiline error because yaml.TypeError (which this likely is)
+	// is already a multiline error
+	return fmt.Errorf("%T: %s\n%T: %s", t.Basic, bErr, t.Advanced, aErr)
 }
 
 // isZeroerAndZero returns true if v is a yaml.Zeroer
