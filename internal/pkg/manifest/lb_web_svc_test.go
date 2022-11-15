@@ -265,6 +265,20 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
+						Variables: map[string]variable{
+							"VAR1": {
+								stringOrFromEnvironment{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromEnvironment{
+									FromEnvironment: fromEnvironment{
+										Name: stringP("import-var2"),
+									},
+								},
+							},
+						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"myEFSVolume": {
@@ -316,6 +330,20 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(1024),
 						Count: Count{
 							Value: aws.Int(1),
+						},
+						Variables: map[string]variable{
+							"VAR1": {
+								stringOrFromEnvironment{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromEnvironment{
+									FromEnvironment: fromEnvironment{
+										Name: stringP("import-var2"),
+									},
+								},
+							},
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
@@ -375,9 +403,23 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 									Plain: stringP("DEBUG"),
 								},
 							},
+							"S3_TABLE_NAME": {
+								stringOrFromEnvironment{
+									Plain: stringP("doggo"),
+								},
+							},
+							"RDS_TABLE_NAME": {
+								stringOrFromEnvironment{
+									FromEnvironment: fromEnvironment{
+										Name: stringP("duckling"),
+									},
+								},
+							},
 							"DDB_TABLE_NAME": {
 								stringOrFromEnvironment{
-									Plain: stringP("awards"),
+									FromEnvironment: fromEnvironment{
+										Name: stringP("awards"),
+									},
 								},
 							},
 						},
@@ -451,9 +493,22 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								Value: aws.Int(0),
 							},
 							Variables: map[string]variable{
+								"LOG_LEVEL": {
+									stringOrFromEnvironment{
+										Plain: stringP("ERROR"),
+									},
+								},
+								"S3_TABLE_NAME": {
+									stringOrFromEnvironment{
+										FromEnvironment: fromEnvironment{Name: stringP("prod-doggo")},
+									},
+								},
+								"RDS_TABLE_NAME": {
+									stringOrFromEnvironment{Plain: stringP("duckling-prod")},
+								},
 								"DDB_TABLE_NAME": {
 									stringOrFromEnvironment{
-										Plain: stringP("awards-prod"),
+										FromEnvironment: fromEnvironment{Name: stringP("awards-prod")},
 									},
 								},
 							},
@@ -539,12 +594,22 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Variables: map[string]variable{
 							"LOG_LEVEL": {
 								stringOrFromEnvironment{
-									Plain: stringP("DEBUG"),
+									Plain: stringP("ERROR"),
+								},
+							},
+							"S3_TABLE_NAME": {
+								stringOrFromEnvironment{
+									FromEnvironment: fromEnvironment{Name: stringP("prod-doggo")},
+								},
+							},
+							"RDS_TABLE_NAME": {
+								stringOrFromEnvironment{
+									Plain: stringP("duckling-prod"),
 								},
 							},
 							"DDB_TABLE_NAME": {
 								stringOrFromEnvironment{
-									Plain: stringP("awards-prod"),
+									FromEnvironment: fromEnvironment{Name: stringP("awards-prod")},
 								},
 							},
 						},
@@ -617,6 +682,18 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								CPU:   mockConfig,
 							},
 						},
+						Variables: map[string]variable{
+							"VAR1": {
+								stringOrFromEnvironment{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromEnvironment{
+									FromEnvironment: fromEnvironment{Name: stringP("import-var2")},
+								},
+							},
+						},
 					},
 					ImageOverride: ImageOverride{
 						Command: CommandOverride{
@@ -641,6 +718,18 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
 								CPU:   mockConfig,
+							},
+						},
+						Variables: map[string]variable{
+							"VAR1": {
+								stringOrFromEnvironment{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromEnvironment{
+									FromEnvironment: fromEnvironment{Name: stringP("import-var2")},
+								},
 							},
 						},
 					},
