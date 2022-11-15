@@ -95,9 +95,10 @@ Resources: # If a bucket URL is specified, that means the template exists.
               awslogs-stream-prefix: copilot
           PortMappings:
             - ContainerPort: !Ref ContainerPort
-              Name: target
+              Name: ALBTarget
             - ContainerPort: 443
               Protocol: tcp
+              Name: NLBTarget
   ExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'

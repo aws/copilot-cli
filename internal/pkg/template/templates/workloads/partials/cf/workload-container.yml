@@ -32,7 +32,7 @@
     {{- if and .ServiceConnect .SCFeatureFlag}} # remove when release
     {{/* Multiple exposed port is not supported yet. Therefore, if the target container is the sidecar, the target port must be the one and only one port that the container exposes. */}}
     {{- if eq .HTTPTargetContainer.Name .WorkloadName}}
-      Name: target
+      Name: ALBTarget
     {{- end}}
     {{- end}}
 {{- if .NLB}} {{ $nlbListener := .NLB.Listener }} 
@@ -40,6 +40,9 @@
   {{/*No need to add additional port if the target port is the same as image port*/}}
     - ContainerPort: {{$nlbListener.TargetPort}}
       Protocol: {{if eq $nlbListener.Protocol "UDP"}}udp{{else}}tcp{{end}}
+      {{- if and .ServiceConnect .SCFeatureFlag }} # remove when release
+      Name: NLBTarget
+      {{- end}}
   {{- end}}
 {{- end}}
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
