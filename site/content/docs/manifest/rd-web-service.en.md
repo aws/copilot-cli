@@ -8,11 +8,11 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
         # Deploys a web service accessible at https://web.example.com.
         name: frontend
         type: Request-Driven Web Service
-    
+
         http:
           healthcheck: '/_healthcheck'
           alias: web.example.com
-    
+
         image:
           build: ./frontend/Dockerfile
           port: 80
@@ -25,7 +25,7 @@ List of all available properties for a `'Request-Driven Web Service'` manifest.
           owner: frontend
         observability:
           tracing: awsxray
-    
+
         environments:
           test:
             variables:
@@ -187,7 +187,7 @@ Amount of memory in MiB reserved for each instance of your service. See the [AWS
 
 <a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
 The `network` section contains parameters for connecting the service to AWS resources in the environment's VPC.  
-By connecting the service to a VPC, you can use [service discovery](../developing/service-discovery.en.md) to communicate with other services
+By connecting the service to a VPC, you can use [service discovery](../developing/internal-traffic.en.md#service-discovery) to communicate with other services
 in your environment, or connect to a database in your VPC such as Amazon Aurora with [`storage init`](../commands/storage-init.en.md).
 
 <span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    
@@ -198,7 +198,7 @@ The only valid option today is `'private'`. If you prefer the service not to be 
 
 When the placement is `'private'`, the App Runner service routes egress traffic through the private subnets of the VPC.  
 If you use a Copilot-generated VPC, Copilot will automatically add NAT Gateways to your environment for internet connectivity. (See [pricing](https://aws.amazon.com/vpc/pricing/).)
-Alternatively, when running `copilot env init`, you can import an existing VPC with NAT Gateways, or one with VPC endpoints 
+Alternatively, when running `copilot env init`, you can import an existing VPC with NAT Gateways, or one with VPC endpoints
 for isolated workloads. See our [custom environment resources](../developing/custom-environment-resources.en.md) page for more.
 
 {% include 'observability.en.md' %}
@@ -224,4 +224,3 @@ Key-value pairs representing AWS tags that are passed down to your AWS App Runne
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the `LOG_LEVEL` environment variable in our 'test' environment.
-

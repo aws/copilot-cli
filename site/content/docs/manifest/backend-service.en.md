@@ -2,10 +2,9 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
 
 ???+ note "Sample backend service manifests"
 
-    === "Service Discovery"
+    === "Serving Internal Traffic"
 
         ```yaml
-            # Your service is reachable at "http://api.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:8080" only within your VPC.
             name: api
             type: Backend Service
 
@@ -18,12 +17,15 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
                 retries: 2
                 timeout: 5s
                 start_period: 0s
-    
+
+            network:
+              connect: true
+
             cpu: 256
             memory: 512
             count: 2
             exec: true
-    
+
             env_file: ./api/.env
             environments:
               test:
@@ -40,7 +42,7 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
         # behind an internal load balancer only within your VPC.
         name: api
         type: Backend Service
-    
+
         image:
           build: ./api/Dockerfile
           port: 8080
@@ -80,7 +82,7 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
         # See https://aws.github.io/copilot-cli/docs/manifest/environment/#http-private-certificates
         name: api
         type: Backend Service
-    
+
         image:
           build: ./api/Dockerfile
           port: 8080
@@ -99,7 +101,7 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
         # See https://aws.github.io/copilot-cli/docs/developing/publish-subscribe/
         name: warehouse
         type: Backend Service
-    
+
         image:
           build: ./warehouse/Dockerfile
           port: 80
@@ -134,7 +136,7 @@ List of all available properties for a `'Backend Service'` manifest. To learn ab
 
         storage:
           volumes:
-            userdata: 
+            userdata:
               path: /etc/mount1
               efs:
                 id: fs-1234567
@@ -146,7 +148,7 @@ The name of your service.
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
-The architecture type for your service. [Backend Services](../concepts/services.en.md#backend-service) are not reachable from the internet, but can be reached with [service discovery](../developing/service-discovery.en.md) from your other services.
+The architecture type for your service. [Backend Services](../concepts/services.en.md#backend-service) are not reachable from the internet, but can be reached with [service discovery](../developing/internal-traffic.en.md#service-discovery) from your other services.
 
 <div class="separator"></div>
 
@@ -217,7 +219,7 @@ TLS connections with the Fargate tasks using certificates that you install on th
 
 <div class="separator"></div>
 
-<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span> 
+<a id="count" href="#count" class="field">`count`</a> <span class="type">Integer or Map</span>
 The number of tasks that your service should maintain.
 
 If you specify a number:
