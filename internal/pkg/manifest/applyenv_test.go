@@ -790,3 +790,175 @@ func TestApplyEnv_MapToPStruct(t *testing.T) {
 		})
 	}
 }
+
+func TestApplyEnv_MapToStruct(t *testing.T) {
+	testCases := map[string]struct {
+		inSvc  func(svc *LoadBalancedWebService)
+		wanted func(svc *LoadBalancedWebService)
+	}{
+		"map upserted": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]variable{
+					"VAR1": {
+						stringOrFromEnvironment{
+							Plain: stringP("var1"),
+						},
+					},
+					"VAR2": {
+						stringOrFromEnvironment{
+							FromEnvironment: fromEnvironment{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].TaskConfig.Variables = map[string]variable{
+					"VAR1": {
+						stringOrFromEnvironment{
+							FromEnvironment: fromEnvironment{
+								Name: stringP("import-var1-test"),
+							},
+						},
+					},
+					"VAR3": {
+						stringOrFromEnvironment{
+							Plain: stringP("var3-test"),
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]variable{
+					"VAR1": {
+						stringOrFromEnvironment{
+							FromEnvironment: fromEnvironment{
+								Name: stringP("import-var1-test"),
+							},
+						},
+					},
+					"VAR2": {
+						stringOrFromEnvironment{
+							FromEnvironment: fromEnvironment{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+					"VAR3": {
+						stringOrFromEnvironment{
+							Plain: stringP("var3-test"),
+						},
+					},
+				}
+			},
+		},
+		"map not overridden by zero map": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]variable{
+					"VAR1": {
+						stringOrFromEnvironment{
+							Plain: stringP("var1"),
+						},
+					},
+					"VAR2": {
+						stringOrFromEnvironment{
+							FromEnvironment: fromEnvironment{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].TaskConfig.Variables = map[string]variable{}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]variable{
+					"VAR1": {
+						stringOrFromEnvironment{
+							Plain: stringP("var1"),
+						},
+					},
+					"VAR2": {
+						stringOrFromEnvironment{
+							FromEnvironment: fromEnvironment{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+				}
+			},
+		},
+		"map not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]variable{
+					"VAR1": {
+						stringOrFromEnvironment{
+							Plain: stringP("var1"),
+						},
+					},
+					"VAR2": {
+						stringOrFromEnvironment{
+							FromEnvironment: fromEnvironment{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]variable{
+					"VAR1": {
+						stringOrFromEnvironment{
+							Plain: stringP("var1"),
+						},
+					},
+					"VAR2": {
+						stringOrFromEnvironment{
+							FromEnvironment: fromEnvironment{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+				}
+			},
+		},
+		"override a zero value": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]variable{
+					"VAR1": {},
+				}
+				svc.Environments["test"].TaskConfig.Variables = map[string]variable{
+					"VAR1": {
+						stringOrFromEnvironment{
+							Plain: stringP("var1-test"),
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]variable{
+					"VAR1": {
+						stringOrFromEnvironment{
+							Plain: stringP("var1-test"),
+						},
+					},
+				}
+
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var inSvc, wantedSvc LoadBalancedWebService
+			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
+				"test": {},
+			}
+
+			tc.inSvc(&inSvc)
+			tc.wanted(&wantedSvc)
+
+			got, err := inSvc.applyEnv("test")
+
+			require.NoError(t, err)
+			require.Equal(t, &wantedSvc, got)
+		})
+	}
+}
