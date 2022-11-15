@@ -109,7 +109,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               SourceVolume: persistence
           PortMappings:
             - ContainerPort: !Ref ContainerPort
-              Name: target
+              Name: ALBTarget
       Volumes:
         - Name: persistence
   ExecutionRole:

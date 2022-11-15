@@ -40,7 +40,7 @@
               awslogs-stream-prefix: copilot
           PortMappings:
             - ContainerPort: !Ref ContainerPort
-              Name: target
+              Name: ALBTarget
             - ContainerPort: 2056
               Protocol: "udp"
           Ulimits:
