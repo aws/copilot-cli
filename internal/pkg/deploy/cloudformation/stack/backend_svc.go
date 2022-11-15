@@ -93,7 +93,7 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars)
+	sidecars, err := convertSidecar(s.manifest.Sidecars, nil, s.manifest)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -197,6 +197,7 @@ func (s *BackendService) Template() (string, error) {
 		HostedZoneAliases:   hostedZoneAliases,
 		PermissionsBoundary: s.permBound,
 		SCFeatureFlag:       s.SCFeatureFlag,
+		PortMappings:        s.getPrimaryContainerPortMappings(),
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -206,6 +207,35 @@ func (s *BackendService) Template() (string, error) {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
 	return string(overriddenTpl), nil
+}
+
+func (s *BackendService) getPrimaryContainerPortMappings() []*template.PortMapping {
+	containerPort := aws.String(s.containerPort())
+	fmt.Println("I was here --", containerPort)
+	var portMappings []*template.PortMapping
+	if aws.StringValue(containerPort) != NoExposedContainerPort {
+		portMappings = append(portMappings, &template.PortMapping{
+			ContainerPort: containerPort,
+			Protocol:      aws.String("tcp"),
+			Name:          s.name,
+		})
+		fmt.Println("I was here1 --", s.name)
+	}
+	if !s.manifest.RoutingRule.IsEmpty() && s.manifest.RoutingRule.TargetContainer == nil {
+		fmt.Println("I was here2 --")
+		if s.manifest.RoutingRule.TargetPort != nil && aws.StringValue(s.manifest.RoutingRule.TargetPort) != aws.StringValue(containerPort) {
+			fmt.Println("I was here3 --", aws.StringValue(s.manifest.RoutingRule.TargetPort))
+			portMappings = append(portMappings, &template.PortMapping{
+				ContainerPort: s.manifest.RoutingRule.TargetPort,
+				Protocol:      aws.String("tcp"), // TODO: @pbhingre what to do with the protocol? Default it to tcp?
+				Name:          s.name,
+			})
+		}
+	}
+	for _, portMapping1 := range portMappings {
+		fmt.Println("printing portmapping", aws.StringValue(portMapping1.ContainerPort))
+	}
+	return portMappings
 }
 
 func (s *BackendService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
@@ -226,8 +256,10 @@ func (s *BackendService) containerPort() string {
 	port := NoExposedContainerPort
 	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
 		port = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
+	} /*else if s.manifest.RoutingRule.TargetPort != nil {
+		port = aws.StringValue(s.manifest.RoutingRule.TargetPort)
 	}
-
+	// TODO: @pbhingre add another else condition to check additional_rules != nil when implemented in the upcoming PRs for multiple ports*/
 	return port
 }
 

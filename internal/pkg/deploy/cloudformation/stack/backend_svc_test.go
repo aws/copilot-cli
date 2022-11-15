@@ -305,6 +305,13 @@ Outputs:
 			},
 			EntryPoint: []string{"enter", "from"},
 			Command:    []string{"here"},
+			PortMappings: []*template.PortMapping{
+				{
+					ContainerPort: aws.String("8080"),
+					Protocol:      aws.String("tcp"),
+					Name:          "api",
+				},
+			},
 		}, actual)
 	})
 
@@ -434,6 +441,12 @@ Outputs:
 				{
 					Name: "envoy",
 					Port: aws.String("443"),
+					PortMappings: []*template.PortMapping{
+						{
+							ContainerPort: aws.String("443"),
+							Name:          "envoy",
+						},
+					},
 				},
 			},
 			HTTPTargetContainer: template.HTTPTargetContainer{
@@ -480,6 +493,13 @@ Outputs:
 			},
 			EntryPoint: []string{"enter", "from"},
 			Command:    []string{"here"},
+			PortMappings: []*template.PortMapping{
+				{
+					ContainerPort: aws.String("8080"),
+					Protocol:      aws.String("tcp"),
+					Name:          "api",
+				},
+			},
 			ALBEnabled: true,
 		}, actual)
 	})

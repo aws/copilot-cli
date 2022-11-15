@@ -45,19 +45,23 @@
   Essential: {{$sidecar.Essential}}
 {{- end}}
 {{include "image-overrides" . | indent 2}}  
-{{- if $sidecar.Port}}
+{{- if and $sidecar.PortMappings (gt (len $sidecar.PortMappings) 0)}}
   PortMappings:
-    - ContainerPort: {{$sidecar.Port}}
+    {{range $portMapping := $sidecar.PortMappings}}
+    {{- if eq $portMapping.Name $sidecar.Name}}
+    - ContainerPort: {{$portMapping.ContainerPort}}
     {{- if and $.ServiceConnect $.SCFeatureFlag}} # remove when release
     {{/* Multiple exposed port is not supported yet. Therefore, if the target container is the sidecar, the target port must be the one and only one port that the container exposes. */}}
     {{- if eq $.HTTPTargetContainer.Name $sidecar.Name}}
-      Name: target
+      Name: {{ (portMappingName $portMapping.Name $portMapping.ContainerPort) }}
     {{- end}}
     {{- end}}
     {{- if $sidecar.Protocol}}
-      Protocol: {{$sidecar.Protocol}}
+      Protocol: {{$portMapping.Protocol}}
     {{- end}}
-{{- end}}
+    {{- end}}
+    {{end}}
+  {{- end}}
 {{- if $sidecar.HealthCheck}}
   HealthCheck:
     Command: {{quoteSlice $sidecar.HealthCheck.Command | fmtSlice}}

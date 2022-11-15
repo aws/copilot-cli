@@ -15,9 +15,10 @@ http:
     interval: 15s
     timeout: 10s
     grace_period: 45s
+  target_port: 8081
 
 network:
-  connect: false
+  connect: true
 
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build

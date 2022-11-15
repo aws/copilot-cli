@@ -99,11 +99,13 @@ Resources:
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
           PortMappings:
-            !If [
-              ExposePort,
-              [{ ContainerPort: !Ref ContainerPort }],
-              !Ref "AWS::NoValue",
-            ]
+            - !If
+              - ExposePort
+              - ContainerPort: 8080
+                Name: http-full-config8080
+              - ContainerPort: 8081
+                Name: http-full-config8081
+              - !Ref AWS::NoValue
   ExecutionRole:
     Metadata:
       "aws:copilot:description": "An IAM Role for the Fargate agent to make AWS API calls on your behalf"
@@ -289,6 +291,22 @@ Resources:
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       LaunchType: FARGATE
+      ServiceConnectConfiguration:
+        Enabled: True
+        Namespace: my-env.my-app.local
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-region: !Ref AWS::Region
+            awslogs-group: !Ref LogGroup
+            awslogs-stream-prefix: copilot
+        Services:
+          - PortName: target
+            # Avoid using the same service with Service Discovery in a namespace.
+            DiscoveryName: !Join [ "-", [ !Ref WorkloadName, "sc" ] ]
+            ClientAliases:
+              - Port: !Ref TargetPort
+                DnsName: WorkloadName
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED

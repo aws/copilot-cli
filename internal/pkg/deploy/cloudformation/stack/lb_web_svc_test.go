@@ -292,6 +292,13 @@ Outputs:
 			EntryPoint: []string{"/bin/echo", "hello"},
 			Command:    []string{"world"},
 			ALBEnabled: true,
+			PortMappings: []*template.PortMapping{
+				{
+					ContainerPort: aws.String("80"),
+					Protocol:      aws.String("tcp"),
+					Name:          "frontend",
+				},
+			},
 		}, actual)
 	})
 

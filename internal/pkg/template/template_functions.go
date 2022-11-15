@@ -140,6 +140,12 @@ func generateMountPointJSON(mountPoints []*MountPoint) string {
 
 }
 
+// PortMappingName returns name for the port mapping.
+func PortMappingName(containerName string, containerPort string) string {
+	fmt.Println("I was here ", containerName+containerPort)
+	return containerName + containerPort
+}
+
 // generatePublisherJSON turns a list of Topics objects into a JSON string:
 // `{"myTopic": "topicArn", "mySecondTopic": "secondTopicArn"}`
 // This function must be called on an array of correctly constructed Topic objects.

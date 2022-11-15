@@ -135,6 +135,7 @@ type SidecarOpts struct {
 	EntryPoint   []string
 	Command      []string
 	HealthCheck  *ContainerHealthCheck
+	PortMappings []*PortMapping
 }
 
 // SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
@@ -328,6 +329,13 @@ type NetworkLoadBalancer struct {
 	PublicSubnetCIDRs []string
 	Listener          NetworkLoadBalancerListener
 	MainContainerPort string
+}
+
+// PortMapping holds configuration that exposes container ports internally.
+type PortMapping struct {
+	Protocol      *string
+	ContainerPort *string
+	Name          string
 }
 
 // ServiceConnect holds configuration for ECS Service Connect.
@@ -601,6 +609,9 @@ type WorkloadOpts struct {
 	Subscribe *SubscribeOpts
 
 	SCFeatureFlag bool
+
+	// Multiple ports configurations
+	PortMappings []*PortMapping
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,
@@ -698,6 +709,7 @@ func withSvcParsingFuncs() ParseOption {
 			"pluralWord":           english.PluralWord,
 			"contains":             contains,
 			"requiresVPCConnector": requiresVPCConnector,
+			"portMappingName":      PortMappingName,
 		})
 	}
 }

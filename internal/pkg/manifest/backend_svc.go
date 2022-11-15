@@ -71,6 +71,7 @@ func (s *BackendService) MarshalBinary() ([]byte, error) {
 	content, err := s.parser.Parse(backendSvcManifestPath, *s, template.WithFuncs(map[string]interface{}{
 		"fmtSlice":   template.FmtSliceFunc,
 		"quoteSlice": template.QuoteSliceFunc,
+		"SCName":     template.PortMappingName,
 	}))
 	if err != nil {
 		return nil, err

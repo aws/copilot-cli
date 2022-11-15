@@ -109,7 +109,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               ReadOnly: true
               SourceVolume: persistence
           PortMappings:
-            - ContainerPort: !Ref ContainerPort
+            - ContainerPort: 4000
         - Name: firelens_log_router
           Image: public.ecr.aws/aws-observability/aws-for-fluent-bit:stable
           Environment:
@@ -144,7 +144,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
           Image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/reverse-proxy:revision_1
           PortMappings:
             - ContainerPort: 8080
-              Name: target
+              Name: nginx8080
           HealthCheck:
             Command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
             Interval: 10

@@ -91,12 +91,12 @@ func (e errDurationInvalid) Error() string {
 
 // ScheduledJobConfig contains data required to initialize a scheduled job stack.
 type ScheduledJobConfig struct {
-	App                 *config.Application
-	Env                 string
-	Manifest            *manifest.ScheduledJob
-	RawManifest         []byte
-	RuntimeConfig       RuntimeConfig
-	Addons              addons
+	App           *config.Application
+	Env           string
+	Manifest      *manifest.ScheduledJob
+	RawManifest   []byte
+	RuntimeConfig RuntimeConfig
+	Addons        addons
 }
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
@@ -135,7 +135,7 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(j.manifest.Sidecars)
+	sidecars, err := convertSidecar(j.manifest.Sidecars, nil, nil)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}

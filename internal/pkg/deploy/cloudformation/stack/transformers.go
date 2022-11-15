@@ -67,22 +67,60 @@ var (
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOpts, error) {
-	if s == nil {
+func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBalancedWebService, bsmft *manifest.BackendService) ([]*template.SidecarOpts, error) {
+	sidecars := s
+	if sidecars == nil {
 		return nil, nil
 	}
 
 	// Sort the sidecars so that the order is consistent and the integration test won't be flaky.
 	keys := make([]string, 0, len(s))
-	for k := range s {
+	for k := range sidecars {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	var sidecars []*template.SidecarOpts
+	var sidecarsList []*template.SidecarOpts
 	for _, name := range keys {
-		config := s[name]
+		var portMappings []*template.PortMapping
+		config := sidecars[name]
 		port, protocol, err := manifest.ParsePortMapping(config.Port)
+		if lbmft != nil {
+			if port != nil {
+				portMappings = append(portMappings, &template.PortMapping{
+					ContainerPort: port,
+					Protocol:      protocol,
+					Name:          name,
+				})
+			}
+			if !lbmft.RoutingRule.IsEmpty() && aws.StringValue(lbmft.RoutingRule.TargetContainer) == name {
+				if lbmft.RoutingRule.TargetPort != nil && lbmft.RoutingRule.TargetPort != port {
+					portMappings = append(portMappings, &template.PortMapping{
+						ContainerPort: lbmft.RoutingRule.TargetPort,
+						Protocol:      protocol, // TODO: @pbhingre what to do with the protocol? Default it to tcp?
+						Name:          name,
+					})
+				}
+			}
+		} else if bsmft != nil {
+			if port != nil {
+				portMappings = append(portMappings, &template.PortMapping{
+					ContainerPort: port,
+					Protocol:      protocol,
+					Name:          name,
+				})
+			}
+			if !bsmft.RoutingRule.IsEmpty() && aws.StringValue(bsmft.RoutingRule.TargetContainer) == name {
+				if bsmft.RoutingRule.TargetPort != nil && bsmft.RoutingRule.TargetPort != port {
+					portMappings = append(portMappings, &template.PortMapping{
+						ContainerPort: bsmft.RoutingRule.TargetPort,
+						Protocol:      protocol, // TODO: @pbhingre what to do with the protocol? Default it to tcp?
+						Name:          name,
+					})
+				}
+			}
+		}
+
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +133,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			return nil, err
 		}
 		mp := convertSidecarMountPoints(config.MountPoints)
-		sidecars = append(sidecars, &template.SidecarOpts{
+		sidecarsList = append(sidecarsList, &template.SidecarOpts{
 			Name:       name,
 			Image:      config.Image,
 			Essential:  config.Essential,
@@ -112,9 +150,10 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			EntryPoint:   entrypoint,
 			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
 			Command:      command,
+			PortMappings: portMappings,
 		})
 	}
-	return sidecars, nil
+	return sidecarsList, nil
 }
 
 func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.ContainerHealthCheck {

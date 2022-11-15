@@ -131,7 +131,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars)
+	sidecars, err := convertSidecar(s.manifest.Sidecars, s.manifest, nil)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -196,6 +196,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
+
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -249,6 +250,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		HostedZoneAliases:   aliasesFor,
 		PermissionsBoundary: s.permBound,
 		SCFeatureFlag:       s.SCFeatureFlag,
+		PortMappings:        s.getPrimaryContainerPortMappings(),
 	})
 	if err != nil {
 		return "", err
@@ -258,6 +260,27 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
 	return string(overriddenTpl), nil
+}
+
+func (s *LoadBalancedWebService) getPrimaryContainerPortMappings() []*template.PortMapping {
+	containerPort := aws.String(s.containerPort())
+	var portMappings []*template.PortMapping
+	portMappings = append(portMappings, &template.PortMapping{
+		ContainerPort: containerPort,
+		Protocol:      aws.String("tcp"),
+		Name:          s.name,
+	})
+
+	if !s.manifest.RoutingRule.IsEmpty() && s.manifest.RoutingRule.TargetContainer == nil {
+		if s.manifest.RoutingRule.TargetPort != nil && aws.StringValue(s.manifest.RoutingRule.TargetPort) != aws.StringValue(containerPort) {
+			portMappings = append(portMappings, &template.PortMapping{
+				ContainerPort: s.manifest.RoutingRule.TargetPort,
+				Protocol:      aws.String("tcp"), // TODO: @pbhingre what to do with the protocol? Default it to tcp?
+				Name:          s.name,
+			})
+		}
+	}
+	return portMappings
 }
 
 func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
