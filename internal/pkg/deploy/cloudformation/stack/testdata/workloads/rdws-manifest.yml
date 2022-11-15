@@ -38,6 +38,8 @@ network:
   vpc:
     placement: private
 
+count: 'arn:aws:apprunner:us-east-1:123456789012:autoscalingconfiguration/high-availability/3'
+
 # Optional fields for more advanced use-cases.
 #
 # variables:                    # Pass environment variables as key value pairs.
