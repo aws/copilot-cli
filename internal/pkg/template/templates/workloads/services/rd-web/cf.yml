@@ -69,7 +69,7 @@ Resources:
     Metadata:
       'aws:copilot:description': 'An App Runner service to run and manage your containers'
     Type: AWS::AppRunner::Service
-    Properties:      
+    Properties:    
       ServiceName: !Sub '${AppName}-${EnvName}-${WorkloadName}'
       SourceConfiguration:
         AuthenticationConfiguration: !If
