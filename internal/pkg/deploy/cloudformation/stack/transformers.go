@@ -68,22 +68,22 @@ var (
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
 func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBalancedWebService, bsmft *manifest.BackendService, sjmft *manifest.ScheduledJob, wsmft *manifest.WorkerService) ([]*template.SidecarOpts, error) {
-	sidecars := s
-	if sidecars == nil {
+
+	if s == nil {
 		return nil, nil
 	}
 
 	// Sort the sidecars so that the order is consistent and the integration test won't be flaky.
 	keys := make([]string, 0, len(s))
-	for k := range sidecars {
+	for k := range s {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	var sidecarsList []*template.SidecarOpts
+	var sidecars []*template.SidecarOpts
 	for _, name := range keys {
 		var portMappings []*template.PortMapping
-		config := sidecars[name]
+		config := s[name]
 		port, protocol, err := manifest.ParsePortMapping(config.Port)
 		if lbmft != nil {
 			if port != nil {
@@ -149,7 +149,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBa
 			return nil, err
 		}
 		mp := convertSidecarMountPoints(config.MountPoints)
-		sidecarsList = append(sidecarsList, &template.SidecarOpts{
+		sidecars = append(sidecars, &template.SidecarOpts{
 			Name:       name,
 			Image:      config.Image,
 			Essential:  config.Essential,
@@ -169,7 +169,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBa
 			PortMappings: portMappings,
 		})
 	}
-	return sidecarsList, nil
+	return sidecars, nil
 }
 
 func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.ContainerHealthCheck {

@@ -211,7 +211,6 @@ func (s *BackendService) Template() (string, error) {
 
 func (s *BackendService) getPrimaryContainerPortMappings() []*template.PortMapping {
 	containerPort := aws.String(s.containerPort())
-	fmt.Println("I was here --", containerPort)
 	var portMappings []*template.PortMapping
 	if aws.StringValue(containerPort) != NoExposedContainerPort {
 		portMappings = append(portMappings, &template.PortMapping{
@@ -219,21 +218,15 @@ func (s *BackendService) getPrimaryContainerPortMappings() []*template.PortMappi
 			Protocol:      aws.String("tcp"),
 			Name:          s.name,
 		})
-		fmt.Println("I was here1 --", s.name)
 	}
 	if !s.manifest.RoutingRule.IsEmpty() && s.manifest.RoutingRule.TargetContainer == nil {
-		fmt.Println("I was here2 --")
 		if s.manifest.RoutingRule.TargetPort != nil && aws.StringValue(s.manifest.RoutingRule.TargetPort) != aws.StringValue(containerPort) {
-			fmt.Println("I was here3 --", aws.StringValue(s.manifest.RoutingRule.TargetPort))
 			portMappings = append(portMappings, &template.PortMapping{
 				ContainerPort: s.manifest.RoutingRule.TargetPort,
 				Protocol:      aws.String("tcp"), // TODO: @pbhingre what to do with the protocol? Default it to tcp?
 				Name:          s.name,
 			})
 		}
-	}
-	for _, portMapping1 := range portMappings {
-		fmt.Println("printing portmapping", aws.StringValue(portMapping1.ContainerPort))
 	}
 	return portMappings
 }
@@ -256,8 +249,6 @@ func (s *BackendService) containerPort() string {
 	port := NoExposedContainerPort
 	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
 		port = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
-	} /*else if s.manifest.RoutingRule.TargetPort != nil {
-		port = aws.StringValue(s.manifest.RoutingRule.TargetPort)
 	}
 	// TODO: @pbhingre add another else condition to check additional_rules != nil when implemented in the upcoming PRs for multiple ports*/
 	return port
