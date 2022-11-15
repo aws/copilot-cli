@@ -198,17 +198,17 @@ func convertCapacityProviders(a manifest.AdvancedCount) []*template.CapacityProv
 		CapacityProvider: capacityProviderFargateSpot,
 	})
 	rc := a.Range.RangeConfig
-	// Return if only spot is specifed as count
+	// Return if only spot is specified as count
 	if rc.SpotFrom == nil {
 		return cps
 	}
 	// Scaling with spot
 	spotFrom := aws.IntValue(rc.SpotFrom)
 	min := aws.IntValue(rc.Min)
-	// If spotFrom value is not equal to the autoscaling min, then
-	// the base value on the Fargate Capacity provider must be set
+	// If spotFrom value is greater than or equal to the autoscaling min, 
+	// then the base value on the Fargate Capacity provider must be set
 	// to one less than spotFrom
-	if spotFrom > min {
+	if spotFrom >= min {
 		base := spotFrom - 1
 		fgCapacity := &template.CapacityProviderStrategy{
 			Base:             aws.Int(base),
