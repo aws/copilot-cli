@@ -20,7 +20,6 @@ import (
 	templatemocks "github.com/aws/copilot-cli/internal/pkg/template/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/golang/mock/gomock"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -867,9 +866,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 			if tc.setupMocks != nil {
 				tc.setupMocks(mocks)
 			}
-
-			memFs := &afero.Afero{Fs: afero.NewMemMapFs()}
-
 			opts := &initPipelineOpts{
 				initPipelineVars: initPipelineVars{
 					name:              tc.inName,
@@ -885,7 +881,6 @@ func TestInitPipelineOpts_Execute(t *testing.T) {
 				sessProvider:   mocks.sessProvider,
 				store:          mocks.store,
 				cfnClient:      mocks.cfnClient,
-				fs:             memFs,
 				buffer:         tc.buffer,
 				envConfigs:     tc.inEnvConfigs,
 			}

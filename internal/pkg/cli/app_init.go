@@ -6,8 +6,10 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"os"
+
+	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
+	"github.com/spf13/afero"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -48,13 +50,17 @@ type initAppOpts struct {
 	store                applicationStore
 	route53              domainHostedZoneGetter
 	domainInfoGetter     domainInfoGetter
-	ws                   wsAppManager
 	cfn                  appDeployer
 	prompt               prompter
 	prog                 progress
 	iam                  policyLister
+	iamRoleManager       roleManager
 	isSessionFromEnvVars func() (bool, error)
 
+	existingWorkspace func() (wsAppManager, error)
+	newWorkspace      func(appName string) (wsAppManager, error)
+
+	// Cached variables.
 	cachedHostedZoneID string
 }
 
@@ -63,25 +69,28 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("default session: %w", err)
 	}
-	ws, err := workspace.New()
-	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
-	}
-
+	fs := afero.NewOsFs()
 	identity := identity.New(sess)
+	iam := iam.New(sess)
 	return &initAppOpts{
 		initAppVars:      vars,
 		identity:         identity,
 		store:            config.NewSSMStore(identity, ssm.New(sess), aws.StringValue(sess.Config.Region)),
 		route53:          route53.New(sess),
 		domainInfoGetter: route53.NewRoute53Domains(sess),
-		ws:               ws,
 		cfn:              cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 		prompt:           prompt.New(),
 		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
-		iam:              iam.New(sess),
+		iam:              iam,
+		iamRoleManager:   iam,
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(sess)
+		},
+		existingWorkspace: func() (wsAppManager, error) {
+			return workspace.Use(fs)
+		},
+		newWorkspace: func(appName string) (wsAppManager, error) {
+			return workspace.Create(appName, fs)
 		},
 	}, nil
 }
@@ -130,31 +139,46 @@ https://aws.github.io/copilot-cli/docs/credentials/`)
 	}
 
 	// When there's a local application.
-	summary, err := o.ws.Summary()
+	ws, err := o.existingWorkspace()
 	if err == nil {
-		if o.name == "" {
-			log.Infoln(fmt.Sprintf(
-				"Your workspace is registered to application %s.",
-				color.HighlightUserInput(summary.Application)))
-			o.name = summary.Application
-			return nil
-		}
-		if o.name != summary.Application {
-			summaryPath := displayPath(summary.Path)
-			if summaryPath == "" {
-				summaryPath = summary.Path
+		summary, err := ws.Summary()
+		if err == nil {
+			if o.name == "" {
+				log.Infoln(fmt.Sprintf(
+					"Your workspace is registered to application %s.",
+					color.HighlightUserInput(summary.Application)))
+				if err := o.validateAppName(summary.Application); err != nil {
+					return err
+				}
+				o.name = summary.Application
+				return nil
 			}
+			if o.name != summary.Application {
+				summaryPath := displayPath(summary.Path)
+				if summaryPath == "" {
+					summaryPath = summary.Path
+				}
 
-			log.Errorf(`Workspace is already registered with application %s instead of %s.
+				log.Errorf(`Workspace is already registered with application %s instead of %s.
 If you'd like to delete the application locally, you can delete the file at %s.
 If you'd like to delete the application and all of its resources, run %s.
 `,
-				summary.Application,
-				o.name,
-				summaryPath,
-				color.HighlightCode("copilot app delete"))
-			return fmt.Errorf("workspace already registered with %s", summary.Application)
+					summary.Application,
+					o.name,
+					summaryPath,
+					color.HighlightCode("copilot app delete"))
+				return fmt.Errorf("workspace already registered with %s", summary.Application)
+			}
 		}
+
+		var errNoAppSummary *workspace.ErrNoAssociatedApplication
+		if !errors.As(err, &errNoAppSummary) {
+			return err
+		}
+	}
+	var errNoWorkspace *workspace.ErrWorkspaceNotFound
+	if !errors.As(err, &errNoWorkspace) {
+		return err
 	}
 
 	// Flag is set by user.
@@ -185,7 +209,7 @@ func (o *initAppOpts) Execute() error {
 		return fmt.Errorf("get identity: %w", err)
 	}
 
-	err = o.ws.Create(o.name)
+	_, err = o.newWorkspace(o.name)
 	if err != nil {
 		return fmt.Errorf("create new workspace with application name %s: %w", o.name, err)
 	}
@@ -225,21 +249,36 @@ func (o *initAppOpts) Execute() error {
 }
 
 func (o *initAppOpts) validateAppName(name string) error {
-	if err := validateAppName(name); err != nil {
+	if err := validateAppNameString(name); err != nil {
 		return err
 	}
 	app, err := o.store.GetApplication(name)
-	if err != nil {
-		var noSuchAppErr *config.ErrNoSuchApplication
-		if errors.As(err, &noSuchAppErr) {
+	if err == nil {
+		if o.domainName != "" && app.Domain != o.domainName {
+			return fmt.Errorf("application named %s already exists with a different domain name %s", name, app.Domain)
+		}
+		return nil
+	}
+	var noSuchAppErr *config.ErrNoSuchApplication
+	if errors.As(err, &noSuchAppErr) {
+		roleName := fmt.Sprintf("%s-adminrole", name)
+		tags, err := o.iamRoleManager.ListRoleTags(roleName)
+		// NOTE: This is a best-effort attempt to check if the app exists in other regions.
+		// The error either indicates that the role does not exist, or not.
+		// In the first case, it means that this is a valid app name, hence we don't error out.
+		// In the second case, since this is a best-effort, we don't need to surface the error either.
+		if err != nil {
 			return nil
 		}
-		return fmt.Errorf("get application %s: %w", name, err)
+		if _, hasTag := tags[deploy.AppTagKey]; hasTag {
+			return &errAppAlreadyExistsInAccount{appName: name}
+		}
+		return &errStackSetAdminRoleExistsInAccount{
+			appName:  name,
+			roleName: roleName,
+		}
 	}
-	if o.domainName != "" && app.Domain != o.domainName {
-		return fmt.Errorf("application named %s already exists with a different domain name %s", name, app.Domain)
-	}
-	return nil
+	return fmt.Errorf("get application %s: %w", name, err)
 }
 
 func (o *initAppOpts) validatePermBound(policyName string) error {
@@ -297,10 +336,13 @@ func (o *initAppOpts) askAppName(formatMsg string) error {
 	appName, err := o.prompt.Get(
 		fmt.Sprintf(formatMsg, color.Emphasize("name")),
 		appInitNameHelpPrompt,
-		validateAppName,
+		validateAppNameString,
 		prompt.WithFinalMessage("Application name:"))
 	if err != nil {
 		return fmt.Errorf("prompt get application name: %w", err)
+	}
+	if err := o.validateAppName(appName); err != nil {
+		return err
 	}
 	o.name = appName
 	return nil
@@ -321,6 +363,34 @@ func (o *initAppOpts) askSelectExistingAppName(existingApps []*config.Applicatio
 	}
 	o.name = name
 	return nil
+}
+
+type errAppAlreadyExistsInAccount struct {
+	appName string
+}
+
+type errStackSetAdminRoleExistsInAccount struct {
+	appName  string
+	roleName string
+}
+
+func (e *errAppAlreadyExistsInAccount) Error() string {
+	return fmt.Sprintf("application named %q already exists in another region", e.appName)
+}
+
+func (e *errAppAlreadyExistsInAccount) RecommendActions() string {
+	return fmt.Sprintf(`If you want to create a new workspace reusing the existing application %s, please switch to the region where you created the application, and run %s.
+If you'd like to recreate the application and all of its resources, please switch to the region where you created the application, and run %s.`, e.appName, color.HighlightCode("copilot app init"), color.HighlightCode("copilot app delete"))
+}
+
+func (e *errStackSetAdminRoleExistsInAccount) Error() string {
+	return fmt.Sprintf("IAM admin role %q already exists in this account", e.roleName)
+}
+
+func (e *errStackSetAdminRoleExistsInAccount) RecommendActions() string {
+	return fmt.Sprintf(`Copilot will create an IAM admin role named %s to manage the stack set of the application %s. 
+You have an existing role with the exact same name in your account, which will collide with the role that Copilot creates.
+Please create the application with a different name, so that the IAM role name does not collide.`, e.roleName, e.appName)
 }
 
 // buildAppInitCommand builds the command for creating a new application.

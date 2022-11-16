@@ -6,7 +6,8 @@
 package stack_test
 
 import (
-	"io/ioutil"
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
@@ -38,7 +40,7 @@ func TestRDWS_Template(t *testing.T) {
 	}
 
 	// Read manifest.
-	manifestBytes, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", manifestFileName))
+	manifestBytes, err := os.ReadFile(filepath.Join("testdata", "workloads", manifestFileName))
 	require.NoError(t, err, "read manifest file")
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err, "unmarshal manifest file")
@@ -54,7 +56,15 @@ func TestRDWS_Template(t *testing.T) {
 		v, ok := content.(*manifest.RequestDrivenWebService)
 		require.True(t, ok)
 
-		ws, err := workspace.New()
+		// Create in-memory mock file system.
+		wd, err := os.Getwd()
+		require.NoError(t, err)
+		fs := afero.NewMemMapFs()
+		_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
+		_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", wd), []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+		require.NoError(t, err)
+
+		ws, err := workspace.Use(fs)
 		require.NoError(t, err)
 
 		_, err = addon.Parse(aws.StringValue(v.Name), ws)
@@ -62,7 +72,7 @@ func TestRDWS_Template(t *testing.T) {
 		require.ErrorAs(t, err, &notFound)
 
 		// Read wanted stack template.
-		wantedTemplate, err := ioutil.ReadFile(filepath.Join("testdata", "workloads", tc.svcStackPath))
+		wantedTemplate, err := os.ReadFile(filepath.Join("testdata", "workloads", tc.svcStackPath))
 		require.NoError(t, err, "read cloudformation stack")
 
 		// Read actual stack template.

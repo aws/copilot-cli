@@ -72,9 +72,10 @@ type packageSvcOpts struct {
 }
 
 func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
-	ws, err := workspace.New()
+	fs := afero.NewOsFs()
+	ws, err := workspace.Use(fs)
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, err
 	}
 
 	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc package"))
@@ -89,7 +90,7 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 		packageSvcVars:    vars,
 		store:             store,
 		ws:                ws,
-		fs:                &afero.Afero{Fs: afero.NewOsFs()},
+		fs:                fs,
 		unmarshal:         manifest.UnmarshalWorkload,
 		runner:            exec.NewCmd(),
 		sel:               selector.NewLocalWorkloadSelector(prompter, store, ws),

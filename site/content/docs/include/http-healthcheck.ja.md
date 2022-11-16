@@ -9,6 +9,7 @@ http:
 http:
   healthcheck:
     path: '/'
+    port: 8080
     success_codes: '200'
     healthy_threshold: 3
     unhealthy_threshold: 2
@@ -19,6 +20,10 @@ http:
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-path" href="#http-healthcheck-path" class="field">`path`</a> <span class="type">String</span>  
 ヘルスチェックリクエスト送信先。
+
+<span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-port" href="#http-healthcheck-port" class="field">`port`</a> <span class="type">Integer</span>
+ヘルスチェックリクエストを送信するポート。デフォルト値は、[`image.port`](./#image-port) です。[`http.target_container`](./#http-target-container)で公開ポートが設定されている場合、公開しているポートが設定されます。  
+ポートが `443` で公開されている場合、 ヘルスチェックは自動で HTTPS に設定されます。
 
 <span class="parent-field">http.healthcheck.</span><a id="http-healthcheck-success-codes" href="#http-healthcheck-success-codes" class="field">`success_codes`</a> <span class="type">String</span>  
 healthy なターゲットがヘルスチェックに対して返す HTTP ステータスコードを指定します。200 から 499 の範囲で指定可能です。また、"200,202" のように複数の値を指定することや "200-299" のような値の範囲指定も可能です。デフォルト値は 200 です。
