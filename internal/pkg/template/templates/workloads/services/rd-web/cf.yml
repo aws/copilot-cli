@@ -69,7 +69,7 @@ Resources:
     Metadata:
       'aws:copilot:description': 'An App Runner service to run and manage your containers'
     Type: AWS::AppRunner::Service
-    Properties: 
+    Properties:
       ServiceName: !Sub '${AppName}-${EnvName}-${WorkloadName}'
       SourceConfiguration:
         AuthenticationConfiguration: !If
@@ -151,7 +151,7 @@ Resources:
         ObservabilityConfigurationArn: !Sub 'arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:observabilityconfiguration/DefaultConfiguration/1/00000000000000000000000000000001'
       {{- end }}
       {{- if .Count}}   
-      AutoScalingConfigurationArn: {{.Count}}
+      AutoScalingConfigurationArn: !Sub 'arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:autoscalingconfiguration/{{.Count}}'
       {{- end}}
       Tags:
         - Key: copilot-application

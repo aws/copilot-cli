@@ -151,7 +151,7 @@ Resources:
         EgressConfiguration:
           EgressType: VPC
           VpcConnectorArn: !Ref VpcConnector
-      AutoScalingConfigurationArn: 'arn:aws:apprunner:us-east-1:123456789012:autoscalingconfiguration/high-availability/3'    
+      AutoScalingConfigurationArn: 'arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:autoscalingconfiguration/high-availability/3'    
       Tags:
         - Key: copilot-application
           Value: !Ref AppName
