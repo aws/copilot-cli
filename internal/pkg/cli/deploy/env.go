@@ -15,6 +15,7 @@ import (
 
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
@@ -321,6 +322,7 @@ type DeployEnvironmentInput struct {
 	ForceNewUpdate      bool
 	RawManifest         []byte
 	PermissionsBoundary string
+	DisableRollback     bool
 }
 
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
@@ -366,8 +368,14 @@ func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
 	if err != nil {
 		return fmt.Errorf("retrieve environment stack force update ID: %w", err)
 	}
+	opts := []awscloudformation.StackOption{
+		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
+	}
+	if in.DisableRollback {
+		opts = append(opts, awscloudformation.WithDisableRollback())
+	}
 	conf := cfnstack.NewEnvConfigFromExistingStack(stackInput, lastForceUpdateID, oldParams)
-	return d.envDeployer.UpdateAndRenderEnvironment(conf, stackInput.ArtifactBucketARN, cloudformation.WithRoleARN(d.env.ExecutionRoleARN))
+	return d.envDeployer.UpdateAndRenderEnvironment(conf, stackInput.ArtifactBucketARN, opts...)
 }
 
 func (d *envDeployer) getAppRegionalResources() (*cfnstack.AppRegionalResources, error) {
