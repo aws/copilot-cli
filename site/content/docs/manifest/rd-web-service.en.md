@@ -187,7 +187,7 @@ Amount of memory in MiB reserved for each instance of your service. See the [AWS
 
 <a id="network" href="#network" class="field">`network`</a> <span class="type">Map</span>      
 The `network` section contains parameters for connecting the service to AWS resources in the environment's VPC.  
-By connecting the service to a VPC, you can use [service discovery](../developing/internal-traffic.en.md#service-discovery) to communicate with other services
+By connecting the service to a VPC, you can use [service discovery](../developing/svc-to-svc-communication.en.md#service-discovery) to communicate with other services
 in your environment, or connect to a database in your VPC such as Amazon Aurora with [`storage init`](../commands/storage-init.en.md).
 
 <span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    

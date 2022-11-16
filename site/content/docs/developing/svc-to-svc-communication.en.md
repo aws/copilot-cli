@@ -1,4 +1,38 @@
-# Internal Traffic
+# Service-to-Service Communication
+
+## Service Connect
+
+!!! info
+    This feature is supported since Copilot `v1.24`, which provides more integrated service-to-service experience compared to [Service Discovery](#service-discovery).
+
+ECS Service Connect enables your client services connect to their dependencies in a load-balanced and resilient fashion, simplifying the way of exposing those dependencies to their clients. With Service Connect in Copilot, each service you create is given a private alias by default: `http://<your service name>`.
+
+### How do I use Service Connect?
+Imagine we have an app called `kudos` and two services: `api` and `front-end`, deployed in the same environment. In order to use Service Connect, both services' manifests need to have:
+
+```yaml
+network:
+  connect: true # Defaults to "false"
+```
+
+After deploying both services, they should be able to talk to each other using the default Service Connect endpoint, which is the same as its service name. For example, `front-end` service can simply call `http://api`.
+
+```go
+// Calling the "api" service from the "front-end" service.
+resp, err := http.Get("http://api/")
+```
+
+### Upgrading from Service Discovery
+
+Prior to v1.24, Copilot enabled private service-to-service communication with Service Discovery. If you are already using Service Discovery and want to avoid any code changes, you can configure [`network.connect.alias`](../manifest/lb-web-service.en.md#network-connect-alias) field so that the Service Connect uses the same alias as Service Discovery. And if **both** client and caller have Service Connect enabled, they'll connect via Service Connect instead of Service Discovery. For example, in the manifest of the `api` service we have
+
+```yaml
+network:
+  connect:
+    alias: ${COPILOT_SERVICE_NAME}.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local
+```
+
+and `front-end` can keep using the same endpoint to make API calls via Service Connect instead of Service Discovery to leverage the benefits of load balancing and additional resiliency.
 
 ## Service Discovery
 
@@ -6,7 +40,7 @@ Service Discovery is a way of letting services discover and connect with each ot
 
 ### How do I use Service Discovery?
 
-Service Discovery is enabled for all services set up using the Copilot CLI. We'll show you how to use it by using an example. Imagine we have an app called `kudos` and two services: `api` and `front-end`.
+Service Discovery is enabled for all services set up using the Copilot CLI. We'll show you how to use it by using an example. Imagine we have the same `kudos` app with two services: `api` and `front-end`.
 
 In this example we'll imagine our `front-end` service is deployed in the `test` environment, has a public endpoint and wants to call our `api` service using its service discovery endpoint.
 
@@ -40,27 +74,4 @@ When our front-end makes this request, the endpoint `api.test.kudos.local` resol
 
 Prior to Copilot v1.9.0, the service discovery namespace used the format _{app name}.local_, without including the environment. This limitation made it impossible to deploy multiple environments in the same VPC. Any environments created with Copilot v1.9.0 and newer can share a VPC with any other environment.
 
-When your environments are upgraded, Copilot will honor the service discovery namespace that the environment was created with. That means that the endpoint your services are reachable at will not change. Any new environments created with Copilot v1.9.0 and above will use the _{env name}.{app name}.local_ format for service discovery, and can share VPCs with older environments.
-
-## Service Connect
-Similar to Service Discovery, ECS Service Connect provides a “one-click” experience to have your client services connect to their dependencies in a load-balanced and resilient fashion, simplifying the way of exposing those dependencies to their clients. With Service Connect, each service you create is given a private (in-VPC) alias by default, which is also configurable in your service manifests.
-
-### How do I use Service Connect?
-Imagine we have the same app called `kudos` and two services: `api` and `front-end`, deployed in the same environment. In order to use Service Connect, both services' manifests need to have:
-
-```yaml
-network:
-  connect: true # Defaults to "false"
-```
-
-After deploying both services, they should be able to talk to each other using the default Service Connect endpoint, which is the same as its service name. For example, `front-end` service can simply call `http://api`.
-
-However, if you are already using Service Discovery right now and want to avoid any code changes, you can configure [`network.connect.alias`](../manifest/lb-web-service.en.md#network-connect-alias) field so that the Service Connect uses the same alias as Service Discovery. And if **both** client and caller have Service Connect enabled, they'll connect via Service Connect instead of Service Discovery. For example, in the manifest of the `api` service we have
-
-```yaml
-network:
-  connect:
-    alias: ${COPILOT_SERVICE_NAME}.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local
-```
-
-and `front-end` can keep using the same endpoint to make API calls via Service Connect instead of Service Discovery.
+When your environments are upgraded, Copilot will honor the service discovery namespace that the environment was created with. That means that endpoints for your services will not change. Any new environments created with Copilot v1.9.0 and above will use the _{env name}.{app name}.local_ format for service discovery, and can share VPCs with older environments.
