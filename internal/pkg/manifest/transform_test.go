@@ -735,7 +735,7 @@ func runUnionTransformerTests[Basic, Advanced any](t *testing.T, tests map[strin
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(unionTransformer[Basic, Advanced]{}))
+			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(unionTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)

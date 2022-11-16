@@ -173,3 +173,17 @@ func (t Union[_, _]) validate() error {
 	}
 	return nil
 }
+
+// SetBasic changes the value of the Union to v.
+func (t *Union[Basic, Advanced]) SetBasic(v Basic) {
+	var zero Advanced
+	t.isAdvanced, t.Advanced = false, zero
+	t.isBasic, t.Basic = true, v
+}
+
+// SetAdvanced changes the value of the Union to v.
+func (t *Union[Basic, Advanced]) SetAdvanced(v Advanced) {
+	var zero Basic
+	t.isBasic, t.Basic = false, zero
+	t.isAdvanced, t.Advanced = true, v
+}

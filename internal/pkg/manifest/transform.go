@@ -6,6 +6,7 @@ package manifest
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/imdario/mergo"
@@ -26,7 +27,7 @@ var defaultTransformers = []mergo.Transformers{
 	serviceConnectTransformer{},
 	placementArgOrStringTransformer{},
 	subnetListOrArgsTransformer{},
-	unionTransformer[string, HTTPHealthCheckArgs]{},
+	unionTransformer{},
 	countTransformer{},
 	advancedCountTransformer{},
 	scalingConfigOrTTransformer[Percentage]{},
@@ -291,29 +292,35 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 	}
 }
 
-type unionTransformer[Basic, Advanced any] struct{}
+type unionTransformer struct{}
 
-func (t unionTransformer[Basic, Advanced]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(Union[Basic, Advanced]{}) {
+// Transformer returns custom merge logic for union types.
+func (t unionTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	// :sweat_smile: https://github.com/golang/go/issues/54393
+	// reflect currently doesn't have support for getting type parameters
+	// or checking if a type is a non-specific instantiation of a generic type
+	// (i.e., no way to tell if the type Union[string, bool] is a Union)
+	isUnion := strings.HasPrefix(typ.String(), "manifest.Union[")
+	if !isUnion {
 		return nil
 	}
 
 	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(Union[Basic, Advanced]), src.Interface().(Union[Basic, Advanced])
+		isBasic := src.MethodByName("IsBasic").Call(nil)[0].Bool()
+		isAdvanced := src.MethodByName("IsAdvanced").Call(nil)[0].Bool()
 
-		if srcStruct.IsBasic() {
-			var zero Advanced
-			dstStruct.isAdvanced, dstStruct.Advanced = false, zero
-			dstStruct.isBasic = true
-		} else if srcStruct.IsAdvanced() {
-			var zero Basic
-			dstStruct.isBasic, dstStruct.Basic = false, zero
-			dstStruct.isAdvanced = true
+		// Call SetType with the correct type based on src's type.
+		// We use the value from dst because it holds the merged value.
+		if isBasic {
+			if dst.CanAddr() {
+				dst.Addr().MethodByName("SetBasic").Call([]reflect.Value{dst.FieldByName("Basic")})
+			}
+		} else if isAdvanced {
+			if dst.CanAddr() {
+				dst.Addr().MethodByName("SetAdvanced").Call([]reflect.Value{dst.FieldByName("Advanced")})
+			}
 		}
 
-		if dst.CanSet() { // For extra safety to prevent panicking.
-			dst.Set(reflect.ValueOf(dstStruct))
-		}
 		return nil
 	}
 }
