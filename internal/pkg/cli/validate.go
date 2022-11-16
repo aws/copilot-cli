@@ -169,7 +169,7 @@ func reservedWorkloadNames() map[string]bool {
 	}
 }
 
-func validateAppName(val interface{}) error {
+func validateAppNameString(val interface{}) error {
 	if err := basicNameValidation(val); err != nil {
 		return fmt.Errorf("application name %v is invalid: %w", val, err)
 	}

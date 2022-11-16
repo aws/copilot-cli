@@ -6,7 +6,7 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
@@ -29,7 +29,7 @@ func TestListAppOpts_Execute(t *testing.T) {
 		"with applications": {
 			listOpts: listAppOpts{
 				store: mockstore,
-				w:     ioutil.Discard,
+				w:     io.Discard,
 			},
 			mocking: func() {
 				mockstore.
@@ -45,7 +45,7 @@ func TestListAppOpts_Execute(t *testing.T) {
 		"with an error": {
 			listOpts: listAppOpts{
 				store: mockstore,
-				w:     ioutil.Discard,
+				w:     io.Discard,
 			},
 			mocking: func() {
 				mockstore.

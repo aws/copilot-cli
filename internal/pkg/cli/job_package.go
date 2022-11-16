@@ -58,10 +58,10 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 		return nil, err
 	}
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
-
-	ws, err := workspace.New()
+	fs := afero.NewOsFs()
+	ws, err := workspace.Use(fs)
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, err
 	}
 	prompter := prompt.New()
 	opts := &packageJobOpts{
@@ -91,7 +91,7 @@ func newPackageJobOpts(vars packageJobVars) (*packageJobOpts, error) {
 			newInterpolator:   newManifestInterpolator,
 			paramsWriter:      discardFile{},
 			addonsWriter:      discardFile{},
-			fs:                &afero.Afero{Fs: afero.NewOsFs()},
+			fs:                fs,
 			sessProvider:      sessProvider,
 			newStackGenerator: newWorkloadStackGenerator,
 		}

@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -625,11 +625,11 @@ func TestBackendService_TemplateAndParamsGeneration(t *testing.T) {
 			defer ctrl.Finish()
 
 			// parse files
-			manifestBytes, err := ioutil.ReadFile(tc.ManifestPath)
+			manifestBytes, err := os.ReadFile(tc.ManifestPath)
 			require.NoError(t, err)
-			tmplBytes, err := ioutil.ReadFile(tc.TemplatePath)
+			tmplBytes, err := os.ReadFile(tc.TemplatePath)
 			require.NoError(t, err)
-			paramsBytes, err := ioutil.ReadFile(tc.ParamsPath)
+			paramsBytes, err := os.ReadFile(tc.ParamsPath)
 			require.NoError(t, err)
 
 			dynamicMft, err := manifest.UnmarshalWorkload([]byte(manifestBytes))

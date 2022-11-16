@@ -86,9 +86,10 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 	if err != nil {
 		return nil, err
 	}
-	ws, err := workspace.New()
+	fs := afero.NewOsFs()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
-		return nil, fmt.Errorf("new workspace: %w", err)
+		return nil, err
 	}
 
 	store := config.NewSSMStore(identity.New(defaultSession), awsssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
@@ -96,7 +97,7 @@ func newSecretInitOpts(vars secretInitVars) (*secretInitOpts, error) {
 	opts := secretInitOpts{
 		secretInitVars: vars,
 		store:          store,
-		fs:             &afero.Afero{Fs: afero.NewOsFs()},
+		fs:             fs,
 		ws:             ws,
 
 		envCompatibilityChecker: make(map[string]versionCompatibilityChecker),
