@@ -88,6 +88,11 @@ func (s *BackendService) requiredEnvironmentFeatures() []string {
 	return features
 }
 
+// IsTargetPortDifferentThanSidecarContainerPort checks if http.target_port is different thatn sidecar.image.port in order to add newly mentioned port in the http.port in the port mappings
+func (rr *RoutingRuleConfiguration) IsTargetPortDifferentThanSidecarContainerPort(name string, port *string) bool {
+	return !rr.IsEmpty() && aws.StringValue(rr.TargetContainer) == name && rr.TargetPort != nil && aws.StringValue(rr.TargetPort) != aws.StringValue(port)
+}
+
 // Port returns the exposed the exposed port in the manifest.
 // If the backend service is not meant to be reachable, then ok is set to false.
 func (s *BackendService) Port() (port uint16, ok bool) {

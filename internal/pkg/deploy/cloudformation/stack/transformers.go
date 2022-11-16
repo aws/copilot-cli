@@ -93,14 +93,12 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBa
 					Name:          name,
 				})
 			}
-			if !lbmft.RoutingRule.IsEmpty() && aws.StringValue(lbmft.RoutingRule.TargetContainer) == name {
-				if lbmft.RoutingRule.TargetPort != nil && lbmft.RoutingRule.TargetPort != port {
-					portMappings = append(portMappings, &template.PortMapping{
-						ContainerPort: lbmft.RoutingRule.TargetPort,
-						Protocol:      protocol, // TODO: @pbhingre what to do with the protocol? Default it to tcp?
-						Name:          name,
-					})
-				}
+			if lbmft.RoutingRule.IsTargetPortDifferentThanSidecarContainerPort(name, port) {
+				portMappings = append(portMappings, &template.PortMapping{
+					ContainerPort: lbmft.RoutingRule.TargetPort,
+					Protocol:      protocol, // TODO: @pbhingre what to do with the protocol? Default it to tcp?
+					Name:          name,
+				})
 			}
 		} else if bsmft != nil {
 			if port != nil {
@@ -110,24 +108,14 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBa
 					Name:          name,
 				})
 			}
-			if !bsmft.RoutingRule.IsEmpty() && aws.StringValue(bsmft.RoutingRule.TargetContainer) == name {
-				if bsmft.RoutingRule.TargetPort != nil && bsmft.RoutingRule.TargetPort != port {
-					portMappings = append(portMappings, &template.PortMapping{
-						ContainerPort: bsmft.RoutingRule.TargetPort,
-						Protocol:      protocol, // TODO: @pbhingre what to do with the protocol? Default it to tcp?
-						Name:          name,
-					})
-				}
-			}
-		} else if sjmft != nil {
-			if port != nil {
+			if bsmft.RoutingRule.IsTargetPortDifferentThanSidecarContainerPort(name, port) {
 				portMappings = append(portMappings, &template.PortMapping{
-					ContainerPort: port,
-					Protocol:      protocol,
+					ContainerPort: bsmft.RoutingRule.TargetPort,
+					Protocol:      protocol, // TODO: @pbhingre what to do with the protocol? Default it to tcp?
 					Name:          name,
 				})
 			}
-		} else if wsmft != nil {
+		} else if sjmft != nil || wsmft != nil {
 			if port != nil {
 				portMappings = append(portMappings, &template.PortMapping{
 					ContainerPort: port,

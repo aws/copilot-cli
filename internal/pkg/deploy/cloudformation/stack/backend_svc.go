@@ -219,16 +219,19 @@ func (s *BackendService) getPrimaryContainerPortMappings() []*template.PortMappi
 			Name:          s.name,
 		})
 	}
-	if !s.manifest.RoutingRule.IsEmpty() && s.manifest.RoutingRule.TargetContainer == nil {
-		if s.manifest.RoutingRule.TargetPort != nil && aws.StringValue(s.manifest.RoutingRule.TargetPort) != aws.StringValue(containerPort) {
-			portMappings = append(portMappings, &template.PortMapping{
-				ContainerPort: s.manifest.RoutingRule.TargetPort,
-				Protocol:      aws.String("tcp"), // TODO: @pbhingre what to do with the protocol? Default it to tcp?
-				Name:          s.name,
-			})
-		}
+	if s.isTargetPortDifferentThanPrimaryContainerPort(containerPort) {
+		portMappings = append(portMappings, &template.PortMapping{
+			ContainerPort: s.manifest.RoutingRule.TargetPort,
+			Protocol:      aws.String("tcp"), // TODO: @pbhingre what to do with the protocol? Default it to tcp?
+			Name:          s.name,
+		})
 	}
 	return portMappings
+}
+
+func (s *BackendService) isTargetPortDifferentThanPrimaryContainerPort(containerPort *string) bool {
+	rr := s.manifest.RoutingRule
+	return !rr.IsEmpty() && rr.TargetContainer == nil && rr.TargetPort != nil && aws.StringValue(rr.TargetPort) != aws.StringValue(containerPort)
 }
 
 func (s *BackendService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
