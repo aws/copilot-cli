@@ -4,12 +4,12 @@
 The `network` section contains parameters for connecting to AWS resources in a VPC.
 
 <span class="parent-field">network.</span><a id="network-connect" href="#network-connect" class="field">`connect`</a> <span class="type">Bool or Map</span>    
-Enable [Service Connect](../developing/internal-traffic.en.md#service-connect) for your service, which makes the traffic between services load balanced and more resilient. The default is `false`.
+Enable [Service Connect](../developing/internal-traffic.en.md#service-connect) for your service, which makes the traffic between services load balanced and more resilient. Defaults to `false`.
 
 When using it as a map, you can specify which alias to use for this service. Note that the alias must be unique within the environment.
 
 <span class="parent-field">network.</span><a id="network-connect-alias" href="#network-connect-alias" class="field">`alias`</a> <span class="type">String</span>  
-A custom DNS name for your Service Connect.
+A custom DNS name for this service exposed to Service Connect.
 
 <span class="parent-field">network.</span><a id="network-vpc" href="#network-vpc" class="field">`vpc`</a> <span class="type">Map</span>    
 Subnets and security groups attached to your tasks.

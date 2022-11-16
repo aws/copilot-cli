@@ -1,4 +1,3 @@
-
 # Internal Traffic
 
 ## Service Discovery
@@ -47,16 +46,16 @@ When your environments are upgraded, Copilot will honor the service discovery na
 Similar to Service Discovery, ECS Service Connect provides a “one-click” experience to have your client services connect to their dependencies in a load-balanced and resilient fashion, simplifying the way of exposing those dependencies to their clients. With Service Connect, each service you create is given a private (in-VPC) alias by default, which is also configurable in your service manifests.
 
 ### How do I use Service Connect?
-Imagine we have the same app called `kudos` and two services: `api` and `front-end`. And both of them are deployed to the same environment. In order to use Service Connect, both services need to have
+Imagine we have the same app called `kudos` and two services: `api` and `front-end`, deployed in the same environment. In order to use Service Connect, both services' manifests need to have:
 
 ```yaml
 network:
-  connect: true # By default it is "false"
+  connect: true # Defaults to "false"
 ```
 
-in their manifests. And after deploying both services, they should be able to talk to each other using the default Service Connect endpoint, which is the same as its service name. For example, `front-end` service can simply call `http://api`.
+After deploying both services, they should be able to talk to each other using the default Service Connect endpoint, which is the same as its service name. For example, `front-end` service can simply call `http://api`.
 
-However, if you are already using Service Discovery right now and uncomfortable for make any code changes. You can configure the `connect.alias` field so that the Service Connect uses the same endpoint as Service Discovery. And if **both** client and caller have Service Connect enabled, they'll be talking in Service Connect instead of Service Discovery. For example, in the manifest of the `api` service we have
+However, if you are already using Service Discovery right now and want to avoid any code changes, you can configure [`network.connect.alias`](../manifest/lb-web-service.en.md#network-connect-alias) field so that the Service Connect uses the same alias as Service Discovery. And if **both** client and caller have Service Connect enabled, they'll connect via Service Connect instead of Service Discovery. For example, in the manifest of the `api` service we have
 
 ```yaml
 network:

@@ -210,6 +210,7 @@ plugins:
             'docs/commands/pipeline-update.ja.md': 'docs/commands/pipeline-deploy.ja.md'
             'docs/developing/additional-aws-resources.en.md': 'docs/developing/addons/modeling.en.md'
             'docs/developing/additional-aws-resources.ja.md': 'docs/developing/addons/modeling.ja.md'
+            'docs/developing/service-discovery.en.md': 'docs/developing/internal-traffic.en.md'
     - i18n:
         default_language: en
         languages:
