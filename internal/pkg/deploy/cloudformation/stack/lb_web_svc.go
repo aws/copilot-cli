@@ -264,18 +264,10 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 func (s *LoadBalancedWebService) getPrimaryContainerPortMappings() []*template.PortMapping {
 	containerPort := aws.String(s.containerPort())
 	var portMappings []*template.PortMapping
-	portMappings = append(portMappings, &template.PortMapping{
-		ContainerPort: containerPort,
-		Protocol:      aws.String("tcp"),
-		Name:          s.name,
-	})
+	portMappings = append(portMappings, ConvertPortMapping(containerPort, aws.String("tcp"), s.name))
 
 	if s.isTargetPortDifferentThanPrimaryContainerPort(containerPort) {
-		portMappings = append(portMappings, &template.PortMapping{
-			ContainerPort: s.manifest.RoutingRule.TargetPort,
-			Protocol:      aws.String("tcp"), // TODO: @pbhingre what to do with the protocol? Default it to tcp?
-			Name:          s.name,
-		})
+		portMappings = append(portMappings, ConvertPortMapping(s.manifest.RoutingRule.TargetPort, aws.String("tcp"), s.name)) // TODO: @pbhingre what to do with the protocol? Default it to tcp?
 	}
 	return portMappings
 }

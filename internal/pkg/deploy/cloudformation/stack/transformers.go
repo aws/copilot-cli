@@ -87,41 +87,21 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBa
 		port, protocol, err := manifest.ParsePortMapping(config.Port)
 		if lbmft != nil {
 			if port != nil {
-				portMappings = append(portMappings, &template.PortMapping{
-					ContainerPort: port,
-					Protocol:      protocol,
-					Name:          name,
-				})
+				portMappings = append(portMappings, ConvertPortMapping(port, protocol, name))
 			}
 			if lbmft.RoutingRule.IsTargetPortDifferentThanSidecarContainerPort(name, port) {
-				portMappings = append(portMappings, &template.PortMapping{
-					ContainerPort: lbmft.RoutingRule.TargetPort,
-					Protocol:      protocol, // TODO: @pbhingre what to do with the protocol? Default it to tcp?
-					Name:          name,
-				})
+				portMappings = append(portMappings, ConvertPortMapping(lbmft.RoutingRule.TargetPort, protocol, name)) // TODO: @pbhingre what to do with the protocol? Default it to tcp?
 			}
 		} else if bsmft != nil {
 			if port != nil {
-				portMappings = append(portMappings, &template.PortMapping{
-					ContainerPort: port,
-					Protocol:      protocol,
-					Name:          name,
-				})
+				portMappings = append(portMappings, ConvertPortMapping(port, protocol, name))
 			}
 			if bsmft.RoutingRule.IsTargetPortDifferentThanSidecarContainerPort(name, port) {
-				portMappings = append(portMappings, &template.PortMapping{
-					ContainerPort: bsmft.RoutingRule.TargetPort,
-					Protocol:      protocol, // TODO: @pbhingre what to do with the protocol? Default it to tcp?
-					Name:          name,
-				})
+				portMappings = append(portMappings, ConvertPortMapping(bsmft.RoutingRule.TargetPort, protocol, name)) // TODO: @pbhingre what to do with the protocol? Default it to tcp?
 			}
 		} else if sjmft != nil || wsmft != nil {
 			if port != nil {
-				portMappings = append(portMappings, &template.PortMapping{
-					ContainerPort: port,
-					Protocol:      protocol,
-					Name:          name,
-				})
+				portMappings = append(portMappings, ConvertPortMapping(port, protocol, name))
 			}
 		}
 
@@ -158,6 +138,15 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBa
 		})
 	}
 	return sidecars, nil
+}
+
+// ConvertPortMapping return the port mapping object based on the given input.
+func ConvertPortMapping(port *string, protocol *string, name string) *template.PortMapping {
+	return &template.PortMapping{
+		ContainerPort: port,
+		Protocol:      protocol,
+		Name:          name,
+	}
 }
 
 func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.ContainerHealthCheck {
