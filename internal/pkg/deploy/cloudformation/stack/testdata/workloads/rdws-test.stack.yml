@@ -142,9 +142,6 @@ Resources:
                 Value: 
               - Name: COPILOT_SNS_TOPIC_ARNS
                 Value: '{"customers":"arn:aws:sns:us-west-2:123456789123:my-app-test-frontend-customers","mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-test-frontend-mytopic.fifo"}'
-              - Name: DB_NAME
-                Value:
-                  Fn::ImportValue: "test-UserDB"
               - Name: LOG_LEVEL
                 Value: "debug"
             StartCommand: crazy diamond

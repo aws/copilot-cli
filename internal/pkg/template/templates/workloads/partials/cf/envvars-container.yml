@@ -1,8 +1,19 @@
 {{if .Variables}}{{range $name, $value := .Variables}}
+{{if $.EnvAddonsFeatureFlag}}
 - Name: {{$name}}
-  Value: {{if $value.RequiresImport }}
+  Value: {{if $value.RequiresImport}}
     Fn::ImportValue: {{$value.Value | printf "%q" -}}
-    {{else}} {{- $value.Value | printf "%q"}} {{- end}}
+  {{else}} {{- $value.Value | printf "%q"}} {{- end}}
+  {{- else }}
+  {{if not $value.RequiresImport}}
+- Name: {{$name}}
+  Value: {{ $value.Value | printf "%q"}}
+  {{- end}} {{/* end if not .RequiresImport */}}
+  {{- end}} {{/* end if .EnvAddonsFeatureFlag */}}
+#- Name: {{$name}}
+#  Value: {{if $value.RequiresImport }}
+#    Fn::ImportValue: {{$value.Value | printf "%q" -}}
+#    {{else}} {{- $value.Value | printf "%q"}} {{- end}}
 {{- end}}{{end}}
 {{- if .Storage}}{{if .Storage.MountPoints}}
 - Name: COPILOT_MOUNT_POINTS

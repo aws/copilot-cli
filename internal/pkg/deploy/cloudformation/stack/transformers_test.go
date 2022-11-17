@@ -19,7 +19,7 @@ import (
 
 func Test_convertSidecar(t *testing.T) {
 	mockImage := aws.String("mockImage")
-	mockMap := map[string]template.Variable{"foo": template.PlainVarialble("")}
+	mockMap := map[string]template.Variable{"foo": template.PlainVariable("")}
 	mockSecrets := map[string]template.Secret{"foo": template.SecretFromSSMOrARN("")}
 	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {

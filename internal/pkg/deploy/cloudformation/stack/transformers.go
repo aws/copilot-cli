@@ -1007,7 +1007,7 @@ func convertEnvVars(variables map[string]manifest.Variable) map[string]template.
 			m[name] = template.ImportedVariable(variable.Value())
 			continue
 		}
-		m[name] = template.PlainVarialble(variable.Value())
+		m[name] = template.PlainVariable(variable.Value())
 	}
 	return m
 }

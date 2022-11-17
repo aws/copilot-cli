@@ -121,20 +121,21 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name         string
-	Image        *string
-	Essential    *bool
-	Port         *string
-	Protocol     *string
-	CredsParam   *string
-	Variables    map[string]Variable
-	Secrets      map[string]Secret
-	Storage      SidecarStorageOpts
-	DockerLabels map[string]string
-	DependsOn    map[string]string
-	EntryPoint   []string
-	Command      []string
-	HealthCheck  *ContainerHealthCheck
+	Name                 string
+	Image                *string
+	Essential            *bool
+	Port                 *string
+	Protocol             *string
+	CredsParam           *string
+	Variables            map[string]Variable
+	Secrets              map[string]Secret
+	Storage              SidecarStorageOpts
+	DockerLabels         map[string]string
+	DependsOn            map[string]string
+	EntryPoint           []string
+	Command              []string
+	HealthCheck          *ContainerHealthCheck
+	EnvAddonsFeatureFlag bool
 }
 
 // SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
@@ -642,7 +643,8 @@ type WorkloadOpts struct {
 	// Additional options for worker service templates.
 	Subscribe *SubscribeOpts
 
-	SCFeatureFlag bool
+	SCFeatureFlag        bool
+	EnvAddonsFeatureFlag bool
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,
