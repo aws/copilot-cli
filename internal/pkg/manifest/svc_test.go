@@ -402,6 +402,64 @@ type: 'OH NO'
 	}
 }
 
+func TestStringOrFromEnvironment_UnmarshalYAML(t *testing.T) {
+	type mockField struct {
+		stringOrFromEnvironment
+	}
+	type mockParentField struct {
+		MockField mockField `yaml:"mock_field"`
+	}
+	testCases := map[string]struct {
+		in          []byte
+		wanted      mockParentField
+		wantedError error
+	}{
+		"unmarshal plain string": {
+			in: []byte(`mock_field: hey`),
+			wanted: mockParentField{
+				MockField: mockField{
+					stringOrFromEnvironment{
+						Plain: aws.String("hey"),
+					},
+				},
+			},
+		},
+		"unmarshal import name": {
+			in: []byte(`mock_field:
+  from_environment: yo`),
+			wanted: mockParentField{
+				MockField: mockField{
+					stringOrFromEnvironment{
+						FromEnvironment: fromEnvironment{
+							Name: aws.String("yo"),
+						},
+					},
+				},
+			},
+		},
+		"nothing to unmarshal": {
+			in: []byte(`other_field: yo`),
+		},
+		"fail to unmarshal": {
+			in: []byte(`mock_field:
+  heyyo: !`),
+			wantedError: errors.New(`cannot unmarshal field to a string or into a map`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var s mockParentField
+			err := yaml.Unmarshal(tc.in, &s)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, s)
+			}
+		})
+	}
+}
+
 func TestCount_UnmarshalYAML(t *testing.T) {
 	var (
 		perc               = Percentage(70)
