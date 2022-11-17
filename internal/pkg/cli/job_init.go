@@ -115,7 +115,7 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		init:             jobInitter,
 		prompt:           prompter,
 		dockerfileSel:    dockerfileSel,
-		scheduleSelector: selector.NewConfigurationSelector(prompter),
+		scheduleSelector: selector.NewStaticSelector(prompter),
 		dockerEngine:     dockerengine.New(exec.NewCmd()),
 		mftReader:        ws,
 		initParser: func(path string) dockerfileParser {

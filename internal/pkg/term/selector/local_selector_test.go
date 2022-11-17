@@ -118,7 +118,7 @@ func TestConfigurationSelector_Schedule(t *testing.T) {
 			defer ctrl.Finish()
 			p := mocks.NewMockprompter(ctrl)
 			tc.mockPrompt(p)
-			sel := configurationSelector{
+			sel := staticSelector{
 				prompt: p,
 			}
 

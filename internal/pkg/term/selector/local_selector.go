@@ -21,19 +21,20 @@ const (
 	dockerignoreName = ".dockerignore"
 )
 
-type configurationSelector struct {
+// staticSelector selects from a list of static options.
+type staticSelector struct {
 	prompt prompter
 }
 
-// NewConfigurationSelector constructs a configurationSelector.
-func NewConfigurationSelector(prompt prompter) *configurationSelector {
-	return &configurationSelector{
+// NewStaticSelector constructs a staticSelector.
+func NewStaticSelector(prompt prompter) *staticSelector {
+	return &staticSelector{
 		prompt: prompt,
 	}
 }
 
 // Schedule asks the user to select either a rate, preset cron, or custom cron.
-func (s *configurationSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
+func (s *staticSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
 	scheduleType, err := s.prompt.SelectOne(
 		scheduleTypePrompt,
 		scheduleTypeHelp,
@@ -53,7 +54,7 @@ func (s *configurationSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp st
 	}
 }
 
-func (s *configurationSelector) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
+func (s *staticSelector) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
 	rateInput, err := s.prompt.Get(
 		ratePrompt,
 		rateHelp,
@@ -67,7 +68,7 @@ func (s *configurationSelector) askRate(rateValidator prompt.ValidatorFunc) (str
 	return fmt.Sprintf(every, rateInput), nil
 }
 
-func (s *configurationSelector) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
+func (s *staticSelector) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
 	cronInput, err := s.prompt.SelectOption(
 		schedulePrompt,
 		scheduleHelp,

@@ -255,7 +255,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					fs:                fs,
 					store:             configStore,
 					dockerfileSel:     sel,
-					scheduleSelector:  selector.NewConfigurationSelector(prompt),
+					scheduleSelector:  selector.NewStaticSelector(prompt),
 					prompt:            prompt,
 					dockerEngine:      dockerengine.New(cmd),
 					wsPendingCreation: true,
