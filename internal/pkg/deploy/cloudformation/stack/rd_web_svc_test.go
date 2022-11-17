@@ -167,11 +167,14 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 				addons := mockAddons{}
 				mockParser.EXPECT().ParseRequestDrivenWebService(gomock.Any()).DoAndReturn(func(actual template.WorkloadOpts) (*template.Content, error) {
 					require.Equal(t, template.WorkloadOpts{
-						AppName:           "phonetool",
-						EnvName:           "test",
-						WorkloadName:      "frontend",
-						WorkloadType:      manifest.RequestDrivenWebServiceType,
-						Variables:         convertEnvVars(c.manifest.Variables),
+						AppName:      "phonetool",
+						EnvName:      "test",
+						WorkloadName: "frontend",
+						WorkloadType: manifest.RequestDrivenWebServiceType,
+						Variables: map[string]template.Variable{
+							"LOG_LEVEL": template.PlainVariable(""),
+							"NODE_ENV":  template.PlainVariable(""),
+						},
 						Tags:              c.manifest.Tags,
 						EnableHealthCheck: true,
 						Alias:             aws.String("convex.domain.com"),
