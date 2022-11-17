@@ -819,6 +819,11 @@ func (t TaskConfig) validate() error {
 	if err = t.Storage.validate(); err != nil {
 		return fmt.Errorf(`validate "storage": %w`, err)
 	}
+	for n, v := range t.Variables {
+		if err := v.validate(); err != nil {
+			return fmt.Errorf(`validate "variable" %s : %w`, n, err)
+		}
+	}
 	for _, v := range t.Secrets {
 		if err := v.validate(); err != nil {
 			return fmt.Errorf(`validate "secret": %w`, err)
@@ -1596,6 +1601,10 @@ func (r OverrideRule) validate() error {
 			return fmt.Errorf(`"%s" cannot be overridden with a custom value`, s)
 		}
 	}
+	return nil
+}
+
+func (v variable) validate() error {
 	return nil
 }
 
