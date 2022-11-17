@@ -253,7 +253,7 @@ func (o *initSvcOpts) Ask() error {
 		if err := o.validateSvc(); err != nil {
 			return err
 		}
-		shouldSkipAsking, err := o.shouldSkipAsking()
+		shouldSkipAsking, err := o.manifestAlreadyExists()
 		if err != nil {
 			return err
 		}
@@ -281,7 +281,7 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.askIngressType(); err != nil {
 		return err
 	}
-	shouldSkipAsking, err := o.shouldSkipAsking()
+	shouldSkipAsking, err := o.manifestAlreadyExists()
 	if err != nil {
 		return err
 	}
@@ -471,7 +471,7 @@ func (o *initSvcOpts) askImage() error {
 	return nil
 }
 
-func (o *initSvcOpts) shouldSkipAsking() (bool, error) {
+func (o *initSvcOpts) manifestAlreadyExists() (bool, error) {
 	if o.wsPendingCreation {
 		return false, nil
 	}
