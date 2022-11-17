@@ -1,11 +1,8 @@
 # Service-to-Service Communication
 
-## Service Connect
+## Service Connect <span class="version" > added in v1.24.0 </span>
 
-!!! info
-    This feature is supported since Copilot `v1.24`, which provides more integrated service-to-service experience compared to [Service Discovery](#service-discovery).
-
-ECS Service Connect enables your client services connect to their dependencies in a load-balanced and resilient fashion, simplifying the way of exposing those dependencies to their clients. With Service Connect in Copilot, each service you create is given a private alias by default: `http://<your service name>`.
+[ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html) enables a client service to connect to its downstream services in a load-balanced and resilient fashion. Furthermore, it simplifies the way of exposing a service to its clients by specifying friendly aliases. With Service Connect in Copilot, each service you create is given the following private alias by default: `http://<your service name>`.
 
 ### How do I use Service Connect?
 Imagine we have an app called `kudos` and two services: `api` and `front-end`, deployed in the same environment. In order to use Service Connect, both services' manifests need to have:
@@ -24,7 +21,7 @@ resp, err := http.Get("http://api/")
 
 ### Upgrading from Service Discovery
 
-Prior to v1.24, Copilot enabled private service-to-service communication with Service Discovery. If you are already using Service Discovery and want to avoid any code changes, you can configure [`network.connect.alias`](../manifest/lb-web-service.en.md#network-connect-alias) field so that the Service Connect uses the same alias as Service Discovery. And if **both** client and caller have Service Connect enabled, they'll connect via Service Connect instead of Service Discovery. For example, in the manifest of the `api` service we have
+Prior to v1.24, Copilot enabled private service-to-service communication with [Service Discovery](#service-discovery). If you are already using Service Discovery and want to avoid any code changes, you can configure [`network.connect.alias`](../manifest/lb-web-service.en.md#network-connect-alias) field so that the Service Connect uses the same alias as Service Discovery. And if **both** the service and its client have Service Connect enabled, they'll connect via Service Connect instead of Service Discovery. For example, in the manifest of the `api` service we have
 
 ```yaml
 network:
@@ -32,7 +29,7 @@ network:
     alias: ${COPILOT_SERVICE_NAME}.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local
 ```
 
-and `front-end` can keep using the same endpoint to make API calls via Service Connect instead of Service Discovery to leverage the benefits of load balancing and additional resiliency.
+and `front-end` also has the same setting. Then, they can keep using the same endpoint to make API calls via Service Connect instead of Service Discovery to leverage the benefits of load balancing and additional resiliency.
 
 ## Service Discovery
 
