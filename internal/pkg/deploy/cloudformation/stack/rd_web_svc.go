@@ -143,6 +143,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		PermissionsBoundary:  s.permBound,
 		Private:              !s.manifest.Private.IsZero(),
 		AppRunnerVPCEndpoint: s.manifest.Private.Advanced.Endpoint,
+		Count:                s.manifest.Count,
 	})
 	if err != nil {
 		return "", err

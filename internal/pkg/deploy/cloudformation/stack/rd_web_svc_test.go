@@ -173,6 +173,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 						WorkloadType:      manifest.RequestDrivenWebServiceType,
 						Variables:         c.manifest.Variables,
 						Tags:              c.manifest.Tags,
+						Count:             c.manifest.Count,
 						EnableHealthCheck: true,
 						Alias:             aws.String("convex.domain.com"),
 						CustomResources: map[string]template.S3ObjectLocation{
