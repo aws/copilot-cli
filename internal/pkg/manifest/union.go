@@ -6,6 +6,7 @@ package manifest
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 
 	"gopkg.in/yaml.v3"
 )
@@ -65,9 +66,9 @@ func (t Union[_, _]) IsAdvanced() bool {
 }
 
 // UnmarshalYAML decodes value into either type Basic or Advanced, and stores that value
-// in t. value is first decoded into type Basic, and t will hold type Basic if:
-//   - There was no error decoding value into type Basic
-//   - Basic.IsZero() returns false OR Basic does not support IsZero()
+// in t. value is first decoded into type Basic, and t will hold type Basic if
+// (1) There was no error decoding value into type Basic and
+// (2) Basic.IsZero() returns false OR Basic is not zero via reflection.
 //
 // If Basic didn't meet the above criteria, then value is decoded into type Advanced.
 // t will hold type Advanced if Advanced meets the same conditions that were required for type Basic.
@@ -75,12 +76,6 @@ func (t Union[_, _]) IsAdvanced() bool {
 // If value fails to decode into either type, or both types are zero after
 // decoding, t will not hold any value.
 func (t *Union[Basic, Advanced]) UnmarshalYAML(value *yaml.Node) error {
-	// reset struct
-	var basic Basic
-	var advanced Advanced
-	t.isBasic, t.Basic = false, basic
-	t.isAdvanced, t.Advanced = false, advanced
-
 	// convert value to []byte so we can use KnownFields()
 	// see https://github.com/go-yaml/yaml/issues/460
 	// side effect: TypeError line numbers are reset.
@@ -89,19 +84,21 @@ func (t *Union[Basic, Advanced]) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
+	var basic Basic
 	dec := yaml.NewDecoder(bytes.NewReader(b))
 	dec.KnownFields(true)
 	bErr := dec.Decode(&basic)
-	if bErr == nil && !isZeroerAndZero(basic) {
-		t.isBasic, t.Basic = true, basic
+	if bErr == nil && !isZero(basic) {
+		t.SetBasic(basic)
 		return nil
 	}
 
+	var advanced Advanced
 	dec = yaml.NewDecoder(bytes.NewReader(b))
 	dec.KnownFields(true)
 	aErr := dec.Decode(&advanced)
-	if aErr == nil && !isZeroerAndZero(advanced) {
-		t.isAdvanced, t.Advanced = true, advanced
+	if aErr == nil && !isZero(advanced) {
+		t.SetAdvanced(advanced)
 		return nil
 	}
 
@@ -119,14 +116,14 @@ func (t *Union[Basic, Advanced]) UnmarshalYAML(value *yaml.Node) error {
 	return fmt.Errorf("%T: %s\n%T: %s", t.Basic, bErr, t.Advanced, aErr)
 }
 
-// isZeroerAndZero returns true if v is a yaml.Zeroer
-// _and_ is zero, as determined by v.IsZero().
-func isZeroerAndZero(v any) bool {
-	z, ok := v.(yaml.IsZeroer)
-	if !ok {
-		return false
+// isZero returns true if:
+//   - v is a yaml.Zeroer and IsZero().
+//   - v is not a yaml.Zeroer and determined to be zero via reflection.
+func isZero(v any) bool {
+	if z, ok := v.(yaml.IsZeroer); ok {
+		return z.IsZero()
 	}
-	return z.IsZero()
+	return reflect.ValueOf(v).IsZero()
 }
 
 // MarshalYAML implements yaml.Marshaler.
@@ -140,15 +137,16 @@ func (t Union[_, _]) MarshalYAML() (interface{}, error) {
 	return nil, nil
 }
 
-// IsZero returns true if the set value of t implements
-// yaml.IsZeroer and IsZero. It also returns true if
+// IsZero returns true if the set value of t
+// is determined to be zero via yaml.Zeroer
+// or reflection. It also returns true if
 // neither value for t is set.
 func (t Union[_, _]) IsZero() bool {
 	if t.IsBasic() {
-		return isZeroerAndZero(t.Basic)
+		return isZero(t.Basic)
 	}
 	if t.IsAdvanced() {
-		return isZeroerAndZero(t.Advanced)
+		return isZero(t.Advanced)
 	}
 	return true
 }

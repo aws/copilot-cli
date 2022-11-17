@@ -26,9 +26,14 @@ func TestUnion(t *testing.T) {
 		yaml:          `key: hello`,
 		expectedValue: BasicToUnion[string, []string]("hello"),
 	})
-	runUnionTest(t, "string or []string, is empty string", unionTest[string, []string]{
+	runUnionTest(t, "string or []string, is zero string, error", unionTest[string, []string]{
+		yaml:                 `key: ""`,
+		expectedUnmarshalErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `` into []string",
+		expectedYAML:         `key: null`,
+	})
+	runUnionTest(t, "*string or []string, is zero string", unionTest[*string, []string]{
 		yaml:          `key: ""`,
-		expectedValue: BasicToUnion[string, []string](""),
+		expectedValue: BasicToUnion[*string, []string](aws.String("")),
 	})
 	runUnionTest(t, "string or []string, is []string", unionTest[string, []string]{
 		yaml: `
@@ -38,8 +43,13 @@ key:
 		expectedValue: AdvancedToUnion[string]([]string{"asdf", "jkl;"}),
 	})
 	runUnionTest(t, "bool or semiComplexStruct, is false bool", unionTest[bool, semiComplexStruct]{
+		yaml:                 `key: false`,
+		expectedUnmarshalErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!bool `false` into manifest.semiComplexStruct",
+		expectedYAML:         `key: null`,
+	})
+	runUnionTest(t, "*bool or semiComplexStruct, is false bool", unionTest[*bool, semiComplexStruct]{
 		yaml:          `key: false`,
-		expectedValue: BasicToUnion[bool, semiComplexStruct](false),
+		expectedValue: BasicToUnion[*bool, semiComplexStruct](aws.Bool(false)),
 	})
 	runUnionTest(t, "bool or semiComplexStruct, is true bool", unionTest[bool, semiComplexStruct]{
 		yaml:          `key: true`,
