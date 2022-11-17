@@ -203,7 +203,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
 
-		Variables:          s.manifest.TaskConfig.Variables,
+		Variables:          convertEnvVars(s.manifest.TaskConfig.Variables),
 		Secrets:            convertSecrets(s.manifest.TaskConfig.Secrets),
 		Aliases:            aliases,
 		HTTPSListener:      s.httpsEnabled,

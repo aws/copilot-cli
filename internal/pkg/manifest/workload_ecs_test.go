@@ -80,7 +80,7 @@ count: 1`),
 
 func TestVariable_UnmarshalYAML(t *testing.T) {
 	type mockParentField struct {
-		Variables map[string]variable `yaml:"variables"`
+		Variables map[string]Variable `yaml:"variables"`
 	}
 	testCases := map[string]struct {
 		in          []byte
@@ -93,7 +93,7 @@ variables:
   LOG_LEVEL: DEBUG
 `),
 			wanted: mockParentField{
-				Variables: map[string]variable{
+				Variables: map[string]Variable{
 					"LOG_LEVEL": {
 						stringOrFromEnvironment{
 							Plain: stringP("DEBUG"),
@@ -109,7 +109,7 @@ variables:
     from_environment: MyUserDB
 `),
 			wanted: mockParentField{
-				Variables: map[string]variable{
+				Variables: map[string]Variable{
 					"DB_NAME": {
 						stringOrFromEnvironment{
 							FromEnvironment: fromEnvironment{
@@ -141,6 +141,68 @@ variables:
 				require.NoError(t, err)
 				require.Equal(t, tc.wanted, s)
 			}
+		})
+	}
+}
+
+func TestVariable_RequiresImport(t *testing.T) {
+	testCases := map[string]struct {
+		in     Variable
+		wanted bool
+	}{
+		"requires import": {
+			in: Variable{
+				stringOrFromEnvironment{
+					FromEnvironment: fromEnvironment{
+						Name: stringP("prod-MyDB"),
+					},
+				},
+			},
+			wanted: true,
+		},
+		"does not require import if it is a plain value": {
+			in: Variable{
+				stringOrFromEnvironment{
+					Plain: stringP("plain"),
+				},
+			},
+			wanted: false,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.RequiresImport())
+		})
+	}
+}
+
+func TestVariable_Value(t *testing.T) {
+	testCases := map[string]struct {
+		in     Variable
+		wanted string
+	}{
+		"requires import": {
+			in: Variable{
+				stringOrFromEnvironment{
+					FromEnvironment: fromEnvironment{
+						Name: stringP("prod-MyDB"),
+					},
+				},
+			},
+			wanted: "prod-MyDB",
+		},
+		"does not require import if it is a plain value": {
+			in: Variable{
+				stringOrFromEnvironment{
+					Plain: stringP("plain"),
+				},
+			},
+			wanted: "plain",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.Value())
 		})
 	}
 }

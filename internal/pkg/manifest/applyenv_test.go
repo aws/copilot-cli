@@ -798,7 +798,7 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 	}{
 		"map upserted": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]variable{
+				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
 						stringOrFromEnvironment{
 							Plain: stringP("var1"),
@@ -812,7 +812,7 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].TaskConfig.Variables = map[string]variable{
+				svc.Environments["test"].TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
 						stringOrFromEnvironment{
 							FromEnvironment: fromEnvironment{
@@ -828,7 +828,7 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]variable{
+				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
 						stringOrFromEnvironment{
 							FromEnvironment: fromEnvironment{
@@ -853,7 +853,7 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 		},
 		"map not overridden by zero map": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]variable{
+				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
 						stringOrFromEnvironment{
 							Plain: stringP("var1"),
@@ -867,10 +867,10 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 						},
 					},
 				}
-				svc.Environments["test"].TaskConfig.Variables = map[string]variable{}
+				svc.Environments["test"].TaskConfig.Variables = map[string]Variable{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]variable{
+				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
 						stringOrFromEnvironment{
 							Plain: stringP("var1"),
@@ -888,7 +888,7 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 		},
 		"map not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]variable{
+				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
 						stringOrFromEnvironment{
 							Plain: stringP("var1"),
@@ -904,7 +904,7 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]variable{
+				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
 						stringOrFromEnvironment{
 							Plain: stringP("var1"),
@@ -922,10 +922,10 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 		},
 		"override a zero value": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]variable{
+				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {},
 				}
-				svc.Environments["test"].TaskConfig.Variables = map[string]variable{
+				svc.Environments["test"].TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
 						stringOrFromEnvironment{
 							Plain: stringP("var1-test"),
@@ -934,7 +934,7 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]variable{
+				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
 						stringOrFromEnvironment{
 							Plain: stringP("var1-test"),

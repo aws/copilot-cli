@@ -265,7 +265,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Variables: map[string]variable{
+						Variables: map[string]Variable{
 							"VAR1": {
 								stringOrFromEnvironment{
 									Plain: stringP("var1"),
@@ -331,7 +331,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Variables: map[string]variable{
+						Variables: map[string]Variable{
 							"VAR1": {
 								stringOrFromEnvironment{
 									Plain: stringP("var1"),
@@ -397,7 +397,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Variables: map[string]variable{
+						Variables: map[string]Variable{
 							"LOG_LEVEL": {
 								stringOrFromEnvironment{
 									Plain: stringP("DEBUG"),
@@ -492,7 +492,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Count: Count{
 								Value: aws.Int(0),
 							},
-							Variables: map[string]variable{
+							Variables: map[string]Variable{
 								"LOG_LEVEL": {
 									stringOrFromEnvironment{
 										Plain: stringP("ERROR"),
@@ -591,7 +591,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(0),
 						},
-						Variables: map[string]variable{
+						Variables: map[string]Variable{
 							"LOG_LEVEL": {
 								stringOrFromEnvironment{
 									Plain: stringP("ERROR"),
@@ -682,7 +682,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								CPU:   mockConfig,
 							},
 						},
-						Variables: map[string]variable{
+						Variables: map[string]Variable{
 							"VAR1": {
 								stringOrFromEnvironment{
 									Plain: stringP("var1"),
@@ -720,7 +720,7 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								CPU:   mockConfig,
 							},
 						},
-						Variables: map[string]variable{
+						Variables: map[string]Variable{
 							"VAR1": {
 								stringOrFromEnvironment{
 									Plain: stringP("var1"),

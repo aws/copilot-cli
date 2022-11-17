@@ -38,9 +38,9 @@ var testRDWebServiceManifest = &manifest.RequestDrivenWebService{
 			CPU:    aws.Int(256),
 			Memory: aws.Int(512),
 		},
-		Variables: map[string]string{
-			"LOG_LEVEL": "info",
-			"NODE_ENV":  "development",
+		Variables: map[string]manifest.Variable{
+			"LOG_LEVEL": {},
+			"NODE_ENV":  {},
 		},
 		RequestDrivenWebServiceHttpConfig: manifest.RequestDrivenWebServiceHttpConfig{
 			HealthCheckConfiguration: manifest.HealthCheckArgsOrString{
@@ -171,7 +171,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 						EnvName:           "test",
 						WorkloadName:      "frontend",
 						WorkloadType:      manifest.RequestDrivenWebServiceType,
-						Variables:         c.manifest.Variables,
+						Variables:         convertEnvVars(c.manifest.Variables),
 						Tags:              c.manifest.Tags,
 						EnableHealthCheck: true,
 						Alias:             aws.String("convex.domain.com"),
@@ -204,7 +204,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 						EnvName:                  "test",
 						WorkloadName:             "frontend",
 						WorkloadType:             manifest.RequestDrivenWebServiceType,
-						Variables:                c.manifest.Variables,
+						Variables:                convertEnvVars(c.manifest.Variables),
 						Tags:                     c.manifest.Tags,
 						ServiceDiscoveryEndpoint: mockSD,
 						EnableHealthCheck:        true,
@@ -248,7 +248,7 @@ Outputs:
 						EnvName:                  "test",
 						WorkloadName:             "frontend",
 						WorkloadType:             manifest.RequestDrivenWebServiceType,
-						Variables:                c.manifest.Variables,
+						Variables:                convertEnvVars(c.manifest.Variables),
 						Tags:                     c.manifest.Tags,
 						ServiceDiscoveryEndpoint: mockSD,
 						NestedStack: &template.WorkloadNestedStackOpts{

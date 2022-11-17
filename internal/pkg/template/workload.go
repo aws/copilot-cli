@@ -127,7 +127,7 @@ type SidecarOpts struct {
 	Port         *string
 	Protocol     *string
 	CredsParam   *string
-	Variables    map[string]string
+	Variables    map[string]Variable
 	Secrets      map[string]Secret
 	Storage      SidecarStorageOpts
 	DockerLabels map[string]string
@@ -205,7 +205,7 @@ type LogConfigOpts struct {
 	EnableMetadata *string
 	SecretOptions  map[string]Secret
 	ConfigFile     *string
-	Variables      map[string]string
+	Variables      map[string]Variable
 	Secrets        map[string]Secret
 }
 
@@ -240,6 +240,43 @@ type HTTPHealthCheckOpts struct {
 // as a HTTPS port.
 func (h HTTPHealthCheckOpts) IsHTTPS() bool {
 	return h.Port == "443"
+}
+
+type importable interface {
+	RequiresImport() bool
+}
+
+type Variable interface {
+	importable
+	Value() string
+}
+
+func ImportedVariable(name string) envVar {
+	return envVar{
+		importName: name,
+	}
+}
+
+func PlainVarialble(value string) envVar {
+	return envVar{
+		value: value,
+	}
+}
+
+type envVar struct {
+	value      string
+	importName string
+}
+
+func (v envVar) RequiresImport() bool {
+	return v.importName != ""
+}
+
+func (v envVar) Value() string {
+	if v.RequiresImport() {
+		return v.importName
+	}
+	return v.value
 }
 
 // A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
@@ -395,7 +432,7 @@ type ObservabilityOpts struct {
 	Tracing string // The name of the vendor used for tracing.
 }
 
-// DeploymentConfiguraitonOpts holds values for MinHealthyPercent and MaxPercent.
+// DeploymentConfigurationOpts holds values for MinHealthyPercent and MaxPercent.
 type DeploymentConfigurationOpts struct {
 	// The lower limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
 	MinHealthyPercent int
@@ -430,7 +467,7 @@ type Topic struct {
 	Svc       string
 }
 
-// Fifo holds configuration needed if the topic is FIFO.
+// FIFOTopicConfig holds configuration needed if the topic is FIFO.
 type FIFOTopicConfig struct {
 	ContentBasedDeduplication *bool
 }
@@ -536,7 +573,7 @@ type WorkloadOpts struct {
 	EnvVersion         string
 
 	// Additional options that are common between **all** workload templates.
-	Variables                map[string]string
+	Variables                map[string]Variable
 	Secrets                  map[string]Secret
 	Aliases                  []string
 	HTTPSListener            bool

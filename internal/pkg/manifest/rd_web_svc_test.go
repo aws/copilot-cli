@@ -169,7 +169,7 @@ func TestRequestDrivenWebService_UnmarshalYaml(t *testing.T) {
 
 			wantedStruct: RequestDrivenWebService{
 				RequestDrivenWebServiceConfig: RequestDrivenWebServiceConfig{
-					Variables: map[string]variable{
+					Variables: map[string]Variable{
 						"LOG_LEVEL": {
 							stringOrFromEnvironment{
 								Plain: stringP("info"),

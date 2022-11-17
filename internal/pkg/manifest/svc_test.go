@@ -129,7 +129,7 @@ environments:
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(true),
 							},
-							Variables: map[string]variable{
+							Variables: map[string]Variable{
 								"LOG_LEVEL": {
 									stringOrFromEnvironment{
 										Plain: stringP("WARN"),

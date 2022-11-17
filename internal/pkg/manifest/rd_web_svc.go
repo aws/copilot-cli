@@ -31,7 +31,7 @@ type RequestDrivenWebServiceConfig struct {
 	RequestDrivenWebServiceHttpConfig `yaml:"http,flow"`
 	InstanceConfig                    AppRunnerInstanceConfig              `yaml:",inline"`
 	ImageConfig                       ImageWithPort                        `yaml:"image"`
-	Variables                         map[string]variable                  `yaml:"variables"`
+	Variables                         map[string]Variable                  `yaml:"variables"`
 	StartCommand                      *string                              `yaml:"command"`
 	Tags                              map[string]string                    `yaml:"tags"`
 	PublishConfig                     PublishConfig                        `yaml:"publish"`

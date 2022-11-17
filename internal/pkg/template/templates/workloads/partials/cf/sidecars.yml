@@ -5,7 +5,10 @@
 {{include "envvars-common" . | indent 2}}
 {{if .LogConfig.Variables}}{{range $name, $value := .LogConfig.Variables}}
   - Name: {{$name}}
-    Value: {{$value | printf "%q"}}{{end}}{{end}}
+    Value: {{if $value.RequiresImport }}
+      Fn::ImportValue: {{$value.Value | printf "%q" -}}
+    {{else}} {{- $value.Value | printf "%q"}} {{- end}}
+{{end}}{{end}}
 {{- if .LogConfig.Secrets}}
   Secrets:
   {{- range $name, $secret := .LogConfig.Secrets}}

@@ -102,7 +102,9 @@ Resources:
               {{- if .Variables}}
               {{- range $name, $value := .Variables}}
               - Name: {{$name}}
-                Value: {{$value | printf "%q"}}
+                Value: {{if $value.RequiresImport }}
+                  Fn::ImportValue: {{$value.Value | printf "%q" -}}
+                  {{else}} {{- $value.Value | printf "%q"}} {{- end}}
               {{- end}}
               {{- end}}
               {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}

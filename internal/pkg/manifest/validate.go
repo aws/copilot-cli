@@ -1604,7 +1604,7 @@ func (r OverrideRule) validate() error {
 	return nil
 }
 
-func (v variable) validate() error {
+func (v Variable) validate() error {
 	return nil
 }
 

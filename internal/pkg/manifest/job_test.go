@@ -62,7 +62,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 				Environments: map[string]*ScheduledJobConfig{
 					"prod": {
 						TaskConfig: TaskConfig{
-							Variables: map[string]variable{
+							Variables: map[string]Variable{
 								"LOG_LEVEL": {
 									stringOrFromEnvironment{
 										Plain: stringP("prod"),
@@ -99,7 +99,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Variables: map[string]variable{
+						Variables: map[string]Variable{
 							"LOG_LEVEL": {
 								stringOrFromEnvironment{
 									Plain: stringP("prod"),

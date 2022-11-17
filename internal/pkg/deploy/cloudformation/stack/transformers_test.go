@@ -19,7 +19,7 @@ import (
 
 func Test_convertSidecar(t *testing.T) {
 	mockImage := aws.String("mockImage")
-	mockMap := map[string]string{"foo": "bar"}
+	mockMap := map[string]template.Variable{"foo": template.PlainVarialble("")}
 	mockSecrets := map[string]template.Secret{"foo": template.SecretFromSSMOrARN("")}
 	mockCredsParam := aws.String("mockCredsParam")
 	testCases := map[string]struct {
@@ -213,7 +213,7 @@ func Test_convertSidecar(t *testing.T) {
 					CredsParam:    mockCredsParam,
 					Image:         mockImage,
 					Secrets:       map[string]manifest.Secret{"foo": {}},
-					Variables:     mockMap,
+					Variables:     map[string]manifest.Variable{"foo": {}},
 					Essential:     aws.Bool(tc.inEssential),
 					Port:          tc.inPort,
 					DockerLabels:  tc.inLabels,
@@ -1468,11 +1468,11 @@ func Test_convertSubscribe(t *testing.T) {
 
 		wanted *template.SubscribeOpts
 	}{
-		"empty subscription": { //1
+		"empty subscription": { // 1
 			inSubscribe: &manifest.WorkerService{},
 			wanted:      nil,
 		},
-		"valid subscribe": { //2
+		"valid subscribe": { // 2
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1510,7 +1510,7 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 			},
 		},
-		"valid subscribe with default queue configs": { //3
+		"valid subscribe with default queue configs": { // 3
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1534,7 +1534,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with queue enabled": { //4
+		"valid subscribe with queue enabled": { // 4
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1564,7 +1564,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with minimal queue": { //5
+		"valid subscribe with minimal queue": { // 5
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1608,7 +1608,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with high throughput fifo sqs": { //6
+		"valid subscribe with high throughput fifo sqs": { // 6
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1703,7 +1703,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with custom complete fifo sqs config values": { //7
+		"valid subscribe with custom complete fifo sqs config values": { // 7
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1759,7 +1759,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with custom complete fifo sqs config and standard topic subscription to a default standard queue": { //8
+		"valid subscribe with custom complete fifo sqs config and standard topic subscription to a default standard queue": { // 8
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1823,7 +1823,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with custom complete fifo sqs config and multiple standard topic subscriptions to a default standard queue": { //9
+		"valid subscribe with custom complete fifo sqs config and multiple standard topic subscriptions to a default standard queue": { // 9
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1895,7 +1895,7 @@ func Test_convertSubscribe(t *testing.T) {
 				Queue: nil,
 			},
 		},
-		"valid subscribe with standard sqs config and fifo topic subscription to a default fifo queue": { //10
+		"valid subscribe with standard sqs config and fifo topic subscription to a default fifo queue": { // 10
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{
@@ -1951,7 +1951,7 @@ func Test_convertSubscribe(t *testing.T) {
 				},
 			},
 		},
-		"valid subscribe with standard sqs config and multiple fifo topic subscriptions to a default fifo queue": { //11
+		"valid subscribe with standard sqs config and multiple fifo topic subscriptions to a default fifo queue": { // 11
 			inSubscribe: &manifest.WorkerService{
 				WorkerServiceConfig: manifest.WorkerServiceConfig{
 					Subscribe: manifest.SubscribeConfig{

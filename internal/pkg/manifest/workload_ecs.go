@@ -113,22 +113,36 @@ type TaskConfig struct {
 	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
 	Count          Count                `yaml:"count"`
 	ExecuteCommand ExecuteCommand       `yaml:"exec"`
-	Variables      map[string]variable  `yaml:"variables"`
+	Variables      map[string]Variable  `yaml:"variables"`
 	EnvFile        *string              `yaml:"env_file"`
 	Secrets        map[string]Secret    `yaml:"secrets"`
 	Storage        Storage              `yaml:"storage"`
 }
 
-type variable struct {
+// Variable represents an identifier for the value of an environment variable.
+type Variable struct {
 	stringOrFromEnvironment
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler (v3) interface to override the default YAML unmarshalling logic.
-func (v *variable) UnmarshalYAML(value *yaml.Node) error {
+func (v *Variable) UnmarshalYAML(value *yaml.Node) error {
 	if err := v.stringOrFromEnvironment.UnmarshalYAML(value); err != nil {
 		return fmt.Errorf(`unmarshal "variables": %w`, err)
 	}
 	return nil
+}
+
+// RequiresImport returns true if the value is imported from an environment.
+func (v *Variable) RequiresImport() bool {
+	return !v.FromEnvironment.isEmpty()
+}
+
+// Value returns the value, whether it is used for import or not.
+func (v *Variable) Value() string {
+	if v.RequiresImport() {
+		return aws.StringValue(v.FromEnvironment.Name)
+	}
+	return aws.StringValue(v.Plain)
 }
 
 // ContainerPlatform returns the platform for the service.
@@ -208,7 +222,7 @@ type Logging struct {
 	EnableMetadata *bool               `yaml:"enableMetadata"`
 	SecretOptions  map[string]Secret   `yaml:"secretOptions"`
 	ConfigFile     *string             `yaml:"configFilePath"`
-	Variables      map[string]variable `yaml:"variables"`
+	Variables      map[string]Variable `yaml:"variables"`
 	Secrets        map[string]Secret   `yaml:"secrets"`
 }
 
@@ -241,7 +255,7 @@ type SidecarConfig struct {
 	Image         *string              `yaml:"image"`
 	Essential     *bool                `yaml:"essential"`
 	CredsParam    *string              `yaml:"credentialsParameter"`
-	Variables     map[string]variable  `yaml:"variables"`
+	Variables     map[string]Variable  `yaml:"variables"`
 	Secrets       map[string]Secret    `yaml:"secrets"`
 	MountPoints   []SidecarMountPoint  `yaml:"mount_points"`
 	DockerLabels  map[string]string    `yaml:"labels"`
