@@ -300,7 +300,7 @@ type configurationSelector struct {
 	prompt prompter
 }
 
-// NewConfigurationSelector constructs a localFconfigurationSelectorileSelector.
+// NewConfigurationSelector constructs a configurationSelector.
 func NewConfigurationSelector(prompt prompter) *configurationSelector {
 	return &configurationSelector{
 		prompt: prompt,
