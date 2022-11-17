@@ -288,6 +288,10 @@ func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *stri
 		targetPort = s.manifest.Sidecars[aws.StringValue(targetContainer)].Port
 	}
 
+	// Route load balancer traffic to the target_port if mentioned.
+	if s.manifest.RoutingRule.TargetPort != nil {
+		targetPort = s.manifest.RoutingRule.TargetPort
+	}
 	return
 }
 
