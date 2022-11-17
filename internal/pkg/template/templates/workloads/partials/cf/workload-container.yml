@@ -57,7 +57,7 @@
         {{- end}}
       - !Ref AWS::NoValue
 {{- else}}
-  PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
+  PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"] # This has not been touched as it will go away after SC release.
 {{- end}}
 {{- end}}
 {{- end}}
