@@ -141,7 +141,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
 		PermissionsBoundary:  s.permBound,
-		Private:              !s.manifest.Private.IsZero(),
+		Private:              aws.BoolValue(s.manifest.Private.Basic) || s.manifest.Private.Advanced.Endpoint != nil,
 		AppRunnerVPCEndpoint: s.manifest.Private.Advanced.Endpoint,
 	})
 	if err != nil {
