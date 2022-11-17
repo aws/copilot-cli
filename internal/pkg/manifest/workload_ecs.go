@@ -202,14 +202,14 @@ func (s secretsManagerSecret) IsEmpty() bool {
 
 // Logging holds configuration for Firelens to route your logs.
 type Logging struct {
-	Retention      *int              `yaml:"retention"`
-	Image          *string           `yaml:"image"`
-	Destination    map[string]string `yaml:"destination,flow"`
-	EnableMetadata *bool             `yaml:"enableMetadata"`
-	SecretOptions  map[string]Secret `yaml:"secretOptions"`
-	ConfigFile     *string           `yaml:"configFilePath"`
-	Variables      map[string]string `yaml:"variables"`
-	Secrets        map[string]Secret `yaml:"secrets"`
+	Retention      *int                `yaml:"retention"`
+	Image          *string             `yaml:"image"`
+	Destination    map[string]string   `yaml:"destination,flow"`
+	EnableMetadata *bool               `yaml:"enableMetadata"`
+	SecretOptions  map[string]Secret   `yaml:"secretOptions"`
+	ConfigFile     *string             `yaml:"configFilePath"`
+	Variables      map[string]variable `yaml:"variables"`
+	Secrets        map[string]Secret   `yaml:"secrets"`
 }
 
 // IsEmpty returns empty if the struct has all zero members.
@@ -241,7 +241,7 @@ type SidecarConfig struct {
 	Image         *string              `yaml:"image"`
 	Essential     *bool                `yaml:"essential"`
 	CredsParam    *string              `yaml:"credentialsParameter"`
-	Variables     map[string]string    `yaml:"variables"`
+	Variables     map[string]variable  `yaml:"variables"`
 	Secrets       map[string]Secret    `yaml:"secrets"`
 	MountPoints   []SidecarMountPoint  `yaml:"mount_points"`
 	DockerLabels  map[string]string    `yaml:"labels"`
