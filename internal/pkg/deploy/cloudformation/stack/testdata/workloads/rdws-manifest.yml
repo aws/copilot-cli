@@ -52,6 +52,8 @@ environments:
     command: crazy diamond
     variables:
       LOG_LEVEL: debug        # Log level for the "test" environment.
+      DB_NAME:
+        from_environment: test-UserDB
   prod:
     network:
       vpc:
