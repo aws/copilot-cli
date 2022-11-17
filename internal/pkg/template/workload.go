@@ -246,18 +246,21 @@ type importable interface {
 	RequiresImport() bool
 }
 
+// Variable represents the value of an environment variable.
 type Variable interface {
 	importable
 	Value() string
 }
 
+// ImportedVariable returns a Variable that should be imported from a stack.
 func ImportedVariable(name string) envVar {
 	return envVar{
 		importName: name,
 	}
 }
 
-func PlainVarialble(value string) envVar {
+// PlainVariable returns a Variable that is a plain string value.
+func PlainVariable(value string) envVar {
 	return envVar{
 		value: value,
 	}
@@ -268,10 +271,12 @@ type envVar struct {
 	importName string
 }
 
+// RequiresImport returns true if the environment variable is imported from a stack.
 func (v envVar) RequiresImport() bool {
 	return v.importName != ""
 }
 
+// Value returns the value of the environment variable, which is either an import name, or a plain value.
 func (v envVar) Value() string {
 	if v.RequiresImport() {
 		return v.importName
