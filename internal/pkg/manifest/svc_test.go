@@ -129,8 +129,12 @@ environments:
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(true),
 							},
-							Variables: map[string]string{
-								"LOG_LEVEL": "WARN",
+							Variables: map[string]variable{
+								"LOG_LEVEL": {
+									stringOrFromEnvironment{
+										Plain: stringP("WARN"),
+									},
+								},
 							},
 							Secrets: map[string]Secret{
 								"DB_PASSWORD": {from: aws.String("MYSQL_DB_PASSWORD")},

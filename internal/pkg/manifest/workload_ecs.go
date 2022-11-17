@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -112,10 +113,22 @@ type TaskConfig struct {
 	Platform       PlatformArgsOrString `yaml:"platform,omitempty"`
 	Count          Count                `yaml:"count"`
 	ExecuteCommand ExecuteCommand       `yaml:"exec"`
-	Variables      map[string]string    `yaml:"variables"`
+	Variables      map[string]variable  `yaml:"variables"`
 	EnvFile        *string              `yaml:"env_file"`
 	Secrets        map[string]Secret    `yaml:"secrets"`
 	Storage        Storage              `yaml:"storage"`
+}
+
+type variable struct {
+	stringOrFromEnvironment
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler (v3) interface to override the default YAML unmarshalling logic.
+func (v *variable) UnmarshalYAML(value *yaml.Node) error {
+	if err := v.stringOrFromEnvironment.UnmarshalYAML(value); err != nil {
+		return fmt.Errorf(`unmarshal "variables": %w`, err)
+	}
+	return nil
 }
 
 // ContainerPlatform returns the platform for the service.

@@ -369,9 +369,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Variables: map[string]string{
-							"LOG_LEVEL":      "DEBUG",
-							"DDB_TABLE_NAME": "awards",
+						Variables: map[string]variable{
+							"LOG_LEVEL": {
+								stringOrFromEnvironment{
+									Plain: stringP("DEBUG"),
+								},
+							},
+							"DDB_TABLE_NAME": {
+								stringOrFromEnvironment{
+									Plain: stringP("awards"),
+								},
+							},
 						},
 						Secrets: map[string]Secret{
 							"GITHUB_TOKEN": {from: aws.String("1111")},
@@ -442,8 +450,12 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Count: Count{
 								Value: aws.Int(0),
 							},
-							Variables: map[string]string{
-								"DDB_TABLE_NAME": "awards-prod",
+							Variables: map[string]variable{
+								"DDB_TABLE_NAME": {
+									stringOrFromEnvironment{
+										Plain: stringP("awards-prod"),
+									},
+								},
 							},
 							Storage: Storage{
 								Volumes: map[string]*Volume{
@@ -524,9 +536,17 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(0),
 						},
-						Variables: map[string]string{
-							"LOG_LEVEL":      "DEBUG",
-							"DDB_TABLE_NAME": "awards-prod",
+						Variables: map[string]variable{
+							"LOG_LEVEL": {
+								stringOrFromEnvironment{
+									Plain: stringP("DEBUG"),
+								},
+							},
+							"DDB_TABLE_NAME": {
+								stringOrFromEnvironment{
+									Plain: stringP("awards-prod"),
+								},
+							},
 						},
 						Secrets: map[string]Secret{
 							"GITHUB_TOKEN": {from: aws.String("1111")},

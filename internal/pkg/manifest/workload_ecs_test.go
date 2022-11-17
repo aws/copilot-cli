@@ -78,6 +78,73 @@ count: 1`),
 	}
 }
 
+func TestVariable_UnmarshalYAML(t *testing.T) {
+	type mockParentField struct {
+		Variables map[string]variable `yaml:"variables"`
+	}
+	testCases := map[string]struct {
+		in          []byte
+		wanted      mockParentField
+		wantedError error
+	}{
+		"unmarshal plain string": {
+			in: []byte(`
+variables:
+  LOG_LEVEL: DEBUG
+`),
+			wanted: mockParentField{
+				Variables: map[string]variable{
+					"LOG_LEVEL": {
+						stringOrFromEnvironment{
+							Plain: stringP("DEBUG"),
+						},
+					},
+				},
+			},
+		},
+		"unmarshal import name": {
+			in: []byte(`
+variables:
+  DB_NAME:
+    from_environment: MyUserDB
+`),
+			wanted: mockParentField{
+				Variables: map[string]variable{
+					"DB_NAME": {
+						stringOrFromEnvironment{
+							FromEnvironment: fromEnvironment{
+								Name: stringP("MyUserDB"),
+							},
+						},
+					},
+				},
+			},
+		},
+		"nothing to unmarshal": {
+			in: []byte(`other_field: yo`),
+		},
+		"fail to unmarshal": {
+			in: []byte(`
+variables:
+  erroneous: 
+    big_mistake: being made`),
+			wantedError: errors.New(`unmarshal "variables": cannot unmarshal field to a string or into a map`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var s mockParentField
+			err := yaml.Unmarshal(tc.in, &s)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, s)
+			}
+		})
+	}
+}
+
 func TestSecret_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		in string
