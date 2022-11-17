@@ -137,6 +137,16 @@ http:
 `
 }
 
+type errRangeValueLessThanZero struct {
+	min int
+	max int
+	spotFrom int
+}
+
+func (e *errRangeValueLessThanZero) Error() string{
+	return fmt.Sprintf("min value %d, max value %d, and spot_from value %d must all be positive", e.min, e.max, e.spotFrom)
+}
+
 type errMinGreaterThanMax struct {
 	min int
 	max int
