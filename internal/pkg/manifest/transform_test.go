@@ -729,12 +729,12 @@ func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
 
 func TestTransformer_UnionWithZeroValues(t *testing.T) {
 	runUnionTransformerTests(t, map[string]unionTransformerTest[bool, struct{}]{
-		"bool true -> false": {
+		"bool true -> false, doesn't work": {
 			original: BasicToUnion[bool, struct{}](true),
 			override: BasicToUnion[bool, struct{}](false),
-			expected: BasicToUnion[bool, struct{}](false),
+			expected: BasicToUnion[bool, struct{}](true),
 		},
-		"bool false -> true": {
+		"bool false -> true, works": {
 			original: BasicToUnion[bool, struct{}](false),
 			override: BasicToUnion[bool, struct{}](true),
 			expected: BasicToUnion[bool, struct{}](true),
@@ -750,12 +750,12 @@ func TestTransformer_UnionWithZeroValues(t *testing.T) {
 	})
 
 	runUnionTransformerTests(t, map[string]unionTransformerTest[*bool, VPCEndpoint]{
-		"*bool true -> false": {
+		"*bool true -> false, works": {
 			original: BasicToUnion[*bool, VPCEndpoint](aws.Bool(true)),
 			override: BasicToUnion[*bool, VPCEndpoint](aws.Bool(false)),
 			expected: BasicToUnion[*bool, VPCEndpoint](aws.Bool(false)),
 		},
-		"*bool false -> true": {
+		"*bool false -> true, works": {
 			original: BasicToUnion[*bool, VPCEndpoint](aws.Bool(false)),
 			override: BasicToUnion[*bool, VPCEndpoint](aws.Bool(true)),
 			expected: BasicToUnion[*bool, VPCEndpoint](aws.Bool(true)),
@@ -772,15 +772,20 @@ func TestTransformer_UnionWithZeroValues(t *testing.T) {
 }
 
 func runUnionTransformerTests[Basic, Advanced any](t *testing.T, tests map[string]unionTransformerTest[Basic, Advanced]) {
+	transformers := []mergo.Transformers{
+		basicTransformer{},
+		unionTransformer{},
+	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// Perform default merge.
 			err := mergo.Merge(&tc.original, tc.override, mergo.WithOverride)
 			require.NoError(t, err)
 
-			// Use custom transformer.
-			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(unionTransformer{}))
-			require.NoError(t, err)
+			for _, tx := range transformers {
+				err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(tx))
+				require.NoError(t, err)
+			}
 
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, tc.original)
