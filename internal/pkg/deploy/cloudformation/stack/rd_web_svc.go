@@ -140,9 +140,8 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		PermissionsBoundary: s.permBound,
-		Private:             s.manifest.PrivateEnabled(),
-		// Private:              aws.BoolValue(s.manifest.Private.Basic) || s.manifest.Private.Advanced.Endpoint != nil,
+		PermissionsBoundary:  s.permBound,
+		Private:              s.manifest.PrivateEnabled(),
 		AppRunnerVPCEndpoint: s.manifest.Private.Advanced.Endpoint,
 		Count:                s.manifest.Count,
 	})

@@ -110,7 +110,7 @@ environments:
 `,
 			expected: func() any {
 				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
-				c.Private = BasicToUnion[bool, VPCEndpoint](false)
+				c.Private = BasicToUnion[*bool, VPCEndpoint](aws.Bool(false))
 				return c
 			},
 		},
@@ -128,7 +128,7 @@ environments:
 `,
 			expected: func() any {
 				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
-				c.Private = BasicToUnion[bool, VPCEndpoint](true)
+				c.Private = BasicToUnion[*bool, VPCEndpoint](aws.Bool(true))
 				return c
 			},
 		},
@@ -147,7 +147,7 @@ environments:
 `,
 			expected: func() any {
 				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
-				c.Private = AdvancedToUnion[bool](VPCEndpoint{
+				c.Private = AdvancedToUnion[*bool](VPCEndpoint{
 					Endpoint: aws.String("vpce-1234"),
 				})
 				return c
@@ -168,7 +168,7 @@ environments:
 `,
 			expected: func() any {
 				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
-				c.Private = BasicToUnion[bool, VPCEndpoint](false)
+				c.Private = BasicToUnion[*bool, VPCEndpoint](aws.Bool(false))
 				return c
 			},
 		},
@@ -186,7 +186,7 @@ environments:
 `,
 			expected: func() any {
 				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
-				c.Private = BasicToUnion[bool, VPCEndpoint](false)
+				c.Private = BasicToUnion[*bool, VPCEndpoint](aws.Bool(false))
 				c.Alias = aws.String("example.com")
 				return c
 			},
@@ -204,7 +204,7 @@ environments:
 `,
 			expected: func() any {
 				c := newDefaultRequestDrivenWebService().RequestDrivenWebServiceConfig
-				c.Private = BasicToUnion[bool, VPCEndpoint](true)
+				c.Private = BasicToUnion[*bool, VPCEndpoint](aws.Bool(true))
 				c.InstanceConfig.CPU = aws.Int(2048)
 				return c
 			},

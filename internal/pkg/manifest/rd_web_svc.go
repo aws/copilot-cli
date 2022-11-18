@@ -89,7 +89,7 @@ type RequestDrivenWebServiceHttpConfig struct {
 
 // PrivateEnabled returns true if r is configured for private ingress.
 func (r *RequestDrivenWebServiceHttpConfig) PrivateEnabled() bool {
-	return r.Private.Basic || !r.Private.Advanced.IsZero()
+	return aws.BoolValue(r.Private.Basic) || r.Private.Advanced.Endpoint != nil
 }
 
 // VPCEndpoint is used to configure a pre-existing VPC endpoint.
