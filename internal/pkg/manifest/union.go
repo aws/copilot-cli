@@ -66,7 +66,7 @@ func (t Union[_, _]) IsAdvanced() bool {
 }
 
 // UnmarshalYAML decodes value into either type Basic or Advanced, and stores that value
-// in t. value is first decoded into type Basic, and t will hold type Basic if
+// in t. Value is first decoded into type Basic, and t will hold type Basic if
 // (1) There was no error decoding value into type Basic and
 // (2) Basic.IsZero() returns false OR Basic is not zero via reflection.
 //

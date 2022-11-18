@@ -294,18 +294,28 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 
 type unionTransformer struct{}
 
+var unionPrefix, _, _ = strings.Cut(reflect.TypeOf(Union[any, any]{}).String(), "[")
+
 // Transformer returns custom merge logic for union types.
 func (t unionTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
 	// :sweat_smile: https://github.com/golang/go/issues/54393
 	// reflect currently doesn't have support for getting type parameters
 	// or checking if a type is a non-specific instantiation of a generic type
 	// (i.e., no way to tell if the type Union[string, bool] is a Union)
-	isUnion := strings.HasPrefix(typ.String(), "manifest.Union[")
+	isUnion := strings.HasPrefix(typ.String(), unionPrefix)
 	if !isUnion {
 		return nil
 	}
 
-	return func(dst, src reflect.Value) error {
+	return func(dst, src reflect.Value) (err error) {
+		defer func() {
+			// should realistically never happen unless Union type code has been
+			// refactored to change functions called via reflection.
+			if r := recover(); r != nil {
+				err = fmt.Errorf("override union: %v", r)
+			}
+		}()
+
 		isBasic := src.MethodByName("IsBasic").Call(nil)[0].Bool()
 		isAdvanced := src.MethodByName("IsAdvanced").Call(nil)[0].Bool()
 
