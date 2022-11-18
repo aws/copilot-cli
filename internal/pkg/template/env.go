@@ -42,6 +42,8 @@ var friendlyEnvFeatureName = map[string]string{
 	AppRunnerPrivateServiceFeatureName: "App Runner Private Services",
 }
 
+// leastVersionForFeature maps a feature to the minimum
+// necessary _environment template version_ for that feature.
 var leastVersionForFeature = map[string]string{
 	ALBFeatureName:                     "v1.0.0",
 	EFSFeatureName:                     "v1.3.0",
