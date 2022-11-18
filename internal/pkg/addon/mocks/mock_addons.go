@@ -64,12 +64,11 @@ func (mr *MockworkspaceReaderMockRecorder) ReadFile(fPath interface{}) *gomock.C
 }
 
 // WorkloadAddonFilePath mocks base method.
-func (m *MockworkspaceReader) WorkloadAddonFilePath(wkldName, fName string) (string, error) {
+func (m *MockworkspaceReader) WorkloadAddonFilePath(wkldName, fName string) string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WorkloadAddonFilePath", wkldName, fName)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // WorkloadAddonFilePath indicates an expected call of WorkloadAddonFilePath.
@@ -79,12 +78,11 @@ func (mr *MockworkspaceReaderMockRecorder) WorkloadAddonFilePath(wkldName, fName
 }
 
 // WorkloadAddonsPath mocks base method.
-func (m *MockworkspaceReader) WorkloadAddonsPath(name string) (string, error) {
+func (m *MockworkspaceReader) WorkloadAddonsPath(name string) string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WorkloadAddonsPath", name)
 	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	return ret0
 }
 
 // WorkloadAddonsPath indicates an expected call of WorkloadAddonsPath.

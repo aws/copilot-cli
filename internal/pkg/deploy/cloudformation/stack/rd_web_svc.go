@@ -143,6 +143,7 @@ func (s *RequestDrivenWebService) Template() (string, error) {
 		PermissionsBoundary:  s.permBound,
 		Private:              aws.BoolValue(s.manifest.Private.Basic) || s.manifest.Private.Advanced.Endpoint != nil,
 		AppRunnerVPCEndpoint: s.manifest.Private.Advanced.Endpoint,
+		Count:                s.manifest.Count,
 	})
 	if err != nil {
 		return "", err

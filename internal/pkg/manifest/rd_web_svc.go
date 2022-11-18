@@ -37,6 +37,7 @@ type RequestDrivenWebServiceConfig struct {
 	PublishConfig                     PublishConfig                        `yaml:"publish"`
 	Network                           RequestDrivenWebServiceNetworkConfig `yaml:"network"`
 	Observability                     Observability                        `yaml:"observability"`
+	Count                             *string                              `yaml:"count"`
 }
 
 // Observability holds configuration for observability to the service.

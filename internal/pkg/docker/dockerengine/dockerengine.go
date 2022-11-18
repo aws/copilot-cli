@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	osexec "os/exec"
 	"path/filepath"
@@ -243,7 +242,7 @@ func (c CmdClient) IsEcrCredentialHelperEnabled(uri string) bool {
 	// Look into the default locations
 	pathsToTry := []string{filepath.Join(".docker", "config.json"), ".dockercfg"}
 	for _, path := range pathsToTry {
-		content, err := ioutil.ReadFile(filepath.Join(c.homePath, path))
+		content, err := os.ReadFile(filepath.Join(c.homePath, path))
 		if err != nil {
 			// if we can't read the file keep going
 			continue
