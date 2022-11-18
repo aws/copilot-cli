@@ -91,16 +91,18 @@ func (t *Union[Basic, Advanced]) UnmarshalYAML(value *yaml.Node) error {
 
 	// set an error to communicate why the Union is not
 	// of each type
-	if aErr == nil {
-		aErr = fmt.Errorf("is zero")
-	}
-	if bErr == nil {
+	switch {
+	case bErr == nil && aErr == nil:
+		return fmt.Errorf("ambiguous value: neither the basic or advanced form for the field was set")
+	case bErr == nil:
 		bErr = fmt.Errorf("is zero")
+	case aErr == nil:
+		aErr = fmt.Errorf("is zero")
 	}
 
 	// multiline error because yaml.TypeError (which this likely is)
 	// is already a multiline error
-	return fmt.Errorf("%T: %s\n%T: %s", t.Basic, bErr, t.Advanced, aErr)
+	return fmt.Errorf("unmarshal to basic form %T: %s\nunmarshal to advanced form %T: %s", t.Basic, bErr, t.Advanced, aErr)
 }
 
 // isZero returns true if:
