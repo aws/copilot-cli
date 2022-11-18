@@ -6,6 +6,7 @@ package manifest
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/imdario/mergo"
@@ -26,8 +27,7 @@ var defaultTransformers = []mergo.Transformers{
 	serviceConnectTransformer{},
 	placementArgOrStringTransformer{},
 	subnetListOrArgsTransformer{},
-	unionTransformer[string, HTTPHealthCheckArgs]{},
-	unionTransformer[bool, VPCEndpoint]{},
+	unionTransformer{},
 	countTransformer{},
 	advancedCountTransformer{},
 	scalingConfigOrTTransformer[Percentage]{},
@@ -292,46 +292,45 @@ func (t subnetListOrArgsTransformer) Transformer(typ reflect.Type) func(dst, src
 	}
 }
 
-type unionTransformer[Basic, Advanced any] struct{}
+type unionTransformer struct{}
 
-// Transfomer implements mergo.Transformer and returns a function that merges two
-// Union[Basic, Advanced]. Because Mergo doesn't override destination values if source has a zero
-// value, there is some special logic if Basic or Advanced is a string, bool, or number. Since the Union
-// type defines if a value was set or not, we will overwrite dst's value for those types if src's value
-// was set, as determined by src.IsBasic()/IsAdvanced(). Pointers to zero values is merged by basicTransformer.
-//
-// See https://github.com/imdario/mergo/issues/89.
-func (t unionTransformer[Basic, Advanced]) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(Union[Basic, Advanced]{}) {
+var unionPrefix, _, _ = strings.Cut(reflect.TypeOf(Union[any, any]{}).String(), "[")
+
+// Transformer returns custom merge logic for union types.
+func (t unionTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
+	// :sweat_smile: https://github.com/golang/go/issues/54393
+	// reflect currently doesn't have support for getting type parameters
+	// or checking if a type is a non-specific instantiation of a generic type
+	// (i.e., no way to tell if the type Union[string, bool] is a Union)
+	isUnion := strings.HasPrefix(typ.String(), unionPrefix)
+	if !isUnion {
 		return nil
 	}
 
-	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(Union[Basic, Advanced]), src.Interface().(Union[Basic, Advanced])
-
-		if srcStruct.IsBasic() {
-			var zero Advanced
-			dstStruct.isAdvanced, dstStruct.Advanced = false, zero
-			dstStruct.isBasic = true
-
-			switch any(srcStruct.Basic).(type) {
-			case string, bool, int, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64, complex64, complex128:
-				dstStruct.Basic = srcStruct.Basic
+	return func(dst, src reflect.Value) (err error) {
+		defer func() {
+			// should realistically never happen unless Union type code has been
+			// refactored to change functions called via reflection.
+			if r := recover(); r != nil {
+				err = fmt.Errorf("override union: %v", r)
 			}
-		} else if srcStruct.IsAdvanced() {
-			var zero Basic
-			dstStruct.isBasic, dstStruct.Basic = false, zero
-			dstStruct.isAdvanced = true
+		}()
 
-			switch any(srcStruct.Advanced).(type) {
-			case string, bool, int, int8, int16, int32, int64, uint8, uint16, uint32, uint64, float32, float64, complex64, complex128:
-				dstStruct.Advanced = srcStruct.Advanced
+		isBasic := src.MethodByName("IsBasic").Call(nil)[0].Bool()
+		isAdvanced := src.MethodByName("IsAdvanced").Call(nil)[0].Bool()
+
+		// Call SetType with the correct type based on src's type.
+		// We use the value from dst because it holds the merged value.
+		if isBasic {
+			if dst.CanAddr() {
+				dst.Addr().MethodByName("SetBasic").Call([]reflect.Value{dst.FieldByName("Basic")})
+			}
+		} else if isAdvanced {
+			if dst.CanAddr() {
+				dst.Addr().MethodByName("SetAdvanced").Call([]reflect.Value{dst.FieldByName("Advanced")})
 			}
 		}
 
-		if dst.CanSet() {
-			dst.Set(reflect.ValueOf(dstStruct))
-		}
 		return nil
 	}
 }

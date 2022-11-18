@@ -28,7 +28,8 @@
     
         environments:
           test:
-            LOG_LEVEL: debug
+            variables:
+              LOG_LEVEL: debug
         ```
 
     === "Connected to the environment VPC"
@@ -68,6 +69,8 @@
         publish:
           topics:
             - name: 'refunds'
+            - name: 'orders'
+              fifo: true
         ```
 
 

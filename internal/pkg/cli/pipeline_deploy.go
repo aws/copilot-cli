@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	cs "github.com/aws/copilot-cli/internal/pkg/aws/codestar"
@@ -96,10 +97,9 @@ func newDeployPipelineOpts(vars deployPipelineVars) (*deployPipelineOpts, error)
 	store := config.NewSSMStore(identity.New(defaultSession), ssm.New(defaultSession), aws.StringValue(defaultSession.Config.Region))
 
 	prompter := prompt.New()
-
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
-		return nil, fmt.Errorf("new workspace client: %w", err)
+		return nil, err
 	}
 
 	wsAppName := tryReadingAppName()

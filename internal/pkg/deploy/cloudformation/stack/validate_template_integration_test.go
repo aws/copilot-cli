@@ -6,7 +6,8 @@
 package stack_test
 
 import (
-	"io/ioutil"
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -18,12 +19,13 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAutoscalingIntegration_Validate(t *testing.T) {
 	path := filepath.Join("testdata", "stacklocal", autoScalingManifestPath)
-	wantedManifestBytes, err := ioutil.ReadFile(path)
+	wantedManifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(wantedManifestBytes)
 	require.NoError(t, err)
@@ -31,7 +33,14 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 	v, ok := content.(*manifest.LoadBalancedWebService)
 	require.Equal(t, ok, true)
 
-	ws, err := workspace.New()
+	// Create in-memory mock file system.
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	fs := afero.NewMemMapFs()
+	_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
+	_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", wd), []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+	require.NoError(t, err)
+	ws, err := workspace.Use(fs)
 	require.NoError(t, err)
 
 	_, err = addon.Parse(aws.StringValue(v.Name), ws)
@@ -77,7 +86,7 @@ func TestAutoscalingIntegration_Validate(t *testing.T) {
 
 func TestScheduledJob_Validate(t *testing.T) {
 	path := filepath.Join("testdata", "workloads", jobManifestPath)
-	manifestBytes, err := ioutil.ReadFile(path)
+	manifestBytes, err := os.ReadFile(path)
 	require.NoError(t, err)
 	mft, err := manifest.UnmarshalWorkload(manifestBytes)
 	require.NoError(t, err)
@@ -85,7 +94,14 @@ func TestScheduledJob_Validate(t *testing.T) {
 	v, ok := content.(*manifest.ScheduledJob)
 	require.True(t, ok)
 
-	ws, err := workspace.New()
+	// Create in-memory mock file system.
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	fs := afero.NewMemMapFs()
+	_ = fs.MkdirAll(fmt.Sprintf("%s/copilot", wd), 0755)
+	_ = afero.WriteFile(fs, fmt.Sprintf("%s/copilot/.workspace", wd), []byte(fmt.Sprintf("---\napplication: %s", "DavidsApp")), 0644)
+	require.NoError(t, err)
+	ws, err := workspace.Use(fs)
 	require.NoError(t, err)
 
 	_, err = addon.Parse(aws.StringValue(v.Name), ws)

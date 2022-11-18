@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -39,7 +39,7 @@ func TestS3_Upload(t *testing.T) {
 		"should upload to the s3 bucket": {
 			mockS3ManagerClient: func(m *mocks.Mocks3ManagerAPI) {
 				m.EXPECT().Upload(gomock.Any()).Do(func(in *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) {
-					b, err := ioutil.ReadAll(in.Body)
+					b, err := io.ReadAll(in.Body)
 					require.NoError(t, err)
 					require.Equal(t, "bar", string(b))
 					require.Equal(t, "mockBucket", aws.StringValue(in.Bucket))

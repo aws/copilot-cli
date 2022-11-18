@@ -20,6 +20,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
@@ -59,7 +60,7 @@ type listPipelineOpts struct {
 type newPipelineDescriberFunc func(pipeline deploy.Pipeline) (describer, error)
 
 func newListPipelinesOpts(vars listPipelineVars) (*listPipelineOpts, error) {
-	ws, err := workspace.New()
+	ws, err := workspace.Use(afero.NewOsFs())
 	if err != nil {
 		return nil, err
 	}
