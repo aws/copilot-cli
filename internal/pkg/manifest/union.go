@@ -76,9 +76,11 @@ func (t Union[_, _]) IsAdvanced() bool {
 // If value fails to decode into either type, or both types are zero after
 // decoding, t will not hold any value.
 func (t *Union[Basic, Advanced]) UnmarshalYAML(value *yaml.Node) error {
-	// convert value to []byte so we can use KnownFields()
-	// see https://github.com/go-yaml/yaml/issues/460
-	// side effect: TypeError line numbers are reset.
+	// Convert value to []byte so we can use KnownFields().
+	// See https://github.com/go-yaml/yaml/issues/460
+	// Side effect: line numbers in yaml TypeErrors are reset.
+	// This means that the actualy error may be on line 30 of the overall file,
+	// but the error will be displayed relative to this byte slice, e.g., line 2.
 	b, err := yaml.Marshal(value)
 	if err != nil {
 		return err
