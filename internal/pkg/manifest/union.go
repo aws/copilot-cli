@@ -5,8 +5,10 @@ package manifest
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -78,9 +80,6 @@ func (t Union[_, _]) IsAdvanced() bool {
 func (t *Union[Basic, Advanced]) UnmarshalYAML(value *yaml.Node) error {
 	// Convert value to []byte so we can use KnownFields().
 	// See https://github.com/go-yaml/yaml/issues/460
-	// Side effect: line numbers in yaml TypeErrors are reset.
-	// This means that the actualy error may be on line 30 of the overall file,
-	// but the error will be displayed relative to this byte slice, e.g., line 2.
 	b, err := yaml.Marshal(value)
 	if err != nil {
 		return err
@@ -104,18 +103,39 @@ func (t *Union[Basic, Advanced]) UnmarshalYAML(value *yaml.Node) error {
 		return nil
 	}
 
+	// fixLine updates yaml.TypeError errors' line numbers
+	// to be relative to the original document passed to this function
+	fixLine := func(err error) error {
+		var tErr *yaml.TypeError
+		if !errors.As(err, &tErr) {
+			return err
+		}
+
+		for i := 0; i < len(tErr.Errors); i++ {
+			var line int
+			if _, scanErr := fmt.Sscanf(tErr.Errors[i], "line %d", &line); scanErr != nil {
+				continue
+			}
+
+			fixedLine := line + value.Line - 1
+			tErr.Errors[i] = strings.Replace(tErr.Errors[i], fmt.Sprintf("line %d:", line), fmt.Sprintf("line %d:", fixedLine), 1)
+		}
+
+		return tErr
+	}
+
 	switch {
 	case bErr == nil && aErr == nil:
 		return nil
 	case bErr != nil && aErr == nil:
-		return bErr
+		return fixLine(bErr)
 	case aErr != nil && bErr == nil:
-		return aErr
+		return fixLine(aErr)
 	}
 
 	// multiline error because yaml.TypeError (which this likely is)
 	// is already a multiline error
-	return fmt.Errorf("%T: %s\n%T: %s", t.Basic, bErr, t.Advanced, aErr)
+	return fmt.Errorf("%T: %s\n%T: %s", t.Basic, fixLine(bErr), t.Advanced, fixLine(aErr))
 }
 
 // isZero returns true if:
