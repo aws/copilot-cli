@@ -4,11 +4,8 @@
 package manifest
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -75,67 +72,35 @@ func (t Union[_, _]) IsAdvanced() bool {
 // If Basic didn't meet the above criteria, then value is decoded into type Advanced.
 // t will hold type Advanced if Advanced meets the same conditions that were required for type Basic.
 //
-// If value fails to decode into either type, or both types are zero after
-// decoding, t will not hold any value.
+// An error is returned if value fails to decode into either type
+// or both types are zero after decoding.
 func (t *Union[Basic, Advanced]) UnmarshalYAML(value *yaml.Node) error {
-	// Convert value to []byte so we can use KnownFields().
-	// See https://github.com/go-yaml/yaml/issues/460
-	b, err := yaml.Marshal(value)
-	if err != nil {
-		return err
-	}
-
 	var basic Basic
-	dec := yaml.NewDecoder(bytes.NewReader(b))
-	dec.KnownFields(true)
-	bErr := dec.Decode(&basic)
+	bErr := value.Decode(&basic)
 	if bErr == nil && !isZero(basic) {
 		t.SetBasic(basic)
 		return nil
 	}
 
 	var advanced Advanced
-	dec = yaml.NewDecoder(bytes.NewReader(b))
-	dec.KnownFields(true)
-	aErr := dec.Decode(&advanced)
+	aErr := value.Decode(&advanced)
 	if aErr == nil && !isZero(advanced) {
 		t.SetAdvanced(advanced)
 		return nil
 	}
 
-	// fixLine updates yaml.TypeError errors' line numbers
-	// to be relative to the original document passed to this function
-	fixLine := func(err error) error {
-		var tErr *yaml.TypeError
-		if !errors.As(err, &tErr) {
-			return err
-		}
-
-		for i := 0; i < len(tErr.Errors); i++ {
-			var line int
-			if _, scanErr := fmt.Sscanf(tErr.Errors[i], "line %d", &line); scanErr != nil {
-				continue
-			}
-
-			fixedLine := line + value.Line - 1
-			tErr.Errors[i] = strings.Replace(tErr.Errors[i], fmt.Sprintf("line %d:", line), fmt.Sprintf("line %d:", fixedLine), 1)
-		}
-
-		return tErr
+	// set an error to communicate why the Union is not
+	// of each type
+	if aErr == nil {
+		aErr = fmt.Errorf("is zero")
 	}
-
-	switch {
-	case bErr == nil && aErr == nil:
-		return nil
-	case bErr != nil && aErr == nil:
-		return fixLine(bErr)
-	case aErr != nil && bErr == nil:
-		return fixLine(aErr)
+	if bErr == nil {
+		bErr = fmt.Errorf("is zero")
 	}
 
 	// multiline error because yaml.TypeError (which this likely is)
 	// is already a multiline error
-	return fmt.Errorf("%T: %s\n%T: %s", t.Basic, fixLine(bErr), t.Advanced, fixLine(aErr))
+	return fmt.Errorf("%T: %s\n%T: %s", t.Basic, bErr, t.Advanced, aErr)
 }
 
 // isZero returns true if:

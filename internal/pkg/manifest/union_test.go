@@ -28,7 +28,7 @@ func TestUnion(t *testing.T) {
 	})
 	runUnionTest(t, "string or []string, is zero string, error", unionTest[string, []string]{
 		yaml:                 `key: ""`,
-		expectedUnmarshalErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `` into []string",
+		expectedUnmarshalErr: "string: is zero\n[]string: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!str `` into []string",
 		expectedYAML:         `key: null`,
 	})
 	runUnionTest(t, "*string or []string, is zero string", unionTest[*string, []string]{
@@ -44,7 +44,7 @@ key:
 	})
 	runUnionTest(t, "bool or semiComplexStruct, is false bool", unionTest[bool, semiComplexStruct]{
 		yaml:                 `key: false`,
-		expectedUnmarshalErr: "yaml: unmarshal errors:\n  line 1: cannot unmarshal !!bool `false` into manifest.semiComplexStruct",
+		expectedUnmarshalErr: "bool: is zero\nmanifest.semiComplexStruct: yaml: unmarshal errors:\n  line 1: cannot unmarshal !!bool `false` into manifest.semiComplexStruct",
 		expectedYAML:         `key: null`,
 	})
 	runUnionTest(t, "*bool or semiComplexStruct, is false bool", unionTest[*bool, semiComplexStruct]{
@@ -93,19 +93,7 @@ key:
   invalid_key: asdf`,
 		expectedUnmarshalErr: `string: yaml: unmarshal errors:
   line 3: cannot unmarshal !!map into string
-manifest.semiComplexStruct: yaml: unmarshal errors:
-  line 3: field invalid_key not found in type manifest.semiComplexStruct`,
-		expectedYAML: `key: null`,
-	})
-	runUnionTest(t, "string or semiComplexStruct, is struct with valid and invalid fields, error", unionTest[string, semiComplexStruct]{
-		yaml: `
-key:
-  str_ptr: ""
-  invalid_key: asdf`,
-		expectedUnmarshalErr: `string: yaml: unmarshal errors:
-  line 3: cannot unmarshal !!map into string
-manifest.semiComplexStruct: yaml: unmarshal errors:
-  line 4: field invalid_key not found in type manifest.semiComplexStruct`,
+manifest.semiComplexStruct: is zero`,
 		expectedYAML: `key: null`,
 	})
 	runUnionTest(t, "complexStruct or semiComplexStruct, is complexStruct with all fields", unionTest[complexStruct, semiComplexStruct]{
@@ -141,10 +129,8 @@ key:
 		yaml: `
 key:
   randomkey: hello`,
-		expectedUnmarshalErr: `manifest.notIsZeroer: yaml: unmarshal errors:
-  line 3: field randomkey not found in type manifest.notIsZeroer
-manifest.isZeroer: yaml: unmarshal errors:
-  line 3: field randomkey not found in type manifest.isZeroer`,
+		expectedUnmarshalErr: `manifest.notIsZeroer: is zero
+manifest.isZeroer: is zero`,
 		expectedYAML: `key: null`,
 	})
 	runUnionTest(t, "two structs, basic type supports IsZero, correct yaml", unionTest[isZeroer, notIsZeroer]{
@@ -157,10 +143,8 @@ key:
 		yaml: `
 key:
   randomkey: hello`,
-		expectedUnmarshalErr: `manifest.isZeroer: yaml: unmarshal errors:
-  line 3: field randomkey not found in type manifest.isZeroer
-manifest.notIsZeroer: yaml: unmarshal errors:
-  line 3: field randomkey not found in type manifest.notIsZeroer`,
+		expectedUnmarshalErr: `manifest.isZeroer: is zero
+manifest.notIsZeroer: is zero`,
 		expectedYAML: `key: null`,
 	})
 	runUnionTest(t, "string or bool, is []string, error", unionTest[string, bool]{
@@ -187,8 +171,7 @@ string: yaml: unmarshal errors:
 	runUnionTest(t, "isZeroer or int, is random object, error", unionTest[isZeroer, int]{
 		yaml: `key:
   randomkey: asdf`,
-		expectedUnmarshalErr: `manifest.isZeroer: yaml: unmarshal errors:
-  line 2: field randomkey not found in type manifest.isZeroer
+		expectedUnmarshalErr: `manifest.isZeroer: is zero
 int: yaml: unmarshal errors:
   line 2: cannot unmarshal !!map into int`,
 		expectedYAML: `key: null`,
