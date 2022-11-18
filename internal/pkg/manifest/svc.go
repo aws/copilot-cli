@@ -365,22 +365,16 @@ type HTTPHealthCheckArgs struct {
 	GracePeriod        *time.Duration `yaml:"grace_period"`
 }
 
-// IsZero returns true if all of h's fields are unset. Implements yaml.IsZeroer.
-func (h *HTTPHealthCheckArgs) IsZero() bool {
-	return h.Path == nil && h.Port == nil && h.SuccessCodes == nil && h.HealthyThreshold == nil && h.UnhealthyThreshold == nil &&
-		h.Interval == nil && h.Timeout == nil && h.GracePeriod == nil
-}
-
 // HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which
 // can either be of type string or type HealthCheckArgs.
 type HealthCheckArgsOrString struct {
-	Union[string, HTTPHealthCheckArgs]
+	Union[*string, HTTPHealthCheckArgs]
 }
 
 // Path returns the default health check path if provided otherwise, returns the path from the advanced configuration.
-func (hc *HealthCheckArgsOrString) Path() *string {
+func (hc HealthCheckArgsOrString) Path() *string {
 	if hc.IsBasic() {
-		return aws.String(hc.Basic)
+		return hc.Basic
 	}
 	return hc.Advanced.Path
 }
