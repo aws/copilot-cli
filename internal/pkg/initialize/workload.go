@@ -60,14 +60,15 @@ type Prog interface {
 
 // WorkloadProps contains the information needed to represent a Workload (job or service).
 type WorkloadProps struct {
-	App            string
-	Type           string
-	Name           string
-	DockerfilePath string
-	Image          string
-	Platform       manifest.PlatformArgsOrString
-	Topics         []manifest.TopicSubscription
-	Queue          manifest.SQSQueue
+	App                     string
+	Type                    string
+	Name                    string
+	DockerfilePath          string
+	Image                   string
+	Platform                manifest.PlatformArgsOrString
+	Topics                  []manifest.TopicSubscription
+	Queue                   manifest.SQSQueue
+	PrivateOnlyEnvironments []string
 }
 
 // JobProps contains the information needed to represent a Job.
@@ -315,11 +316,12 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps)
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Path:        "/",
-		Port:        i.Port,
-		HTTPVersion: httpVersion,
-		HealthCheck: i.HealthCheck,
-		Platform:    i.Platform,
+		Path:                    "/",
+		Port:                    i.Port,
+		HTTPVersion:             httpVersion,
+		HealthCheck:             i.HealthCheck,
+		Platform:                i.Platform,
+		PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 	}
 	existingSvcs, err := w.Store.ListServices(i.App)
 	if err != nil {
@@ -343,9 +345,10 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port:     i.Port,
-		Platform: i.Platform,
-		Private:  i.Private,
+		Port:                    i.Port,
+		Platform:                i.Platform,
+		Private:                 i.Private,
+		PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 	}
 	return manifest.NewRequestDrivenWebService(props)
 }
@@ -357,9 +360,10 @@ func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port:        i.Port,
-		HealthCheck: i.HealthCheck,
-		Platform:    i.Platform,
+		Port:                    i.Port,
+		HealthCheck:             i.HealthCheck,
+		Platform:                i.Platform,
+		PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 	}), nil
 }
 
@@ -370,10 +374,11 @@ func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) 
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		HealthCheck: i.HealthCheck,
-		Platform:    i.Platform,
-		Topics:      i.Topics,
-		Queue:       i.Queue,
+		HealthCheck:             i.HealthCheck,
+		Platform:                i.Platform,
+		Topics:                  i.Topics,
+		Queue:                   i.Queue,
+		PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 	}), nil
 }
 

@@ -33,6 +33,7 @@ type initSvcMocks struct {
 	mockDockerEngine *mocks.MockdockerEngine
 	mockMftReader    *mocks.MockmanifestReader
 	mockStore        *mocks.Mockstore
+	mockEnvDescriber *mocks.MockenvDescriber
 }
 
 func TestSvcInitOpts_Validate(t *testing.T) {
@@ -1135,3 +1136,32 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 		})
 	}
 }
+
+// func Test_isSubnetsOnlyPrivate(t *testing.T) {
+// 	testCases := map[string]struct {
+// 		inAppName             string
+// 		setupMocks            func(mocks initSvcMocks)
+// 		wantedPrivateOnlyEnvs []string
+// 		wantedErr             error
+// 	}{
+// 		"no error": {
+// 			inAppName: "phonetool",
+// 			setupMocks: func(mocks initSvcMocks) {
+// 				mocks.mockStore.EXPECT().ListEnvironments("phonetool").Return([]*config.Environment{
+// 					{
+// 						Name: "metrics",
+// 					},
+// 					{
+// 						Name: "payments",
+// 					},
+// 				})
+// 				for i := 0; i < 2; i++ {
+// 					//fmt.Println("w")
+// 					mocks.mockEnvDescriber.EXPECT().Manifest().Return([]byte("hello"), nil)
+
+// 				}
+// 			},
+// 		},
+// 	}
+
+// }

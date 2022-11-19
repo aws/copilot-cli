@@ -41,9 +41,10 @@ type BackendServiceConfig struct {
 // BackendServiceProps represents the configuration needed to create a backend service.
 type BackendServiceProps struct {
 	WorkloadProps
-	Port        uint16
-	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
-	Platform    PlatformArgsOrString // Optional platform configuration.
+	Port                    uint16
+	PrivateOnlyEnvironments []string
+	HealthCheck             ContainerHealthCheck // Optional healthcheck configuration.
+	Platform                PlatformArgsOrString // Optional platform configuration.
 }
 
 // NewBackendService applies the props to a default backend service configuration with
@@ -62,6 +63,19 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 		svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	svc.parser = template.New()
+	for _, v := range props.PrivateOnlyEnvironments {
+		if v != "" {
+			svc.Environments[v] = &BackendServiceConfig{
+				Network: NetworkConfig{
+					VPC: vpcConfig{
+						Placement: PlacementArgOrString{
+							PlacementString: placementStringP(PrivateSubnetPlacement),
+						},
+					},
+				},
+			}
+		}
+	}
 	return svc
 }
 
@@ -191,5 +205,6 @@ func newDefaultBackendService() *BackendService {
 				},
 			},
 		},
+		Environments: map[string]*BackendServiceConfig{},
 	}
 }

@@ -62,8 +62,9 @@ type LoadBalancedWebServiceConfig struct {
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
 type LoadBalancedWebServiceProps struct {
 	*WorkloadProps
-	Path string
-	Port uint16
+	Path                    string
+	Port                    uint16
+	PrivateOnlyEnvironments []string
 
 	HTTPVersion string               // Optional http protocol version such as gRPC, HTTP2.
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
@@ -90,6 +91,17 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
+	for _, v := range props.PrivateOnlyEnvironments {
+		svc.Environments[v] = &LoadBalancedWebServiceConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	return svc
 }
 
@@ -135,6 +147,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				},
 			},
 		},
+		Environments: map[string]*LoadBalancedWebServiceConfig{},
 	}
 }
 

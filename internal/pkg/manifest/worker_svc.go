@@ -187,6 +187,7 @@ func (q *DeadLetterQueue) IsEmpty() bool {
 // WorkerServiceProps represents the configuration needed to create a worker service.
 type WorkerServiceProps struct {
 	WorkloadProps
+	PrivateOnlyEnvironments []string
 
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
@@ -213,15 +214,28 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform
+	for _, v := range props.PrivateOnlyEnvironments {
+		if v != "" {
+			svc.Environments[v] = &WorkerServiceConfig{
+				Network: NetworkConfig{
+					VPC: vpcConfig{
+						Placement: PlacementArgOrString{
+							PlacementString: placementStringP(PrivateSubnetPlacement),
+						},
+					},
+				},
+			}
+		}
+	}
 	svc.parser = template.New()
 	return svc
 }
 
 // setSubscriptionQueueDefaults function modifies the manifest to have
-// 1. FIFO Topic names without ".fifo" suffix.
-// 2. If there are both FIFO and Standard topic subscriptions are specified then set
-//    default events queue to FIFO and add standard topic-specific queue for all the standard topic subscriptions.
-// 3. If there are only Standard topic subscriptions are specified then do nothing and return.
+//  1. FIFO Topic names without ".fifo" suffix.
+//  2. If there are both FIFO and Standard topic subscriptions are specified then set
+//     default events queue to FIFO and add standard topic-specific queue for all the standard topic subscriptions.
+//  3. If there are only Standard topic subscriptions are specified then do nothing and return.
 func setSubscriptionQueueDefaults(topics []TopicSubscription, eventsQueue *SQSQueue) {
 	var isFIFOEnabled bool
 	for _, topic := range topics {
@@ -353,5 +367,6 @@ func newDefaultWorkerService() *WorkerService {
 				},
 			},
 		},
+		Environments: map[string]*WorkerServiceConfig{},
 	}
 }

@@ -59,3 +59,12 @@ exec: true     # Enable running commands in your container.
 #    count: 2               # Number of tasks to run for the "test" environment.
 #    deployment:            # The deployment strategy for the "test" environment.
 #       rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.
+{{- if .Environments}}
+environments: {{ range $key, $value := .Environments}}
+  {{$key}}:
+    network:
+      vpc:
+        placement: {{$value.Network.VPC.Placement.PlacementString}}
+  {{- end}}      
+{{- end}}
+

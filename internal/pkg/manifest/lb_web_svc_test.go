@@ -77,6 +77,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{},
 			},
 		},
 		"overrides default settings when optional configuration is provided": {
@@ -153,6 +154,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{},
 			},
 		},
 	}

@@ -102,9 +102,10 @@ type AppRunnerInstanceConfig struct {
 // RequestDrivenWebServiceProps contains properties for creating a new request-driven web service manifest.
 type RequestDrivenWebServiceProps struct {
 	*WorkloadProps
-	Port     uint16
-	Platform PlatformArgsOrString
-	Private  bool
+	Port                    uint16
+	PrivateOnlyEnvironments []string
+	Platform                PlatformArgsOrString
+	Private                 bool
 }
 
 // NewRequestDrivenWebService creates a new Request-Driven Web Service manifest with default values.
@@ -118,6 +119,19 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	if props.Private {
 		svc.Private = BasicToUnion[*bool, VPCEndpoint](aws.Bool(true))
 		svc.Network.VPC.Placement.PlacementString = (*PlacementString)(aws.String("private"))
+	}
+	for _, v := range props.PrivateOnlyEnvironments {
+		if v != "" {
+			svc.Environments[v] = &RequestDrivenWebServiceConfig{
+				Network: RequestDrivenWebServiceNetworkConfig{
+					VPC: rdwsVpcConfig{
+						Placement: PlacementArgOrString{
+							PlacementString: placementStringP(PrivateSubnetPlacement),
+						},
+					},
+				},
+			}
+		}
 	}
 	svc.parser = template.New()
 	return svc
@@ -199,5 +213,6 @@ func newDefaultRequestDrivenWebService() *RequestDrivenWebService {
 				Memory: aws.Int(2048),
 			},
 		},
+		Environments: map[string]*RequestDrivenWebServiceConfig{},
 	}
 }
