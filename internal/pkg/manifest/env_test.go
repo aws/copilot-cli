@@ -858,15 +858,15 @@ func TestEnvironmentVPCConfig_IsEmpty(t *testing.T) {
 		},
 		"not empty when flowlog is on": {
 			in: environmentVPCConfig{
-				FlowLogs: Union[bool, VPCFlowLogsArgs]{
-					Basic: true,
+				FlowLogs: Union[*bool, VPCFlowLogsArgs]{
+					Basic: aws.Bool(true),
 				},
 			},
 			wanted: true,
 		},
 		"not empty when flowlog with specific retention": {
 			in: environmentVPCConfig{
-				FlowLogs: Union[bool, VPCFlowLogsArgs]{
+				FlowLogs: Union[*bool, VPCFlowLogsArgs]{
 					Advanced: VPCFlowLogsArgs{
 						Retention: aws.Int(60),
 					},

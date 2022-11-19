@@ -387,7 +387,7 @@ func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessL
 // convertFlowLogsConfig converts the VPC FlowLog configuration into a format parsable by the templates pkg.
 func convertFlowLogsConfig(mft *manifest.Environment) (*template.VPCFlowLogs, error) {
 	vpcFlowLogs := mft.EnvironmentConfig.Network.VPC.FlowLogs
-	if !vpcFlowLogs.Basic && vpcFlowLogs.Advanced.Retention == nil {
+	if vpcFlowLogs.IsZero() {
 		return nil, nil
 	}
 	retentionInDays := aws.Int(14)

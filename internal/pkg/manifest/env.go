@@ -119,11 +119,11 @@ type environmentNetworkConfig struct {
 }
 
 type environmentVPCConfig struct {
-	ID                  *string                      `yaml:"id,omitempty"`
-	CIDR                *IPNet                       `yaml:"cidr,omitempty"`
-	Subnets             subnetsConfiguration         `yaml:"subnets,omitempty"`
-	SecurityGroupConfig securityGroupConfig          `yaml:"security_group,omitempty"`
-	FlowLogs            Union[bool, VPCFlowLogsArgs] `yaml:"flow_logs,omitempty"`
+	ID                  *string                       `yaml:"id,omitempty"`
+	CIDR                *IPNet                        `yaml:"cidr,omitempty"`
+	Subnets             subnetsConfiguration          `yaml:"subnets,omitempty"`
+	SecurityGroupConfig securityGroupConfig           `yaml:"security_group,omitempty"`
+	FlowLogs            Union[*bool, VPCFlowLogsArgs] `yaml:"flow_logs,omitempty"`
 }
 
 type securityGroupConfig struct {
