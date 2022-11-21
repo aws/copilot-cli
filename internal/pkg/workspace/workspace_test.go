@@ -266,7 +266,7 @@ func TestWorkspace_Use(t *testing.T) {
 			},
 			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", parent),
 		},
-		"returns the existing workspace that does not have a workspace summary": {
+		"returns an ErrNoAssociatedApplication error when there is existing copilot/ directory that does not have a workspace summary": {
 			appName: "DavidsApp",
 			mockFileSystem: func() afero.Fs {
 				fs := afero.NewMemMapFs()
@@ -274,6 +274,7 @@ func TestWorkspace_Use(t *testing.T) {
 				return fs
 			},
 			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", wd),
+			expectedError:         &ErrNoAssociatedApplication{},
 		},
 		"ErrWorkspaceNotFound if there is no workspace": {
 			mockFileSystem: func() afero.Fs {

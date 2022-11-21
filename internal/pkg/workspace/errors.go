@@ -44,11 +44,19 @@ func (e *ErrWorkspaceNotFound) Error() string {
 		e.CurrentDirectory)
 }
 
+func (_ *ErrWorkspaceNotFound) empty() bool {
+	return true
+}
+
 // ErrNoAssociatedApplication means we couldn't locate a workspace summary file.
 type ErrNoAssociatedApplication struct{}
 
 func (e *ErrNoAssociatedApplication) Error() string {
 	return "couldn't find an application associated with this workspace"
+}
+
+func (_ *ErrNoAssociatedApplication) empty() bool {
+	return true
 }
 
 // errHasExistingApplication means we tried to create a workspace that belongs to another application.
@@ -64,4 +72,13 @@ func (e *errHasExistingApplication) Error() string {
 		relPath = e.summaryPath
 	}
 	return fmt.Sprintf("workspace is already registered with application %s under %s", e.existingAppName, relPath)
+}
+
+// IsEmptyErr returns true if the error is related to an empty workspace.
+func IsEmptyErr(err error) bool {
+	type empty interface {
+		empty() bool
+	}
+	var emptyWs empty
+	return errors.As(err, &emptyWs)
 }
