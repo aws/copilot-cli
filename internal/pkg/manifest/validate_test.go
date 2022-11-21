@@ -2105,6 +2105,14 @@ func TestRangeConfig_validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf("min value 2 cannot be greater than max value 1"),
 		},
+		"error if spot_from value is negative": {
+			RangeConfig: RangeConfig{
+				Min: aws.Int(2),
+				Max: aws.Int(10),
+				SpotFrom: aws.Int(-3),
+			},
+			wantedError: fmt.Errorf("min value 2, max value 10, and spot_from value -3 must all be positive"),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

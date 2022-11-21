@@ -590,6 +590,7 @@ type WorkloadOpts struct {
 	Observability        ObservabilityOpts
 	Private              bool
 	AppRunnerVPCEndpoint *string
+	Count                *string
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string

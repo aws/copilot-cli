@@ -1080,7 +1080,14 @@ func (r RangeConfig) validate() error {
 			missingField: "min/max",
 		}
 	}
-	min, max := aws.IntValue(r.Min), aws.IntValue(r.Max)
+	min, max, spotFrom := aws.IntValue(r.Min), aws.IntValue(r.Max), aws.IntValue(r.SpotFrom)
+	if min < 0 || max < 0 || spotFrom < 0 {
+		return &errRangeValueLessThanZero{
+			min: min,
+			max: max,
+			spotFrom: spotFrom,
+		}
+	}
 	if min <= max {
 		return nil
 	}
