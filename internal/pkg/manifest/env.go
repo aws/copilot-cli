@@ -119,11 +119,11 @@ type environmentNetworkConfig struct {
 }
 
 type environmentVPCConfig struct {
-	ID                  *string              `yaml:"id,omitempty"`
-	CIDR                *IPNet               `yaml:"cidr,omitempty"`
-	Subnets             subnetsConfiguration `yaml:"subnets,omitempty"`
-	SecurityGroupConfig securityGroupConfig  `yaml:"security_group,omitempty"`
-	Flowlogs            *bool                `yaml:"flow_logs,omitempty"`
+	ID                  *string                       `yaml:"id,omitempty"`
+	CIDR                *IPNet                        `yaml:"cidr,omitempty"`
+	Subnets             subnetsConfiguration          `yaml:"subnets,omitempty"`
+	SecurityGroupConfig securityGroupConfig           `yaml:"security_group,omitempty"`
+	FlowLogs            Union[*bool, VPCFlowLogsArgs] `yaml:"flow_logs,omitempty"`
 }
 
 type securityGroupConfig struct {
@@ -185,6 +185,16 @@ func (cfg *portsConfig) UnmarshalYAML(value *yaml.Node) error {
 		return errUnmarshalPortsConfig
 	}
 	return nil
+}
+
+// VPCFlowLogsArgs holds the flow logs configuration.
+type VPCFlowLogsArgs struct {
+	Retention *int `yaml:"retention,omitempty"`
+}
+
+// IsZero implements yaml.IsZeroer.
+func (fl *VPCFlowLogsArgs) IsZero() bool {
+	return fl.Retention == nil
 }
 
 // EnvSecurityGroup returns the security group config if the user has set any values.
@@ -262,7 +272,7 @@ func (cfg *EnvironmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 
 // IsEmpty returns true if vpc is not configured.
 func (cfg environmentVPCConfig) IsEmpty() bool {
-	return cfg.ID == nil && cfg.CIDR == nil && cfg.Subnets.IsEmpty() && cfg.Flowlogs == nil
+	return cfg.ID == nil && cfg.CIDR == nil && cfg.Subnets.IsEmpty() && cfg.FlowLogs.IsZero()
 }
 
 func (cfg *environmentVPCConfig) loadVPCConfig(env *config.CustomizeEnv) {
