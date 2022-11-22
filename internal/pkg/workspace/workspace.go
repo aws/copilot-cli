@@ -28,7 +28,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
@@ -52,9 +51,6 @@ const (
 	buildspecFileName         = "buildspec.yml"
 
 	ymlFileExtension = ".yml"
-
-	dockerfileName   = "dockerfile"
-	dockerignoreName = ".dockerignore"
 )
 
 // Summary is a description of what's associated with this workspace.
@@ -600,48 +596,6 @@ func (ws *Workspace) read(elem ...string) ([]byte, error) {
 		return nil, &ErrFileNotExists{FileName: filename}
 	}
 	return ws.fs.ReadFile(filename)
-}
-
-// ListDockerfiles returns the list of Dockerfiles within the current
-// working directory and a sub-directory level below. If an error occurs while
-// reading directories, or no Dockerfiles found returns the error.
-func (ws *Workspace) ListDockerfiles() ([]string, error) {
-	wdFiles, err := ws.fs.ReadDir(ws.workingDirAbs)
-	if err != nil {
-		return nil, fmt.Errorf("read directory: %w", err)
-	}
-	var dockerfiles = make([]string, 0)
-	for _, wdFile := range wdFiles {
-		// Add current file if it is a Dockerfile and not a directory; otherwise continue.
-		if !wdFile.IsDir() {
-			fname := wdFile.Name()
-			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.HasSuffix(strings.ToLower(fname), dockerignoreName) {
-				path := filepath.Dir(fname) + "/" + fname
-				dockerfiles = append(dockerfiles, path)
-			}
-			continue
-		}
-
-		// Add sub-directories containing a Dockerfile one level below current directory.
-		subFiles, err := ws.fs.ReadDir(wdFile.Name())
-		if err != nil {
-			// swallow errors for unreadable directories
-			continue
-		}
-		for _, f := range subFiles {
-			// NOTE: ignore directories in sub-directories.
-			if f.IsDir() {
-				continue
-			}
-			fname := f.Name()
-			if strings.Contains(strings.ToLower(fname), dockerfileName) && !strings.HasSuffix(strings.ToLower(fname), dockerignoreName) {
-				path := wdFile.Name() + "/" + f.Name()
-				dockerfiles = append(dockerfiles, path)
-			}
-		}
-	}
-	sort.Strings(dockerfiles)
-	return dockerfiles, nil
 }
 
 func (ws *Workspace) manifestNameMatchWithDir(mft namedManifest, mftDirName string) error {
