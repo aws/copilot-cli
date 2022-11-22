@@ -447,23 +447,23 @@ observability:
 
 func compareStackTemplate(t *testing.T, wantedObj, actualObj map[any]any) {
 	actual, wanted := reflect.ValueOf(actualObj), reflect.ValueOf(wantedObj)
-	compareStackTemplateSection(t, reflect.ValueOf("Description"), actual, wanted)
-	compareStackTemplateSection(t, reflect.ValueOf("Metadata"), actual, wanted)
-	compareStackTemplateSection(t, reflect.ValueOf("Parameters"), actual, wanted)
-	compareStackTemplateSection(t, reflect.ValueOf("Conditions"), actual, wanted)
-	compareStackTemplateSection(t, reflect.ValueOf("Outputs"), actual, wanted)
+	compareStackTemplateSection(t, reflect.ValueOf("Description"), wanted, actual)
+	compareStackTemplateSection(t, reflect.ValueOf("Metadata"), wanted, actual)
+	compareStackTemplateSection(t, reflect.ValueOf("Parameters"), wanted, actual)
+	compareStackTemplateSection(t, reflect.ValueOf("Conditions"), wanted, actual)
+	compareStackTemplateSection(t, reflect.ValueOf("Outputs"), wanted, actual)
 	// Compare each resource.
 	actualResources, wantedResources := actual.MapIndex(reflect.ValueOf("Resources")).Elem(), wanted.MapIndex(reflect.ValueOf("Resources")).Elem()
 	actualResourceNames, wantedResourceNames := actualResources.MapKeys(), wantedResources.MapKeys()
 	for _, key := range actualResourceNames {
-		compareStackTemplateSection(t, key, actualResources, wantedResources)
+		compareStackTemplateSection(t, key, wantedResources, actualResources)
 	}
 	for _, key := range wantedResourceNames {
-		compareStackTemplateSection(t, key, actualResources, wantedResources)
+		compareStackTemplateSection(t, key, wantedResources, actualResources)
 	}
 }
 
-func compareStackTemplateSection(t *testing.T, key, actual, wanted reflect.Value) {
+func compareStackTemplateSection(t *testing.T, key, wanted, actual reflect.Value) {
 	actualExist, wantedExist := actual.MapIndex(key).IsValid(), wanted.MapIndex(key).IsValid()
 	if !actualExist && !wantedExist {
 		return
