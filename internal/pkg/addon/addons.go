@@ -7,6 +7,7 @@ package addon
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/dustin/go-humanize/english"
@@ -16,6 +17,10 @@ import (
 const (
 	// StackName is the name of the addons nested stack resource.
 	StackName = "AddonsStack"
+)
+
+var (
+	workloadParameterReservedKeys = []string{"App", "Env", "Name"}
 )
 
 var (
@@ -68,7 +73,7 @@ func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
 			return ws.WorkloadAddonFilePath(workloadName, fName)
 		},
 		validateParameters: func(params yaml.Node, paramFilePath string) error {
-			return validateReservedParameters(params, paramFilePath, workloadName)
+			return validateReservedParameters(params, workloadParameterReservedKeys)
 		},
 	}
 
@@ -186,19 +191,19 @@ func (p *parser) parseParameters(fNames []string) (yaml.Node, error) {
 	return content.Parameters, nil
 }
 
-func validateReservedParameters(params yaml.Node, fname, workloadName string) error {
-	content := struct {
-		App  yaml.Node `yaml:"App"`
-		Env  yaml.Node `yaml:"Env"`
-		Name yaml.Node `yaml:"Name"`
-	}{}
+func validateReservedParameters(params yaml.Node, reservedKeys []string) error {
+	content := make(map[string]yaml.Node, len(reservedKeys))
+	for _, key := range reservedKeys {
+		content[key] = yaml.Node{}
+	}
 	if err := params.Decode(&content); err != nil {
-		return fmt.Errorf("decode content of parameters file %s under %s addons/", fname, workloadName)
+		return fmt.Errorf("decode content of the parameters file: %w", err)
 	}
 
-	for _, field := range []yaml.Node{content.App, content.Env, content.Name} {
+	for _, key := range reservedKeys {
+		field := content[key]
 		if !field.IsZero() {
-			return fmt.Errorf("reserved parameters 'App', 'Env', and 'Name' cannot be declared in %s under %s addons/", fname, workloadName)
+			return fmt.Errorf("reserved parameters %s cannot be declared", english.WordSeries(quoteSlice(reservedKeys), "and"))
 		}
 	}
 	return nil
@@ -240,4 +245,16 @@ func contains(arr []string, el string) bool {
 		}
 	}
 	return false
+}
+
+func quoteSlice(elems []string) []string {
+	var quotedElems []string
+	if len(elems) == 0 {
+		return quotedElems
+	}
+	quotedElems = make([]string, len(elems))
+	for i, el := range elems {
+		quotedElems[i] = strconv.Quote(el)
+	}
+	return quotedElems
 }

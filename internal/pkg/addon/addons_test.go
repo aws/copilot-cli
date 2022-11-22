@@ -296,7 +296,7 @@ Parameters:
   DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 `), nil)
 			},
-			wantedErr: errors.New("reserved parameters 'App', 'Env', and 'Name' cannot be declared in addons.parameters.yml under api addons/"),
+			wantedErr: errors.New(`reserved parameters "App", "Env" and "Name" cannot be declared`),
 		},
 		"returns the content of Parameters on success": {
 			setupMocks: func(m addonMocks) {
