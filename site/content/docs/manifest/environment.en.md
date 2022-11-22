@@ -195,8 +195,8 @@ ports: 80
 The IPv4 address range, in CIDR format.
 
 <span class="parent-field">network.vpc.</span><a id="network-vpc-flowlogs" href="#network-vpc-flowlogs" class="field">`flow_logs`</a> <span class="type">Boolean or Map</span>   
-If you specify true Copilot will enable VPC flow logs to capture information about the IP traffic going in and out of the environment VPC.
-The default value for VPC flow logs is now 14 days (2 weeks).
+If you specify 'true', Copilot will enable VPC flow logs to capture information about the IP traffic going in and out of the environment VPC.
+The default value for VPC flow logs is 14 days (2 weeks).
 
 ```yaml
 network:

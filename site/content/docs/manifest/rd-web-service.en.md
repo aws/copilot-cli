@@ -223,7 +223,10 @@ Key-value pairs representing AWS tags that are passed down to your AWS App Runne
 <div class="separator"></div>
 
 <a id="count" href="#count" class="field">`count`</a> <span class="type">String</span>
-Specify the name of an existing autoscaling configuration to your request-driven web services.
+Specify the name of an existing autoscaling configuration.
+```yaml
+count: high-availability/3
+```
 
 <div class="separator"></div>
 
