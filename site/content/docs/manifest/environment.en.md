@@ -194,9 +194,24 @@ ports: 80
 <span class="parent-field">network.vpc.security_group.<type\>.</span><a id="network-vpc-security-group-cidr" href="#network-vpc-security-group-cidr" class="field">`cidr`</a> <span class="type">String</span>   
 The IPv4 address range, in CIDR format.
 
-<span class="parent-field">network.vpc.</span><a id="network-vpc-flowlogs" href="#network-vpc-flowlogs" class="field">`flow_logs`</a> <span class="type">Boolean</span>   
-Specify true to enable VPC flow logs to capture information about the IP traffic going in and out of the environment VPC.
+<span class="parent-field">network.vpc.</span><a id="network-vpc-flowlogs" href="#network-vpc-flowlogs" class="field">`flow_logs`</a> <span class="type">Boolean or Map</span>   
+If you specify true Copilot will enable VPC flow logs to capture information about the IP traffic going in and out of the environment VPC.
+The default value for VPC flow logs is now 14 days (2 weeks).
 
+```yaml
+network:
+  vpc:
+    flow_logs: on
+```
+You can customize the number of days for retention:
+```yaml
+network:
+  vpc:
+    flow_logs:
+      retention: 30
+```
+<span class="parent-field">network.vpc.flow_logs.</span><a id="network-vpc-flowlogs-retention" href="#network-vpc-flowlogs-retention" class="field">`retention`</a> <span class="type">String</span>
+The number of days to retain the log events. See [this page](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-logs-loggroup.html#cfn-logs-loggroup-retentionindays) for all accepted values.
 
 <div class="separator"></div>
 

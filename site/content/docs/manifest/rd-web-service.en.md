@@ -222,6 +222,11 @@ Key-value pairs representing AWS tags that are passed down to your AWS App Runne
 
 <div class="separator"></div>
 
+<a id="count" href="#count" class="field">`count`</a> <span class="type">String</span>
+Specify the name of an existing autoscaling configuration to your request-driven web services.
+
+<div class="separator"></div>
+
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  
 The environment section lets you override any value in your manifest based on the environment you're in. In the example manifest above, we're overriding the `LOG_LEVEL` environment variable in our 'test' environment.
 
