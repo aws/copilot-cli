@@ -43,7 +43,7 @@ ServiceConnectConfiguration:
       awslogs-region: !Ref AWS::Region
       awslogs-group: !Ref LogGroup
       awslogs-stream-prefix: copilot
-  {{- if and (ne .HTTPTargetContainer.Port "") (ne .HTTPTargetContainer.Port "-1")}}
+  {{- if .HTTPTargetContainer.Exposed}}
   Services:
     - PortName: target
       # Avoid using the same service with Service Discovery in a namespace.

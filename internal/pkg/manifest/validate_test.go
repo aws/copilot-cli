@@ -611,7 +611,7 @@ func TestBackendService_validate(t *testing.T) {
 					Name: aws.String("api"),
 				},
 			},
-			wantedError: fmt.Errorf(`cannot set "network.connect.alias" when no port exposed`),
+			wantedError: fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`),
 		},
 	}
 	for name, tc := range testCases {

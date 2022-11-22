@@ -206,7 +206,7 @@ func (b BackendService) validate() error {
 	}
 	if b.Network.Connect.Alias != nil {
 		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
-			return fmt.Errorf(`cannot set "network.connect.alias" when no port exposed`)
+			return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
 		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
