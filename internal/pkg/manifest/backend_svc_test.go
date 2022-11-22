@@ -25,6 +25,9 @@ func TestNewBackendSvc(t *testing.T) {
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
 				},
+				PrivateOnlyEnvironments: []string{
+					"metrics",
+				},
 			},
 			wantedManifest: &BackendService{
 				Workload: Workload{
@@ -57,6 +60,17 @@ func TestNewBackendSvc(t *testing.T) {
 						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+				Environments: map[string]*BackendServiceConfig{
+					"metrics": {
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PrivateSubnetPlacement),
+								},
 							},
 						},
 					},

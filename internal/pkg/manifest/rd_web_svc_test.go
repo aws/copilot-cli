@@ -30,6 +30,9 @@ func TestNewRequestDrivenWebService(t *testing.T) {
 					Dockerfile: "./Dockerfile",
 				},
 				Port: uint16(80),
+				PrivateOnlyEnvironments: []string{
+					"metrics",
+				},
 			},
 
 			wantedStruct: &RequestDrivenWebService{
@@ -51,6 +54,17 @@ func TestNewRequestDrivenWebService(t *testing.T) {
 					InstanceConfig: AppRunnerInstanceConfig{
 						CPU:    aws.Int(1024),
 						Memory: aws.Int(2048),
+					},
+				},
+				Environments: map[string]*RequestDrivenWebServiceConfig{
+					"metrics": {
+						Network: RequestDrivenWebServiceNetworkConfig{
+							VPC: rdwsVpcConfig{
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PrivateSubnetPlacement),
+								},
+							},
+						},
 					},
 				},
 			},

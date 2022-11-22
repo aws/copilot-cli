@@ -120,17 +120,15 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 		svc.Private = BasicToUnion[*bool, VPCEndpoint](aws.Bool(true))
 		svc.Network.VPC.Placement.PlacementString = (*PlacementString)(aws.String("private"))
 	}
-	for _, v := range props.PrivateOnlyEnvironments {
-		if v != "" {
-			svc.Environments[v] = &RequestDrivenWebServiceConfig{
-				Network: RequestDrivenWebServiceNetworkConfig{
-					VPC: rdwsVpcConfig{
-						Placement: PlacementArgOrString{
-							PlacementString: placementStringP(PrivateSubnetPlacement),
-						},
+	for _, envName := range props.PrivateOnlyEnvironments {
+		svc.Environments[envName] = &RequestDrivenWebServiceConfig{
+			Network: RequestDrivenWebServiceNetworkConfig{
+				VPC: rdwsVpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
 					},
 				},
-			}
+			},
 		}
 	}
 	svc.parser = template.New()

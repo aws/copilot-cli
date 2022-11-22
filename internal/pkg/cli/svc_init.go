@@ -306,18 +306,6 @@ func (o *initSvcOpts) Ask() error {
 			return err
 		}
 	}
-	// if man, _ := o.IsSubnetsOnlyPrivate(); man != nil {
-	// 	var fmtEnv string
-	// 	var fmtString string
-	// 	for k, v := range man.EnvOverridePlacement {
-	// 		// if v == "" {
-	// 		// 	return fmt.Errorf("zero value of string")
-	// 		// }
-	// 		fmtString = fmtString + v
-	// 		fmtEnv = fmtEnv + strconv.Itoa(k)
-	// 	}
-	// 	return fmt.Errorf("myError is\n%s\n%s", fmtEnv, fmtString)
-	// }
 	if err := o.askSvcPort(); err != nil {
 		return err
 	}
@@ -362,12 +350,12 @@ func (o *initSvcOpts) Execute() error {
 			Platform: manifest.PlatformArgsOrString{
 				PlatformString: o.platform,
 			},
-			Topics:                  o.topics,
-			PrivateOnlyEnvironments: envs,
+			Topics: o.topics,
 		},
-		Port:        o.port,
-		HealthCheck: hc,
-		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
+		Port:                    o.port,
+		HealthCheck:             hc,
+		Private:                 strings.EqualFold(o.ingressType, ingressTypeEnvironment),
+		PrivateOnlyEnvironments: envs,
 	})
 	if err != nil {
 		return err
@@ -741,6 +729,7 @@ func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error
 	}, nil
 }
 
+// isSubnetsOnlyPrivate returns the list of deployed environment names whose subnets are only private.
 // func (o *initSvcOpts) isSubnetsOnlyPrivate() ([]string, error) {
 // 	envs, err := o.store.ListEnvironments(o.appName)
 // 	if err != nil {
@@ -764,15 +753,17 @@ func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error
 // 		if err != nil {
 // 			return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", envs[i].Name, err)
 // 		}
+// 		// workspace.ReadEnvironmentManifest()
 // 		subnets := envConfig.Network.VPC.Subnets
 
 // 		if len(subnets.Public) == 0 && len(subnets.Private) != 0 {
 // 			privateOnlyEnvs = append(privateOnlyEnvs, envs[i].Name)
 // 		}
 // 	}
-// 	return privateOnlyEnvs, nil
+// 	return privateOnlyEnvs, err
 // }
 
+// isSubnetsOnlyPrivate returns the list of deployed environment names whose subnets are only private.
 func (o *initSvcOpts) isSubnetsOnlyPrivate() ([]string, error) {
 	envs, err := o.store.ListEnvironments(o.appName)
 	if err != nil {
@@ -780,25 +771,23 @@ func (o *initSvcOpts) isSubnetsOnlyPrivate() ([]string, error) {
 	}
 	var privateOnlyEnvs []string
 	for i := range envs {
-		envDescribers, err := o.initEnvDescribers(envs[i].Name)
+		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         o.appName,
+			Env:         envs[i].Name,
+			ConfigStore: o.store,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("initiate env describer: %w", err)
 		}
-		mft, err := envDescribers.Manifest()
+		out, err := envDescriber.Outputs()
 		if err != nil {
 			return nil, fmt.Errorf("read the manifest used to deploy environment %s: %w", envs[i].Name, err)
 		}
-		envConfig, err := manifest.UnmarshalEnvironment(mft)
-		if err != nil {
-			return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", envs[i].Name, err)
-		}
-		subnets := envConfig.Network.VPC.Subnets
-
-		if len(subnets.Public) == 0 && len(subnets.Private) != 0 {
+		if out["PublicSubnets"] == "" && out["PrivateSubnets"] != "" {
 			privateOnlyEnvs = append(privateOnlyEnvs, envs[i].Name)
 		}
 	}
-	return privateOnlyEnvs, nil
+	return privateOnlyEnvs, err
 }
 
 func svcTypePromptOpts() []prompt.Option {

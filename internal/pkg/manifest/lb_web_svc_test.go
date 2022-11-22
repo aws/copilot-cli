@@ -94,6 +94,9 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
 				Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
+				PrivateOnlyEnvironments: []string{
+					"metrics",
+				},
 			},
 
 			wanted: &LoadBalancedWebService{
@@ -154,7 +157,17 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
-				Environments: map[string]*LoadBalancedWebServiceConfig{},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"metrics": {
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PrivateSubnetPlacement),
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}

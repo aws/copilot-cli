@@ -63,17 +63,15 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 		svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	svc.parser = template.New()
-	for _, v := range props.PrivateOnlyEnvironments {
-		if v != "" {
-			svc.Environments[v] = &BackendServiceConfig{
-				Network: NetworkConfig{
-					VPC: vpcConfig{
-						Placement: PlacementArgOrString{
-							PlacementString: placementStringP(PrivateSubnetPlacement),
-						},
+	for _, envName := range props.PrivateOnlyEnvironments {
+		svc.Environments[envName] = &BackendServiceConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
 					},
 				},
-			}
+			},
 		}
 	}
 	return svc

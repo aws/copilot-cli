@@ -62,6 +62,9 @@ func TestNewWorkerSvc(t *testing.T) {
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
 				},
+				PrivateOnlyEnvironments: []string{
+					"metrics",
+				},
 			},
 			wantedManifest: &WorkerService{
 				Workload: Workload{
@@ -93,6 +96,17 @@ func TestNewWorkerSvc(t *testing.T) {
 						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+				Environments: map[string]*WorkerServiceConfig{
+					"metrics": {
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PrivateSubnetPlacement),
+								},
 							},
 						},
 					},

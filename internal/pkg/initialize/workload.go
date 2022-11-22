@@ -60,15 +60,14 @@ type Prog interface {
 
 // WorkloadProps contains the information needed to represent a Workload (job or service).
 type WorkloadProps struct {
-	App                     string
-	Type                    string
-	Name                    string
-	DockerfilePath          string
-	Image                   string
-	Platform                manifest.PlatformArgsOrString
-	Topics                  []manifest.TopicSubscription
-	Queue                   manifest.SQSQueue
-	PrivateOnlyEnvironments []string
+	App            string
+	Type           string
+	Name           string
+	DockerfilePath string
+	Image          string
+	Platform       manifest.PlatformArgsOrString
+	Topics         []manifest.TopicSubscription
+	Queue          manifest.SQSQueue
 }
 
 // JobProps contains the information needed to represent a Job.
@@ -83,10 +82,11 @@ type JobProps struct {
 // ServiceProps contains the information needed to represent a Service (port, HealthCheck, and workload common props).
 type ServiceProps struct {
 	WorkloadProps
-	Port        uint16
-	HealthCheck manifest.ContainerHealthCheck
-	Private     bool
-	appDomain   *string
+	Port                    uint16
+	HealthCheck             manifest.ContainerHealthCheck
+	Private                 bool
+	appDomain               *string
+	PrivateOnlyEnvironments []string
 }
 
 // WorkloadInitializer holds the clients necessary to initialize either a

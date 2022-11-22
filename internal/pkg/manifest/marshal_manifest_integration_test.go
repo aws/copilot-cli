@@ -36,6 +36,22 @@ func TestLoadBalancedWebService_InitialManifestIntegration(t *testing.T) {
 			},
 			wantedTestdata: "lb-svc.yml",
 		},
+		"with environments private": {
+			inProps: LoadBalancedWebServiceProps{
+				WorkloadProps: &WorkloadProps{
+					Name:       "frontend",
+					Dockerfile: "./frontend/Dockerfile",
+				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
+				},
+				PrivateOnlyEnvironments: []string{
+					"phonetool",
+				},
+			},
+			wantedTestdata: "lb-svc-placement.yml",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -62,7 +78,7 @@ func TestBackendSvc_InitialManifestIntegration(t *testing.T) {
 
 		wantedTestdata string
 	}{
-		"without healthcheck and port": {
+		"without healthcheck and port and with private only environments": {
 			inProps: BackendServiceProps{
 				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
@@ -75,8 +91,11 @@ func TestBackendSvc_InitialManifestIntegration(t *testing.T) {
 						Arch:     nil,
 					},
 				},
+				PrivateOnlyEnvironments: []string{
+					"phonetool",
+				},
 			},
-			wantedTestdata: "backend-svc-nohealthcheck.yml",
+			wantedTestdata: "backend-svc-nohealthcheck-placement.yml",
 		},
 		"with custom healthcheck command": {
 			inProps: BackendServiceProps{
@@ -121,7 +140,7 @@ func TestWorkerSvc_InitialManifestIntegration(t *testing.T) {
 
 		wantedTestdata string
 	}{
-		"without subscribe": {
+		"without subscribe and with private only environments": {
 			inProps: WorkerServiceProps{
 				WorkloadProps: WorkloadProps{
 					Name:       "testers",
@@ -134,8 +153,11 @@ func TestWorkerSvc_InitialManifestIntegration(t *testing.T) {
 						Arch:     nil,
 					},
 				},
+				PrivateOnlyEnvironments: []string{
+					"phonetool",
+				},
 			},
-			wantedTestdata: "worker-svc-nosubscribe.yml",
+			wantedTestdata: "worker-svc-nosubscribe-placement.yml",
 		},
 		"with subscribe": {
 			inProps: WorkerServiceProps{
