@@ -41,6 +41,7 @@ func TestEnv_Template(t *testing.T) {
 								PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
 							},
 							SecurityGroupConfig: nil,
+							FlowLogs:            nil,
 						},
 						LatestVersion: deploy.LatestEnvTemplateVersion,
 						CustomResources: map[string]template.S3ObjectLocation{

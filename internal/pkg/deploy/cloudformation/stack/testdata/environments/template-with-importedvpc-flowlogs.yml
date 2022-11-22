@@ -833,6 +833,13 @@ Resources:
       DomainName: !Ref AppDNSName
       PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
       PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+  VpcFlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    Metadata:
+      'aws:copilot:description': 'A CloudWatch log group to store VPC flow log data'
+    Properties:
+      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogs]]
+      RetentionInDays: 14  
   FlowLog:
     Metadata:
       'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'
@@ -840,7 +847,7 @@ Resources:
     Properties:
       DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
       LogDestinationType: cloud-watch-logs
-      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
+      LogGroupName: !Ref VpcFlowLogGroup
       MaxAggregationInterval: 60
       ResourceId: vpc-12345                 
       ResourceType: VPC
