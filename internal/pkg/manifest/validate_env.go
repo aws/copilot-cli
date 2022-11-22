@@ -100,6 +100,9 @@ func (cfg environmentVPCConfig) validate() error {
 			return fmt.Errorf(`validate "subnets" for an adjusted VPC: %w`, err)
 		}
 	}
+	if err := cfg.FlowLogs.validate(); err != nil {
+		return fmt.Errorf(`validate vpc "flowlogs": %w`, err)
+	}
 	return nil
 }
 
@@ -266,6 +269,11 @@ func (c subnetConfiguration) validate() error {
 			mustExist:   false,
 		}
 	}
+	return nil
+}
+
+// validate is a no-op for VPCFlowLogsArgs.
+func (fl VPCFlowLogsArgs) validate() error {
 	return nil
 }
 

@@ -433,12 +433,16 @@ func (e *EnvStackConfig) vpcConfig() (template.VPCConfig, error) {
 	if err != nil {
 		return template.VPCConfig{}, err
 	}
+	flowLogs, err := convertFlowLogsConfig(e.in.Mft)
+	if err != nil {
+		return template.VPCConfig{}, err
+	}
 	return template.VPCConfig{
 		Imported:            e.importVPC(),
 		Managed:             e.managedVPC(),
 		AllowVPCIngress:     e.in.Mft.HTTPConfig.Private.HasVPCIngress(),
 		SecurityGroupConfig: securityGroupConfig,
-		FlowLogs:            aws.BoolValue(e.in.Mft.Network.VPC.Flowlogs),
+		FlowLogs:            flowLogs,
 	}, nil
 }
 
