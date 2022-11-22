@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.24: ECS Service Connect is coming!
+# AWS Copilot v1.24: ECS Service Connect!
 
 Posted On: Nov 28, 2022
 
@@ -21,20 +21,20 @@ Copilot v1.24 brings several new features and improvements:
 - **Add `--no-rollback` flag to `env deploy`**: Copilot `env deploy` now has a new flag `--no-rollback`; you can specify the flag to disable automatic env deployment rollback to help with debugging.
 - **Config autoscaling for Request-Driven Web Service**: It is now possible to specify autoscaling configuration for your RDWS. For example, this can be configured in your service manifest:
 ```yaml
- count: high-availability/3
+count: high-availability/3
 ```
-- **Add log retention to VPC flow logs**: The default value for VPC flow logs is now 14 days (2 weeks).
+- **Add log retention to VPC flow logs**: The default value for VPC flow logs is now 14 days.
  ```yaml
- network:
+network:
   vpc:
     flow_logs: on
  ```
  Alternatively, you can customize the number of days fore retention:
  ```yaml
- network:
-   vpc:
-     flow_logs:
-       retention: 30
+network:
+  vpc:
+    flow_logs:
+      retention: 30
  ```
 
 
@@ -62,7 +62,8 @@ network:
   connect: true
 ```
 
-Note that in order to use Service Connect, both server and client services need to have Service Connect enabled.
+!!! attention
+    Note that in order to use Service Connect, both server and client services need to have Service Connect enabled.
 
 ### Check out available endpoint
 After successfully deploying with the updated manifest, Service Connect should be enabled for your service. You can run `copilot svc show` to get the endpoint URL for your service.
