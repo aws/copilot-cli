@@ -29,7 +29,7 @@ network:
   vpc:
     flow_logs: on
  ```
- Alternatively, you can customize the number of days fore retention:
+ Alternatively, you can customize the number of days for retention:
  ```yaml
 network:
   vpc:
