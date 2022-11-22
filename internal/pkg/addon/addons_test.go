@@ -5,6 +5,7 @@ package addon
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,8 +25,9 @@ func TestTemplate(t *testing.T) {
 		workloadName string
 		setupMocks   func(m addonMocks)
 
-		wantedTemplate string
-		wantedErr      error
+		wantedTemplate            string
+		wantedErr                 error
+		wantedAddonsNotFoundError bool
 	}{
 		"return ErrAddonsNotFound if addons doesn't exist in a service": {
 			workloadName: testSvcName,
@@ -33,10 +35,9 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, testErr)
 			},
-			wantedErr: &ErrAddonsNotFound{
-				WlName:    testSvcName,
+			wantedErr: fmt.Errorf("list addons for workload %s: %w", testSvcName, &ErrAddonsNotFound{
 				ParentErr: testErr,
-			},
+			}),
 		},
 		"return ErrAddonsNotFound if addons doesn't exist in a job": {
 			workloadName: testJobName,
@@ -44,10 +45,9 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testJobName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, testErr)
 			},
-			wantedErr: &ErrAddonsNotFound{
-				WlName:    testJobName,
+			wantedErr: fmt.Errorf("list addons for workload %s: %w", testJobName, &ErrAddonsNotFound{
 				ParentErr: testErr,
-			},
+			}),
 		},
 		"return ErrAddonsNotFound if addons directory is empty in a service": {
 			workloadName: testSvcName,
@@ -56,7 +56,6 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{
-				WlName:    testSvcName,
 				ParentErr: nil,
 			},
 		},
@@ -67,7 +66,6 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"gitkeep"}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{
-				WlName:    testSvcName,
 				ParentErr: nil,
 			},
 		},
@@ -78,17 +76,8 @@ func TestTemplate(t *testing.T) {
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"addons.parameters.yml", "addons.parameters.yaml"}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{
-				WlName:    testSvcName,
 				ParentErr: nil,
 			},
-		},
-		"print correct error message for ErrAddonsNotFound": {
-			workloadName: testJobName,
-			setupMocks: func(m addonMocks) {
-				m.ws.EXPECT().WorkloadAddonsPath(testJobName).Return("mockPath")
-				m.ws.EXPECT().ListFiles("mockPath").Return(nil, testErr)
-			},
-			wantedErr: errors.New("read addons directory for resizer: some error"),
 		},
 		"return err on invalid Metadata fields": {
 			workloadName: testSvcName,
@@ -240,17 +229,16 @@ func TestParameters(t *testing.T) {
 		setupMocks func(m addonMocks)
 
 		wantedParams string
-		wantedErr    string
+		wantedErr    error
 	}{
 		"returns ErrAddonsNotFound if there is no addons/ directory defined": {
 			setupMocks: func(m addonMocks) {
 				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, errors.New("some error"))
 			},
-			wantedErr: (&ErrAddonsNotFound{
-				WlName:    "api",
+			wantedErr: fmt.Errorf("list addons for workload api: %w", &ErrAddonsNotFound{
 				ParentErr: errors.New("some error"),
-			}).Error(),
+			}),
 		},
 		"returns empty string and nil if there are no parameter files under addons/": {
 			setupMocks: func(m addonMocks) {
@@ -267,7 +255,7 @@ func TestParameters(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonFilePath("api", "database.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
 			},
-			wantedErr: "defining addons.parameters.yaml and addons.parameters.yml is not allowed under api addons/",
+			wantedErr: errors.New("defining addons.parameters.yaml and addons.parameters.yml is not allowed under api addons/"),
 		},
 		"returns an error if cannot read parameter file under addons/": {
 			setupMocks: func(m addonMocks) {
@@ -278,7 +266,7 @@ func TestParameters(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, errors.New("some error"))
 			},
-			wantedErr: "read parameter file addons.parameters.yml under api addons/: some error",
+			wantedErr: errors.New("read parameter file addons.parameters.yml under api addons/: some error"),
 		},
 		"returns an error if there are no 'Parameters' field defined in a parameters file": {
 			setupMocks: func(m addonMocks) {
@@ -289,7 +277,7 @@ func TestParameters(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(""), nil)
 			},
-			wantedErr: "must define field 'Parameters' in file addons.parameters.yml under api addons/",
+			wantedErr: errors.New("must define field 'Parameters' in file addons.parameters.yml under api addons/"),
 		},
 		"returns an error if reserved parameter fields is redefined in a parameters file": {
 			setupMocks: func(m addonMocks) {
@@ -308,7 +296,7 @@ Parameters:
   DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 `), nil)
 			},
-			wantedErr: "reserved parameters 'App', 'Env', and 'Name' cannot be declared in addons.parameters.yml under api addons/",
+			wantedErr: errors.New("reserved parameters 'App', 'Env', and 'Name' cannot be declared in addons.parameters.yml under api addons/"),
 		},
 		"returns the content of Parameters on success": {
 			setupMocks: func(m addonMocks) {
@@ -351,8 +339,8 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 
 			// WHEN
 			stack, err := Parse("api", mocks.ws)
-			if tc.wantedErr != "" {
-				require.EqualError(t, err, tc.wantedErr)
+			if tc.wantedErr != nil {
+				require.EqualError(t, err, tc.wantedErr.Error())
 				return
 			}
 			require.NoError(t, err)

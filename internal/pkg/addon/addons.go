@@ -51,18 +51,17 @@ type Stack struct {
 func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
 	fNames, err := ws.ListFiles(ws.WorkloadAddonsPath(workloadName))
 	if err != nil {
-		return nil, &ErrAddonsNotFound{
-			WlName:    workloadName,
+		return nil, fmt.Errorf("list addons for workload %s: %w", workloadName, &ErrAddonsNotFound{
 			ParentErr: err,
-		}
+		})
 	}
 
-	template, err := parseTemplate(fNames, workloadName, ws)
+	template, err := parseWorkloadTemplate(fNames, workloadName, ws)
 	if err != nil {
 		return nil, err
 	}
 
-	params, err := parseParameters(fNames, workloadName, ws)
+	params, err := parseWorkloadParameters(fNames, workloadName, ws)
 	if err != nil {
 		return nil, err
 	}
@@ -105,18 +104,16 @@ func (s *Stack) encode(v any) (string, error) {
 	return str.String(), nil
 }
 
-// parseTemplate merges CloudFormation templates under the "addons/" directory of a workload
+// parseWorkloadTemplate merges CloudFormation templates under the "addons/" directory of a workload
 // into a single CloudFormation template and returns it.
 //
 // If the addons directory doesn't exist or no yaml files are found in
 // the addons directory, it returns the empty string and
 // ErrAddonsNotFound.
-func parseTemplate(fNames []string, workloadName string, ws workspaceReader) (*cfnTemplate, error) {
+func parseWorkloadTemplate(fNames []string, workloadName string, ws workspaceReader) (*cfnTemplate, error) {
 	templateFiles := filterFiles(fNames, yamlMatcher, nonParamsMatcher)
 	if len(templateFiles) == 0 {
-		return nil, &ErrAddonsNotFound{
-			WlName: workloadName,
-		}
+		return nil, &ErrAddonsNotFound{}
 	}
 
 	mergedTemplate := newCFNTemplate("merged")
@@ -137,13 +134,13 @@ func parseTemplate(fNames []string, workloadName string, ws workspaceReader) (*c
 	return mergedTemplate, nil
 }
 
-// parseParameters returns the content of user-defined additional CloudFormation Parameters
+// parseWorkloadParameters returns the content of user-defined additional CloudFormation Parameters
 // to pass from the parent stack to Template.
 //
 // If there are addons but no parameters file defined, then returns "" and nil for error.
 // If there are multiple parameters files, then returns "" and cannot define multiple parameter files error.
 // If the addons parameters use the reserved parameter names, then returns "" and a reserved parameter error.
-func parseParameters(fNames []string, workloadName string, ws workspaceReader) (yaml.Node, error) {
+func parseWorkloadParameters(fNames []string, workloadName string, ws workspaceReader) (yaml.Node, error) {
 	paramFiles := filterFiles(fNames, paramsMatcher)
 	if len(paramFiles) == 0 {
 		return yaml.Node{}, nil
