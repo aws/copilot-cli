@@ -204,6 +204,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		initEnvCmd.manifestWriter = ws
 		deployEnvCmd.ws = ws
 		deploySvcCmd.ws = ws
+		deploySvcCmd.sel = sel
 		deployJobCmd.ws = ws
 		deployJobCmd.sel = sel
 		if initWkCmd, ok := o.initWlCmd.(*initSvcOpts); ok {
