@@ -255,7 +255,7 @@ func TestParameters(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonFilePath("api", "database.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
 			},
-			wantedErr: errors.New("defining addons.parameters.yaml and addons.parameters.yml is not allowed under api addons/"),
+			wantedErr: errors.New("defining addons.parameters.yaml and addons.parameters.yml is not allowed under addons/"),
 		},
 		"returns an error if cannot read parameter file under addons/": {
 			setupMocks: func(m addonMocks) {
@@ -266,7 +266,7 @@ func TestParameters(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(nil, errors.New("some error"))
 			},
-			wantedErr: errors.New("read parameter file addons.parameters.yml under api addons/: some error"),
+			wantedErr: errors.New("read parameter file addons.parameters.yml under path mockPath: some error"),
 		},
 		"returns an error if there are no 'Parameters' field defined in a parameters file": {
 			setupMocks: func(m addonMocks) {
@@ -277,7 +277,7 @@ func TestParameters(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(""), nil)
 			},
-			wantedErr: errors.New("must define field 'Parameters' in file addons.parameters.yml under api addons/"),
+			wantedErr: errors.New("must define field 'Parameters' in file addons.parameters.yml under path mockPath"),
 		},
 		"returns an error if reserved parameter fields is redefined in a parameters file": {
 			setupMocks: func(m addonMocks) {
