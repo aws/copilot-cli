@@ -153,8 +153,9 @@ type initSvcOpts struct {
 	manifestExists bool
 
 	// Init a Dockerfile parser using fs and input path
-	dockerfile        func(string) dockerfileParser
-	initEnvDescribers func(string) (envDescriber, error)
+	dockerfile func(string) dockerfileParser
+	// Init a new EnvDescriber using environment name.
+	envDescriber func(string) (envDescriber, error)
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
@@ -202,7 +203,7 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		opts.df = dockerfile.New(opts.fs, opts.dockerfilePath)
 		return opts.df
 	}
-	opts.initEnvDescribers = func(envName string) (envDescriber, error) {
+	opts.envDescriber = func(envName string) (envDescriber, error) {
 		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
 			App:         opts.appName,
 			Env:         envName,
@@ -350,12 +351,12 @@ func (o *initSvcOpts) Execute() error {
 			Platform: manifest.PlatformArgsOrString{
 				PlatformString: o.platform,
 			},
-			Topics: o.topics,
+			Topics:                  o.topics,
+			PrivateOnlyEnvironments: envs,
 		},
-		Port:                    o.port,
-		HealthCheck:             hc,
-		Private:                 strings.EqualFold(o.ingressType, ingressTypeEnvironment),
-		PrivateOnlyEnvironments: envs,
+		Port:        o.port,
+		HealthCheck: hc,
+		Private:     strings.EqualFold(o.ingressType, ingressTypeEnvironment),
 	})
 	if err != nil {
 		return err
@@ -729,41 +730,7 @@ func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error
 	}, nil
 }
 
-// isSubnetsOnlyPrivate returns the list of deployed environment names whose subnets are only private.
-// func (o *initSvcOpts) isSubnetsOnlyPrivate() ([]string, error) {
-// 	envs, err := o.store.ListEnvironments(o.appName)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var privateOnlyEnvs []string
-// 	for i := range envs {
-// 		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-// 			App:         o.appName,
-// 			Env:         envs[i].Name,
-// 			ConfigStore: o.store,
-// 		})
-// 		if err != nil {
-// 			return nil, fmt.Errorf("initiate env describer: %w", err)
-// 		}
-// 		mft, err := envDescriber.Manifest()
-// 		if err != nil {
-// 			return nil, fmt.Errorf("read the manifest used to deploy environment %s: %w", envs[i].Name, err)
-// 		}
-// 		envConfig, err := manifest.UnmarshalEnvironment(mft)
-// 		if err != nil {
-// 			return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", envs[i].Name, err)
-// 		}
-// 		// workspace.ReadEnvironmentManifest()
-// 		subnets := envConfig.Network.VPC.Subnets
-
-// 		if len(subnets.Public) == 0 && len(subnets.Private) != 0 {
-// 			privateOnlyEnvs = append(privateOnlyEnvs, envs[i].Name)
-// 		}
-// 	}
-// 	return privateOnlyEnvs, err
-// }
-
-// isSubnetsOnlyPrivate returns the list of deployed environment names whose subnets are only private.
+// isSubnetsOnlyPrivate returns the list of environment names deployed on private only subnets.
 func (o *initSvcOpts) isSubnetsOnlyPrivate() ([]string, error) {
 	envs, err := o.store.ListEnvironments(o.appName)
 	if err != nil {
@@ -771,19 +738,21 @@ func (o *initSvcOpts) isSubnetsOnlyPrivate() ([]string, error) {
 	}
 	var privateOnlyEnvs []string
 	for i := range envs {
-		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-			App:         o.appName,
-			Env:         envs[i].Name,
-			ConfigStore: o.store,
-		})
+		envDescriber, err := o.envDescriber(envs[i].Name)
 		if err != nil {
 			return nil, fmt.Errorf("initiate env describer: %w", err)
 		}
-		out, err := envDescriber.Outputs()
+		mft, err := envDescriber.Manifest()
 		if err != nil {
 			return nil, fmt.Errorf("read the manifest used to deploy environment %s: %w", envs[i].Name, err)
 		}
-		if out["PublicSubnets"] == "" && out["PrivateSubnets"] != "" {
+		envConfig, err := manifest.UnmarshalEnvironment(mft)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", envs[i].Name, err)
+		}
+		subnets := envConfig.Network.VPC.Subnets
+
+		if len(subnets.Public) == 0 && len(subnets.Private) != 0 {
 			privateOnlyEnvs = append(privateOnlyEnvs, envs[i].Name)
 		}
 	}
