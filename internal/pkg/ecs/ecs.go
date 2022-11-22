@@ -69,7 +69,7 @@ type Client struct {
 // New inits a new Client.
 func New(sess *session.Session) *Client {
 	return &Client{
-		rgGetter:       resourcegroups.NewECSClient(sess),
+		rgGetter:       resourcegroups.New(sess),
 		ecsClient:      ecs.New(sess),
 		StepFuncClient: stepfunctions.New(sess),
 	}

@@ -39,16 +39,6 @@ func New(s *session.Session) *ResourceGroups {
 	}
 }
 
-func NewECSClient(s *session.Session) *ResourceGroups {
-	sess, _ := session.NewSession(&aws.Config{
-		Region:   aws.String("us-west-2"),
-		Endpoint: aws.String("https://tagging-gamma.us-west-2.amazonaws.com"),
-	})
-	return &ResourceGroups{
-		client: resourcegroupstaggingapi.New(sess),
-	}
-}
-
 // GetResourcesByTags gets tag set and ARN for the resource with input resource type and tags.
 func (rg *ResourceGroups) GetResourcesByTags(resourceType string, tags map[string]string) ([]*Resource, error) {
 	var resources []*Resource

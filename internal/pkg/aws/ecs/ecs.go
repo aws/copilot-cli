@@ -75,14 +75,10 @@ type ExecuteCommandInput struct {
 
 // New returns a Service configured against the input session.
 func New(s *session.Session) *ECS {
-	sess, _ := session.NewSession(&aws.Config{
-		Region:   aws.String("us-west-2"),
-		Endpoint: aws.String("https://madison.us-west-2.amazonaws.com"),
-	})
 	return &ECS{
-		client: ecs.New(sess),
+		client: ecs.New(s),
 		newSessStarter: func() ssmSessionStarter {
-			return exec.NewSSMPluginCommand(sess)
+			return exec.NewSSMPluginCommand(s)
 		},
 		maxServiceStableTries: waitServiceStableMaxTry,
 		pollIntervalDuration:  waitServiceStablePollingInterval,
