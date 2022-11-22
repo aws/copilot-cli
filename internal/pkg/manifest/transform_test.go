@@ -735,13 +735,21 @@ func runUnionTransformerTests[Basic, Advanced any](t *testing.T, tests map[strin
 			require.NoError(t, err)
 
 			// Use custom transformer.
-			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(unionTransformer[Basic, Advanced]{}))
+			err = mergo.Merge(&tc.original, tc.override, mergo.WithOverride, mergo.WithTransformers(unionTransformer{}))
 			require.NoError(t, err)
 
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, tc.original)
 		})
 	}
+}
+
+func TestUnionPanicRecover(t *testing.T) {
+	// trick the transformer logic into thinking
+	// this is the real manifest.Union type
+	type Union[T any] struct{}
+	err := mergo.Merge(&Union[any]{}, &Union[any]{}, mergo.WithTransformers(unionTransformer{}))
+	require.EqualError(t, err, "override union: reflect: call of reflect.Value.Call on zero Value")
 }
 
 func TestCountTransformer_Transformer(t *testing.T) {
