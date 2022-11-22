@@ -16,11 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
-const (
-	// NoExposedContainerPort indicates no port should be exposed for the service container.
-	NoExposedContainerPort = "-1"
-)
-
 type backendSvcReadParser interface {
 	template.ReadParser
 	ParseBackendService(template.WorkloadOpts) (*template.Content, error)
@@ -221,7 +216,7 @@ func (s *BackendService) httpLoadBalancerTarget() (targetContainer *string, targ
 }
 
 func (s *BackendService) containerPort() string {
-	port := NoExposedContainerPort
+	port := template.NoExposedContainerPort
 	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
 		port = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
 	}

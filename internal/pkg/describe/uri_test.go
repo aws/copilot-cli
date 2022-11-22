@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	describeStack "github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/golang/mock/gomock"
@@ -372,7 +373,7 @@ func TestBackendServiceDescriber_URI(t *testing.T) {
 			setupMocks: func(m lbWebSvcDescriberMocks) {
 				m.ecsDescriber.EXPECT().ServiceStackResources().Return(nil, nil)
 				m.ecsDescriber.EXPECT().Params().Return(map[string]string{
-					stack.WorkloadTargetPortParamKey: stack.NoExposedContainerPort, // No port is set for the backend service.
+					stack.WorkloadTargetPortParamKey: template.NoExposedContainerPort, // No port is set for the backend service.
 				}, nil)
 			},
 			wantedURI: BlankServiceDiscoveryURI,

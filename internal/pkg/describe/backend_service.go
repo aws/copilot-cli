@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerengine"
+	"github.com/aws/copilot-cli/internal/pkg/template"
 
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
@@ -274,5 +275,5 @@ func (w *backendSvcDesc) HumanString() string {
 }
 
 func isReachableWithinVPC(params map[string]string) bool {
-	return params[cfnstack.WorkloadTargetPortParamKey] != cfnstack.NoExposedContainerPort
+	return params[cfnstack.WorkloadTargetPortParamKey] != template.NoExposedContainerPort
 }

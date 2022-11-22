@@ -204,9 +204,9 @@ func (b BackendService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate HTTP load balancer target: %w", err)
 	}
-	if b.Network.Connect.Enabled() {
+	if b.Network.Connect.Alias != nil {
 		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
-			return fmt.Errorf(`cannot enable "network.connect" when no port exposed`)
+			return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
 		}
 	}
 	if err = validateContainerDeps(validateDependenciesOpts{
@@ -1083,8 +1083,8 @@ func (r RangeConfig) validate() error {
 	min, max, spotFrom := aws.IntValue(r.Min), aws.IntValue(r.Max), aws.IntValue(r.SpotFrom)
 	if min < 0 || max < 0 || spotFrom < 0 {
 		return &errRangeValueLessThanZero{
-			min: min,
-			max: max,
+			min:      min,
+			max:      max,
 			spotFrom: spotFrom,
 		}
 	}

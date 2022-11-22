@@ -91,6 +91,8 @@ Metadata:
       test:
         image:
           location: amazon/ecs-example
+        network:
+          connect: true
 Parameters:
   AppName:
     Type: String
@@ -622,7 +624,14 @@ Resources:
           Weight: 0
           Base: 5
       ServiceConnectConfiguration:
-        Enabled: False
+        Enabled: True
+        Namespace: test.my-app.local
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-region: !Ref AWS::Region
+            awslogs-group: !Ref LogGroup
+            awslogs-stream-prefix: copilot
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
