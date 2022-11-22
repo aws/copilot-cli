@@ -23,7 +23,7 @@ Copilot v1.24 brings several new features and improvements:
 ```yaml
 count: high-availability/3
 ```
-- **Add log retention to VPC flow logs**: The default value for VPC flow logs is now 14 days.
+- **Add log retention to VPC flow logs**: There is now a default value of 14 days.
  ```yaml
 network:
   vpc:
@@ -63,7 +63,7 @@ network:
 ```
 
 !!! attention
-    Note that in order to use Service Connect, both server and client services need to have Service Connect enabled.
+    In order to use Service Connect, both server and client services need to have Service Connect enabled.
 
 ### Check out available endpoint
 After successfully deploying with the updated manifest, Service Connect should be enabled for your service. You can run `copilot svc show` to get the endpoint URL for your service.
