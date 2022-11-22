@@ -58,7 +58,7 @@ const (
 // Summary is a description of what's associated with this workspace.
 type Summary struct {
 	Application string `yaml:"application"` // Name of the application.
-	Path        string // absolute path to the summary file.
+	Path        string `yaml:"-"`           // absolute path to the summary file.
 }
 
 // Workspace typically represents a Git repository where the user has its infrastructure-as-code files as well as source files.
