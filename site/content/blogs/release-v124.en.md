@@ -49,7 +49,7 @@ network:
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## ECS Service Connect Support
-ECS just launched [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html). With [Copilot support](../docs/developing/svc-to-svc-communication.en.md#service-connect), your private service-to-service communication will be more resilient and load balanced compared with using Service Discovery. I will walk you through how Copilot supports ECS Service Connect.
+ECS just launched [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html). With [Copilot support](../docs/developing/svc-to-svc-communication.en.md#service-connect)! Your private service-to-service communication will be more resilient and load-balanced, compared with that when using Service Discovery. Let's walk through how Copilot supports ECS Service Connect.
 
 ### (Optional) Deploy an example service
 If you don't have any existing services deployed, please follow [our tutorial](../docs/getting-started/first-app-tutorial.en.md) to deploy a simple front-end service that is accessible in your browser.
@@ -65,7 +65,7 @@ network:
 !!! attention
     In order to use Service Connect, both server and client services need to have Service Connect enabled.
 
-### Check out available endpoint
+### Check out the generated endpoint
 After successfully deploying with the updated manifest, Service Connect should be enabled for your service. You can run `copilot svc show` to get the endpoint URL for your service.
 
 ```
@@ -80,10 +80,10 @@ Internal Service Endpoint
   front-end.test.demo.local:80  test         Service Discovery
 ...
 ```
-As shown above, `front-end:80` is your Service Connect endpoint that the other client services can call (must have Service Connect enabled as well).
+As shown above, `front-end:80` is your Service Connect endpoint that your other client services can call. (They must have Service Connect enabled as well.)
 
-### (Optional) Verify it works
-To verify the IP address for your Service Connect endpoint URL is indeed added to your service network, you can simply use `copilot svc exec` to execute into it and check out the hosts file.
+### (Optional) Verify that it works
+To verify the IP address for your Service Connect endpoint URL has indeed been added to your service network, you can simply use `copilot svc exec` to execute into your container and check out the hosts file.
 
 ```
 $ copilot svc exec --name front-end
@@ -107,4 +107,4 @@ Download the new Copilot CLI version by following the link below and leave your 
 
 - Download [the latest CLI version](../docs/getting-started/install.en.md)
 - Try our [Getting Started Guide](../docs/getting-started/first-app-tutorial.en.md)
-- Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.23.0)
+- Read full release notes on [GitHub](https://github.com/aws/copilot-cli/releases/tag/v1.24.0)
