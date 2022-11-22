@@ -374,13 +374,13 @@ func (h *HTTPHealthCheckArgs) IsZero() bool {
 // HealthCheckArgsOrString is a custom type which supports unmarshaling yaml which
 // can either be of type string or type HealthCheckArgs.
 type HealthCheckArgsOrString struct {
-	Union[string, HTTPHealthCheckArgs]
+	Union[*string, HTTPHealthCheckArgs]
 }
 
 // Path returns the default health check path if provided otherwise, returns the path from the advanced configuration.
 func (hc *HealthCheckArgsOrString) Path() *string {
 	if hc.IsBasic() {
-		return aws.String(hc.Basic)
+		return hc.Basic
 	}
 	return hc.Advanced.Path
 }

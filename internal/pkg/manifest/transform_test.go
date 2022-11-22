@@ -682,42 +682,42 @@ func TestTransformer_Generic(t *testing.T) {
 }
 
 func TestTransformer_StringOrHealthCheckArgs(t *testing.T) {
-	runUnionTransformerTests(t, map[string]unionTransformerTest[string, HTTPHealthCheckArgs]{
+	runUnionTransformerTests(t, map[string]unionTransformerTest[*string, HTTPHealthCheckArgs]{
 		"string unset if args set": {
-			original: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
-			override: AdvancedToUnion[string](HTTPHealthCheckArgs{
+			original: BasicToUnion[*string, HTTPHealthCheckArgs](aws.String("mockPath")),
+			override: AdvancedToUnion[*string](HTTPHealthCheckArgs{
 				Path:         aws.String("mockPathArgs"),
 				SuccessCodes: aws.String("200"),
 			}),
-			expected: AdvancedToUnion[string](HTTPHealthCheckArgs{
+			expected: AdvancedToUnion[*string](HTTPHealthCheckArgs{
 				Path:         aws.String("mockPathArgs"),
 				SuccessCodes: aws.String("200"),
 			}),
 		},
 		"args unset if string set": {
-			original: AdvancedToUnion[string](HTTPHealthCheckArgs{
+			original: AdvancedToUnion[*string](HTTPHealthCheckArgs{
 				Path:         aws.String("mockPathArgs"),
 				SuccessCodes: aws.String("200"),
 			}),
-			override: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
-			expected: BasicToUnion[string, HTTPHealthCheckArgs]("mockPath"),
+			override: BasicToUnion[*string, HTTPHealthCheckArgs](aws.String("mockPath")),
+			expected: BasicToUnion[*string, HTTPHealthCheckArgs](aws.String("mockPath")),
 		},
 		"string merges correctly": {
-			original: BasicToUnion[string, HTTPHealthCheckArgs]("path"),
-			override: BasicToUnion[string, HTTPHealthCheckArgs]("newPath"),
-			expected: BasicToUnion[string, HTTPHealthCheckArgs]("newPath"),
+			original: BasicToUnion[*string, HTTPHealthCheckArgs](aws.String("path")),
+			override: BasicToUnion[*string, HTTPHealthCheckArgs](aws.String("newPath")),
+			expected: BasicToUnion[*string, HTTPHealthCheckArgs](aws.String("newPath")),
 		},
 		"args merge correctly": {
-			original: AdvancedToUnion[string](HTTPHealthCheckArgs{
+			original: AdvancedToUnion[*string](HTTPHealthCheckArgs{
 				Path:             aws.String("mockPathArgs"),
 				SuccessCodes:     aws.String("200"),
 				HealthyThreshold: aws.Int64(10),
 			}),
-			override: AdvancedToUnion[string](HTTPHealthCheckArgs{
+			override: AdvancedToUnion[*string](HTTPHealthCheckArgs{
 				SuccessCodes:       aws.String("420"),
 				UnhealthyThreshold: aws.Int64(20),
 			}),
-			expected: AdvancedToUnion[string](HTTPHealthCheckArgs{
+			expected: AdvancedToUnion[*string](HTTPHealthCheckArgs{
 				Path:               aws.String("mockPathArgs"), // merged unchanged
 				SuccessCodes:       aws.String("420"),          // updated
 				HealthyThreshold:   aws.Int64(10),              // comes from original

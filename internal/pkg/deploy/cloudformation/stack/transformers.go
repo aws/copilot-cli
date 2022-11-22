@@ -338,7 +338,7 @@ func convertHTTPHealthCheck(hc *manifest.HealthCheckArgsOrString) template.HTTPH
 		return opts
 	}
 	if hc.IsBasic() {
-		opts.HealthCheckPath = hc.Basic
+		opts.HealthCheckPath = aws.StringValue(hc.Basic)
 		return opts
 	}
 
