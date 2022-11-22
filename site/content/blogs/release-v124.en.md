@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.24: ECS Service Connect is coming!'
+title: 'AWS Copilot v1.24: ECS Service Connect!'
 twitter_title: 'AWS Copilot v1.24'
 image: ''
 image_alt: ''
