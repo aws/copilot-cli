@@ -38,6 +38,8 @@ var (
 type workspaceReader interface {
 	WorkloadAddonsPath(name string) string
 	WorkloadAddonFilePath(wkldName, fName string) string
+	EnvAddonsPath() string
+	EnvAddonFilePath(fName string) string
 	ListFiles(dirPath string) ([]string, error)
 	ReadFile(fPath string) ([]byte, error)
 }
