@@ -66,6 +66,7 @@ type Workspace struct {
 	workingDirAbs string
 	copilotDirAbs string
 
+	// These fields should be accessed via the Summary method and not directly.
 	summary       *Summary
 	summaryErr    error
 	summarizeOnce sync.Once
