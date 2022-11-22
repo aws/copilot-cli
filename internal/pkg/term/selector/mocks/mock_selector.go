@@ -563,21 +563,6 @@ func (m *MockworkspaceRetriever) EXPECT() *MockworkspaceRetrieverMockRecorder {
 	return m.recorder
 }
 
-// ListDockerfiles mocks base method.
-func (m *MockworkspaceRetriever) ListDockerfiles() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDockerfiles")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListDockerfiles indicates an expected call of ListDockerfiles.
-func (mr *MockworkspaceRetrieverMockRecorder) ListDockerfiles() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MockworkspaceRetriever)(nil).ListDockerfiles))
-}
-
 // ListEnvironments mocks base method.
 func (m *MockworkspaceRetriever) ListEnvironments() ([]string, error) {
 	m.ctrl.T.Helper()
