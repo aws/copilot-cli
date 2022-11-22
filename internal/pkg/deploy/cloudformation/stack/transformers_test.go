@@ -404,6 +404,11 @@ func Test_convertCapacityProviders(t *testing.T) {
 					Weight:           aws.Int(1),
 					CapacityProvider: capacityProviderFargateSpot,
 				},
+				{
+					Base:             aws.Int(0),
+					Weight:           aws.Int(0),
+					CapacityProvider: capacityProviderFargate,
+				},
 			},
 		},
 		"with scaling into spot": {
@@ -424,6 +429,29 @@ func Test_convertCapacityProviders(t *testing.T) {
 				},
 				{
 					Base:             aws.Int(spotFrom - 1),
+					Weight:           aws.Int(0),
+					CapacityProvider: capacityProviderFargate,
+				},
+			},
+		},
+		"with min equaling spot_from": {
+			input: manifest.AdvancedCount{
+				Range: manifest.Range{
+					RangeConfig: manifest.RangeConfig{
+						Min:      aws.Int(2),
+						Max:      aws.Int(10),
+						SpotFrom: aws.Int(2),
+					},
+				},
+			},
+
+			expected: []*template.CapacityProviderStrategy{
+				{
+					Weight:           aws.Int(1),
+					CapacityProvider: capacityProviderFargateSpot,
+				},
+				{
+					Base:             aws.Int(1),
 					Weight:           aws.Int(0),
 					CapacityProvider: capacityProviderFargate,
 				},

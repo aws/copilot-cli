@@ -271,9 +271,10 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 		Name: mockAppName,
 	}
 	testCases := map[string]struct {
-		setUpMocks  func(m *envDeployerMocks)
-		inManifest  *manifest.Environment
-		wantedError error
+		setUpMocks        func(m *envDeployerMocks)
+		inManifest        *manifest.Environment
+		inDisableRollback bool
+		wantedError       error
 	}{
 		"fail to get app resources by region": {
 			setUpMocks: func(m *envDeployerMocks) {
@@ -360,6 +361,18 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
+		"successful environment deployment, no rollback": {
+			inDisableRollback: true,
+			setUpMocks: func(m *envDeployerMocks) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.prefixListGetter.EXPECT().CloudFrontManagedPrefixListID().Return("mockPrefixListID", nil).Times(0)
+				m.envDeployer.EXPECT().DeployedEnvironmentParameters(gomock.Any(), gomock.Any()).Return(nil, nil)
+				m.envDeployer.EXPECT().ForceUpdateOutputID(gomock.Any(), gomock.Any()).Return("", nil)
+				m.envDeployer.EXPECT().UpdateAndRenderEnvironment(gomock.Any(), gomock.Any(), gomock.Len(2)).Return(nil)
+			},
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
@@ -388,7 +401,8 @@ func TestEnvDeployer_DeployEnvironment(t *testing.T) {
 				CustomResourcesURLs: map[string]string{
 					"mockResource": "mockURL",
 				},
-				Manifest: tc.inManifest,
+				Manifest:        tc.inManifest,
+				DisableRollback: tc.inDisableRollback,
 			}
 			gotErr := d.DeployEnvironment(mockIn)
 			if tc.wantedError != nil {
