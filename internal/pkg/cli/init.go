@@ -10,6 +10,7 @@ import (
 	"os"
 
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -109,9 +110,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	spin := termprogress.NewSpinner(log.DiagnosticWriter)
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
-	if err != nil {
-		return nil, err
-	}
+	iamClient := iam.New(defaultSess)
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
 			name: vars.appName,
@@ -130,6 +129,8 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		newWorkspace: func(appName string) (wsAppManager, error) {
 			return workspace.Create(appName, fs)
 		},
+		iam:            iamClient,
+		iamRoleManager: iamClient,
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{

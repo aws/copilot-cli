@@ -836,7 +836,7 @@ Resources:
   VpcFlowLogGroup:
     Type: AWS::Logs::LogGroup
     Metadata:
-      'aws:copilot:description': 'A CloudWatch log group to store VPC flow log data'
+      'aws:copilot:description': 'A CloudWatch log group with 14 days retention for VPC flow log data'
     Properties:
       LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogs]]
       RetentionInDays: 14  
@@ -855,7 +855,7 @@ Resources:
 # Reference to IAM Role policy for flowlogs: https://go.aws/3euClbg     
   FlowLogRole:
     Metadata:
-      'aws:copilot:description': 'An IAM Role for AWS EC2 to publish flow logs to a CloudWatch log group'
+      'aws:copilot:description': 'An IAM Role for the flow logs service to publish logs'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
