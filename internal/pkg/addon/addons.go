@@ -20,7 +20,8 @@ const (
 )
 
 var (
-	workloadParameterReservedKeys = []string{"App", "Env", "Name"}
+	wkldAddonsParameterReservedKeys = []string{"App", "Env", "Name"}
+	envAddonsParameterReservedKeys  = []string{"App", "Name"}
 )
 
 var (
@@ -44,11 +45,19 @@ type workspaceReader interface {
 	ReadFile(fPath string) ([]byte, error)
 }
 
-// Stack represents a CloudFormation stack.
-type Stack struct {
-	template     *cfnTemplate
-	parameters   yaml.Node
+// WorkloadAddonStack represents a CloudFormation stack for workload addons.
+type WorkloadAddonStack struct {
+	stack
 	workloadName string
+}
+
+type EnvironmentAddonStack struct {
+	stack
+}
+
+type stack struct {
+	template   *cfnTemplate
+	parameters yaml.Node
 }
 
 type parser struct {
@@ -61,7 +70,7 @@ type parser struct {
 // and returns a Stack created by merging the CloudFormation templates
 // files found there. If no addons are found, Parse returns a nil
 // Stack and ErrAddonsNotFound.
-func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
+func Parse(workloadName string, ws workspaceReader) (*WorkloadAddonStack, error) {
 	fNames, err := ws.ListFiles(ws.WorkloadAddonsPath(workloadName))
 	if err != nil {
 		return nil, fmt.Errorf("list addons for workload %s: %w", workloadName, &ErrAddonsNotFound{
@@ -75,7 +84,7 @@ func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
 			return ws.WorkloadAddonFilePath(workloadName, fName)
 		},
 		validateParameters: func(params yaml.Node, paramFilePath string) error {
-			return validateReservedParameters(params, workloadParameterReservedKeys)
+			return validateReservedParameters(params, wkldAddonsParameterReservedKeys)
 		},
 	}
 
@@ -89,15 +98,56 @@ func Parse(workloadName string, ws workspaceReader) (*Stack, error) {
 		return nil, err
 	}
 
-	return &Stack{
-		template:     template,
-		parameters:   params,
+	return &WorkloadAddonStack{
+		stack: stack{
+			template:   template,
+			parameters: params,
+		},
 		workloadName: workloadName,
 	}, nil
 }
 
+// ParseEnvAddon parses the 'addon/' directory for environments
+// and returns a Stack created by merging the CloudFormation templates
+// files found there. If no addons are found, Parse returns a nil
+// Stack and ErrAddonsNotFound.
+func ParseEnvAddon(ws workspaceReader) (*EnvironmentAddonStack, error) {
+	fNames, err := ws.ListFiles(ws.EnvAddonsPath())
+	if err != nil {
+		return nil, fmt.Errorf("list addons for environments: %w", &ErrAddonsNotFound{
+			ParentErr: err,
+		})
+	}
+	parser := parser{
+		ws: ws,
+		filePath: func(fName string) string {
+			return ws.EnvAddonFilePath(fName)
+		},
+		validateParameters: func(params yaml.Node, paramFilePath string) error {
+			return validateReservedParameters(params, envAddonsParameterReservedKeys)
+		},
+	}
+
+	template, err := parser.parseTemplate(fNames)
+	if err != nil {
+		return nil, err
+	}
+
+	params, err := parser.parseParameters(fNames)
+	if err != nil {
+		return nil, err
+	}
+
+	return &EnvironmentAddonStack{
+		stack: stack{
+			template:   template,
+			parameters: params,
+		},
+	}, nil
+}
+
 // Template returns Stack's CloudFormation template as a yaml string.
-func (s *Stack) Template() (string, error) {
+func (s *stack) Template() (string, error) {
 	if s.template == nil {
 		return "", nil
 	}
@@ -106,7 +156,7 @@ func (s *Stack) Template() (string, error) {
 }
 
 // Parameters returns Stack's CloudFormation parameters as a yaml string.
-func (s *Stack) Parameters() (string, error) {
+func (s *stack) Parameters() (string, error) {
 	if s.parameters.IsZero() {
 		return "", nil
 	}
@@ -115,7 +165,7 @@ func (s *Stack) Parameters() (string, error) {
 }
 
 // encode encodes v as a yaml string indented with 2 spaces.
-func (s *Stack) encode(v any) (string, error) {
+func (s *stack) encode(v any) (string, error) {
 	str := &strings.Builder{}
 	enc := yaml.NewEncoder(str)
 	enc.SetIndent(2)

@@ -216,6 +216,7 @@ func TestWorkload_Template(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+			require.Equal(t, tc.workloadName, stack.workloadName)
 
 			template, err := stack.Template()
 			require.NoError(t, err)
@@ -344,6 +345,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 				return
 			}
 			require.NoError(t, err)
+			require.Equal(t, "api", stack.workloadName)
 
 			params, err := stack.Parameters()
 			require.NoError(t, err)
