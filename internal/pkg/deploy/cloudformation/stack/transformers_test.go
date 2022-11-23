@@ -677,7 +677,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Path": {
 			input: manifest.HealthCheckArgsOrString{
-				Union: manifest.BasicToUnion[*string, manifest.HTTPHealthCheckArgs](aws.String("path")),
+				Union: manifest.BasicToUnion[string, manifest.HTTPHealthCheckArgs]("path"),
 			},
 			wantedOpts: template.HTTPHealthCheckOpts{
 				HealthCheckPath: "path",
@@ -686,7 +686,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just HealthyThreshold": {
 			input: manifest.HealthCheckArgsOrString{
-				Union: manifest.AdvancedToUnion[*string](manifest.HTTPHealthCheckArgs{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
 					HealthyThreshold: aws.Int64(5),
 				}),
 			},
@@ -698,7 +698,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just UnhealthyThreshold": {
 			input: manifest.HealthCheckArgsOrString{
-				Union: manifest.AdvancedToUnion[*string](manifest.HTTPHealthCheckArgs{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
 					UnhealthyThreshold: aws.Int64(5),
 				}),
 			},
@@ -710,7 +710,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Interval": {
 			input: manifest.HealthCheckArgsOrString{
-				Union: manifest.AdvancedToUnion[*string](manifest.HTTPHealthCheckArgs{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
 					Interval: &duration15Seconds,
 				}),
 			},
@@ -722,7 +722,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Timeout": {
 			input: manifest.HealthCheckArgsOrString{
-				Union: manifest.AdvancedToUnion[*string](manifest.HTTPHealthCheckArgs{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
 					Timeout: &duration15Seconds,
 				}),
 			},
@@ -734,7 +734,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just SuccessCodes": {
 			input: manifest.HealthCheckArgsOrString{
-				Union: manifest.AdvancedToUnion[*string](manifest.HTTPHealthCheckArgs{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
 					SuccessCodes: aws.String("200,301"),
 				}),
 			},
@@ -746,7 +746,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"just Port": {
 			input: manifest.HealthCheckArgsOrString{
-				Union: manifest.AdvancedToUnion[*string](manifest.HTTPHealthCheckArgs{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
 					Port: aws.Int(8000),
 				}),
 			},
@@ -758,7 +758,7 @@ func Test_convertHTTPHealthCheck(t *testing.T) {
 		},
 		"all values changed in manifest": {
 			input: manifest.HealthCheckArgsOrString{
-				Union: manifest.AdvancedToUnion[*string](manifest.HTTPHealthCheckArgs{
+				Union: manifest.AdvancedToUnion[string](manifest.HTTPHealthCheckArgs{
 					Path:               aws.String("/road/to/nowhere"),
 					Port:               aws.Int(8080),
 					SuccessCodes:       aws.String("200-299"),
