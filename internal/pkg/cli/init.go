@@ -111,9 +111,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
 	iam := iam.New(defaultSess)
-	if err != nil {
-		return nil, err
-	}
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
 			name: vars.appName,
