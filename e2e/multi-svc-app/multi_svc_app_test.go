@@ -320,6 +320,8 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(len(svc.ServiceConnects)).To(Equal(1))
 			Expect(svc.ServiceConnects[0].Endpoint).To(Equal(fmt.Sprintf("%s:80", svcName)))
 
+			// Calls the front end's service connect/discovery endpoint - which should connect
+			// to the backend, and pipe the backend response to us.
 			route := svc.Routes[0]
 
 			Expect(route.Environment).To(Equal("test"))
