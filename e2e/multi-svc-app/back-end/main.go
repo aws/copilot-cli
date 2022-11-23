@@ -23,17 +23,17 @@ func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	w.Write([]byte("back-end"))
 }
 
-// ServiceConnectGet just returns true no matter what
-func ServiceConnectGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-	log.Println("Get on service connect endpoint Succeeded")
+// Get just returns true no matter what
+func Get(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	log.Println("Get on service endpoint Succeeded")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("back-end-service-connect"))
+	w.Write([]byte("back-end-service"))
 }
 
 func main() {
 	router := httprouter.New()
 	router.GET("/back-end/", SimpleGet)
-	router.GET("/service-connect/", ServiceConnectGet)
+	router.GET("/service-endpoint/", Get)
 
 	// Health Check
 	router.GET("/", HealthCheck)

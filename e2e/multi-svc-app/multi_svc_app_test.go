@@ -301,13 +301,13 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(svcs["back-end"].Type).To(Equal("Backend Service"))
 		})
 
-		It("service connect should be enabled and working", func() {
+		It("service internal endpoint should be enabled and working", func() {
 			// The front-end service is set up to have a path called
-			// "/front-end/service-connect-test" - this route
+			// "/front-end/service-endpoint-test" - this route
 			// calls a function which makes a call via the service
-			// connect endpoint, "back-end.local". If that back-end
+			// connect/discovery endpoint, "back-end.local". If that back-end
 			// call succeeds, the back-end returns a response
-			// "back-end-service-connect". This should be forwarded
+			// "back-end-service". This should be forwarded
 			// back to us via the front-end api.
 			// [test] -- http req -> [front-end] -- service-connect -> [back-end]
 			svcName := "front-end"
@@ -320,14 +320,12 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(len(svc.ServiceConnects)).To(Equal(1))
 			Expect(svc.ServiceConnects[0].Endpoint).To(Equal(fmt.Sprintf("%s:80", svcName)))
 
-			// Calls the front end's service connect endpoint - which should connect
-			// to the backend, and pipe the backend response to us.
 			route := svc.Routes[0]
 
 			Expect(route.Environment).To(Equal("test"))
 			routeURL = route.URL
 
-			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-connect-test/", route.URL))
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-endpoint-test/", route.URL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 
@@ -335,7 +333,7 @@ var _ = Describe("Multiple Service App", func() {
 			// name as the value.
 			bodyBytes, err := ioutil.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(bodyBytes)).To(Equal("back-end-service-connect"))
+			Expect(string(bodyBytes)).To(Equal("back-end-service"))
 		})
 
 		It("should be able to write to EFS volume", func() {
