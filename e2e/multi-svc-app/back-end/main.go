@@ -16,14 +16,14 @@ func HealthCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 	w.WriteHeader(http.StatusOK)
 }
 
-// SimpleGet just returns true no matter what
+// SimpleGet just returns true no matter what.
 func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	log.Println("Get Succeeded")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("back-end"))
 }
 
-// Get just returns true no matter what
+// Get just returns true no matter what.
 func Get(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	log.Println("Get on service endpoint Succeeded")
 	w.WriteHeader(http.StatusOK)

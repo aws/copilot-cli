@@ -87,7 +87,7 @@ type SvcShowRoutes struct {
 	URL         string `json:"url"`
 }
 
-// SvcShowServiceEndpoints contains serialized endpoint info for an service.
+// SvcShowServiceEndpoints contains serialized endpoint info for a service.
 type SvcShowServiceEndpoints struct {
 	Environment []string `json:"environment"`
 	Endpoint    string   `json:"endpoint"`
