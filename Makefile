@@ -110,11 +110,11 @@ run-integ-test:
 	# and runs tests which end in Integration.
 	go test -race -count=1 -timeout 120m -tags=integration ${PACKAGES}
 
-.PHONY: local-integ-test
-local-integ-test: package-custom-resources custom-resource-tests run-local-integ-test package-custom-resources-clean
+.PHONY: local-test
+local-test: package-custom-resources custom-resource-tests run-local-test package-custom-resources-clean
 
-.PHONY: run-local-integ-test
-run-local-integ-test:
+.PHONY: run-local-test
+run-local-test:
 	go test -race -count=1 -timeout=60m -tags=localintegration -coverprofile=${COVERAGE} ${PACKAGES}
 
 .PHONY: e2e
