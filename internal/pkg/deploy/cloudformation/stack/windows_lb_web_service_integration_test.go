@@ -17,13 +17,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
-	"gopkg.in/yaml.v3"
-
-	"github.com/aws/copilot-cli/internal/pkg/manifest"
-
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -97,7 +95,7 @@ func TestWindowsLoadBalancedWebService_Template(t *testing.T) {
 		expectedBytes := []byte(expected)
 		mExpected := make(map[interface{}]interface{})
 		require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
-		require.Equal(t, mExpected, mActual)
+		compareStackTemplate(t, mExpected, mActual)
 	})
 
 	t.Run("Parameter values should render properly", func(t *testing.T) {

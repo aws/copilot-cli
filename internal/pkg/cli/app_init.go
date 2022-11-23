@@ -71,7 +71,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	}
 	fs := afero.NewOsFs()
 	identity := identity.New(sess)
-	iam := iam.New(sess)
+	iamClient := iam.New(sess)
 	return &initAppOpts{
 		initAppVars:      vars,
 		identity:         identity,
@@ -81,8 +81,8 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		cfn:              cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 		prompt:           prompt.New(),
 		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
-		iam:              iam,
-		iamRoleManager:   iam,
+		iam:              iamClient,
+		iamRoleManager:   iamClient,
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
@@ -138,9 +138,9 @@ https://aws.github.io/copilot-cli/docs/credentials/`)
 		log.Infoln()
 	}
 
-	// When there's a local application.
 	ws, err := o.existingWorkspace()
 	if err == nil {
+		// When there's a local application.
 		summary, err := ws.Summary()
 		if err == nil {
 			if o.name == "" {
@@ -176,8 +176,7 @@ If you'd like to delete the application and all of its resources, run %s.
 			return err
 		}
 	}
-	var errNoWorkspace *workspace.ErrWorkspaceNotFound
-	if !errors.As(err, &errNoWorkspace) {
+	if !workspace.IsEmptyErr(err) {
 		return err
 	}
 
