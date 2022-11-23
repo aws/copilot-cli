@@ -71,7 +71,7 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	}
 	fs := afero.NewOsFs()
 	identity := identity.New(sess)
-	iam := iam.New(sess)
+	iamClient := iam.New(sess)
 	return &initAppOpts{
 		initAppVars:      vars,
 		identity:         identity,
@@ -81,8 +81,8 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 		cfn:              cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 		prompt:           prompt.New(),
 		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
-		iam:              iam,
-		iamRoleManager:   iam,
+		iam:              iamClient,
+		iamRoleManager:   iamClient,
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
