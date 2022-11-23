@@ -2781,21 +2781,6 @@ func (m *MockwsWlDirReader) EXPECT() *MockwsWlDirReaderMockRecorder {
 	return m.recorder
 }
 
-// ListDockerfiles mocks base method.
-func (m *MockwsWlDirReader) ListDockerfiles() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDockerfiles")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListDockerfiles indicates an expected call of ListDockerfiles.
-func (mr *MockwsWlDirReaderMockRecorder) ListDockerfiles() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDockerfiles", reflect.TypeOf((*MockwsWlDirReader)(nil).ListDockerfiles))
-}
-
 // ListEnvironments mocks base method.
 func (m *MockwsWlDirReader) ListEnvironments() ([]string, error) {
 	m.ctrl.T.Helper()
@@ -5408,46 +5393,31 @@ func (mr *MockwsSelectorMockRecorder) Workload(msg, help interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Workload", reflect.TypeOf((*MockwsSelector)(nil).Workload), msg, help)
 }
 
-// MockinitJobSelector is a mock of initJobSelector interface.
-type MockinitJobSelector struct {
+// MockscheduleSelector is a mock of scheduleSelector interface.
+type MockscheduleSelector struct {
 	ctrl     *gomock.Controller
-	recorder *MockinitJobSelectorMockRecorder
+	recorder *MockscheduleSelectorMockRecorder
 }
 
-// MockinitJobSelectorMockRecorder is the mock recorder for MockinitJobSelector.
-type MockinitJobSelectorMockRecorder struct {
-	mock *MockinitJobSelector
+// MockscheduleSelectorMockRecorder is the mock recorder for MockscheduleSelector.
+type MockscheduleSelectorMockRecorder struct {
+	mock *MockscheduleSelector
 }
 
-// NewMockinitJobSelector creates a new mock instance.
-func NewMockinitJobSelector(ctrl *gomock.Controller) *MockinitJobSelector {
-	mock := &MockinitJobSelector{ctrl: ctrl}
-	mock.recorder = &MockinitJobSelectorMockRecorder{mock}
+// NewMockscheduleSelector creates a new mock instance.
+func NewMockscheduleSelector(ctrl *gomock.Controller) *MockscheduleSelector {
+	mock := &MockscheduleSelector{ctrl: ctrl}
+	mock.recorder = &MockscheduleSelectorMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockinitJobSelector) EXPECT() *MockinitJobSelectorMockRecorder {
+func (m *MockscheduleSelector) EXPECT() *MockscheduleSelectorMockRecorder {
 	return m.recorder
 }
 
-// Dockerfile mocks base method.
-func (m *MockinitJobSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pv prompt.ValidatorFunc) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Dockerfile", selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Dockerfile indicates an expected call of Dockerfile.
-func (mr *MockinitJobSelectorMockRecorder) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dockerfile", reflect.TypeOf((*MockinitJobSelector)(nil).Dockerfile), selPrompt, notFoundPrompt, selHelp, notFoundHelp, pv)
-}
-
 // Schedule mocks base method.
-func (m *MockinitJobSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
+func (m *MockscheduleSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Schedule", scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator)
 	ret0, _ := ret[0].(string)
@@ -5456,9 +5426,9 @@ func (m *MockinitJobSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp stri
 }
 
 // Schedule indicates an expected call of Schedule.
-func (mr *MockinitJobSelectorMockRecorder) Schedule(scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator interface{}) *gomock.Call {
+func (mr *MockscheduleSelectorMockRecorder) Schedule(scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockinitJobSelector)(nil).Schedule), scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockscheduleSelector)(nil).Schedule), scheduleTypePrompt, scheduleTypeHelp, scheduleValidator, rateValidator)
 }
 
 // MockcfTaskSelector is a mock of cfTaskSelector interface.

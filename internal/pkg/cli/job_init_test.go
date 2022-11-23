@@ -25,11 +25,12 @@ import (
 )
 
 type initJobMocks struct {
-	mockPrompt       *mocks.Mockprompter
-	mockSel          *mocks.MockinitJobSelector
-	mockDockerEngine *mocks.MockdockerEngine
-	mockMftReader    *mocks.MockmanifestReader
-	mockStore        *mocks.Mockstore
+	mockPrompt        *mocks.Mockprompter
+	mockDockerEngine  *mocks.MockdockerEngine
+	mockMftReader     *mocks.MockmanifestReader
+	mockStore         *mocks.Mockstore
+	mockDockerfileSel *mocks.MockdockerfileSelector
+	mockScheduleSel   *mocks.MockscheduleSelector
 }
 
 func TestJobInitOpts_Validate(t *testing.T) {
@@ -360,7 +361,7 @@ type: Scheduled Job`), nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("", mockError)
-				m.mockSel.EXPECT().Dockerfile(
+				m.mockDockerfileSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedJobName)),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedJobName)),
 					gomock.Eq(wkldInitDockerfileHelpPrompt),
@@ -383,7 +384,7 @@ type: Scheduled Job`), nil)
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
 				m.mockPrompt.EXPECT().Get(wkldInitImagePrompt, wkldInitImagePromptHelp, gomock.Any(), gomock.Any()).
 					Return("mockImage", nil)
-				m.mockSel.EXPECT().Dockerfile(
+				m.mockDockerfileSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, wantedJobName)),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, wantedJobName)),
 					gomock.Eq(wkldInitDockerfileHelpPrompt),
@@ -404,7 +405,7 @@ type: Scheduled Job`), nil)
 			setupMocks: func(m initJobMocks) {
 				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
-				m.mockSel.EXPECT().Dockerfile(
+				m.mockDockerfileSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(wantedJobName))),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.HighlightUserInput(wantedJobName))),
 					gomock.Any(),
@@ -425,7 +426,7 @@ type: Scheduled Job`), nil)
 			setupMocks: func(m initJobMocks) {
 				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
-				m.mockSel.EXPECT().Dockerfile(
+				m.mockDockerfileSel.EXPECT().Dockerfile(
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(wantedJobName))),
 					gomock.Eq(fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.HighlightUserInput(wantedJobName))),
 					gomock.Any(),
@@ -445,8 +446,8 @@ type: Scheduled Job`), nil)
 
 			setupMocks: func(m initJobMocks) {
 				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
-				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrWorkspaceNotFound{})
-				m.mockSel.EXPECT().Schedule(
+				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{})
+				m.mockScheduleSel.EXPECT().Schedule(
 					gomock.Eq(jobInitSchedulePrompt),
 					gomock.Eq(jobInitScheduleHelp),
 					gomock.Any(),
@@ -465,7 +466,7 @@ type: Scheduled Job`), nil)
 			setupMocks: func(m initJobMocks) {
 				m.mockStore.EXPECT().GetJob(mockAppName, wantedJobName).Return(nil, &config.ErrNoSuchJob{})
 				m.mockMftReader.EXPECT().ReadWorkloadManifest(wantedJobName).Return(nil, &workspace.ErrFileNotExists{FileName: wantedJobName})
-				m.mockSel.EXPECT().Schedule(
+				m.mockScheduleSel.EXPECT().Schedule(
 					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
@@ -495,20 +496,16 @@ type: Scheduled Job`), nil)
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockPrompt := mocks.NewMockprompter(ctrl)
-			mockSel := mocks.NewMockinitJobSelector(ctrl)
-			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
-			mockManifestReader := mocks.NewMockmanifestReader(ctrl)
-			mockStore := mocks.NewMockstore(ctrl)
-			mocks := initJobMocks{
-				mockPrompt:       mockPrompt,
-				mockSel:          mockSel,
-				mockDockerEngine: mockDockerEngine,
-				mockMftReader:    mockManifestReader,
-				mockStore:        mockStore,
+			m := initJobMocks{
+				mockPrompt:        mocks.NewMockprompter(ctrl),
+				mockDockerfileSel: mocks.NewMockdockerfileSelector(ctrl),
+				mockScheduleSel:   mocks.NewMockscheduleSelector(ctrl),
+				mockDockerEngine:  mocks.NewMockdockerEngine(ctrl),
+				mockMftReader:     mocks.NewMockmanifestReader(ctrl),
+				mockStore:         mocks.NewMockstore(ctrl),
 			}
 			if tc.setupMocks != nil {
-				tc.setupMocks(mocks)
+				tc.setupMocks(m)
 			}
 
 			opts := &initJobOpts{
@@ -522,11 +519,12 @@ type: Scheduled Job`), nil)
 					},
 					schedule: tc.inJobSchedule,
 				},
-				sel:          mockSel,
-				store:        mockStore,
-				dockerEngine: mockDockerEngine,
-				mftReader:    mockManifestReader,
-				prompt:       mockPrompt,
+				dockerfileSel:    m.mockDockerfileSel,
+				scheduleSelector: m.mockScheduleSel,
+				store:            m.mockStore,
+				dockerEngine:     m.mockDockerEngine,
+				mftReader:        m.mockMftReader,
+				prompt:           m.mockPrompt,
 			}
 
 			// WHEN

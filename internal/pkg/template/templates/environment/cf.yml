@@ -587,7 +587,14 @@ Resources:
 {{- if not .VPCConfig.Imported}}
 {{include "ar-vpc-connector" . | indent 2}}
 {{- end}}
-{{- if .VPCConfig.FlowLogs }}
+{{- if .VPCConfig.FlowLogs}}
+  VpcFlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    Metadata:
+      'aws:copilot:description': 'A CloudWatch log group with {{.VPCConfig.FlowLogs.Retention}} days retention for VPC flow log data'
+    Properties:
+      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogs]]
+      RetentionInDays: {{.VPCConfig.FlowLogs.Retention}}       
   FlowLog:
     Metadata:
       'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'
@@ -595,7 +602,7 @@ Resources:
     Properties:
       DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
       LogDestinationType: cloud-watch-logs
-      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
+      LogGroupName: !Ref VpcFlowLogGroup
       MaxAggregationInterval: 60
 {{- if .VPCConfig.Imported}}
       ResourceId: {{.VPCConfig.Imported.ID}}
@@ -607,7 +614,7 @@ Resources:
 # Reference to IAM Role policy for Publish flow logs to CloudWatch Logs: https://go.aws/3euClbg     
   FlowLogRole:
     Metadata:
-      'aws:copilot:description': 'An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for AWS EC2 to publish flow logs to a CloudWatch log group'
+      'aws:copilot:description': 'An IAM Role {{- if .PermissionsBoundary}} with permissions boundary {{.PermissionsBoundary}} {{- end}} for the flow logs service to publish logs'
     Type: AWS::IAM::Role
     Properties:
       {{- if .PermissionsBoundary}}

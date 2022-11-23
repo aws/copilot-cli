@@ -60,13 +60,14 @@ type initJobOpts struct {
 	initJobVars
 
 	// Interfaces to interact with dependencies.
-	fs           afero.Fs
-	store        store
-	init         jobInitializer
-	prompt       prompter
-	sel          initJobSelector
-	dockerEngine dockerEngine
-	mftReader    manifestReader
+	fs               afero.Fs
+	store            store
+	init             jobInitializer
+	prompt           prompter
+	dockerEngine     dockerEngine
+	mftReader        manifestReader
+	dockerfileSel    dockerfileSelector
+	scheduleSelector scheduleSelector
 
 	// Outputs stored on successful actions.
 	manifestPath   string
@@ -102,18 +103,21 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 	}
 
 	prompter := prompt.New()
-	sel := selector.NewWorkspaceSelector(prompter, ws)
-
+	dockerfileSel, err := selector.NewLocalFileSelector(prompter, fs)
+	if err != nil {
+		return nil, err
+	}
 	return &initJobOpts{
 		initJobVars: vars,
 
-		fs:           fs,
-		store:        store,
-		init:         jobInitter,
-		prompt:       prompter,
-		sel:          sel,
-		dockerEngine: dockerengine.New(exec.NewCmd()),
-		mftReader:    ws,
+		fs:               fs,
+		store:            store,
+		init:             jobInitter,
+		prompt:           prompter,
+		dockerfileSel:    dockerfileSel,
+		scheduleSelector: selector.NewStaticSelector(prompter),
+		dockerEngine:     dockerengine.New(exec.NewCmd()),
+		mftReader:        ws,
 		initParser: func(path string) dockerfileParser {
 			return dockerfile.New(fs, path)
 		},
@@ -171,25 +175,24 @@ func (o *initJobOpts) Ask() error {
 	if err := o.validateDuplicateJob(); err != nil {
 		return err
 	}
-	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
-	if err == nil {
-		jobType, err := localMft.WorkloadType()
-		if err != nil {
-			return fmt.Errorf(`read "type" field for job %s from local manifest: %w`, o.name, err)
+	if !o.wsPendingCreation {
+		localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
+		if err == nil {
+			jobType, err := localMft.WorkloadType()
+			if err != nil {
+				return fmt.Errorf(`read "type" field for job %s from local manifest: %w`, o.name, err)
+			}
+			if o.wkldType != jobType {
+				return fmt.Errorf("manifest file for job %s exists with a different type %s", o.name, jobType)
+			}
+			log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
+			o.manifestExists = true
+			return nil
 		}
-		if o.wkldType != jobType {
-			return fmt.Errorf("manifest file for job %s exists with a different type %s", o.name, jobType)
+		var errNotFound *workspace.ErrFileNotExists
+		if !errors.As(err, &errNotFound) {
+			return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 		}
-		log.Infof("Manifest file for job %s already exists. Skipping configuration.\n", o.name)
-		o.manifestExists = true
-		return nil
-	}
-	var (
-		errNotFound          *workspace.ErrFileNotExists
-		errWorkspaceNotFound *workspace.ErrWorkspaceNotFound
-	)
-	if !errors.As(err, &errNotFound) && !errors.As(err, &errWorkspaceNotFound) {
-		return fmt.Errorf("read manifest file for job %s: %w", o.name, err)
 	}
 	dfSelected, err := o.askDockerfile()
 	if err != nil {
@@ -347,7 +350,7 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 			return false, fmt.Errorf("check if docker engine is running: %w", err)
 		}
 	}
-	df, err := o.sel.Dockerfile(
+	df, err := o.dockerfileSel.Dockerfile(
 		fmt.Sprintf(fmtWkldInitDockerfilePrompt, color.HighlightUserInput(o.name)),
 		fmt.Sprintf(fmtWkldInitDockerfilePathPrompt, color.HighlightUserInput(o.name)),
 		wkldInitDockerfileHelpPrompt,
@@ -367,7 +370,7 @@ func (o *initJobOpts) askDockerfile() (isDfSelected bool, err error) {
 }
 
 func (o *initJobOpts) askSchedule() error {
-	schedule, err := o.sel.Schedule(
+	schedule, err := o.scheduleSelector.Schedule(
 		jobInitSchedulePrompt,
 		jobInitScheduleHelp,
 		validateSchedule,
