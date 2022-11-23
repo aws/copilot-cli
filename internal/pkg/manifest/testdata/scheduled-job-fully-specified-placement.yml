@@ -31,6 +31,10 @@ memory: 512    # Amount of memory in MiB used by the task.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 
 # You can override any of the values defined above by environment.
-#environments:
-#  prod:
-#    cpu: 2048               # Larger CPU value for prod environment 
+environments:  
+  phonetool:
+    network:
+      vpc:
+        placement: 'private' # Placement is set to private for environment "phonetool" containing only private subnets.
+#   prod:
+#     cpu: 2048              # Larger CPU value for prod environment.

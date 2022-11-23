@@ -83,14 +83,13 @@ subscribe:
 #       rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.
 {{- else}}
 
-# Set placement to private for environments containing only private subnets.
+# You can override any of the values defined above by environment.
 environments: {{ range $key, $value := .Environments}} 
   {{$key}}:
     network:
       vpc:
-        placement: '{{$value.Network.VPC.Placement.PlacementString}}' # Set placement to private for environments containing only on private subnets.  
+        placement: '{{$value.Network.VPC.Placement.PlacementString}}' # Placement is set to private for environment "{{$key}}" containing only private subnets. 
 {{- end}}
-# You can override any of the values defined above by environment.
 #   test:
 #     count: 2                # Number of tasks to run for the "test" environment.
 #       deployment:           # The deployment strategy for the "test" environment.

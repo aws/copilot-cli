@@ -337,7 +337,7 @@ func (o *initSvcOpts) Execute() error {
 			o.platform = &platform
 		}
 	}
-	// Environments that are deployed to the VPC has only private subnets.
+	// Environments that are deployed have​ only private subnets.
 	envs, err := o.isSubnetsOnlyPrivate()
 	if err != nil {
 		return err
@@ -731,7 +731,7 @@ func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error
 	}, nil
 }
 
-// isSubnetsOnlyPrivate returns the list of environment names deployed on private only subnets.
+// isSubnetsOnlyPrivate returns the list of environments names deployed that contains only private subnets.
 func (o *initSvcOpts) isSubnetsOnlyPrivate() ([]string, error) {
 	envs, err := o.store.ListEnvironments(o.appName)
 	if err != nil {

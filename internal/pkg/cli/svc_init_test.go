@@ -1175,20 +1175,17 @@ type: Environment`), nil)
 			},
 			wantedErr: errors.New("redirect docker engine platform: Windows is not supported for App Runner services"),
 		},
-		"failure if appname is not provided": {
+		"failure": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
-			// mockSvcInit: func(m *mocks.MocksvcInitializer) {
-			// 	m.EXPECT().Service(gomock.Any()).Return("", errors.New("some error"))
-			// },
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments("").Return(nil, errors.New("some error"))
 			},
 			wantedErr: errors.New("some error"),
 		},
-		"environments with only private subnets": {
+		"initalize a service in environments with only private subnets": {
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",

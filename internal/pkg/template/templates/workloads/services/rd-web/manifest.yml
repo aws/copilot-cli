@@ -75,16 +75,14 @@ network:
 #       LOG_LEVEL: debug        # Log level for the "test" environment.
 {{- else}}
 
-# Set placement to private for environments containing only private subnets.
+# You can override any of the values defined above by environment.
 environments: {{ range $key, $value := .Environments}} 
   {{$key}}:
     network:
       vpc:
-        placement: '{{$value.Network.VPC.Placement.PlacementString}}'
+        placement: '{{$value.Network.VPC.Placement.PlacementString}}' # Placement is set to private for environment "{{$key}}" containing only private subnets.
 {{- end}} 
-# You can override any of the values defined above by environment.
-# environments:
 #   test:
 #     variables:
-#       LOG_LEVEL: debug        # Log level for the "test" environment.  
+#       LOG_LEVEL: debug        # Log level for the "test" environment.
 {{- end}}

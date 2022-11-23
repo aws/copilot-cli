@@ -762,7 +762,7 @@ type: Environment`), nil)
 			},
 			wantedErr: errors.New("get docker engine platform: some error"),
 		},
-		"environments with only private subnets": {
+		"initialize a job in environments with only private subnets": {
 			inApp:              "sample",
 			inName:             "mailer",
 			inType:             manifest.ScheduledJobType,
