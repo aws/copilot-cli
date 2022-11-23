@@ -961,6 +961,24 @@ func TestWorkerService_validate(t *testing.T) {
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
 		},
+		"error if service connect is enabled without any port exposed": {
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					Network: NetworkConfig{
+						Connect: ServiceConnectBoolOrArgs{
+							ServiceConnectArgs: ServiceConnectArgs{
+								Alias: aws.String("some alias"),
+							},
+						},
+					},
+				},
+				Workload: Workload{
+					Name: aws.String("api"),
+				},
+			},
+			wantedError: fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`),
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
