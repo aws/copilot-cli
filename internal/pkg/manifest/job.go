@@ -67,11 +67,12 @@ type JobFailureHandlerConfig struct {
 // ScheduledJobProps contains properties for creating a new scheduled job manifest.
 type ScheduledJobProps struct {
 	*WorkloadProps
-	Schedule    string
-	Timeout     string
-	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
-	Platform    PlatformArgsOrString // Optional platform configuration.
-	Retries     int
+	Schedule                string
+	Timeout                 string
+	HealthCheck             ContainerHealthCheck // Optional healthcheck configuration.
+	Platform                PlatformArgsOrString // Optional platform configuration.
+	Retries                 int
+	PrivateOnlyEnvironments []string
 }
 
 // NewScheduledJob creates a new scheduled job object.
@@ -92,6 +93,17 @@ func NewScheduledJob(props *ScheduledJobProps) *ScheduledJob {
 		job.Retries = aws.Int(props.Retries)
 	}
 	job.Timeout = stringP(props.Timeout)
+	for _, envName := range props.PrivateOnlyEnvironments {
+		job.Environments[envName] = &ScheduledJobConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	job.parser = template.New()
 	return job
 }
@@ -178,5 +190,6 @@ func newDefaultScheduledJob() *ScheduledJob {
 				},
 			},
 		},
+		Environments: map[string]*ScheduledJobConfig{},
 	}
 }

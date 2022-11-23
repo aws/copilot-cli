@@ -552,12 +552,25 @@ type: Scheduled Job`), nil)
 }
 
 func TestJobInitOpts_Execute(t *testing.T) {
+	mockmanifest := []byte(`name: test
+type: Environment
+network:
+  vpc:
+   id: 'vpc-mockid'
+   subnets:
+      private:
+        - id: 'subnet-1'
+        - id: 'subnet-2'
+        - id: 'subnet-3'
+        - id: 'subnet-4'`)
 	second := time.Second
 	zero := 0
 	testCases := map[string]struct {
 		mockJobInit      func(m *mocks.MockjobInitializer)
 		mockDockerfile   func(m *mocks.MockdockerfileParser)
 		mockDockerEngine func(m *mocks.MockdockerEngine)
+		mockStore        func(m *mocks.Mockstore)
+		mockEnvDescriber func(m *mocks.MockenvDescriber)
 
 		inApp      string
 		inName     string
@@ -610,11 +623,26 @@ func TestJobInitOpts_Execute(t *testing.T) {
 					},
 				}).Return("manifest/path", nil)
 			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
+					{
+						App:  "sample",
+						Name: "test",
+					},
+				}, nil)
+			},
+			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
+				m.EXPECT().Manifest().Return([]byte(`name: test
+type: Environment`), nil)
+			},
 		},
 		"fail to init job": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
 				m.EXPECT().CheckDockerEngineRunning().Return(nil)
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("").Return(nil, nil)
 			},
 			mockJobInit: func(m *mocks.MockjobInitializer) {
 				m.EXPECT().Job(gomock.Any()).Return("", errors.New("some error"))
@@ -662,6 +690,18 @@ func TestJobInitOpts_Execute(t *testing.T) {
 					},
 				}).Return("manifest/path", nil)
 			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
+					{
+						App:  "sample",
+						Name: "test",
+					},
+				}, nil)
+			},
+			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
+				m.EXPECT().Manifest().Return([]byte(`name: test
+type: Environment`), nil)
+			},
 		},
 		"doesn't complain if docker is unavailable": {
 			inApp:              "sample",
@@ -703,6 +743,17 @@ func TestJobInitOpts_Execute(t *testing.T) {
 					},
 				}).Return("manifest/path", nil)
 			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
+					{
+						App:  "sample",
+						Name: "test",
+					},
+				}, nil)
+			},
+			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
+				m.EXPECT().Manifest().Return([]byte(``), nil)
+			},
 		},
 		"return error if platform detection fails": {
 			mockDockerEngine: func(m *mocks.MockdockerEngine) {
@@ -710,6 +761,59 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				m.EXPECT().GetPlatform().Return("", "", errors.New("some error"))
 			},
 			wantedErr: errors.New("get docker engine platform: some error"),
+		},
+		"environments with only private subnets": {
+			inApp:              "sample",
+			inName:             "mailer",
+			inType:             manifest.ScheduledJobType,
+			inDf:               "./Dockerfile",
+			inSchedule:         "@hourly",
+			wantedManifestPath: "manifest/path",
+
+			mockDockerfile: func(m *mocks.MockdockerfileParser) {
+				m.EXPECT().GetHealthCheck().Return(&dockerfile.HealthCheck{
+					Cmd:         []string{"mockCommand"},
+					Interval:    second,
+					Timeout:     second,
+					StartPeriod: second,
+					Retries:     zero,
+				}, nil)
+			},
+			mockDockerEngine: func(m *mocks.MockdockerEngine) {
+				m.EXPECT().CheckDockerEngineRunning().Return(nil)
+				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
+			},
+			mockJobInit: func(m *mocks.MockjobInitializer) {
+				m.EXPECT().Job(&initialize.JobProps{
+					WorkloadProps: initialize.WorkloadProps{
+						App:                     "sample",
+						Name:                    "mailer",
+						Type:                    "Scheduled Job",
+						DockerfilePath:          "./Dockerfile",
+						Platform:                manifest.PlatformArgsOrString{},
+						PrivateOnlyEnvironments: []string{"test"},
+					},
+					Schedule: "@hourly",
+					HealthCheck: manifest.ContainerHealthCheck{
+						Command:     []string{"mockCommand"},
+						Interval:    &second,
+						Retries:     &zero,
+						Timeout:     &second,
+						StartPeriod: &second,
+					},
+				}).Return("manifest/path", nil)
+			},
+			mockStore: func(m *mocks.Mockstore) {
+				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
+					{
+						App:  "sample",
+						Name: "test",
+					},
+				}, nil)
+			},
+			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
+				m.EXPECT().Manifest().Return(mockmanifest, nil)
+			},
 		},
 	}
 	for name, tc := range testCases {
@@ -721,6 +825,8 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			mockJobInitializer := mocks.NewMockjobInitializer(ctrl)
 			mockDockerfile := mocks.NewMockdockerfileParser(ctrl)
 			mockDockerEngine := mocks.NewMockdockerEngine(ctrl)
+			mockStore := mocks.NewMockstore(ctrl)
+			mockEnvDescriber := mocks.NewMockenvDescriber(ctrl)
 
 			if tc.mockJobInit != nil {
 				tc.mockJobInit(mockJobInitializer)
@@ -730,6 +836,12 @@ func TestJobInitOpts_Execute(t *testing.T) {
 			}
 			if tc.mockDockerEngine != nil {
 				tc.mockDockerEngine(mockDockerEngine)
+			}
+			if tc.mockStore != nil {
+				tc.mockStore(mockStore)
+			}
+			if tc.mockEnvDescriber != nil {
+				tc.mockEnvDescriber(mockEnvDescriber)
 			}
 
 			opts := initJobOpts{
@@ -748,6 +860,10 @@ func TestJobInitOpts_Execute(t *testing.T) {
 				},
 				dockerEngine:   mockDockerEngine,
 				manifestExists: tc.inManifestExists,
+				store:          mockStore,
+				envDescriber: func(s string) (envDescriber, error) {
+					return mockEnvDescriber, nil
+				},
 			}
 
 			// WHEN

@@ -337,6 +337,7 @@ func (o *initSvcOpts) Execute() error {
 			o.platform = &platform
 		}
 	}
+	// Environments that are deployed to the VPC has only private subnets.
 	envs, err := o.isSubnetsOnlyPrivate()
 	if err != nil {
 		return err

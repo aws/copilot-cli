@@ -276,11 +276,12 @@ func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 				Dockerfile: i.DockerfilePath,
 				Image:      i.Image,
 			},
-			HealthCheck: i.HealthCheck,
-			Platform:    i.Platform,
-			Schedule:    i.Schedule,
-			Timeout:     i.Timeout,
-			Retries:     i.Retries,
+			HealthCheck:             i.HealthCheck,
+			Platform:                i.Platform,
+			Schedule:                i.Schedule,
+			Timeout:                 i.Timeout,
+			Retries:                 i.Retries,
+			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 		}), nil
 	default:
 		return nil, fmt.Errorf("job type %s doesn't have a manifest", i.Type)

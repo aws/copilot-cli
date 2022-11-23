@@ -46,7 +46,23 @@ platform: {{.Platform.PlatformString}}   # See https://aws.github.io/copilot-cli
 #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 
+{{- if not .Environments}}
+
 # You can override any of the values defined above by environment.
 #environments:
 #  prod:
-#    cpu: 2048               # Larger CPU value for prod environment 
+#    cpu: 2048               # Larger CPU value for prod environment. 
+{{- else}}
+
+# Set placement to private for environments containing only private subnets.
+environments: {{ range $key, $value := .Environments}} 
+  {{$key}}:
+    network:
+      vpc:
+        placement: '{{$value.Network.VPC.Placement.PlacementString}}'  
+{{- end}}
+# You can override any of the values defined above by environment.
+#environments:
+#  prod:
+#    cpu: 2048               # Larger CPU value for prod environment.    
+{{- end}}

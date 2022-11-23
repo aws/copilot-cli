@@ -820,8 +820,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				}, nil)
 			},
 			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
+				m.EXPECT().Manifest().Return([]byte(``), nil)
 			},
 			wantedManifestPath: "manifest/path",
 		},
@@ -1189,7 +1188,7 @@ type: Environment`), nil)
 			},
 			wantedErr: errors.New("some error"),
 		},
-		"return environment with only private subnets": {
+		"environments with only private subnets": {
 			inAppName:        "sample",
 			inSvcName:        "frontend",
 			inDockerfilePath: "./Dockerfile",
