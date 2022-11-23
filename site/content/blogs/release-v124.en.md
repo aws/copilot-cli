@@ -12,7 +12,7 @@ image_height: '747'
 Posted On: Nov 28, 2022
 
 The AWS Copilot core team is announcing the Copilot v1.24 release.   
-Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 350 people online and nearly 2.5k stars on [GitHub](http://github.com/aws/copilot-cli/).
+Our public [сommunity сhat](https://gitter.im/aws/copilot-cli) is growing and has over 350 people online and over 2.5k stars on [GitHub](http://github.com/aws/copilot-cli/).
 Thanks to every one of you who shows love and support for AWS Copilot.
 
 Copilot v1.24 brings several new features and improvements:
@@ -49,7 +49,7 @@ network:
     See the section [Overview](../docs/concepts/overview.en.md) for a more detailed introduction to AWS Copilot.
 
 ## ECS Service Connect Support
-ECS just launched [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html). With [Copilot support](../docs/developing/svc-to-svc-communication.en.md#service-connect)! Your private service-to-service communication will be more resilient and load-balanced, compared with that when using Service Discovery. Let's walk through how Copilot supports ECS Service Connect.
+[Copilot supports](../docs/developing/svc-to-svc-communication.en.md#service-connect) the newly launched [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html)! Your private service-to-service communication will be more resilient and load-balanced with Service Connect than with Service Discovery. Let's walk through how Copilot supports ECS Service Connect.
 
 ### (Optional) Deploy an example service
 If you don't have any existing services deployed, please follow [our tutorial](../docs/getting-started/first-app-tutorial.en.md) to deploy a simple front-end service that is accessible in your browser.
