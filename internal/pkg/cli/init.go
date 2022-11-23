@@ -110,7 +110,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	spin := termprogress.NewSpinner(log.DiagnosticWriter)
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
-	iam := iam.New(defaultSess)
+	iamClient := iam.New(defaultSess)
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
 			name: vars.appName,
@@ -129,8 +129,8 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		newWorkspace: func(appName string) (wsAppManager, error) {
 			return workspace.Create(appName, fs)
 		},
-		iam:            iam,
-		iamRoleManager: iam,
+		iam:            iamClient,
+		iamRoleManager: iamClient,
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
