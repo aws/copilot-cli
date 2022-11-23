@@ -65,7 +65,8 @@ type SvcShowOutput struct {
 	Type               string                            `json:"type"`
 	AppName            string                            `json:"application"`
 	Configs            []SvcShowConfigurations           `json:"configurations"`
-	ServiceDiscoveries []SvcShowServiceDiscoveries       `json:"serviceDiscovery"`
+	ServiceDiscoveries []SvcShowServiceEndpoints         `json:"serviceDiscovery"`
+	ServiceConnects    []SvcShowServiceEndpoints         `json:"serviceConnect"`
 	Routes             []SvcShowRoutes                   `json:"routes"`
 	Variables          []SvcShowVariables                `json:"variables"`
 	Resources          map[string][]*SvcShowResourceInfo `json:"resources"`
@@ -86,8 +87,8 @@ type SvcShowRoutes struct {
 	URL         string `json:"url"`
 }
 
-// SvcShowServiceDiscoveries contains serialized service discovery info for an service.
-type SvcShowServiceDiscoveries struct {
+// SvcShowServiceEndpoints contains serialized endpoint info for an service.
+type SvcShowServiceEndpoints struct {
 	Environment []string `json:"environment"`
 	Endpoint    string   `json:"endpoint"`
 }

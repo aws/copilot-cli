@@ -30,20 +30,19 @@ func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	w.Write([]byte("front-end"))
 }
 
-// ServiceDiscoveryGet calls the back-end service, via service-discovery.
+// ServiceConnectGet calls the back-end service, via service-connect.
 // This call should succeed and return the value from the backend service.
-// This test assumes the backend app is called "back-end". The 'service-discovery' endpoint
+// This test assumes the backend app is called "back-end". The 'service-connect' endpoint
 // of the back-end service is unreachable from the LB, so the only way to get it is
-// through service discovery. The response should be `back-end-service-discovery`
-func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-	endpoint := fmt.Sprintf("http://back-end.%s/service-discovery/", os.Getenv("COPILOT_SERVICE_DISCOVERY_ENDPOINT"))
-	resp, err := http.Get(endpoint)
+// through service connect. The response should be `back-end-service-connect`
+func ServiceConnectGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	resp, err := http.Get("http://back-end/service-connect/")
 	if err != nil {
-		log.Printf("🚨 could call service discovery endpoint: err=%s\n", err)
+		log.Printf("🚨 could call service connect endpoint: err=%s\n", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Println("Get on ServiceDiscovery endpoint Succeeded")
+	log.Println("Get on service connect endpoint Succeeded")
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	w.WriteHeader(http.StatusOK)
@@ -123,7 +122,7 @@ func PutEFSCheck(w http.ResponseWriter, req *http.Request, ps httprouter.Params)
 func main() {
 	router := httprouter.New()
 	router.GET("/", SimpleGet)
-	router.GET("/service-discovery-test", ServiceDiscoveryGet)
+	router.GET("/service-connect-test", ServiceConnectGet)
 	router.GET("/magicwords/", GetMagicWords)
 	router.GET("/job-checker/", GetJobCheck)
 	router.GET("/job-setter/", SetJobCheck)
