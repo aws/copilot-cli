@@ -44,7 +44,7 @@ func ServiceGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) 
 		return
 	}
 	log.Println("Get on service connect endpoint Succeeded")
-	sdEndpoint := fmt.Sprintf("http://back-end.%s/service-discovery/", os.Getenv("COPILOT_SERVICE_DISCOVERY_ENDPOINT"))
+	sdEndpoint := fmt.Sprintf("http://back-end.%s/service-endpoint/", os.Getenv("COPILOT_SERVICE_DISCOVERY_ENDPOINT"))
 	resp, err = http.Get(sdEndpoint)
 	if err != nil {
 		log.Printf("🚨 could call service discovery endpoint: err=%s\n", err)
