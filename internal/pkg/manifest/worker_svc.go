@@ -232,7 +232,7 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 // setSubscriptionQueueDefaults function modifies the manifest to have
 // 1. FIFO Topic names without ".fifo" suffix.
 // 2. If there are both FIFO and Standard topic subscriptions are specified then set
-//     default events queue to FIFO and add standard topic-specific queue for all the standard topic subscriptions.
+//    default events queue to FIFO and add standard topic-specific queue for all the standard topic subscriptions.
 // 3. If there are only Standard topic subscriptions are specified then do nothing and return.
 func setSubscriptionQueueDefaults(topics []TopicSubscription, eventsQueue *SQSQueue) {
 	var isFIFOEnabled bool
