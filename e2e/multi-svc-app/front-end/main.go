@@ -43,6 +43,7 @@ func ServiceGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Println("Get on service connect endpoint Succeeded")
 	sdEndpoint := fmt.Sprintf("http://back-end.%s/service-discovery/", os.Getenv("COPILOT_SERVICE_DISCOVERY_ENDPOINT"))
 	resp, err = http.Get(sdEndpoint)
 	if err != nil {
@@ -50,7 +51,7 @@ func ServiceGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Println("Get on service connect endpoint Succeeded")
+	log.Println("Get on service discovery endpoint Succeeded")
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	w.WriteHeader(http.StatusOK)
