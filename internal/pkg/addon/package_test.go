@@ -456,7 +456,7 @@ func TestEnvironmentAddonStack_PackagePackage(t *testing.T) {
 	lambdaZipHash.Write([]byte("test.js " + info.Mode().String()))
 
 	indexZipS3PathForEnvironmentAddon := fmt.Sprintf("manual/addons/environments/assets/%s", hex.EncodeToString(indexZipHash.Sum(nil)))
-	t.Run(fmt.Sprintf("package zipped AWS::Lambda::Function for environment addons"), func(t *testing.T) {
+	t.Run("package zipped AWS::Lambda::Function for environment addons", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
