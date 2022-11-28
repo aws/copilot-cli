@@ -57,9 +57,11 @@ platform: {{.Platform.PlatformString}}   # See https://aws.github.io/copilot-cli
 # You can override any of the values defined above by environment.
 environments: {{ range $key, $value := .Environments}} 
   {{$key}}:
+{{- if $value.Network.VPC.Placement.PlacementString}}
     network:
       vpc:
-        placement: '{{$value.Network.VPC.Placement.PlacementString}}' # Placement is set to private for environment "{{$key}}" containing only private subnets.
+        placement: '{{$value.Network.VPC.Placement.PlacementString}}' # Placement is set to 'private' for environment "{{$key}}", which contains only private subnets.
+{{- end}}
 {{- end}}
 #   prod:
 #     cpu: 2048              # Larger CPU value for prod environment. 

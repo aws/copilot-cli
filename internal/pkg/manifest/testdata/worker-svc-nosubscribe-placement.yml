@@ -40,8 +40,8 @@ environments:
   phonetool:
     network:
       vpc:
-        placement: 'private' # Placement is set to private for environment "phonetool" containing only private subnets.
+        placement: 'private' # Placement is set to 'private' for environment "phonetool", which contains only private subnets.
 #   test:
-#     count: 2                # Number of tasks to run for the "test" environment.
-#       deployment:           # The deployment strategy for the "test" environment.
+#     count: 2               # Number of tasks to run for the "test" environment.
+#     deployment:            # The deployment strategy for the "test" environment.
 #         rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.

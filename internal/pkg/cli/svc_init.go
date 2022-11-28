@@ -338,7 +338,7 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 	// Environments that are deployed have​ only private subnets.
-	envs, err := o.isSubnetsOnlyPrivate()
+	envs, err := o.hasOnlyPrivateSubnets()
 	if err != nil {
 		return err
 	}
@@ -731,8 +731,8 @@ func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error
 	}, nil
 }
 
-// isSubnetsOnlyPrivate returns the list of environments names deployed that contains only private subnets.
-func (o *initSvcOpts) isSubnetsOnlyPrivate() ([]string, error) {
+// hasOnlyPrivateSubnets returns the list of environments names deployed that contains only private subnets.
+func (o *initSvcOpts) hasOnlyPrivateSubnets() ([]string, error) {
 	envs, err := o.store.ListEnvironments(o.appName)
 	if err != nil {
 		return nil, err

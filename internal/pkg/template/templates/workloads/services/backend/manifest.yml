@@ -71,12 +71,14 @@ exec: true     # Enable running commands in your container.
 # You can override any of the values defined above by environment.
 environments: {{ range $key, $value := .Environments}} 
   {{$key}}:
+{{- if $value.Network.VPC.Placement.PlacementString}}
     network:
       vpc:
-        placement: '{{$value.Network.VPC.Placement.PlacementString}}' # Placement is set to private for environment "{{$key}}" containing only private subnets.
+        placement: '{{$value.Network.VPC.Placement.PlacementString}}' # Placement is set to 'private' for environment "{{$key}}", which contains only private subnets.
+{{- end}}
 {{- end}}
 #   test:
 #     count: 2                # Number of tasks to run for the "test" environment.
-#       deployment:           # The deployment strategy for the "test" environment.
-#         rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.     
+#     deployment:           # The deployment strategy for the "test" environment.
+#         rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments. 
 {{- end}}

@@ -50,7 +50,7 @@ environments:
   phonetool:
     network:
       vpc:
-        placement: 'private' # Placement is set to private for environment "phonetool" containing only private subnets. 
+        placement: 'private' # Placement is set to 'private' for environment "phonetool", which contains only private subnets.
 #   test:
 #     variables:
 #       LOG_LEVEL: debug        # Log level for the "test" environment.
