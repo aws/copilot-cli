@@ -203,6 +203,21 @@ func (m *MockecsClient) EXPECT() *MockecsClientMockRecorder {
 	return m.recorder
 }
 
+// Service mocks base method.
+func (m *MockecsClient) Service(app, env, svc string) (*ecs.Service, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service", app, env, svc)
+	ret0, _ := ret[0].(*ecs.Service)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service.
+func (mr *MockecsClientMockRecorder) Service(app, env, svc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockecsClient)(nil).Service), app, env, svc)
+}
+
 // TaskDefinition mocks base method.
 func (m *MockecsClient) TaskDefinition(app, env, svc string) (*ecs.TaskDefinition, error) {
 	m.ctrl.T.Helper()
@@ -465,6 +480,21 @@ func (m *MockecsDescriber) Secrets() ([]*ecs.ContainerSecret, error) {
 func (mr *MockecsDescriberMockRecorder) Secrets() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Secrets", reflect.TypeOf((*MockecsDescriber)(nil).Secrets))
+}
+
+// ServiceConnectDNSNames mocks base method.
+func (m *MockecsDescriber) ServiceConnectDNSNames() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ServiceConnectDNSNames")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ServiceConnectDNSNames indicates an expected call of ServiceConnectDNSNames.
+func (mr *MockecsDescriberMockRecorder) ServiceConnectDNSNames() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceConnectDNSNames", reflect.TypeOf((*MockecsDescriber)(nil).ServiceConnectDNSNames))
 }
 
 // ServiceStackResources mocks base method.

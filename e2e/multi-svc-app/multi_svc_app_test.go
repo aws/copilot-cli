@@ -199,6 +199,11 @@ var _ = Describe("Multiple Service App", func() {
 			routeURL string
 		)
 		BeforeAll(func() {
+			_, backEndDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
+				Name:     "back-end",
+				EnvName:  "test",
+				ImageTag: "gallopinggurdey",
+			})
 			_, frontEndDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
 				Name:     "front-end",
 				EnvName:  "test",
@@ -211,11 +216,6 @@ var _ = Describe("Multiple Service App", func() {
 			})
 			_, wwwDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
 				Name:     "www",
-				EnvName:  "test",
-				ImageTag: "gallopinggurdey",
-			})
-			_, backEndDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
-				Name:     "back-end",
 				EnvName:  "test",
 				ImageTag: "gallopinggurdey",
 			})
@@ -301,15 +301,15 @@ var _ = Describe("Multiple Service App", func() {
 			Expect(svcs["back-end"].Type).To(Equal("Backend Service"))
 		})
 
-		It("service discovery should be enabled and working", func() {
+		It("service internal endpoint should be enabled and working", func() {
 			// The front-end service is set up to have a path called
-			// "/front-end/service-discovery-test" - this route
+			// "/front-end/service-endpoint-test" - this route
 			// calls a function which makes a call via the service
-			// discovery endpoint, "back-end.local". If that back-end
+			// connect/discovery endpoint, "back-end.local". If that back-end
 			// call succeeds, the back-end returns a response
-			// "back-end-service-discovery". This should be forwarded
+			// "back-end-service". This should be forwarded
 			// back to us via the front-end api.
-			// [test] -- http req -> [front-end] -- service-discovery -> [back-end]
+			// [test] -- http req -> [front-end] -- service-connect -> [back-end]
 			svcName := "front-end"
 			svc, svcShowErr := cli.SvcShow(&client.SvcShowRequest{
 				AppName: appName,
@@ -317,15 +317,17 @@ var _ = Describe("Multiple Service App", func() {
 			})
 			Expect(svcShowErr).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
+			Expect(len(svc.ServiceConnects)).To(Equal(1))
+			Expect(svc.ServiceConnects[0].Endpoint).To(Equal(fmt.Sprintf("%s:80", svcName)))
 
-			// Calls the front end's service discovery endpoint - which should connect
+			// Calls the front end's service connect/discovery endpoint - which should connect
 			// to the backend, and pipe the backend response to us.
 			route := svc.Routes[0]
 
 			Expect(route.Environment).To(Equal("test"))
 			routeURL = route.URL
 
-			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-discovery-test/", route.URL))
+			resp, fetchErr := http.Get(fmt.Sprintf("%s/service-endpoint-test/", route.URL))
 			Expect(fetchErr).NotTo(HaveOccurred())
 			Expect(resp.StatusCode).To(Equal(200))
 
@@ -333,8 +335,7 @@ var _ = Describe("Multiple Service App", func() {
 			// name as the value.
 			bodyBytes, err := ioutil.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(bodyBytes)).To(Equal("back-end-service-discovery"))
-
+			Expect(string(bodyBytes)).To(Equal("back-end-service"))
 		})
 
 		It("should be able to write to EFS volume", func() {

@@ -157,6 +157,7 @@ var _ = Describe("exec flow", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
+			Expect(len(svc.ServiceConnects)).To(Equal(0))
 
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal(envName))

@@ -16,11 +16,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
 )
 
-const (
-	// NoExposedContainerPort indicates no port should be exposed for the service container.
-	NoExposedContainerPort = "-1"
-)
-
 type backendSvcReadParser interface {
 	template.ReadParser
 	ParseBackendService(template.WorkloadOpts) (*template.Content, error)
@@ -33,8 +28,7 @@ type BackendService struct {
 	httpsEnabled bool
 	albEnabled   bool
 
-	parser        backendSvcReadParser
-	SCFeatureFlag bool
+	parser backendSvcReadParser
 }
 
 // BackendServiceConfig contains data required to initialize a backend service stack.
@@ -143,7 +137,7 @@ func (s *BackendService) Template() (string, error) {
 		allowedSourceIPs = append(allowedSourceIPs, string(ipNet))
 	}
 	var scConfig *template.ServiceConnect
-	if s.manifest.ServiceConnectEnabled() {
+	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
@@ -196,7 +190,6 @@ func (s *BackendService) Template() (string, error) {
 		},
 		HostedZoneAliases:   hostedZoneAliases,
 		PermissionsBoundary: s.permBound,
-		SCFeatureFlag:       s.SCFeatureFlag,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -223,7 +216,7 @@ func (s *BackendService) httpLoadBalancerTarget() (targetContainer *string, targ
 }
 
 func (s *BackendService) containerPort() string {
-	port := NoExposedContainerPort
+	port := template.NoExposedContainerPort
 	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
 		port = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
 	}

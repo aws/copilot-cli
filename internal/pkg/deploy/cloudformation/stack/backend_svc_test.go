@@ -283,7 +283,6 @@ Outputs:
 					Key:    "sha2/count.zip",
 				},
 			},
-			ServiceConnect: &template.ServiceConnect{},
 			ExecuteCommand: &template.ExecuteCommandOpts{},
 			NestedStack: &template.WorkloadNestedStackOpts{
 				StackName:       addon.StackName,
@@ -435,7 +434,6 @@ Outputs:
 				Name: "envoy",
 				Port: "443",
 			},
-			ServiceConnect: &template.ServiceConnect{},
 			HTTPHealthCheck: template.HTTPHealthCheckOpts{
 				HealthCheckPath:    "/healthz",
 				Port:               "4200",
