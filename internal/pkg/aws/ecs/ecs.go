@@ -14,7 +14,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	ecs "github.com/aws/copilot-cli/internal/pkg/ecssdk"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/exec"
 )
 

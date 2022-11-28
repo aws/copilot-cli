@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	ecsapi "github.com/aws/copilot-cli/internal/pkg/ecssdk"
+	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"

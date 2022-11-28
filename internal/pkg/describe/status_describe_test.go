@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	ecsapi "github.com/aws/aws-sdk-go/service/ecs"
 	elbv2api "github.com/aws/aws-sdk-go/service/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudwatch"
@@ -18,7 +19,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/describe/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/ecs"
-	ecsapi "github.com/aws/copilot-cli/internal/pkg/ecssdk"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

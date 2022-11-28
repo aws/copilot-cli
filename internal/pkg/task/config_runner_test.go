@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	awsecs "github.com/aws/copilot-cli/internal/pkg/ecssdk"
+	awsecs "github.com/aws/aws-sdk-go/service/ecs"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"

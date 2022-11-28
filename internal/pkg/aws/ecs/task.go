@@ -12,7 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	ecs "github.com/aws/copilot-cli/internal/pkg/ecssdk"
+	"github.com/aws/aws-sdk-go/service/ecs"
 )
 
 const (

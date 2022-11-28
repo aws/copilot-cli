@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	ecs "github.com/aws/copilot-cli/internal/pkg/ecssdk"
+	"github.com/aws/aws-sdk-go/service/ecs"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
