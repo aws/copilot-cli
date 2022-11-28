@@ -325,14 +325,14 @@ environments:
 			}
 
 			Expect(len(svc.ServiceDiscoveries)).To(Equal(3))
-			var envs, namespaces, wantedNamespaces []string
+			var envs, endpoints, wantedEndpoints []string
 			for _, sd := range svc.ServiceDiscoveries {
 				envs = append(envs, sd.Environment[0])
-				namespaces = append(namespaces, sd.Namespace)
-				wantedNamespaces = append(wantedNamespaces, fmt.Sprintf("%s.%s.%s.local:80", svc.SvcName, sd.Environment[0], appName))
+				endpoints = append(endpoints, sd.Endpoint)
+				wantedEndpoints = append(wantedEndpoints, fmt.Sprintf("%s.%s.%s.local:80", svc.SvcName, sd.Environment[0], appName))
 			}
 			Expect(envs).To(ConsistOf("test", "prod", "shared"))
-			Expect(namespaces).To(ConsistOf(wantedNamespaces))
+			Expect(endpoints).To(ConsistOf(wantedEndpoints))
 
 			// Call each environment's endpoint and ensure it returns a 200
 			for _, env := range []string{"test", "prod", "shared"} {

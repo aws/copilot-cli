@@ -17,7 +17,7 @@ var cli *client.CLI
 var aws *client.AWS
 var appName string
 
-/**
+/*
 The multi svc suite runs through several tests focusing on creating multiple
 services in one app.
 */

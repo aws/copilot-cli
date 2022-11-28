@@ -235,6 +235,9 @@ func TestInitOpts_Run(t *testing.T) {
 				schedule:          &mockSchedule,
 				port:              &mockPort,
 				setupWorkloadInit: func(*initOpts, string) error { return nil },
+				useExistingWorkspaceForCMDs: func(opts *initOpts) error {
+					return nil
+				},
 			}
 			tc.expect(opts)
 

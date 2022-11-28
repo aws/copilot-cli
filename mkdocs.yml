@@ -59,7 +59,7 @@ nav:
       - Observability: docs/developing/observability.en.md
       - Publish/Subscribe: docs/developing/publish-subscribe.en.md
       - Secrets: docs/developing/secrets.en.md
-      - Service Discovery: docs/developing/service-discovery.en.md
+      - Service-to-Service Communication: docs/developing/svc-to-svc-communication.en.md
       - Sidecars: docs/developing/sidecars.en.md
       - Storage: docs/developing/storage.en.md
       - Task Definition Overrides: docs/developing/taskdef-overrides.en.md
@@ -210,6 +210,7 @@ plugins:
             'docs/commands/pipeline-update.ja.md': 'docs/commands/pipeline-deploy.ja.md'
             'docs/developing/additional-aws-resources.en.md': 'docs/developing/addons/modeling.en.md'
             'docs/developing/additional-aws-resources.ja.md': 'docs/developing/addons/modeling.ja.md'
+            'docs/developing/service-discovery.en.md': 'docs/developing/svc-to-svc-communication.en.md'
     - i18n:
         default_language: en
         languages:

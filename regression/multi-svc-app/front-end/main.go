@@ -13,7 +13,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-// SimpleGet just returns true no matter what
+// SimpleGet just returns true no matter what.
 func SimpleGet(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	log.Println("Get Succeeded")
 	w.WriteHeader(http.StatusOK)

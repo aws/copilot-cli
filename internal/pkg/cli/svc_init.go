@@ -184,13 +184,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
+	sel, err := selector.NewLocalFileSelector(prompter, fs)
+	if err != nil {
+		return nil, err
+	}
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
 		fs:           fs,
 		init:         initSvc,
 		prompt:       prompter,
-		sel:          selector.NewWorkspaceSelector(prompter, ws),
+		sel:          sel,
 		topicSel:     snsSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
@@ -263,7 +267,7 @@ func (o *initSvcOpts) Ask() error {
 		if err := o.validateSvc(); err != nil {
 			return err
 		}
-		shouldSkipAsking, err := o.shouldSkipAsking()
+		shouldSkipAsking, err := o.manifestAlreadyExists()
 		if err != nil {
 			return err
 		}
@@ -291,7 +295,7 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.askIngressType(); err != nil {
 		return err
 	}
-	shouldSkipAsking, err := o.shouldSkipAsking()
+	shouldSkipAsking, err := o.manifestAlreadyExists()
 	if err != nil {
 		return err
 	}
@@ -487,7 +491,10 @@ func (o *initSvcOpts) askImage() error {
 	return nil
 }
 
-func (o *initSvcOpts) shouldSkipAsking() (bool, error) {
+func (o *initSvcOpts) manifestAlreadyExists() (bool, error) {
+	if o.wsPendingCreation {
+		return false, nil
+	}
 	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
 	if err != nil {
 		var (

@@ -29,11 +29,9 @@
 {{- if eq .WorkloadType "Load Balanced Web Service"}}
   PortMappings:
     - ContainerPort: !Ref ContainerPort
-    {{- if and .ServiceConnect .SCFeatureFlag}} # remove when release
     {{/* Multiple exposed port is not supported yet. Therefore, if the target container is the sidecar, the target port must be the one and only one port that the container exposes. */}}
     {{- if eq .HTTPTargetContainer.Name .WorkloadName}}
       Name: target
-    {{- end}}
     {{- end}}
 {{- if .NLB}} {{ $nlbListener := .NLB.Listener }} 
   {{- if and (eq $nlbListener.TargetContainer .WorkloadName) (ne $nlbListener.TargetPort .NLB.MainContainerPort)}}
@@ -45,11 +43,7 @@
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
 {{- if eq .WorkloadType "Backend Service"}}
 {{- if eq .HTTPTargetContainer.Name .WorkloadName}} 
-{{- if and .ServiceConnect .SCFeatureFlag}} # remove when release
   PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort, Name: target}], !Ref "AWS::NoValue"]
-{{- else}}
-  PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort}], !Ref "AWS::NoValue"]
-{{- end}}
 {{- end}}
 {{- end}}
 {{- if .HealthCheck}}

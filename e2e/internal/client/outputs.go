@@ -65,7 +65,8 @@ type SvcShowOutput struct {
 	Type               string                            `json:"type"`
 	AppName            string                            `json:"application"`
 	Configs            []SvcShowConfigurations           `json:"configurations"`
-	ServiceDiscoveries []SvcShowServiceDiscoveries       `json:"serviceDiscovery"`
+	ServiceDiscoveries []SvcShowServiceEndpoints         `json:"serviceDiscovery"`
+	ServiceConnects    []SvcShowServiceEndpoints         `json:"serviceConnect"`
 	Routes             []SvcShowRoutes                   `json:"routes"`
 	Variables          []SvcShowVariables                `json:"variables"`
 	Resources          map[string][]*SvcShowResourceInfo `json:"resources"`
@@ -86,10 +87,10 @@ type SvcShowRoutes struct {
 	URL         string `json:"url"`
 }
 
-// SvcShowServiceDiscoveries contains serialized service discovery info for an service.
-type SvcShowServiceDiscoveries struct {
+// SvcShowServiceEndpoints contains serialized endpoint info for a service.
+type SvcShowServiceEndpoints struct {
 	Environment []string `json:"environment"`
-	Namespace   string   `json:"namespace"`
+	Endpoint    string   `json:"endpoint"`
 }
 
 // SvcShowVariables contains serialized environment variables for a service.
@@ -127,7 +128,7 @@ func toSvcListOutput(jsonInput string) (*SvcListOutput, error) {
 	return &output, json.Unmarshal([]byte(jsonInput), &output)
 }
 
-//JobListOutput is the JSON output for job list.
+// JobListOutput is the JSON output for job list.
 type JobListOutput struct {
 	Jobs []WkldDescription `json:"jobs"`
 }
