@@ -128,9 +128,7 @@ func (s *StackSetStreamer) Fetch() (next time.Time, err error) {
 		}
 		return next, fmt.Errorf("describe operation %q for stack set %q: %w", s.opID, s.ssName, err)
 	}
-
 	if op.Status.IsCompleted() {
-		// There are no more stack set events, notify there is no need to Fetch again.
 		close(s.done)
 	}
 	s.retries = 0

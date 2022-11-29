@@ -173,10 +173,11 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 	streamer := NewStackStreamer(client, "arn:aws:cloudformation:us-west-2:111111:stack/phonetool-test/b3184400-1429-11ed-a574-0a587ce78f9b", startTime)
 
 	// WHEN
-	_, err := streamer.Fetch()
-
+	beforeFetch := time.Now()
+	expected, err := streamer.Fetch()
 	// THEN
 	require.NoError(t, err)
+	require.False(t, beforeFetch.Add(streamerMinFetchIntervalDurationMs*time.Millisecond).After(expected))
 	require.Equal(t, []StackEvent{
 		{
 			LogicalResourceID:  "PublicLoadBalancer",

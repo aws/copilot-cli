@@ -149,7 +149,6 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 
 			logicalID, resourceStatus := aws.StringValue(event.LogicalResourceId), aws.StringValue(event.ResourceStatus)
 			if logicalID == s.stackName && !cfn.StackStatus(resourceStatus).InProgress() {
-				// The stack is done, notify that there is no need for another Fetch call beyond this point.
 				close(s.done)
 			}
 			events = append(events, StackEvent{
@@ -171,8 +170,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	// Store events to flush in chronological order.
 	reverse(events)
 	s.eventsToFlush = append(s.eventsToFlush, events...)
-	// Only use exponential backoff if there's an error.
-	return nextFetchDate(s.clock, s.rand, 0), nil
+	return nextFetchDate(s.clock, s.rand, s.retries), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.

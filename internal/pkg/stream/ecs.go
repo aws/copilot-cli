@@ -143,13 +143,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 		}
 		deployments = append(deployments, rollingDeploy)
 		if isDeploymentDone(rollingDeploy, s.deploymentCreationTime) {
-			// The deployment is done, notify that there is no need for another Fetch call beyond this point.
-			// In stream.Stream, it's possible that both the <-Done() event is available as well as another Fetch()
-			// call. In order to guarantee that we don't try to close the same stream multiple times, we wrap it with a
-			// sync.Once.
-			s.once.Do(func() {
-				close(s.done)
-			})
+			close(s.done)
 		}
 	}
 	var failureMsgs []string
@@ -170,7 +164,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
 	})
-	return nextFetchDate(s.clock, s.rand, 0), nil
+	return nextFetchDate(s.clock, s.rand, s.retries), nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.
