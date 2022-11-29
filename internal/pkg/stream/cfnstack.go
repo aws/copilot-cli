@@ -59,7 +59,6 @@ type StackStreamer struct {
 	changeSetCreationTime time.Time
 
 	subscribers   []chan StackEvent
-	done          chan struct{}
 	isDone        bool
 	pastEventIDs  map[string]bool
 	eventsToFlush []StackEvent
@@ -78,7 +77,6 @@ func NewStackStreamer(cfn StackEventsDescriber, stackID string, csCreationTime t
 		stackName:             stackARN(stackID).name(),
 		changeSetCreationTime: csCreationTime,
 		pastEventIDs:          make(map[string]bool),
-		done:                  make(chan struct{}),
 	}
 }
 
@@ -113,8 +111,8 @@ func (s *StackStreamer) Subscribe() <-chan StackEvent {
 
 // Fetch retrieves and stores any new CloudFormation stack events since the ChangeSetCreationTime in chronological order.
 // If an error occurs from describe stack events, returns a wrapped error.
-// Otherwise, returns the time the next Fetch should be attempted.
-func (s *StackStreamer) Fetch() (next time.Time, err error) {
+// Otherwise, returns the time the next Fetch should be attempted, and if the stack is done.
+func (s *StackStreamer) Fetch() (next time.Time, done bool, err error) {
 	var events []StackEvent
 	var nextToken *string
 	for {
@@ -130,9 +128,9 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 			// Check for throttles and wait to try again using the StackStreamer's interval.
 			if request.IsErrorThrottle(err) {
 				s.retries += 1
-				return nextFetchDate(s.clock, s.rand, s.retries), nil
+				return nextFetchDate(s.clock, s.rand, s.retries), done, nil
 			}
-			return next, fmt.Errorf("describe stack events %s: %w", s.stackID, err)
+			return next, done, fmt.Errorf("describe stack events %s: %w", s.stackID, err)
 		}
 
 		s.retries = 0
@@ -149,7 +147,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 
 			logicalID, resourceStatus := aws.StringValue(event.LogicalResourceId), aws.StringValue(event.ResourceStatus)
 			if logicalID == s.stackName && !cfn.StackStatus(resourceStatus).InProgress() {
-				close(s.done)
+				done = true
 			}
 			events = append(events, StackEvent{
 				LogicalResourceID:    logicalID,
@@ -170,7 +168,7 @@ func (s *StackStreamer) Fetch() (next time.Time, err error) {
 	// Store events to flush in chronological order.
 	reverse(events)
 	s.eventsToFlush = append(s.eventsToFlush, events...)
-	return nextFetchDate(s.clock, s.rand, s.retries), nil
+	return nextFetchDate(s.clock, s.rand, s.retries), done, nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.
@@ -200,11 +198,6 @@ func (s *StackStreamer) Close() {
 		close(sub)
 	}
 	s.isDone = true
-}
-
-// Done returns a channel that's closed when there are no more events that can be fetched.
-func (s *StackStreamer) Done() <-chan struct{} {
-	return s.done
 }
 
 // compress retains only the last event for each unique resource physical IDs in a batch.

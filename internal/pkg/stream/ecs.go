@@ -74,7 +74,6 @@ type ECSDeploymentStreamer struct {
 	deploymentCreationTime time.Time
 
 	subscribers   []chan ECSService
-	done          chan struct{}
 	isDone        bool
 	pastEventIDs  map[string]bool
 	eventsToFlush []ECSService
@@ -93,7 +92,6 @@ func NewECSDeploymentStreamer(ecs ECSServiceDescriber, cluster, service string, 
 		cluster:                cluster,
 		service:                service,
 		deploymentCreationTime: deploymentCreationTime,
-		done:                   make(chan struct{}),
 		pastEventIDs:           make(map[string]bool),
 	}
 }
@@ -115,14 +113,14 @@ func (s *ECSDeploymentStreamer) Subscribe() <-chan ECSService {
 // until the primary deployment's running count is equal to its desired count.
 // If an error occurs from describe service, returns a wrapped err.
 // Otherwise, returns the time the next Fetch should be attempted.
-func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
+func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 	out, err := s.client.Service(s.cluster, s.service)
 	if err != nil {
 		if request.IsErrorThrottle(err) {
 			s.retries += 1
-			return nextFetchDate(s.clock, s.rand, s.retries), nil
+			return nextFetchDate(s.clock, s.rand, s.retries), done, nil
 		}
-		return next, fmt.Errorf("fetch service description: %w", err)
+		return next, done, fmt.Errorf("fetch service description: %w", err)
 	}
 	s.retries = 0
 	var deployments []ECSDeployment
@@ -142,7 +140,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 		}
 		deployments = append(deployments, rollingDeploy)
 		if isDeploymentDone(rollingDeploy, s.deploymentCreationTime) {
-			close(s.done)
+			done = true
 		}
 	}
 	var failureMsgs []string
@@ -163,7 +161,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, err error) {
 		Deployments:         deployments,
 		LatestFailureEvents: failureMsgs,
 	})
-	return nextFetchDate(s.clock, s.rand, s.retries), nil
+	return nextFetchDate(s.clock, s.rand, s.retries), done, nil
 }
 
 // Notify flushes all new events to the streamer's subscribers.
@@ -192,11 +190,6 @@ func (s *ECSDeploymentStreamer) Close() {
 		close(sub)
 	}
 	s.isDone = true
-}
-
-// Done returns a channel that's closed when there are no more events that can be fetched.
-func (s *ECSDeploymentStreamer) Done() <-chan struct{} {
-	return s.done
 }
 
 // parseRevisionFromTaskDefARN returns the revision number as string given the ARN of a task definition.

@@ -21,16 +21,13 @@ const (
 type Streamer interface {
 	// Fetch fetches events, updates the internal state of the Streamer with new events and returns the next time
 	// the Fetch call should be attempted. On failure, Fetch returns an error.
-	Fetch() (next time.Time, err error)
+	Fetch() (next time.Time, done bool, err error)
 
 	// Notify publishes all new event updates to subscribers.
 	Notify()
 
 	// Close notifies all subscribers that no more events will be sent.
 	Close()
-
-	// Done returns a channel that's closed when there are no more events to Fetch.
-	Done() <-chan struct{}
 }
 
 // Stream streams event updates by calling Fetch followed with Notify until there are no more events left.
@@ -39,6 +36,7 @@ func Stream(ctx context.Context, streamer Streamer) error {
 	defer streamer.Close()
 
 	var next time.Time
+	var done bool
 	var err error
 	for {
 		var fetchDelay time.Duration // By default there is no delay.
@@ -49,16 +47,15 @@ func Stream(ctx context.Context, streamer Streamer) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-streamer.Done():
-			// No more events to Fetch, flush and exit successfully.
-			streamer.Notify()
-			return nil
 		case <-time.After(fetchDelay):
-			next, err = streamer.Fetch()
+			next, done, err = streamer.Fetch()
 			if err != nil {
 				return err
 			}
 			streamer.Notify()
+			if done {
+				return nil
+			}
 		}
 	}
 }

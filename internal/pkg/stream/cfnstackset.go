@@ -35,7 +35,6 @@ type StackSetStreamer struct {
 
 	subsMu     sync.Mutex
 	subs       []chan StackSetOpEvent
-	done       chan struct{}
 	isDone     bool
 	lastSentOp stackset.Operation
 	curOp      stackset.Operation
@@ -50,13 +49,10 @@ type StackSetStreamer struct {
 // NewStackSetStreamer creates a StackSetStreamer for the given stack set name and operation.
 func NewStackSetStreamer(cfn StackSetDescriber, ssName, opID string, opStartTime time.Time) *StackSetStreamer {
 	return &StackSetStreamer{
-		stackset:    cfn,
-		ssName:      ssName,
-		opID:        opID,
-		opStartTime: opStartTime,
-
-		done: make(chan struct{}),
-
+		stackset:                  cfn,
+		ssName:                    ssName,
+		opID:                      opID,
+		opStartTime:               opStartTime,
 		clock:                     realClock{},
 		rand:                      rand.Intn,
 		instanceSummariesInterval: 250 * time.Millisecond,
@@ -118,22 +114,22 @@ func (s *StackSetStreamer) Subscribe() <-chan StackSetOpEvent {
 }
 
 // Fetch retrieves the latest stack set operation and buffers it.
-func (s *StackSetStreamer) Fetch() (next time.Time, err error) {
+func (s *StackSetStreamer) Fetch() (next time.Time, done bool, err error) {
 	op, err := s.stackset.DescribeOperation(s.ssName, s.opID)
 	if err != nil {
 		// Check for throttles and wait to try again using the StackSetStreamer's interval.
 		if request.IsErrorThrottle(err) {
 			s.retries += 1
-			return nextFetchDate(s.clock, s.rand, s.retries), nil
+			return nextFetchDate(s.clock, s.rand, s.retries), done, nil
 		}
-		return next, fmt.Errorf("describe operation %q for stack set %q: %w", s.opID, s.ssName, err)
+		return next, done, fmt.Errorf("describe operation %q for stack set %q: %w", s.opID, s.ssName, err)
 	}
 	if op.Status.IsCompleted() {
-		close(s.done)
+		done = true
 	}
 	s.retries = 0
 	s.curOp = op
-	return nextFetchDate(s.clock, s.rand, s.retries), nil
+	return nextFetchDate(s.clock, s.rand, s.retries), done, nil
 }
 
 // Notify publishes the stack set's operation description to subscribers only
@@ -169,9 +165,4 @@ func (s *StackSetStreamer) Close() {
 		close(sub)
 	}
 	s.isDone = true
-}
-
-// Done returns a channel that's closed when there are no more events that can be fetched.
-func (s *StackSetStreamer) Done() <-chan struct{} {
-	return s.done
 }
