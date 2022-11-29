@@ -74,7 +74,6 @@ type ECSDeploymentStreamer struct {
 	deploymentCreationTime time.Time
 
 	subscribers   []chan ECSService
-	once          sync.Once
 	done          chan struct{}
 	isDone        bool
 	pastEventIDs  map[string]bool
