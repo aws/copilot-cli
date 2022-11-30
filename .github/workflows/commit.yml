@@ -7,6 +7,7 @@ on:
 
 jobs:
   test: # same as ci/test
+    if: github.repository == "aws/copilot-cli" # don't run on forks
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go
