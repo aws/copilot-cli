@@ -17,7 +17,7 @@ func HealthCheck(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// ServiceDiscoveryGet just returns true no matter what
+// ServiceDiscoveryGet just returns true no matter what.
 func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request) {
 	log.Printf("Get on ServiceDiscovery endpoint Succeeded with message %s\n", message)
 	w.WriteHeader(http.StatusOK)
