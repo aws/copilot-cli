@@ -118,9 +118,9 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 	if err != nil {
 		if request.IsErrorThrottle(err) {
 			s.retries += 1
-			return nextFetchDate(s.clock, s.rand, s.retries), done, nil
+			return nextFetchDate(s.clock, s.rand, s.retries), false, nil
 		}
-		return next, done, fmt.Errorf("fetch service description: %w", err)
+		return next, false, fmt.Errorf("fetch service description: %w", err)
 	}
 	s.retries = 0
 	var deployments []ECSDeployment
@@ -139,9 +139,7 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 			UpdatedAt:       aws.TimeValue(deployment.UpdatedAt),
 		}
 		deployments = append(deployments, rollingDeploy)
-		if isDeploymentDone(rollingDeploy, s.deploymentCreationTime) {
-			done = true
-		}
+		done = isDeploymentDone(rollingDeploy, s.deploymentCreationTime)
 	}
 	var failureMsgs []string
 	for _, event := range out.Events {

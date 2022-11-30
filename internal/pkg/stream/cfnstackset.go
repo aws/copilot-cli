@@ -120,13 +120,11 @@ func (s *StackSetStreamer) Fetch() (next time.Time, done bool, err error) {
 		// Check for throttles and wait to try again using the StackSetStreamer's interval.
 		if request.IsErrorThrottle(err) {
 			s.retries += 1
-			return nextFetchDate(s.clock, s.rand, s.retries), done, nil
+			return nextFetchDate(s.clock, s.rand, s.retries), false, nil
 		}
-		return next, done, fmt.Errorf("describe operation %q for stack set %q: %w", s.opID, s.ssName, err)
+		return next, false, fmt.Errorf("describe operation %q for stack set %q: %w", s.opID, s.ssName, err)
 	}
-	if op.Status.IsCompleted() {
-		done = true
-	}
+	done = op.Status.IsCompleted()
 	s.retries = 0
 	s.curOp = op
 	return nextFetchDate(s.clock, s.rand, s.retries), done, nil

@@ -128,9 +128,9 @@ func (s *StackStreamer) Fetch() (next time.Time, done bool, err error) {
 			// Check for throttles and wait to try again using the StackStreamer's interval.
 			if request.IsErrorThrottle(err) {
 				s.retries += 1
-				return nextFetchDate(s.clock, s.rand, s.retries), done, nil
+				return nextFetchDate(s.clock, s.rand, s.retries), false, nil
 			}
-			return next, done, fmt.Errorf("describe stack events %s: %w", s.stackID, err)
+			return next, false, fmt.Errorf("describe stack events %s: %w", s.stackID, err)
 		}
 
 		s.retries = 0
@@ -146,9 +146,7 @@ func (s *StackStreamer) Fetch() (next time.Time, done bool, err error) {
 			}
 
 			logicalID, resourceStatus := aws.StringValue(event.LogicalResourceId), aws.StringValue(event.ResourceStatus)
-			if logicalID == s.stackName && !cfn.StackStatus(resourceStatus).InProgress() {
-				done = true
-			}
+			done = logicalID == s.stackName && !cfn.StackStatus(resourceStatus).InProgress()
 			events = append(events, StackEvent{
 				LogicalResourceID:    logicalID,
 				PhysicalResourceID:   aws.StringValue(event.PhysicalResourceId),

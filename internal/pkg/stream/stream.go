@@ -34,21 +34,13 @@ type Streamer interface {
 // If the context is canceled or Fetch errors, then Stream short-circuits and returns the error.
 func Stream(ctx context.Context, streamer Streamer) error {
 	defer streamer.Close()
-
-	var next time.Time
-	var done bool
-	var err error
 	for {
 		var fetchDelay time.Duration // By default there is no delay.
-		if now := time.Now(); next.After(now) {
-			fetchDelay = next.Sub(now)
-		}
-
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(fetchDelay):
-			next, done, err = streamer.Fetch()
+			next, done, err := streamer.Fetch()
 			if err != nil {
 				return err
 			}
@@ -56,6 +48,7 @@ func Stream(ctx context.Context, streamer Streamer) error {
 			if done {
 				return nil
 			}
+			fetchDelay = time.Until(next)
 		}
 	}
 }
