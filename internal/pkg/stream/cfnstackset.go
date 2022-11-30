@@ -124,7 +124,9 @@ func (s *StackSetStreamer) Fetch() (next time.Time, done bool, err error) {
 		}
 		return next, false, fmt.Errorf("describe operation %q for stack set %q: %w", s.opID, s.ssName, err)
 	}
-	done = op.Status.IsCompleted()
+	if op.Status.IsCompleted() {
+		done = true
+	}
 	s.retries = 0
 	s.curOp = op
 	return nextFetchDate(s.clock, s.rand, s.retries), done, nil

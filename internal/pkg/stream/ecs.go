@@ -139,7 +139,9 @@ func (s *ECSDeploymentStreamer) Fetch() (next time.Time, done bool, err error) {
 			UpdatedAt:       aws.TimeValue(deployment.UpdatedAt),
 		}
 		deployments = append(deployments, rollingDeploy)
-		done = isDeploymentDone(rollingDeploy, s.deploymentCreationTime)
+		if isDeploymentDone(rollingDeploy, s.deploymentCreationTime) {
+			done = true
+		}
 	}
 	var failureMsgs []string
 	for _, event := range out.Events {

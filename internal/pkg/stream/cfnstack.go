@@ -146,7 +146,9 @@ func (s *StackStreamer) Fetch() (next time.Time, done bool, err error) {
 			}
 
 			logicalID, resourceStatus := aws.StringValue(event.LogicalResourceId), aws.StringValue(event.ResourceStatus)
-			done = logicalID == s.stackName && !cfn.StackStatus(resourceStatus).InProgress()
+			if logicalID == s.stackName && !cfn.StackStatus(resourceStatus).InProgress() {
+				done = true
+			}
 			events = append(events, StackEvent{
 				LogicalResourceID:    logicalID,
 				PhysicalResourceID:   aws.StringValue(event.PhysicalResourceId),

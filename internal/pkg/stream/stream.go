@@ -34,8 +34,8 @@ type Streamer interface {
 // If the context is canceled or Fetch errors, then Stream short-circuits and returns the error.
 func Stream(ctx context.Context, streamer Streamer) error {
 	defer streamer.Close()
+	var fetchDelay time.Duration // By default there is no delay.
 	for {
-		var fetchDelay time.Duration // By default there is no delay.
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
