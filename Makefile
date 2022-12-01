@@ -139,7 +139,7 @@ e2e-dryrun: build # Sample command "make e2e-dryrun test=multi-env-app" to run t
 .PHONY: regression-dryrun
 regression-dryrun: build
 	@echo "Install ginkgo"
-	go install github.com/onsi/ginkgo/ginkgo@latest
+	go install github.com/onsi/ginkgo/v2/ginkgo@latest
 	@echo "Setup credentials"
 	./scripts/dryrun-creds.sh regression
 	@echo "Run the $(test) test"
