@@ -173,10 +173,11 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 	streamer := NewStackStreamer(client, "arn:aws:cloudformation:us-west-2:111111:stack/phonetool-test/b3184400-1429-11ed-a574-0a587ce78f9b", startTime)
 
 	// WHEN
-	_, err := streamer.Fetch()
-
+	beforeFetch := time.Now()
+	expected, done, err := streamer.Fetch()
 	// THEN
 	require.NoError(t, err)
+	require.False(t, beforeFetch.Add(streamerMinFetchIntervalDurationMs*time.Millisecond).After(expected))
 	require.Equal(t, []StackEvent{
 		{
 			LogicalResourceID:  "PublicLoadBalancer",
@@ -204,8 +205,7 @@ func testStackStreamer_Fetch_Success(t *testing.T) {
 			Timestamp:          startTime.Add(time.Hour),
 		},
 	}, streamer.compress(streamer.eventsToFlush), "expected eventsToFlush to appear in chronological order")
-	_, isOpen := <-streamer.Done()
-	require.False(t, isOpen, "there should be no more work to do since the stack is created")
+	require.True(t, done, "there should be no more work to do since the stack is created")
 }
 
 func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
@@ -232,7 +232,7 @@ func testStackStreamer_Fetch_PostChangeSet(t *testing.T) {
 	}
 
 	// WHEN
-	_, err := streamer.Fetch()
+	_, _, err := streamer.Fetch()
 
 	// THEN
 	require.NoError(t, err)
@@ -274,7 +274,7 @@ func testStackStreamer_Fetch_WithSeenEvents(t *testing.T) {
 	}
 
 	// WHEN
-	_, err := streamer.Fetch()
+	_, _, err := streamer.Fetch()
 
 	// THEN
 	require.NoError(t, err)
@@ -302,7 +302,7 @@ func testStackStreamer_Fetch_WithError(t *testing.T) {
 	}
 
 	// WHEN
-	_, err := streamer.Fetch()
+	_, _, err := streamer.Fetch()
 
 	// THEN
 	require.EqualError(t, err, "describe stack events phonetool-test: some error")
@@ -325,7 +325,7 @@ func testStackStreamer_Fetch_withThrottle(t *testing.T) {
 	}
 
 	// WHEN
-	nextDate, err := streamer.Fetch()
+	nextDate, _, err := streamer.Fetch()
 	maxDuration := 2 * streamerFetchIntervalDurationMs * time.Millisecond
 	require.NoError(t, err, "expect no results and no error for throttle exception")
 	require.Equal(t, nextDate, time.Date(2020, time.November, 23, 16, 0, 8, 0, time.UTC), "expect that the returned timeout (%s) is less than the maximum for backoff (%d)", time.Until(nextDate), maxDuration)
