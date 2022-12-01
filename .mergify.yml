@@ -5,8 +5,6 @@ queue_rules:
       - status-success=build (compile-windows)
       - status-success=build (compile-darwin)
       - status-success=test
-      - status-success=test-race
-      - status-success=integ-test
       - status-success=staticcheck
       - status-success=license
 
@@ -21,8 +19,6 @@ pull_request_rules:
       - status-success=build (compile-windows)
       - status-success=build (compile-darwin)
       - status-success=test
-      - status-success=test-race
-      - status-success=integ-test
       - status-success=staticcheck
       - status-success=license
       - -label~=(WIP|do-not-merge)
@@ -47,8 +43,6 @@ pull_request_rules:
       - status-success=build (compile-windows)
       - status-success=build (compile-darwin)
       - status-success=test
-      - status-success=test-race
-      - status-success=integ-test
       - status-success=staticcheck
       - status-success=license
       - author=dependabot[bot]
@@ -58,7 +52,7 @@ pull_request_rules:
       - -closed
     actions:
       review:
-       type: APPROVE
+        type: APPROVE
       queue:
         name: default
         method: squash
