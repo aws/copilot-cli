@@ -25,7 +25,7 @@ func SimpleGet(w http.ResponseWriter, req *http.Request) {
 // from the request and writes the response from the url to the response.
 func ProxyRequest(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.Query().Get("url")
-	log.Printf("Proxying request to %q\n", url)
+	log.Printf("Proxying request to %q", url)
 
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
@@ -43,7 +43,7 @@ func ProxyRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Built request")
+	log.Println("Built request")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -51,7 +51,7 @@ func ProxyRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer resp.Body.Close()
-	log.Printf("Did request")
+	log.Println("Did request")
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
