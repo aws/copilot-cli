@@ -24,9 +24,9 @@ func TestNewBackendSvc(t *testing.T) {
 				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
-				},
-				PrivateOnlyEnvironments: []string{
-					"metrics",
+					PrivateOnlyEnvironments: []string{
+						"metrics",
+					},
 				},
 			},
 			wantedManifest: &BackendService{

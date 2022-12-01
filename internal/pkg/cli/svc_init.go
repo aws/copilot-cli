@@ -155,7 +155,7 @@ type initSvcOpts struct {
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
 	// Init a new EnvDescriber using environment name.
-	envDescriber func(string) (envDescriber, error)
+	initEnvDescriber func(string, string) (envDescriber, error)
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
@@ -207,14 +207,14 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		opts.df = dockerfile.New(opts.fs, opts.dockerfilePath)
 		return opts.df
 	}
-	opts.envDescriber = func(envName string) (envDescriber, error) {
+	opts.initEnvDescriber = func(appName string, envName string) (envDescriber, error) {
 		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-			App:         opts.appName,
+			App:         appName,
 			Env:         envName,
 			ConfigStore: opts.store,
 		})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("initiate env describer: %w", err)
 		}
 		return envDescriber, nil
 	}
@@ -342,7 +342,7 @@ func (o *initSvcOpts) Execute() error {
 		}
 	}
 	// Environments that are deployed have​ only private subnets.
-	envs, err := o.hasOnlyPrivateSubnets()
+	envs, err := envsWithPrivateSubnetsOnly(o.store, o.initEnvDescriber, o.appName)
 	if err != nil {
 		return err
 	}
@@ -736,35 +736,6 @@ func parseHealthCheck(df dockerfileParser) (manifest.ContainerHealthCheck, error
 		Retries:     &hc.Retries,
 		Command:     hc.Cmd,
 	}, nil
-}
-
-// hasOnlyPrivateSubnets returns the list of environments names deployed that contains only private subnets.
-func (o *initSvcOpts) hasOnlyPrivateSubnets() ([]string, error) {
-	envs, err := o.store.ListEnvironments(o.appName)
-	if err != nil {
-		return nil, err
-	}
-	var privateOnlyEnvs []string
-	for i := range envs {
-		envDescriber, err := o.envDescriber(envs[i].Name)
-		if err != nil {
-			return nil, fmt.Errorf("initiate env describer: %w", err)
-		}
-		mft, err := envDescriber.Manifest()
-		if err != nil {
-			return nil, fmt.Errorf("read the manifest used to deploy environment %s: %w", envs[i].Name, err)
-		}
-		envConfig, err := manifest.UnmarshalEnvironment(mft)
-		if err != nil {
-			return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", envs[i].Name, err)
-		}
-		subnets := envConfig.Network.VPC.Subnets
-
-		if len(subnets.Public) == 0 && len(subnets.Private) != 0 {
-			privateOnlyEnvs = append(privateOnlyEnvs, envs[i].Name)
-		}
-	}
-	return privateOnlyEnvs, err
 }
 
 func svcTypePromptOpts() []prompt.Option {

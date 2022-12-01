@@ -61,9 +61,9 @@ func TestNewWorkerSvc(t *testing.T) {
 				WorkloadProps: WorkloadProps{
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
-				},
-				PrivateOnlyEnvironments: []string{
-					"metrics",
+					PrivateOnlyEnvironments: []string{
+						"metrics",
+					},
 				},
 			},
 			wantedManifest: &WorkerService{

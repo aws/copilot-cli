@@ -66,25 +66,8 @@ network:
 # tags:                         # Pass tags as key value pairs.
 #   project: project-name
 
-{{- if not .Environments}}
-
 # You can override any of the values defined above by environment.
 # environments:
 #   test:
 #     variables:
 #       LOG_LEVEL: debug        # Log level for the "test" environment.
-{{- else}}
-
-# You can override any of the values defined above by environment.
-environments: {{ range $key, $value := .Environments}} 
-  {{$key}}:
-{{- if $value.Network.VPC.Placement.PlacementString}}
-    network:
-      vpc:
-        placement: '{{$value.Network.VPC.Placement.PlacementString}}' # Placement is set to 'private' for environment "{{$key}}", which contains only private subnets.
-{{- end}}
-{{- end}}
-#   test:
-#     variables:
-#       LOG_LEVEL: debug        # Log level for the "test" environment.
-{{- end}}

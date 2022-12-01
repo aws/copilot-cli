@@ -41,13 +41,13 @@ func TestLoadBalancedWebService_InitialManifestIntegration(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "frontend",
 					Dockerfile: "./frontend/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"phonetool",
+					},
 				},
 				Platform: PlatformArgsOrString{
 					PlatformString: nil,
 					PlatformArgs:   PlatformArgs{},
-				},
-				PrivateOnlyEnvironments: []string{
-					"phonetool",
 				},
 			},
 			wantedTestdata: "lb-svc-placement-private.yml",
@@ -83,6 +83,9 @@ func TestBackendSvc_InitialManifestIntegration(t *testing.T) {
 				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"phonetool",
+					},
 				},
 				Platform: PlatformArgsOrString{
 					PlatformString: nil,
@@ -90,9 +93,6 @@ func TestBackendSvc_InitialManifestIntegration(t *testing.T) {
 						OSFamily: nil,
 						Arch:     nil,
 					},
-				},
-				PrivateOnlyEnvironments: []string{
-					"phonetool",
 				},
 			},
 			wantedTestdata: "backend-svc-nohealthcheck-placement.yml",
@@ -145,6 +145,9 @@ func TestWorkerSvc_InitialManifestIntegration(t *testing.T) {
 				WorkloadProps: WorkloadProps{
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"phonetool",
+					},
 				},
 				Platform: PlatformArgsOrString{
 					PlatformString: nil,
@@ -152,9 +155,6 @@ func TestWorkerSvc_InitialManifestIntegration(t *testing.T) {
 						OSFamily: nil,
 						Arch:     nil,
 					},
-				},
-				PrivateOnlyEnvironments: []string{
-					"phonetool",
 				},
 			},
 			wantedTestdata: "worker-svc-nosubscribe-placement.yml",
@@ -252,6 +252,9 @@ func TestScheduledJob_InitialManifestIntegration(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"phonetool",
+					},
 				},
 				Platform: PlatformArgsOrString{
 					PlatformString: nil,
@@ -260,9 +263,6 @@ func TestScheduledJob_InitialManifestIntegration(t *testing.T) {
 				Schedule: "0 */2 * * *",
 				Retries:  3,
 				Timeout:  "1h30m",
-				PrivateOnlyEnvironments: []string{
-					"phonetool",
-				},
 			},
 			wantedTestData: "scheduled-job-fully-specified-placement.yml",
 		},
@@ -478,48 +478,6 @@ func TestPipelineManifest_InitialManifest_Integration(t *testing.T) {
 			// THEN
 			require.Equal(t, string(wantedBytes), string(b))
 			require.NoError(t, err)
-		})
-	}
-}
-
-func TestRequestDrivenSvc_InitialManifestIntegration(t *testing.T) {
-	testCases := map[string]struct {
-		inProps RequestDrivenWebServiceProps
-
-		wantedTestdata string
-	}{
-		"with placement private": {
-			inProps: RequestDrivenWebServiceProps{
-				WorkloadProps: &WorkloadProps{
-					Name:       "testers",
-					Dockerfile: "./testers/Dockerfile",
-				},
-				Platform: PlatformArgsOrString{
-					PlatformString: nil,
-					PlatformArgs:   PlatformArgs{},
-				},
-				Port: 8000,
-				PrivateOnlyEnvironments: []string{
-					"phonetool",
-				},
-			},
-			wantedTestdata: "rdws-placement-private.yml",
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			path := filepath.Join("testdata", tc.wantedTestdata)
-			wantedBytes, err := os.ReadFile(path)
-			require.NoError(t, err)
-			manifest := NewRequestDrivenWebService(&tc.inProps)
-
-			// WHEN
-			tpl, err := manifest.MarshalBinary()
-			require.NoError(t, err)
-
-			// THEN
-			require.Equal(t, string(wantedBytes), string(tpl))
 		})
 	}
 }

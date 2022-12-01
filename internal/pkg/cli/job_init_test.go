@@ -550,7 +550,7 @@ type: Scheduled Job`), nil)
 }
 
 func TestJobInitOpts_Execute(t *testing.T) {
-	mockmanifest := []byte(`name: test
+	mockEnvironmentManifest := []byte(`name: test
 type: Environment
 network:
   vpc:
@@ -622,16 +622,7 @@ network:
 				}).Return("manifest/path", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 		},
 		"fail to init job": {
@@ -689,16 +680,7 @@ type: Environment`), nil)
 				}).Return("manifest/path", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 		},
 		"doesn't complain if docker is unavailable": {
@@ -742,15 +724,7 @@ type: Environment`), nil)
 				}).Return("manifest/path", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(``), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 		},
 		"return error if platform detection fails": {
@@ -810,7 +784,7 @@ type: Environment`), nil)
 				}, nil)
 			},
 			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return(mockmanifest, nil)
+				m.EXPECT().Manifest().Return(mockEnvironmentManifest, nil)
 			},
 		},
 	}
@@ -859,7 +833,7 @@ type: Environment`), nil)
 				dockerEngine:   mockDockerEngine,
 				manifestExists: tc.inManifestExists,
 				store:          mockStore,
-				envDescriber: func(s string) (envDescriber, error) {
+				initEnvDescriber: func(string, string) (envDescriber, error) {
 					return mockEnvDescriber, nil
 				},
 			}

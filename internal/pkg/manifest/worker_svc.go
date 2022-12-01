@@ -187,7 +187,6 @@ func (q *DeadLetterQueue) IsEmpty() bool {
 // WorkerServiceProps represents the configuration needed to create a worker service.
 type WorkerServiceProps struct {
 	WorkloadProps
-	PrivateOnlyEnvironments []string
 
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.

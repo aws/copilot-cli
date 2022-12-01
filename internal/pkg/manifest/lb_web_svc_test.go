@@ -85,6 +85,9 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"metrics",
+					},
 				},
 				Path: "/",
 				Port: 80,
@@ -94,9 +97,6 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 					Command: []string{"CMD", "curl -f http://localhost:8080 || exit 1"},
 				},
 				Platform: PlatformArgsOrString{PlatformString: (*PlatformString)(aws.String("windows/amd64"))},
-				PrivateOnlyEnvironments: []string{
-					"metrics",
-				},
 			},
 
 			wanted: &LoadBalancedWebService{

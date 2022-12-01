@@ -766,6 +766,17 @@ type: Request-Driven Web Service`), nil)
 }
 
 func TestSvcInitOpts_Execute(t *testing.T) {
+	mockEnvironmentManifest := []byte(`name: test
+type: Environment
+network:
+  vpc:
+   id: 'vpc-mockid'
+   subnets:
+      private:
+        - id: 'subnet-1'
+        - id: 'subnet-2'
+        - id: 'subnet-3'
+        - id: 'subnet-4'`)
 	testCases := map[string]struct {
 		mockSvcInit      func(m *mocks.MocksvcInitializer)
 		mockDockerfile   func(m *mocks.MockdockerfileParser)
@@ -812,15 +823,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(``), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 			wantedManifestPath: "manifest/path",
 		},
@@ -849,16 +852,7 @@ func TestSvcInitOpts_Execute(t *testing.T) {
 				m.EXPECT().GetPlatform().Return("linux", "amd64", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 			wantedManifestPath: "manifest/path",
 		},
@@ -889,18 +883,8 @@ type: Environment`), nil)
 				}).Return("manifest/path", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
-			},
-
 			wantedManifestPath: "manifest/path",
 		},
 		"doesn't complain if docker is unavailable": {
@@ -930,16 +914,7 @@ type: Environment`), nil)
 				}).Return("manifest/path", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -974,16 +949,7 @@ type: Environment`), nil)
 				m.EXPECT().GetPlatform().Return("windows", "amd64", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -1018,16 +984,7 @@ type: Environment`), nil)
 				m.EXPECT().GetPlatform().Return("linux", "arm", nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -1069,16 +1026,7 @@ type: Environment`), nil)
 				}, nil)
 			},
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -1103,16 +1051,7 @@ type: Environment`), nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -1137,16 +1076,7 @@ type: Environment`), nil)
 			},
 			mockDockerfile: func(m *mocks.MockdockerfileParser) {}, // Be sure that no dockerfile parsing happens.
 			mockStore: func(m *mocks.Mockstore) {
-				m.EXPECT().ListEnvironments("sample").Return([]*config.Environment{
-					{
-						App:  "sample",
-						Name: "test",
-					},
-				}, nil)
-			},
-			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment`), nil)
+				m.EXPECT().ListEnvironments("sample").Return(nil, nil)
 			},
 
 			wantedManifestPath: "manifest/path",
@@ -1183,7 +1113,7 @@ type: Environment`), nil)
 			mockStore: func(m *mocks.Mockstore) {
 				m.EXPECT().ListEnvironments("").Return(nil, errors.New("some error"))
 			},
-			wantedErr: errors.New("some error"),
+			wantedErr: errors.New("list environments for application : some error"),
 		},
 		"initalize a service in environments with only private subnets": {
 			inAppName:        "sample",
@@ -1224,17 +1154,7 @@ type: Environment`), nil)
 				}, nil)
 			},
 			mockEnvDescriber: func(m *mocks.MockenvDescriber) {
-				m.EXPECT().Manifest().Return([]byte(`name: test
-type: Environment
-network:
-  vpc:
-    id: 'vpc-mockid'
-    subnets:
-      private:
-        - id: 'subnet-1'
-        - id: 'subnet-2'
-        - id: 'subnet-3'
-        - id: 'subnet-4'`), nil)
+				m.EXPECT().Manifest().Return(mockEnvironmentManifest, nil)
 			},
 			wantedManifestPath: "manifest/path",
 		},
@@ -1316,7 +1236,7 @@ network:
 				store:          mockStore,
 				topicSel:       mockTopicSel,
 				manifestExists: tc.inManifestExists,
-				envDescriber: func(s string) (envDescriber, error) {
+				initEnvDescriber: func(string, string) (envDescriber, error) {
 					return mockEnvDescriber, nil
 				},
 			}

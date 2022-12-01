@@ -41,10 +41,9 @@ type BackendServiceConfig struct {
 // BackendServiceProps represents the configuration needed to create a backend service.
 type BackendServiceProps struct {
 	WorkloadProps
-	Port                    uint16
-	PrivateOnlyEnvironments []string
-	HealthCheck             ContainerHealthCheck // Optional healthcheck configuration.
-	Platform                PlatformArgsOrString // Optional platform configuration.
+	Port        uint16
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
 }
 
 // NewBackendService applies the props to a default backend service configuration with

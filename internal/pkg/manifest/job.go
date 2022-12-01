@@ -67,12 +67,11 @@ type JobFailureHandlerConfig struct {
 // ScheduledJobProps contains properties for creating a new scheduled job manifest.
 type ScheduledJobProps struct {
 	*WorkloadProps
-	Schedule                string
-	Timeout                 string
-	HealthCheck             ContainerHealthCheck // Optional healthcheck configuration.
-	Platform                PlatformArgsOrString // Optional platform configuration.
-	Retries                 int
-	PrivateOnlyEnvironments []string
+	Schedule    string
+	Timeout     string
+	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
+	Platform    PlatformArgsOrString // Optional platform configuration.
+	Retries     int
 }
 
 // NewScheduledJob creates a new scheduled job object.

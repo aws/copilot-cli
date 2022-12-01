@@ -272,16 +272,16 @@ func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 	case manifest.ScheduledJobType:
 		return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
 			WorkloadProps: &manifest.WorkloadProps{
-				Name:       i.Name,
-				Dockerfile: i.DockerfilePath,
-				Image:      i.Image,
+				Name:                    i.Name,
+				Dockerfile:              i.DockerfilePath,
+				Image:                   i.Image,
+				PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 			},
-			HealthCheck:             i.HealthCheck,
-			Platform:                i.Platform,
-			Schedule:                i.Schedule,
-			Timeout:                 i.Timeout,
-			Retries:                 i.Retries,
-			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
+			HealthCheck: i.HealthCheck,
+			Platform:    i.Platform,
+			Schedule:    i.Schedule,
+			Timeout:     i.Timeout,
+			Retries:     i.Retries,
 		}), nil
 	default:
 		return nil, fmt.Errorf("job type %s doesn't have a manifest", i.Type)
@@ -313,16 +313,16 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps)
 	}
 	props := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
-			Name:       i.Name,
-			Dockerfile: i.DockerfilePath,
-			Image:      i.Image,
+			Name:                    i.Name,
+			Dockerfile:              i.DockerfilePath,
+			Image:                   i.Image,
+			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 		},
-		Path:                    "/",
-		Port:                    i.Port,
-		HTTPVersion:             httpVersion,
-		HealthCheck:             i.HealthCheck,
-		Platform:                i.Platform,
-		PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
+		Path:        "/",
+		Port:        i.Port,
+		HTTPVersion: httpVersion,
+		HealthCheck: i.HealthCheck,
+		Platform:    i.Platform,
 	}
 	existingSvcs, err := w.Store.ListServices(i.App)
 	if err != nil {
@@ -346,10 +346,9 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 			Dockerfile: i.DockerfilePath,
 			Image:      i.Image,
 		},
-		Port:                    i.Port,
-		Platform:                i.Platform,
-		Private:                 i.Private,
-		PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
+		Port:     i.Port,
+		Platform: i.Platform,
+		Private:  i.Private,
 	}
 	return manifest.NewRequestDrivenWebService(props)
 }
@@ -357,29 +356,29 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error) {
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
-			Name:       i.Name,
-			Dockerfile: i.DockerfilePath,
-			Image:      i.Image,
+			Name:                    i.Name,
+			Dockerfile:              i.DockerfilePath,
+			Image:                   i.Image,
+			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 		},
-		Port:                    i.Port,
-		HealthCheck:             i.HealthCheck,
-		Platform:                i.Platform,
-		PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
+		Port:        i.Port,
+		HealthCheck: i.HealthCheck,
+		Platform:    i.Platform,
 	}), nil
 }
 
 func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) {
 	return manifest.NewWorkerService(manifest.WorkerServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
-			Name:       i.Name,
-			Dockerfile: i.DockerfilePath,
-			Image:      i.Image,
+			Name:                    i.Name,
+			Dockerfile:              i.DockerfilePath,
+			Image:                   i.Image,
+			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 		},
-		HealthCheck:             i.HealthCheck,
-		Platform:                i.Platform,
-		Topics:                  i.Topics,
-		Queue:                   i.Queue,
-		PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
+		HealthCheck: i.HealthCheck,
+		Platform:    i.Platform,
+		Topics:      i.Topics,
+		Queue:       i.Queue,
 	}), nil
 }
 

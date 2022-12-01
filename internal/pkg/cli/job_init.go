@@ -82,7 +82,7 @@ type initJobOpts struct {
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
 	// Init a new EnvDescriber using environment name.
-	envDescriber func(string) (envDescriber, error)
+	initEnvDescriber func(string, string) (envDescriber, error)
 }
 
 func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
@@ -124,14 +124,14 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		initParser: func(path string) dockerfileParser {
 			return dockerfile.New(fs, path)
 		},
-		envDescriber: func(envName string) (envDescriber, error) {
+		initEnvDescriber: func(appName string, envName string) (envDescriber, error) {
 			envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
-				App:         vars.appName,
+				App:         appName,
 				Env:         envName,
 				ConfigStore: store,
 			})
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("initiate env describer: %w", err)
 			}
 			return envDescriber, nil
 		},
@@ -228,30 +228,30 @@ func (o *initJobOpts) Ask() error {
 	return nil
 }
 
-// hasOnlyPrivateSubnets returns the list of environments names deployed that contains only private subnets.
-func (o *initJobOpts) hasOnlyPrivateSubnets() ([]string, error) {
-	envs, err := o.store.ListEnvironments(o.appName)
+// envsWithPrivateSubnetsOnly returns the list of environments names deployed that contains only private subnets.
+func envsWithPrivateSubnetsOnly(store store, initEnvDescriber func(string, string) (envDescriber, error), appName string) ([]string, error) {
+	envs, err := store.ListEnvironments(appName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list environments for application %s: %w", appName, err)
 	}
 	var privateOnlyEnvs []string
-	for i := range envs {
-		envDescriber, err := o.envDescriber(envs[i].Name)
+	for _, env := range envs {
+		envDescriber, err := initEnvDescriber(appName, env.Name)
 		if err != nil {
-			return nil, fmt.Errorf("initiate env describer: %w", err)
+			return nil, err
 		}
 		mft, err := envDescriber.Manifest()
 		if err != nil {
-			return nil, fmt.Errorf("read the manifest used to deploy environment %s: %w", envs[i].Name, err)
+			return nil, fmt.Errorf("read the manifest used to deploy environment %s: %w", env.Name, err)
 		}
 		envConfig, err := manifest.UnmarshalEnvironment(mft)
 		if err != nil {
-			return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", envs[i].Name, err)
+			return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", env.Name, err)
 		}
 		subnets := envConfig.Network.VPC.Subnets
 
 		if len(subnets.Public) == 0 && len(subnets.Private) != 0 {
-			privateOnlyEnvs = append(privateOnlyEnvs, envs[i].Name)
+			privateOnlyEnvs = append(privateOnlyEnvs, env.Name)
 		}
 	}
 	return privateOnlyEnvs, err
@@ -278,8 +278,7 @@ func (o *initJobOpts) Execute() error {
 			o.platform = &platform
 		}
 	}
-	// Environments that are deployed have​ only private subnets.
-	envs, err := o.hasOnlyPrivateSubnets()
+	envs, err := envsWithPrivateSubnetsOnly(o.store, o.initEnvDescriber, o.appName)
 	if err != nil {
 		return err
 	}

@@ -62,9 +62,8 @@ type LoadBalancedWebServiceConfig struct {
 // LoadBalancedWebServiceProps contains properties for creating a new load balanced fargate service manifest.
 type LoadBalancedWebServiceProps struct {
 	*WorkloadProps
-	Path                    string
-	Port                    uint16
-	PrivateOnlyEnvironments []string
+	Path string
+	Port uint16
 
 	HTTPVersion string               // Optional http protocol version such as gRPC, HTTP2.
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
