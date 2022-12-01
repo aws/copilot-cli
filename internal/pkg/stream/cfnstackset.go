@@ -113,7 +113,9 @@ func (s *StackSetStreamer) Subscribe() <-chan StackSetOpEvent {
 	return c
 }
 
-// Fetch retrieves the latest stack set operation and buffers it.
+// Fetch retrieves and stores the latest CloudFormation stack set operation.
+// If an error occurs from describing stack set operation, returns a wrapped error.
+// Otherwise, returns the time the next Fetch should be attempted and whether or not there are more operations to fetch.
 func (s *StackSetStreamer) Fetch() (next time.Time, done bool, err error) {
 	op, err := s.stackset.DescribeOperation(s.ssName, s.opID)
 	if err != nil {

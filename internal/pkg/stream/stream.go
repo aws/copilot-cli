@@ -61,6 +61,7 @@ func nextFetchDate(clock clock, rand func(int) int, retries int) time.Time {
 	// 		streamerFetchIntervalDuration*(1<<retries), // d*2^r, where r=retries and d= the normal
 	// 	)-streamerMinFetchIntervalDurationMs
 	// ) + streamerMinFetchIntervalDurationMs
+	// See https://www.educative.io/answers/how-to-generate-random-numbers-in-a-given-range-in-go
 	waitMs :=
 		rand(
 			min(

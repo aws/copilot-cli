@@ -111,7 +111,7 @@ func (s *StackStreamer) Subscribe() <-chan StackEvent {
 
 // Fetch retrieves and stores any new CloudFormation stack events since the ChangeSetCreationTime in chronological order.
 // If an error occurs from describe stack events, returns a wrapped error.
-// Otherwise, returns the time the next Fetch should be attempted, and if the stack is done.
+// Otherwise, returns the time the next Fetch should be attempted and whether or not there are more events to fetch.
 func (s *StackStreamer) Fetch() (next time.Time, done bool, err error) {
 	var events []StackEvent
 	var nextToken *string
