@@ -126,7 +126,7 @@ e2e: build-e2e
 .PHONY: e2e-dryrun
 e2e-dryrun: build # Sample command "make e2e-dryrun test=multi-env-app" to run the test suit under "e2e/multi-env-app"
 	@echo "Install ginkgo"
-	go install github.com/onsi/ginkgo/ginkgo@latest
+	go install github.com/onsi/ginkgo/v2/ginkgo@latest
 	@echo "Setup credentials"
 	./scripts/dryrun-creds.sh e2e
 	@echo "Run the $(test) test"
