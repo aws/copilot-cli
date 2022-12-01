@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Run tests
-        run: make test
+        run: make local-test
 
       - name: Upload golang coverage report to CodeCov
         uses: codecov/codecov-action@v3
