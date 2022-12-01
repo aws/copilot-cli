@@ -85,6 +85,7 @@ type SvcShowConfigurations struct {
 type SvcShowRoutes struct {
 	Environment string `json:"environment"`
 	URL         string `json:"url"`
+	Ingress     string `json:"ingress"`
 }
 
 // SvcShowServiceEndpoints contains serialized endpoint info for a service.
