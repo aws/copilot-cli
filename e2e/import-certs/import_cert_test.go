@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("Import Certificates", func() {
 
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		var appInitErr error
 
 		BeforeAll(func() {
@@ -37,7 +37,7 @@ var _ = Describe("Import Certificates", func() {
 		})
 	})
 
-	Context("when adding new environment", func() {
+	Context("when adding new environment", Ordered, func() {
 		var (
 			err error
 		)
@@ -54,7 +54,7 @@ var _ = Describe("Import Certificates", func() {
 		})
 	})
 
-	Context("when deploying the environments", func() {
+	Context("when deploying the environments", Ordered, func() {
 		var envDeployErr error
 		BeforeAll(func() {
 			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{

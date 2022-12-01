@@ -18,7 +18,7 @@ import (
 var _ = Describe("App With Domain", func() {
 	const domainName = "copilot-e2e-tests.ecs.aws.dev"
 
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		var appInitErr error
 
 		BeforeAll(func() {

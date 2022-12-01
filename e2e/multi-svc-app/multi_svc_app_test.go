@@ -19,7 +19,7 @@ var (
 )
 
 var _ = Describe("Multiple Service App", func() {
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		BeforeAll(func() {
 			_, initErr = cli.AppInit(&client.AppInitRequest{
 				AppName: appName,
@@ -46,7 +46,7 @@ var _ = Describe("Multiple Service App", func() {
 		})
 	})
 
-	Context("when adding a new environment", func() {
+	Context("when adding a new environment", Ordered, func() {
 		var (
 			testEnvInitErr error
 		)
@@ -63,7 +63,7 @@ var _ = Describe("Multiple Service App", func() {
 		})
 	})
 
-	Context("when deploying the environment", func() {
+	Context("when deploying the environment", Ordered, func() {
 		var envDeployErr error
 		BeforeAll(func() {
 			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
@@ -77,7 +77,7 @@ var _ = Describe("Multiple Service App", func() {
 		})
 	})
 
-	Context("when adding a svc", func() {
+	Context("when adding a svc", Ordered, func() {
 		var (
 			frontEndInitErr error
 			wwwInitErr      error
@@ -189,7 +189,7 @@ var _ = Describe("Multiple Service App", func() {
 		})
 	})
 
-	Context("when deploying services and jobs", func() {
+	Context("when deploying services and jobs", Ordered, func() {
 		var (
 			frontEndDeployErr error
 			wwwDeployErr      error

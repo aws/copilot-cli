@@ -19,7 +19,7 @@ var (
 )
 
 var _ = Describe("Multiple Env App", func() {
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		BeforeAll(func() {
 			_, initErr = cli.AppInit(&client.AppInitRequest{
 				AppName: appName,
@@ -49,7 +49,7 @@ var _ = Describe("Multiple Env App", func() {
 		})
 	})
 
-	Context("when adding cross account environments", func() {
+	Context("when adding cross account environments", Ordered, func() {
 		var (
 			testEnvInitErr error
 			prodEnvInitErr error
@@ -126,7 +126,7 @@ var _ = Describe("Multiple Env App", func() {
 		})
 	})
 
-	Context("when deploying the environments", func() {
+	Context("when deploying the environments", Ordered, func() {
 		var testEnvDeployErr, prodEnvDeployErr error
 		BeforeAll(func() {
 			_, testEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{

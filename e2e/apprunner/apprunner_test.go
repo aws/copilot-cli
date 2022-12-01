@@ -17,7 +17,7 @@ type countAssertionTracker struct {
 	actual   int
 }
 
-var _ = Describe("App Runner", func() {
+var _ = Describe("App Runner", Ordered, func() {
 
 	var (
 		initErr error
@@ -41,7 +41,7 @@ var _ = Describe("App Runner", func() {
 		})
 	})
 
-	Context("run svc ls to ensure the service was created", func() {
+	Context("run svc ls to ensure the service was created", Ordered, func() {
 		var (
 			svcList      *client.SvcListOutput
 			svcListError error
@@ -63,7 +63,7 @@ var _ = Describe("App Runner", func() {
 		})
 	})
 
-	Context("run svc status to ensure that the service is healthy", func() {
+	Context("run svc status to ensure that the service is healthy", Ordered, func() {
 		var (
 			out            *client.SvcStatusOutput
 			svcStatusError error
@@ -86,7 +86,7 @@ var _ = Describe("App Runner", func() {
 		})
 	})
 
-	Context("run storage init and svc deploy to create an S3 bucket and an aurora DB", func() {
+	Context("run storage init and svc deploy to create an S3 bucket and an aurora DB", Ordered, func() {
 		var (
 			s3StorageInitErr error
 			auroraInitErr    error
@@ -119,7 +119,7 @@ var _ = Describe("App Runner", func() {
 		})
 	})
 
-	Context("create and deploy a backend service", func() {
+	Context("create and deploy a backend service", Ordered, func() {
 		var (
 			initErr   error
 			deployErr error
@@ -145,7 +145,7 @@ var _ = Describe("App Runner", func() {
 		})
 	})
 
-	Context("run svc show to retrieve the service configuration, resources, and endpoint, then query the service", func() {
+	Context("run svc show to retrieve the service configuration, resources, and endpoint, then query the service", Ordered, func() {
 		var (
 			svc          *client.SvcShowOutput
 			svcShowError error
@@ -261,7 +261,7 @@ var _ = Describe("App Runner", func() {
 		}
 	})
 
-	Context("run pause and then resume the service", func() {
+	Context("run pause and then resume the service", Ordered, func() {
 		var (
 			svcPauseError         error
 			pausedSvcStatus       *client.SvcStatusOutput

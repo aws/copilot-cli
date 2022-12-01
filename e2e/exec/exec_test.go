@@ -16,7 +16,7 @@ import (
 )
 
 var _ = Describe("exec flow", func() {
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		var (
 			initErr error
 		)
@@ -47,7 +47,7 @@ var _ = Describe("exec flow", func() {
 		})
 	})
 
-	Context("when adding a new environment", func() {
+	Context("when adding a new environment", Ordered, func() {
 		var (
 			testEnvInitErr error
 		)

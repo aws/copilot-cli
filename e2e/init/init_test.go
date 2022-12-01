@@ -55,7 +55,7 @@ var _ = Describe("init flow", func() {
 		})
 	})
 
-	Context("svc ls", func() {
+	Context("svc ls", Ordered, func() {
 		var (
 			svcList      *client.SvcListOutput
 			svcListError error

@@ -66,7 +66,7 @@ logging:
 const nginxPort = "80"
 
 var _ = Describe("sidecars flow", func() {
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		var (
 			initErr error
 		)

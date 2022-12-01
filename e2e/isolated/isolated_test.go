@@ -14,7 +14,7 @@ import (
 )
 
 var _ = Describe("Isolated", func() {
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		var appInitErr error
 		BeforeAll(func() {
 			_, appInitErr = cli.AppInit(&client.AppInitRequest{
@@ -65,7 +65,7 @@ var _ = Describe("Isolated", func() {
 		})
 	})
 
-	Context("when adding environment with imported vpc resources", func() {
+	Context("when adding environment with imported vpc resources", Ordered, func() {
 		var testEnvInitErr error
 		BeforeAll(func() {
 			_, testEnvInitErr = cli.EnvInit(&client.EnvInitRequest{
@@ -81,7 +81,7 @@ var _ = Describe("Isolated", func() {
 		})
 	})
 
-	Context("when deploying the environment", func() {
+	Context("when deploying the environment", Ordered, func() {
 		var privateEnvDeployErr error
 		BeforeAll(func() {
 			_, privateEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
@@ -103,7 +103,7 @@ var _ = Describe("Isolated", func() {
 		})
 	})
 
-	Context("when creating a backend service in private subnets", func() {
+	Context("when creating a backend service in private subnets", Ordered, func() {
 		var initErr error
 		BeforeAll(func() {
 			_, initErr = cli.SvcInit(&client.SvcInitRequest{
@@ -125,7 +125,7 @@ var _ = Describe("Isolated", func() {
 		})
 	})
 
-	Context("when deploying a svc to 'private' env", func() {
+	Context("when deploying a svc to 'private' env", Ordered, func() {
 		var privateEnvDeployErr error
 		BeforeAll(func() {
 			_, privateEnvDeployErr = cli.SvcDeploy(&client.SvcDeployInput{
@@ -139,7 +139,7 @@ var _ = Describe("Isolated", func() {
 		})
 	})
 
-	Context("when running svc show to retrieve the service configuration, resources, and endpoint, then querying the service", func() {
+	Context("when running svc show to retrieve the service configuration, resources, and endpoint, then querying the service", Ordered, func() {
 		var (
 			svc          *client.SvcShowOutput
 			svcShowError error
