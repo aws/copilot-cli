@@ -64,7 +64,7 @@ var _ = Describe("exec flow", func() {
 		})
 	})
 
-	Context("when deploying the environment", func() {
+	Context("when deploying the environment", Ordered, func() {
 		var envDeployErr error
 		BeforeAll(func() {
 			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
@@ -78,7 +78,7 @@ var _ = Describe("exec flow", func() {
 		})
 	})
 
-	Context("when adding a svc", func() {
+	Context("when adding a svc", Ordered, func() {
 		var (
 			svcInitErr error
 		)
@@ -116,7 +116,7 @@ var _ = Describe("exec flow", func() {
 		})
 	})
 
-	Context("when deploying svc", func() {
+	Context("when deploying svc", Ordered, func() {
 		const newContent = "HELP I AM TRAPPED INSIDE A SHELL"
 		var (
 			appDeployErr error
@@ -262,7 +262,7 @@ var _ = Describe("exec flow", func() {
 		// })
 	})
 
-	Context("when running a one-off task", func() {
+	Context("when running a one-off task", Ordered, func() {
 		var (
 			taskRunErr error
 		)
