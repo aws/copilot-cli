@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("init flow", func() {
+var _ = Describe("init flow", Ordered, func() {
 
 	var (
 		svcName    string
@@ -77,7 +77,7 @@ var _ = Describe("init flow", func() {
 
 	})
 
-	Context("job ls", func() {
+	Context("job ls", Ordered, func() {
 		var (
 			jobList    *client.JobListOutput
 			jobListErr error
@@ -98,7 +98,7 @@ var _ = Describe("init flow", func() {
 		})
 	})
 
-	Context("svc show", func() {
+	Context("svc show", Ordered, func() {
 		var (
 			svc        *client.SvcShowOutput
 			svcShowErr error
@@ -173,7 +173,7 @@ var _ = Describe("init flow", func() {
 		})
 	})
 
-	Context("force a new svc deploy", func() {
+	Context("force a new svc deploy", Ordered, func() {
 		var err error
 		BeforeAll(func() {
 			_, err = cli.SvcDeploy(&client.SvcDeployInput{
