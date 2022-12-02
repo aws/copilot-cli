@@ -145,7 +145,7 @@ var _ = Describe("Multiple Env App", func() {
 		})
 	})
 
-	Context("when adding a svc", func() {
+	Context("when adding a svc", Ordered, func() {
 		var (
 			frontEndInitErr error
 		)
@@ -178,7 +178,7 @@ var _ = Describe("Multiple Env App", func() {
 		})
 	})
 
-	Context("when deploying a svc to test and prod envs", func() {
+	Context("when deploying a svc to test and prod envs", Ordered, func() {
 		var (
 			testDeployErr    error
 			prodEndDeployErr error
