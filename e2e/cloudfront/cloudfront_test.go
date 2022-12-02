@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
@@ -16,7 +16,7 @@ import (
 var _ = Describe("CloudFront", func() {
 	const domainName = "copilot-e2e-tests.ecs.aws.dev"
 
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		var appInitErr error
 
 		BeforeAll(func() {
@@ -46,7 +46,7 @@ var _ = Describe("CloudFront", func() {
 		})
 	})
 
-	Context("when adding new environment", func() {
+	Context("when adding new environment", Ordered, func() {
 		var err error
 		BeforeAll(func() {
 			_, err = cli.EnvInit(&client.EnvInitRequest{
@@ -60,7 +60,7 @@ var _ = Describe("CloudFront", func() {
 		})
 	})
 
-	Context("when deploying the environments", func() {
+	Context("when deploying the environments", Ordered, func() {
 		var envDeployErr error
 		BeforeAll(func() {
 			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
@@ -73,7 +73,7 @@ var _ = Describe("CloudFront", func() {
 		})
 	})
 
-	Context("when initializing Load Balanced Web Services", func() {
+	Context("when initializing Load Balanced Web Services", Ordered, func() {
 		var svcInitErr error
 		BeforeAll(func() {
 			_, svcInitErr = cli.SvcInit(&client.SvcInitRequest{

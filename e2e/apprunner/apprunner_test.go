@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -17,7 +17,7 @@ type countAssertionTracker struct {
 	actual   int
 }
 
-var _ = Describe("App Runner", func() {
+var _ = Describe("App Runner", Ordered, func() {
 
 	var (
 		initErr error

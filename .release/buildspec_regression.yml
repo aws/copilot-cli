@@ -17,7 +17,7 @@ phases:
       - 'cd $HOME/.goenv && git pull --ff-only && cd -'
       - 'goenv install 1.18.4'
       - 'goenv global 1.18.4'
-      - 'go install github.com/onsi/ginkgo/ginkgo@latest'
+      - 'go install github.com/onsi/ginkgo/v2/ginkgo@latest'
   pre_build:
     commands:
       - printenv DOCKERHUB_TOKEN | docker login --username ${DOCKERHUB_USERNAME} --password-stdin

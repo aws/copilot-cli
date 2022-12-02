@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -66,7 +66,7 @@ logging:
 const nginxPort = "80"
 
 var _ = Describe("sidecars flow", func() {
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		var (
 			initErr error
 		)
