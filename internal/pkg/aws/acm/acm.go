@@ -60,8 +60,8 @@ func (a *ACM) ValidateCertAliases(aliases []string, certs []string) error {
 			for _, alias := range validCertAliases {
 				validAliases[alias] = true
 			}
-			for k, v := range domainsperCert {
-				AllowedDomainsCert[k] = v
+			for certARN, domains := range domainsperCert {
+				AllowedDomainsCert[certARN] = domains
 			}
 			return nil
 		})
