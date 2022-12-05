@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -42,6 +43,7 @@ func New(s *session.Session) *ACM {
 // ValidateCertAliases validates if aliases are all valid against the provided ACM certificates.
 func (a *ACM) ValidateCertAliases(aliases []string, certs []string) error {
 	validAliases := make(map[string]bool)
+	AllowedDomainsCert := make(map[string][]string)
 	ctx, cancelWait := context.WithTimeout(context.Background(), waitForFindValidAliasesTimeout)
 	defer cancelWait()
 	g, ctx := errgroup.WithContext(ctx)
@@ -49,7 +51,7 @@ func (a *ACM) ValidateCertAliases(aliases []string, certs []string) error {
 	for i := range certs {
 		cert := certs[i]
 		g.Go(func() error {
-			validCertAliases, err := a.findValidAliasesAgainstCert(ctx, aliases, cert)
+			validCertAliases, domainsperCert, err := a.findValidAliasesAndAllowedDomainsAgainstCert(ctx, aliases, cert)
 			if err != nil {
 				return err
 			}
@@ -57,6 +59,9 @@ func (a *ACM) ValidateCertAliases(aliases []string, certs []string) error {
 			defer mux.Unlock()
 			for _, alias := range validCertAliases {
 				validAliases[alias] = true
+			}
+			for k, v := range domainsperCert {
+				AllowedDomainsCert[k] = v
 			}
 			return nil
 		})
@@ -66,23 +71,31 @@ func (a *ACM) ValidateCertAliases(aliases []string, certs []string) error {
 	}
 	for _, alias := range aliases {
 		if !validAliases[alias] {
+			for certARN, domains := range AllowedDomainsCert {
+				log.Infoln(fmt.Sprintf("Your imported Certificate '%s' protects the following domains:", certARN))
+				for _, domain := range domains {
+					log.Infoln(domain)
+				}
+			}
 			return fmt.Errorf("%s is not a valid domain against %s", alias, strings.Join(certs, ","))
 		}
 	}
 	return nil
 }
 
-func (a *ACM) findValidAliasesAgainstCert(ctx context.Context, aliases []string, cert string) ([]string, error) {
+func (a *ACM) findValidAliasesAndAllowedDomainsAgainstCert(ctx context.Context, aliases []string, cert string) ([]string, map[string][]string, error) {
 	resp, err := a.client.DescribeCertificateWithContext(ctx, &acm.DescribeCertificateInput{
 		CertificateArn: aws.String(cert),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("describe certificate %s: %w", cert, err)
+		return nil, nil, fmt.Errorf("describe certificate %s: %w", cert, err)
 	}
 	domainSet := make(map[string]bool)
+	domainsperCert := make(map[string][]string)
 	domainSet[aws.StringValue(resp.Certificate.DomainName)] = true
 	for _, san := range resp.Certificate.SubjectAlternativeNames {
 		domainSet[aws.StringValue(san)] = true
+		domainsperCert[cert] = append(domainsperCert[cert], aws.StringValue(san))
 	}
 	var validAliases []string
 	for _, alias := range aliases {
@@ -92,5 +105,5 @@ func (a *ACM) findValidAliasesAgainstCert(ctx context.Context, aliases []string,
 			validAliases = append(validAliases, alias)
 		}
 	}
-	return validAliases, nil
+	return validAliases, domainsperCert, nil
 }
