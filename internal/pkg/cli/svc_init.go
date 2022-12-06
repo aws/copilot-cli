@@ -341,7 +341,7 @@ func (o *initSvcOpts) Execute() error {
 			o.platform = &platform
 		}
 	}
-	// Environments that are deployed have​ only private subnets.
+	// Environments that are deployed and have​ only private subnets.
 	envs, err := envsWithPrivateSubnetsOnly(o.store, o.initEnvDescriber, o.appName)
 	if err != nil {
 		return err
