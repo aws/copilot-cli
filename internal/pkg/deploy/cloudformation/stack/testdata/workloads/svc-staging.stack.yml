@@ -109,7 +109,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               SourceVolume: persistence
           PortMappings:
             - ContainerPort: 4000
-              Name: target
+              Name: fe4000
       Volumes:
         - Name: persistence
   ExecutionRole:

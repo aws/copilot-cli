@@ -109,7 +109,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               SourceVolume: persistence
           PortMappings:
             - ContainerPort: 50051
-              Name: target
+              Name: gRPC50051
       Volumes:
         - Name: persistence
   ExecutionRole:
