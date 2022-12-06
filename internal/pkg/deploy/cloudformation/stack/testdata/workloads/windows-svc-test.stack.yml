@@ -102,7 +102,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               awslogs-stream-prefix: copilot
           PortMappings:
             - ContainerPort: 80
-              Name: target
+              Name: windows-fe80
   ExecutionRole:
     Metadata:
       'aws:copilot:description': 'An IAM Role for the Fargate agent to make AWS API calls on your behalf'

@@ -142,7 +142,6 @@ func generateMountPointJSON(mountPoints []*MountPoint) string {
 
 // PortMappingName returns name for the port mapping.
 func PortMappingName(containerName string, containerPort string) string {
-	fmt.Println("I was here ", containerName+containerPort)
 	return containerName + containerPort
 }
 
