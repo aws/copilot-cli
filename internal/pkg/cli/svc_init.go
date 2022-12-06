@@ -154,7 +154,7 @@ type initSvcOpts struct {
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
-	// Init a new EnvDescriber using environment name.
+	// Init a new EnvDescriber using environment name and app name.
 	initEnvDescriber func(string, string) (envDescriber, error)
 }
 
