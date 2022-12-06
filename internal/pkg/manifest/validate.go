@@ -821,7 +821,7 @@ func (t TaskConfig) validate() error {
 	}
 	for n, v := range t.Variables {
 		if err := v.validate(); err != nil {
-			return fmt.Errorf(`validate %q "variables"  : %w`, n, err)
+			return fmt.Errorf(`validate %q "variables": %w`, n, err)
 		}
 	}
 	for _, v := range t.Secrets {
