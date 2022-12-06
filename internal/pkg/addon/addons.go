@@ -64,7 +64,7 @@ type stack struct {
 type parser struct {
 	ws                 workspaceReader
 	filePath           func(fName string) string
-	validateParameters func(params yaml.Node, paramFilePath string) error
+	validateParameters func(params yaml.Node) error
 }
 
 // ParseFromWorkload parses the 'addon/' directory for the given workload
@@ -84,7 +84,7 @@ func ParseFromWorkload(workloadName string, ws workspaceReader) (*WorkloadStack,
 		filePath: func(fName string) string {
 			return ws.WorkloadAddonFilePath(workloadName, fName)
 		},
-		validateParameters: func(params yaml.Node, paramFilePath string) error {
+		validateParameters: func(params yaml.Node) error {
 			return validateReservedParameters(params, wkldAddonsParameterReservedKeys)
 		},
 	}
@@ -124,7 +124,7 @@ func ParseFromEnv(ws workspaceReader) (*EnvironmentStack, error) {
 		filePath: func(fName string) string {
 			return ws.EnvAddonFilePath(fName)
 		},
-		validateParameters: func(params yaml.Node, paramFilePath string) error {
+		validateParameters: func(params yaml.Node) error {
 			return validateReservedParameters(params, envAddonsParameterReservedKeys)
 		},
 	}
@@ -237,7 +237,7 @@ func (p *parser) parseParameters(fNames []string) (yaml.Node, error) {
 	if content.Parameters.IsZero() {
 		return yaml.Node{}, fmt.Errorf("must define field 'Parameters' in file %s under path %s", paramFile, path)
 	}
-	if err := p.validateParameters(content.Parameters, paramFile); err != nil {
+	if err := p.validateParameters(content.Parameters); err != nil {
 		return yaml.Node{}, err
 	}
 
