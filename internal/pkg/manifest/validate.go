@@ -1605,6 +1605,19 @@ func (r OverrideRule) validate() error {
 }
 
 func (v Variable) validate() error {
+	if err := v.FromEnvironment.validate(); err != nil {
+		return fmt.Errorf(`validate "from_environment": %w`, err)
+	}
+	return nil
+}
+
+func (e fromEnvironment) validate() error {
+	if e.isEmpty() {
+		return nil
+	}
+	if len(aws.StringValue(e.Name)) == 0 {
+		return errors.New("name cannot be an empty string")
+	}
 	return nil
 }
 
