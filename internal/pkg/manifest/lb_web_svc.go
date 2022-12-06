@@ -90,6 +90,17 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
+	for _, envName := range props.PrivateOnlyEnvironments {
+		svc.Environments[envName] = &LoadBalancedWebServiceConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	return svc
 }
 
@@ -135,6 +146,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				},
 			},
 		},
+		Environments: map[string]*LoadBalancedWebServiceConfig{},
 	}
 }
 

@@ -17,7 +17,7 @@ ENV PATH=$PATH:/usr/local/go/bin
 RUN rm go$GOLANG_VERSION.src.tar.gz
 RUN apk del go
 
-RUN go install github.com/onsi/ginkgo/ginkgo@latest
+RUN go install github.com/onsi/ginkgo/v2/ginkgo@latest
 
 # Copy the binary
 ADD bin/local/copilot-linux-amd64 /bin/copilot

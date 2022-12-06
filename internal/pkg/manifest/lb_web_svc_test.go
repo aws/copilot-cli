@@ -77,6 +77,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{},
 			},
 		},
 		"overrides default settings when optional configuration is provided": {
@@ -84,6 +85,9 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"metrics",
+					},
 				},
 				Path: "/",
 				Port: 80,
@@ -149,6 +153,17 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"metrics": {
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PrivateSubnetPlacement),
+								},
 							},
 						},
 					},
