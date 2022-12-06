@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
@@ -19,7 +19,7 @@ var (
 )
 
 var _ = Describe("Multiple Env App", func() {
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		BeforeAll(func() {
 			_, initErr = cli.AppInit(&client.AppInitRequest{
 				AppName: appName,
@@ -49,7 +49,7 @@ var _ = Describe("Multiple Env App", func() {
 		})
 	})
 
-	Context("when adding cross account environments", func() {
+	Context("when adding cross account environments", Ordered, func() {
 		var (
 			testEnvInitErr error
 			prodEnvInitErr error
@@ -126,7 +126,7 @@ var _ = Describe("Multiple Env App", func() {
 		})
 	})
 
-	Context("when deploying the environments", func() {
+	Context("when deploying the environments", Ordered, func() {
 		var testEnvDeployErr, prodEnvDeployErr error
 		BeforeAll(func() {
 			_, testEnvDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
@@ -145,7 +145,7 @@ var _ = Describe("Multiple Env App", func() {
 		})
 	})
 
-	Context("when adding a svc", func() {
+	Context("when adding a svc", Ordered, func() {
 		var (
 			frontEndInitErr error
 		)
@@ -178,7 +178,7 @@ var _ = Describe("Multiple Env App", func() {
 		})
 	})
 
-	Context("when deploying a svc to test and prod envs", func() {
+	Context("when deploying a svc to test and prod envs", Ordered, func() {
 		var (
 			testDeployErr    error
 			prodEndDeployErr error
@@ -218,14 +218,14 @@ var _ = Describe("Multiple Env App", func() {
 			}
 
 			Expect(len(svc.ServiceDiscoveries)).To(Equal(2))
-			var envs, namespaces, wantedNamespaces []string
+			var envs, endpoints, wantedEndpoints []string
 			for _, sd := range svc.ServiceDiscoveries {
 				envs = append(envs, sd.Environment[0])
-				namespaces = append(namespaces, sd.Namespace)
-				wantedNamespaces = append(wantedNamespaces, fmt.Sprintf("%s.%s.%s.local:80", svc.SvcName, sd.Environment[0], appName))
+				endpoints = append(endpoints, sd.Endpoint)
+				wantedEndpoints = append(wantedEndpoints, fmt.Sprintf("%s.%s.%s.local:80", svc.SvcName, sd.Environment[0], appName))
 			}
 			Expect(envs).To(ConsistOf("test", "prod"))
-			Expect(namespaces).To(ConsistOf(wantedNamespaces))
+			Expect(endpoints).To(ConsistOf(wantedEndpoints))
 
 			// Call each environment's endpoint and ensure it returns a 200
 			for _, env := range []string{"test", "prod"} {

@@ -7,7 +7,8 @@ Metadata:
     type: Environment
     network:
       vpc:
-        flow_logs: on
+        flow_logs:
+         retention: 60
     
 Parameters:
   AppName:
@@ -1003,6 +1004,13 @@ Resources:
       DomainName: !Ref AppDNSName
       PublicAccessDNS: !GetAtt PublicLoadBalancer.DNSName
       PublicAccessHostedZone: !GetAtt PublicLoadBalancer.CanonicalHostedZoneID
+  VpcFlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    Metadata:
+      'aws:copilot:description': 'A CloudWatch log group with 60 days retention for VPC flow log data'
+    Properties:
+      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogs]]
+      RetentionInDays: 60
   FlowLog:
     Metadata:
       'aws:copilot:description': 'A flow log for the VPC to capture information about the IP traffic'
@@ -1010,7 +1018,7 @@ Resources:
     Properties:
       DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
       LogDestinationType: cloud-watch-logs
-      LogGroupName: !Join ['-', [!Ref AppName, !Ref EnvironmentName, FlowLogGroup]]
+      LogGroupName: !Ref VpcFlowLogGroup
       MaxAggregationInterval: 60
       ResourceId: !Ref VPC                 
       ResourceType: VPC
@@ -1018,7 +1026,7 @@ Resources:
 # Reference to IAM Role policy for Publish flow logs to CloudWatch Logs: https://go.aws/3euClbg     
   FlowLogRole:
     Metadata:
-      'aws:copilot:description': 'An IAM Role for AWS EC2 to publish flow logs to a CloudWatch log group'
+      'aws:copilot:description': 'An IAM Role for the flow logs service to publish logs'
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:

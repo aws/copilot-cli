@@ -12,6 +12,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/dustin/go-humanize/english"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -153,6 +154,8 @@ type initSvcOpts struct {
 
 	// Init a Dockerfile parser using fs and input path
 	dockerfile func(string) dockerfileParser
+	// Init a new EnvDescriber using environment name and app name.
+	initEnvDescriber func(string, string) (envDescriber, error)
 }
 
 func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
@@ -181,13 +184,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		Prog:     termprogress.NewSpinner(log.DiagnosticWriter),
 		Deployer: cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
 	}
+	sel, err := selector.NewLocalFileSelector(prompter, fs)
+	if err != nil {
+		return nil, err
+	}
 	opts := &initSvcOpts{
 		initSvcVars:  vars,
 		store:        store,
 		fs:           fs,
 		init:         initSvc,
 		prompt:       prompter,
-		sel:          selector.NewWorkspaceSelector(prompter, ws),
+		sel:          sel,
 		topicSel:     snsSel,
 		mftReader:    ws,
 		dockerEngine: dockerengine.New(exec.NewCmd()),
@@ -199,6 +206,17 @@ func newInitSvcOpts(vars initSvcVars) (*initSvcOpts, error) {
 		}
 		opts.df = dockerfile.New(opts.fs, opts.dockerfilePath)
 		return opts.df
+	}
+	opts.initEnvDescriber = func(appName string, envName string) (envDescriber, error) {
+		envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+			App:         appName,
+			Env:         envName,
+			ConfigStore: opts.store,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("initiate env describer: %w", err)
+		}
+		return envDescriber, nil
 	}
 	return opts, nil
 }
@@ -249,7 +267,7 @@ func (o *initSvcOpts) Ask() error {
 		if err := o.validateSvc(); err != nil {
 			return err
 		}
-		shouldSkipAsking, err := o.shouldSkipAsking()
+		shouldSkipAsking, err := o.manifestAlreadyExists()
 		if err != nil {
 			return err
 		}
@@ -277,7 +295,7 @@ func (o *initSvcOpts) Ask() error {
 	if err := o.askIngressType(); err != nil {
 		return err
 	}
-	shouldSkipAsking, err := o.shouldSkipAsking()
+	shouldSkipAsking, err := o.manifestAlreadyExists()
 	if err != nil {
 		return err
 	}
@@ -323,6 +341,11 @@ func (o *initSvcOpts) Execute() error {
 			o.platform = &platform
 		}
 	}
+	// Environments that are deployed and have​ only private subnets.
+	envs, err := envsWithPrivateSubnetsOnly(o.store, o.initEnvDescriber, o.appName)
+	if err != nil {
+		return err
+	}
 	manifestPath, err := o.init.Service(&initialize.ServiceProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -333,7 +356,8 @@ func (o *initSvcOpts) Execute() error {
 			Platform: manifest.PlatformArgsOrString{
 				PlatformString: o.platform,
 			},
-			Topics: o.topics,
+			Topics:                  o.topics,
+			PrivateOnlyEnvironments: envs,
 		},
 		Port:        o.port,
 		HealthCheck: hc,
@@ -467,7 +491,10 @@ func (o *initSvcOpts) askImage() error {
 	return nil
 }
 
-func (o *initSvcOpts) shouldSkipAsking() (bool, error) {
+func (o *initSvcOpts) manifestAlreadyExists() (bool, error) {
+	if o.wsPendingCreation {
+		return false, nil
+	}
 	localMft, err := o.mftReader.ReadWorkloadManifest(o.name)
 	if err != nil {
 		var (

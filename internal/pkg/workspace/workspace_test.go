@@ -266,7 +266,7 @@ func TestWorkspace_Use(t *testing.T) {
 			},
 			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", parent),
 		},
-		"returns the existing workspace that does not have a workspace summary": {
+		"returns an ErrNoAssociatedApplication error when there is existing copilot/ directory that does not have a workspace summary": {
 			appName: "DavidsApp",
 			mockFileSystem: func() afero.Fs {
 				fs := afero.NewMemMapFs()
@@ -274,6 +274,7 @@ func TestWorkspace_Use(t *testing.T) {
 				return fs
 			},
 			expectedCopilotDirAbs: fmt.Sprintf("%s/copilot", wd),
+			expectedError:         &ErrNoAssociatedApplication{},
 		},
 		"ErrWorkspaceNotFound if there is no workspace": {
 			mockFileSystem: func() afero.Fs {
@@ -1470,81 +1471,6 @@ func TestWorkspace_DeleteWorkspaceFile(t *testing.T) {
 				Err:  os.ErrNotExist,
 			}
 			require.EqualError(t, existErr, expectedErr.Error())
-		})
-	}
-}
-
-func TestWorkspace_ListDockerfiles(t *testing.T) {
-	wantedDockerfiles := []string{"./Dockerfile", "backend/Dockerfile", "frontend/Dockerfile"}
-	testCases := map[string]struct {
-		mockFileSystem func(mockFS afero.Fs)
-		err            error
-		dockerfiles    []string
-	}{
-		"find Dockerfiles": {
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("frontend", 0755)
-				mockFS.MkdirAll("backend", 0755)
-
-				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
-			},
-			err:         nil,
-			dockerfiles: wantedDockerfiles,
-		},
-		"exclude dockerignore files": {
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("frontend", 0755)
-				mockFS.MkdirAll("backend", 0755)
-
-				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "frontend/Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "frontend/Dockerfile.dockerignore", []byte("*/temp*"), 0644)
-				afero.WriteFile(mockFS, "backend/Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "backend/Dockerfile.dockerignore", []byte("*/temp*"), 0644)
-			},
-			err:         nil,
-			dockerfiles: wantedDockerfiles,
-		},
-		"nonstandard Dockerfile names": {
-			mockFileSystem: func(mockFS afero.Fs) {
-				mockFS.MkdirAll("frontend", 0755)
-				mockFS.MkdirAll("dockerfiles", 0755)
-				afero.WriteFile(mockFS, "Dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "frontend/dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "Job.dockerfile", []byte("FROM nginx"), 0644)
-				afero.WriteFile(mockFS, "Job.dockerfile.dockerignore", []byte("*/temp*"), 0644)
-			},
-			err:         nil,
-			dockerfiles: []string{"./Dockerfile", "./Job.dockerfile", "frontend/dockerfile"},
-		},
-		"no Dockerfiles": {
-			mockFileSystem: func(mockFS afero.Fs) {},
-			dockerfiles:    []string{},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			fs := &afero.Afero{Fs: afero.NewMemMapFs()}
-			tc.mockFileSystem(fs)
-			ws := &Workspace{
-				workingDirAbs: "/",
-				copilotDirAbs: "copilot",
-				fs: &afero.Afero{
-					Fs: fs,
-				},
-			}
-			got, err := ws.ListDockerfiles()
-
-			if tc.err != nil {
-				require.EqualError(t, err, tc.err.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.dockerfiles, got)
-			}
 		})
 	}
 }

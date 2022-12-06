@@ -113,7 +113,6 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 			},
 			RootUserARN: "arn:aws:iam::123456789123:root",
 		}, stack.WithNLB([]string{"10.0.0.0/24", "10.1.0.0/24"}))
-		serializer.SCFeatureFlag = true
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids
@@ -131,7 +130,7 @@ func TestNetworkLoadBalancedWebService_Template(t *testing.T) {
 			expectedBytes := []byte(expected)
 			mExpected := make(map[interface{}]interface{})
 			require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
-			require.Equal(t, mExpected, mActual)
+			compareStackTemplate(t, mExpected, mActual)
 		})
 
 		testName = fmt.Sprintf("Parameter values should render properly/%s", name)

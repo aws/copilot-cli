@@ -77,6 +77,7 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						},
 					},
 				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{},
 			},
 		},
 		"overrides default settings when optional configuration is provided": {
@@ -84,6 +85,9 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 				WorkloadProps: &WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"metrics",
+					},
 				},
 				Path: "/",
 				Port: 80,
@@ -149,6 +153,17 @@ func TestNewHTTPLoadBalancedWebService(t *testing.T) {
 						VPC: vpcConfig{
 							Placement: PlacementArgOrString{
 								PlacementString: placementStringP(PublicSubnetPlacement),
+							},
+						},
+					},
+				},
+				Environments: map[string]*LoadBalancedWebServiceConfig{
+					"metrics": {
+						Network: NetworkConfig{
+							VPC: vpcConfig{
+								Placement: PlacementArgOrString{
+									PlacementString: placementStringP(PrivateSubnetPlacement),
+								},
 							},
 						},
 					},
@@ -1324,41 +1339,6 @@ func TestLoadBalancedWebService_Port(t *testing.T) {
 	// THEN
 	require.True(t, ok)
 	require.Equal(t, uint16(80), actual)
-}
-
-func TestLoadBalancedWebService_ServiceConnectEnabled(t *testing.T) {
-	testCases := map[string]struct {
-		mft *LoadBalancedWebService
-
-		wanted bool
-	}{
-		"enabled by default": {
-			mft:    &LoadBalancedWebService{},
-			wanted: true,
-		},
-		"disable if explicitly set": {
-			mft: &LoadBalancedWebService{
-				LoadBalancedWebServiceConfig: LoadBalancedWebServiceConfig{
-					Network: NetworkConfig{
-						Connect: ServiceConnectBoolOrArgs{
-							EnableServiceConnect: aws.Bool(false),
-						},
-					},
-				},
-			},
-			wanted: false,
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			enabled := tc.mft.ServiceConnectEnabled()
-
-			// THEN
-			require.Equal(t, tc.wanted, enabled)
-		})
-	}
 }
 
 func TestLoadBalancedWebService_Publish(t *testing.T) {

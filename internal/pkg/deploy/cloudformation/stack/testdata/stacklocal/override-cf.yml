@@ -40,6 +40,7 @@
               awslogs-stream-prefix: copilot
           PortMappings:
             - ContainerPort: 5000
+              Name: target
             - ContainerPort: 2056
               Protocol: "udp"
           Ulimits:

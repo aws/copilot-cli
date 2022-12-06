@@ -37,6 +37,7 @@ type RequestDrivenWebServiceConfig struct {
 	PublishConfig                     PublishConfig                        `yaml:"publish"`
 	Network                           RequestDrivenWebServiceNetworkConfig `yaml:"network"`
 	Observability                     Observability                        `yaml:"observability"`
+	Count                             *string                              `yaml:"count"`
 }
 
 // Observability holds configuration for observability to the service.
@@ -81,19 +82,14 @@ func (c *rdwsVpcConfig) isEmpty() bool {
 
 // RequestDrivenWebServiceHttpConfig represents options for configuring http.
 type RequestDrivenWebServiceHttpConfig struct {
-	HealthCheckConfiguration HealthCheckArgsOrString  `yaml:"healthcheck"`
-	Alias                    *string                  `yaml:"alias"`
-	Private                  Union[bool, VPCEndpoint] `yaml:"private"`
+	HealthCheckConfiguration HealthCheckArgsOrString   `yaml:"healthcheck"`
+	Alias                    *string                   `yaml:"alias"`
+	Private                  Union[*bool, VPCEndpoint] `yaml:"private"`
 }
 
 // VPCEndpoint is used to configure a pre-existing VPC endpoint.
 type VPCEndpoint struct {
 	Endpoint *string `yaml:"endpoint"`
-}
-
-// IsZero implements yaml.IsZeroer.
-func (v VPCEndpoint) IsZero() bool {
-	return v.Endpoint == nil
 }
 
 // AppRunnerInstanceConfig contains the instance configuration properties for an App Runner service.
@@ -120,7 +116,7 @@ func NewRequestDrivenWebService(props *RequestDrivenWebServiceProps) *RequestDri
 	svc.RequestDrivenWebServiceConfig.ImageConfig.Port = aws.Uint16(props.Port)
 	svc.RequestDrivenWebServiceConfig.InstanceConfig.Platform = props.Platform
 	if props.Private {
-		svc.Private = BasicToUnion[bool, VPCEndpoint](true)
+		svc.Private = BasicToUnion[*bool, VPCEndpoint](aws.Bool(true))
 		svc.Network.VPC.Placement.PlacementString = (*PlacementString)(aws.String("private"))
 	}
 	svc.parser = template.New()

@@ -95,6 +95,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               awslogs-stream-prefix: copilot
           PortMappings:
             - ContainerPort: 80
+              Name: target
         - Name: tls
           Image: 1234567890.dkr.ecr.us-west-2.amazonaws.com/proxy:cicdtest
           PortMappings:
@@ -311,6 +312,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
         MaximumPercent: 200
       PropagateTags: SERVICE
       LaunchType: FARGATE
+      ServiceConnectConfiguration:
+        Enabled: False
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED

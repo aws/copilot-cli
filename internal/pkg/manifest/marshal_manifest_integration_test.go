@@ -36,6 +36,22 @@ func TestLoadBalancedWebService_InitialManifestIntegration(t *testing.T) {
 			},
 			wantedTestdata: "lb-svc.yml",
 		},
+		"with placement private": {
+			inProps: LoadBalancedWebServiceProps{
+				WorkloadProps: &WorkloadProps{
+					Name:       "frontend",
+					Dockerfile: "./frontend/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"phonetool",
+					},
+				},
+				Platform: PlatformArgsOrString{
+					PlatformString: nil,
+					PlatformArgs:   PlatformArgs{},
+				},
+			},
+			wantedTestdata: "lb-svc-placement-private.yml",
+		},
 	}
 
 	for name, tc := range testCases {
@@ -62,11 +78,14 @@ func TestBackendSvc_InitialManifestIntegration(t *testing.T) {
 
 		wantedTestdata string
 	}{
-		"without healthcheck and port": {
+		"without healthcheck and port and with private only environments": {
 			inProps: BackendServiceProps{
 				WorkloadProps: WorkloadProps{
 					Name:       "subscribers",
 					Dockerfile: "./subscribers/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"phonetool",
+					},
 				},
 				Platform: PlatformArgsOrString{
 					PlatformString: nil,
@@ -76,7 +95,7 @@ func TestBackendSvc_InitialManifestIntegration(t *testing.T) {
 					},
 				},
 			},
-			wantedTestdata: "backend-svc-nohealthcheck.yml",
+			wantedTestdata: "backend-svc-nohealthcheck-placement.yml",
 		},
 		"with custom healthcheck command": {
 			inProps: BackendServiceProps{
@@ -121,11 +140,14 @@ func TestWorkerSvc_InitialManifestIntegration(t *testing.T) {
 
 		wantedTestdata string
 	}{
-		"without subscribe": {
+		"without subscribe and with private only environments": {
 			inProps: WorkerServiceProps{
 				WorkloadProps: WorkloadProps{
 					Name:       "testers",
 					Dockerfile: "./testers/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"phonetool",
+					},
 				},
 				Platform: PlatformArgsOrString{
 					PlatformString: nil,
@@ -135,7 +157,7 @@ func TestWorkerSvc_InitialManifestIntegration(t *testing.T) {
 					},
 				},
 			},
-			wantedTestdata: "worker-svc-nosubscribe.yml",
+			wantedTestdata: "worker-svc-nosubscribe-placement.yml",
 		},
 		"with subscribe": {
 			inProps: WorkerServiceProps{
@@ -225,11 +247,14 @@ func TestScheduledJob_InitialManifestIntegration(t *testing.T) {
 			},
 			wantedTestData: "scheduled-job-no-timeout-or-retries.yml",
 		},
-		"fully specified using cron schedule": {
+		"fully specified using cron schedule with placement set to private": {
 			inProps: ScheduledJobProps{
 				WorkloadProps: &WorkloadProps{
 					Name:       "cuteness-aggregator",
 					Dockerfile: "./cuteness-aggregator/Dockerfile",
+					PrivateOnlyEnvironments: []string{
+						"phonetool",
+					},
 				},
 				Platform: PlatformArgsOrString{
 					PlatformString: nil,
@@ -239,7 +264,7 @@ func TestScheduledJob_InitialManifestIntegration(t *testing.T) {
 				Retries:  3,
 				Timeout:  "1h30m",
 			},
-			wantedTestData: "scheduled-job-fully-specified.yml",
+			wantedTestData: "scheduled-job-fully-specified-placement.yml",
 		},
 		"with timeout and no retries": {
 			inProps: ScheduledJobProps{

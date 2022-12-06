@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("init flow", func() {
+var _ = Describe("init flow", Ordered, func() {
 
 	var (
 		svcName    string
@@ -55,7 +55,7 @@ var _ = Describe("init flow", func() {
 		})
 	})
 
-	Context("svc ls", func() {
+	Context("svc ls", Ordered, func() {
 		var (
 			svcList      *client.SvcListOutput
 			svcListError error
@@ -77,7 +77,7 @@ var _ = Describe("init flow", func() {
 
 	})
 
-	Context("job ls", func() {
+	Context("job ls", Ordered, func() {
 		var (
 			jobList    *client.JobListOutput
 			jobListErr error
@@ -98,7 +98,7 @@ var _ = Describe("init flow", func() {
 		})
 	})
 
-	Context("svc show", func() {
+	Context("svc show", Ordered, func() {
 		var (
 			svc        *client.SvcShowOutput
 			svcShowErr error
@@ -132,7 +132,7 @@ var _ = Describe("init flow", func() {
 		It("should return a valid service discovery namespace", func() {
 			Expect(len(svc.ServiceDiscoveries)).To(Equal(1))
 			Expect(svc.ServiceDiscoveries[0].Environment).To(Equal([]string{"test"}))
-			Expect(svc.ServiceDiscoveries[0].Namespace).To(Equal(fmt.Sprintf("%s.%s.%s.local:80", svcName, envName, appName)))
+			Expect(svc.ServiceDiscoveries[0].Endpoint).To(Equal(fmt.Sprintf("%s.%s.%s.local:80", svcName, envName, appName)))
 		})
 
 		It("should return the correct environment variables", func() {
@@ -173,7 +173,7 @@ var _ = Describe("init flow", func() {
 		})
 	})
 
-	Context("force a new svc deploy", func() {
+	Context("force a new svc deploy", Ordered, func() {
 		var err error
 		BeforeAll(func() {
 			_, err = cli.SvcDeploy(&client.SvcDeployInput{

@@ -20,6 +20,7 @@ const (
 	URIAccessTypeInternet
 	URIAccessTypeInternal
 	URIAccessTypeServiceDiscovery
+	URIAccessTypeServiceConnect
 )
 
 var (
@@ -192,11 +193,20 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	if err != nil {
 		return URI{}, fmt.Errorf("get stack parameters for environment %s: %w", envName, err)
 	}
-	port := svcStackParams[stack.WorkloadContainerPortParamKey]
-	if port == stack.NoExposedContainerPort {
+	if !isReachableWithinVPC(svcStackParams) {
 		return URI{
 			URI:        BlankServiceDiscoveryURI,
 			AccessType: URIAccessTypeNone,
+		}, nil
+	}
+	scDNSNames, err := svcDescr.ServiceConnectDNSNames()
+	if err != nil {
+		return URI{}, fmt.Errorf("retrieve service connect DNS names: %w", err)
+	}
+	if len(scDNSNames) > 0 {
+		return URI{
+			URI:        english.OxfordWordSeries(scDNSNames, "or"),
+			AccessType: URIAccessTypeServiceConnect,
 		}, nil
 	}
 	endpoint, err := envDescr.ServiceDiscoveryEndpoint()
@@ -205,7 +215,7 @@ func (d *BackendServiceDescriber) URI(envName string) (URI, error) {
 	}
 	s := serviceDiscovery{
 		Service:  d.svc,
-		Port:     port,
+		Port:     svcStackParams[stack.WorkloadTargetPortParamKey],
 		Endpoint: endpoint,
 	}
 	return URI{

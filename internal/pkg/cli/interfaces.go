@@ -295,7 +295,6 @@ type wsWlDirReader interface {
 	workspacePathGetter
 	wlLister
 	wsEnvironmentsLister
-	ListDockerfiles() ([]string, error)
 	Summary() (*workspace.Summary, error)
 }
 
@@ -507,8 +506,7 @@ type wsSelector interface {
 	Workload(msg, help string) (string, error)
 }
 
-type initJobSelector interface {
-	dockerfileSelector
+type scheduleSelector interface {
 	Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error)
 }
 

@@ -432,21 +432,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
       PropagateTags: SERVICE
       LaunchType: FARGATE
       ServiceConnectConfiguration:
-        Enabled: True
-        Namespace: test.my-app.local
-        LogConfiguration:
-          LogDriver: awslogs
-          Options:
-            awslogs-region: !Ref AWS::Region
-            awslogs-group: !Ref LogGroup
-            awslogs-stream-prefix: copilot
-        Services:
-          - PortName: target
-            # Avoid using the same service with Service Discovery in a namespace.
-            DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]]
-            ClientAliases:
-              - Port: !Ref TargetPort
-                DnsName: !Ref WorkloadName
+        Enabled: False
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED

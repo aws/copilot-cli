@@ -69,7 +69,7 @@ func TestValidateAppName(t *testing.T) {
 
 	for name, tc := range basicNameTestCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateAppName(tc.input)
+			got := validateAppNameString(tc.input)
 
 			require.True(t, errors.Is(got, tc.want))
 		})
@@ -77,7 +77,7 @@ func TestValidateAppName(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			got := validateAppName(tc.input)
+			got := validateAppNameString(tc.input)
 
 			require.True(t, errors.Is(got, tc.want))
 		})

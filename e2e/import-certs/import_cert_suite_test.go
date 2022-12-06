@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -37,13 +37,3 @@ var _ = AfterSuite(func() {
 	_, err := cli.AppDelete()
 	Expect(err).NotTo(HaveOccurred())
 })
-
-func BeforeAll(fn func()) {
-	first := true
-	BeforeEach(func() {
-		if first {
-			fn()
-			first = false
-		}
-	})
-}

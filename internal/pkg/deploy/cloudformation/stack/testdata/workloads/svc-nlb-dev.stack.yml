@@ -106,6 +106,7 @@ Resources: # If a bucket URL is specified, that means the template exists.
               awslogs-stream-prefix: copilot
           PortMappings:
             - ContainerPort: 80
+              Name: target
             - ContainerPort: 81
               Protocol: tcp
   ExecutionRole:
@@ -306,6 +307,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
         MinimumHealthyPercent: 100
         MaximumPercent: 200
       PropagateTags: SERVICE
+      ServiceConnectConfiguration:
+        Enabled: False
       CapacityProviderStrategy:
         - CapacityProvider: FARGATE_SPOT
           Weight: 1
