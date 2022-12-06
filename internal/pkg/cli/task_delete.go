@@ -54,6 +54,7 @@ type deleteTaskVars struct {
 
 type deleteTaskOpts struct {
 	deleteTaskVars
+	wsAppName string
 
 	// Dependencies to interact with other modules
 	store    store
@@ -90,6 +91,7 @@ func newDeleteTaskOpts(vars deleteTaskVars) (*deleteTaskOpts, error) {
 	prompter := prompt.New()
 	return &deleteTaskOpts{
 		deleteTaskVars: vars,
+		wsAppName:      tryReadingAppName(),
 
 		store:    store,
 		spinner:  termprogress.NewSpinner(log.DiagnosticWriter),
@@ -181,7 +183,7 @@ func (o *deleteTaskOpts) validateFlagsWithDefaultCluster() error {
 	// The app flag defaults to the WS app so there's an edge case where it's possible to specify
 	// `copilot task delete --app ws-app --default` and not error out, but this should be taken as
 	// specifying "default".
-	if o.app != tryReadingAppName() {
+	if o.app != o.wsAppName {
 		return fmt.Errorf("cannot specify both `--app` and `--default`")
 	}
 
