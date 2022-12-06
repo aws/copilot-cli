@@ -5,7 +5,7 @@
 [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html) enables a client service to connect to its downstream services in a load-balanced and resilient fashion. Furthermore, it simplifies the way of exposing a service to its clients by specifying friendly aliases. With Service Connect in Copilot, each service you create is given the following private alias by default: `http://<your service name>`.
 
 !!! attention
-    Service Connect is not yet supported for [Request-Driven Web Services](../docs/concepts/services.en.md#request-driven-web-service).
+    Service Connect is not yet supported for [Request-Driven Web Services](../concepts/services.en.md#request-driven-web-service).
 
 ### How do I use Service Connect?
 Imagine we have an app called `kudos` and two services: `api` and `front-end`, deployed in the same environment. In order to use Service Connect, both services' manifests need to have:
