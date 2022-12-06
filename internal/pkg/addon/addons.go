@@ -74,7 +74,7 @@ type parser struct {
 func ParseFromWorkload(workloadName string, ws workspaceReader) (*WorkloadStack, error) {
 	fNames, err := ws.ListFiles(ws.WorkloadAddonsPath(workloadName))
 	if err != nil {
-		return nil, fmt.Errorf("list addons for workload %s: %w", workloadName, &ErrAddonsNotFound{
+		return nil, fmt.Errorf("list addons for workload %q: %w", workloadName, &ErrAddonsNotFound{
 			ParentErr: err,
 		})
 	}
@@ -296,11 +296,10 @@ func contains(arr []string, el string) bool {
 }
 
 func quoteSlice(elems []string) []string {
-	var quotedElems []string
 	if len(elems) == 0 {
-		return quotedElems
+		return nil
 	}
-	quotedElems = make([]string, len(elems))
+	quotedElems := make([]string, len(elems))
 	for i, el := range elems {
 		quotedElems[i] = strconv.Quote(el)
 	}

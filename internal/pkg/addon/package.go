@@ -197,13 +197,13 @@ type PackageConfig struct {
 	WorkspacePath string
 	FS            afero.Fs
 
-	toPath func(hash string) string
+	s3Path func(hash string) string
 }
 
 // Package finds references to local files in Stack's template, uploads
 // the files to S3, and replaces the file path with the S3 location.
 func (s *EnvironmentStack) Package(cfg PackageConfig) error {
-	cfg.toPath = func(hash string) string {
+	cfg.s3Path = func(hash string) string {
 		return artifactpath.EnvironmentAddonAsset(hash)
 	}
 	return s.packageAssets(cfg)
@@ -212,7 +212,7 @@ func (s *EnvironmentStack) Package(cfg PackageConfig) error {
 // Package finds references to local files in Stack's template, uploads
 // the files to S3, and replaces the file path with the S3 location.
 func (s *WorkloadStack) Package(cfg PackageConfig) error {
-	cfg.toPath = func(hash string) string {
+	cfg.s3Path = func(hash string) string {
 		return artifactpath.AddonAsset(s.workloadName, hash)
 	}
 	return s.packageAssets(cfg)
@@ -377,7 +377,7 @@ func (p *PackageConfig) uploadAddonAsset(assetPath string, forceZip bool) (templ
 		return template.S3ObjectLocation{}, fmt.Errorf("create asset: %w", err)
 	}
 
-	s3Path := p.toPath(asset.hash)
+	s3Path := p.s3Path(asset.hash)
 	url, err := p.Uploader.Upload(p.Bucket, s3Path, asset.data)
 	if err != nil {
 		return template.S3ObjectLocation{}, fmt.Errorf("upload %s to s3 bucket %s: %w", assetPath, p.Bucket, err)

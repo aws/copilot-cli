@@ -35,7 +35,7 @@ func TestWorkload_Template(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testSvcName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, testErr)
 			},
-			wantedErr: fmt.Errorf("list addons for workload %s: %w", testSvcName, &ErrAddonsNotFound{
+			wantedErr: fmt.Errorf("list addons for workload %q: %w", testSvcName, &ErrAddonsNotFound{
 				ParentErr: testErr,
 			}),
 		},
@@ -45,7 +45,7 @@ func TestWorkload_Template(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath(testJobName).Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, testErr)
 			},
-			wantedErr: fmt.Errorf("list addons for workload %s: %w", testJobName, &ErrAddonsNotFound{
+			wantedErr: fmt.Errorf("list addons for workload %q: %w", testJobName, &ErrAddonsNotFound{
 				ParentErr: testErr,
 			}),
 		},
@@ -237,7 +237,7 @@ func TestWorkload_Parameters(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, errors.New("some error"))
 			},
-			wantedErr: fmt.Errorf("list addons for workload api: %w", &ErrAddonsNotFound{
+			wantedErr: fmt.Errorf(`list addons for workload "api": %w`, &ErrAddonsNotFound{
 				ParentErr: errors.New("some error"),
 			}),
 		},
