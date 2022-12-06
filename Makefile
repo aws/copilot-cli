@@ -100,7 +100,7 @@ generate-coverage: test
 	go tool cover -html=${COVERAGE}
 
 .PHONY: integ-test
-integ-test: package-custom-resources run-integ-test package-custom-resources-clean
+integ-test: package-custom-resources run-integ-test package-custom-resources-clean 
 
 .PHONY: run-integ-test
 run-integ-test:
@@ -110,11 +110,12 @@ run-integ-test:
 	# and runs tests which end in Integration.
 	go test -race -count=1 -timeout 120m -tags=integration ${PACKAGES}
 
-.PHONY: local-integ-test
-local-integ-test: package-custom-resources run-local-integ-test package-custom-resources-clean
+.PHONY: local-test
+local-test: package-custom-resources custom-resource-tests run-local-test package-custom-resources-clean
 
-run-local-integ-test:
-	go test -race -count=1 -timeout=60m -tags=localintegration ${PACKAGES}
+.PHONY: run-local-test
+run-local-test:
+	go test -race -count=1 -timeout=60m -tags=localintegration -coverprofile=${COVERAGE} ${PACKAGES}
 
 .PHONY: e2e
 e2e: build-e2e
@@ -126,7 +127,7 @@ e2e: build-e2e
 .PHONY: e2e-dryrun
 e2e-dryrun: build # Sample command "make e2e-dryrun test=multi-env-app" to run the test suit under "e2e/multi-env-app"
 	@echo "Install ginkgo"
-	go install github.com/onsi/ginkgo/ginkgo@latest
+	go install github.com/onsi/ginkgo/v2/ginkgo@latest
 	@echo "Setup credentials"
 	./scripts/dryrun-creds.sh e2e
 	@echo "Run the $(test) test"
@@ -139,7 +140,7 @@ e2e-dryrun: build # Sample command "make e2e-dryrun test=multi-env-app" to run t
 .PHONY: regression-dryrun
 regression-dryrun: build
 	@echo "Install ginkgo"
-	go install github.com/onsi/ginkgo/ginkgo@latest
+	go install github.com/onsi/ginkgo/v2/ginkgo@latest
 	@echo "Setup credentials"
 	./scripts/dryrun-creds.sh regression
 	@echo "Run the $(test) test"

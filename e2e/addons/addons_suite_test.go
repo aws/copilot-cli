@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -55,13 +55,3 @@ var _ = AfterSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	_ = client.NewAWS().DeleteAllDBClusterSnapshots()
 })
-
-func BeforeAll(fn func()) {
-	first := true
-	BeforeEach(func() {
-		if first {
-			fn()
-			first = false
-		}
-	})
-}
