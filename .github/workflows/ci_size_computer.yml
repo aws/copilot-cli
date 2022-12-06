@@ -1,4 +1,4 @@
-name: compute bin sizes
+name: Compute bin sizes
 
 on:
   pull_request:

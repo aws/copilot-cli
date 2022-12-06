@@ -1,8 +1,8 @@
-name: comment PR with bin sizes
+name: Comment PR with bin sizes
 
 on:
   workflow_run:
-    workflows: ["compute bin sizes"]
+    workflows: ["Compute bin sizes"]
     types:
       - completed
 
@@ -106,5 +106,5 @@ jobs:
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
           issue-number: ${{ steps.find-pr-number.outputs.PR_NUMBER }}
-          body: ${{steps.diff.outputs.result}}
+          body: ${{ steps.diff.outputs.result }}
           edit-mode: replace
