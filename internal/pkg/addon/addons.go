@@ -200,7 +200,7 @@ func (p *parser) parseTemplate(fNames []string) (*cfnTemplate, error) {
 	return mergedTemplate, nil
 }
 
-// parseWorkloadParameters returns the content of user-defined additional CloudFormation Parameters
+// parseParameters returns the content of user-defined additional CloudFormation Parameters
 // to pass from the parent stack to Template.
 //
 // If there are addons but no parameters file defined, then returns "" and nil for error.
