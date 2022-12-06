@@ -205,7 +205,7 @@ func (s *BackendService) Template() (string, error) {
 func (s *BackendService) getPrimaryContainerPortMappings() []*template.PortMapping {
 	containerPort := aws.String(s.containerPort())
 	var portMappings []*template.PortMapping
-	if aws.StringValue(containerPort) != NoExposedContainerPort {
+	if aws.StringValue(containerPort) != template.NoExposedContainerPort {
 		portMappings = append(portMappings, ConvertPortMapping(containerPort, aws.String("tcp"), s.name))
 	}
 	if s.isTargetPortDifferentThanPrimaryContainerPort(containerPort) {
