@@ -59,7 +59,7 @@ jobs:
 
       - name: Save sizes and PR number
         run: |
-          mkdir -p artifacts/old artifacts/new
+          mkdir artifacts
           sizes_json="{
             \"macOS\": {
               \"amd\": {
