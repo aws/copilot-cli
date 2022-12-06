@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/identity"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
@@ -80,6 +81,8 @@ type initJobOpts struct {
 
 	// Init a Dockerfile parser using fs and input path
 	initParser func(string) dockerfileParser
+	// Init a new EnvDescriber using environment name and app name.
+	initEnvDescriber func(string, string) (envDescriber, error)
 }
 
 func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
@@ -120,6 +123,17 @@ func newInitJobOpts(vars initJobVars) (*initJobOpts, error) {
 		mftReader:        ws,
 		initParser: func(path string) dockerfileParser {
 			return dockerfile.New(fs, path)
+		},
+		initEnvDescriber: func(appName string, envName string) (envDescriber, error) {
+			envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+				App:         appName,
+				Env:         envName,
+				ConfigStore: store,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("initiate env describer: %w", err)
+			}
+			return envDescriber, nil
 		},
 		wsAppName: tryReadingAppName(),
 	}, nil
@@ -214,6 +228,35 @@ func (o *initJobOpts) Ask() error {
 	return nil
 }
 
+// envsWithPrivateSubnetsOnly returns the list of environments names deployed that contains only private subnets.
+func envsWithPrivateSubnetsOnly(store store, initEnvDescriber func(string, string) (envDescriber, error), appName string) ([]string, error) {
+	envs, err := store.ListEnvironments(appName)
+	if err != nil {
+		return nil, fmt.Errorf("list environments for application %s: %w", appName, err)
+	}
+	var privateOnlyEnvs []string
+	for _, env := range envs {
+		envDescriber, err := initEnvDescriber(appName, env.Name)
+		if err != nil {
+			return nil, err
+		}
+		mft, err := envDescriber.Manifest()
+		if err != nil {
+			return nil, fmt.Errorf("read the manifest used to deploy environment %s: %w", env.Name, err)
+		}
+		envConfig, err := manifest.UnmarshalEnvironment(mft)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal the manifest used to deploy environment %s: %w", env.Name, err)
+		}
+		subnets := envConfig.Network.VPC.Subnets
+
+		if len(subnets.Public) == 0 && len(subnets.Private) != 0 {
+			privateOnlyEnvs = append(privateOnlyEnvs, env.Name)
+		}
+	}
+	return privateOnlyEnvs, err
+}
+
 // Execute writes the job's manifest file, creates an ECR repo, and stores the name in SSM.
 func (o *initJobOpts) Execute() error {
 	// Check for a valid healthcheck and add it to the opts.
@@ -235,6 +278,10 @@ func (o *initJobOpts) Execute() error {
 			o.platform = &platform
 		}
 	}
+	envs, err := envsWithPrivateSubnetsOnly(o.store, o.initEnvDescriber, o.appName)
+	if err != nil {
+		return err
+	}
 	manifestPath, err := o.init.Job(&initialize.JobProps{
 		WorkloadProps: initialize.WorkloadProps{
 			App:            o.appName,
@@ -245,6 +292,7 @@ func (o *initJobOpts) Execute() error {
 			Platform: manifest.PlatformArgsOrString{
 				PlatformString: o.platform,
 			},
+			PrivateOnlyEnvironments: envs,
 		},
 
 		Schedule:    o.schedule,

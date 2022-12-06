@@ -115,9 +115,10 @@ func UnmarshalWorkload(in []byte) (DynamicWorkload, error) {
 
 // WorkloadProps contains properties for creating a new workload manifest.
 type WorkloadProps struct {
-	Name       string
-	Dockerfile string
-	Image      string
+	Name                    string
+	Dockerfile              string
+	Image                   string
+	PrivateOnlyEnvironments []string
 }
 
 // Workload holds the basic data that every workload manifest file needs to have.
