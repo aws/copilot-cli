@@ -120,10 +120,8 @@ func ParseFromEnv(ws workspaceReader) (*EnvironmentStack, error) {
 		})
 	}
 	parser := parser{
-		ws: ws,
-		filePath: func(fName string) string {
-			return ws.EnvAddonFilePath(fName)
-		},
+		ws:       ws,
+		filePath: ws.EnvAddonFilePath,
 		validateParameters: func(params yaml.Node) error {
 			return validateReservedParameters(params, envAddonsParameterReservedKeys)
 		},
