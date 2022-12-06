@@ -246,16 +246,11 @@ func (p *parser) parseParameters(fNames []string) (yaml.Node, error) {
 
 func validateReservedParameters(params yaml.Node, reservedKeys []string) error {
 	content := make(map[string]yaml.Node, len(reservedKeys))
-	for _, key := range reservedKeys {
-		content[key] = yaml.Node{}
-	}
 	if err := params.Decode(&content); err != nil {
-		return fmt.Errorf("decode content of the parameters file: %w", err)
+		return fmt.Errorf("decode \"Parameters\" section of the parameters file: %w", err)
 	}
-
 	for _, key := range reservedKeys {
-		field := content[key]
-		if !field.IsZero() {
+		if _, ok := content[key]; ok {
 			return fmt.Errorf("reserved parameters %s cannot be declared", english.WordSeries(quoteSlice(reservedKeys), "and"))
 		}
 	}
