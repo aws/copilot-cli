@@ -217,7 +217,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}
 
 	var addons stackBuilder
-	addons, err = addon.Parse(in.Name, ws)
+	addons, err = addon.ParseFromWorkload(in.Name, ws)
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
 		if !errors.As(err, &notFoundErr) {

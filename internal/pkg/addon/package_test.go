@@ -396,7 +396,7 @@ Resources:
 				tc.setupMocks(mocks)
 			}
 
-			stack := &WorkloadAddonStack{
+			stack := &WorkloadStack{
 				workloadName: wlName,
 				stack: stack{
 					template: newCFNTemplate("merged"),
@@ -482,7 +482,7 @@ Resources:
       Role: !GetAtt "TestRole.Arn"
       Runtime: nodejs16.x
 `
-		stack := &EnvironmentAddonStack{
+		stack := &EnvironmentStack{
 			stack: stack{
 				template: newCFNTemplate("merged"),
 			},

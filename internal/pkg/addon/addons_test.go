@@ -210,7 +210,7 @@ func TestWorkload_Template(t *testing.T) {
 			}
 
 			// WHEN
-			stack, err := Parse(tc.workloadName, mocks.ws)
+			stack, err := ParseFromWorkload(tc.workloadName, mocks.ws)
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 				return
@@ -339,7 +339,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 			}
 
 			// WHEN
-			stack, err := Parse("api", mocks.ws)
+			stack, err := ParseFromWorkload("api", mocks.ws)
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 				return
@@ -516,7 +516,7 @@ func TestEnv_Template(t *testing.T) {
 			}
 
 			// WHEN
-			stack, err := ParseEnvAddon(m.ws)
+			stack, err := ParseFromEnv(m.ws)
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 				return
@@ -644,7 +644,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 			}
 
 			// WHEN
-			stack, err := ParseEnvAddon(mocks.ws)
+			stack, err := ParseFromEnv(mocks.ws)
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())
 				return

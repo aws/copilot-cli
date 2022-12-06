@@ -45,13 +45,14 @@ type workspaceReader interface {
 	ReadFile(fPath string) ([]byte, error)
 }
 
-// WorkloadAddonStack represents a CloudFormation stack for workload addons.
-type WorkloadAddonStack struct {
+// WorkloadStack represents a CloudFormation stack for workload addons.
+type WorkloadStack struct {
 	stack
 	workloadName string
 }
 
-type EnvironmentAddonStack struct {
+// EnvironmentStack represents a CloudFormation stack for environment addons.
+type EnvironmentStack struct {
 	stack
 }
 
@@ -66,11 +67,11 @@ type parser struct {
 	validateParameters func(params yaml.Node, paramFilePath string) error
 }
 
-// Parse parses the 'addon/' directory for the given workload
+// ParseFromWorkload parses the 'addon/' directory for the given workload
 // and returns a Stack created by merging the CloudFormation templates
-// files found there. If no addons are found, Parse returns a nil
+// files found there. If no addons are found, ParseFromWorkload returns a nil
 // Stack and ErrAddonsNotFound.
-func Parse(workloadName string, ws workspaceReader) (*WorkloadAddonStack, error) {
+func ParseFromWorkload(workloadName string, ws workspaceReader) (*WorkloadStack, error) {
 	fNames, err := ws.ListFiles(ws.WorkloadAddonsPath(workloadName))
 	if err != nil {
 		return nil, fmt.Errorf("list addons for workload %s: %w", workloadName, &ErrAddonsNotFound{
@@ -98,7 +99,7 @@ func Parse(workloadName string, ws workspaceReader) (*WorkloadAddonStack, error)
 		return nil, err
 	}
 
-	return &WorkloadAddonStack{
+	return &WorkloadStack{
 		stack: stack{
 			template:   template,
 			parameters: params,
@@ -107,11 +108,11 @@ func Parse(workloadName string, ws workspaceReader) (*WorkloadAddonStack, error)
 	}, nil
 }
 
-// ParseEnvAddon parses the 'addon/' directory for environments
+// ParseFromEnv parses the 'addon/' directory for environments
 // and returns a Stack created by merging the CloudFormation templates
-// files found there. If no addons are found, Parse returns a nil
+// files found there. If no addons are found, ParseFromWorkload returns a nil
 // Stack and ErrAddonsNotFound.
-func ParseEnvAddon(ws workspaceReader) (*EnvironmentAddonStack, error) {
+func ParseFromEnv(ws workspaceReader) (*EnvironmentStack, error) {
 	fNames, err := ws.ListFiles(ws.EnvAddonsPath())
 	if err != nil {
 		return nil, fmt.Errorf("list addons for environments: %w", &ErrAddonsNotFound{
@@ -138,7 +139,7 @@ func ParseEnvAddon(ws workspaceReader) (*EnvironmentAddonStack, error) {
 		return nil, err
 	}
 
-	return &EnvironmentAddonStack{
+	return &EnvironmentStack{
 		stack: stack{
 			template:   template,
 			parameters: params,
@@ -177,7 +178,7 @@ func (s *stack) encode(v any) (string, error) {
 	return str.String(), nil
 }
 
-// parseWorkloadTemplate merges CloudFormation templates under the "addons/" directory  into a single CloudFormation 
+// parseTemplate merges CloudFormation templates under the "addons/" directory  into a single CloudFormation 
 // template and returns it.
 //
 // If the addons directory doesn't exist or no yaml files are found in
