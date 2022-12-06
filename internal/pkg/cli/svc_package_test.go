@@ -5,7 +5,6 @@ package cli
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"testing"
 
@@ -214,6 +213,13 @@ count: 1`
 				}, nil)
 				m.interpolator.EXPECT().Interpolate(lbwsMft).Return(lbwsMft, nil)
 				m.generator.EXPECT().AddonsTemplate().Return("", nil)
+				m.envFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{}
+					},
+				}
+				m.envFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{}, nil)
 			},
 			wantedStack:  "mystack",
 			wantedParams: "myparams",
@@ -230,6 +236,13 @@ count: 1`
 				m.ws.EXPECT().ReadWorkloadManifest("api").Return([]byte(rdwsMft), nil)
 				m.interpolator.EXPECT().Interpolate(rdwsMft).Return(rdwsMft, nil)
 				m.generator.EXPECT().AddonsTemplate().Return("", nil)
+				m.envFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mft = &mockWorkloadMft{
+					mockRequiredEnvironmentFeatures: func() []string {
+						return []string{}
+					},
+				}
+				m.envFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{}, nil)
 				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						RootUserARN: mockARN,
@@ -280,9 +293,8 @@ count: 1`
 					return m.generator, nil
 				},
 				envFeaturesDescriber: m.envFeaturesDescriber,
-
-				targetApp: &config.Application{},
-				targetEnv: &config.Environment{},
+				targetApp:            &config.Application{},
+				targetEnv:            &config.Environment{},
 			}
 			// tc.mockDependencies(ctrl, opts)
 
@@ -294,60 +306,6 @@ count: 1`
 			require.Equal(t, tc.wantedStack, stackBuf.String())
 			require.Equal(t, tc.wantedParams, paramsBuf.String())
 			require.Equal(t, tc.wantedAddons, addonsBuf.String())
-		})
-	}
-}
-
-func TestPackageSvcOpts_RecommendedActions(t *testing.T) {
-	testCases := map[string]struct {
-		setupMocks  func(m *svcPackageExecuteMock)
-		wantedError error
-	}{
-		"no recommended action when manifest is compatible with env": {
-			setupMocks: func(m *svcPackageExecuteMock) {
-				m.mft = &mockWorkloadMft{
-					mockRequiredEnvironmentFeatures: func() []string {
-						return []string{"mockFeature1"}
-					},
-				}
-				m.envFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
-			},
-		},
-		"error out when manifest is incompatible with env": {
-			setupMocks: func(m *svcPackageExecuteMock) {
-				m.mft = &mockWorkloadMft{
-					mockRequiredEnvironmentFeatures: func() []string {
-						return []string{"mockFeature1", "mockFeature3"}
-					},
-				}
-				m.envFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
-				m.envFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
-			},
-			wantedError: errors.New("environment \"mockEnv\" is on version \"v1.mock\" which does not support the \"mockFeature3\" feature"),
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			m := &svcPackageExecuteMock{
-				envFeaturesDescriber: mocks.NewMockversionCompatibilityChecker(ctrl),
-			}
-			tc.setupMocks(m)
-			opts := &packageSvcOpts{
-				packageSvcVars: packageSvcVars{
-					name:    "mockSvc",
-					envName: "mockEnv",
-				},
-				envFeaturesDescriber: m.envFeaturesDescriber,
-				appliedDynamicMft:    m.mft,
-			}
-			got := opts.RecommendActions()
-			if tc.wantedError != nil {
-				require.EqualError(t, got, tc.wantedError.Error())
-			} else {
-				require.NoError(t, got)
-			}
 		})
 	}
 }

@@ -9,12 +9,13 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/aws/copilot-cli/internal/pkg/cli/deploy"
+	clideploy "github.com/aws/copilot-cli/internal/pkg/cli/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/cli/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 )
@@ -162,6 +163,7 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockSvcName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return(nil, mockError)
 			},
 
@@ -176,8 +178,8 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 						return []string{"mockFeature1", "mockFeature3"}
 					},
 				}
-				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
 				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
 			},
 
 			wantedError: fmt.Errorf(`environment "prod-iad" is on version "v1.mock" which does not support the "mockFeature3" feature`),
@@ -191,8 +193,8 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 						return []string{"mockFeature1"}
 					},
 				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
-				m.mockEnvFeaturesDescriber.EXPECT().Version().Times(0)
 				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(nil, mockError)
 			},
@@ -208,9 +210,9 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 						return []string{"mockFeature1"}
 					},
 				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
-				m.mockEnvFeaturesDescriber.EXPECT().Version().Times(0)
-				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
 				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 			},
@@ -226,9 +228,9 @@ func TestSvcDeployOpts_Execute(t *testing.T) {
 						return []string{"mockFeature1"}
 					},
 				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
-				m.mockEnvFeaturesDescriber.EXPECT().Version().Times(0)
-				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
+				m.mockDeployer.EXPECT().UploadArtifacts().Return(&clideploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, nil)
 				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 			},
@@ -292,14 +294,28 @@ type checkEnvironmentCompatibilityMocks struct {
 }
 
 func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
+	mockError := errors.New("some error")
 	testCases := map[string]struct {
 		setupMock    func(m *checkEnvironmentCompatibilityMocks)
 		mockManifest *mockWorkloadMft
 		wantedError  error
 	}{
+		"error getting environment version": {
+			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
+				m.versionFeatureGetter.EXPECT().Version().Return("", mockError)
+			},
+			wantedError: errors.New("get environment \"mockEnv\" version: some error"),
+		},
+		"error if env is not deployed": {
+			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
+				m.versionFeatureGetter.EXPECT().Version().Return(deploy.EnvTemplateVersionBootstrap, nil)
+			},
+			wantedError: errors.New("cannot deploy a service to an undeployed environment. Please run \"copilot env deploy --name mockEnv\" to deploy the environment first"),
+		},
 		"error getting environment available features": {
 			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
-				m.versionFeatureGetter.EXPECT().AvailableFeatures().Return(nil, errors.New("some error"))
+				m.versionFeatureGetter.EXPECT().Version().Return("mockVersion", nil)
+				m.versionFeatureGetter.EXPECT().AvailableFeatures().Return(nil, mockError)
 				m.requiredEnvironmentFeaturesFunc = func() []string {
 					return nil
 				}
@@ -308,8 +324,8 @@ func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 		},
 		"not compatible": {
 			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
-				m.versionFeatureGetter.EXPECT().AvailableFeatures().Return([]string{template.ALBFeatureName}, nil)
 				m.versionFeatureGetter.EXPECT().Version().Return("mockVersion", nil)
+				m.versionFeatureGetter.EXPECT().AvailableFeatures().Return([]string{template.ALBFeatureName}, nil)
 				m.requiredEnvironmentFeaturesFunc = func() []string {
 					return []string{template.InternalALBFeatureName}
 				}
@@ -318,6 +334,7 @@ func Test_isManifestCompatibleWithEnvironment(t *testing.T) {
 		},
 		"compatible": {
 			setupMock: func(m *checkEnvironmentCompatibilityMocks) {
+				m.versionFeatureGetter.EXPECT().Version().Return("mockVersion", nil)
 				m.versionFeatureGetter.EXPECT().AvailableFeatures().Return([]string{template.ALBFeatureName, template.InternalALBFeatureName}, nil)
 				m.requiredEnvironmentFeaturesFunc = func() []string {
 					return []string{template.InternalALBFeatureName}
