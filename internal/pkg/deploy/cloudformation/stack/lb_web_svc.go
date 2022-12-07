@@ -197,6 +197,17 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
+
+	// Set container-level feature flag.
+	logConfig := convertLogging(s.manifest.Logging)
+	if logConfig != nil {
+		logConfig.EnvAddonsFeatureFlag = s.EnvAddonsFeatureFlag
+	}
+	for _, sidecar := range sidecars {
+		if sidecar != nil {
+			sidecar.EnvAddonsFeatureFlag = s.EnvAddonsFeatureFlag
+		}
+	}
 	content, err := s.parser.ParseLoadBalancedWebService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -212,7 +223,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		NestedStack:        addonsOutputs,
 		AddonsExtraParams:  addonsParams,
 		Sidecars:           sidecars,
-		LogConfig:          convertLogging(s.manifest.Logging),
+		LogConfig:          logConfig,
 		DockerLabels:       s.manifest.ImageConfig.Image.DockerLabels,
 		Autoscaling:        autoscaling,
 		CapacityProviders:  capacityProviders,
@@ -250,7 +261,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		HostedZoneAliases:    aliasesFor,
 		PermissionsBoundary:  s.permBound,
 		SCFeatureFlag:        s.SCFeatureFlag,
-		EnvAddonsFeatureFlag: s.EnvAddonsFeatureFlag,
+		EnvAddonsFeatureFlag: s.EnvAddonsFeatureFlag, // Feature flag for main container
 	})
 	if err != nil {
 		return "", err

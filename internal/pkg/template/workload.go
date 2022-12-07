@@ -201,13 +201,14 @@ type EFSVolumeConfiguration struct {
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
 // its logs.
 type LogConfigOpts struct {
-	Image          *string
-	Destination    map[string]string
-	EnableMetadata *string
-	SecretOptions  map[string]Secret
-	ConfigFile     *string
-	Variables      map[string]Variable
-	Secrets        map[string]Secret
+	Image                *string
+	Destination          map[string]string
+	EnableMetadata       *string
+	SecretOptions        map[string]Secret
+	ConfigFile           *string
+	Variables            map[string]Variable
+	Secrets              map[string]Secret
+	EnvAddonsFeatureFlag bool
 }
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.

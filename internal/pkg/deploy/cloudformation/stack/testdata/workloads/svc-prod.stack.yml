@@ -170,6 +170,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: '{"givesdogs":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-givesdogs","mytopic.fifo":"arn:aws:sns:us-west-2:123456789123:my-app-prod-fe-mytopic.fifo"}'
             - Name: COPILOT_LB_DNS
               Value: !GetAtt EnvControllerAction.PublicLoadBalancerDNSName
+            - Name: DB_NAME
+              Value:
+                Fn::ImportValue: "MyDB"
             - Name: NGINX_PORT
               Value: "80"
           LogConfiguration:
