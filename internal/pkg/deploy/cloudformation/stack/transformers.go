@@ -1001,7 +1001,7 @@ func convertEnvVars(variables map[string]manifest.Variable) map[string]template.
 	if len(variables) == 0 {
 		return nil
 	}
-	m := make(map[string]template.Variable)
+	m := make(map[string]template.Variable, len(variables))
 	for name, variable := range variables {
 		if variable.RequiresImport() {
 			m[name] = template.ImportedVariable(variable.Value())
