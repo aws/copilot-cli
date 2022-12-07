@@ -203,9 +203,7 @@ type PackageConfig struct {
 // Package finds references to local files in Stack's template, uploads
 // the files to S3, and replaces the file path with the S3 location.
 func (s *EnvironmentStack) Package(cfg PackageConfig) error {
-	cfg.s3Path = func(hash string) string {
-		return artifactpath.EnvironmentAddonAsset(hash)
-	}
+	cfg.s3Path = artifactpath.EnvironmentAddonAsset
 	return s.packageAssets(cfg)
 }
 
