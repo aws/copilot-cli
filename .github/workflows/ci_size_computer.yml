@@ -1,0 +1,97 @@
+name: Compute bin sizes
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+jobs:
+  binsize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+
+      - name: Set up Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.x
+
+      - name: Get latest release with tag
+        id: latestrelease
+        run: |
+          echo "VERSION_TAG=$(curl -s https://api.github.com/repos/aws/copilot-cli/releases/latest | jq '.tag_name' | sed 's/\"//g')" >> $GITHUB_OUTPUT
+
+      - name: Check out latest release tag
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ steps.latestrelease.outputs.VERSION_TAG }}
+          repository: aws/copilot-cli
+
+      - name: Compute old release binary sizes
+        id: old-bins
+        run: |
+          make release
+          echo "MAC_AMD_KIB=$(du -k ./bin/local/copilot-darwin-amd64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "MAC_ARM_KIB=$(du -k ./bin/local/copilot-darwin-arm64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "LINUX_AMD_KIB=$(du -k ./bin/local/copilot-linux-amd64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "LINUX_ARM_KIB=$(du -k ./bin/local/copilot-linux-arm64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "WINDOWS_AMD_KIB=$(du -k ./bin/local/copilot.exe | awk '{ print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Check out PR commit
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Compute new release binary sizes
+        id: new-bins
+        run: |
+          make release
+          echo "MAC_AMD_KIB=$(du -k ./bin/local/copilot-darwin-amd64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "MAC_ARM_KIB=$(du -k ./bin/local/copilot-darwin-arm64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "LINUX_AMD_KIB=$(du -k ./bin/local/copilot-linux-amd64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "LINUX_ARM_KIB=$(du -k ./bin/local/copilot-linux-arm64 | awk '{ print $1}')" >> $GITHUB_OUTPUT
+          echo "WINDOWS_AMD_KIB=$(du -k ./bin/local/copilot.exe | awk '{ print $1}')" >> $GITHUB_OUTPUT
+
+      - name: Save sizes and PR number
+        run: |
+          mkdir artifacts
+          sizes_json="{
+            \"macOS\": {
+              \"amd\": {
+                \"old\": ${{ steps.old-bins.outputs.MAC_AMD_KIB }},
+                \"cur\": ${{ steps.new-bins.outputs.MAC_AMD_KIB }}
+              },
+              \"arm\": {
+                \"old\": ${{ steps.old-bins.outputs.MAC_ARM_KIB }},
+                \"cur\": ${{ steps.new-bins.outputs.MAC_ARM_KIB }}
+              }
+            },
+            \"linux\": {
+              \"amd\": {
+                \"old\": ${{ steps.old-bins.outputs.LINUX_AMD_KIB }},
+                \"cur\": ${{ steps.new-bins.outputs.LINUX_AMD_KIB }}
+              },
+              \"arm\": {
+                \"old\": ${{ steps.old-bins.outputs.LINUX_ARM_KIB }},
+                \"cur\": ${{ steps.new-bins.outputs.LINUX_ARM_KIB }}
+              }
+            },
+            \"windows\": {
+              \"amd\": {
+                \"old\": ${{ steps.old-bins.outputs.WINDOWS_AMD_KIB }},
+                \"cur\": ${{ steps.new-bins.outputs.WINDOWS_AMD_KIB }}
+              }
+            }
+          }"
+          echo ${{ github.event.number }} > artifacts/pr_number
+          echo ${sizes_json} > artifacts/sizes.json
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: pr_number_and_bin_sizes
+          path: artifacts/

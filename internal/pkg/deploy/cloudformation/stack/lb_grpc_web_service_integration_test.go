@@ -70,7 +70,7 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 		require.NoError(t, err)
 
 		ws, err := workspace.Use(fs)
-		_, err = addon.Parse(aws.StringValue(v.Name), ws)
+		_, err = addon.ParseFromWorkload(aws.StringValue(v.Name), ws)
 		var notFound *addon.ErrAddonsNotFound
 		require.ErrorAs(t, err, &notFound)
 
