@@ -150,6 +150,145 @@ func (d *envDeployer) Validate(mft *manifest.Environment) error {
 	return d.validateCDN(mft)
 }
 
+// UploadArtifacts uploads the deployment artifacts for the environment.
+func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
+	resources, err := d.getAppRegionalResources()
+	if err != nil {
+		return nil, err
+	}
+	if err := d.patcher.EnsureManagerRoleIsAllowedToUpload(resources.S3Bucket); err != nil {
+		return nil, fmt.Errorf("ensure env manager role has permissions to upload: %w", err)
+	}
+	return d.uploadCustomResources(resources.S3Bucket)
+}
+
+// DeployEnvironmentInput contains information used to deploy the environment.
+type DeployEnvironmentInput struct {
+	RootUserARN         string
+	CustomResourcesURLs map[string]string
+	Manifest            *manifest.Environment
+	ForceNewUpdate      bool
+	RawManifest         []byte
+	PermissionsBoundary string
+	DisableRollback     bool
+}
+
+// GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
+func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput) (*GenerateCloudFormationTemplateOutput, error) {
+	stackInput, err := d.buildStackInput(in)
+	if err != nil {
+		return nil, err
+	}
+	oldParams, err := d.envDeployer.DeployedEnvironmentParameters(d.app.Name, d.env.Name)
+	if err != nil {
+		return nil, fmt.Errorf("describe environment stack parameters: %w", err)
+	}
+	lastForceUpdateID, err := d.envDeployer.ForceUpdateOutputID(d.app.Name, d.env.Name)
+	if err != nil {
+		return nil, fmt.Errorf("retrieve environment stack force update ID: %w", err)
+	}
+	stack := d.newStackSerializer(stackInput, lastForceUpdateID, oldParams)
+	tpl, err := stack.Template()
+	if err != nil {
+		return nil, fmt.Errorf("generate stack template: %w", err)
+	}
+	params, err := stack.SerializedParameters()
+	if err != nil {
+		return nil, fmt.Errorf("generate stack template parameters: %w", err)
+	}
+	return &GenerateCloudFormationTemplateOutput{
+		Template:   tpl,
+		Parameters: params,
+	}, nil
+}
+
+// DeployEnvironment deploys an environment using CloudFormation.
+func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
+	stackInput, err := d.buildStackInput(in)
+	if err != nil {
+		return err
+	}
+	oldParams, err := d.envDeployer.DeployedEnvironmentParameters(d.app.Name, d.env.Name)
+	if err != nil {
+		return fmt.Errorf("describe environment stack parameters: %w", err)
+	}
+	lastForceUpdateID, err := d.envDeployer.ForceUpdateOutputID(d.app.Name, d.env.Name)
+	if err != nil {
+		return fmt.Errorf("retrieve environment stack force update ID: %w", err)
+	}
+	opts := []awscloudformation.StackOption{
+		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
+	}
+	if in.DisableRollback {
+		opts = append(opts, awscloudformation.WithDisableRollback())
+	}
+	conf := cfnstack.NewEnvConfigFromExistingStack(stackInput, lastForceUpdateID, oldParams)
+	return d.envDeployer.UpdateAndRenderEnvironment(conf, stackInput.ArtifactBucketARN, opts...)
+}
+
+func (d *envDeployer) getAppRegionalResources() (*cfnstack.AppRegionalResources, error) {
+	if d.appRegionalResources != nil {
+		return d.appRegionalResources, nil
+	}
+	resources, err := d.appCFN.GetAppResourcesByRegion(d.app, d.env.Region)
+	if err != nil {
+		return nil, fmt.Errorf("get app resources in region %s: %w", d.env.Region, err)
+	}
+	if resources.S3Bucket == "" {
+		return nil, fmt.Errorf("cannot find the S3 artifact bucket in region %s", d.env.Region)
+	}
+	return resources, nil
+}
+
+func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, error) {
+	crs, err := customresource.Env(d.templateFS)
+	if err != nil {
+		return nil, fmt.Errorf("read custom resources for environment %s: %w", d.env.Name, err)
+	}
+	urls, err := customresource.Upload(func(key string, dat io.Reader) (url string, err error) {
+		return d.s3.Upload(bucket, key, dat)
+	}, crs)
+	if err != nil {
+		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", bucket, err)
+	}
+	return urls, nil
+}
+
+func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.CreateEnvironmentInput, error) {
+	resources, err := d.getAppRegionalResources()
+	if err != nil {
+		return nil, err
+	}
+	partition, err := partitions.Region(d.env.Region).Partition()
+	if err != nil {
+		return nil, err
+	}
+	cidrPrefixListIDs, err := d.cidrPrefixLists(in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &deploy.CreateEnvironmentInput{
+		Name: d.env.Name,
+		App: deploy.AppInformation{
+			Name:                d.app.Name,
+			Domain:              d.app.Domain,
+			AccountPrincipalARN: in.RootUserARN,
+		},
+		AdditionalTags:       d.app.Tags,
+		CustomResourcesURLs:  in.CustomResourcesURLs,
+		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
+		ArtifactBucketKeyARN: resources.KMSKeyARN,
+		CIDRPrefixListIDs:    cidrPrefixListIDs,
+		PublicALBSourceIPs:   d.publicALBSourceIPs(in),
+		Mft:                  in.Manifest,
+		ForceUpdate:          in.ForceNewUpdate,
+		RawMft:               in.RawManifest,
+		PermissionsBoundary:  in.PermissionsBoundary,
+		Version:              deploy.LatestEnvTemplateVersion,
+	}, nil
+}
+
 func (d *envDeployer) validateCDN(mft *manifest.Environment) error {
 	isManagedCDNEnabled := mft.CDNEnabled() && !mft.HasImportedPublicALBCerts() && d.app.Domain != ""
 	if isManagedCDNEnabled {
@@ -252,32 +391,6 @@ func (d *envDeployer) lbServiceRedirects(ctx context.Context, svc string) (bool,
 	return rule.HasRedirectAction(), nil
 }
 
-// UploadArtifacts uploads the deployment artifacts for the environment.
-func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
-	resources, err := d.getAppRegionalResources()
-	if err != nil {
-		return nil, err
-	}
-	if err := d.patcher.EnsureManagerRoleIsAllowedToUpload(resources.S3Bucket); err != nil {
-		return nil, fmt.Errorf("ensure env manager role has permissions to upload: %w", err)
-	}
-	return d.uploadCustomResources(resources.S3Bucket)
-}
-
-func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, error) {
-	crs, err := customresource.Env(d.templateFS)
-	if err != nil {
-		return nil, fmt.Errorf("read custom resources for environment %s: %w", d.env.Name, err)
-	}
-	urls, err := customresource.Upload(func(key string, dat io.Reader) (url string, err error) {
-		return d.s3.Upload(bucket, key, dat)
-	}, crs)
-	if err != nil {
-		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", bucket, err)
-	}
-	return urls, nil
-}
-
 func (d *envDeployer) cidrPrefixLists(in *DeployEnvironmentInput) ([]string, error) {
 	var cidrPrefixListIDs []string
 
@@ -312,117 +425,4 @@ func (d *envDeployer) cfManagedPrefixListID() (string, error) {
 	}
 
 	return id, nil
-}
-
-// DeployEnvironmentInput contains information used to deploy the environment.
-type DeployEnvironmentInput struct {
-	RootUserARN         string
-	CustomResourcesURLs map[string]string
-	Manifest            *manifest.Environment
-	ForceNewUpdate      bool
-	RawManifest         []byte
-	PermissionsBoundary string
-	DisableRollback     bool
-}
-
-// GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
-func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput) (*GenerateCloudFormationTemplateOutput, error) {
-	stackInput, err := d.buildStackInput(in)
-	if err != nil {
-		return nil, err
-	}
-	oldParams, err := d.envDeployer.DeployedEnvironmentParameters(d.app.Name, d.env.Name)
-	if err != nil {
-		return nil, fmt.Errorf("describe environment stack parameters: %w", err)
-	}
-	lastForceUpdateID, err := d.envDeployer.ForceUpdateOutputID(d.app.Name, d.env.Name)
-	if err != nil {
-		return nil, fmt.Errorf("retrieve environment stack force update ID: %w", err)
-	}
-	stack := d.newStackSerializer(stackInput, lastForceUpdateID, oldParams)
-	tpl, err := stack.Template()
-	if err != nil {
-		return nil, fmt.Errorf("generate stack template: %w", err)
-	}
-	params, err := stack.SerializedParameters()
-	if err != nil {
-		return nil, fmt.Errorf("generate stack template parameters: %w", err)
-	}
-	return &GenerateCloudFormationTemplateOutput{
-		Template:   tpl,
-		Parameters: params,
-	}, nil
-}
-
-// DeployEnvironment deploys an environment using CloudFormation.
-func (d *envDeployer) DeployEnvironment(in *DeployEnvironmentInput) error {
-	stackInput, err := d.buildStackInput(in)
-	if err != nil {
-		return err
-	}
-	oldParams, err := d.envDeployer.DeployedEnvironmentParameters(d.app.Name, d.env.Name)
-	if err != nil {
-		return fmt.Errorf("describe environment stack parameters: %w", err)
-	}
-	lastForceUpdateID, err := d.envDeployer.ForceUpdateOutputID(d.app.Name, d.env.Name)
-	if err != nil {
-		return fmt.Errorf("retrieve environment stack force update ID: %w", err)
-	}
-	opts := []awscloudformation.StackOption{
-		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
-	}
-	if in.DisableRollback {
-		opts = append(opts, awscloudformation.WithDisableRollback())
-	}
-	conf := cfnstack.NewEnvConfigFromExistingStack(stackInput, lastForceUpdateID, oldParams)
-	return d.envDeployer.UpdateAndRenderEnvironment(conf, stackInput.ArtifactBucketARN, opts...)
-}
-
-func (d *envDeployer) getAppRegionalResources() (*cfnstack.AppRegionalResources, error) {
-	if d.appRegionalResources != nil {
-		return d.appRegionalResources, nil
-	}
-	resources, err := d.appCFN.GetAppResourcesByRegion(d.app, d.env.Region)
-	if err != nil {
-		return nil, fmt.Errorf("get app resources in region %s: %w", d.env.Region, err)
-	}
-	if resources.S3Bucket == "" {
-		return nil, fmt.Errorf("cannot find the S3 artifact bucket in region %s", d.env.Region)
-	}
-	return resources, nil
-}
-
-func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.CreateEnvironmentInput, error) {
-	resources, err := d.getAppRegionalResources()
-	if err != nil {
-		return nil, err
-	}
-	partition, err := partitions.Region(d.env.Region).Partition()
-	if err != nil {
-		return nil, err
-	}
-	cidrPrefixListIDs, err := d.cidrPrefixLists(in)
-	if err != nil {
-		return nil, err
-	}
-
-	return &deploy.CreateEnvironmentInput{
-		Name: d.env.Name,
-		App: deploy.AppInformation{
-			Name:                d.app.Name,
-			Domain:              d.app.Domain,
-			AccountPrincipalARN: in.RootUserARN,
-		},
-		AdditionalTags:       d.app.Tags,
-		CustomResourcesURLs:  in.CustomResourcesURLs,
-		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
-		ArtifactBucketKeyARN: resources.KMSKeyARN,
-		CIDRPrefixListIDs:    cidrPrefixListIDs,
-		PublicALBSourceIPs:   d.publicALBSourceIPs(in),
-		Mft:                  in.Manifest,
-		ForceUpdate:          in.ForceNewUpdate,
-		RawMft:               in.RawManifest,
-		PermissionsBoundary:  in.PermissionsBoundary,
-		Version:              deploy.LatestEnvTemplateVersion,
-	}, nil
 }
