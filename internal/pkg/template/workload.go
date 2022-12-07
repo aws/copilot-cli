@@ -254,14 +254,14 @@ type Variable interface {
 }
 
 // ImportedVariable returns a Variable that should be imported from a stack.
-func ImportedVariable(name string) envVar {
+func ImportedVariable(name string) Variable {
 	return envVar{
 		importName: name,
 	}
 }
 
 // PlainVariable returns a Variable that is a plain string value.
-func PlainVariable(value string) envVar {
+func PlainVariable(value string) Variable {
 	return envVar{
 		value: value,
 	}
