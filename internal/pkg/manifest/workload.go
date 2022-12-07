@@ -115,9 +115,10 @@ func UnmarshalWorkload(in []byte) (DynamicWorkload, error) {
 
 // WorkloadProps contains properties for creating a new workload manifest.
 type WorkloadProps struct {
-	Name       string
-	Dockerfile string
-	Image      string
+	Name                    string
+	Dockerfile              string
+	Image                   string
+	PrivateOnlyEnvironments []string
 }
 
 // Workload holds the basic data that every workload manifest file needs to have.
@@ -479,6 +480,11 @@ func (c *NetworkConfig) requiredEnvFeatures() []string {
 type ServiceConnectBoolOrArgs struct {
 	EnableServiceConnect *bool
 	ServiceConnectArgs
+}
+
+// Enabled returns if ServiceConnect is enabled or not.
+func (s *ServiceConnectBoolOrArgs) Enabled() bool {
+	return aws.BoolValue(s.EnableServiceConnect) || !s.ServiceConnectArgs.isEmpty()
 }
 
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the ServiceConnect

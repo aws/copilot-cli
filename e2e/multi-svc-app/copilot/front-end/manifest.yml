@@ -22,6 +22,9 @@ http:
   # To match all requests you can use the "/" path. 
   path: '/'
 
+network:
+  connect: true
+
 # Number of CPU units for the task.
 cpu: 256
 # Amount of memory in MiB used by the task.

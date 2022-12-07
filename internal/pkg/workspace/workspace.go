@@ -4,21 +4,22 @@
 // Package workspace contains functionality to manage a user's local workspace. This includes
 // creating an application directory, reading and writing a summary file to associate the workspace with the application,
 // and managing infrastructure-as-code files. The typical workspace will be structured like:
-//  .
-//  ├── copilot                        (application directory)
-//  │   ├── .workspace                 (workspace summary)
-//  │   ├── my-service
-//  │   │   └── manifest.yml           (service manifest)
-//  |   |   environments
-//  |   |   └── test
-//  │   │       └── manifest.yml       (environment manifest for the environment test)
-//  │   ├── buildspec.yml              (legacy buildspec for the pipeline's build stage)
-//  │   ├── pipeline.yml               (legacy pipeline manifest)
-//  │   ├── pipelines
-//  │   │   ├── pipeline-app-beta
-//  │   │   │   ├── buildspec.yml      (buildspec for the pipeline 'pipeline-app-beta')
-//  │   ┴   ┴   └── manifest.yml       (pipeline manifest for the pipeline 'pipeline-app-beta')
-//  └── my-service-src                 (customer service code)
+//
+//	.
+//	├── copilot                        (application directory)
+//	│   ├── .workspace                 (workspace summary)
+//	│   ├── my-service
+//	│   │   └── manifest.yml           (service manifest)
+//	|   |   environments
+//	|   |   └── test
+//	│   │       └── manifest.yml       (environment manifest for the environment test)
+//	│   ├── buildspec.yml              (legacy buildspec for the pipeline's build stage)
+//	│   ├── pipeline.yml               (legacy pipeline manifest)
+//	│   ├── pipelines
+//	│   │   ├── pipeline-app-beta
+//	│   │   │   ├── buildspec.yml      (buildspec for the pipeline 'pipeline-app-beta')
+//	│   ┴   ┴   └── manifest.yml       (pipeline manifest for the pipeline 'pipeline-app-beta')
+//	└── my-service-src                 (customer service code)
 package workspace
 
 import (
@@ -28,6 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 
@@ -56,16 +58,21 @@ const (
 // Summary is a description of what's associated with this workspace.
 type Summary struct {
 	Application string `yaml:"application"` // Name of the application.
-
-	Path string // absolute path to the summary file.
+	Path        string `yaml:"-"`           // absolute path to the summary file.
 }
 
 // Workspace typically represents a Git repository where the user has its infrastructure-as-code files as well as source files.
 type Workspace struct {
 	workingDirAbs string
 	copilotDirAbs string
-	fs            *afero.Afero
-	logger        func(format string, args ...interface{})
+
+	// These fields should be accessed via the Summary method and not directly.
+	summary       *Summary
+	summaryErr    error
+	summarizeOnce sync.Once
+
+	fs     *afero.Afero
+	logger func(format string, args ...interface{})
 }
 
 // Use returns an existing workspace, searching for a copilot/ directory from the current wd,
@@ -85,6 +92,10 @@ func Use(fs afero.Fs) (*Workspace, error) {
 		return nil, err
 	}
 	ws.copilotDirAbs = copilotDirPath
+	if _, err := ws.Summary(); err != nil {
+		// If there is an issue retrieving the summary, then the workspace is not usable.
+		return nil, err
+	}
 	return ws, nil
 }
 
@@ -134,7 +145,8 @@ func Create(appName string, fs afero.Fs) (*Workspace, error) {
 		return nil, err
 	}
 	ws.copilotDirAbs = copilotDirAbs
-	if err := ws.writeSummary(appName); err != nil {
+	ws.summary, ws.summaryErr = ws.writeSummary(appName)
+	if ws.summaryErr != nil {
 		return nil, err
 	}
 
@@ -143,19 +155,23 @@ func Create(appName string, fs afero.Fs) (*Workspace, error) {
 
 // Summary returns a summary of the workspace. The method assumes that the workspace exists and the path is known.
 func (ws *Workspace) Summary() (*Summary, error) {
-	summaryPath := filepath.Join(ws.copilotDirAbs, SummaryFileName) // Assume `copilotDirAbs` is always present.
-	summaryFileExists, _ := ws.fs.Exists(summaryPath)               // If an err occurs, return no applications.
-	if summaryFileExists {
-		value, err := ws.fs.ReadFile(summaryPath)
-		if err != nil {
-			return nil, err
+	ws.summarizeOnce.Do(func() {
+		summaryPath := filepath.Join(ws.copilotDirAbs, SummaryFileName) // Assume `copilotDirAbs` is always present.
+		if ok, _ := ws.fs.Exists(summaryPath); !ok {
+			ws.summaryErr = &ErrNoAssociatedApplication{}
+			return
 		}
-		wsSummary := Summary{
+		f, err := ws.fs.ReadFile(summaryPath)
+		if err != nil {
+			ws.summaryErr = err
+			return
+		}
+		ws.summary = &Summary{
 			Path: summaryPath,
 		}
-		return &wsSummary, yaml.Unmarshal(value, &wsSummary)
-	}
-	return nil, &ErrNoAssociatedApplication{}
+		ws.summaryErr = yaml.Unmarshal(f, ws.summary)
+	})
+	return ws.summary, ws.summaryErr
 }
 
 // ListServices returns the names of the services in the workspace.
@@ -480,18 +496,18 @@ func (ws *Workspace) pipelineManifestLegacyPath() string {
 	return filepath.Join(ws.copilotDirAbs, legacyPipelineFileName)
 }
 
-func (ws *Workspace) writeSummary(appName string) error {
+func (ws *Workspace) writeSummary(appName string) (*Summary, error) {
 	summaryPath := ws.summaryPath()
-	workspaceSummary := Summary{
+	summary := Summary{
 		Application: appName,
+		Path:        summaryPath,
 	}
 
-	serializedWorkspaceSummary, err := yaml.Marshal(workspaceSummary)
-
+	serializedWorkspaceSummary, err := yaml.Marshal(summary)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return ws.fs.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
+	return &summary, ws.fs.WriteFile(summaryPath, serializedWorkspaceSummary, 0644)
 }
 
 func (ws *Workspace) pipelinesDirPath() string {

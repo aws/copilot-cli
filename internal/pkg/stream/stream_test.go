@@ -16,14 +16,13 @@ import (
 type counterStreamer struct {
 	fetchCount  int
 	notifyCount int
-	done        chan struct{}
 
 	next func() time.Time
 }
 
-func (s *counterStreamer) Fetch() (time.Time, error) {
+func (s *counterStreamer) Fetch() (time.Time, bool, error) {
 	s.fetchCount += 1
-	return s.next(), nil
+	return s.next(), false, nil
 }
 
 func (s *counterStreamer) Notify() {
@@ -32,33 +31,18 @@ func (s *counterStreamer) Notify() {
 
 func (s *counterStreamer) Close() {}
 
-func (s *counterStreamer) Done() <-chan struct{} {
-	if s.done == nil {
-		s.done = make(chan struct{})
-	}
-	return s.done
-}
-
 // errStreamer returns an error when Fetch is invoked.
 type errStreamer struct {
-	err  error
-	done chan struct{}
+	err error
 }
 
-func (s *errStreamer) Fetch() (time.Time, error) {
-	return time.Now(), s.err
+func (s *errStreamer) Fetch() (time.Time, bool, error) {
+	return time.Now(), false, s.err
 }
 
 func (s *errStreamer) Notify() {}
 
 func (s *errStreamer) Close() {}
-
-func (s *errStreamer) Done() <-chan struct{} {
-	if s.done == nil {
-		s.done = make(chan struct{})
-	}
-	return s.done
-}
 
 func TestStream(t *testing.T) {
 	t.Run("returns error from Fetch", func(t *testing.T) {
@@ -92,32 +76,6 @@ func TestStream(t *testing.T) {
 		require.Greater(t, streamer.fetchCount, 1, "expected more than one call to Fetch within timeout")
 		require.Greater(t, streamer.notifyCount, 1, "expected more than one call to Notify within timeout")
 	})
-
-	t.Run("calls Fetch and Notify multiple times until there is no more work left", func(t *testing.T) {
-		t.Parallel()
-
-		done := make(chan struct{})
-		streamer := &counterStreamer{
-			next: func() time.Time {
-				return time.Now().Add(100 * time.Millisecond)
-			},
-			done: done,
-		}
-		go func() {
-			// Stop the streamer after 1s of work.
-			<-time.After(300 * time.Millisecond)
-			close(done)
-		}()
-
-		// WHEN
-		err := Stream(context.Background(), streamer)
-
-		// THEN
-		require.NoError(t, err)
-		require.Greater(t, streamer.fetchCount, 1, "expected more than one call to Fetch within timeout")
-		require.Greater(t, streamer.notifyCount, 1, "expected more than one call to Notify within timeout")
-	})
-
 	t.Run("nextFetchDate works correctly to grab times before the timeout.", func(t *testing.T) {
 		clock := fakeClock{fakeNow: time.Date(2020, time.November, 1, 0, 0, 0, 0, time.UTC)}
 		rand := func(n int) int { return n }

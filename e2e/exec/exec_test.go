@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("exec flow", func() {
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		var (
 			initErr error
 		)
@@ -47,7 +47,7 @@ var _ = Describe("exec flow", func() {
 		})
 	})
 
-	Context("when adding a new environment", func() {
+	Context("when adding a new environment", Ordered, func() {
 		var (
 			testEnvInitErr error
 		)
@@ -64,7 +64,7 @@ var _ = Describe("exec flow", func() {
 		})
 	})
 
-	Context("when deploying the environment", func() {
+	Context("when deploying the environment", Ordered, func() {
 		var envDeployErr error
 		BeforeAll(func() {
 			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
@@ -78,7 +78,7 @@ var _ = Describe("exec flow", func() {
 		})
 	})
 
-	Context("when adding a svc", func() {
+	Context("when adding a svc", Ordered, func() {
 		var (
 			svcInitErr error
 		)
@@ -116,7 +116,7 @@ var _ = Describe("exec flow", func() {
 		})
 	})
 
-	Context("when deploying svc", func() {
+	Context("when deploying svc", Ordered, func() {
 		const newContent = "HELP I AM TRAPPED INSIDE A SHELL"
 		var (
 			appDeployErr error
@@ -157,6 +157,7 @@ var _ = Describe("exec flow", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(svc.Routes)).To(Equal(1))
+			Expect(len(svc.ServiceConnects)).To(Equal(0))
 
 			route := svc.Routes[0]
 			Expect(route.Environment).To(Equal(envName))
@@ -261,7 +262,7 @@ var _ = Describe("exec flow", func() {
 		// })
 	})
 
-	Context("when running a one-off task", func() {
+	Context("when running a one-off task", Ordered, func() {
 		var (
 			taskRunErr error
 		)

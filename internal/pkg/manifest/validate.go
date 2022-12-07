@@ -204,11 +204,6 @@ func (b BackendService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate HTTP load balancer target: %w", err)
 	}
-	if b.ServiceConnectEnabled() {
-		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
-			return fmt.Errorf(`cannot enable "network.connect" when no port exposed`)
-		}
-	}
 	if err = validateContainerDeps(validateDependenciesOpts{
 		sidecarConfig:     b.Sidecars,
 		imageConfig:       b.ImageConfig.Image,
@@ -251,6 +246,11 @@ func (b BackendServiceConfig) validate() error {
 	}
 	if err = b.Network.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	if b.Network.Connect.Alias != nil {
+		if b.RoutingRule.GetTargetContainer() == nil && b.ImageConfig.Port == nil {
+			return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
+		}
 	}
 	if err = b.PublishConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "publish": %w`, err)
@@ -361,6 +361,9 @@ func (w WorkerServiceConfig) validate() error {
 	}
 	if err = w.Network.validate(); err != nil {
 		return fmt.Errorf(`validate "network": %w`, err)
+	}
+	if w.Network.Connect.Alias != nil {
+		return fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`)
 	}
 	if err = w.Subscribe.validate(); err != nil {
 		return fmt.Errorf(`validate "subscribe": %w`, err)
@@ -1083,8 +1086,8 @@ func (r RangeConfig) validate() error {
 	min, max, spotFrom := aws.IntValue(r.Min), aws.IntValue(r.Max), aws.IntValue(r.SpotFrom)
 	if min < 0 || max < 0 || spotFrom < 0 {
 		return &errRangeValueLessThanZero{
-			min: min,
-			max: max,
+			min:      min,
+			max:      max,
 			spotFrom: spotFrom,
 		}
 	}

@@ -9,24 +9,22 @@ import (
 	"net/http"
 )
 
-var message = "hello world"
-
-// HealthCheck just returns true if the service is up.
+// HealthCheck returns a 200.
 func HealthCheck(w http.ResponseWriter, req *http.Request) {
 	log.Println("🚑 healthcheck ok!")
 	w.WriteHeader(http.StatusOK)
 }
 
-// ServiceDiscoveryGet just returns true no matter what
-func ServiceDiscoveryGet(w http.ResponseWriter, req *http.Request) {
-	log.Printf("Get on ServiceDiscovery endpoint Succeeded with message %s\n", message)
+// HelloWorld writes a hello world message.
+func HelloWorld(w http.ResponseWriter, req *http.Request) {
+	log.Printf("Received request to %s", req.URL.Path)
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(message))
+	w.Write([]byte("hello-world"))
 }
 
 func main() {
 	http.Handle("/", http.HandlerFunc(HealthCheck))
-	http.Handle("/service-discovery", http.HandlerFunc(ServiceDiscoveryGet))
+	http.Handle("/hello-world", http.HandlerFunc(HelloWorld))
 
 	err := http.ListenAndServe(":80", nil)
 	if !errors.Is(err, http.ErrServerClosed) {

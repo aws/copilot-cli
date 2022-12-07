@@ -10,6 +10,8 @@ import (
 	"os"
 
 	awscfn "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/aws/iam"
+	"github.com/aws/copilot-cli/internal/pkg/describe"
 	"github.com/aws/copilot-cli/internal/pkg/docker/dockerfile"
 
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -109,9 +111,7 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 	spin := termprogress.NewSpinner(log.DiagnosticWriter)
 	id := identity.New(defaultSess)
 	deployer := cloudformation.New(defaultSess, cloudformation.WithProgressTracker(os.Stderr))
-	if err != nil {
-		return nil, err
-	}
+	iamClient := iam.New(defaultSess)
 	initAppCmd := &initAppOpts{
 		initAppVars: initAppVars{
 			name: vars.appName,
@@ -130,6 +130,8 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		newWorkspace: func(appName string) (wsAppManager, error) {
 			return workspace.Create(appName, fs)
 		},
+		iam:            iamClient,
+		iamRoleManager: iamClient,
 	}
 	initEnvCmd := &initEnvOpts{
 		initEnvVars: initEnvVars{
@@ -263,6 +265,17 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					initParser: func(s string) dockerfileParser {
 						return dockerfile.New(fs, s)
 					},
+					initEnvDescriber: func(appName string, envName string) (envDescriber, error) {
+						envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+							App:         appName,
+							Env:         envName,
+							ConfigStore: configStore,
+						})
+						if err != nil {
+							return nil, fmt.Errorf("initiate env describer: %w", err)
+						}
+						return envDescriber, nil
+					},
 				}
 				o.initWlCmd = &opts
 				o.schedule = &opts.schedule // Surfaced via pointer for logging
@@ -290,6 +303,17 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 					}
 					opts.df = dockerfile.New(opts.fs, opts.dockerfilePath)
 					return opts.df
+				}
+				opts.initEnvDescriber = func(appName string, envName string) (envDescriber, error) {
+					envDescriber, err := describe.NewEnvDescriber(describe.NewEnvDescriberConfig{
+						App:         appName,
+						Env:         envName,
+						ConfigStore: opts.store,
+					})
+					if err != nil {
+						return nil, fmt.Errorf("initiate env describer: %w", err)
+					}
+					return envDescriber, nil
 				}
 				o.initWlCmd = &opts
 				o.port = &opts.port // Surfaced via pointer for logging.

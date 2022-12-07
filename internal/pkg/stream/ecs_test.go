@@ -57,7 +57,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", time.Now())
 
 		// WHEN
-		_, err := streamer.Fetch()
+		_, _, err := streamer.Fetch()
 
 		// THEN
 		require.EqualError(t, err, "fetch service description: some error")
@@ -95,7 +95,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
 
 		// WHEN
-		_, err := streamer.Fetch()
+		_, done, err := streamer.Fetch()
 
 		// THEN
 		require.NoError(t, err)
@@ -126,8 +126,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 				LatestFailureEvents: nil,
 			},
 		}, streamer.eventsToFlush)
-		_, isOpen := <-streamer.Done()
-		require.False(t, isOpen, "there should be no more work to do since the deployment is completed")
+		require.True(t, done, "there should be no more work to do since the deployment is completed")
 	})
 	t.Run("stores events until deployment is done without circuit breaker", func(t *testing.T) {
 		// GIVEN
@@ -160,7 +159,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 		streamer := NewECSDeploymentStreamer(m, "my-cluster", "my-svc", startDate)
 
 		// WHEN
-		_, err := streamer.Fetch()
+		_, done, err := streamer.Fetch()
 
 		// THEN
 		require.NoError(t, err)
@@ -189,8 +188,7 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 				LatestFailureEvents: nil,
 			},
 		}, streamer.eventsToFlush)
-		_, isOpen := <-streamer.Done()
-		require.False(t, isOpen, "there should be no more work to do since the deployment is completed")
+		require.True(t, done, "there should be no more work to do since the deployment is completed")
 	})
 	t.Run("stores only failure event messages", func(t *testing.T) {
 		// GIVEN
@@ -256,11 +254,10 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 			cluster:                "my-cluster",
 			service:                "my-svc",
 			deploymentCreationTime: startDate,
-			done:                   make(chan struct{}),
 			pastEventIDs:           make(map[string]bool),
 		}
 		// WHEN
-		_, err := streamer.Fetch()
+		_, _, err := streamer.Fetch()
 
 		// THEN
 		require.NoError(t, err)
@@ -299,11 +296,10 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 			cluster:                "my-cluster",
 			service:                "my-svc",
 			deploymentCreationTime: startDate,
-			done:                   make(chan struct{}),
 			pastEventIDs:           make(map[string]bool),
 		}
 		// WHEN
-		_, err := streamer.Fetch()
+		_, _, err := streamer.Fetch()
 
 		// THEN
 		require.NoError(t, err)
@@ -332,13 +328,12 @@ func TestECSDeploymentStreamer_Fetch(t *testing.T) {
 			cluster:                "my-cluster",
 			service:                "my-svc",
 			deploymentCreationTime: startDate,
-			done:                   make(chan struct{}),
 			pastEventIDs:           make(map[string]bool),
 		}
 		streamer.pastEventIDs["1"] = true
 
 		// WHEN
-		_, err := streamer.Fetch()
+		_, _, err := streamer.Fetch()
 
 		// THEN
 		require.NoError(t, err)

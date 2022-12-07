@@ -12,7 +12,7 @@ import (
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
 	"github.com/aws/copilot-cli/e2e/internal/command"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -47,16 +47,6 @@ var _ = AfterSuite(func() {
 	err = command.Run("aws", []string{"ecr", "delete-repository", "--repository-name", sidecarRepoName, "--force"})
 	Expect(err).NotTo(HaveOccurred())
 })
-
-func BeforeAll(fn func()) {
-	first := true
-	BeforeEach(func() {
-		if first {
-			fn()
-			first = false
-		}
-	})
-}
 
 // exponentialBackoffWithJitter backoff exponentially with jitter based on 200ms base
 // component of backoff fixed to ensure minimum total wait time on

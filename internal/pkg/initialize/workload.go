@@ -60,14 +60,15 @@ type Prog interface {
 
 // WorkloadProps contains the information needed to represent a Workload (job or service).
 type WorkloadProps struct {
-	App            string
-	Type           string
-	Name           string
-	DockerfilePath string
-	Image          string
-	Platform       manifest.PlatformArgsOrString
-	Topics         []manifest.TopicSubscription
-	Queue          manifest.SQSQueue
+	App                     string
+	Type                    string
+	Name                    string
+	DockerfilePath          string
+	Image                   string
+	Platform                manifest.PlatformArgsOrString
+	Topics                  []manifest.TopicSubscription
+	Queue                   manifest.SQSQueue
+	PrivateOnlyEnvironments []string
 }
 
 // JobProps contains the information needed to represent a Job.
@@ -271,9 +272,10 @@ func newJobManifest(i *JobProps) (encoding.BinaryMarshaler, error) {
 	case manifest.ScheduledJobType:
 		return manifest.NewScheduledJob(&manifest.ScheduledJobProps{
 			WorkloadProps: &manifest.WorkloadProps{
-				Name:       i.Name,
-				Dockerfile: i.DockerfilePath,
-				Image:      i.Image,
+				Name:                    i.Name,
+				Dockerfile:              i.DockerfilePath,
+				Image:                   i.Image,
+				PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 			},
 			HealthCheck: i.HealthCheck,
 			Platform:    i.Platform,
@@ -311,9 +313,10 @@ func (w *WorkloadInitializer) newLoadBalancedWebServiceManifest(i *ServiceProps)
 	}
 	props := &manifest.LoadBalancedWebServiceProps{
 		WorkloadProps: &manifest.WorkloadProps{
-			Name:       i.Name,
-			Dockerfile: i.DockerfilePath,
-			Image:      i.Image,
+			Name:                    i.Name,
+			Dockerfile:              i.DockerfilePath,
+			Image:                   i.Image,
+			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 		},
 		Path:        "/",
 		Port:        i.Port,
@@ -353,9 +356,10 @@ func (w *WorkloadInitializer) newRequestDrivenWebServiceManifest(i *ServiceProps
 func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error) {
 	return manifest.NewBackendService(manifest.BackendServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
-			Name:       i.Name,
-			Dockerfile: i.DockerfilePath,
-			Image:      i.Image,
+			Name:                    i.Name,
+			Dockerfile:              i.DockerfilePath,
+			Image:                   i.Image,
+			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 		},
 		Port:        i.Port,
 		HealthCheck: i.HealthCheck,
@@ -366,9 +370,10 @@ func newBackendServiceManifest(i *ServiceProps) (*manifest.BackendService, error
 func newWorkerServiceManifest(i *ServiceProps) (*manifest.WorkerService, error) {
 	return manifest.NewWorkerService(manifest.WorkerServiceProps{
 		WorkloadProps: manifest.WorkloadProps{
-			Name:       i.Name,
-			Dockerfile: i.DockerfilePath,
-			Image:      i.Image,
+			Name:                    i.Name,
+			Dockerfile:              i.DockerfilePath,
+			Image:                   i.Image,
+			PrivateOnlyEnvironments: i.PrivateOnlyEnvironments,
 		},
 		HealthCheck: i.HealthCheck,
 		Platform:    i.Platform,

@@ -101,7 +101,7 @@ Resources:
           PortMappings:
             !If [
               ExposePort,
-              [{ ContainerPort: !Ref ContainerPort }],
+              [{ ContainerPort: !Ref ContainerPort, Name: target }],
               !Ref "AWS::NoValue",
             ]
   ExecutionRole:
@@ -289,6 +289,8 @@ Resources:
       PropagateTags: SERVICE
       EnableExecuteCommand: true
       LaunchType: FARGATE
+      ServiceConnectConfiguration:
+        Enabled: False
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED

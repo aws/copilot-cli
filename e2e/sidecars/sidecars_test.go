@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -66,7 +66,7 @@ logging:
 const nginxPort = "80"
 
 var _ = Describe("sidecars flow", func() {
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		var (
 			initErr error
 		)
@@ -96,7 +96,7 @@ var _ = Describe("sidecars flow", func() {
 		})
 	})
 
-	Context("when adding a new environment", func() {
+	Context("when adding a new environment", Ordered, func() {
 		var (
 			testEnvInitErr error
 		)
@@ -113,7 +113,7 @@ var _ = Describe("sidecars flow", func() {
 		})
 	})
 
-	Context("when deploying the environment", func() {
+	Context("when deploying the environment", Ordered, func() {
 		var envDeployErr error
 		BeforeAll(func() {
 			_, envDeployErr = cli.EnvDeploy(&client.EnvDeployRequest{
@@ -127,7 +127,7 @@ var _ = Describe("sidecars flow", func() {
 		})
 	})
 
-	Context("when creating a service", func() {
+	Context("when creating a service", Ordered, func() {
 		var (
 			svcInitErr error
 		)
@@ -217,7 +217,7 @@ var _ = Describe("sidecars flow", func() {
 		})
 	})
 
-	Context("when deploying svc", func() {
+	Context("when deploying svc", Ordered, func() {
 		var (
 			appDeployErr error
 		)
