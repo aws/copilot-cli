@@ -523,7 +523,7 @@ type SQSQueue struct {
 	FIFOQueueConfig *FIFOQueueConfig
 }
 
-// FifoAdvanceConfigOrBool holds information needed to render a FIFO SQS Queue in a container definition.
+// FIFOQueueConfig holds information needed to render a FIFO SQS Queue in a container definition.
 type FIFOQueueConfig struct {
 	FIFOThroughputLimit       *string
 	ContentBasedDeduplication *bool
