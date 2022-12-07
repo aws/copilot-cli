@@ -267,34 +267,44 @@ type Variable interface {
 
 // ImportedVariable returns a Variable that should be imported from a stack.
 func ImportedVariable(name string) Variable {
-	return envVar{
+	return importedEnvVar{
 		importName: name,
 	}
 }
 
 // PlainVariable returns a Variable that is a plain string value.
 func PlainVariable(value string) Variable {
-	return envVar{
+	return plainEnvVar{
 		value: value,
 	}
 }
 
-type envVar struct {
-	value      string
+type plainEnvVar struct {
+	value string
+}
+
+// RequiresImport returns false for a plain string environment variable.
+func (v plainEnvVar) RequiresImport() bool {
+	return false
+}
+
+// Value returns the plain string value of the environment variable.
+func (v plainEnvVar) Value() string {
+	return v.value
+}
+
+type importedEnvVar struct {
 	importName string
 }
 
-// RequiresImport returns true if the environment variable is imported from a stack.
-func (v envVar) RequiresImport() bool {
-	return v.importName != ""
+// RequiresImport returns true for an imported environment variable.
+func (v importedEnvVar) RequiresImport() bool {
+	return true
 }
 
-// Value returns the value of the environment variable, which is either an import name, or a plain value.
-func (v envVar) Value() string {
-	if v.RequiresImport() {
-		return v.importName
-	}
-	return v.value
+// Value returns the name of the import that will be the value of the environment variable.
+func (v importedEnvVar) Value() string {
+	return v.importName
 }
 
 // A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
