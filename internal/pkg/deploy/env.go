@@ -31,7 +31,8 @@ type CreateEnvironmentInput struct {
 	ArtifactBucketKeyARN string            // ARN of the KMS key used to encrypt the contents in the regional application bucket.
 
 	// Runtime configurations.
-	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
+	AddonsURL           string            // The URL where the addons template is stored, if there is any.
+	CustomResourcesURLs map[string]string // Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// User inputs.
 	ImportVPCConfig     *config.ImportVPC     // Optional configuration if users have an existing VPC.
@@ -43,7 +44,7 @@ type CreateEnvironmentInput struct {
 	PublicALBSourceIPs  []string              // Optional configuration to specify public security group ingress based on customer given source IPs.
 	InternalLBSourceIPs []string              // Optional configuration to specify private security group ingress based on customer given source IPs.
 	Telemetry           *config.Telemetry     // Optional observability and monitoring configuration.
-	Mft                 *manifest.Environment // Unmarshaled and interpolated manifest object.
+	Mft                 *manifest.Environment // Unmarshalled and interpolated manifest object.
 	RawMft              []byte                // Content of the environment manifest without any modifications.
 	ForceUpdate         bool
 

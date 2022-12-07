@@ -108,17 +108,21 @@ func (e *EnvStackConfig) Template() (string, error) {
 	}
 
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
-		AppName:              e.in.App.Name,
-		EnvName:              e.in.Name,
-		CustomResources:      crs,
+		AppName: e.in.App.Name,
+		EnvName: e.in.Name,
+
+		CustomResources: crs,
+		AddonsURL:       e.in.AddonsURL,
+
 		ArtifactBucketARN:    e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
 		PermissionsBoundary:  e.in.PermissionsBoundary,
-		PublicHTTPConfig:     publicHTTPConfig,
-		VPCConfig:            vpcConfig,
-		PrivateHTTPConfig:    e.privateHTTPConfig(),
-		Telemetry:            e.telemetryConfig(),
-		CDNConfig:            e.cdnConfig(),
+
+		PublicHTTPConfig:  publicHTTPConfig,
+		VPCConfig:         vpcConfig,
+		PrivateHTTPConfig: e.privateHTTPConfig(),
+		Telemetry:         e.telemetryConfig(),
+		CDNConfig:         e.cdnConfig(),
 
 		Version:            e.in.Version,
 		LatestVersion:      deploy.LatestEnvTemplateVersion,
