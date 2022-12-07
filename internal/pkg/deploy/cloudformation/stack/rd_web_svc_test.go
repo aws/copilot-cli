@@ -176,6 +176,7 @@ func TestRequestDrivenWebService_Template(t *testing.T) {
 							"NODE_ENV":  template.PlainVariable(""),
 						},
 						Tags:              c.manifest.Tags,
+						Count:             c.manifest.Count,
 						EnableHealthCheck: true,
 						Alias:             aws.String("convex.domain.com"),
 						CustomResources: map[string]template.S3ObjectLocation{

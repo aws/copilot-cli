@@ -396,9 +396,11 @@ Resources:
 				tc.setupMocks(mocks)
 			}
 
-			stack := &Stack{
+			stack := &WorkloadStack{
 				workloadName: wlName,
-				template:     newCFNTemplate("merged"),
+				stack: stack{
+					template: newCFNTemplate("merged"),
+				},
 			}
 
 			require.NoError(t, yaml.Unmarshal([]byte(tc.inTemplate), stack.template))
@@ -422,4 +424,99 @@ Resources:
 			require.Equal(t, strings.TrimSpace(tc.outTemplate), strings.TrimSpace(tmpl))
 		})
 	}
+
+}
+
+func TestEnvironmentAddonStack_PackagePackage(t *testing.T) {
+	const (
+		wsPath = "/"
+		bucket = "mockBucket"
+	)
+
+	lambdaZipHash := sha256.New()
+	indexZipHash := sha256.New()
+	indexFileHash := sha256.New()
+
+	// fs has the following structure:
+	//  .
+	//  ├─ lambda
+	//  │  ├─ index.js (contains lambda function)
+	//  ┴  └─ test.js (empty)
+	fs := afero.NewMemMapFs()
+	fs.Mkdir("/lambda", 0644)
+
+	f, _ := fs.Create("/lambda/index.js")
+	defer f.Close()
+	info, _ := f.Stat()
+	io.MultiWriter(lambdaZipHash, indexZipHash).Write([]byte("index.js " + info.Mode().String()))
+	io.MultiWriter(f, lambdaZipHash, indexZipHash, indexFileHash).Write([]byte(`exports.handler = function(event, context) {}`))
+
+	f2, _ := fs.Create("/lambda/test.js")
+	info, _ = f2.Stat()
+	lambdaZipHash.Write([]byte("test.js " + info.Mode().String()))
+
+	indexZipS3PathForEnvironmentAddon := fmt.Sprintf("manual/addons/environments/assets/%s", hex.EncodeToString(indexZipHash.Sum(nil)))
+	t.Run("package zipped AWS::Lambda::Function for environment addons", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// Set up mocks.
+		m := addonMocks{
+			uploader: mocks.NewMockuploader(ctrl),
+			ws:       mocks.NewMockworkspaceReader(ctrl),
+		}
+		m.uploader.EXPECT().Upload(bucket, indexZipS3PathForEnvironmentAddon, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
+
+		// WHEN.
+		inTemplate := `
+Resources:
+  Test:
+    Metadata:
+      "testKey": "testValue"
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: lambda/index.js
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt "TestRole.Arn"
+      Runtime: nodejs16.x
+`
+		stack := &EnvironmentStack{
+			stack: stack{
+				template: newCFNTemplate("merged"),
+			},
+		}
+		require.NoError(t, yaml.Unmarshal([]byte(inTemplate), stack.template))
+		config := PackageConfig{
+			Bucket:        bucket,
+			WorkspacePath: wsPath,
+			Uploader:      m.uploader,
+			FS:            fs,
+		}
+		err := stack.Package(config)
+
+		// Expect.
+		outTemplate := `
+Resources:
+  Test:
+    Metadata:
+      "testKey": "testValue"
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: mockBucket
+        S3Key: asdf
+      Handler: "index.handler"
+      Timeout: 900
+      MemorySize: 512
+      Role: !GetAtt "TestRole.Arn"
+      Runtime: nodejs16.x
+`
+		require.NoError(t, err)
+		tmpl, err := stack.Template()
+		require.NoError(t, err)
+		require.Equal(t, strings.TrimSpace(outTemplate), strings.TrimSpace(tmpl))
+	})
+
 }

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/aws/copilot-cli/e2e/internal/client"
@@ -18,7 +18,7 @@ import (
 const resourceTypeVPC = "AWS::EC2::VPC"
 
 var _ = Describe("Customized Env", func() {
-	Context("when creating a new app", func() {
+	Context("when creating a new app", Ordered, func() {
 		var appInitErr error
 		BeforeAll(func() {
 			_, appInitErr = cli.AppInit(&client.AppInitRequest{
@@ -49,7 +49,7 @@ var _ = Describe("Customized Env", func() {
 		})
 	})
 
-	Context("when deploying resources to be imported", func() {
+	Context("when deploying resources to be imported", Ordered, func() {
 		BeforeAll(func() {
 			err := aws.CreateStack(vpcStackName, vpcStackTemplatePath)
 			Expect(err).NotTo(HaveOccurred(), "create vpc cloudformation stack")
@@ -76,7 +76,7 @@ var _ = Describe("Customized Env", func() {
 		})
 	})
 
-	Context("when adding cross account environments", func() {
+	Context("when adding cross account environments", Ordered, func() {
 		var (
 			testEnvInitErr   error
 			prodEnvInitErr   error
@@ -165,7 +165,7 @@ var _ = Describe("Customized Env", func() {
 		})
 	})
 
-	Context("when deploying the environments", func() {
+	Context("when deploying the environments", Ordered, func() {
 		var (
 			testEnvDeployErr, prodEnvDeployErr, sharedEnvDeployErr error
 		)
@@ -231,7 +231,7 @@ var _ = Describe("Customized Env", func() {
 		})
 	})
 
-	Context("when adding a svc", func() {
+	Context("when adding a svc", Ordered, func() {
 		var (
 			frontEndInitErr error
 		)
@@ -278,7 +278,7 @@ environments:
 		})
 	})
 
-	Context("when deploying a svc to test, prod, and shared envs", func() {
+	Context("when deploying a svc to test, prod, and shared envs", Ordered, func() {
 		var (
 			testDeployErr    error
 			prodEndDeployErr error
@@ -325,14 +325,14 @@ environments:
 			}
 
 			Expect(len(svc.ServiceDiscoveries)).To(Equal(3))
-			var envs, namespaces, wantedNamespaces []string
+			var envs, endpoints, wantedEndpoints []string
 			for _, sd := range svc.ServiceDiscoveries {
 				envs = append(envs, sd.Environment[0])
-				namespaces = append(namespaces, sd.Namespace)
-				wantedNamespaces = append(wantedNamespaces, fmt.Sprintf("%s.%s.%s.local:80", svc.SvcName, sd.Environment[0], appName))
+				endpoints = append(endpoints, sd.Endpoint)
+				wantedEndpoints = append(wantedEndpoints, fmt.Sprintf("%s.%s.%s.local:80", svc.SvcName, sd.Environment[0], appName))
 			}
 			Expect(envs).To(ConsistOf("test", "prod", "shared"))
-			Expect(namespaces).To(ConsistOf(wantedNamespaces))
+			Expect(endpoints).To(ConsistOf(wantedEndpoints))
 
 			// Call each environment's endpoint and ensure it returns a 200
 			for _, env := range []string{"test", "prod", "shared"} {

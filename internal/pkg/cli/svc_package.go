@@ -308,6 +308,9 @@ func (o *packageSvcOpts) getStackGenerator(env *config.Environment) (workloadSta
 		return nil, err
 	}
 	o.appliedDynamicMft = mft
+	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, o.appliedDynamicMft, o.envName); err != nil {
+		return nil, err
+	}
 	return o.newStackGenerator(o)
 }
 
@@ -411,9 +414,9 @@ func (o *packageSvcOpts) writeAndClose(wc io.WriteCloser, dat string) error {
 	return wc.Close()
 }
 
-// RecommendActions suggests recommended actions before the packaged template is used for deployment.
+// RecommendActions is a no-op.
 func (o *packageSvcOpts) RecommendActions() error {
-	return validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, o.appliedDynamicMft, o.envName)
+	return nil
 }
 
 func contains(s string, items []string) bool {

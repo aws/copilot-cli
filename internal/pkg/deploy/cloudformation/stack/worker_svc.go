@@ -112,6 +112,10 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf(`convert "publish" field for service %s: %w`, s.name, err)
 	}
+	var scConfig *template.ServiceConnect
+	if s.manifest.Network.Connect.Enabled() {
+		scConfig = convertServiceConnect(s.manifest.Network.Connect)
+	}
 	content, err := s.parser.ParseWorkerService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -137,6 +141,7 @@ func (s *WorkerService) Template() (string, error) {
 		Network:                  convertNetworkConfig(s.manifest.Network),
 		DeploymentConfiguration:  convertDeploymentConfig(s.manifest.DeployConfig),
 		EntryPoint:               entrypoint,
+		ServiceConnect:           scConfig,
 		Command:                  command,
 		DependsOn:                convertDependsOn(s.manifest.ImageConfig.Image.DependsOn),
 		CredentialsParameter:     aws.StringValue(s.manifest.ImageConfig.Image.Credentials),

@@ -70,7 +70,7 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 		require.NoError(t, err)
 
 		ws, err := workspace.Use(fs)
-		_, err = addon.Parse(aws.StringValue(v.Name), ws)
+		_, err = addon.ParseFromWorkload(aws.StringValue(v.Name), ws)
 		var notFound *addon.ErrAddonsNotFound
 		require.ErrorAs(t, err, &notFound)
 
@@ -92,7 +92,6 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 				EnvVersion:               "v1.42.0",
 			},
 		})
-
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids
@@ -110,7 +109,7 @@ func TestGrpcLoadBalancedWebService_Template(t *testing.T) {
 			expectedBytes := []byte(expected)
 			mExpected := make(map[interface{}]interface{})
 			require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
-			require.Equal(t, mExpected, mActual)
+			compareStackTemplate(t, mExpected, mActual)
 		})
 
 		testName = fmt.Sprintf("Parameter values should render properly/%s", name)

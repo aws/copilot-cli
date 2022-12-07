@@ -289,6 +289,84 @@ func TestServiceDescriber_EnvVars(t *testing.T) {
 	}
 }
 
+func TestServiceDescriber_ServiceConnectDNSNames(t *testing.T) {
+	const (
+		testApp = "phonetool"
+		testSvc = "svc"
+		testEnv = "test"
+	)
+	testCases := map[string]struct {
+		setupMocks func(mocks ecsSvcDescriberMocks)
+
+		wantedDNSNames []string
+		wantedError    error
+	}{
+		"returns error if fails to get ECS service": {
+			setupMocks: func(m ecsSvcDescriberMocks) {
+				m.mockECSClient.EXPECT().Service(testApp, testEnv, testSvc).Return(nil, errors.New("some error"))
+			},
+
+			wantedError: errors.New("get service svc: some error"),
+		},
+		"success": {
+			setupMocks: func(m ecsSvcDescriberMocks) {
+				m.mockECSClient.EXPECT().Service(testApp, testEnv, testSvc).Return(&awsecs.Service{
+					Deployments: []*ecsapi.Deployment{
+						{
+							ServiceConnectConfiguration: &ecsapi.ServiceConnectConfiguration{
+								Enabled:   aws.Bool(true),
+								Namespace: aws.String("foobar.com"),
+								Services: []*ecsapi.ServiceConnectService{
+									{
+										PortName: aws.String("frontend"),
+									},
+								},
+							},
+						},
+					},
+				}, nil)
+			},
+
+			wantedDNSNames: []string{"frontend.foobar.com"},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockecsClient := mocks.NewMockecsClient(ctrl)
+			mocks := ecsSvcDescriberMocks{
+				mockECSClient: mockecsClient,
+			}
+
+			tc.setupMocks(mocks)
+
+			d := &ecsServiceDescriber{
+				serviceStackDescriber: &serviceStackDescriber{
+					app:     testApp,
+					service: testSvc,
+					env:     testEnv,
+				},
+				ecsClient: mockecsClient,
+			}
+
+			// WHEN
+			actual, err := d.ServiceConnectDNSNames()
+
+			// THEN
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.ElementsMatch(t, tc.wantedDNSNames, actual)
+			}
+		})
+	}
+}
+
 func TestServiceDescriber_Secrets(t *testing.T) {
 	const (
 		testApp = "phonetool"

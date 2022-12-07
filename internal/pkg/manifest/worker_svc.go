@@ -213,6 +213,17 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 	}
 	svc.WorkerServiceConfig.Subscribe.Topics = props.Topics
 	svc.WorkerServiceConfig.Platform = props.Platform
+	for _, envName := range props.PrivateOnlyEnvironments {
+		svc.Environments[envName] = &WorkerServiceConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	svc.parser = template.New()
 	return svc
 }
@@ -353,5 +364,6 @@ func newDefaultWorkerService() *WorkerService {
 				},
 			},
 		},
+		Environments: map[string]*WorkerServiceConfig{},
 	}
 }

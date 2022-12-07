@@ -60,8 +60,6 @@ environments:
         path: /
         grace_period: 30s
       deregistration_delay: 30s
-    network:
-      connect: false
   prod:
     count:
       range:

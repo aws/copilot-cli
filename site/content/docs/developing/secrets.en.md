@@ -6,10 +6,10 @@ but shouldn't commit to your source code. In the AWS Copilot CLI, secrets are pa
 
 ## How do I add Secrets?
 
-Adding secrets requires you to store your secret as a SecureString in [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM)
-or in [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html), then add a reference to the secret in your [manifest](../manifest/overview.en.md). 
+Adding secrets requires you to store your secret in [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html) (SSM)
+or in [AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html), then add a reference to the secret in your [manifest](../manifest/overview.en.md).
 
-You can easily create secrets in SSM using [`copilot secret init`](../commands/secret-init.en.md)! 
+You can easily create a secret in SSM as a `SecureString` using [`copilot secret init`](../commands/secret-init.en.md)! 
 
 !!! attention
     Secrets are not supported for Request-Driven Web Services.

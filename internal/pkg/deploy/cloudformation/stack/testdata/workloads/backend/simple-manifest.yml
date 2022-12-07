@@ -4,6 +4,8 @@ image:
   build: Dockerfile
   port: 8080
 
+network:
+  connect: true
 cpu: 256
 memory: 512
 count: 1

@@ -91,7 +91,7 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 		ws, err := workspace.Use(fs)
 		require.NoError(t, err)
 
-		_, err = addon.Parse(aws.StringValue(v.Name), ws)
+		_, err = addon.ParseFromWorkload(aws.StringValue(v.Name), ws)
 		var notFound *addon.ErrAddonsNotFound
 		require.ErrorAs(t, err, &notFound)
 
@@ -113,7 +113,6 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 				EnvVersion:               "v1.42.0",
 			},
 		})
-		serializer.SCFeatureFlag = true
 		serializer.EnvAddonsFeatureFlag = true
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
@@ -132,7 +131,7 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 			expectedBytes := []byte(expected)
 			mExpected := make(map[interface{}]interface{})
 			require.NoError(t, yaml.Unmarshal(expectedBytes, mExpected))
-			require.Equal(t, mExpected, mActual)
+			compareStackTemplate(t, mExpected, mActual)
 		})
 
 		testName = fmt.Sprintf("Parameter values should render properly/%s", name)

@@ -38,7 +38,8 @@ count: {{.Count.Value}}       # Number of tasks that should be running in your s
 {{- if not .TaskConfig.IsWindows}}
 exec: true     # Enable running commands in your container.
 {{- end}}
-  
+network:
+  connect: true # Enable Service Connect for intra-environment traffic between services.
 {{- if not .TaskConfig.IsWindows}}
 
 # storage:
@@ -53,9 +54,27 @@ exec: true     # Enable running commands in your container.
 #secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
 
+{{- if not .Environments}}
+
 # You can override any of the values defined above by environment.
 #environments:
 #  test:
 #    count: 2               # Number of tasks to run for the "test" environment.
 #    deployment:            # The deployment strategy for the "test" environment.
 #       rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.
+{{- else}}
+
+# You can override any of the values defined above by environment.
+environments: {{range $key, $value := .Environments}}
+  {{$key}}:
+{{- if $value.Network.VPC.Placement.PlacementString}}
+    network:
+      vpc:
+        placement: '{{$value.Network.VPC.Placement.PlacementString}}' # The tasks will be placed on private subnets for the "{{$key}}" environment.
+{{- end}}
+{{- end}} 
+#   test:
+#     count: 2                # Number of tasks to run for the "test" environment.
+#     deployment:           # The deployment strategy for the "test" environment.
+#         rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.
+{{- end}}

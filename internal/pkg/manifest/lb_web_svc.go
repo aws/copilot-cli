@@ -90,6 +90,17 @@ func NewLoadBalancedWebService(props *LoadBalancedWebServiceProps) *LoadBalanced
 	}
 	svc.RoutingRule.Path = aws.String(props.Path)
 	svc.parser = template.New()
+	for _, envName := range props.PrivateOnlyEnvironments {
+		svc.Environments[envName] = &LoadBalancedWebServiceConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	return svc
 }
 
@@ -135,6 +146,7 @@ func newDefaultLoadBalancedWebService() *LoadBalancedWebService {
 				},
 			},
 		},
+		Environments: map[string]*LoadBalancedWebServiceConfig{},
 	}
 }
 
@@ -162,11 +174,6 @@ func (s *LoadBalancedWebService) requiredEnvironmentFeatures() []string {
 // A LoadBalancedWebService always has a port exposed therefore the boolean is always true.
 func (s *LoadBalancedWebService) Port() (port uint16, ok bool) {
 	return aws.Uint16Value(s.ImageConfig.Port), true
-}
-
-// ServiceConnectEnabled returns if ServiceConnect is enabled or not.
-func (s *LoadBalancedWebService) ServiceConnectEnabled() bool {
-	return s.Network.Connect.EnableServiceConnect == nil || *s.Network.Connect.EnableServiceConnect
 }
 
 // Publish returns the list of topics where notifications can be published.

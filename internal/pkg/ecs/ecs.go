@@ -112,17 +112,26 @@ func (c Client) DescribeService(app, env, svc string) (*ServiceDesc, error) {
 	}, nil
 }
 
+// Service returns an ECS service given Copilot service info.
+func (c Client) Service(app, env, svc string) (*ecs.Service, error) {
+	clusterName, serviceName, err := c.fetchAndParseServiceARN(app, env, svc)
+	if err != nil {
+		return nil, err
+	}
+	service, err := c.ecsClient.Service(clusterName, serviceName)
+	if err != nil {
+		return nil, fmt.Errorf("get ECS service %s: %w", serviceName, err)
+	}
+	return service, nil
+}
+
 // LastUpdatedAt returns the last updated time of the ECS service.
 func (c Client) LastUpdatedAt(app, env, svc string) (time.Time, error) {
-	clusterName, serviceName, err := c.fetchAndParseServiceARN(app, env, svc)
+	detail, err := c.Service(app, env, svc)
 	if err != nil {
 		return time.Time{}, err
 	}
-	detail, err := c.ecsClient.Service(clusterName, serviceName)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("get ECS service %s: %w", serviceName, err)
-	}
-	return aws.TimeValue(detail.Deployments[0].UpdatedAt), nil
+	return detail.LastUpdatedAt(), nil
 }
 
 // ListActiveAppEnvTasksOpts contains the parameters for ListActiveAppEnvTasks.
@@ -277,6 +286,7 @@ type NetworkConfiguration ecs.NetworkConfiguration
 
 // UnmarshalJSON implements custom logic to unmarshal only the network configuration from a state machine definition.
 // Example state machine definition:
+//
 //	 "Version": "1.0",
 //	 "Comment": "Run AWS Fargate task",
 //	 "StartAt": "Run Fargate Task",

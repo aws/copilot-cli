@@ -38,6 +38,8 @@ network:
   vpc:
     placement: private
 
+count: 'high-availability/3'
+
 # Optional fields for more advanced use-cases.
 #
 # variables:                    # Pass environment variables as key value pairs.

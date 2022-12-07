@@ -601,7 +601,9 @@ func TestBackendService_validate(t *testing.T) {
 					ImageConfig: testImageConfig,
 					Network: NetworkConfig{
 						Connect: ServiceConnectBoolOrArgs{
-							EnableServiceConnect: aws.Bool(true),
+							ServiceConnectArgs: ServiceConnectArgs{
+								Alias: aws.String("some alias"),
+							},
 						},
 					},
 				},
@@ -609,7 +611,7 @@ func TestBackendService_validate(t *testing.T) {
 					Name: aws.String("api"),
 				},
 			},
-			wantedError: fmt.Errorf(`cannot enable "network.connect" when no port exposed`),
+			wantedError: fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`),
 		},
 	}
 	for name, tc := range testCases {
@@ -958,6 +960,24 @@ func TestWorkerService_validate(t *testing.T) {
 				},
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
+		},
+		"error if service connect is enabled without any port exposed": {
+			config: WorkerService{
+				WorkerServiceConfig: WorkerServiceConfig{
+					ImageConfig: testImageConfig,
+					Network: NetworkConfig{
+						Connect: ServiceConnectBoolOrArgs{
+							ServiceConnectArgs: ServiceConnectArgs{
+								Alias: aws.String("some alias"),
+							},
+						},
+					},
+				},
+				Workload: Workload{
+					Name: aws.String("api"),
+				},
+			},
+			wantedError: fmt.Errorf(`cannot set "network.connect.alias" when no ports are exposed`),
 		},
 	}
 	for name, tc := range testCases {
@@ -2104,6 +2124,14 @@ func TestRangeConfig_validate(t *testing.T) {
 				Max: aws.Int(1),
 			},
 			wantedError: fmt.Errorf("min value 2 cannot be greater than max value 1"),
+		},
+		"error if spot_from value is negative": {
+			RangeConfig: RangeConfig{
+				Min:      aws.Int(2),
+				Max:      aws.Int(10),
+				SpotFrom: aws.Int(-3),
+			},
+			wantedError: fmt.Errorf("min value 2, max value 10, and spot_from value -3 must all be positive"),
 		},
 	}
 	for name, tc := range testCases {

@@ -67,6 +67,11 @@ const (
 	LogicalIDHTTPListenerRuleWithDomain = "HTTPListenerRuleWithDomain"
 )
 
+const (
+	// NoExposedContainerPort indicates no port should be exposed for the service container.
+	NoExposedContainerPort = "-1"
+)
+
 var (
 	// Template names under "workloads/partials/cf/".
 	partialsWorkloadCFTemplateNames = []string{
@@ -216,6 +221,11 @@ type LogConfigOpts struct {
 type HTTPTargetContainer struct {
 	Name string
 	Port string
+}
+
+// Exposed returns true if the target container has an accessible port to receive traffic.
+func (tg HTTPTargetContainer) Exposed() bool {
+	return tg.Port != "" && tg.Port != NoExposedContainerPort
 }
 
 // IsHTTPS returns true if the target container's port is 443.
@@ -635,6 +645,7 @@ type WorkloadOpts struct {
 	Observability        ObservabilityOpts
 	Private              bool
 	AppRunnerVPCEndpoint *string
+	Count                *string
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
@@ -643,9 +654,7 @@ type WorkloadOpts struct {
 	AppDNSName           *string
 
 	// Additional options for worker service templates.
-	Subscribe *SubscribeOpts
-
-	SCFeatureFlag        bool
+	Subscribe            *SubscribeOpts
 	EnvAddonsFeatureFlag bool
 }
 

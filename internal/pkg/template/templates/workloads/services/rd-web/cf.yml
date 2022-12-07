@@ -159,6 +159,9 @@ Resources:
         ObservabilityEnabled: true
         ObservabilityConfigurationArn: !Sub 'arn:aws:apprunner:${AWS::Region}:${AWS::AccountId}:observabilityconfiguration/DefaultConfiguration/1/00000000000000000000000000000001'
       {{- end }}
+      {{- if .Count}}   
+      AutoScalingConfigurationArn: !Sub 'arn:${AWS::Partition}:apprunner:${AWS::Region}:${AWS::AccountId}:autoscalingconfiguration/{{.Count}}'
+      {{- end}}
       Tags:
         - Key: copilot-application
           Value: !Ref AppName

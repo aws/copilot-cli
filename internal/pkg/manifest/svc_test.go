@@ -291,6 +291,7 @@ secrets:
 							},
 						},
 					},
+					Environments: map[string]*BackendServiceConfig{},
 				}
 				require.Equal(t, wantedManifest, actualManifest)
 			},
@@ -379,6 +380,7 @@ subscribe:
 							},
 						},
 					},
+					Environments: map[string]*WorkerServiceConfig{},
 				}
 				require.Equal(t, wantedManifest, actualManifest)
 			},

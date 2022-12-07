@@ -39,7 +39,6 @@ type LoadBalancedWebService struct {
 	appInfo                deploy.AppInformation
 
 	parser               loadBalancedWebSvcReadParser
-	SCFeatureFlag        bool
 	EnvAddonsFeatureFlag bool
 }
 
@@ -193,7 +192,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		httpRedirect = aws.BoolValue(s.manifest.RoutingRule.RedirectToHTTPS)
 	}
 	var scConfig *template.ServiceConnect
-	if s.manifest.ServiceConnectEnabled() {
+	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
 	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
@@ -260,7 +259,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		},
 		HostedZoneAliases:    aliasesFor,
 		PermissionsBoundary:  s.permBound,
-		SCFeatureFlag:        s.SCFeatureFlag,
 		EnvAddonsFeatureFlag: s.EnvAddonsFeatureFlag, // Feature flag for main container
 	})
 	if err != nil {

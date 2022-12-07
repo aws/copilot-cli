@@ -62,6 +62,17 @@ func NewBackendService(props BackendServiceProps) *BackendService {
 		svc.BackendServiceConfig.TaskConfig.Memory = aws.Int(MinWindowsTaskMemory)
 	}
 	svc.parser = template.New()
+	for _, envName := range props.PrivateOnlyEnvironments {
+		svc.Environments[envName] = &BackendServiceConfig{
+			Network: NetworkConfig{
+				VPC: vpcConfig{
+					Placement: PlacementArgOrString{
+						PlacementString: placementStringP(PrivateSubnetPlacement),
+					},
+				},
+			},
+		}
+	}
 	return svc
 }
 
@@ -96,23 +107,6 @@ func (s *BackendService) Port() (port uint16, ok bool) {
 		return 0, false
 	}
 	return aws.Uint16Value(value), true
-}
-
-// ServiceConnectEnabled returns if ServiceConnect is enabled or not.
-// Unless explicitly disabled in the manifest or if no server is configured we default to true.
-func (s *BackendService) ServiceConnectEnabled() bool {
-	if s.Network.Connect.EnableServiceConnect != nil {
-		return *s.Network.Connect.EnableServiceConnect
-	}
-	if !s.Network.Connect.ServiceConnectArgs.isEmpty() {
-		return true
-	}
-	// Try our best to enable Service Connect by default.
-	if s.BackendServiceConfig.ImageConfig.Port != nil ||
-		s.BackendServiceConfig.RoutingRule.TargetContainer != nil {
-		return true
-	}
-	return false
 }
 
 // Publish returns the list of topics where notifications can be published.
@@ -191,5 +185,6 @@ func newDefaultBackendService() *BackendService {
 				},
 			},
 		},
+		Environments: map[string]*BackendServiceConfig{},
 	}
 }

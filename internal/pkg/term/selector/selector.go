@@ -18,8 +18,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/aws/copilot-cli/internal/pkg/term/prompt"
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
-
-	"github.com/lnquy/cron"
 )
 
 const (
@@ -142,7 +140,6 @@ type workspaceRetriever interface {
 	wsWorkloadLister
 	wsEnvironmentsLister
 	Summary() (*workspace.Summary, error)
-	ListDockerfiles() ([]string, error)
 }
 
 // deployedWorkloadsRetriever retrieves information about deployed services or jobs.
@@ -1056,59 +1053,6 @@ func (s *AppEnvSelector) Application(msg, help string, additionalOpts ...string)
 	return app, nil
 }
 
-// Dockerfile asks the user to select from a list of Dockerfiles in the current
-// directory or one level down. If no dockerfiles are found, it asks for a custom path.
-func (s *WorkspaceSelector) Dockerfile(selPrompt, notFoundPrompt, selHelp, notFoundHelp string, pathValidator prompt.ValidatorFunc) (string, error) {
-	dockerfiles, err := s.ws.ListDockerfiles()
-	if err != nil {
-		return "", fmt.Errorf("list Dockerfiles: %w", err)
-	}
-	var sel string
-	dockerfiles = append(dockerfiles, []string{dockerfilePromptUseCustom, DockerfilePromptUseImage}...)
-	sel, err = s.prompt.SelectOne(
-		selPrompt,
-		selHelp,
-		dockerfiles,
-		prompt.WithFinalMessage(dockerfileFinalMsg),
-	)
-	if err != nil {
-		return "", fmt.Errorf("select Dockerfile: %w", err)
-	}
-	if sel != dockerfilePromptUseCustom {
-		return sel, nil
-	}
-	sel, err = s.prompt.Get(
-		notFoundPrompt,
-		notFoundHelp,
-		pathValidator,
-		prompt.WithFinalMessage(dockerfileFinalMsg))
-	if err != nil {
-		return "", fmt.Errorf("get custom Dockerfile path: %w", err)
-	}
-	return sel, nil
-}
-
-// Schedule asks the user to select either a rate, preset cron, or custom cron.
-func (s *WorkspaceSelector) Schedule(scheduleTypePrompt, scheduleTypeHelp string, scheduleValidator, rateValidator prompt.ValidatorFunc) (string, error) {
-	scheduleType, err := s.prompt.SelectOne(
-		scheduleTypePrompt,
-		scheduleTypeHelp,
-		scheduleTypes,
-		prompt.WithFinalMessage("Schedule type:"),
-	)
-	if err != nil {
-		return "", fmt.Errorf("get schedule type: %w", err)
-	}
-	switch scheduleType {
-	case rate:
-		return s.askRate(rateValidator)
-	case fixedSchedule:
-		return s.askCron(scheduleValidator)
-	default:
-		return "", fmt.Errorf("unrecognized schedule type %s", scheduleType)
-	}
-}
-
 // Topics asks the user to select from all Copilot-managed SNS topics *which are deployed
 // across all environments* and returns the topic structs.
 func (s *DeploySelector) Topics(promptMsg, help, app string) ([]deploy.Topic, error) {
@@ -1257,81 +1201,6 @@ func (s *WsPipelineSelector) pipelinePath(pipelines []workspace.PipelineManifest
 		}
 	}
 	return ""
-}
-
-func (s *WorkspaceSelector) askRate(rateValidator prompt.ValidatorFunc) (string, error) {
-	rateInput, err := s.prompt.Get(
-		ratePrompt,
-		rateHelp,
-		rateValidator,
-		prompt.WithDefaultInput("1h30m"),
-		prompt.WithFinalMessage("Rate:"),
-	)
-	if err != nil {
-		return "", fmt.Errorf("get schedule rate: %w", err)
-	}
-	return fmt.Sprintf(every, rateInput), nil
-}
-
-func (s *WorkspaceSelector) askCron(scheduleValidator prompt.ValidatorFunc) (string, error) {
-	cronInput, err := s.prompt.SelectOption(
-		schedulePrompt,
-		scheduleHelp,
-		presetSchedules,
-		prompt.WithFinalMessage("Fixed schedule:"),
-	)
-	if err != nil {
-		return "", fmt.Errorf("get preset schedule: %w", err)
-	}
-	if cronInput != custom {
-		return presetScheduleToDefinitionString(cronInput), nil
-	}
-	var customSchedule, humanCron string
-	cronDescriptor, err := cron.NewDescriptor()
-	if err != nil {
-		return "", fmt.Errorf("get custom schedule: %w", err)
-	}
-	for {
-		customSchedule, err = s.prompt.Get(
-			customSchedulePrompt,
-			customScheduleHelp,
-			scheduleValidator,
-			prompt.WithDefaultInput("0 * * * *"),
-			prompt.WithFinalMessage("Custom schedule:"),
-		)
-		if err != nil {
-			return "", fmt.Errorf("get custom schedule: %w", err)
-		}
-
-		// Break if the customer has specified an easy to read cron definition string
-		if strings.HasPrefix(customSchedule, "@") {
-			break
-		}
-
-		humanCron, err = cronDescriptor.ToDescription(customSchedule, cron.Locale_en)
-		if err != nil {
-			return "", fmt.Errorf("convert cron to human string: %w", err)
-		}
-
-		log.Infoln(fmt.Sprintf("Your job will run at the following times: %s", humanCron))
-
-		ok, err := s.prompt.Confirm(
-			humanReadableCronConfirmPrompt,
-			humanReadableCronConfirmHelp,
-		)
-		if err != nil {
-			return "", fmt.Errorf("confirm cron schedule: %w", err)
-		}
-		if ok {
-			break
-		}
-	}
-
-	return customSchedule, nil
-}
-
-func presetScheduleToDefinitionString(input string) string {
-	return fmt.Sprintf("@%s", strings.ToLower(input))
 }
 
 func filterDeployedServices(filter DeployedWorkloadFilter, inServices []*DeployedWorkload) ([]*DeployedWorkload, error) {
