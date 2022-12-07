@@ -267,13 +267,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"VAR1": {
-								stringOrFromEnvironment{
+								stringOrFromCFN{
 									Plain: stringP("var1"),
 								},
 							},
 							"VAR2": {
-								stringOrFromEnvironment{
-									FromEnvironment: fromEnvironment{
+								stringOrFromCFN{
+									FromCFN: fromCFN{
 										Name: stringP("import-var2"),
 									},
 								},
@@ -333,13 +333,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"VAR1": {
-								stringOrFromEnvironment{
+								stringOrFromCFN{
 									Plain: stringP("var1"),
 								},
 							},
 							"VAR2": {
-								stringOrFromEnvironment{
-									FromEnvironment: fromEnvironment{
+								stringOrFromCFN{
+									FromCFN: fromCFN{
 										Name: stringP("import-var2"),
 									},
 								},
@@ -399,25 +399,25 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"LOG_LEVEL": {
-								stringOrFromEnvironment{
+								stringOrFromCFN{
 									Plain: stringP("DEBUG"),
 								},
 							},
 							"S3_TABLE_NAME": {
-								stringOrFromEnvironment{
+								stringOrFromCFN{
 									Plain: stringP("doggo"),
 								},
 							},
 							"RDS_TABLE_NAME": {
-								stringOrFromEnvironment{
-									FromEnvironment: fromEnvironment{
+								stringOrFromCFN{
+									FromCFN: fromCFN{
 										Name: stringP("duckling"),
 									},
 								},
 							},
 							"DDB_TABLE_NAME": {
-								stringOrFromEnvironment{
-									FromEnvironment: fromEnvironment{
+								stringOrFromCFN{
+									FromCFN: fromCFN{
 										Name: stringP("awards"),
 									},
 								},
@@ -494,21 +494,21 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 							Variables: map[string]Variable{
 								"LOG_LEVEL": {
-									stringOrFromEnvironment{
+									stringOrFromCFN{
 										Plain: stringP("ERROR"),
 									},
 								},
 								"S3_TABLE_NAME": {
-									stringOrFromEnvironment{
-										FromEnvironment: fromEnvironment{Name: stringP("prod-doggo")},
+									stringOrFromCFN{
+										FromCFN: fromCFN{Name: stringP("prod-doggo")},
 									},
 								},
 								"RDS_TABLE_NAME": {
-									stringOrFromEnvironment{Plain: stringP("duckling-prod")},
+									stringOrFromCFN{Plain: stringP("duckling-prod")},
 								},
 								"DDB_TABLE_NAME": {
-									stringOrFromEnvironment{
-										FromEnvironment: fromEnvironment{Name: stringP("awards-prod")},
+									stringOrFromCFN{
+										FromCFN: fromCFN{Name: stringP("awards-prod")},
 									},
 								},
 							},
@@ -593,23 +593,23 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"LOG_LEVEL": {
-								stringOrFromEnvironment{
+								stringOrFromCFN{
 									Plain: stringP("ERROR"),
 								},
 							},
 							"S3_TABLE_NAME": {
-								stringOrFromEnvironment{
-									FromEnvironment: fromEnvironment{Name: stringP("prod-doggo")},
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("prod-doggo")},
 								},
 							},
 							"RDS_TABLE_NAME": {
-								stringOrFromEnvironment{
+								stringOrFromCFN{
 									Plain: stringP("duckling-prod"),
 								},
 							},
 							"DDB_TABLE_NAME": {
-								stringOrFromEnvironment{
-									FromEnvironment: fromEnvironment{Name: stringP("awards-prod")},
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("awards-prod")},
 								},
 							},
 						},
@@ -684,13 +684,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"VAR1": {
-								stringOrFromEnvironment{
+								stringOrFromCFN{
 									Plain: stringP("var1"),
 								},
 							},
 							"VAR2": {
-								stringOrFromEnvironment{
-									FromEnvironment: fromEnvironment{Name: stringP("import-var2")},
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("import-var2")},
 								},
 							},
 						},
@@ -722,13 +722,13 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"VAR1": {
-								stringOrFromEnvironment{
+								stringOrFromCFN{
 									Plain: stringP("var1"),
 								},
 							},
 							"VAR2": {
-								stringOrFromEnvironment{
-									FromEnvironment: fromEnvironment{Name: stringP("import-var2")},
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("import-var2")},
 								},
 							},
 						},

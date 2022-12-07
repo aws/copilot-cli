@@ -73,7 +73,7 @@ environments:
         out: 1m30s
     variables:
       DB_NAME:
-        from_environment: MyDB
+        from_cfn: MyDB
     logging:
       retention: 1
       destination:
@@ -84,7 +84,7 @@ environments:
       variables:
         TEST: TEST
         DB_NAME:
-          from_environment: MyDB
+          from_cfn: MyDB
       secrets:
         GITHUB_TOKEN: GITHUB_TOKEN
     http:
@@ -101,7 +101,7 @@ environments:
         variables:
           NGINX_PORT: 80
           DB_NAME:
-            from_environment: MyDB
+            from_cfn: MyDB
         healthcheck:
           command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
           interval: 10s

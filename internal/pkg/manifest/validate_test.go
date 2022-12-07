@@ -3377,17 +3377,17 @@ func TestDeploymentConfiguration_validate(t *testing.T) {
 
 func TestFromEnvironment_validate(t *testing.T) {
 	testCases := map[string]struct {
-		in          fromEnvironment
+		in          fromCFN
 		wantedError error
 	}{
 		"error if name is an empty string": {
-			in: fromEnvironment{
+			in: fromCFN{
 				Name: aws.String(""),
 			},
 			wantedError: errors.New("name cannot be an empty string"),
 		},
 		"ok": {
-			in: fromEnvironment{
+			in: fromCFN{
 				Name: aws.String("db"),
 			},
 		},

@@ -492,7 +492,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 					CPU: aws.Int(512),
 					Variables: map[string]Variable{
 						"LOG_LEVEL": {
-							stringOrFromEnvironment{
+							stringOrFromCFN{
 								Plain: stringP(""),
 							},
 						},
@@ -870,7 +870,7 @@ func TestWorkerSvc_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"LOG_LEVEL": {
-								stringOrFromEnvironment{
+								stringOrFromCFN{
 									Plain: stringP(""),
 								},
 							},

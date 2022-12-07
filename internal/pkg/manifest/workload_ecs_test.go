@@ -95,7 +95,7 @@ variables:
 			wanted: mockParentField{
 				Variables: map[string]Variable{
 					"LOG_LEVEL": {
-						stringOrFromEnvironment{
+						stringOrFromCFN{
 							Plain: stringP("DEBUG"),
 						},
 					},
@@ -106,13 +106,13 @@ variables:
 			in: []byte(`
 variables:
   DB_NAME:
-    from_environment: MyUserDB
+    from_cfn: MyUserDB
 `),
 			wanted: mockParentField{
 				Variables: map[string]Variable{
 					"DB_NAME": {
-						stringOrFromEnvironment{
-							FromEnvironment: fromEnvironment{
+						stringOrFromCFN{
+							FromCFN: fromCFN{
 								Name: stringP("MyUserDB"),
 							},
 						},
@@ -152,8 +152,8 @@ func TestVariable_RequiresImport(t *testing.T) {
 	}{
 		"requires import": {
 			in: Variable{
-				stringOrFromEnvironment{
-					FromEnvironment: fromEnvironment{
+				stringOrFromCFN{
+					FromCFN: fromCFN{
 						Name: stringP("prod-MyDB"),
 					},
 				},
@@ -162,7 +162,7 @@ func TestVariable_RequiresImport(t *testing.T) {
 		},
 		"does not require import if it is a plain value": {
 			in: Variable{
-				stringOrFromEnvironment{
+				stringOrFromCFN{
 					Plain: stringP("plain"),
 				},
 			},
@@ -183,8 +183,8 @@ func TestVariable_Value(t *testing.T) {
 	}{
 		"requires import": {
 			in: Variable{
-				stringOrFromEnvironment{
-					FromEnvironment: fromEnvironment{
+				stringOrFromCFN{
+					FromCFN: fromCFN{
 						Name: stringP("prod-MyDB"),
 					},
 				},
@@ -193,7 +193,7 @@ func TestVariable_Value(t *testing.T) {
 		},
 		"does not require import if it is a plain value": {
 			in: Variable{
-				stringOrFromEnvironment{
+				stringOrFromCFN{
 					Plain: stringP("plain"),
 				},
 			},

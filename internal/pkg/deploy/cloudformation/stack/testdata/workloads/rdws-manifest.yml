@@ -53,7 +53,7 @@ environments:
     variables:
       LOG_LEVEL: debug        # Log level for the "test" environment.
       DB_NAME:
-        from_environment: test-UserDB
+        from_cfn: test-UserDB
   prod:
     network:
       vpc:

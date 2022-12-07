@@ -800,13 +800,13 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
-						stringOrFromEnvironment{
+						stringOrFromCFN{
 							Plain: stringP("var1"),
 						},
 					},
 					"VAR2": {
-						stringOrFromEnvironment{
-							FromEnvironment: fromEnvironment{
+						stringOrFromCFN{
+							FromCFN: fromCFN{
 								Name: stringP("import-var2"),
 							},
 						},
@@ -814,14 +814,14 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 				}
 				svc.Environments["test"].TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
-						stringOrFromEnvironment{
-							FromEnvironment: fromEnvironment{
+						stringOrFromCFN{
+							FromCFN: fromCFN{
 								Name: stringP("import-var1-test"),
 							},
 						},
 					},
 					"VAR3": {
-						stringOrFromEnvironment{
+						stringOrFromCFN{
 							Plain: stringP("var3-test"),
 						},
 					},
@@ -830,21 +830,21 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
-						stringOrFromEnvironment{
-							FromEnvironment: fromEnvironment{
+						stringOrFromCFN{
+							FromCFN: fromCFN{
 								Name: stringP("import-var1-test"),
 							},
 						},
 					},
 					"VAR2": {
-						stringOrFromEnvironment{
-							FromEnvironment: fromEnvironment{
+						stringOrFromCFN{
+							FromCFN: fromCFN{
 								Name: stringP("import-var2"),
 							},
 						},
 					},
 					"VAR3": {
-						stringOrFromEnvironment{
+						stringOrFromCFN{
 							Plain: stringP("var3-test"),
 						},
 					},
@@ -855,13 +855,13 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
-						stringOrFromEnvironment{
+						stringOrFromCFN{
 							Plain: stringP("var1"),
 						},
 					},
 					"VAR2": {
-						stringOrFromEnvironment{
-							FromEnvironment: fromEnvironment{
+						stringOrFromCFN{
+							FromCFN: fromCFN{
 								Name: stringP("import-var2"),
 							},
 						},
@@ -872,13 +872,13 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
-						stringOrFromEnvironment{
+						stringOrFromCFN{
 							Plain: stringP("var1"),
 						},
 					},
 					"VAR2": {
-						stringOrFromEnvironment{
-							FromEnvironment: fromEnvironment{
+						stringOrFromCFN{
+							FromCFN: fromCFN{
 								Name: stringP("import-var2"),
 							},
 						},
@@ -890,13 +890,13 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 			inSvc: func(svc *LoadBalancedWebService) {
 				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
-						stringOrFromEnvironment{
+						stringOrFromCFN{
 							Plain: stringP("var1"),
 						},
 					},
 					"VAR2": {
-						stringOrFromEnvironment{
-							FromEnvironment: fromEnvironment{
+						stringOrFromCFN{
+							FromCFN: fromCFN{
 								Name: stringP("import-var2"),
 							},
 						},
@@ -906,13 +906,13 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
-						stringOrFromEnvironment{
+						stringOrFromCFN{
 							Plain: stringP("var1"),
 						},
 					},
 					"VAR2": {
-						stringOrFromEnvironment{
-							FromEnvironment: fromEnvironment{
+						stringOrFromCFN{
+							FromCFN: fromCFN{
 								Name: stringP("import-var2"),
 							},
 						},
@@ -927,7 +927,7 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 				}
 				svc.Environments["test"].TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
-						stringOrFromEnvironment{
+						stringOrFromCFN{
 							Plain: stringP("var1-test"),
 						},
 					},
@@ -936,7 +936,7 @@ func TestApplyEnv_MapToStruct(t *testing.T) {
 			wanted: func(svc *LoadBalancedWebService) {
 				svc.TaskConfig.Variables = map[string]Variable{
 					"VAR1": {
-						stringOrFromEnvironment{
+						stringOrFromCFN{
 							Plain: stringP("var1-test"),
 						},
 					},

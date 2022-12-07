@@ -30,7 +30,7 @@ timeout: 1h
 
 variables:
   DB_NAME: # This variable should not render in template because it is guarded out by feature flag.
-    from_environment: MYDB
+    from_cfn: MYDB
 
 storage:
   ephemeral: 200

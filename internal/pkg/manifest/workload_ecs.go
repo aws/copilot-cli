@@ -121,12 +121,12 @@ type TaskConfig struct {
 
 // Variable represents an identifier for the value of an environment variable.
 type Variable struct {
-	stringOrFromEnvironment
+	stringOrFromCFN
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler (v3) interface to override the default YAML unmarshalling logic.
 func (v *Variable) UnmarshalYAML(value *yaml.Node) error {
-	if err := v.stringOrFromEnvironment.UnmarshalYAML(value); err != nil {
+	if err := v.stringOrFromCFN.UnmarshalYAML(value); err != nil {
 		return fmt.Errorf(`unmarshal "variables": %w`, err)
 	}
 	return nil
@@ -134,13 +134,13 @@ func (v *Variable) UnmarshalYAML(value *yaml.Node) error {
 
 // RequiresImport returns true if the value is imported from an environment.
 func (v *Variable) RequiresImport() bool {
-	return !v.FromEnvironment.isEmpty()
+	return !v.FromCFN.isEmpty()
 }
 
 // Value returns the value, whether it is used for import or not.
 func (v *Variable) Value() string {
 	if v.RequiresImport() {
-		return aws.StringValue(v.FromEnvironment.Name)
+		return aws.StringValue(v.FromCFN.Name)
 	}
 	return aws.StringValue(v.Plain)
 }

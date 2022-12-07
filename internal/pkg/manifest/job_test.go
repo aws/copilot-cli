@@ -64,7 +64,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 						TaskConfig: TaskConfig{
 							Variables: map[string]Variable{
 								"LOG_LEVEL": {
-									stringOrFromEnvironment{
+									stringOrFromCFN{
 										Plain: stringP("prod"),
 									},
 								},
@@ -101,7 +101,7 @@ func TestScheduledJob_ApplyEnv(t *testing.T) {
 						},
 						Variables: map[string]Variable{
 							"LOG_LEVEL": {
-								stringOrFromEnvironment{
+								stringOrFromCFN{
 									Plain: stringP("prod"),
 								},
 							},

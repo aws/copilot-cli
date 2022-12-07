@@ -1605,13 +1605,13 @@ func (r OverrideRule) validate() error {
 }
 
 func (v Variable) validate() error {
-	if err := v.FromEnvironment.validate(); err != nil {
-		return fmt.Errorf(`validate "from_environment": %w`, err)
+	if err := v.FromCFN.validate(); err != nil {
+		return fmt.Errorf(`validate "from_cfn": %w`, err)
 	}
 	return nil
 }
 
-func (e fromEnvironment) validate() error {
+func (e fromCFN) validate() error {
 	if e.isEmpty() {
 		return nil
 	}

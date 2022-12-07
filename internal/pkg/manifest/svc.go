@@ -417,22 +417,22 @@ func ParsePortMapping(s *string) (port *string, protocol *string, err error) {
 	}
 }
 
-type fromEnvironment struct {
-	Name *string `yaml:"from_environment"`
+type fromCFN struct {
+	Name *string `yaml:"from_cfn"`
 }
 
-func (e *fromEnvironment) isEmpty() bool {
+func (e *fromCFN) isEmpty() bool {
 	return e.Name == nil
 }
 
-type stringOrFromEnvironment struct {
-	Plain           *string
-	FromEnvironment fromEnvironment
+type stringOrFromCFN struct {
+	Plain   *string
+	FromCFN fromCFN
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler (v3) interface to override the default YAML unmarshalling logic.
-func (s *stringOrFromEnvironment) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&s.FromEnvironment); err != nil {
+func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&s.FromCFN); err != nil {
 		switch err.(type) {
 		case *yaml.TypeError:
 			break
@@ -440,7 +440,7 @@ func (s *stringOrFromEnvironment) UnmarshalYAML(value *yaml.Node) error {
 			return err
 		}
 	}
-	if !s.FromEnvironment.isEmpty() { // Successfully unmarshalled to a environment import name.
+	if !s.FromCFN.isEmpty() { // Successfully unmarshalled to a environment import name.
 		return nil
 	}
 	if err := value.Decode(&s.Plain); err != nil { // Otherwise, try decoding the simple form.

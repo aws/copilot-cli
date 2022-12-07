@@ -131,7 +131,7 @@ environments:
 							},
 							Variables: map[string]Variable{
 								"LOG_LEVEL": {
-									stringOrFromEnvironment{
+									stringOrFromCFN{
 										Plain: stringP("WARN"),
 									},
 								},
@@ -406,9 +406,9 @@ type: 'OH NO'
 	}
 }
 
-func TestStringOrFromEnvironment_UnmarshalYAML(t *testing.T) {
+func TestStringOrFromCFN_UnmarshalYAML(t *testing.T) {
 	type mockField struct {
-		stringOrFromEnvironment
+		stringOrFromCFN
 	}
 	type mockParentField struct {
 		MockField mockField `yaml:"mock_field"`
@@ -422,7 +422,7 @@ func TestStringOrFromEnvironment_UnmarshalYAML(t *testing.T) {
 			in: []byte(`mock_field: hey`),
 			wanted: mockParentField{
 				MockField: mockField{
-					stringOrFromEnvironment{
+					stringOrFromCFN{
 						Plain: aws.String("hey"),
 					},
 				},
@@ -430,11 +430,11 @@ func TestStringOrFromEnvironment_UnmarshalYAML(t *testing.T) {
 		},
 		"unmarshal import name": {
 			in: []byte(`mock_field:
-  from_environment: yo`),
+  from_cfn: yo`),
 			wanted: mockParentField{
 				MockField: mockField{
-					stringOrFromEnvironment{
-						FromEnvironment: fromEnvironment{
+					stringOrFromCFN{
+						FromCFN: fromCFN{
 							Name: aws.String("yo"),
 						},
 					},
