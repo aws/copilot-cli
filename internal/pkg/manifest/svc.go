@@ -415,8 +415,8 @@ type fromCFN struct {
 	Name *string `yaml:"from_cfn"`
 }
 
-func (e *fromCFN) isEmpty() bool {
-	return e.Name == nil
+func (cfg *fromCFN) isEmpty() bool {
+	return cfg.Name == nil
 }
 
 type stringOrFromCFN struct {

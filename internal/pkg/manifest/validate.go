@@ -1621,11 +1621,11 @@ func (v Variable) validate() error {
 	return nil
 }
 
-func (e fromCFN) validate() error {
-	if e.isEmpty() {
+func (cfg fromCFN) validate() error {
+	if cfg.isEmpty() {
 		return nil
 	}
-	if len(aws.StringValue(e.Name)) == 0 {
+	if len(aws.StringValue(cfg.Name)) == 0 {
 		return errors.New("name cannot be an empty string")
 	}
 	return nil
