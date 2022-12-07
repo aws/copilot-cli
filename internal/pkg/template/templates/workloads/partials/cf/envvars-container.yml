@@ -2,12 +2,12 @@
 {{if $.EnvAddonsFeatureFlag}}
 - Name: {{$name}}
   Value: {{if $value.RequiresImport}}
-    Fn::ImportValue: {{$value.Value | printf "%q" -}}
+    Fn::ImportValue: {{ quote $value.Value -}}
   {{else}} {{- $value.Value | printf "%q"}} {{- end}}
   {{- else }}
   {{if not $value.RequiresImport}}
 - Name: {{$name}}
-  Value: {{ $value.Value | printf "%q"}}
+  Value: {{ quote $value.Value }}
   {{- end}} {{/* end if not .RequiresImport */}}
   {{- end}} {{/* end if .EnvAddonsFeatureFlag */}}
 {{- end}}{{end}}
