@@ -602,7 +602,7 @@ Parameters:
   DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 `), nil)
 			},
-			wantedErr: errors.New(`reserved parameters "App" and "Name" cannot be declared`),
+			wantedErr: errors.New(`reserved parameters "App" and "Env" cannot be declared`),
 		},
 		"returns the content of Parameters on success": {
 			setupMocks: func(m addonMocks) {

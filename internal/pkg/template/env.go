@@ -107,6 +107,8 @@ type EnvOpts struct {
 	EnableLongARNFormatLambda string
 	CustomDomainLambda        string
 
+	AddonsURL string
+
 	ScriptBucketName     string
 	PermissionsBoundary  string
 	ArtifactBucketARN    string
