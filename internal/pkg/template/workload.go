@@ -92,6 +92,7 @@ var (
 		"http-listener",
 		"env-controller",
 		"mount-points",
+		"variables",
 		"volumes",
 		"image-overrides",
 		"instancerole",
