@@ -6,12 +6,13 @@ package stack
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/aws/copilot-cli/internal/pkg/config"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -171,7 +172,7 @@ func (j *ScheduledJob) Template() (string, error) {
 
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		SerializedManifest:       string(j.rawManifest),
-		Variables:                j.manifest.Variables,
+		Variables:                convertEnvVars(j.manifest.Variables),
 		Secrets:                  convertSecrets(j.manifest.Secrets),
 		WorkloadType:             manifest.ScheduledJobType,
 		NestedStack:              addonsOutputs,

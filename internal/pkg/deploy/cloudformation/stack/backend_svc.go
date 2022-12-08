@@ -153,7 +153,7 @@ func (s *BackendService) Template() (string, error) {
 		SerializedManifest: string(s.rawManifest),
 		EnvVersion:         s.rc.EnvVersion,
 
-		Variables:          s.manifest.BackendServiceConfig.Variables,
+		Variables:          convertEnvVars(s.manifest.BackendServiceConfig.Variables),
 		Secrets:            convertSecrets(s.manifest.BackendServiceConfig.Secrets),
 		Aliases:            aliases,
 		HTTPSListener:      s.httpsEnabled,

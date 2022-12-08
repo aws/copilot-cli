@@ -553,17 +553,17 @@ func TestApplyEnv_MapToString(t *testing.T) {
 	}{
 		"map upserted": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]string{
+				svc.ImageConfig.Image.DockerLabels = map[string]string{
 					"var1": "the secret sauce is mole",
 					"var2": "the secret agent is johnny rivers",
 				}
-				svc.Environments["test"].TaskConfig.Variables = map[string]string{
+				svc.Environments["test"].ImageConfig.Image.DockerLabels = map[string]string{
 					"var1": "the secret sauce is blue cheese which has mold in it",
 					"var3": "the secret route is through egypt",
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]string{
+				svc.ImageConfig.Image.DockerLabels = map[string]string{
 					"var1": "the secret sauce is blue cheese which has mold in it", // Overridden.
 					"var2": "the secret agent is johnny rivers",                    // Kept.
 					"var3": "the secret route is through egypt",                    // Appended
@@ -572,14 +572,14 @@ func TestApplyEnv_MapToString(t *testing.T) {
 		},
 		"map not overridden by zero map": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]string{
+				svc.ImageConfig.Image.DockerLabels = map[string]string{
 					"var1": "the secret sauce is mole",
 					"var2": "the secret agent man is johnny rivers",
 				}
-				svc.Environments["test"].TaskConfig.Variables = map[string]string{}
+				svc.Environments["test"].ImageConfig.Image.DockerLabels = map[string]string{}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]string{
+				svc.ImageConfig.Image.DockerLabels = map[string]string{
 					"var1": "the secret sauce is mole",
 					"var2": "the secret agent man is johnny rivers",
 				}
@@ -587,13 +587,13 @@ func TestApplyEnv_MapToString(t *testing.T) {
 		},
 		"map not overridden": {
 			inSvc: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]string{
+				svc.ImageConfig.Image.DockerLabels = map[string]string{
 					"var1": "the secret sauce is mole",
 					"var2": "the secret agent man is johnny rivers",
 				}
 			},
 			wanted: func(svc *LoadBalancedWebService) {
-				svc.TaskConfig.Variables = map[string]string{
+				svc.ImageConfig.Image.DockerLabels = map[string]string{
 					"var1": "the secret sauce is mole",
 					"var2": "the secret agent man is johnny rivers",
 				}
@@ -770,6 +770,178 @@ func TestApplyEnv_MapToPStruct(t *testing.T) {
 						},
 					},
 				}
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var inSvc, wantedSvc LoadBalancedWebService
+			inSvc.Environments = map[string]*LoadBalancedWebServiceConfig{
+				"test": {},
+			}
+
+			tc.inSvc(&inSvc)
+			tc.wanted(&wantedSvc)
+
+			got, err := inSvc.applyEnv("test")
+
+			require.NoError(t, err)
+			require.Equal(t, &wantedSvc, got)
+		})
+	}
+}
+
+func TestApplyEnv_MapToStruct(t *testing.T) {
+	testCases := map[string]struct {
+		inSvc  func(svc *LoadBalancedWebService)
+		wanted func(svc *LoadBalancedWebService)
+	}{
+		"map upserted": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]Variable{
+					"VAR1": {
+						stringOrFromCFN{
+							Plain: stringP("var1"),
+						},
+					},
+					"VAR2": {
+						stringOrFromCFN{
+							FromCFN: fromCFN{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].TaskConfig.Variables = map[string]Variable{
+					"VAR1": {
+						stringOrFromCFN{
+							FromCFN: fromCFN{
+								Name: stringP("import-var1-test"),
+							},
+						},
+					},
+					"VAR3": {
+						stringOrFromCFN{
+							Plain: stringP("var3-test"),
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]Variable{
+					"VAR1": {
+						stringOrFromCFN{
+							FromCFN: fromCFN{
+								Name: stringP("import-var1-test"),
+							},
+						},
+					},
+					"VAR2": {
+						stringOrFromCFN{
+							FromCFN: fromCFN{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+					"VAR3": {
+						stringOrFromCFN{
+							Plain: stringP("var3-test"),
+						},
+					},
+				}
+			},
+		},
+		"map not overridden by zero map": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]Variable{
+					"VAR1": {
+						stringOrFromCFN{
+							Plain: stringP("var1"),
+						},
+					},
+					"VAR2": {
+						stringOrFromCFN{
+							FromCFN: fromCFN{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+				}
+				svc.Environments["test"].TaskConfig.Variables = map[string]Variable{}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]Variable{
+					"VAR1": {
+						stringOrFromCFN{
+							Plain: stringP("var1"),
+						},
+					},
+					"VAR2": {
+						stringOrFromCFN{
+							FromCFN: fromCFN{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+				}
+			},
+		},
+		"map not overridden": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]Variable{
+					"VAR1": {
+						stringOrFromCFN{
+							Plain: stringP("var1"),
+						},
+					},
+					"VAR2": {
+						stringOrFromCFN{
+							FromCFN: fromCFN{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]Variable{
+					"VAR1": {
+						stringOrFromCFN{
+							Plain: stringP("var1"),
+						},
+					},
+					"VAR2": {
+						stringOrFromCFN{
+							FromCFN: fromCFN{
+								Name: stringP("import-var2"),
+							},
+						},
+					},
+				}
+			},
+		},
+		"override a zero value": {
+			inSvc: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]Variable{
+					"VAR1": {},
+				}
+				svc.Environments["test"].TaskConfig.Variables = map[string]Variable{
+					"VAR1": {
+						stringOrFromCFN{
+							Plain: stringP("var1-test"),
+						},
+					},
+				}
+			},
+			wanted: func(svc *LoadBalancedWebService) {
+				svc.TaskConfig.Variables = map[string]Variable{
+					"VAR1": {
+						stringOrFromCFN{
+							Plain: stringP("var1-test"),
+						},
+					},
+				}
+
 			},
 		},
 	}

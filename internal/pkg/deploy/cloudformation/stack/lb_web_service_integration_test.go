@@ -91,7 +91,7 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 		ws, err := workspace.Use(fs)
 		require.NoError(t, err)
 
-		_, err = addon.Parse(aws.StringValue(v.Name), ws)
+		_, err = addon.ParseFromWorkload(aws.StringValue(v.Name), ws)
 		var notFound *addon.ErrAddonsNotFound
 		require.ErrorAs(t, err, &notFound)
 
@@ -113,6 +113,7 @@ func TestLoadBalancedWebService_TemplateInteg(t *testing.T) {
 				EnvVersion:               "v1.42.0",
 			},
 		})
+		serializer.EnvAddonsFeatureFlag = true
 		tpl, err := serializer.Template()
 		require.NoError(t, err, "template should render")
 		regExpGUID := regexp.MustCompile(`([a-f\d]{8}-)([a-f\d]{4}-){3}([a-f\d]{12})`) // Matches random guids

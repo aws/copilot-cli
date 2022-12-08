@@ -410,3 +410,35 @@ func ParsePortMapping(s *string) (port *string, protocol *string, err error) {
 		return nil, nil, fmt.Errorf("cannot parse port mapping from %s", *s)
 	}
 }
+
+type fromCFN struct {
+	Name *string `yaml:"from_cfn"`
+}
+
+func (cfg *fromCFN) isEmpty() bool {
+	return cfg.Name == nil
+}
+
+type stringOrFromCFN struct {
+	Plain   *string
+	FromCFN fromCFN
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler (v3) interface to override the default YAML unmarshalling logic.
+func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&s.FromCFN); err != nil {
+		switch err.(type) {
+		case *yaml.TypeError:
+			break
+		default:
+			return err
+		}
+	}
+	if !s.FromCFN.isEmpty() { // Successfully unmarshalled to a environment import name.
+		return nil
+	}
+	if err := value.Decode(&s.Plain); err != nil { // Otherwise, try decoding the simple form.
+		return errors.New(`cannot unmarshal field to a string or into a map`)
+	}
+	return nil
+}

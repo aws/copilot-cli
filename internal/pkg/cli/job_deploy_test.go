@@ -218,6 +218,7 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 			mock: func(m *deployMocks) {
 				m.mockWsReader.EXPECT().ReadWorkloadManifest(mockJobName).Return([]byte(""), nil)
 				m.mockInterpolator.EXPECT().Interpolate("").Return("", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return(nil, mockError)
 			},
 
@@ -232,8 +233,8 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 						return []string{"mockFeature1", "mockFeature3"}
 					},
 				}
-				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
 				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
+				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
 			},
 			wantedError: fmt.Errorf(`environment "prod-iad" is on version "v1.mock" which does not support the "mockFeature3" feature`),
 		},
@@ -246,8 +247,8 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 						return []string{"mockFeature1"}
 					},
 				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
-				m.mockEnvFeaturesDescriber.EXPECT().Version().Times(0)
 				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(nil, mockError)
 			},
@@ -263,8 +264,8 @@ func TestJobDeployOpts_Execute(t *testing.T) {
 						return []string{"mockFeature1"}
 					},
 				}
+				m.mockEnvFeaturesDescriber.EXPECT().Version().Return("v1.mock", nil)
 				m.mockEnvFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{"mockFeature1", "mockFeature2"}, nil)
-				m.mockEnvFeaturesDescriber.EXPECT().Version().Times(0)
 				m.mockDeployer.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{}, nil)
 				m.mockDeployer.EXPECT().DeployWorkload(gomock.Any()).Return(nil, mockError)
 				m.mockDeployer.EXPECT().IsServiceAvailableInRegion("").Return(false, nil)

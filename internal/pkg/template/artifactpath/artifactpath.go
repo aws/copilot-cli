@@ -19,6 +19,7 @@ const (
 	s3ArtifactEnvFilesDirName   = "env-files"
 	s3ScriptsDirName            = "scripts"
 	s3CustomResourcesDirName    = "custom-resources"
+	s3EnvironmentsAddonsDirName = "environments"
 )
 
 // MkdirSHA256 prefixes the key with the SHA256 hash of the contents of "manual/<hash>/key".
@@ -36,6 +37,12 @@ func Addons(key string, content []byte) string {
 // Example: manual/addons/frontend/assets/668e2b73ac.
 func AddonAsset(workloadName, hash string) string {
 	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, workloadName, s3ArtifactAddonAssetDirName, hash)
+}
+
+// EnvironmentAddonAsset returns the path to store an addon asset file for an environment addon.
+// Example: manual/addons/environments/assets/668e2b73ac.
+func EnvironmentAddonAsset(hash string) string {
+	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, s3EnvironmentsAddonsDirName, s3ArtifactAddonAssetDirName, hash)
 }
 
 // CFNTemplate returns the path to store cloudformation templates with sha256 of the content.

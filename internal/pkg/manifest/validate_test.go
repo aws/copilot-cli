@@ -3431,16 +3431,47 @@ func TestValidateExposedPorts(t *testing.T) {
 				},
 			},
 			wanted: nil,
-		},
+    },
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			err := validateExposedPorts(tc.in)
+    err := validateExposedPorts(tc.in)
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestFromEnvironment_validate(t *testing.T) {
+	testCases := map[string]struct {
+		in          fromCFN
+		wantedError error
+	}{
+		"error if name is an empty string": {
+			in: fromCFN{
+				Name: aws.String(""),
+			},
+			wantedError: errors.New("name cannot be an empty string"),
+		},
+		"ok": {
+			in: fromCFN{
+				Name: aws.String("db"),
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.in.validate()
+
+			if tc.wantedError != nil {
+				require.NotNil(t, gotErr)
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
 			}
 		})
 	}

@@ -110,7 +110,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, portMappings []*templa
 			Protocol:   protocol,
 			CredsParam: config.CredsParam,
 			Secrets:    convertSecrets(config.Secrets),
-			Variables:  config.Variables,
+			Variables:  convertEnvVars(config.Variables),
 			Storage: template.SidecarStorageOpts{
 				MountPoints: mp,
 			},
@@ -559,7 +559,7 @@ func convertLogging(lc manifest.Logging) *template.LogConfigOpts {
 		EnableMetadata: lc.GetEnableMetadata(),
 		Destination:    lc.Destination,
 		SecretOptions:  convertSecrets(lc.SecretOptions),
-		Variables:      lc.Variables,
+		Variables:      convertEnvVars(lc.Variables),
 		Secrets:        convertSecrets(lc.Secrets),
 	}
 }
@@ -1037,6 +1037,21 @@ func convertHTTPVersion(protocolVersion *string) *string {
 	}
 	pv := strings.ToUpper(*protocolVersion)
 	return &pv
+}
+
+func convertEnvVars(variables map[string]manifest.Variable) map[string]template.Variable {
+	if len(variables) == 0 {
+		return nil
+	}
+	m := make(map[string]template.Variable, len(variables))
+	for name, variable := range variables {
+		if variable.RequiresImport() {
+			m[name] = template.ImportedVariable(variable.Value())
+			continue
+		}
+		m[name] = template.PlainVariable(variable.Value())
+	}
+	return m
 }
 
 func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secret {

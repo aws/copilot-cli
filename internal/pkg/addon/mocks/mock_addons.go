@@ -33,6 +33,34 @@ func (m *MockworkspaceReader) EXPECT() *MockworkspaceReaderMockRecorder {
 	return m.recorder
 }
 
+// EnvAddonFilePath mocks base method.
+func (m *MockworkspaceReader) EnvAddonFilePath(fName string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvAddonFilePath", fName)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// EnvAddonFilePath indicates an expected call of EnvAddonFilePath.
+func (mr *MockworkspaceReaderMockRecorder) EnvAddonFilePath(fName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvAddonFilePath", reflect.TypeOf((*MockworkspaceReader)(nil).EnvAddonFilePath), fName)
+}
+
+// EnvAddonsPath mocks base method.
+func (m *MockworkspaceReader) EnvAddonsPath() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnvAddonsPath")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// EnvAddonsPath indicates an expected call of EnvAddonsPath.
+func (mr *MockworkspaceReaderMockRecorder) EnvAddonsPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvAddonsPath", reflect.TypeOf((*MockworkspaceReader)(nil).EnvAddonsPath))
+}
+
 // ListFiles mocks base method.
 func (m *MockworkspaceReader) ListFiles(dirPath string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -89,4 +117,41 @@ func (m *MockworkspaceReader) WorkloadAddonsPath(name string) string {
 func (mr *MockworkspaceReaderMockRecorder) WorkloadAddonsPath(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadAddonsPath", reflect.TypeOf((*MockworkspaceReader)(nil).WorkloadAddonsPath), name)
+}
+
+// MockcontentNode is a mock of contentNode interface.
+type MockcontentNode struct {
+	ctrl     *gomock.Controller
+	recorder *MockcontentNodeMockRecorder
+}
+
+// MockcontentNodeMockRecorder is the mock recorder for MockcontentNode.
+type MockcontentNodeMockRecorder struct {
+	mock *MockcontentNode
+}
+
+// NewMockcontentNode creates a new mock instance.
+func NewMockcontentNode(ctrl *gomock.Controller) *MockcontentNode {
+	mock := &MockcontentNode{ctrl: ctrl}
+	mock.recorder = &MockcontentNodeMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockcontentNode) EXPECT() *MockcontentNodeMockRecorder {
+	return m.recorder
+}
+
+// Marshaled mocks base method.
+func (m *MockcontentNode) Marshaled() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Marshaled")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Marshaled indicates an expected call of Marshaled.
+func (mr *MockcontentNodeMockRecorder) Marshaled() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Marshaled", reflect.TypeOf((*MockcontentNode)(nil).Marshaled))
 }

@@ -104,11 +104,10 @@ func FmtSliceFunc(elems []string) string {
 
 // QuoteSliceFunc places quotation marks around all elements of a go string slice.
 func QuoteSliceFunc(elems []string) []string {
-	var quotedElems []string
 	if len(elems) == 0 {
-		return quotedElems
+		return nil
 	}
-	quotedElems = make([]string, len(elems))
+	quotedElems := make([]string, len(elems))
 	for i, el := range elems {
 		quotedElems[i] = strconv.Quote(el)
 	}
