@@ -35,6 +35,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"golang.org/x/sync/errgroup"
 )
@@ -87,13 +88,11 @@ type envDeployer struct {
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
-
-	// TODO: move them
-	addons stackBuilder
-	wsPath string
+	addons                   stackBuilder
 
 	// Cached variables.
 	appRegionalResources *cfnstack.AppRegionalResources
+	wsPath               string
 }
 
 // NewEnvDeployerInput contains information needed to construct an environment deployer.
@@ -126,6 +125,14 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("initialize env describer: %w", err)
 	}
+	ws, err := workspace.Use(afero.NewOsFs())
+	if err != nil {
+		return nil, err
+	}
+	addons, err := addon.ParseFromEnv(ws)
+	if err != nil {
+		return nil, fmt.Errorf("parse environments addons: %w", err)
+	}
 	cfnClient := deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr))
 	return &envDeployer{
 		app: in.App,
@@ -134,6 +141,9 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		templateFS:       template.New(),
 		s3:               s3.New(envManagerSession),
 		prefixListGetter: ec2.New(envRegionSession),
+
+		addons: addons,
+		wsPath: ws.Path(),
 
 		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
 		envDeployer: cfnClient,

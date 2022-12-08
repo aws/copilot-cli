@@ -36,7 +36,7 @@ var (
 	}()
 )
 
-type workspaceReader interface {
+type workspaceAddonReader interface {
 	WorkloadAddonsPath(name string) string
 	WorkloadAddonFilePath(wkldName, fName string) string
 	EnvAddonsPath() string
@@ -62,7 +62,7 @@ type stack struct {
 }
 
 type parser struct {
-	ws                 workspaceReader
+	ws                 workspaceAddonReader
 	addonsDirPath      func() string
 	addonsFilePath     func(fName string) string
 	validateParameters func(params yaml.Node) error
@@ -72,7 +72,7 @@ type parser struct {
 // and returns a Stack created by merging the CloudFormation templates
 // files found there. If no addons are found, ParseFromWorkload returns a nil
 // Stack and ErrAddonsNotFound.
-func ParseFromWorkload(workloadName string, ws workspaceReader) (*WorkloadStack, error) {
+func ParseFromWorkload(workloadName string, ws workspaceAddonReader) (*WorkloadStack, error) {
 	parser := parser{
 		ws: ws,
 		addonsDirPath: func() string {
@@ -99,7 +99,7 @@ func ParseFromWorkload(workloadName string, ws workspaceReader) (*WorkloadStack,
 // and returns a Stack created by merging the CloudFormation templates
 // files found there. If no addons are found, ParseFromWorkload returns a nil
 // Stack and ErrAddonsNotFound.
-func ParseFromEnv(ws workspaceReader) (*EnvironmentStack, error) {
+func ParseFromEnv(ws workspaceAddonReader) (*EnvironmentStack, error) {
 	parser := parser{
 		ws:             ws,
 		addonsDirPath:  ws.EnvAddonsPath,
