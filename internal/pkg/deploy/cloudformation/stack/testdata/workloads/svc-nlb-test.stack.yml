@@ -305,12 +305,12 @@ Resources: # If a bucket URL is specified, that means the template exists.
             awslogs-group: !Ref LogGroup
             awslogs-stream-prefix: copilot
         Services:
-          - PortName: target
+          - PortName: fe80
             # Avoid using the same service with Service Discovery in a namespace.
-            DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]]
+            DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc", 80]]
             ClientAliases:
-              - Port: !Ref TargetPort
-                DnsName: !Ref WorkloadName
+              - Port: 80
+                DnsName: example.com
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED

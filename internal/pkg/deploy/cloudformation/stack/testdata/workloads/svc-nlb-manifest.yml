@@ -27,7 +27,8 @@ environments:
       healthcheck:
         port: 80
     network:
-      connect: true
+      connect:
+        alias: "example.com"
   dev:
     http:
       path: '/'

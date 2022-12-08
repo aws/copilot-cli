@@ -529,11 +529,11 @@ Resources: # If a bucket URL is specified, that means the template exists.
             awslogs-group: !Ref LogGroup
             awslogs-stream-prefix: copilot
         Services:
-          - PortName: target
+          - PortName: fe4000
             # Avoid using the same service with Service Discovery in a namespace.
-            DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]]
+            DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc", 4000]]
             ClientAliases:
-              - Port: !Ref TargetPort
+              - Port: 4000
                 DnsName: api
       NetworkConfiguration:
         AwsvpcConfiguration:

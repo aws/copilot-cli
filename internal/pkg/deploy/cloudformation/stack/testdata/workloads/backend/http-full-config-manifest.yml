@@ -18,7 +18,8 @@ http:
   target_port: 8081
 
 network:
-  connect: true
+  connect:
+    alias: "example.com"
 
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build

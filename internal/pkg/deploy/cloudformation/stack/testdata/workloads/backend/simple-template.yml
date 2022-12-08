@@ -286,11 +286,11 @@ Resources:
             awslogs-group: !Ref LogGroup
             awslogs-stream-prefix: copilot
         Services:
-          - PortName: target
+          - PortName: simple-backend8080
             # Avoid using the same service with Service Discovery in a namespace.
-            DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc"]]
+            DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc", 8080]]
             ClientAliases:
-              - Port: !Ref TargetPort
+              - Port: 8080
                 DnsName: !Ref WorkloadName
       NetworkConfiguration:
         AwsvpcConfiguration:
