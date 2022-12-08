@@ -179,11 +179,14 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 			d := envDeployer{
 				app:        mockApp,
 				env:        mockEnv,
-				addons:     m.addons,
 				appCFN:     m.appCFN,
 				s3:         m.s3,
 				patcher:    m.patcher,
 				templateFS: fakeTemplateFS(),
+
+				parseAddons: func() (stackBuilder, error) {
+					return m.addons, nil
+				},
 			}
 
 			got, gotErr := d.UploadArtifacts()

@@ -88,10 +88,11 @@ type envDeployer struct {
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
-	addons                   stackBuilder
+	parseAddons              func() (stackBuilder, error)
 
 	// Cached variables.
 	appRegionalResources *cfnstack.AppRegionalResources
+	addons               stackBuilder
 	wsPath               string
 }
 
@@ -129,12 +130,8 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 	if err != nil {
 		return nil, err
 	}
-	addons, err := addon.ParseFromEnv(ws)
-	if err != nil {
-		return nil, fmt.Errorf("parse environments addons: %w", err)
-	}
 	cfnClient := deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr))
-	return &envDeployer{
+	deployer := &envDeployer{
 		app: in.App,
 		env: in.Env,
 
@@ -142,7 +139,6 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		s3:               s3.New(envManagerSession),
 		prefixListGetter: ec2.New(envRegionSession),
 
-		addons: addons,
 		wsPath: ws.Path(),
 
 		appCFN:      deploycfn.New(defaultSession, deploycfn.WithProgressTracker(os.Stderr)),
@@ -160,7 +156,16 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		newServiceStackDescriber: func(svc string) stackDescriber {
 			return stack.NewStackDescriber(cfnstack.NameForService(in.App.Name, in.Env.Name, svc), envManagerSession)
 		},
-	}, nil
+	}
+	deployer.parseAddons = func() (stackBuilder, error) {
+		if deployer.addons == nil {
+			var err error
+			deployer.addons, err = addon.ParseFromEnv(ws)
+			return deployer.addons, err
+		}
+		return deployer.addons, nil
+	}
+	return deployer, nil
 }
 
 // Validate returns an error if the environment manifest is incompatible with services and application configurations.
@@ -198,16 +203,24 @@ func (d *envDeployer) UploadArtifacts() (*UploadEnvArtifactsOutput, error) {
 }
 
 func (d *envDeployer) uploadAddons(bucket string) (string, error) {
+	addons, err := d.parseAddons()
+	if err != nil {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if !errors.As(err, &notFoundErr) {
+			return "", fmt.Errorf("parse environment addons: %w", err)
+		}
+		return "", nil
+	}
 	pkgConfig := addon.PackageConfig{
 		Bucket:        bucket,
 		Uploader:      d.s3,
 		WorkspacePath: d.wsPath,
 		FS:            afero.NewOsFs(),
 	}
-	if err := d.addons.Package(pkgConfig); err != nil {
+	if err := addons.Package(pkgConfig); err != nil {
 		return "", fmt.Errorf("package environment addons: %w", err)
 	}
-	tmpl, err := d.addons.Template()
+	tmpl, err := addons.Template()
 	if err != nil {
 		return "", fmt.Errorf("render addons template: %w", err)
 	}
