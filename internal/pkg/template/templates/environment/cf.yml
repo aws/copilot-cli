@@ -655,6 +655,9 @@ Resources:
       Parameters:
         App: !Ref AppName
         Env: !Ref EnvironmentName
+        {{- if .Addons.ExtraParams }}
+        {{ .Addons.ExtraParams }}
+        {{- end}}
       TemplateURL: {{.Addons.URL}}
   {{- end }}
 Outputs:

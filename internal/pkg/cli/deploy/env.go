@@ -354,7 +354,8 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 	var addons *deploy.Addons
 	if !d.addons.notFound {
 		addons = &deploy.Addons{
-			URL: in.AddonsURL,
+			URL:    in.AddonsURL,
+			Config: d.addons.stackBuilder,
 		}
 	}
 	return &deploy.CreateEnvironmentInput{

@@ -109,8 +109,13 @@ func (e *EnvStackConfig) Template() (string, error) {
 
 	var addons *template.Addons
 	if e.in.Addons != nil {
+		parameters, err := e.in.Addons.Config.Parameters()
+		if err != nil {
+			return "", fmt.Errorf("parse environment addons parameters: %w", err)
+		}
 		addons = &template.Addons{
-			URL: e.in.Addons.URL,
+			URL:         e.in.Addons.URL,
+			ExtraParams: parameters,
 		}
 	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{

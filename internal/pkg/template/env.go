@@ -96,7 +96,8 @@ var (
 
 // Addons holds data about an aggregated addons stack.
 type Addons struct {
-	URL string
+	URL         string
+	ExtraParams string
 }
 
 // EnvOpts holds data that can be provided to enable features in an environment stack template.

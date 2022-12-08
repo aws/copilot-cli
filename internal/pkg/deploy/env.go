@@ -18,9 +18,14 @@ const (
 	EnvTemplateVersionBootstrap = "bootstrap"
 )
 
+type stackConfigurer interface {
+	Parameters() (string, error)
+}
+
 // Addons holds information about the addons.
 type Addons struct {
-	URL string
+	URL    string
+	Config stackConfigurer
 }
 
 // CreateEnvironmentInput holds the fields required to deploy an environment.
