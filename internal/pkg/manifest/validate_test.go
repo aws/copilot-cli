@@ -3402,3 +3402,34 @@ func TestDeploymentConfiguration_validate(t *testing.T) {
 		})
 	}
 }
+
+func TestFromEnvironment_validate(t *testing.T) {
+	testCases := map[string]struct {
+		in          fromCFN
+		wantedError error
+	}{
+		"error if name is an empty string": {
+			in: fromCFN{
+				Name: aws.String(""),
+			},
+			wantedError: errors.New("name cannot be an empty string"),
+		},
+		"ok": {
+			in: fromCFN{
+				Name: aws.String("db"),
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			gotErr := tc.in.validate()
+
+			if tc.wantedError != nil {
+				require.NotNil(t, gotErr)
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+			}
+		})
+	}
+}

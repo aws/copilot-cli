@@ -97,6 +97,7 @@ var (
 		"http-listener",
 		"env-controller",
 		"mount-points",
+		"variables",
 		"volumes",
 		"image-overrides",
 		"instancerole",
@@ -126,20 +127,21 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name         string
-	Image        *string
-	Essential    *bool
-	Port         *string
-	Protocol     *string
-	CredsParam   *string
-	Variables    map[string]string
-	Secrets      map[string]Secret
-	Storage      SidecarStorageOpts
-	DockerLabels map[string]string
-	DependsOn    map[string]string
-	EntryPoint   []string
-	Command      []string
-	HealthCheck  *ContainerHealthCheck
+	Name                 string
+	Image                *string
+	Essential            *bool
+	Port                 *string
+	Protocol             *string
+	CredsParam           *string
+	Variables            map[string]Variable
+	Secrets              map[string]Secret
+	Storage              SidecarStorageOpts
+	DockerLabels         map[string]string
+	DependsOn            map[string]string
+	EntryPoint           []string
+	Command              []string
+	HealthCheck          *ContainerHealthCheck
+	EnvAddonsFeatureFlag bool
 }
 
 // SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
@@ -205,13 +207,14 @@ type EFSVolumeConfiguration struct {
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
 // its logs.
 type LogConfigOpts struct {
-	Image          *string
-	Destination    map[string]string
-	EnableMetadata *string
-	SecretOptions  map[string]Secret
-	ConfigFile     *string
-	Variables      map[string]string
-	Secrets        map[string]Secret
+	Image                *string
+	Destination          map[string]string
+	EnableMetadata       *string
+	SecretOptions        map[string]Secret
+	ConfigFile           *string
+	Variables            map[string]Variable
+	Secrets              map[string]Secret
+	EnvAddonsFeatureFlag bool
 }
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
@@ -250,6 +253,50 @@ type HTTPHealthCheckOpts struct {
 // as a HTTPS port.
 func (h HTTPHealthCheckOpts) IsHTTPS() bool {
 	return h.Port == "443"
+}
+
+type importable interface {
+	RequiresImport() bool
+}
+
+// Variable represents the value of an environment variable.
+type Variable interface {
+	importable
+	Value() string
+}
+
+// ImportedVariable returns a Variable that should be imported from a stack.
+func ImportedVariable(name string) Variable {
+	return importedEnvVar(name)
+}
+
+// PlainVariable returns a Variable that is a plain string value.
+func PlainVariable(value string) Variable {
+	return plainEnvVar(value)
+}
+
+type plainEnvVar string
+
+// RequiresImport returns false for a plain string environment variable.
+func (v plainEnvVar) RequiresImport() bool {
+	return false
+}
+
+// Value returns the plain string value of the environment variable.
+func (v plainEnvVar) Value() string {
+	return string(v)
+}
+
+type importedEnvVar string
+
+// RequiresImport returns true for an imported environment variable.
+func (v importedEnvVar) RequiresImport() bool {
+	return true
+}
+
+// Value returns the name of the import that will be the value of the environment variable.
+func (v importedEnvVar) Value() string {
+	return string(v)
 }
 
 // A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
@@ -405,7 +452,7 @@ type ObservabilityOpts struct {
 	Tracing string // The name of the vendor used for tracing.
 }
 
-// DeploymentConfiguraitonOpts holds values for MinHealthyPercent and MaxPercent.
+// DeploymentConfigurationOpts holds values for MinHealthyPercent and MaxPercent.
 type DeploymentConfigurationOpts struct {
 	// The lower limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
 	MinHealthyPercent int
@@ -440,7 +487,7 @@ type Topic struct {
 	Svc       string
 }
 
-// Fifo holds configuration needed if the topic is FIFO.
+// FIFOTopicConfig holds configuration needed if the topic is FIFO.
 type FIFOTopicConfig struct {
 	ContentBasedDeduplication *bool
 }
@@ -478,7 +525,7 @@ type SQSQueue struct {
 	FIFOQueueConfig *FIFOQueueConfig
 }
 
-// FifoAdvanceConfigOrBool holds information needed to render a FIFO SQS Queue in a container definition.
+// FIFOQueueConfig holds information needed to render a FIFO SQS Queue in a container definition.
 type FIFOQueueConfig struct {
 	FIFOThroughputLimit       *string
 	ContentBasedDeduplication *bool
@@ -546,7 +593,7 @@ type WorkloadOpts struct {
 	EnvVersion         string
 
 	// Additional options that are common between **all** workload templates.
-	Variables                map[string]string
+	Variables                map[string]Variable
 	Secrets                  map[string]Secret
 	Aliases                  []string
 	HTTPSListener            bool
@@ -609,7 +656,8 @@ type WorkloadOpts struct {
 	AppDNSName           *string
 
 	// Additional options for worker service templates.
-	Subscribe *SubscribeOpts
+	Subscribe            *SubscribeOpts
+	EnvAddonsFeatureFlag bool
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,

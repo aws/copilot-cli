@@ -28,6 +28,10 @@ retries: 3
 # Optional. The timeout after which to stop the job if it's still running. You can use the units (h, m, s).
 timeout: 1h
 
+variables:
+  DB_NAME: # This variable should not render in template because it is guarded out by feature flag.
+    from_cfn: MYDB
+
 storage:
   ephemeral: 200
   volumes:

@@ -1,6 +1,6 @@
-{{if .Variables}}{{range $name, $value := .Variables}}
-- Name: {{$name}}
-  Value: {{$value | printf "%q"}}{{end}}{{end}}
+{{if .Variables}}
+{{include "variables" .}}
+{{end}}
 {{- if .Storage}}{{if .Storage.MountPoints}}
 - Name: COPILOT_MOUNT_POINTS
   Value: '{{jsonMountPoints .Storage.MountPoints}}'
