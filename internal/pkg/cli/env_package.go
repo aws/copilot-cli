@@ -159,16 +159,18 @@ func (o *packageEnvOpts) Execute() error {
 	if err := deployer.Validate(mft); err != nil {
 		return err
 	}
-	var urls map[string]string
+	var uploadArtifactsOutput deploy.UploadEnvArtifactsOutput
 	if o.uploadAssets {
-		urls, err = deployer.UploadArtifacts()
+		out, err := deployer.UploadArtifacts()
 		if err != nil {
 			return fmt.Errorf("upload assets for environment %q: %v", o.envName, err)
 		}
+		uploadArtifactsOutput = *out
 	}
 	res, err := deployer.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
 		RootUserARN:         principal.RootUserARN,
-		CustomResourcesURLs: urls,
+		AddonsURL:           uploadArtifactsOutput.AddonsURL,
+		CustomResourcesURLs: uploadArtifactsOutput.CustomResourceURLs,
 		Manifest:            mft,
 		RawManifest:         rawMft,
 		PermissionsBoundary: o.appCfg.PermissionsBoundary,

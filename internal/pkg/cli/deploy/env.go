@@ -160,8 +160,8 @@ func (d *envDeployer) Validate(mft *manifest.Environment) error {
 
 // UploadEnvArtifactsOutput is the output of UploadArtifacts.
 type UploadEnvArtifactsOutput struct {
-	addonsURL          string
-	customResourceURLs map[string]string
+	AddonsURL          string
+	CustomResourceURLs map[string]string
 }
 
 // UploadArtifacts uploads the deployment artifacts for the environment.
@@ -182,8 +182,8 @@ func (d *envDeployer) UploadArtifacts() (*UploadEnvArtifactsOutput, error) {
 		return nil, err
 	}
 	return &UploadEnvArtifactsOutput{
-		addonsURL:          addonsURL,
-		customResourceURLs: customResourceURLs,
+		AddonsURL:          addonsURL,
+		CustomResourceURLs: customResourceURLs,
 	}, nil
 }
 

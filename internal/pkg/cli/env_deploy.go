@@ -138,13 +138,14 @@ func (o *deployEnvOpts) Execute() error {
 	if err := deployer.Validate(mft); err != nil {
 		return err
 	}
-	urls, err := deployer.UploadArtifacts()
+	uploadArtifactsOutput, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload artifacts for environment %s: %w", o.name, err)
 	}
 	if err := deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
 		RootUserARN:         caller.RootUserARN,
-		CustomResourcesURLs: urls,
+		AddonsURL:           uploadArtifactsOutput.AddonsURL,
+		CustomResourcesURLs: uploadArtifactsOutput.CustomResourceURLs,
 		Manifest:            mft,
 		ForceNewUpdate:      o.forceNewUpdate,
 		RawManifest:         rawMft,

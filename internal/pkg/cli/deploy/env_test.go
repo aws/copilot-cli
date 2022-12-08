@@ -191,8 +191,8 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				require.Contains(t, gotErr.Error(), tc.wantedError.Error())
 			} else {
 				require.NoError(t, gotErr)
-				require.Equal(t, tc.wantedCustomResourceURLs, got.customResourceURLs)
-				require.Equal(t, tc.wantedAddonsURL, got.addonsURL)
+				require.Equal(t, tc.wantedCustomResourceURLs, got.CustomResourceURLs)
+				require.Equal(t, tc.wantedAddonsURL, got.AddonsURL)
 			}
 		})
 	}
