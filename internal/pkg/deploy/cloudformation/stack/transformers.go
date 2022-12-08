@@ -812,6 +812,12 @@ func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) 
 		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
 		deployConfigs.MaxPercent = maxPercentDefault
 	}
+	if !deploymentConfig.Alarms.IsEmpty() {
+		if len(deploymentConfig.Alarms.AlarmNames) != 0 {
+			deployConfigs.RollbackAlarms = deploymentConfig.Alarms.AlarmNames
+		}
+		// To come: if AlarmArgs, create alarms and pass their Copilot-created names in CFN template.
+	}
 	return deployConfigs
 }
 

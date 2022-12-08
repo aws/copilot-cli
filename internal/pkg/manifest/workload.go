@@ -56,10 +56,11 @@ var (
 	errUnmarshalCountOpts          = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts          = errors.New(`unable to unmarshal "range" field`)
 
-	errUnmarshalExec       = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
-	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
-	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into advanced alias map, string, or slice of strings`)
-	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
+	errUnmarshalExec           = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
+	errUnmarshalEntryPoint     = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
+	errUnmarshalAlias          = errors.New(`unable to unmarshal "alias" into advanced alias map, string, or slice of strings`)
+	errUnmarshalCommand        = errors.New(`unable to unmarshal "command" into string or slice of strings`)
+	errUnmarshalRollbackAlarms = errors.New(`unable to unmarshal "alarms" into slice of strings or compose-style map`)
 )
 
 // WorkloadTypes returns the list of all manifest types.
@@ -704,6 +705,49 @@ type vpcConfig struct {
 
 func (v *vpcConfig) isEmpty() bool {
 	return v.Placement.IsEmpty() && v.SecurityGroups.isEmpty()
+}
+
+// AlarmArgs represents specs of CloudWatch alarms for deployment rollbacks.
+type AlarmArgs struct {
+	CPUUtilization    *int    `yaml:"cpu_utilization"`
+	MemoryUtilization *int    `yaml:"memory_utilization"`
+	SNS               *string `yaml:"sns"`
+}
+
+// RollbackAlarmArgsOrNames represents alarms for rolling back deployments.
+// It supports unmarshalling yaml which can either be of type AlarmArgs or a list of strings.
+type RollbackAlarmArgsOrNames struct {
+	AlarmNames []string `yaml:"alarms"`
+	AlarmArgs
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the RollbackAlarmArgsOrNames
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (r *RollbackAlarmArgsOrNames) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&r.AlarmArgs); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+	if !r.AlarmArgs.isEmpty() {
+		// Unmarshaled successfully to r.AlarmArgs, unset r.AlarmNames, and return.
+		r.AlarmNames = nil
+		return nil
+	}
+	if err := value.Decode(&r.AlarmNames); err != nil {
+		return errUnmarshalRollbackAlarms
+	}
+	return nil
+}
+
+func (r *RollbackAlarmArgsOrNames) IsEmpty() bool {
+	return len(r.AlarmNames) == 0 && r.AlarmArgs.isEmpty()
+}
+
+func (a *AlarmArgs) isEmpty() bool {
+	return a.CPUUtilization == nil && a.MemoryUtilization == nil && a.SNS == nil
 }
 
 // PlatformArgsOrString is a custom type which supports unmarshaling yaml which

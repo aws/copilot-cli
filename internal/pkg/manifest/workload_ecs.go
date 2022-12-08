@@ -87,11 +87,12 @@ type ImageWithPortAndHealthcheck struct {
 
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
-	Rolling *string `yaml:"rolling"`
+	Rolling *string                  `yaml:"rolling"`
+	Alarms  RollbackAlarmArgsOrNames `yaml:"alarms"`
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
-	return d == nil || d.Rolling == nil
+	return d.Rolling == nil && d.Alarms.IsEmpty()
 }
 
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
