@@ -94,6 +94,11 @@ var (
 	}
 )
 
+// Addons holds data about an aggregated addons stack.
+type Addons struct {
+	URL string
+}
+
 // EnvOpts holds data that can be provided to enable features in an environment stack template.
 type EnvOpts struct {
 	AppName string // The application name. Needed to create default value for svc discovery endpoint for upgraded environments.
@@ -107,7 +112,8 @@ type EnvOpts struct {
 	EnableLongARNFormatLambda string
 	CustomDomainLambda        string
 
-	AddonsURL            string
+	Addons *Addons
+
 	ScriptBucketName     string
 	PermissionsBoundary  string
 	ArtifactBucketARN    string

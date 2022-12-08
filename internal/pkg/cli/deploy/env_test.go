@@ -177,9 +177,11 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				App:            "mockApp",
 			}
 			d := envDeployer{
-				app:        mockApp,
-				env:        mockEnv,
-				addons:     m.addons,
+				app: mockApp,
+				env: mockEnv,
+				addons: addons{
+					stackBuilder: m.addons,
+				},
 				appCFN:     m.appCFN,
 				s3:         m.s3,
 				patcher:    m.patcher,
@@ -825,7 +827,9 @@ func TestEnvDeployer_AddonsTemplate(t *testing.T) {
 			}
 			tc.setUpMocks(m)
 			d := envDeployer{
-				addons: m.addons,
+				addons: addons{
+					stackBuilder: m.addons,
+				},
 			}
 			got, gotErr := d.AddonsTemplate()
 			if tc.wantedError != nil {

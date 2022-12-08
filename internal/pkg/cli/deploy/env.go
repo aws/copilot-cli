@@ -71,6 +71,11 @@ type stackDescriber interface {
 	Resources() ([]*stack.Resource, error)
 }
 
+type addons struct {
+	stackBuilder
+	notFound bool
+}
+
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
@@ -88,10 +93,11 @@ type envDeployer struct {
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
-	addons                   stackBuilder
+
 	// Cached variables.
 	appRegionalResources *cfnstack.AppRegionalResources
 	wsPath               string
+	addons               addons
 }
 
 // NewEnvDeployerInput contains information needed to construct an environment deployer.
@@ -130,15 +136,17 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 	}
 	cfnClient := deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr))
 
-	var addons stackBuilder
-	addons, err = addon.ParseFromEnv(ws)
+	var addons addons
+	addonsStack, err := addon.ParseFromEnv(ws)
 	if err != nil {
 		var notFoundErr *addon.ErrAddonsNotFound
 		if !errors.As(err, &notFoundErr) {
 			return nil, fmt.Errorf("parse environment addons: %w", err)
 		}
-		addons = nil
+		addons.notFound = true
 	}
+	addons.stackBuilder = addonsStack
+
 	deployer := &envDeployer{
 		app: in.App,
 		env: in.Env,
@@ -205,14 +213,14 @@ func (d *envDeployer) UploadArtifacts() (*UploadEnvArtifactsOutput, error) {
 
 // AddonsTemplate returns the environment addons template.
 func (d *envDeployer) AddonsTemplate() (string, error) {
-	if d.addons == nil {
+	if d.addons.notFound {
 		return "", nil
 	}
 	return d.addons.Template()
 }
 
 func (d *envDeployer) uploadAddons(bucket string) (string, error) {
-	if d.addons == nil {
+	if d.addons.notFound {
 		return "", nil
 	}
 	pkgConfig := addon.PackageConfig{
@@ -343,6 +351,12 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		return nil, err
 	}
 
+	var addons *deploy.Addons
+	if !d.addons.notFound {
+		addons = &deploy.Addons{
+			URL: in.AddonsURL,
+		}
+	}
 	return &deploy.CreateEnvironmentInput{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
@@ -351,7 +365,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 			AccountPrincipalARN: in.RootUserARN,
 		},
 		AdditionalTags:       d.app.Tags,
-		AddonsURL:            in.AddonsURL,
+		Addons:               addons,
 		CustomResourcesURLs:  in.CustomResourcesURLs,
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,

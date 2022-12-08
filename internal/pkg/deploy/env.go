@@ -18,6 +18,11 @@ const (
 	EnvTemplateVersionBootstrap = "bootstrap"
 )
 
+// Addons holds information about the addons.
+type Addons struct {
+	URL string
+}
+
 // CreateEnvironmentInput holds the fields required to deploy an environment.
 type CreateEnvironmentInput struct {
 	// The version of the environment template to create the stack. If empty, creates the legacy stack.
@@ -31,7 +36,7 @@ type CreateEnvironmentInput struct {
 	ArtifactBucketKeyARN string            // ARN of the KMS key used to encrypt the contents in the regional application bucket.
 
 	// Runtime configurations.
-	AddonsURL           string            // The URL where the addons template is stored, if there is any.
+	Addons              *Addons
 	CustomResourcesURLs map[string]string // Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// User inputs.

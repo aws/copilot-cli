@@ -107,12 +107,18 @@ func (e *EnvStackConfig) Template() (string, error) {
 		return "", err
 	}
 
+	var addons *template.Addons
+	if e.in.Addons != nil {
+		addons = &template.Addons{
+			URL: e.in.Addons.URL,
+		}
+	}
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName: e.in.App.Name,
 		EnvName: e.in.Name,
 
 		CustomResources: crs,
-		AddonsURL:       e.in.AddonsURL,
+		Addons:          addons,
 
 		ArtifactBucketARN:    e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
