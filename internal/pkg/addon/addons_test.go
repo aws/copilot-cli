@@ -203,7 +203,7 @@ func TestWorkload_Template(t *testing.T) {
 			defer ctrl.Finish()
 
 			mocks := addonMocks{
-				ws: mocks.NewMockworkspaceReader(ctrl),
+				ws: mocks.NewMockworkspaceAddonReader(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(mocks)
@@ -332,7 +332,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 			defer ctrl.Finish()
 
 			mocks := addonMocks{
-				ws: mocks.NewMockworkspaceReader(ctrl),
+				ws: mocks.NewMockworkspaceAddonReader(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(mocks)
@@ -509,7 +509,7 @@ func TestEnv_Template(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := addonMocks{
-				ws: mocks.NewMockworkspaceReader(ctrl),
+				ws: mocks.NewMockworkspaceAddonReader(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(m)
@@ -637,7 +637,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 			defer ctrl.Finish()
 
 			mocks := addonMocks{
-				ws: mocks.NewMockworkspaceReader(ctrl),
+				ws: mocks.NewMockworkspaceAddonReader(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(mocks)

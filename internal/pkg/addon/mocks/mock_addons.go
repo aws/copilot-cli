@@ -10,31 +10,31 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockworkspaceReader is a mock of workspaceReader interface.
-type MockworkspaceReader struct {
+// MockworkspaceAddonReader is a mock of workspaceAddonReader interface.
+type MockworkspaceAddonReader struct {
 	ctrl     *gomock.Controller
-	recorder *MockworkspaceReaderMockRecorder
+	recorder *MockworkspaceAddonReaderMockRecorder
 }
 
-// MockworkspaceReaderMockRecorder is the mock recorder for MockworkspaceReader.
-type MockworkspaceReaderMockRecorder struct {
-	mock *MockworkspaceReader
+// MockworkspaceAddonReaderMockRecorder is the mock recorder for MockworkspaceAddonReader.
+type MockworkspaceAddonReaderMockRecorder struct {
+	mock *MockworkspaceAddonReader
 }
 
-// NewMockworkspaceReader creates a new mock instance.
-func NewMockworkspaceReader(ctrl *gomock.Controller) *MockworkspaceReader {
-	mock := &MockworkspaceReader{ctrl: ctrl}
-	mock.recorder = &MockworkspaceReaderMockRecorder{mock}
+// NewMockworkspaceAddonReader creates a new mock instance.
+func NewMockworkspaceAddonReader(ctrl *gomock.Controller) *MockworkspaceAddonReader {
+	mock := &MockworkspaceAddonReader{ctrl: ctrl}
+	mock.recorder = &MockworkspaceAddonReaderMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockworkspaceReader) EXPECT() *MockworkspaceReaderMockRecorder {
+func (m *MockworkspaceAddonReader) EXPECT() *MockworkspaceAddonReaderMockRecorder {
 	return m.recorder
 }
 
 // EnvAddonFilePath mocks base method.
-func (m *MockworkspaceReader) EnvAddonFilePath(fName string) string {
+func (m *MockworkspaceAddonReader) EnvAddonFilePath(fName string) string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnvAddonFilePath", fName)
 	ret0, _ := ret[0].(string)
@@ -42,13 +42,13 @@ func (m *MockworkspaceReader) EnvAddonFilePath(fName string) string {
 }
 
 // EnvAddonFilePath indicates an expected call of EnvAddonFilePath.
-func (mr *MockworkspaceReaderMockRecorder) EnvAddonFilePath(fName interface{}) *gomock.Call {
+func (mr *MockworkspaceAddonReaderMockRecorder) EnvAddonFilePath(fName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvAddonFilePath", reflect.TypeOf((*MockworkspaceReader)(nil).EnvAddonFilePath), fName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvAddonFilePath", reflect.TypeOf((*MockworkspaceAddonReader)(nil).EnvAddonFilePath), fName)
 }
 
 // EnvAddonsPath mocks base method.
-func (m *MockworkspaceReader) EnvAddonsPath() string {
+func (m *MockworkspaceAddonReader) EnvAddonsPath() string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnvAddonsPath")
 	ret0, _ := ret[0].(string)
@@ -56,13 +56,13 @@ func (m *MockworkspaceReader) EnvAddonsPath() string {
 }
 
 // EnvAddonsPath indicates an expected call of EnvAddonsPath.
-func (mr *MockworkspaceReaderMockRecorder) EnvAddonsPath() *gomock.Call {
+func (mr *MockworkspaceAddonReaderMockRecorder) EnvAddonsPath() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvAddonsPath", reflect.TypeOf((*MockworkspaceReader)(nil).EnvAddonsPath))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnvAddonsPath", reflect.TypeOf((*MockworkspaceAddonReader)(nil).EnvAddonsPath))
 }
 
 // ListFiles mocks base method.
-func (m *MockworkspaceReader) ListFiles(dirPath string) ([]string, error) {
+func (m *MockworkspaceAddonReader) ListFiles(dirPath string) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListFiles", dirPath)
 	ret0, _ := ret[0].([]string)
@@ -71,13 +71,13 @@ func (m *MockworkspaceReader) ListFiles(dirPath string) ([]string, error) {
 }
 
 // ListFiles indicates an expected call of ListFiles.
-func (mr *MockworkspaceReaderMockRecorder) ListFiles(dirPath interface{}) *gomock.Call {
+func (mr *MockworkspaceAddonReaderMockRecorder) ListFiles(dirPath interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFiles", reflect.TypeOf((*MockworkspaceReader)(nil).ListFiles), dirPath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFiles", reflect.TypeOf((*MockworkspaceAddonReader)(nil).ListFiles), dirPath)
 }
 
 // ReadFile mocks base method.
-func (m *MockworkspaceReader) ReadFile(fPath string) ([]byte, error) {
+func (m *MockworkspaceAddonReader) ReadFile(fPath string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadFile", fPath)
 	ret0, _ := ret[0].([]byte)
@@ -86,13 +86,13 @@ func (m *MockworkspaceReader) ReadFile(fPath string) ([]byte, error) {
 }
 
 // ReadFile indicates an expected call of ReadFile.
-func (mr *MockworkspaceReaderMockRecorder) ReadFile(fPath interface{}) *gomock.Call {
+func (mr *MockworkspaceAddonReaderMockRecorder) ReadFile(fPath interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockworkspaceReader)(nil).ReadFile), fPath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockworkspaceAddonReader)(nil).ReadFile), fPath)
 }
 
 // WorkloadAddonFilePath mocks base method.
-func (m *MockworkspaceReader) WorkloadAddonFilePath(wkldName, fName string) string {
+func (m *MockworkspaceAddonReader) WorkloadAddonFilePath(wkldName, fName string) string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WorkloadAddonFilePath", wkldName, fName)
 	ret0, _ := ret[0].(string)
@@ -100,13 +100,13 @@ func (m *MockworkspaceReader) WorkloadAddonFilePath(wkldName, fName string) stri
 }
 
 // WorkloadAddonFilePath indicates an expected call of WorkloadAddonFilePath.
-func (mr *MockworkspaceReaderMockRecorder) WorkloadAddonFilePath(wkldName, fName interface{}) *gomock.Call {
+func (mr *MockworkspaceAddonReaderMockRecorder) WorkloadAddonFilePath(wkldName, fName interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadAddonFilePath", reflect.TypeOf((*MockworkspaceReader)(nil).WorkloadAddonFilePath), wkldName, fName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadAddonFilePath", reflect.TypeOf((*MockworkspaceAddonReader)(nil).WorkloadAddonFilePath), wkldName, fName)
 }
 
 // WorkloadAddonsPath mocks base method.
-func (m *MockworkspaceReader) WorkloadAddonsPath(name string) string {
+func (m *MockworkspaceAddonReader) WorkloadAddonsPath(name string) string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WorkloadAddonsPath", name)
 	ret0, _ := ret[0].(string)
@@ -114,7 +114,7 @@ func (m *MockworkspaceReader) WorkloadAddonsPath(name string) string {
 }
 
 // WorkloadAddonsPath indicates an expected call of WorkloadAddonsPath.
-func (mr *MockworkspaceReaderMockRecorder) WorkloadAddonsPath(name interface{}) *gomock.Call {
+func (mr *MockworkspaceAddonReaderMockRecorder) WorkloadAddonsPath(name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadAddonsPath", reflect.TypeOf((*MockworkspaceReader)(nil).WorkloadAddonsPath), name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorkloadAddonsPath", reflect.TypeOf((*MockworkspaceAddonReader)(nil).WorkloadAddonsPath), name)
 }
