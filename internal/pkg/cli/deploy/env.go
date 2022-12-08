@@ -106,6 +106,8 @@ type NewEnvDeployerInput struct {
 	Env             *config.Environment
 	SessionProvider *sessions.Provider
 	ConfigStore     describe.ConfigStoreSvc
+
+	EnvAddonsFeatureFlag bool
 }
 
 // NewEnvDeployer constructs an environment deployer.
@@ -137,15 +139,19 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 	cfnClient := deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr))
 
 	var addons addons
-	addonsStack, err := addon.ParseFromEnv(ws)
-	if err != nil {
-		var notFoundErr *addon.ErrAddonsNotFound
-		if !errors.As(err, &notFoundErr) {
-			return nil, fmt.Errorf("parse environment addons: %w", err)
+	if in.EnvAddonsFeatureFlag {
+		addonsStack, err := addon.ParseFromEnv(ws)
+		if err != nil {
+			var notFoundErr *addon.ErrAddonsNotFound
+			if !errors.As(err, &notFoundErr) {
+				return nil, fmt.Errorf("parse environment addons: %w", err)
+			}
+			addons.notFound = true
 		}
+		addons.stackBuilder = addonsStack
+	} else {
 		addons.notFound = true
 	}
-	addons.stackBuilder = addonsStack
 
 	deployer := &envDeployer{
 		app: in.App,
