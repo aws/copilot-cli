@@ -3431,11 +3431,11 @@ func TestValidateExposedPorts(t *testing.T) {
 				},
 			},
 			wanted: nil,
-    },
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-    err := validateExposedPorts(tc.in)
+			err := validateExposedPorts(tc.in)
 
 			if tc.wanted != nil {
 				require.EqualError(t, err, tc.wanted.Error())
