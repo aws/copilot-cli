@@ -219,31 +219,6 @@ func (d *envDeployer) AddonsTemplate() (string, error) {
 	return d.addons.Template()
 }
 
-func (d *envDeployer) uploadAddons(bucket string) (string, error) {
-	if d.addons.notFound {
-		return "", nil
-	}
-	pkgConfig := addon.PackageConfig{
-		Bucket:        bucket,
-		Uploader:      d.s3,
-		WorkspacePath: d.wsPath,
-		FS:            afero.NewOsFs(),
-	}
-	if err := d.addons.Package(pkgConfig); err != nil {
-		return "", fmt.Errorf("package environment addons: %w", err)
-	}
-	tmpl, err := d.addons.Template()
-	if err != nil {
-		return "", fmt.Errorf("render addons template: %w", err)
-	}
-	url, err := d.s3.Upload(bucket, artifactpath.EnvironmentAddons([]byte(tmpl)), strings.NewReader(tmpl))
-	if err != nil {
-		return "", fmt.Errorf("upload addons template to bucket %s: %w", bucket, err)
-	}
-	return url, nil
-
-}
-
 // DeployEnvironmentInput contains information used to deploy the environment.
 type DeployEnvironmentInput struct {
 	RootUserARN         string
@@ -321,6 +296,31 @@ func (d *envDeployer) getAppRegionalResources() (*cfnstack.AppRegionalResources,
 		return nil, fmt.Errorf("cannot find the S3 artifact bucket in region %s", d.env.Region)
 	}
 	return resources, nil
+}
+
+func (d *envDeployer) uploadAddons(bucket string) (string, error) {
+	if d.addons.notFound {
+		return "", nil
+	}
+	pkgConfig := addon.PackageConfig{
+		Bucket:        bucket,
+		Uploader:      d.s3,
+		WorkspacePath: d.wsPath,
+		FS:            afero.NewOsFs(),
+	}
+	if err := d.addons.Package(pkgConfig); err != nil {
+		return "", fmt.Errorf("package environment addons: %w", err)
+	}
+	tmpl, err := d.addons.Template()
+	if err != nil {
+		return "", fmt.Errorf("render addons template: %w", err)
+	}
+	url, err := d.s3.Upload(bucket, artifactpath.EnvironmentAddons([]byte(tmpl)), strings.NewReader(tmpl))
+	if err != nil {
+		return "", fmt.Errorf("upload addons template to bucket %s: %w", bucket, err)
+	}
+	return url, nil
+
 }
 
 func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, error) {
