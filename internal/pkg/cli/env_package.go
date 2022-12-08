@@ -32,6 +32,7 @@ import (
 const (
 	envCFNTemplateNameFmt              = "%s.env.yml"
 	envCFNTemplateConfigurationNameFmt = "%s.env.params.json"
+	envAddonsCFNTemplateName           = "env.addons.yml"
 )
 
 type packageEnvVars struct {
@@ -63,6 +64,7 @@ type packageEnvOpts struct {
 	fs           afero.Fs
 	tplWriter    io.WriteCloser
 	paramsWriter io.WriteCloser
+	addonsWriter io.WriteCloser
 
 	newInterpolator func(appName, envName string) interpolator
 	newEnvPackager  func() (envPackager, error)
@@ -96,6 +98,7 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 		fs:           fs,
 		tplWriter:    os.Stdout,
 		paramsWriter: discardFile{},
+		addonsWriter: discardFile{},
 
 		newInterpolator: func(appName, envName string) interpolator {
 			return manifest.NewInterpolator(appName, envName)
@@ -152,22 +155,22 @@ func (o *packageEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get caller principal identity: %v", err)
 	}
-	deployer, err := o.newEnvPackager()
+	packager, err := o.newEnvPackager()
 	if err != nil {
 		return err
 	}
-	if err := deployer.Validate(mft); err != nil {
+	if err := packager.Validate(mft); err != nil {
 		return err
 	}
 	var uploadArtifactsOutput deploy.UploadEnvArtifactsOutput
 	if o.uploadAssets {
-		out, err := deployer.UploadArtifacts()
+		out, err := packager.UploadArtifacts()
 		if err != nil {
 			return fmt.Errorf("upload assets for environment %q: %v", o.envName, err)
 		}
 		uploadArtifactsOutput = *out
 	}
-	res, err := deployer.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
+	res, err := packager.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
 		RootUserARN:         principal.RootUserARN,
 		AddonsURL:           uploadArtifactsOutput.AddonsURL,
 		CustomResourcesURLs: uploadArtifactsOutput.CustomResourceURLs,
@@ -179,13 +182,43 @@ func (o *packageEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("generate CloudFormation template from environment %q manifest: %v", o.envName, err)
 	}
+	addonsTemplate, err := packager.AddonsTemplate()
+	if err != nil {
+		return fmt.Errorf("retrieve environment addons template: %w", err)
+	}
 	if err := o.setWriters(); err != nil {
 		return err
 	}
 	if err := o.writeAndClose(o.tplWriter, res.Template); err != nil {
 		return err
 	}
-	return o.writeAndClose(o.paramsWriter, res.Parameters)
+	if err := o.writeAndClose(o.paramsWriter, res.Parameters); err != nil {
+		return err
+	}
+
+	if addonsTemplate == "" {
+		return nil
+	}
+	if err := o.setAddonsWriter(); err != nil {
+		return err
+	}
+	if err := o.writeAndClose(o.addonsWriter, addonsTemplate); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *packageEnvOpts) setAddonsWriter() error {
+	if o.outputDir == "" {
+		return nil
+	}
+	addonsPath := filepath.Join(o.outputDir, envAddonsCFNTemplateName)
+	addonsFile, err := o.fs.Create(addonsPath)
+	if err != nil {
+		return fmt.Errorf("create file %s: %w", addonsPath, err)
+	}
+	o.addonsWriter = addonsFile
+	return nil
 }
 
 func (o *packageEnvOpts) getAppCfg() (*config.Application, error) {

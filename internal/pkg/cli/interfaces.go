@@ -654,6 +654,7 @@ type envDeployer interface {
 }
 
 type envPackager interface {
+	AddonsTemplate() (string, error)
 	GenerateCloudFormationTemplate(in *clideploy.DeployEnvironmentInput) (*clideploy.GenerateCloudFormationTemplateOutput, error)
 	Validate(*manifest.Environment) error
 	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)

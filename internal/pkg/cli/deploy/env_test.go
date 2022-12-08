@@ -179,14 +179,11 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 			d := envDeployer{
 				app:        mockApp,
 				env:        mockEnv,
+				addons:     m.addons,
 				appCFN:     m.appCFN,
 				s3:         m.s3,
 				patcher:    m.patcher,
 				templateFS: fakeTemplateFS(),
-
-				parseAddons: func() (stackBuilder, error) {
-					return m.addons, nil
-				},
 			}
 
 			got, gotErr := d.UploadArtifacts()
@@ -802,5 +799,42 @@ If you'd like to use these services without a CDN, ensure each service's A recor
 				require.Equal(t, tc.expectedStdErr, buf.String())
 			}
 		})
+	}
+}
+
+func TestEnvDeployer_AddonsTemplate(t *testing.T) {
+	testCases := map[string]struct {
+		setUpMocks  func(m *envDeployerMocks)
+		wanted      string
+		wantedError error
+	}{
+		"return the addon template": {
+			setUpMocks: func(m *envDeployerMocks) {
+				m.addons.EXPECT().Template().Return("mockAddonsTemplate", nil)
+			},
+			wanted: "mockAddonsTemplate",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := &envDeployerMocks{
+				addons: mocks.NewMockstackBuilder(ctrl),
+			}
+			tc.setUpMocks(m)
+			d := envDeployer{
+				addons: m.addons,
+			}
+			got, gotErr := d.AddonsTemplate()
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+
 	}
 }
