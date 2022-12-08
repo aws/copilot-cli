@@ -101,7 +101,7 @@ func TestBackendService_Template(t *testing.T) {
 		_, err = svc.Template()
 
 		// THEN
-		require.EqualError(t, err, "convert the sidecar container port mappings for service api: cannot parse port mapping from 80/80/80")
+		require.EqualError(t, err, "convert container port mappings for service api: cannot parse port mapping from 80/80/80")
 	})
 
 	t.Run("returns an error when failed to parse autoscaling template", func(t *testing.T) {

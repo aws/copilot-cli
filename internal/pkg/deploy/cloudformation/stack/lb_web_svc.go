@@ -134,7 +134,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	}
 	primaryContainerPortMapping, sidecarContainerPortMapping, err := s.containerPortMappings()
 	if err != nil {
-		return "", fmt.Errorf("convert the sidecar container port mappings for service %s: %w", s.name, err)
+		return "", fmt.Errorf("convert container port mappings for service %s: %w", s.name, err)
 	}
 	sidecars, err := convertSidecar(s.manifest.Sidecars, sidecarContainerPortMapping)
 	if err != nil {
@@ -262,7 +262,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		PortMappings:        primaryContainerPortMapping,
+		PortMappings:         primaryContainerPortMapping,
 		HostedZoneAliases:    aliasesFor,
 		PermissionsBoundary:  s.permBound,
 		EnvAddonsFeatureFlag: s.EnvAddonsFeatureFlag, // Feature flag for main container

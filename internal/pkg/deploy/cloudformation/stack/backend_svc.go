@@ -90,7 +90,7 @@ func (s *BackendService) Template() (string, error) {
 	}
 	primaryContainerPortMapping, sidecarContainerPortMapping, err := s.containerPortMappings()
 	if err != nil {
-		return "", fmt.Errorf("convert the sidecar container port mappings for service %s: %w", s.name, err)
+		return "", fmt.Errorf("convert container port mappings for service %s: %w", s.name, err)
 	}
 	sidecars, err := convertSidecar(s.manifest.Sidecars, sidecarContainerPortMapping)
 	if err != nil {
