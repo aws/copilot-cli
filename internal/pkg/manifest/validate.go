@@ -100,6 +100,13 @@ func (l LoadBalancedWebService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		mainContainerName: aws.StringValue(l.Name),
+		mainContainerPort: l.ImageConfig.Port,
+		sidecarConfig:     l.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
 	return nil
 }
 
@@ -212,6 +219,15 @@ func (b BackendService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
+
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		mainContainerName: aws.StringValue(b.Name),
+		mainContainerPort: b.ImageConfig.Port,
+		sidecarConfig:     b.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
+
 	return nil
 }
 
@@ -1633,6 +1649,12 @@ type validateTargetContainerOpts struct {
 	sidecarConfig     map[string]*SidecarConfig
 }
 
+type validateExposedPortsOpts struct {
+	mainContainerName string
+	mainContainerPort *uint16
+	sidecarConfig     map[string]*SidecarConfig
+}
+
 type validateWindowsOpts struct {
 	readOnlyFS *bool
 	efsVolumes map[string]*Volume
@@ -1683,6 +1705,29 @@ func validateContainerDeps(opts validateDependenciesOpts) error {
 		return err
 	}
 	return validateNoCircularDependencies(containerDependencies)
+}
+
+func validateExposedPorts(opts validateExposedPortsOpts) error {
+	exposedPorts := make(map[uint16]bool)
+
+	if opts.mainContainerPort != nil {
+		exposedPorts[aws.Uint16Value(opts.mainContainerPort)] = true
+	}
+
+	for _, sidecar := range opts.sidecarConfig {
+		if sidecar.Port != nil {
+			port, err := strconv.Atoi(aws.StringValue(sidecar.Port))
+			if err != nil {
+				return err
+			}
+			if _, ok := exposedPorts[uint16(port)]; !ok {
+				exposedPorts[uint16(port)] = true
+			} else {
+				return fmt.Errorf("multiple containers are exposing the same port")
+			}
+		}
+	}
+	return nil
 }
 
 func validateDepsForEssentialContainers(deps map[string]containerDependency) error {

@@ -140,9 +140,9 @@ func generateMountPointJSON(mountPoints []*MountPoint) string {
 
 }
 
-// PortMappingName returns name for the port mapping.
-func PortMappingName(containerName string, containerPort string) string {
-	return containerName + containerPort
+// PortMappingName returns name of the port mapping.
+func PortMappingName(containerName string, containerPort *string) string {
+	return containerName + aws.StringValue(containerPort)
 }
 
 // generatePublisherJSON turns a list of Topics objects into a JSON string:

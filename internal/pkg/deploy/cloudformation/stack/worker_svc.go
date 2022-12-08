@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -77,7 +78,11 @@ func (s *WorkerService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars, nil, nil, nil, s.manifest)
+	sidecarPortMapping, err := s.containerPortMappings()
+	if err != nil {
+		return "", fmt.Errorf("convert the sidecar container port mappings for service %s: %w", s.name, err)
+	}
+	sidecars, err := convertSidecar(s.manifest.Sidecars, sidecarPortMapping)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -179,4 +184,16 @@ func (s *WorkerService) Parameters() ([]*cloudformation.Parameter, error) {
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
 func (s *WorkerService) SerializedParameters() (string, error) {
 	return serializeTemplateConfig(s.wkld.parser, s)
+}
+
+func (s *WorkerService) containerPortMappings() ([]*template.PortMapping, error) {
+	sidecarContainerExposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return nil, err
+	}
+	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
+	sort.Slice(sidecarContainerExposedPorts, func(i, j int) bool {
+		return sidecarContainerExposedPorts[i].Port < sidecarContainerExposedPorts[j].Port
+	})
+	return ConvertPortMapping(sidecarContainerExposedPorts), nil
 }

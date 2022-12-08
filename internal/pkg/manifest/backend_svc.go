@@ -4,9 +4,11 @@
 package manifest
 
 import (
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
+	"strconv"
 )
 
 const (
@@ -99,9 +101,59 @@ func (s *BackendService) requiredEnvironmentFeatures() []string {
 	return features
 }
 
-// IsTargetPortDifferentThanSidecarContainerPort checks if http.target_port is different thatn sidecar.image.port in order to add newly mentioned port in the http.port in the port mappings
-func (rr *RoutingRuleConfiguration) IsTargetPortDifferentThanSidecarContainerPort(name string, port *string) bool {
-	return !rr.IsEmpty() && aws.StringValue(rr.TargetContainer) == name && rr.TargetPort != nil && aws.StringValue(rr.TargetPort) != aws.StringValue(port)
+// ExposedPorts returns all the ports that are container ports available to receive traffic.
+func (cfg *BackendService) ExposedPorts() ([]ExposedPort, error) {
+	exposedPorts := make(map[int]ExposedPort)
+	var exposedPortList []ExposedPort
+
+	// Read `image.port`
+	if cfg.ImageConfig.Port != nil {
+		port := int(aws.Uint16Value(cfg.ImageConfig.Port))
+		exposedPorts[port] = ExposedPort{
+			Port:          port,
+			Protocol:      "tcp",
+			ContainerName: aws.StringValue(cfg.Name),
+		}
+	}
+	// Read `http.target_port`
+	if cfg.RoutingRule.TargetPort != nil {
+		targetPort := aws.IntValue(cfg.RoutingRule.TargetPort)
+		if cfg.RoutingRule.TargetContainer != nil {
+			exposedPorts[targetPort] = ExposedPort{
+				Port:          targetPort,
+				Protocol:      "tcp",
+				ContainerName: aws.StringValue(cfg.RoutingRule.TargetContainer),
+			}
+
+		} else {
+			// if target_container is nil then by default set container name as main container name.
+			exposedPorts[targetPort] = ExposedPort{
+				Port:          targetPort,
+				Protocol:      "tcp",
+				ContainerName: aws.StringValue(cfg.Name),
+			}
+		}
+	}
+
+	// Read `sidecars.port`
+	// This will also take care of the case where target_port is same as that of sidecar port.
+	for name, sidecar := range cfg.Sidecars {
+		if sidecar.Port != nil {
+			port, err := strconv.Atoi(aws.StringValue(sidecar.Port))
+			if err != nil {
+				return nil, fmt.Errorf("cannot parse port mapping from %s", aws.StringValue(sidecar.Port))
+			}
+			exposedPorts[port] = ExposedPort{
+				Port:          port,
+				Protocol:      "tcp",
+				ContainerName: name,
+			}
+		}
+	}
+	for _, v := range exposedPorts {
+		exposedPortList = append(exposedPortList, v)
+	}
+	return exposedPortList, nil
 }
 
 // Port returns the exposed the exposed port in the manifest.

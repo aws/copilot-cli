@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -130,7 +131,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars, s.manifest, nil, nil, nil)
+	primaryContainerPortMapping, sidecarContainerPortMapping, err := s.containerPortMappings()
+	if err != nil {
+		return "", fmt.Errorf("convert the sidecar container port mappings for service %s: %w", s.name, err)
+	}
+	sidecars, err := convertSidecar(s.manifest.Sidecars, sidecarContainerPortMapping)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -247,7 +252,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		},
 		HostedZoneAliases:   aliasesFor,
 		PermissionsBoundary: s.permBound,
-		PortMappings:        s.getPrimaryContainerPortMappings(),
+		PortMappings:        primaryContainerPortMapping,
 	})
 	if err != nil {
 		return "", err
@@ -259,20 +264,27 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	return string(overriddenTpl), nil
 }
 
-func (s *LoadBalancedWebService) getPrimaryContainerPortMappings() []*template.PortMapping {
-	containerPort := aws.String(s.containerPort())
-	var portMappings []*template.PortMapping
-	portMappings = append(portMappings, ConvertPortMapping(containerPort, aws.String("tcp"), s.name))
-
-	if s.isTargetPortDifferentThanPrimaryContainerPort(containerPort) {
-		portMappings = append(portMappings, ConvertPortMapping(s.manifest.RoutingRule.TargetPort, aws.String("tcp"), s.name)) // TODO: @pbhingre what to do with the protocol? Default it to tcp?
+func (s *LoadBalancedWebService) containerPortMappings() ([]*template.PortMapping, []*template.PortMapping, error) {
+	var primaryPorts []manifest.ExposedPort
+	var sidecarPorts []manifest.ExposedPort
+	exposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return nil, nil, err
 	}
-	return portMappings
-}
+	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
+	sort.Slice(exposedPorts, func(i, j int) bool {
+		return exposedPorts[i].Port < exposedPorts[j].Port
+	})
 
-func (s *LoadBalancedWebService) isTargetPortDifferentThanPrimaryContainerPort(containerPort *string) bool {
-	rr := s.manifest.RoutingRule
-	return !rr.IsEmpty() && rr.TargetContainer == nil && rr.TargetPort != nil && aws.StringValue(rr.TargetPort) != aws.StringValue(containerPort)
+	for _, portConfig := range exposedPorts {
+		if portConfig.ContainerName == s.name {
+			primaryPorts = append(primaryPorts, portConfig)
+		} else {
+			sidecarPorts = append(sidecarPorts, portConfig)
+		}
+	}
+
+	return ConvertPortMapping(primaryPorts), ConvertPortMapping(sidecarPorts), nil
 }
 
 func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
@@ -288,7 +300,15 @@ func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *stri
 
 	// Route load balancer traffic to the target_port if mentioned.
 	if s.manifest.RoutingRule.TargetPort != nil {
-		targetPort = s.manifest.RoutingRule.TargetPort
+		targetPort = aws.String(strconv.Itoa(aws.IntValue(s.manifest.RoutingRule.TargetPort)))
+		exposedPorts, err := s.manifest.ExposedPorts()
+		if err == nil {
+			for _, portConfig := range exposedPorts {
+				if portConfig.Port == aws.IntValue(s.manifest.RoutingRule.TargetPort) {
+					targetContainer = aws.String(portConfig.ContainerName)
+				}
+			}
+		}
 	}
 	return
 }

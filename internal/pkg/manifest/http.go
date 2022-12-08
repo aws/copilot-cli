@@ -57,7 +57,7 @@ type RoutingRuleConfiguration struct {
 	DeregistrationDelay *time.Duration          `yaml:"deregistration_delay"`
 	// TargetContainer is the container load balancer routes traffic to.
 	TargetContainer          *string `yaml:"target_container"`
-	TargetPort               *string `yaml:"target_port"`
+	TargetPort               *int    `yaml:"target_port"`
 	TargetContainerCamelCase *string `yaml:"targetContainer"` // "targetContainerCamelCase" for backwards compatibility
 	AllowedSourceIps         []IPNet `yaml:"allowed_source_ips"`
 	HostedZone               *string `yaml:"hosted_zone"`

@@ -5,6 +5,7 @@ package stack
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -87,7 +88,11 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars, nil, s.manifest, nil, nil)
+	primaryContainerPortMapping, sidecarContainerPortMapping, err := s.containerPortMappings()
+	if err != nil {
+		return "", fmt.Errorf("convert the sidecar container port mappings for service %s: %w", s.name, err)
+	}
+	sidecars, err := convertSidecar(s.manifest.Sidecars, sidecarContainerPortMapping)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -190,7 +195,7 @@ func (s *BackendService) Template() (string, error) {
 		},
 		HostedZoneAliases:   hostedZoneAliases,
 		PermissionsBoundary: s.permBound,
-		PortMappings:        s.getPrimaryContainerPortMappings(),
+		PortMappings:        primaryContainerPortMapping,
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -202,21 +207,25 @@ func (s *BackendService) Template() (string, error) {
 	return string(overriddenTpl), nil
 }
 
-func (s *BackendService) getPrimaryContainerPortMappings() []*template.PortMapping {
-	containerPort := aws.String(s.containerPort())
-	var portMappings []*template.PortMapping
-	if aws.StringValue(containerPort) != template.NoExposedContainerPort {
-		portMappings = append(portMappings, ConvertPortMapping(containerPort, aws.String("tcp"), s.name))
+func (s *BackendService) containerPortMappings() ([]*template.PortMapping, []*template.PortMapping, error) {
+	var primaryPorts []manifest.ExposedPort
+	var sidecarPorts []manifest.ExposedPort
+	exposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return nil, nil, err
 	}
-	if s.isTargetPortDifferentThanPrimaryContainerPort(containerPort) {
-		portMappings = append(portMappings, ConvertPortMapping(s.manifest.RoutingRule.TargetPort, aws.String("tcp"), s.name)) // TODO: @pbhingre what to do with the protocol? Default it to tcp?
+	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
+	sort.Slice(exposedPorts, func(i, j int) bool {
+		return exposedPorts[i].Port < exposedPorts[j].Port
+	})
+	for _, portConfig := range exposedPorts {
+		if portConfig.ContainerName == s.name {
+			primaryPorts = append(primaryPorts, portConfig)
+		} else {
+			sidecarPorts = append(sidecarPorts, portConfig)
+		}
 	}
-	return portMappings
-}
-
-func (s *BackendService) isTargetPortDifferentThanPrimaryContainerPort(containerPort *string) bool {
-	rr := s.manifest.RoutingRule
-	return !rr.IsEmpty() && rr.TargetContainer == nil && rr.TargetPort != nil && aws.StringValue(rr.TargetPort) != aws.StringValue(containerPort)
+	return ConvertPortMapping(primaryPorts), ConvertPortMapping(sidecarPorts), nil
 }
 
 func (s *BackendService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
@@ -232,9 +241,16 @@ func (s *BackendService) httpLoadBalancerTarget() (targetContainer *string, targ
 
 	// Route load balancer traffic to the target_port if mentioned.
 	if s.manifest.RoutingRule.TargetPort != nil {
-		targetPort = s.manifest.RoutingRule.TargetPort
+		targetPort = aws.String(strconv.Itoa(aws.IntValue(s.manifest.RoutingRule.TargetPort)))
+		exposedPorts, err := s.manifest.ExposedPorts()
+		if err == nil {
+			for _, portConfig := range exposedPorts {
+				if portConfig.Port == aws.IntValue(s.manifest.RoutingRule.TargetPort) {
+					targetContainer = aws.String(portConfig.ContainerName)
+				}
+			}
+		}
 	}
-
 	return
 }
 
@@ -243,7 +259,6 @@ func (s *BackendService) containerPort() string {
 	if s.manifest.BackendServiceConfig.ImageConfig.Port != nil {
 		port = strconv.FormatUint(uint64(aws.Uint16Value(s.manifest.BackendServiceConfig.ImageConfig.Port)), 10)
 	}
-	// TODO: @pbhingre add another else condition to check additional_rules != nil when implemented in the upcoming PRs for multiple ports*/
 	return port
 }
 

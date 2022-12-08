@@ -44,15 +44,12 @@
 {{- end}}
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
 {{- if eq .WorkloadType "Backend Service"}}
-{{- if eq .HTTPTargetContainer.Name .WorkloadName}}
+{{- if and (eq .HTTPTargetContainer.Name .WorkloadName) .PortMappings}}
   PortMappings:
-    - !If
-      - ExposePort
         {{- range $portMapping := .PortMappings}}
       - ContainerPort: {{$portMapping.ContainerPort}}
         Name: {{ (portMappingName $portMapping.Name $portMapping.ContainerPort) }}
         {{- end}}
-      - !Ref AWS::NoValue
 {{- end}}
 {{- end}}
 {{- if .HealthCheck}}

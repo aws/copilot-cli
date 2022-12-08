@@ -67,7 +67,7 @@ var (
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBalancedWebService, bsmft *manifest.BackendService, sjmft *manifest.ScheduledJob, wsmft *manifest.WorkerService) ([]*template.SidecarOpts, error) {
+func convertSidecar(s map[string]*manifest.SidecarConfig, portMappings []*template.PortMapping) ([]*template.SidecarOpts, error) {
 
 	if s == nil {
 		return nil, nil
@@ -82,29 +82,14 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBa
 
 	var sidecars []*template.SidecarOpts
 	for _, name := range keys {
-		var portMappings []*template.PortMapping
-		config := s[name]
-		port, protocol, err := manifest.ParsePortMapping(config.Port)
-		if lbmft != nil {
-			if port != nil {
-				portMappings = append(portMappings, ConvertPortMapping(port, protocol, name))
-			}
-			if lbmft.RoutingRule.IsTargetPortDifferentThanSidecarContainerPort(name, port) {
-				portMappings = append(portMappings, ConvertPortMapping(lbmft.RoutingRule.TargetPort, protocol, name)) // TODO: @pbhingre what to do with the protocol? Default it to tcp?
-			}
-		} else if bsmft != nil {
-			if port != nil {
-				portMappings = append(portMappings, ConvertPortMapping(port, protocol, name))
-			}
-			if bsmft.RoutingRule.IsTargetPortDifferentThanSidecarContainerPort(name, port) {
-				portMappings = append(portMappings, ConvertPortMapping(bsmft.RoutingRule.TargetPort, protocol, name)) // TODO: @pbhingre what to do with the protocol? Default it to tcp?
-			}
-		} else if sjmft != nil || wsmft != nil {
-			if port != nil {
-				portMappings = append(portMappings, ConvertPortMapping(port, protocol, name))
+		var sidecarPortMappings []*template.PortMapping
+		for _, portConfig := range portMappings {
+			if name == portConfig.Name {
+				sidecarPortMappings = append(sidecarPortMappings, portConfig)
 			}
 		}
-
+		config := s[name]
+		port, protocol, err := manifest.ParsePortMapping(config.Port)
 		if err != nil {
 			return nil, err
 		}
@@ -134,19 +119,25 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, lbmft *manifest.LoadBa
 			EntryPoint:   entrypoint,
 			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
 			Command:      command,
-			PortMappings: portMappings,
+			PortMappings: sidecarPortMappings,
 		})
 	}
 	return sidecars, nil
 }
 
 // ConvertPortMapping return the port mapping object based on the given input.
-func ConvertPortMapping(port *string, protocol *string, name string) *template.PortMapping {
-	return &template.PortMapping{
-		ContainerPort: port,
-		Protocol:      protocol,
-		Name:          name,
+func ConvertPortMapping(exposedPorts []manifest.ExposedPort) []*template.PortMapping {
+	var portMapping []*template.PortMapping
+
+	for _, exposedPort := range exposedPorts {
+		portMapping = append(portMapping, &template.PortMapping{
+			ContainerPort: aws.String(strconv.Itoa(exposedPort.Port)),
+			Protocol:      aws.String(exposedPort.Protocol),
+			Name:          exposedPort.ContainerName,
+		})
 	}
+
+	return portMapping
 }
 
 func convertContainerHealthCheck(hc manifest.ContainerHealthCheck) *template.ContainerHealthCheck {

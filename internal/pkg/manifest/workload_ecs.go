@@ -89,6 +89,13 @@ type DeploymentConfiguration struct {
 	Rolling *string `yaml:"rolling"`
 }
 
+// ExposedPort will hold the port mapping configuration.
+type ExposedPort struct {
+	ContainerName string // The name of the container that exposes this port.
+	Port          int    // The port number.
+	Protocol      string // Either "tcp" or "udp", empty means the default value that the underlying service provides.
+}
+
 func (d *DeploymentConfiguration) isEmpty() bool {
 	return d == nil || d.Rolling == nil
 }

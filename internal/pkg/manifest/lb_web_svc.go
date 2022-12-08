@@ -4,6 +4,8 @@
 package manifest
 
 import (
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -68,6 +70,63 @@ type LoadBalancedWebServiceProps struct {
 	HTTPVersion string               // Optional http protocol version such as gRPC, HTTP2.
 	HealthCheck ContainerHealthCheck // Optional healthcheck configuration.
 	Platform    PlatformArgsOrString // Optional platform configuration.
+}
+
+// ExposedPorts returns all the ports that are container ports available to receive traffic.
+func (cfg *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
+	exposedPorts := make(map[int]ExposedPort)
+	var exposedPortList []ExposedPort
+	// Read `image.port`
+	if cfg.ImageConfig.Port != nil {
+		port := int(aws.Uint16Value(cfg.ImageConfig.Port))
+		exposedPorts[port] = ExposedPort{
+			Port:          port,
+			Protocol:      "tcp",
+			ContainerName: aws.StringValue(cfg.Name),
+		}
+	}
+	// Read `http.target_port`
+	if cfg.RoutingRule.TargetPort != nil {
+		targetPort := aws.IntValue(cfg.RoutingRule.TargetPort)
+		if cfg.RoutingRule.TargetContainer != nil {
+			exposedPorts[targetPort] = ExposedPort{
+				Port:          targetPort,
+				Protocol:      "tcp",
+				ContainerName: aws.StringValue(cfg.RoutingRule.TargetContainer),
+			}
+		} else {
+			// if target_container is nil then by default set container name as main container name.
+			exposedPorts[targetPort] = ExposedPort{
+				Port:          targetPort,
+				Protocol:      "tcp",
+				ContainerName: aws.StringValue(cfg.Name),
+			}
+		}
+	}
+
+	// Read `sidecars.port`
+	// This will also take care of the case where target_port is same as that of sidecar port.
+	for name, sidecar := range cfg.Sidecars {
+		if sidecar.Port != nil {
+			port, protocol, err := ParsePortMapping(sidecar.Port)
+			if err != nil {
+				return nil, err
+			}
+			portValue, err := strconv.Atoi(aws.StringValue(port))
+			if err != nil {
+				return nil, fmt.Errorf("cannot parse port mapping from %s", aws.StringValue(sidecar.Port))
+			}
+			exposedPorts[portValue] = ExposedPort{
+				Port:          portValue,
+				Protocol:      aws.StringValue(protocol),
+				ContainerName: name,
+			}
+		}
+	}
+	for _, v := range exposedPorts {
+		exposedPortList = append(exposedPortList, v)
+	}
+	return exposedPortList, nil
 }
 
 // NewLoadBalancedWebService creates a new public load balanced web service, receives all the requests from the load balancer,
