@@ -5,7 +5,6 @@ package override
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -40,8 +39,21 @@ func NewCDK(root string, stdout io.Writer, fs afero.Fs, exec Executable) *CDK {
 	}
 }
 
-// Install runs "npm install" insides the overrides/ directory to pull the latest dependencies.
-func (cdk *CDK) Install() error {
+// Override returns the extended CloudFormation template body using the CDK.
+// In order to ensure the CDK transformations can be applied, Copilot first installs any CDK dependencies
+// as well as the toolkit itself.
+func (cdk *CDK) Override(body []byte) ([]byte, error) {
+	if err := cdk.install(); err != nil {
+		return nil, err
+	}
+	out, err := cdk.transform(body)
+	if err != nil {
+		return nil, err
+	}
+	return cdk.cleanUp(out)
+}
+
+func (cdk *CDK) install() error {
 	if _, err := cdk.exec.LookPath("npm"); err != nil {
 		return &errNPMUnavailable{parent: err}
 	}
@@ -55,10 +67,7 @@ func (cdk *CDK) Install() error {
 	return nil
 }
 
-// Override writes the template body under dir/.build/in.yml and runs "cdk synth"
-// to generate and return a transformed template.
-// Override should be invoked after Install.
-func (cdk *CDK) Override(body []byte) ([]byte, error) {
+func (cdk *CDK) transform(body []byte) ([]byte, error) {
 	buildPath := filepath.Join(cdk.rootAbsPath, ".build")
 	if err := cdk.fs.MkdirAll(buildPath, fs.ModeDir); err != nil {
 		return nil, fmt.Errorf("create %s directory to store the CloudFormation template body: %w", buildPath, err)
@@ -79,7 +88,7 @@ func (cdk *CDK) Override(body []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// CleanUp removes any CDK metadata resource from the CloudFormation template body.
-func (cdk *CDK) CleanUp(body []byte) ([]byte, error) {
-	return nil, errors.New("implement me")
+func (cdk *CDK) cleanUp(body []byte) ([]byte, error) {
+	// TODO(efekarakus): Implement me.
+	return body, nil
 }

@@ -10,7 +10,7 @@ type errNPMUnavailable struct {
 }
 
 func (err *errNPMUnavailable) Error() string {
-	return fmt.Sprintf(`"npm" is required to override with the Cloud Development Kit: %v`, err.parent)
+	return fmt.Sprintf(`"npm" cannot be found: "npm" is required to override with the Cloud Development Kit: %v`, err.parent)
 }
 
 // RecommendActions implements the cli.actionRecommender interface.

@@ -29,9 +29,9 @@ func (m *mockExec) Command(name string, args ...string) *exec.Cmd {
 	return m.command(name, args...)
 }
 
-func TestCDK_Install(t *testing.T) {
+func TestCDK_Override(t *testing.T) {
 	t.Parallel()
-	t.Run("should return a wrapped error if npm is not available for the users", func(t *testing.T) {
+	t.Run("on install: should return a wrapped error if npm is not available for the users", func(t *testing.T) {
 		// GIVEN
 		exec := &mockExec{
 			lookPath: func(file string) (string, error) {
@@ -41,12 +41,12 @@ func TestCDK_Install(t *testing.T) {
 		cdk := NewCDK("", nil, afero.NewMemMapFs(), exec)
 
 		// WHEN
-		err := cdk.Install()
+		_, err := cdk.Override(nil)
 
 		// THEN
-		require.EqualError(t, err, `"npm" is required to override with the Cloud Development Kit: exec: "npm": executable file not found in $PATH`)
+		require.EqualError(t, err, `"npm" cannot be found: "npm" is required to override with the Cloud Development Kit: exec: "npm": executable file not found in $PATH`)
 	})
-	t.Run("should return a wrapped error if npm install fails", func(t *testing.T) {
+	t.Run("on install: should return a wrapped error if npm install fails", func(t *testing.T) {
 		// GIVEN
 		exec := &mockExec{
 			lookPath: func(file string) (string, error) {
@@ -59,35 +59,12 @@ func TestCDK_Install(t *testing.T) {
 		cdk := NewCDK("", nil, afero.NewMemMapFs(), exec)
 
 		// WHEN
-		err := cdk.Install()
+		_, err := cdk.Override(nil)
 
 		// THEN
 		require.ErrorContains(t, err, `run "exit 42"`)
 	})
-	t.Run("should pipe stdout installation results to the writer", func(t *testing.T) {
-		// GIVEN
-		exec := &mockExec{
-			lookPath: func(file string) (string, error) {
-				return "/bin/npm", nil
-			},
-			command: func(name string, args ...string) *exec.Cmd {
-				return exec.Command("echo", append([]string{name}, args...)...)
-			},
-		}
-		buf := new(strings.Builder)
-		cdk := NewCDK("", buf, afero.NewMemMapFs(), exec)
 
-		// WHEN
-		err := cdk.Install()
-
-		// THEN
-		require.NoError(t, err)
-		require.Equal(t, "npm install\n", buf.String())
-	})
-}
-
-func TestCDK_Override(t *testing.T) {
-	t.Parallel()
 	t.Run("should override the same hidden file on multiple Override calls", func(t *testing.T) {
 		// GIVEN
 		mockFS := afero.NewMemMapFs()
@@ -95,6 +72,9 @@ func TestCDK_Override(t *testing.T) {
 		_ = mockFS.MkdirAll(root, 0755)
 		mockFS = afero.NewBasePathFs(mockFS, root)
 		exec := &mockExec{
+			lookPath: func(file string) (string, error) {
+				return "/bin/npm", nil
+			},
 			command: func(name string, args ...string) *exec.Cmd {
 				return exec.Command("echo", append([]string{name}, args...)...)
 			},
@@ -115,11 +95,17 @@ func TestCDK_Override(t *testing.T) {
 		actual, _ = afero.ReadFile(mockFS, filepath.Join(root, ".build", "in.yml"))
 		require.Equal(t, []byte("second"), actual, `expected to write "second" to the hidden file`)
 	})
-	t.Run("should return a wrapped error if override exec call fails", func(t *testing.T) {
+	t.Run("should return a wrapped error if cdk synth fails", func(t *testing.T) {
 		// GIVEN
 		exec := &mockExec{
+			lookPath: func(file string) (string, error) {
+				return "/bin/npm", nil
+			},
 			command: func(name string, args ...string) *exec.Cmd {
-				return exec.Command("exit", "42")
+				if name == filepath.Join("node_modules", "aws-cdk", "bin", "cdk") {
+					return exec.Command("exit", "42")
+				}
+				return exec.Command("echo", "success")
 			},
 		}
 		cdk := NewCDK("", new(bytes.Buffer), afero.NewMemMapFs(), exec)
@@ -130,19 +116,43 @@ func TestCDK_Override(t *testing.T) {
 		// THEN
 		require.ErrorContains(t, err, `run "exit 42"`)
 	})
-	t.Run("should return the transformed output", func(t *testing.T) {
+	t.Run("should invoke npm install and cdk synth", func(t *testing.T) {
+		binPath := filepath.Join("node_modules", "aws-cdk", "bin", "cdk")
 		exec := &mockExec{
+			lookPath: func(file string) (string, error) {
+				return "/bin/npm", nil
+			},
 			command: func(name string, args ...string) *exec.Cmd {
-				return exec.Command("echo", "hello")
+				return exec.Command("echo", append([]string{name}, args...)...)
 			},
 		}
-		cdk := NewCDK("", new(bytes.Buffer), afero.NewMemMapFs(), exec)
+		buf := new(strings.Builder)
+		cdk := NewCDK("", buf, afero.NewMemMapFs(), exec)
+
+		// WHEN
+		_, err := cdk.Override(nil)
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, fmt.Sprintf("npm install\n%s synth --no-version-reporting\n", binPath), buf.String())
+	})
+	t.Run("should return the transformed document", func(t *testing.T) {
+		exec := &mockExec{
+			lookPath: func(file string) (string, error) {
+				return "/bin/npm", nil
+			},
+			command: func(name string, args ...string) *exec.Cmd {
+				return exec.Command("echo", "sample cloudformation template")
+			},
+		}
+		buf := new(strings.Builder)
+		cdk := NewCDK("", buf, afero.NewMemMapFs(), exec)
 
 		// WHEN
 		out, err := cdk.Override(nil)
 
 		// THEN
 		require.NoError(t, err)
-		require.Equal(t, "hello\n", string(out))
+		require.Equal(t, "sample cloudformation template\n", string(out))
 	})
 }
