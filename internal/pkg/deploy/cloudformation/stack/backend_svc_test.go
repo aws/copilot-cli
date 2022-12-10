@@ -303,7 +303,7 @@ Outputs:
 				{
 					ContainerPort: aws.String("8080"),
 					Protocol:      aws.String("tcp"),
-					Name:          "api",
+					Name:          "api8080",
 				},
 			},
 		}, actual)
@@ -439,7 +439,7 @@ Outputs:
 						{
 							ContainerPort: aws.String("443"),
 							Protocol:      aws.String("tcp"),
-							Name:          "envoy",
+							Name:          "envoy443",
 						},
 					},
 				},
@@ -491,7 +491,7 @@ Outputs:
 				{
 					ContainerPort: aws.String("8080"),
 					Protocol:      aws.String("tcp"),
-					Name:          "api",
+					Name:          "api8080",
 				},
 			},
 			ALBEnabled: true,

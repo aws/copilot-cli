@@ -138,12 +138,12 @@ http:
 }
 
 type errRangeValueLessThanZero struct {
-	min int
-	max int
+	min      int
+	max      int
 	spotFrom int
 }
 
-func (e *errRangeValueLessThanZero) Error() string{
+func (e *errRangeValueLessThanZero) Error() string {
 	return fmt.Sprintf("min value %d, max value %d, and spot_from value %d must all be positive", e.min, e.max, e.spotFrom)
 }
 
@@ -188,4 +188,14 @@ func quoteStringSlice(in []string) []string {
 		quoted[idx] = strconv.Quote(str)
 	}
 	return quoted
+}
+
+type errContainersExposingSamePort struct {
+	firstContainer  string
+	secondContainer string
+	port            string
+}
+
+func (e *errContainersExposingSamePort) Error() string {
+	return fmt.Sprintf(`container %s and container %s are exposing the same port %s`, e.firstContainer, e.secondContainer, e.port)
 }

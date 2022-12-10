@@ -67,15 +67,15 @@ var (
 )
 
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s map[string]*manifest.SidecarConfig, portMappings []*template.PortMapping) ([]*template.SidecarOpts, error) {
+func convertSidecar(sidecarsMap map[string]*manifest.SidecarConfig, portMappings map[string][]*template.PortMapping) ([]*template.SidecarOpts, error) {
 
-	if s == nil {
+	if sidecarsMap == nil {
 		return nil, nil
 	}
 
 	// Sort the sidecars so that the order is consistent and the integration test won't be flaky.
-	keys := make([]string, 0, len(s))
-	for k := range s {
+	keys := make([]string, 0, len(sidecarsMap))
+	for k := range sidecarsMap {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -83,12 +83,10 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, portMappings []*templa
 	var sidecars []*template.SidecarOpts
 	for _, name := range keys {
 		var sidecarPortMappings []*template.PortMapping
-		for _, portConfig := range portMappings {
-			if name == portConfig.Name {
-				sidecarPortMappings = append(sidecarPortMappings, portConfig)
-			}
+		if portMapping, ok := portMappings[name]; ok {
+			sidecarPortMappings = portMapping
 		}
-		config := s[name]
+		config := sidecarsMap[name]
 		port, protocol, err := manifest.ParsePortMapping(config.Port)
 		if err != nil {
 			return nil, err
@@ -125,18 +123,46 @@ func convertSidecar(s map[string]*manifest.SidecarConfig, portMappings []*templa
 	return sidecars, nil
 }
 
-// ConvertPortMapping return the port mapping object based on the given input.
-func ConvertPortMapping(exposedPorts []manifest.ExposedPort) []*template.PortMapping {
-	var portMapping []*template.PortMapping
-
-	for _, exposedPort := range exposedPorts {
-		portMapping = append(portMapping, &template.PortMapping{
-			ContainerPort: aws.String(strconv.Itoa(exposedPort.Port)),
-			Protocol:      aws.String(exposedPort.Protocol),
-			Name:          exposedPort.ContainerName,
-		})
+// findContainerNameGivenPort searches through exposed ports in the manifest to find the container name that matches the given port.
+func findContainerNameGivenPort(port int, exposedPorts []manifest.ExposedPort) *string {
+	for _, portConfig := range exposedPorts {
+		if portConfig.Port == port {
+			return aws.String(portConfig.ContainerName)
+		}
 	}
+	return nil
+}
 
+func containerPortMappings(workloadName string, port *uint16, targetPort *int, targetContainer *string, sidecars map[string]*manifest.SidecarConfig) (map[string][]*template.PortMapping, error) {
+	exposedPorts, err := manifest.ExposedPorts(workloadName, port, targetPort, targetContainer, sidecars)
+	if err != nil {
+		return nil, err
+	}
+	return convertPortMapping(exposedPorts), nil
+}
+
+func convertPortMapping(exposedPorts []manifest.ExposedPort) map[string][]*template.PortMapping {
+	portMapping := make(map[string][]*template.PortMapping)
+	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
+	sort.Slice(exposedPorts, func(i, j int) bool {
+		return exposedPorts[i].Port < exposedPorts[j].Port
+	})
+	for _, exposedPort := range exposedPorts {
+		port := aws.String(strconv.Itoa(exposedPort.Port))
+		if config, ok := portMapping[exposedPort.ContainerName]; ok {
+			portMapping[exposedPort.ContainerName] = append(portMapping[exposedPort.ContainerName], &template.PortMapping{
+				ContainerPort: port,
+				Protocol:      aws.String(exposedPort.Protocol),
+				Name:          exposedPort.ContainerName + aws.StringValue(port),
+			})
+		} else {
+			portMapping[exposedPort.ContainerName] = append(config, &template.PortMapping{
+				ContainerPort: port,
+				Protocol:      aws.String(exposedPort.Protocol),
+				Name:          exposedPort.ContainerName + aws.StringValue(port),
+			})
+		}
+	}
 	return portMapping
 }
 

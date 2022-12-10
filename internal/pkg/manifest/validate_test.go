@@ -3418,7 +3418,7 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 			},
-			wanted: fmt.Errorf(`multiple containers are exposing the same port`),
+			wanted: fmt.Errorf(`container foo and container mockMainContainer are exposing the same port 80`),
 		},
 		"should not return an error if main container and sidecar container is exposing different ports": {
 			in: validateExposedPortsOpts{

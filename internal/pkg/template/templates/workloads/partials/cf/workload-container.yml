@@ -31,7 +31,7 @@
     {{- range $portMapping := .PortMappings}}
     - ContainerPort: {{$portMapping.ContainerPort}}
     {{- if eq $.HTTPTargetContainer.Name $.WorkloadName}}
-      Name: {{ (portMappingName $portMapping.Name $portMapping.ContainerPort) }}
+      Name: {{ $portMapping.Name }}
     {{- end}}
     {{- end}}
 {{- if .NLB}} {{ $nlbListener := .NLB.Listener }} 
@@ -47,7 +47,7 @@
   PortMappings:
         {{- range $portMapping := .PortMappings}}
       - ContainerPort: {{$portMapping.ContainerPort}}
-        Name: {{ (portMappingName $portMapping.Name $portMapping.ContainerPort) }}
+        Name: {{ $portMapping.Name }}
         {{- end}}
 {{- end}}
 {{- end}}

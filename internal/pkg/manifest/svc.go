@@ -55,6 +55,64 @@ func (r *Range) Parse() (min int, max int, err error) {
 	return aws.IntValue(r.RangeConfig.Min), aws.IntValue(r.RangeConfig.Max), nil
 }
 
+// ExposedPorts returns all the ports that are container ports available to receive traffic.
+func ExposedPorts(workloadName string, port *uint16, targetPort *int, targetContainer *string, sidecars map[string]*SidecarConfig) ([]ExposedPort, error) {
+	exposedPorts := make(map[int]ExposedPort)
+	var exposedPortList []ExposedPort
+
+	// Read `image.port`
+	if port != nil {
+		port := int(aws.Uint16Value(port))
+		exposedPorts[port] = ExposedPort{
+			Port:          port,
+			Protocol:      "tcp",
+			ContainerName: workloadName,
+		}
+	}
+	// Read `http.target_port`
+	// This block of code takes care of following use cases:
+	// 1. if target_port is given but target_container is nil then set ContainerName as primary container.
+	// 2. if target_port is given with the target_container as primary or sidecar container then set the value to ContainerName.
+	if targetPort != nil {
+		if targetContainer != nil {
+			exposedPorts[aws.IntValue(targetPort)] = ExposedPort{
+				Port:          aws.IntValue(targetPort),
+				Protocol:      "tcp",
+				ContainerName: aws.StringValue(targetContainer),
+			}
+
+		} else {
+			exposedPorts[aws.IntValue(targetPort)] = ExposedPort{
+				Port:          aws.IntValue(targetPort),
+				Protocol:      "tcp",
+				ContainerName: workloadName,
+			}
+		}
+	}
+
+	// Read `sidecars.port`
+	// This block of code takes care of following use case:
+	// 1. if target_port is set and if it is same as any of the sidecar containers then set ContainerName as that of sidecar container.
+	// This overrides the value of the ContainerName set in the previous if block for the target_port considering, if target_container is nil then set ContainerName as primary container.
+	for name, sidecar := range sidecars {
+		if sidecar.Port != nil {
+			port, err := strconv.Atoi(aws.StringValue(sidecar.Port))
+			if err != nil {
+				return nil, fmt.Errorf("cannot parse port mapping from %s", aws.StringValue(sidecar.Port))
+			}
+			exposedPorts[port] = ExposedPort{
+				Port:          port,
+				Protocol:      "tcp",
+				ContainerName: name,
+			}
+		}
+	}
+	for _, v := range exposedPorts {
+		exposedPortList = append(exposedPortList, v)
+	}
+	return exposedPortList, nil
+}
+
 // UnmarshalYAML overrides the default YAML unmarshaling logic for the RangeOpts
 // struct, allowing it to perform more complex unmarshaling behavior.
 // This method implements the yaml.Unmarshaler (v3) interface.

@@ -5,8 +5,6 @@ package manifest
 
 import (
 	"errors"
-	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -42,26 +40,6 @@ func (s *WorkerService) Publish() []Topic {
 
 func (s *WorkerService) subnets() *SubnetListOrArgs {
 	return &s.Network.VPC.Placement.Subnets
-}
-
-// ExposedPorts returns all the ports that are container ports available to receive traffic.
-func (cfg *WorkerService) ExposedPorts() ([]ExposedPort, error) {
-	var sidecarContainerExposedPorts []ExposedPort
-	// Read `sidecars.port`
-	for name, sidecar := range cfg.Sidecars {
-		if sidecar.Port != nil {
-			port, err := strconv.Atoi(aws.StringValue(sidecar.Port))
-			if err != nil {
-				return nil, fmt.Errorf("cannot parse port mapping from %s", aws.StringValue(sidecar.Port))
-			}
-			sidecarContainerExposedPorts = append(sidecarContainerExposedPorts, ExposedPort{
-				Port:          port,
-				Protocol:      "tcp",
-				ContainerName: name,
-			})
-		}
-	}
-	return sidecarContainerExposedPorts, nil
 }
 
 // WorkerServiceConfig holds the configuration that can be overridden per environments.

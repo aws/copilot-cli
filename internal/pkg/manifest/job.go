@@ -4,11 +4,9 @@
 package manifest
 
 import (
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
-	"strconv"
 )
 
 const (
@@ -193,24 +191,4 @@ func newDefaultScheduledJob() *ScheduledJob {
 		},
 		Environments: map[string]*ScheduledJobConfig{},
 	}
-}
-
-// ExposedPorts returns all the ports that are container ports available to receive traffic.
-func (cfg *ScheduledJob) ExposedPorts() ([]ExposedPort, error) {
-	var sidecarContainerExposedPorts []ExposedPort
-	// Read `sidecars.port`
-	for name, sidecar := range cfg.Sidecars {
-		if sidecar.Port != nil {
-			port, err := strconv.Atoi(aws.StringValue(sidecar.Port))
-			if err != nil {
-				return nil, fmt.Errorf("cannot parse port mapping from %s", aws.StringValue(sidecar.Port))
-			}
-			sidecarContainerExposedPorts = append(sidecarContainerExposedPorts, ExposedPort{
-				Port:          port,
-				Protocol:      "tcp",
-				ContainerName: name,
-			})
-		}
-	}
-	return sidecarContainerExposedPorts, nil
 }

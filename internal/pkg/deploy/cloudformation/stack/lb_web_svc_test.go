@@ -296,7 +296,7 @@ Outputs:
 				{
 					ContainerPort: aws.String("80"),
 					Protocol:      aws.String("tcp"),
-					Name:          "frontend",
+					Name:          "frontend80",
 				},
 			},
 		}, actual)

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -137,11 +136,11 @@ func (j *ScheduledJob) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecarContainerPortMapping, err := j.containerPortMappings()
+	portMappings, err := containerPortMappings(j.name, nil, nil, nil, j.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar container port mappings for service %s: %w", j.name, err)
 	}
-	sidecars, err := convertSidecar(j.manifest.Sidecars, sidecarContainerPortMapping)
+	sidecars, err := convertSidecar(j.manifest.Sidecars, portMappings)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for job %s: %w", j.name, err)
 	}
@@ -426,16 +425,4 @@ func (j *ScheduledJob) stateMachineOpts() (*template.StateMachineOpts, error) {
 		Timeout: timeoutSeconds,
 		Retries: retries,
 	}, nil
-}
-
-func (s *ScheduledJob) containerPortMappings() ([]*template.PortMapping, error) {
-	sidecarContainerExposedPorts, err := s.manifest.ExposedPorts()
-	if err != nil {
-		return nil, err
-	}
-	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
-	sort.Slice(sidecarContainerExposedPorts, func(i, j int) bool {
-		return sidecarContainerExposedPorts[i].Port < sidecarContainerExposedPorts[j].Port
-	})
-	return ConvertPortMapping(sidecarContainerExposedPorts), nil
 }

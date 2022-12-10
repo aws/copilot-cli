@@ -1730,22 +1730,26 @@ func validateContainerDeps(opts validateDependenciesOpts) error {
 }
 
 func validateExposedPorts(opts validateExposedPortsOpts) error {
-	exposedPorts := make(map[uint16]bool)
+	exposedPorts := make(map[uint16]string)
 
 	if opts.mainContainerPort != nil {
-		exposedPorts[aws.Uint16Value(opts.mainContainerPort)] = true
+		exposedPorts[aws.Uint16Value(opts.mainContainerPort)] = opts.mainContainerName
 	}
 
-	for _, sidecar := range opts.sidecarConfig {
+	for name, sidecar := range opts.sidecarConfig {
 		if sidecar.Port != nil {
 			port, err := strconv.Atoi(aws.StringValue(sidecar.Port))
 			if err != nil {
 				return err
 			}
 			if _, ok := exposedPorts[uint16(port)]; !ok {
-				exposedPorts[uint16(port)] = true
+				exposedPorts[uint16(port)] = name
 			} else {
-				return fmt.Errorf("multiple containers are exposing the same port")
+				return &errContainersExposingSamePort{
+					firstContainer:  name,
+					secondContainer: exposedPorts[uint16(port)],
+					port:            aws.StringValue(sidecar.Port),
+				}
 			}
 		}
 	}

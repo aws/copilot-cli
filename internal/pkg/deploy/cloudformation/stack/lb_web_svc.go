@@ -5,7 +5,6 @@ package stack
 
 import (
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -132,11 +131,11 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	primaryContainerPortMapping, sidecarContainerPortMapping, err := s.containerPortMappings()
+	portMappings, err := containerPortMappings(s.name, s.manifest.ImageConfig.Port, s.manifest.RoutingRule.TargetPort, s.manifest.RoutingRule.TargetContainer, s.manifest.Sidecars)
 	if err != nil {
 		return "", fmt.Errorf("convert container port mappings for service %s: %w", s.name, err)
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars, sidecarContainerPortMapping)
+	sidecars, err := convertSidecar(s.manifest.Sidecars, portMappings)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -262,7 +261,7 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		Observability: template.ObservabilityOpts{
 			Tracing: strings.ToUpper(aws.StringValue(s.manifest.Observability.Tracing)),
 		},
-		PortMappings:         primaryContainerPortMapping,
+		PortMappings:         portMappings[s.name],
 		HostedZoneAliases:    aliasesFor,
 		PermissionsBoundary:  s.permBound,
 		EnvAddonsFeatureFlag: s.EnvAddonsFeatureFlag, // Feature flag for main container
@@ -275,29 +274,6 @@ func (s *LoadBalancedWebService) Template() (string, error) {
 		return "", fmt.Errorf("apply task definition overrides: %w", err)
 	}
 	return string(overriddenTpl), nil
-}
-
-func (s *LoadBalancedWebService) containerPortMappings() ([]*template.PortMapping, []*template.PortMapping, error) {
-	var primaryPorts []manifest.ExposedPort
-	var sidecarPorts []manifest.ExposedPort
-	exposedPorts, err := s.manifest.ExposedPorts()
-	if err != nil {
-		return nil, nil, err
-	}
-	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
-	sort.Slice(exposedPorts, func(i, j int) bool {
-		return exposedPorts[i].Port < exposedPorts[j].Port
-	})
-
-	for _, portConfig := range exposedPorts {
-		if portConfig.ContainerName == s.name {
-			primaryPorts = append(primaryPorts, portConfig)
-		} else {
-			sidecarPorts = append(sidecarPorts, portConfig)
-		}
-	}
-
-	return ConvertPortMapping(primaryPorts), ConvertPortMapping(sidecarPorts), nil
 }
 
 func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
@@ -314,14 +290,8 @@ func (s *LoadBalancedWebService) httpLoadBalancerTarget() (targetContainer *stri
 	// Route load balancer traffic to the target_port if mentioned.
 	if s.manifest.RoutingRule.TargetPort != nil {
 		targetPort = aws.String(strconv.Itoa(aws.IntValue(s.manifest.RoutingRule.TargetPort)))
-		exposedPorts, err := s.manifest.ExposedPorts()
-		if err == nil {
-			for _, portConfig := range exposedPorts {
-				if portConfig.Port == aws.IntValue(s.manifest.RoutingRule.TargetPort) {
-					targetContainer = aws.String(portConfig.ContainerName)
-				}
-			}
-		}
+		exposedPorts, _ := manifest.ExposedPorts(s.name, s.manifest.ImageConfig.Port, s.manifest.RoutingRule.TargetPort, s.manifest.RoutingRule.TargetContainer, s.manifest.Sidecars)
+		targetContainer = findContainerNameGivenPort(aws.IntValue(s.manifest.RoutingRule.TargetPort), exposedPorts)
 	}
 	return
 }

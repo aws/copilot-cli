@@ -46,7 +46,7 @@ ServiceConnectConfiguration:
   {{- if .PortMappings}}
   Services:
     {{- range $portMapping := .PortMappings}}
-    - PortName: {{ (portMappingName $portMapping.Name $portMapping.ContainerPort) }}
+    - PortName: {{ $portMapping.Name }}
       # Avoid using the same service with Service Discovery in a namespace.
       DiscoveryName: !Join ["-", [!Ref WorkloadName, "sc", {{$portMapping.ContainerPort}}]]
       ClientAliases:
