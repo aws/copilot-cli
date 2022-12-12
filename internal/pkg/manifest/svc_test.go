@@ -129,8 +129,12 @@ environments:
 							ExecuteCommand: ExecuteCommand{
 								Enable: aws.Bool(true),
 							},
-							Variables: map[string]string{
-								"LOG_LEVEL": "WARN",
+							Variables: map[string]Variable{
+								"LOG_LEVEL": {
+									stringOrFromCFN{
+										Plain: stringP("WARN"),
+									},
+								},
 							},
 							Secrets: map[string]Secret{
 								"DB_PASSWORD": {from: aws.String("MYSQL_DB_PASSWORD")},
@@ -399,6 +403,64 @@ type: 'OH NO'
 			} else {
 				require.NoError(t, err)
 				tc.requireCorrectValues(t, m.Manifest())
+			}
+		})
+	}
+}
+
+func TestStringOrFromCFN_UnmarshalYAML(t *testing.T) {
+	type mockField struct {
+		stringOrFromCFN
+	}
+	type mockParentField struct {
+		MockField mockField `yaml:"mock_field"`
+	}
+	testCases := map[string]struct {
+		in          []byte
+		wanted      mockParentField
+		wantedError error
+	}{
+		"unmarshal plain string": {
+			in: []byte(`mock_field: hey`),
+			wanted: mockParentField{
+				MockField: mockField{
+					stringOrFromCFN{
+						Plain: aws.String("hey"),
+					},
+				},
+			},
+		},
+		"unmarshal import name": {
+			in: []byte(`mock_field:
+  from_cfn: yo`),
+			wanted: mockParentField{
+				MockField: mockField{
+					stringOrFromCFN{
+						FromCFN: fromCFN{
+							Name: aws.String("yo"),
+						},
+					},
+				},
+			},
+		},
+		"nothing to unmarshal": {
+			in: []byte(`other_field: yo`),
+		},
+		"fail to unmarshal": {
+			in: []byte(`mock_field:
+  heyyo: !`),
+			wantedError: errors.New(`cannot unmarshal field to a string or into a map`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var s mockParentField
+			err := yaml.Unmarshal(tc.in, &s)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, s)
 			}
 		})
 	}

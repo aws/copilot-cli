@@ -822,6 +822,11 @@ func (t TaskConfig) validate() error {
 	if err = t.Storage.validate(); err != nil {
 		return fmt.Errorf(`validate "storage": %w`, err)
 	}
+	for n, v := range t.Variables {
+		if err := v.validate(); err != nil {
+			return fmt.Errorf(`validate %q "variables": %w`, n, err)
+		}
+	}
 	for _, v := range t.Secrets {
 		if err := v.validate(); err != nil {
 			return fmt.Errorf(`validate "secret": %w`, err)
@@ -1605,6 +1610,23 @@ func (r OverrideRule) validate() error {
 		if re.MatchString(r.Path) {
 			return fmt.Errorf(`"%s" cannot be overridden with a custom value`, s)
 		}
+	}
+	return nil
+}
+
+func (v Variable) validate() error {
+	if err := v.FromCFN.validate(); err != nil {
+		return fmt.Errorf(`validate "from_cfn": %w`, err)
+	}
+	return nil
+}
+
+func (cfg fromCFN) validate() error {
+	if cfg.isEmpty() {
+		return nil
+	}
+	if len(aws.StringValue(cfg.Name)) == 0 {
+		return errors.New("name cannot be an empty string")
 	}
 	return nil
 }

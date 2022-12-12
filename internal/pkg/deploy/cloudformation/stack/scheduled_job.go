@@ -6,11 +6,12 @@ package stack
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/copilot-cli/internal/pkg/config"
 	"regexp"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/aws/copilot-cli/internal/pkg/config"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
@@ -91,12 +92,12 @@ func (e errDurationInvalid) Error() string {
 
 // ScheduledJobConfig contains data required to initialize a scheduled job stack.
 type ScheduledJobConfig struct {
-	App                 *config.Application
-	Env                 string
-	Manifest            *manifest.ScheduledJob
-	RawManifest         []byte
-	RuntimeConfig       RuntimeConfig
-	Addons              addons
+	App           *config.Application
+	Env           string
+	Manifest      *manifest.ScheduledJob
+	RawManifest   []byte
+	RuntimeConfig RuntimeConfig
+	Addons        addons
 }
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
@@ -166,7 +167,7 @@ func (j *ScheduledJob) Template() (string, error) {
 
 	content, err := j.parser.ParseScheduledJob(template.WorkloadOpts{
 		SerializedManifest:       string(j.rawManifest),
-		Variables:                j.manifest.Variables,
+		Variables:                convertEnvVars(j.manifest.Variables),
 		Secrets:                  convertSecrets(j.manifest.Secrets),
 		WorkloadType:             manifest.ScheduledJobType,
 		NestedStack:              addonsOutputs,

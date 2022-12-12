@@ -51,6 +51,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 					"templates/workloads/partials/cf/http-listener.yml":                   []byte("http-listener"),
 					"templates/workloads/partials/cf/env-controller.yml":                  []byte("env-controller"),
 					"templates/workloads/partials/cf/mount-points.yml":                    []byte("mount-points"),
+					"templates/workloads/partials/cf/variables.yml":                       []byte("variables"),
 					"templates/workloads/partials/cf/volumes.yml":                         []byte("volumes"),
 					"templates/workloads/partials/cf/image-overrides.yml":                 []byte("image-overrides"),
 					"templates/workloads/partials/cf/instancerole.yml":                    []byte("instancerole"),
@@ -84,6 +85,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   http-listener
   env-controller
   mount-points
+  variables
   volumes
   image-overrides
   instancerole
