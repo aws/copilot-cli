@@ -22,12 +22,12 @@ import (
 
 func TestEnv_Template(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, e *EnvStackConfig)
+		mockDependencies func(ctrl *gomock.Controller, e *Env)
 		expectedOutput   string
 		want             error
 	}{
 		"should return template body when present": {
-			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
+			mockDependencies: func(ctrl *gomock.Controller, e *Env) {
 				m := mocks.NewMockenvReadParser(ctrl)
 				m.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
 					require.Equal(t, &template.EnvOpts{
@@ -78,7 +78,7 @@ func TestEnv_Template(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			envStack := &EnvStackConfig{
+			envStack := &Env{
 				in:                mockDeployEnvironmentInput(),
 				lastForceUpdateID: "mockPreviousForceUpdateID",
 			}
@@ -867,7 +867,7 @@ func TestEnv_Parameters(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			env := &EnvStackConfig{
+			env := &Env{
 				in:         tc.input,
 				prevParams: tc.oldParams,
 			}
@@ -879,7 +879,7 @@ func TestEnv_Parameters(t *testing.T) {
 }
 
 func TestEnv_Tags(t *testing.T) {
-	env := &EnvStackConfig{
+	env := &Env{
 		in: &CreateEnvironmentInput{
 			Name: "env",
 			App: deploy.AppInformation{
@@ -910,7 +910,7 @@ func TestEnv_Tags(t *testing.T) {
 
 func TestStackName(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
-	env := &EnvStackConfig{
+	env := &Env{
 		in: deploymentInput,
 	}
 	require.Equal(t, fmt.Sprintf("%s-%s", deploymentInput.App.Name, deploymentInput.Name), env.StackName())
@@ -956,7 +956,7 @@ func TestBootstrapEnv_Template(t *testing.T) {
 
 			mockParser := mocks.NewMockenvReadParser(ctrl)
 			tc.setupMock(mockParser)
-			bootstrapStack := &BootstrapEnvStackConfig{
+			bootstrapStack := &BootstrapEnv{
 				in:     tc.in,
 				parser: mockParser,
 			}
@@ -1007,7 +1007,7 @@ func TestBootstrapEnv_Parameters(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			bootstrap := &BootstrapEnvStackConfig{
+			bootstrap := &BootstrapEnv{
 				in: tc.input,
 			}
 			params, err := bootstrap.Parameters()
@@ -1018,7 +1018,7 @@ func TestBootstrapEnv_Parameters(t *testing.T) {
 }
 
 func TestBootstrapEnv_Tags(t *testing.T) {
-	bootstrap := &BootstrapEnvStackConfig{
+	bootstrap := &BootstrapEnv{
 		in: &CreateEnvironmentInput{
 			Name: "env",
 			App: deploy.AppInformation{
@@ -1048,7 +1048,7 @@ func TestBootstrapEnv_Tags(t *testing.T) {
 }
 
 func TestBootstrapEnv_StackName(t *testing.T) {
-	bootstrap := &BootstrapEnvStackConfig{
+	bootstrap := &BootstrapEnv{
 		in: &CreateEnvironmentInput{
 			App: deploy.AppInformation{
 				Name: "mockApp",
@@ -1088,7 +1088,7 @@ func TestBootstrapEnv_ToEnv(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			envStack := &BootstrapEnvStackConfig{
+			envStack := &BootstrapEnv{
 				in: mockDeployInput,
 			}
 			got, err := envStack.ToEnv(tc.mockStack)
