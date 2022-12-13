@@ -38,7 +38,7 @@ func TestCDK_Override(t *testing.T) {
 				return "", fmt.Errorf(`exec: "%s": executable file not found in $PATH`, file)
 			},
 		}
-		cdk := NewCDK("", nil, afero.NewMemMapFs(), exec)
+		cdk := WithCDK("", nil, afero.NewMemMapFs(), exec)
 
 		// WHEN
 		_, err := cdk.Override(nil)
@@ -56,7 +56,7 @@ func TestCDK_Override(t *testing.T) {
 				return exec.Command("exit", "42")
 			},
 		}
-		cdk := NewCDK("", nil, afero.NewMemMapFs(), exec)
+		cdk := WithCDK("", nil, afero.NewMemMapFs(), exec)
 
 		// WHEN
 		_, err := cdk.Override(nil)
@@ -79,7 +79,7 @@ func TestCDK_Override(t *testing.T) {
 				return exec.Command("echo", append([]string{name}, args...)...)
 			},
 		}
-		cdk := NewCDK(root, new(bytes.Buffer), mockFS, exec)
+		cdk := WithCDK(root, new(bytes.Buffer), mockFS, exec)
 
 		// WHEN
 		_, err := cdk.Override([]byte("first"))
@@ -108,7 +108,7 @@ func TestCDK_Override(t *testing.T) {
 				return exec.Command("echo", "success")
 			},
 		}
-		cdk := NewCDK("", new(bytes.Buffer), afero.NewMemMapFs(), exec)
+		cdk := WithCDK("", new(bytes.Buffer), afero.NewMemMapFs(), exec)
 
 		// WHEN
 		_, err := cdk.Override(nil)
@@ -127,7 +127,7 @@ func TestCDK_Override(t *testing.T) {
 			},
 		}
 		buf := new(strings.Builder)
-		cdk := NewCDK("", buf, afero.NewMemMapFs(), exec)
+		cdk := WithCDK("", buf, afero.NewMemMapFs(), exec)
 
 		// WHEN
 		_, err := cdk.Override(nil)
@@ -146,7 +146,7 @@ func TestCDK_Override(t *testing.T) {
 			},
 		}
 		buf := new(strings.Builder)
-		cdk := NewCDK("", buf, afero.NewMemMapFs(), exec)
+		cdk := WithCDK("", buf, afero.NewMemMapFs(), exec)
 
 		// WHEN
 		out, err := cdk.Override(nil)
