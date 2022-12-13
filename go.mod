@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/aws/aws-sdk-go v1.44.152
+	github.com/aws/aws-sdk-go v1.44.157
 	github.com/briandowns/spinner v1.19.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
@@ -15,7 +15,7 @@ require (
 	github.com/imdario/mergo v0.3.13
 	github.com/lnquy/cron v1.1.1
 	github.com/moby/buildkit v0.9.3
-	github.com/onsi/ginkgo/v2 v2.5.1
+	github.com/onsi/ginkgo/v2 v2.6.0
 	github.com/onsi/gomega v1.24.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/afero v1.9.3
