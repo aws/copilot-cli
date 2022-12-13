@@ -395,3 +395,96 @@ func TestLogging_GetEnableMetadata(t *testing.T) {
 		})
 	}
 }
+
+func TestRollbackAlarmArgsOrNames_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     RollbackAlarmArgsOrNames
+		wanted bool
+	}{
+		"empty network config": {
+			in:     RollbackAlarmArgsOrNames{},
+			wanted: true,
+		},
+		"non-empty alarm name": {
+			in: RollbackAlarmArgsOrNames{
+				AlarmNames: []*string{aws.String("name1"), aws.String("name2")},
+			},
+			wanted: false,
+		},
+		"non-empty alarm args": {
+			in: RollbackAlarmArgsOrNames{
+				AlarmNames: nil,
+				AlarmArgs:  AlarmArgs{
+					CPUUtilization: aws.Int(70),
+				},
+			},
+			wanted: false,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			got := tc.in.IsEmpty()
+
+			// THEN
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
+func TestRollbackAlarmArgsOrNames_UnmarshalYAML(t *testing.T) {
+	testCases := map[string]struct {
+		inContent []byte
+
+		wantedStruct RollbackAlarmArgsOrNames
+		wantedError  error
+	}{
+		"returns error if both string and args specified": {
+			inContent: []byte(`rollback_alarms: ["alarm1, alarm2"]
+    cpu_utilization: 70
+    sns: "mySNSTopic"`),
+
+			wantedError: errors.New("yaml: line 1: did not find expected key"),
+		},
+		"error if unmarshalable": {
+			inContent: []byte(`rollback_alarms: 
+  rooster_utilization: "cock-a-doodle-doo"`),
+			wantedError: errUnmarshalRollbackAlarms,
+		},
+		"valid alarm args": {
+			inContent: []byte(`rollback_alarms:
+  cpu_utilization: 70
+  memory_utilization: 80
+  sns: "mySNSTopic"`),
+  wantedStruct: RollbackAlarmArgsOrNames{
+	  AlarmNames: nil,
+	  AlarmArgs:  AlarmArgs{
+		  CPUUtilization: aws.Int(70),
+		  MemoryUtilization: aws.Int(80),
+	  },
+  },
+		},
+		"valid alarm names": {
+			inContent: []byte(`rollback_alarms: ["alarm1", "alarm2"]`),
+			wantedStruct: RollbackAlarmArgsOrNames{
+				AlarmNames: []*string{aws.String("alarm1"), aws.String("alarm2")},
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			r := DeploymentConfiguration{}
+			err := yaml.Unmarshal(tc.inContent, &r)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wantedStruct.AlarmNames, r.Alarms.AlarmNames)
+				require.Equal(t, tc.wantedStruct.AlarmArgs.CPUUtilization, r.Alarms.AlarmArgs.CPUUtilization)
+				require.Equal(t, tc.wantedStruct.AlarmArgs.MemoryUtilization, r.Alarms.AlarmArgs.MemoryUtilization)
+			}
+		})
+	}
+}
+

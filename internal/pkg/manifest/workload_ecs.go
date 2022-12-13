@@ -85,10 +85,52 @@ type ImageWithPortAndHealthcheck struct {
 	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 }
 
+// AlarmArgs represents specs of CloudWatch alarms for deployment rollbacks.
+type AlarmArgs struct {
+	CPUUtilization    *int    `yaml:"cpu_utilization"`
+	MemoryUtilization *int    `yaml:"memory_utilization"`
+}
+
+// RollbackAlarmArgsOrNames represents alarms for rolling back deployments.
+// It supports unmarshalling yaml which can either be of type AlarmArgs or a list of strings.
+type RollbackAlarmArgsOrNames struct {
+	AlarmNames []*string
+	AlarmArgs
+}
+
+// UnmarshalYAML overrides the default YAML unmarshaling logic for the RollbackAlarmArgsOrNames
+// struct, allowing it to perform more complex unmarshaling behavior.
+// This method implements the yaml.Unmarshaler (v3) interface.
+func (r *RollbackAlarmArgsOrNames) UnmarshalYAML(value *yaml.Node) error {
+	if err := value.Decode(&r.AlarmArgs); err != nil {
+		var yamlTypeErr *yaml.TypeError
+		if !errors.As(err, &yamlTypeErr) {
+			return err
+		}
+	}
+	if !r.AlarmArgs.isEmpty() {
+		// Unmarshaled successfully to r.AlarmArgs, unset r.AlarmNames, and return.
+		r.AlarmNames = nil
+		return nil
+	}
+	if err := value.Decode(&r.AlarmNames); err != nil {
+		return errUnmarshalRollbackAlarms
+	}
+	return nil
+}
+
+func (r *RollbackAlarmArgsOrNames) IsEmpty() bool {
+	return r.AlarmNames == nil && r.AlarmArgs.isEmpty()
+}
+
+func (a *AlarmArgs) isEmpty() bool {
+	return a.CPUUtilization == nil && a.MemoryUtilization == nil
+}
+
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
 	Rolling *string                  `yaml:"rolling"`
-	Alarms  RollbackAlarmArgsOrNames `yaml:"alarms"`
+	Alarms  RollbackAlarmArgsOrNames `yaml:"rollback_alarms"`
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
