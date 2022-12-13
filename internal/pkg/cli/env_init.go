@@ -690,7 +690,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
-	deployEnvInput := &deploy.CreateEnvironmentInput{
+	deployEnvInput := &stack.CreateEnvironmentInput{
 		Name: o.name,
 		App: deploy.AppInformation{
 			Name:                o.appName,

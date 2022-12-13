@@ -17,7 +17,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
-	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	cfnstack "github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation/stack"
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
@@ -244,7 +243,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				},
 				appCFN:      m.appCFN,
 				envDeployer: m.envDeployer,
-				newStackSerializer: func(_ *deploy.CreateEnvironmentInput, _ string, _ []*awscfn.Parameter) stackSerializer {
+				newStackSerializer: func(_ *cfnstack.CreateEnvironmentInput, _ string, _ []*awscfn.Parameter) stackSerializer {
 					return m.stackSerializer
 				},
 			}

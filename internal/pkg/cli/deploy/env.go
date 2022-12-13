@@ -79,7 +79,7 @@ type envDeployer struct {
 	appCFN                   appResourcesGetter
 	envDeployer              environmentDeployer
 	patcher                  patcher
-	newStackSerializer       func(input *deploy.CreateEnvironmentInput, forceUpdateID string, prevParams []*awscfn.Parameter) stackSerializer
+	newStackSerializer       func(input *cfnstack.CreateEnvironmentInput, forceUpdateID string, prevParams []*awscfn.Parameter) stackSerializer
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
@@ -134,7 +134,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 			TemplatePatcher: cfnClient,
 			Env:             in.Env,
 		},
-		newStackSerializer: func(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
+		newStackSerializer: func(in *cfnstack.CreateEnvironmentInput, lastForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
 			return cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
 		},
 		envDescriber: envDescriber,
@@ -254,7 +254,7 @@ func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, e
 	return urls, nil
 }
 
-func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.CreateEnvironmentInput, error) {
+func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.CreateEnvironmentInput, error) {
 	resources, err := d.getAppRegionalResources()
 	if err != nil {
 		return nil, err
@@ -268,7 +268,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*deploy.Creat
 		return nil, err
 	}
 
-	return &deploy.CreateEnvironmentInput{
+	return &cfnstack.CreateEnvironmentInput{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
 			Name:                d.app.Name,

@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/google/uuid"
 )
@@ -21,10 +22,43 @@ type envReadParser interface {
 	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
 }
 
+// CreateEnvironmentInput holds the fields required to deploy an environment.
+type CreateEnvironmentInput struct {
+	// The version of the environment template to create the stack. If empty, creates the legacy stack.
+	Version string
+
+	// Application regional configurations.
+	App                  deploy.AppInformation // Information about the application that the environment belongs to, include app name, DNS name, the principal ARN of the account.
+	Name                 string                // Name of the environment, must be unique within an application.
+	AdditionalTags       map[string]string     // AdditionalTags are labels applied to resources under the application.
+	ArtifactBucketARN    string                // ARN of the regional application bucket.
+	ArtifactBucketKeyARN string                // ARN of the KMS key used to encrypt the contents in the regional application bucket.
+
+	// Runtime configurations.
+	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
+
+	// User inputs.
+	ImportVPCConfig     *config.ImportVPC     // Optional configuration if users have an existing VPC.
+	AdjustVPCConfig     *config.AdjustVPC     // Optional configuration if users want to override default VPC configuration.
+	ImportCertARNs      []string              // Optional configuration if users want to import certificates.
+	InternalALBSubnets  []string              // Optional configuration if users want to specify internal ALB placement.
+	AllowVPCIngress     bool                  // Optional configuration to allow access to internal ALB from ports 80/443.
+	CIDRPrefixListIDs   []string              // Optional configuration to specify public security group ingress based on prefix lists.
+	PublicALBSourceIPs  []string              // Optional configuration to specify public security group ingress based on customer given source IPs.
+	InternalLBSourceIPs []string              // Optional configuration to specify private security group ingress based on customer given source IPs.
+	Telemetry           *config.Telemetry     // Optional observability and monitoring configuration.
+	Mft                 *manifest.Environment // Unmarshaled and interpolated manifest object.
+	RawMft              []byte                // Content of the environment manifest without any modifications.
+	ForceUpdate         bool
+
+	CFNServiceRoleARN   string // Optional. A service role ARN that CloudFormation should use to make calls to resources in the stack.
+	PermissionsBoundary string // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.
+}
+
 // EnvStackConfig is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type EnvStackConfig struct {
-	in                *deploy.CreateEnvironmentInput
+	in                *CreateEnvironmentInput
 	lastForceUpdateID string
 	prevParams        []*cloudformation.Parameter
 	parser            envReadParser
@@ -65,7 +99,7 @@ var (
 )
 
 // NewEnvStackConfig returns a CloudFormation stack configuration for deploying a brand-new environment.
-func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
+func NewEnvStackConfig(input *CreateEnvironmentInput) *EnvStackConfig {
 	return &EnvStackConfig{
 		in:     input,
 		parser: template.New(),
@@ -73,7 +107,7 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 }
 
 // NewEnvConfigFromExistingStack returns a CloudFormation stack configuration for updating an environment.
-func NewEnvConfigFromExistingStack(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, prevParams []*cloudformation.Parameter) *EnvStackConfig {
+func NewEnvConfigFromExistingStack(in *CreateEnvironmentInput, lastForceUpdateID string, prevParams []*cloudformation.Parameter) *EnvStackConfig {
 	return &EnvStackConfig{
 		in:                in,
 		prevParams:        prevParams,
@@ -307,7 +341,7 @@ func (e *EnvStackConfig) transformServiceDiscoveryEndpoint(new, old *cloudformat
 }
 
 // NewBootstrapEnvStackConfig sets up a BootstrapEnvStackConfig struct.
-func NewBootstrapEnvStackConfig(input *deploy.CreateEnvironmentInput) *BootstrapEnvStackConfig {
+func NewBootstrapEnvStackConfig(input *CreateEnvironmentInput) *BootstrapEnvStackConfig {
 	return &BootstrapEnvStackConfig{
 		in:     input,
 		parser: template.New(),
