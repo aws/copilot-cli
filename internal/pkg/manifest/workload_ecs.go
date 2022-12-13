@@ -87,8 +87,8 @@ type ImageWithPortAndHealthcheck struct {
 
 // AlarmArgs represents specs of CloudWatch alarms for deployment rollbacks.
 type AlarmArgs struct {
-	CPUUtilization    *int    `yaml:"cpu_utilization"`
-	MemoryUtilization *int    `yaml:"memory_utilization"`
+	CPUUtilization    *int `yaml:"cpu_utilization"`
+	MemoryUtilization *int `yaml:"memory_utilization"`
 }
 
 // RollbackAlarmArgsOrNames represents alarms for rolling back deployments.
@@ -118,6 +118,7 @@ func (r *RollbackAlarmArgsOrNames) UnmarshalYAML(value *yaml.Node) error {
 	}
 	return nil
 }
+
 // IsEmpty returns true if neither alarm names nor alarm args (for creating alarms) are present.
 func (r *RollbackAlarmArgsOrNames) IsEmpty() bool {
 	return r.AlarmNames == nil && r.AlarmArgs.isEmpty()

@@ -414,7 +414,7 @@ func TestRollbackAlarmArgsOrNames_IsEmpty(t *testing.T) {
 		"non-empty alarm args": {
 			in: RollbackAlarmArgsOrNames{
 				AlarmNames: nil,
-				AlarmArgs:  AlarmArgs{
+				AlarmArgs: AlarmArgs{
 					CPUUtilization: aws.Int(70),
 				},
 			},
@@ -456,13 +456,13 @@ func TestRollbackAlarmArgsOrNames_UnmarshalYAML(t *testing.T) {
   cpu_utilization: 70
   memory_utilization: 80
   sns: "mySNSTopic"`),
-  wantedStruct: RollbackAlarmArgsOrNames{
-	  AlarmNames: nil,
-	  AlarmArgs:  AlarmArgs{
-		  CPUUtilization: aws.Int(70),
-		  MemoryUtilization: aws.Int(80),
-	  },
-  },
+			wantedStruct: RollbackAlarmArgsOrNames{
+				AlarmNames: nil,
+				AlarmArgs: AlarmArgs{
+					CPUUtilization:    aws.Int(70),
+					MemoryUtilization: aws.Int(80),
+				},
+			},
 		},
 		"valid alarm names": {
 			inContent: []byte(`rollback_alarms: ["alarm1", "alarm2"]`),
@@ -487,4 +487,3 @@ func TestRollbackAlarmArgsOrNames_UnmarshalYAML(t *testing.T) {
 		})
 	}
 }
-
