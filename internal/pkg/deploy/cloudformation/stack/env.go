@@ -401,9 +401,9 @@ func (e *BootstrapEnv) StackName() string {
 	return (*Env)(e).StackName()
 }
 
-// ToEnv inspects an environment cloudformation stack and constructs an environment
+// ToEnvMetadata inspects an environment cloudformation stack and constructs an environment
 // struct out of it (including resources like ECR Repo).
-func (e *BootstrapEnv) ToEnv(stack *cloudformation.Stack) (*config.Environment, error) {
+func (e *BootstrapEnv) ToEnvMetadata(stack *cloudformation.Stack) (*config.Environment, error) {
 	stackARN, err := arn.Parse(*stack.StackId)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't extract region and account from stack ID %s: %w", *stack.StackId, err)

@@ -1091,7 +1091,7 @@ func TestBootstrapEnv_ToEnv(t *testing.T) {
 			envStack := &BootstrapEnv{
 				in: mockDeployInput,
 			}
-			got, err := envStack.ToEnv(tc.mockStack)
+			got, err := envStack.ToEnvMetadata(tc.mockStack)
 
 			if tc.want != nil {
 				require.EqualError(t, tc.want, err.Error())

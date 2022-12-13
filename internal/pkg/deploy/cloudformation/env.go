@@ -94,7 +94,7 @@ func (cf CloudFormation) GetEnvironment(appName, envName string) (*config.Enviro
 	if err != nil {
 		return nil, err
 	}
-	return conf.ToEnv(descr.SDK())
+	return conf.ToEnvMetadata(descr.SDK())
 }
 
 // EnvironmentTemplate returns the environment stack's template.
