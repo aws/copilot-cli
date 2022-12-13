@@ -649,7 +649,7 @@ Resources:
 {{- if .Addons}}
   AddonsStack:
     Metadata:
-      'aws:copilot:description': 'An addons CloudFormation stack for your additional AWS resources'
+      'aws:copilot:description': 'A CloudFormation nested stack for your additional AWS resources'
     Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
