@@ -16,6 +16,40 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	// Parameter keys.
+	envParamAppNameKey                     = "AppName"
+	envParamEnvNameKey                     = "EnvironmentName"
+	envParamToolsAccountPrincipalKey       = "ToolsAccountPrincipalARN"
+	envParamAppDNSKey                      = "AppDNSName"
+	envParamAppDNSDelegationRoleKey        = "AppDNSDelegationRole"
+	EnvParamAliasesKey                     = "Aliases"
+	EnvParamALBWorkloadsKey                = "ALBWorkloads"
+	envParamInternalALBWorkloadsKey        = "InternalALBWorkloads"
+	envParamEFSWorkloadsKey                = "EFSWorkloads"
+	envParamNATWorkloadsKey                = "NATWorkloads"
+	envParamAppRunnerPrivateWorkloadsKey   = "AppRunnerPrivateWorkloads"
+	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
+	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
+	EnvParamServiceDiscoveryEndpoint       = "ServiceDiscoveryEndpoint"
+
+	// Output keys.
+	EnvOutputVPCID               = "VpcId"
+	EnvOutputPublicSubnets       = "PublicSubnets"
+	EnvOutputPrivateSubnets      = "PrivateSubnets"
+	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
+	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
+
+	// Default parameter values.
+	DefaultVPCCIDR = "10.0.0.0/16"
+)
+
+var (
+	fmtServiceDiscoveryEndpoint = "%s.%s.local"
+	DefaultPublicSubnetCIDRs    = []string{"10.0.0.0/24", "10.0.1.0/24"}
+	DefaultPrivateSubnetCIDRs   = []string{"10.0.2.0/24", "10.0.3.0/24"}
+)
+
 type envReadParser interface {
 	template.ReadParser
 	ParseEnv(data *template.EnvOpts) (*template.Content, error)
@@ -63,40 +97,6 @@ type EnvStackConfig struct {
 	prevParams        []*cloudformation.Parameter
 	parser            envReadParser
 }
-
-const (
-	// Parameter keys.
-	envParamAppNameKey                     = "AppName"
-	envParamEnvNameKey                     = "EnvironmentName"
-	envParamToolsAccountPrincipalKey       = "ToolsAccountPrincipalARN"
-	envParamAppDNSKey                      = "AppDNSName"
-	envParamAppDNSDelegationRoleKey        = "AppDNSDelegationRole"
-	EnvParamAliasesKey                     = "Aliases"
-	EnvParamALBWorkloadsKey                = "ALBWorkloads"
-	envParamInternalALBWorkloadsKey        = "InternalALBWorkloads"
-	envParamEFSWorkloadsKey                = "EFSWorkloads"
-	envParamNATWorkloadsKey                = "NATWorkloads"
-	envParamAppRunnerPrivateWorkloadsKey   = "AppRunnerPrivateWorkloads"
-	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
-	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
-	EnvParamServiceDiscoveryEndpoint       = "ServiceDiscoveryEndpoint"
-
-	// Output keys.
-	EnvOutputVPCID               = "VpcId"
-	EnvOutputPublicSubnets       = "PublicSubnets"
-	EnvOutputPrivateSubnets      = "PrivateSubnets"
-	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
-	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
-
-	// Default parameter values.
-	DefaultVPCCIDR = "10.0.0.0/16"
-)
-
-var (
-	fmtServiceDiscoveryEndpoint = "%s.%s.local"
-	DefaultPublicSubnetCIDRs    = []string{"10.0.0.0/24", "10.0.1.0/24"}
-	DefaultPrivateSubnetCIDRs   = []string{"10.0.2.0/24", "10.0.3.0/24"}
-)
 
 // NewEnvStackConfig returns a CloudFormation stack configuration for deploying a brand-new environment.
 func NewEnvStackConfig(input *CreateEnvironmentInput) *EnvStackConfig {
