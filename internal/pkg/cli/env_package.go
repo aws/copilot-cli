@@ -65,7 +65,7 @@ type packageEnvOpts struct {
 	paramsWriter io.WriteCloser
 
 	newInterpolator func(appName, envName string) interpolator
-	newEnvDeployer  func() (envPackager, error)
+	newEnvPackager  func() (envPackager, error)
 
 	// Cached variables.
 	appCfg *config.Application
@@ -101,7 +101,7 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 			return manifest.NewInterpolator(appName, envName)
 		},
 	}
-	opts.newEnvDeployer = func() (envPackager, error) {
+	opts.newEnvPackager = func() (envPackager, error) {
 		appCfg, err := opts.getAppCfg()
 		if err != nil {
 			return nil, err
@@ -152,7 +152,7 @@ func (o *packageEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get caller principal identity: %v", err)
 	}
-	deployer, err := o.newEnvDeployer()
+	deployer, err := o.newEnvPackager()
 	if err != nil {
 		return err
 	}
