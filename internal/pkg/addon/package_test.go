@@ -22,7 +22,7 @@ import (
 
 type addonMocks struct {
 	uploader *mocks.Mockuploader
-	ws       *mocks.MockworkspaceReader
+	ws       *mocks.MockworkspaceAddonsReader
 }
 
 func TestPackage(t *testing.T) {
@@ -390,7 +390,7 @@ Resources:
 
 			mocks := addonMocks{
 				uploader: mocks.NewMockuploader(ctrl),
-				ws:       mocks.NewMockworkspaceReader(ctrl),
+				ws:       mocks.NewMockworkspaceAddonsReader(ctrl),
 			}
 			if tc.setupMocks != nil {
 				tc.setupMocks(mocks)
@@ -463,7 +463,7 @@ func TestEnvironmentAddonStack_PackagePackage(t *testing.T) {
 		// Set up mocks.
 		m := addonMocks{
 			uploader: mocks.NewMockuploader(ctrl),
-			ws:       mocks.NewMockworkspaceReader(ctrl),
+			ws:       mocks.NewMockworkspaceAddonsReader(ctrl),
 		}
 		m.uploader.EXPECT().Upload(bucket, indexZipS3PathForEnvironmentAddon, gomock.Any()).Return(s3.URL("us-west-2", bucket, "asdf"), nil)
 
