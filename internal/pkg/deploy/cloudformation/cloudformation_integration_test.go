@@ -392,7 +392,7 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	envName := randStringBytes(10)
 	appName := randStringBytes(10)
 	bucketName := randStringBytes(10)
-	environmentToDeploy := stack.CreateEnvironmentInput{
+	environmentToDeploy := stack.EnvConfig{
 		Name: envName,
 		App: deploy.AppInformation{
 			Name:                appName,

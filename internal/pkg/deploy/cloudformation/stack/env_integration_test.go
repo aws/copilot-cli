@@ -24,11 +24,11 @@ import (
 
 func TestEnvStack_Template(t *testing.T) {
 	testCases := map[string]struct {
-		input          *stack.CreateEnvironmentInput
+		input          *stack.EnvConfig
 		wantedFileName string
 	}{
 		"generate template with embedded manifest file with container insights and imported certificates and advanced access logs": {
-			input: func() *stack.CreateEnvironmentInput {
+			input: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
@@ -56,7 +56,7 @@ observability:
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
-				return &stack.CreateEnvironmentInput{
+				return &stack.EnvConfig{
 					Version: "1.x",
 					App: deploy.AppInformation{
 						AccountPrincipalARN: "arn:aws:iam::000000000:root",
@@ -80,7 +80,7 @@ observability:
 			wantedFileName: "template-with-imported-certs-observability.yml",
 		},
 		"generate template with default access logs": {
-			input: func() *stack.CreateEnvironmentInput {
+			input: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment
 http:
@@ -89,7 +89,7 @@ http:
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
-				return &stack.CreateEnvironmentInput{
+				return &stack.EnvConfig{
 					Version: "1.x",
 					App: deploy.AppInformation{
 						AccountPrincipalARN: "arn:aws:iam::000000000:root",
@@ -110,7 +110,7 @@ http:
 			wantedFileName: "template-with-default-access-log-config.yml",
 		},
 		"generate template with embedded manifest file with custom security groups rules added by the customer": {
-			input: func() *stack.CreateEnvironmentInput {
+			input: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
@@ -138,7 +138,7 @@ network:
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
-				return &stack.CreateEnvironmentInput{
+				return &stack.EnvConfig{
 					Version: "1.x",
 					App: deploy.AppInformation{
 						AccountPrincipalARN: "arn:aws:iam::000000000:root",
@@ -160,7 +160,7 @@ network:
 			wantedFileName: "template-with-custom-security-group.yml",
 		},
 		"generate template with embedded manifest file with imported certificates and SSL Policy and empty security groups rules added by the customer": {
-			input: func() *stack.CreateEnvironmentInput {
+			input: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
@@ -178,7 +178,7 @@ security_group:
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
-				return &stack.CreateEnvironmentInput{
+				return &stack.EnvConfig{
 					Version: "1.x",
 					App: deploy.AppInformation{
 						AccountPrincipalARN: "arn:aws:iam::000000000:root",
@@ -200,13 +200,13 @@ security_group:
 			wantedFileName: "template-with-imported-certs-sslpolicy-custom-empty-security-group.yml",
 		},
 		"generate template with custom resources": {
-			input: func() *stack.CreateEnvironmentInput {
+			input: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment`
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
-				return &stack.CreateEnvironmentInput{
+				return &stack.EnvConfig{
 					Version: "1.x",
 					App: deploy.AppInformation{
 						AccountPrincipalARN: "arn:aws:iam::000000000:root",
@@ -227,7 +227,7 @@ type: Environment`
 			wantedFileName: "template-with-basic-manifest.yml",
 		},
 		"generate template with default vpc and flowlogs is on": {
-			input: func() *stack.CreateEnvironmentInput {
+			input: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment
 network:
@@ -237,7 +237,7 @@ network:
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
-				return &stack.CreateEnvironmentInput{
+				return &stack.EnvConfig{
 					Version: "1.x",
 					App: deploy.AppInformation{
 						AccountPrincipalARN: "arn:aws:iam::000000000:root",
@@ -258,7 +258,7 @@ network:
 			wantedFileName: "template-with-defaultvpc-flowlogs.yml",
 		},
 		"generate template with imported vpc and flowlogs is on": {
-			input: func() *stack.CreateEnvironmentInput {
+			input: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment
 network:
@@ -275,7 +275,7 @@ network:
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
-				return &stack.CreateEnvironmentInput{
+				return &stack.EnvConfig{
 					Version: "1.x",
 					App: deploy.AppInformation{
 						AccountPrincipalARN: "arn:aws:iam::000000000:root",
@@ -324,11 +324,11 @@ network:
 
 func TestEnvStack_Regression(t *testing.T) {
 	testCases := map[string]struct {
-		originalManifest *stack.CreateEnvironmentInput
-		newManifest      *stack.CreateEnvironmentInput
+		originalManifest *stack.EnvConfig
+		newManifest      *stack.EnvConfig
 	}{
 		"should produce the same template after migrating load balancer ingress fields": {
-			originalManifest: func() *stack.CreateEnvironmentInput {
+			originalManifest: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
@@ -355,7 +355,7 @@ observability:
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
-				return &stack.CreateEnvironmentInput{
+				return &stack.EnvConfig{
 					Version: "1.x",
 					App: deploy.AppInformation{
 						AccountPrincipalARN: "arn:aws:iam::000000000:root",
@@ -375,7 +375,7 @@ observability:
 					RawMft: []byte(rawMft),
 				}
 			}(),
-			newManifest: func() *stack.CreateEnvironmentInput {
+			newManifest: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
@@ -399,7 +399,7 @@ observability:
 				var mft manifest.Environment
 				err := yaml.Unmarshal([]byte(rawMft), &mft)
 				require.NoError(t, err)
-				return &stack.CreateEnvironmentInput{
+				return &stack.EnvConfig{
 					Version: "1.x",
 					App: deploy.AppInformation{
 						AccountPrincipalARN: "arn:aws:iam::000000000:root",

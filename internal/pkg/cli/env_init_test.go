@@ -1143,7 +1143,7 @@ func TestInitEnvOpts_Execute(t *testing.T) {
 				m.iam.EXPECT().ListRoleTags(gomock.Any()).Times(0)
 				m.cfn.EXPECT().Exists("phonetool-test").Return(true, nil)
 				m.deployer.EXPECT().CreateAndRenderEnvironment(gomock.Any(), gomock.Any()).DoAndReturn(func(conf deploycfn.StackConfiguration, bucketARN string) error {
-					require.Equal(t, conf, stack.NewBootstrapEnvStackConfig(&stack.CreateEnvironmentInput{
+					require.Equal(t, conf, stack.NewBootstrapEnvStackConfig(&stack.EnvConfig{
 						Name: "test",
 						App: deploy.AppInformation{
 							Name:                "phonetool",

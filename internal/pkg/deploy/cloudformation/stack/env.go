@@ -56,8 +56,8 @@ type envReadParser interface {
 	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
 }
 
-// CreateEnvironmentInput holds the fields required to deploy an environment.
-type CreateEnvironmentInput struct {
+// EnvConfig holds the fields required to deploy an environment.
+type EnvConfig struct {
 	// The version of the environment template to create the stack. If empty, creates the legacy stack.
 	Version string
 
@@ -92,14 +92,14 @@ type CreateEnvironmentInput struct {
 // Env is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
 type Env struct {
-	in                *CreateEnvironmentInput
+	in                *EnvConfig
 	lastForceUpdateID string
 	prevParams        []*cloudformation.Parameter
 	parser            envReadParser
 }
 
 // NewEnvStackConfig returns a CloudFormation stack configuration for deploying a brand-new environment.
-func NewEnvStackConfig(input *CreateEnvironmentInput) *Env {
+func NewEnvStackConfig(input *EnvConfig) *Env {
 	return &Env{
 		in:     input,
 		parser: template.New(),
@@ -107,7 +107,7 @@ func NewEnvStackConfig(input *CreateEnvironmentInput) *Env {
 }
 
 // NewEnvConfigFromExistingStack returns a CloudFormation stack configuration for updating an environment.
-func NewEnvConfigFromExistingStack(in *CreateEnvironmentInput, lastForceUpdateID string, prevParams []*cloudformation.Parameter) *Env {
+func NewEnvConfigFromExistingStack(in *EnvConfig, lastForceUpdateID string, prevParams []*cloudformation.Parameter) *Env {
 	return &Env{
 		in:                in,
 		prevParams:        prevParams,
@@ -341,7 +341,7 @@ func (e *Env) transformServiceDiscoveryEndpoint(new, old *cloudformation.Paramet
 }
 
 // NewBootstrapEnvStackConfig sets up a BootstrapEnv struct.
-func NewBootstrapEnvStackConfig(input *CreateEnvironmentInput) *BootstrapEnv {
+func NewBootstrapEnvStackConfig(input *EnvConfig) *BootstrapEnv {
 	return &BootstrapEnv{
 		in:     input,
 		parser: template.New(),
