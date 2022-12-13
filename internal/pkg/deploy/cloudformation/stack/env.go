@@ -74,6 +74,7 @@ type EnvConfig struct {
 	PermissionsBoundary  string                // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.
 
 	// Runtime configurations.
+	Addons              *NestedStackConfigurer
 	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// User inputs.
