@@ -20,7 +20,7 @@ func (err *errNPMUnavailable) RecommendActions() string {
 	return fmt.Sprintf(`Please follow instructions at: %q to install "npm"`, "https://docs.npmjs.com/downloading-and-installing-node-js-and-npm")
 }
 
-// ErrNotExist occurs when an overrides/ directory is either empty or does not exist.
+// ErrNotExist occurs when the path of the file associated with an Overrider does not exist.
 type ErrNotExist struct {
 	parent error
 }

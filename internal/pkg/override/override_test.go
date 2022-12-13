@@ -54,6 +54,20 @@ func TestLookup(t *testing.T) {
 		require.True(t, info.IsCDK())
 		require.False(t, info.IsYAMLPatch())
 	})
+	t.Run("should return an error when the path is a file without a YAML extension", func(t *testing.T) {
+		// GIVEN
+		fs := afero.NewMemMapFs()
+		root := filepath.Join("copilot", "frontend", "overrides")
+		_ = fs.MkdirAll(root, 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, "abc.js"), nil, 0755)
+
+		// WHEN
+		_, err := Lookup(filepath.Join(root, "abc.js"), fs)
+
+		// THEN
+		wantedMsg := fmt.Sprintf(`YAML patch documents require a .yml or .yaml extension: %q has a ".js" extension`, filepath.Join(root, "abc.js"))
+		require.EqualError(t, err, wantedMsg)
+	})
 	t.Run("should return an error when the path is an empty file", func(t *testing.T) {
 		// GIVEN
 		fs := afero.NewMemMapFs()
