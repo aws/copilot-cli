@@ -5,6 +5,7 @@ package manifest
 
 import (
 	"errors"
+	"sort"
 	"strings"
 	"time"
 
@@ -366,4 +367,24 @@ func newDefaultWorkerService() *WorkerService {
 		},
 		Environments: map[string]*WorkerServiceConfig{},
 	}
+}
+
+// ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
+func (ws *WorkerService) ExposedPorts() []ExposedPort {
+
+	var exposedPortList []ExposedPort
+	exposedPorts := make(map[int]ExposedPort)
+
+	for name, sidecar := range ws.Sidecars {
+		sidecar.exposedPorts(exposedPorts, name)
+	}
+
+	for _, v := range exposedPorts {
+		exposedPortList = append(exposedPortList, v)
+	}
+	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
+	sort.Slice(exposedPortList, func(i, j int) bool {
+		return exposedPortList[i].Port < exposedPortList[j].Port
+	})
+	return exposedPortList
 }

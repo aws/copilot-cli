@@ -959,3 +959,283 @@ func TestBackendSvc_ApplyEnv_CountOverrides(t *testing.T) {
 		})
 	}
 }
+
+func TestBackendService_ExposedPorts(t *testing.T) {
+	testCases := map[string]struct {
+		mft                *BackendService
+		wantedExposedPorts []ExposedPort
+	}{
+		"expose primary container port through target_port": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{},
+					RoutingRule: RoutingRuleConfiguration{
+						TargetPort: aws.Uint16(81),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          81,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"expose two primary container port internally through image.port and target_port": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfiguration{
+						//TargetContainer: aws.String("xray"),
+						TargetPort: aws.Uint16(81),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"expose two primary container port internally through image.port and target_port and target_container": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfiguration{
+						TargetContainer: aws.String("frontend"),
+						TargetPort:      aws.Uint16(81),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"expose primary container port through image.port and sidecar container port through target_port and target_container": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfiguration{
+						TargetContainer: aws.String("xray"),
+						TargetPort:      aws.Uint16(81),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							//Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          81,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"doesn't create duplicate entry in ExposedPorts when similar config is present in target_port and target_container as that of primary container": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfiguration{
+						TargetContainer: aws.String("frontend"),
+						TargetPort:      aws.Uint16(80),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"doesn't create duplicate entry in ExposedPorts when similar config is present in target_port and target_container as that of sidecar container": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfiguration{
+						TargetContainer: aws.String("xray"),
+						TargetPort:      aws.Uint16(2000),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+		"doesn't create duplicate entry in ExposedPorts when target_port is same as that of sidecar container port": {
+			mft: &BackendService{
+				Workload: Workload{
+					Name: aws.String("frontend"),
+				},
+				BackendServiceConfig: BackendServiceConfig{
+					ImageConfig: ImageWithHealthcheckAndOptionalPort{
+						ImageWithOptionalPort: ImageWithOptionalPort{
+							Port: aws.Uint16(80),
+						},
+					},
+					RoutingRule: RoutingRuleConfiguration{
+						TargetPort: aws.Uint16(2000),
+					},
+					Sidecars: map[string]*SidecarConfig{
+						"xray": {
+							Port:       aws.String("2000"),
+							Image:      aws.String("123456789012.dkr.ecr.us-east-2.amazonaws.com/xray-daemon"),
+							CredsParam: aws.String("some arn"),
+						},
+					},
+				},
+			},
+			wantedExposedPorts: []ExposedPort{
+				{
+					Port:          80,
+					ContainerName: "frontend",
+					Protocol:      "tcp",
+				},
+				{
+					Port:          2000,
+					ContainerName: "xray",
+					Protocol:      "tcp",
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// WHEN
+			actual := tc.mft.ExposedPorts()
+
+			// THEN
+			require.Equal(t, tc.wantedExposedPorts, actual)
+		})
+	}
+}

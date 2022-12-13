@@ -94,6 +94,13 @@ func (d *DeploymentConfiguration) isEmpty() bool {
 	return d == nil || d.Rolling == nil
 }
 
+// ExposedPort will hold the port mapping configuration.
+type ExposedPort struct {
+	ContainerName string // The name of the container that exposes this port.
+	Port          int    // The port number.
+	Protocol      string // Either "tcp" or "udp", empty means the default value that the underlying service provides.
+}
+
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
 type ImageWithHealthcheckAndOptionalPort struct {
 	ImageWithOptionalPort `yaml:",inline"`

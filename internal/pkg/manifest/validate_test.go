@@ -3433,3 +3433,63 @@ func TestFromEnvironment_validate(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateExposedPorts(t *testing.T) {
+	testCases := map[string]struct {
+		in     validateExposedPortsOpts
+		wanted error
+	}{
+		"should return an error if main container and sidecar container is exposing the same port": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(80),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+			},
+			wanted: fmt.Errorf(`container foo and container mockMainContainer are exposing the same port 80`),
+		},
+		"should return an error if target_port points to one sidecar container port and target_container points to another sidecar container": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				targetContainer: aws.String("nginx"),
+				targetPort:      aws.Uint16(8080),
+			},
+			wanted: fmt.Errorf(`container nginx and container foo are exposing the same port 8080`),
+		},
+		"should not return an error if main container and sidecar container is exposing different ports": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+			},
+			wanted: nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateExposedPorts(tc.in)
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

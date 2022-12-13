@@ -442,3 +442,57 @@ func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 	}
 	return nil
 }
+
+func (cfg ImageWithPortAndHealthcheck) exposedPorts(exposedPort map[int]ExposedPort, workloadName string) {
+	// Read `image.port`
+	if cfg.Port != nil {
+		port := int(aws.Uint16Value(cfg.Port))
+		exposedPort[port] = ExposedPort{
+			Port:          port,
+			Protocol:      "tcp",
+			ContainerName: workloadName,
+		}
+	}
+}
+
+func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(exposedPort map[int]ExposedPort, workloadName string) {
+	// Read `image.port`
+	if cfg.Port != nil {
+		port := int(aws.Uint16Value(cfg.Port))
+		exposedPort[port] = ExposedPort{
+			Port:          port,
+			Protocol:      "tcp",
+			ContainerName: workloadName,
+		}
+	}
+}
+
+func (rr RoutingRuleConfiguration) exposedPorts(exposedPort map[int]ExposedPort, workloadName string) {
+	// Read `http.target_port`
+	// This block of code takes care of following use cases:
+	// 1. if target_port is given but target_container is nil then set ContainerName as primary container.
+	// 2. if target_port is given with the target_container as primary or sidecar container then set the value to ContainerName.
+	containerName := workloadName
+	if rr.TargetPort != nil {
+		if rr.TargetContainer != nil {
+			containerName = aws.StringValue(rr.TargetContainer)
+		}
+		targetPort := int(aws.Uint16Value(rr.TargetPort))
+		exposedPort[targetPort] = ExposedPort{
+			Port:          targetPort,
+			Protocol:      "tcp",
+			ContainerName: containerName,
+		}
+	}
+}
+
+func (sidecar SidecarConfig) exposedPorts(exposedPort map[int]ExposedPort, sidecarName string) {
+	if sidecar.Port != nil {
+		port, _ := strconv.Atoi(aws.StringValue(sidecar.Port))
+		exposedPort[port] = ExposedPort{
+			Port:          port,
+			Protocol:      "tcp",
+			ContainerName: sidecarName,
+		}
+	}
+}

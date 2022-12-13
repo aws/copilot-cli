@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
+	"sort"
 )
 
 const (
@@ -99,7 +100,7 @@ func (s *BackendService) requiredEnvironmentFeatures() []string {
 	return features
 }
 
-// Port returns the exposed the exposed port in the manifest.
+// Port returns the exposed port in the manifest.
 // If the backend service is not meant to be reachable, then ok is set to false.
 func (s *BackendService) Port() (port uint16, ok bool) {
 	value := s.BackendServiceConfig.ImageConfig.Port
@@ -187,4 +188,27 @@ func newDefaultBackendService() *BackendService {
 		},
 		Environments: map[string]*BackendServiceConfig{},
 	}
+}
+
+// ExposedPorts returns all the ports that are container ports available to receive traffic.
+func (b *BackendService) ExposedPorts() []ExposedPort {
+
+	var exposedPortList []ExposedPort
+	exposedPorts := make(map[int]ExposedPort)
+
+	workloadName := aws.StringValue(b.Name)
+	b.ImageConfig.exposedPorts(exposedPorts, workloadName)
+	b.RoutingRule.exposedPorts(exposedPorts, workloadName)
+	for name, sidecar := range b.Sidecars {
+		sidecar.exposedPorts(exposedPorts, name)
+	}
+
+	for _, v := range exposedPorts {
+		exposedPortList = append(exposedPortList, v)
+	}
+	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
+	sort.Slice(exposedPortList, func(i, j int) bool {
+		return exposedPortList[i].Port < exposedPortList[j].Port
+	})
+	return exposedPortList
 }
