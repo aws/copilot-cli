@@ -71,6 +71,7 @@ type EnvConfig struct {
 	AdditionalTags       map[string]string     // AdditionalTags are labels applied to resources under the application.
 	ArtifactBucketARN    string                // ARN of the regional application bucket.
 	ArtifactBucketKeyARN string                // ARN of the KMS key used to encrypt the contents in the regional application bucket.
+	PermissionsBoundary  string                // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.
 
 	// Runtime configurations.
 	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
@@ -88,8 +89,6 @@ type EnvConfig struct {
 	Mft                 *manifest.Environment // Unmarshaled and interpolated manifest object.
 	RawMft              []byte                // Content of the environment manifest without any modifications.
 	ForceUpdate         bool
-
-	PermissionsBoundary string // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.
 }
 
 // Env is for providing all the values to set up an
