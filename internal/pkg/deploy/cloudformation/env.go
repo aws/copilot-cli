@@ -22,8 +22,8 @@ import (
 )
 
 // CreateAndRenderEnvironment creates the CloudFormation stack for an environment, and render the stack creation to out.
-func (cf CloudFormation) CreateAndRenderEnvironment(env *deploy.CreateEnvironmentInput) error {
-	cfnStack, err := cf.toUploadedStack(env.ArtifactBucketARN, stack.NewBootstrapEnvStackConfig(env))
+func (cf CloudFormation) CreateAndRenderEnvironment(conf StackConfiguration, bucketARN string) error {
+	cfnStack, err := cf.toUploadedStack(bucketARN, conf)
 	if err != nil {
 		return err
 	}
