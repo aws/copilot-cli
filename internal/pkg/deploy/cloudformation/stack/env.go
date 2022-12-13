@@ -16,39 +16,44 @@ import (
 	"github.com/google/uuid"
 )
 
+// Parameter keys.
 const (
-	// Parameter keys.
+	EnvParamAliasesKey                     = "Aliases"
+	EnvParamALBWorkloadsKey                = "ALBWorkloads"
+	EnvParamServiceDiscoveryEndpoint       = "ServiceDiscoveryEndpoint"
 	envParamAppNameKey                     = "AppName"
 	envParamEnvNameKey                     = "EnvironmentName"
 	envParamToolsAccountPrincipalKey       = "ToolsAccountPrincipalARN"
 	envParamAppDNSKey                      = "AppDNSName"
 	envParamAppDNSDelegationRoleKey        = "AppDNSDelegationRole"
-	EnvParamAliasesKey                     = "Aliases"
-	EnvParamALBWorkloadsKey                = "ALBWorkloads"
 	envParamInternalALBWorkloadsKey        = "InternalALBWorkloads"
 	envParamEFSWorkloadsKey                = "EFSWorkloads"
 	envParamNATWorkloadsKey                = "NATWorkloads"
 	envParamAppRunnerPrivateWorkloadsKey   = "AppRunnerPrivateWorkloads"
 	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
 	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
-	EnvParamServiceDiscoveryEndpoint       = "ServiceDiscoveryEndpoint"
+)
 
-	// Output keys.
+// Output keys.
+const (
 	EnvOutputVPCID               = "VpcId"
 	EnvOutputPublicSubnets       = "PublicSubnets"
 	EnvOutputPrivateSubnets      = "PrivateSubnets"
 	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
 	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
-
-	// Default parameter values.
-	DefaultVPCCIDR = "10.0.0.0/16"
 )
+
+// DefaultVPCCIDR is the default CIDR used for a manged VPC.
+const DefaultVPCCIDR = "10.0.0.0/16"
 
 var (
-	fmtServiceDiscoveryEndpoint = "%s.%s.local"
-	DefaultPublicSubnetCIDRs    = []string{"10.0.0.0/24", "10.0.1.0/24"}
-	DefaultPrivateSubnetCIDRs   = []string{"10.0.2.0/24", "10.0.3.0/24"}
+	// DefaultPublicSubnetCIDRs contains two default CIDRs for the two managed public subnets.
+	DefaultPublicSubnetCIDRs = []string{"10.0.0.0/24", "10.0.1.0/24"}
+	// DefaultPrivateSubnetCIDRs contains two default CIDRs for the two managed private subnets.
+	DefaultPrivateSubnetCIDRs = []string{"10.0.2.0/24", "10.0.3.0/24"}
 )
+
+var fmtServiceDiscoveryEndpoint = "%s.%s.local"
 
 type envReadParser interface {
 	template.ReadParser
@@ -58,12 +63,11 @@ type envReadParser interface {
 
 // EnvConfig holds the fields required to deploy an environment.
 type EnvConfig struct {
-	// The version of the environment template to create the stack. If empty, creates the legacy stack.
-	Version string
+	Name    string // Name of the environment, must be unique within an application.
+	Version string // The version of the environment template to create the stack. If empty, creates the legacy stack.
 
 	// Application regional configurations.
 	App                  deploy.AppInformation // Information about the application that the environment belongs to, include app name, DNS name, the principal ARN of the account.
-	Name                 string                // Name of the environment, must be unique within an application.
 	AdditionalTags       map[string]string     // AdditionalTags are labels applied to resources under the application.
 	ArtifactBucketARN    string                // ARN of the regional application bucket.
 	ArtifactBucketKeyARN string                // ARN of the KMS key used to encrypt the contents in the regional application bucket.
