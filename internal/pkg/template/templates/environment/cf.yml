@@ -646,6 +646,21 @@ Resources:
                   - logs:DescribeLogStreams
                 Resource: "*"
 {{- end}}
+{{- if .Addons}}
+  AddonsStack:
+    Metadata:
+      'aws:copilot:description': 'An addons CloudFormation stack for your additional AWS resources'
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        App: !Ref AppName
+        Env: !Ref EnvironmentName
+        {{- if .Addons.ExtraParams }}
+        {{ .Addons.ExtraParams }}
+        {{- end}}
+      TemplateURL: {{.Addons.URL}}
+{{- end }}
+
 Outputs:
   VpcId:
 {{- if .VPCConfig.Imported}}
