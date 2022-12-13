@@ -21,7 +21,7 @@ const (
 
 var (
 	wkldAddonsParameterReservedKeys = []string{"App", "Env", "Name"}
-	envAddonsParameterReservedKeys  = []string{"App", "Name"}
+	envAddonsParameterReservedKeys  = []string{"App", "Env"}
 )
 
 var (
