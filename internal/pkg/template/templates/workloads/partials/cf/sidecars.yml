@@ -3,9 +3,9 @@
   Image: {{ .LogConfig.Image }}
   Environment:
 {{include "envvars-common" . | indent 2}}
-{{if .LogConfig.Variables}}{{range $name, $value := .LogConfig.Variables}}
-  - Name: {{$name}}
-    Value: {{$value | printf "%q"}}{{end}}{{end}}
+{{if .LogConfig.Variables}}
+{{include "variables" .LogConfig | indent 2 }}
+{{end}}
 {{- if .LogConfig.Secrets}}
   Secrets:
   {{- range $name, $secret := .LogConfig.Secrets}}

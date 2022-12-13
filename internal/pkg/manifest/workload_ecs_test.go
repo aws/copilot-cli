@@ -78,6 +78,135 @@ count: 1`),
 	}
 }
 
+func TestVariable_UnmarshalYAML(t *testing.T) {
+	type mockParentField struct {
+		Variables map[string]Variable `yaml:"variables"`
+	}
+	testCases := map[string]struct {
+		in          []byte
+		wanted      mockParentField
+		wantedError error
+	}{
+		"unmarshal plain string": {
+			in: []byte(`
+variables:
+  LOG_LEVEL: DEBUG
+`),
+			wanted: mockParentField{
+				Variables: map[string]Variable{
+					"LOG_LEVEL": {
+						stringOrFromCFN{
+							Plain: stringP("DEBUG"),
+						},
+					},
+				},
+			},
+		},
+		"unmarshal import name": {
+			in: []byte(`
+variables:
+  DB_NAME:
+    from_cfn: MyUserDB
+`),
+			wanted: mockParentField{
+				Variables: map[string]Variable{
+					"DB_NAME": {
+						stringOrFromCFN{
+							FromCFN: fromCFN{
+								Name: stringP("MyUserDB"),
+							},
+						},
+					},
+				},
+			},
+		},
+		"nothing to unmarshal": {
+			in: []byte(`other_field: yo`),
+		},
+		"fail to unmarshal": {
+			in: []byte(`
+variables:
+  erroneous: 
+    big_mistake: being made`),
+			wantedError: errors.New(`unmarshal "variables": cannot unmarshal field to a string or into a map`),
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			var s mockParentField
+			err := yaml.Unmarshal(tc.in, &s)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.wanted, s)
+			}
+		})
+	}
+}
+
+func TestVariable_RequiresImport(t *testing.T) {
+	testCases := map[string]struct {
+		in     Variable
+		wanted bool
+	}{
+		"requires import": {
+			in: Variable{
+				stringOrFromCFN{
+					FromCFN: fromCFN{
+						Name: stringP("prod-MyDB"),
+					},
+				},
+			},
+			wanted: true,
+		},
+		"does not require import if it is a plain value": {
+			in: Variable{
+				stringOrFromCFN{
+					Plain: stringP("plain"),
+				},
+			},
+			wanted: false,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.RequiresImport())
+		})
+	}
+}
+
+func TestVariable_Value(t *testing.T) {
+	testCases := map[string]struct {
+		in     Variable
+		wanted string
+	}{
+		"requires import": {
+			in: Variable{
+				stringOrFromCFN{
+					FromCFN: fromCFN{
+						Name: stringP("prod-MyDB"),
+					},
+				},
+			},
+			wanted: "prod-MyDB",
+		},
+		"does not require import if it is a plain value": {
+			in: Variable{
+				stringOrFromCFN{
+					Plain: stringP("plain"),
+				},
+			},
+			wanted: "plain",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.wanted, tc.in.Value())
+		})
+	}
+}
+
 func TestSecret_UnmarshalYAML(t *testing.T) {
 	testCases := map[string]struct {
 		in string

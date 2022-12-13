@@ -280,6 +280,20 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
+						Variables: map[string]Variable{
+							"VAR1": {
+								stringOrFromCFN{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{
+										Name: stringP("import-var2"),
+									},
+								},
+							},
+						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
 								"myEFSVolume": {
@@ -331,6 +345,20 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Memory: aws.Int(1024),
 						Count: Count{
 							Value: aws.Int(1),
+						},
+						Variables: map[string]Variable{
+							"VAR1": {
+								stringOrFromCFN{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{
+										Name: stringP("import-var2"),
+									},
+								},
+							},
 						},
 						Storage: Storage{
 							Volumes: map[string]*Volume{
@@ -384,9 +412,31 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(1),
 						},
-						Variables: map[string]string{
-							"LOG_LEVEL":      "DEBUG",
-							"DDB_TABLE_NAME": "awards",
+						Variables: map[string]Variable{
+							"LOG_LEVEL": {
+								stringOrFromCFN{
+									Plain: stringP("DEBUG"),
+								},
+							},
+							"S3_TABLE_NAME": {
+								stringOrFromCFN{
+									Plain: stringP("doggo"),
+								},
+							},
+							"RDS_TABLE_NAME": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{
+										Name: stringP("duckling"),
+									},
+								},
+							},
+							"DDB_TABLE_NAME": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{
+										Name: stringP("awards"),
+									},
+								},
+							},
 						},
 						Secrets: map[string]Secret{
 							"GITHUB_TOKEN": {from: aws.String("1111")},
@@ -457,8 +507,25 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							Count: Count{
 								Value: aws.Int(0),
 							},
-							Variables: map[string]string{
-								"DDB_TABLE_NAME": "awards-prod",
+							Variables: map[string]Variable{
+								"LOG_LEVEL": {
+									stringOrFromCFN{
+										Plain: stringP("ERROR"),
+									},
+								},
+								"S3_TABLE_NAME": {
+									stringOrFromCFN{
+										FromCFN: fromCFN{Name: stringP("prod-doggo")},
+									},
+								},
+								"RDS_TABLE_NAME": {
+									stringOrFromCFN{Plain: stringP("duckling-prod")},
+								},
+								"DDB_TABLE_NAME": {
+									stringOrFromCFN{
+										FromCFN: fromCFN{Name: stringP("awards-prod")},
+									},
+								},
 							},
 							Storage: Storage{
 								Volumes: map[string]*Volume{
@@ -539,9 +606,27 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Count: Count{
 							Value: aws.Int(0),
 						},
-						Variables: map[string]string{
-							"LOG_LEVEL":      "DEBUG",
-							"DDB_TABLE_NAME": "awards-prod",
+						Variables: map[string]Variable{
+							"LOG_LEVEL": {
+								stringOrFromCFN{
+									Plain: stringP("ERROR"),
+								},
+							},
+							"S3_TABLE_NAME": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("prod-doggo")},
+								},
+							},
+							"RDS_TABLE_NAME": {
+								stringOrFromCFN{
+									Plain: stringP("duckling-prod"),
+								},
+							},
+							"DDB_TABLE_NAME": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("awards-prod")},
+								},
+							},
 						},
 						Secrets: map[string]Secret{
 							"GITHUB_TOKEN": {from: aws.String("1111")},
@@ -612,6 +697,18 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								CPU:   mockConfig,
 							},
 						},
+						Variables: map[string]Variable{
+							"VAR1": {
+								stringOrFromCFN{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("import-var2")},
+								},
+							},
+						},
 					},
 					ImageOverride: ImageOverride{
 						Command: CommandOverride{
@@ -636,6 +733,18 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							AdvancedCount: AdvancedCount{
 								Range: Range{Value: &mockRange},
 								CPU:   mockConfig,
+							},
+						},
+						Variables: map[string]Variable{
+							"VAR1": {
+								stringOrFromCFN{
+									Plain: stringP("var1"),
+								},
+							},
+							"VAR2": {
+								stringOrFromCFN{
+									FromCFN: fromCFN{Name: stringP("import-var2")},
+								},
 							},
 						},
 					},
