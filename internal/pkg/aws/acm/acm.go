@@ -87,6 +87,7 @@ func (a *ACM) validDomainsOfCert(ctx context.Context, cert string) ([]string, er
 		return nil, fmt.Errorf("describe certificate %s: %w", cert, err)
 	}
 	var domainsOfCert []string
+	domainsOfCert = append(domainsOfCert, aws.StringValue(resp.Certificate.DomainName))
 	for _, san := range resp.Certificate.SubjectAlternativeNames {
 		domainsOfCert = append(domainsOfCert, aws.StringValue(san))
 	}
