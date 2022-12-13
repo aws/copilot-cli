@@ -118,7 +118,7 @@ func (r *RollbackAlarmArgsOrNames) UnmarshalYAML(value *yaml.Node) error {
 	}
 	return nil
 }
-
+// IsEmpty returns true if neither alarm names nor alarm args (for creating alarms) are present.
 func (r *RollbackAlarmArgsOrNames) IsEmpty() bool {
 	return r.AlarmNames == nil && r.AlarmArgs.isEmpty()
 }
