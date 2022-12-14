@@ -230,7 +230,6 @@ gen-mocks: tools
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_svc.go -source=./internal/pkg/cli/deploy/svc.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_worker.go -source=./internal/pkg/cli/deploy/worker.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_workload.go -source=./internal/pkg/cli/deploy/workload.go
-	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/mocks/mock_backend.go -source=./internal/pkg/cli/deploy/backend.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/cli/deploy/patch/mocks/mock_env.go -source=./internal/pkg/cli/deploy/patch/env.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/initialize/mocks/mock_workload.go -source=./internal/pkg/initialize/workload.go
 	${GOBIN}/mockgen -package=mocks -destination=./internal/pkg/ecs/mocks/mock_ecs.go -source=./internal/pkg/ecs/ecs.go
