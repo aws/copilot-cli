@@ -6,7 +6,6 @@ package deploy
 import (
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/acm"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
@@ -30,6 +29,7 @@ func NewBackendDeployer(in *WorkloadDeployerInput) (*backendSvcDeployer, error) 
 	if err != nil {
 		return nil, err
 	}
+	svcDeployer.svcUpdater = ecs.New(svcDeployer.envSess)
 	bsMft, ok := in.Mft.(*manifest.BackendService)
 	if !ok {
 		return nil, fmt.Errorf("manifest is not of type %s", manifest.BackendServiceType)
@@ -54,33 +54,11 @@ func (backendSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
-func (d *backendSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+func (d *backendSvcDeployer) UploadArtifacts() error {
 	return d.uploadArtifacts(d.customResources)
 }
 
-// GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.
-func (d *backendSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
-	*GenerateCloudFormationTemplateOutput, error) {
-	output, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	return d.generateCloudFormationTemplate(output.conf)
-}
-
-// DeployWorkload deploys a backend service using CloudFormation.
-func (d *backendSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
-	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
-		return nil, err
-	}
-	return nil, nil
-}
-
-func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {
+func (d *backendSvcDeployer) Stack(in StackRuntimeConfiguration) (Stack, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
@@ -99,12 +77,7 @@ func (d *backendSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
-	return &svcStackConfigurationOutput{
-		conf: conf,
-		svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
-			return ecs.New(s)
-		}),
-	}, nil
+	return conf, nil
 }
 
 func (d *backendSvcDeployer) validateALBRuntime() error {

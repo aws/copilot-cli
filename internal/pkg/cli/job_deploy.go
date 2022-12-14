@@ -179,7 +179,7 @@ func (o *deployJobOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("upload deploy resources for job %s: %w", o.name, err)
 	}
-	if _, err = deployer.DeployWorkload(&deploy.DeployWorkloadInput{
+	if _, err = deployer.DeployWorkload(&deploy.DeployInput{
 		StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 			ImageDigest:        uploadOut.ImageDigest,
 			EnvFileARN:         uploadOut.EnvFileARN,
@@ -188,7 +188,7 @@ func (o *deployJobOpts) Execute() error {
 			Tags:               tags.Merge(o.targetApp.Tags, o.resourceTags),
 			CustomResourceURLs: uploadOut.CustomResourceURLs,
 		},
-		Options: deploy.Options{
+		DeployOpts: deploy.DeployOpts{
 			DisableRollback: o.disableRollback,
 		},
 	}); err != nil {

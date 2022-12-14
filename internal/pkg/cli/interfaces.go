@@ -631,18 +631,16 @@ type interpolator interface {
 }
 
 type workloadDeployer interface {
-	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
-	DeployWorkload(in *clideploy.DeployWorkloadInput) (clideploy.ActionRecommender, error)
+	UploadArtifacts() error
+	Stack(clideploy.StackRuntimeConfiguration) (clideploy.Stack, error)
+	Deploy(clideploy.Stack, clideploy.DeployOpts) error
 	IsServiceAvailableInRegion(region string) (bool, error)
-}
+	RecommendActions() []string
 
-type workloadStackGenerator interface {
-	UploadArtifacts() (*clideploy.UploadArtifactsOutput, error)
-	GenerateCloudFormationTemplate(in *clideploy.GenerateCloudFormationTemplateInput) (
-		*clideploy.GenerateCloudFormationTemplateOutput, error)
+	// TODO ?
+	// AddonsStack() (clideploy.Stack, error)
 	AddonsTemplate() (string, error)
 }
-
 type runner interface {
 	Run() error
 }

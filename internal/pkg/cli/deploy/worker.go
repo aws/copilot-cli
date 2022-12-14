@@ -9,7 +9,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/session"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -37,11 +36,9 @@ type workerSvcDeployer struct {
 	topicLister     snsTopicsLister
 	wsMft           *manifest.WorkerService
 	customResources customResourcesFunc
-}
 
-// IsServiceAvailableInRegion checks if service type exist in the given region.
-func (workerSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
-	return partitions.IsAvailableInRegion(awsecs.EndpointsID, region)
+	// cached
+	subs []manifest.TopicSubscription
 }
 
 // NewWorkerSvcDeployer is the constructor for workerSvcDeployer.
@@ -50,6 +47,7 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 	if err != nil {
 		return nil, err
 	}
+	svcDeployer.svcUpdater = ecs.New(svcDeployer.envSess)
 	deployStore, err := deploy.NewStore(in.SessionProvider, svcDeployer.store)
 	if err != nil {
 		return nil, fmt.Errorf("new deploy store: %w", err)
@@ -72,84 +70,17 @@ func NewWorkerSvcDeployer(in *WorkloadDeployerInput) (*workerSvcDeployer, error)
 	}, nil
 }
 
+// IsServiceAvailableInRegion checks if service type exist in the given region.
+func (workerSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
+	return partitions.IsAvailableInRegion(awsecs.EndpointsID, region)
+}
+
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
-func (d *workerSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+func (d *workerSvcDeployer) UploadArtifacts() error {
 	return d.uploadArtifacts(d.customResources)
 }
 
-type workerSvcDeployOutput struct {
-	subs []manifest.TopicSubscription
-}
-
-// RecommendedActions returns the recommended actions after deployment.
-func (d *workerSvcDeployOutput) RecommendedActions() []string {
-	if d.subs == nil {
-		return nil
-	}
-	retrieveEnvVarCode := "const eventsQueueURI = process.env.COPILOT_QUEUE_URI"
-	actionRetrieveEnvVar := fmt.Sprintf(
-		`Update worker service code to leverage the injected environment variable "COPILOT_QUEUE_URI".
-    In JavaScript you can write %s.`,
-		color.HighlightCode(retrieveEnvVarCode),
-	)
-	recs := []string{actionRetrieveEnvVar}
-	topicQueueNames := d.buildWorkerQueueNames()
-	if topicQueueNames == "" {
-		return recs
-	}
-	retrieveTopicQueueEnvVarCode := fmt.Sprintf("const {%s} = JSON.parse(process.env.COPILOT_TOPIC_QUEUE_URIS)", topicQueueNames)
-	actionRetrieveTopicQueues := fmt.Sprintf(
-		`You can retrieve topic-specific queues by writing
-    %s.`,
-		color.HighlightCode(retrieveTopicQueueEnvVarCode),
-	)
-	recs = append(recs, actionRetrieveTopicQueues)
-	return recs
-}
-
-// GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.
-func (d *workerSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
-	*GenerateCloudFormationTemplateOutput, error) {
-	output, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	return d.generateCloudFormationTemplate(output.conf)
-}
-
-// DeployWorkload deploys a worker service using CloudFormation.
-func (d *workerSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
-	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	if err := d.deploy(in.Options, stackConfigOutput.svcStackConfigurationOutput); err != nil {
-		return nil, err
-	}
-	return &workerSvcDeployOutput{
-		subs: stackConfigOutput.subscriptions,
-	}, nil
-}
-
-func (d *workerSvcDeployOutput) buildWorkerQueueNames() string {
-	var queueNames []string
-	for _, subscription := range d.subs {
-		if subscription.Queue.IsEmpty() {
-			continue
-		}
-		svc := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Service))
-		topic := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Name))
-		queueNames = append(queueNames, fmt.Sprintf("%s%sEventsQueue", svc, cases.Title(language.English).String(topic)))
-	}
-	return strings.Join(queueNames, ", ")
-}
-
-type workerSvcStackConfigurationOutput struct {
-	svcStackConfigurationOutput
-	subscriptions []manifest.TopicSubscription
-}
-
-func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*workerSvcStackConfigurationOutput, error) {
+func (d *workerSvcDeployer) Stack(in StackRuntimeConfiguration) (Stack, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
@@ -167,6 +98,7 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 	if err = validateTopicsExist(subs, topicARNs, d.app.Name, d.env.Name); err != nil {
 		return nil, err
 	}
+	d.subs = subs
 	conf, err := stack.NewWorkerService(stack.WorkerServiceConfig{
 		App:           d.app,
 		Env:           d.env.Name,
@@ -178,15 +110,51 @@ func (d *workerSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
-	return &workerSvcStackConfigurationOutput{
-		svcStackConfigurationOutput: svcStackConfigurationOutput{
-			conf: conf,
-			svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
-				return ecs.New(s)
-			}),
-		},
-		subscriptions: subs,
-	}, nil
+	return conf, nil
+}
+
+type workerSvcDeployOutput struct {
+	subs []manifest.TopicSubscription
+}
+
+// RecommendedActions returns the recommended actions after deployment.
+func (d *workerSvcDeployer) RecommendedActions() []string {
+	if d.subs == nil {
+		return nil
+	}
+
+	retrieveEnvVarCode := "const eventsQueueURI = process.env.COPILOT_QUEUE_URI"
+	actionRetrieveEnvVar := fmt.Sprintf(
+		`Update worker service code to leverage the injected environment variable "COPILOT_QUEUE_URI".
+    In JavaScript you can write %s.`,
+		color.HighlightCode(retrieveEnvVarCode),
+	)
+	recs := []string{actionRetrieveEnvVar}
+	topicQueueNames := buildWorkerQueueNames(d.subs)
+	if topicQueueNames == "" {
+		return recs
+	}
+	retrieveTopicQueueEnvVarCode := fmt.Sprintf("const {%s} = JSON.parse(process.env.COPILOT_TOPIC_QUEUE_URIS)", topicQueueNames)
+	actionRetrieveTopicQueues := fmt.Sprintf(
+		`You can retrieve topic-specific queues by writing
+    %s.`,
+		color.HighlightCode(retrieveTopicQueueEnvVarCode),
+	)
+	recs = append(recs, actionRetrieveTopicQueues)
+	return recs
+}
+
+func buildWorkerQueueNames(subs []manifest.TopicSubscription) string {
+	var queueNames []string
+	for _, subscription := range subs {
+		if subscription.Queue.IsEmpty() {
+			continue
+		}
+		svc := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Service))
+		topic := template.StripNonAlphaNumFunc(aws.StringValue(subscription.Name))
+		queueNames = append(queueNames, fmt.Sprintf("%s%sEventsQueue", svc, cases.Title(language.English).String(topic)))
+	}
+	return strings.Join(queueNames, ", ")
 }
 
 func validateTopicsExist(subscriptions []manifest.TopicSubscription, topicARNs []string, app, env string) error {

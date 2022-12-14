@@ -10,12 +10,11 @@ import (
 	"io"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"golang.org/x/mod/semver"
 
+	sdkcfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
-	"github.com/aws/copilot-cli/internal/pkg/deploy/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 )
@@ -27,6 +26,8 @@ type uploader interface {
 type stackSerializer interface {
 	templater
 	SerializedParameters() (string, error)
+	Parameters() ([]*sdkcfn.Parameter, error)
+	Tags() []*sdkcfn.Tag
 }
 
 type versionGetter interface {
@@ -44,8 +45,8 @@ type aliasCertValidator interface {
 
 type svcDeployer struct {
 	*workloadDeployer
-	newSvcUpdater func(func(*session.Session) serviceForceUpdater) serviceForceUpdater
-	now           func() time.Time
+	svcUpdater serviceForceUpdater
+	now        func() time.Time
 }
 
 func newSvcDeployer(in *WorkloadDeployerInput) (*svcDeployer, error) {
@@ -55,52 +56,44 @@ func newSvcDeployer(in *WorkloadDeployerInput) (*svcDeployer, error) {
 	}
 	return &svcDeployer{
 		workloadDeployer: wkldDeployer,
-		newSvcUpdater: func(f func(*session.Session) serviceForceUpdater) serviceForceUpdater {
-			return f(wkldDeployer.envSess)
-		},
-		now: time.Now,
+		now:              time.Now,
 	}, nil
 }
 
-func (d *svcDeployer) deploy(deployOptions Options, stackConfigOutput svcStackConfigurationOutput) error {
+func (d *svcDeployer) Deploy(stack Stack, deployOpts DeployOpts) error {
 	opts := []awscloudformation.StackOption{
 		awscloudformation.WithRoleARN(d.env.ExecutionRoleARN),
 	}
-	if deployOptions.DisableRollback {
+	if deployOpts.DisableRollback {
 		opts = append(opts, awscloudformation.WithDisableRollback())
 	}
 	cmdRunAt := d.now()
-	if err := d.deployer.DeployService(stackConfigOutput.conf, d.resources.S3Bucket, opts...); err != nil {
+	if err := d.deployer.DeployService(stack, d.resources.S3Bucket, opts...); err != nil {
 		var errEmptyCS *awscloudformation.ErrChangeSetEmpty
 		if !errors.As(err, &errEmptyCS) {
 			return fmt.Errorf("deploy service: %w", err)
 		}
-		if !deployOptions.ForceNewUpdate {
+		if !deployOpts.ForceNewUpdate {
 			log.Warningln("Set --force to force an update for the service.")
 			return fmt.Errorf("deploy service: %w", err)
 		}
 	}
 	// Force update the service if --force is set and the service is not updated by the CFN.
-	if deployOptions.ForceNewUpdate {
-		lastUpdatedAt, err := stackConfigOutput.svcUpdater.LastUpdatedAt(d.app.Name, d.env.Name, d.name)
+	if deployOpts.ForceNewUpdate {
+		lastUpdatedAt, err := d.svcUpdater.LastUpdatedAt(d.app.Name, d.env.Name, d.name)
 		if err != nil {
 			return fmt.Errorf("get the last updated deployment time for %s: %w", d.name, err)
 		}
 		if cmdRunAt.After(lastUpdatedAt) {
 			if err := d.forceDeploy(&forceDeployInput{
 				spinner:    d.spinner,
-				svcUpdater: stackConfigOutput.svcUpdater,
+				svcUpdater: d.svcUpdater,
 			}); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
-}
-
-type svcStackConfigurationOutput struct {
-	conf       cloudformation.StackConfiguration
-	svcUpdater serviceForceUpdater
 }
 
 func validateAppVersionForAlias(appName string, appVersionGetter versionGetter) error {

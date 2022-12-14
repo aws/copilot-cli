@@ -202,7 +202,7 @@ count: 1`
 				m.generator.EXPECT().UploadArtifacts().Return(&deploy.UploadArtifactsOutput{
 					ImageDigest: aws.String(mockDigest),
 				}, nil)
-				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
+				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.StackInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						ImageDigest: aws.String(mockDigest),
 						RootUserARN: mockARN,
@@ -243,7 +243,7 @@ count: 1`
 					},
 				}
 				m.envFeaturesDescriber.EXPECT().AvailableFeatures().Return([]string{}, nil)
-				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.GenerateCloudFormationTemplateInput{
+				m.generator.EXPECT().GenerateCloudFormationTemplate(&deploy.StackInput{
 					StackRuntimeConfiguration: deploy.StackRuntimeConfiguration{
 						RootUserARN: mockARN,
 					},

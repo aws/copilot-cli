@@ -40,6 +40,7 @@ type packageSvcVars struct {
 	tag          string
 	outputDir    string
 	uploadAssets bool
+	showDiff     bool
 
 	// To facilitate unit tests.
 	clientConfigured bool
@@ -60,7 +61,7 @@ type packageSvcOpts struct {
 	sel                  wsSelector
 	unmarshal            func([]byte) (manifest.DynamicWorkload, error)
 	newInterpolator      func(app, env string) interpolator
-	newStackGenerator    func(*packageSvcOpts) (workloadStackGenerator, error)
+	newWorkloadDeployer  func(*packageSvcOpts) (workloadDeployer, error)
 	envFeaturesDescriber versionCompatibilityChecker
 
 	// cached variables
@@ -71,14 +72,14 @@ type packageSvcOpts struct {
 	rootUserARN       string
 }
 
-func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
+func newPackageSvcOpts(vars packageSvcVars, userAgent string) (*packageSvcOpts, error) {
 	fs := afero.NewOsFs()
 	ws, err := workspace.Use(fs)
 	if err != nil {
 		return nil, err
 	}
 
-	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras("svc package"))
+	sessProvider := sessions.ImmutableProvider(sessions.UserAgentExtras(userAgent))
 	defaultSess, err := sessProvider.Default()
 	if err != nil {
 		return nil, fmt.Errorf("default session: %v", err)
@@ -86,25 +87,26 @@ func newPackageSvcOpts(vars packageSvcVars) (*packageSvcOpts, error) {
 
 	store := config.NewSSMStore(identity.New(defaultSess), ssm.New(defaultSess), aws.StringValue(defaultSess.Config.Region))
 	prompter := prompt.New()
-	opts := &packageSvcOpts{
-		packageSvcVars:    vars,
-		store:             store,
-		ws:                ws,
-		fs:                fs,
-		unmarshal:         manifest.UnmarshalWorkload,
-		runner:            exec.NewCmd(),
-		sel:               selector.NewLocalWorkloadSelector(prompter, store, ws),
-		templateWriter:    os.Stdout,
-		paramsWriter:      discardFile{},
-		addonsWriter:      discardFile{},
-		newInterpolator:   newManifestInterpolator,
-		sessProvider:      sessProvider,
-		newStackGenerator: newWorkloadStackGenerator,
-	}
-	return opts, nil
+	return &packageSvcOpts{
+		packageSvcVars: vars,
+		store:          store,
+		ws:             ws,
+		fs:             fs,
+		unmarshal:      manifest.UnmarshalWorkload,
+		runner:         exec.NewCmd(),
+		sel:            selector.NewLocalWorkloadSelector(prompter, store, ws),
+		templateWriter: os.Stdout,
+		paramsWriter:   discardFile{},
+		addonsWriter:   discardFile{},
+		newInterpolator: func(app, env string) interpolator {
+			return manifest.NewInterpolator(app, env)
+		},
+		sessProvider:        sessProvider,
+		newWorkloadDeployer: newWorkloadDeployer,
+	}, nil
 }
 
-func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error) {
+func newWorkloadDeployer(o *packageSvcOpts) (workloadDeployer, error) {
 	targetApp, err := o.getTargetApp()
 	if err != nil {
 		return nil, err
@@ -119,7 +121,7 @@ func newWorkloadStackGenerator(o *packageSvcOpts) (workloadStackGenerator, error
 	}
 
 	content := o.appliedDynamicMft.Manifest()
-	var deployer workloadStackGenerator
+	var deployer workloadDeployer
 	in := clideploy.WorkloadDeployerInput{
 		SessionProvider:  o.sessProvider,
 		Name:             o.name,
@@ -220,6 +222,39 @@ func (o *packageSvcOpts) Execute() error {
 	return o.writeAndClose(o.addonsWriter, addonsTemplate)
 }
 
+type workloadStack struct {
+	name       string
+	template   string
+	parameters map[string]string
+	tags       map[string]string
+}
+
+type workloadStacks struct {
+	main   workloadStack
+	addons workloadStack
+}
+
+func (o *packageSvcOpts) Deployer() (workloadDeployer, error) {
+	mft, err := workloadManifest(&workloadManifestInput{
+		name:         o.name,
+		appName:      o.appName,
+		envName:      o.envName,
+		interpolator: o.newInterpolator(o.appName, o.envName),
+		ws:           o.ws,
+		unmarshal:    o.unmarshal,
+		sess:         o.envSess,
+	})
+	if err != nil {
+		return nil, err
+	}
+	o.appliedDynamicMft = mft
+	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, o.appliedDynamicMft, o.envName); err != nil {
+		return nil, err
+	}
+
+	return o.newWorkloadDeployer(o)
+}
+
 func (o *packageSvcOpts) validateOrAskSvcName() error {
 	if o.name != "" {
 		names, err := o.ws.ListServices()
@@ -294,26 +329,6 @@ type cfnStackConfig struct {
 	parameters string
 }
 
-func (o *packageSvcOpts) getStackGenerator(env *config.Environment) (workloadStackGenerator, error) {
-	mft, err := workloadManifest(&workloadManifestInput{
-		name:         o.name,
-		appName:      o.appName,
-		envName:      o.envName,
-		interpolator: o.newInterpolator(o.appName, o.envName),
-		ws:           o.ws,
-		unmarshal:    o.unmarshal,
-		sess:         o.envSess,
-	})
-	if err != nil {
-		return nil, err
-	}
-	o.appliedDynamicMft = mft
-	if err := validateWorkloadManifestCompatibilityWithEnv(o.ws, o.envFeaturesDescriber, o.appliedDynamicMft, o.envName); err != nil {
-		return nil, err
-	}
-	return o.newStackGenerator(o)
-}
-
 // getWorkloadStack returns the CloudFormation stack's template and its parameters for the service.
 func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cfnStackConfig, error) {
 	targetApp, err := o.getTargetApp()
@@ -328,7 +343,7 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 		}
 		uploadOut = *out
 	}
-	output, err := generator.GenerateCloudFormationTemplate(&clideploy.GenerateCloudFormationTemplateInput{
+	output, err := generator.GenerateCloudFormationTemplate(&clideploy.StackInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			RootUserARN:        o.rootUserARN,
 			Tags:               targetApp.Tags,
@@ -446,7 +461,7 @@ func buildSvcPackageCmd() *cobra.Command {
   frontend-test.stack.yml      frontend-test.params.json
   /endcodeblock`,
 		RunE: runCmdE(func(cmd *cobra.Command, args []string) error {
-			opts, err := newPackageSvcOpts(vars)
+			opts, err := newPackageSvcOpts(vars, "svc package")
 			if err != nil {
 				return err
 			}

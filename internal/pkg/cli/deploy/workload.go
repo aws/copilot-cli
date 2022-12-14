@@ -14,6 +14,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	sdkcfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -82,34 +83,27 @@ type fileReader interface {
 	ReadFile(string) ([]byte, error)
 }
 
+type stackGetter interface {
+	TemplateBody(string) (string, error)
+	Describe(name string) (*awscloudformation.StackDescription, error)
+}
+
 // StackRuntimeConfiguration contains runtime configuration for a workload CloudFormation stack.
 type StackRuntimeConfiguration struct {
-	// Use *string for three states (see https://github.com/aws/copilot-cli/pull/3268#discussion_r806060230)
-	// This is mainly to keep the `workload package` behavior backward-compatible, otherwise our old pipeline buildspec would break,
-	// since previously we parsed the env region from a mock ECR URL that we generated from `workload package``.
-	ImageDigest        *string
-	EnvFileARN         string
-	AddonsURL          string
-	RootUserARN        string
-	Tags               map[string]string
-	CustomResourceURLs map[string]string
+	RootUserARN string
+	Tags        map[string]string
 }
 
-// DeployWorkloadInput is the input of DeployWorkload.
-type DeployWorkloadInput struct {
+// DeployInput is the input of DeployWorkload.
+type DeployInput struct {
 	StackRuntimeConfiguration
-	Options
+	DeployOpts
 }
 
-// Options specifies options for the deployment.
-type Options struct {
+// DeployOpts specifies options for the deployment.
+type DeployOpts struct {
 	ForceNewUpdate  bool
 	DisableRollback bool
-}
-
-// GenerateCloudFormationTemplateInput is the input of GenerateCloudFormationTemplate.
-type GenerateCloudFormationTemplateInput struct {
-	StackRuntimeConfiguration
 }
 
 // GenerateCloudFormationTemplateOutput is the output of GenerateCloudFormationTemplate.
@@ -138,6 +132,7 @@ type workloadDeployer struct {
 	spinner            spinner
 	templateFS         template.Reader
 	envVersionGetter   versionGetter
+	stackGetter        stackGetter
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -145,6 +140,7 @@ type workloadDeployer struct {
 	envSess                  *session.Session
 	store                    *config.Store
 	envConfig                *manifest.Environment
+	uploadedArtifacts        *UploadArtifactsOutput
 }
 
 // WorkloadDeployerInput is the input to for workloadDeployer constructor.
@@ -230,6 +226,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
 		templateFS:         template.New(),
 		envVersionGetter:   in.EnvVersionGetter,
+		stackGetter:        awscloudformation.New(envSession),
 
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
@@ -242,6 +239,34 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 	}, nil
 }
 
+// StackInput is the input of GenerateCloudFormationTemplate.
+type StackInput struct {
+	StackRuntimeConfiguration
+}
+
+type Stack interface {
+	StackName() string
+	Template() (string, error)
+	Parameters() ([]*sdkcfn.Parameter, error)
+	Tags() []*sdkcfn.Tag
+
+	SerializedParameters() (string, error)
+}
+
+// TODO
+func (w *workloadDeployer) AddonStack() (Stack, error) {
+	if w.addons == nil {
+		return nil, nil
+	}
+
+	return nil, nil
+	// return w.addons, nil
+}
+
+func (w *workloadDeployer) RecommendActions() []string {
+	return nil
+}
+
 // AddonsTemplate returns this workload's addon template.
 func (w *workloadDeployer) AddonsTemplate() (string, error) {
 	if w.addons == nil {
@@ -249,22 +274,6 @@ func (w *workloadDeployer) AddonsTemplate() (string, error) {
 	}
 
 	return w.addons.Template()
-}
-
-func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) (
-	*GenerateCloudFormationTemplateOutput, error) {
-	tpl, err := conf.Template()
-	if err != nil {
-		return nil, fmt.Errorf("generate stack template: %w", err)
-	}
-	params, err := conf.SerializedParameters()
-	if err != nil {
-		return nil, fmt.Errorf("generate stack template parameters: %w", err)
-	}
-	return &GenerateCloudFormationTemplateOutput{
-		Template:   tpl,
-		Parameters: params,
-	}, nil
 }
 
 type forceDeployInput struct {
@@ -366,42 +375,45 @@ type customResourcesFunc func(fs template.Reader) ([]*customresource.CustomResou
 
 // UploadArtifactsOutput is the output of UploadArtifacts.
 type UploadArtifactsOutput struct {
+	// Use *string for three states (see https://github.com/aws/copilot-cli/pull/3268#discussion_r806060230)
+	// This is mainly to keep the `workload package` behavior backward-compatible, otherwise our old pipeline buildspec would break,
+	// since previously we parsed the env region from a mock ECR URL that we generated from `workload package``.
 	ImageDigest        *string
 	EnvFileARN         string
 	AddonsURL          string
 	CustomResourceURLs map[string]string
 }
 
-func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) (*UploadArtifactsOutput, error) {
+func (d *workloadDeployer) uploadArtifacts(customResources customResourcesFunc) error {
 	imageDigest, err := d.uploadContainerImage(d.imageBuilderPusher)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	s3Artifacts, err := d.uploadArtifactsToS3(&uploadArtifactsToS3Input{
 		fs:       d.fs,
 		uploader: d.s3Client,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	out := &UploadArtifactsOutput{
-		ImageDigest: imageDigest,
-		EnvFileARN:  s3Artifacts.envFileARN,
-		AddonsURL:   s3Artifacts.addonsURL,
-	}
 	crs, err := customResources(d.templateFS)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	urls, err := customresource.Upload(func(key string, contents io.Reader) (string, error) {
 		return d.s3Client.Upload(d.resources.S3Bucket, key, contents)
 	}, crs)
 	if err != nil {
-		return nil, fmt.Errorf("upload custom resources for %q: %w", d.name, err)
+		return fmt.Errorf("upload custom resources for %q: %w", d.name, err)
 	}
-	out.CustomResourceURLs = urls
-	return out, nil
+	d.uploadedArtifacts = &UploadArtifactsOutput{
+		ImageDigest:        imageDigest,
+		EnvFileARN:         s3Artifacts.envFileARN,
+		AddonsURL:          s3Artifacts.addonsURL,
+		CustomResourceURLs: urls,
+	}
+	return nil
 }
 
 type pushEnvFilesToS3BucketInput struct {
@@ -477,7 +489,7 @@ func (d *workloadDeployer) pushAddonsTemplateToS3Bucket() (string, error) {
 	return url, nil
 }
 
-func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.RuntimeConfig, error) {
+func (d *workloadDeployer) runtimeConfig(in StackRuntimeConfiguration) (*stack.RuntimeConfig, error) {
 	endpoint, err := d.endpointGetter.ServiceDiscoveryEndpoint()
 	if err != nil {
 		return nil, fmt.Errorf("get service discovery endpoint: %w", err)
@@ -486,36 +498,51 @@ func (d *workloadDeployer) runtimeConfig(in *StackRuntimeConfiguration) (*stack.
 	if err != nil {
 		return nil, fmt.Errorf("get version of environment %q: %w", d.env.Name, err)
 	}
-	if len(aws.StringValue(in.ImageDigest)) == 0 {
-		return &stack.RuntimeConfig{
-			AddonsTemplateURL:        in.AddonsURL,
-			EnvFileARN:               in.EnvFileARN,
-			AdditionalTags:           in.Tags,
-			ServiceDiscoveryEndpoint: endpoint,
-			AccountID:                d.env.AccountID,
-			Region:                   d.env.Region,
-			CustomResourcesURL:       in.CustomResourceURLs,
-			EnvVersion:               envVersion,
-		}, nil
-	}
-	return &stack.RuntimeConfig{
-		AddonsTemplateURL: in.AddonsURL,
-		EnvFileARN:        in.EnvFileARN,
-		AdditionalTags:    in.Tags,
-		Image: &stack.ECRImage{
-			RepoURL:  d.resources.RepositoryURLs[d.name],
-			ImageTag: d.imageTag,
-			Digest:   aws.StringValue(in.ImageDigest),
-		},
+	rc := &stack.RuntimeConfig{
+		AddonsTemplateURL:        d.uploadedArtifacts.AddonsURL,
+		EnvFileARN:               d.uploadedArtifacts.EnvFileARN,
+		AdditionalTags:           in.Tags,
 		ServiceDiscoveryEndpoint: endpoint,
 		AccountID:                d.env.AccountID,
 		Region:                   d.env.Region,
-		CustomResourcesURL:       in.CustomResourceURLs,
+		CustomResourcesURL:       d.uploadedArtifacts.CustomResourceURLs,
 		EnvVersion:               envVersion,
-	}, nil
+	}
+	if aws.StringValue(d.uploadedArtifacts.ImageDigest) != "" {
+		rc.Image = &stack.ECRImage{
+			RepoURL:  d.resources.RepositoryURLs[d.name],
+			ImageTag: d.imageTag,
+			Digest:   aws.StringValue(d.uploadedArtifacts.ImageDigest),
+		}
+	}
+	return rc, nil
 }
 
 type timeoutError interface {
 	error
 	Timeout() bool
 }
+
+/*
+func (d *workloadDeployer) getDeployedStack(name string) (deployedStack, error) {
+	tmpl, err := d.stackGetter.TemplateBody(name)
+	if err != nil {
+		return deployedStack{}, err
+	}
+
+	desc, err := d.stackGetter.Describe(name)
+	if err != nil {
+		return deployedStack{}, err
+	}
+
+	params := make(map[string]string, len(desc.Parameters))
+	for _, param := range desc.Parameters {
+		params[aws.StringValue(param.ParameterKey)] = aws.StringValue(param.ParameterValue)
+	}
+
+	return deployedStack{
+		template: tmpl,
+		params:   params,
+	}, nil
+}
+*/

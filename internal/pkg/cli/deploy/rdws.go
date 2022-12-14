@@ -9,7 +9,6 @@ import (
 	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/apprunner"
 	awsapprunner "github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/aws/partitions"
@@ -43,6 +42,7 @@ func NewRDWSDeployer(in *WorkloadDeployerInput) (*rdwsDeployer, error) {
 	if err != nil {
 		return nil, err
 	}
+	svcDeployer.svcUpdater = apprunner.New(svcDeployer.envSess)
 	versionGetter, err := describe.NewAppDescriber(in.App.Name)
 	if err != nil {
 		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
@@ -72,7 +72,7 @@ func (rdwsDeployer) IsServiceAvailableInRegion(region string) (bool, error) {
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
-func (d *rdwsDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+func (d *rdwsDeployer) UploadArtifacts() error {
 	return d.uploadArtifacts(d.customResources)
 }
 
@@ -89,36 +89,7 @@ func (d *rdwsDeployOutput) RecommendedActions() []string {
     Please visit %s to check the validation status.`, d.rdwsAlias, color.Emphasize("https://console.aws.amazon.com/apprunner/home"))}
 }
 
-// GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.
-func (d *rdwsDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
-	*GenerateCloudFormationTemplateOutput, error) {
-	output, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	return d.generateCloudFormationTemplate(output.conf)
-}
-
-// DeployWorkload deploys a request driven web service using CloudFormation.
-func (d *rdwsDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
-	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	if err := d.deploy(in.Options, stackConfigOutput.svcStackConfigurationOutput); err != nil {
-		return nil, err
-	}
-	return &rdwsDeployOutput{
-		rdwsAlias: stackConfigOutput.rdSvcAlias,
-	}, nil
-}
-
-type rdwsStackConfigurationOutput struct {
-	svcStackConfigurationOutput
-	rdSvcAlias string
-}
-
-func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsStackConfigurationOutput, error) {
+func (d *rdwsDeployer) Stack(in StackRuntimeConfiguration) (Stack, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
@@ -146,29 +117,23 @@ func (d *rdwsDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*rdwsS
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
 	if d.rdwsMft.Alias == nil {
-		return &rdwsStackConfigurationOutput{
-			svcStackConfigurationOutput: svcStackConfigurationOutput{
-				conf: conf,
-				svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
-					return apprunner.New(s)
-				}),
-			},
-		}, nil
+		return conf, nil
 	}
 
 	if err = validateRDSvcAliasAndAppVersion(d.name,
 		aws.StringValue(d.rdwsMft.Alias), d.env.Name, d.app, d.appVersionGetter); err != nil {
 		return nil, err
 	}
-	return &rdwsStackConfigurationOutput{
-		svcStackConfigurationOutput: svcStackConfigurationOutput{
-			conf: conf,
-			svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
-				return apprunner.New(s)
-			}),
-		},
-		rdSvcAlias: aws.StringValue(d.rdwsMft.Alias),
-	}, nil
+	return conf, nil
+}
+
+func (d *rdwsDeployer) RecommendedActions() []string {
+	if d.rdwsMft.Alias == nil {
+		return nil
+	}
+
+	return []string{fmt.Sprintf(`The validation process for https://%s can take more than 15 minutes.
+    Please visit %s to check the validation status.`, *d.rdwsMft.Alias, color.Emphasize("https://console.aws.amazon.com/apprunner/home"))}
 }
 
 func validateRDSvcAliasAndAppVersion(svcName, alias, envName string, app *config.Application, appVersionGetter versionGetter) error {

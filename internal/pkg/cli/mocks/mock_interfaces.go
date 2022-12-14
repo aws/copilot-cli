@@ -6637,7 +6637,7 @@ func (m *MockworkloadDeployer) EXPECT() *MockworkloadDeployerMockRecorder {
 }
 
 // DeployWorkload mocks base method.
-func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployWorkloadInput) (deploy.ActionRecommender, error) {
+func (m *MockworkloadDeployer) DeployWorkload(in *deploy.DeployInput) (deploy.ActionRecommender, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeployWorkload", in)
 	ret0, _ := ret[0].(deploy.ActionRecommender)
@@ -6720,7 +6720,7 @@ func (mr *MockworkloadStackGeneratorMockRecorder) AddonsTemplate() *gomock.Call 
 }
 
 // GenerateCloudFormationTemplate mocks base method.
-func (m *MockworkloadStackGenerator) GenerateCloudFormationTemplate(in *deploy.GenerateCloudFormationTemplateInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
+func (m *MockworkloadStackGenerator) GenerateCloudFormationTemplate(in *deploy.StackInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenerateCloudFormationTemplate", in)
 	ret0, _ := ret[0].(*deploy.GenerateCloudFormationTemplateOutput)

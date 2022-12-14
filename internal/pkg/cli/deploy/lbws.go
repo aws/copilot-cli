@@ -8,7 +8,6 @@ import (
 	"regexp"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/copilot-cli/internal/pkg/aws/acm"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudfront"
 	awsecs "github.com/aws/copilot-cli/internal/pkg/aws/ecs"
@@ -59,6 +58,7 @@ func NewLBWSDeployer(in *WorkloadDeployerInput) (*lbWebSvcDeployer, error) {
 	if err != nil {
 		return nil, err
 	}
+	svcDeployer.svcUpdater = ecs.New(svcDeployer.envSess)
 	versionGetter, err := describe.NewAppDescriber(in.App.Name)
 	if err != nil {
 		return nil, fmt.Errorf("new app describer for application %s: %w", in.App.Name, err)
@@ -107,33 +107,11 @@ func (lbWebSvcDeployer) IsServiceAvailableInRegion(region string) (bool, error) 
 }
 
 // UploadArtifacts uploads the deployment artifacts such as the container image, custom resources, addons and env files.
-func (d *lbWebSvcDeployer) UploadArtifacts() (*UploadArtifactsOutput, error) {
+func (d *lbWebSvcDeployer) UploadArtifacts() error {
 	return d.uploadArtifacts(d.customResources)
 }
 
-// GenerateCloudFormationTemplate generates a CloudFormation template and parameters for a workload.
-func (d *lbWebSvcDeployer) GenerateCloudFormationTemplate(in *GenerateCloudFormationTemplateInput) (
-	*GenerateCloudFormationTemplateOutput, error) {
-	output, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	return d.generateCloudFormationTemplate(output.conf)
-}
-
-// DeployWorkload deploys a load balanced web service using CloudFormation.
-func (d *lbWebSvcDeployer) DeployWorkload(in *DeployWorkloadInput) (ActionRecommender, error) {
-	stackConfigOutput, err := d.stackConfiguration(&in.StackRuntimeConfiguration)
-	if err != nil {
-		return nil, err
-	}
-	if err := d.deploy(in.Options, *stackConfigOutput); err != nil {
-		return nil, err
-	}
-	return nil, nil
-}
-
-func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*svcStackConfigurationOutput, error) {
+func (d *lbWebSvcDeployer) Stack(in StackRuntimeConfiguration) (Stack, error) {
 	rc, err := d.runtimeConfig(in)
 	if err != nil {
 		return nil, err
@@ -164,12 +142,7 @@ func (d *lbWebSvcDeployer) stackConfiguration(in *StackRuntimeConfiguration) (*s
 	if err != nil {
 		return nil, fmt.Errorf("create stack configuration: %w", err)
 	}
-	return &svcStackConfigurationOutput{
-		conf: conf,
-		svcUpdater: d.newSvcUpdater(func(s *session.Session) serviceForceUpdater {
-			return ecs.New(s)
-		}),
-	}, nil
+	return conf, nil
 }
 
 func (d *lbWebSvcDeployer) validateALBRuntime() error {

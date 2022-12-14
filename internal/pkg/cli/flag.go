@@ -28,6 +28,7 @@ const (
 	forceFlag      = "force"
 	noRollbackFlag = "no-rollback"
 	manifestFlag   = "manifest"
+	diffFlag       = "diff"
 
 	// Command specific flags.
 	dockerFileFlag        = "dockerfile"
@@ -229,6 +230,9 @@ production environment.`
 	manifestFlagDescription    = "Optional. Output the manifest file used for the deployment."
 	svcManifestFlagDescription = `Optional. Name of the environment in which the service was deployed;
 output the manifest file used for that deployment.`
+	diffFlagPackageDescription = "Optional. Output the diff between the deployed stack and the packaged stack."
+	diffFlagDeployDescription  = `Optional. Acknowledge the diff between the deployed stack
+and the packaged stack before deployment.`
 
 	imageTagFlagDescription     = `Optional. The container image tag.`
 	resourceTagsFlagDescription = `Optional. Labels with a key and value separated by commas.
