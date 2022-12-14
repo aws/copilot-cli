@@ -98,27 +98,6 @@ type RollbackAlarmArgsOrNames struct {
 	AlarmArgs
 }
 
-// UnmarshalYAML overrides the default YAML unmarshaling logic for the RollbackAlarmArgsOrNames
-// struct, allowing it to perform more complex unmarshaling behavior.
-// This method implements the yaml.Unmarshaler (v3) interface.
-func (r *RollbackAlarmArgsOrNames) UnmarshalYAML(value *yaml.Node) error {
-	if err := value.Decode(&r.AlarmArgs); err != nil {
-		var yamlTypeErr *yaml.TypeError
-		if !errors.As(err, &yamlTypeErr) {
-			return err
-		}
-	}
-	if !r.AlarmArgs.isEmpty() {
-		// Unmarshaled successfully to r.AlarmArgs, unset r.AlarmNames, and return.
-		r.AlarmNames = nil
-		return nil
-	}
-	if err := value.Decode(&r.AlarmNames); err != nil {
-		return errUnmarshalRollbackAlarms
-	}
-	return nil
-}
-
 // IsEmpty returns true if neither alarm names nor alarm args (for creating alarms) are present.
 func (r *RollbackAlarmArgsOrNames) IsEmpty() bool {
 	return r.AlarmNames == nil && r.AlarmArgs.isEmpty()
