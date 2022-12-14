@@ -65,6 +65,11 @@ type stackBuilder interface {
 	Package(addon.PackageConfig) error
 }
 
+type stackSerializer interface {
+	templater
+	SerializedParameters() (string, error)
+}
+
 type endpointGetter interface {
 	ServiceDiscoveryEndpoint() (string, error)
 }

@@ -22,12 +22,12 @@ import (
 
 func TestEnv_Template(t *testing.T) {
 	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, e *EnvStackConfig)
+		mockDependencies func(ctrl *gomock.Controller, e *Env)
 		expectedOutput   string
 		want             error
 	}{
 		"should return template body when present": {
-			mockDependencies: func(ctrl *gomock.Controller, e *EnvStackConfig) {
+			mockDependencies: func(ctrl *gomock.Controller, e *Env) {
 				m := mocks.NewMockenvReadParser(ctrl)
 				m.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
 					require.Equal(t, &template.EnvOpts{
@@ -78,7 +78,7 @@ func TestEnv_Template(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			envStack := &EnvStackConfig{
+			envStack := &Env{
 				in:                mockDeployEnvironmentInput(),
 				lastForceUpdateID: "mockPreviousForceUpdateID",
 			}
@@ -105,7 +105,7 @@ func TestEnv_Parameters(t *testing.T) {
 	deploymentInputWithPrivateDNS := mockDeployEnvironmentInput()
 	deploymentInputWithPrivateDNS.Mft.HTTPConfig.Private.Certificates = []string{"arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"}
 	testCases := map[string]struct {
-		input     *deploy.CreateEnvironmentInput
+		input     *EnvConfig
 		oldParams []*cloudformation.Parameter
 		want      []*cloudformation.Parameter
 	}{
@@ -867,7 +867,7 @@ func TestEnv_Parameters(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			env := &EnvStackConfig{
+			env := &Env{
 				in:         tc.input,
 				prevParams: tc.oldParams,
 			}
@@ -879,8 +879,8 @@ func TestEnv_Parameters(t *testing.T) {
 }
 
 func TestEnv_Tags(t *testing.T) {
-	env := &EnvStackConfig{
-		in: &deploy.CreateEnvironmentInput{
+	env := &Env{
+		in: &EnvConfig{
 			Name: "env",
 			App: deploy.AppInformation{
 				Name: "project",
@@ -910,7 +910,7 @@ func TestEnv_Tags(t *testing.T) {
 
 func TestStackName(t *testing.T) {
 	deploymentInput := mockDeployEnvironmentInput()
-	env := &EnvStackConfig{
+	env := &Env{
 		in: deploymentInput,
 	}
 	require.Equal(t, fmt.Sprintf("%s-%s", deploymentInput.App.Name, deploymentInput.Name), env.StackName())
@@ -918,20 +918,20 @@ func TestStackName(t *testing.T) {
 
 func TestBootstrapEnv_Template(t *testing.T) {
 	testCases := map[string]struct {
-		in             *deploy.CreateEnvironmentInput
+		in             *EnvConfig
 		setupMock      func(m *mocks.MockenvReadParser)
 		expectedOutput string
 		wantedError    error
 	}{
 		"error parsing the template": {
-			in: &deploy.CreateEnvironmentInput{},
+			in: &EnvConfig{},
 			setupMock: func(m *mocks.MockenvReadParser) {
 				m.EXPECT().ParseEnvBootstrap(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
 			},
 			wantedError: errors.New("some error"),
 		},
 		"should return template body when present": {
-			in: &deploy.CreateEnvironmentInput{
+			in: &EnvConfig{
 				ArtifactBucketARN:    "mockBucketARN",
 				ArtifactBucketKeyARN: "mockBucketKeyARN",
 			},
@@ -956,7 +956,7 @@ func TestBootstrapEnv_Template(t *testing.T) {
 
 			mockParser := mocks.NewMockenvReadParser(ctrl)
 			tc.setupMock(mockParser)
-			bootstrapStack := &BootstrapEnvStackConfig{
+			bootstrapStack := &BootstrapEnv{
 				in:     tc.in,
 				parser: mockParser,
 			}
@@ -977,11 +977,11 @@ func TestBootstrapEnv_Template(t *testing.T) {
 
 func TestBootstrapEnv_Parameters(t *testing.T) {
 	testCases := map[string]struct {
-		input *deploy.CreateEnvironmentInput
+		input *EnvConfig
 		want  []*cloudformation.Parameter
 	}{
 		"returns correct parameters": {
-			input: &deploy.CreateEnvironmentInput{
+			input: &EnvConfig{
 				App: deploy.AppInformation{
 					Name:                "mockApp",
 					AccountPrincipalARN: "mockAccountPrincipalARN",
@@ -1007,7 +1007,7 @@ func TestBootstrapEnv_Parameters(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			bootstrap := &BootstrapEnvStackConfig{
+			bootstrap := &BootstrapEnv{
 				in: tc.input,
 			}
 			params, err := bootstrap.Parameters()
@@ -1018,8 +1018,8 @@ func TestBootstrapEnv_Parameters(t *testing.T) {
 }
 
 func TestBootstrapEnv_Tags(t *testing.T) {
-	bootstrap := &BootstrapEnvStackConfig{
-		in: &deploy.CreateEnvironmentInput{
+	bootstrap := &BootstrapEnv{
+		in: &EnvConfig{
 			Name: "env",
 			App: deploy.AppInformation{
 				Name: "project",
@@ -1048,8 +1048,8 @@ func TestBootstrapEnv_Tags(t *testing.T) {
 }
 
 func TestBootstrapEnv_StackName(t *testing.T) {
-	bootstrap := &BootstrapEnvStackConfig{
-		in: &deploy.CreateEnvironmentInput{
+	bootstrap := &BootstrapEnv{
+		in: &EnvConfig{
 			App: deploy.AppInformation{
 				Name: "mockApp",
 			},
@@ -1088,10 +1088,10 @@ func TestBootstrapEnv_ToEnv(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			envStack := &BootstrapEnvStackConfig{
+			envStack := &BootstrapEnv{
 				in: mockDeployInput,
 			}
-			got, err := envStack.ToEnv(tc.mockStack)
+			got, err := envStack.ToEnvMetadata(tc.mockStack)
 
 			if tc.want != nil {
 				require.EqualError(t, tc.want, err.Error())
@@ -1119,8 +1119,8 @@ func mockEnvironmentStack(stackArn, managerRoleARN, executionRoleARN string) *cl
 	}
 }
 
-func mockDeployEnvironmentInput() *deploy.CreateEnvironmentInput {
-	return &deploy.CreateEnvironmentInput{
+func mockDeployEnvironmentInput() *EnvConfig {
+	return &EnvConfig{
 		Name: "env",
 		App: deploy.AppInformation{
 			Name:                "project",

@@ -3294,17 +3294,17 @@ func (m *MockenvironmentDeployer) EXPECT() *MockenvironmentDeployerMockRecorder 
 }
 
 // CreateAndRenderEnvironment mocks base method.
-func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(env *deploy0.CreateEnvironmentInput) error {
+func (m *MockenvironmentDeployer) CreateAndRenderEnvironment(conf cloudformation0.StackConfiguration, bucketARN string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", env)
+	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", conf, bucketARN)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAndRenderEnvironment indicates an expected call of CreateAndRenderEnvironment.
-func (mr *MockenvironmentDeployerMockRecorder) CreateAndRenderEnvironment(env interface{}) *gomock.Call {
+func (mr *MockenvironmentDeployerMockRecorder) CreateAndRenderEnvironment(conf, bucketARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).CreateAndRenderEnvironment), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*MockenvironmentDeployer)(nil).CreateAndRenderEnvironment), conf, bucketARN)
 }
 
 // DeleteEnvironment mocks base method.
@@ -4076,17 +4076,17 @@ func (mr *MockdeployerMockRecorder) AddServiceToApp(app, svcName interface{}) *g
 }
 
 // CreateAndRenderEnvironment mocks base method.
-func (m *Mockdeployer) CreateAndRenderEnvironment(env *deploy0.CreateEnvironmentInput) error {
+func (m *Mockdeployer) CreateAndRenderEnvironment(conf cloudformation0.StackConfiguration, bucketARN string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", env)
+	ret := m.ctrl.Call(m, "CreateAndRenderEnvironment", conf, bucketARN)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAndRenderEnvironment indicates an expected call of CreateAndRenderEnvironment.
-func (mr *MockdeployerMockRecorder) CreateAndRenderEnvironment(env interface{}) *gomock.Call {
+func (mr *MockdeployerMockRecorder) CreateAndRenderEnvironment(conf, bucketARN interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).CreateAndRenderEnvironment), env)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndRenderEnvironment", reflect.TypeOf((*Mockdeployer)(nil).CreateAndRenderEnvironment), conf, bucketARN)
 }
 
 // CreatePipeline mocks base method.
