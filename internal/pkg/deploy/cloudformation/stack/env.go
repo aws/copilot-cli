@@ -133,12 +133,6 @@ func (e *Env) Template() (string, error) {
 		}
 		forceUpdateID = id.String()
 	}
-
-	publicHTTPConfig, err := e.publicHTTPConfig()
-	if err != nil {
-		return "", err
-	}
-
 	vpcConfig, err := e.vpcConfig()
 	if err != nil {
 		return "", err
@@ -151,7 +145,7 @@ func (e *Env) Template() (string, error) {
 		ArtifactBucketARN:    e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
 		PermissionsBoundary:  e.in.PermissionsBoundary,
-		PublicHTTPConfig:     publicHTTPConfig,
+		PublicHTTPConfig:     e.publicHTTPConfig(),
 		VPCConfig:            vpcConfig,
 		PrivateHTTPConfig:    e.privateHTTPConfig(),
 		Telemetry:            e.telemetryConfig(),
@@ -438,12 +432,7 @@ func (e *Env) cdnConfig() *template.CDNConfig {
 	}
 }
 
-func (e *Env) publicHTTPConfig() (template.PublicHTTPConfig, error) {
-	elbAccessLogsConfig, err := convertELBAccessLogsConfig(e.in.Mft)
-	if err != nil {
-		return template.PublicHTTPConfig{}, err
-	}
-
+func (e *Env) publicHTTPConfig() template.PublicHTTPConfig {
 	return template.PublicHTTPConfig{
 		HTTPConfig: template.HTTPConfig{
 			ImportedCertARNs: e.importPublicCertARNs(),
@@ -451,8 +440,8 @@ func (e *Env) publicHTTPConfig() (template.PublicHTTPConfig, error) {
 		},
 		PublicALBSourceIPs: e.in.PublicALBSourceIPs,
 		CIDRPrefixListIDs:  e.in.CIDRPrefixListIDs,
-		ELBAccessLogs:      elbAccessLogsConfig,
-	}, nil
+		ELBAccessLogs:      convertELBAccessLogsConfig(e.in.Mft),
+	}
 }
 
 func (e *Env) privateHTTPConfig() template.PrivateHTTPConfig {
