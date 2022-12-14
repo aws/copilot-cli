@@ -125,6 +125,10 @@ func (e *Env) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	vpcConfig, err := e.vpcConfig()
+	if err != nil {
+		return "", err
+	}
 	forceUpdateID := e.lastForceUpdateID
 	if e.in.ForceUpdate {
 		id, err := uuid.NewRandom()
@@ -133,11 +137,6 @@ func (e *Env) Template() (string, error) {
 		}
 		forceUpdateID = id.String()
 	}
-	vpcConfig, err := e.vpcConfig()
-	if err != nil {
-		return "", err
-	}
-
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:              e.in.App.Name,
 		EnvName:              e.in.Name,
