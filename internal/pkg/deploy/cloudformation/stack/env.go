@@ -61,10 +61,10 @@ type envReadParser interface {
 	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
 }
 
-// Addons contains information about the packaged addons.
+// Addons contains information about a packaged addons.
 type Addons struct {
-	URL    string
-	Config NestedStackConfigurer
+	S3ObjectURL string                // S3ObjectURL is the URL where the addons template is uploaded.
+	Stack       NestedStackConfigurer // Stack generates the template and the parameters to the addons.
 }
 
 // EnvConfig holds the fields required to deploy an environment.
@@ -133,12 +133,12 @@ func (e *Env) Template() (string, error) {
 	}
 	var addons *template.Addons
 	if e.in.Addons != nil {
-		extraParams, err := e.in.Addons.Config.Parameters()
+		extraParams, err := e.in.Addons.Stack.Parameters()
 		if err != nil {
 			return "", fmt.Errorf("parse extra parameters for environment addons: %w", err)
 		}
 		addons = &template.Addons{
-			URL:         e.in.Addons.URL,
+			URL:         e.in.Addons.S3ObjectURL,
 			ExtraParams: extraParams,
 		}
 	}

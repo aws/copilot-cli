@@ -52,8 +52,8 @@ func TestEnv_Template(t *testing.T) {
 		mockAddonsConfig := mocks.NewMockNestedStackConfigurer(ctrl)
 		mockParser := mocks.NewMockenvReadParser(ctrl)
 		inEnvConfig.Addons = &Addons{
-			URL:    "mockAddonsURL",
-			Config: mockAddonsConfig,
+			S3ObjectURL: "mockAddonsURL",
+			Stack:       mockAddonsConfig,
 		}
 		// EXPECT
 		mockAddonsConfig.EXPECT().Parameters().Return("", errors.New("some error"))
@@ -78,8 +78,8 @@ func TestEnv_Template(t *testing.T) {
 		mockAddonsConfig := mocks.NewMockNestedStackConfigurer(ctrl)
 		mockParser := mocks.NewMockenvReadParser(ctrl)
 		inEnvConfig.Addons = &Addons{
-			URL:    "mockAddonsURL",
-			Config: mockAddonsConfig,
+			S3ObjectURL: "mockAddonsURL",
+			Stack:       mockAddonsConfig,
 		}
 
 		// EXPECT
