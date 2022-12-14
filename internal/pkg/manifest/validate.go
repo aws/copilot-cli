@@ -125,7 +125,13 @@ func (r RollbackAlarmArgsOrNames) validate() error {
 	if r.AlarmArgs.isEmpty() {
 		return nil
 	}
-	// TODO (jwh)
+	if err := r.AlarmArgs.validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a AlarmArgs) validate() error {
 	return nil
 }
 
