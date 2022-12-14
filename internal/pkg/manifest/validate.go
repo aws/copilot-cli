@@ -1746,21 +1746,26 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 	}
 
 	for name, sidecar := range opts.sidecarConfig {
-		if sidecar.Port != nil {
-			port, err := strconv.Atoi(aws.StringValue(sidecar.Port))
-			if err != nil {
-				return err
-			}
-			if _, ok := exposedPorts[uint16(port)]; !ok {
-				exposedPorts[uint16(port)] = name
-			} else {
-				return &errContainersExposingSamePort{
-					firstContainer:  name,
-					secondContainer: exposedPorts[uint16(port)],
-					port:            aws.StringValue(sidecar.Port),
-				}
+		if sidecar.Port == nil {
+			continue
+		}
+		sidecarPort, _, err := ParsePortMapping(sidecar.Port)
+		if err != nil {
+			return err
+		}
+
+		port, err := strconv.Atoi(aws.StringValue(sidecarPort))
+		if err != nil {
+			return err
+		}
+		if _, ok := exposedPorts[uint16(port)]; ok {
+			return &errContainersExposingSamePort{
+				firstContainer:  name,
+				secondContainer: exposedPorts[uint16(port)],
+				port:            aws.StringValue(sidecar.Port),
 			}
 		}
+		exposedPorts[uint16(port)] = name
 	}
 
 	// This condition takes care of the use case where target_container is set to x container and

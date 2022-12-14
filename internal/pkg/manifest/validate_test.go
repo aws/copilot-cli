@@ -3480,6 +3480,47 @@ func TestValidateExposedPorts(t *testing.T) {
 			},
 			wanted: nil,
 		},
+		"doesn't error out when similar config is present in target_port and target_container as that of primary container": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+				targetPort:      aws.Uint16(8080),
+				targetContainer: aws.String("mockMainContainer"),
+			},
+			wanted: nil,
+		},
+		"doesn't error out when similar config is present in target_port and target_container as that of sidecar container": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+				targetPort:      aws.Uint16(80),
+				targetContainer: aws.String("foo"),
+			},
+			wanted: nil,
+		},
+		"doesn't error out when target_port is same as that of sidecar container port": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+				targetPort: aws.Uint16(80),
+			},
+			wanted: nil,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

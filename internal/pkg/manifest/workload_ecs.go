@@ -97,7 +97,7 @@ func (d *DeploymentConfiguration) isEmpty() bool {
 // ExposedPort will hold the port mapping configuration.
 type ExposedPort struct {
 	ContainerName string // The name of the container that exposes this port.
-	Port          int    // The port number.
+	Port          uint16 // The port number.
 	Protocol      string // Either "tcp" or "udp", empty means the default value that the underlying service provides.
 }
 

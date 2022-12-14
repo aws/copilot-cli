@@ -243,23 +243,17 @@ func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (lbws *LoadBalancedWebService) ExposedPorts() []ExposedPort {
-
-	var exposedPortList []ExposedPort
-	exposedPorts := make(map[int]ExposedPort)
+	var exposedPorts []ExposedPort
 
 	workloadName := aws.StringValue(lbws.Name)
-	lbws.ImageConfig.exposedPorts(exposedPorts, workloadName)
-	lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)
+	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
+	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(workloadName)...)
 	for name, sidecar := range lbws.Sidecars {
-		sidecar.exposedPorts(exposedPorts, name)
-	}
-
-	for _, v := range exposedPorts {
-		exposedPortList = append(exposedPortList, v)
+		exposedPorts = append(exposedPorts, sidecar.exposedPorts(name)...)
 	}
 	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
-	sort.Slice(exposedPortList, func(i, j int) bool {
-		return exposedPortList[i].Port < exposedPortList[j].Port
+	sort.Slice(exposedPorts, func(i, j int) bool {
+		return exposedPorts[i].Port < exposedPorts[j].Port
 	})
-	return exposedPortList
+	return exposedPorts
 }

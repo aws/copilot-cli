@@ -192,23 +192,17 @@ func newDefaultBackendService() *BackendService {
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
 func (b *BackendService) ExposedPorts() []ExposedPort {
-
-	var exposedPortList []ExposedPort
-	exposedPorts := make(map[int]ExposedPort)
+	var exposedPorts []ExposedPort
 
 	workloadName := aws.StringValue(b.Name)
-	b.ImageConfig.exposedPorts(exposedPorts, workloadName)
-	b.RoutingRule.exposedPorts(exposedPorts, workloadName)
+	exposedPorts = append(exposedPorts, b.ImageConfig.exposedPorts(workloadName)...)
+	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(workloadName)...)
 	for name, sidecar := range b.Sidecars {
-		sidecar.exposedPorts(exposedPorts, name)
-	}
-
-	for _, v := range exposedPorts {
-		exposedPortList = append(exposedPortList, v)
+		exposedPorts = append(exposedPorts, sidecar.exposedPorts(name)...)
 	}
 	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
-	sort.Slice(exposedPortList, func(i, j int) bool {
-		return exposedPortList[i].Port < exposedPortList[j].Port
+	sort.Slice(exposedPorts, func(i, j int) bool {
+		return exposedPorts[i].Port < exposedPorts[j].Port
 	})
-	return exposedPortList
+	return exposedPorts
 }
