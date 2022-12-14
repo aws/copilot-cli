@@ -61,6 +61,11 @@ type envReadParser interface {
 	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
 }
 
+type addons struct {
+	URL    string
+	Config NestedStackConfigurer
+}
+
 // EnvConfig holds the fields required to deploy an environment.
 type EnvConfig struct {
 	Name    string // Name of the environment, must be unique within an application.
@@ -74,7 +79,7 @@ type EnvConfig struct {
 	PermissionsBoundary  string                // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.
 
 	// Runtime configurations.
-	Addons              *NestedStackConfigurer
+	Addons              *addons
 	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// User inputs.
@@ -125,6 +130,17 @@ func (e *Env) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	var addons *template.Addons
+	if e.in.Addons != nil {
+		extraParams, err := e.in.Addons.Config.Parameters()
+		if err != nil {
+			return "", fmt.Errorf("parse extra parameters for environment addons: %w", err)
+		}
+		addons = &template.Addons{
+			URL:         e.in.Addons.URL,
+			ExtraParams: extraParams,
+		}
+	}
 	vpcConfig, err := e.vpcConfig()
 	if err != nil {
 		return "", err
@@ -141,6 +157,7 @@ func (e *Env) Template() (string, error) {
 		AppName:              e.in.App.Name,
 		EnvName:              e.in.Name,
 		CustomResources:      crs,
+		Addons:               addons,
 		ArtifactBucketARN:    e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
 		PermissionsBoundary:  e.in.PermissionsBoundary,

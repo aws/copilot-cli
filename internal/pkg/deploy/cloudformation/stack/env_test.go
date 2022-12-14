@@ -43,6 +43,94 @@ func TestEnv_Template(t *testing.T) {
 		// THEN
 		require.EqualError(t, errors.New("some error"), err.Error())
 	})
+	t.Run("error parsing addons extra parameters", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// GIVEN
+		inEnvConfig := mockDeployEnvironmentInput()
+		mockAddonsConfig := mocks.NewMockNestedStackConfigurer(ctrl)
+		mockParser := mocks.NewMockenvReadParser(ctrl)
+		inEnvConfig.Addons = &addons{
+			URL:    "mockAddonsURL",
+			Config: mockAddonsConfig,
+		}
+		// EXPECT
+		mockAddonsConfig.EXPECT().Parameters().Return("", errors.New("some error"))
+
+		// WHEN
+		envStack := &Env{
+			in:                inEnvConfig,
+			lastForceUpdateID: "mockPreviousForceUpdateID",
+			parser:            mockParser,
+		}
+		_, err := envStack.Template()
+
+		// THEN
+		require.EqualError(t, errors.New("parse extra parameters for environment addons: some error"), err.Error())
+	})
+	t.Run("should contain addons information when addons are present", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// GIVEN
+		inEnvConfig := mockDeployEnvironmentInput()
+		mockAddonsConfig := mocks.NewMockNestedStackConfigurer(ctrl)
+		mockParser := mocks.NewMockenvReadParser(ctrl)
+		inEnvConfig.Addons = &addons{
+			URL:    "mockAddonsURL",
+			Config: mockAddonsConfig,
+		}
+
+		// EXPECT
+		mockAddonsConfig.EXPECT().Parameters().Return("mockAddonsExtraParameters", nil)
+		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
+			require.Equal(t, &template.Addons{
+				URL:         "mockAddonsURL",
+				ExtraParams: "mockAddonsExtraParameters",
+			}, data.Addons)
+			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
+		})
+
+		// WHEN
+		envStack := &Env{
+			in:                inEnvConfig,
+			lastForceUpdateID: "mockPreviousForceUpdateID",
+			parser:            mockParser,
+		}
+		got, err := envStack.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, mockTemplate, got)
+	})
+	t.Run("should use new force update ID when asked", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// GIVEN
+		inEnvConfig := mockDeployEnvironmentInput()
+		inEnvConfig.ForceUpdate = true
+		mockParser := mocks.NewMockenvReadParser(ctrl)
+
+		// EXPECT
+		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
+			require.NotEqual(t, "mockPreviousForceUpdateID", data.ForceUpdateID)
+			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
+		})
+
+		// WHEN
+		envStack := &Env{
+			in:                inEnvConfig,
+			lastForceUpdateID: "mockPreviousForceUpdateID",
+			parser:            mockParser,
+		}
+		got, err := envStack.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, mockTemplate, got)
+	})
 	t.Run("should return template body when present", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -88,33 +176,6 @@ func TestEnv_Template(t *testing.T) {
 				SerializedManifest: "name: env\ntype: Environment\n",
 				ForceUpdateID:      "mockPreviousForceUpdateID",
 			}, data)
-			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
-		})
-
-		// WHEN
-		envStack := &Env{
-			in:                inEnvConfig,
-			lastForceUpdateID: "mockPreviousForceUpdateID",
-			parser:            mockParser,
-		}
-		got, err := envStack.Template()
-
-		// THEN
-		require.NoError(t, err)
-		require.Equal(t, mockTemplate, got)
-	})
-	t.Run("should use new force update ID when asked", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-
-		// GIVEN
-		inEnvConfig := mockDeployEnvironmentInput()
-		inEnvConfig.ForceUpdate = true
-		mockParser := mocks.NewMockenvReadParser(ctrl)
-
-		// EXPECT
-		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
-			require.NotEqual(t, "mockPreviousForceUpdateID", data.ForceUpdateID)
 			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
 		})
 
