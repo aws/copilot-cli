@@ -61,7 +61,8 @@ type envReadParser interface {
 	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
 }
 
-type addons struct {
+// Addons contains information about the packaged addons.
+type Addons struct {
 	URL    string
 	Config NestedStackConfigurer
 }
@@ -79,7 +80,7 @@ type EnvConfig struct {
 	PermissionsBoundary  string                // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.
 
 	// Runtime configurations.
-	Addons              *addons
+	Addons              *Addons
 	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// User inputs.

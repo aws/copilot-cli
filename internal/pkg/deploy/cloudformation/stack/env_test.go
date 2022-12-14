@@ -51,7 +51,7 @@ func TestEnv_Template(t *testing.T) {
 		inEnvConfig := mockDeployEnvironmentInput()
 		mockAddonsConfig := mocks.NewMockNestedStackConfigurer(ctrl)
 		mockParser := mocks.NewMockenvReadParser(ctrl)
-		inEnvConfig.Addons = &addons{
+		inEnvConfig.Addons = &Addons{
 			URL:    "mockAddonsURL",
 			Config: mockAddonsConfig,
 		}
@@ -77,7 +77,7 @@ func TestEnv_Template(t *testing.T) {
 		inEnvConfig := mockDeployEnvironmentInput()
 		mockAddonsConfig := mocks.NewMockNestedStackConfigurer(ctrl)
 		mockParser := mocks.NewMockenvReadParser(ctrl)
-		inEnvConfig.Addons = &addons{
+		inEnvConfig.Addons = &Addons{
 			URL:    "mockAddonsURL",
 			Config: mockAddonsConfig,
 		}
