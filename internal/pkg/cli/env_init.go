@@ -690,7 +690,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 	if err != nil {
 		return fmt.Errorf("get identity: %w", err)
 	}
-	deployEnvInput := &deploy.CreateEnvironmentInput{
+	deployEnvInput := &stack.EnvConfig{
 		Name: o.name,
 		App: deploy.AppInformation{
 			Name:                o.appName,
@@ -706,7 +706,7 @@ func (o *initEnvOpts) deployEnv(app *config.Application) error {
 	if err := o.cleanUpDanglingRoles(o.appName, o.name); err != nil {
 		return err
 	}
-	if err := o.envDeployer.CreateAndRenderEnvironment(deployEnvInput); err != nil {
+	if err := o.envDeployer.CreateAndRenderEnvironment(stack.NewBootstrapEnvStackConfig(deployEnvInput), artifactBucketARN); err != nil {
 		var existsErr *cloudformation.ErrStackAlreadyExists
 		if errors.As(err, &existsErr) {
 			// Do nothing if the stack already exists.

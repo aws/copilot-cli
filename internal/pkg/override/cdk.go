@@ -29,8 +29,8 @@ type CDK struct {
 	exec Executable // For testing os/exec calls.
 }
 
-// NewCDK instantiates a new CDK Overrider with the file system pointing ot the overrides/ dir.
-func NewCDK(root string, stdout io.Writer, fs afero.Fs, exec Executable) *CDK {
+// WithCDK instantiates a new CDK Overrider with the file system pointing ot the overrides/ dir.
+func WithCDK(root string, stdout io.Writer, fs afero.Fs, exec Executable) *CDK {
 	return &CDK{
 		rootAbsPath: root,
 		out:         stdout,

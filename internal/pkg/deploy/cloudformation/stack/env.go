@@ -11,9 +11,49 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
+	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/google/uuid"
 )
+
+// Parameter keys.
+const (
+	EnvParamAliasesKey                     = "Aliases"
+	EnvParamALBWorkloadsKey                = "ALBWorkloads"
+	EnvParamServiceDiscoveryEndpoint       = "ServiceDiscoveryEndpoint"
+	envParamAppNameKey                     = "AppName"
+	envParamEnvNameKey                     = "EnvironmentName"
+	envParamToolsAccountPrincipalKey       = "ToolsAccountPrincipalARN"
+	envParamAppDNSKey                      = "AppDNSName"
+	envParamAppDNSDelegationRoleKey        = "AppDNSDelegationRole"
+	envParamInternalALBWorkloadsKey        = "InternalALBWorkloads"
+	envParamEFSWorkloadsKey                = "EFSWorkloads"
+	envParamNATWorkloadsKey                = "NATWorkloads"
+	envParamAppRunnerPrivateWorkloadsKey   = "AppRunnerPrivateWorkloads"
+	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
+	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
+)
+
+// Output keys.
+const (
+	EnvOutputVPCID               = "VpcId"
+	EnvOutputPublicSubnets       = "PublicSubnets"
+	EnvOutputPrivateSubnets      = "PrivateSubnets"
+	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
+	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
+)
+
+// DefaultVPCCIDR is the default CIDR used for a manged VPC.
+const DefaultVPCCIDR = "10.0.0.0/16"
+
+var (
+	// DefaultPublicSubnetCIDRs contains two default CIDRs for the two managed public subnets.
+	DefaultPublicSubnetCIDRs = []string{"10.0.0.0/24", "10.0.1.0/24"}
+	// DefaultPrivateSubnetCIDRs contains two default CIDRs for the two managed private subnets.
+	DefaultPrivateSubnetCIDRs = []string{"10.0.2.0/24", "10.0.3.0/24"}
+)
+
+var fmtServiceDiscoveryEndpoint = "%s.%s.local"
 
 type envReadParser interface {
 	template.ReadParser
@@ -21,60 +61,56 @@ type envReadParser interface {
 	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
 }
 
-// EnvStackConfig is for providing all the values to set up an
+// EnvConfig holds the fields required to deploy an environment.
+type EnvConfig struct {
+	Name    string // Name of the environment, must be unique within an application.
+	Version string // The version of the environment template to create the stack. If empty, creates the legacy stack.
+
+	// Application regional configurations.
+	App                  deploy.AppInformation // Information about the application that the environment belongs to, include app name, DNS name, the principal ARN of the account.
+	AdditionalTags       map[string]string     // AdditionalTags are labels applied to resources under the application.
+	ArtifactBucketARN    string                // ARN of the regional application bucket.
+	ArtifactBucketKeyARN string                // ARN of the KMS key used to encrypt the contents in the regional application bucket.
+	PermissionsBoundary  string                // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.
+
+	// Runtime configurations.
+	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
+
+	// User inputs.
+	ImportVPCConfig     *config.ImportVPC     // Optional configuration if users have an existing VPC.
+	AdjustVPCConfig     *config.AdjustVPC     // Optional configuration if users want to override default VPC configuration.
+	ImportCertARNs      []string              // Optional configuration if users want to import certificates.
+	InternalALBSubnets  []string              // Optional configuration if users want to specify internal ALB placement.
+	AllowVPCIngress     bool                  // Optional configuration to allow access to internal ALB from ports 80/443.
+	CIDRPrefixListIDs   []string              // Optional configuration to specify public security group ingress based on prefix lists.
+	PublicALBSourceIPs  []string              // Optional configuration to specify public security group ingress based on customer given source IPs.
+	InternalLBSourceIPs []string              // Optional configuration to specify private security group ingress based on customer given source IPs.
+	Telemetry           *config.Telemetry     // Optional observability and monitoring configuration.
+	Mft                 *manifest.Environment // Unmarshaled and interpolated manifest object.
+	RawMft              []byte                // Content of the environment manifest without any modifications.
+	ForceUpdate         bool
+}
+
+// Env is for providing all the values to set up an
 // environment stack and to interpret the outputs from it.
-type EnvStackConfig struct {
-	in                *deploy.CreateEnvironmentInput
+type Env struct {
+	in                *EnvConfig
 	lastForceUpdateID string
 	prevParams        []*cloudformation.Parameter
 	parser            envReadParser
 }
 
-const (
-	// Parameter keys.
-	envParamAppNameKey                     = "AppName"
-	envParamEnvNameKey                     = "EnvironmentName"
-	envParamToolsAccountPrincipalKey       = "ToolsAccountPrincipalARN"
-	envParamAppDNSKey                      = "AppDNSName"
-	envParamAppDNSDelegationRoleKey        = "AppDNSDelegationRole"
-	EnvParamAliasesKey                     = "Aliases"
-	EnvParamALBWorkloadsKey                = "ALBWorkloads"
-	envParamInternalALBWorkloadsKey        = "InternalALBWorkloads"
-	envParamEFSWorkloadsKey                = "EFSWorkloads"
-	envParamNATWorkloadsKey                = "NATWorkloads"
-	envParamAppRunnerPrivateWorkloadsKey   = "AppRunnerPrivateWorkloads"
-	envParamCreateHTTPSListenerKey         = "CreateHTTPSListener"
-	envParamCreateInternalHTTPSListenerKey = "CreateInternalHTTPSListener"
-	EnvParamServiceDiscoveryEndpoint       = "ServiceDiscoveryEndpoint"
-
-	// Output keys.
-	EnvOutputVPCID               = "VpcId"
-	EnvOutputPublicSubnets       = "PublicSubnets"
-	EnvOutputPrivateSubnets      = "PrivateSubnets"
-	envOutputCFNExecutionRoleARN = "CFNExecutionRoleARN"
-	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
-
-	// Default parameter values.
-	DefaultVPCCIDR = "10.0.0.0/16"
-)
-
-var (
-	fmtServiceDiscoveryEndpoint = "%s.%s.local"
-	DefaultPublicSubnetCIDRs    = []string{"10.0.0.0/24", "10.0.1.0/24"}
-	DefaultPrivateSubnetCIDRs   = []string{"10.0.2.0/24", "10.0.3.0/24"}
-)
-
 // NewEnvStackConfig returns a CloudFormation stack configuration for deploying a brand-new environment.
-func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
-	return &EnvStackConfig{
+func NewEnvStackConfig(input *EnvConfig) *Env {
+	return &Env{
 		in:     input,
 		parser: template.New(),
 	}
 }
 
 // NewEnvConfigFromExistingStack returns a CloudFormation stack configuration for updating an environment.
-func NewEnvConfigFromExistingStack(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, prevParams []*cloudformation.Parameter) *EnvStackConfig {
-	return &EnvStackConfig{
+func NewEnvConfigFromExistingStack(in *EnvConfig, lastForceUpdateID string, prevParams []*cloudformation.Parameter) *Env {
+	return &Env{
 		in:                in,
 		prevParams:        prevParams,
 		lastForceUpdateID: lastForceUpdateID,
@@ -83,7 +119,7 @@ func NewEnvConfigFromExistingStack(in *deploy.CreateEnvironmentInput, lastForceU
 }
 
 // Template returns the environment CloudFormation template.
-func (e *EnvStackConfig) Template() (string, error) {
+func (e *Env) Template() (string, error) {
 	crs, err := convertCustomResources(e.in.CustomResourcesURLs)
 	if err != nil {
 		return "", err
@@ -133,7 +169,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 }
 
 // Parameters returns the parameters to be passed into an environment CloudFormation template.
-func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
+func (e *Env) Parameters() ([]*cloudformation.Parameter, error) {
 	httpsListener := "false"
 	if len(e.importPublicCertARNs()) != 0 || e.in.App.Domain != "" {
 		httpsListener = "true"
@@ -209,12 +245,12 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
-func (e *EnvStackConfig) SerializedParameters() (string, error) {
+func (e *Env) SerializedParameters() (string, error) {
 	return serializeTemplateConfig(e.parser, e)
 }
 
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
-func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
+func (e *Env) Tags() []*cloudformation.Tag {
 	return mergeAndFlattenTags(e.in.AdditionalTags, map[string]string{
 		deploy.AppTagKey: e.in.App.Name,
 		deploy.EnvTagKey: e.in.Name,
@@ -222,7 +258,7 @@ func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
 }
 
 // StackName returns the name of the CloudFormation stack (based on the app and env names).
-func (e *EnvStackConfig) StackName() string {
+func (e *Env) StackName() string {
 	return NameForEnv(e.in.App.Name, e.in.Name)
 }
 
@@ -235,7 +271,7 @@ type transformParameterFunc func(new, old *cloudformation.Parameter) *cloudforma
 // 1. It should return `nil` if the parameter should be removed.
 // 2. The transform functions are applied in a convolutional manner.
 // 3. If the parameter `old` is passed in as `nil`, the parameter does not exist in the old template.
-func (e *EnvStackConfig) transformParameters(currParams, oldParams []*cloudformation.Parameter, transformFunc ...transformParameterFunc) ([]*cloudformation.Parameter, error) {
+func (e *Env) transformParameters(currParams, oldParams []*cloudformation.Parameter, transformFunc ...transformParameterFunc) ([]*cloudformation.Parameter, error) {
 
 	// Make a map out of `currParams` and out of `oldParams`.
 	curr := make(map[string]*cloudformation.Parameter)
@@ -287,7 +323,7 @@ func transformEnvControllerParameters(new, old *cloudformation.Parameter) *cloud
 // transformServiceDiscoveryEndpoint transforms the service discovery endpoint parameter.
 // If the parameter exists in the old template, it uses its previous value.
 // Otherwise, it uses a default value of `<app>.local`.
-func (e *EnvStackConfig) transformServiceDiscoveryEndpoint(new, old *cloudformation.Parameter) *cloudformation.Parameter {
+func (e *Env) transformServiceDiscoveryEndpoint(new, old *cloudformation.Parameter) *cloudformation.Parameter {
 	if new == nil {
 		return nil
 	}
@@ -306,19 +342,19 @@ func (e *EnvStackConfig) transformServiceDiscoveryEndpoint(new, old *cloudformat
 	return old
 }
 
-// NewBootstrapEnvStackConfig sets up a BootstrapEnvStackConfig struct.
-func NewBootstrapEnvStackConfig(input *deploy.CreateEnvironmentInput) *BootstrapEnvStackConfig {
-	return &BootstrapEnvStackConfig{
+// NewBootstrapEnvStackConfig sets up a BootstrapEnv struct.
+func NewBootstrapEnvStackConfig(input *EnvConfig) *BootstrapEnv {
+	return &BootstrapEnv{
 		in:     input,
 		parser: template.New(),
 	}
 }
 
-// BootstrapEnvStackConfig contains information for creating a stack bootstrapping environment resources.
-type BootstrapEnvStackConfig EnvStackConfig
+// BootstrapEnv contains information for creating a stack bootstrapping environment resources.
+type BootstrapEnv Env
 
 // Template returns the CloudFormation template to bootstrap environment resources.
-func (e *BootstrapEnvStackConfig) Template() (string, error) {
+func (e *BootstrapEnv) Template() (string, error) {
 	content, err := e.parser.ParseEnvBootstrap(&template.EnvOpts{
 		ArtifactBucketARN:    e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
@@ -331,7 +367,7 @@ func (e *BootstrapEnvStackConfig) Template() (string, error) {
 }
 
 // Parameters returns the parameters to be passed into the bootstrap stack's CloudFormation template.
-func (e *BootstrapEnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
+func (e *BootstrapEnv) Parameters() ([]*cloudformation.Parameter, error) {
 	return []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(envParamAppNameKey),
@@ -350,24 +386,24 @@ func (e *BootstrapEnvStackConfig) Parameters() ([]*cloudformation.Parameter, err
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized
 // to a YAML document annotated with comments for readability to users.
-func (e *BootstrapEnvStackConfig) SerializedParameters() (string, error) {
+func (e *BootstrapEnv) SerializedParameters() (string, error) {
 	// No-op for now.
 	return "", nil
 }
 
 // Tags returns the tags that should be applied to the bootstrap CloudFormation stack.
-func (e *BootstrapEnvStackConfig) Tags() []*cloudformation.Tag {
-	return (*EnvStackConfig)(e).Tags()
+func (e *BootstrapEnv) Tags() []*cloudformation.Tag {
+	return (*Env)(e).Tags()
 }
 
 // StackName returns the name of the CloudFormation stack (based on the app and env names).
-func (e *BootstrapEnvStackConfig) StackName() string {
-	return (*EnvStackConfig)(e).StackName()
+func (e *BootstrapEnv) StackName() string {
+	return (*Env)(e).StackName()
 }
 
-// ToEnv inspects an environment cloudformation stack and constructs an environment
+// ToEnvMetadata inspects an environment cloudformation stack and constructs an environment
 // struct out of it (including resources like ECR Repo).
-func (e *BootstrapEnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.Environment, error) {
+func (e *BootstrapEnv) ToEnvMetadata(stack *cloudformation.Stack) (*config.Environment, error) {
 	stackARN, err := arn.Parse(*stack.StackId)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't extract region and account from stack ID %s: %w", *stack.StackId, err)
@@ -388,7 +424,7 @@ func (e *BootstrapEnvStackConfig) ToEnv(stack *cloudformation.Stack) (*config.En
 	}, nil
 }
 
-func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
+func (e *Env) cdnConfig() *template.CDNConfig {
 	if e.in.Mft == nil {
 		return nil
 	}
@@ -401,7 +437,7 @@ func (e *EnvStackConfig) cdnConfig() *template.CDNConfig {
 	}
 }
 
-func (e *EnvStackConfig) publicHTTPConfig() (template.PublicHTTPConfig, error) {
+func (e *Env) publicHTTPConfig() (template.PublicHTTPConfig, error) {
 	elbAccessLogsConfig, err := convertELBAccessLogsConfig(e.in.Mft)
 	if err != nil {
 		return template.PublicHTTPConfig{}, err
@@ -418,7 +454,7 @@ func (e *EnvStackConfig) publicHTTPConfig() (template.PublicHTTPConfig, error) {
 	}, nil
 }
 
-func (e *EnvStackConfig) privateHTTPConfig() template.PrivateHTTPConfig {
+func (e *Env) privateHTTPConfig() template.PrivateHTTPConfig {
 	return template.PrivateHTTPConfig{
 		HTTPConfig: template.HTTPConfig{
 			ImportedCertARNs: e.importPrivateCertARNs(),
@@ -428,7 +464,7 @@ func (e *EnvStackConfig) privateHTTPConfig() template.PrivateHTTPConfig {
 	}
 }
 
-func (e *EnvStackConfig) vpcConfig() (template.VPCConfig, error) {
+func (e *Env) vpcConfig() (template.VPCConfig, error) {
 	securityGroupConfig, err := convertEnvSecurityGroupCfg(e.in.Mft)
 	if err != nil {
 		return template.VPCConfig{}, err
@@ -446,7 +482,7 @@ func (e *EnvStackConfig) vpcConfig() (template.VPCConfig, error) {
 	}, nil
 }
 
-func (e *EnvStackConfig) importVPC() *template.ImportVPC {
+func (e *Env) importVPC() *template.ImportVPC {
 	// If a manifest is present, it is the only place we look at.
 	if e.in.Mft != nil {
 		return e.in.Mft.Network.VPC.ImportedVPC()
@@ -463,7 +499,7 @@ func (e *EnvStackConfig) importVPC() *template.ImportVPC {
 	}
 }
 
-func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
+func (e *Env) managedVPC() template.ManagedVPC {
 	defaultManagedVPC := template.ManagedVPC{
 		CIDR:               DefaultVPCCIDR,
 		PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
@@ -489,7 +525,7 @@ func (e *EnvStackConfig) managedVPC() template.ManagedVPC {
 	}
 }
 
-func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
+func (e *Env) telemetryConfig() *template.Telemetry {
 	// If a manifest is present, it is the only place we look at.
 	if e.in.Mft != nil {
 		return &template.Telemetry{
@@ -509,7 +545,7 @@ func (e *EnvStackConfig) telemetryConfig() *template.Telemetry {
 	}
 }
 
-func (e *EnvStackConfig) importPublicCertARNs() []string {
+func (e *Env) importPublicCertARNs() []string {
 	// If a manifest is present, it is the only place we look at.
 	if e.in.Mft != nil {
 		return e.in.Mft.HTTPConfig.Public.Certificates
@@ -521,7 +557,7 @@ func (e *EnvStackConfig) importPublicCertARNs() []string {
 	return e.in.ImportCertARNs
 }
 
-func (e *EnvStackConfig) importPrivateCertARNs() []string {
+func (e *Env) importPrivateCertARNs() []string {
 	// If a manifest is present, it is the only place we look at.
 	if e.in.Mft != nil {
 		return e.in.Mft.HTTPConfig.Private.Certificates
@@ -533,7 +569,7 @@ func (e *EnvStackConfig) importPrivateCertARNs() []string {
 	return nil
 }
 
-func (e *EnvStackConfig) internalALBSubnets() []string {
+func (e *Env) internalALBSubnets() []string {
 	// If a manifest is present, it is the only place we look.
 	if e.in.Mft != nil {
 		return e.in.Mft.HTTPConfig.Private.InternalALBSubnets
@@ -542,10 +578,10 @@ func (e *EnvStackConfig) internalALBSubnets() []string {
 	return e.in.InternalALBSubnets
 }
 
-func (e *EnvStackConfig) getPublicSSLPolicy() *string {
+func (e *Env) getPublicSSLPolicy() *string {
 	return e.in.Mft.EnvironmentConfig.HTTPConfig.Public.SSLPolicy
 }
 
-func (e *EnvStackConfig) getPrivateSSLPolicy() *string {
+func (e *Env) getPrivateSSLPolicy() *string {
 	return e.in.Mft.EnvironmentConfig.HTTPConfig.Private.SSLPolicy
 }

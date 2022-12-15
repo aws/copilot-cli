@@ -215,7 +215,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 					newInterpolator: func(_, _ string) interpolator {
 						return interop
 					},
-					newEnvDeployer: func() (envPackager, error) {
+					newEnvPackager: func() (envPackager, error) {
 						return deployer, nil
 					},
 					envCfg: &config.Environment{Name: "test"},
@@ -245,7 +245,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 					newInterpolator: func(_, _ string) interpolator {
 						return interop
 					},
-					newEnvDeployer: func() (envPackager, error) {
+					newEnvPackager: func() (envPackager, error) {
 						return deployer, nil
 					},
 					envCfg: &config.Environment{Name: "test"},
@@ -274,7 +274,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 					newInterpolator: func(_, _ string) interpolator {
 						return interop
 					},
-					newEnvDeployer: func() (envPackager, error) {
+					newEnvPackager: func() (envPackager, error) {
 						return deployer, nil
 					},
 					envCfg: &config.Environment{Name: "test"},
@@ -323,7 +323,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 					newInterpolator: func(_, _ string) interpolator {
 						return interop
 					},
-					newEnvDeployer: func() (envPackager, error) {
+					newEnvPackager: func() (envPackager, error) {
 						return deployer, nil
 					},
 					fs:     fs,
