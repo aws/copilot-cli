@@ -24,11 +24,6 @@ type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
 }
 
-type stackSerializer interface {
-	templater
-	SerializedParameters() (string, error)
-}
-
 type versionGetter interface {
 	Version() (string, error)
 }
