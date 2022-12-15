@@ -39,6 +39,12 @@ func AddonAsset(workloadName, hash string) string {
 	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, workloadName, s3ArtifactAddonAssetDirName, hash)
 }
 
+// EnvironmentAddons returns the path to store environment addon artifact files with sha256 of the content.
+// Example: manual/addons/environments/sha.yml.
+func EnvironmentAddons(content []byte) string {
+	return path.Join(s3ArtifactDirName, s3ArtifactAddonsDirName, s3EnvironmentsAddonsDirName, fmt.Sprintf("%x.yml", sha256.Sum256(content)))
+}
+
 // EnvironmentAddonAsset returns the path to store an addon asset file for an environment addon.
 // Example: manual/addons/environments/assets/668e2b73ac.
 func EnvironmentAddonAsset(hash string) string {
