@@ -97,10 +97,6 @@ type RollbackAlarmArgsOrNames struct {
 	Union[[]*string, AlarmArgs]
 }
 
-func (a *AlarmArgs) isEmpty() bool {
-	return a.CPUUtilization == nil && a.MemoryUtilization == nil
-}
-
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
 	Rolling *string                  `yaml:"rolling"`

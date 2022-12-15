@@ -56,11 +56,10 @@ var (
 	errUnmarshalCountOpts          = errors.New(`unable to unmarshal "count" field to an integer or autoscaling configuration`)
 	errUnmarshalRangeOpts          = errors.New(`unable to unmarshal "range" field`)
 
-	errUnmarshalExec           = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
-	errUnmarshalEntryPoint     = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
-	errUnmarshalAlias          = errors.New(`unable to unmarshal "alias" into advanced alias map, string, or slice of strings`)
-	errUnmarshalCommand        = errors.New(`unable to unmarshal "command" into string or slice of strings`)
-	errUnmarshalRollbackAlarms = errors.New(`unable to unmarshal "rollback_alarms" into slice of strings or compose-style map`)
+	errUnmarshalExec       = errors.New(`unable to unmarshal "exec" field into boolean or exec configuration`)
+	errUnmarshalEntryPoint = errors.New(`unable to unmarshal "entrypoint" into string or slice of strings`)
+	errUnmarshalAlias      = errors.New(`unable to unmarshal "alias" into advanced alias map, string, or slice of strings`)
+	errUnmarshalCommand    = errors.New(`unable to unmarshal "command" into string or slice of strings`)
 )
 
 // WorkloadTypes returns the list of all manifest types.
