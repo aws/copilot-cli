@@ -193,9 +193,9 @@ func quoteStringSlice(in []string) []string {
 type errContainersExposingSamePort struct {
 	firstContainer  string
 	secondContainer string
-	port            string
+	port            uint16
 }
 
 func (e *errContainersExposingSamePort) Error() string {
-	return fmt.Sprintf(`container %s and container %s are exposing the same port %s`, e.firstContainer, e.secondContainer, e.port)
+	return fmt.Sprintf(`containers %q and %q are exposing the same port %d`, e.firstContainer, e.secondContainer, e.port)
 }

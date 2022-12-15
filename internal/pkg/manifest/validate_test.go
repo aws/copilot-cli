@@ -3449,7 +3449,7 @@ func TestValidateExposedPorts(t *testing.T) {
 					},
 				},
 			},
-			wanted: fmt.Errorf(`container foo and container mockMainContainer are exposing the same port 80`),
+			wanted: fmt.Errorf(`containers "foo" and "mockMainContainer" are exposing the same port 80`),
 		},
 		"should return an error if target_port points to one sidecar container port and target_container points to another sidecar container": {
 			in: validateExposedPortsOpts{
@@ -3466,7 +3466,7 @@ func TestValidateExposedPorts(t *testing.T) {
 				targetContainer: aws.String("nginx"),
 				targetPort:      aws.Uint16(8080),
 			},
-			wanted: fmt.Errorf(`container nginx and container foo are exposing the same port 8080`),
+			wanted: fmt.Errorf(`containers "nginx" and "foo" are exposing the same port 8080`),
 		},
 		"should not return an error if main container and sidecar container is exposing different ports": {
 			in: validateExposedPortsOpts{

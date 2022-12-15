@@ -443,31 +443,31 @@ func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) (exposedPort []ExposedPort) {
+func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) (exposedPorts []ExposedPort) {
 	// Read `image.port`
 	if cfg.Port != nil {
-		exposedPort = append(exposedPort, ExposedPort{
+		exposedPorts = append(exposedPorts, ExposedPort{
 			Port:          aws.Uint16Value(cfg.Port),
 			Protocol:      "tcp",
 			ContainerName: workloadName,
 		})
 	}
-	return exposedPort
+	return exposedPorts
 }
 
-func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string) (exposedPort []ExposedPort) {
+func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string) (exposedPorts []ExposedPort) {
 	// Read `image.port`
 	if cfg.Port != nil {
-		exposedPort = append(exposedPort, ExposedPort{
+		exposedPorts = append(exposedPorts, ExposedPort{
 			Port:          aws.Uint16Value(cfg.Port),
 			Protocol:      "tcp",
 			ContainerName: workloadName,
 		})
 	}
-	return exposedPort
+	return exposedPorts
 }
 
-func (rr RoutingRuleConfiguration) exposedPorts(workloadName string) (exposedPort []ExposedPort) {
+func (rr RoutingRuleConfiguration) exposedPorts(workloadName string) (exposedPorts []ExposedPort) {
 	// Read `http.target_port`
 	// This block of code takes care of following use cases:
 	// 1. if target_port is given but target_container is nil then set ContainerName as primary container.
@@ -477,27 +477,27 @@ func (rr RoutingRuleConfiguration) exposedPorts(workloadName string) (exposedPor
 		if rr.TargetContainer != nil {
 			containerName = aws.StringValue(rr.TargetContainer)
 		}
-		exposedPort = append(exposedPort, ExposedPort{
+		exposedPorts = append(exposedPorts, ExposedPort{
 			Port:          aws.Uint16Value(rr.TargetPort),
 			Protocol:      "tcp",
 			ContainerName: containerName,
 		})
 	}
-	return exposedPort
+	return exposedPorts
 }
 
-func (sidecar SidecarConfig) exposedPorts(sidecarName string) (exposedPort []ExposedPort) {
+func (sidecar SidecarConfig) exposedPorts(sidecarName string) (exposedPorts []ExposedPort) {
 	if sidecar.Port != nil {
 		sidecarPort, protocol, _ := ParsePortMapping(sidecar.Port)
 		if protocol == nil {
 			protocol = aws.String("tcp")
 		}
-		port, _ := strconv.Atoi(aws.StringValue(sidecarPort))
-		exposedPort = append(exposedPort, ExposedPort{
+		port, _ := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
+		exposedPorts = append(exposedPorts, ExposedPort{
 			Port:          uint16(port),
 			Protocol:      aws.StringValue(protocol),
 			ContainerName: sidecarName,
 		})
 	}
-	return exposedPort
+	return exposedPorts
 }

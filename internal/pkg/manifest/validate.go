@@ -105,7 +105,7 @@ func (l LoadBalancedWebService) validate() error {
 		mainContainerPort: l.ImageConfig.Port,
 		sidecarConfig:     l.Sidecars,
 		targetPort:        l.RoutingRule.TargetPort,
-		targetContainer:   l.RoutingRule.TargetContainer,
+		targetContainer:   l.RoutingRule.GetTargetContainer(),
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
@@ -1749,12 +1749,25 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 		if sidecar.Port == nil {
 			continue
 		}
-		sidecarPort, _, err := ParsePortMapping(sidecar.Port)
+		sidecarPort, protocol, err := ParsePortMapping(sidecar.Port)
 		if err != nil {
 			return err
 		}
+		if protocol != nil {
+			protocolVal := aws.StringValue(protocol)
+			var isValidProtocol bool
+			for _, valid := range nlbValidProtocols {
+				if strings.EqualFold(protocolVal, valid) {
+					isValidProtocol = true
+					break
+				}
+			}
+			if !isValidProtocol {
+				return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(nlbValidProtocols, "and"))
+			}
+		}
 
-		port, err := strconv.Atoi(aws.StringValue(sidecarPort))
+		port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
 		if err != nil {
 			return err
 		}
@@ -1762,7 +1775,7 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 			return &errContainersExposingSamePort{
 				firstContainer:  name,
 				secondContainer: exposedPorts[uint16(port)],
-				port:            aws.StringValue(sidecar.Port),
+				port:            uint16(port),
 			}
 		}
 		exposedPorts[uint16(port)] = name
@@ -1770,17 +1783,19 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 
 	// This condition takes care of the use case where target_container is set to x container and
 	// target_port exposing port 80 which is already exposed by container y.That means container x
-	// is trying to expose the port that is alreadt being exposed by container y, so error out.
-	if opts.targetPort != nil && opts.targetContainer != nil {
-		if exposedPorts[aws.Uint16Value(opts.targetPort)] != aws.StringValue(opts.targetContainer) {
-			return &errContainersExposingSamePort{
-				firstContainer:  aws.StringValue(opts.targetContainer),
-				secondContainer: exposedPorts[aws.Uint16Value(opts.targetPort)],
-				port:            strconv.Itoa(int(aws.Uint16Value(opts.targetPort))),
+	// is trying to expose the port that is already being exposed by container y, so error out.
+	if opts.targetPort != nil {
+		containerName := exposedPorts[aws.Uint16Value(opts.targetPort)]
+		if opts.targetContainer != nil {
+			if containerName != "" && containerName != aws.StringValue(opts.targetContainer) {
+				return &errContainersExposingSamePort{
+					firstContainer:  aws.StringValue(opts.targetContainer),
+					secondContainer: containerName,
+					port:            aws.Uint16Value(opts.targetPort),
+				}
 			}
 		}
 	}
-
 	return nil
 }
 
