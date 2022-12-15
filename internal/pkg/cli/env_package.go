@@ -152,22 +152,22 @@ func (o *packageEnvOpts) Execute() error {
 	if err != nil {
 		return fmt.Errorf("get caller principal identity: %v", err)
 	}
-	deployer, err := o.newEnvPackager()
+	packager, err := o.newEnvPackager()
 	if err != nil {
 		return err
 	}
-	if err := deployer.Validate(mft); err != nil {
+	if err := packager.Validate(mft); err != nil {
 		return err
 	}
 	var uploadArtifactsOut deploy.UploadEnvArtifactsOutput
 	if o.uploadAssets {
-		out, err := deployer.UploadArtifacts()
+		out, err := packager.UploadArtifacts()
 		if err != nil {
 			return fmt.Errorf("upload assets for environment %q: %v", o.envName, err)
 		}
 		uploadArtifactsOut = *out
 	}
-	res, err := deployer.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
+	res, err := packager.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
 		RootUserARN:         principal.RootUserARN,
 		CustomResourcesURLs: uploadArtifactsOut.CustomResourceURLs,
 		Manifest:            mft,
