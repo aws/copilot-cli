@@ -221,6 +221,15 @@ func (b BackendService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		mainContainerName: aws.StringValue(b.Name),
+		mainContainerPort: b.ImageConfig.Port,
+		sidecarConfig:     b.Sidecars,
+		targetPort:        b.RoutingRule.TargetPort,
+		targetContainer:   b.RoutingRule.GetTargetContainer(),
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
 	return nil
 }
 
@@ -345,6 +354,11 @@ func (w WorkerService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		sidecarConfig: w.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
 	return nil
 }
 
@@ -420,6 +434,11 @@ func (s ScheduledJob) validate() error {
 		logging:           s.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
+	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		sidecarConfig: s.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
 	return nil
 }
