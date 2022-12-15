@@ -396,7 +396,7 @@ func TestLogging_GetEnableMetadata(t *testing.T) {
 	}
 }
 
-func TestRollbackAlarmArgsOrNames_IsEmpty(t *testing.T) {
+func TestRollbackAlarmArgsOrNames_IsZero(t *testing.T) {
 	testCases := map[string]struct {
 		in     RollbackAlarmArgsOrNames
 		wanted bool
@@ -407,16 +407,15 @@ func TestRollbackAlarmArgsOrNames_IsEmpty(t *testing.T) {
 		},
 		"non-empty alarm name": {
 			in: RollbackAlarmArgsOrNames{
-				AlarmNames: []*string{aws.String("name1"), aws.String("name2")},
-			},
+				Union: BasicToUnion[[]*string, AlarmArgs]([]*string{aws.String("alarmName1"), aws.String("alarmName2")})},
 			wanted: false,
 		},
 		"non-empty alarm args": {
 			in: RollbackAlarmArgsOrNames{
-				AlarmNames: nil,
-				AlarmArgs: AlarmArgs{
-					CPUUtilization: aws.Int(70),
-				},
+				Union: AdvancedToUnion[[]*string, AlarmArgs](
+					AlarmArgs{
+						CPUUtilization: aws.Int(70),
+					}),
 			},
 			wanted: false,
 		},
@@ -424,7 +423,7 @@ func TestRollbackAlarmArgsOrNames_IsEmpty(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			got := tc.in.IsEmpty()
+			got := tc.in.IsZero()
 
 			// THEN
 			require.Equal(t, tc.wanted, got)

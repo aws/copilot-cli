@@ -812,9 +812,13 @@ func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) 
 		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
 		deployConfigs.MaxPercent = maxPercentDefault
 	}
-	if !deploymentConfig.Alarms.IsEmpty() {
-		if deploymentConfig.Alarms.AlarmNames != nil {
-			deployConfigs.RollbackAlarms = deploymentConfig.Alarms.AlarmNames
+	if !deploymentConfig.Alarms.IsZero() {
+		if deploymentConfig.Alarms.IsBasic() {
+			alarmStrings := make([]string, len(deploymentConfig.Alarms.Basic))
+			for i, alarm := range deploymentConfig.Alarms.Basic {
+				alarmStrings[i] = aws.StringValue(alarm)
+			}
+			deployConfigs.RollbackAlarms = alarmStrings
 		}
 		// TODO (jwh): if AlarmArgs, create alarms and pass their Copilot-created names in CFN template.
 	}

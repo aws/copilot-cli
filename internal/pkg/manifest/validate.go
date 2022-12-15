@@ -107,31 +107,30 @@ func (d DeploymentConfiguration) validate() error {
 	if d.isEmpty() {
 		return nil
 	}
-	for _, validStrategy := range ecsRollingUpdateStrategies {
-		if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
-			return nil
-		}
-	}
-	return fmt.Errorf("invalid rolling deployment strategy %s, must be one of %s",
-		aws.StringValue(d.Rolling),
-		english.WordSeries(ecsRollingUpdateStrategies, "or"))
 	if err := d.Alarms.validate(); err != nil {
-		return fmt.Errorf("validate rollback alarms: %w", err)
+		return fmt.Errorf(`validate "rollback alarms": %w`, err)
+	}
+	if d.Rolling != nil {
+		for _, validStrategy := range ecsRollingUpdateStrategies {
+			if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
+				return nil
+			}
+		}
+		return fmt.Errorf("invalid rolling deployment strategy %q, must be one of %s",
+			aws.StringValue(d.Rolling),
+			english.WordSeries(ecsRollingUpdateStrategies, "or"))
 	}
 	return nil
 }
 
 func (r RollbackAlarmArgsOrNames) validate() error {
-	if r.AlarmArgs.isEmpty() {
+	if r.IsZero() {
 		return nil
 	}
-	if err := r.AlarmArgs.validate(); err != nil {
-		return err
+	if r.IsAdvanced() {
+		// TODO(jwh): Validate advanced format.
+		return nil
 	}
-	return nil
-}
-
-func (a AlarmArgs) validate() error {
 	return nil
 }
 

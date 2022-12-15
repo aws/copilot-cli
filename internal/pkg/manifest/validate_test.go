@@ -3373,7 +3373,7 @@ func TestDeploymentConfiguration_validate(t *testing.T) {
 			deployConfig: DeploymentConfiguration{
 				Rolling: aws.String("unknown"),
 			},
-			wanted: `invalid rolling deployment strategy unknown, must be one of default or recreate`,
+			wanted: `invalid rolling deployment strategy "unknown", must be one of default or recreate`,
 		},
 		"ok if deployment strategy is recreate": {
 			deployConfig: DeploymentConfiguration{
@@ -3387,6 +3387,11 @@ func TestDeploymentConfiguration_validate(t *testing.T) {
 		},
 		"ok if deployment is empty": {
 			deployConfig: DeploymentConfiguration{},
+		},
+		"ok if deployment strategy is empty but alarm indicated": {
+			deployConfig: DeploymentConfiguration{
+				Alarms:  RollbackAlarmArgsOrNames{BasicToUnion[[]*string, AlarmArgs]([]*string{aws.String("alarmName")})},
+			},
 		},
 	}
 	for name, tc := range testCases {

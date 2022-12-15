@@ -94,13 +94,7 @@ type AlarmArgs struct {
 // RollbackAlarmArgsOrNames represents alarms for rolling back deployments.
 // It supports unmarshalling yaml which can either be of type AlarmArgs or a list of strings.
 type RollbackAlarmArgsOrNames struct {
-	AlarmNames []*string
-	AlarmArgs
-}
-
-// IsEmpty returns true if neither alarm names nor alarm args (for creating alarms) are present.
-func (r *RollbackAlarmArgsOrNames) IsEmpty() bool {
-	return r.AlarmNames == nil && r.AlarmArgs.isEmpty()
+	Union[[]*string, AlarmArgs]
 }
 
 func (a *AlarmArgs) isEmpty() bool {
@@ -114,7 +108,7 @@ type DeploymentConfiguration struct {
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
-	return d.Rolling == nil && d.Alarms.IsEmpty()
+	return d == nil || (d.Rolling == nil && d.Alarms.IsZero())
 }
 
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.

@@ -40,7 +40,6 @@ var defaultTransformers = []mergo.Transformers{
 	routingRuleConfigOrBoolTransformer{},
 	secretTransformer{},
 	environmentCDNConfigTransformer{},
-	rollbackAlarmArgsOrNamesTransformer{},
 }
 
 // See a complete list of `reflect.Kind` here: https://pkg.go.dev/reflect#Kind.
@@ -581,32 +580,6 @@ func (t environmentCDNConfigTransformer) Transformer(typ reflect.Type) func(dst,
 
 		if srcStruct.Enabled != nil {
 			dstStruct.Config = AdvancedCDNConfig{}
-		}
-
-		if dst.CanSet() { // For extra safety to prevent panicking.
-			dst.Set(reflect.ValueOf(dstStruct))
-		}
-		return nil
-	}
-}
-
-type rollbackAlarmArgsOrNamesTransformer struct{}
-
-// Transformer returns custom merge logic for rollbackAlarmArgsOrNames's fields.
-func (t rollbackAlarmArgsOrNamesTransformer) Transformer(typ reflect.Type) func(dst, src reflect.Value) error {
-	if typ != reflect.TypeOf(RollbackAlarmArgsOrNames{}) {
-		return nil
-	}
-
-	return func(dst, src reflect.Value) error {
-		dstStruct, srcStruct := dst.Interface().(RollbackAlarmArgsOrNames), src.Interface().(RollbackAlarmArgsOrNames)
-
-		if srcStruct.AlarmNames != nil {
-			dstStruct.AlarmArgs = AlarmArgs{}
-		}
-
-		if !srcStruct.AlarmArgs.isEmpty() {
-			dstStruct.AlarmNames = nil
 		}
 
 		if dst.CanSet() { // For extra safety to prevent panicking.
