@@ -378,7 +378,7 @@ Resources:
       Port: 443
       Protocol: HTTPS
 {{- if .PublicHTTPConfig.SSLPolicy }}
-      SSLPolicy: {{ .PublicHTTPConfig.SSLPolicy }}
+      SslPolicy: {{ .PublicHTTPConfig.SSLPolicy }}
 {{- end }} 
 {{- range $ind, $arn := .PublicHTTPConfig.ImportedCertARNs}}
 {{- if gt $ind 0}}
@@ -457,7 +457,7 @@ Resources:
       Port: 443
       Protocol: HTTPS
 {{- if .PrivateHTTPConfig.SSLPolicy }}
-      SSLPolicy: {{ .PrivateHTTPConfig.SSLPolicy }}
+      SslPolicy: {{ .PrivateHTTPConfig.SSLPolicy }}
 {{- end}}      
 {{- range $ind, $arn := .PrivateHTTPConfig.ImportedCertARNs}}
 {{- if gt $ind 0}}
