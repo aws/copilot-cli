@@ -202,6 +202,19 @@ func (d *envDeployer) UploadArtifacts() (*UploadEnvArtifactsOutput, error) {
 	}, nil
 }
 
+// AddonsTemplate returns the environment addons template.
+func (d *envDeployer) AddonsTemplate() (string, error) {
+	addons, err := d.parseAddons()
+	if err != nil {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if !errors.As(err, &notFoundErr) {
+			return "", fmt.Errorf("parse environment addons: %w", err)
+		}
+		return "", nil
+	}
+	return addons.Template()
+}
+
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
 func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput) (*GenerateCloudFormationTemplateOutput, error) {
 	stackInput, err := d.buildStackInput(in)

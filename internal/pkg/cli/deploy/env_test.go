@@ -240,6 +240,53 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 	}
 }
 
+func TestEnvDeployer_AddonsTemplate(t *testing.T) {
+	testCases := map[string]struct {
+		setUpMocks  func(m *envDeployerMocks)
+		wanted      string
+		wantedError error
+	}{
+		"return empty string when no addons is found": {
+			setUpMocks: func(m *envDeployerMocks) {
+				m.parseAddons = func() (stackBuilder, error) {
+					return nil, &addon.ErrAddonsNotFound{}
+				}
+			},
+		},
+		"return the addon template": {
+			setUpMocks: func(m *envDeployerMocks) {
+				m.parseAddons = func() (stackBuilder, error) {
+					return m.addons, nil
+				}
+				m.addons.EXPECT().Template().Return("mockAddonsTemplate", nil)
+			},
+			wanted: "mockAddonsTemplate",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			m := &envDeployerMocks{
+				addons: mocks.NewMockstackBuilder(ctrl),
+			}
+			tc.setUpMocks(m)
+			d := envDeployer{
+				parseAddons: m.parseAddons,
+			}
+			got, gotErr := d.AddonsTemplate()
+			if tc.wantedError != nil {
+				require.EqualError(t, gotErr, tc.wantedError.Error())
+			} else {
+				require.NoError(t, gotErr)
+				require.Equal(t, got, tc.wanted)
+			}
+		})
+
+	}
+}
+
 func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 	const (
 		mockEnvRegion = "us-west-2"
