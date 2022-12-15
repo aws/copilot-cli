@@ -128,9 +128,16 @@ func (r RollbackAlarmArgsOrNames) validate() error {
 		return nil
 	}
 	if r.IsAdvanced() {
+		if err := r.Advanced.validate(); err != nil {
+			return err
+		}
 		// TODO(jwh): Validate advanced format.
 		return nil
 	}
+	return nil
+}
+
+func (a AlarmArgs) validate() error {
 	return nil
 }
 
