@@ -35,10 +35,15 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
-	"github.com/aws/copilot-cli/internal/pkg/workspace"
 	"github.com/spf13/afero"
 	"golang.org/x/sync/errgroup"
 )
+
+// WorkspaceAddonsReaderPathGetter reads addons from a workspace and the path of a workspace.
+type WorkspaceAddonsReaderPathGetter interface {
+	addon.WorkspaceAddonsReader
+	Path() string
+}
 
 type appResourcesGetter interface {
 	GetAppResourcesByRegion(app *config.Application, region string) (*cfnstack.AppRegionalResources, error)
@@ -94,14 +99,14 @@ type envDeployer struct {
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
 
-	ws              *workspace.Workspace
-	wsPath          string
-	addons          addons
+	// Dependencies for parsing addons.
+	ws              WorkspaceAddonsReaderPathGetter
 	parseAddonsOnce sync.Once
 	parseAddons     func() (stackBuilder, error)
 
 	// Cached variables.
 	appRegionalResources *cfnstack.AppRegionalResources
+	addons               addons
 }
 
 // NewEnvDeployerInput contains information needed to construct an environment deployer.
@@ -110,6 +115,7 @@ type NewEnvDeployerInput struct {
 	Env             *config.Environment
 	SessionProvider *sessions.Provider
 	ConfigStore     describe.ConfigStoreSvc
+	Workspace       WorkspaceAddonsReaderPathGetter
 }
 
 // NewEnvDeployer constructs an environment deployer.
@@ -158,6 +164,8 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		newServiceStackDescriber: func(svc string) stackDescriber {
 			return stack.NewStackDescriber(cfnstack.NameForService(in.App.Name, in.Env.Name, svc), envManagerSession)
 		},
+
+		ws: in.Workspace,
 	}
 	deployer.parseAddons = func() (stackBuilder, error) {
 		deployer.parseAddonsOnce.Do(func() {
@@ -319,7 +327,7 @@ func (d *envDeployer) uploadAddons(bucket string) (string, error) {
 	pkgConfig := addon.PackageConfig{
 		Bucket:        bucket,
 		Uploader:      d.s3,
-		WorkspacePath: d.wsPath,
+		WorkspacePath: d.ws.Path(),
 		FS:            afero.NewOsFs(),
 	}
 	if err := addons.Package(pkgConfig); err != nil {

@@ -38,6 +38,7 @@ type envDeployerMocks struct {
 	envDescriber     *mocks.MockenvDescriber
 	lbDescriber      *mocks.MocklbDescriber
 	stackDescribers  map[string]*mocks.MockstackDescriber
+	ws               *mocks.MockWorkspaceAddonsReaderPathGetter
 
 	parseAddons func() (stackBuilder, error)
 	addons      *mocks.MockstackBuilder
@@ -108,6 +109,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				m.parseAddons = func() (stackBuilder, error) {
 					return m.addons, nil
 				}
+				m.ws.EXPECT().Path().Return("mockPath")
 				m.addons.EXPECT().Package(gomock.Any()).Return(errors.New("some error"))
 			},
 			wantedError: errors.New("package environment addons: some error"),
@@ -122,6 +124,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				m.parseAddons = func() (stackBuilder, error) {
 					return m.addons, nil
 				}
+				m.ws.EXPECT().Path().Return("mockPath")
 				m.addons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.addons.EXPECT().Template().Return("", errors.New("some error"))
 			},
@@ -137,6 +140,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				m.parseAddons = func() (stackBuilder, error) {
 					return m.addons, nil
 				}
+				m.ws.EXPECT().Path().Return("mockPath")
 				m.addons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.addons.EXPECT().Template().Return("mockAddons", nil)
 				m.s3.EXPECT().Upload("mockS3Bucket", artifactpath.EnvironmentAddons([]byte("mockAddons")), gomock.Any()).
@@ -154,6 +158,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				m.parseAddons = func() (stackBuilder, error) {
 					return m.addons, nil
 				}
+				m.ws.EXPECT().Path().Return("mockPath")
 				m.addons.EXPECT().Package(gomock.Any()).Return(nil)
 				m.addons.EXPECT().Template().Return("mockAddons", nil)
 				m.s3.EXPECT().Upload("mockS3Bucket", artifactpath.EnvironmentAddons([]byte("mockAddons")), gomock.Any()).
@@ -207,6 +212,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				appCFN:  mocks.NewMockappResourcesGetter(ctrl),
 				s3:      mocks.NewMockuploader(ctrl),
 				patcher: mocks.NewMockpatcher(ctrl),
+				ws:      mocks.NewMockWorkspaceAddonsReaderPathGetter(ctrl),
 				addons:  mocks.NewMockstackBuilder(ctrl),
 			}
 			tc.setUpMocks(m)
@@ -224,8 +230,8 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				s3:          m.s3,
 				patcher:     m.patcher,
 				templateFS:  fakeTemplateFS(),
+				ws:          m.ws,
 				parseAddons: m.parseAddons,
-				wsPath:      "mockPath",
 			}
 
 			got, gotErr := d.UploadArtifacts()
