@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/dustin/go-humanize/english"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -86,16 +87,14 @@ func (a *ACM) validDomainsOfCert(ctx context.Context, cert string) ([]string, er
 	if err != nil {
 		return nil, fmt.Errorf("describe certificate %s: %w", cert, err)
 	}
-	var domainsOfCert []string
-	domainsOfCert = append(domainsOfCert, aws.StringValue(resp.Certificate.DomainName))
-	for _, san := range resp.Certificate.SubjectAlternativeNames {
-		domainsOfCert = append(domainsOfCert, aws.StringValue(san))
-	}
-	return domainsOfCert, err
+	var domainsOfCert []*string
+	domainsOfCert = append(domainsOfCert, resp.Certificate.DomainName)
+	domainsOfCert = append(domainsOfCert, resp.Certificate.SubjectAlternativeNames...)
+	return aws.StringValueSlice(domainsOfCert), err
 }
 
 func filterValidAliases(domains []string, aliases []string) []string {
-	domainSet := make(map[string]bool)
+	domainSet := make(map[string]bool, len(domains))
 	for _, v := range domains {
 		domainSet[v] = true
 	}
@@ -122,8 +121,9 @@ func (e *errInValidAliasAgainstCert) Error() string {
 
 func (e *errInValidAliasAgainstCert) RecommendActions() string {
 	var logMsg string
+	logMsg = fmt.Sprintf("Please use aliases that are protected by %s your imported:\n", english.Plural(len(e.certs), "certificate", ""))
 	for cert, sans := range e.domainsOfCert {
-		logMsg += fmt.Sprintf("Your imported certificate '%s' protects the following domains:\n%s\n", cert, strings.Join(sans, "\n"))
+		logMsg += fmt.Sprintf("'%s':%s\n", cert, english.WordSeries(sans[1:], ","))
 	}
 	return logMsg
 }
