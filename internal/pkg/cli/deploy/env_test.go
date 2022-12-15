@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	awselb "github.com/aws/aws-sdk-go/service/elbv2"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/elbv2"
 	"github.com/aws/copilot-cli/internal/pkg/cli/deploy/mocks"
 	"github.com/aws/copilot-cli/internal/pkg/config"
@@ -21,6 +22,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/deploy/upload/customresource"
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -36,6 +38,9 @@ type envDeployerMocks struct {
 	envDescriber     *mocks.MockenvDescriber
 	lbDescriber      *mocks.MocklbDescriber
 	stackDescribers  map[string]*mocks.MockstackDescriber
+
+	parseAddons func() (stackBuilder, error)
+	addons      *mocks.MockstackBuilder
 }
 
 func TestEnvDeployer_UploadArtifacts(t *testing.T) {
@@ -44,9 +49,10 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 	)
 	mockApp := &config.Application{}
 	testCases := map[string]struct {
-		setUpMocks  func(m *envDeployerMocks)
-		wantedOut   map[string]string
-		wantedError error
+		setUpMocks               func(m *envDeployerMocks)
+		wantedAddonsURL          string
+		wantedCustomResourceURLs map[string]string
+		wantedError              error
 	}{
 		"fail to get app resource by region": {
 			setUpMocks: func(m *envDeployerMocks) {
@@ -69,7 +75,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 			},
 			wantedError: errors.New("ensure env manager role has permissions to upload: some error"),
 		},
-		"fail to upload artifacts": {
+		"fail to upload custom resource scripts": {
 			setUpMocks: func(m *envDeployerMocks) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
@@ -79,7 +85,90 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 			},
 			wantedError: errors.New("upload custom resources to bucket mockS3Bucket"),
 		},
-		"success with URL returned": {
+		"fail to parse addons": {
+			setUpMocks: func(m *envDeployerMocks) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.patcher.EXPECT().EnsureManagerRoleIsAllowedToUpload("mockS3Bucket").Return(nil)
+				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Any(), gomock.Any()).AnyTimes().Return("", nil)
+				m.parseAddons = func() (stackBuilder, error) {
+					return nil, errors.New("some error")
+				}
+			},
+			wantedError: errors.New("parse environment addons: some error"),
+		},
+		"fail to package addons asset": {
+			setUpMocks: func(m *envDeployerMocks) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.patcher.EXPECT().EnsureManagerRoleIsAllowedToUpload("mockS3Bucket").Return(nil)
+				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Any(), gomock.Any()).AnyTimes().Return("", nil)
+				m.parseAddons = func() (stackBuilder, error) {
+					return m.addons, nil
+				}
+				m.addons.EXPECT().Package(gomock.Any()).Return(errors.New("some error"))
+			},
+			wantedError: errors.New("package environment addons: some error"),
+		},
+		"fail to render addons template": {
+			setUpMocks: func(m *envDeployerMocks) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.patcher.EXPECT().EnsureManagerRoleIsAllowedToUpload("mockS3Bucket").Return(nil)
+				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Any(), gomock.Any()).AnyTimes().Return("", nil)
+				m.parseAddons = func() (stackBuilder, error) {
+					return m.addons, nil
+				}
+				m.addons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.addons.EXPECT().Template().Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("render addons template: some error"),
+		},
+		"fail to upload addons template": {
+			setUpMocks: func(m *envDeployerMocks) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.patcher.EXPECT().EnsureManagerRoleIsAllowedToUpload("mockS3Bucket").Return(nil)
+				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Not(artifactpath.EnvironmentAddons([]byte("mockAddons"))), gomock.Any()).AnyTimes().Return("", nil)
+				m.parseAddons = func() (stackBuilder, error) {
+					return m.addons, nil
+				}
+				m.addons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.addons.EXPECT().Template().Return("mockAddons", nil)
+				m.s3.EXPECT().Upload("mockS3Bucket", artifactpath.EnvironmentAddons([]byte("mockAddons")), gomock.Any()).
+					Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("upload addons template to bucket mockS3Bucket: some error"),
+		},
+		"success with addons and custom resources URLs": {
+			setUpMocks: func(m *envDeployerMocks) {
+				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
+					S3Bucket: "mockS3Bucket",
+				}, nil)
+				m.patcher.EXPECT().EnsureManagerRoleIsAllowedToUpload("mockS3Bucket").Return(nil)
+				m.s3.EXPECT().Upload("mockS3Bucket", gomock.Not(artifactpath.EnvironmentAddons([]byte("mockAddons"))), gomock.Any()).AnyTimes().Return("", nil)
+				m.parseAddons = func() (stackBuilder, error) {
+					return m.addons, nil
+				}
+				m.addons.EXPECT().Package(gomock.Any()).Return(nil)
+				m.addons.EXPECT().Template().Return("mockAddons", nil)
+				m.s3.EXPECT().Upload("mockS3Bucket", artifactpath.EnvironmentAddons([]byte("mockAddons")), gomock.Any()).
+					Return("mockAddonsURL", nil)
+			},
+			wantedAddonsURL: "mockAddonsURL",
+			wantedCustomResourceURLs: map[string]string{
+				"CertificateReplicatorFunction": "",
+				"CertificateValidationFunction": "",
+				"CustomDomainFunction":          "",
+				"DNSDelegationFunction":         "",
+				"UniqueJSONValuesFunction":      "",
+			},
+		},
+		"success with only custom resource URLs returned": {
 			setUpMocks: func(m *envDeployerMocks) {
 				m.appCFN.EXPECT().GetAppResourcesByRegion(mockApp, mockEnvRegion).Return(&cfnstack.AppRegionalResources{
 					S3Bucket: "mockS3Bucket",
@@ -95,8 +184,11 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 					}
 					return "", errors.New("did not match any custom resource")
 				}).Times(len(crs))
+				m.parseAddons = func() (stackBuilder, error) {
+					return nil, &addon.ErrAddonsNotFound{}
+				}
 			},
-			wantedOut: map[string]string{
+			wantedCustomResourceURLs: map[string]string{
 				"CertificateReplicatorFunction": "",
 				"CertificateValidationFunction": "",
 				"CustomDomainFunction":          "",
@@ -115,6 +207,7 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				appCFN:  mocks.NewMockappResourcesGetter(ctrl),
 				s3:      mocks.NewMockuploader(ctrl),
 				patcher: mocks.NewMockpatcher(ctrl),
+				addons:  mocks.NewMockstackBuilder(ctrl),
 			}
 			tc.setUpMocks(m)
 
@@ -125,12 +218,14 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				App:            "mockApp",
 			}
 			d := envDeployer{
-				app:        mockApp,
-				env:        mockEnv,
-				appCFN:     m.appCFN,
-				s3:         m.s3,
-				patcher:    m.patcher,
-				templateFS: fakeTemplateFS(),
+				app:         mockApp,
+				env:         mockEnv,
+				appCFN:      m.appCFN,
+				s3:          m.s3,
+				patcher:     m.patcher,
+				templateFS:  fakeTemplateFS(),
+				parseAddons: m.parseAddons,
+				wsPath:      "mockPath",
 			}
 
 			got, gotErr := d.UploadArtifacts()
@@ -138,7 +233,8 @@ func TestEnvDeployer_UploadArtifacts(t *testing.T) {
 				require.Contains(t, gotErr.Error(), tc.wantedError.Error())
 			} else {
 				require.NoError(t, gotErr)
-				require.Equal(t, tc.wantedOut, got)
+				require.Equal(t, tc.wantedCustomResourceURLs, got.CustomResourceURLs)
+				require.Equal(t, tc.wantedAddonsURL, got.AddonsURL)
 			}
 		})
 	}

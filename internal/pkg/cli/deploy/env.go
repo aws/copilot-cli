@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	awscfn "github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/aws/ec2"
@@ -31,8 +32,11 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/describe/stack"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
+	"github.com/aws/copilot-cli/internal/pkg/template/artifactpath"
 	"github.com/aws/copilot-cli/internal/pkg/term/log"
 	termprogress "github.com/aws/copilot-cli/internal/pkg/term/progress"
+	"github.com/aws/copilot-cli/internal/pkg/workspace"
+	"github.com/spf13/afero"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -67,6 +71,11 @@ type stackDescriber interface {
 	Resources() ([]*stack.Resource, error)
 }
 
+type addons struct {
+	stack stackBuilder
+	err   error
+}
+
 type envDeployer struct {
 	app *config.Application
 	env *config.Environment
@@ -75,6 +84,7 @@ type envDeployer struct {
 	templateFS       template.Reader
 	s3               uploader
 	prefixListGetter prefixListGetter
+
 	// Dependencies to deploy an environment.
 	appCFN                   appResourcesGetter
 	envDeployer              environmentDeployer
@@ -83,6 +93,12 @@ type envDeployer struct {
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
+
+	ws              *workspace.Workspace
+	wsPath          string
+	addons          addons
+	parseAddonsOnce sync.Once
+	parseAddons     func() (stackBuilder, error)
 
 	// Cached variables.
 	appRegionalResources *cfnstack.AppRegionalResources
@@ -119,7 +135,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		return nil, fmt.Errorf("initialize env describer: %w", err)
 	}
 	cfnClient := deploycfn.New(envManagerSession, deploycfn.WithProgressTracker(os.Stderr))
-	return &envDeployer{
+	deployer := &envDeployer{
 		app: in.App,
 		env: in.Env,
 
@@ -142,7 +158,14 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		newServiceStackDescriber: func(svc string) stackDescriber {
 			return stack.NewStackDescriber(cfnstack.NameForService(in.App.Name, in.Env.Name, svc), envManagerSession)
 		},
-	}, nil
+	}
+	deployer.parseAddons = func() (stackBuilder, error) {
+		deployer.parseAddonsOnce.Do(func() {
+			deployer.addons.stack, deployer.addons.err = addon.ParseFromEnv(deployer.ws)
+		})
+		return deployer.addons.stack, deployer.addons.err
+	}
+	return deployer, nil
 }
 
 // Validate returns an error if the environment manifest is incompatible with services and application configurations.
@@ -150,8 +173,14 @@ func (d *envDeployer) Validate(mft *manifest.Environment) error {
 	return d.validateCDN(mft)
 }
 
+// UploadEnvArtifactsOutput is the output of UploadArtifacts.
+type UploadEnvArtifactsOutput struct {
+	AddonsURL          string
+	CustomResourceURLs map[string]string
+}
+
 // UploadArtifacts uploads the deployment artifacts for the environment.
-func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
+func (d *envDeployer) UploadArtifacts() (*UploadEnvArtifactsOutput, error) {
 	resources, err := d.getAppRegionalResources()
 	if err != nil {
 		return nil, err
@@ -159,7 +188,18 @@ func (d *envDeployer) UploadArtifacts() (map[string]string, error) {
 	if err := d.patcher.EnsureManagerRoleIsAllowedToUpload(resources.S3Bucket); err != nil {
 		return nil, fmt.Errorf("ensure env manager role has permissions to upload: %w", err)
 	}
-	return d.uploadCustomResources(resources.S3Bucket)
+	customResourceURLs, err := d.uploadCustomResources(resources.S3Bucket)
+	if err != nil {
+		return nil, err
+	}
+	addonsURL, err := d.uploadAddons(resources.S3Bucket)
+	if err != nil {
+		return nil, err
+	}
+	return &UploadEnvArtifactsOutput{
+		AddonsURL:          addonsURL,
+		CustomResourceURLs: customResourceURLs,
+	}, nil
 }
 
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
@@ -252,6 +292,36 @@ func (d *envDeployer) uploadCustomResources(bucket string) (map[string]string, e
 		return nil, fmt.Errorf("upload custom resources to bucket %s: %w", bucket, err)
 	}
 	return urls, nil
+}
+
+func (d *envDeployer) uploadAddons(bucket string) (string, error) {
+	addons, err := d.parseAddons()
+	if err != nil {
+		var notFoundErr *addon.ErrAddonsNotFound
+		if !errors.As(err, &notFoundErr) {
+			return "", fmt.Errorf("parse environment addons: %w", err)
+		}
+		return "", nil
+	}
+	pkgConfig := addon.PackageConfig{
+		Bucket:        bucket,
+		Uploader:      d.s3,
+		WorkspacePath: d.wsPath,
+		FS:            afero.NewOsFs(),
+	}
+	if err := addons.Package(pkgConfig); err != nil {
+		return "", fmt.Errorf("package environment addons: %w", err)
+	}
+	tmpl, err := addons.Template()
+	if err != nil {
+		return "", fmt.Errorf("render addons template: %w", err)
+	}
+	url, err := d.s3.Upload(bucket, artifactpath.EnvironmentAddons([]byte(tmpl)), strings.NewReader(tmpl))
+	if err != nil {
+		return "", fmt.Errorf("upload addons template to bucket %s: %w", bucket, err)
+	}
+	return url, nil
+
 }
 
 func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.EnvConfig, error) {
