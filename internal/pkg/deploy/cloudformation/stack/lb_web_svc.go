@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
@@ -290,68 +289,32 @@ func (s *LoadBalancedWebService) containerPort() string {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (s *LoadBalancedWebService) Parameters() ([]*cloudformation.Parameter, error) {
-	wkldParams, err := s.ecsWkld.Parameters()
+func (s *LoadBalancedWebService) Parameters() (map[string]*string, error) {
+	params, err := s.ecsWkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
-	targetContainer, targetPort := s.httpLoadBalancerTarget()
-	wkldParams = append(wkldParams, []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
-			ParameterValue: aws.String(s.containerPort()),
-		},
-		{
-			ParameterKey:   aws.String(LBWebServiceDNSDelegatedParamKey),
-			ParameterValue: aws.String(strconv.FormatBool(s.dnsDelegationEnabled)),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
-			ParameterValue: targetContainer,
-		},
-		{
-			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
-			ParameterValue: targetPort,
-		},
-		{
-			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
-			ParameterValue: aws.String(s.rc.EnvFileARN),
-		},
-	}...)
+
+	params[WorkloadTargetContainerParamKey], params[WorkloadTargetPortParamKey] = s.httpLoadBalancerTarget()
+	params[WorkloadContainerPortParamKey] = aws.String(s.containerPort())
+	params[LBWebServiceDNSDelegatedParamKey] = aws.String(strconv.FormatBool(s.dnsDelegationEnabled))
 
 	if !s.manifest.RoutingRule.Disabled() {
-		wkldParams = append(wkldParams, []*cloudformation.Parameter{
-			{
-				ParameterKey:   aws.String(WorkloadRulePathParamKey),
-				ParameterValue: s.manifest.RoutingRule.Path,
-			},
-			{
-				ParameterKey:   aws.String(WorkloadHTTPSParamKey),
-				ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
-			},
-			{
-				ParameterKey:   aws.String(WorkloadStickinessParamKey),
-				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
-			},
-		}...)
+		params[WorkloadRulePathParamKey] = s.manifest.RoutingRule.Path
+		params[WorkloadHTTPSParamKey] = aws.String(strconv.FormatBool(s.httpsEnabled))
+		params[WorkloadStickinessParamKey] = aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness)))
 	}
+
 	if !s.manifest.NLBConfig.IsEmpty() {
 		port, _, err := manifest.ParsePortMapping(s.manifest.NLBConfig.Port)
 		if err != nil {
 			return nil, err
 		}
-		wkldParams = append(wkldParams, []*cloudformation.Parameter{
-			{
-				ParameterKey:   aws.String(LBWebServiceNLBAliasesParamKey),
-				ParameterValue: aws.String(s.manifest.NLBConfig.Aliases.ToString()),
-			},
-			{
-				ParameterKey:   aws.String(LBWebServiceNLBPortParamKey),
-				ParameterValue: port,
-			},
-		}...)
+
+		params[LBWebServiceNLBAliasesParamKey] = aws.String(s.manifest.NLBConfig.Aliases.ToString())
+		params[LBWebServiceNLBPortParamKey] = port
 	}
-	return wkldParams, nil
+	return params, nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.

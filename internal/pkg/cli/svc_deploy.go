@@ -68,18 +68,6 @@ func (o *deploySvcOpts) Validate() error {
 
 // Ask prompts for and validates any required flags.
 func (o *deploySvcOpts) Ask() error {
-	// TODO fix prompts to not say "package"
-	/*
-	   func (o *deploySvcOpts) validateOrAskSvcName() error {
-	   	name, err := o.sel.Service("Select a service in your workspace", "")
-	   	return nil
-	   }
-
-	   func (o *deploySvcOpts) validateOrAskEnvName() error {
-	   	name, err := o.sel.Environment("Select an environment", "", o.appName)
-	   	return nil
-	   }
-	*/
 	return o.packageSvcOpts.Ask()
 }
 
@@ -220,7 +208,7 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 	type reachable interface {
 		Port() (uint16, bool)
 	}
-	mft, ok := o.appliedDynamicMft.Manifest().(reachable)
+	mft, ok := o.packageSvcOpts.appliedDynamicMft.Manifest().(reachable)
 	if !ok {
 		return nil, nil
 	}
@@ -228,7 +216,7 @@ func (o *deploySvcOpts) uriRecommendedActions() ([]string, error) {
 		return nil, nil
 	}
 
-	describer, err := describe.NewReachableService(o.appName, o.name, o.store)
+	describer, err := describe.NewReachableService(o.appName, o.name, o.packageSvcOpts.store)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +244,7 @@ func (o *deploySvcOpts) publishRecommendedActions() []string {
 	type publisher interface {
 		Publish() []manifest.Topic
 	}
-	mft, ok := o.appliedDynamicMft.Manifest().(publisher)
+	mft, ok := o.packageSvcOpts.appliedDynamicMft.Manifest().(publisher)
 	if !ok {
 		return nil
 	}
@@ -331,7 +319,7 @@ func buildSvcDeployCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&vars.appName, appFlag, appFlagShort, tryReadingAppName(), appFlagDescription)
 	cmd.Flags().StringVarP(&vars.name, nameFlag, nameFlagShort, "", svcFlagDescription)
 	cmd.Flags().StringVarP(&vars.envName, envFlag, envFlagShort, "", envFlagDescription)
-	cmd.Flags().StringVar(&vars.imageTag, imageTagFlag, "", imageTagFlagDescription)
+	cmd.Flags().StringVar(&vars.tag, imageTagFlag, "", imageTagFlagDescription)
 	cmd.Flags().StringToStringVar(&vars.resourceTags, resourceTagsFlag, nil, resourceTagsFlagDescription)
 	cmd.Flags().BoolVar(&vars.forceNewUpdate, forceFlag, false, forceFlagDescription)
 	cmd.Flags().BoolVar(&vars.disableRollback, noRollbackFlag, false, noRollbackFlagDescription)

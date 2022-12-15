@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -165,15 +164,8 @@ func (s *WorkerService) Template() (string, error) {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (s *WorkerService) Parameters() ([]*cloudformation.Parameter, error) {
-	wkldParams, err := s.ecsWkld.Parameters()
-	if err != nil {
-		return nil, err
-	}
-	return append(wkldParams, &cloudformation.Parameter{
-		ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
-		ParameterValue: aws.String(s.rc.EnvFileARN),
-	}), nil
+func (s *WorkerService) Parameters() (map[string]*string, error) {
+	return s.ecsWkld.Parameters()
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.

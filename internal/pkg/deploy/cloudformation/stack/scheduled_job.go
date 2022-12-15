@@ -14,7 +14,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/config"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/aws/copilot-cli/internal/pkg/template/override"
@@ -203,8 +202,8 @@ func (j *ScheduledJob) Template() (string, error) {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
-	wkldParams, err := j.ecsWkld.Parameters()
+func (j *ScheduledJob) Parameters() (map[string]*string, error) {
+	params, err := j.ecsWkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
@@ -212,16 +211,9 @@ func (j *ScheduledJob) Parameters() ([]*cloudformation.Parameter, error) {
 	if err != nil {
 		return nil, err
 	}
-	return append(wkldParams, []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(ScheduledJobScheduleParamKey),
-			ParameterValue: aws.String(schedule),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
-			ParameterValue: aws.String(j.rc.EnvFileARN),
-		},
-	}...), nil
+
+	params[ScheduledJobScheduleParamKey] = aws.String(schedule)
+	return params, nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
@@ -277,7 +269,8 @@ func (j *ScheduledJob) awsSchedule() (string, error) {
 
 // toRate converts a cron "@every" directive to a rate expression defined in minutes.
 // example input: @every 1h30m
-//        output: rate(90 minutes)
+//
+//	output: rate(90 minutes)
 func toRate(duration string) (string, error) {
 	d, err := time.ParseDuration(duration)
 	if err != nil {
@@ -302,9 +295,10 @@ func toRate(duration string) (string, error) {
 // toFixedSchedule converts cron predefined schedules into AWS-flavored cron expressions.
 // (https://godoc.org/github.com/robfig/cron#hdr-Predefined_schedules)
 // Example input: @daily
-//        output: cron(0 0 * * ? *)
-//         input: @annually
-//        output: cron(0 0 1 1 ? *)
+//
+//	output: cron(0 0 * * ? *)
+//	 input: @annually
+//	output: cron(0 0 1 1 ? *)
 func toFixedSchedule(schedule string) (string, error) {
 	switch {
 	case strings.HasPrefix(schedule, hourly):
@@ -337,7 +331,8 @@ func awsCronFieldSpecified(input string) bool {
 // BOTH DOM and DOW cannot be specified
 // DOW numbers run 1-7, not 0-6
 // Example input: 0 9 * * 1-5 (at 9 am, Monday-Friday)
-//              : cron(0 9 ? * 2-6 *) (adds required ? operator, increments DOW to 1-index, adds year)
+//
+//	: cron(0 9 ? * 2-6 *) (adds required ? operator, increments DOW to 1-index, adds year)
 func toAWSCron(schedule string) (string, error) {
 	const (
 		MIN = iota

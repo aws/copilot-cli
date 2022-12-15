@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	"github.com/aws/copilot-cli/internal/pkg/aws/apprunner"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
@@ -131,7 +130,7 @@ func (w *wkld) StackName() string {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
+func (w *wkld) Parameters() (map[string]*string, error) {
 	var img string
 	if w.image != nil {
 		img = w.image.GetLocation()
@@ -139,42 +138,31 @@ func (w *wkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.rc.Image != nil {
 		img = w.rc.Image.GetLocation()
 	}
-	return []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(WorkloadAppNameParamKey),
-			ParameterValue: aws.String(w.app),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadEnvNameParamKey),
-			ParameterValue: aws.String(w.env),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadNameParamKey),
-			ParameterValue: aws.String(w.name),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadContainerImageParamKey),
-			ParameterValue: aws.String(img),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadAddonsTemplateURLParamKey),
-			ParameterValue: aws.String(w.rc.AddonsTemplateURL),
-		},
+	return map[string]*string{
+		WorkloadAppNameParamKey:           aws.String(w.app),
+		WorkloadEnvNameParamKey:           aws.String(w.env),
+		WorkloadNameParamKey:              aws.String(w.name),
+		WorkloadContainerImageParamKey:    aws.String(img),
+		WorkloadAddonsTemplateURLParamKey: aws.String(w.rc.AddonsTemplateURL),
 	}, nil
 }
 
 // Tags returns the list of tags to apply to the CloudFormation stack.
-func (w *wkld) Tags() []*cloudformation.Tag {
-	return mergeAndFlattenTags(w.rc.AdditionalTags, map[string]string{
-		deploy.AppTagKey:     w.app,
-		deploy.EnvTagKey:     w.env,
-		deploy.ServiceTagKey: w.name,
-	})
+func (w *wkld) Tags() map[string]string {
+	tags := make(map[string]string, len(w.rc.AdditionalTags)+3)
+	for k, v := range w.rc.AdditionalTags {
+		tags[k] = v
+	}
+
+	tags[deploy.AppTagKey] = w.app
+	tags[deploy.EnvTagKey] = w.app
+	tags[deploy.ServiceTagKey] = w.app
+	return tags
 }
 
 type templateConfigurer interface {
-	Parameters() ([]*cloudformation.Parameter, error)
-	Tags() []*cloudformation.Tag
+	Parameters() (map[string]*string, error)
+	Tags() map[string]string
 }
 
 func serializeTemplateConfig(parser template.Parser, stack templateConfigurer) (string, error) {
@@ -183,21 +171,12 @@ func serializeTemplateConfig(parser template.Parser, stack templateConfigurer) (
 		return "", err
 	}
 
-	tags := stack.Tags()
-
 	config := struct {
 		Parameters map[string]*string `json:"Parameters"`
-		Tags       map[string]*string `json:"Tags,omitempty"`
+		Tags       map[string]string  `json:"Tags,omitempty"`
 	}{
-		Parameters: make(map[string]*string, len(params)),
-		Tags:       make(map[string]*string, len(tags)),
-	}
-
-	for _, param := range params {
-		config.Parameters[aws.StringValue(param.ParameterKey)] = param.ParameterValue
-	}
-	for _, tag := range tags {
-		config.Tags[aws.StringValue(tag.Key)] = tag.Value
+		Parameters: params,
+		Tags:       stack.Tags(),
 	}
 
 	str, err := json.MarshalIndent(config, "", "  ")
@@ -296,8 +275,8 @@ type ecsWkld struct {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (w *ecsWkld) Parameters() ([]*cloudformation.Parameter, error) {
-	wkldParameters, err := w.wkld.Parameters()
+func (w *ecsWkld) Parameters() (map[string]*string, error) {
+	params, err := w.wkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
@@ -309,24 +288,13 @@ func (w *ecsWkld) Parameters() ([]*cloudformation.Parameter, error) {
 	if w.logRetention != nil {
 		logRetention = aws.IntValue(w.logRetention)
 	}
-	return append(wkldParameters, []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(WorkloadTaskCPUParamKey),
-			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.tc.CPU))),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadTaskMemoryParamKey),
-			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.tc.Memory))),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadTaskCountParamKey),
-			ParameterValue: aws.String(strconv.Itoa(*desiredCount)),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadLogRetentionParamKey),
-			ParameterValue: aws.String(strconv.Itoa(logRetention)),
-		},
-	}...), nil
+
+	params[WorkloadTaskCPUParamKey] = aws.String(strconv.Itoa(aws.IntValue(w.tc.CPU)))
+	params[WorkloadTaskMemoryParamKey] = aws.String(strconv.Itoa(aws.IntValue(w.tc.Memory)))
+	params[WorkloadTaskCountParamKey] = aws.String(strconv.Itoa(aws.IntValue(desiredCount)))
+	params[WorkloadLogRetentionParamKey] = aws.String(strconv.Itoa(logRetention))
+	params[WorkloadEnvFileARNParamKey] = aws.String(w.rc.EnvFileARN)
+	return params, nil
 }
 
 type appRunnerWkld struct {
@@ -337,8 +305,8 @@ type appRunnerWkld struct {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
-	wkldParameters, err := w.wkld.Parameters()
+func (w *appRunnerWkld) Parameters() (map[string]*string, error) {
+	params, err := w.wkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
@@ -367,64 +335,35 @@ func (w *appRunnerWkld) Parameters() ([]*cloudformation.Parameter, error) {
 		return nil, fmt.Errorf("field `memory` is required for Request Driven Web Services")
 	}
 
-	appRunnerParameters := []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(RDWkldImageRepositoryType),
-			ParameterValue: aws.String(imageRepositoryType),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(aws.Uint16Value(w.imageConfig.Port)))),
-		},
-		{
-			ParameterKey:   aws.String(RDWkldInstanceCPUParamKey),
-			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.instanceConfig.CPU))),
-		},
-		{
-			ParameterKey:   aws.String(RDWkldInstanceMemoryParamKey),
-			ParameterValue: aws.String(strconv.Itoa(aws.IntValue(w.instanceConfig.Memory))),
-		},
-	}
+	params[RDWkldImageRepositoryType] = aws.String(imageRepositoryType)
+	params[WorkloadContainerPortParamKey] = aws.String(strconv.Itoa(int(aws.Uint16Value(w.imageConfig.Port))))
+	params[RDWkldInstanceCPUParamKey] = aws.String(strconv.Itoa(aws.IntValue(w.instanceConfig.CPU)))
+	params[RDWkldInstanceMemoryParamKey] = aws.String(strconv.Itoa(aws.IntValue(w.instanceConfig.Memory)))
 
 	// Optional HealthCheckPath parameter
 	if w.healthCheckConfig.Path() != nil {
-		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
-			ParameterKey:   aws.String(RDWkldHealthCheckPathParamKey),
-			ParameterValue: aws.String(*w.healthCheckConfig.Path()),
-		})
+		params[RDWkldHealthCheckPathParamKey] = w.healthCheckConfig.Path()
 	}
 
 	// Optional HealthCheckInterval parameter
 	if w.healthCheckConfig.Advanced.Interval != nil {
-		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
-			ParameterKey:   aws.String(RDWkldHealthCheckIntervalParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.Advanced.Interval.Seconds()))),
-		})
+		params[RDWkldHealthCheckIntervalParamKey] = aws.String(strconv.Itoa(int(w.healthCheckConfig.Advanced.Interval.Seconds())))
 	}
 
 	// Optional HealthCheckTimeout parameter
 	if w.healthCheckConfig.Advanced.Timeout != nil {
-		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
-			ParameterKey:   aws.String(RDWkldHealthCheckTimeoutParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(w.healthCheckConfig.Advanced.Timeout.Seconds()))),
-		})
+		params[RDWkldHealthCheckTimeoutParamKey] = aws.String(strconv.Itoa(int(w.healthCheckConfig.Advanced.Timeout.Seconds())))
 	}
 
 	// Optional HealthCheckHealthyThreshold parameter
 	if w.healthCheckConfig.Advanced.HealthyThreshold != nil {
-		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
-			ParameterKey:   aws.String(RDWkldHealthCheckHealthyThresholdParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.Advanced.HealthyThreshold))),
-		})
+		params[RDWkldHealthCheckHealthyThresholdParamKey] = aws.String(strconv.Itoa(int(*w.healthCheckConfig.Advanced.HealthyThreshold)))
 	}
 
 	// Optional HealthCheckUnhealthyThreshold parameter
 	if w.healthCheckConfig.Advanced.UnhealthyThreshold != nil {
-		appRunnerParameters = append(appRunnerParameters, &cloudformation.Parameter{
-			ParameterKey:   aws.String(RDWkldHealthCheckUnhealthyThresholdParamKey),
-			ParameterValue: aws.String(strconv.Itoa(int(*w.healthCheckConfig.Advanced.UnhealthyThreshold))),
-		})
+		params[RDWkldHealthCheckUnhealthyThresholdParamKey] = aws.String(strconv.Itoa(int(*w.healthCheckConfig.Advanced.UnhealthyThreshold)))
 	}
 
-	return append(wkldParameters, appRunnerParameters...), nil
+	return params, nil
 }

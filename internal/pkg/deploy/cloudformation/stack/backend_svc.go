@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/config"
 	"github.com/aws/copilot-cli/internal/pkg/manifest"
 	"github.com/aws/copilot-cli/internal/pkg/template"
@@ -225,49 +224,20 @@ func (s *BackendService) containerPort() string {
 }
 
 // Parameters returns the list of CloudFormation parameters used by the template.
-func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
+func (s *BackendService) Parameters() (map[string]*string, error) {
 	params, err := s.ecsWkld.Parameters()
 	if err != nil {
 		return nil, err
 	}
 
-	targetContainer, targetPort := s.httpLoadBalancerTarget()
-	params = append(params, []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(WorkloadContainerPortParamKey),
-			ParameterValue: aws.String(s.containerPort()),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadEnvFileARNParamKey),
-			ParameterValue: aws.String(s.rc.EnvFileARN),
-		},
-		{
-			ParameterKey:   aws.String(WorkloadTargetContainerParamKey),
-			ParameterValue: targetContainer,
-		},
-		{
-			ParameterKey:   aws.String(WorkloadTargetPortParamKey),
-			ParameterValue: targetPort,
-		},
-	}...)
+	params[WorkloadTargetContainerParamKey], params[WorkloadTargetPortParamKey] = s.httpLoadBalancerTarget()
+	params[WorkloadContainerPortParamKey] = aws.String(s.containerPort())
 
 	if !s.manifest.RoutingRule.IsEmpty() {
-		params = append(params, []*cloudformation.Parameter{
-			{
-				ParameterKey:   aws.String(WorkloadRulePathParamKey),
-				ParameterValue: s.manifest.RoutingRule.Path,
-			},
-			{
-				ParameterKey:   aws.String(WorkloadStickinessParamKey),
-				ParameterValue: aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness))),
-			},
-			{
-				ParameterKey:   aws.String(WorkloadHTTPSParamKey),
-				ParameterValue: aws.String(strconv.FormatBool(s.httpsEnabled)),
-			},
-		}...)
+		params[WorkloadRulePathParamKey] = s.manifest.RoutingRule.Path
+		params[WorkloadHTTPSParamKey] = aws.String(strconv.FormatBool(s.httpsEnabled))
+		params[WorkloadStickinessParamKey] = aws.String(strconv.FormatBool(aws.BoolValue(s.manifest.RoutingRule.Stickiness)))
 	}
-
 	return params, nil
 }
 

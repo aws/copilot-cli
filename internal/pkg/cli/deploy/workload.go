@@ -254,7 +254,8 @@ type Stack interface {
 }
 
 // TODO
-func (w *workloadDeployer) AddonStack() (Stack, error) {
+func (w *workloadDeployer) AddonsStack() (Stack, error) {
+	return w.addons, nil
 	if w.addons == nil {
 		return nil, nil
 	}

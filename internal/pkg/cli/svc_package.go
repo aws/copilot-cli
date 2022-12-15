@@ -28,11 +28,6 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/workspace"
 )
 
-const (
-	svcPackageSvcNamePrompt = "Which service would you like to generate a CloudFormation template for?"
-	svcPackageEnvNamePrompt = "Which environment would you like to package this stack for?"
-)
-
 type packageSvcVars struct {
 	name         string
 	envName      string
@@ -179,6 +174,7 @@ func (o *packageSvcOpts) Ask() error {
 // Execute prints the CloudFormation template of the application for the environment.
 func (o *packageSvcOpts) Execute() error {
 	if !o.clientConfigured {
+		// TODO configure clients never called in svc deploy
 		if err := o.configureClients(); err != nil {
 			return err
 		}
@@ -188,38 +184,50 @@ func (o *packageSvcOpts) Execute() error {
 			return err
 		}
 	}
-	targetEnv, err := o.getTargetEnv()
-	if err != nil {
-		return nil
-	}
-	gen, err := o.getStackGenerator(targetEnv)
+
+	deployer, err := o.Deployer()
 	if err != nil {
 		return err
 	}
-	stack, err := o.getWorkloadStack(gen)
-	if err != nil {
-		return err
-	}
-	if err := o.writeAndClose(o.templateWriter, stack.template); err != nil {
-		return err
-	}
-	if err := o.writeAndClose(o.paramsWriter, stack.parameters); err != nil {
-		return err
-	}
-	addonsTemplate, err := gen.AddonsTemplate()
-	switch {
-	case err != nil:
-		return fmt.Errorf("retrieve addons template: %w", err)
-	case addonsTemplate == "":
-		return nil
-	}
-	// Addons template won't show up without setting --output-dir flag.
-	if o.outputDir != "" {
-		if err := o.setAddonsFileWriter(); err != nil {
-			return err
+
+	if o.uploadAssets {
+		if err := deployer.UploadArtifacts(); err != nil {
+			return fmt.Errorf("upload resources required for deployment for %s: %w", o.name, err)
 		}
 	}
-	return o.writeAndClose(o.addonsWriter, addonsTemplate)
+
+	stack, err := deployer.Stack(clideploy.StackRuntimeConfiguration{
+		RootUserARN: o.rootUserARN,    // TODO make sure it's set before this point
+		Tags:        o.targetApp.Tags, // TODO maybe targetApp should get called in configure clients?
+	})
+	if err != nil {
+		return fmt.Errorf("generate workload %s template against environment %s: %w", o.name, o.envName, err)
+	}
+
+	// TODO do stuff with stack
+
+	/*
+		if err := o.writeAndClose(o.templateWriter, stack.template); err != nil {
+			return err
+		}
+		if err := o.writeAndClose(o.paramsWriter, stack.parameters); err != nil {
+			return err
+		}
+		addonsTemplate, err := gen.AddonsTemplate()
+		switch {
+		case err != nil:
+			return fmt.Errorf("retrieve addons template: %w", err)
+		case addonsTemplate == "":
+			return nil
+		}
+		// Addons template won't show up without setting --output-dir flag.
+		if o.outputDir != "" {
+			if err := o.setAddonsFileWriter(); err != nil {
+				return err
+			}
+		}
+		return o.writeAndClose(o.addonsWriter, addonsTemplate)
+	*/
 }
 
 type workloadStack struct {
@@ -267,7 +275,7 @@ func (o *packageSvcOpts) validateOrAskSvcName() error {
 		return nil
 	}
 
-	name, err := o.sel.Service(svcPackageSvcNamePrompt, "")
+	name, err := o.sel.Service("Select a service in your workspace", "")
 	if err != nil {
 		return fmt.Errorf("select service: %w", err)
 	}
@@ -281,7 +289,7 @@ func (o *packageSvcOpts) validateOrAskEnvName() error {
 		return err
 	}
 
-	name, err := o.sel.Environment(svcPackageEnvNamePrompt, "", o.appName)
+	name, err := o.sel.Environment("Select an environment", "", o.appName)
 	if err != nil {
 		return fmt.Errorf("select environment: %w", err)
 	}
@@ -331,18 +339,6 @@ type cfnStackConfig struct {
 
 // getWorkloadStack returns the CloudFormation stack's template and its parameters for the service.
 func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cfnStackConfig, error) {
-	targetApp, err := o.getTargetApp()
-	if err != nil {
-		return nil, err
-	}
-	var uploadOut clideploy.UploadArtifactsOutput
-	if o.uploadAssets {
-		out, err := generator.UploadArtifacts()
-		if err != nil {
-			return nil, fmt.Errorf("upload resources required for deployment for %s: %w", o.name, err)
-		}
-		uploadOut = *out
-	}
 	output, err := generator.GenerateCloudFormationTemplate(&clideploy.StackInput{
 		StackRuntimeConfiguration: clideploy.StackRuntimeConfiguration{
 			RootUserARN:        o.rootUserARN,
@@ -353,9 +349,6 @@ func (o *packageSvcOpts) getWorkloadStack(generator workloadStackGenerator) (*cf
 			CustomResourceURLs: uploadOut.CustomResourceURLs,
 		},
 	})
-	if err != nil {
-		return nil, fmt.Errorf("generate workload %s template against environment %s: %w", o.name, o.envName, err)
-	}
 	return &cfnStackConfig{
 		template:   output.Template,
 		parameters: output.Parameters}, nil

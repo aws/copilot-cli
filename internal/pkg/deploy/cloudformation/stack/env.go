@@ -26,7 +26,7 @@ type envReadParser interface {
 type EnvStackConfig struct {
 	in                *deploy.CreateEnvironmentInput
 	lastForceUpdateID string
-	prevParams        []*cloudformation.Parameter
+	prevParams        map[string]*string
 	parser            envReadParser
 }
 
@@ -74,9 +74,14 @@ func NewEnvStackConfig(input *deploy.CreateEnvironmentInput) *EnvStackConfig {
 
 // NewEnvConfigFromExistingStack returns a CloudFormation stack configuration for updating an environment.
 func NewEnvConfigFromExistingStack(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, prevParams []*cloudformation.Parameter) *EnvStackConfig {
+	params := make(map[string]*string, len(prevParams))
+	for _, param := range prevParams {
+		params[aws.StringValue(param.ParameterKey)] = param.ParameterValue
+	}
+
 	return &EnvStackConfig{
 		in:                in,
-		prevParams:        prevParams,
+		prevParams:        params,
 		lastForceUpdateID: lastForceUpdateID,
 		parser:            template.New(),
 	}
@@ -133,7 +138,7 @@ func (e *EnvStackConfig) Template() (string, error) {
 }
 
 // Parameters returns the parameters to be passed into an environment CloudFormation template.
-func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
+func (e *EnvStackConfig) Parameters() (map[string]*string, error) {
 	httpsListener := "false"
 	if len(e.importPublicCertARNs()) != 0 || e.in.App.Domain != "" {
 		httpsListener = "true"
@@ -142,70 +147,31 @@ func (e *EnvStackConfig) Parameters() ([]*cloudformation.Parameter, error) {
 	if len(e.importPrivateCertARNs()) != 0 {
 		internalHTTPSListener = "true"
 	}
-	currParams := []*cloudformation.Parameter{
-		{
-			ParameterKey:   aws.String(envParamAppNameKey),
-			ParameterValue: aws.String(e.in.App.Name),
-		},
-		{
-			ParameterKey:   aws.String(envParamEnvNameKey),
-			ParameterValue: aws.String(e.in.Name),
-		},
-		{
-			ParameterKey:   aws.String(envParamToolsAccountPrincipalKey),
-			ParameterValue: aws.String(e.in.App.AccountPrincipalARN),
-		},
-		{
-			ParameterKey:   aws.String(envParamAppDNSKey),
-			ParameterValue: aws.String(e.in.App.Domain),
-		},
-		{
-			ParameterKey:   aws.String(envParamAppDNSDelegationRoleKey),
-			ParameterValue: aws.String(e.in.App.DNSDelegationRole()),
-		},
-		{
-			ParameterKey:   aws.String(EnvParamServiceDiscoveryEndpoint),
-			ParameterValue: aws.String(fmt.Sprintf(fmtServiceDiscoveryEndpoint, e.in.Name, e.in.App.Name)),
-		},
-		{
-			ParameterKey:   aws.String(envParamCreateHTTPSListenerKey),
-			ParameterValue: aws.String(httpsListener),
-		},
-		{
-			ParameterKey:   aws.String(envParamCreateInternalHTTPSListenerKey),
-			ParameterValue: aws.String(internalHTTPSListener),
-		},
-		{
-			ParameterKey:   aws.String(EnvParamAliasesKey),
-			ParameterValue: aws.String(""),
-		},
-		{
-			ParameterKey:   aws.String(EnvParamALBWorkloadsKey),
-			ParameterValue: aws.String(""),
-		},
-		{
-			ParameterKey:   aws.String(envParamInternalALBWorkloadsKey),
-			ParameterValue: aws.String(""),
-		},
-		{
-			ParameterKey:   aws.String(envParamEFSWorkloadsKey),
-			ParameterValue: aws.String(""),
-		},
-		{
-			ParameterKey:   aws.String(envParamNATWorkloadsKey),
-			ParameterValue: aws.String(""),
-		},
-		{
-			ParameterKey:   aws.String(envParamAppRunnerPrivateWorkloadsKey),
-			ParameterValue: aws.String(""),
-		},
+
+	params := map[string]*string{
+		envParamAppNameKey:                     aws.String(e.in.App.Name),
+		envParamEnvNameKey:                     aws.String(e.in.Name),
+		envParamToolsAccountPrincipalKey:       aws.String(e.in.App.AccountPrincipalARN),
+		envParamAppDNSKey:                      aws.String(e.in.App.Domain),
+		envParamAppDNSDelegationRoleKey:        aws.String(e.in.App.DNSDelegationRole()),
+		EnvParamServiceDiscoveryEndpoint:       aws.String(fmt.Sprintf(fmtServiceDiscoveryEndpoint, e.in.Name, e.in.App.Name)),
+		envParamCreateHTTPSListenerKey:         aws.String(httpsListener),
+		envParamCreateInternalHTTPSListenerKey: aws.String(internalHTTPSListener),
+		EnvParamAliasesKey:                     aws.String(""),
+		EnvParamALBWorkloadsKey:                aws.String(""),
+		envParamInternalALBWorkloadsKey:        aws.String(""),
+		envParamEFSWorkloadsKey:                aws.String(""),
+		envParamNATWorkloadsKey:                aws.String(""),
+		envParamAppRunnerPrivateWorkloadsKey:   aws.String(""),
 	}
-	if e.prevParams == nil {
-		return currParams, nil
+
+	if len(e.prevParams) == 0 {
+		return params, nil
 	}
+
 	// If we're creating a stack configuration for an existing environment stack, ensure the previous env controller
 	// managed parameters are using the previous value.
-	return e.transformParameters(currParams, e.prevParams, transformEnvControllerParameters, e.transformServiceDiscoveryEndpoint)
+	return e.transformParameters(params, e.prevParams, transformEnvControllerParameters, e.transformServiceDiscoveryEndpoint), nil
 }
 
 // SerializedParameters returns the CloudFormation stack's parameters serialized to a JSON document.
@@ -214,11 +180,15 @@ func (e *EnvStackConfig) SerializedParameters() (string, error) {
 }
 
 // Tags returns the tags that should be applied to the environment CloudFormation stack.
-func (e *EnvStackConfig) Tags() []*cloudformation.Tag {
-	return mergeAndFlattenTags(e.in.AdditionalTags, map[string]string{
-		deploy.AppTagKey: e.in.App.Name,
-		deploy.EnvTagKey: e.in.Name,
-	})
+func (e *EnvStackConfig) Tags() map[string]string {
+	tags := make(map[string]string, len(e.in.AdditionalTags)+2)
+	for k, v := range e.in.AdditionalTags {
+		tags[k] = v
+	}
+
+	tags[deploy.AppTagKey] = e.in.App.Name
+	tags[deploy.EnvTagKey] = e.in.Name
+	return tags
 }
 
 // StackName returns the name of the CloudFormation stack (based on the app and env names).
@@ -226,7 +196,7 @@ func (e *EnvStackConfig) StackName() string {
 	return NameForEnv(e.in.App.Name, e.in.Name)
 }
 
-type transformParameterFunc func(new, old *cloudformation.Parameter) *cloudformation.Parameter
+type transformParameterFunc func(key string, newValue, oldValue *string) *string
 
 // transformParameters removes or transforms each of the current parameters and does not add any new parameters.
 // This means that parameters that exist only in the old template are left out.
@@ -235,75 +205,55 @@ type transformParameterFunc func(new, old *cloudformation.Parameter) *cloudforma
 // 1. It should return `nil` if the parameter should be removed.
 // 2. The transform functions are applied in a convolutional manner.
 // 3. If the parameter `old` is passed in as `nil`, the parameter does not exist in the old template.
-func (e *EnvStackConfig) transformParameters(currParams, oldParams []*cloudformation.Parameter, transformFunc ...transformParameterFunc) ([]*cloudformation.Parameter, error) {
-
-	// Make a map out of `currParams` and out of `oldParams`.
-	curr := make(map[string]*cloudformation.Parameter)
-	for _, p := range currParams {
-		curr[aws.StringValue(p.ParameterKey)] = p
-	}
-	old := make(map[string]*cloudformation.Parameter)
-	for _, p := range oldParams {
-		old[aws.StringValue(p.ParameterKey)] = p
-	}
-
+func (e *EnvStackConfig) transformParameters(curr, old map[string]*string, transformFunc ...transformParameterFunc) map[string]*string {
 	// Remove or transform each of the current parameters.
-	var params []*cloudformation.Parameter
-	for k, p := range curr {
-		currP := p
+	params := make(map[string]*string)
+	for key, val := range curr {
+		currVal := val
 		for _, transform := range transformFunc {
-			currP = transform(currP, old[k])
+			currVal = transform(key, currVal, old[key])
 		}
-		if currP != nil {
-			params = append(params, currP)
+		if currVal != nil {
+			params[key] = currVal
 		}
 	}
-	return params, nil
+	return params
 }
 
 // transformEnvControllerParameters transforms an env-controller managed parameter.
 // If the parameter exists in the old template, it returns the old parameter assuming that old.ParameterKey = new.ParameterKey.
 // Otherwise, it returns its new default value.
-func transformEnvControllerParameters(new, old *cloudformation.Parameter) *cloudformation.Parameter {
-	if new == nil {
+func transformEnvControllerParameters(key string, newValue, oldValue *string) *string {
+	if newValue == nil {
 		return nil
 	}
 	isEnvControllerManaged := make(map[string]struct{})
 	for _, f := range template.AvailableEnvFeatures() {
 		isEnvControllerManaged[f] = struct{}{}
 	}
-	if _, ok := isEnvControllerManaged[aws.StringValue(new.ParameterKey)]; !ok {
-		return new
+	if _, ok := isEnvControllerManaged[key]; !ok {
+		return newValue
 	}
-	if old == nil { // The EnvController-managed parameter doesn't exist in the old stack. Use the new value.
-		return new
+	if oldValue == nil { // The EnvController-managed parameter doesn't exist in the old stack. Use the new value.
+		return newValue
 	}
-	// Ideally, we would return `&cloudformation.Parameter{ ParameterKey: new.ParameterKey, UsePreviousValue: true}`.
-	// Unfortunately CodePipeline template config does not support it.
-	// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-cfn-artifacts.html#w2ab1c21c15c15
-	return old
+	return oldValue
 }
 
 // transformServiceDiscoveryEndpoint transforms the service discovery endpoint parameter.
 // If the parameter exists in the old template, it uses its previous value.
 // Otherwise, it uses a default value of `<app>.local`.
-func (e *EnvStackConfig) transformServiceDiscoveryEndpoint(new, old *cloudformation.Parameter) *cloudformation.Parameter {
-	if new == nil {
+func (e *EnvStackConfig) transformServiceDiscoveryEndpoint(key string, newValue, oldValue *string) *string {
+	if newValue == nil {
 		return nil
 	}
-	if aws.StringValue(new.ParameterKey) != EnvParamServiceDiscoveryEndpoint {
-		return new
+	if key != EnvParamServiceDiscoveryEndpoint {
+		return newValue
 	}
-	if old == nil {
-		return &cloudformation.Parameter{
-			ParameterKey:   new.ParameterKey,
-			ParameterValue: aws.String(fmt.Sprintf(`%s.local`, e.in.App.Name)),
-		}
+	if oldValue == nil {
+		return aws.String(fmt.Sprintf("%s.local", e.in.App.Name))
 	}
-	// Ideally, we would return `&cloudformation.Parameter{ ParameterKey: new.ParameterKey, UsePreviousValue: true}`.
-	// Unfortunately CodePipeline template config does not support it.
-	// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/continuous-delivery-codepipeline-cfn-artifacts.html#w2ab1c21c15c15
-	return old
+	return oldValue
 }
 
 // NewBootstrapEnvStackConfig sets up a BootstrapEnvStackConfig struct.
@@ -356,7 +306,7 @@ func (e *BootstrapEnvStackConfig) SerializedParameters() (string, error) {
 }
 
 // Tags returns the tags that should be applied to the bootstrap CloudFormation stack.
-func (e *BootstrapEnvStackConfig) Tags() []*cloudformation.Tag {
+func (e *BootstrapEnvStackConfig) Tags() map[string]string {
 	return (*EnvStackConfig)(e).Tags()
 }
 
