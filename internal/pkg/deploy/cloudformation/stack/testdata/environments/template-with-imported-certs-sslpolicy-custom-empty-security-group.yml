@@ -405,7 +405,7 @@ Resources:
       LoadBalancerArn: !Ref PublicLoadBalancer
       Port: 443
       Protocol: HTTPS
-      SSLPolicy:  ELBSecurityPolicy-FS-1-1-2019-08
+      SslPolicy:  ELBSecurityPolicy-FS-1-1-2019-08
   HTTPSImportCertificate2:
     Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
     Condition: ExportHTTPSListener
