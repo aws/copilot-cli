@@ -115,6 +115,7 @@ func newPackageEnvOpts(vars packageEnvVars) (*packageEnvOpts, error) {
 			Env:             envCfg,
 			SessionProvider: sessProvider,
 			ConfigStore:     opts.cfgStore,
+			Workspace:       ws,
 		})
 	}
 	return opts, nil
@@ -169,6 +170,7 @@ func (o *packageEnvOpts) Execute() error {
 	}
 	res, err := packager.GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
 		RootUserARN:         principal.RootUserARN,
+		AddonsURL:           uploadArtifactsOut.AddonsURL,
 		CustomResourcesURLs: uploadArtifactsOut.CustomResourceURLs,
 		Manifest:            mft,
 		RawManifest:         rawMft,

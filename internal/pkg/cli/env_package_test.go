@@ -283,6 +283,58 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErr: errors.New(`generate CloudFormation template from environment "test" manifest: some error`),
 		},
+		"should generate templates with artifact URLs": {
+			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
+				ws := mocks.NewMockwsEnvironmentReader(ctrl)
+				ws.EXPECT().ReadEnvironmentManifest("test").Return([]byte("name: test\ntype: Environment\n"), nil)
+				interop := mocks.NewMockinterpolator(ctrl)
+				interop.EXPECT().Interpolate("name: test\ntype: Environment\n").Return("name: test\ntype: Environment\n", nil)
+				caller := mocks.NewMockidentityService(ctrl)
+				caller.EXPECT().Get().Return(identity.Caller{}, nil)
+				deployer := mocks.NewMockenvPackager(ctrl)
+				deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{
+					AddonsURL: "mockAddonsURL",
+					CustomResourceURLs: map[string]string{
+						"mockCustomResource": "mockURL",
+					},
+				}, nil)
+				deployer.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).DoAndReturn(func(in *deploy.DeployEnvironmentInput) (*deploy.GenerateCloudFormationTemplateOutput, error) {
+					require.Equal(t, in.AddonsURL, "mockAddonsURL")
+					require.Equal(t, in.CustomResourcesURLs, map[string]string{
+						"mockCustomResource": "mockURL",
+					})
+					return &deploy.GenerateCloudFormationTemplateOutput{
+						Template:   "template",
+						Parameters: "parameters",
+					}, nil
+				})
+
+				fs := afero.NewMemMapFs()
+				return &packageEnvOpts{
+					packageEnvVars: packageEnvVars{
+						envName:      "test",
+						uploadAssets: true,
+					},
+					ws:           ws,
+					caller:       caller,
+					tplWriter:    discardFile{},
+					paramsWriter: discardFile{},
+					newInterpolator: func(_, _ string) interpolator {
+						return interop
+					},
+					newEnvPackager: func() (envPackager, error) {
+						return deployer, nil
+					},
+					fs:     fs,
+					envCfg: &config.Environment{Name: "test"},
+					appCfg: &config.Application{
+						PermissionsBoundary: "mockPermissionsBoundaryPolicy",
+					},
+				}
+			},
+			wantedFS: func(_ *testing.T, _ afero.Fs) {},
+		},
 		"should write files to output directories": {
 			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
 				ws := mocks.NewMockwsEnvironmentReader(ctrl)
