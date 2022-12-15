@@ -102,7 +102,8 @@ func (i ECRImage) GetLocation() string {
 
 type addons interface {
 	Template() (string, error)
-	Parameters() (string, error)
+	SerializedParameters() (string, error)
+	Parameters() (map[string]*string, error)
 }
 
 type location interface {

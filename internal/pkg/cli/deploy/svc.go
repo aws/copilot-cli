@@ -12,7 +12,6 @@ import (
 
 	"golang.org/x/mod/semver"
 
-	sdkcfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
 	"github.com/aws/copilot-cli/internal/pkg/deploy"
 	"github.com/aws/copilot-cli/internal/pkg/term/color"
@@ -21,13 +20,6 @@ import (
 
 type uploader interface {
 	Upload(bucket, key string, data io.Reader) (string, error)
-}
-
-type stackSerializer interface {
-	templater
-	SerializedParameters() (string, error)
-	Parameters() ([]*sdkcfn.Parameter, error)
-	Tags() []*sdkcfn.Tag
 }
 
 type versionGetter interface {

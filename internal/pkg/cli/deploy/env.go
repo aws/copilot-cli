@@ -79,7 +79,7 @@ type envDeployer struct {
 	appCFN                   appResourcesGetter
 	envDeployer              environmentDeployer
 	patcher                  patcher
-	newStackSerializer       func(input *deploy.CreateEnvironmentInput, forceUpdateID string, prevParams []*awscfn.Parameter) stackSerializer
+	newStack                 func(input *deploy.CreateEnvironmentInput, forceUpdateID string, prevParams []*awscfn.Parameter) Stack
 	envDescriber             envDescriber
 	lbDescriber              lbDescriber
 	newServiceStackDescriber func(string) stackDescriber
@@ -134,7 +134,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 			TemplatePatcher: cfnClient,
 			Env:             in.Env,
 		},
-		newStackSerializer: func(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, oldParams []*awscfn.Parameter) stackSerializer {
+		newStack: func(in *deploy.CreateEnvironmentInput, lastForceUpdateID string, oldParams []*awscfn.Parameter) Stack {
 			return cfnstack.NewEnvConfigFromExistingStack(in, lastForceUpdateID, oldParams)
 		},
 		envDescriber: envDescriber,
@@ -339,7 +339,7 @@ func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput)
 	if err != nil {
 		return nil, fmt.Errorf("retrieve environment stack force update ID: %w", err)
 	}
-	stack := d.newStackSerializer(stackInput, lastForceUpdateID, oldParams)
+	stack := d.newStack(stackInput, lastForceUpdateID, oldParams)
 	tpl, err := stack.Template()
 	if err != nil {
 		return nil, fmt.Errorf("generate stack template: %w", err)

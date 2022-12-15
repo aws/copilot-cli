@@ -50,8 +50,8 @@ var (
 type StackConfiguration interface {
 	StackName() string
 	Template() (string, error)
-	Parameters() ([]*sdkcloudformation.Parameter, error)
-	Tags() []*sdkcloudformation.Tag
+	Parameters() (map[string]*string, error)
+	Tags() map[string]string
 	SerializedParameters() (string, error)
 }
 

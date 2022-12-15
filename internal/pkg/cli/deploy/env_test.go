@@ -244,7 +244,7 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				},
 				appCFN:      m.appCFN,
 				envDeployer: m.envDeployer,
-				newStackSerializer: func(_ *deploy.CreateEnvironmentInput, _ string, _ []*awscfn.Parameter) stackSerializer {
+				newStack: func(_ *deploy.CreateEnvironmentInput, _ string, _ []*awscfn.Parameter) Stack {
 					return m.stackSerializer
 				},
 			}

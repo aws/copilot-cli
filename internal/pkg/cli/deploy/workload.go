@@ -14,7 +14,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	sdkcfn "github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/copilot-cli/internal/pkg/addon"
 	awscloudformation "github.com/aws/copilot-cli/internal/pkg/aws/cloudformation"
@@ -61,8 +60,7 @@ type templater interface {
 }
 
 type stackBuilder interface {
-	templater
-	Parameters() (string, error)
+	Stack
 	Package(addon.PackageConfig) error
 }
 
@@ -247,34 +245,18 @@ type StackInput struct {
 type Stack interface {
 	StackName() string
 	Template() (string, error)
-	Parameters() ([]*sdkcfn.Parameter, error)
-	Tags() []*sdkcfn.Tag
-
+	Parameters() (map[string]*string, error)
+	Tags() map[string]string
 	SerializedParameters() (string, error)
 }
 
 // TODO
 func (w *workloadDeployer) AddonsStack() (Stack, error) {
 	return w.addons, nil
-	if w.addons == nil {
-		return nil, nil
-	}
-
-	return nil, nil
-	// return w.addons, nil
 }
 
 func (w *workloadDeployer) RecommendActions() []string {
 	return nil
-}
-
-// AddonsTemplate returns this workload's addon template.
-func (w *workloadDeployer) AddonsTemplate() (string, error) {
-	if w.addons == nil {
-		return "", nil
-	}
-
-	return w.addons.Template()
 }
 
 type forceDeployInput struct {

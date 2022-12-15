@@ -51,6 +51,10 @@ type WorkloadStack struct {
 	workloadName string
 }
 
+func (w *WorkloadStack) StackName() string {
+	return "addons" // TODO do i need this?
+}
+
 // EnvironmentStack represents a CloudFormation stack for environment addons.
 type EnvironmentStack struct {
 	stack
@@ -59,6 +63,10 @@ type EnvironmentStack struct {
 type stack struct {
 	template   *cfnTemplate
 	parameters yaml.Node
+}
+
+func (s *stack) Tags() map[string]string {
+	return nil
 }
 
 type parser struct {
@@ -127,12 +135,30 @@ func (s *stack) Template() (string, error) {
 }
 
 // Parameters returns Stack's CloudFormation parameters as a yaml string.
-func (s *stack) Parameters() (string, error) {
+func (s *stack) SerializedParameters() (string, error) {
 	if s.parameters.IsZero() {
 		return "", nil
 	}
 
 	return s.encode(s.parameters)
+}
+
+// Parameters converts the parameters passed to the addons stack
+// into map[string]*string. Parameters who's value is a CloudFormation
+// intrinsic functions are converted best-effort to a string representation.
+func (s *stack) Parameters() (map[string]*string, error) {
+	params := make(map[string]*string)
+	for k, v := range mappingNode(&s.parameters) {
+		b, err := yaml.Marshal(v)
+		if err != nil {
+			continue
+		}
+
+		str := string(b)
+		params[k] = &str
+	}
+
+	return params, nil
 }
 
 // encode encodes v as a yaml string indented with 2 spaces.
@@ -170,7 +196,7 @@ func (p *parser) stack() (*stack, error) {
 	}, nil
 }
 
-// parseTemplate merges CloudFormation templates under the "addons/" directory  into a single CloudFormation 
+// parseTemplate merges CloudFormation templates under the "addons/" directory  into a single CloudFormation
 // template and returns it.
 //
 // If the addons directory doesn't exist or no yaml files are found in
