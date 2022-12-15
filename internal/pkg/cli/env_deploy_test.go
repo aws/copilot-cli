@@ -189,7 +189,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErr: errors.New("mock error"),
 		},
-		"fail to upload manifest": {
+		"fail to upload artifacts": {
 			setUpMocks: func(m *deployEnvExecuteMocks) {
 				m.ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: mockEnv\ntype: Environment\n"), nil)
 				m.interpolator.EXPECT().Interpolate(gomock.Any()).Return("name: mockEnv\ntype: Environment\n", nil)
@@ -209,11 +209,7 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 					RootUserARN: "mockRootUserARN",
 				}, nil)
 				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
-				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{
-					CustomResourceURLs: map[string]string{
-						"mockResource": "mockURL",
-					},
-				}, nil)
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{}, nil)
 				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).DoAndReturn(func(_ *deploy.DeployEnvironmentInput) error {
 					return errors.New("some error")
 				})
@@ -229,12 +225,14 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 				}, nil)
 				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
 				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{
+					AddonsURL: "mockAddonsURL",
 					CustomResourceURLs: map[string]string{
 						"mockResource": "mockURL",
 					},
 				}, nil)
 				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).DoAndReturn(func(in *deploy.DeployEnvironmentInput) error {
 					require.Equal(t, in.RootUserARN, "mockRootUserARN")
+					require.Equal(t, in.AddonsURL, "mockAddonsURL")
 					require.Equal(t, in.CustomResourcesURLs, map[string]string{
 						"mockResource": "mockURL",
 					})

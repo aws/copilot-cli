@@ -144,6 +144,7 @@ func (o *deployEnvOpts) Execute() error {
 	}
 	if err := deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
 		RootUserARN:         caller.RootUserARN,
+		AddonsURL:           uploadArtifactsOut.AddonsURL,
 		CustomResourcesURLs: uploadArtifactsOut.CustomResourceURLs,
 		Manifest:            mft,
 		ForceNewUpdate:      o.forceNewUpdate,
