@@ -5,6 +5,7 @@ package cli
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"testing"
 
@@ -283,6 +284,39 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 			},
 			wantedErr: errors.New(`generate CloudFormation template from environment "test" manifest: some error`),
 		},
+		"should return a wrapped error when retrieving addons CloudFormation template fails": {
+			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
+				ws := mocks.NewMockwsEnvironmentReader(ctrl)
+				ws.EXPECT().ReadEnvironmentManifest(gomock.Any()).Return([]byte("name: test\ntype: Environment\n"), nil)
+				interop := mocks.NewMockinterpolator(ctrl)
+				interop.EXPECT().Interpolate(gomock.Any()).Return("name: test\ntype: Environment\n", nil)
+				caller := mocks.NewMockidentityService(ctrl)
+				caller.EXPECT().Get().Return(identity.Caller{}, nil)
+				packager := mocks.NewMockenvPackager(ctrl)
+				packager.EXPECT().Validate(gomock.Any()).Return(nil)
+				packager.EXPECT().GenerateCloudFormationTemplate(gomock.Any()).Return(&deploy.GenerateCloudFormationTemplateOutput{
+					Template:   "template",
+					Parameters: "parameters",
+				}, nil)
+				packager.EXPECT().AddonsTemplate().Return("", errors.New("some error"))
+				return &packageEnvOpts{
+					packageEnvVars: packageEnvVars{
+						envName: "test",
+					},
+					ws:     ws,
+					caller: caller,
+					newInterpolator: func(_, _ string) interpolator {
+						return interop
+					},
+					newEnvPackager: func() (envPackager, error) {
+						return packager, nil
+					},
+					envCfg: &config.Environment{Name: "test"},
+					appCfg: &config.Application{},
+				}
+			},
+			wantedErr: errors.New(`retrieve environment addons template: some error`),
+		},
 		"should generate templates with artifact URLs": {
 			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
 				ws := mocks.NewMockwsEnvironmentReader(ctrl)
@@ -309,6 +343,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 						Parameters: "parameters",
 					}, nil
 				})
+				deployer.EXPECT().AddonsTemplate().Return("", nil)
 
 				fs := afero.NewMemMapFs()
 				return &packageEnvOpts{
@@ -335,7 +370,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 			},
 			wantedFS: func(_ *testing.T, _ afero.Fs) {},
 		},
-		"should write files to output directories": {
+		"should write files to output directories without addons": {
 			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
 				ws := mocks.NewMockwsEnvironmentReader(ctrl)
 				ws.EXPECT().ReadEnvironmentManifest("test").Return([]byte("name: test\ntype: Environment\n"), nil)
@@ -362,7 +397,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 					Template:   "template",
 					Parameters: "parameters",
 				}, nil)
-
+				deployer.EXPECT().AddonsTemplate().Return("", nil)
 				fs := afero.NewMemMapFs()
 
 				return &packageEnvOpts{
@@ -397,6 +432,79 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				actual, err = io.ReadAll(f)
 				require.NoError(t, err)
 				require.Equal(t, []byte("parameters"), actual)
+
+				f, err = fs.Open(fmt.Sprintf("infrastructure/%s", envAddonsCFNTemplateName))
+				require.EqualError(t, err, fmt.Errorf("open infrastructure/%s: file does not exist", envAddonsCFNTemplateName).Error())
+			},
+		},
+		"should write files to output directories with addons": {
+			mockedCmd: func(ctrl *gomock.Controller) *packageEnvOpts {
+				ws := mocks.NewMockwsEnvironmentReader(ctrl)
+				ws.EXPECT().ReadEnvironmentManifest("test").Return([]byte("name: test\ntype: Environment\n"), nil)
+				interop := mocks.NewMockinterpolator(ctrl)
+				interop.EXPECT().Interpolate("name: test\ntype: Environment\n").Return("name: test\ntype: Environment\n", nil)
+				caller := mocks.NewMockidentityService(ctrl)
+				caller.EXPECT().Get().Return(identity.Caller{}, nil)
+				deployer := mocks.NewMockenvPackager(ctrl)
+				deployer.EXPECT().Validate(gomock.Any()).Return(nil)
+				deployer.EXPECT().GenerateCloudFormationTemplate(&deploy.DeployEnvironmentInput{
+					RootUserARN:         "",
+					CustomResourcesURLs: nil,
+					Manifest: &manifest.Environment{
+						Workload: manifest.Workload{
+							Name: aws.String("test"),
+							Type: aws.String("Environment"),
+						},
+						EnvironmentConfig: manifest.EnvironmentConfig{},
+					},
+					ForceNewUpdate:      false,
+					RawManifest:         []byte("name: test\ntype: Environment\n"),
+					PermissionsBoundary: "mockPermissionsBoundaryPolicy",
+				}).Return(&deploy.GenerateCloudFormationTemplateOutput{
+					Template:   "template",
+					Parameters: "parameters",
+				}, nil)
+				deployer.EXPECT().AddonsTemplate().Return("addons", nil)
+				fs := afero.NewMemMapFs()
+
+				return &packageEnvOpts{
+					packageEnvVars: packageEnvVars{
+						envName:   "test",
+						outputDir: "infrastructure",
+					},
+					ws:     ws,
+					caller: caller,
+					newInterpolator: func(_, _ string) interpolator {
+						return interop
+					},
+					newEnvPackager: func() (envPackager, error) {
+						return deployer, nil
+					},
+					fs:     fs,
+					envCfg: &config.Environment{Name: "test"},
+					appCfg: &config.Application{
+						PermissionsBoundary: "mockPermissionsBoundaryPolicy",
+					},
+				}
+			},
+			wantedFS: func(t *testing.T, fs afero.Fs) {
+				f, err := fs.Open("infrastructure/test.env.yml")
+				require.NoError(t, err)
+				actual, err := io.ReadAll(f)
+				require.NoError(t, err)
+				require.Equal(t, []byte("template"), actual)
+
+				f, err = fs.Open("infrastructure/test.env.params.json")
+				require.NoError(t, err)
+				actual, err = io.ReadAll(f)
+				require.NoError(t, err)
+				require.Equal(t, []byte("parameters"), actual)
+
+				f, err = fs.Open("infrastructure/env.addons.yml")
+				require.NoError(t, err)
+				actual, err = io.ReadAll(f)
+				require.NoError(t, err)
+				require.Equal(t, []byte("addons"), actual)
 			},
 		},
 	}
