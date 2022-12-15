@@ -209,8 +209,10 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 					RootUserARN: "mockRootUserARN",
 				}, nil)
 				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
-				m.deployer.EXPECT().UploadArtifacts().Return(map[string]string{
-					"mockResource": "mockURL",
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{
+					CustomResourceURLs: map[string]string{
+						"mockResource": "mockURL",
+					},
 				}, nil)
 				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).DoAndReturn(func(_ *deploy.DeployEnvironmentInput) error {
 					return errors.New("some error")
@@ -226,8 +228,10 @@ func TestDeployEnvOpts_Execute(t *testing.T) {
 					RootUserARN: "mockRootUserARN",
 				}, nil)
 				m.deployer.EXPECT().Validate(gomock.Any()).Return(nil)
-				m.deployer.EXPECT().UploadArtifacts().Return(map[string]string{
-					"mockResource": "mockURL",
+				m.deployer.EXPECT().UploadArtifacts().Return(&deploy.UploadEnvArtifactsOutput{
+					CustomResourceURLs: map[string]string{
+						"mockResource": "mockURL",
+					},
 				}, nil)
 				m.deployer.EXPECT().DeployEnvironment(gomock.Any()).DoAndReturn(func(in *deploy.DeployEnvironmentInput) error {
 					require.Equal(t, in.RootUserARN, "mockRootUserARN")

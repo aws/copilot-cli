@@ -6824,10 +6824,10 @@ func (mr *MockenvDeployerMockRecorder) DeployEnvironment(in interface{}) *gomock
 }
 
 // UploadArtifacts mocks base method.
-func (m *MockenvDeployer) UploadArtifacts() (map[string]string, error) {
+func (m *MockenvDeployer) UploadArtifacts() (*deploy.UploadEnvArtifactsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadArtifacts")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].(*deploy.UploadEnvArtifactsOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -6891,10 +6891,10 @@ func (mr *MockenvPackagerMockRecorder) GenerateCloudFormationTemplate(in interfa
 }
 
 // UploadArtifacts mocks base method.
-func (m *MockenvPackager) UploadArtifacts() (map[string]string, error) {
+func (m *MockenvPackager) UploadArtifacts() (*deploy.UploadEnvArtifactsOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UploadArtifacts")
-	ret0, _ := ret[0].(map[string]string)
+	ret0, _ := ret[0].(*deploy.UploadEnvArtifactsOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
