@@ -216,7 +216,7 @@ type EnvironmentCDNConfig struct {
 type AdvancedCDNConfig struct {
 	Certificate  *string         `yaml:"certificate,omitempty"`
 	TerminateTLS *bool           `yaml:"terminate_tls,omitempty"`
-	Static       CDNStaticConfig `yaml:"static,omitempty"`
+	Static       CDNStaticConfig `yaml:"static_assets,omitempty"`
 }
 
 // IsEmpty returns whether environmentCDNConfig is empty.
