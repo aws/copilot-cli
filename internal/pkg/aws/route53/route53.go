@@ -89,7 +89,7 @@ func (r53 *Route53) ValidateDomainOwnership(domainName string) error {
 		return err
 	}
 
-	wanted, err := r53.listNSRecords(domainName, hzID)
+	wanted, err := r53.listHostedZoneNSRecords(domainName, hzID)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (r53 *Route53) ValidateDomainOwnership(domainName string) error {
 	return nil
 }
 
-func (r53 *Route53) listNSRecords(domainName, hostedZoneID string) ([]string, error) {
+func (r53 *Route53) listHostedZoneNSRecords(domainName, hostedZoneID string) ([]string, error) {
 	out, err := r53.client.ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
 		HostedZoneId: aws.String(hostedZoneID),
 	})
