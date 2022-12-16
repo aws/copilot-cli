@@ -223,6 +223,18 @@ func (d *envDeployer) AddonsTemplate() (string, error) {
 	return addons.Template()
 }
 
+// DeployEnvironmentInput contains information used to deploy the environment.
+type DeployEnvironmentInput struct {
+	RootUserARN         string
+	AddonsURL           string
+	CustomResourcesURLs map[string]string
+	Manifest            *manifest.Environment
+	ForceNewUpdate      bool
+	RawManifest         []byte
+	PermissionsBoundary string
+	DisableRollback     bool
+}
+
 // GenerateCloudFormationTemplate returns the environment stack's template and parameter configuration.
 func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput) (*GenerateCloudFormationTemplateOutput, error) {
 	stackInput, err := d.buildStackInput(in)
@@ -250,17 +262,6 @@ func (d *envDeployer) GenerateCloudFormationTemplate(in *DeployEnvironmentInput)
 		Template:   tpl,
 		Parameters: params,
 	}, nil
-}
-
-// DeployEnvironmentInput contains information used to deploy the environment.
-type DeployEnvironmentInput struct {
-	RootUserARN         string
-	CustomResourcesURLs map[string]string
-	Manifest            *manifest.Environment
-	ForceNewUpdate      bool
-	RawManifest         []byte
-	PermissionsBoundary string
-	DisableRollback     bool
 }
 
 // DeployEnvironment deploys an environment using CloudFormation.
@@ -359,6 +360,18 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 		return nil, err
 	}
 
+	var addons *cfnstack.Addons
+	parsedAddons, err := d.parseAddons()
+	if err == nil {
+		addons = &cfnstack.Addons{
+			S3ObjectURL: in.AddonsURL,
+			Stack:       parsedAddons,
+		}
+	}
+	var notFoundErr *addon.ErrAddonsNotFound
+	if !errors.As(err, &notFoundErr) {
+		return nil, err
+	}
 	return &cfnstack.EnvConfig{
 		Name: d.env.Name,
 		App: deploy.AppInformation{
@@ -367,6 +380,7 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 			AccountPrincipalARN: in.RootUserARN,
 		},
 		AdditionalTags:       d.app.Tags,
+		Addons:               addons,
 		CustomResourcesURLs:  in.CustomResourcesURLs,
 		ArtifactBucketARN:    s3.FormatARN(partition.ID(), resources.S3Bucket),
 		ArtifactBucketKeyARN: resources.KMSKeyARN,
