@@ -47,7 +47,7 @@ Outputs:
     Description: "The name of a user-defined bucket."
     Value: !Ref {{logicalIDSafe .Name}}Bucket
   {{logicalIDSafe .Name}}BucketARN:
-    Description: "The ARN of the {{.Name}} bucket"
+    Description: "The ARN of the {{.Name}} bucket."
     Value: !GetAtt {{logicalIDSafe .Name}}Bucket.Arn
 #    # Uncomment the "Export" block if you need to reference the bucket ARN in a workload addon.
 #    Export: 
