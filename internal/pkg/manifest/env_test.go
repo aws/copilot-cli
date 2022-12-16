@@ -909,6 +909,29 @@ func TestSubnetsConfiguration_IsEmpty(t *testing.T) {
 	}
 }
 
+func TestCDNStaticConfig_IsEmpty(t *testing.T) {
+	testCases := map[string]struct {
+		in     CDNStaticConfig
+		wanted bool
+	}{
+		"empty": {
+			wanted: true,
+		},
+		"not empty": {
+			in: CDNStaticConfig{
+				Path: aws.String("something"),
+			},
+			wanted: false,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			got := tc.in.IsEmpty()
+			require.Equal(t, tc.wanted, got)
+		})
+	}
+}
+
 func TestEnvironmentHTTPConfig_IsEmpty(t *testing.T) {
 	testCases := map[string]struct {
 		in     EnvironmentHTTPConfig

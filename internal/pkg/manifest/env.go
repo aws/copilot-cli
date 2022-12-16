@@ -214,8 +214,9 @@ type EnvironmentCDNConfig struct {
 
 // AdvancedCDNConfig represents an advanced configuration for a Content Delivery Network.
 type AdvancedCDNConfig struct {
-	Certificate  *string `yaml:"certificate,omitempty"`
-	TerminateTLS *bool   `yaml:"terminate_tls,omitempty"`
+	Certificate  *string         `yaml:"certificate,omitempty"`
+	TerminateTLS *bool           `yaml:"terminate_tls,omitempty"`
+	Static       CDNStaticConfig `yaml:"static_assets,omitempty"`
 }
 
 // IsEmpty returns whether environmentCDNConfig is empty.
@@ -225,7 +226,7 @@ func (cfg *EnvironmentCDNConfig) IsEmpty() bool {
 
 // isEmpty returns whether advancedCDNConfig is empty.
 func (cfg *AdvancedCDNConfig) isEmpty() bool {
-	return cfg.Certificate == nil && cfg.TerminateTLS == nil
+	return cfg.Certificate == nil && cfg.TerminateTLS == nil && cfg.Static.IsEmpty()
 }
 
 // CDNEnabled returns whether a CDN configuration has been enabled in the environment manifest.
@@ -270,7 +271,19 @@ func (cfg *EnvironmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-// IsEmpty returns true if vpc is not configured.
+// CDNStaticConfig represents the static config for CDN.
+type CDNStaticConfig struct {
+	Location string  `yaml:"location,omitempty"`
+	Alias    string  `yaml:"alias,omitempty"`
+	Path     *string `yaml:"path,omitempty"`
+}
+
+// IsEmpty returns true if CDNStaticConfig is not configured.
+func (cfg CDNStaticConfig) IsEmpty() bool {
+	return cfg.Location == "" && cfg.Alias == "" && cfg.Path == nil
+}
+
+// IsEmpty returns true if environmentVPCConfig is not configured.
 func (cfg environmentVPCConfig) IsEmpty() bool {
 	return cfg.ID == nil && cfg.CIDR == nil && cfg.Subnets.IsEmpty() && cfg.FlowLogs.IsZero()
 }
