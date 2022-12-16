@@ -35,7 +35,7 @@ type WorkerServiceConfig struct {
 	Manifest      *manifest.WorkerService
 	RawManifest   []byte
 	RuntimeConfig RuntimeConfig
-	Addons        addons
+	Addons        NestedStackConfigurer
 }
 
 // NewWorkerService creates a new WorkerService stack from a manifest file.
