@@ -818,7 +818,7 @@ func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) 
 			for i, alarm := range deploymentConfig.Alarms.Basic {
 				alarmStrings[i] = aws.StringValue(alarm)
 			}
-			deployConfigs.RollbackAlarms = alarmStrings
+			deployConfigs.RollbackAlarms = template.FmtSliceFunc(alarmStrings)
 		}
 		// TODO (jwh): if AlarmArgs, create alarms and pass their Copilot-created names in CFN template.
 	}

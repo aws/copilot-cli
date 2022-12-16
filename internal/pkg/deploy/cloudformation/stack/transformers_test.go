@@ -2083,7 +2083,7 @@ func Test_convertDeploymentConfig(t *testing.T) {
 				MaxPercent:        maxPercentDefault,
 			},
 		},
-		"if alarm names entered, populate": {
+		"if alarm names entered, format and populate": {
 			in: manifest.DeploymentConfiguration{
 				Alarms: manifest.RollbackAlarmArgsOrNames{
 					Union: manifest.BasicToUnion[[]*string, manifest.AlarmArgs](
@@ -2095,10 +2095,7 @@ func Test_convertDeploymentConfig(t *testing.T) {
 			out: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: minHealthyPercentDefault,
 				MaxPercent:        maxPercentDefault,
-				RollbackAlarms: []string{
-					"alarmName1",
-					"alarmName2",
-				},
+				RollbackAlarms:    "[alarmName1, alarmName2]",
 			},
 		},
 	}
