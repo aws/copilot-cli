@@ -433,7 +433,7 @@ func TestPackageEnvOpts_Execute(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, []byte("parameters"), actual)
 
-				f, err = fs.Open(fmt.Sprintf("infrastructure/%s", envAddonsCFNTemplateName))
+				_, err = fs.Open(fmt.Sprintf("infrastructure/%s", envAddonsCFNTemplateName))
 				require.EqualError(t, err, fmt.Errorf("open infrastructure/%s: file does not exist", envAddonsCFNTemplateName).Error())
 			},
 		},
