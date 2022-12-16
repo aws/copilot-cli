@@ -395,6 +395,9 @@ func TestEnvDeployer_GenerateCloudFormationTemplate(t *testing.T) {
 				newStackSerializer: func(_ *cfnstack.EnvConfig, _ string, _ []*awscfn.Parameter) stackSerializer {
 					return m.stackSerializer
 				},
+				parseAddons: func() (stackBuilder, error) {
+					return nil, &addon.ErrAddonsNotFound{}
+				},
 			}
 			actual, err := d.GenerateCloudFormationTemplate(&DeployEnvironmentInput{})
 			if tc.wantedError != nil {
