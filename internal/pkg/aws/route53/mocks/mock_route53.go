@@ -5,6 +5,8 @@
 package mocks
 
 import (
+	context "context"
+	net "net"
 	reflect "reflect"
 
 	route53 "github.com/aws/aws-sdk-go/service/route53"
@@ -35,16 +37,69 @@ func (m *Mockapi) EXPECT() *MockapiMockRecorder {
 }
 
 // ListHostedZonesByName mocks base method.
-func (m *Mockapi) ListHostedZonesByName(in *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
+func (m *Mockapi) ListHostedZonesByName(arg0 *route53.ListHostedZonesByNameInput) (*route53.ListHostedZonesByNameOutput, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListHostedZonesByName", in)
+	ret := m.ctrl.Call(m, "ListHostedZonesByName", arg0)
 	ret0, _ := ret[0].(*route53.ListHostedZonesByNameOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListHostedZonesByName indicates an expected call of ListHostedZonesByName.
-func (mr *MockapiMockRecorder) ListHostedZonesByName(in interface{}) *gomock.Call {
+func (mr *MockapiMockRecorder) ListHostedZonesByName(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListHostedZonesByName", reflect.TypeOf((*Mockapi)(nil).ListHostedZonesByName), in)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListHostedZonesByName", reflect.TypeOf((*Mockapi)(nil).ListHostedZonesByName), arg0)
+}
+
+// ListResourceRecordSets mocks base method.
+func (m *Mockapi) ListResourceRecordSets(arg0 *route53.ListResourceRecordSetsInput) (*route53.ListResourceRecordSetsOutput, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListResourceRecordSets", arg0)
+	ret0, _ := ret[0].(*route53.ListResourceRecordSetsOutput)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListResourceRecordSets indicates an expected call of ListResourceRecordSets.
+func (mr *MockapiMockRecorder) ListResourceRecordSets(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResourceRecordSets", reflect.TypeOf((*Mockapi)(nil).ListResourceRecordSets), arg0)
+}
+
+// MocknameserverResolver is a mock of nameserverResolver interface.
+type MocknameserverResolver struct {
+	ctrl     *gomock.Controller
+	recorder *MocknameserverResolverMockRecorder
+}
+
+// MocknameserverResolverMockRecorder is the mock recorder for MocknameserverResolver.
+type MocknameserverResolverMockRecorder struct {
+	mock *MocknameserverResolver
+}
+
+// NewMocknameserverResolver creates a new mock instance.
+func NewMocknameserverResolver(ctrl *gomock.Controller) *MocknameserverResolver {
+	mock := &MocknameserverResolver{ctrl: ctrl}
+	mock.recorder = &MocknameserverResolverMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocknameserverResolver) EXPECT() *MocknameserverResolverMockRecorder {
+	return m.recorder
+}
+
+// LookupNS mocks base method.
+func (m *MocknameserverResolver) LookupNS(ctx context.Context, name string) ([]*net.NS, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LookupNS", ctx, name)
+	ret0, _ := ret[0].([]*net.NS)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LookupNS indicates an expected call of LookupNS.
+func (mr *MocknameserverResolverMockRecorder) LookupNS(ctx, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LookupNS", reflect.TypeOf((*MocknameserverResolver)(nil).LookupNS), ctx, name)
 }

@@ -6,6 +6,7 @@ package route53
 import (
 	"errors"
 	"fmt"
+	"net"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -150,7 +151,8 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 			tc.mockRoute53Client(mockRoute53Client)
 
 			service := Route53{
-				client: mockRoute53Client,
+				client:          mockRoute53Client,
+				hostedZoneIDFor: make(map[string]string),
 			}
 
 			gotID, gotErr := service.DomainHostedZoneID(tc.domainName)
@@ -161,6 +163,186 @@ func TestRoute53_DomainHostedZoneID(t *testing.T) {
 				require.Equal(t, tc.wantHostedZoneID, gotID)
 			}
 		})
-
 	}
+
+	t.Run("should only call route53 once for the same hosted zone", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		m := mocks.NewMockapi(ctrl)
+		m.EXPECT().ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
+			DNSName: aws.String("example.com"),
+		}).Return(&route53.ListHostedZonesByNameOutput{
+			IsTruncated: aws.Bool(false),
+			HostedZones: []*route53.HostedZone{
+				{
+					Name: aws.String("example.com"),
+					Id:   aws.String("Z0698117FUWMJ87C39TF"),
+				},
+			},
+		}, nil).Times(1)
+
+		service := Route53{
+			client:          m,
+			hostedZoneIDFor: make(map[string]string),
+		}
+
+		// Call once and make the request.
+		actual, err := service.DomainHostedZoneID("example.com")
+		require.NoError(t, err)
+		require.Equal(t, "Z0698117FUWMJ87C39TF", actual)
+
+		// Call again and Times should be 1.
+		actual, err = service.DomainHostedZoneID("example.com")
+		require.NoError(t, err)
+		require.Equal(t, "Z0698117FUWMJ87C39TF", actual)
+	})
+}
+
+func TestRoute53_ValidateDomainOwnership(t *testing.T) {
+	t.Run("should return a wrapped error if resource record sets cannot be retrieved", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAWS := mocks.NewMockapi(ctrl)
+		mockAWS.EXPECT().ListResourceRecordSets(gomock.Any()).Return(nil, errors.New("some error"))
+		r53 := Route53{
+			client: mockAWS,
+			hostedZoneIDFor: map[string]string{
+				"example.com": "Z0698117FUWMJ87C39TF",
+			},
+		}
+
+		// WHEN
+		err := r53.ValidateDomainOwnership("example.com")
+
+		// THEN
+		require.EqualError(t, err, `list resource record sets for hosted zone ID "Z0698117FUWMJ87C39TF": some error`)
+	})
+	t.Run("should return a wrapped error if the DNS look up for name server records fails", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAWS := mocks.NewMockapi(ctrl)
+		mockAWS.EXPECT().ListResourceRecordSets(gomock.Any()).Return(&route53.ListResourceRecordSetsOutput{}, nil)
+
+		mockResolver := mocks.NewMocknameserverResolver(ctrl)
+		mockResolver.EXPECT().LookupNS(gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+		r53 := Route53{
+			client: mockAWS,
+			dns:    mockResolver,
+			hostedZoneIDFor: map[string]string{
+				"example.com": "Z0698117FUWMJ87C39TF",
+			},
+		}
+
+		// WHEN
+		err := r53.ValidateDomainOwnership("example.com")
+
+		// THEN
+		require.EqualError(t, err, `look up NS records for domain "example.com": some error`)
+	})
+	t.Run("should return ErrUnmatchedNSRecords if the records are not equal", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAWS := mocks.NewMockapi(ctrl)
+		mockAWS.EXPECT().ListResourceRecordSets(gomock.Any()).Return(&route53.ListResourceRecordSetsOutput{
+			ResourceRecordSets: []*route53.ResourceRecordSet{
+				{
+					Name: aws.String("example.com."),
+					Type: aws.String("NS"),
+					ResourceRecords: []*route53.ResourceRecord{
+						{
+							Value: aws.String("ns-1119.awsdns-11.org."),
+						},
+						{
+							Value: aws.String("ns-501.awsdns-62.com."),
+						},
+					},
+				},
+			},
+		}, nil)
+
+		mockResolver := mocks.NewMocknameserverResolver(ctrl)
+		mockResolver.EXPECT().LookupNS(gomock.Any(), gomock.Any()).Return([]*net.NS{
+			{
+				Host: "dns-ns2.amazon.com.",
+			},
+			{
+				Host: "dns-ns1.amazon.com.",
+			},
+		}, nil)
+		r53 := Route53{
+			client: mockAWS,
+			dns:    mockResolver,
+			hostedZoneIDFor: map[string]string{
+				"example.com": "Z0698117FUWMJ87C39TF",
+			},
+		}
+
+		// WHEN
+		err := r53.ValidateDomainOwnership("example.com")
+
+		// THEN
+		var wanted *ErrUnmatchedNSRecords
+		require.ErrorAs(t, err, &wanted)
+	})
+	t.Run("should return nil when NS records match", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAWS := mocks.NewMockapi(ctrl)
+		mockAWS.EXPECT().ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
+			HostedZoneId: aws.String("Z0698117FUWMJ87C39TF"),
+		}).Return(&route53.ListResourceRecordSetsOutput{
+			ResourceRecordSets: []*route53.ResourceRecordSet{
+				{
+					Name: aws.String("example.com."),
+					Type: aws.String("NS"),
+					ResourceRecords: []*route53.ResourceRecord{
+						{
+							Value: aws.String("dns-ns1.amazon.com."),
+						},
+						{
+							Value: aws.String("dns-ns2.amazon.com"),
+						},
+					},
+				},
+				{
+					Name: aws.String("demo.example.com."),
+					Type: aws.String("NS"),
+					ResourceRecords: []*route53.ResourceRecord{
+						{
+							Value: aws.String("ns-473.awsdns-59.com"),
+						},
+					},
+				},
+			},
+		}, nil)
+
+		mockResolver := mocks.NewMocknameserverResolver(ctrl)
+		mockResolver.EXPECT().LookupNS(gomock.Any(), "example.com").Return([]*net.NS{
+			{
+				Host: "dns-ns2.amazon.com.",
+			},
+			{
+				Host: "dns-ns1.amazon.com",
+			},
+		}, nil)
+		r53 := Route53{
+			client: mockAWS,
+			dns:    mockResolver,
+			hostedZoneIDFor: map[string]string{
+				"example.com": "Z0698117FUWMJ87C39TF",
+			},
+		}
+
+		// WHEN
+		err := r53.ValidateDomainOwnership("example.com")
+
+		// THEN
+		require.NoError(t, err)
+	})
 }
