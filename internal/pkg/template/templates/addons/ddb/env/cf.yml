@@ -4,17 +4,15 @@ Parameters:
     Description: Your application's name.
   Env:
     Type: String
-    Description: The environment name your service, job, or workflow is being deployed to.
-  Name:
-    Type: String
-    Description: The name of the service, job, or workflow being deployed.
+    Description: The name of the environment being deployed.
+
 Resources:
   {{logicalIDSafe .Name}}:
     Metadata:
       'aws:copilot:description': 'An Amazon DynamoDB table for {{.Name}}'
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${App}-${Env}-${Name}-{{.Name}}
+      TableName: !Sub ${App}-${Env}-{{.Name}}
       AttributeDefinitions:{{range .Attributes}}
         - AttributeName: {{.Name}}
           AttributeType: "{{.DataType}}"{{end}}
@@ -34,43 +32,14 @@ Resources:
           Projection:
             ProjectionType: ALL{{end}}{{end}}
 
-  {{logicalIDSafe .Name}}AccessPolicy:
-    Metadata:
-      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the {{.Name}} db'
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: !Sub
-        - Grants CRUD access to the Dynamo DB table ${Table}
-        - { Table: !Ref {{logicalIDSafe .Name}} }
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: DDBActions
-            Effect: Allow
-            Action:
-              - dynamodb:BatchGet*
-              - dynamodb:DescribeStream
-              - dynamodb:DescribeTable
-              - dynamodb:Get*
-              - dynamodb:Query
-              - dynamodb:Scan
-              - dynamodb:BatchWrite*
-              - dynamodb:Create*
-              - dynamodb:Delete*
-              - dynamodb:Update*
-              - dynamodb:PutItem
-            Resource: !Sub ${ {{logicalIDSafe .Name}}.Arn}
-          - Sid: DDBLSIActions
-            Action:
-              - dynamodb:Query
-              - dynamodb:Scan
-            Effect: Allow
-            Resource: !Sub ${ {{logicalIDSafe .Name}}.Arn}/index/*
-
 Outputs:
   {{envVarName .Name}}:
     Description: "The name of this DynamoDB."
     Value: !Ref {{logicalIDSafe .Name}}
-  {{logicalIDSafe .Name}}AccessPolicy:
-    Description: "The IAM::ManagedPolicy to attach to the task role."
-    Value: !Ref {{logicalIDSafe .Name}}AccessPolicy
+  {{logicalIDSafe .Name}}DynamoDBTableARN:
+    Description: "The ARN of the {{.Name}} DynamoDB table."
+    Value: !GetAtt {{logicalIDSafe .Name}}.Arn
+#    # Uncomment the "Export" block if you need to reference the DynamoDB table ARN in a workload addon.
+#    Export: 
+#      Name: !Sub ${Env}-{{logicalIDSafe .Name}}ARN
+]
