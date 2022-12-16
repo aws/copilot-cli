@@ -111,11 +111,12 @@ type envDeployer struct {
 
 // NewEnvDeployerInput contains information needed to construct an environment deployer.
 type NewEnvDeployerInput struct {
-	App             *config.Application
-	Env             *config.Environment
-	SessionProvider *sessions.Provider
-	ConfigStore     describe.ConfigStoreSvc
-	Workspace       WorkspaceAddonsReaderPathGetter
+	App                  *config.Application
+	Env                  *config.Environment
+	SessionProvider      *sessions.Provider
+	ConfigStore          describe.ConfigStoreSvc
+	Workspace            WorkspaceAddonsReaderPathGetter
+	EnvAddonsFeatureFlag bool
 }
 
 // NewEnvDeployer constructs an environment deployer.
@@ -168,6 +169,9 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		ws: in.Workspace,
 	}
 	deployer.parseAddons = func() (stackBuilder, error) {
+		if !in.EnvAddonsFeatureFlag {
+			return nil, &addon.ErrAddonsNotFound{}
+		}
 		deployer.parseAddonsOnce.Do(func() {
 			deployer.addons.stack, deployer.addons.err = addon.ParseFromEnv(deployer.ws)
 		})
