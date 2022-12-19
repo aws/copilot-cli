@@ -4,7 +4,6 @@
 package manifest
 
 import (
-	"sort"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -242,18 +241,18 @@ func (c *NetworkLoadBalancerConfiguration) IsEmpty() bool {
 }
 
 // ExposedPorts returns all the ports that are container ports available to receive traffic.
-func (lbws *LoadBalancedWebService) ExposedPorts() []ExposedPort {
+func (lbws *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
 	var exposedPorts []ExposedPort
 
 	workloadName := aws.StringValue(lbws.Name)
 	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
 	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(workloadName)...)
 	for name, sidecar := range lbws.Sidecars {
-		exposedPorts = append(exposedPorts, sidecar.exposedPorts(name)...)
+		out, err := sidecar.exposedPorts(name)
+		if err != nil {
+			return nil, err
+		}
+		exposedPorts = append(exposedPorts, out...)
 	}
-	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
-	sort.Slice(exposedPorts, func(i, j int) bool {
-		return exposedPorts[i].Port < exposedPorts[j].Port
-	})
-	return exposedPorts
+	return sortAndRemoveDuplicatePorts(exposedPorts), nil
 }

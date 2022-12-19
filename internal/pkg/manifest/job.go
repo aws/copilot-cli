@@ -195,14 +195,18 @@ func newDefaultScheduledJob() *ScheduledJob {
 }
 
 // ExposedPorts returns all the ports that are sidecar container ports available to receive traffic.
-func (j *ScheduledJob) ExposedPorts() []ExposedPort {
+func (j *ScheduledJob) ExposedPorts() ([]ExposedPort, error) {
 	var exposedPorts []ExposedPort
 	for name, sidecar := range j.Sidecars {
-		exposedPorts = append(exposedPorts, sidecar.exposedPorts(name)...)
+		out, err := sidecar.exposedPorts(name)
+		if err != nil {
+			return nil, err
+		}
+		exposedPorts = append(exposedPorts, out...)
 	}
 	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
 	sort.Slice(exposedPorts, func(i, j int) bool {
 		return exposedPorts[i].Port < exposedPorts[j].Port
 	})
-	return exposedPorts
+	return sortAndRemoveDuplicatePorts(exposedPorts), nil
 }

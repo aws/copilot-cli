@@ -104,8 +104,7 @@ func (l LoadBalancedWebService) validate() error {
 		mainContainerName: aws.StringValue(l.Name),
 		mainContainerPort: l.ImageConfig.Port,
 		sidecarConfig:     l.Sidecars,
-		targetPort:        l.RoutingRule.TargetPort,
-		targetContainer:   l.RoutingRule.GetTargetContainer(),
+		alb:               &l.RoutingRule.RoutingRuleConfiguration,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
@@ -225,8 +224,7 @@ func (b BackendService) validate() error {
 		mainContainerName: aws.StringValue(b.Name),
 		mainContainerPort: b.ImageConfig.Port,
 		sidecarConfig:     b.Sidecars,
-		targetPort:        b.RoutingRule.TargetPort,
-		targetContainer:   b.RoutingRule.GetTargetContainer(),
+		alb:               &b.RoutingRule,
 	}); err != nil {
 		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
@@ -1667,8 +1665,7 @@ func (s Secret) validate() error {
 type validateExposedPortsOpts struct {
 	mainContainerName string
 	mainContainerPort *uint16
-	targetContainer   *string
-	targetPort        *uint16
+	alb               *RoutingRuleConfiguration
 	sidecarConfig     map[string]*SidecarConfig
 }
 
@@ -1803,14 +1800,18 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 	// This condition takes care of the use case where target_container is set to x container and
 	// target_port exposing port 80 which is already exposed by container y.That means container x
 	// is trying to expose the port that is already being exposed by container y, so error out.
-	if opts.targetPort != nil {
-		containerName := exposedPorts[aws.Uint16Value(opts.targetPort)]
-		if opts.targetContainer != nil {
-			if containerName != "" && containerName != aws.StringValue(opts.targetContainer) {
+	if opts.alb != nil {
+		alb := opts.alb
+		if alb.TargetContainer == nil {
+			return nil
+		}
+		if alb.TargetPort != nil {
+			containerName := exposedPorts[aws.Uint16Value(alb.TargetPort)]
+			if containerName != "" && containerName != aws.StringValue(alb.TargetContainer) {
 				return &errContainersExposingSamePort{
-					firstContainer:  aws.StringValue(opts.targetContainer),
+					firstContainer:  aws.StringValue(alb.TargetContainer),
 					secondContainer: containerName,
-					port:            aws.Uint16Value(opts.targetPort),
+					port:            aws.Uint16Value(alb.TargetPort),
 				}
 			}
 		}

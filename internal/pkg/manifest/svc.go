@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -443,61 +444,92 @@ func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 	return nil
 }
 
-func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) (exposedPorts []ExposedPort) {
+func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) []ExposedPort {
 	// Read `image.port`
-	if cfg.Port != nil {
-		exposedPorts = append(exposedPorts, ExposedPort{
+	if cfg.Port == nil {
+		return nil
+	}
+	return []ExposedPort{
+		{
 			Port:          aws.Uint16Value(cfg.Port),
 			Protocol:      "tcp",
 			ContainerName: workloadName,
-		})
+		},
 	}
-	return exposedPorts
+
 }
 
-func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string) (exposedPorts []ExposedPort) {
+func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string) []ExposedPort {
 	// Read `image.port`
-	if cfg.Port != nil {
-		exposedPorts = append(exposedPorts, ExposedPort{
+	if cfg.Port == nil {
+		return nil
+	}
+	return []ExposedPort{
+		{
 			Port:          aws.Uint16Value(cfg.Port),
 			Protocol:      "tcp",
 			ContainerName: workloadName,
-		})
+		},
 	}
-	return exposedPorts
 }
 
-func (rr RoutingRuleConfiguration) exposedPorts(workloadName string) (exposedPorts []ExposedPort) {
+func (rr RoutingRuleConfiguration) exposedPorts(workloadName string) []ExposedPort {
+	if rr.TargetPort == nil {
+		return nil
+	}
 	// Read `http.target_port`
 	// This block of code takes care of following use cases:
 	// 1. if target_port is given but target_container is nil then set ContainerName as primary container.
 	// 2. if target_port is given with the target_container as primary or sidecar container then set the value to ContainerName.
 	containerName := workloadName
-	if rr.TargetPort != nil {
-		if rr.TargetContainer != nil {
-			containerName = aws.StringValue(rr.TargetContainer)
-		}
-		exposedPorts = append(exposedPorts, ExposedPort{
+	if rr.TargetContainer != nil {
+		containerName = aws.StringValue(rr.TargetContainer)
+	}
+	return []ExposedPort{
+		{
 			Port:          aws.Uint16Value(rr.TargetPort),
 			Protocol:      "tcp",
 			ContainerName: containerName,
-		})
+		},
 	}
-	return exposedPorts
 }
 
-func (sidecar SidecarConfig) exposedPorts(sidecarName string) (exposedPorts []ExposedPort) {
-	if sidecar.Port != nil {
-		sidecarPort, protocol, _ := ParsePortMapping(sidecar.Port)
-		if protocol == nil {
-			protocol = aws.String("tcp")
-		}
-		port, _ := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
-		exposedPorts = append(exposedPorts, ExposedPort{
+func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, error) {
+	if sidecar.Port == nil {
+		return nil, nil
+	}
+	sidecarPort, protocol, err := ParsePortMapping(sidecar.Port)
+	if err != nil {
+		return nil, err
+	}
+	if protocol == nil {
+		protocol = aws.String("tcp")
+	}
+	port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
+	if err != nil {
+		return nil, err
+	}
+	return []ExposedPort{
+		{
 			Port:          uint16(port),
 			Protocol:      aws.StringValue(protocol),
 			ContainerName: sidecarName,
-		})
+		},
+	}, nil
+}
+
+func sortAndRemoveDuplicatePorts(exposedPorts []ExposedPort) []ExposedPort {
+	portMap := make(map[uint16]bool)
+	var list []ExposedPort
+	for _, portConfig := range exposedPorts {
+		if _, value := portMap[portConfig.Port]; !value {
+			portMap[portConfig.Port] = true
+			list = append(list, portConfig)
+		}
 	}
-	return exposedPorts
+	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Port < list[j].Port
+	})
+	return list
 }

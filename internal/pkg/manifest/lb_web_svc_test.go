@@ -1859,9 +1859,10 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			// WHEN
-			actual := tc.mft.ExposedPorts()
+			actual, err := tc.mft.ExposedPorts()
 
 			// THEN
+			require.NoError(t, err)
 			require.Equal(t, tc.wantedExposedPorts, actual)
 		})
 	}
