@@ -108,7 +108,7 @@ func TestRequestDrivenWebService_NewRequestDrivenWebService(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			addons := mocks.NewMockaddons(ctrl)
+			addons := mocks.NewMockNestedStackConfigurer(ctrl)
 
 			stack, err := NewRequestDrivenWebService(RequestDrivenWebServiceConfig{
 				App:           tc.input.appInfo,

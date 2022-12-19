@@ -21,81 +21,176 @@ import (
 )
 
 func TestEnv_Template(t *testing.T) {
-	testCases := map[string]struct {
-		mockDependencies func(ctrl *gomock.Controller, e *Env)
-		expectedOutput   string
-		want             error
-	}{
-		"should return template body when present": {
-			mockDependencies: func(ctrl *gomock.Controller, e *Env) {
-				m := mocks.NewMockenvReadParser(ctrl)
-				m.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
-					require.Equal(t, &template.EnvOpts{
-						AppName: "project",
-						EnvName: "env",
-						VPCConfig: template.VPCConfig{
-							Imported: nil,
-							Managed: template.ManagedVPC{
-								CIDR:               DefaultVPCCIDR,
-								PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
-								PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
-							},
-							SecurityGroupConfig: nil,
-							FlowLogs:            nil,
-						},
-						LatestVersion: deploy.LatestEnvTemplateVersion,
-						CustomResources: map[string]template.S3ObjectLocation{
-							"CertificateValidationFunction": {
-								Bucket: "mockbucket",
-								Key:    "mockkey1",
-							},
-							"DNSDelegationFunction": {
-								Bucket: "mockbucket",
-								Key:    "mockkey2",
-							},
-							"CustomDomainFunction": {
-								Bucket: "mockbucket",
-								Key:    "mockkey4",
-							},
-						},
-						Telemetry: &template.Telemetry{
-							EnableContainerInsights: false,
-						},
+	t.Run("error parsing template", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-						SerializedManifest: "name: env\ntype: Environment\n",
-						ForceUpdateID:      "mockPreviousForceUpdateID",
-					}, data)
-					return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
-				})
-				e.parser = m
-			},
-			expectedOutput: mockTemplate,
-		},
-	}
+		// GIVEN
+		inEnvConfig := mockDeployEnvironmentInput()
+		mockParser := mocks.NewMockenvReadParser(ctrl)
 
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// GIVEN
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			envStack := &Env{
-				in:                mockDeployEnvironmentInput(),
-				lastForceUpdateID: "mockPreviousForceUpdateID",
-			}
-			tc.mockDependencies(ctrl, envStack)
+		// EXPECT
+		mockParser.EXPECT().ParseEnv(gomock.Any()).Return(nil, errors.New("some error"))
 
-			// WHEN
-			got, err := envStack.Template()
+		// WHEN
+		envStack := &Env{
+			in:                inEnvConfig,
+			lastForceUpdateID: "mockPreviousForceUpdateID",
+			parser:            mockParser,
+		}
+		_, err := envStack.Template()
 
-			// THEN
-			if tc.want != nil {
-				require.EqualError(t, tc.want, err.Error())
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.expectedOutput, got)
-			}
+		// THEN
+		require.EqualError(t, errors.New("some error"), err.Error())
+	})
+	t.Run("error parsing addons extra parameters", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// GIVEN
+		inEnvConfig := mockDeployEnvironmentInput()
+		mockAddonsConfig := mocks.NewMockNestedStackConfigurer(ctrl)
+		mockParser := mocks.NewMockenvReadParser(ctrl)
+		inEnvConfig.Addons = &Addons{
+			S3ObjectURL: "mockAddonsURL",
+			Stack:       mockAddonsConfig,
+		}
+		// EXPECT
+		mockAddonsConfig.EXPECT().Parameters().Return("", errors.New("some error"))
+
+		// WHEN
+		envStack := &Env{
+			in:                inEnvConfig,
+			lastForceUpdateID: "mockPreviousForceUpdateID",
+			parser:            mockParser,
+		}
+		_, err := envStack.Template()
+
+		// THEN
+		require.EqualError(t, errors.New("parse extra parameters for environment addons: some error"), err.Error())
+	})
+	t.Run("should contain addons information when addons are present", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// GIVEN
+		inEnvConfig := mockDeployEnvironmentInput()
+		mockAddonsConfig := mocks.NewMockNestedStackConfigurer(ctrl)
+		mockParser := mocks.NewMockenvReadParser(ctrl)
+		inEnvConfig.Addons = &Addons{
+			S3ObjectURL: "mockAddonsURL",
+			Stack:       mockAddonsConfig,
+		}
+
+		// EXPECT
+		mockAddonsConfig.EXPECT().Parameters().Return("mockAddonsExtraParameters", nil)
+		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
+			require.Equal(t, &template.Addons{
+				URL:         "mockAddonsURL",
+				ExtraParams: "mockAddonsExtraParameters",
+			}, data.Addons)
+			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
 		})
-	}
+
+		// WHEN
+		envStack := &Env{
+			in:                inEnvConfig,
+			lastForceUpdateID: "mockPreviousForceUpdateID",
+			parser:            mockParser,
+		}
+		got, err := envStack.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, mockTemplate, got)
+	})
+	t.Run("should use new force update ID when asked", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// GIVEN
+		inEnvConfig := mockDeployEnvironmentInput()
+		inEnvConfig.ForceUpdate = true
+		mockParser := mocks.NewMockenvReadParser(ctrl)
+
+		// EXPECT
+		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
+			require.NotEqual(t, "mockPreviousForceUpdateID", data.ForceUpdateID)
+			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
+		})
+
+		// WHEN
+		envStack := &Env{
+			in:                inEnvConfig,
+			lastForceUpdateID: "mockPreviousForceUpdateID",
+			parser:            mockParser,
+		}
+		got, err := envStack.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, mockTemplate, got)
+	})
+	t.Run("should return template body when present", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		// GIVEN
+		inEnvConfig := mockDeployEnvironmentInput()
+		mockParser := mocks.NewMockenvReadParser(ctrl)
+
+		// EXPECT
+		mockParser.EXPECT().ParseEnv(gomock.Any()).DoAndReturn(func(data *template.EnvOpts) (*template.Content, error) {
+			require.Equal(t, &template.EnvOpts{
+				AppName: "project",
+				EnvName: "env",
+				VPCConfig: template.VPCConfig{
+					Imported: nil,
+					Managed: template.ManagedVPC{
+						CIDR:               DefaultVPCCIDR,
+						PrivateSubnetCIDRs: DefaultPrivateSubnetCIDRs,
+						PublicSubnetCIDRs:  DefaultPublicSubnetCIDRs,
+					},
+					SecurityGroupConfig: nil,
+					FlowLogs:            nil,
+				},
+				LatestVersion: deploy.LatestEnvTemplateVersion,
+				CustomResources: map[string]template.S3ObjectLocation{
+					"CertificateValidationFunction": {
+						Bucket: "mockbucket",
+						Key:    "mockkey1",
+					},
+					"DNSDelegationFunction": {
+						Bucket: "mockbucket",
+						Key:    "mockkey2",
+					},
+					"CustomDomainFunction": {
+						Bucket: "mockbucket",
+						Key:    "mockkey4",
+					},
+				},
+				Telemetry: &template.Telemetry{
+					EnableContainerInsights: false,
+				},
+
+				SerializedManifest: "name: env\ntype: Environment\n",
+				ForceUpdateID:      "mockPreviousForceUpdateID",
+			}, data)
+			return &template.Content{Buffer: bytes.NewBufferString("mockTemplate")}, nil
+		})
+
+		// WHEN
+		envStack := &Env{
+			in:                inEnvConfig,
+			lastForceUpdateID: "mockPreviousForceUpdateID",
+			parser:            mockParser,
+		}
+		got, err := envStack.Template()
+
+		// THEN
+		require.NoError(t, err)
+		require.Equal(t, mockTemplate, got)
+	})
 }
 
 func TestEnv_Parameters(t *testing.T) {

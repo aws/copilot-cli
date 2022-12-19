@@ -433,9 +433,9 @@ func Test_Environment_Deployment_Integration(t *testing.T) {
 	}()
 
 	t.Run("Deploys bootstrap resources for the environment to CloudFormation", func(t *testing.T) {
-		bucketARN := "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
-		environmentToDeploy.ArtifactBucketKeyARN = bucketARN
-		environmentToDeploy.ArtifactBucketARN = fmt.Sprintf("arn:aws:s3:::%s", bucketName)
+		bucketARN := fmt.Sprintf("arn:aws:s3:::%s", bucketName)
+		environmentToDeploy.ArtifactBucketKeyARN = "arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab"
+		environmentToDeploy.ArtifactBucketARN = bucketARN
 
 		// Deploy the environment and wait for it to be complete
 		require.NoError(t, deployer.CreateAndRenderEnvironment(stack.NewBootstrapEnvStackConfig(&environmentToDeploy), bucketARN))

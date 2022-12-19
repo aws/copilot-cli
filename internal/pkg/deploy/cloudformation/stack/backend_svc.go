@@ -38,7 +38,7 @@ type BackendServiceConfig struct {
 	Manifest      *manifest.BackendService
 	RawManifest   []byte // Content of the manifest file without any transformations.
 	RuntimeConfig RuntimeConfig
-	Addons        addons
+	Addons        NestedStackConfigurer
 }
 
 // NewBackendService creates a new BackendService stack from a manifest file.
