@@ -61,6 +61,12 @@ type envReadParser interface {
 	ParseEnvBootstrap(data *template.EnvOpts, options ...template.ParseOption) (*template.Content, error)
 }
 
+// Addons contains information about a packaged addons.
+type Addons struct {
+	S3ObjectURL string                // S3ObjectURL is the URL where the addons template is uploaded.
+	Stack       NestedStackConfigurer // Stack generates the template and the parameters to the addons.
+}
+
 // EnvConfig holds the fields required to deploy an environment.
 type EnvConfig struct {
 	Name    string // Name of the environment, must be unique within an application.
@@ -74,6 +80,7 @@ type EnvConfig struct {
 	PermissionsBoundary  string                // Optional. An IAM Managed Policy name used as permissions boundary for IAM roles.
 
 	// Runtime configurations.
+	Addons              *Addons
 	CustomResourcesURLs map[string]string //  Mapping of Custom Resource Function Name to the S3 URL where the function zip file is stored.
 
 	// User inputs.
@@ -124,6 +131,21 @@ func (e *Env) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	var addons *template.Addons
+	if e.in.Addons != nil {
+		extraParams, err := e.in.Addons.Stack.Parameters()
+		if err != nil {
+			return "", fmt.Errorf("parse extra parameters for environment addons: %w", err)
+		}
+		addons = &template.Addons{
+			URL:         e.in.Addons.S3ObjectURL,
+			ExtraParams: extraParams,
+		}
+	}
+	vpcConfig, err := e.vpcConfig()
+	if err != nil {
+		return "", err
+	}
 	forceUpdateID := e.lastForceUpdateID
 	if e.in.ForceUpdate {
 		id, err := uuid.NewRandom()
@@ -132,25 +154,15 @@ func (e *Env) Template() (string, error) {
 		}
 		forceUpdateID = id.String()
 	}
-
-	publicHTTPConfig, err := e.publicHTTPConfig()
-	if err != nil {
-		return "", err
-	}
-
-	vpcConfig, err := e.vpcConfig()
-	if err != nil {
-		return "", err
-	}
-
 	content, err := e.parser.ParseEnv(&template.EnvOpts{
 		AppName:              e.in.App.Name,
 		EnvName:              e.in.Name,
 		CustomResources:      crs,
+		Addons:               addons,
 		ArtifactBucketARN:    e.in.ArtifactBucketARN,
 		ArtifactBucketKeyARN: e.in.ArtifactBucketKeyARN,
 		PermissionsBoundary:  e.in.PermissionsBoundary,
-		PublicHTTPConfig:     publicHTTPConfig,
+		PublicHTTPConfig:     e.publicHTTPConfig(),
 		VPCConfig:            vpcConfig,
 		PrivateHTTPConfig:    e.privateHTTPConfig(),
 		Telemetry:            e.telemetryConfig(),
@@ -425,10 +437,7 @@ func (e *BootstrapEnv) ToEnvMetadata(stack *cloudformation.Stack) (*config.Envir
 }
 
 func (e *Env) cdnConfig() *template.CDNConfig {
-	if e.in.Mft == nil {
-		return nil
-	}
-	if !e.in.Mft.CDNEnabled() {
+	if e.in.Mft == nil || !e.in.Mft.CDNEnabled() {
 		return nil
 	}
 	return &template.CDNConfig{
@@ -437,12 +446,7 @@ func (e *Env) cdnConfig() *template.CDNConfig {
 	}
 }
 
-func (e *Env) publicHTTPConfig() (template.PublicHTTPConfig, error) {
-	elbAccessLogsConfig, err := convertELBAccessLogsConfig(e.in.Mft)
-	if err != nil {
-		return template.PublicHTTPConfig{}, err
-	}
-
+func (e *Env) publicHTTPConfig() template.PublicHTTPConfig {
 	return template.PublicHTTPConfig{
 		HTTPConfig: template.HTTPConfig{
 			ImportedCertARNs: e.importPublicCertARNs(),
@@ -450,8 +454,8 @@ func (e *Env) publicHTTPConfig() (template.PublicHTTPConfig, error) {
 		},
 		PublicALBSourceIPs: e.in.PublicALBSourceIPs,
 		CIDRPrefixListIDs:  e.in.CIDRPrefixListIDs,
-		ELBAccessLogs:      elbAccessLogsConfig,
-	}, nil
+		ELBAccessLogs:      convertELBAccessLogsConfig(e.in.Mft),
+	}
 }
 
 func (e *Env) privateHTTPConfig() template.PrivateHTTPConfig {

@@ -97,7 +97,7 @@ type ScheduledJobConfig struct {
 	Manifest      *manifest.ScheduledJob
 	RawManifest   []byte
 	RuntimeConfig RuntimeConfig
-	Addons        addons
+	Addons        NestedStackConfigurer
 }
 
 // NewScheduledJob creates a new ScheduledJob stack from a manifest file.
