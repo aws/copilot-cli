@@ -107,7 +107,7 @@ func (d DeploymentConfiguration) validate() error {
 	if d.isEmpty() {
 		return nil
 	}
-	if err := d.Alarms.validate(); err != nil {
+	if err := d.RollbackAlarms.validate(); err != nil {
 		return fmt.Errorf(`validate "rollback alarms": %w`, err)
 	}
 	if d.Rolling != nil {
@@ -123,21 +123,8 @@ func (d DeploymentConfiguration) validate() error {
 	return nil
 }
 
-func (r RollbackAlarmArgsOrNames) validate() error {
-	if r.IsZero() {
-		return nil
-	}
-	if r.IsAdvanced() {
-		if err := r.Advanced.validate(); err != nil {
-			return err
-		}
-		// TODO(jwh): Validate advanced format.
-		return nil
-	}
-	return nil
-}
-
 func (a AlarmArgs) validate() error {
+	// TODO(jwh)
 	return nil
 }
 

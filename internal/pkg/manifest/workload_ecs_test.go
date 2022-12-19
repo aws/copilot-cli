@@ -395,38 +395,3 @@ func TestLogging_GetEnableMetadata(t *testing.T) {
 		})
 	}
 }
-
-func TestRollbackAlarmArgsOrNames_IsZero(t *testing.T) {
-	testCases := map[string]struct {
-		in     RollbackAlarmArgsOrNames
-		wanted bool
-	}{
-		"empty network config": {
-			in:     RollbackAlarmArgsOrNames{},
-			wanted: true,
-		},
-		"non-empty alarm name": {
-			in: RollbackAlarmArgsOrNames{
-				Union: BasicToUnion[[]*string, AlarmArgs]([]*string{aws.String("alarmName1"), aws.String("alarmName2")})},
-			wanted: false,
-		},
-		"non-empty alarm args": {
-			in: RollbackAlarmArgsOrNames{
-				Union: AdvancedToUnion[[]*string, AlarmArgs](
-					AlarmArgs{
-						CPUUtilization: aws.Int(70),
-					}),
-			},
-			wanted: false,
-		},
-	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			// WHEN
-			got := tc.in.IsZero()
-
-			// THEN
-			require.Equal(t, tc.wanted, got)
-		})
-	}
-}

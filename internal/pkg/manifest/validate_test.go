@@ -3390,8 +3390,7 @@ func TestDeploymentConfiguration_validate(t *testing.T) {
 		},
 		"ok if deployment strategy is empty but alarm indicated": {
 			deployConfig: DeploymentConfiguration{
-				Alarms:  RollbackAlarmArgsOrNames{BasicToUnion[[]*string, AlarmArgs]([]*string{aws.String("alarmName")})},
-			},
+				RollbackAlarms: BasicToUnion[[]string, AlarmArgs]([]string{"alarmName"})},
 		},
 	}
 	for name, tc := range testCases {

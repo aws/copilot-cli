@@ -458,7 +458,7 @@ type DeploymentConfigurationOpts struct {
 	MinHealthyPercent int
 	// The upper limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
 	MaxPercent     int
-	RollbackAlarms string
+	RollbackAlarms []string
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.

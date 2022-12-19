@@ -2085,17 +2085,13 @@ func Test_convertDeploymentConfig(t *testing.T) {
 		},
 		"if alarm names entered, format and populate": {
 			in: manifest.DeploymentConfiguration{
-				Alarms: manifest.RollbackAlarmArgsOrNames{
-					Union: manifest.BasicToUnion[[]*string, manifest.AlarmArgs](
-						[]*string{
-							aws.String("alarmName1"),
-							aws.String("alarmName2")}),
-				},
+				RollbackAlarms: manifest.BasicToUnion[[]string, manifest.AlarmArgs](
+					[]string{"alarmName1", "alarmName2"}),
 			},
 			out: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: minHealthyPercentDefault,
 				MaxPercent:        maxPercentDefault,
-				RollbackAlarms:    "[alarmName1, alarmName2]",
+				RollbackAlarms:    []string{"alarmName1", "alarmName2"},
 			},
 		},
 	}

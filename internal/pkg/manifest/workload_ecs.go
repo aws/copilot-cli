@@ -91,20 +91,14 @@ type AlarmArgs struct {
 	MemoryUtilization *int `yaml:"memory_utilization"`
 }
 
-// RollbackAlarmArgsOrNames represents alarms for rolling back deployments.
-// It supports unmarshalling yaml which can either be of type AlarmArgs or a list of strings.
-type RollbackAlarmArgsOrNames struct {
-	Union[[]*string, AlarmArgs]
-}
-
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
-	Rolling *string                  `yaml:"rolling"`
-	Alarms  RollbackAlarmArgsOrNames `yaml:"rollback_alarms"`
+	Rolling        *string                    `yaml:"rolling"`
+	RollbackAlarms Union[[]string, AlarmArgs] `yaml:"rollback_alarms"`
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
-	return d == nil || (d.Rolling == nil && d.Alarms.IsZero())
+	return d == nil || (d.Rolling == nil && d.RollbackAlarms.IsZero())
 }
 
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
