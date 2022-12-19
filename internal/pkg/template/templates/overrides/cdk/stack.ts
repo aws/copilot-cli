@@ -14,14 +14,14 @@ export class TransformedStack extends cdk.Stack {
         this.envName = this.template.getParameter('EnvName').valueAsString;
 
         {{- range $resource := .Resources }}
-        this.transform{{pascalCase $resource.LogicalID}}();
+        this.transform{{camelCase $resource.LogicalID}}();
         {{- end }}
     }
 
     {{- range $resource := .Resources}}
     // TODO: implement me.
-    transform{{pascalCase $resource.LogicalID}}() {
-        const {{pascalCase $resource.LogicalID}} = this.template.getResource("{{$resource.LogicalID}}") as {{$resource.Type.ImportShortRename}}.{{$resource.Type.L1ConstructName}};
+    transform{{camelCase $resource.LogicalID}}() {
+        const {{camelCase $resource.LogicalID}} = this.template.getResource("{{$resource.LogicalID}}") as {{$resource.Type.ImportShortRename}}.{{$resource.Type.L1ConstructName}};
         throw new error("not implemented");
     }
     {{- end }}
