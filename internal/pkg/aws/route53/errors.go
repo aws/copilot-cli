@@ -43,7 +43,7 @@ func (err *ErrUnmatchedNSRecords) Error() string {
 func (err *ErrUnmatchedNSRecords) RecommendActions() string {
 	return fmt.Sprintf(`Domain name %q has the following name server records: %s
 Whereas the hosted zone ID %q for the domain has: %s
-Copilot will proceed but to use Route 53 as the DNS service 
+Copilot will proceed, but to use Route 53 as the DNS service, 
 please ensure the name server records are mapped correctly:
 - https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/migrate-dns-domain-in-use.html#migrate-dns-change-name-servers-with-provider`,
 		err.domainName, strings.Join(err.dnsRecords, ", "),
