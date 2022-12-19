@@ -5,7 +5,6 @@ package manifest
 
 import (
 	"errors"
-	"sort"
 	"strings"
 	"time"
 
@@ -379,9 +378,5 @@ func (ws *WorkerService) ExposedPorts() ([]ExposedPort, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
-	sort.Slice(exposedPorts, func(i, j int) bool {
-		return exposedPorts[i].Port < exposedPorts[j].Port
-	})
 	return sortAndRemoveDuplicatePorts(exposedPorts), nil
 }

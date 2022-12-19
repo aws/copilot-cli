@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/copilot-cli/internal/pkg/template"
 	"github.com/imdario/mergo"
-	"sort"
 )
 
 const (
@@ -204,9 +203,5 @@ func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
-	sort.Slice(exposedPorts, func(i, j int) bool {
-		return exposedPorts[i].Port < exposedPorts[j].Port
-	})
 	return sortAndRemoveDuplicatePorts(exposedPorts), nil
 }
