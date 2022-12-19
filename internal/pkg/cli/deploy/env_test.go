@@ -252,6 +252,15 @@ func TestEnvDeployer_AddonsTemplate(t *testing.T) {
 		wanted      string
 		wantedError error
 	}{
+		"error rendering addons template": {
+			setUpMocks: func(m *envDeployerMocks) {
+				m.parseAddons = func() (stackBuilder, error) {
+					return m.addons, nil
+				}
+				m.addons.EXPECT().Template().Return("", errors.New("some error"))
+			},
+			wantedError: errors.New("render addons template: some error"),
+		},
 		"return empty string when no addons is found": {
 			setUpMocks: func(m *envDeployerMocks) {
 				m.parseAddons = func() (stackBuilder, error) {

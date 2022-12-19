@@ -224,7 +224,11 @@ func (d *envDeployer) AddonsTemplate() (string, error) {
 		}
 		return "", nil
 	}
-	return addons.Template()
+	tmpl, err := addons.Template()
+	if err != nil {
+		return "", fmt.Errorf("render addons template: %w", err)
+	}
+	return tmpl, nil
 }
 
 // DeployEnvironmentInput contains information used to deploy the environment.
