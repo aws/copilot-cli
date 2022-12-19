@@ -99,7 +99,7 @@ func (r53 *Route53) ValidateDomainOwnership(domainName string) error {
 		return err
 	}
 
-	if !eqStringSlices(wanted, actual) {
+	if !isStrictSubset(actual, wanted) {
 		return &ErrUnmatchedNSRecords{
 			domainName:   domainName,
 			hostedZoneID: hzID,
@@ -173,18 +173,18 @@ func cleanNSRecord(record string) string {
 	return record[:len(record)-1]
 }
 
-func eqStringSlices(first, second []string) bool {
-	if len(first) != len(second) {
+func isStrictSubset(subset, superset []string) bool {
+	if len(subset) > len(superset) {
 		return false
 	}
 
-	present := make(map[string]struct{}, len(first))
-	for _, v := range first {
-		present[v] = struct{}{}
+	exists := make(map[string]struct{}, len(superset))
+	for _, item := range superset {
+		exists[item] = struct{}{}
 	}
 
-	for _, v := range second {
-		if _, ok := present[v]; !ok {
+	for _, item := range subset {
+		if _, ok := exists[item]; !ok {
 			return false
 		}
 	}

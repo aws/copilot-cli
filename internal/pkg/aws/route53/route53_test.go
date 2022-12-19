@@ -289,7 +289,7 @@ func TestRoute53_ValidateDomainOwnership(t *testing.T) {
 		var wanted *ErrUnmatchedNSRecords
 		require.ErrorAs(t, err, &wanted)
 	})
-	t.Run("should return nil when NS records match", func(t *testing.T) {
+	t.Run("should return nil when NS records match exactly", func(t *testing.T) {
 		// GIVEN
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -316,6 +316,59 @@ func TestRoute53_ValidateDomainOwnership(t *testing.T) {
 					ResourceRecords: []*route53.ResourceRecord{
 						{
 							Value: aws.String("ns-473.awsdns-59.com"),
+						},
+					},
+				},
+			},
+		}, nil)
+
+		mockResolver := mocks.NewMocknameserverResolver(ctrl)
+		mockResolver.EXPECT().LookupNS(gomock.Any(), "example.com").Return([]*net.NS{
+			{
+				Host: "dns-ns2.amazon.com.",
+			},
+			{
+				Host: "dns-ns1.amazon.com",
+			},
+		}, nil)
+		r53 := Route53{
+			client: mockAWS,
+			dns:    mockResolver,
+			hostedZoneIDFor: map[string]string{
+				"example.com": "Z0698117FUWMJ87C39TF",
+			},
+		}
+
+		// WHEN
+		err := r53.ValidateDomainOwnership("example.com")
+
+		// THEN
+		require.NoError(t, err)
+	})
+	t.Run("should return nil when ns records are just a subset", func(t *testing.T) {
+		// GIVEN
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAWS := mocks.NewMockapi(ctrl)
+		mockAWS.EXPECT().ListResourceRecordSets(&route53.ListResourceRecordSetsInput{
+			HostedZoneId: aws.String("Z0698117FUWMJ87C39TF"),
+		}).Return(&route53.ListResourceRecordSetsOutput{
+			ResourceRecordSets: []*route53.ResourceRecordSet{
+				{
+					Name: aws.String("example.com."),
+					Type: aws.String("NS"),
+					ResourceRecords: []*route53.ResourceRecord{
+						{
+							Value: aws.String("dns-ns1.amazon.com."),
+						},
+						{
+							Value: aws.String("dns-ns2.amazon.com."),
+						},
+						{
+							Value: aws.String("dns-ns3.amazon.com."),
+						},
+						{
+							Value: aws.String("dns-ns4.amazon.com."),
 						},
 					},
 				},
