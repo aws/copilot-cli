@@ -1755,12 +1755,24 @@ func validateDepsForEssentialContainers(deps map[string]containerDependency) err
 }
 
 func validateExposedPorts(opts validateExposedPortsOpts) error {
-	exposedPorts := make(map[uint16]string)
-
-	if opts.mainContainerPort != nil {
-		exposedPorts[aws.Uint16Value(opts.mainContainerPort)] = opts.mainContainerName
+	containerNameFor := make(map[uint16]string)
+	validateMainContainerPort(containerNameFor, opts)
+	if err := validateSidecarContainerPorts(containerNameFor, opts); err != nil {
+		return err
 	}
+	if err := validateALBPorts(containerNameFor, opts); err != nil {
+		return err
+	}
+	return nil
+}
 
+func validateMainContainerPort(containerNameFor map[uint16]string, opts validateExposedPortsOpts) {
+	if opts.mainContainerPort != nil {
+		containerNameFor[aws.Uint16Value(opts.mainContainerPort)] = opts.mainContainerName
+	}
+}
+
+func validateSidecarContainerPorts(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
 	for name, sidecar := range opts.sidecarConfig {
 		if sidecar.Port == nil {
 			continue
@@ -1787,16 +1799,19 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 		if err != nil {
 			return err
 		}
-		if _, ok := exposedPorts[uint16(port)]; ok {
+		if _, ok := containerNameFor[uint16(port)]; ok {
 			return &errContainersExposingSamePort{
 				firstContainer:  name,
-				secondContainer: exposedPorts[uint16(port)],
+				secondContainer: containerNameFor[uint16(port)],
 				port:            uint16(port),
 			}
 		}
-		exposedPorts[uint16(port)] = name
+		containerNameFor[uint16(port)] = name
 	}
+	return nil
+}
 
+func validateALBPorts(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
 	// This condition takes care of the use case where target_container is set to x container and
 	// target_port exposing port 80 which is already exposed by container y.That means container x
 	// is trying to expose the port that is already being exposed by container y, so error out.
@@ -1806,7 +1821,7 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 			return nil
 		}
 		containerName := opts.mainContainerName
-		existingContainerName := exposedPorts[aws.Uint16Value(alb.TargetPort)]
+		existingContainerName := containerNameFor[aws.Uint16Value(alb.TargetPort)]
 
 		if existingContainerName != "" {
 			containerName = existingContainerName
@@ -1822,7 +1837,7 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 		} else if alb.TargetContainer != nil {
 			containerName = aws.StringValue(alb.TargetContainer)
 		}
-		exposedPorts[aws.Uint16Value(alb.TargetPort)] = containerName
+		containerNameFor[aws.Uint16Value(alb.TargetPort)] = containerName
 	}
 	return nil
 }

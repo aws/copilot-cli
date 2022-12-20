@@ -445,7 +445,6 @@ func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 }
 
 func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) []ExposedPort {
-	// Read `image.port`
 	if cfg.Port == nil {
 		return nil
 	}
@@ -460,7 +459,6 @@ func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) []Expos
 }
 
 func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string) []ExposedPort {
-	// Read `image.port`
 	if cfg.Port == nil {
 		return nil
 	}
@@ -473,14 +471,12 @@ func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string)
 	}
 }
 
+// exportPorts returns any new ports that should be exposed given the load balancer
+// configuration that's not part of the existing containerPorts.
 func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, workloadName string) []ExposedPort {
 	if rr.TargetPort == nil {
 		return nil
 	}
-	// Read `http.target_port`
-	// This block of code takes care of following use cases:
-	// 1. if target_port is given but target_container is nil then set ContainerName as primary container.
-	// 2. if target_port is given with the target_container as primary or sidecar container then set the value to ContainerName.
 	containerName := workloadName
 	if rr.TargetContainer != nil {
 		containerName = aws.StringValue(rr.TargetContainer)
