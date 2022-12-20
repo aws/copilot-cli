@@ -175,7 +175,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		deployer.parseAddonsOnce.Do(func() {
 			deployer.addons.stack, deployer.addons.err = addon.ParseFromEnv(deployer.ws)
 		})
-		return deployer.addons.stack, deployer.addons.err
+		return deployer.addons.stack, fmt.Errorf("parse environment addons from workspace: %w", deployer.addons.err)
 	}
 	return deployer, nil
 }
