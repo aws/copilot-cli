@@ -85,13 +85,20 @@ type ImageWithPortAndHealthcheck struct {
 	HealthCheck   ContainerHealthCheck `yaml:"healthcheck"`
 }
 
+// AlarmArgs represents specs of CloudWatch alarms for deployment rollbacks.
+type AlarmArgs struct {
+	CPUUtilization    *int `yaml:"cpu_utilization"`
+	MemoryUtilization *int `yaml:"memory_utilization"`
+}
+
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
-	Rolling *string `yaml:"rolling"`
+	Rolling        *string                    `yaml:"rolling"`
+	RollbackAlarms Union[[]string, AlarmArgs] `yaml:"rollback_alarms"`
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
-	return d == nil || d.Rolling == nil
+	return d == nil || (d.Rolling == nil && d.RollbackAlarms.IsZero())
 }
 
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
