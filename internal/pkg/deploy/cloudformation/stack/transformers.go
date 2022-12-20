@@ -813,9 +813,12 @@ func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) 
 		deployConfigs.MaxPercent = maxPercentDefault
 	}
 	if deploymentConfig.RollbackAlarms.IsBasic() {
-		deployConfigs.RollbackAlarms = deploymentConfig.RollbackAlarms.Basic
+		deployConfigs.RollbackAlarms = template.FmtSliceFunc(deploymentConfig.RollbackAlarms.Basic)
 	}
-	// TODO (jwh): if AlarmArgs, create alarms and pass their Copilot-created names in CFN template.
+	if deploymentConfig.RollbackAlarms.IsAdvanced() {
+		deployConfigs.CPUUtilization = aws.IntValue(deploymentConfig.RollbackAlarms.Advanced.CPUUtilization)
+		deployConfigs.MemoryUtilization = aws.IntValue(deploymentConfig.RollbackAlarms.Advanced.MemoryUtilization)
+	}
 	return deployConfigs
 }
 

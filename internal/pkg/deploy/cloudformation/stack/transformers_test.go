@@ -2091,7 +2091,22 @@ func Test_convertDeploymentConfig(t *testing.T) {
 			out: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: minHealthyPercentDefault,
 				MaxPercent:        maxPercentDefault,
-				RollbackAlarms:    []string{"alarmName1", "alarmName2"},
+				RollbackAlarms:    "[alarmName1, alarmName2]",
+			},
+		},
+		"if alarm args entered, transform": {
+			in: manifest.DeploymentConfiguration{
+				RollbackAlarms: manifest.AdvancedToUnion[[]string, manifest.AlarmArgs](
+					manifest.AlarmArgs{
+						CPUUtilization:    aws.Int(34),
+						MemoryUtilization: aws.Int(56),
+					}),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+				CPUUtilization:    34,
+				MemoryUtilization: 56,
 			},
 		},
 	}

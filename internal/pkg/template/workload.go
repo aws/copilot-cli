@@ -107,6 +107,7 @@ var (
 		"nlb",
 		"vpc-connector",
 		"alb",
+		"rollback-alarms",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -452,13 +453,15 @@ type ObservabilityOpts struct {
 	Tracing string // The name of the vendor used for tracing.
 }
 
-// DeploymentConfigurationOpts holds values for MinHealthyPercent and MaxPercent.
+// DeploymentConfigurationOpts holds configuration for rolling deployments.
 type DeploymentConfigurationOpts struct {
 	// The lower limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
 	MinHealthyPercent int
 	// The upper limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
-	MaxPercent     int
-	RollbackAlarms []string
+	MaxPercent        int
+	RollbackAlarms    string
+	CPUUtilization    int
+	MemoryUtilization int
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.

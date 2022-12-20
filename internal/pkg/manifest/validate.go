@@ -124,7 +124,6 @@ func (d DeploymentConfiguration) validate() error {
 }
 
 func (a AlarmArgs) validate() error {
-	// TODO(jwh)
 	return nil
 }
 

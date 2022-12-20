@@ -21,6 +21,17 @@ DeploymentConfiguration:
     AlarmNames: {{ .DeploymentConfiguration.RollbackAlarms }}
     Enable: true
     Rollback: true
+  {{- else if or .DeploymentConfiguration.CPUUtilization .DeploymentConfiguration.MemoryUtilization }}
+  Alarms:
+    AlarmNames:
+      {{- if .DeploymentConfiguration.CPUUtilization }}
+      - !Sub ${AWS::StackName}-CPUAlarm
+      {{- end }}
+      {{- if .DeploymentConfiguration.MemoryUtilization }}
+      - !Sub ${AWS::StackName}-MemAlarm
+      {{- end}}
+    Enable: true
+    Rollback: true
   {{- end }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
