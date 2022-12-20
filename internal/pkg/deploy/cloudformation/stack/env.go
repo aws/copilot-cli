@@ -437,10 +437,7 @@ func (e *BootstrapEnv) ToEnvMetadata(stack *cloudformation.Stack) (*config.Envir
 }
 
 func (e *Env) cdnConfig() *template.CDNConfig {
-	if e.in.Mft == nil {
-		return nil
-	}
-	if !e.in.Mft.CDNEnabled() {
+	if e.in.Mft == nil || !e.in.Mft.CDNEnabled() {
 		return nil
 	}
 	return &template.CDNConfig{
