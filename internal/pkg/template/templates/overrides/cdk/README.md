@@ -11,7 +11,7 @@ The files of special importance are:
 ## Troubleshooting
 
 * `copilot [noun] package` preview the transformed template by writing to stdout.
-* `copilot [noun] package --diff` show the difference against the template deployed in your environment
+* `copilot [noun] package --diff` show the difference against the template deployed in your environment.
 
 ## Under the hood
 The `stack.ts` file uses the [import or migrate an existing AWS CloudFormation template](https://docs.aws.amazon.com/cdk/v2/guide/use_cfn_template.html) 
