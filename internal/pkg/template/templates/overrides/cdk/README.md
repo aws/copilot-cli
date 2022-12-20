@@ -15,7 +15,7 @@ The files of special importance are:
 
 ## Under the hood
 The `stack.ts` file follows the [import or migrate an existing AWS CloudFormation template guide](https://docs.aws.amazon.com/cdk/v2/guide/use_cfn_template.html) by using the `cloudformation-include.CfnInclude` construct
-from the CDK to transform the Copilot generated CloudFormation template into AWS CDK L1 constructs.  
+from the CDK to transform the Copilot-generated CloudFormation template into AWS CDK L1 constructs.  
 By writing `transform()` methods in stack, you can access and modify properties of the resources.
 
 The CDK and Copilot communicates when running `copilot [noun] package`:
