@@ -18,6 +18,6 @@ The `stack.ts` file follows the [import or migrate an existing AWS CloudFormatio
 from the CDK to transform the Copilot-generated CloudFormation template into AWS CDK L1 constructs.  
 By writing `transform()` methods in stack, you can access and modify properties of the resources.
 
-The CDK and Copilot communicates when running `copilot [noun] package`:
+The CDK and Copilot communicate when running `copilot [noun] package`:
 1. Copilot copies the template generated from your `manifest.yml` under `.build/in.yml`.
 2. Copilot then runs `cdk synth` from your `overrides/` directory and uses its output to deploy to CloudFormation.
