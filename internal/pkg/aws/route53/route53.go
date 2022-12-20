@@ -178,13 +178,13 @@ func isStrictSubset(subset, superset []string) bool {
 		return false
 	}
 
-	exists := make(map[string]struct{}, len(superset))
+	isMember := make(map[string]struct{}, len(superset))
 	for _, item := range superset {
-		exists[item] = struct{}{}
+		isMember[item] = struct{}{}
 	}
 
 	for _, item := range subset {
-		if _, ok := exists[item]; !ok {
+		if _, ok := isMember[item]; !ok {
 			return false
 		}
 	}
