@@ -123,7 +123,7 @@ func (e *errInValidAliasAgainstCert) RecommendActions() string {
 	var logMsg string
 	logMsg = fmt.Sprintf("Please use aliases that are protected by %s your imported:\n", english.Plural(len(e.certs), "certificate", ""))
 	for cert, sans := range e.domainsOfCert {
-		logMsg += fmt.Sprintf("'%s': %s\n", cert, english.WordSeries(sans[1:], ","))
+		logMsg += fmt.Sprintf("%q: %s\n", cert, english.WordSeries(sans[1:], ","))
 	}
 	return logMsg
 }
