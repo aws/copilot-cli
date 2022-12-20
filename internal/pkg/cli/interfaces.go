@@ -409,10 +409,7 @@ type deployer interface {
 
 type domainHostedZoneGetter interface {
 	DomainHostedZoneID(domainName string) (string, error)
-}
-
-type domainInfoGetter interface {
-	IsRegisteredDomain(domainName string) error
+	ValidateDomainOwnership(domainName string) error
 }
 
 type dockerfileParser interface {
@@ -650,11 +647,12 @@ type runner interface {
 type envDeployer interface {
 	DeployEnvironment(in *clideploy.DeployEnvironmentInput) error
 	Validate(*manifest.Environment) error
-	UploadArtifacts() (map[string]string, error)
+	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
 }
 
 type envPackager interface {
 	GenerateCloudFormationTemplate(in *clideploy.DeployEnvironmentInput) (*clideploy.GenerateCloudFormationTemplateOutput, error)
 	Validate(*manifest.Environment) error
-	UploadArtifacts() (map[string]string, error)
+	UploadArtifacts() (*clideploy.UploadEnvArtifactsOutput, error)
+	AddonsTemplate() (string, error)
 }

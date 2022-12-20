@@ -108,7 +108,7 @@ func (d DeploymentConfiguration) validate() error {
 		return nil
 	}
 	if err := d.RollbackAlarms.validate(); err != nil {
-		return fmt.Errorf(`validate "rollback alarms": %w`, err)
+		return fmt.Errorf(`validate "rollback_alarms": %w`, err)
 	}
 	if d.Rolling != nil {
 		for _, validStrategy := range ecsRollingUpdateStrategies {
