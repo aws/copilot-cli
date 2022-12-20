@@ -1,7 +1,7 @@
 {{- if .DeploymentConfiguration.CPUUtilization}}
 CPURollbackAlarm:
   Metadata:
-    'aws:copilot:description': "A CloudWatch alarm associated with CPU percentage for deployment rollbacks"
+    'aws:copilot:description': "A CloudWatch alarm associated with CPU utilization for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
   DependsOn: Service
   Properties:
@@ -24,7 +24,7 @@ CPURollbackAlarm:
 {{- if .DeploymentConfiguration.MemoryUtilization}}
 MemoryRollbackAlarm:
   Metadata:
-    'aws:copilot:description': "A CloudWatch alarm associated with memory percentage for deployment rollbacks"
+    'aws:copilot:description': "A CloudWatch alarm associated with memory utilization for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
   DependsOn: Service
   Properties:
