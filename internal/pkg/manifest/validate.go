@@ -1802,19 +1802,22 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 	// is trying to expose the port that is already being exposed by container y, so error out.
 	if opts.alb != nil {
 		alb := opts.alb
-		if alb.TargetContainer == nil {
+		if alb.TargetPort == nil {
 			return nil
 		}
-		if alb.TargetPort != nil {
-			containerName := exposedPorts[aws.Uint16Value(alb.TargetPort)]
-			if containerName != "" && containerName != aws.StringValue(alb.TargetContainer) {
-				return &errContainersExposingSamePort{
-					firstContainer:  aws.StringValue(alb.TargetContainer),
-					secondContainer: containerName,
-					port:            aws.Uint16Value(alb.TargetPort),
-				}
+		existingContainerName := exposedPorts[aws.Uint16Value(alb.TargetPort)]
+		containerName := opts.mainContainerName
+		if alb.TargetContainer != nil {
+			containerName = aws.StringValue(alb.TargetContainer)
+		}
+		if existingContainerName != "" && containerName != existingContainerName {
+			return &errContainersExposingSamePort{
+				firstContainer:  existingContainerName,
+				secondContainer: containerName,
+				port:            aws.Uint16Value(alb.TargetPort),
 			}
 		}
+		exposedPorts[aws.Uint16Value(alb.TargetPort)] = containerName
 	}
 	return nil
 }
