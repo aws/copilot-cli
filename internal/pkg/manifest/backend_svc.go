@@ -195,7 +195,6 @@ func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
 
 	workloadName := aws.StringValue(b.Name)
 	exposedPorts = append(exposedPorts, b.ImageConfig.exposedPorts(workloadName)...)
-	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(workloadName)...)
 	for name, sidecar := range b.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
@@ -203,5 +202,7 @@ func (b *BackendService) ExposedPorts() ([]ExposedPort, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	return sortAndRemoveDuplicatePorts(exposedPorts), nil
+	exposedPorts = append(exposedPorts, b.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
+
+	return sortExposedPorts(exposedPorts), nil
 }

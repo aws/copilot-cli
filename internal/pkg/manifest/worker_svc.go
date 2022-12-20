@@ -378,5 +378,5 @@ func (ws *WorkerService) ExposedPorts() ([]ExposedPort, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	return sortAndRemoveDuplicatePorts(exposedPorts), nil
+	return sortExposedPorts(exposedPorts), nil
 }

@@ -246,7 +246,6 @@ func (lbws *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
 
 	workloadName := aws.StringValue(lbws.Name)
 	exposedPorts = append(exposedPorts, lbws.ImageConfig.exposedPorts(workloadName)...)
-	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(workloadName)...)
 	for name, sidecar := range lbws.Sidecars {
 		out, err := sidecar.exposedPorts(name)
 		if err != nil {
@@ -254,5 +253,7 @@ func (lbws *LoadBalancedWebService) ExposedPorts() ([]ExposedPort, error) {
 		}
 		exposedPorts = append(exposedPorts, out...)
 	}
-	return sortAndRemoveDuplicatePorts(exposedPorts), nil
+	exposedPorts = append(exposedPorts, lbws.RoutingRule.exposedPorts(exposedPorts, workloadName)...)
+
+	return sortExposedPorts(exposedPorts), nil
 }

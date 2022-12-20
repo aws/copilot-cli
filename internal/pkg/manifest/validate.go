@@ -1805,17 +1805,22 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 		if alb.TargetPort == nil {
 			return nil
 		}
-		existingContainerName := exposedPorts[aws.Uint16Value(alb.TargetPort)]
 		containerName := opts.mainContainerName
-		if alb.TargetContainer != nil {
-			containerName = aws.StringValue(alb.TargetContainer)
-		}
-		if existingContainerName != "" && containerName != existingContainerName {
-			return &errContainersExposingSamePort{
-				firstContainer:  existingContainerName,
-				secondContainer: containerName,
-				port:            aws.Uint16Value(alb.TargetPort),
+		existingContainerName := exposedPorts[aws.Uint16Value(alb.TargetPort)]
+
+		if existingContainerName != "" {
+			containerName = existingContainerName
+			if alb.TargetContainer != nil {
+				if containerName != aws.StringValue(alb.TargetContainer) {
+					return &errContainersExposingSamePort{
+						firstContainer:  aws.StringValue(alb.TargetContainer),
+						secondContainer: containerName,
+						port:            aws.Uint16Value(alb.TargetPort),
+					}
+				}
 			}
+		} else if alb.TargetContainer != nil {
+			containerName = aws.StringValue(alb.TargetContainer)
 		}
 		exposedPorts[aws.Uint16Value(alb.TargetPort)] = containerName
 	}

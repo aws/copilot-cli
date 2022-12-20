@@ -473,7 +473,7 @@ func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string)
 	}
 }
 
-func (rr RoutingRuleConfiguration) exposedPorts(workloadName string) []ExposedPort {
+func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, workloadName string) []ExposedPort {
 	if rr.TargetPort == nil {
 		return nil
 	}
@@ -484,6 +484,11 @@ func (rr RoutingRuleConfiguration) exposedPorts(workloadName string) []ExposedPo
 	containerName := workloadName
 	if rr.TargetContainer != nil {
 		containerName = aws.StringValue(rr.TargetContainer)
+	}
+	for _, exposedPort := range exposedPorts {
+		if aws.Uint16Value(rr.TargetPort) == exposedPort.Port && rr.TargetContainer == nil {
+			return nil
+		}
 	}
 	return []ExposedPort{
 		{
@@ -518,18 +523,10 @@ func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, er
 	}, nil
 }
 
-func sortAndRemoveDuplicatePorts(exposedPorts []ExposedPort) []ExposedPort {
-	portMap := make(map[uint16]bool)
-	var list []ExposedPort
-	for _, portConfig := range exposedPorts {
-		if _, value := portMap[portConfig.Port]; !value {
-			portMap[portConfig.Port] = true
-			list = append(list, portConfig)
-		}
-	}
+func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
 	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].Port < list[j].Port
+	sort.Slice(exposedPorts, func(i, j int) bool {
+		return exposedPorts[i].Port < exposedPorts[j].Port
 	})
-	return list
+	return exposedPorts
 }
