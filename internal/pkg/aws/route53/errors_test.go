@@ -29,8 +29,8 @@ func TestErrUnmatchedNSRecords_RecommendActions(t *testing.T) {
 	}
 
 	require.Equal(t,
-		`Domain name "amazon.com" has the following name server records: dns-ns2.amazon.com., dns-ns1.amazon.com.
-Whereas the hosted zone ID "Z0698117FUWMJ87C39TF" for the domain has: ns-1119.awsdns-11.org, ns-501.awsdns-62.com, ns-955.awsdns-55.net, ns-2022.awsdns-60.co.uk
+		`Domain name "amazon.com" has the following name server records: dns-ns2.amazon.com. and dns-ns1.amazon.com.
+Whereas the hosted zone ID "Z0698117FUWMJ87C39TF" for the domain has: ns-1119.awsdns-11.org, ns-501.awsdns-62.com, ns-955.awsdns-55.net and ns-2022.awsdns-60.co.uk
 Copilot will proceed, but to use Route 53 as the DNS service, 
 please ensure the name server records are mapped correctly:
 - https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/migrate-dns-domain-in-use.html#migrate-dns-change-name-servers-with-provider`,
