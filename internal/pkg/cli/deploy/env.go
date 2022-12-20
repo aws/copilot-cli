@@ -185,7 +185,7 @@ func (d *envDeployer) Validate(mft *manifest.Environment) error {
 	return d.validateCDN(mft)
 }
 
-// UploadEnvArtifactsOutput is the output of UploadArtifacts.
+// UploadEnvArtifactsOutput holds URLs of artifacts pushed to S3 buckets.
 type UploadEnvArtifactsOutput struct {
 	AddonsURL          string
 	CustomResourceURLs map[string]string
