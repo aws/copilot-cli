@@ -1756,23 +1756,24 @@ func validateDepsForEssentialContainers(deps map[string]containerDependency) err
 
 func validateExposedPorts(opts validateExposedPortsOpts) error {
 	containerNameFor := make(map[uint16]string)
-	validateMainContainerPort(containerNameFor, opts)
-	if err := validateSidecarContainerPorts(containerNameFor, opts); err != nil {
+	populateMainContainerPort(containerNameFor, opts)
+	if err := populateSidecarContainerPortsAndValidate(containerNameFor, opts); err != nil {
 		return err
 	}
-	if err := validateALBPorts(containerNameFor, opts); err != nil {
+	if err := populateALBPortsAndValidate(containerNameFor, opts); err != nil {
 		return err
 	}
 	return nil
 }
 
-func validateMainContainerPort(containerNameFor map[uint16]string, opts validateExposedPortsOpts) {
-	if opts.mainContainerPort != nil {
-		containerNameFor[aws.Uint16Value(opts.mainContainerPort)] = opts.mainContainerName
+func populateMainContainerPort(containerNameFor map[uint16]string, opts validateExposedPortsOpts) {
+	if opts.mainContainerPort == nil {
+		return
 	}
+	containerNameFor[aws.Uint16Value(opts.mainContainerPort)] = opts.mainContainerName
 }
 
-func validateSidecarContainerPorts(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+func populateSidecarContainerPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
 	for name, sidecar := range opts.sidecarConfig {
 		if sidecar.Port == nil {
 			continue
@@ -1811,34 +1812,36 @@ func validateSidecarContainerPorts(containerNameFor map[uint16]string, opts vali
 	return nil
 }
 
-func validateALBPorts(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
 	// This condition takes care of the use case where target_container is set to x container and
 	// target_port exposing port 80 which is already exposed by container y.That means container x
 	// is trying to expose the port that is already being exposed by container y, so error out.
-	if opts.alb != nil {
-		alb := opts.alb
-		if alb.TargetPort == nil {
-			return nil
-		}
-		containerName := opts.mainContainerName
-		existingContainerName := containerNameFor[aws.Uint16Value(alb.TargetPort)]
+	if opts.alb == nil {
+		return nil
+	}
+	alb := opts.alb
+	if alb.TargetPort == nil {
+		return nil
+	}
+	containerName := opts.mainContainerName
+	existingContainerName := containerNameFor[aws.Uint16Value(alb.TargetPort)]
 
-		if existingContainerName != "" {
-			containerName = existingContainerName
-			if alb.TargetContainer != nil {
-				if containerName != aws.StringValue(alb.TargetContainer) {
-					return &errContainersExposingSamePort{
-						firstContainer:  aws.StringValue(alb.TargetContainer),
-						secondContainer: containerName,
-						port:            aws.Uint16Value(alb.TargetPort),
-					}
+	if existingContainerName != "" {
+		containerName = existingContainerName
+		if alb.TargetContainer != nil {
+			if containerName != aws.StringValue(alb.TargetContainer) {
+				return &errContainersExposingSamePort{
+					firstContainer:  aws.StringValue(alb.TargetContainer),
+					secondContainer: containerName,
+					port:            aws.Uint16Value(alb.TargetPort),
 				}
 			}
-		} else if alb.TargetContainer != nil {
-			containerName = aws.StringValue(alb.TargetContainer)
 		}
-		containerNameFor[aws.Uint16Value(alb.TargetPort)] = containerName
+	} else if alb.TargetContainer != nil {
+		containerName = aws.StringValue(alb.TargetContainer)
 	}
+	containerNameFor[aws.Uint16Value(alb.TargetPort)] = containerName
+
 	return nil
 }
 
