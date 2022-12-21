@@ -471,7 +471,7 @@ func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string)
 	}
 }
 
-// exportPorts returns any new ports that should be exposed given the load balancer
+// exportPorts returns any new ports that should be exposed given the application load balancer
 // configuration that's not part of the existing containerPorts.
 func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, workloadName string) []ExposedPort {
 	if rr.TargetPort == nil {
@@ -495,6 +495,8 @@ func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, work
 	}
 }
 
+// exportPorts returns any new ports that should be exposed given the network load balancer
+// configuration that's not part of the existing containerPorts.
 func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedPort, workloadName string) ([]ExposedPort, error) {
 	if cfg.IsEmpty() {
 		return nil, nil
