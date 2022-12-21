@@ -3548,6 +3548,52 @@ func TestValidateExposedPorts(t *testing.T) {
 			},
 			wanted: nil,
 		},
+		"should not return an error if alb and nlb target_port trying to expose same container port of the primary container": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort: aws.Uint16(5001),
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Port:       aws.String("5001/tcp"),
+					TargetPort: aws.Int(5001),
+				},
+			},
+			wanted: nil,
+		},
+		"should not return an error if alb and nlb target_port trying to expose same container port sidecar container": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort:      aws.Uint16(5001),
+					TargetContainer: aws.String("foo"),
+				},
+				nlb: &NetworkLoadBalancerConfiguration{
+					Port:            aws.String("5001/tcp"),
+					TargetPort:      aws.Int(5001),
+					TargetContainer: aws.String("foo"),
+				},
+			},
+			wanted: nil,
+		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {

@@ -1677,6 +1677,7 @@ type validateExposedPortsOpts struct {
 	mainContainerName string
 	mainContainerPort *uint16
 	alb               *RoutingRuleConfiguration
+	nlb               *NetworkLoadBalancerConfiguration
 	sidecarConfig     map[string]*SidecarConfig
 }
 
@@ -1774,6 +1775,9 @@ func validateExposedPorts(opts validateExposedPortsOpts) error {
 	if err := populateALBPortsAndValidate(containerNameFor, opts); err != nil {
 		return err
 	}
+	if err := populateNLBPortsAndValidate(containerNameFor, opts); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1852,6 +1856,62 @@ func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 		containerName = aws.StringValue(alb.TargetContainer)
 	}
 	containerNameFor[aws.Uint16Value(alb.TargetPort)] = containerName
+
+	return nil
+}
+
+func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+	if opts.nlb == nil {
+		return nil
+	}
+	nlb := opts.nlb
+	if nlb.Port == nil {
+		return nil
+	}
+	nlbPort, protocol, err := ParsePortMapping(nlb.Port)
+	if err != nil {
+		return err
+	}
+	if protocol != nil {
+		protocolVal := aws.StringValue(protocol)
+		var isValidProtocol bool
+		for _, valid := range nlbValidProtocols {
+			if strings.EqualFold(protocolVal, valid) {
+				isValidProtocol = true
+				break
+			}
+		}
+		if !isValidProtocol {
+			return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(nlbValidProtocols, "and"))
+		}
+	}
+	port, err := strconv.ParseUint(aws.StringValue(nlbPort), 10, 16)
+	if err != nil {
+		return err
+	}
+	containerPort := uint16(port)
+	if nlb.TargetPort != nil {
+		containerPort = uint16(aws.IntValue(nlb.TargetPort))
+	}
+
+	containerName := opts.mainContainerName
+	existingContainerName := containerNameFor[containerPort]
+
+	if existingContainerName != "" {
+		containerName = existingContainerName
+		if nlb.TargetContainer != nil {
+			if containerName != aws.StringValue(nlb.TargetContainer) {
+				return &errContainersExposingSamePort{
+					firstContainer:  aws.StringValue(nlb.TargetContainer),
+					secondContainer: containerName,
+					port:            containerPort,
+				}
+			}
+		}
+	} else if nlb.TargetContainer != nil {
+		containerName = aws.StringValue(nlb.TargetContainer)
+	}
+	containerNameFor[containerPort] = containerName
 
 	return nil
 }
