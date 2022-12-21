@@ -60,7 +60,7 @@ type RequestDrivenWebServiceConfig struct {
 	RawManifest []byte
 
 	RuntimeConfig RuntimeConfig
-	Addons        addons
+	Addons        NestedStackConfigurer
 }
 
 // NewRequestDrivenWebService creates a new RequestDrivenWebService stack from a manifest file.

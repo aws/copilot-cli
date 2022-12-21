@@ -368,20 +368,20 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
-func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessLogs, error) {
+func convertELBAccessLogsConfig(mft *manifest.Environment) *template.ELBAccessLogs {
 	elbAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
 	if !isELBAccessLogsSet {
-		return nil, nil
+		return nil
 	}
 
 	if elbAccessLogsArgs == nil {
-		return &template.ELBAccessLogs{}, nil
+		return &template.ELBAccessLogs{}
 	}
 
 	return &template.ELBAccessLogs{
 		BucketName: aws.StringValue(elbAccessLogsArgs.BucketName),
 		Prefix:     aws.StringValue(elbAccessLogsArgs.Prefix),
-	}, nil
+	}
 }
 
 // convertFlowLogsConfig converts the VPC FlowLog configuration into a format parsable by the templates pkg.
@@ -812,6 +812,10 @@ func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) 
 		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
 		deployConfigs.MaxPercent = maxPercentDefault
 	}
+	if deploymentConfig.RollbackAlarms.IsBasic() {
+		deployConfigs.RollbackAlarms = deploymentConfig.RollbackAlarms.Basic
+	}
+	// TODO (jwh): if AlarmArgs, create alarms and pass their Copilot-created names in CFN template.
 	return deployConfigs
 }
 

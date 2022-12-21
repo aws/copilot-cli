@@ -115,14 +115,25 @@ func (d DeploymentConfiguration) validate() error {
 	if d.isEmpty() {
 		return nil
 	}
-	for _, validStrategy := range ecsRollingUpdateStrategies {
-		if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
-			return nil
-		}
+	if err := d.RollbackAlarms.validate(); err != nil {
+		return fmt.Errorf(`validate "rollback_alarms": %w`, err)
 	}
-	return fmt.Errorf("invalid rolling deployment strategy %s, must be one of %s",
-		aws.StringValue(d.Rolling),
-		english.WordSeries(ecsRollingUpdateStrategies, "or"))
+	if d.Rolling != nil {
+		for _, validStrategy := range ecsRollingUpdateStrategies {
+			if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
+				return nil
+			}
+		}
+		return fmt.Errorf("invalid rolling deployment strategy %q, must be one of %s",
+			aws.StringValue(d.Rolling),
+			english.WordSeries(ecsRollingUpdateStrategies, "or"))
+	}
+	return nil
+}
+
+func (a AlarmArgs) validate() error {
+	// TODO(jwh)
+	return nil
 }
 
 // validate returns nil if LoadBalancedWebServiceConfig is configured correctly.

@@ -2053,6 +2053,55 @@ func Test_convertSubscribe(t *testing.T) {
 	}
 }
 
+func Test_convertDeploymentConfig(t *testing.T) {
+	testCases := map[string]struct {
+		in  manifest.DeploymentConfiguration
+		out template.DeploymentConfigurationOpts
+	}{
+		"if 'recreate' strategy indicated, populate with replacement defaults": {
+			in: manifest.DeploymentConfiguration{
+				Rolling: aws.String("recreate"),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentRecreate,
+				MaxPercent:        maxPercentRecreate,
+			},
+		},
+		"if 'default' strategy indicated, populate with rolling defaults": {
+			in: manifest.DeploymentConfiguration{
+				Rolling: aws.String("default"),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+			},
+		},
+		"if nothing indicated, populate with rolling defaults": {
+			in: manifest.DeploymentConfiguration{},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+			},
+		},
+		"if alarm names entered, format and populate": {
+			in: manifest.DeploymentConfiguration{
+				RollbackAlarms: manifest.BasicToUnion[[]string, manifest.AlarmArgs](
+					[]string{"alarmName1", "alarmName2"}),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+				RollbackAlarms:    []string{"alarmName1", "alarmName2"},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.out, convertDeploymentConfig(tc.in))
+		})
+	}
+}
+
 func Test_convertPlatform(t *testing.T) {
 	testCases := map[string]struct {
 		in  manifest.PlatformArgsOrString

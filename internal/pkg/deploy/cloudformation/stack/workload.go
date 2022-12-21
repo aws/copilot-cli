@@ -101,7 +101,8 @@ func (i ECRImage) GetLocation() string {
 	return fmt.Sprintf("%s:%s", i.RepoURL, "latest")
 }
 
-type addons interface {
+// NestedStackConfigurer configures a nested stack that deploys addons.
+type NestedStackConfigurer interface {
 	Template() (string, error)
 	Parameters() (string, error)
 }
@@ -122,7 +123,7 @@ type wkld struct {
 	rawManifest []byte // Content of the manifest file without any transformations.
 
 	parser template.Parser
-	addons addons
+	addons NestedStackConfigurer
 }
 
 // StackName returns the name of the stack.

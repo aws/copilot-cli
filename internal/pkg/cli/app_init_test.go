@@ -19,11 +19,11 @@ import (
 )
 
 type initAppMocks struct {
-	mockRoute53Svc       *mocks.MockdomainHostedZoneGetter
-	mockStore            *mocks.Mockstore
-	mockDomainInfoGetter *mocks.MockdomainInfoGetter
-	mockPolicyLister     *mocks.MockpolicyLister
-	mockRoleManager      *mocks.MockroleManager
+	mockRoute53Svc   *mocks.MockdomainHostedZoneGetter
+	mockStore        *mocks.Mockstore
+	mockPolicyLister *mocks.MockpolicyLister
+	mockRoleManager  *mocks.MockroleManager
+	mockProg         *mocks.Mockprogress
 }
 
 func TestInitAppOpts_Validate(t *testing.T) {
@@ -119,16 +119,21 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		},
 		"invalid domain name not containing a dot": {
 			inDomainName: "hello_website",
-			mock:         func(m *initAppMocks) {},
+			mock: func(m *initAppMocks) {
+				m.mockProg.EXPECT().Start(gomock.Any())
+				m.mockProg.EXPECT().Stop(gomock.Any())
+			},
 
 			wantedError: fmt.Errorf("domain name hello_website is invalid: %w", errDomainInvalid),
 		},
-		"errors checking if the domain is owned by the account": {
-			inDomainName: "badMockDomain.com",
+		"ignore unexpected errors from checking domain ownership": {
+			inDomainName: "something.com",
 			mock: func(m *initAppMocks) {
-				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("badMockDomain.com").Return(errors.New("some error"))
+				m.mockProg.EXPECT().Start(gomock.Any())
+				m.mockProg.EXPECT().Stop(gomock.Any()).AnyTimes()
+				m.mockRoute53Svc.EXPECT().ValidateDomainOwnership("something.com").Return(errors.New("some error"))
+				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("something.com").Return("mockHostedZoneID", nil)
 			},
-			wantedError: errors.New("check if domain is owned by the account: some error"),
 		},
 		"wrap error from ListPolicies": {
 			inPBPolicyName: "nonexistentPolicyName",
@@ -148,7 +153,9 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"invalid domain name that doesn't have a hosted zone": {
 			inDomainName: "badMockDomain.com",
 			mock: func(m *initAppMocks) {
-				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("badMockDomain.com").Return(nil)
+				m.mockProg.EXPECT().Start(gomock.Any())
+				m.mockProg.EXPECT().Stop(gomock.Any()).AnyTimes()
+				m.mockRoute53Svc.EXPECT().ValidateDomainOwnership("badMockDomain.com").Return(nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("badMockDomain.com").Return("", &route53.ErrDomainHostedZoneNotFound{})
 			},
 			wantedError: fmt.Errorf("get hosted zone ID for domain badMockDomain.com: %w", &route53.ErrDomainHostedZoneNotFound{}),
@@ -156,7 +163,9 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"errors if failed to validate that domain has a hosted zone": {
 			inDomainName: "mockDomain.com",
 			mock: func(m *initAppMocks) {
-				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("mockDomain.com").Return(nil)
+				m.mockProg.EXPECT().Start(gomock.Any())
+				m.mockProg.EXPECT().Stop(gomock.Any()).AnyTimes()
+				m.mockRoute53Svc.EXPECT().ValidateDomainOwnership("mockDomain.com").Return(&route53.ErrUnmatchedNSRecords{})
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("mockDomain.com").Return("", errors.New("some error"))
 			},
 			wantedError: errors.New("get hosted zone ID for domain mockDomain.com: some error"),
@@ -164,14 +173,18 @@ func TestInitAppOpts_Validate(t *testing.T) {
 		"valid domain name": {
 			inDomainName: "mockDomain.com",
 			mock: func(m *initAppMocks) {
+				m.mockProg.EXPECT().Start(`Validating ownership of "mockDomain.com"`)
+				m.mockProg.EXPECT().Stop("")
+				m.mockRoute53Svc.EXPECT().ValidateDomainOwnership("mockDomain.com").Return(nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("mockDomain.com").Return("mockHostedZoneID", nil)
-				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("mockDomain.com").Return(nil)
 			},
 		},
 		"valid domain name containing multiple dots": {
 			inDomainName: "hello.dog.com",
 			mock: func(m *initAppMocks) {
-				m.mockDomainInfoGetter.EXPECT().IsRegisteredDomain("hello.dog.com").Return(nil)
+				m.mockProg.EXPECT().Start(gomock.Any())
+				m.mockProg.EXPECT().Stop(gomock.Any()).AnyTimes()
+				m.mockRoute53Svc.EXPECT().ValidateDomainOwnership("hello.dog.com").Return(nil)
 				m.mockRoute53Svc.EXPECT().DomainHostedZoneID("hello.dog.com").Return("mockHostedZoneID", nil)
 			},
 		},
@@ -184,20 +197,20 @@ func TestInitAppOpts_Validate(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := &initAppMocks{
-				mockStore:            mocks.NewMockstore(ctrl),
-				mockRoute53Svc:       mocks.NewMockdomainHostedZoneGetter(ctrl),
-				mockDomainInfoGetter: mocks.NewMockdomainInfoGetter(ctrl),
-				mockPolicyLister:     mocks.NewMockpolicyLister(ctrl),
-				mockRoleManager:      mocks.NewMockroleManager(ctrl),
+				mockStore:        mocks.NewMockstore(ctrl),
+				mockRoute53Svc:   mocks.NewMockdomainHostedZoneGetter(ctrl),
+				mockPolicyLister: mocks.NewMockpolicyLister(ctrl),
+				mockRoleManager:  mocks.NewMockroleManager(ctrl),
+				mockProg:         mocks.NewMockprogress(ctrl),
 			}
 			tc.mock(m)
 
 			opts := &initAppOpts{
-				route53:          m.mockRoute53Svc,
-				domainInfoGetter: m.mockDomainInfoGetter,
-				store:            m.mockStore,
-				iam:              m.mockPolicyLister,
-				iamRoleManager:   m.mockRoleManager,
+				route53:        m.mockRoute53Svc,
+				store:          m.mockStore,
+				iam:            m.mockPolicyLister,
+				iamRoleManager: m.mockRoleManager,
+				prog:           m.mockProg,
 				initAppVars: initAppVars{
 					name:                tc.inAppName,
 					domainName:          tc.inDomainName,
