@@ -1,5 +1,5 @@
 ---
-title: 'AWS Copilot v1.23: App Runner プライベートサービス, Aurora Serverless v2など!'
+title: 'AWS Copilot v1.23: App Runner プライベートサービス, Aurora Serverless v2 など！'
 twitter_title: 'AWS Copilot v1.23'
 image: ''
 image_alt: ''
@@ -7,7 +7,7 @@ image_width: '1051'
 image_height: '747'
 ---
 
-# AWS Copilot v1.23: App Runner プライベートサービス, Aurora Serverless v2など!
+# AWS Copilot v1.23: App Runner プライベートサービス, Aurora Serverless v2 など！
 
 投稿日: 2022 年 11 月 1 日
 
@@ -19,10 +19,10 @@ Copilot v1.23 では、いくつかの新機能と改良が施されています
 
 - **App Runner プライベートサービス**: App Runner でプライベートサービスの起動がサポートされました。Request-Driven Web Service Manifest に `http.private` を追加すると、App Runner プライベートサービスを作成できます。[詳細はこちらを確認してください。](#app-runner-private-services)
 - **`storage init` で Aurora Serverless v2 をサポート**: [詳細はこちらを確認してください。](#support-aurora-serverless-v2-in-storage-init)
-- **Environment Manifestにおける誤った `http` フィールドの移動（後方互換性あり！）:** [詳細はこちらを確認してください。](#move-misplaced-http-fields-in-environment-manifest-backward-compatible)
+- **Environment Manifest における誤った `http` フィールドの移動（後方互換性あり！）:** [詳細はこちらを確認してください。](#move-misplaced-http-fields-in-environment-manifest-backward-compatible)
 - **ルートファイルシステムへのコンテナアクセスを読み取り専用に制限:** [詳細はこちらを確認してください。](../docs/manifest/lb-web-service.ja.md#storage-readonlyfs) ([#4062](https://github.com/aws/copilot-cli/pull/4062)).
 - **ALB の HTTPS レイヤーに対する SSL ポリシーを設定します:** [詳細はこちらを確認してください。](../docs/manifest/environment.ja.md#http-public-sslpolicy) ([#4099](https://github.com/aws/copilot-cli/pull/4099)).
-- **ALBに対する ソース IP によるアクセス制限**: [詳細はこちらを確認してください。](../docs/manifest/environment.ja.md#http-public-ingress-source-ips) ([#4103](https://github.com/aws/copilot-cli/pull/4103)).
+- **ALB に対する ソース IP によるアクセス制限**: [詳細はこちらを確認してください。](../docs/manifest/environment.ja.md#http-public-ingress-source-ips) ([#4103](https://github.com/aws/copilot-cli/pull/4103)).
 
 
 ???+ note "AWS Copilot とは?"
@@ -57,26 +57,26 @@ Environment 内にトラフィックを送りたい場合は、Manifest に [`ne
 <a id="support-aurora-serverless-v2-in-storage-init"></a>
 
 ## [`storage init`] (../docs/commands/storage-init.ja.md)で Aurora Serverless v2 をサポート
-[Aurora Serverless v2 は 今年の初めに一般利用となりました。](https://aws.amazon.com/about-aws/whats-new/2022/04/amazon-aurora-serverless-v2/)
+[Aurora Serverless v2 は 今年の初めに一般利用を開始](https://aws.amazon.com/about-aws/whats-new/2022/04/amazon-aurora-serverless-v2/)しており、
 現在、Copilot のストレージオプションとしてサポートされています。
 
 以前は、次のコマンドを実行し、
 ```console
 $ copilot storage init --storage-type Aurora
 ``` 
-v1 クラスター用の Addon テンプレートを作成しました。現在は、**このコマンドはデフォルトで v2用のテンプレートを作成します。**
+v1 クラスター用の Addon テンプレートを作成しました。現在は、**このコマンドはデフォルトで v2 用のテンプレートを作成します。**
 v1 テンプレートを作成したい場合、`copilot storage init --storage-type Aurora --serverless-version v1` というコマンドを実行します。
 
-より詳しく知りたい場合は、[the doc for `storage init`](../docs/commands/storage-init.ja.md)を確認してください！
+より詳しく知りたい場合は、[`storage init` のドキュメント](../docs/commands/storage-init.ja.md)を確認してください！
 
 <a id="move-misplaced-http-fields-in-environment-manifest-backward-compatible"></a>
 
-## Environment Manifestにおける誤った `http` フィールドの移動（後方互換性あり！）
+## Environment Manifest における誤った `http` フィールドの移動（後方互換性あり！）
 
 [Copilot v1.23.0](https://github.com/aws/copilot-cli/releases/tag/v1.23.0) では、 Environment Manifest における `http` フィールド下の階層を修正しました。
 
 ### 何が修正されるのか、それは何故なのか？
-[Copilot v1.20.0](../blogs/release-v120.en.md)では、Environment Manifest をリリースし、infrastructure as code の利点を Environment にも取り込みました。当時の `http` フィールド階層は次の様な形です。
+[Copilot v1.20.0](../blogs/release-v120.ja.md)では、Environment Manifest をリリースし、infrastructure as code の利点を Environment にも取り込みました。当時の `http` フィールド階層は次の様な形です。
 ```yaml
 name: test
 type: Environment
@@ -94,7 +94,7 @@ http:
 ```
 この階層設計には、2 つの欠点があります。
 
-1. **`security_groups` 下の `ingress` は曖昧。** 各セキュリティグループには、対応する ingress があります。複数のセキュリティグループの "ingress" が何を意味するのか不明です。*（ここでは、 Copilot がアプリケーションロードバランサーに適用するデフォルトのセキュリティグループをIngressに設定する事を意味していました。）*
+1. **`security_groups` 下の `ingress` は曖昧。** 各セキュリティグループには、対応する ingress があります。複数のセキュリティグループの "ingress" が何を意味するのか不明です。*（ここでは、 Copilot がアプリケーションロードバランサーに適用するデフォルトのセキュリティグループを Ingress に設定する事を意味していました。）*
 
 
 2. **`restrict_to` が冗長。** `http.public` 下の `ingress` は制限され、`http.private` 下の `ingress` は許可されることが明確に示唆されなければなりません。`from_vpc` の `"from"` も同様の冗長性の問題があります。
@@ -158,7 +158,7 @@ http:
 
 
 #### 既存の Manifest は動作し続けます
-Envrionment Manifest を正しい階層にすぐに修正しなくても大丈夫です。`http.public.security_groups.ingress`（不備のあるバージョン）と `http.public.ingress`（修正されたバージョン）の両方を含む Manifest に更新しないかりぎ、既存の Manifest は動作し続けます。
+Envrionment Manifest を正しい階層にすぐに修正しなくても大丈夫です。`http.public.security_groups.ingress`（不備のあるバージョン）と `http.public.ingress`（修正されたバージョン）の両方を含む Manifest に更新しない限り、既存の Manifest は動作し続けます。
 
 
 例えば、 v1.23.0 のリリース前に、Manifest が次の様なものだったとします。

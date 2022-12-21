@@ -59,7 +59,7 @@ $ copilot storage init \
   -n my-cluster -t Aurora -w frontend --engine PostgreSQL
 ```
 
-データベースエンジンに MYSQL を使用し、初期データベース名を testdb として、RDS Aurora Serverless v1 クラスタを作成します。
+データベースエンジンに MySQL を使用し、初期データベース名を testdb として、RDS Aurora Serverless v1 クラスタを作成します。
 ```console
 $ copilot storage init \
   -n my-cluster -t Aurora --serverless-version v1 -w frontend --engine MySQL --initial-db testdb

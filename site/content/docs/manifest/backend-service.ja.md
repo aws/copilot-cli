@@ -148,7 +148,7 @@ Service 名。
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
-Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md#backend-service) はインターネット側からはアクセスできませんが、[サービス検出](../developing/svc-to-svc-communication.ja.md#service-discovery)の利用により他の Service からはアクセスできます。
+Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md#backend-service) はインターネット側からはアクセスできませんが、[サービスディスカバリ](../developing/svc-to-svc-communication.ja.md#service-discovery)の利用により他の Service からはアクセスできます。
 
 <div class="separator"></div>
 

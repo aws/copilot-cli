@@ -51,7 +51,7 @@ network:
 <a id="ecs-service-connect-support"></a>
 
 ## ECS Service Connect のサポート
-[Copilot は](../docs/developing/svc-to-svc-communication.ja.md#service-connect) 新しくリリースされた [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html)サポートしています! サービスディスカバリーよりも Service Connect の方が、より弾力的で、負荷分散されたプライベートなサービス間のコミュニケーションを実現します。Copilot がどの様に ECS Service Connect をサポートしているかウォークスルーしましょう。
+[Copilot は](../docs/developing/svc-to-svc-communication.ja.md#service-connect) 新しくリリースされた [ECS Service Connect](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html)サポートしています! サービスディスカバリよりも Service Connect の方が、より弾力的で、負荷分散されたプライベートなサービス間のコミュニケーションを実現します。Copilot がどの様に ECS Service Connect をサポートしているかウォークスルーしましょう。
 
 ### (任意項目) サンプル Service のデプロイ
 デプロイされた既存の Service が無い場合は、[チュートリアル](../docs/getting-started/first-app-tutorial.ja.md) に従って、ブラウザーからアクセスできる簡単なフロントエンド Service をデプロイしましょう。 
@@ -84,7 +84,7 @@ Internal Service Endpoint
 ```
 上記のように、`front-end:80` は他のクライアント Service が呼び出すことのできる Service Connect のエンドポイントです。(これらの Service も同様に Service Connect を有効にしておく必要があります。)
 
-### (任意項目) Verify that it works
+### (任意項目) Service Connect を検証する
 Service Connect のエンドポイント IP アドレスがサービスネットワークに追加されたことを確認する為には、 `copilot svc exec` を使用してコンテナ内部に入り、hosts ファイルを確認します。
 
 ```
