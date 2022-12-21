@@ -2,7 +2,7 @@
 
 ## Service Connect が<span class="version" > v1.24.0 </span>で追加
 
-[ECS Service Connect](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/service-connect.html) を使うとクライアント Service が負荷分散された弾力的な方法で、ダウンストリームの Service に接続できます。さらに分かりやすいエイリアスを指定することで、Service をクライアントに公開する方法を簡単にします。Copilot における Service Connect は、作成した各 Service にデフォルトで次の様なプライベートエイリアスを付. します：`http://<your service name>` 。
+[ECS Service Connect](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/service-connect.html) を使うとクライアント Service が負荷分散された弾力的な方法で、ダウンストリームの Service に接続できます。さらに分かりやすいエイリアスを指定することで、Service をクライアントに公開する方法を簡単にします。Copilot における Service Connect は、作成した各 Service にデフォルトで次の様なプライベートエイリアスを付与します：`http://<your service name>` 。
 
 !!! attention
     Service Connect は [Request-Driven Web Services](../concepts/services.ja.md#request-driven-web-service) ではまだサポートされていません。
@@ -34,7 +34,7 @@ resp, err := http.Get("http://api/")
 
 ### サービスディスカバリからの更新
 
-v1.24 以前の Copilot では、[サービスディスカバリ](#service-discovery) を使用したプライベートなサービス間通信が可能でした。既にサービスディスカバリを利用していて、コードの変更を避けたい場合、[`network.connect.alias`](../manifest/lb-web-service.ja.md#network-connect-alias) を設定し、Service Connect がサービスディスカバリと同じエリアスを使う様にします。Service とそのクライアントの両方が Service Connect を有効にしている場合、サービスディスカバリの代わりに Service Connect を経由して接続します。例えば、 `api` Service の Manifest を次の様にします。
+v1.24 以前の Copilot では、[サービスディスカバリ](#service-discovery) を使用したプライベートなサービス間通信が可能でした。既にサービスディスカバリを利用していて、コードの変更を避けたい場合、[`network.connect.alias`](../manifest/lb-web-service.ja.md#network-connect-alias) を設定し、Service Connect がサービスディスカバリと同じエイリアスを使う様にします。Service とそのクライアントの両方が Service Connect を有効にしている場合、サービスディスカバリの代わりに Service Connect を経由して接続します。例えば、 `api` Service の Manifest を次の様にします。
 
 
 ```yaml
