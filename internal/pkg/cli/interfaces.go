@@ -409,10 +409,7 @@ type deployer interface {
 
 type domainHostedZoneGetter interface {
 	DomainHostedZoneID(domainName string) (string, error)
-}
-
-type domainInfoGetter interface {
-	IsRegisteredDomain(domainName string) error
+	ValidateDomainOwnership(domainName string) error
 }
 
 type dockerfileParser interface {

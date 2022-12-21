@@ -3373,7 +3373,7 @@ func TestDeploymentConfiguration_validate(t *testing.T) {
 			deployConfig: DeploymentConfiguration{
 				Rolling: aws.String("unknown"),
 			},
-			wanted: `invalid rolling deployment strategy unknown, must be one of default or recreate`,
+			wanted: `invalid rolling deployment strategy "unknown", must be one of default or recreate`,
 		},
 		"ok if deployment strategy is recreate": {
 			deployConfig: DeploymentConfiguration{
@@ -3387,6 +3387,10 @@ func TestDeploymentConfiguration_validate(t *testing.T) {
 		},
 		"ok if deployment is empty": {
 			deployConfig: DeploymentConfiguration{},
+		},
+		"ok if deployment strategy is empty but alarm indicated": {
+			deployConfig: DeploymentConfiguration{
+				RollbackAlarms: BasicToUnion[[]string, AlarmArgs]([]string{"alarmName"})},
 		},
 	}
 	for name, tc := range testCases {
@@ -3429,6 +3433,130 @@ func TestFromEnvironment_validate(t *testing.T) {
 				require.EqualError(t, gotErr, tc.wantedError.Error())
 			} else {
 				require.NoError(t, gotErr)
+			}
+		})
+	}
+}
+
+func TestValidateExposedPorts(t *testing.T) {
+	testCases := map[string]struct {
+		in     validateExposedPortsOpts
+		wanted error
+	}{
+		"should return an error if main container and sidecar container is exposing the same port": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(80),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+			},
+			wanted: fmt.Errorf(`containers "foo" and "mockMainContainer" are exposing the same port 80`),
+		},
+		"should not error out when alb target_port is same as that of sidecar container port but target_container is empty": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort: aws.Uint16(80),
+				},
+			},
+			wanted: nil,
+		},
+		"should return an error if alb target_port points to one sidecar container port and target_container points to another sidecar container": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(5000),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("8080"),
+					},
+					"nginx": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetContainer: aws.String("nginx"),
+					TargetPort:      aws.Uint16(8080),
+				},
+			},
+			wanted: fmt.Errorf(`containers "nginx" and "foo" are exposing the same port 8080`),
+		},
+		"should not return an error if main container and sidecar container is exposing different ports": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+			},
+			wanted: nil,
+		},
+		"doesn't error out when similar config is present in target_port and target_container as that of primary container": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort:      aws.Uint16(8080),
+					TargetContainer: aws.String("mockMainContainer"),
+				},
+			},
+			wanted: nil,
+		},
+		"doesn't error out when similar config is present in target_port and target_container as that of sidecar container": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort:      aws.Uint16(80),
+					TargetContainer: aws.String("foo"),
+				},
+			},
+			wanted: nil,
+		},
+		"doesn't error out when target_port exposing different port of the primary container than its main port": {
+			in: validateExposedPortsOpts{
+				mainContainerName: "mockMainContainer",
+				mainContainerPort: aws.Uint16(8080),
+				sidecarConfig: map[string]*SidecarConfig{
+					"foo": {
+						Port: aws.String("80"),
+					},
+				},
+				alb: &RoutingRuleConfiguration{
+					TargetPort: aws.Uint16(8081),
+				},
+			},
+			wanted: nil,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			err := validateExposedPorts(tc.in)
+
+			if tc.wanted != nil {
+				require.EqualError(t, err, tc.wanted.Error())
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

@@ -49,7 +49,6 @@ type initAppOpts struct {
 	identity             identityService
 	store                applicationStore
 	route53              domainHostedZoneGetter
-	domainInfoGetter     domainInfoGetter
 	cfn                  appDeployer
 	prompt               prompter
 	prog                 progress
@@ -73,16 +72,15 @@ func newInitAppOpts(vars initAppVars) (*initAppOpts, error) {
 	identity := identity.New(sess)
 	iamClient := iam.New(sess)
 	return &initAppOpts{
-		initAppVars:      vars,
-		identity:         identity,
-		store:            config.NewSSMStore(identity, ssm.New(sess), aws.StringValue(sess.Config.Region)),
-		route53:          route53.New(sess),
-		domainInfoGetter: route53.NewRoute53Domains(sess),
-		cfn:              cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
-		prompt:           prompt.New(),
-		prog:             termprogress.NewSpinner(log.DiagnosticWriter),
-		iam:              iamClient,
-		iamRoleManager:   iamClient,
+		initAppVars:    vars,
+		identity:       identity,
+		store:          config.NewSSMStore(identity, ssm.New(sess), aws.StringValue(sess.Config.Region)),
+		route53:        route53.New(sess),
+		cfn:            cloudformation.New(sess, cloudformation.WithProgressTracker(os.Stderr)),
+		prompt:         prompt.New(),
+		prog:           termprogress.NewSpinner(log.DiagnosticWriter),
+		iam:            iamClient,
+		iamRoleManager: iamClient,
 		isSessionFromEnvVars: func() (bool, error) {
 			return sessions.AreCredsFromEnvVars(sess)
 		},
@@ -108,12 +106,12 @@ func (o *initAppOpts) Validate() error {
 		}
 	}
 	if o.domainName != "" {
+		o.prog.Start(fmt.Sprintf("Validating ownership of %q", o.domainName))
+		defer o.prog.Stop("")
 		if err := validateDomainName(o.domainName); err != nil {
 			return fmt.Errorf("domain name %s is invalid: %w", o.domainName, err)
 		}
-		if err := o.isDomainOwned(); err != nil {
-			return err
-		}
+		o.warnIfDomainIsNotOwned()
 		id, err := o.domainHostedZoneID(o.domainName)
 		if err != nil {
 			return err
@@ -293,23 +291,16 @@ func (o *initAppOpts) validatePermBound(policyName string) error {
 	return fmt.Errorf("IAM policy %q not found in this account", policyName)
 }
 
-func (o *initAppOpts) isDomainOwned() error {
-	err := o.domainInfoGetter.IsRegisteredDomain(o.domainName)
+func (o *initAppOpts) warnIfDomainIsNotOwned() {
+	err := o.route53.ValidateDomainOwnership(o.domainName)
 	if err == nil {
-		return nil
+		return
 	}
-	var errDomainNotFound *route53.ErrDomainNotFound
-	if errors.As(err, &errDomainNotFound) {
-		log.Warningf(`The account does not seem to own the domain that you entered.
-Please make sure that %s is registered with Route53 in your account, or that your hosted zone has the appropriate NS records.
-To transfer domain registration in Route53, see:
-https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-transfer-to-route-53.html
-To update the NS records in your hosted zone, see:
-https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/SOA-NSrecords.html#NSrecords
-`, o.domainName)
-		return nil
+	var nsRecordsErr *route53.ErrUnmatchedNSRecords
+	if errors.As(err, &nsRecordsErr) {
+		o.prog.Stop("")
+		log.Warningln(nsRecordsErr.RecommendActions())
 	}
-	return fmt.Errorf("check if domain is owned by the account: %w", err)
 }
 
 func (o *initAppOpts) domainHostedZoneID(domainName string) (string, error) {
