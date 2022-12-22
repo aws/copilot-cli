@@ -23,14 +23,14 @@ DeploymentConfiguration:
     {{- else if .DeploymentConfiguration.Rollback.HasCustomAlarms }}
     AlarmNames:
       {{- if .DeploymentConfiguration.Rollback.CPUUtilization }}
-      - !Sub ${AWS::StackName}-CPUAlarm
+      - {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackCPUAlarm"}}
       {{- end }}
       {{- if .DeploymentConfiguration.Rollback.MemoryUtilization }}
-      - !Sub ${AWS::StackName}-MemAlarm
+      - {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackMemAlarm"}}
       {{- end}}
+    {{- end }}
     Enable: true
     Rollback: true
-    {{- end }}
   {{- end }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}

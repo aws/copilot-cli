@@ -528,8 +528,8 @@ MaximumPercent: 200
 			wantedDeploymentConfig: `
 Alarms:
   AlarmNames: 
-    - ${AWS::StackName}-CPUAlarm
-    - ${AWS::StackName}-MemAlarm
+    - {{.DeploymentConfiguration.Rollback.TruncateAlarmName .App .Env .Name "CopilotRollbackCPUAlarm"}}
+    - {{.DeploymentConfiguration.Rollback.TruncateAlarmName .App .Env .Name "CopilotRollbackMemAlarm"}}
   Enable: true
   Rollback: true
 DeploymentCircuitBreaker:
@@ -548,7 +548,7 @@ MaximumPercent: 200
 			wantedDeploymentConfig: `
 Alarms:
   AlarmNames:
-    - ${AWS::StackName}-MemAlarm
+    - {{.DeploymentConfiguration.Rollback.TruncateAlarmName .App .Env .Name "CopilotRollbackMemAlarm"}}
   Enable: true
   Rollback: true
 DeploymentCircuitBreaker:

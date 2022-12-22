@@ -481,6 +481,16 @@ func (cfg RollingUpdateRollbackConfig) HasCustomAlarms() bool {
 	return cfg.CPUUtilization != nil || cfg.MemoryUtilization != nil
 }
 
+// TruncateAlarmName ensures that alarm names don't exceed the 255 character limit.
+func (cfg RollingUpdateRollbackConfig) TruncateAlarmName(app, env, svc, alarmType string) string {
+	if len(app) + len(env) + len(svc) + len(alarmType) <= 255 {
+		return fmt.Sprintf("%s-%s-%s-%s", app, env, svc, alarmType)
+	}
+	maxSubstringLength := (255 - len(alarmType) - 3) / 3
+	return fmt.Sprintf("%s-%s-%s-%s", app[:maxSubstringLength], env[:maxSubstringLength], svc[:maxSubstringLength], alarmType)
+}
+
+
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
 type ExecuteCommandOpts struct{}
 

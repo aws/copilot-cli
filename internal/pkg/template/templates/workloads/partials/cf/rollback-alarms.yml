@@ -6,7 +6,7 @@ CPURollbackAlarm:
   DependsOn: Service
   Properties:
     AlarmDescription: "Roll back ECS service if CPU utilization is greater or equal to {{.DeploymentConfiguration.Rollback.CPUUtilization}}% twice in 2 minutes."
-    AlarmName: !Sub ${AWS::StackName}-CPUAlarm
+    AlarmName: {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackCPUAlarm"}}
     Namespace: 'AWS/ECS'
     Dimensions:
       - Name: ServiceName
@@ -29,7 +29,7 @@ MemoryRollbackAlarm:
   DependsOn: Service
   Properties:
     AlarmDescription: "Roll back ECS service if memory utilization is greater or equal to {{.DeploymentConfiguration.Rollback.MemoryUtilization}}% twice in 2 minutes."
-    AlarmName: !Sub ${AWS::StackName}-MemAlarm
+    AlarmName: {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackMemAlarm"}}
     Namespace: 'AWS/ECS'
     Dimensions:
       - Name: ServiceName
