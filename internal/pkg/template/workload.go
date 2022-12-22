@@ -462,12 +462,18 @@ type DeploymentConfigurationOpts struct {
 	Rollback   RollingUpdateRollbackConfig
 }
 
+// RollingUpdateRollbackConfig holds config for rollback alarms.
 type RollingUpdateRollbackConfig struct {
-	AlarmNames    string // Names of existing alarms.
+	AlarmNames    []string // Names of existing alarms.
 	
 	// Custom alarms to create.
-	CPUUtilization    int
-	MemoryUtilization int
+	CPUUtilization    *float64
+	MemoryUtilization *float64
+}
+
+// HasCustomAlarms returns true if the client is using Copilot-generated alarms for alarm-based rollbacks.
+func (cfg RollingUpdateRollbackConfig) HasCustomAlarms() bool {
+	return cfg.CPUUtilization != nil || cfg.MemoryUtilization != nil
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.

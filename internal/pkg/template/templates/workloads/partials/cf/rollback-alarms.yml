@@ -1,11 +1,11 @@
-{{- if .DeploymentConfiguration.CPUUtilization}}
+{{- if .DeploymentConfiguration.Rollback.CPUUtilization}}
 CPURollbackAlarm:
   Metadata:
     'aws:copilot:description': "A CloudWatch alarm associated with CPU utilization for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
   DependsOn: Service
   Properties:
-    AlarmDescription: "Roll back ECS service if CPU utilization is greater or equal to {{.DeploymentConfiguration.CPUUtilization}}% twice in 2 minutes."
+    AlarmDescription: "Roll back ECS service if CPU utilization is greater or equal to {{.DeploymentConfiguration.Rollback.CPUUtilization}}% twice in 2 minutes."
     AlarmName: !Sub ${AWS::StackName}-CPUAlarm
     Namespace: 'AWS/ECS'
     Dimensions:
@@ -17,18 +17,18 @@ CPURollbackAlarm:
     EvaluationPeriods: 2
     Period: 60
     Statistic: 'Average'
-    Threshold: {{.DeploymentConfiguration.CPUUtilization}}
+    Threshold: {{.DeploymentConfiguration.Rollback.CPUUtilization}}
     Unit: 'Percent'
 {{- end}}
   
-{{- if .DeploymentConfiguration.MemoryUtilization}}
+{{- if .DeploymentConfiguration.Rollback.MemoryUtilization}}
 MemoryRollbackAlarm:
   Metadata:
     'aws:copilot:description': "A CloudWatch alarm associated with memory utilization for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
   DependsOn: Service
   Properties:
-    AlarmDescription: "Roll back ECS service if memory utilization is greater or equal to {{.DeploymentConfiguration.MemoryUtilization}}% twice in 2 minutes."
+    AlarmDescription: "Roll back ECS service if memory utilization is greater or equal to {{.DeploymentConfiguration.Rollback.MemoryUtilization}}% twice in 2 minutes."
     AlarmName: !Sub ${AWS::StackName}-MemAlarm
     Namespace: 'AWS/ECS'
     Dimensions:
@@ -40,6 +40,6 @@ MemoryRollbackAlarm:
     EvaluationPeriods: 2
     Period: 60
     Statistic: 'Average'
-    Threshold: {{.DeploymentConfiguration.MemoryUtilization}}
+    Threshold: {{.DeploymentConfiguration.Rollback.MemoryUtilization}}
     Unit: 'Percent'
 {{- end}}

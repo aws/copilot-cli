@@ -16,18 +16,18 @@ DeploymentConfiguration:
     Rollback: true
   MinimumHealthyPercent: {{ .DeploymentConfiguration.MinHealthyPercent }}
   MaximumPercent: {{ .DeploymentConfiguration.MaxPercent }}
-  {{- if .DeploymentConfiguration.RollbackAlarms }}
+  {{- if .DeploymentConfiguration.Rollback.AlarmNames }}
   Alarms:
-    AlarmNames: {{ .DeploymentConfiguration.RollbackAlarms }}
+    AlarmNames: {{ fmtSlice (quoteSlice .DeploymentConfiguration.Rollback.AlarmNames) }}
     Enable: true
     Rollback: true
-  {{- else if or .DeploymentConfiguration.CPUUtilization .DeploymentConfiguration.MemoryUtilization }}
+  {{- else if .DeploymentConfiguration.Rollback.HasCustomAlarms }}
   Alarms:
     AlarmNames:
-      {{- if .DeploymentConfiguration.CPUUtilization }}
+      {{- if .DeploymentConfiguration.Rollback.CPUUtilization }}
       - !Sub ${AWS::StackName}-CPUAlarm
       {{- end }}
-      {{- if .DeploymentConfiguration.MemoryUtilization }}
+      {{- if .DeploymentConfiguration.Rollback.MemoryUtilization }}
       - !Sub ${AWS::StackName}-MemAlarm
       {{- end}}
     Enable: true

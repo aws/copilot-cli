@@ -813,11 +813,11 @@ func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.Deplo
 		out.MaxPercent = maxPercentDefault
 	}
 	if in.RollbackAlarms.IsBasic() {
-		out.Rollback.AlarmNames = template.FmtSliceFunc(in.RollbackAlarms.Basic)
+		out.Rollback.AlarmNames = in.RollbackAlarms.Basic
 	}
 	if in.RollbackAlarms.IsAdvanced() {
-		out.Rollback.CPUUtilization = aws.IntValue(in.RollbackAlarms.Advanced.CPUUtilization)
-		out.Rollback.MemoryUtilization = aws.IntValue(in.RollbackAlarms.Advanced.MemoryUtilization)
+		out.Rollback.CPUUtilization = in.RollbackAlarms.Advanced.CPUUtilization
+		out.Rollback.MemoryUtilization = in.RollbackAlarms.Advanced.MemoryUtilization
 	}
 	return out
 }
