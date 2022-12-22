@@ -28,8 +28,6 @@ const (
 	DNSDelegationFileName               = "dns-delegation"
 	CustomDomainFileName                = "custom-domain"
 	AppRunnerCustomDomainLambdaFileName = "custom-domain-app-runner"
-	NLBCertValidatorLambdaFileName      = "nlb-cert-validator"
-	NLBCustomDomainLambdaFileName       = "nlb-custom-domain"
 
 	customResourceRootPath         = "custom-resources"
 	customResourceZippedScriptName = "index.js"
@@ -84,9 +82,14 @@ type fileToCompress struct {
 	uploadables []Uploadable
 }
 
+type osFS interface {
+	fs.ReadDirFS
+	fs.ReadFileFS
+}
+
 // Template represents the "/templates/" directory that holds static files to be embedded in the binary.
 type Template struct {
-	fs fs.ReadFileFS
+	fs osFS
 }
 
 // New returns a Template object that can be used to parse files under the "/templates/" directory.
