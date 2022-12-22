@@ -224,6 +224,7 @@ AWS App Runner リソースとして渡される AWS タグを表すキー・値
 既存のオートスケーリング設定の名前を指定します。
 ```yaml
 count: high-availability/3
+```
 <div class="separator"></div>
 
 <a id="environments" href="#environments" class="field">`environments`</a> <span class="type">Map</span>  

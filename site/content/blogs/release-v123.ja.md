@@ -56,8 +56,8 @@ Environment 内にトラフィックを送りたい場合は、Manifest に [`ne
 
 <a id="support-aurora-serverless-v2-in-storage-init"></a>
 
-## [`storage init`] (../docs/commands/storage-init.ja.md)で Aurora Serverless v2 をサポート
-[Aurora Serverless v2 は 今年の初めに一般利用を開始](https://aws.amazon.com/about-aws/whats-new/2022/04/amazon-aurora-serverless-v2/)しており、
+## [`storage init`](../docs/commands/storage-init.ja.md)で Aurora Serverless v2 をサポート
+[Aurora Serverless v2 は今年の初めに一般利用を開始](https://aws.amazon.com/about-aws/whats-new/2022/04/amazon-aurora-serverless-v2/)しており、
 現在、Copilot のストレージオプションとしてサポートされています。
 
 以前は、次のコマンドを実行し、
