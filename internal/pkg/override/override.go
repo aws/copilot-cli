@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/spf13/afero"
@@ -22,6 +24,8 @@ const (
 	cdkOverrider
 	yamlPatchOverrider
 )
+
+var templates = template.New()
 
 // IsCDK returns true if the overrider is a CDK application.
 func (i Info) IsCDK() bool {

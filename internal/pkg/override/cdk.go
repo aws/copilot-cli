@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
 	"github.com/spf13/afero"
 )
 
@@ -29,7 +31,9 @@ type CDK struct {
 	exec Executable // For testing os/exec calls.
 }
 
-// WithCDK instantiates a new CDK Overrider with the file system pointing ot the overrides/ dir.
+// WithCDK instantiates a new CDK Overrider with root being the path to the overrides/ directory.
+// stdout is the writer to catch any outputs written by exec commands.
+// fs is the interface to the file system.
 func WithCDK(root string, stdout io.Writer, fs afero.Fs, exec Executable) *CDK {
 	return &CDK{
 		rootAbsPath: root,
@@ -91,4 +95,18 @@ func (cdk *CDK) transform(body []byte) ([]byte, error) {
 func (cdk *CDK) cleanUp(body []byte) ([]byte, error) {
 	// TODO(efekarakus): Implement me.
 	return body, nil
+}
+
+// ScaffoldWithCDK bootstraps a CDK application under dir/ to override the seed CloudFormation resources.
+func ScaffoldWithCDK(fs afero.Fs, dir string, seeds []template.CFNResource) error {
+	return templates.WalkOverridesCDKDir(seeds, func(name string, content *template.Content) error {
+		path := filepath.Join(dir, name)
+		if err := fs.MkdirAll(path, 0755); err != nil {
+			return fmt.Errorf("make directories along %q: %w", path, err)
+		}
+		if err := afero.WriteFile(fs, path, content.Bytes(), 0644); err != nil {
+			return fmt.Errorf("write file at %q: %w", path, err)
+		}
+		return nil
+	})
 }
