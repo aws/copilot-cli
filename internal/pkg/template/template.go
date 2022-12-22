@@ -248,7 +248,10 @@ func (t *Template) walkDir(basePath, curPath string, data any, fn WalkDirFunc, p
 	for _, entry := range entries {
 		targetPath := filepath.Join(curPath, entry.Name())
 		if entry.IsDir() {
-			return t.walkDir(basePath, targetPath, data, fn)
+			if err := t.walkDir(basePath, targetPath, data, fn); err != nil {
+				return err
+			}
+			continue
 		}
 		content, err := t.Parse(targetPath, data, parseOpts...)
 		if err != nil {
