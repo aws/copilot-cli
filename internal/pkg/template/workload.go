@@ -458,8 +458,14 @@ type DeploymentConfigurationOpts struct {
 	// The lower limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
 	MinHealthyPercent int
 	// The upper limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
-	MaxPercent        int
-	RollbackAlarms    string
+	MaxPercent int
+	Rollback   RollingUpdateRollbackConfig
+}
+
+type RollingUpdateRollbackConfig struct {
+	AlarmNames    string // Names of existing alarms.
+	
+	// Custom alarms to create.
 	CPUUtilization    int
 	MemoryUtilization int
 }

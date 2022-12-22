@@ -803,23 +803,23 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
-func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
-	var deployConfigs template.DeploymentConfigurationOpts
-	if strings.EqualFold(aws.StringValue(deploymentConfig.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
-		deployConfigs.MinHealthyPercent = minHealthyPercentRecreate
-		deployConfigs.MaxPercent = maxPercentRecreate
+func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+	var out template.DeploymentConfigurationOpts
+	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
+		out.MinHealthyPercent = minHealthyPercentRecreate
+		out.MaxPercent = maxPercentRecreate
 	} else {
-		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
-		deployConfigs.MaxPercent = maxPercentDefault
+		out.MinHealthyPercent = minHealthyPercentDefault
+		out.MaxPercent = maxPercentDefault
 	}
-	if deploymentConfig.RollbackAlarms.IsBasic() {
-		deployConfigs.RollbackAlarms = template.FmtSliceFunc(deploymentConfig.RollbackAlarms.Basic)
+	if in.RollbackAlarms.IsBasic() {
+		out.Rollback.AlarmNames = template.FmtSliceFunc(in.RollbackAlarms.Basic)
 	}
-	if deploymentConfig.RollbackAlarms.IsAdvanced() {
-		deployConfigs.CPUUtilization = aws.IntValue(deploymentConfig.RollbackAlarms.Advanced.CPUUtilization)
-		deployConfigs.MemoryUtilization = aws.IntValue(deploymentConfig.RollbackAlarms.Advanced.MemoryUtilization)
+	if in.RollbackAlarms.IsAdvanced() {
+		out.Rollback.CPUUtilization = aws.IntValue(in.RollbackAlarms.Advanced.CPUUtilization)
+		out.Rollback.MemoryUtilization = aws.IntValue(in.RollbackAlarms.Advanced.MemoryUtilization)
 	}
-	return deployConfigs
+	return out
 }
 
 func convertCommand(command manifest.CommandOverride) ([]string, error) {
