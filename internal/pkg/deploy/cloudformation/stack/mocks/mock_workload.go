@@ -11,31 +11,31 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// Mockaddons is a mock of addons interface.
-type Mockaddons struct {
+// MockNestedStackConfigurer is a mock of NestedStackConfigurer interface.
+type MockNestedStackConfigurer struct {
 	ctrl     *gomock.Controller
-	recorder *MockaddonsMockRecorder
+	recorder *MockNestedStackConfigurerMockRecorder
 }
 
-// MockaddonsMockRecorder is the mock recorder for Mockaddons.
-type MockaddonsMockRecorder struct {
-	mock *Mockaddons
+// MockNestedStackConfigurerMockRecorder is the mock recorder for MockNestedStackConfigurer.
+type MockNestedStackConfigurerMockRecorder struct {
+	mock *MockNestedStackConfigurer
 }
 
-// NewMockaddons creates a new mock instance.
-func NewMockaddons(ctrl *gomock.Controller) *Mockaddons {
-	mock := &Mockaddons{ctrl: ctrl}
-	mock.recorder = &MockaddonsMockRecorder{mock}
+// NewMockNestedStackConfigurer creates a new mock instance.
+func NewMockNestedStackConfigurer(ctrl *gomock.Controller) *MockNestedStackConfigurer {
+	mock := &MockNestedStackConfigurer{ctrl: ctrl}
+	mock.recorder = &MockNestedStackConfigurerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *Mockaddons) EXPECT() *MockaddonsMockRecorder {
+func (m *MockNestedStackConfigurer) EXPECT() *MockNestedStackConfigurerMockRecorder {
 	return m.recorder
 }
 
 // Parameters mocks base method.
-func (m *Mockaddons) Parameters() (string, error) {
+func (m *MockNestedStackConfigurer) Parameters() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Parameters")
 	ret0, _ := ret[0].(string)
@@ -44,13 +44,13 @@ func (m *Mockaddons) Parameters() (string, error) {
 }
 
 // Parameters indicates an expected call of Parameters.
-func (mr *MockaddonsMockRecorder) Parameters() *gomock.Call {
+func (mr *MockNestedStackConfigurerMockRecorder) Parameters() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*Mockaddons)(nil).Parameters))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Parameters", reflect.TypeOf((*MockNestedStackConfigurer)(nil).Parameters))
 }
 
 // Template mocks base method.
-func (m *Mockaddons) Template() (string, error) {
+func (m *MockNestedStackConfigurer) Template() (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Template")
 	ret0, _ := ret[0].(string)
@@ -59,9 +59,9 @@ func (m *Mockaddons) Template() (string, error) {
 }
 
 // Template indicates an expected call of Template.
-func (mr *MockaddonsMockRecorder) Template() *gomock.Call {
+func (mr *MockNestedStackConfigurerMockRecorder) Template() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*Mockaddons)(nil).Template))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Template", reflect.TypeOf((*MockNestedStackConfigurer)(nil).Template))
 }
 
 // Mocklocation is a mock of location interface.
