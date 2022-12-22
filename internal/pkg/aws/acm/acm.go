@@ -88,7 +88,6 @@ func (a *ACM) validDomainsOfCert(ctx context.Context, cert string) ([]string, er
 		return nil, fmt.Errorf("describe certificate %s: %w", cert, err)
 	}
 	var domainsOfCert []*string
-	//domainsOfCert = append(domainsOfCert, resp.Certificate.DomainName)
 	domainsOfCert = append(domainsOfCert, resp.Certificate.SubjectAlternativeNames...)
 	return aws.StringValueSlice(domainsOfCert), err
 }
