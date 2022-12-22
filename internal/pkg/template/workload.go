@@ -471,6 +471,11 @@ type RollingUpdateRollbackConfig struct {
 	MemoryUtilization *float64
 }
 
+// HasRollbackAlarms returns true if the client is using ABR.
+func (cfg RollingUpdateRollbackConfig) HasRollbackAlarms() bool {
+	return len(cfg.AlarmNames) > 0 || cfg.HasCustomAlarms() 
+}
+
 // HasCustomAlarms returns true if the client is using Copilot-generated alarms for alarm-based rollbacks.
 func (cfg RollingUpdateRollbackConfig) HasCustomAlarms() bool {
 	return cfg.CPUUtilization != nil || cfg.MemoryUtilization != nil

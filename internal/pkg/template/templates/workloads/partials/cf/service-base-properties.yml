@@ -16,13 +16,11 @@ DeploymentConfiguration:
     Rollback: true
   MinimumHealthyPercent: {{ .DeploymentConfiguration.MinHealthyPercent }}
   MaximumPercent: {{ .DeploymentConfiguration.MaxPercent }}
-  {{- if .DeploymentConfiguration.Rollback.AlarmNames }}
+  {{- if .DeploymentConfiguration.Rollback.HasRollbackAlarms }}
   Alarms:
+    {{- if .DeploymentConfiguration.Rollback.AlarmNames }}
     AlarmNames: {{ fmtSlice (quoteSlice .DeploymentConfiguration.Rollback.AlarmNames) }}
-    Enable: true
-    Rollback: true
-  {{- else if .DeploymentConfiguration.Rollback.HasCustomAlarms }}
-  Alarms:
+    {{- else if .DeploymentConfiguration.Rollback.HasCustomAlarms }}
     AlarmNames:
       {{- if .DeploymentConfiguration.Rollback.CPUUtilization }}
       - !Sub ${AWS::StackName}-CPUAlarm
@@ -32,6 +30,7 @@ DeploymentConfiguration:
       {{- end}}
     Enable: true
     Rollback: true
+    {{- end }}
   {{- end }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
