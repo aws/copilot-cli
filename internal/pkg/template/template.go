@@ -236,3 +236,33 @@ func (t *Template) parse(name, path string, options ...ParseOption) (*template.T
 	}
 	return parsedTpl, nil
 }
+
+// WalkDirFunc is the type of the function called by any Walk functions while visiting each file under a directory.
+type WalkDirFunc func(name string, content *Content) error
+
+func (t *Template) walkDir(basePath, curPath string, data any, fn WalkDirFunc, parseOpts ...ParseOption) error {
+	entries, err := t.fs.ReadDir(filepath.Join("templates", curPath))
+	if err != nil {
+		return fmt.Errorf("read dir %q: %w", curPath, err)
+	}
+	for _, entry := range entries {
+		targetPath := filepath.Join(curPath, entry.Name())
+		if entry.IsDir() {
+			if err := t.walkDir(basePath, targetPath, data, fn); err != nil {
+				return err
+			}
+		}
+		content, err := t.Parse(targetPath, data, parseOpts...)
+		if err != nil {
+			return err
+		}
+		relPath, err := filepath.Rel(basePath, targetPath)
+		if err != nil {
+			return err
+		}
+		if err := fn(relPath, content); err != nil {
+			return err
+		}
+	}
+	return nil
+}
