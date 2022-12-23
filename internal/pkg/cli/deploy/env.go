@@ -175,7 +175,7 @@ func NewEnvDeployer(in *NewEnvDeployerInput) (*envDeployer, error) {
 		deployer.parseAddonsOnce.Do(func() {
 			deployer.addons.stack, deployer.addons.err = addon.ParseFromEnv(deployer.ws)
 		})
-		return deployer.addons.stack, fmt.Errorf("parse environment addons from workspace: %w", deployer.addons.err)
+		return deployer.addons.stack, deployer.addons.err
 	}
 	return deployer, nil
 }
@@ -370,15 +370,15 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 
 	var addons *cfnstack.Addons
 	parsedAddons, err := d.parseAddons()
+	var notFoundErr *addon.ErrAddonsNotFound
+	if err != nil && !errors.As(err, &notFoundErr) {
+		return nil, err
+	}
 	if err == nil {
 		addons = &cfnstack.Addons{
 			S3ObjectURL: in.AddonsURL,
 			Stack:       parsedAddons,
 		}
-	}
-	var notFoundErr *addon.ErrAddonsNotFound
-	if !errors.As(err, &notFoundErr) {
-		return nil, err
 	}
 	return &cfnstack.EnvConfig{
 		Name: d.env.Name,
