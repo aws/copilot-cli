@@ -367,13 +367,12 @@ func (d *envDeployer) buildStackInput(in *DeployEnvironmentInput) (*cfnstack.Env
 	if err != nil {
 		return nil, err
 	}
-
-	var addons *cfnstack.Addons
 	parsedAddons, err := d.parseAddons()
 	var notFoundErr *addon.ErrAddonsNotFound
 	if err != nil && !errors.As(err, &notFoundErr) {
 		return nil, err
 	}
+	var addons *cfnstack.Addons
 	if err == nil {
 		addons = &cfnstack.Addons{
 			S3ObjectURL: in.AddonsURL,
