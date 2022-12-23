@@ -9,7 +9,7 @@ Parameters:
 Resources:
   {{logicalIDSafe .Name}}Bucket:
     Metadata:
-      'aws:copilot:description': 'An Amazon S3 bucket as your {{.Name}} storage to store and retrieve objects'
+      'aws:copilot:description': 'An Amazon S3 bucket, {{.Name}}, for storing and retrieving objects'
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: Private
