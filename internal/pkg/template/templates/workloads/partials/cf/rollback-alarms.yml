@@ -9,8 +9,12 @@ CPURollbackAlarm:
     AlarmName: {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackCPUAlarm"}}
     Namespace: 'AWS/ECS'
     Dimensions:
+      - Name: ClusterName
+        Value:
+          Fn::ImportValue:
+            !Sub '${AppName}-${EnvName}-ClusterId'
       - Name: ServiceName
-        Value: !Ref Service
+        Value: !Select [2, !Split ["/", !Ref Service]]
     MetricName: 'CPUUtilization'
     ComparisonOperator: 'GreaterThanOrEqualToThreshold'
     DatapointsToAlarm: 2
@@ -32,8 +36,12 @@ MemoryRollbackAlarm:
     AlarmName: {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackMemAlarm"}}
     Namespace: 'AWS/ECS'
     Dimensions:
+      - Name: ClusterName
+        Value:
+          Fn::ImportValue:
+            !Sub '${AppName}-${EnvName}-ClusterId'
       - Name: ServiceName
-        Value: !Ref Service
+        Value: !Select [2, !Split ["/", !Ref Service ]]
     MetricName: 'MemoryUtilization'
     ComparisonOperator: 'GreaterThanOrEqualToThreshold'
     DatapointsToAlarm: 2

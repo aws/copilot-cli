@@ -490,7 +490,6 @@ func (cfg RollingUpdateRollbackConfig) TruncateAlarmName(app, env, svc, alarmTyp
 	return fmt.Sprintf("%s-%s-%s-%s", app[:maxSubstringLength], env[:maxSubstringLength], svc[:maxSubstringLength], alarmType)
 }
 
-
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
 type ExecuteCommandOpts struct{}
 
