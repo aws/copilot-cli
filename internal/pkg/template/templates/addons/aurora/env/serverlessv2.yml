@@ -170,9 +170,9 @@ Outputs:
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier' and 'engine'"
     Value: !Ref {{logicalIDSafe .ClusterName}}AuroraSecret
     Export:
-      Name: !Sub ${Env}-{{logicalIDSafe .ClusterName}}AuroraSecret
+      Name: !Sub ${App}-${Env}-{{logicalIDSafe .ClusterName}}AuroraSecret
   {{logicalIDSafe .ClusterName}}SecurityGroup:
     Description: "The security group to attach to the workload."
     Value: !Ref {{logicalIDSafe .ClusterName}}WorkloadSecurityGroup  
     Export:
-      Name: !Sub ${Env}-{{logicalIDSafe .ClusterName}}SecurityGroup
+      Name: !Sub ${App}-${Env}-{{logicalIDSafe .ClusterName}}SecurityGroup
