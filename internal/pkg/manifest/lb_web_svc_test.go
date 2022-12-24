@@ -478,7 +478,9 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []string{"sg-123"},
+								IDs: []stringOrFromCFN{{
+									Plain: aws.String("sg-123"),
+								}},
 							},
 						},
 					},
@@ -564,7 +566,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						Network: NetworkConfig{
 							VPC: vpcConfig{
 								SecurityGroups: SecurityGroupsIDsOrConfig{
-									IDs: []string{"sg-456", "sg-789"},
+									IDs: []stringOrFromCFN{
+										{
+											Plain: aws.String("sg-456"),
+										},
+										{
+											Plain: aws.String("sg-789"),
+										},
+									},
 								},
 							},
 						},
@@ -680,7 +689,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []string{"sg-456", "sg-789"},
+								IDs: []stringOrFromCFN{
+									{
+										Plain: aws.String("sg-456"),
+									},
+									{
+										Plain: aws.String("sg-789"),
+									},
+								},
 							},
 						},
 					},
@@ -779,7 +795,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []string{"sg-456", "sg-789"},
+								IDs: []stringOrFromCFN{
+									{
+										Plain: aws.String("sg-456"),
+									},
+									{
+										Plain: aws.String("sg-789"),
+									},
+								},
 							},
 						},
 					},
@@ -807,7 +830,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 								PlacementString: placementStringP(PublicSubnetPlacement),
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
-								IDs: []string{"sg-456", "sg-789"},
+								IDs: []stringOrFromCFN{
+									{
+										Plain: aws.String("sg-456"),
+									},
+									{
+										Plain: aws.String("sg-789"),
+									},
+								},
 							},
 						},
 					},
@@ -824,7 +854,14 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
 								AdvancedConfig: SecurityGroupsConfig{
-									SecurityGroups: []string{"sg-535", "sg-789"},
+									SecurityGroups: []stringOrFromCFN{
+										{
+											Plain: aws.String("sg-535"),
+										},
+										{
+											Plain: aws.String("sg-789"),
+										},
+									},
 								},
 							},
 						},
@@ -836,8 +873,15 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							VPC: vpcConfig{
 								SecurityGroups: SecurityGroupsIDsOrConfig{
 									AdvancedConfig: SecurityGroupsConfig{
-										SecurityGroups: []string{"sg-456", "sg-700"},
-										DenyDefault:    aws.Bool(true),
+										SecurityGroups: []stringOrFromCFN{
+											{
+												Plain: aws.String("sg-456"),
+											},
+											{
+												Plain: aws.String("sg-700"),
+											},
+										},
+										DenyDefault: aws.Bool(true),
 									},
 								},
 							},
@@ -856,8 +900,15 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 							SecurityGroups: SecurityGroupsIDsOrConfig{
 								AdvancedConfig: SecurityGroupsConfig{
-									SecurityGroups: []string{"sg-456", "sg-700"},
-									DenyDefault:    aws.Bool(true),
+									SecurityGroups: []stringOrFromCFN{
+										{
+											Plain: aws.String("sg-456"),
+										},
+										{
+											Plain: aws.String("sg-700"),
+										},
+									},
+									DenyDefault: aws.Bool(true),
 								},
 							},
 						},

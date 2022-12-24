@@ -540,8 +540,9 @@ type DeadLetterQueue struct {
 
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
-	SecurityGroups []string
-	AssignPublicIP string
+	PlainSecurityGroups    []string
+	ImportedSecurityGroups []string
+	AssignPublicIP         string
 	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
 	SubnetsType              string
 	SubnetIDs                []string

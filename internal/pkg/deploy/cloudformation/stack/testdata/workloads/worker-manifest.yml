@@ -72,6 +72,12 @@ subscribe:
       queue:
         fifo: false
 
+network:
+  vpc:
+    security_groups:
+      - sg-0c10c4fe23f5e5361
+      - from_cfn: MyUserDBAccessSecurityGroup1
+
 # Optional fields for more advanced use-cases.
 #
 #variables:                    # Pass environment variables as key value pairs.

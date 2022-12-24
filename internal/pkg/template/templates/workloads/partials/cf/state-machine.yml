@@ -35,7 +35,10 @@ StateMachine:
         Fn::Join:
           - '","'
           - - Fn::ImportValue: !Sub "${AppName}-${EnvName}-EnvironmentSecurityGroup"
-            {{- range $sg := .Network.SecurityGroups }}
+            {{- range $sg := .Network.PlainSecurityGroups }}
+            - {{$sg}}
+            {{- end }}
+            {{- range $sg := .Network.ImportedSecurityGroups }}
             - {{$sg}}
             {{- end }}
             {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}{{range $sg := .NestedStack.SecurityGroupOutputs}}

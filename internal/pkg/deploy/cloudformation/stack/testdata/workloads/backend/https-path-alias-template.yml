@@ -401,6 +401,8 @@ Resources:
               - Fn::ImportValue: !Sub '${AppName}-${EnvName}-PublicSubnets'
           SecurityGroups:
             - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
+            - sg-0c10c4fe23f5e5361
+            - Fn::ImportValue: MyUserDBAccessSecurityGroup1
       ServiceRegistries: !If [ExposePort, [{RegistryArn: !GetAtt DiscoveryService.Arn, Port: !Ref TargetPort}], !Ref "AWS::NoValue"]
       HealthCheckGracePeriodSeconds: 60
       LoadBalancers:
