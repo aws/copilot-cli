@@ -182,7 +182,7 @@ func (t TaskConfig) IsARM() bool {
 
 // Secret represents an identifier for sensitive data stored in either SSM or SecretsManager.
 type Secret struct {
-	from               *string              // SSM Parameter name or ARN to a secret.
+	from               stringOrFromCFN      // SSM Parameter name or ARN to a secret.
 	fromSecretsManager secretsManagerSecret // Conveniently fetch from a secretsmanager secret name instead of ARN.
 }
 
@@ -210,22 +210,39 @@ func (s *Secret) IsSecretsManagerName() bool {
 	return !s.fromSecretsManager.IsEmpty()
 }
 
+// SSMRequiresImport returns true if the SSM parameter name or secret ARN value is imported from CloudFormation stack.
+func (s *Secret) SSMRequiresImport() bool {
+	return !s.from.FromCFN.isEmpty()
+}
+
+// SecretsManagerRequiresImport returns true if the secretsmanager secret name is imported from CloudFormation stack.
+func (s *Secret) SecretsManagerRequiresImport() bool {
+	return s.fromSecretsManager.SecretName.Plain == nil
+}
+
 // Value returns the secret value provided by clients.
 func (s *Secret) Value() string {
 	if !s.fromSecretsManager.IsEmpty() {
-		return aws.StringValue(s.fromSecretsManager.Name)
+		if !s.SecretsManagerRequiresImport() {
+			return aws.StringValue(s.fromSecretsManager.SecretName.Plain)
+		} else {
+			return aws.StringValue(s.fromSecretsManager.SecretName.FromCFN.Name)
+		}
+	} else if !s.SSMRequiresImport() {
+		return aws.StringValue(s.from.Plain)
+	} else {
+		return aws.StringValue(s.from.FromCFN.Name)
 	}
-	return aws.StringValue(s.from)
 }
 
 // secretsManagerSecret represents the name of a secret stored in SecretsManager.
 type secretsManagerSecret struct {
-	Name *string `yaml:"secretsmanager"`
+	SecretName stringOrFromCFN `yaml:"secretsmanager"`
 }
 
 // IsEmpty returns true if all the fields in secretsManagerSecret have the zero value.
 func (s secretsManagerSecret) IsEmpty() bool {
-	return s.Name == nil
+	return s.SecretName.FromCFN.isEmpty() && s.SecretName.Plain == nil
 }
 
 // Logging holds configuration for Firelens to route your logs.

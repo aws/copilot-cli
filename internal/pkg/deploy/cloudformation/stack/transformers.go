@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -1039,13 +1040,28 @@ func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secr
 	if len(secrets) == 0 {
 		return nil
 	}
-	m := make(map[string]template.Secret)
+	m := make(map[string]template.Secret, len(secrets))
 	for name, mftSecret := range secrets {
-		var tplSecret template.Secret = template.SecretFromSSMOrARN(mftSecret.Value())
+		var tplSecret template.Secret
 		if mftSecret.IsSecretsManagerName() {
-			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
+			if mftSecret.SecretsManagerRequiresImport() {
+				tplSecret = template.ImportedSecretFromSecretManager(mftSecret.Value())
+				m[name] = tplSecret
+			} else {
+				tplSecret = template.PlainSecretFromSecretsManager(mftSecret.Value())
+				m[name] = tplSecret
+			}
+		} else if mftSecret.SSMRequiresImport() {
+			tplSecret = template.ImportedSecretFromSSMOrARN(mftSecret.Value())
+			m[name] = tplSecret
+		} else {
+			tplSecret = template.PlainSecretFromSSMOrARN(mftSecret.Value())
+			m[name] = tplSecret
 		}
-		m[name] = tplSecret
+	}
+
+	for k, v := range m {
+		log.Println(k, v.RequiresImport(), v.RequiresSub(), v.ValueFrom())
 	}
 	return m
 }
