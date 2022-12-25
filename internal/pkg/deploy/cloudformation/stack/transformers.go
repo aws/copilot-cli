@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/crc32"
-	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -1058,10 +1057,6 @@ func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secr
 			tplSecret = template.PlainSecretFromSSMOrARN(mftSecret.Value())
 			m[name] = tplSecret
 		}
-	}
-
-	for k, v := range m {
-		log.Println(k, v.RequiresImport(), v.RequiresSub(), v.ValueFrom())
 	}
 	return m
 }

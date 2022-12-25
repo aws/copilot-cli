@@ -74,6 +74,13 @@ Resources: # If a bucket URL is specified, that means the template exists.
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
+          Secrets:
+            - Name: gitpassword
+              ValueFrom:
+                Fn::ImportValue: "MySecretManagerSecret"
+            - Name: gitusername
+              ValueFrom:
+                Fn::ImportValue: "MySSMSecret"
           Environment:
             - Name: COPILOT_APPLICATION_NAME
               Value: !Sub '${AppName}'

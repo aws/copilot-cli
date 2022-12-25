@@ -44,6 +44,12 @@ publish:
   topics:
     - name: mytopic
       fifo: true
+secrets:
+  gitusername:
+    from_cfn: MySSMSecret
+  gitpassword:
+    secretsmanager:
+      from_cfn: MySecretManagerSecret
 
 sidecars:
   nginx:

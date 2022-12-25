@@ -131,6 +131,13 @@ Resources:
       ContainerDefinitions:
         - Name: !Ref WorkloadName
           Image: !Ref ContainerImage
+          Secrets:
+            - Name: gitpassword
+              ValueFrom:
+                Fn::ImportValue: "MySecretManagerSecret"
+            - Name: gitusername
+              ValueFrom:
+                Fn::ImportValue: "MySSMSecret"
           # We pipe certain environment variables directly into the task definition.
           # This lets customers have access to, for example, their LB endpoint - which they'd
           # have no way of otherwise determining.
