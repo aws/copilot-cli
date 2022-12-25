@@ -265,24 +265,56 @@ func TestHTTPTargetContainer_IsHTTPS(t *testing.T) {
 	require.False(t, HTTPTargetContainer{Port: "8080"}.IsHTTPS())
 }
 
-func TestSsmOrSecretARN_RequiresSub(t *testing.T) {
+func TestPlainSSMOrSecretARN_RequiresSub(t *testing.T) {
 	require.False(t, plainSSMOrSecretARN{}.RequiresSub(), "SSM Parameter Store or secret ARNs do not require !Sub")
 }
 
-func TestSsmOrSecretARN_ValueFrom(t *testing.T) {
+func TestPlainSSMOrSecretARN_RequiresImport(t *testing.T) {
+	require.False(t, plainSSMOrSecretARN{}.RequiresImport(), "secret name that refers to a value imported from CloudFormation Stack")
+}
+
+func TestPlainSSMOrSecretARN_ValueFrom(t *testing.T) {
 	require.Equal(t, "/github/token", PlainSecretFromSSMOrARN("/github/token").ValueFrom())
 }
 
-func TestSecretsManagerName_RequiresSub(t *testing.T) {
+func TestImportedSSMOrSecretARN_RequiresSub(t *testing.T) {
+	require.False(t, importedSSMorSecretARN{}.RequiresSub(), "SSM Parameter Store or secret ARNs do not require !Sub")
+}
+
+func TestImportedSSMOrSecretARN_RequiresImport(t *testing.T) {
+	require.True(t, importedSSMorSecretARN{}.RequiresImport(), "secret name that refers to a value imported from CloudFormation Stack")
+}
+
+func TestImportedSSMOrSecretARN_ValueFrom(t *testing.T) {
+	require.Equal(t, "mygithubtoken", ImportedSecretFromSSMOrARN("mygithubtoken").ValueFrom())
+}
+
+func TestPlainSecretsManagerName_RequiresSub(t *testing.T) {
 	require.True(t, plainSecretsManagerName{}.RequiresSub(), "secrets referring to a SecretsManager name need to be expanded to a full ARN")
 }
 
-func TestSecretsManagerName_Service(t *testing.T) {
+func TestPlainSecretsManagerName_RequiresImport(t *testing.T) {
+	require.False(t, plainSecretsManagerName{}.RequiresImport(), "secret name that refers to a value imported from CloudFormation Stack")
+}
+
+func TestPlainSecretsManagerName_Service(t *testing.T) {
 	require.Equal(t, "secretsmanager", plainSecretsManagerName{}.Service())
 }
 
 func TestSecretsManagerName_ValueFrom(t *testing.T) {
 	require.Equal(t, "secret:aes128-1a2b3c", PlainSecretFromSecretsManager("aes128-1a2b3c").ValueFrom())
+}
+
+func TestImportedSecretsManagerName_RequiresSub(t *testing.T) {
+	require.False(t, importedSecretsManagerName{}.RequiresSub(), "secrets referring to a SecretsManager name need to be expanded to a full ARN")
+}
+
+func TestImportedSecretsManagerName_RequiresImport(t *testing.T) {
+	require.True(t, importedSecretsManagerName{}.RequiresImport(), "secret name that refers to a value imported from CloudFormation Stack")
+}
+
+func TestImportedSecretsManagerName_ValueFrom(t *testing.T) {
+	require.Equal(t, "mygithubtoken", ImportedSecretFromSecretManager("mygithubtoken").ValueFrom())
 }
 
 func TestWorkload_HealthCheckProtocol(t *testing.T) {
