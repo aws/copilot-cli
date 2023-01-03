@@ -3,7 +3,6 @@ CPURollbackAlarm:
   Metadata:
     'aws:copilot:description': "A CloudWatch alarm associated with CPU utilization for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
-  DependsOn: Service
   Properties:
     AlarmDescription: "Roll back ECS service if CPU utilization is greater than or equal to {{.DeploymentConfiguration.Rollback.CPUUtilization}}% twice in 2 minutes."
     AlarmName: {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackCPUAlarm"}}
@@ -30,7 +29,6 @@ MemoryRollbackAlarm:
   Metadata:
     'aws:copilot:description': "A CloudWatch alarm associated with memory utilization for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
-  DependsOn: Service
   Properties:
     AlarmDescription: "Roll back ECS service if memory utilization is greater than or equal to {{.DeploymentConfiguration.Rollback.MemoryUtilization}}% twice in 2 minutes."
     AlarmName: {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackMemAlarm"}}
