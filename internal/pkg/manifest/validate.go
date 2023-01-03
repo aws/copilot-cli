@@ -100,6 +100,14 @@ func (l LoadBalancedWebService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		mainContainerName: aws.StringValue(l.Name),
+		mainContainerPort: l.ImageConfig.Port,
+		sidecarConfig:     l.Sidecars,
+		alb:               &l.RoutingRule.RoutingRuleConfiguration,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
 	return nil
 }
 
@@ -221,6 +229,14 @@ func (b BackendService) validate() error {
 		logging:           b.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
+	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		mainContainerName: aws.StringValue(b.Name),
+		mainContainerPort: b.ImageConfig.Port,
+		sidecarConfig:     b.Sidecars,
+		alb:               &b.RoutingRule,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
 	return nil
 }
@@ -346,6 +362,11 @@ func (w WorkerService) validate() error {
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
 	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		sidecarConfig: w.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
+	}
 	return nil
 }
 
@@ -421,6 +442,11 @@ func (s ScheduledJob) validate() error {
 		logging:           s.Logging,
 	}); err != nil {
 		return fmt.Errorf("validate container dependencies: %w", err)
+	}
+	if err = validateExposedPorts(validateExposedPortsOpts{
+		sidecarConfig: s.Sidecars,
+	}); err != nil {
+		return fmt.Errorf("validate unique exposed ports: %w", err)
 	}
 	return nil
 }
@@ -1646,6 +1672,13 @@ func (s Secret) validate() error {
 	return nil
 }
 
+type validateExposedPortsOpts struct {
+	mainContainerName string
+	mainContainerPort *uint16
+	alb               *RoutingRuleConfiguration
+	sidecarConfig     map[string]*SidecarConfig
+}
+
 type validateDependenciesOpts struct {
 	mainContainerName string
 	sidecarConfig     map[string]*SidecarConfig
@@ -1728,6 +1761,97 @@ func validateDepsForEssentialContainers(deps map[string]containerDependency) err
 			}
 		}
 	}
+	return nil
+}
+
+func validateExposedPorts(opts validateExposedPortsOpts) error {
+	containerNameFor := make(map[uint16]string)
+	populateMainContainerPort(containerNameFor, opts)
+	if err := populateSidecarContainerPortsAndValidate(containerNameFor, opts); err != nil {
+		return err
+	}
+	if err := populateALBPortsAndValidate(containerNameFor, opts); err != nil {
+		return err
+	}
+	return nil
+}
+
+func populateMainContainerPort(containerNameFor map[uint16]string, opts validateExposedPortsOpts) {
+	if opts.mainContainerPort == nil {
+		return
+	}
+	containerNameFor[aws.Uint16Value(opts.mainContainerPort)] = opts.mainContainerName
+}
+
+func populateSidecarContainerPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+	for name, sidecar := range opts.sidecarConfig {
+		if sidecar.Port == nil {
+			continue
+		}
+		sidecarPort, protocol, err := ParsePortMapping(sidecar.Port)
+		if err != nil {
+			return err
+		}
+		if protocol != nil {
+			protocolVal := aws.StringValue(protocol)
+			var isValidProtocol bool
+			for _, valid := range nlbValidProtocols {
+				if strings.EqualFold(protocolVal, valid) {
+					isValidProtocol = true
+					break
+				}
+			}
+			if !isValidProtocol {
+				return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(nlbValidProtocols, "and"))
+			}
+		}
+
+		port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
+		if err != nil {
+			return err
+		}
+		if _, ok := containerNameFor[uint16(port)]; ok {
+			return &errContainersExposingSamePort{
+				firstContainer:  name,
+				secondContainer: containerNameFor[uint16(port)],
+				port:            uint16(port),
+			}
+		}
+		containerNameFor[uint16(port)] = name
+	}
+	return nil
+}
+
+func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts validateExposedPortsOpts) error {
+	// This condition takes care of the use case where target_container is set to x container and
+	// target_port exposing port 80 which is already exposed by container y.That means container x
+	// is trying to expose the port that is already being exposed by container y, so error out.
+	if opts.alb == nil {
+		return nil
+	}
+	alb := opts.alb
+	if alb.TargetPort == nil {
+		return nil
+	}
+	containerName := opts.mainContainerName
+	existingContainerName := containerNameFor[aws.Uint16Value(alb.TargetPort)]
+
+	if existingContainerName != "" {
+		containerName = existingContainerName
+		if alb.TargetContainer != nil {
+			if containerName != aws.StringValue(alb.TargetContainer) {
+				return &errContainersExposingSamePort{
+					firstContainer:  aws.StringValue(alb.TargetContainer),
+					secondContainer: containerName,
+					port:            aws.Uint16Value(alb.TargetPort),
+				}
+			}
+		}
+	} else if alb.TargetContainer != nil {
+		containerName = aws.StringValue(alb.TargetContainer)
+	}
+	containerNameFor[aws.Uint16Value(alb.TargetPort)] = containerName
+
 	return nil
 }
 

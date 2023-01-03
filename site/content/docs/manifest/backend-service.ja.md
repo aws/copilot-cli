@@ -2,10 +2,9 @@
 
 ???+ note "api service のサンプル Manifest"
 
-    === "Service Discovery"
+    === "Serving Internal Traffic"
 
         ```yaml
-            # Service は、VPC 内の "http://api.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:8080" でのみアクセス可能です。
             name: api
             type: Backend Service
 
@@ -18,7 +17,10 @@
                 retries: 2
                 timeout: 5s
                 start_period: 0s
-    
+
+            network:
+              connect: true
+
             cpu: 256
             memory: 512
             count: 2
@@ -146,7 +148,7 @@ Service 名。
 <div class="separator"></div>
 
 <a id="type" href="#type" class="field">`type`</a> <span class="type">String</span>  
-Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md#backend-service) はインターネット側からはアクセスできませんが、[サービス検出](../developing/service-discovery.ja.md)の利用により他の Service からはアクセスできます。
+Service のアーキテクチャ。[Backend Services](../concepts/services.ja.md#backend-service) はインターネット側からはアクセスできませんが、[サービスディスカバリ](../developing/svc-to-svc-communication.ja.md#service-discovery)の利用により他の Service からはアクセスできます。
 
 <div class="separator"></div>
 
