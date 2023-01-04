@@ -1,6 +1,6 @@
 # サービス間通信
 
-## Service Connect が<span class="version" > v1.24.0 </span>で追加
+## Service Connect <span class="version" > v1.24.0 </span>
 
 [ECS Service Connect](https://docs.aws.amazon.com/ja_jp/AmazonECS/latest/developerguide/service-connect.html) を使うとクライアント Service が負荷分散された弾力的な方法で、ダウンストリームの Service に接続できます。さらに分かりやすいエイリアスを指定することで、Service をクライアントに公開する方法を簡単にします。Copilot における Service Connect は、作成した各 Service にデフォルトで次の様なプライベートエイリアスを付与します：`http://<your service name>` 。
 
