@@ -94,7 +94,7 @@ type AlarmArgs struct {
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
 	Rolling        *string                    `yaml:"rolling"`
-	RollbackAlarms Union[[]string, AlarmArgs] `yaml:"rollback_alarms"`
+	RollbackAlarms Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"`
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
