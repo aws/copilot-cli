@@ -302,7 +302,7 @@ func (v importedEnvVar) Value() string {
 // A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
 type Secret interface {
 	RequiresSub() bool
-	RequiresImport() bool
+	importable
 	ValueFrom() string
 }
 
