@@ -178,8 +178,17 @@ func (elb *ELBAccessLogs) ShouldCreateBucket() bool {
 type CDNConfig struct {
 	ImportedCertificate *string
 	TerminateTLS        bool
+	Static              *CDNStatic
 }
 
+// CDNStatic represents static assets config for a Content Delivery Network.
+type CDNStatic struct {
+	Path     string
+	Location string
+	Alias    string
+}
+
+// VPCConfig represents the VPC configuration.
 type VPCConfig struct {
 	Imported            *ImportVPC // If not-nil, use the imported VPC resources instead of the Managed VPC.
 	Managed             ManagedVPC

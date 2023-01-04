@@ -67,7 +67,7 @@ const deadlineExpired = function () {
   return new Promise((resolve, reject) => {
     setTimeout(
       reject,
-      (9 * 60 * 1000) + (30 * 1000), /* 9.5 minutes */
+      9 * 60 * 1000 + 30 * 1000 /* 9.5 minutes */,
       new Error("Lambda took longer than 9.5 minutes")
     );
   });
@@ -75,7 +75,7 @@ const deadlineExpired = function () {
 
 /**
  * Main handler, invoked by Lambda
- * 
+ *
  * The input event.ResourceProperties.Aliases is a map of service name to
  * it's alises. For example, it might look like this:
  * {
@@ -83,7 +83,7 @@ const deadlineExpired = function () {
  *  "svc2": ["example.com"]
  *  "svc3": ["svc3.com"]
  * }
- * 
+ *
  * The input event.ResourceProperties.FilterFor is a comma delimated list
  * of keys in event.ResourceProperties.Aliases to filter for.
  * Taking the above map, and event.ResourceProperties.FilterFor = "svc1,svc2"
@@ -92,27 +92,40 @@ const deadlineExpired = function () {
  *  "svc1": ["svc1.com", "example.com"],
  *  "svc2": ["example.com"]
  * }
- *  
- * This function returns a list of unique values found in this map.
+ *
+ * The input event.ResourceProperties.AdditionalAlias is a string (e.g., "foobar.com").
+ *
+ * This function returns a sorted list of unique values found in the map and the additional string.
  * For this example, UniqueValues would be:
- * ["svc1.com", "example.com"]
+ * ["example.com", "foobar.com", "svc1.com"]
  */
 exports.handler = async function (event, context) {
   const responseData = {};
-  const physicalResourceId = event.PhysicalResourceId || event.LogicalResourceId;
+  const physicalResourceId =
+    event.PhysicalResourceId || event.LogicalResourceId;
 
   const handler = async function () {
     switch (event.RequestType) {
       case "Create":
       case "Update":
-        const aliasesForService = JSON.parse(event.ResourceProperties.Aliases || "{}");
-        const filterFor = new Set(event.ResourceProperties.FilterFor.split(","));
+        const aliasesForService = JSON.parse(
+          event.ResourceProperties.Aliases || "{}"
+        );
+        const filterFor = new Set(
+          event.ResourceProperties.FilterFor.split(",")
+        );
         const filteredAliasesForService = Object.fromEntries(
-          Object.entries(aliasesForService).filter(
-            ([key]) => filterFor.has(key)
+          Object.entries(aliasesForService).filter(([key]) =>
+            filterFor.has(key)
           )
         );
         const unique = new Set(Object.values(filteredAliasesForService).flat());
+        if (
+          event.ResourceProperties.AdditionalAlias &&
+          event.ResourceProperties.AdditionalAlias !== ""
+        ) {
+          unique.add(event.ResourceProperties.AdditionalAlias);
+        }
         responseData.UniqueValues = Array.from(unique).sort();
         break;
       case "Delete":
@@ -120,15 +133,21 @@ exports.handler = async function (event, context) {
         break;
       default:
         throw new Error(`Unsupported request type ${event.RequestType}`);
-    };
+    }
   };
-
 
   try {
     await Promise.race([deadlineExpired(), handler()]);
     await report(event, context, "SUCCESS", physicalResourceId, responseData);
   } catch (err) {
     console.error(`caught error: ${err}`);
-    await report(event, context, "FAILED", physicalResourceId, null, `${err.message} (Log: ${context.logGroupName}/${context.logStreamName})`);
+    await report(
+      event,
+      context,
+      "FAILED",
+      physicalResourceId,
+      null,
+      `${err.message} (Log: ${context.logGroupName}/${context.logStreamName})`
+    );
   }
 };

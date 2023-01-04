@@ -8,6 +8,9 @@ Metadata:
     # Create the public ALB with certificates attached.
     cdn:
       certificate: viewer-cert
+      static_assets:
+        location: cf-s3-ecs-demo-bucket.s3.us-west-2.amazonaws.com
+        alias: example.com
     http:
       public:
         ingress:
@@ -319,7 +322,17 @@ Resources:
     Properties:
       ServiceToken: !GetAtt UniqueJSONValuesFunction.Arn
       Aliases: !Ref Aliases
+      AdditionalAlias: example.com
       FilterFor: !Ref ALBWorkloads
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties: 
+      OriginAccessControlConfig: 
+          Description: An optional description for the origin access control
+          Name: !Sub 'copilot-${AppName}-${EnvironmentName}-origin-access-control'
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
   CloudFrontDistribution:
     Metadata:
       'aws:copilot:description': 'A CloudFront distribution for global content delivery'
@@ -341,6 +354,17 @@ Resources:
               OriginProtocolPolicy: match-viewer # Will need to change with TLS termination and Alias usage
             DomainName: !GetAtt PublicLoadBalancer.DNSName
             Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+          - Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin-s3'
+            DomainName: cf-s3-ecs-demo-bucket.s3.us-west-2.amazonaws.com
+            OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+        CacheBehaviors:
+          - AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
+            ViewerProtocolPolicy: allow-all
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
+            TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin-s3'
+            PathPattern: '*'
         ViewerCertificate:
           AcmCertificateArn: viewer-cert
           MinimumProtocolVersion: TLSv1
