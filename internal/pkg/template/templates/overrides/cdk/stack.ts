@@ -20,7 +20,7 @@ export class TransformedStack extends cdk.Stack {
     {{range $resource := .Resources}}
     // TODO: implement me.
     transform{{$resource.LogicalID}}() {
-        const {{camelCase $resource.LogicalID}} = this.template.getResource("{{$resource.LogicalID}}") as {{$resource.Type.ImportShortRename}}.{{$resource.Type.L1ConstructName}};
+        const {{lowerInitialLetters $resource.LogicalID}} = this.template.getResource("{{$resource.LogicalID}}") as {{$resource.Type.ImportShortRename}}.{{$resource.Type.L1ConstructName}};
         throw new error("not implemented");
     }
     {{end }}

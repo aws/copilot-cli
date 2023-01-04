@@ -105,7 +105,7 @@ import { {{$resourceType.ImportName}} as {{$resourceType.ImportShortRename}} } f
 {{- end }}
 {{range $resource := .Resources}}
 transform{{$resource.LogicalID}}() {
-	const {{camelCase $resource.LogicalID}} = this.template.getResource("{{$resource.LogicalID}}") as {{$resource.Type.ImportShortRename}}.{{$resource.Type.L1ConstructName}};
+	const {{lowerInitialLetters $resource.LogicalID}} = this.template.getResource("{{$resource.LogicalID}}") as {{$resource.Type.ImportShortRename}}.{{$resource.Type.L1ConstructName}};
 }
 {{end}}
 `), 0644)

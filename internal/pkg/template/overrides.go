@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	shortenServiceName = map[string]string{
+	cdkAliasForService = map[string]string{
 		"ApiGatewayV2":           "apigwv2",
 		"AppRunner":              "ar",
 		"AutoScalingPlans":       "asgplans",
@@ -72,7 +72,7 @@ func (t CFNType) ImportShortRename() string {
 	parts := strings.Split(string(t), "::")
 	name := parts[1]
 
-	if rename, ok := shortenServiceName[name]; ok {
+	if rename, ok := cdkAliasForService[name]; ok {
 		return rename
 	}
 	return strings.ToLower(name)
@@ -98,15 +98,15 @@ func (t *Template) WalkOverridesCDKDir(resources []CFNResource, fn WalkDirFunc) 
 	}, fn, WithFuncs(
 		map[string]interface{}{
 			// transform all the initial capital letters into lower letters.
-			"camelCase": func(pascal string) string {
-				firstSmall := len(pascal)
-				for i, r := range pascal {
+			"lowerInitialLetters": func(serviceName string) string {
+				firstSmall := len(serviceName)
+				for i, r := range serviceName {
 					if unicode.IsLower(r) {
 						firstSmall = i
 						break
 					}
 				}
-				return strings.ToLower(pascal[:firstSmall]) + pascal[firstSmall:]
+				return strings.ToLower(serviceName[:firstSmall]) + serviceName[firstSmall:]
 			},
 		},
 	))
