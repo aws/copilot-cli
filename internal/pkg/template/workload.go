@@ -548,7 +548,7 @@ type NetworkOpts struct {
 	DenyDefaultSecurityGroup bool
 }
 
-// SecurityGroup represents the value of an additional security IDs associated with your tasks.
+// SecurityGroup represents the ID of an additional security group associated with the tasks.
 type SecurityGroup interface {
 	importable
 	Value() string

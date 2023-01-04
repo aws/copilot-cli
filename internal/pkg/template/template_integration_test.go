@@ -419,13 +419,11 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 			input: template.NetworkOpts{
 				AssignPublicIP: "DISABLED",
 				SubnetsType:    "PrivateSubnets",
-				PlainSecurityGroups: []string{
-					"sg-1bcf1d5b",
-					"sg-asdasdas",
+				SecurityGroups:[]template.SecurityGroup{
+					template.plainSecurityGroup("sg-1bcf1d5b"),
+					template.plainSecurityGroup("sg-asdasdas"),
+					template.importedSecurityGroup("mydb-sg001")
 				},
-				ImportedSecurityGroups:[]string{
-					"mydb-sg001"
-				}
 			},
 			wantedNetworkConfig: `
  AwsvpcConfiguration:
@@ -445,9 +443,9 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 			input: template.NetworkOpts{
 				AssignPublicIP: "DISABLED",
 				SubnetsType:    "PrivateSubnets",
-				PlainSecurityGroups: []string{
-					"sg-1bcf1d5b",
-					"sg-asdasdas",
+				SecurityGroups:[]template.SecurityGroup{
+					template.plainSecurityGroup("sg-1bcf1d5b"),
+					template.plainSecurityGroup("sg-asdasdas"),
 				},
 				DenyDefaultSecurityGroup: true,
 			},
