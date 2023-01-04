@@ -158,9 +158,6 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		identity:        id,
 		newInterpolator: newManifestInterpolator,
 	}
-	deployEnvCmd.newEnvDeployer = func() (envDeployer, error) {
-		return newEnvDeployer(deployEnvCmd)
-	}
 	deploySvcCmd := &deploySvcOpts{
 		deployWkldVars: deployWkldVars{
 			envName:  defaultEnvironmentName,
@@ -205,6 +202,9 @@ func newInitOpts(vars initVars) (*initOpts, error) {
 		sel := selector.NewLocalWorkloadSelector(prompt, configStore, ws)
 		initEnvCmd.manifestWriter = ws
 		deployEnvCmd.ws = ws
+		deployEnvCmd.newEnvDeployer = func() (envDeployer, error) {
+			return newEnvDeployer(deployEnvCmd, ws)
+		}
 		deploySvcCmd.ws = ws
 		deploySvcCmd.sel = sel
 		deployJobCmd.ws = ws

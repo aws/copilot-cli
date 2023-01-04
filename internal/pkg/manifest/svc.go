@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -441,4 +442,87 @@ func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 		return errors.New(`cannot unmarshal field to a string or into a map`)
 	}
 	return nil
+}
+
+func (cfg ImageWithPortAndHealthcheck) exposedPorts(workloadName string) []ExposedPort {
+	if cfg.Port == nil {
+		return nil
+	}
+	return []ExposedPort{
+		{
+			Port:          aws.Uint16Value(cfg.Port),
+			Protocol:      "tcp",
+			ContainerName: workloadName,
+		},
+	}
+
+}
+
+func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string) []ExposedPort {
+	if cfg.Port == nil {
+		return nil
+	}
+	return []ExposedPort{
+		{
+			Port:          aws.Uint16Value(cfg.Port),
+			Protocol:      "tcp",
+			ContainerName: workloadName,
+		},
+	}
+}
+
+// exportPorts returns any new ports that should be exposed given the load balancer
+// configuration that's not part of the existing containerPorts.
+func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, workloadName string) []ExposedPort {
+	if rr.TargetPort == nil {
+		return nil
+	}
+	containerName := workloadName
+	if rr.TargetContainer != nil {
+		containerName = aws.StringValue(rr.TargetContainer)
+	}
+	for _, exposedPort := range exposedPorts {
+		if aws.Uint16Value(rr.TargetPort) == exposedPort.Port && rr.TargetContainer == nil {
+			return nil
+		}
+	}
+	return []ExposedPort{
+		{
+			Port:          aws.Uint16Value(rr.TargetPort),
+			Protocol:      "tcp",
+			ContainerName: containerName,
+		},
+	}
+}
+
+func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, error) {
+	if sidecar.Port == nil {
+		return nil, nil
+	}
+	sidecarPort, protocol, err := ParsePortMapping(sidecar.Port)
+	if err != nil {
+		return nil, err
+	}
+	if protocol == nil {
+		protocol = aws.String("tcp")
+	}
+	port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
+	if err != nil {
+		return nil, err
+	}
+	return []ExposedPort{
+		{
+			Port:          uint16(port),
+			Protocol:      aws.StringValue(protocol),
+			ContainerName: sidecarName,
+		},
+	}, nil
+}
+
+func sortExposedPorts(exposedPorts []ExposedPort) []ExposedPort {
+	// Sort the exposed ports so that the order is consistent and the integration test won't be flaky.
+	sort.Slice(exposedPorts, func(i, j int) bool {
+		return exposedPorts[i].Port < exposedPorts[j].Port
+	})
+	return exposedPorts
 }

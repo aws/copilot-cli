@@ -78,12 +78,12 @@ func newEnvDeployOpts(vars deployEnvVars) (*deployEnvOpts, error) {
 		newInterpolator: newManifestInterpolator,
 	}
 	opts.newEnvDeployer = func() (envDeployer, error) {
-		return newEnvDeployer(opts)
+		return newEnvDeployer(opts, ws)
 	}
 	return opts, nil
 }
 
-func newEnvDeployer(opts *deployEnvOpts) (envDeployer, error) {
+func newEnvDeployer(opts *deployEnvOpts, ws deploy.WorkspaceAddonsReaderPathGetter) (envDeployer, error) {
 	app, err := opts.cachedTargetApp()
 	if err != nil {
 		return nil, err
@@ -97,6 +97,7 @@ func newEnvDeployer(opts *deployEnvOpts) (envDeployer, error) {
 		Env:             env,
 		SessionProvider: opts.sessionProvider,
 		ConfigStore:     opts.store,
+		Workspace:       ws,
 	})
 }
 
@@ -138,13 +139,14 @@ func (o *deployEnvOpts) Execute() error {
 	if err := deployer.Validate(mft); err != nil {
 		return err
 	}
-	urls, err := deployer.UploadArtifacts()
+	artifacts, err := deployer.UploadArtifacts()
 	if err != nil {
 		return fmt.Errorf("upload artifacts for environment %s: %w", o.name, err)
 	}
 	if err := deployer.DeployEnvironment(&deploy.DeployEnvironmentInput{
 		RootUserARN:         caller.RootUserARN,
-		CustomResourcesURLs: urls,
+		AddonsURL:           artifacts.AddonsURL,
+		CustomResourcesURLs: artifacts.CustomResourceURLs,
 		Manifest:            mft,
 		ForceNewUpdate:      o.forceNewUpdate,
 		RawManifest:         rawMft,

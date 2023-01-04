@@ -24,18 +24,18 @@ Copilot v1.24 brings several new features and improvements:
 count: high-availability/3
 ```
 - **Add log retention to VPC flow logs**: There is now a default value of 14 days.
- ```yaml
+```yaml
 network:
   vpc:
     flow_logs: on
- ```
+```
  Alternatively, you can customize the number of days for retention:
- ```yaml
+```yaml
 network:
   vpc:
     flow_logs:
       retention: 30
- ```
+```
 
 
 ???+ note "What’s AWS Copilot?"
