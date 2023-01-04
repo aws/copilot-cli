@@ -22,7 +22,7 @@ func TestCFNType_ImportShortRename(t *testing.T) {
 	}{
 		{
 			in:     "AWS::AutoScaling::AutoScalingGroup",
-			wanted: "autoscaling",
+			wanted: "asg",
 		},
 		{
 			in:     "AWS::Logs::LogGroup",
@@ -38,7 +38,7 @@ func TestCFNType_ImportShortRename(t *testing.T) {
 		},
 		{
 			in:     "AWS::ApiGatewayV2::Api",
-			wanted: "agv2",
+			wanted: "apigwv2",
 		},
 		{
 			in:     "AWS::EC2::CapacityReservation",
@@ -80,7 +80,7 @@ func TestCfnResources_Types(t *testing.T) {
 		{
 			Type: "AWS::ECR::Repository",
 		},
-	}).Types())
+	}).UniqueTypes())
 }
 
 func TestTemplate_WalkOverridesCDKDir(t *testing.T) {
@@ -100,7 +100,7 @@ func TestTemplate_WalkOverridesCDKDir(t *testing.T) {
    "source-map-support": "^0.5.21"
  }
 }`), 0644)
-	_ = afero.WriteFile(fs, "templates/overrides/cdk/stack.ts", []byte(`{{- range $resourceType := .Resources.Types }}
+	_ = afero.WriteFile(fs, "templates/overrides/cdk/stack.ts", []byte(`{{- range $resourceType := .Resources.UniqueTypes }}
 import { {{$resourceType.ImportName}} as {{$resourceType.ImportShortRename}} } from 'aws-cdk-lib';
 {{- end }}
 {{range $resource := .Resources}}

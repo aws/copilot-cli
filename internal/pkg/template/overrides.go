@@ -15,6 +15,28 @@ const (
 	cdkTemplatesPath        = "overrides/cdk"
 )
 
+var (
+	shortenServiceName = map[string]string{
+		"ApiGatewayV2":           "apigwv2",
+		"AppRunner":              "ar",
+		"AutoScalingPlans":       "asgplans",
+		"ApplicationAutoScaling": "appasg",
+		"AutoScaling":            "asg",
+		"CertificateManager":     "acm",
+		"CloudFormation":         "cfn",
+		"CloudFront":             "cf",
+		"ServiceDiscovery":       "sd",
+		"CloudWatch":             "cw",
+		"CodeBuild":              "cb",
+		"CodePipeline":           "cp",
+		"DynamoDB":               "ddb",
+		"ElasticLoadBalancingV2": "elbv2",
+		"OpenSearchService":      "oss",
+		"Route53":                "r53",
+		"StepFunctions":          "sfn",
+	}
+)
+
 // CFNResource represents a resource rendered in a CloudFormation template.
 type CFNResource struct {
 	Type      CFNType
@@ -23,8 +45,8 @@ type CFNResource struct {
 
 type cfnResources []CFNResource
 
-// Types returns the list of unique CFN types.
-func (rs cfnResources) Types() []CFNType {
+// UniqueTypes returns the list of unique CFN types.
+func (rs cfnResources) UniqueTypes() []CFNType {
 	var uniqueTypes []CFNType
 	seen := make(map[CFNType]struct{})
 	for _, r := range rs {
@@ -48,21 +70,12 @@ func (t CFNType) ImportName() string {
 // ImportShortRename returns a human-friendly shortened rename of the CDK package for the given CloudFormation type.
 func (t CFNType) ImportShortRename() string {
 	parts := strings.Split(string(t), "::")
+	name := parts[1]
 
-	// If the service name is camel case values, like ElasticLoadBalancingV2, then only grab the upper case
-	// letters and numbers to generate "elbv2"
-	var sb strings.Builder
-	for _, r := range parts[1] {
-		if unicode.IsLetter(r) && !unicode.IsUpper(r) {
-			continue
-		}
-		_, _ = sb.WriteRune(r)
+	if rename, ok := shortenServiceName[name]; ok {
+		return rename
 	}
-	proposal := strings.ToLower(sb.String())
-	if len(proposal) < 3 { // If the rename is too short, just use the service name.
-		return strings.ToLower(parts[1])
-	}
-	return proposal
+	return strings.ToLower(name)
 }
 
 // L1ConstructName returns the name of the L1 construct representing the CloudFormation type.
