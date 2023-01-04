@@ -4,8 +4,8 @@ go 1.18
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
-	github.com/aws/aws-sdk-go v1.44.162
-	github.com/briandowns/spinner v1.19.0
+	github.com/aws/aws-sdk-go v1.44.171
+	github.com/briandowns/spinner v1.20.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
 	github.com/fatih/structs v1.1.0
