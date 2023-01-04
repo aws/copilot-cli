@@ -540,13 +540,52 @@ type DeadLetterQueue struct {
 
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
-	PlainSecurityGroups    []string
-	ImportedSecurityGroups []string
-	AssignPublicIP         string
+	SecurityGroups []SecurityGroup
+	AssignPublicIP string
 	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
 	SubnetsType              string
 	SubnetIDs                []string
 	DenyDefaultSecurityGroup bool
+}
+
+// SecurityGroup represents the value of an additional security IDs associated with your tasks.
+type SecurityGroup interface {
+	importable
+	Value() string
+}
+
+// PlainSecurityGroup returns a SecurityGroup that is a plain string value.
+func PlainSecurityGroup(value string) Variable {
+	return plainSecurityGroup(value)
+}
+
+// ImportedSecurityGroup returns a SecurityGroup that should be imported from a stack.
+func ImportedSecurityGroup(name string) Variable {
+	return importedSecurityGroup(name)
+}
+
+type plainSecurityGroup string
+
+// RequiresImport returns false for a plain string SecurityGroup.
+func (sg plainSecurityGroup) RequiresImport() bool {
+	return false
+}
+
+// Value returns the plain string value of the SecurityGroup.
+func (sg plainSecurityGroup) Value() string {
+	return string(sg)
+}
+
+type importedSecurityGroup string
+
+// RequiresImport returns true for an imported SecurityGroup.
+func (sg importedSecurityGroup) RequiresImport() bool {
+	return true
+}
+
+// Value returns the name of the import that will be the value of the SecurityGroup.
+func (sg importedSecurityGroup) Value() string {
+	return string(sg)
 }
 
 // RuntimePlatformOpts holds configuration needed for Platform configuration.

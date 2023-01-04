@@ -750,17 +750,16 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 		AssignPublicIP: template.EnablePublicIP,
 		SubnetsType:    template.PublicSubnetsPlacement,
 	}
-	securityGroups := network.VPC.SecurityGroups.GetIDs()
-	var ImportedSecurityGroups, PlainSecurityGroups []string
-	for _, sg := range securityGroups {
+	mftSecurityGroups := network.VPC.SecurityGroups.GetIDs()
+	var tplSecurityGroups []template.SecurityGroup
+	for _, sg := range mftSecurityGroups {
 		if sg.Plain != nil {
-			PlainSecurityGroups = append(PlainSecurityGroups, aws.StringValue(sg.Plain))
+			tplSecurityGroups = append(tplSecurityGroups, template.PlainSecurityGroup(aws.StringValue(sg.Plain)))
 		} else {
-			ImportedSecurityGroups = append(ImportedSecurityGroups, aws.StringValue(sg.FromCFN.Name))
+			tplSecurityGroups = append(tplSecurityGroups, template.ImportedSecurityGroup(aws.StringValue(sg.FromCFN.Name)))
 		}
 	}
-	opts.PlainSecurityGroups = PlainSecurityGroups
-	opts.ImportedSecurityGroups = ImportedSecurityGroups
+	opts.SecurityGroups = tplSecurityGroups
 	opts.DenyDefaultSecurityGroup = network.VPC.SecurityGroups.IsDefaultSecurityGroupDenied()
 
 	placement := network.VPC.Placement

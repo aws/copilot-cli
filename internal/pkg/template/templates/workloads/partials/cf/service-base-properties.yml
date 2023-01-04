@@ -82,11 +82,11 @@ NetworkConfiguration:
       {{- if not .Network.DenyDefaultSecurityGroup}}
       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
       {{- end}}
-      {{- range $sg := .Network.PlainSecurityGroups}}
-      - {{$sg}}
-      {{- end}}
-      {{- range $sg := .Network.ImportedSecurityGroups}}
-      - Fn::ImportValue: {{$sg}}
+      {{- range $sg := .Network.SecurityGroups}}
+      {{- if not $sg.RequiresImport}}
+      - {{$sg.Value}}
+      {{- else}}
+      - Fn::ImportValue: {{$sg.Value}} {{- end}}
       {{- end}}
       {{- if .NLB}}
       - !Ref NLBSecurityGroup
