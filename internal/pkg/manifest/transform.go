@@ -552,7 +552,7 @@ func (t secretTransformer) Transformer(typ reflect.Type) func(dst, src reflect.V
 			dstStruct.from = stringOrFromCFN{}
 		}
 
-		if srcStruct.from.Plain != nil || !srcStruct.from.FromCFN.isEmpty() {
+		if srcStruct.from.isEmpty() {
 			dstStruct.fromSecretsManager = secretsManagerSecret{}
 		}
 
