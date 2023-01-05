@@ -107,6 +107,7 @@ var (
 		"nlb",
 		"vpc-connector",
 		"alb",
+		"rollback-alarms",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -452,13 +453,41 @@ type ObservabilityOpts struct {
 	Tracing string // The name of the vendor used for tracing.
 }
 
-// DeploymentConfigurationOpts holds values for MinHealthyPercent and MaxPercent.
+// DeploymentConfigurationOpts holds configuration for rolling deployments.
 type DeploymentConfigurationOpts struct {
 	// The lower limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
 	MinHealthyPercent int
 	// The upper limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
-	MaxPercent     int
-	RollbackAlarms []string
+	MaxPercent int
+	Rollback   RollingUpdateRollbackConfig
+}
+
+// RollingUpdateRollbackConfig holds config for rollback alarms.
+type RollingUpdateRollbackConfig struct {
+	AlarmNames    []string // Names of existing alarms.
+	
+	// Custom alarms to create.
+	CPUUtilization    *float64
+	MemoryUtilization *float64
+}
+
+// HasRollbackAlarms returns true if the client is using ABR.
+func (cfg RollingUpdateRollbackConfig) HasRollbackAlarms() bool {
+	return len(cfg.AlarmNames) > 0 || cfg.HasCustomAlarms() 
+}
+
+// HasCustomAlarms returns true if the client is using Copilot-generated alarms for alarm-based rollbacks.
+func (cfg RollingUpdateRollbackConfig) HasCustomAlarms() bool {
+	return cfg.CPUUtilization != nil || cfg.MemoryUtilization != nil
+}
+
+// TruncateAlarmName ensures that alarm names don't exceed the 255 character limit.
+func (cfg RollingUpdateRollbackConfig) TruncateAlarmName(app, env, svc, alarmType string) string {
+	if len(app) + len(env) + len(svc) + len(alarmType) <= 255 {
+		return fmt.Sprintf("%s-%s-%s-%s", app, env, svc, alarmType)
+	}
+	maxSubstringLength := (255 - len(alarmType) - 3) / 3
+	return fmt.Sprintf("%s-%s-%s-%s", app[:maxSubstringLength], env[:maxSubstringLength], svc[:maxSubstringLength], alarmType)
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.

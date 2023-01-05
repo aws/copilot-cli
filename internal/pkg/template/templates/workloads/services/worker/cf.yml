@@ -59,6 +59,8 @@ Resources:
 {{- if .Autoscaling }}
 {{include "autoscaling" . | indent 2}}
 {{- end}}
+{{include "rollback-alarms" . | indent 2}}
+
   Service:
     DependsOn:
     - EnvControllerAction

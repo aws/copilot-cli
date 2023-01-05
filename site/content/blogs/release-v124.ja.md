@@ -24,18 +24,18 @@ Copilot v1.24 では、いくつかの新機能と改良が施されています
 count: high-availability/3
 ```
 - **VPC フローログのログ保持期間の指定**: デフォルトでは 14 日間です。
- ```yaml
+```yaml
 network:
   vpc:
     flow_logs: on
- ```
+```
  または、保持期間を変更できます。
- ```yaml
+```yaml
 network:
   vpc:
     flow_logs:
       retention: 30
- ```
+```
 
 
 ???+ note "AWS Copilot とは?"

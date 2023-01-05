@@ -87,14 +87,15 @@ type ImageWithPortAndHealthcheck struct {
 
 // AlarmArgs represents specs of CloudWatch alarms for deployment rollbacks.
 type AlarmArgs struct {
-	CPUUtilization    *int `yaml:"cpu_utilization"`
-	MemoryUtilization *int `yaml:"memory_utilization"`
+	CPUUtilization    *float64 `yaml:"cpu_utilization"`
+	MemoryUtilization *float64 `yaml:"memory_utilization"`
 }
 
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
 	Rolling        *string                    `yaml:"rolling"`
-	RollbackAlarms Union[[]string, AlarmArgs] `yaml:"rollback_alarms"`
+	RollbackAlarms Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"` 
+	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
