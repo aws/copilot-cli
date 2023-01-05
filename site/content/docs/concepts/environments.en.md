@@ -47,7 +47,7 @@ Optionally, when you set up an application, you can provide a domain name that y
 An internal ALB is created when a Backend Service with [`http`](../manifest/backend-service.en.md#http) configured in its manifest is deployed in an environment. For an HTTPS endpoint, use the [`--import-cert-arns`](../commands/env-init.en.md#what-are-the-flags) flag when running `copilot env init` and import a VPC with only private subnets. For more on internal ALBs, go [here](../developing/internal-albs.en.md).
 
 ## Customize your Environment
-Optionally, you can customize your environment interactively by using flags to import your existing resources, or configure the default environment resources. Currently, only VPC resources are customizable. However, if you want to customize more types of resources, feel free to bring your use cases and cut an issue! 
+You can import your existing environment resources or configure the default ones by using flags with commands or by changing your environment manifest. Currently, only VPC resources are customizable. However, if you want to customize more types of resources, feel free to bring your use cases and cut an issue! 
 
 For more, see our [custom environment resources](../developing/custom-environment-resources.en.md) page.
 
