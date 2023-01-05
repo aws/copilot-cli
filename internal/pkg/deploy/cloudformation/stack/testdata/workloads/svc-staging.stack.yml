@@ -77,12 +77,9 @@ Resources: # If a bucket URL is specified, that means the template exists.
           Secrets:
             - Name: DB
               ValueFrom: !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:valo/testing/mysql'
-            - Name: gitpassword
-              ValueFrom:
-                Fn::ImportValue: "MySecretManagerSecret"
             - Name: gitusername
               ValueFrom:
-                Fn::ImportValue: "MyOverrideSSMSecret"
+                Fn::ImportValue: "MySSMSecret"
           Environment:
             - Name: COPILOT_APPLICATION_NAME
               Value: !Sub '${AppName}'

@@ -1250,50 +1250,19 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 			},
 			override: func(s *Secret) {
 				s.fromSecretsManager = secretsManagerSecret{
-					SecretName: stringOrFromCFN{
-						Plain: aws.String("aes128-1a2b3c"),
-					},
+					Name: aws.String("aes128-1a2b3c"),
 				}
 			},
 			wanted: func(s *Secret) {
 				s.fromSecretsManager = secretsManagerSecret{
-					SecretName: stringOrFromCFN{
-						Plain: aws.String("aes128-1a2b3c"),
-					},
-				}
-			},
-		},
-		`"from" set to empty when overriding with imported "secretsmanager"`: {
-			original: func(s *Secret) {
-				s.from = stringOrFromCFN{
-					Plain: aws.String("/github/token"),
-				}
-			},
-			override: func(s *Secret) {
-				s.fromSecretsManager = secretsManagerSecret{
-					SecretName: stringOrFromCFN{
-						FromCFN: fromCFN{
-							Name: aws.String("mygithubtoken"),
-						},
-					},
-				}
-			},
-			wanted: func(s *Secret) {
-				s.fromSecretsManager = secretsManagerSecret{
-					SecretName: stringOrFromCFN{
-						FromCFN: fromCFN{
-							Name: aws.String("mygithubtoken"),
-						},
-					},
+					Name: aws.String("aes128-1a2b3c"),
 				}
 			},
 		},
 		`"secretsmanager" set to empty when overriding with "from"`: {
 			original: func(s *Secret) {
 				s.fromSecretsManager = secretsManagerSecret{
-					SecretName: stringOrFromCFN{
-						Plain: aws.String("aes128-1a2b3c"),
-					},
+					Name: aws.String("aes128-1a2b3c"),
 				}
 			},
 			override: func(s *Secret) {
@@ -1310,9 +1279,7 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 		`"secretsmanager" set to empty when overriding with imported "from"`: {
 			original: func(s *Secret) {
 				s.fromSecretsManager = secretsManagerSecret{
-					SecretName: stringOrFromCFN{
-						Plain: aws.String("aes128-1a2b3c"),
-					},
+					Name: aws.String("aes128-1a2b3c"),
 				}
 			},
 			override: func(s *Secret) {

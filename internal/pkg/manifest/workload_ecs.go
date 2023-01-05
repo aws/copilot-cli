@@ -215,19 +215,10 @@ func (s *Secret) SSMRequiresImport() bool {
 	return !s.from.FromCFN.isEmpty()
 }
 
-// SecretsManagerRequiresImport returns true if the secretsmanager secret name is imported from CloudFormation stack.
-func (s *Secret) SecretsManagerRequiresImport() bool {
-	return s.fromSecretsManager.SecretName.Plain == nil
-}
-
 // Value returns the secret value provided by clients.
 func (s *Secret) Value() string {
 	if !s.fromSecretsManager.IsEmpty() {
-		if !s.SecretsManagerRequiresImport() {
-			return aws.StringValue(s.fromSecretsManager.SecretName.Plain)
-		} else {
-			return aws.StringValue(s.fromSecretsManager.SecretName.FromCFN.Name)
-		}
+		return aws.StringValue(s.fromSecretsManager.Name)
 	} else if !s.SSMRequiresImport() {
 		return aws.StringValue(s.from.Plain)
 	} else {
@@ -237,12 +228,12 @@ func (s *Secret) Value() string {
 
 // secretsManagerSecret represents the name of a secret stored in SecretsManager.
 type secretsManagerSecret struct {
-	SecretName stringOrFromCFN `yaml:"secretsmanager"`
+	Name *string `yaml:"secretsmanager"`
 }
 
 // IsEmpty returns true if all the fields in secretsManagerSecret have the zero value.
 func (s secretsManagerSecret) IsEmpty() bool {
-	return s.SecretName.FromCFN.isEmpty() && s.SecretName.Plain == nil
+	return s.Name == nil
 }
 
 // Logging holds configuration for Firelens to route your logs.

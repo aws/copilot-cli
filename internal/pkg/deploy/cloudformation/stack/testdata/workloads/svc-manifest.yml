@@ -31,12 +31,6 @@ count:
     value: 70
     cooldown:
       out: 2m30s 
-secrets:
-  gitusername:
-    from_cfn: MySSMSecret
-  gitpassword:
-    secretsmanager:
-      from_cfn: MySecretManagerSecret
 storage:
   volumes:
     persistence:
@@ -68,7 +62,7 @@ environments:
       deregistration_delay: 30s
     secrets:                      
       gitusername:
-        from_cfn: MyOverrideSSMSecret
+        from_cfn: MySSMSecret
       DB:
         secretsmanager: 'valo/testing/mysql'
   prod:

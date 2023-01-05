@@ -133,8 +133,7 @@ Resources:
           Image: !Ref ContainerImage
           Secrets:
             - Name: gitpassword
-              ValueFrom:
-                Fn::ImportValue: "MySecretManagerSecret"
+              ValueFrom: !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:demo/test/mysql'
             - Name: gitusername
               ValueFrom:
                 Fn::ImportValue: "MySSMSecret"

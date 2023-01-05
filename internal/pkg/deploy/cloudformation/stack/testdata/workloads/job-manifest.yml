@@ -48,8 +48,7 @@ secrets:
   gitusername:
     from_cfn: MySSMSecret
   gitpassword:
-    secretsmanager:
-      from_cfn: MySecretManagerSecret
+    secretsmanager: demo/test/mysql
 
 sidecars:
   nginx:

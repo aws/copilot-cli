@@ -1043,13 +1043,8 @@ func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secr
 	for name, mftSecret := range secrets {
 		var tplSecret template.Secret
 		if mftSecret.IsSecretsManagerName() {
-			if mftSecret.SecretsManagerRequiresImport() {
-				tplSecret = template.ImportedSecretFromSecretManager(mftSecret.Value())
-				m[name] = tplSecret
-			} else {
-				tplSecret = template.PlainSecretFromSecretsManager(mftSecret.Value())
-				m[name] = tplSecret
-			}
+			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
+			m[name] = tplSecret
 		} else if mftSecret.SSMRequiresImport() {
 			tplSecret = template.ImportedSecretFromSSMOrARN(mftSecret.Value())
 			m[name] = tplSecret

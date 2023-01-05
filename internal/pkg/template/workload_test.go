@@ -289,32 +289,20 @@ func TestImportedSSMOrSecretARN_ValueFrom(t *testing.T) {
 	require.Equal(t, "mygithubtoken", ImportedSecretFromSSMOrARN("mygithubtoken").ValueFrom())
 }
 
-func TestPlainSecretsManagerName_RequiresSub(t *testing.T) {
-	require.True(t, plainSecretsManagerName{}.RequiresSub(), "secrets referring to a SecretsManager name need to be expanded to a full ARN")
+func TestSecretsManagerName_RequiresSub(t *testing.T) {
+	require.True(t, secretsManagerName{}.RequiresSub(), "secrets referring to a SecretsManager name need to be expanded to a full ARN")
 }
 
-func TestPlainSecretsManagerName_RequiresImport(t *testing.T) {
-	require.False(t, plainSecretsManagerName{}.RequiresImport(), "secret name that refers to a value imported from CloudFormation Stack")
+func TestSecretsManagerName_RequiresImport(t *testing.T) {
+	require.False(t, secretsManagerName{}.RequiresImport(), "secret name that refers to a value imported from CloudFormation Stack")
 }
 
-func TestPlainSecretsManagerName_Service(t *testing.T) {
-	require.Equal(t, "secretsmanager", plainSecretsManagerName{}.Service())
+func TestSecretsManagerName_Service(t *testing.T) {
+	require.Equal(t, "secretsmanager", secretsManagerName{}.Service())
 }
 
 func TestSecretsManagerName_ValueFrom(t *testing.T) {
-	require.Equal(t, "secret:aes128-1a2b3c", PlainSecretFromSecretsManager("aes128-1a2b3c").ValueFrom())
-}
-
-func TestImportedSecretsManagerName_RequiresSub(t *testing.T) {
-	require.False(t, importedSecretsManagerName{}.RequiresSub(), "secrets referring to a SecretsManager name need to be expanded to a full ARN")
-}
-
-func TestImportedSecretsManagerName_RequiresImport(t *testing.T) {
-	require.True(t, importedSecretsManagerName{}.RequiresImport(), "secret name that refers to a value imported from CloudFormation Stack")
-}
-
-func TestImportedSecretsManagerName_ValueFrom(t *testing.T) {
-	require.Equal(t, "mygithubtoken", ImportedSecretFromSecretManager("mygithubtoken").ValueFrom())
+	require.Equal(t, "secret:aes128-1a2b3c", SecretFromSecretsManager("aes128-1a2b3c").ValueFrom())
 }
 
 func TestWorkload_HealthCheckProtocol(t *testing.T) {

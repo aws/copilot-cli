@@ -360,61 +360,34 @@ func ImportedSecretFromSSMOrARN(value string) importedSSMorSecretARN {
 	}
 }
 
-// plainsecretsManagerName is a Secret that can be referred by a SecretsManager secret name.
-type plainSecretsManagerName struct {
+// secretsManagerName is a Secret that can be referred by a SecretsManager secret name.
+type secretsManagerName struct {
 	value string
 }
 
 // RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
-func (s plainSecretsManagerName) RequiresSub() bool {
+func (s secretsManagerName) RequiresSub() bool {
 	return true
 }
 
 // RequiresImport returns true if the secret should be imported from other CloudFormation stack.
-func (s plainSecretsManagerName) RequiresImport() bool {
+func (s secretsManagerName) RequiresImport() bool {
 	return false
 }
 
 // ValueFrom returns the resource ID of the SecretsManager secret for populating the ARN.
-func (s plainSecretsManagerName) ValueFrom() string {
+func (s secretsManagerName) ValueFrom() string {
 	return fmt.Sprintf("secret:%s", s.value)
 }
 
 // Service returns the name of the SecretsManager service for populating the ARN.
-func (s plainSecretsManagerName) Service() string {
+func (s secretsManagerName) Service() string {
 	return secretsmanager.ServiceName
 }
 
 // SecretFromSecretsManager returns a Secret that refers to SecretsManager secret name.
-func PlainSecretFromSecretsManager(value string) plainSecretsManagerName {
-	return plainSecretsManagerName{
-		value: value,
-	}
-}
-
-// importedSecretsManagerName is a Secret that can be referred by a SecretsManager secret name.
-type importedSecretsManagerName struct {
-	value string
-}
-
-// RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
-func (s importedSecretsManagerName) RequiresSub() bool {
-	return false
-}
-
-// RequiresImport returns true if the secret should be imported from other CloudFormation stack.
-func (s importedSecretsManagerName) RequiresImport() bool {
-	return true
-}
-
-// ValueFrom returns the resource ID of the SecretsManager secret for populating the ARN.
-func (s importedSecretsManagerName) ValueFrom() string {
-	return s.value
-}
-
-// ImportedSecretFromSecretManager returns an imported name that will be value of the Secret.
-func ImportedSecretFromSecretManager(value string) importedSecretsManagerName {
-	return importedSecretsManagerName{
+func SecretFromSecretsManager(value string) secretsManagerName {
+	return secretsManagerName{
 		value: value,
 	}
 }
