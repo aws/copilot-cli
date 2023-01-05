@@ -94,7 +94,8 @@ type AlarmArgs struct {
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
 	Rolling        *string                    `yaml:"rolling"`
-	RollbackAlarms Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"`
+	RollbackAlarms Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"` 
+	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
