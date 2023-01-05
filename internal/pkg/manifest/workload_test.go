@@ -1074,7 +1074,6 @@ network:
 								Plain: aws.String("sg-4567"),
 							},
 							{
-								Plain: nil,
 								FromCFN: fromCFN{
 									Name: aws.String("dbsg-001"),
 								},
@@ -1142,7 +1141,6 @@ network:
 									Plain: aws.String("sg-4567"),
 								},
 							},
-							DenyDefault: nil,
 						},
 					},
 				},

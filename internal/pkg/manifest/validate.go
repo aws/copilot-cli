@@ -1661,7 +1661,7 @@ func (v Variable) validate() error {
 
 // validate returns nil if stringorFromCFN is configured correctly.
 func (s stringOrFromCFN) validate() error {
-	if s.FromCFN.isEmpty() && s.Plain == nil {
+	if s.isEmpty() {
 		return nil
 	}
 	return s.FromCFN.validate()
