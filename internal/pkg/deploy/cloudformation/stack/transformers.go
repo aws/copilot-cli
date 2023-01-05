@@ -804,20 +804,19 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 }
 
 func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
-	var out template.DeploymentConfigurationOpts
+	out := template.DeploymentConfigurationOpts{
+		MinHealthyPercent: minHealthyPercentDefault,
+		MaxPercent: maxPercentDefault,
+		Rollback: template.RollingUpdateRollbackConfig{
+			AlarmNames:        in.RollbackAlarms.Basic,
+			CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
+			MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
+		},
+	}
+
 	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
 		out.MinHealthyPercent = minHealthyPercentRecreate
 		out.MaxPercent = maxPercentRecreate
-	} else {
-		out.MinHealthyPercent = minHealthyPercentDefault
-		out.MaxPercent = maxPercentDefault
-	}
-	if in.RollbackAlarms.IsBasic() {
-		out.Rollback.AlarmNames = in.RollbackAlarms.Basic
-	}
-	if in.RollbackAlarms.IsAdvanced() {
-		out.Rollback.CPUUtilization = in.RollbackAlarms.Advanced.CPUUtilization
-		out.Rollback.MemoryUtilization = in.RollbackAlarms.Advanced.MemoryUtilization
 	}
 	return out
 }
