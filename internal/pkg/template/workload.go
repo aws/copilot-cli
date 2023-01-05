@@ -259,11 +259,13 @@ type importable interface {
 	RequiresImport() bool
 }
 
-// Variable represents the value of an environment variable.
-type Variable interface {
+type importableValue interface {
 	importable
 	Value() string
 }
+
+// Variable represents the value of an environment variable.
+type Variable importableValue
 
 // ImportedVariable returns a Variable that should be imported from a stack.
 func ImportedVariable(name string) Variable {
@@ -549,32 +551,39 @@ type NetworkOpts struct {
 }
 
 // SecurityGroup represents the ID of an additional security group associated with the tasks.
-type SecurityGroup interface {
-	importable
-	Value() string
+type SecurityGroup importableValue
+
+// PlainSecurityGroup returns a SecurityGroup that is a plain string value.
+func PlainSecurityGroup(value string) SecurityGroup {
+	return plainSecurityGroup(value)
 }
 
-type PlainSecurityGroup string
+// ImportedSecurityGroup returns a SecurityGroup that should be imported from a stack.
+func ImportedSecurityGroup(name string) SecurityGroup {
+	return importedSecurityGroup(name)
+}
+
+type plainSecurityGroup string
 
 // RequiresImport returns false for a plain string SecurityGroup.
-func (sg PlainSecurityGroup) RequiresImport() bool {
+func (sg plainSecurityGroup) RequiresImport() bool {
 	return false
 }
 
 // Value returns the plain string value of the SecurityGroup.
-func (sg PlainSecurityGroup) Value() string {
+func (sg plainSecurityGroup) Value() string {
 	return string(sg)
 }
 
-type ImportedSecurityGroup string
+type importedSecurityGroup string
 
 // RequiresImport returns true for an imported SecurityGroup.
-func (sg ImportedSecurityGroup) RequiresImport() bool {
+func (sg importedSecurityGroup) RequiresImport() bool {
 	return true
 }
 
 // Value returns the name of the import that will be the value of the SecurityGroup.
-func (sg ImportedSecurityGroup) Value() string {
+func (sg importedSecurityGroup) Value() string {
 	return string(sg)
 }
 
