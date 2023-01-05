@@ -120,10 +120,7 @@ exports.handler = async function (event, context) {
           )
         );
         const unique = new Set(Object.values(filteredAliasesForService).flat());
-        if (
-          event.ResourceProperties.AdditionalAlias &&
-          event.ResourceProperties.AdditionalAlias !== ""
-        ) {
+        if (event.ResourceProperties.AdditionalAlias) {
           unique.add(event.ResourceProperties.AdditionalAlias);
         }
         responseData.UniqueValues = Array.from(unique).sort();

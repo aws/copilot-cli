@@ -166,7 +166,7 @@ describe("Unique Aliases", () => {
   );
 
   aliasTest(
-    "two services, one with multiple common aliases",
+    "two services, one with multiple aliases",
     {
       Aliases: JSON.stringify({
         svc1: ["svc1.com"],
@@ -228,7 +228,7 @@ describe("Unique Aliases", () => {
   );
 
   aliasTest(
-    "bunch of services with single alias, some FilterFor services don't exist, and additional alias",
+    "bunch of services with single alias, some FilterFor services don't exist",
     {
       Aliases: JSON.stringify({
         lbws1: ["lbws1.com"],
@@ -237,8 +237,21 @@ describe("Unique Aliases", () => {
         lbws4: ["lbws4.com"],
       }),
       FilterFor: "lbws1,lbws5,lbws6,lbws3",
+    },
+    ["lbws1.com", "lbws3.com"]
+  );
+
+  aliasTest(
+    "bunch of services with single alias, and additional alias",
+    {
+      Aliases: JSON.stringify({
+        lbws1: ["lbws1.com"],
+        lbws2: ["lbws2.com"],
+        lbws3: ["lbws3.com"],
+      }),
+      FilterFor: "lbws1",
       AdditionalAlias: "example.com",
     },
-    ["example.com", "lbws1.com", "lbws3.com"]
+    ["example.com", "lbws1.com"]
   );
 });

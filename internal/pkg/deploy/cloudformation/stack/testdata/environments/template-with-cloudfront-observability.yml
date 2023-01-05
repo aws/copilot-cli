@@ -328,7 +328,7 @@ Resources:
     Type: AWS::CloudFront::OriginAccessControl
     Properties: 
       OriginAccessControlConfig: 
-          Description: An optional description for the origin access control
+          Description: Access control for static s3 origin
           Name: !Sub 'copilot-${AppName}-${EnvironmentName}-origin-access-control'
           OriginAccessControlOriginType: s3
           SigningBehavior: always
@@ -344,7 +344,7 @@ Resources:
         DefaultCacheBehavior:
           AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
           CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k
-          TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+          TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}'
           OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3 # See https://go.aws/3BIE8CP
           ViewerProtocolPolicy: allow-all # Will need to change with TLS termination and Alias usage
         Enabled: true
@@ -353,8 +353,8 @@ Resources:
           - CustomOriginConfig:
               OriginProtocolPolicy: match-viewer # Will need to change with TLS termination and Alias usage
             DomainName: !GetAtt PublicLoadBalancer.DNSName
-            Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
-          - Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin-s3'
+            Id: !Sub 'copilot-${AppName}-${EnvironmentName}'
+          - Id: !Sub 'copilot-${AppName}-${EnvironmentName}-s3'
             DomainName: cf-s3-ecs-demo-bucket.s3.us-west-2.amazonaws.com
             OriginAccessControlId: !Ref CloudFrontOriginAccessControl
             S3OriginConfig:
@@ -363,7 +363,7 @@ Resources:
           - AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
             ViewerProtocolPolicy: allow-all
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
-            TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin-s3'
+            TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-s3'
             PathPattern: '*'
         ViewerCertificate:
           AcmCertificateArn: viewer-cert

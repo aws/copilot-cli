@@ -55,7 +55,7 @@ CloudFrontOriginAccessControl:
   Type: AWS::CloudFront::OriginAccessControl
   Properties: 
     OriginAccessControlConfig: 
-        Description: An optional description for the origin access control
+        Description: Access control for static s3 origin
         Name: !Sub 'copilot-${AppName}-${EnvironmentName}-origin-access-control'
         OriginAccessControlOriginType: s3
         SigningBehavior: always
@@ -74,7 +74,7 @@ CloudFrontDistribution:
       DefaultCacheBehavior:
         AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
         CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # See https://go.aws/3bJid3k
-        TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+        TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}'
         OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3 # See https://go.aws/3BIE8CP
         {{- if .CDNConfig.TerminateTLS}}
         ViewerProtocolPolicy: redirect-to-https
@@ -84,7 +84,7 @@ CloudFrontDistribution:
       Enabled: true
       IPV6Enabled: true
       Origins:
-        - Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin'
+        - Id: !Sub 'copilot-${AppName}-${EnvironmentName}'
           DomainName: !GetAtt PublicLoadBalancer.DNSName
           CustomOriginConfig:
             {{- if .CDNConfig.TerminateTLS}}
@@ -93,16 +93,18 @@ CloudFrontDistribution:
             OriginProtocolPolicy: match-viewer
             {{- end}}
       {{- if .CDNConfig.Static}}
-        - Id: !Sub 'copilot-${AppName}-${EnvironmentName}-origin-s3'
+        - Id: !Sub 'copilot-${AppName}-${EnvironmentName}-s3'
           DomainName: {{.CDNConfig.Static.Location}}
           OriginAccessControlId: !Ref CloudFrontOriginAccessControl
+          # Workaround for using Origin Access Control as Origin Access Identity is still 
+          # required when the origin is an S3 bucket.
           S3OriginConfig:
-            OriginAccessIdentity: ''
+            OriginAccessIdentity: '' 
       CacheBehaviors:
         - AllowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
           ViewerProtocolPolicy: allow-all
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
-          TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-origin-s3'
+          TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-s3'
           PathPattern: '{{.CDNConfig.Static.Path}}'
       {{- end}}
 {{- if .CDNConfig.ImportedCertificate}}
