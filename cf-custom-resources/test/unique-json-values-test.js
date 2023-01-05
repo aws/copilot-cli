@@ -216,7 +216,7 @@ describe("Unique Aliases", () => {
         lbws5: ["lbws.com"],
       }),
       FilterFor: "lbws2,lbws3,lbws4,lbws1,lbws5,lbws6",
-      AdditionalAlias: "lbws.com",
+      AdditionalStrings: ["lbws.com"],
     },
     [
       "four.lbws.com",
@@ -250,8 +250,8 @@ describe("Unique Aliases", () => {
         lbws3: ["lbws3.com"],
       }),
       FilterFor: "lbws1",
-      AdditionalAlias: "example.com",
+      AdditionalStrings: ["example.com", "foobar.com"],
     },
-    ["example.com", "lbws1.com"]
+    ["example.com", "foobar.com", "lbws1.com"]
   );
 });

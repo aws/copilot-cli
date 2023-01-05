@@ -449,7 +449,7 @@ func (e *Env) cdnConfig() *template.CDNConfig {
 		TerminateTLS:        aws.BoolValue(mftConfig.TerminateTLS),
 	}
 	if !mftConfig.Static.IsEmpty() {
-		config.Static = &template.CDNStatic{
+		config.Static = &template.CDNStaticAssetConfig{
 			Location: mftConfig.Static.Location,
 			Path:     defaultCDNStaticPath,
 			Alias:    mftConfig.Static.Alias,

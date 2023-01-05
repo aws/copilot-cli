@@ -178,11 +178,11 @@ func (elb *ELBAccessLogs) ShouldCreateBucket() bool {
 type CDNConfig struct {
 	ImportedCertificate *string
 	TerminateTLS        bool
-	Static              *CDNStatic
+	Static              *CDNStaticAssetConfig
 }
 
-// CDNStatic represents static assets config for a Content Delivery Network.
-type CDNStatic struct {
+// CDNStaticAssetConfig represents static assets config for a Content Delivery Network.
+type CDNStaticAssetConfig struct {
 	Path     string
 	Location string
 	Alias    string

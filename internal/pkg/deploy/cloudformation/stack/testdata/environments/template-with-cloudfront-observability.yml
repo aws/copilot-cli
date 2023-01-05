@@ -322,7 +322,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt UniqueJSONValuesFunction.Arn
       Aliases: !Ref Aliases
-      AdditionalAlias: example.com
+      AdditionalStrings: [example.com]
       FilterFor: !Ref ALBWorkloads
   CloudFrontOriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl

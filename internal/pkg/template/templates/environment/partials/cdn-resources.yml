@@ -45,7 +45,7 @@ UniqueAliasesAction:
     ServiceToken: !GetAtt UniqueJSONValuesFunction.Arn
     Aliases: !Ref Aliases
     {{- if .CDNConfig.Static}}
-    AdditionalAlias: {{.CDNConfig.Static.Alias}}
+    AdditionalStrings: [{{.CDNConfig.Static.Alias}}]
     {{- end}}
     FilterFor: !Ref ALBWorkloads
 {{- end}}{{/* endif or .CDNConfig.ImportedCertificate .DelegateDNS */}}

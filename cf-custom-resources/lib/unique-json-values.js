@@ -93,7 +93,7 @@ const deadlineExpired = function () {
  *  "svc2": ["example.com"]
  * }
  *
- * The input event.ResourceProperties.AdditionalAlias is a string (e.g., "foobar.com").
+ * The input event.ResourceProperties.AdditionalStrings is a string slice (e.g., ["foobar.com"]).
  *
  * This function returns a sorted list of unique values found in the map and the additional string.
  * For this example, UniqueValues would be:
@@ -120,8 +120,12 @@ exports.handler = async function (event, context) {
           )
         );
         const unique = new Set(Object.values(filteredAliasesForService).flat());
-        if (event.ResourceProperties.AdditionalAlias) {
-          unique.add(event.ResourceProperties.AdditionalAlias);
+        if (event.ResourceProperties.AdditionalStrings) {
+          event.ResourceProperties.AdditionalStrings.forEach((element) => {
+            if (element) {
+              unique.add(element);
+            }
+          });
         }
         responseData.UniqueValues = Array.from(unique).sort();
         break;
