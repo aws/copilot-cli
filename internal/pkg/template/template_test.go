@@ -7,49 +7,74 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"testing"
+
+	"github.com/spf13/afero"
 
 	"github.com/aws/copilot-cli/internal/pkg/aws/s3"
 	"github.com/stretchr/testify/require"
 )
 
-// mockReadFileFS implements the fs.ReadFileFS interface.
-type mockReadFileFS struct {
-	fs map[string][]byte
+// mockFS implements the fs.ReadFileFS interface.
+type mockFS struct {
+	afero.Fs
 }
 
-func (m *mockReadFileFS) ReadFile(name string) ([]byte, error) {
-	dat, ok := m.fs[name]
-	if !ok {
-		return nil, &fs.PathError{
-			Op:   "open",
-			Path: name,
-			Err:  fs.ErrNotExist,
-		}
+func (m *mockFS) ReadFile(name string) ([]byte, error) {
+	return afero.ReadFile(m.Fs, name)
+}
+
+func (m *mockFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	files, err := afero.ReadDir(m.Fs, name)
+	if err != nil {
+		return nil, err
 	}
-	return dat, nil
+	out := make([]fs.DirEntry, len(files))
+	for i, f := range files {
+		out[i] = &mockDirEntry{FileInfo: f}
+	}
+	return out, nil
 }
 
-func (m *mockReadFileFS) Open(name string) (fs.File, error) {
-	return nil, errors.New("open should not be called")
+func (m *mockFS) Open(name string) (fs.File, error) {
+	return m.Fs.Open(name)
+}
+
+type mockDirEntry struct {
+	os.FileInfo
+}
+
+func (m *mockDirEntry) Type() fs.FileMode {
+	return m.Mode()
+}
+
+func (m *mockDirEntry) Info() (fs.FileInfo, error) {
+	return m.FileInfo, nil
 }
 
 func TestTemplate_Read(t *testing.T) {
 	testCases := map[string]struct {
 		inPath string
-		fs     map[string][]byte
+		fs     func() afero.Fs
 
 		wantedContent string
 		wantedErr     error
 	}{
 		"template does not exist": {
-			inPath:    "/fake/manifest.yml",
+			inPath: "/fake/manifest.yml",
+			fs: func() afero.Fs {
+				return afero.NewMemMapFs()
+			},
 			wantedErr: errors.New("read template /fake/manifest.yml"),
 		},
 		"returns content": {
 			inPath: "/fake/manifest.yml",
-			fs: map[string][]byte{
-				"templates/fake/manifest.yml": []byte("hello"),
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = fs.MkdirAll("templates/fake/", 0755)
+				_ = afero.WriteFile(fs, "templates/fake/manifest.yml", []byte("hello"), 0644)
+				return fs
 			},
 			wantedContent: "hello",
 		},
@@ -59,7 +84,7 @@ func TestTemplate_Read(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			tpl := &Template{
-				fs: &mockReadFileFS{tc.fs},
+				fs: &mockFS{Fs: tc.fs()},
 			}
 
 			// WHEN
@@ -76,22 +101,23 @@ func TestTemplate_Read(t *testing.T) {
 
 func TestTemplate_UploadEnvironmentCustomResources(t *testing.T) {
 	testCases := map[string]struct {
-		fs func() map[string][]byte
+		fs func() afero.Fs
 
 		wantedErr error
 	}{
 		"success": {
-			fs: func() map[string][]byte {
-				m := make(map[string][]byte)
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = fs.MkdirAll("templates/custom-resources/", 0755)
 				for _, file := range envCustomResourceFiles {
-					m[fmt.Sprintf("templates/custom-resources/%s.js", file)] = []byte("hello")
+					_ = afero.WriteFile(fs, fmt.Sprintf("templates/custom-resources/%s.js", file), []byte("hello"), 0644)
 				}
-				return m
+				return fs
 			},
 		},
 		"errors if env custom resource file doesn't exist": {
-			fs: func() map[string][]byte {
-				return nil
+			fs: func() afero.Fs {
+				return afero.NewMemMapFs()
 			},
 			wantedErr: fmt.Errorf("read template custom-resources/dns-cert-validator.js: open templates/custom-resources/dns-cert-validator.js: file does not exist"),
 		},
@@ -101,7 +127,7 @@ func TestTemplate_UploadEnvironmentCustomResources(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			tpl := &Template{
-				fs: &mockReadFileFS{tc.fs()},
+				fs: &mockFS{tc.fs()},
 			}
 			mockUploader := s3.CompressAndUploadFunc(func(key string, files ...s3.NamedBinary) (string, error) {
 				require.Contains(t, key, "scripts")
@@ -126,20 +152,26 @@ func TestTemplate_Parse(t *testing.T) {
 	testCases := map[string]struct {
 		inPath string
 		inData interface{}
-		fs     map[string][]byte
+		fs     func() afero.Fs
 
 		wantedContent string
 		wantedErr     error
 	}{
 		"template does not exist": {
 			inPath: "/fake/manifest.yml",
+			fs: func() afero.Fs {
+				return afero.NewMemMapFs()
+			},
 
 			wantedErr: errors.New("read template /fake/manifest.yml"),
 		},
 		"template cannot be parsed": {
 			inPath: "/fake/manifest.yml",
-			fs: map[string][]byte{
-				"templates/fake/manifest.yml": []byte(`{{}}`),
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = fs.MkdirAll("templates/fake", 0755)
+				_ = afero.WriteFile(fs, "templates/fake/manifest.yml", []byte(`{{}}`), 0644)
+				return fs
 			},
 
 			wantedErr: errors.New("parse template /fake/manifest.yml"),
@@ -147,8 +179,11 @@ func TestTemplate_Parse(t *testing.T) {
 		"template cannot be executed": {
 			inPath: "/fake/manifest.yml",
 			inData: struct{}{},
-			fs: map[string][]byte{
-				"templates/fake/manifest.yml": []byte(`{{.Name}}`),
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = fs.MkdirAll("templates/fake", 0755)
+				_ = afero.WriteFile(fs, "templates/fake/manifest.yml", []byte(`{{.Name}}`), 0644)
+				return fs
 			},
 
 			wantedErr: fmt.Errorf("execute template %s", "/fake/manifest.yml"),
@@ -160,8 +195,11 @@ func TestTemplate_Parse(t *testing.T) {
 			}{
 				Name: "webhook",
 			},
-			fs: map[string][]byte{
-				"templates/fake/manifest.yml": []byte(`{{.Name}}`),
+			fs: func() afero.Fs {
+				fs := afero.NewMemMapFs()
+				_ = fs.MkdirAll("templates/fake", 0755)
+				_ = afero.WriteFile(fs, "templates/fake/manifest.yml", []byte(`{{.Name}}`), 0644)
+				return fs
 			},
 			wantedContent: "webhook",
 		},
@@ -171,7 +209,7 @@ func TestTemplate_Parse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			tpl := &Template{
-				fs: &mockReadFileFS{tc.fs},
+				fs: &mockFS{Fs: tc.fs()},
 			}
 
 			// WHEN

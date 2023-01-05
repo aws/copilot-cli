@@ -368,20 +368,20 @@ type networkLoadBalancerConfig struct {
 	appDNSName           *string
 }
 
-func convertELBAccessLogsConfig(mft *manifest.Environment) (*template.ELBAccessLogs, error) {
+func convertELBAccessLogsConfig(mft *manifest.Environment) *template.ELBAccessLogs {
 	elbAccessLogsArgs, isELBAccessLogsSet := mft.ELBAccessLogs()
 	if !isELBAccessLogsSet {
-		return nil, nil
+		return nil
 	}
 
 	if elbAccessLogsArgs == nil {
-		return &template.ELBAccessLogs{}, nil
+		return &template.ELBAccessLogs{}
 	}
 
 	return &template.ELBAccessLogs{
 		BucketName: aws.StringValue(elbAccessLogsArgs.BucketName),
 		Prefix:     aws.StringValue(elbAccessLogsArgs.Prefix),
-	}, nil
+	}
 }
 
 // convertFlowLogsConfig converts the VPC FlowLog configuration into a format parsable by the templates pkg.
@@ -803,16 +803,22 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
-func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
-	var deployConfigs template.DeploymentConfigurationOpts
-	if strings.EqualFold(aws.StringValue(deploymentConfig.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
-		deployConfigs.MinHealthyPercent = minHealthyPercentRecreate
-		deployConfigs.MaxPercent = maxPercentRecreate
-	} else {
-		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
-		deployConfigs.MaxPercent = maxPercentDefault
+func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+	out := template.DeploymentConfigurationOpts{
+		MinHealthyPercent: minHealthyPercentDefault,
+		MaxPercent: maxPercentDefault,
+		Rollback: template.RollingUpdateRollbackConfig{
+			AlarmNames:        in.RollbackAlarms.Basic,
+			CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
+			MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
+		},
 	}
-	return deployConfigs
+
+	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
+		out.MinHealthyPercent = minHealthyPercentRecreate
+		out.MaxPercent = maxPercentRecreate
+	}
+	return out
 }
 
 func convertCommand(command manifest.CommandOverride) ([]string, error) {

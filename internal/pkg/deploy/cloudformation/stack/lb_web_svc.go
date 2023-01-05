@@ -60,7 +60,7 @@ type LoadBalancedWebServiceConfig struct {
 	RawManifest   []byte // Content of the manifest file without any transformations.
 	RuntimeConfig RuntimeConfig
 	RootUserARN   string
-	Addons        addons
+	Addons        NestedStackConfigurer
 }
 
 // NewLoadBalancedWebService creates a new CFN stack with an ECS service from a manifest file, given the options.
