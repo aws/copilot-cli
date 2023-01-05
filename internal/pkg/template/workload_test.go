@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/spf13/afero"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/require"
 )
@@ -16,12 +18,12 @@ func TestTemplate_ParseSvc(t *testing.T) {
 		testSvcName = "backend"
 	)
 	testCases := map[string]struct {
-		fs            func() map[string][]byte
+		fs            func() afero.Fs
 		wantedContent string
 		wantedErr     error
 	}{
 		"renders all common templates": {
-			fs: func() map[string][]byte {
+			fs: func() afero.Fs {
 				var baseContent string
 				for _, name := range partialsWorkloadCFTemplateNames {
 					baseContent += fmt.Sprintf(`{{include "%s" . | indent 2}}`+"\n", name)
@@ -105,7 +107,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// GIVEN
 			tpl := &Template{
-				fs: &mockReadFileFS{tc.fs()},
+				fs: &mockFS{tc.fs()},
 			}
 
 			// WHEN

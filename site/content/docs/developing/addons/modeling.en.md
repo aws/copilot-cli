@@ -10,7 +10,7 @@ Copilot provides the following commands to help you create certain kinds of addo
 
 You can run `copilot storage init` from your workspace and be guided through some questions to help you set up these resources.
 
-## How to do I add other resources?
+## How to add other resources?
 
 For other types of addons, you can add your own custom CloudFormation templates according to the following instructions.
 

@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as path from 'path';
-{{- range $resourceType := .Resources.Types }}
+{{- range $resourceType := .Resources.UniqueTypes }}
 import { {{$resourceType.ImportName}} as {{$resourceType.ImportShortRename}} } from 'aws-cdk-lib';
 {{- end }}
 
@@ -14,15 +14,14 @@ export class TransformedStack extends cdk.Stack {
         this.envName = this.template.getParameter('EnvName').valueAsString;
 
         {{- range $resource := .Resources }}
-        this.transform{{camelCase $resource.LogicalID}}();
+        this.transform{{$resource.LogicalID}}();
         {{- end }}
     }
-
-    {{- range $resource := .Resources}}
+    {{range $resource := .Resources}}
     // TODO: implement me.
-    transform{{camelCase $resource.LogicalID}}() {
-        const {{camelCase $resource.LogicalID}} = this.template.getResource("{{$resource.LogicalID}}") as {{$resource.Type.ImportShortRename}}.{{$resource.Type.L1ConstructName}};
+    transform{{$resource.LogicalID}}() {
+        const {{lowerInitialLetters $resource.LogicalID}} = this.template.getResource("{{$resource.LogicalID}}") as {{$resource.Type.ImportShortRename}}.{{$resource.Type.L1ConstructName}};
         throw new error("not implemented");
     }
-    {{- end }}
+    {{end }}
 }
