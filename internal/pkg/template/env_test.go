@@ -6,28 +6,31 @@ package template
 import (
 	"testing"
 
+	"github.com/spf13/afero"
+
 	"github.com/stretchr/testify/require"
 )
 
 func TestTemplate_ParseEnv(t *testing.T) {
 	// GIVEN
+	fs := afero.NewMemMapFs()
+	_ = fs.MkdirAll("templates/environment", 0755)
+	_ = afero.WriteFile(fs, "templates/environment/cf.yml", []byte("test"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/cdn-resources.yml", []byte("cdn-resources"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/cfn-execution-role.yml", []byte("cfn-execution-role"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/custom-resources.yml", []byte("custom-resources"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/custom-resources-role.yml", []byte("custom-resources-role"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/environment-manager-role.yml", []byte("environment-manager-role"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/lambdas.yml", []byte("lambdas"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/vpc-resources.yml", []byte("vpc-resources"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/nat-gateways.yml", []byte("nat-gateways"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/bootstrap-resources.yml", []byte("bootstrap"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/elb-access-logs.yml", []byte("elb-access-logs"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/mappings-regional-configs.yml", []byte("mappings-regional-configs"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/ar-vpc-connector.yml", []byte("ar-vpc-connector"), 0644)
 	tpl := &Template{
-		fs: &mockReadFileFS{
-			fs: map[string][]byte{
-				"templates/environment/cf.yml":                                 []byte("test"),
-				"templates/environment/partials/cdn-resources.yml":             []byte("cdn-resources"),
-				"templates/environment/partials/cfn-execution-role.yml":        []byte("cfn-execution-role"),
-				"templates/environment/partials/custom-resources.yml":          []byte("custom-resources"),
-				"templates/environment/partials/custom-resources-role.yml":     []byte("custom-resources-role"),
-				"templates/environment/partials/environment-manager-role.yml":  []byte("environment-manager-role"),
-				"templates/environment/partials/lambdas.yml":                   []byte("lambdas"),
-				"templates/environment/partials/vpc-resources.yml":             []byte("vpc-resources"),
-				"templates/environment/partials/nat-gateways.yml":              []byte("nat-gateways"),
-				"templates/environment/partials/bootstrap-resources.yml":       []byte("bootstrap"),
-				"templates/environment/partials/elb-access-logs.yml":           []byte("elb-access-logs"),
-				"templates/environment/partials/mappings-regional-configs.yml": []byte("mappings-regional-configs"),
-				"templates/environment/partials/ar-vpc-connector.yml":          []byte("ar-vpc-connector"),
-			},
+		fs: &mockFS{
+			Fs: fs,
 		},
 	}
 
@@ -41,14 +44,15 @@ func TestTemplate_ParseEnv(t *testing.T) {
 
 func TestTemplate_ParseEnvBootstrap(t *testing.T) {
 	// GIVEN
+	fs := afero.NewMemMapFs()
+	_ = fs.MkdirAll("templates/environment/partials", 0755)
+	_ = afero.WriteFile(fs, "templates/environment/bootstrap-cf.yml", []byte("test"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/cfn-execution-role.yml", []byte("cfn-execution-role"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/environment-manager-role.yml", []byte("environment-manager-role"), 0644)
+	_ = afero.WriteFile(fs, "templates/environment/partials/bootstrap-resources.yml", []byte("bootstrap"), 0644)
 	tpl := &Template{
-		fs: &mockReadFileFS{
-			fs: map[string][]byte{
-				"templates/environment/bootstrap-cf.yml":                      []byte("test"),
-				"templates/environment/partials/cfn-execution-role.yml":       []byte("cfn-execution-role"),
-				"templates/environment/partials/environment-manager-role.yml": []byte("environment-manager-role"),
-				"templates/environment/partials/bootstrap-resources.yml":      []byte("bootstrap"),
-			},
+		fs: &mockFS{
+			Fs: fs,
 		},
 	}
 
