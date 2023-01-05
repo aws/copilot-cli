@@ -15,6 +15,15 @@ Parameters:
     Default: {{.InitialDBName}}
     # Cannot have special characters
     # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
+  VPCID:
+    Type: String
+    Description: The ID of the VPC in which to create the Aurora Serverless v2 cluster.
+    Default: ""
+  PrivateSubnets:
+    Type: String
+    Description: The IDs of the private subnets in which to create the Aurora Serverless v2 cluster.
+    Default: """
+
 Mappings:
   {{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap: {{range $env := .Envs}}
     {{$env}}:
@@ -29,44 +38,42 @@ Resources:
   {{logicalIDSafe .ClusterName}}DBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
-      DBSubnetGroupDescription: Group of Copilot private subnets for Aurora Serverless v2 cluster.
+      DBSubnetGroupDescription: Group of private subnets for Aurora Serverless v2 cluster.
       SubnetIds:
-        !Split [',', { 'Fn::ImportValue': !Sub '${App}-${Env}-PrivateSubnets' }]
-  {{logicalIDSafe .ClusterName}}SecurityGroup:
+        !Split [',', !Ref PrivateSubnets]
+  
+  {{logicalIDSafe .ClusterName}}WorkloadSecurityGroup:
     Metadata:
-      'aws:copilot:description': 'A security group for your workload to access the Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}'
+      'aws:copilot:description': 'A security group for one or more workloads to access the Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}'
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
-      GroupDescription: !Sub 'The Security Group for ${Name} to access Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}.'
-      VpcId:
-        Fn::ImportValue:
-          !Sub '${App}-${Env}-VpcId'
+      GroupDescription: !Sub 'The Security Group to access Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}.'
+      VpcId: !Ref VPCID
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${App}-${Env}-${Name}-Aurora'
+          Value: !Sub 'copilot-${App}-${Env}-AuroraCluster'
+
   {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup:
     Metadata:
       'aws:copilot:description': 'A security group for your Aurora Serverless v2 cluster {{logicalIDSafe .ClusterName}}'
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: The Security Group for the Aurora Serverless v2 cluster.
-      SecurityGroupIngress:
-        {{- if eq .Engine "MySQL"}}
-        - ToPort: 3306
-          FromPort: 3306
-        {{- else}}
-        - ToPort: 5432
-          FromPort: 5432
-        {{- end}}
-          IpProtocol: tcp
-          Description: !Sub 'From the Aurora Security Group of the workload ${Name}.'
-          SourceSecurityGroupId: !Ref {{logicalIDSafe .ClusterName}}SecurityGroup
-      VpcId:
-        Fn::ImportValue:
-          !Sub '${App}-${Env}-VpcId'
+      VpcId: !Ref VPCID
       Tags:
         - Key: Name
-          Value: !Sub 'copilot-${App}-${Env}-${Name}-Aurora'
+          Value: !Sub 'copilot-${App}-${Env}-AuroraCluster'
+  
+  {{logicalIDSafe .ClusterName}}DBClusterSecurityGroupIngressFromWorkload:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from one or more workloads in the environment.
+      GroupId: !Ref {{logicalIDSafe .ClusterName}}DBClusterSecurityGroup
+      IpProtocol: tcp
+      ToPort: {{- if eq .Engine "MySQL"}} 3306 {{- else}} 5432 {{- end}}
+      FromPort: {{- if eq .Engine "MySQL"}} 3306 {{- else}} 5432 {{- end}}
+      SourceSecurityGroupId: !Ref {{logicalIDSafe .ClusterName}}WorkloadSecurityGroup
+  
   {{logicalIDSafe .ClusterName}}AuroraSecret:
     Metadata:
       'aws:copilot:description': 'A Secrets Manager secret to store your DB credentials'
@@ -74,15 +81,12 @@ Resources:
     Properties:
       Description: !Sub Aurora main user secret for ${AWS::StackName}
       GenerateSecretString:
-        {{- if eq .Engine "MySQL"}}
-        SecretStringTemplate: '{"username": "admin"}'
-        {{- else}}
-        SecretStringTemplate: '{"username": "postgres"}'
-        {{- end}}
+        SecretStringTemplate: {{- if eq .Engine "MySQL"}} '{"username": "admin"}' {{- else}} '{"username": "postgres"}' {{- end}}
         GenerateStringKey: "password"
         ExcludePunctuation: true
         IncludeSpace: false
         PasswordLength: 16
+  
   {{- if .ParameterGroup}}
   # {{logicalIDSafe .ClusterName}}DBClusterParameterGroup:
   #   Type: 'AWS::RDS::DBClusterParameterGroup'
@@ -108,6 +112,7 @@ Resources:
         client_encoding: 'UTF8'
       {{- end}}
   {{- end}}
+  
   {{logicalIDSafe .ClusterName}}DBCluster:
     Metadata:
       'aws:copilot:description': 'The {{logicalIDSafe .ClusterName}} Aurora Serverless v2 database cluster'
@@ -134,6 +139,7 @@ Resources:
         # Replace "All" below with "!Ref Env" to set different autoscaling limits per environment.
         MinCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, All, DBMinCapacity]
         MaxCapacity: !FindInMap [{{logicalIDSafe .ClusterName}}EnvScalingConfigurationMap, All, DBMaxCapacity]
+  
   {{logicalIDSafe .ClusterName}}DBWriterInstance:
     Metadata:
       'aws:copilot:description': 'The {{logicalIDSafe .ClusterName}} Aurora Serverless v2 writer instance'
@@ -158,10 +164,15 @@ Resources:
       SecretId: !Ref {{logicalIDSafe .ClusterName}}AuroraSecret
       TargetId: !Ref {{logicalIDSafe .ClusterName}}DBCluster
       TargetType: AWS::RDS::DBCluster
+
 Outputs:
   {{logicalIDSafe .ClusterName}}Secret: # injected as {{envVarSecret .ClusterName | toSnakeCase}} environment variable by Copilot.
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier' and 'engine'"
     Value: !Ref {{logicalIDSafe .ClusterName}}AuroraSecret
+    Export:
+      Name: !Sub ${App}-${Env}-{{logicalIDSafe .ClusterName}}AuroraSecret
   {{logicalIDSafe .ClusterName}}SecurityGroup:
     Description: "The security group to attach to the workload."
-    Value: !Ref {{logicalIDSafe .ClusterName}}SecurityGroup
+    Value: !Ref {{logicalIDSafe .ClusterName}}WorkloadSecurityGroup  
+    Export:
+      Name: !Sub ${App}-${Env}-{{logicalIDSafe .ClusterName}}SecurityGroup

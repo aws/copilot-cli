@@ -57,6 +57,9 @@ Resources:
           SourceSecurityGroupId: !Ref auroraSecurityGroup
       VpcId:
         Fn::ImportValue: !Sub "${App}-${Env}-VpcId"
+      Tags:
+        - Key: Name
+          Value: !Sub 'copilot-${App}-${Env}-${Name}-Aurora'
   auroraAuroraSecret:
     Metadata:
       "aws:copilot:description": "A Secrets Manager secret to store your DB credentials"

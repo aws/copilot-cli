@@ -27,13 +27,16 @@ func TestEnvStack_Template(t *testing.T) {
 		input          *stack.EnvConfig
 		wantedFileName string
 	}{
-		"generate template with embedded manifest file with container insights and imported certificates and advanced access logs": {
+		"generate template with embedded manifest file with container insights and cloudfront and advanced access logs": {
 			input: func() *stack.EnvConfig {
 				rawMft := `name: test
 type: Environment
 # Create the public ALB with certificates attached.
 cdn:
   certificate: viewer-cert
+  static_assets:
+    location: cf-s3-ecs-demo-bucket.s3.us-west-2.amazonaws.com
+    alias: example.com
 http:
   public:
     ingress:
@@ -77,7 +80,7 @@ observability:
 					RawMft: []byte(rawMft),
 				}
 			}(),
-			wantedFileName: "template-with-imported-certs-observability.yml",
+			wantedFileName: "template-with-cloudfront-observability.yml",
 		},
 		"generate template with default access logs": {
 			input: func() *stack.EnvConfig {
