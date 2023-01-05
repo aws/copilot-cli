@@ -72,6 +72,7 @@ func TestScheduledJob_Template(t *testing.T) {
 						Network: template.NetworkOpts{
 							AssignPublicIP: template.DisablePublicIP,
 							SubnetIDs:      []string{"id1", "id2"},
+							SecurityGroups: []template.SecurityGroup{},
 						},
 						EntryPoint:      []string{"/bin/echo", "hello"},
 						Command:         []string{"world"},
@@ -107,6 +108,7 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
 						Network: template.NetworkOpts{
 							AssignPublicIP: template.DisablePublicIP,
 							SubnetIDs:      []string{"id1", "id2"},
+							SecurityGroups: []template.SecurityGroup{},
 						},
 						EntryPoint:      []string{"/bin/echo", "hello"},
 						Command:         []string{"world"},

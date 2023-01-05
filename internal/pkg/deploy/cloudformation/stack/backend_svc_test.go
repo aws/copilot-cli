@@ -289,6 +289,7 @@ Outputs:
 			Network: template.NetworkOpts{
 				AssignPublicIP: template.DisablePublicIP,
 				SubnetsType:    template.PrivateSubnetsPlacement,
+				SecurityGroups: []template.SecurityGroup{},
 			},
 			DeploymentConfiguration: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: 0,
@@ -460,6 +461,7 @@ Outputs:
 			Network: template.NetworkOpts{
 				AssignPublicIP: template.DisablePublicIP,
 				SubnetsType:    template.PrivateSubnetsPlacement,
+				SecurityGroups: []template.SecurityGroup{},
 			},
 			DeploymentConfiguration: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: 0,

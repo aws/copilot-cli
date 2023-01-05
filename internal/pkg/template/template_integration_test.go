@@ -419,10 +419,10 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 			input: template.NetworkOpts{
 				AssignPublicIP: "DISABLED",
 				SubnetsType:    "PrivateSubnets",
-				SecurityGroups:[]template.SecurityGroup{
-					template.plainSecurityGroup("sg-1bcf1d5b"),
-					template.plainSecurityGroup("sg-asdasdas"),
-					template.importedSecurityGroup("mydb-sg001")
+				SecurityGroups: []template.SecurityGroup{
+					template.PlainSecurityGroup("sg-1bcf1d5b"),
+					template.PlainSecurityGroup("sg-asdasdas"),
+					template.ImportedSecurityGroup("mydb-sg001"),
 				},
 			},
 			wantedNetworkConfig: `
@@ -443,9 +443,9 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 			input: template.NetworkOpts{
 				AssignPublicIP: "DISABLED",
 				SubnetsType:    "PrivateSubnets",
-				SecurityGroups:[]template.SecurityGroup{
-					template.plainSecurityGroup("sg-1bcf1d5b"),
-					template.plainSecurityGroup("sg-asdasdas"),
+				SecurityGroups: []template.SecurityGroup{
+					template.PlainSecurityGroup("sg-1bcf1d5b"),
+					template.PlainSecurityGroup("sg-asdasdas"),
 				},
 				DenyDefaultSecurityGroup: true,
 			},
