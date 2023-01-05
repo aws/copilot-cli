@@ -32,6 +32,12 @@ DeploymentConfiguration:
     Enable: true
     Rollback: true
   {{- end }}
+  {{- if .DeploymentConfiguration.MessagesDelayed }}
+  Alarms:
+    AlarmNames: !Sub ${AWS::StackName}-MsgsDelayedAlarm
+    Enable: true
+    Rollback: true
+  {{- end }}
 PropagateTags: SERVICE
 {{- if .ExecuteCommand }}
 EnableExecuteCommand: true

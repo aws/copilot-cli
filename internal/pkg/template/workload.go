@@ -469,6 +469,7 @@ type RollingUpdateRollbackConfig struct {
 	// Custom alarms to create.
 	CPUUtilization    *float64
 	MemoryUtilization *float64
+	MessagesDelayed   *int
 }
 
 // HasRollbackAlarms returns true if the client is using ABR.

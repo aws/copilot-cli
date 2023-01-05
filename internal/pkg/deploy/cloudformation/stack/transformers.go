@@ -821,6 +821,26 @@ func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.Deplo
 	return out
 }
 
+func convertWorkerDeploymentConfig(in manifest.WorkerDeploymentConfig) template.DeploymentConfigurationOpts {
+	out := template.DeploymentConfigurationOpts{
+		MinHealthyPercent: minHealthyPercentDefault,
+		MaxPercent: maxPercentDefault,
+		Rollback: template.RollingUpdateRollbackConfig{
+			AlarmNames:        in.WorkerRollbackAlarms.Basic,
+			CPUUtilization:    in.WorkerRollbackAlarms.Advanced.CPUUtilization,
+			MemoryUtilization: in.WorkerRollbackAlarms.Advanced.MemoryUtilization,
+			MessagesDelayed:   in.WorkerRollbackAlarms.Advanced.MessagesDelayed,
+		},
+	}
+
+	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
+		out.MinHealthyPercent = minHealthyPercentRecreate
+		out.MaxPercent = maxPercentRecreate
+		out.MessagesDelayed = aws.IntValue(in.WorkerRollbackAlarms.Advanced.MessagesDelayed)
+	}
+	return out
+}
+
 func convertCommand(command manifest.CommandOverride) ([]string, error) {
 	out, err := command.ToStringSlice()
 	if err != nil {

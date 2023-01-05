@@ -47,14 +47,14 @@ type WorkerServiceConfig struct {
 	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
-	Logging          Logging                   `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
-	Subscribe        SubscribeConfig           `yaml:"subscribe"`
-	PublishConfig    PublishConfig             `yaml:"publish"`
-	Network          NetworkConfig             `yaml:"network"`
-	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
-	DeployConfig     DeploymentConfiguration   `yaml:"deployment"`
-	Observability    Observability             `yaml:"observability"`
+	Logging          Logging                          `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Subscribe        SubscribeConfig                  `yaml:"subscribe"`
+	PublishConfig    PublishConfig                    `yaml:"publish"`
+	Network          NetworkConfig                    `yaml:"network"`
+	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides"`
+	DeployConfig     DeploymentConfigWithWorkerAlarms `yaml:"deployment"`
+	Observability    Observability                    `yaml:"observability"`
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.
@@ -229,10 +229,10 @@ func NewWorkerService(props WorkerServiceProps) *WorkerService {
 }
 
 // setSubscriptionQueueDefaults function modifies the manifest to have
-// 1. FIFO Topic names without ".fifo" suffix.
-// 2. If there are both FIFO and Standard topic subscriptions are specified then set
-//    default events queue to FIFO and add standard topic-specific queue for all the standard topic subscriptions.
-// 3. If there are only Standard topic subscriptions are specified then do nothing and return.
+//  1. FIFO Topic names without ".fifo" suffix.
+//  2. If there are both FIFO and Standard topic subscriptions are specified then set
+//     default events queue to FIFO and add standard topic-specific queue for all the standard topic subscriptions.
+//  3. If there are only Standard topic subscriptions are specified then do nothing and return.
 func setSubscriptionQueueDefaults(topics []TopicSubscription, eventsQueue *SQSQueue) {
 	var isFIFOEnabled bool
 	for _, topic := range topics {

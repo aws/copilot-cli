@@ -25,6 +25,7 @@ CPURollbackAlarm:
 {{- end}}
   
 {{- if .DeploymentConfiguration.Rollback.MemoryUtilization}}
+
 MemoryRollbackAlarm:
   Metadata:
     'aws:copilot:description': "A CloudWatch alarm associated with memory utilization for deployment rollbacks"
@@ -48,4 +49,27 @@ MemoryRollbackAlarm:
     Statistic: 'Average'
     Threshold: {{.DeploymentConfiguration.Rollback.MemoryUtilization}}
     Unit: 'Percent'
+{{- end}}
+
+{{- if .DeploymentConfiguration.MessagesDelayed}}
+MessagesDelayedAlarm:
+  Metadata:
+    'aws:copilot:description': "A CloudWatch alarm associated with number of messages delayed for deployment rollbacks"
+  Type: AWS::CloudWatch::Alarm
+  DependsOn: Service
+  Properties:
+    AlarmDescription: "Roll back worker service if number of messages delayed is greater or equal to {{.DeploymentConfiguration.MemoryUtilization}}% twice in 90 seconds."
+    AlarmName: !Sub ${AWS::StackName}-MsgsDelayedAlarm
+    Namespace: 'AWS/SQS'
+    Dimensions:
+      - Name: ServiceName
+        Value: !Ref Service
+    MetricName: 'ApproximateNumberOfMessagesDelayed'
+    ComparisonOperator: 'GreaterThanOrEqualToThreshold'
+    DatapointsToAlarm: 2
+    EvaluationPeriods: 3
+    Period: 60
+    Statistic: 'Average'
+    Threshold: {{.DeploymentConfiguration.MessagesDelayed}}
+    Unit: 'Count'
 {{- end}}

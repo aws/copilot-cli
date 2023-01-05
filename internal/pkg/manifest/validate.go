@@ -131,7 +131,31 @@ func (d DeploymentConfiguration) validate() error {
 	return nil
 }
 
+func (d DeploymentConfigWithWorkerAlarms) validate() error {
+	if d.isEmpty() {
+		return nil
+	}
+	if err := d.WorkerRollbackAlarms.validate(); err != nil {
+		return fmt.Errorf(`validate "rollback_alarms": %w`, err)
+	}
+	if d.Rolling != nil {
+		for _, validStrategy := range ecsRollingUpdateStrategies {
+			if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
+				return nil
+			}
+		}
+		return fmt.Errorf("invalid rolling deployment strategy %q, must be one of %s",
+			aws.StringValue(d.Rolling),
+			english.WordSeries(ecsRollingUpdateStrategies, "or"))
+	}
+	return nil
+}
+
 func (a AlarmArgs) validate() error {
+	return nil
+}
+
+func (w WorkerAlarmArgs) validate() error {
 	return nil
 }
 
@@ -345,9 +369,6 @@ func (r RequestDrivenWebServiceConfig) validate() error {
 // validate returns nil if WorkerService is configured correctly.
 func (w WorkerService) validate() error {
 	var err error
-	if err = w.DeployConfig.validate(); err != nil {
-		return fmt.Errorf(`validate "deployment": %w`, err)
-	}
 	if err = w.WorkerServiceConfig.validate(); err != nil {
 		return err
 	}
@@ -373,6 +394,9 @@ func (w WorkerService) validate() error {
 // validate returns nil if WorkerServiceConfig is configured correctly.
 func (w WorkerServiceConfig) validate() error {
 	var err error
+	if err = w.DeployConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "deployment": %w`, err)
+	}
 	if err = w.ImageConfig.validate(); err != nil {
 		return fmt.Errorf(`validate "image": %w`, err)
 	}

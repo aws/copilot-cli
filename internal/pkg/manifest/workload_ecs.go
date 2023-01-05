@@ -91,6 +91,12 @@ type AlarmArgs struct {
 	MemoryUtilization *float64 `yaml:"memory_utilization"`
 }
 
+// WorkerAlarmArgs represents specs of CloudWatch alarms for Worker Service deployment rollbacks.
+type WorkerAlarmArgs struct {
+	AlarmArgs
+	MessagesDelayed   *int `yaml:"messages_delayed"`
+}
+
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
 	Rolling        *string                    `yaml:"rolling"`
@@ -98,8 +104,18 @@ type DeploymentConfiguration struct {
 	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
 }
 
+// WorkerDeploymentConfig represents the deployment strategies for a worker service.
+type WorkerDeploymentConfig struct {
+	Rolling *string `yaml:"rolling"`
+	WorkerRollbackAlarms Union[[]string, WorkerAlarmArgs] `yaml:"rollback_alarms"`
+}
+
 func (d *DeploymentConfiguration) isEmpty() bool {
 	return d == nil || (d.Rolling == nil && d.RollbackAlarms.IsZero())
+}
+
+func (w *WorkerDeploymentConfig) isEmpty() bool {
+	return w == nil || (w.Rolling == nil && w.WorkerRollbackAlarms.IsZero())
 }
 
 // ExposedPort will hold the port mapping configuration.
@@ -107,7 +123,6 @@ type ExposedPort struct {
 	ContainerName string // The name of the container that exposes this port.
 	Port          uint16 // The port number.
 	Protocol      string // Either "tcp" or "udp", empty means the default value that the underlying service provides.
-}
 
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
 type ImageWithHealthcheckAndOptionalPort struct {
