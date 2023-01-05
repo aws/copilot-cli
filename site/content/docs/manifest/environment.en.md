@@ -124,9 +124,10 @@ For example, if you're importing an existing VPC:
 network:
   vpc:
     id: 'vpc-12345'
-    public:
-      - id: 'subnet-11111'
-      - id: 'subnet-22222'
+    subnets:
+      public:
+        - id: 'subnet-11111'
+        - id: 'subnet-22222'
 ```
 Alternatively, if you're configuring a Copilot-generated VPC:
 ```yaml
