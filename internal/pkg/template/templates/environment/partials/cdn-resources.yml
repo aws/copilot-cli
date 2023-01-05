@@ -52,6 +52,8 @@ UniqueAliasesAction:
 
 {{- if .CDNConfig.Static}}
 CloudFrontOriginAccessControl:
+  Metadata:
+    'aws:copilot:description': 'Access control to make the content in the S3 bucket only accessible through CloudFront'
   Type: AWS::CloudFront::OriginAccessControl
   Properties: 
     OriginAccessControlConfig: 
