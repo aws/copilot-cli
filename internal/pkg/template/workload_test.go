@@ -29,42 +29,45 @@ func TestTemplate_ParseSvc(t *testing.T) {
 					baseContent += fmt.Sprintf(`{{include "%s" . | indent 2}}`+"\n", name)
 				}
 
-				return map[string][]byte{
-					"templates/workloads/services/backend/cf.yml":                         []byte(baseContent),
-					"templates/workloads/partials/cf/loggroup.yml":                        []byte("loggroup"),
-					"templates/workloads/partials/cf/envvars-container.yml":               []byte("envvars-container"),
-					"templates/workloads/partials/cf/envvars-common.yml":                  []byte("envvars-common"),
-					"templates/workloads/partials/cf/secrets.yml":                         []byte("secrets"),
-					"templates/workloads/partials/cf/executionrole.yml":                   []byte("executionrole"),
-					"templates/workloads/partials/cf/taskrole.yml":                        []byte("taskrole"),
-					"templates/workloads/partials/cf/workload-container.yml":              []byte("workload-container"),
-					"templates/workloads/partials/cf/fargate-taskdef-base-properties.yml": []byte("fargate-taskdef-base-properties"),
-					"templates/workloads/partials/cf/service-base-properties.yml":         []byte("service-base-properties"),
-					"templates/workloads/partials/cf/servicediscovery.yml":                []byte("servicediscovery"),
-					"templates/workloads/partials/cf/addons.yml":                          []byte("addons"),
-					"templates/workloads/partials/cf/sidecars.yml":                        []byte("sidecars"),
-					"templates/workloads/partials/cf/logconfig.yml":                       []byte("logconfig"),
-					"templates/workloads/partials/cf/autoscaling.yml":                     []byte("autoscaling"),
-					"templates/workloads/partials/cf/state-machine-definition.json.yml":   []byte("state-machine-definition"),
-					"templates/workloads/partials/cf/eventrule.yml":                       []byte("eventrule"),
-					"templates/workloads/partials/cf/state-machine.yml":                   []byte("state-machine"),
-					"templates/workloads/partials/cf/efs-access-point.yml":                []byte("efs-access-point"),
-					"templates/workloads/partials/cf/https-listener.yml":                  []byte("https-listener"),
-					"templates/workloads/partials/cf/http-listener.yml":                   []byte("http-listener"),
-					"templates/workloads/partials/cf/env-controller.yml":                  []byte("env-controller"),
-					"templates/workloads/partials/cf/mount-points.yml":                    []byte("mount-points"),
-					"templates/workloads/partials/cf/variables.yml":                       []byte("variables"),
-					"templates/workloads/partials/cf/volumes.yml":                         []byte("volumes"),
-					"templates/workloads/partials/cf/image-overrides.yml":                 []byte("image-overrides"),
-					"templates/workloads/partials/cf/instancerole.yml":                    []byte("instancerole"),
-					"templates/workloads/partials/cf/accessrole.yml":                      []byte("accessrole"),
-					"templates/workloads/partials/cf/publish.yml":                         []byte("publish"),
-					"templates/workloads/partials/cf/subscribe.yml":                       []byte("subscribe"),
-					"templates/workloads/partials/cf/nlb.yml":                             []byte("nlb"),
-					"templates/workloads/partials/cf/vpc-connector.yml":                   []byte("vpc-connector"),
-					"templates/workloads/partials/cf/alb.yml":                             []byte("alb"),
-					"templates/workloads/partials/cf/rollback-alarms.yml":                 []byte("rollback-alarms"),
-				}
+				fs := afero.NewMemMapFs()
+				_ = fs.MkdirAll("templates/workloads/services/backend/", 0755)
+				_ = fs.MkdirAll("templates/workloads/partials/cf/", 0755)
+				_ = afero.WriteFile(fs, "templates/workloads/services/backend/cf.yml", []byte(baseContent), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/loggroup.yml", []byte("loggroup"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/envvars-container.yml", []byte("envvars-container"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/envvars-common.yml", []byte("envvars-common"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/secrets.yml", []byte("secrets"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/executionrole.yml", []byte("executionrole"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/taskrole.yml", []byte("taskrole"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/workload-container.yml", []byte("workload-container"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/fargate-taskdef-base-properties.yml", []byte("fargate-taskdef-base-properties"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/service-base-properties.yml", []byte("service-base-properties"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/servicediscovery.yml", []byte("servicediscovery"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/addons.yml", []byte("addons"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/sidecars.yml", []byte("sidecars"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/logconfig.yml", []byte("logconfig"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/autoscaling.yml", []byte("autoscaling"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/state-machine-definition.json.yml", []byte("state-machine-definition"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/eventrule.yml", []byte("eventrule"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/state-machine.yml", []byte("state-machine"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/efs-access-point.yml", []byte("efs-access-point"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/https-listener.yml", []byte("https-listener"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/http-listener.yml", []byte("http-listener"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/env-controller.yml", []byte("env-controller"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/mount-points.yml", []byte("mount-points"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/variables.yml", []byte("variables"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/volumes.yml", []byte("volumes"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/image-overrides.yml", []byte("image-overrides"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/instancerole.yml", []byte("instancerole"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/accessrole.yml", []byte("accessrole"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/publish.yml", []byte("publish"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/subscribe.yml", []byte("subscribe"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/nlb.yml", []byte("nlb"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/vpc-connector.yml", []byte("vpc-connector"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/alb.yml", []byte("alb"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/rollback-alarms.yml", []byte("rollback-alarms"), 0644)
+
+				return fs
 			},
 			wantedContent: `  loggroup
   envvars-container
