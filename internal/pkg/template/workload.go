@@ -554,37 +554,27 @@ type SecurityGroup interface {
 	Value() string
 }
 
-// PlainSecurityGroup returns a SecurityGroup that is a plain string value.
-func PlainSecurityGroup(value string) Variable {
-	return plainSecurityGroup(value)
-}
-
-// ImportedSecurityGroup returns a SecurityGroup that should be imported from a stack.
-func ImportedSecurityGroup(name string) Variable {
-	return importedSecurityGroup(name)
-}
-
-type plainSecurityGroup string
+type PlainSecurityGroup string
 
 // RequiresImport returns false for a plain string SecurityGroup.
-func (sg plainSecurityGroup) RequiresImport() bool {
+func (sg PlainSecurityGroup) RequiresImport() bool {
 	return false
 }
 
 // Value returns the plain string value of the SecurityGroup.
-func (sg plainSecurityGroup) Value() string {
+func (sg PlainSecurityGroup) Value() string {
 	return string(sg)
 }
 
-type importedSecurityGroup string
+type ImportedSecurityGroup string
 
 // RequiresImport returns true for an imported SecurityGroup.
-func (sg importedSecurityGroup) RequiresImport() bool {
+func (sg ImportedSecurityGroup) RequiresImport() bool {
 	return true
 }
 
 // Value returns the name of the import that will be the value of the SecurityGroup.
-func (sg importedSecurityGroup) Value() string {
+func (sg ImportedSecurityGroup) Value() string {
 	return string(sg)
 }
 
