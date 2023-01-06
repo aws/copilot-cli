@@ -43,4 +43,3 @@ Outputs:
     Value: !GetAtt {{logicalIDSafe .Name}}.Arn
     Export: 
       Name: !Sub ${App}-${Env}-{{logicalIDSafe .Name}}ARN
-]
