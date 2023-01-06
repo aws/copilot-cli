@@ -402,9 +402,11 @@ func TestLogging_IsEmpty(t *testing.T) {
 		"non empty logging": {
 			in: Logging{
 				SecretOptions: map[string]Secret{
-					"secret1": {from: stringOrFromCFN{
-						Plain: aws.String("value1"),
-					}},
+					"secret1": {
+						from: stringOrFromCFN{
+							Plain: aws.String("value1"),
+						},
+					},
 				},
 			},
 		},

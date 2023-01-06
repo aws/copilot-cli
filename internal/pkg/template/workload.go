@@ -302,12 +302,14 @@ func (v importedEnvVar) Value() string {
 	return string(v)
 }
 
-// A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
-type Secret interface {
-	RequiresSub() bool
+type importableSubValueFrom interface {
 	importable
+	RequiresSub() bool
 	ValueFrom() string
 }
+
+// A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
+type Secret importableSubValueFrom
 
 // plainSSMOrSecretARN is a Secret stored that can be referred by an SSM Parameter Name or a secret ARN.
 type plainSSMOrSecretARN struct {
@@ -504,8 +506,8 @@ type DeploymentConfigurationOpts struct {
 
 // RollingUpdateRollbackConfig holds config for rollback alarms.
 type RollingUpdateRollbackConfig struct {
-	AlarmNames    []string // Names of existing alarms.
-	
+	AlarmNames []string // Names of existing alarms.
+
 	// Custom alarms to create.
 	CPUUtilization    *float64
 	MemoryUtilization *float64
@@ -513,7 +515,7 @@ type RollingUpdateRollbackConfig struct {
 
 // HasRollbackAlarms returns true if the client is using ABR.
 func (cfg RollingUpdateRollbackConfig) HasRollbackAlarms() bool {
-	return len(cfg.AlarmNames) > 0 || cfg.HasCustomAlarms() 
+	return len(cfg.AlarmNames) > 0 || cfg.HasCustomAlarms()
 }
 
 // HasCustomAlarms returns true if the client is using Copilot-generated alarms for alarm-based rollbacks.
@@ -523,7 +525,7 @@ func (cfg RollingUpdateRollbackConfig) HasCustomAlarms() bool {
 
 // TruncateAlarmName ensures that alarm names don't exceed the 255 character limit.
 func (cfg RollingUpdateRollbackConfig) TruncateAlarmName(app, env, svc, alarmType string) string {
-	if len(app) + len(env) + len(svc) + len(alarmType) <= 255 {
+	if len(app)+len(env)+len(svc)+len(alarmType) <= 255 {
 		return fmt.Sprintf("%s-%s-%s-%s", app, env, svc, alarmType)
 	}
 	maxSubstringLength := (255 - len(alarmType) - 3) / 3

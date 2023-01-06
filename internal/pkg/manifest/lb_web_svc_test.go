@@ -439,13 +439,15 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 						Secrets: map[string]Secret{
-							"GITHUB_TOKEN": {from: stringOrFromCFN{
-								Plain: aws.String("1111"),
+							"GITHUB_TOKEN": {
+								from: stringOrFromCFN{
+									Plain: aws.String("1111"),
+								},
 							},
-							},
-							"TWILIO_TOKEN": {from: stringOrFromCFN{
-								Plain: aws.String("1111"),
-							},
+							"TWILIO_TOKEN": {
+								from: stringOrFromCFN{
+									Plain: aws.String("1111"),
+								},
 							},
 						},
 						Storage: Storage{
@@ -566,9 +568,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 						},
 						Logging: Logging{
 							SecretOptions: map[string]Secret{
-								"FOO": {from: stringOrFromCFN{
-									Plain: aws.String("BAR"),
-								},
+								"FOO": {
+									from: stringOrFromCFN{
+										Plain: aws.String("BAR"),
+									},
 								},
 							},
 						},
@@ -647,13 +650,15 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 							},
 						},
 						Secrets: map[string]Secret{
-							"GITHUB_TOKEN": {from: stringOrFromCFN{
-								Plain: aws.String("1111"),
+							"GITHUB_TOKEN": {
+								from: stringOrFromCFN{
+									Plain: aws.String("1111"),
+								},
 							},
-							},
-							"TWILIO_TOKEN": {from: stringOrFromCFN{
-								Plain: aws.String("1111"),
-							},
+							"TWILIO_TOKEN": {
+								from: stringOrFromCFN{
+									Plain: aws.String("1111"),
+								},
 							},
 						},
 						Storage: Storage{
@@ -695,9 +700,10 @@ func TestLoadBalancedWebService_ApplyEnv(t *testing.T) {
 					Logging: Logging{
 						ConfigFile: aws.String("mockConfigFile"),
 						SecretOptions: map[string]Secret{
-							"FOO": {from: stringOrFromCFN{
-								Plain: aws.String("BAR"),
-							},
+							"FOO": {
+								from: stringOrFromCFN{
+									Plain: aws.String("BAR"),
+								},
 							},
 						},
 					},
