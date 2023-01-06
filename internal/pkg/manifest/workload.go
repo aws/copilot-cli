@@ -636,7 +636,7 @@ func (s *SubnetListOrArgs) UnmarshalYAML(value *yaml.Node) error {
 // SecurityGroupsIDsOrConfig represents security groups attached to task. It supports unmarshalling
 // yaml which can either be of type SecurityGroupsConfig or a list of strings.
 type SecurityGroupsIDsOrConfig struct {
-	IDs            []string
+	IDs            []stringOrFromCFN
 	AdvancedConfig SecurityGroupsConfig
 }
 
@@ -647,8 +647,8 @@ func (s *SecurityGroupsIDsOrConfig) isEmpty() bool {
 // SecurityGroupsConfig represents which security groups are attached to a task
 // and if default security group is applied.
 type SecurityGroupsConfig struct {
-	SecurityGroups []string `yaml:"groups"`
-	DenyDefault    *bool    `yaml:"deny_default"`
+	SecurityGroups []stringOrFromCFN `yaml:"groups"`
+	DenyDefault    *bool             `yaml:"deny_default"`
 }
 
 func (s *SecurityGroupsConfig) isEmpty() bool {
@@ -680,7 +680,7 @@ func (s *SecurityGroupsIDsOrConfig) UnmarshalYAML(value *yaml.Node) error {
 
 // GetIDs returns security groups from SecurityGroupsIDsOrConfig that are attached to task.
 // nil is returned if no security groups are specified.
-func (s *SecurityGroupsIDsOrConfig) GetIDs() []string {
+func (s *SecurityGroupsIDsOrConfig) GetIDs() []stringOrFromCFN {
 	if !s.AdvancedConfig.isEmpty() {
 		return s.AdvancedConfig.SecurityGroups
 	}

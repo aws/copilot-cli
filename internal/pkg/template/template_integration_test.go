@@ -419,9 +419,10 @@ func TestTemplate_ParseNetwork(t *testing.T) {
 			input: template.NetworkOpts{
 				AssignPublicIP: "DISABLED",
 				SubnetsType:    "PrivateSubnets",
-				SecurityGroups: []string{
-					"sg-1bcf1d5b",
-					"sg-asdasdas",
+				SecurityGroups: []template.SecurityGroup{
+					template.PlainSecurityGroup("sg-1bcf1d5b"),
+					template.PlainSecurityGroup("sg-asdasdas"),
+					template.ImportedSecurityGroup("mydb-sg001"),
 				},
 			},
 			wantedNetworkConfig: `
@@ -435,15 +436,16 @@ func TestTemplate_ParseNetwork(t *testing.T) {
      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
      - "sg-1bcf1d5b"
      - "sg-asdasdas"
+	 - Fn::ImportValue: mydb-sg001
 `,
 		},
 		"should render AWS VPC configuration without default environment security group": {
 			input: template.NetworkOpts{
 				AssignPublicIP: "DISABLED",
 				SubnetsType:    "PrivateSubnets",
-				SecurityGroups: []string{
-					"sg-1bcf1d5b",
-					"sg-asdasdas",
+				SecurityGroups: []template.SecurityGroup{
+					template.PlainSecurityGroup("sg-1bcf1d5b"),
+					template.PlainSecurityGroup("sg-asdasdas"),
 				},
 				DenyDefaultSecurityGroup: true,
 			},

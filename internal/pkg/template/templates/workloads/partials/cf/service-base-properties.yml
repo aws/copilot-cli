@@ -93,7 +93,10 @@ NetworkConfiguration:
       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
       {{- end}}
       {{- range $sg := .Network.SecurityGroups}}
-      - {{$sg}}
+      {{- if not $sg.RequiresImport}}
+      - {{$sg.Value}}
+      {{- else}}
+      - Fn::ImportValue: {{$sg.Value}} {{- end}}
       {{- end}}
       {{- if .NLB}}
       - !Ref NLBSecurityGroup

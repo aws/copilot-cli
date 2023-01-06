@@ -1650,6 +1650,7 @@ func (r OverrideRule) validate() error {
 	return nil
 }
 
+// validate returns nil if Variable is configured correctly.
 func (v Variable) validate() error {
 	if err := v.FromCFN.validate(); err != nil {
 		return fmt.Errorf(`validate "from_cfn": %w`, err)
@@ -1657,6 +1658,15 @@ func (v Variable) validate() error {
 	return nil
 }
 
+// validate returns nil if stringorFromCFN is configured correctly.
+func (s stringOrFromCFN) validate() error {
+	if s.isEmpty() {
+		return nil
+	}
+	return s.FromCFN.validate()
+}
+
+// validate returns nil if fromCFN is configured correctly.
 func (cfg fromCFN) validate() error {
 	if cfg.isEmpty() {
 		return nil
