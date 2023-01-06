@@ -56,7 +56,6 @@ MessagesDelayedAlarm:
   Metadata:
     'aws:copilot:description': "A CloudWatch alarm associated with number of messages delayed for deployment rollbacks"
   Type: AWS::CloudWatch::Alarm
-  DependsOn: Service
   Properties:
     AlarmDescription: "Roll back worker service if number of messages delayed is greater or equal to {{.DeploymentConfiguration.Rollback.MessagesDelayed}} twice in 90 seconds."
     AlarmName: {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackMsgsDelayedAlarm"}}
