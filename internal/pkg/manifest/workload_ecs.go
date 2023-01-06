@@ -211,8 +211,8 @@ func (s *Secret) IsSecretsManagerName() bool {
 	return !s.fromSecretsManager.IsEmpty()
 }
 
-// SSMRequiresImport returns true if the SSM parameter name or secret ARN value is imported from CloudFormation stack.
-func (s *Secret) SSMRequiresImport() bool {
+// RequiresImport returns true if the SSM parameter name or secret ARN value is imported from CloudFormation stack.
+func (s *Secret) RequiresImport() bool {
 	return !s.from.FromCFN.isEmpty()
 }
 
@@ -220,10 +220,10 @@ func (s *Secret) SSMRequiresImport() bool {
 func (s *Secret) Value() string {
 	if !s.fromSecretsManager.IsEmpty() {
 		return aws.StringValue(s.fromSecretsManager.Name)
-	} else if !s.SSMRequiresImport() {
-		return aws.StringValue(s.from.Plain)
-	} else {
+	} else if s.RequiresImport() {
 		return aws.StringValue(s.from.FromCFN.Name)
+	} else {
+		return aws.StringValue(s.from.Plain)
 	}
 }
 

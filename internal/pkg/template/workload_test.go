@@ -144,7 +144,7 @@ func TestHasSecrets(t *testing.T) {
 		"service has secrets": {
 			in: WorkloadOpts{
 				Secrets: map[string]Secret{
-					"hello": PlainSecretFromSSMOrARN("world"),
+					"hello": SecretFromPlainSSMOrARN("world"),
 				},
 			},
 			wanted: true,
@@ -273,27 +273,27 @@ func TestHTTPTargetContainer_IsHTTPS(t *testing.T) {
 }
 
 func TestPlainSSMOrSecretARN_RequiresSub(t *testing.T) {
-	require.False(t, plainSSMOrSecretARN{}.RequiresSub(), "SSM Parameter Store or secret ARNs do not require !Sub")
+	require.False(t, plainSSMOrSecretARN{}.RequiresSub(), "plain SSM Parameter Store or secret ARNs do not require !Sub")
 }
 
 func TestPlainSSMOrSecretARN_RequiresImport(t *testing.T) {
-	require.False(t, plainSSMOrSecretARN{}.RequiresImport(), "secret name that refers to a value imported from CloudFormation Stack")
+	require.False(t, plainSSMOrSecretARN{}.RequiresImport(), "plain SSM Parameter Store or secret ARNs do not require !ImportValue")
 }
 
 func TestPlainSSMOrSecretARN_ValueFrom(t *testing.T) {
-	require.Equal(t, "/github/token", PlainSecretFromSSMOrARN("/github/token").ValueFrom())
+	require.Equal(t, "/github/token", SecretFromPlainSSMOrARN("/github/token").ValueFrom())
 }
 
 func TestImportedSSMOrSecretARN_RequiresSub(t *testing.T) {
-	require.False(t, importedSSMorSecretARN{}.RequiresSub(), "SSM Parameter Store or secret ARNs do not require !Sub")
+	require.False(t, importedSSMorSecretARN{}.RequiresSub(), "imported SSM Parameter Store or secret ARNs do not require !Sub")
 }
 
 func TestImportedSSMOrSecretARN_RequiresImport(t *testing.T) {
-	require.True(t, importedSSMorSecretARN{}.RequiresImport(), "secret name that refers to a value imported from CloudFormation Stack")
+	require.True(t, importedSSMorSecretARN{}.RequiresImport(), "imported SSM Parameter Store or secret ARNs requires !ImportValue")
 }
 
 func TestImportedSSMOrSecretARN_ValueFrom(t *testing.T) {
-	require.Equal(t, "mygithubtoken", ImportedSecretFromSSMOrARN("mygithubtoken").ValueFrom())
+	require.Equal(t, "stack-SSMGHTokenName", SecretFromImportedSSMOrARN("stack-SSMGHTokenName").ValueFrom())
 }
 
 func TestSecretsManagerName_RequiresSub(t *testing.T) {
@@ -301,7 +301,7 @@ func TestSecretsManagerName_RequiresSub(t *testing.T) {
 }
 
 func TestSecretsManagerName_RequiresImport(t *testing.T) {
-	require.False(t, secretsManagerName{}.RequiresImport(), "secret name that refers to a value imported from CloudFormation Stack")
+	require.False(t, secretsManagerName{}.RequiresImport(), "secrets referring to a SecretsManager name do not require !ImportValue")
 }
 
 func TestSecretsManagerName_Service(t *testing.T) {

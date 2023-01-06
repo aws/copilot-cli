@@ -45,9 +45,10 @@ publish:
     - name: mytopic
       fifo: true
 secrets:
-  gitusername:
-    from_cfn: MySSMSecret
-  gitpassword:
+  SQL_PASS: SQL_PASS
+  GIT_USERNAME:
+    from_cfn: stack-SSMGHUserName
+  DB:
     secretsmanager: demo/test/mysql
 
 sidecars:
@@ -62,6 +63,12 @@ sidecars:
       NGINX_PORT: 8080
     labels:
       com.amazonaws.ecs.copilot.sidecars.nginx.description: tricky
+    secrets:
+      SQL_PASS: SQL_PASS      
+      GIT_USERNAME:
+        from_cfn: stack-SSMGHUserName
+      DB:
+        secretsmanager: 'demo/testing/mysql'
 
 network:
   vpc:

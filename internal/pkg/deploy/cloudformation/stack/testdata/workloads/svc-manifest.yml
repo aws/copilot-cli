@@ -68,11 +68,12 @@ environments:
         path: /
         grace_period: 30s
       deregistration_delay: 30s
-    secrets:                      
-      gitusername:
-        from_cfn: MySSMSecret
+    secrets:
+      SQL_PASS: SQL_PASS      
+      GIT_USERNAME:
+       from_cfn: stack-SSMGHUserName
       DB:
-        secretsmanager: 'valo/testing/mysql'
+       secretsmanager: 'demo/testing/mysql'
   prod:
     count:
       range:
@@ -98,6 +99,14 @@ environments:
           from_cfn: MyDB
       secrets:
         GITHUB_TOKEN: GITHUB_TOKEN
+        MONGO_DB:
+          from_cfn: stack-MongoUserName
+      secretOptions:
+        SQL_USERNAME: SQL_USERNAME
+        GIT_USERNAME:
+          from_cfn: stack-SSMGHUserName
+        DB:
+          secretsmanager: 'demo/testing/mysql'
     http:
       path: '/'
       alias: example.com
@@ -116,6 +125,12 @@ environments:
         healthcheck:
           command: ["CMD-SHELL", "curl -f http://localhost:8080 || exit 1"]
           interval: 10s
+        secrets:
+          SQL_PASS: SQL_PASS      
+          GIT_USERNAME:
+            from_cfn: stack-SSMGHUserName
+          DB:
+            secretsmanager: 'demo/testing/mysql'
       operation:
         image: "alpine:latest"
         command: ["echo", "$COPILOT_APPLICATION_NAME"]

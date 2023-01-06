@@ -1285,14 +1285,14 @@ func TestSecretTransformer_Transformer(t *testing.T) {
 			override: func(s *Secret) {
 				s.from = stringOrFromCFN{
 					FromCFN: fromCFN{
-						Name: aws.String("mygithubtoken"),
+						Name: aws.String("stack-SSMGHTokenName"),
 					},
 				}
 			},
 			wanted: func(s *Secret) {
 				s.from = stringOrFromCFN{
 					FromCFN: fromCFN{
-						Name: aws.String("mygithubtoken"),
+						Name: aws.String("stack-SSMGHTokenName"),
 					},
 				}
 			},

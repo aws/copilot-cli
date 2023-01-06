@@ -166,7 +166,6 @@ func TestVariable_RequiresImport(t *testing.T) {
 					Plain: stringP("plain"),
 				},
 			},
-			wanted: false,
 		},
 	}
 	for name, tc := range testCases {
@@ -220,25 +219,28 @@ func TestSecret_UnmarshalYAML(t *testing.T) {
 		},
 		"should be able to unmarshal an plain SSM parameter name": {
 			in: "/github/token",
-			wanted: Secret{from: stringOrFromCFN{
-				Plain: aws.String("/github/token"),
-			},
+			wanted: Secret{
+				from: stringOrFromCFN{
+					Plain: aws.String("/github/token"),
+				},
 			},
 		},
 		"should be able to unmarshal an imported SSM parameter name from other cloudformation stack": {
-			in: `from_cfn: "mygithubtoken"`,
-			wanted: Secret{from: stringOrFromCFN{
-				FromCFN: fromCFN{
-					Name: aws.String("mygithubtoken"),
+			in: `from_cfn: "stack-SSMGHTokenName"`,
+			wanted: Secret{
+				from: stringOrFromCFN{
+					FromCFN: fromCFN{
+						Name: aws.String("stack-SSMGHTokenName"),
+					},
 				},
-			},
 			},
 		},
 		"should be able to unmarshal a plain SecretsManager ARN": {
 			in: "arn:aws:secretsmanager:us-west-2:111122223333:secret:aes128-1a2b3c",
-			wanted: Secret{from: stringOrFromCFN{
-				Plain: aws.String("arn:aws:secretsmanager:us-west-2:111122223333:secret:aes128-1a2b3c"),
-			},
+			wanted: Secret{
+				from: stringOrFromCFN{
+					Plain: aws.String("arn:aws:secretsmanager:us-west-2:111122223333:secret:aes128-1a2b3c"),
+				},
 			},
 		},
 		"should be able to unmarshal a SecretsManager name": {
@@ -272,9 +274,10 @@ func TestSecret_IsSecretsManagerName(t *testing.T) {
 		wanted bool
 	}{
 		"should return false if the secret refers to an SSM parameter": {
-			in: Secret{from: stringOrFromCFN{
-				Plain: aws.String("/github/token"),
-			},
+			in: Secret{
+				from: stringOrFromCFN{
+					Plain: aws.String("/github/token"),
+				},
 			},
 		},
 		"should return true if the secret refers to a SecretsManager secret name": {
@@ -282,10 +285,11 @@ func TestSecret_IsSecretsManagerName(t *testing.T) {
 			wanted: true,
 		},
 		"should return false if the secret is imported": {
-			in: Secret{from: stringOrFromCFN{
-				FromCFN: fromCFN{aws.String("mygithubtoken")},
-			}},
-			wanted: false,
+			in: Secret{
+				from: stringOrFromCFN{
+					FromCFN: fromCFN{aws.String("stack-SSMGHTokenName")},
+				},
+			},
 		},
 	}
 	for name, tc := range testCases {
@@ -295,31 +299,39 @@ func TestSecret_IsSecretsManagerName(t *testing.T) {
 	}
 }
 
-func TestSSMRequiresImport(t *testing.T) {
+func TestSSMOrSecretARN_RequiresImport(t *testing.T) {
 	testCases := map[string]struct {
 		in     Secret
 		wanted bool
 	}{
 		"should return false if secret is plain": {
-			in: Secret{from: stringOrFromCFN{
-				Plain: aws.String("aes128-1a2b3c"),
-			},
-			},
-			wanted: false,
-		},
-		"should return true if secret is imported": {
-			in: Secret{from: stringOrFromCFN{
-				FromCFN: fromCFN{
-					Name: aws.String("mygithubtoken"),
+			in: Secret{
+				from: stringOrFromCFN{
+					Plain: aws.String("aes128-1a2b3c"),
 				},
 			},
+		},
+		"should return true if secret is imported": {
+			in: Secret{
+				from: stringOrFromCFN{
+					FromCFN: fromCFN{
+						Name: aws.String("stack-SSMGHTokenName"),
+					},
+				},
 			},
 			wanted: true,
+		},
+		"should return false if secret is from secrets manager": {
+			in: Secret{
+				fromSecretsManager: secretsManagerSecret{
+					Name: aws.String("aes128-1a2b3c"),
+				},
+			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wanted, tc.in.SSMRequiresImport())
+			require.Equal(t, tc.wanted, tc.in.RequiresImport())
 		})
 	}
 }
@@ -330,19 +342,22 @@ func TestSecret_Value(t *testing.T) {
 		wanted string
 	}{
 		"should return the SSM parameter name if the secret is just a string": {
-			in: Secret{from: stringOrFromCFN{
-				Plain: aws.String("/github/token"),
-			}},
+			in: Secret{
+				from: stringOrFromCFN{
+					Plain: aws.String("/github/token"),
+				},
+			},
 			wanted: "/github/token",
 		},
 		"should return the imported name of the SSM parameter or secretARN": {
-			in: Secret{from: stringOrFromCFN{
-				FromCFN: fromCFN{
-					Name: aws.String("mygithubtoken"),
+			in: Secret{
+				from: stringOrFromCFN{
+					FromCFN: fromCFN{
+						Name: aws.String("stack-SSMGHTokenName"),
+					},
 				},
 			},
-			},
-			wanted: "mygithubtoken",
+			wanted: "stack-SSMGHTokenName",
 		},
 		"should return the SecretsManager secret name when the secret is from SecretsManager": {
 			in:     Secret{fromSecretsManager: secretsManagerSecret{Name: aws.String("aes128-1a2b3c")}},
