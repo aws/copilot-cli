@@ -65,6 +65,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/nlb.yml", []byte("nlb"), 0644)
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/vpc-connector.yml", []byte("vpc-connector"), 0644)
 				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/alb.yml", []byte("alb"), 0644)
+				_ = afero.WriteFile(fs, "templates/workloads/partials/cf/rollback-alarms.yml", []byte("rollback-alarms"), 0644)
 
 				return fs
 			},
@@ -100,6 +101,7 @@ func TestTemplate_ParseSvc(t *testing.T) {
   nlb
   vpc-connector
   alb
+  rollback-alarms
 `,
 		},
 	}
@@ -426,3 +428,35 @@ func TestEnvControllerParameters(t *testing.T) {
 		})
 	}
 }
+
+func TestRollingUpdateRollbackConfig_TruncateAlarmName(t *testing.T) {
+	testCases := map[string]struct {
+		config   RollingUpdateRollbackConfig
+		inApp    string
+		inEnv    string
+		inSvc    string
+		inAlarmType string
+		expected string
+	}{
+		"with no need to truncate": {
+			inApp: "shortAppName",
+			inEnv: "shortEnvName",
+			inSvc: "shortSvcName",
+			inAlarmType: "CopilotRollbackMemAlarm",
+			expected: "shortAppName-shortEnvName-shortSvcName-CopilotRollbackMemAlarm",
+		},
+		"with need to truncate at 76 chars per element": {
+			inApp: "12345678911234567892123456789312345678941234567895123456789612345678971234567898",
+			inEnv: "12345678911234567892123456789312345678941234567895123456789612345678971234567898",
+			inSvc: "12345678911234567892123456789312345678941234567895123456789612345678971234567898",
+			inAlarmType: "CopilotRollbackCPUAlarm",
+			expected: "1234567891123456789212345678931234567894123456789512345678961234567897123456-1234567891123456789212345678931234567894123456789512345678961234567897123456-1234567891123456789212345678931234567894123456789512345678961234567897123456-CopilotRollbackCPUAlarm",
+		},
+		
+	}
+	for name, tc := range testCases {
+	t.Run(name, func(t *testing.T) {
+		require.Equal(t, tc.expected, tc.config.TruncateAlarmName(tc.inApp, tc.inEnv, tc.inSvc, tc.inAlarmType))
+	})}
+}
+

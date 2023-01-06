@@ -284,6 +284,7 @@ Outputs:
 			Network: template.NetworkOpts{
 				AssignPublicIP: template.EnablePublicIP,
 				SubnetsType:    template.PublicSubnetsPlacement,
+				SecurityGroups: []template.SecurityGroup{},
 			},
 			DeploymentConfiguration: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: 100,
