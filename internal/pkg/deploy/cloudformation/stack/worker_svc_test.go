@@ -137,9 +137,12 @@ Outputs:
 					StringSlice: []string{"here"},
 				}
 				svc.manifest.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
-				svc.manifest.DeployConfig = manifest.DeploymentConfiguration{
+				svc.manifest.DeployConfig = manifest.WorkerDeploymentConfig{
 					Rolling: aws.String("default"),
-				}
+					WorkerRollbackAlarms: manifest.AdvancedToUnion[[]string, manifest.WorkerAlarmArgs](
+						manifest.WorkerAlarmArgs{
+							MessagesDelayed: aws.Int(10),
+						})}
 			},
 			mockDependencies: func(t *testing.T, ctrl *gomock.Controller, svc *WorkerService) {
 				m := mocks.NewMockworkerSvcReadParser(ctrl)
@@ -170,6 +173,7 @@ Outputs:
 						DeploymentConfiguration: template.DeploymentConfigurationOpts{
 							MinHealthyPercent: 100,
 							MaxPercent:        200,
+							Rollback:          template.RollingUpdateRollbackConfig{MessagesDelayed: aws.Int(10)},
 						},
 						EntryPoint: []string{"enter", "from"},
 						Command:    []string{"here"},

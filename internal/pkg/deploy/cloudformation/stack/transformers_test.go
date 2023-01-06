@@ -2121,6 +2121,53 @@ func Test_convertDeploymentConfig(t *testing.T) {
 	}
 }
 
+func Test_convertWorkerDeploymentConfig(t *testing.T) {
+	testCases := map[string]struct {
+		in  manifest.WorkerDeploymentConfig
+		out template.DeploymentConfigurationOpts
+	}{
+		"if alarm names entered, format and populate": {
+			in: manifest.WorkerDeploymentConfig{
+				WorkerRollbackAlarms: manifest.BasicToUnion[[]string, manifest.WorkerAlarmArgs](
+					[]string{"alarmName1", "alarmName2"}),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+				Rollback: template.RollingUpdateRollbackConfig{
+					AlarmNames: []string{"alarmName1", "alarmName2"},
+				},
+			},
+		},
+		"if alarm args entered, transform": {
+			in: manifest.WorkerDeploymentConfig{
+				WorkerRollbackAlarms: manifest.AdvancedToUnion[[]string, manifest.WorkerAlarmArgs](
+					manifest.WorkerAlarmArgs{
+						AlarmArgs: manifest.AlarmArgs{
+							CPUUtilization:    aws.Float64(34),
+							MemoryUtilization: aws.Float64(56),
+						},
+						MessagesDelayed: aws.Int(10),
+					}),
+			},
+			out: template.DeploymentConfigurationOpts{
+				MinHealthyPercent: minHealthyPercentDefault,
+				MaxPercent:        maxPercentDefault,
+				Rollback: template.RollingUpdateRollbackConfig{
+					CPUUtilization:    aws.Float64(34),
+					MemoryUtilization: aws.Float64(56),
+					MessagesDelayed:   aws.Int(10),
+				},
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tc.out, convertWorkerDeploymentConfig(tc.in))
+		})
+	}
+}
+
 func Test_convertPlatform(t *testing.T) {
 	testCases := map[string]struct {
 		in  manifest.PlatformArgsOrString
