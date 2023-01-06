@@ -53,7 +53,7 @@ type WorkerServiceConfig struct {
 	PublishConfig    PublishConfig                    `yaml:"publish"`
 	Network          NetworkConfig                    `yaml:"network"`
 	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides"`
-	DeployConfig     DeploymentConfigWithWorkerAlarms `yaml:"deployment"`
+	DeployConfig     WorkerDeploymentConfig           `yaml:"deployment"`
 	Observability    Observability                    `yaml:"observability"`
 }
 

@@ -94,19 +94,19 @@ type AlarmArgs struct {
 // WorkerAlarmArgs represents specs of CloudWatch alarms for Worker Service deployment rollbacks.
 type WorkerAlarmArgs struct {
 	AlarmArgs
-	MessagesDelayed   *int `yaml:"messages_delayed"`
+	MessagesDelayed *int `yaml:"messages_delayed"`
 }
 
 // DeploymentConfiguration represents the deployment strategies for a service.
 type DeploymentConfiguration struct {
 	Rolling        *string                    `yaml:"rolling"`
-	RollbackAlarms Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"` 
+	RollbackAlarms Union[[]string, AlarmArgs] `yaml:"rollback_alarms"`
 	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
 }
 
 // WorkerDeploymentConfig represents the deployment strategies for a worker service.
 type WorkerDeploymentConfig struct {
-	Rolling *string `yaml:"rolling"`
+	Rolling              *string                          `yaml:"rolling"`
 	WorkerRollbackAlarms Union[[]string, WorkerAlarmArgs] `yaml:"rollback_alarms"`
 }
 
@@ -123,6 +123,7 @@ type ExposedPort struct {
 	ContainerName string // The name of the container that exposes this port.
 	Port          uint16 // The port number.
 	Protocol      string // Either "tcp" or "udp", empty means the default value that the underlying service provides.
+}
 
 // ImageWithHealthcheckAndOptionalPort represents a container image with an optional exposed port and health check.
 type ImageWithHealthcheckAndOptionalPort struct {

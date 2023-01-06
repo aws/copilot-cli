@@ -836,7 +836,6 @@ func convertWorkerDeploymentConfig(in manifest.WorkerDeploymentConfig) template.
 	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
 		out.MinHealthyPercent = minHealthyPercentRecreate
 		out.MaxPercent = maxPercentRecreate
-		out.MessagesDelayed = aws.IntValue(in.WorkerRollbackAlarms.Advanced.MessagesDelayed)
 	}
 	return out
 }

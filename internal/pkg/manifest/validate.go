@@ -131,7 +131,7 @@ func (d DeploymentConfiguration) validate() error {
 	return nil
 }
 
-func (d DeploymentConfigWithWorkerAlarms) validate() error {
+func (d WorkerDeploymentConfig) validate() error {
 	if d.isEmpty() {
 		return nil
 	}

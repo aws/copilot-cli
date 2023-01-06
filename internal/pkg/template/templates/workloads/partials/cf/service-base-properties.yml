@@ -27,14 +27,11 @@ DeploymentConfiguration:
       {{- end }}
       {{- if .DeploymentConfiguration.Rollback.MemoryUtilization }}
       - {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackMemAlarm"}}
-      {{- end}}
+      {{- end }}
+      {{- if .DeploymentConfiguration.Rollback.MessagesDelayed }}
+      - {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackMsgsDelayedAlarm"}}
+      {{- end }}
     {{- end }}
-    Enable: true
-    Rollback: true
-  {{- end }}
-  {{- if .DeploymentConfiguration.MessagesDelayed }}
-  Alarms:
-    AlarmNames: !Sub ${AWS::StackName}-MsgsDelayedAlarm
     Enable: true
     Rollback: true
   {{- end }}

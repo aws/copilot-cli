@@ -479,7 +479,7 @@ func (cfg RollingUpdateRollbackConfig) HasRollbackAlarms() bool {
 
 // HasCustomAlarms returns true if the client is using Copilot-generated alarms for alarm-based rollbacks.
 func (cfg RollingUpdateRollbackConfig) HasCustomAlarms() bool {
-	return cfg.CPUUtilization != nil || cfg.MemoryUtilization != nil
+	return cfg.CPUUtilization != nil || cfg.MemoryUtilization != nil || cfg.MessagesDelayed != nil
 }
 
 // TruncateAlarmName ensures that alarm names don't exceed the 255 character limit.
