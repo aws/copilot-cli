@@ -436,7 +436,7 @@ func TestTemplate_ParseNetwork(t *testing.T) {
      - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
      - "sg-1bcf1d5b"
      - "sg-asdasdas"
-	 - Fn::ImportValue: mydb-sg001
+     - Fn::ImportValue: mydb-sg001
 `,
 		},
 		"should render AWS VPC configuration without default environment security group": {
