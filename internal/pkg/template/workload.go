@@ -107,6 +107,7 @@ var (
 		"nlb",
 		"vpc-connector",
 		"alb",
+		"rollback-alarms",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -259,11 +260,13 @@ type importable interface {
 	RequiresImport() bool
 }
 
-// Variable represents the value of an environment variable.
-type Variable interface {
+type importableValue interface {
 	importable
 	Value() string
 }
+
+// Variable represents the value of an environment variable.
+type Variable importableValue
 
 // ImportedVariable returns a Variable that should be imported from a stack.
 func ImportedVariable(name string) Variable {
@@ -490,13 +493,41 @@ type ObservabilityOpts struct {
 	Tracing string // The name of the vendor used for tracing.
 }
 
-// DeploymentConfigurationOpts holds values for MinHealthyPercent and MaxPercent.
+// DeploymentConfigurationOpts holds configuration for rolling deployments.
 type DeploymentConfigurationOpts struct {
 	// The lower limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
 	MinHealthyPercent int
 	// The upper limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
-	MaxPercent     int
-	RollbackAlarms []string
+	MaxPercent int
+	Rollback   RollingUpdateRollbackConfig
+}
+
+// RollingUpdateRollbackConfig holds config for rollback alarms.
+type RollingUpdateRollbackConfig struct {
+	AlarmNames    []string // Names of existing alarms.
+	
+	// Custom alarms to create.
+	CPUUtilization    *float64
+	MemoryUtilization *float64
+}
+
+// HasRollbackAlarms returns true if the client is using ABR.
+func (cfg RollingUpdateRollbackConfig) HasRollbackAlarms() bool {
+	return len(cfg.AlarmNames) > 0 || cfg.HasCustomAlarms() 
+}
+
+// HasCustomAlarms returns true if the client is using Copilot-generated alarms for alarm-based rollbacks.
+func (cfg RollingUpdateRollbackConfig) HasCustomAlarms() bool {
+	return cfg.CPUUtilization != nil || cfg.MemoryUtilization != nil
+}
+
+// TruncateAlarmName ensures that alarm names don't exceed the 255 character limit.
+func (cfg RollingUpdateRollbackConfig) TruncateAlarmName(app, env, svc, alarmType string) string {
+	if len(app) + len(env) + len(svc) + len(alarmType) <= 255 {
+		return fmt.Sprintf("%s-%s-%s-%s", app, env, svc, alarmType)
+	}
+	maxSubstringLength := (255 - len(alarmType) - 3) / 3
+	return fmt.Sprintf("%s-%s-%s-%s", app[:maxSubstringLength], env[:maxSubstringLength], svc[:maxSubstringLength], alarmType)
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
@@ -578,12 +609,49 @@ type DeadLetterQueue struct {
 
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
-	SecurityGroups []string
+	SecurityGroups []SecurityGroup
 	AssignPublicIP string
 	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
 	SubnetsType              string
 	SubnetIDs                []string
 	DenyDefaultSecurityGroup bool
+}
+
+// SecurityGroup represents the ID of an additional security group associated with the tasks.
+type SecurityGroup importableValue
+
+// PlainSecurityGroup returns a SecurityGroup that is a plain string value.
+func PlainSecurityGroup(value string) SecurityGroup {
+	return plainSecurityGroup(value)
+}
+
+// ImportedSecurityGroup returns a SecurityGroup that should be imported from a stack.
+func ImportedSecurityGroup(name string) SecurityGroup {
+	return importedSecurityGroup(name)
+}
+
+type plainSecurityGroup string
+
+// RequiresImport returns false for a plain string SecurityGroup.
+func (sg plainSecurityGroup) RequiresImport() bool {
+	return false
+}
+
+// Value returns the plain string value of the SecurityGroup.
+func (sg plainSecurityGroup) Value() string {
+	return string(sg)
+}
+
+type importedSecurityGroup string
+
+// RequiresImport returns true for an imported SecurityGroup.
+func (sg importedSecurityGroup) RequiresImport() bool {
+	return true
+}
+
+// Value returns the name of the import that will be the value of the SecurityGroup.
+func (sg importedSecurityGroup) Value() string {
+	return string(sg)
 }
 
 // RuntimePlatformOpts holds configuration needed for Platform configuration.

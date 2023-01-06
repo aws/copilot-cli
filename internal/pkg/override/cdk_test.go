@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aws/copilot-cli/internal/pkg/template"
+
 	"github.com/spf13/afero"
 
 	"github.com/stretchr/testify/require"
@@ -155,4 +157,34 @@ func TestCDK_Override(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "sample cloudformation template\n", string(out))
 	})
+}
+
+func TestScaffoldWithCDK(t *testing.T) {
+	// GIVEN
+	fs := afero.NewMemMapFs()
+	dir := filepath.Join("copilot", "frontend", "overrides")
+
+	// WHEN
+	err := ScaffoldWithCDK(fs, dir, []template.CFNResource{
+		{
+			Type:      "AWS::ECS::Service",
+			LogicalID: "Service",
+		},
+	})
+
+	// THEN
+	t.Log(fs)
+	require.NoError(t, err)
+
+	ok, _ := afero.Exists(fs, filepath.Join(dir, "package.json"))
+	require.True(t, ok, "package.json should exist")
+
+	ok, _ = afero.Exists(fs, filepath.Join(dir, "cdk.json"))
+	require.True(t, ok, "cdk.json should exist")
+
+	ok, _ = afero.Exists(fs, filepath.Join(dir, "stack.ts"))
+	require.True(t, ok, "stack.ts should exist")
+
+	ok, _ = afero.Exists(fs, filepath.Join(dir, "bin", "override.ts"))
+	require.True(t, ok, "bin/override.ts should exist")
 }
