@@ -860,7 +860,11 @@ func TestNetworkConfig_IsEmpty(t *testing.T) {
 			in: NetworkConfig{
 				VPC: vpcConfig{
 					SecurityGroups: SecurityGroupsIDsOrConfig{
-						IDs: []string{"group"},
+						IDs: []stringOrFromCFN{
+							{
+								Plain: aws.String("group"),
+							},
+						},
 					},
 				},
 			},
@@ -880,7 +884,7 @@ func TestNetworkConfig_IsEmpty(t *testing.T) {
 func TestSecurityGroupsConfig_GetIDs(t *testing.T) {
 	testCases := map[string]struct {
 		in     SecurityGroupsIDsOrConfig
-		wanted []string
+		wanted []stringOrFromCFN
 	}{
 		"nil returned when no security groups are specified": {
 			in:     SecurityGroupsIDsOrConfig{},
@@ -889,24 +893,66 @@ func TestSecurityGroupsConfig_GetIDs(t *testing.T) {
 		"security groups in map are returned": {
 			in: SecurityGroupsIDsOrConfig{
 				AdvancedConfig: SecurityGroupsConfig{
-					SecurityGroups: []string{"group", "group1"},
+					SecurityGroups: []stringOrFromCFN{
+						{
+							Plain: aws.String("group"),
+						},
+						{
+							Plain: aws.String("group1"),
+						},
+						{
+							FromCFN: fromCFN{
+								Name: aws.String("sg-001"),
+							},
+						},
+					},
 				},
 			},
-			wanted: []string{"group", "group1"},
+			wanted: []stringOrFromCFN{
+				{
+					Plain: aws.String("group"),
+				},
+				{
+					Plain: aws.String("group1"),
+				},
+				{
+					FromCFN: fromCFN{
+						Name: aws.String("sg-001"),
+					},
+				},
+			},
 		},
 		"nil returned when security groups in map are empty": {
 			in: SecurityGroupsIDsOrConfig{
 				AdvancedConfig: SecurityGroupsConfig{
-					SecurityGroups: []string{},
+					SecurityGroups: []stringOrFromCFN{},
 				},
 			},
 			wanted: nil,
 		},
 		"security groups in array are returned": {
 			in: SecurityGroupsIDsOrConfig{
-				IDs: []string{"123", "45"},
+				IDs: []stringOrFromCFN{
+					{
+						Plain: aws.String("123"),
+					},
+					{
+						Plain: aws.String("45"),
+					},
+					{
+						FromCFN: fromCFN{
+							Name: aws.String("sg-001"),
+						},
+					},
+				},
 			},
-			wanted: []string{"123", "45"},
+			wanted: []stringOrFromCFN{
+				{Plain: aws.String("123")},
+				{Plain: aws.String("45")},
+				{FromCFN: fromCFN{
+					Name: aws.String("sg-001"),
+				}},
+			},
 		},
 	}
 
@@ -932,7 +978,11 @@ func TestSecurityGroupsConfig_IsDefaultSecurityGroupDenied(t *testing.T) {
 		"default security group is applied when deny_default is not specified in SG config": {
 			in: SecurityGroupsIDsOrConfig{
 				AdvancedConfig: SecurityGroupsConfig{
-					SecurityGroups: []string{"1"},
+					SecurityGroups: []stringOrFromCFN{
+						{
+							Plain: aws.String("1"),
+						},
+					},
 				},
 			},
 			wanted: false,
@@ -940,15 +990,23 @@ func TestSecurityGroupsConfig_IsDefaultSecurityGroupDenied(t *testing.T) {
 		"default security group is applied when deny_default is false in SG config": {
 			in: SecurityGroupsIDsOrConfig{
 				AdvancedConfig: SecurityGroupsConfig{
-					SecurityGroups: []string{"1"},
-					DenyDefault:    aws.Bool(false),
+					SecurityGroups: []stringOrFromCFN{
+						{
+							Plain: aws.String("1"),
+						},
+					},
+					DenyDefault: aws.Bool(false),
 				},
 			},
 			wanted: false,
 		},
 		"default security group is applied when security group array is specified": {
 			in: SecurityGroupsIDsOrConfig{
-				IDs: []string{"1"},
+				IDs: []stringOrFromCFN{
+					{
+						Plain: aws.String("1"),
+					},
+				},
 			},
 			wanted: false,
 		},
@@ -998,8 +1056,9 @@ network:
   vpc:
     placement: 'public'
     security_groups:
-    - 'sg-1234'
-    - 'sg-4567'
+      - 'sg-1234'
+      - 'sg-4567'
+      - from_cfn: 'dbsg-001'
 `,
 			wantedConfig: &NetworkConfig{
 				VPC: vpcConfig{
@@ -1007,7 +1066,19 @@ network:
 						PlacementString: placementStringP(PublicSubnetPlacement),
 					},
 					SecurityGroups: SecurityGroupsIDsOrConfig{
-						IDs:            []string{"sg-1234", "sg-4567"},
+						IDs: []stringOrFromCFN{
+							{
+								Plain: aws.String("sg-1234"),
+							},
+							{
+								Plain: aws.String("sg-4567"),
+							},
+							{
+								FromCFN: fromCFN{
+									Name: aws.String("dbsg-001"),
+								},
+							},
+						},
 						AdvancedConfig: SecurityGroupsConfig{},
 					},
 				},
@@ -1018,7 +1089,10 @@ network:
 network:
   vpc:
     security_groups:
-      groups: ['sg-1234', 'sg-4567']
+      groups: 
+        - 'sg-1234'
+        - 'sg-4567'
+        - from_cfn: 'dbsg-001'
       deny_default: true
 `,
 			wantedConfig: &NetworkConfig{
@@ -1027,8 +1101,20 @@ network:
 					SecurityGroups: SecurityGroupsIDsOrConfig{
 						IDs: nil,
 						AdvancedConfig: SecurityGroupsConfig{
-							SecurityGroups: []string{"sg-1234", "sg-4567"},
-							DenyDefault:    &trueValue,
+							SecurityGroups: []stringOrFromCFN{
+								{
+									Plain: aws.String("sg-1234"),
+								},
+								{
+									Plain: aws.String("sg-4567"),
+								},
+								{
+									FromCFN: fromCFN{
+										Name: aws.String("dbsg-001"),
+									},
+								},
+							},
+							DenyDefault: &trueValue,
 						},
 					},
 				},
@@ -1047,8 +1133,14 @@ network:
 					SecurityGroups: SecurityGroupsIDsOrConfig{
 						IDs: nil,
 						AdvancedConfig: SecurityGroupsConfig{
-							SecurityGroups: []string{"sg-1234", "sg-4567"},
-							DenyDefault:    nil,
+							SecurityGroups: []stringOrFromCFN{
+								{
+									Plain: aws.String("sg-1234"),
+								},
+								{
+									Plain: aws.String("sg-4567"),
+								},
+							},
 						},
 					},
 				},

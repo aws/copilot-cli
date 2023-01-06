@@ -260,11 +260,13 @@ type importable interface {
 	RequiresImport() bool
 }
 
-// Variable represents the value of an environment variable.
-type Variable interface {
+type importableValue interface {
 	importable
 	Value() string
 }
+
+// Variable represents the value of an environment variable.
+type Variable importableValue
 
 // ImportedVariable returns a Variable that should be imported from a stack.
 func ImportedVariable(name string) Variable {
@@ -570,12 +572,49 @@ type DeadLetterQueue struct {
 
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
-	SecurityGroups []string
+	SecurityGroups []SecurityGroup
 	AssignPublicIP string
 	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
 	SubnetsType              string
 	SubnetIDs                []string
 	DenyDefaultSecurityGroup bool
+}
+
+// SecurityGroup represents the ID of an additional security group associated with the tasks.
+type SecurityGroup importableValue
+
+// PlainSecurityGroup returns a SecurityGroup that is a plain string value.
+func PlainSecurityGroup(value string) SecurityGroup {
+	return plainSecurityGroup(value)
+}
+
+// ImportedSecurityGroup returns a SecurityGroup that should be imported from a stack.
+func ImportedSecurityGroup(name string) SecurityGroup {
+	return importedSecurityGroup(name)
+}
+
+type plainSecurityGroup string
+
+// RequiresImport returns false for a plain string SecurityGroup.
+func (sg plainSecurityGroup) RequiresImport() bool {
+	return false
+}
+
+// Value returns the plain string value of the SecurityGroup.
+func (sg plainSecurityGroup) Value() string {
+	return string(sg)
+}
+
+type importedSecurityGroup string
+
+// RequiresImport returns true for an imported SecurityGroup.
+func (sg importedSecurityGroup) RequiresImport() bool {
+	return true
+}
+
+// Value returns the name of the import that will be the value of the SecurityGroup.
+func (sg importedSecurityGroup) Value() string {
+	return string(sg)
 }
 
 // RuntimePlatformOpts holds configuration needed for Platform configuration.
