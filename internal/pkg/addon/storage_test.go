@@ -73,7 +73,7 @@ func TestS3Template_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, s3 *S3Template) {
 				m := mocks.NewMockParser(ctrl)
 				s3.parser = m
-				m.EXPECT().Parse(s3TemplatePath, *s3, gomock.Any()).Return(nil, errors.New("some error"))
+				m.EXPECT().Parse("mockPath", *s3, gomock.Any()).Return(nil, errors.New("some error"))
 			},
 
 			wantedError: errors.New("some error"),
@@ -82,7 +82,7 @@ func TestS3Template_MarshalBinary(t *testing.T) {
 			mockDependencies: func(ctrl *gomock.Controller, s3 *S3Template) {
 				m := mocks.NewMockParser(ctrl)
 				s3.parser = m
-				m.EXPECT().Parse(s3TemplatePath, *s3, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
+				m.EXPECT().Parse("mockPath", *s3, gomock.Any()).Return(&template.Content{Buffer: bytes.NewBufferString("hello")}, nil)
 
 			},
 
@@ -95,7 +95,9 @@ func TestS3Template_MarshalBinary(t *testing.T) {
 			// GIVEN
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			addon := &S3Template{}
+			addon := &S3Template{
+				tmplPath: "mockPath",
+			}
 			tc.mockDependencies(ctrl, addon)
 
 			// WHEN
