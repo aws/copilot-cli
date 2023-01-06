@@ -954,7 +954,7 @@ func TestWorkerService_validate(t *testing.T) {
 							},
 						},
 					},
-					DeployConfig: DeploymentConfiguration{
+					DeployConfig: WorkerDeploymentConfig{
 						Rolling: aws.String("mockName"),
 					},
 				},
