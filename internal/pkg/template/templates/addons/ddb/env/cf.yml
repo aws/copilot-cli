@@ -36,13 +36,11 @@ Outputs:
   {{envVarName .Name}}:
     Description: "The name of this DynamoDB table."
     Value: !Ref {{logicalIDSafe .Name}}
-#    # Uncomment the "Export" block if you need to inject the table name as an environment variable in a workload. 
-#    Export: 
-#      Name: !Sub ${Env}-{{logicalIDSafe .Name}}TableName
+    Export: 
+      Name: !Sub ${App}-${Env}-{{logicalIDSafe .Name}}TableName
   {{logicalIDSafe .Name}}DynamoDBTableARN:
     Description: "The ARN of the {{.Name}} DynamoDB table."
     Value: !GetAtt {{logicalIDSafe .Name}}.Arn
-#    # Uncomment the "Export" block if you need to reference the DynamoDB table ARN in a workload addon.
-#    Export: 
-#      Name: !Sub ${Env}-{{logicalIDSafe .Name}}ARN
+    Export: 
+      Name: !Sub ${App}-${Env}-{{logicalIDSafe .Name}}ARN
 ]
