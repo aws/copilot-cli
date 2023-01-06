@@ -45,8 +45,7 @@ const (
 
 const (
 	// DefaultVPCCIDR is the default CIDR used for a manged VPC.
-	DefaultVPCCIDR       = "10.0.0.0/16"
-	defaultCDNStaticPath = "*"
+	DefaultVPCCIDR = "10.0.0.0/16"
 )
 
 var (
@@ -451,11 +450,8 @@ func (e *Env) cdnConfig() *template.CDNConfig {
 	if !mftConfig.Static.IsEmpty() {
 		config.Static = &template.CDNStaticAssetConfig{
 			Location: mftConfig.Static.Location,
-			Path:     defaultCDNStaticPath,
+			Path:     mftConfig.Static.Path,
 			Alias:    mftConfig.Static.Alias,
-		}
-		if mftConfig.Static.Path != nil {
-			config.Static.Path = aws.StringValue(mftConfig.Static.Path)
 		}
 	}
 	return config

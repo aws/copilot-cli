@@ -273,14 +273,14 @@ func (cfg *EnvironmentCDNConfig) UnmarshalYAML(value *yaml.Node) error {
 
 // CDNStaticConfig represents the static config for CDN.
 type CDNStaticConfig struct {
-	Location string  `yaml:"location,omitempty"`
-	Alias    string  `yaml:"alias,omitempty"`
-	Path     *string `yaml:"path,omitempty"`
+	Location string `yaml:"location,omitempty"`
+	Alias    string `yaml:"alias,omitempty"`
+	Path     string `yaml:"path,omitempty"`
 }
 
 // IsEmpty returns true if CDNStaticConfig is not configured.
 func (cfg CDNStaticConfig) IsEmpty() bool {
-	return cfg.Location == "" && cfg.Alias == "" && cfg.Path == nil
+	return cfg.Location == "" && cfg.Alias == "" && cfg.Path == ""
 }
 
 // IsEmpty returns true if environmentVPCConfig is not configured.

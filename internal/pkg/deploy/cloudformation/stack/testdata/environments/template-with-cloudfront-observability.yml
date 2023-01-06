@@ -11,6 +11,7 @@ Metadata:
       static_assets:
         location: cf-s3-ecs-demo-bucket.s3.us-west-2.amazonaws.com
         alias: example.com
+        path: static/*
     http:
       public:
         ingress:
@@ -366,7 +367,7 @@ Resources:
             ViewerProtocolPolicy: allow-all
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # See https://go.aws/3bJid3k
             TargetOriginId: !Sub 'copilot-${AppName}-${EnvironmentName}-s3'
-            PathPattern: '*'
+            PathPattern: 'static/*'
         ViewerCertificate:
           AcmCertificateArn: viewer-cert
           MinimumProtocolVersion: TLSv1
