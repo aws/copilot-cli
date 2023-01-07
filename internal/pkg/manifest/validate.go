@@ -36,6 +36,7 @@ const (
 	// Protocols.
 	TCP = "TCP"
 	tls = "TLS"
+	udp = "UDP"
 
 	// Tracing vendors.
 	awsXRAY = "awsxray"
@@ -52,6 +53,7 @@ var (
 	essentialContainerDependsOnValidStatuses = []string{dependsOnStart, dependsOnHealthy}
 	dependsOnValidStatuses                   = []string{dependsOnStart, dependsOnComplete, dependsOnSuccess, dependsOnHealthy}
 	nlbValidProtocols                        = []string{TCP, tls}
+	validContainerProtocols                  = []string{TCP, udp}
 	TracingValidVendors                      = []string{awsXRAY}
 	ecsRollingUpdateStrategies               = []string{ECSDefaultRollingUpdateStrategy, ECSRecreateRollingUpdateStrategy}
 
@@ -1278,6 +1280,23 @@ func (s SidecarConfig) validate() error {
 			return fmt.Errorf(`validate "mount_points[%d]": %w`, ind, err)
 		}
 	}
+	_, protocol, err := ParsePortMapping(s.Port)
+	if err != nil {
+		return err
+	}
+	if protocol != nil {
+		protocolVal := aws.StringValue(protocol)
+		var isValidProtocol bool
+		for _, valid := range validContainerProtocols {
+			if strings.EqualFold(protocolVal, valid) {
+				isValidProtocol = true
+				break
+			}
+		}
+		if !isValidProtocol {
+			return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(validContainerProtocols, "and"))
+		}
+	}
 	if err := s.HealthCheck.validate(); err != nil {
 		return fmt.Errorf(`validate "healthcheck": %w`, err)
 	}
@@ -1793,24 +1812,10 @@ func populateSidecarContainerPortsAndValidate(containerNameFor map[uint16]string
 		if sidecar.Port == nil {
 			continue
 		}
-		sidecarPort, protocol, err := ParsePortMapping(sidecar.Port)
+		sidecarPort, _, err := ParsePortMapping(sidecar.Port)
 		if err != nil {
 			return err
 		}
-		if protocol != nil {
-			protocolVal := aws.StringValue(protocol)
-			var isValidProtocol bool
-			for _, valid := range nlbValidProtocols {
-				if strings.EqualFold(protocolVal, valid) {
-					isValidProtocol = true
-					break
-				}
-			}
-			if !isValidProtocol {
-				return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(nlbValidProtocols, "and"))
-			}
-		}
-
 		port, err := strconv.ParseUint(aws.StringValue(sidecarPort), 10, 16)
 		if err != nil {
 			return err
@@ -1838,24 +1843,20 @@ func populateALBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 	if alb.TargetPort == nil {
 		return nil
 	}
-	containerName := opts.mainContainerName
-	existingContainerName := containerNameFor[aws.Uint16Value(alb.TargetPort)]
-
-	if existingContainerName != "" {
-		containerName = existingContainerName
-		if alb.TargetContainer != nil {
-			if containerName != aws.StringValue(alb.TargetContainer) {
-				return &errContainersExposingSamePort{
-					firstContainer:  aws.StringValue(alb.TargetContainer),
-					secondContainer: containerName,
-					port:            aws.Uint16Value(alb.TargetPort),
-				}
+	if exposed, ok := containerNameFor[aws.Uint16Value(alb.TargetPort)]; ok {
+		if alb.TargetContainer != nil && exposed != aws.StringValue(alb.TargetContainer) {
+			return &errContainersExposingSamePort{
+				firstContainer:  aws.StringValue(alb.TargetContainer),
+				secondContainer: exposed,
+				port:            aws.Uint16Value(alb.TargetPort),
 			}
 		}
-	} else if alb.TargetContainer != nil {
-		containerName = aws.StringValue(alb.TargetContainer)
 	}
-	containerNameFor[aws.Uint16Value(alb.TargetPort)] = containerName
+	targetContainerName := opts.mainContainerName
+	if alb.TargetContainer != nil {
+		targetContainerName = aws.StringValue(alb.TargetContainer)
+	}
+	containerNameFor[aws.Uint16Value(alb.TargetPort)] = targetContainerName
 
 	return nil
 }
@@ -1868,22 +1869,9 @@ func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 	if nlb.Port == nil {
 		return nil
 	}
-	nlbPort, protocol, err := ParsePortMapping(nlb.Port)
+	nlbPort, _, err := ParsePortMapping(nlb.Port)
 	if err != nil {
 		return err
-	}
-	if protocol != nil {
-		protocolVal := aws.StringValue(protocol)
-		var isValidProtocol bool
-		for _, valid := range nlbValidProtocols {
-			if strings.EqualFold(protocolVal, valid) {
-				isValidProtocol = true
-				break
-			}
-		}
-		if !isValidProtocol {
-			return fmt.Errorf(`invalid protocol %s; valid protocols include %s`, protocolVal, english.WordSeries(nlbValidProtocols, "and"))
-		}
 	}
 	port, err := strconv.ParseUint(aws.StringValue(nlbPort), 10, 16)
 	if err != nil {
@@ -1893,25 +1881,20 @@ func populateNLBPortsAndValidate(containerNameFor map[uint16]string, opts valida
 	if nlb.TargetPort != nil {
 		containerPort = uint16(aws.IntValue(nlb.TargetPort))
 	}
-
-	containerName := opts.mainContainerName
-	existingContainerName := containerNameFor[containerPort]
-
-	if existingContainerName != "" {
-		containerName = existingContainerName
-		if nlb.TargetContainer != nil {
-			if containerName != aws.StringValue(nlb.TargetContainer) {
-				return &errContainersExposingSamePort{
-					firstContainer:  aws.StringValue(nlb.TargetContainer),
-					secondContainer: containerName,
-					port:            containerPort,
-				}
+	if exposed, ok := containerNameFor[containerPort]; ok {
+		if nlb.TargetContainer != nil && aws.StringValue(nlb.TargetContainer) != exposed {
+			return &errContainersExposingSamePort{
+				firstContainer:  aws.StringValue(nlb.TargetContainer),
+				secondContainer: exposed,
+				port:            containerPort,
 			}
 		}
-	} else if nlb.TargetContainer != nil {
-		containerName = aws.StringValue(nlb.TargetContainer)
 	}
-	containerNameFor[containerPort] = containerName
+	targetContainerName := opts.mainContainerName
+	if nlb.TargetContainer != nil {
+		targetContainerName = aws.StringValue(nlb.TargetContainer)
+	}
+	containerNameFor[containerPort] = targetContainerName
 
 	return nil
 }

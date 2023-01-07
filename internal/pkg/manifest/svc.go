@@ -522,7 +522,7 @@ func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedP
 		containerPort = uint16(aws.IntValue(cfg.TargetPort))
 	}
 	for _, exposedPort := range exposedPorts {
-		if containerPort == exposedPort.Port && cfg.TargetContainer == nil {
+		if containerPort == exposedPort.Port {
 			return nil, nil
 		}
 	}
