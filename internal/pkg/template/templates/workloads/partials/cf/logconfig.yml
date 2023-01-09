@@ -10,7 +10,7 @@
     - Name: {{$name}}
     {{- if $secret.RequiresImport}}
       ValueFrom:
-        Fn::ImportValue: {{ quote $secret.ValueFrom -}}
+        Fn::ImportValue: {{ quote $secret.ValueFrom }}
     {{- else}}
       ValueFrom: {{if not $secret.RequiresSub }} {{$secret.ValueFrom}} {{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end}}
     {{- end}}

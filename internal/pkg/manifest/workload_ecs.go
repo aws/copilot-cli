@@ -183,7 +183,7 @@ func (t TaskConfig) IsARM() bool {
 
 // Secret represents an identifier for sensitive data stored in either SSM or SecretsManager.
 type Secret struct {
-	from               stringOrFromCFN      // SSM Parameter name or ARN to a secret.
+	from               stringOrFromCFN      // SSM Parameter name or ARN to a secret or secret imported from another CloudFormation stack.
 	fromSecretsManager secretsManagerSecret // Conveniently fetch from a secretsmanager secret name instead of ARN.
 }
 
@@ -222,9 +222,8 @@ func (s *Secret) Value() string {
 		return aws.StringValue(s.fromSecretsManager.Name)
 	} else if s.RequiresImport() {
 		return aws.StringValue(s.from.FromCFN.Name)
-	} else {
-		return aws.StringValue(s.from.Plain)
 	}
+	return aws.StringValue(s.from.Plain)
 }
 
 // secretsManagerSecret represents the name of a secret stored in SecretsManager.
