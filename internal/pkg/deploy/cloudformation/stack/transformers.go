@@ -1046,6 +1046,7 @@ func convertEnvVars(variables map[string]manifest.Variable) map[string]template.
 	return m
 }
 
+// convertSecrets converts the manifest Secrets into a format parsable by the templates pkg.
 func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secret {
 	if len(secrets) == 0 {
 		return nil
@@ -1053,11 +1054,12 @@ func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secr
 	m := make(map[string]template.Secret, len(secrets))
 	for name, mftSecret := range secrets {
 		var tplSecret template.Secret
-		if mftSecret.IsSecretsManagerName() {
+		switch {
+		case mftSecret.IsSecretsManagerName():
 			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
-		} else if mftSecret.RequiresImport() {
+		case mftSecret.RequiresImport():
 			tplSecret = template.SecretFromImportedSSMOrARN(mftSecret.Value())
-		} else {
+		default:
 			tplSecret = template.SecretFromPlainSSMOrARN(mftSecret.Value())
 		}
 		m[name] = tplSecret
