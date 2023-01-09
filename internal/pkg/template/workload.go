@@ -302,30 +302,65 @@ func (v importedEnvVar) Value() string {
 	return string(v)
 }
 
-// A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
-type Secret interface {
+type importableSubValueFrom interface {
+	importable
 	RequiresSub() bool
 	ValueFrom() string
 }
 
-// ssmOrSecretARN is a Secret stored that can be referred by an SSM Parameter Name or a secret ARN.
-type ssmOrSecretARN struct {
+// A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
+type Secret importableSubValueFrom
+
+// plainSSMOrSecretARN is a Secret stored that can be referred by an SSM Parameter Name or a secret ARN.
+type plainSSMOrSecretARN struct {
 	value string
 }
 
 // RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
-func (s ssmOrSecretARN) RequiresSub() bool {
+func (s plainSSMOrSecretARN) RequiresSub() bool {
 	return false
 }
 
-// ValueFrom returns the valueFrom field for the secret.
-func (s ssmOrSecretARN) ValueFrom() string {
+// RequiresImport returns true if the secret should be imported from other CloudFormation stack.
+func (s plainSSMOrSecretARN) RequiresImport() bool {
+	return false
+}
+
+// ValueFrom returns the plain string value of the secret.
+func (s plainSSMOrSecretARN) ValueFrom() string {
 	return s.value
 }
 
-// SecretFromSSMOrARN returns a Secret that refers to an SSM parameter or a secret ARN.
-func SecretFromSSMOrARN(value string) ssmOrSecretARN {
-	return ssmOrSecretARN{
+// SecretFromPlainSSMOrARN returns a Secret that refers to an SSM parameter or a secret ARN.
+func SecretFromPlainSSMOrARN(value string) plainSSMOrSecretARN {
+	return plainSSMOrSecretARN{
+		value: value,
+	}
+}
+
+// importedSSMorSecretARN is a Secret that can be referred by the name of the import value from env addon or an arbitary CloudFormation stack.
+type importedSSMorSecretARN struct {
+	value string
+}
+
+// RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
+func (s importedSSMorSecretARN) RequiresSub() bool {
+	return false
+}
+
+// RequiresImport returns true if the secret should be imported from env addon or an arbitary CloudFormation stack.
+func (s importedSSMorSecretARN) RequiresImport() bool {
+	return true
+}
+
+// ValueFrom returns the name of the import value of the Secret.
+func (s importedSSMorSecretARN) ValueFrom() string {
+	return s.value
+}
+
+// SecretFromImportedSSMOrARN returns a Secret that refers to imported name of SSM parameter or a secret ARN.
+func SecretFromImportedSSMOrARN(value string) importedSSMorSecretARN {
+	return importedSSMorSecretARN{
 		value: value,
 	}
 }
@@ -338,6 +373,11 @@ type secretsManagerName struct {
 // RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
 func (s secretsManagerName) RequiresSub() bool {
 	return true
+}
+
+// RequiresImport returns true if the secret should be imported from other CloudFormation stack.
+func (s secretsManagerName) RequiresImport() bool {
+	return false
 }
 
 // ValueFrom returns the resource ID of the SecretsManager secret for populating the ARN.
