@@ -815,7 +815,7 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
 	out := template.DeploymentConfigurationOpts{
 		MinHealthyPercent: minHealthyPercentDefault,
-		MaxPercent: maxPercentDefault,
+		MaxPercent:        maxPercentDefault,
 		Rollback: template.RollingUpdateRollbackConfig{
 			AlarmNames:        in.RollbackAlarms.Basic,
 			CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
@@ -1052,8 +1052,8 @@ func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secr
 		return nil
 	}
 	m := make(map[string]template.Secret, len(secrets))
+	var tplSecret template.Secret
 	for name, mftSecret := range secrets {
-		var tplSecret template.Secret
 		switch {
 		case mftSecret.IsSecretsManagerName():
 			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
