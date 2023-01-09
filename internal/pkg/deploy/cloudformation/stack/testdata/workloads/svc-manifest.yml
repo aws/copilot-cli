@@ -68,12 +68,6 @@ environments:
         path: /
         grace_period: 30s
       deregistration_delay: 30s
-    secrets:
-      SQL_PASS: SQL_PASS      
-      GIT_USERNAME:
-       from_cfn: stack-SSMGHUserName
-      DB:
-       secretsmanager: 'demo/testing/mysql'
   prod:
     count:
       range:
@@ -86,6 +80,12 @@ environments:
     variables:
       DB_NAME:
         from_cfn: MyDB
+    secrets:
+      SQL_PASS: SQL_PASS      
+      GIT_USERNAME:
+       from_cfn: stack-SSMGHUserName
+      DB:
+       secretsmanager: 'demo/testing/mysql'
     logging:
       retention: 1
       destination:

@@ -183,7 +183,7 @@ func (t TaskConfig) IsARM() bool {
 
 // Secret represents an identifier for sensitive data stored in either SSM or SecretsManager.
 type Secret struct {
-	from               stringOrFromCFN      // SSM Parameter name or ARN to a secret or secret imported from another CloudFormation stack.
+	from               stringOrFromCFN      // SSM Parameter name or ARN to a secret or secret ARN imported from another CloudFormation stack.
 	fromSecretsManager secretsManagerSecret // Conveniently fetch from a secretsmanager secret name instead of ARN.
 }
 

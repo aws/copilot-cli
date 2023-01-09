@@ -217,7 +217,7 @@ func TestSecret_UnmarshalYAML(t *testing.T) {
 			in:        "key: value",
 			wantedErr: errors.New(`cannot marshal "secret" field to a string or "secretsmanager" object`),
 		},
-		"should be able to unmarshal an plain SSM parameter name": {
+		"should be able to unmarshal a plain SSM parameter name": {
 			in: "/github/token",
 			wanted: Secret{
 				from: stringOrFromCFN{

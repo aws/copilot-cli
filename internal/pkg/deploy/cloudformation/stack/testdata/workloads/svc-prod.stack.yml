@@ -94,6 +94,14 @@ Resources: # If a bucket URL is specified, that means the template exists.
               Value: "info"
             - Name: COPILOT_MOUNT_POINTS
               Value: '{"persistence":"/etc/scratch"}'
+          Secrets:
+            - Name: DB
+              ValueFrom: !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:demo/testing/mysql'
+            - Name: GIT_USERNAME
+              ValueFrom:
+                Fn::ImportValue: "stack-SSMGHUserName"
+            - Name: SQL_PASS
+              ValueFrom: SQL_PASS         
           EnvironmentFiles:
             - !If
               - HasEnvFile
