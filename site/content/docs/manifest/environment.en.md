@@ -232,7 +232,7 @@ cdn:
 Optional. Configuration for static assets associated with CloudFront.
 
 <span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-alias" href="#cdn-static-assets-alias" class="field">`alias`</a> <span class="type">String</span>  
-Additional HTTPS domain alias to use for the static assets.
+Additional HTTPS domain alias to use for static assets.
 
 <span class="parent-field">cdn.static_assets.</span><a id="cdn-static-assets-location" href="#cdn-static-assets-location" class="field">`location`</a> <span class="type">String</span>  
 DNS domain name of the S3 bucket (for example, `EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com`).

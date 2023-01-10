@@ -73,14 +73,14 @@ cdn:
 And traffic from `CloudFront → Application Load Balancer (ALB) → ECS` will be HTTP only. This brings the benefit of terminating TLS at a geographically closer endpoint to the end user for faster TLS handshakes.
 
 ## How do I use CloudFront with an S3 bucket?
-You can optionally have the CloudFront work with Amazon S3 Bucket for faster static content delivery by configuring `cdn.static_assets` in the env manifest.
+You can optionally have CloudFront work with an Amazon S3 bucket for faster static content delivery by configuring `cdn.static_assets` in the env manifest.
 
 ### Use an existing S3 bucket
 
 !!! attention
-    For security concerns, it is suggested that a **private** S3 bucket should be used, so that all public access is blocked by default.
+    For security concerns, we suggest that you use a **private** S3 bucket, so that all public access is blocked by default.
 
-The env manifest example below illustrates how to use an existing S3 bucket for the CloudFront:
+The env manifest example below illustrates how to use an existing S3 bucket for CloudFront:
 
 ???+ note "Sample env manifest setup for using an existing S3 bucket with CloudFront"
     ```yaml
@@ -91,9 +91,9 @@ The env manifest example below illustrates how to use an existing S3 bucket for 
         path: static/*
     ```
 
-Note that `static_assets.location` is the DNS domain name of the S3 bucket (for example, `EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com`). If you are not using an alias of [app-associated root domain](../domain/#use-app-associated-root-domain), remember to create an A-record for your alias pointing to the CloudFront domain name.
+Note that `static_assets.location` is the DNS domain name of the S3 bucket (for example, `EXAMPLE-BUCKET.s3.us-west-2.amazonaws.com`). If you are not using an alias of the [app-associated root domain](../domain/#use-app-associated-root-domain), remember to create an A-record for your alias pointing to the CloudFront domain name.
 
-After getting the environment deployed using the env manifest, you would need to update the bucket policy of your S3 bucket (if it is a private one), so that CloudFront can access it.
+After getting the environment deployed using the env manifest, you need to update the bucket policy of your S3 bucket (if it is a private one), so that CloudFront can access it.
 
 ???+ note "Example S3 bucket policy that grants read-only access to CloudFront"
     ```json
