@@ -27,7 +27,7 @@ func TestLookup(t *testing.T) {
 		var notExistErr *ErrNotExist
 		require.ErrorAs(t, err, &notExistErr)
 	})
-	t.Run("should return an error when the path is a directory without a cdk.json file", func(t *testing.T) {
+	t.Run("should return an error when the path is an empty directory", func(t *testing.T) {
 		// GIVEN
 		fs := afero.NewMemMapFs()
 		root := filepath.Join("copilot", "frontend", "overrides")
@@ -37,14 +37,44 @@ func TestLookup(t *testing.T) {
 		_, err := Lookup(root, fs)
 
 		// THEN
+		require.ErrorContains(t, err, fmt.Sprintf(`directory at %q is empty`, root))
+	})
+	t.Run("should return an error when the path contains a single file that is not a YAML patch file", func(t *testing.T) {
+		// GIVEN
+		fs := afero.NewMemMapFs()
+		root := filepath.Join("copilot", "frontend", "overrides")
+		_ = fs.MkdirAll(root, 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, "cdk.json"), []byte(""), 0755)
+
+		// WHEN
+		_, err := Lookup(root, fs)
+
+		// THEN
+		require.ErrorContains(t, err, "look up YAML patch document when directory contains a single file")
+	})
+	t.Run("should return an error when the path is a directory with multiple files but no cdk.json", func(t *testing.T) {
+		// GIVEN
+		fs := afero.NewMemMapFs()
+		root := filepath.Join("copilot", "frontend", "overrides")
+		_ = fs.MkdirAll(root, 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, "README.md"), []byte(""), 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, "patch.yaml"), []byte(""), 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, "script.js"), []byte(""), 0755)
+
+		// WHEN
+		_, err := Lookup(root, fs)
+
+		// THEN
+		require.ErrorContains(t, err, `look up CDK project for directories with multiple files`)
 		require.ErrorContains(t, err, `"cdk.json" does not exist`)
 	})
-	t.Run("should detect a CDK application if a cdk.json file exists", func(t *testing.T) {
+	t.Run("should detect a CDK application if a cdk.json file exists within a directory with multiple files", func(t *testing.T) {
 		// GIVEN
 		fs := afero.NewMemMapFs()
 		root := filepath.Join("copilot", "frontend", "overrides")
 		_ = fs.MkdirAll(root, 0755)
 		_ = afero.WriteFile(fs, filepath.Join(root, "cdk.json"), []byte("{}"), 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, "app.ts"), []byte("console.log('hi')"), 0755)
 
 		// WHEN
 		info, err := Lookup(root, fs)

@@ -47,10 +47,30 @@ func Lookup(path string, fs afero.Fs) (Info, error) {
 		return unknownOverrider, &ErrNotExist{parent: err}
 	}
 
-	if stat.IsDir() {
-		return lookupCDK(path, fs)
+	if !stat.IsDir() {
+		return lookupYAMLPatch(path, fs)
 	}
-	return lookupYAMLPatch(path, fs)
+
+	files, err := afero.ReadDir(fs, path)
+	if err != nil {
+		return unknownOverrider, fmt.Errorf("read directory %q: %w", path, err)
+	}
+	var info Info
+	switch n := len(files); n {
+	case 0:
+		return unknownOverrider, fmt.Errorf(`directory at %q is empty`, path)
+	case 1:
+		info, err = lookupYAMLPatch(filepath.Join(path, files[0].Name()), fs)
+		if err != nil {
+			return unknownOverrider, fmt.Errorf("look up YAML patch document when directory contains a single file: %w", err)
+		}
+	default:
+		info, err = lookupCDK(path, fs)
+		if err != nil {
+			return unknownOverrider, fmt.Errorf("look up CDK project for directories with multiple files: %w", err)
+		}
+	}
+	return info, nil
 }
 
 type extension string
