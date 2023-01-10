@@ -104,7 +104,7 @@ func (ext extension) isYAML() bool { return ext == ".yml" || ext == ".yaml" }
 
 func lookupYAMLPatch(path string, fs afero.Fs) (Info, error) {
 	if ext := extension(filepath.Ext(path)); !ext.isYAML() {
-		return Info{}, fmt.Errorf("YAML patch documents require a .yml or .yaml extension: %q has a %q extension", path, ext)
+		return Info{}, fmt.Errorf(`YAML patch documents require a ".yml" or ".yaml" extension: %q has a %q extension`, path, ext)
 	}
 
 	content, err := afero.ReadFile(fs, path)

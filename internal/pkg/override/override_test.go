@@ -96,7 +96,7 @@ func TestLookup(t *testing.T) {
 		_, err := Lookup(filepath.Join(root, "abc.js"), fs)
 
 		// THEN
-		wantedMsg := fmt.Sprintf(`YAML patch documents require a .yml or .yaml extension: %q has a ".js" extension`, filepath.Join(root, "abc.js"))
+		wantedMsg := fmt.Sprintf(`YAML patch documents require a ".yml" or ".yaml" extension: %q has a ".js" extension`, filepath.Join(root, "abc.js"))
 		require.EqualError(t, err, wantedMsg)
 	})
 	t.Run("should return an error when the path is an empty file", func(t *testing.T) {
