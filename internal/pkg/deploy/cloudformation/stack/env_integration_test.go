@@ -37,6 +37,7 @@ cdn:
   static_assets:
     location: cf-s3-ecs-demo-bucket.s3.us-west-2.amazonaws.com
     alias: example.com
+    path: static/*
 http:
   public:
     ingress:

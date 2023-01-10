@@ -866,7 +866,7 @@ func TestCDNConfiguration_validate(t *testing.T) {
 			in: EnvironmentCDNConfig{
 				Config: AdvancedCDNConfig{
 					Static: CDNStaticConfig{
-						Path: aws.String("something"),
+						Path: "something",
 					},
 				},
 			},
@@ -907,7 +907,7 @@ func TestCDNStaticConfig_validate(t *testing.T) {
 		},
 		"invalid if alias is not specified": {
 			in: CDNStaticConfig{
-				Path: aws.String("something"),
+				Path: "something",
 			},
 			wantedError: fmt.Errorf(`"alias" must be specified`),
 		},
@@ -917,10 +917,18 @@ func TestCDNStaticConfig_validate(t *testing.T) {
 			},
 			wantedError: fmt.Errorf(`"location" must be specified`),
 		},
+		"invalid if path is not specified": {
+			in: CDNStaticConfig{
+				Alias:    "example.com",
+				Location: "s3url",
+			},
+			wantedError: fmt.Errorf(`"path" must be specified`),
+		},
 		"success": {
 			in: CDNStaticConfig{
 				Alias:    "example.com",
 				Location: "static",
+				Path:     "something",
 			},
 		},
 	}
