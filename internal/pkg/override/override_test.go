@@ -14,6 +14,7 @@ import (
 )
 
 func TestLookup(t *testing.T) {
+	t.Parallel()
 	t.Run("should return ErrNotExist when the file path does not exist", func(t *testing.T) {
 		// GIVEN
 		fs := afero.NewMemMapFs()
@@ -126,5 +127,22 @@ func TestLookup(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, info.IsYAMLPatch())
 		require.False(t, info.IsCDK())
+		require.Equal(t, filepath.Join(root, "cfn.patch.yml"), info.Path())
+	})
+	t.Run("should detect a YAML patch document for directories with a single YAML file", func(t *testing.T) {
+		// GIVEN
+		fs := afero.NewMemMapFs()
+		root := filepath.Join("copilot", "frontend", "overrides")
+		_ = fs.MkdirAll(root, 0755)
+		_ = afero.WriteFile(fs, filepath.Join(root, "cfn.patch.yml"), []byte("- {op: 5, path: '/Resources'}"), 0755)
+
+		// WHEN
+		info, err := Lookup(root, fs)
+
+		// THEN
+		require.NoError(t, err)
+		require.True(t, info.IsYAMLPatch())
+		require.False(t, info.IsCDK())
+		require.Equal(t, filepath.Join(root, "cfn.patch.yml"), info.Path())
 	})
 }
