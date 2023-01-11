@@ -51,6 +51,11 @@ type ActionRecommender interface {
 	RecommendedActions() []string
 }
 
+// An Overrider transforms the content in body to out.
+type Overrider interface {
+	Override(body []byte) (out []byte, err error)
+}
+
 type imageBuilderPusher interface {
 	BuildAndPush(docker repository.ContainerLoginBuildPusher, args *dockerengine.BuildArguments) (string, error)
 }
@@ -143,6 +148,7 @@ type workloadDeployer struct {
 	spinner            spinner
 	templateFS         template.Reader
 	envVersionGetter   versionGetter
+	overrider          Overrider
 
 	// Cached variables.
 	defaultSess              *session.Session
@@ -162,6 +168,7 @@ type WorkloadDeployerInput struct {
 	Mft              interface{} // Interpolated, applied, and unmarshaled manifest.
 	RawMft           []byte      // Content of the manifest file without any transformations.
 	EnvVersionGetter versionGetter
+	Overrider        Overrider
 }
 
 // newWorkloadDeployer is the constructor for workloadDeployer.
@@ -235,6 +242,7 @@ func newWorkloadDeployer(in *WorkloadDeployerInput) (*workloadDeployer, error) {
 		spinner:            termprogress.NewSpinner(log.DiagnosticWriter),
 		templateFS:         template.New(),
 		envVersionGetter:   in.EnvVersionGetter,
+		overrider:          in.Overrider,
 
 		defaultSess:              defaultSession,
 		defaultSessWithEnvRegion: defaultSessEnvRegion,
@@ -262,12 +270,16 @@ func (d *workloadDeployer) generateCloudFormationTemplate(conf stackSerializer) 
 	if err != nil {
 		return nil, fmt.Errorf("generate stack template: %w", err)
 	}
+	transformedTpl, err := d.overrider.Override([]byte(tpl))
+	if err != nil {
+		return nil, fmt.Errorf("override template: %w", err)
+	}
 	params, err := conf.SerializedParameters()
 	if err != nil {
 		return nil, fmt.Errorf("generate stack template parameters: %w", err)
 	}
 	return &GenerateCloudFormationTemplateOutput{
-		Template:   tpl,
+		Template:   string(transformedTpl),
 		Parameters: params,
 	}, nil
 }
