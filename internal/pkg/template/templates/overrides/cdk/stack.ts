@@ -5,8 +5,8 @@ import { {{$resourceType.ImportName}} as {{$resourceType.ImportShortRename}} } f
 {{- end }}
 
 interface TransformedStackProps extends cdk.StackProps {
-    readonly appName?: string;
-    readonly envName?: string;
+    readonly appName: string;
+    readonly envName: string;
 }
 
 export class TransformedStack extends cdk.Stack {
