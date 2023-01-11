@@ -477,12 +477,12 @@ func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, work
 	if rr.TargetPort == nil {
 		return nil
 	}
-	containerName := workloadName
+	targetContainer := workloadName
 	if rr.TargetContainer != nil {
-		containerName = aws.StringValue(rr.TargetContainer)
+		targetContainer = aws.StringValue(rr.TargetContainer)
 	}
 	for _, exposedPort := range exposedPorts {
-		if aws.Uint16Value(rr.TargetPort) == exposedPort.Port && rr.TargetContainer == nil {
+		if aws.Uint16Value(rr.TargetPort) == exposedPort.Port {
 			return nil
 		}
 	}
@@ -490,7 +490,7 @@ func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, work
 		{
 			Port:          aws.Uint16Value(rr.TargetPort),
 			Protocol:      "tcp",
-			ContainerName: containerName,
+			ContainerName: targetContainer,
 		},
 	}
 }
@@ -500,10 +500,6 @@ func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, work
 func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedPort, workloadName string) ([]ExposedPort, error) {
 	if cfg.IsEmpty() {
 		return nil, nil
-	}
-	containerName := workloadName
-	if cfg.TargetContainer != nil {
-		containerName = aws.StringValue(cfg.TargetContainer)
 	}
 	nlbPort, protocol, err := ParsePortMapping(cfg.Port)
 	if err != nil {
@@ -517,20 +513,24 @@ func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedP
 	if err != nil {
 		return nil, err
 	}
-	containerPort := uint16(port)
+	targetPort := uint16(port)
 	if cfg.TargetPort != nil {
-		containerPort = uint16(aws.IntValue(cfg.TargetPort))
+		targetPort = uint16(aws.IntValue(cfg.TargetPort))
 	}
 	for _, exposedPort := range exposedPorts {
-		if containerPort == exposedPort.Port {
+		if targetPort == exposedPort.Port {
 			return nil, nil
 		}
 	}
+	targetContainer := workloadName
+	if cfg.TargetContainer != nil {
+		targetContainer = aws.StringValue(cfg.TargetContainer)
+	}
 	return []ExposedPort{
 		{
-			Port:          containerPort,
+			Port:          targetPort,
 			Protocol:      aws.StringValue(protocol),
-			ContainerName: containerName,
+			ContainerName: targetContainer,
 		},
 	}, nil
 }

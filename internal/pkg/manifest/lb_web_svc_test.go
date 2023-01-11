@@ -1935,7 +1935,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 			},
 		},
-		"expose new primary container port only once through ALB and NLB config": {
+		"ALB and NLB exposes the same additional port on the main container": {
 			mft: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("frontend"),
@@ -1983,7 +1983,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 				},
 			},
 		},
-		"expose two new primary container port through ALB and NLB config": {
+		"ALB and NLB exposes two different ports on the main container": {
 			mft: &LoadBalancedWebService{
 				Workload: Workload{
 					Name: aws.String("frontend"),
@@ -2129,7 +2129,7 @@ func TestLoadBalancedWebService_ExposedPorts(t *testing.T) {
 						},
 					},
 					NLBConfig: NetworkLoadBalancerConfiguration{
-						Port:            aws.String("8082"),
+						Port:            aws.String("8082/tcp"),
 						TargetContainer: aws.String("xray"),
 					},
 					RoutingRule: RoutingRuleConfigOrBool{

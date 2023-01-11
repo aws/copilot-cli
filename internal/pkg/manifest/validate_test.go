@@ -3568,7 +3568,6 @@ func TestValidateExposedPorts(t *testing.T) {
 					TargetPort: aws.Int(5001),
 				},
 			},
-			wanted: nil,
 		},
 		"should not return an error if alb and nlb target_port trying to expose same container port sidecar container": {
 			in: validateExposedPortsOpts{
@@ -3592,7 +3591,6 @@ func TestValidateExposedPorts(t *testing.T) {
 					TargetContainer: aws.String("foo"),
 				},
 			},
-			wanted: nil,
 		},
 		"should return an error if alb and nlb target_port trying to expose same container port of different containers": {
 			in: validateExposedPortsOpts{
