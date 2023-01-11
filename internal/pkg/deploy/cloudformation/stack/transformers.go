@@ -750,7 +750,16 @@ func convertNetworkConfig(network manifest.NetworkConfig) template.NetworkOpts {
 		AssignPublicIP: template.EnablePublicIP,
 		SubnetsType:    template.PublicSubnetsPlacement,
 	}
-	opts.SecurityGroups = network.VPC.SecurityGroups.GetIDs()
+	inSGs := network.VPC.SecurityGroups.GetIDs()
+	outSGs := make([]template.SecurityGroup, len(inSGs))
+	for i, sg := range inSGs {
+		if sg.Plain != nil {
+			outSGs[i] = template.PlainSecurityGroup(aws.StringValue(sg.Plain))
+		} else {
+			outSGs[i] = template.ImportedSecurityGroup(aws.StringValue(sg.FromCFN.Name))
+		}
+	}
+	opts.SecurityGroups = outSGs
 	opts.DenyDefaultSecurityGroup = network.VPC.SecurityGroups.IsDefaultSecurityGroupDenied()
 
 	placement := network.VPC.Placement
@@ -803,20 +812,22 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
-func convertDeploymentConfig(deploymentConfig manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
-	var deployConfigs template.DeploymentConfigurationOpts
-	if strings.EqualFold(aws.StringValue(deploymentConfig.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
-		deployConfigs.MinHealthyPercent = minHealthyPercentRecreate
-		deployConfigs.MaxPercent = maxPercentRecreate
-	} else {
-		deployConfigs.MinHealthyPercent = minHealthyPercentDefault
-		deployConfigs.MaxPercent = maxPercentDefault
+func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+	out := template.DeploymentConfigurationOpts{
+		MinHealthyPercent: minHealthyPercentDefault,
+		MaxPercent:        maxPercentDefault,
+		Rollback: template.RollingUpdateRollbackConfig{
+			AlarmNames:        in.RollbackAlarms.Basic,
+			CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
+			MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
+		},
 	}
-	if deploymentConfig.RollbackAlarms.IsBasic() {
-		deployConfigs.RollbackAlarms = deploymentConfig.RollbackAlarms.Basic
+
+	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
+		out.MinHealthyPercent = minHealthyPercentRecreate
+		out.MaxPercent = maxPercentRecreate
 	}
-	// TODO (jwh): if AlarmArgs, create alarms and pass their Copilot-created names in CFN template.
-	return deployConfigs
+	return out
 }
 
 func convertCommand(command manifest.CommandOverride) ([]string, error) {
@@ -1035,15 +1046,21 @@ func convertEnvVars(variables map[string]manifest.Variable) map[string]template.
 	return m
 }
 
+// convertSecrets converts the manifest Secrets into a format parsable by the templates pkg.
 func convertSecrets(secrets map[string]manifest.Secret) map[string]template.Secret {
 	if len(secrets) == 0 {
 		return nil
 	}
-	m := make(map[string]template.Secret)
+	m := make(map[string]template.Secret, len(secrets))
+	var tplSecret template.Secret
 	for name, mftSecret := range secrets {
-		var tplSecret template.Secret = template.SecretFromSSMOrARN(mftSecret.Value())
-		if mftSecret.IsSecretsManagerName() {
+		switch {
+		case mftSecret.IsSecretsManagerName():
 			tplSecret = template.SecretFromSecretsManager(mftSecret.Value())
+		case mftSecret.RequiresImport():
+			tplSecret = template.SecretFromImportedSSMOrARN(mftSecret.Value())
+		default:
+			tplSecret = template.SecretFromPlainSSMOrARN(mftSecret.Value())
 		}
 		m[name] = tplSecret
 	}

@@ -107,6 +107,7 @@ var (
 		"nlb",
 		"vpc-connector",
 		"alb",
+		"rollback-alarms",
 	}
 
 	// Operating systems to determine Fargate platform versions.
@@ -259,11 +260,13 @@ type importable interface {
 	RequiresImport() bool
 }
 
-// Variable represents the value of an environment variable.
-type Variable interface {
+type importableValue interface {
 	importable
 	Value() string
 }
+
+// Variable represents the value of an environment variable.
+type Variable importableValue
 
 // ImportedVariable returns a Variable that should be imported from a stack.
 func ImportedVariable(name string) Variable {
@@ -299,30 +302,65 @@ func (v importedEnvVar) Value() string {
 	return string(v)
 }
 
-// A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
-type Secret interface {
+type importableSubValueFrom interface {
+	importable
 	RequiresSub() bool
 	ValueFrom() string
 }
 
-// ssmOrSecretARN is a Secret stored that can be referred by an SSM Parameter Name or a secret ARN.
-type ssmOrSecretARN struct {
+// A Secret represents an SSM or SecretsManager secret that can be rendered in CloudFormation.
+type Secret importableSubValueFrom
+
+// plainSSMOrSecretARN is a Secret stored that can be referred by an SSM Parameter Name or a secret ARN.
+type plainSSMOrSecretARN struct {
 	value string
 }
 
 // RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
-func (s ssmOrSecretARN) RequiresSub() bool {
+func (s plainSSMOrSecretARN) RequiresSub() bool {
 	return false
 }
 
-// ValueFrom returns the valueFrom field for the secret.
-func (s ssmOrSecretARN) ValueFrom() string {
+// RequiresImport returns true if the secret should be imported from other CloudFormation stack.
+func (s plainSSMOrSecretARN) RequiresImport() bool {
+	return false
+}
+
+// ValueFrom returns the plain string value of the secret.
+func (s plainSSMOrSecretARN) ValueFrom() string {
 	return s.value
 }
 
-// SecretFromSSMOrARN returns a Secret that refers to an SSM parameter or a secret ARN.
-func SecretFromSSMOrARN(value string) ssmOrSecretARN {
-	return ssmOrSecretARN{
+// SecretFromPlainSSMOrARN returns a Secret that refers to an SSM parameter or a secret ARN.
+func SecretFromPlainSSMOrARN(value string) plainSSMOrSecretARN {
+	return plainSSMOrSecretARN{
+		value: value,
+	}
+}
+
+// importedSSMorSecretARN is a Secret that can be referred by the name of the import value from env addon or an arbitary CloudFormation stack.
+type importedSSMorSecretARN struct {
+	value string
+}
+
+// RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
+func (s importedSSMorSecretARN) RequiresSub() bool {
+	return false
+}
+
+// RequiresImport returns true if the secret should be imported from env addon or an arbitary CloudFormation stack.
+func (s importedSSMorSecretARN) RequiresImport() bool {
+	return true
+}
+
+// ValueFrom returns the name of the import value of the Secret.
+func (s importedSSMorSecretARN) ValueFrom() string {
+	return s.value
+}
+
+// SecretFromImportedSSMOrARN returns a Secret that refers to imported name of SSM parameter or a secret ARN.
+func SecretFromImportedSSMOrARN(value string) importedSSMorSecretARN {
+	return importedSSMorSecretARN{
 		value: value,
 	}
 }
@@ -335,6 +373,11 @@ type secretsManagerName struct {
 // RequiresSub returns true if the secret should be populated in CloudFormation with !Sub.
 func (s secretsManagerName) RequiresSub() bool {
 	return true
+}
+
+// RequiresImport returns true if the secret should be imported from other CloudFormation stack.
+func (s secretsManagerName) RequiresImport() bool {
+	return false
 }
 
 // ValueFrom returns the resource ID of the SecretsManager secret for populating the ARN.
@@ -452,13 +495,41 @@ type ObservabilityOpts struct {
 	Tracing string // The name of the vendor used for tracing.
 }
 
-// DeploymentConfigurationOpts holds values for MinHealthyPercent and MaxPercent.
+// DeploymentConfigurationOpts holds configuration for rolling deployments.
 type DeploymentConfigurationOpts struct {
 	// The lower limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
 	MinHealthyPercent int
 	// The upper limit on the number of tasks that should be running during a service deployment or when a container instance is draining.
-	MaxPercent     int
-	RollbackAlarms []string
+	MaxPercent int
+	Rollback   RollingUpdateRollbackConfig
+}
+
+// RollingUpdateRollbackConfig holds config for rollback alarms.
+type RollingUpdateRollbackConfig struct {
+	AlarmNames    []string // Names of existing alarms.
+	
+	// Custom alarms to create.
+	CPUUtilization    *float64
+	MemoryUtilization *float64
+}
+
+// HasRollbackAlarms returns true if the client is using ABR.
+func (cfg RollingUpdateRollbackConfig) HasRollbackAlarms() bool {
+	return len(cfg.AlarmNames) > 0 || cfg.HasCustomAlarms() 
+}
+
+// HasCustomAlarms returns true if the client is using Copilot-generated alarms for alarm-based rollbacks.
+func (cfg RollingUpdateRollbackConfig) HasCustomAlarms() bool {
+	return cfg.CPUUtilization != nil || cfg.MemoryUtilization != nil
+}
+
+// TruncateAlarmName ensures that alarm names don't exceed the 255 character limit.
+func (cfg RollingUpdateRollbackConfig) TruncateAlarmName(app, env, svc, alarmType string) string {
+	if len(app) + len(env) + len(svc) + len(alarmType) <= 255 {
+		return fmt.Sprintf("%s-%s-%s-%s", app, env, svc, alarmType)
+	}
+	maxSubstringLength := (255 - len(alarmType) - 3) / 3
+	return fmt.Sprintf("%s-%s-%s-%s", app[:maxSubstringLength], env[:maxSubstringLength], svc[:maxSubstringLength], alarmType)
 }
 
 // ExecuteCommandOpts holds configuration that's needed for ECS Execute Command.
@@ -540,12 +611,49 @@ type DeadLetterQueue struct {
 
 // NetworkOpts holds AWS networking configuration for the workloads.
 type NetworkOpts struct {
-	SecurityGroups []string
+	SecurityGroups []SecurityGroup
 	AssignPublicIP string
 	// SubnetsType and SubnetIDs are mutually exclusive. They won't be set together.
 	SubnetsType              string
 	SubnetIDs                []string
 	DenyDefaultSecurityGroup bool
+}
+
+// SecurityGroup represents the ID of an additional security group associated with the tasks.
+type SecurityGroup importableValue
+
+// PlainSecurityGroup returns a SecurityGroup that is a plain string value.
+func PlainSecurityGroup(value string) SecurityGroup {
+	return plainSecurityGroup(value)
+}
+
+// ImportedSecurityGroup returns a SecurityGroup that should be imported from a stack.
+func ImportedSecurityGroup(name string) SecurityGroup {
+	return importedSecurityGroup(name)
+}
+
+type plainSecurityGroup string
+
+// RequiresImport returns false for a plain string SecurityGroup.
+func (sg plainSecurityGroup) RequiresImport() bool {
+	return false
+}
+
+// Value returns the plain string value of the SecurityGroup.
+func (sg plainSecurityGroup) Value() string {
+	return string(sg)
+}
+
+type importedSecurityGroup string
+
+// RequiresImport returns true for an imported SecurityGroup.
+func (sg importedSecurityGroup) RequiresImport() bool {
+	return true
+}
+
+// Value returns the name of the import that will be the value of the SecurityGroup.
+func (sg importedSecurityGroup) Value() string {
+	return string(sg)
 }
 
 // RuntimePlatformOpts holds configuration needed for Platform configuration.

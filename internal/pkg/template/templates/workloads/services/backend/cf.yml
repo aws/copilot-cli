@@ -87,6 +87,7 @@ Resources:
 {{- if .ALBEnabled}}
 {{include "alb" . | indent 2}}
 {{end}}
+{{include "rollback-alarms" . | indent 2}}
 
   Service:
     Metadata:

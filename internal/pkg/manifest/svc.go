@@ -425,6 +425,10 @@ type stringOrFromCFN struct {
 	FromCFN fromCFN
 }
 
+func (s stringOrFromCFN) isEmpty() bool {
+	return s.FromCFN.isEmpty() && s.Plain == nil
+}
+
 // UnmarshalYAML implements the yaml.Unmarshaler (v3) interface to override the default YAML unmarshalling logic.
 func (s *stringOrFromCFN) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&s.FromCFN); err != nil {

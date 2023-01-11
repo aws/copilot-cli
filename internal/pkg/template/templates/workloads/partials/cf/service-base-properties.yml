@@ -16,9 +16,19 @@ DeploymentConfiguration:
     Rollback: true
   MinimumHealthyPercent: {{ .DeploymentConfiguration.MinHealthyPercent }}
   MaximumPercent: {{ .DeploymentConfiguration.MaxPercent }}
-  {{- if .DeploymentConfiguration.RollbackAlarms }}
+  {{- if .DeploymentConfiguration.Rollback.HasRollbackAlarms }}
   Alarms:
-    AlarmNames: {{ .DeploymentConfiguration.RollbackAlarms }}
+    {{- if .DeploymentConfiguration.Rollback.AlarmNames }}
+    AlarmNames: {{ fmtSlice (quoteSlice .DeploymentConfiguration.Rollback.AlarmNames) }}
+    {{- else if .DeploymentConfiguration.Rollback.HasCustomAlarms }}
+    AlarmNames:
+      {{- if .DeploymentConfiguration.Rollback.CPUUtilization }}
+      - {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackCPUAlarm"}}
+      {{- end }}
+      {{- if .DeploymentConfiguration.Rollback.MemoryUtilization }}
+      - {{.DeploymentConfiguration.Rollback.TruncateAlarmName .AppName .EnvName .WorkloadName "CopilotRollbackMemAlarm"}}
+      {{- end}}
+    {{- end }}
     Enable: true
     Rollback: true
   {{- end }}
@@ -83,7 +93,10 @@ NetworkConfiguration:
       - Fn::ImportValue: !Sub '${AppName}-${EnvName}-EnvironmentSecurityGroup'
       {{- end}}
       {{- range $sg := .Network.SecurityGroups}}
-      - {{$sg}}
+      {{- if not $sg.RequiresImport}}
+      - {{$sg.Value}}
+      {{- else}}
+      - Fn::ImportValue: {{$sg.Value}} {{- end}}
       {{- end}}
       {{- if .NLB}}
       - !Ref NLBSecurityGroup

@@ -22,6 +22,9 @@ Resources:
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
 
   {{logicalIDSafe .Name}}BucketPolicy:
     Metadata:

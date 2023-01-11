@@ -25,6 +25,9 @@ sidecars:
 ```
 この例ではサイドカーとメインコンテナで共有されるボリュームとして、100 GiB のストレージがプロビジョンされます。例えば大きなサイズのデータセットを利用したい場合、あるいはディスク I/O の要求が高いワークロードにおいてサイドカーを利用して EFS からデータをコピーするような場合に有効な方法と言えます。
 
+<span class="parent-field">storage.</span><a id="storage-readonlyfs" href="#storage-readonlyfs" class="field">`readonly_fs`</a> <span class="type">Boolean</span>
+コンテナのルートファイルシステムに読み取り専用でアクセス出来る様にするには、true を指定します。
+
 <span class="parent-field">storage.</span><a id="volumes" href="#volumes" class="field">`volumes`</a> <span class="type">Map</span>  
 マウントしたい EFS ボリュームの名前や設定を指定します。`volumes` フィールドでは次のように Map を利用して指定します。
 ```yaml

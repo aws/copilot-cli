@@ -43,8 +43,10 @@ const (
 	envOutputManagerRoleKey      = "EnvironmentManagerRoleARN"
 )
 
-// DefaultVPCCIDR is the default CIDR used for a manged VPC.
-const DefaultVPCCIDR = "10.0.0.0/16"
+const (
+	// DefaultVPCCIDR is the default CIDR used for a manged VPC.
+	DefaultVPCCIDR = "10.0.0.0/16"
+)
 
 var (
 	// DefaultPublicSubnetCIDRs contains two default CIDRs for the two managed public subnets.
@@ -440,10 +442,19 @@ func (e *Env) cdnConfig() *template.CDNConfig {
 	if e.in.Mft == nil || !e.in.Mft.CDNEnabled() {
 		return nil
 	}
-	return &template.CDNConfig{
-		ImportedCertificate: e.in.Mft.CDNConfig.Config.Certificate,
-		TerminateTLS:        aws.BoolValue(e.in.Mft.CDNConfig.Config.TerminateTLS),
+	mftConfig := e.in.Mft.CDNConfig.Config
+	config := &template.CDNConfig{
+		ImportedCertificate: mftConfig.Certificate,
+		TerminateTLS:        aws.BoolValue(mftConfig.TerminateTLS),
 	}
+	if !mftConfig.Static.IsEmpty() {
+		config.Static = &template.CDNStaticAssetConfig{
+			Location: mftConfig.Static.Location,
+			Path:     mftConfig.Static.Path,
+			Alias:    mftConfig.Static.Alias,
+		}
+	}
+	return config
 }
 
 func (e *Env) publicHTTPConfig() template.PublicHTTPConfig {

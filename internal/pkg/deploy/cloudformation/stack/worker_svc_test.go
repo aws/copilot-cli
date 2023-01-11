@@ -165,7 +165,7 @@ Outputs:
 						Network: template.NetworkOpts{
 							AssignPublicIP: template.DisablePublicIP,
 							SubnetsType:    template.PrivateSubnetsPlacement,
-							SecurityGroups: []string{"sg-1234"},
+							SecurityGroups: []template.SecurityGroup{},
 						},
 						DeploymentConfiguration: template.DeploymentConfigurationOpts{
 							MinHealthyPercent: 100,
@@ -220,9 +220,7 @@ Outputs:
 				conf.manifest.Network.VPC.Placement = manifest.PlacementArgOrString{
 					PlacementString: &testPrivatePlacement,
 				}
-				conf.manifest.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{
-					IDs: []string{"sg-1234"},
-				}
+				conf.manifest.Network.VPC.SecurityGroups = manifest.SecurityGroupsIDsOrConfig{}
 			}
 
 			tc.mockDependencies(t, ctrl, conf)

@@ -6,7 +6,7 @@ AWS Copilot は、わずかなステップで簡単にコンテナを AWS にデ
 
 ## Step 1: AWS Copilot のダウンロードと設定
 
-AWS Copilot を使用するには、AWS Copilot のバイナリ、AWS CLI、Docker Desktop、AWS の認証情報などが必要です。
+AWS Copilot を使用するには、AWS Copilot のバイナリ、AWS CLI、Docker Desktop（起動している必要があります）、AWS の認証情報などが必要です。
 
 これらのツールのセットアップと設定方法については、こちらをご覧ください。
 
