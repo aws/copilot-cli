@@ -38,8 +38,15 @@
   {{- end}}
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
 {{- if eq .WorkloadType "Backend Service"}}
-{{- if eq .HTTPTargetContainer.Name .WorkloadName}} 
-  PortMappings: !If [ExposePort, [{ContainerPort: !Ref ContainerPort, Name: target}], !Ref "AWS::NoValue"]
+  {{- if and (eq .HTTPTargetContainer.Name .WorkloadName) .PortMappings}}
+  PortMappings:
+  {{- range $portMapping := .PortMappings}}
+    - ContainerPort: {{$portMapping.ContainerPort}}
+      Protocol: {{if eq $portMapping.Protocol "udp"}}udp{{else}}tcp{{end}}
+  {{- if isEqual $.HTTPTargetContainer.Port $portMapping.ContainerPort}}
+      Name: target
+  {{- end}}
+  {{- end}}
 {{- end}}
 {{- end}}
 {{- if .HealthCheck}}
