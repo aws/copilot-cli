@@ -78,7 +78,7 @@ You can optionally have CloudFront work with an Amazon S3 bucket for faster stat
 ### Use an existing S3 bucket
 
 !!! attention
-    For security concerns, we suggest that you use a **private** S3 bucket, so that all public access is blocked by default.
+    For security concerns, we suggest that you use a **private** S3 bucket so that all public access is blocked by default.
 
 The env manifest example below illustrates how to use an existing S3 bucket for CloudFront:
 
