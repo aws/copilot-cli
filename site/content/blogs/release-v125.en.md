@@ -33,6 +33,39 @@ Copilot v1.25 brings several new features and improvements:
 ## Environment Addons
 ### Import Values From CloudFormation Stacks In Workload Manifests
 
+You can now import values from environment addons CloudFormation stack or any other arbitary stack in your workload manifest using `from_cfn`.
+To reference a value from another CloudFormation stack, users should first export the output value from the source stack.
+
+For now, `from_cfn` is added only to the following workload manifest fields.
+
+```yaml
+variables:
+  LOG_LEVEL: info
+  DB_NAME:
+    from_cfn: DBUserName
+```
+
+```yaml
+secrets:
+  GIT_USERNAME:
+    from_cfn: stack-SSMGHUserName
+```
+
+```yaml
+logging:
+  secretOptions:
+    GIT_USERNAME:
+      from_cfn: stack-SSMGHUserName
+```
+
+```yaml
+network:
+  vpn:
+    security_groups:
+      - sg-1234
+      - from_cfn: UserDBAccessSecurityGroup
+```
+
 ## Static Content Delivery With CloudFront
 
 ## What’s next?
