@@ -173,7 +173,6 @@ func TestScaffoldWithCDK(t *testing.T) {
 	})
 
 	// THEN
-	t.Log(fs)
 	require.NoError(t, err)
 
 	ok, _ := afero.Exists(fs, filepath.Join(dir, "package.json"))

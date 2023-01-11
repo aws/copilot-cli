@@ -144,7 +144,7 @@ func TestHasSecrets(t *testing.T) {
 		"service has secrets": {
 			in: WorkloadOpts{
 				Secrets: map[string]Secret{
-					"hello": SecretFromSSMOrARN("world"),
+					"hello": SecretFromPlainSSMOrARN("world"),
 				},
 			},
 			wanted: true,
@@ -272,16 +272,36 @@ func TestHTTPTargetContainer_IsHTTPS(t *testing.T) {
 	require.False(t, HTTPTargetContainer{Port: "8080"}.IsHTTPS())
 }
 
-func TestSsmOrSecretARN_RequiresSub(t *testing.T) {
-	require.False(t, ssmOrSecretARN{}.RequiresSub(), "SSM Parameter Store or secret ARNs do not require !Sub")
+func TestPlainSSMOrSecretARN_RequiresSub(t *testing.T) {
+	require.False(t, plainSSMOrSecretARN{}.RequiresSub(), "plain SSM Parameter Store or secret ARNs do not require !Sub")
 }
 
-func TestSsmOrSecretARN_ValueFrom(t *testing.T) {
-	require.Equal(t, "/github/token", SecretFromSSMOrARN("/github/token").ValueFrom())
+func TestPlainSSMOrSecretARN_RequiresImport(t *testing.T) {
+	require.False(t, plainSSMOrSecretARN{}.RequiresImport(), "plain SSM Parameter Store or secret ARNs do not require !ImportValue")
+}
+
+func TestPlainSSMOrSecretARN_ValueFrom(t *testing.T) {
+	require.Equal(t, "/github/token", SecretFromPlainSSMOrARN("/github/token").ValueFrom())
+}
+
+func TestImportedSSMOrSecretARN_RequiresSub(t *testing.T) {
+	require.False(t, importedSSMorSecretARN{}.RequiresSub(), "imported SSM Parameter Store or secret ARNs do not require !Sub")
+}
+
+func TestImportedSSMOrSecretARN_RequiresImport(t *testing.T) {
+	require.True(t, importedSSMorSecretARN{}.RequiresImport(), "imported SSM Parameter Store or secret ARNs requires !ImportValue")
+}
+
+func TestImportedSSMOrSecretARN_ValueFrom(t *testing.T) {
+	require.Equal(t, "stack-SSMGHTokenName", SecretFromImportedSSMOrARN("stack-SSMGHTokenName").ValueFrom())
 }
 
 func TestSecretsManagerName_RequiresSub(t *testing.T) {
 	require.True(t, secretsManagerName{}.RequiresSub(), "secrets referring to a SecretsManager name need to be expanded to a full ARN")
+}
+
+func TestSecretsManagerName_RequiresImport(t *testing.T) {
+	require.False(t, secretsManagerName{}.RequiresImport(), "secrets referring to a SecretsManager name do not require !ImportValue")
 }
 
 func TestSecretsManagerName_Service(t *testing.T) {

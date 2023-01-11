@@ -137,7 +137,11 @@ environments:
 								},
 							},
 							Secrets: map[string]Secret{
-								"DB_PASSWORD": {from: aws.String("MYSQL_DB_PASSWORD")},
+								"DB_PASSWORD": {
+									from: stringOrFromCFN{
+										Plain: aws.String("MYSQL_DB_PASSWORD"),
+									},
+								},
 							},
 						},
 						Sidecars: map[string]*SidecarConfig{
@@ -156,7 +160,11 @@ environments:
 							EnableMetadata: aws.Bool(false),
 							ConfigFile:     aws.String("/extra.conf"),
 							SecretOptions: map[string]Secret{
-								"LOG_TOKEN": {from: aws.String("LOG_TOKEN")},
+								"LOG_TOKEN": {
+									from: stringOrFromCFN{
+										Plain: aws.String("LOG_TOKEN"),
+									},
+								},
 							},
 						},
 						Network: NetworkConfig{
@@ -280,7 +288,11 @@ secrets:
 								Enable: aws.Bool(false),
 							},
 							Secrets: map[string]Secret{
-								"API_TOKEN": {from: aws.String("SUBS_API_TOKEN")},
+								"API_TOKEN": {
+									from: stringOrFromCFN{
+										Plain: aws.String("SUBS_API_TOKEN"),
+									},
+								},
 							},
 						},
 						Network: NetworkConfig{
