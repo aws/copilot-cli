@@ -67,7 +67,7 @@ Outputs:
     Value: hello`,
 				}
 			},
-			wantedErr: fmt.Errorf("convert the sidecar configuration for service frontend: %w", errors.New("cannot parse port mapping from 80/80/80")),
+			wantedErr: fmt.Errorf("exposed ports configuration for service frontend: cannot parse port mapping from 80/80/80"),
 		},
 		"failed parsing Auto Scaling template": {
 			setUpManifest: func(svc *WorkerService) {

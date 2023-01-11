@@ -222,7 +222,7 @@ func Test_convertSidecar(t *testing.T) {
 					HealthCheck:   tc.inHealthCheck,
 				},
 			}
-			got, err := convertSidecar(sidecar)
+			got, err := convertSidecar(sidecar, nil)
 
 			if tc.wantedErr != nil {
 				require.EqualError(t, err, tc.wantedErr.Error())

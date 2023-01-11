@@ -66,22 +66,45 @@ var (
 	}
 )
 
+// findContainerNameGivenPort searches through exposed ports in the manifest to find the container name that matches the given port.
+func findContainerNameGivenPort(port uint16, exposedPorts []manifest.ExposedPort) string {
+	for _, portConfig := range exposedPorts {
+		if portConfig.Port == port {
+			return portConfig.ContainerName
+		}
+	}
+	return ""
+}
+
+func convertPortMapping(exposedPorts []manifest.ExposedPort) map[string][]*template.PortMapping {
+	portMapping := make(map[string][]*template.PortMapping)
+	for _, exposedPort := range exposedPorts {
+		out := &template.PortMapping{
+			ContainerPort: exposedPort.Port,
+			Protocol:      exposedPort.Protocol,
+			ContainerName: exposedPort.ContainerName,
+		}
+		portMapping[exposedPort.ContainerName] = append(portMapping[exposedPort.ContainerName], out) // should work even when nil
+	}
+	return portMapping
+}
+
 // convertSidecar converts the manifest sidecar configuration into a format parsable by the templates pkg.
-func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOpts, error) {
-	if s == nil {
+func convertSidecar(sidecarsMap map[string]*manifest.SidecarConfig, portMappings map[string][]*template.PortMapping) ([]*template.SidecarOpts, error) {
+	if sidecarsMap == nil {
 		return nil, nil
 	}
 
 	// Sort the sidecars so that the order is consistent and the integration test won't be flaky.
-	keys := make([]string, 0, len(s))
-	for k := range s {
+	keys := make([]string, 0, len(sidecarsMap))
+	for k := range sidecarsMap {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
 	var sidecars []*template.SidecarOpts
 	for _, name := range keys {
-		config := s[name]
+		config := sidecarsMap[name]
 		port, protocol, err := manifest.ParsePortMapping(config.Port)
 		if err != nil {
 			return nil, err
@@ -112,6 +135,7 @@ func convertSidecar(s map[string]*manifest.SidecarConfig) ([]*template.SidecarOp
 			EntryPoint:   entrypoint,
 			HealthCheck:  convertContainerHealthCheck(config.HealthCheck),
 			Command:      command,
+			PortMappings: portMappings[name],
 		})
 	}
 	return sidecars, nil

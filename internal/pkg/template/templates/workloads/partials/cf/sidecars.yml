@@ -49,17 +49,17 @@
 {{- if $sidecar.Essential}}
   Essential: {{$sidecar.Essential}}
 {{- end}}
-{{include "image-overrides" . | indent 2}}  
-{{- if $sidecar.Port}}
+{{include "image-overrides" . | indent 2}}
+{{- if .PortMappings}}
   PortMappings:
-    - ContainerPort: {{$sidecar.Port}}
+    {{- range $portMapping := .PortMappings }}
+    - ContainerPort: {{ $portMapping.ContainerPort }}
     {{/* Multiple exposed port is not supported yet. Therefore, if the target container is the sidecar, the target port must be the one and only one port that the container exposes. */}}
-    {{- if eq $.HTTPTargetContainer.Name $sidecar.Name}}
+  {{- if and (eq $.HTTPTargetContainer.Name $sidecar.Name) (isEqual $.HTTPTargetContainer.Port $portMapping.ContainerPort)}}
       Name: target
     {{- end}}
-    {{- if $sidecar.Protocol}}
-      Protocol: {{$sidecar.Protocol}}
-    {{- end}}
+      Protocol: {{if eq $portMapping.Protocol "udp"}}udp{{else}}tcp{{end}}
+{{- end}}
 {{- end}}
 {{- if $sidecar.HealthCheck}}
   HealthCheck:

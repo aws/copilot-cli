@@ -143,6 +143,14 @@ type SidecarOpts struct {
 	Command              []string
 	HealthCheck          *ContainerHealthCheck
 	EnvAddonsFeatureFlag bool
+	PortMappings         []*PortMapping
+}
+
+// PortMapping holds container port mapping configuration.
+type PortMapping struct {
+	Protocol      string
+	ContainerPort uint16
+	ContainerName string
 }
 
 // SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
@@ -232,6 +240,12 @@ func (tg HTTPTargetContainer) Exposed() bool {
 // IsHTTPS returns true if the target container's port is 443.
 func (tg HTTPTargetContainer) IsHTTPS() bool {
 	return tg.Port == "443"
+}
+
+// IsEqual returns true if httpContainerPort and portmpaaing port are equal.
+func IsEqual(s string, p uint16) bool {
+	strconv.FormatUint(uint64(p), 10)
+	return s == strconv.FormatUint(uint64(p), 10)
 }
 
 // HTTPHealthCheckOpts holds configuration that's needed for HTTP Health Check.
@@ -506,8 +520,8 @@ type DeploymentConfigurationOpts struct {
 
 // RollingUpdateRollbackConfig holds config for rollback alarms.
 type RollingUpdateRollbackConfig struct {
-	AlarmNames    []string // Names of existing alarms.
-	
+	AlarmNames []string // Names of existing alarms.
+
 	// Custom alarms to create.
 	CPUUtilization    *float64
 	MemoryUtilization *float64
@@ -515,7 +529,7 @@ type RollingUpdateRollbackConfig struct {
 
 // HasRollbackAlarms returns true if the client is using ABR.
 func (cfg RollingUpdateRollbackConfig) HasRollbackAlarms() bool {
-	return len(cfg.AlarmNames) > 0 || cfg.HasCustomAlarms() 
+	return len(cfg.AlarmNames) > 0 || cfg.HasCustomAlarms()
 }
 
 // HasCustomAlarms returns true if the client is using Copilot-generated alarms for alarm-based rollbacks.
@@ -525,7 +539,7 @@ func (cfg RollingUpdateRollbackConfig) HasCustomAlarms() bool {
 
 // TruncateAlarmName ensures that alarm names don't exceed the 255 character limit.
 func (cfg RollingUpdateRollbackConfig) TruncateAlarmName(app, env, svc, alarmType string) string {
-	if len(app) + len(env) + len(svc) + len(alarmType) <= 255 {
+	if len(app)+len(env)+len(svc)+len(alarmType) <= 255 {
 		return fmt.Sprintf("%s-%s-%s-%s", app, env, svc, alarmType)
 	}
 	maxSubstringLength := (255 - len(alarmType) - 3) / 3
@@ -767,6 +781,9 @@ type WorkloadOpts struct {
 	// Additional options for worker service templates.
 	Subscribe            *SubscribeOpts
 	EnvAddonsFeatureFlag bool
+
+	// Multiple ports configurations
+	PortMappings []*PortMapping
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,
@@ -864,6 +881,7 @@ func withSvcParsingFuncs() ParseOption {
 			"pluralWord":           english.PluralWord,
 			"contains":             contains,
 			"requiresVPCConnector": requiresVPCConnector,
+			"isEqual":              IsEqual,
 		})
 	}
 }

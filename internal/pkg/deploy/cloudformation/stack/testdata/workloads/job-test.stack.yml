@@ -191,6 +191,7 @@ Resources:
               SourceVolume: managedEFSVolume
           PortMappings:
             - ContainerPort: 8080
+              Protocol: tcp
           Environment:
             - Name: COPILOT_APPLICATION_NAME
               Value: !Sub '${AppName}'

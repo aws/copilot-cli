@@ -105,7 +105,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: copilot
           PortMappings:
-            - ContainerPort: !Ref ContainerPort
+            - ContainerPort: 80
+              Protocol: tcp
               Name: target
             - ContainerPort: 81
               Protocol: tcp

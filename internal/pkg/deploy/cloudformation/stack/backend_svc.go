@@ -87,7 +87,12 @@ func (s *BackendService) Template() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	sidecars, err := convertSidecar(s.manifest.Sidecars)
+	exposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return "", fmt.Errorf("exposed ports configuration for service %s: %w", s.name, err)
+	}
+	portMappings := convertPortMapping(exposedPorts)
+	sidecars, err := convertSidecar(s.manifest.Sidecars, portMappings)
 	if err != nil {
 		return "", fmt.Errorf("convert the sidecar configuration for service %s: %w", s.name, err)
 	}
@@ -140,7 +145,7 @@ func (s *BackendService) Template() (string, error) {
 	if s.manifest.Network.Connect.Enabled() {
 		scConfig = convertServiceConnect(s.manifest.Network.Connect)
 	}
-	targetContainer, targetContainerPort := s.httpLoadBalancerTarget()
+	targetContainer, targetContainerPort := s.httpLoadBalancerTarget(exposedPorts)
 	content, err := s.parser.ParseBackendService(template.WorkloadOpts{
 		AppName:            s.app,
 		EnvName:            s.env,
@@ -190,6 +195,7 @@ func (s *BackendService) Template() (string, error) {
 		},
 		HostedZoneAliases:   hostedZoneAliases,
 		PermissionsBoundary: s.permBound,
+		PortMappings:        portMappings[s.name],
 	})
 	if err != nil {
 		return "", fmt.Errorf("parse backend service template: %w", err)
@@ -201,7 +207,7 @@ func (s *BackendService) Template() (string, error) {
 	return string(overriddenTpl), nil
 }
 
-func (s *BackendService) httpLoadBalancerTarget() (targetContainer *string, targetPort *string) {
+func (s *BackendService) httpLoadBalancerTarget(exposedPorts []manifest.ExposedPort) (targetContainer *string, targetPort *string) {
 	// Route load balancer traffic to main container by default.
 	targetContainer = aws.String(s.name)
 	targetPort = aws.String(s.containerPort())
@@ -210,6 +216,15 @@ func (s *BackendService) httpLoadBalancerTarget() (targetContainer *string, targ
 	if rrTarget != nil && *rrTarget != *targetContainer {
 		targetContainer = rrTarget
 		targetPort = s.manifest.Sidecars[aws.StringValue(targetContainer)].Port
+	}
+
+	// Route load balancer traffic to the target_port if mentioned.
+	if s.manifest.RoutingRule.TargetPort != nil {
+		port := aws.Uint16Value(s.manifest.RoutingRule.TargetPort)
+		targetPort = aws.String(strconv.FormatUint(uint64(port), 10))
+		if containerName := findContainerNameGivenPort(port, exposedPorts); containerName != "" {
+			targetContainer = aws.String(containerName)
+		}
 	}
 
 	return
@@ -231,7 +246,11 @@ func (s *BackendService) Parameters() ([]*cloudformation.Parameter, error) {
 		return nil, err
 	}
 
-	targetContainer, targetPort := s.httpLoadBalancerTarget()
+	exposedPorts, err := s.manifest.ExposedPorts()
+	if err != nil {
+		return nil, err
+	}
+	targetContainer, targetPort := s.httpLoadBalancerTarget(exposedPorts)
 	params = append(params, []*cloudformation.Parameter{
 		{
 			ParameterKey:   aws.String(WorkloadContainerPortParamKey),

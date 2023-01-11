@@ -108,7 +108,8 @@ Resources: # If a bucket URL is specified, that means the template exists.
               ReadOnly: true
               SourceVolume: persistence
           PortMappings:
-            - ContainerPort: !Ref ContainerPort
+            - ContainerPort: 4000
+              Protocol: tcp
               Name: target
       Volumes:
         - Name: persistence
