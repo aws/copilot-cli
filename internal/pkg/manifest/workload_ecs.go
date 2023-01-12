@@ -93,29 +93,35 @@ type AlarmArgs struct {
 
 // WorkerAlarmArgs represents specs of CloudWatch alarms for Worker Service deployment rollbacks.
 type WorkerAlarmArgs struct {
-	AlarmArgs
+	AlarmArgs       `yaml:",inline"`
 	MessagesDelayed *int `yaml:"messages_delayed"`
 }
 
-// DeploymentConfiguration represents the deployment strategies for a service.
+// DeploymentControllerConfig represents deployment strategies for a service.
+type DeploymentControllerConfig struct {
+	Rolling *string `yaml:"rolling"`
+}
+
+// DeploymentConfiguration represents the deployment config for an ECS service.
 type DeploymentConfiguration struct {
-	Rolling        *string                    `yaml:"rolling"`
-	RollbackAlarms Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"`
+	DeploymentControllerConfig `yaml:",inline"`
+	RollbackAlarms             Union[[]string, AlarmArgs] // `yaml:"rollback_alarms"`
 	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
 }
 
 // WorkerDeploymentConfig represents the deployment strategies for a worker service.
 type WorkerDeploymentConfig struct {
-	Rolling              *string                          `yaml:"rolling"`
-	WorkerRollbackAlarms Union[[]string, WorkerAlarmArgs] `yaml:"rollback_alarms"`
+	DeploymentControllerConfig `yaml:",inline"`
+	WorkerRollbackAlarms       Union[[]string, WorkerAlarmArgs] // `yaml:"rollback_alarms"`
+	// The rollback_alarms manifest field is a no-op until the EDS-CFN ABR bug is fixed.
 }
 
 func (d *DeploymentConfiguration) isEmpty() bool {
-	return d == nil || (d.Rolling == nil && d.RollbackAlarms.IsZero())
+	return d == nil || (d.DeploymentControllerConfig.Rolling == nil && d.RollbackAlarms.IsZero())
 }
 
 func (w *WorkerDeploymentConfig) isEmpty() bool {
-	return w == nil || (w.Rolling == nil && w.WorkerRollbackAlarms.IsZero())
+	return w == nil || (w.DeploymentControllerConfig.Rolling == nil && w.WorkerRollbackAlarms.IsZero())
 }
 
 // ExposedPort will hold the port mapping configuration.

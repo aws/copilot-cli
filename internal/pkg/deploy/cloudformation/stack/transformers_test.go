@@ -2060,8 +2060,9 @@ func Test_convertDeploymentConfig(t *testing.T) {
 	}{
 		"if 'recreate' strategy indicated, populate with replacement defaults": {
 			in: manifest.DeploymentConfiguration{
-				Rolling: aws.String("recreate"),
-			},
+				DeploymentControllerConfig: manifest.DeploymentControllerConfig{
+					Rolling: aws.String("recreate"),
+				}},
 			out: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: minHealthyPercentRecreate,
 				MaxPercent:        maxPercentRecreate,
@@ -2069,8 +2070,9 @@ func Test_convertDeploymentConfig(t *testing.T) {
 		},
 		"if 'default' strategy indicated, populate with rolling defaults": {
 			in: manifest.DeploymentConfiguration{
-				Rolling: aws.String("default"),
-			},
+				DeploymentControllerConfig: manifest.DeploymentControllerConfig{
+					Rolling: aws.String("default"),
+				}},
 			out: template.DeploymentConfigurationOpts{
 				MinHealthyPercent: minHealthyPercentDefault,
 				MaxPercent:        maxPercentDefault,

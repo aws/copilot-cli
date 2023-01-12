@@ -138,7 +138,9 @@ Outputs:
 				}
 				svc.manifest.ExecuteCommand = manifest.ExecuteCommand{Enable: aws.Bool(true)}
 				svc.manifest.DeployConfig = manifest.WorkerDeploymentConfig{
-					Rolling: aws.String("default"),
+					DeploymentControllerConfig: manifest.DeploymentControllerConfig{
+						Rolling: aws.String("default"),
+					},
 					WorkerRollbackAlarms: manifest.AdvancedToUnion[[]string, manifest.WorkerAlarmArgs](
 						manifest.WorkerAlarmArgs{
 							MessagesDelayed: aws.Int(10),

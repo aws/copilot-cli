@@ -812,17 +812,11 @@ func convertEntryPoint(entrypoint manifest.EntryPointOverride) ([]string, error)
 	return out, nil
 }
 
-func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+func convertDeploymentControllerConfig(in manifest.DeploymentControllerConfig) template.DeploymentConfigurationOpts {
 	out := template.DeploymentConfigurationOpts{
 		MinHealthyPercent: minHealthyPercentDefault,
-		MaxPercent: maxPercentDefault,
-		Rollback: template.RollingUpdateRollbackConfig{
-			AlarmNames:        in.RollbackAlarms.Basic,
-			CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
-			MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
-		},
+		MaxPercent:        maxPercentDefault,
 	}
-
 	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
 		out.MinHealthyPercent = minHealthyPercentRecreate
 		out.MaxPercent = maxPercentRecreate
@@ -830,21 +824,23 @@ func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.Deplo
 	return out
 }
 
-func convertWorkerDeploymentConfig(in manifest.WorkerDeploymentConfig) template.DeploymentConfigurationOpts {
-	out := template.DeploymentConfigurationOpts{
-		MinHealthyPercent: minHealthyPercentDefault,
-		MaxPercent: maxPercentDefault,
-		Rollback: template.RollingUpdateRollbackConfig{
-			AlarmNames:        in.WorkerRollbackAlarms.Basic,
-			CPUUtilization:    in.WorkerRollbackAlarms.Advanced.CPUUtilization,
-			MemoryUtilization: in.WorkerRollbackAlarms.Advanced.MemoryUtilization,
-			MessagesDelayed:   in.WorkerRollbackAlarms.Advanced.MessagesDelayed,
-		},
+func convertDeploymentConfig(in manifest.DeploymentConfiguration) template.DeploymentConfigurationOpts {
+	out := convertDeploymentControllerConfig(in.DeploymentControllerConfig)
+	out.Rollback = template.RollingUpdateRollbackConfig{
+		AlarmNames:        in.RollbackAlarms.Basic,
+		CPUUtilization:    in.RollbackAlarms.Advanced.CPUUtilization,
+		MemoryUtilization: in.RollbackAlarms.Advanced.MemoryUtilization,
 	}
+	return out
+}
 
-	if strings.EqualFold(aws.StringValue(in.Rolling), manifest.ECSRecreateRollingUpdateStrategy) {
-		out.MinHealthyPercent = minHealthyPercentRecreate
-		out.MaxPercent = maxPercentRecreate
+func convertWorkerDeploymentConfig(in manifest.WorkerDeploymentConfig) template.DeploymentConfigurationOpts {
+	out := convertDeploymentControllerConfig(in.DeploymentControllerConfig)
+	out.Rollback = template.RollingUpdateRollbackConfig{
+		AlarmNames:        in.WorkerRollbackAlarms.Basic,
+		CPUUtilization:    in.WorkerRollbackAlarms.Advanced.CPUUtilization,
+		MemoryUtilization: in.WorkerRollbackAlarms.Advanced.MemoryUtilization,
+		MessagesDelayed:   in.WorkerRollbackAlarms.Advanced.MessagesDelayed,
 	}
 	return out
 }

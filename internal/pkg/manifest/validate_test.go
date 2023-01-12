@@ -334,8 +334,9 @@ func TestLoadBalancedWebService_validate(t *testing.T) {
 						},
 					},
 					DeployConfig: DeploymentConfiguration{
-						Rolling: aws.String("mockName"),
-					},
+						DeploymentControllerConfig: DeploymentControllerConfig{
+							Rolling: aws.String("mockName"),
+						}},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "deployment"`,
@@ -530,8 +531,9 @@ func TestBackendService_validate(t *testing.T) {
 						},
 					},
 					DeployConfig: DeploymentConfiguration{
-						Rolling: aws.String("mockName"),
-					},
+						DeploymentControllerConfig: DeploymentControllerConfig{
+							Rolling: aws.String("mockName"),
+						}},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
@@ -955,8 +957,9 @@ func TestWorkerService_validate(t *testing.T) {
 						},
 					},
 					DeployConfig: WorkerDeploymentConfig{
-						Rolling: aws.String("mockName"),
-					},
+						DeploymentControllerConfig: DeploymentControllerConfig{
+							Rolling: aws.String("mockName"),
+						}},
 				},
 			},
 			wantedErrorMsgPrefix: `validate "deployment":`,
@@ -3371,19 +3374,22 @@ func TestDeploymentConfiguration_validate(t *testing.T) {
 	}{
 		"error if deploy config has invalid rolling strategy": {
 			deployConfig: DeploymentConfiguration{
-				Rolling: aws.String("unknown"),
-			},
+				DeploymentControllerConfig: DeploymentControllerConfig{
+					Rolling: aws.String("unknown"),
+				}},
 			wanted: `invalid rolling deployment strategy "unknown", must be one of default or recreate`,
 		},
 		"ok if deployment strategy is recreate": {
 			deployConfig: DeploymentConfiguration{
-				Rolling: aws.String("recreate"),
-			},
+				DeploymentControllerConfig: DeploymentControllerConfig{
+					Rolling: aws.String("recreate"),
+				}},
 		},
 		"ok if deployment strategy is default": {
 			deployConfig: DeploymentConfiguration{
-				Rolling: aws.String("default"),
-			},
+				DeploymentControllerConfig: DeploymentControllerConfig{
+					Rolling: aws.String("default"),
+				}},
 		},
 		"ok if deployment is empty": {
 			deployConfig: DeploymentConfiguration{},

@@ -47,14 +47,14 @@ type WorkerServiceConfig struct {
 	ImageConfig      ImageWithHealthcheck `yaml:"image,flow"`
 	ImageOverride    `yaml:",inline"`
 	TaskConfig       `yaml:",inline"`
-	Logging          Logging                          `yaml:"logging,flow"`
-	Sidecars         map[string]*SidecarConfig        `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
-	Subscribe        SubscribeConfig                  `yaml:"subscribe"`
-	PublishConfig    PublishConfig                    `yaml:"publish"`
-	Network          NetworkConfig                    `yaml:"network"`
-	TaskDefOverrides []OverrideRule                   `yaml:"taskdef_overrides"`
-	DeployConfig     WorkerDeploymentConfig           `yaml:"deployment"`
-	Observability    Observability                    `yaml:"observability"`
+	Logging          Logging                   `yaml:"logging,flow"`
+	Sidecars         map[string]*SidecarConfig `yaml:"sidecars"` // NOTE: keep the pointers because `mergo` doesn't automatically deep merge map's value unless it's a pointer type.
+	Subscribe        SubscribeConfig           `yaml:"subscribe"`
+	PublishConfig    PublishConfig             `yaml:"publish"`
+	Network          NetworkConfig             `yaml:"network"`
+	TaskDefOverrides []OverrideRule            `yaml:"taskdef_overrides"`
+	DeployConfig     WorkerDeploymentConfig    `yaml:"deployment"`
+	Observability    Observability             `yaml:"observability"`
 }
 
 // SubscribeConfig represents the configurable options for setting up subscriptions.
