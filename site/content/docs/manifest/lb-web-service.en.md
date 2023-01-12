@@ -266,7 +266,7 @@ Indicates whether sticky sessions are enabled.
 CIDR IP addresses permitted to access your service.
 ```yaml
 http:
-allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
+  allowed_source_ips: ["192.0.2.0/24", "198.51.100.10/32"]
 ```
 
 <span class="parent-field">http.</span><a id="http-alias" href="#http-alias" class="field">`alias`</a> <span class="type">String or Array of Strings or Array of Maps</span>  
