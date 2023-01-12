@@ -8,7 +8,12 @@
   SecretOptions:
   {{- range $name, $secret := .LogConfig.SecretOptions}}
     - Name: {{$name}}
-      ValueFrom: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
+    {{- if $secret.RequiresImport}}
+      ValueFrom:
+        Fn::ImportValue: {{ quote $secret.ValueFrom }}
+    {{- else}}
+      ValueFrom: {{if not $secret.RequiresSub }} {{$secret.ValueFrom}} {{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end}}
+    {{- end}}
   {{- end}}
 {{- end}}
 {{- else}}LogConfiguration:

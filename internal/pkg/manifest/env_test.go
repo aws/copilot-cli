@@ -919,7 +919,7 @@ func TestCDNStaticConfig_IsEmpty(t *testing.T) {
 		},
 		"not empty": {
 			in: CDNStaticConfig{
-				Path: aws.String("something"),
+				Path: "something",
 			},
 			wanted: false,
 		},

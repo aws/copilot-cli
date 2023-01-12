@@ -4,14 +4,19 @@ import * as path from 'path';
 import { {{$resourceType.ImportName}} as {{$resourceType.ImportShortRename}} } from 'aws-cdk-lib';
 {{- end }}
 
+interface TransformedStackProps extends cdk.StackProps {
+    readonly appName: string;
+    readonly envName: string;
+}
+
 export class TransformedStack extends cdk.Stack {
-    constructor (scope: cdk.App, id: string, props?: cdk.StackProps) {
+    constructor (scope: cdk.App, id: string, props: TransformedStackProps) {
         super(scope, id, props);
         this.template = new cdk.cloudformation_include.CfnInclude(this, 'Template', {
             templateFile: path.join('.build', 'in.yml'),
         });
-        this.appName = this.template.getParameter('AppName').valueAsString;
-        this.envName = this.template.getParameter('EnvName').valueAsString;
+        this.appName = props.appName;
+        this.envName = props.envName;
 
         {{- range $resource := .Resources }}
         this.transform{{$resource.LogicalID}}();

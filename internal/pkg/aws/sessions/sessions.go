@@ -70,6 +70,14 @@ func UserAgentExtras(extras ...string) func(*Provider) {
 	}
 }
 
+// UserAgentExtras adds additional User-Agent extras to cached sessions and any new sessions.
+func (p *Provider) UserAgentExtras(extras ...string) {
+	p.userAgentExtras = append(p.userAgentExtras, extras...)
+	if p.defaultSess != nil {
+		p.defaultSess.Handlers.Build.SwapNamed(p.userAgentHandler())
+	}
+}
+
 // Default returns a session configured against the "default" AWS profile.
 // Default assumes that a region must be present with a session, otherwise it returns an error.
 func (p *Provider) Default() (*session.Session, error) {
