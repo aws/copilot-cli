@@ -120,26 +120,26 @@ func (d DeploymentConfiguration) validate() error {
 	if err := d.RollbackAlarms.validate(); err != nil {
 		return fmt.Errorf(`validate "rollback_alarms": %w`, err)
 	}
-	if d.Rolling != nil {
-		for _, validStrategy := range ecsRollingUpdateStrategies {
-			if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
-				return nil
-			}
-		}
-		return fmt.Errorf("invalid rolling deployment strategy %q, must be one of %s",
-			aws.StringValue(d.Rolling),
-			english.WordSeries(ecsRollingUpdateStrategies, "or"))
+	if err := d.DeploymentControllerConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "deployment controller strategy": %w`, err)
 	}
 	return nil
 }
 
-func (d WorkerDeploymentConfig) validate() error {
-	if d.isEmpty() {
+func (w WorkerDeploymentConfig) validate() error {
+	if w.isEmpty() {
 		return nil
 	}
-	if err := d.WorkerRollbackAlarms.validate(); err != nil {
+	if err := w.WorkerRollbackAlarms.validate(); err != nil {
 		return fmt.Errorf(`validate "rollback_alarms": %w`, err)
 	}
+	if err := w.DeploymentControllerConfig.validate(); err != nil {
+		return fmt.Errorf(`validate "deployment controller strategy": %w`, err)
+	}
+	return nil
+}
+
+func (d DeploymentControllerConfig) validate() error {
 	if d.Rolling != nil {
 		for _, validStrategy := range ecsRollingUpdateStrategies {
 			if strings.EqualFold(aws.StringValue(d.Rolling), validStrategy) {
