@@ -255,7 +255,7 @@ func validateParameters(neededNode yaml.Node, passedNode yaml.Node, reservedKeys
 		}
 		passed[k] = yaml.Node{}
 	}
-	for k, _ := range passed {
+	for k := range passed {
 		if _, ok := needed[k]; !ok {
 			return fmt.Errorf("template does not require the parameter %q in parameters file", k)
 		}
