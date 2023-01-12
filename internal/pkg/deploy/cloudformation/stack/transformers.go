@@ -84,7 +84,7 @@ func convertPortMapping(exposedPorts []manifest.ExposedPort) map[string][]*templ
 			Protocol:      exposedPort.Protocol,
 			ContainerName: exposedPort.ContainerName,
 		}
-		portMapping[exposedPort.ContainerName] = append(portMapping[exposedPort.ContainerName], out) // should work even when nil
+		portMapping[exposedPort.ContainerName] = append(portMapping[exposedPort.ContainerName], out)
 	}
 	return portMapping
 }

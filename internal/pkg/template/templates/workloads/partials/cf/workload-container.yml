@@ -31,19 +31,18 @@
   {{- range $portMapping := .PortMappings }}
     - ContainerPort: {{ $portMapping.ContainerPort }}
       Protocol: {{if eq $portMapping.Protocol "udp"}}udp{{else}}tcp{{end}}
-    {{/* Multiple exposed port is not supported yet. Therefore, if the target container is the sidecar, the target port must be the one and only one port that the container exposes. */}}
   {{- if and (eq $.HTTPTargetContainer.Name $.WorkloadName) (isEqual $.HTTPTargetContainer.Port $portMapping.ContainerPort)}}
       Name: target
     {{- end}}
   {{- end}}
 {{- end}} {{/* end if eq .WorkloadType "Load Balanced Web Service"*/}}
 {{- if eq .WorkloadType "Backend Service"}}
-  {{- if and (eq .HTTPTargetContainer.Name .WorkloadName) .PortMappings}}
+  {{- if .PortMappings}}
   PortMappings:
   {{- range $portMapping := .PortMappings}}
     - ContainerPort: {{$portMapping.ContainerPort}}
       Protocol: {{if eq $portMapping.Protocol "udp"}}udp{{else}}tcp{{end}}
-  {{- if isEqual $.HTTPTargetContainer.Port $portMapping.ContainerPort}}
+  {{- if and (eq $.HTTPTargetContainer.Name $.WorkloadName) (isEqual $.HTTPTargetContainer.Port $portMapping.ContainerPort)}}
       Name: target
   {{- end}}
   {{- end}}

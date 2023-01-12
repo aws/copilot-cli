@@ -242,9 +242,8 @@ func (tg HTTPTargetContainer) IsHTTPS() bool {
 	return tg.Port == "443"
 }
 
-// IsEqual returns true if httpContainerPort and portmpaaing port are equal.
+// IsEqual returns true if httpContainerPort and port mapping port are equal.
 func IsEqual(s string, p uint16) bool {
-	strconv.FormatUint(uint64(p), 10)
 	return s == strconv.FormatUint(uint64(p), 10)
 }
 
