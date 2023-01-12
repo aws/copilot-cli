@@ -12,25 +12,31 @@ import (
 
 // Service wraps up AppRunner Service struct.
 type Service struct {
-	ServiceARN           string
-	Name                 string
-	ID                   string
-	Status               string
-	ServiceURL           string
-	DateCreated          time.Time
-	DateUpdated          time.Time
-	CPU                  string
-	Memory               string
-	ImageID              string
-	Port                 string
-	EnvironmentVariables []*EnvironmentVariable
-	Observability        ObservabilityConfiguration
+	ServiceARN                string
+	Name                      string
+	ID                        string
+	Status                    string
+	ServiceURL                string
+	DateCreated               time.Time
+	DateUpdated               time.Time
+	CPU                       string
+	Memory                    string
+	ImageID                   string
+	Port                      string
+	EnvironmentVariables      []*EnvironmentVariable
+	Observability             ObservabilityConfiguration
+	RuntimeEnvironmentSecrets []*RuntimeEnvironmentSecret
 }
 
 // EnvironmentVariable contains the name and value of an environment variable.
 type EnvironmentVariable struct {
 	Name  string
 	Value string
+}
+
+type RuntimeEnvironmentSecret struct {
+	Name      string
+	ValueFrom string
 }
 
 // ObservabilityConfiguration contains observability related configuration. Currently only tracing configuration is available.

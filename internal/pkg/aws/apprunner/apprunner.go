@@ -74,6 +74,15 @@ func (a *AppRunner) DescribeService(svcARN string) (*Service, error) {
 	}
 	sort.SliceStable(envVars, func(i int, j int) bool { return envVars[i].Name < envVars[j].Name })
 
+	var secrets []*RuntimeEnvironmentSecret
+	for k, v := range resp.Service.SourceConfiguration.ImageRepository.ImageConfiguration.RuntimeEnvironmentSecrets {
+		secrets = append(secrets, &RuntimeEnvironmentSecret{
+			Name:      k,
+			ValueFrom: aws.StringValue(v),
+		})
+	}
+	sort.SliceStable(secrets, func(i int, j int) bool { return secrets[i].Name < secrets[j].Name })
+
 	var observabilityConfiguration ObservabilityConfiguration
 	if resp.Service.ObservabilityConfiguration != nil && aws.BoolValue(resp.Service.ObservabilityConfiguration.ObservabilityEnabled) {
 		if out, err := a.client.DescribeObservabilityConfiguration(&apprunner.DescribeObservabilityConfigurationInput{
@@ -87,19 +96,20 @@ func (a *AppRunner) DescribeService(svcARN string) (*Service, error) {
 		}
 	}
 	return &Service{
-		ServiceARN:           aws.StringValue(resp.Service.ServiceArn),
-		Name:                 aws.StringValue(resp.Service.ServiceName),
-		ID:                   aws.StringValue(resp.Service.ServiceId),
-		Status:               aws.StringValue(resp.Service.Status),
-		ServiceURL:           aws.StringValue(resp.Service.ServiceUrl),
-		DateCreated:          *resp.Service.CreatedAt,
-		DateUpdated:          *resp.Service.UpdatedAt,
-		EnvironmentVariables: envVars,
-		CPU:                  *resp.Service.InstanceConfiguration.Cpu,
-		Memory:               *resp.Service.InstanceConfiguration.Memory,
-		ImageID:              *resp.Service.SourceConfiguration.ImageRepository.ImageIdentifier,
-		Port:                 *resp.Service.SourceConfiguration.ImageRepository.ImageConfiguration.Port,
-		Observability:        observabilityConfiguration,
+		ServiceARN:                aws.StringValue(resp.Service.ServiceArn),
+		Name:                      aws.StringValue(resp.Service.ServiceName),
+		ID:                        aws.StringValue(resp.Service.ServiceId),
+		Status:                    aws.StringValue(resp.Service.Status),
+		ServiceURL:                aws.StringValue(resp.Service.ServiceUrl),
+		DateCreated:               *resp.Service.CreatedAt,
+		DateUpdated:               *resp.Service.UpdatedAt,
+		EnvironmentVariables:      envVars,
+		CPU:                       *resp.Service.InstanceConfiguration.Cpu,
+		Memory:                    *resp.Service.InstanceConfiguration.Memory,
+		ImageID:                   *resp.Service.SourceConfiguration.ImageRepository.ImageIdentifier,
+		Port:                      *resp.Service.SourceConfiguration.ImageRepository.ImageConfiguration.Port,
+		Observability:             observabilityConfiguration,
+		RuntimeEnvironmentSecrets: secrets,
 	}, nil
 }
 

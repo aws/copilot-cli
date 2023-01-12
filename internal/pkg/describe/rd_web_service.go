@@ -78,6 +78,7 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 	var routes []*RDWSRoute
 	var configs []*ServiceConfig
 	var envVars envVars
+	var secrets []*envSecret
 	resources := make(map[string][]*stack.Resource)
 	for _, env := range environments {
 		describer, err := d.initAppRunnerDescriber(env)
@@ -118,6 +119,14 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 				Value:       v.Value,
 			})
 		}
+
+		for _, v := range service.RuntimeEnvironmentSecrets {
+			secrets = append(secrets, &envSecret{
+				Environment: env,
+				Name:        v.Name,
+				ValueFrom:   v.ValueFrom,
+			})
+		}
 		observabilities = append(observabilities, observabilityInEnv{
 			Environment: env,
 			Tracing:     formatTracingConfiguration(service.Observability.TraceConfiguration),
@@ -135,14 +144,15 @@ func (d *RDWebServiceDescriber) Describe() (HumanJSONStringer, error) {
 		observabilities = nil
 	}
 	return &rdWebSvcDesc{
-		Service:                 d.svc,
-		Type:                    manifest.RequestDrivenWebServiceType,
-		App:                     d.app,
-		AppRunnerConfigurations: configs,
-		Routes:                  routes,
-		Variables:               envVars,
-		Resources:               resources,
-		Observability:           observabilities,
+		Service:                   d.svc,
+		Type:                      manifest.RequestDrivenWebServiceType,
+		App:                       d.app,
+		AppRunnerConfigurations:   configs,
+		Routes:                    routes,
+		Variables:                 envVars,
+		Resources:                 resources,
+		Observability:             observabilities,
+		RuntimeEnvironmentSecrets: secrets,
 
 		environments: environments,
 	}, nil
@@ -224,14 +234,15 @@ type RDWSRoute struct {
 
 // rdWebSvcDesc contains serialized parameters for a web service.
 type rdWebSvcDesc struct {
-	Service                 string                  `json:"service"`
-	Type                    string                  `json:"type"`
-	App                     string                  `json:"application"`
-	AppRunnerConfigurations appRunnerConfigurations `json:"configurations"`
-	Routes                  []*RDWSRoute            `json:"routes"`
-	Variables               envVars                 `json:"variables"`
-	Resources               deployedSvcResources    `json:"resources,omitempty"`
-	Observability           observabilityPerEnv     `json:"observability,omitempty"`
+	Service                   string                  `json:"service"`
+	Type                      string                  `json:"type"`
+	App                       string                  `json:"application"`
+	AppRunnerConfigurations   appRunnerConfigurations `json:"configurations"`
+	Routes                    []*RDWSRoute            `json:"routes"`
+	Variables                 envVars                 `json:"variables"`
+	Resources                 deployedSvcResources    `json:"resources,omitempty"`
+	Observability             observabilityPerEnv     `json:"observability,omitempty"`
+	RuntimeEnvironmentSecrets envSecrets              `json:"secrets,omitempty"`
 
 	environments []string `json:"-"`
 }
@@ -274,6 +285,12 @@ func (w *rdWebSvcDesc) HumanString() string {
 	fmt.Fprint(writer, color.Bold.Sprint("\nVariables\n\n"))
 	writer.Flush()
 	w.Variables.humanString(writer)
+
+	if len(w.RuntimeEnvironmentSecrets) != 0 {
+		fmt.Fprint(writer, color.Bold.Sprint("\nRuntimeEnvironmentSecrets\n\n"))
+		writer.Flush()
+		w.RuntimeEnvironmentSecrets.humanString(writer)
+	}
 
 	if len(w.Resources) != 0 {
 		fmt.Fprint(writer, color.Bold.Sprint("\nResources\n"))

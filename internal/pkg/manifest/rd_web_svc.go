@@ -32,6 +32,7 @@ type RequestDrivenWebServiceConfig struct {
 	InstanceConfig                    AppRunnerInstanceConfig              `yaml:",inline"`
 	ImageConfig                       ImageWithPort                        `yaml:"image"`
 	Variables                         map[string]Variable                  `yaml:"variables"`
+	RuntimeEnvironmentSecrets         map[string]Secret                    `yaml:"secrets"`
 	StartCommand                      *string                              `yaml:"command"`
 	Tags                              map[string]string                    `yaml:"tags"`
 	PublishConfig                     PublishConfig                        `yaml:"publish"`

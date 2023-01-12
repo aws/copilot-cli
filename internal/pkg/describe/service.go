@@ -475,6 +475,28 @@ func (e containerEnvVars) humanString(w io.Writer) {
 	printTable(w, headers, rows)
 }
 
+// envSecret contains secrets for an rdws service.
+type envSecret struct {
+	Environment string `json:"environment"`
+	Name        string `json:"name"`
+	ValueFrom   string `json:"value"`
+}
+
+type envSecrets []*envSecret
+
+func (e envSecrets) humanString(w io.Writer) {
+	headers := []string{"Name", "Environment", "Value"}
+	var rows [][]string
+	sort.SliceStable(e, func(i, j int) bool { return e[i].Environment < e[j].Environment })
+	sort.SliceStable(e, func(i, j int) bool { return e[i].Name < e[j].Name })
+
+	for _, v := range e {
+		rows = append(rows, []string{v.Name, v.Environment, v.ValueFrom})
+	}
+
+	printTable(w, headers, rows)
+}
+
 type secret struct {
 	Name        string `json:"name"`
 	Container   string `json:"container"`

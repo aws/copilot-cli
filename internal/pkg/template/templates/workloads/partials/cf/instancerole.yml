@@ -38,6 +38,25 @@ InstanceRole:
                 StringEquals:
                   'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                   'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+      - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, SecretsPolicy]]
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: 'Allow'
+              Action:
+                - 'ssm:GetParameters'
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*'
+            - Effect: 'Allow'
+              Action:
+                - 'secretsmanager:GetSecretValue'
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+            - Effect: 'Allow'
+              Action:
+                - 'kms:Decrypt'
+              Resource:
+                - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
       {{- if .Publish }}
       {{- if .Publish.Topics }}
       - PolicyName: 'Publish2SNS'
