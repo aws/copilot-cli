@@ -75,7 +75,7 @@ logging:
 sidecars:
   secrets:
     GIT_USERNAME:
-    from_cfn: stack-SSMGHUserName
+      from_cfn: stack-SSMGHUserName
 ```
 
 ```yaml
