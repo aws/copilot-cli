@@ -233,7 +233,6 @@ func (p *parser) parseParameters(fNames []string) (yaml.Node, error) {
 	if err := p.validateParameters(content.Parameters); err != nil {
 		return yaml.Node{}, err
 	}
-
 	return content.Parameters, nil
 }
 
@@ -245,6 +244,48 @@ func validateReservedParameters(params yaml.Node, reservedKeys []string) error {
 	for _, key := range reservedKeys {
 		if _, ok := content[key]; ok {
 			return fmt.Errorf("reserved parameters %s cannot be declared", english.WordSeries(quoteSlice(reservedKeys), "and"))
+		}
+	}
+	return nil
+}
+
+func validateParameters(neededNode yaml.Node, passedNode yaml.Node, reservedKeys []string) error {
+	passed := make(map[string]yaml.Node)
+	if err := passedNode.Decode(passed); err != nil {
+		return fmt.Errorf("decode \"Parameters\" section of the parameters file: %w", err)
+	}
+	needed := make(map[string]yaml.Node)
+	if err := neededNode.Decode(needed); err != nil {
+		return fmt.Errorf("decode \"Parameters\" section of the template file: %w", err)
+	}
+	// The reserved keys should present/be absent in the template/parameters file.
+	for _, k := range reservedKeys {
+		if _, ok := needed[k]; !ok {
+			return fmt.Errorf("required parameter %q is missing from the template", k)
+		}
+		if _, ok := passed[k]; ok {
+			return fmt.Errorf("reserved parameters %s cannot be declared", english.WordSeries(quoteSlice(reservedKeys), "and"))
+		}
+		passed[k] = yaml.Node{}
+	}
+	for k, _ := range passed {
+		if _, ok := needed[k]; !ok {
+			return fmt.Errorf("template does not require the parameter %q in parameters file", k)
+		}
+	}
+	type parameter struct {
+		Default yaml.Node `yaml:"Default"`
+	}
+	for k, v := range needed {
+		var p parameter
+		if err := v.Decode(&p); err != nil {
+			return fmt.Errorf("error decoding: %w", err)
+		}
+		if !p.Default.IsZero() {
+			continue
+		}
+		if _, ok := passed[k]; !ok {
+			return fmt.Errorf("parameter %q in template must have a default value or is included in parameters file", k)
 		}
 	}
 	return nil

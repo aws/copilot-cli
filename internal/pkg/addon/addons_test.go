@@ -13,6 +13,7 @@ import (
 	"github.com/aws/copilot-cli/internal/pkg/addon/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestWorkload_Template(t *testing.T) {
@@ -654,6 +655,112 @@ DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
 			params, err := stack.Parameters()
 			require.NoError(t, err)
 			require.Equal(t, tc.wantedParams, params)
+		})
+	}
+}
+
+func Test_validaTemplateParameters(t *testing.T) {
+	type content struct {
+		Parameters yaml.Node `yaml:"Parameters"`
+	}
+	testCases := map[string]struct {
+		rawParams   string
+		rawTpl      string
+		wantedError error
+	}{
+		"template parameters with default values are not required in parameters file": {
+			rawParams: `Parameters:`,
+			rawTpl: `Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  IsProd:
+    Type: String
+    Default: "false"
+`,
+		},
+		"some template parameters are missing from the parameters file": {
+			rawParams: `Parameters:`,
+			rawTpl: `Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  InstanceType:
+    Type: 'AWS::SSM::Parameter::Value<String>'
+`,
+			wantedError: errors.New(`parameter "InstanceType" in template must have a default value or is included in parameters file`),
+		},
+		"template does not have required parameters": {
+			rawParams: `Parameters:`,
+			rawTpl: `Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  IsProd:
+    Type: String
+    Default: "false"
+`,
+			wantedError: errors.New(`required parameter "Env" is missing from the template`),
+		},
+		"parameters file contains reserved keys": {
+			rawParams: `Parameters:
+  App: !Ref AppName
+  Env: !Ref EnvName
+  Name: !Ref WorkloadName
+  EventsQueue: 
+    !Ref EventsQueue
+  DiscoveryServiceArn: !GetAtt DiscoveryService.Arn`,
+			rawTpl: `Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  InstanceType:
+    Type: 'AWS::SSM::Parameter::Value<String>'`,
+			wantedError: errors.New(`reserved parameters "App" and "Env" cannot be declared`),
+		},
+		"parameters file contains parameters that are not required by the template": {
+			rawParams: `Parameters:
+  ServiceName: !Ref Service`,
+			rawTpl: `Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  IsProd:
+    Type: String
+    Default: "false"
+`,
+			wantedError: errors.New(`template does not require the parameter "ServiceName" in parameters file`),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			parameters := content{}
+			err := yaml.Unmarshal([]byte(tc.rawParams), &parameters)
+			require.NoError(t, err)
+
+			tpl := content{}
+			err = yaml.Unmarshal([]byte(tc.rawTpl), &tpl)
+			require.NoError(t, err)
+
+			err = validateParameters(tpl.Parameters, parameters.Parameters, envAddonsParameterReservedKeys)
+			if tc.wantedError != nil {
+				require.EqualError(t, err, tc.wantedError.Error())
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }
