@@ -44,7 +44,7 @@ Outputs:
     Description: URL for the website bucket
     Value: !GetAtt WebBucket.WebsiteURL
     Export:
-      Name: stack-WebsiteUrl
+      Name: stack-WebsiteUrl # <- Unique export name within the region.
 ```
 
 To find our more, you can see [this page](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) 
