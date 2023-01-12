@@ -227,6 +227,14 @@ func TestWorkload_Template(t *testing.T) {
 }
 
 func TestWorkload_Parameters(t *testing.T) {
+	mockTemplate := `Parameters:
+  App:
+    Type: String
+  Env:
+    Type: String
+  Name:
+    Type: String
+`
 	testCases := map[string]struct {
 		setupMocks func(m addonMocks)
 
@@ -247,7 +255,7 @@ func TestWorkload_Parameters(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"database.yaml"}, nil)
 				m.ws.EXPECT().WorkloadAddonFilePath("api", "database.yaml").Return("mockPath")
-				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
+				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(mockTemplate), nil)
 			},
 		},
 		"returns an error if there are multiple parameter files defined under addons/": {
@@ -286,9 +294,9 @@ func TestWorkload_Parameters(t *testing.T) {
 				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yaml", "addons.parameters.yml"}, nil)
 				m.ws.EXPECT().WorkloadAddonFilePath("api", "template.yaml").Return("mockPath")
-				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yml").Return("mockPath")
-				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(`
+				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(mockTemplate), nil)
+				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yml").Return("mockParametersPath")
+				m.ws.EXPECT().ReadFile("mockParametersPath").Return([]byte(`
 Parameters:
   App: !Ref AppName
   Env: !Ref EnvName
@@ -305,9 +313,24 @@ Parameters:
 				m.ws.EXPECT().WorkloadAddonsPath("api").Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yaml", "addons.parameters.yaml"}, nil)
 				m.ws.EXPECT().WorkloadAddonFilePath("api", "template.yaml").Return("mockPath")
-				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
-				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yaml").Return("mockPath")
-				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(`
+				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(`Parameters:
+  App:
+    Type: String
+  Env:
+    Type: String
+  Name:
+    Type: String
+  EventsQueue:
+    Type: String
+  ServiceName:
+    Type: String
+  SecurityGroupId:
+    Type: String
+  DiscoveryServiceArn:
+    Type: String
+`), nil)
+				m.ws.EXPECT().WorkloadAddonFilePath("api", "addons.parameters.yaml").Return("mockParametersPath")
+				m.ws.EXPECT().ReadFile("mockParametersPath").Return([]byte(`
 Parameters:
   EventsQueue: 
     !Ref EventsQueue
@@ -363,7 +386,7 @@ func TestEnv_Template(t *testing.T) {
 		wantedTemplate string
 		wantedErr      error
 	}{
-		"return ErrAddonsNotFound if addons doesn't exist in a service": {
+		"return ErrAddonsNotFound if addons doesn't exist in an environment": {
 			setupMocks: func(m addonMocks) {
 				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return(nil, testErr)
@@ -372,14 +395,14 @@ func TestEnv_Template(t *testing.T) {
 				ParentErr: testErr,
 			}),
 		},
-		"return ErrAddonsNotFound if addons directory is empty in a service": {
+		"return ErrAddonsNotFound if addons directory is empty in an environment": {
 			setupMocks: func(m addonMocks) {
 				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{}, nil)
 			},
 			wantedErr: &ErrAddonsNotFound{},
 		},
-		"return ErrAddonsNotFound if addons directory does not contain yaml files in a service": {
+		"return ErrAddonsNotFound if addons directory does not contain yaml files in an environment": {
 			setupMocks: func(m addonMocks) {
 				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"gitkeep"}, nil)
@@ -488,16 +511,16 @@ func TestEnv_Template(t *testing.T) {
 				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"first.yaml", "second.yaml"}, nil)
 
-				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "first.yaml"))
+				first, _ := os.ReadFile(filepath.Join("testdata", "merge", "env", "first.yaml"))
 				m.ws.EXPECT().EnvAddonFilePath("first.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(first, nil)
 
-				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "second.yaml"))
+				second, _ := os.ReadFile(filepath.Join("testdata", "merge", "env", "second.yaml"))
 				m.ws.EXPECT().EnvAddonFilePath("second.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return(second, nil)
 			},
 			wantedTemplate: func() string {
-				wanted, _ := os.ReadFile(filepath.Join("testdata", "merge", "wanted.yaml"))
+				wanted, _ := os.ReadFile(filepath.Join("testdata", "merge", "env", "wanted.yaml"))
 				return string(wanted)
 			}(),
 		},
@@ -532,6 +555,11 @@ func TestEnv_Template(t *testing.T) {
 }
 
 func TestEnv_Parameters(t *testing.T) {
+	mockTemplate := `Parameters:
+  App:
+    Type: String
+  Env:
+    Type: String`
 	testCases := map[string]struct {
 		setupMocks func(m addonMocks)
 
@@ -552,7 +580,7 @@ func TestEnv_Parameters(t *testing.T) {
 				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"database.yaml"}, nil)
 				m.ws.EXPECT().EnvAddonFilePath("database.yaml").Return("mockPath")
-				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
+				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(mockTemplate), nil)
 			},
 		},
 		"returns an error if there are multiple parameter files defined under addons/": {
@@ -591,13 +619,12 @@ func TestEnv_Parameters(t *testing.T) {
 				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yaml", "addons.parameters.yml"}, nil)
 				m.ws.EXPECT().EnvAddonFilePath("template.yaml").Return("mockPath")
-				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
+				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(mockTemplate), nil)
 				m.ws.EXPECT().EnvAddonFilePath("addons.parameters.yml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(`
 Parameters:
   App: !Ref AppName
   Env: !Ref EnvName
-  Name: !Ref WorkloadName
   EventsQueue: 
     !Ref EventsQueue
   DiscoveryServiceArn: !GetAtt DiscoveryService.Arn
@@ -610,7 +637,20 @@ Parameters:
 				m.ws.EXPECT().EnvAddonsPath().Return("mockPath")
 				m.ws.EXPECT().ListFiles("mockPath").Return([]string{"template.yaml", "addons.parameters.yaml"}, nil)
 				m.ws.EXPECT().EnvAddonFilePath("template.yaml").Return("mockPath")
-				m.ws.EXPECT().ReadFile("mockPath").Return(nil, nil)
+				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(`Parameters:
+  App:
+    Type: String
+  Env:
+    Type: String
+  EventsQueue: 
+    Type: String
+  ServiceName:
+    Type: String
+  SecurityGroupId: 
+    Type: String
+  DiscoveryServiceArn:
+    Type: String
+`), nil)
 				m.ws.EXPECT().EnvAddonFilePath("addons.parameters.yaml").Return("mockPath")
 				m.ws.EXPECT().ReadFile("mockPath").Return([]byte(`
 Parameters:
