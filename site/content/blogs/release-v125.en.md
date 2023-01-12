@@ -33,7 +33,7 @@ Copilot v1.25 brings several new features and improvements:
 ## Environment Addons
 ### Import Values From CloudFormation Stacks In Workload Manifests
 
-You can now import values from environment addons CloudFormation stack or any other arbitary stack in your workload manifest using `from_cfn`.
+You can now import values from environment addons' CloudFormation stacks or any other stack in your workload manifest using `from_cfn`.
 To reference a value from another CloudFormation stack, users should first export the output value from the source stack.
 
 Here is an example on how the `Outputs` section of a CloudFormation template looks when exporting values from other stacks or creating cross-stack references.
