@@ -36,13 +36,26 @@ Copilot v1.25 brings several new features and improvements:
 You can now import values from environment addons CloudFormation stack or any other arbitary stack in your workload manifest using `from_cfn`.
 To reference a value from another CloudFormation stack, users should first export the output value from the source stack.
 
+Here is an example on how the `Outputs` section of ClouFormation template looks like to export values from other stacks or to create a cross-stack references.
+
+```yaml
+Outputs:
+  WebBucketURL:
+    Description: URL for the website bucket
+    Value: !GetAtt WebBucket.WebsiteURL
+    Export:
+      Name: stack-WebsiteUrl
+```
+
+To find our more, you can see [this page](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) 
+
 For now, `from_cfn` is added only to the following workload manifest fields.
 
 ```yaml
 variables:
   LOG_LEVEL: info
-  DB_NAME:
-    from_cfn: DBUserName
+  WebsiteUrl:
+    from_cfn: stack-WebsiteUrl
 ```
 
 ```yaml
@@ -56,6 +69,13 @@ logging:
   secretOptions:
     GIT_USERNAME:
       from_cfn: stack-SSMGHUserName
+```
+
+```yaml
+sidecars:
+  secrets:
+    GIT_USERNAME:
+    from_cfn: stack-SSMGHUserName
 ```
 
 ```yaml
