@@ -245,7 +245,7 @@ func validateParameters(neededNode yaml.Node, passedNode yaml.Node, reservedKeys
 	if err := neededNode.Decode(needed); err != nil {
 		return fmt.Errorf("decode \"Parameters\" section of the template file: %w", err)
 	}
-	// The reserved keys should present/be absent in the template/parameters file.
+	// The reserved keys should be present/absent in the template/parameters file.
 	for _, k := range reservedKeys {
 		if _, ok := needed[k]; !ok {
 			return fmt.Errorf("required parameter %q is missing from the template", k)
