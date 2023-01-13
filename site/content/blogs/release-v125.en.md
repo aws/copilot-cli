@@ -121,7 +121,133 @@ Mappings:
 ```
 
 ### Integrating With Workloads
-todo @wanxiay
+You can reference values from your environment addons in your workload-level resources. 
+
+#### Reference Environment Addons Values In Workload Addon
+
+##### Step 1: Export values from your environment addons
+In an environment addon template, you should add an `Outputs` section, and define the `Output` that you want your 
+workload resource to reference to. See [this doc](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) for CloudFormation `Outputs` syntax.
+
+Taking the example template that we provided - this is the `Outputs` section that we have added in the example. 
+```yaml
+Outputs:
+  MyTableARN:
+    Value: !GetAtt ServiceTable.Arn
+    Export:
+      Name: !Sub ${App}-${Env}-MyTableARN
+  MyTableName:
+    Value: !Ref ServiceTable
+    Export:
+      Name: !Sub ${App}-${Env}-MyTableName
+```
+
+You can specify any name you like for `Export.Name`; however, we recommend you to namespace it with `${App}` and `${Env}` 
+so that it is clear which application and environment the value is managed under. With the namespace, for example, say 
+your application's name  is `"my-app"`, 
+and you deployed the addons with environment `test`, then the final export name would be `my-app-test-MyTableName`.
+
+After you've made the code change, run `copilot env deploy` for the change to take effect.
+
+
+##### Step 2: Import the values from your workload addons.
+
+In your workload addons, use [`Fn::ImportValue`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html) function to import the value that you just exported from your environment addons.
+
+Continuing the example that we had. Say now I want my `db-front` service to access `MyTable`, I will create a workload addon 
+attached to `db-front`, with an IAM policy that gives it the access.
+
+```yaml
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  Name:
+    Type: String
+    Description: The name of the service, job, or workflow being deployed.
+Resources:
+  MyTableAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Grants CRUD access to the Dynamo DB table
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DDBActions
+            Effect: Allow
+            Action:
+              - dynamodb:* # NOTE: Scope down the permissions in your real application. This is done so that the blog isn't too long!
+            Resource: 
+              Fn::ImportValue:                # <- We import the table ARN from the environment addons.
+                !Sub ${App}-${Env}-MyTableARN # <- The export name that we used.
+```
+
+For another example, suppose you did not namespace your `Export.Name`, and instead gave your export a name like this:
+```yaml
+Outputs:
+  MyTableARN:
+    Value: !GetAtt ServiceTable.Arn
+    Export:
+      Name: !Sub MyTableARN
+```
+
+You should instead import this value with
+```yaml
+Fn::ImportValue:       
+  !Sub MyTableARN
+```
+
+This is how you would hook your workload addons with your environment addons!
+
+#### Reference Environment Addons Values In Workload Manifests
+
+If you need to reference any value from your environment addons - for example, adding a secret created in an environment addon
+to your service - you can use the feature [`from_cfn` in workload manifests](#import-values-from-cloudformation-stacks-in-workload-manifests) 
+to do so.
+
+##### Step 1: Export values from your environment addons
+Same as working with workload addons, you need to export the value from your environment addons. 
+
+```yaml
+Outputs:
+  MyTableName:
+    Value: !Ref ServiceTable
+    Export:
+      Name: !Sub ${App}-${Env}-MyTableName
+```
+
+##### Step 2: Reference the value using `from_cfn` in your workload manifests
+Suppose I want to inject the table name as an environment variable in my `db-front` service, then my `db-front` service
+should have a manifest that looks like
+```yaml
+name: db-front
+type: Backend Service
+
+// Other configurations...
+
+variables:
+  MY_TABLE_NAME:
+    from_cfn: ${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}-MyTableName
+```
+
+Similarly, if you have exported your table name without the namespace like this:
+```yaml
+Outputs:
+  MyTableName:
+    Value: !Ref ServiceTable
+    Export:
+      Name: MyTableName
+```
+
+Then your manifest should have instead
+```yaml
+variables:
+  MY_TABLE_NAME:
+    from_cfn: MyTableName
+```
 
 ### Import Values From CloudFormation Stacks In Workload Manifests
 
