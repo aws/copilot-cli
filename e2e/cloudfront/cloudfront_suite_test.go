@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/aws/copilot-cli/e2e/internal/client"
-	"github.com/aws/copilot-cli/internal/pkg/aws/sessions"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -43,7 +43,7 @@ var _ = BeforeSuite(func() {
 	err = os.Setenv("DOMAINNAME", domainName)
 	Expect(err).NotTo(HaveOccurred())
 	staticPath = "static/index.html"
-	sess, err := sessions.ImmutableProvider().Default()
+	sess, err := session.NewSession()
 	Expect(err).NotTo(HaveOccurred())
 	s3Client = s3.New(sess)
 	s3Manager = s3manager.NewUploader(sess)
