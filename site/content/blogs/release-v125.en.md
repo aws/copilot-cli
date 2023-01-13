@@ -75,7 +75,7 @@ copilot/
 
 ##### Step 3: Run `copilot env deploy`
 
-After you run `copilot env deploy`, Copilot will scan through the `addons` folder to look for addons template. 
+After you run `copilot env deploy`, Copilot will scan through the `addons` folder to look for addons templates. 
 If it is able to find any, it will deploy the templates along with the environment. 
 
 ##### (Optional) Step 4: Verify the deployment
