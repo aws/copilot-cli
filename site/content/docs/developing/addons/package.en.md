@@ -62,10 +62,10 @@ Absolute paths are supported as well, though they may not work as well across mu
 This example will walk through creating an [Amazon Dynamo DB](https://aws.amazon.com/dynamodb/) table with a lambda function connected to process events from the [table's stream](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html).
 This architecture could be useful if you have a service that needs to minimize latency on storing data, but can kick off a separate process that takes longer to process the data.
 
-#### Prerequesites:
+#### Prerequisites
 - [A deployed copilot service](../../concepts/services.en.md)
 
-#### Steps:
+#### Steps
 1. Generate a DynamoDB table addon for your service by running `copilot storage init` (More info [here!](../storage.en.md))
 2. Add the [`StreamSpecification`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-dynamodb-table.html#cfn-dynamodb-table-streamspecification) property to the generated [`AWS::DynamoDB::Table`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-dynamodb-table.html) resource:
   ```yaml title="copilot/service-name/addons/ddb.yml"
