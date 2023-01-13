@@ -13,9 +13,6 @@ Parameters:
   Env:
     Type: String
     Description: The environment name your service, job, or workflow is being deployed to.
-  Name:
-    Type: String
-    Description: The name of the service, job, or workflow being deployed.
   IsProd:
     Type: String
     Default: "false"
@@ -54,7 +51,7 @@ Resources:
   MyTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub '${App}-${Env}-${Name}-mytable'
+      TableName: !Sub '${App}-${Env}-mytable'
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
@@ -105,7 +102,7 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-      BucketName: !Sub '${App}-${Env}-${Name}-mybucket'
+      BucketName: !Sub '${App}-${Env}-mybucket'
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
