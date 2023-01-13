@@ -66,7 +66,7 @@ type parser struct {
 	ws                 WorkspaceAddonsReader
 	addonsDirPath      func() string
 	addonsFilePath     func(fName string) string
-	validateParameters func(need, pass yaml.Node) error
+	validateParameters func(tplParams, customParams yaml.Node) error
 }
 
 // ParseFromWorkload parses the 'addon/' directory for the given workload
@@ -82,8 +82,8 @@ func ParseFromWorkload(workloadName string, ws WorkspaceAddonsReader) (*Workload
 		addonsFilePath: func(fName string) string {
 			return ws.WorkloadAddonFilePath(workloadName, fName)
 		},
-		validateParameters: func(need, pass yaml.Node) error {
-			return validateParameters(need, pass, wkldAddonsParameterReservedKeys)
+		validateParameters: func(tplParams, customParams yaml.Node) error {
+			return validateParameters(tplParams, customParams, wkldAddonsParameterReservedKeys)
 		},
 	}
 	stack, err := parser.stack()
@@ -105,8 +105,8 @@ func ParseFromEnv(ws WorkspaceAddonsReader) (*EnvironmentStack, error) {
 		ws:             ws,
 		addonsDirPath:  ws.EnvAddonsPath,
 		addonsFilePath: ws.EnvAddonFilePath,
-		validateParameters: func(need, pass yaml.Node) error {
-			return validateParameters(need, pass, envAddonsParameterReservedKeys)
+		validateParameters: func(tplParams, customParams yaml.Node) error {
+			return validateParameters(tplParams, customParams, envAddonsParameterReservedKeys)
 		},
 	}
 	stack, err := parser.stack()
@@ -236,34 +236,34 @@ func (p *parser) parseParameters(fNames []string) (yaml.Node, error) {
 	return content.Parameters, nil
 }
 
-func validateParameters(neededNode yaml.Node, passedNode yaml.Node, reservedKeys []string) error {
-	passed := make(map[string]yaml.Node)
-	if err := passedNode.Decode(passed); err != nil {
+func validateParameters(tplParamsNode, customParamsNode yaml.Node, reservedKeys []string) error {
+	customParams := make(map[string]yaml.Node)
+	if err := customParamsNode.Decode(customParams); err != nil {
 		return fmt.Errorf("decode \"Parameters\" section of the parameters file: %w", err)
 	}
-	needed := make(map[string]yaml.Node)
-	if err := neededNode.Decode(needed); err != nil {
+	tplParams := make(map[string]yaml.Node)
+	if err := tplParamsNode.Decode(tplParams); err != nil {
 		return fmt.Errorf("decode \"Parameters\" section of the template file: %w", err)
 	}
 	// The reserved keys should present/be absent in the template/parameters file.
 	for _, k := range reservedKeys {
-		if _, ok := needed[k]; !ok {
+		if _, ok := tplParams[k]; !ok {
 			return fmt.Errorf("required parameter %q is missing from the template", k)
 		}
-		if _, ok := passed[k]; ok {
+		if _, ok := customParams[k]; ok {
 			return fmt.Errorf("reserved parameters %s cannot be declared", english.WordSeries(quoteSlice(reservedKeys), "and"))
 		}
-		passed[k] = yaml.Node{}
+		customParams[k] = yaml.Node{}
 	}
-	for k := range passed {
-		if _, ok := needed[k]; !ok {
+	for k := range customParams {
+		if _, ok := tplParams[k]; !ok {
 			return fmt.Errorf("template does not require the parameter %q in parameters file", k)
 		}
 	}
 	type parameter struct {
 		Default yaml.Node `yaml:"Default"`
 	}
-	for k, v := range needed {
+	for k, v := range tplParams {
 		var p parameter
 		if err := v.Decode(&p); err != nil {
 			return fmt.Errorf("error decoding: %w", err)
@@ -271,7 +271,7 @@ func validateParameters(neededNode yaml.Node, passedNode yaml.Node, reservedKeys
 		if !p.Default.IsZero() {
 			continue
 		}
-		if _, ok := passed[k]; !ok {
+		if _, ok := customParams[k]; !ok {
 			return fmt.Errorf("parameter %q in template must have a default value or is included in parameters file", k)
 		}
 	}
