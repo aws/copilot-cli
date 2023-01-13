@@ -43,7 +43,8 @@ var _ = BeforeSuite(func() {
 	err = os.Setenv("DOMAINNAME", domainName)
 	Expect(err).NotTo(HaveOccurred())
 	staticPath = "static/index.html"
-	sess := session.New()
+	sess, err := session.NewSession()
+	Expect(err).NotTo(HaveOccurred())
 	s3Client = s3.New(sess)
 	s3Manager = s3manager.NewUploader(sess)
 })
