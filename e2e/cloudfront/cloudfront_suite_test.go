@@ -43,7 +43,9 @@ var _ = BeforeSuite(func() {
 	err = os.Setenv("DOMAINNAME", domainName)
 	Expect(err).NotTo(HaveOccurred())
 	staticPath = "static/index.html"
-	sess, err := session.NewSession()
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	})
 	Expect(err).NotTo(HaveOccurred())
 	s3Client = s3.New(sess)
 	s3Manager = s3manager.NewUploader(sess)
