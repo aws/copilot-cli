@@ -49,7 +49,42 @@ Today, addons only support modelling using CloudFormation. For environment addon
 1. Have `App` and `Env` in the `Parameters` section.
 2. Include at least one `Resource`.
 
-[Here](TODO: link) is an example CloudFormation template that you can use to experiment.
+???- note "Sample CloudFormation template"
+    Here is an example CloudFormation template that you can use to experiment with.
+
+    ```yaml
+    AWSTemplateFormatVersion: 2010-09-09
+    Parameters:
+      App:
+        Type: String
+        Description: Your application's name.
+      Env:
+        Type: String
+        Description: he name of the environment being deployed.
+    Resources:
+      MyTable:
+        Type: 'AWS::DynamoDB::Table'
+        Properties:
+          TableName: MyEnvAddonsGettingStartedTable
+          AttributeDefinitions:
+            - AttributeName: key
+              AttributeType: S
+          KeySchema:
+            - AttributeName: key
+              KeyType: HASH
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 2
+    Outputs:
+      MyTableARN:
+        Value: !GetAtt MyTable.Arn
+        Export:
+          Name: !Sub ${App}-${Env}-MyTableARN
+      MyTableName:
+        Value: !Ref MyTable
+        Export:
+          Name: !Sub ${App}-${Env}-MyTableName
+    ```
 
 ##### Step 2: Store the CFN template under `copilot/environments/addons`
 
@@ -129,22 +164,22 @@ You can reference values from your environment addons in your workload-level res
 In an environment addon template, you should add an `Outputs` section, and define the `Output` that you want your 
 workload resource to reference to. See [this doc](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) for CloudFormation `Outputs` syntax.
 
-Taking the example template that we provided - this is the `Outputs` section that we have added in the example. 
+Taking the example template that we provided - this is the `Outputs` section that we have added in the example.
 ```yaml
 Outputs:
   MyTableARN:
-    Value: !GetAtt ServiceTable.Arn
+    Value: !GetAtt MyTable.Arn
     Export:
       Name: !Sub ${App}-${Env}-MyTableARN
   MyTableName:
-    Value: !Ref ServiceTable
+    Value: !Ref MyTable
     Export:
       Name: !Sub ${App}-${Env}-MyTableName
 ```
 
-You can specify any name you like for `Export.Name`; however, we recommend you to namespace it with `${App}` and `${Env}` 
-so that it is clear which application and environment the value is managed under. With the namespace, for example, say 
-your application's name  is `"my-app"`, 
+You can specify any name you like for `Export.Name`. However, the name must be unique within an AWS region; therefore 
+we recommend you to namespace it with `${App}` and `${Env}` to reduce the chances of name collision. 
+With the namespace, for example, say your application's name  is `"my-app"`, 
 and you deployed the addons with environment `test`, then the final export name would be `my-app-test-MyTableName`.
 
 After you've made the code change, run `copilot env deploy` for the change to take effect.
@@ -189,7 +224,7 @@ For another example, suppose you did not namespace your `Export.Name`, and inste
 ```yaml
 Outputs:
   MyTableARN:
-    Value: !GetAtt ServiceTable.Arn
+    Value: !GetAtt MyTable.Arn
     Export:
       Name: !Sub MyTableARN
 ```
@@ -214,7 +249,7 @@ Same as working with workload addons, you need to export the value from your env
 ```yaml
 Outputs:
   MyTableName:
-    Value: !Ref ServiceTable
+    Value: !Ref MyTable
     Export:
       Name: !Sub ${App}-${Env}-MyTableName
 ```
@@ -237,7 +272,7 @@ Similarly, if you have exported your table name without the namespace like this:
 ```yaml
 Outputs:
   MyTableName:
-    Value: !Ref ServiceTable
+    Value: !Ref MyTable
     Export:
       Name: MyTableName
 ```
