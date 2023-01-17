@@ -178,7 +178,7 @@ Outputs:
 ```
 
 You can specify any name you like for `Export.Name`. However, the name must be unique within an AWS region; therefore 
-we recommend you to namespace it with `${App}` and `${Env}` to reduce the chances of name collision. 
+we recommend that you namespace it with `${App}` and `${Env}` to reduce the chances of name collision. 
 With the namespace, for example, say your application's name  is `"my-app"`, 
 and you deployed the addons with environment `test`, then the final export name would be `my-app-test-MyTableName`.
 
