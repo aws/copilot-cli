@@ -3,9 +3,12 @@
 Additional AWS resources, referred to as "addons" in the CLI, are any additional AWS services that a [service or environment manifest](../../manifest/overview.en.md) does not integrate by default. 
 For example, an addon can be a DynamoDB table, an S3 bucket, or an RDS Aurora Serverless cluster that your service needs to read or write to.
 
-An addon can be attached to a workload (a service or a job): its lifecycle will be managed at the workload level and
-will be deleted when the workload is deleted. An addon can also be attached to an environment, in which case,
-it can be shared across services or jobs and won't be deleted unless the environment is deleted.
+You can define additional resources for a workload (such as a [Load Balanced Web Service](../../manifest/lb-web-service.en.md) 
+or a [Scheduled Job](../../manifest/scheduled-job.en.md)). 
+The lifecycle of workload addons will be managed by the workload and will be deleted once the workload is deleted.  
+
+Alternatively, you can define additional shareable resource for an environment. 
+Environment addons won't be deleted unless the environment is deleted.
 
 This page documents how to create workload-level addons.
 
