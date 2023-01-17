@@ -190,7 +190,7 @@ After you've made the code change, run `copilot env deploy` for the change to ta
 In your workload addons, use the [`Fn::ImportValue`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html) function to import the value that you just exported from your environment addons.
 
 Continuing the example that we had. Say now I want my `db-front` service to access `MyTable`, I will create a workload addon 
-attached to `db-front`, with an IAM policy that gives it the access.
+attached to `db-front` with an IAM policy that gives it access.
 
 ```yaml
 Parameters:
