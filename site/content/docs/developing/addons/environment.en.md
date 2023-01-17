@@ -15,7 +15,7 @@ This page documents how to create environment-level addons.
 ## How do I add an S3 bucket, a DDB Table, or an Aurora Serverless cluster?
 
 !!!caution "" 
-    As of v1.25.0, `copilot storage init` does not support creating addons on environment-level.
+    As of v1.25.0, `copilot storage init` does not support creating addons at the environment-level.
 
 
 ## How to add other resources?
