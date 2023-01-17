@@ -189,13 +189,13 @@ You will use `Export.Name` to reference the value from your workload-level resou
     In addition, this makes it clear which application and environment the value is managed under.
     
     With the namespace, for example, say your application's name is `"my-app"`,
-    and you deployed the addons with environment `test`, then the final export name would be rendered to  `my-app-test-MyTableName`.
+    and you deployed the addons with environment `test`, then the final export name would be rendered to `my-app-test-MyTableName`.
 
 
 ##### Referencing from a workload addon
 
 In your workload addons, you can reference a value from your environment addons, as long as that value is exported.
-To do so, use [`Fn::ImportValue`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html)
+To do so, use the [`Fn::ImportValue`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html)
 function with that value's export name to import it from an environment addon.
 
 ???- note "Example: An IAM policy to access an environment-level DynamoDB table"
@@ -221,7 +221,7 @@ function with that value's export name to import it from an environment addon.
               - Sid: DDBActions
                 Effect: Allow
                 Action:
-                  - dynamodb:* # NOTE: Scope down the permissions in your real application. This is done so that the blog isn't too long!
+                  - dynamodb:* # NOTE: Scope down the permissions in your real application. This is done so that this example isn't too long!
                 Resource: 
                   Fn::ImportValue:                # <- We import the table ARN from the environment addons.
                     !Sub ${App}-${Env}-MyTableARN # <- The export name that we used.
