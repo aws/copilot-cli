@@ -340,6 +340,48 @@ network:
 ```
 
 ## Static Content Delivery With CloudFront
+You can now bring your own S3 bucket to work with CloudFront for faster static content delivery. More native support for bucket management (for example, bucket creation and asset upload) will be included in future releases.
+
+### (Optional) Create an S3 bucket
+If you don't have an existing S3 bucket, use the S3 console/AWS CLI/SDK to create an S3 bucket. Note that for security concerns, we strongly recommend creating a private S3 bucket, which blocks public access by default.
+
+### Configuring CloudFront in the env manifest
+You can use CloudFront with an S3 bucket as the origin by configuring the environment manifest as below:
+
+```yaml
+cdn:
+  static_assets:
+    location: cf-s3-ecs-demo-bucket.s3.us-west-2.amazonaws.com
+    alias: example.com
+    path: static/*
+```
+
+More specifically, `location` is the [DNS domain name of the S3 bucket](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-web-values-specify.html#DownloadDistValuesDomainName), and the static assets will be accessible at `example.com/static/*`.
+
+### (Optional) Update bucket policy
+If the bucket you use for CloudFront is **private**, you need to update the bucket policy to grant read access to CloudFront. To use the example above, we need to update the bucket policy for `cf-s3-ecs-demo-bucket` to
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": {
+        "Sid": "AllowCloudFrontServicePrincipalReadOnly",
+        "Effect": "Allow",
+        "Principal": {
+            "Service": "cloudfront.amazonaws.com"
+        },
+        "Action": "s3:GetObject",
+        "Resource": "arn:aws:s3:::cf-s3-ecs-demo-bucket/*",
+        "Condition": {
+            "StringEquals": {
+                "AWS:SourceArn": "arn:aws:cloudfront::111122223333:distribution/EDFDVBD6EXAMPLE"
+            }
+        }
+    }
+}
+```
+
+You can find the CloudFront distribution ID by running `copilot env show --resources`.
 
 ## What’s next?
 
