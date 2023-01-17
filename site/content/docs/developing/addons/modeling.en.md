@@ -287,8 +287,12 @@ function with that value's export name to import it from an environment addon.
 
 ##### Referencing from a workload manifest
 
-You can also reference a value from your environment addons in a workload manifest, as long as that value is exported. 
-To do so, use [`from_cfn` fields in workload manifests](#TODO: add the link) with that value's export name.
+You can also reference a value from your environment addons in a workload manifest for 
+[`variables`](../../../manifest/lb-web-service/#variables-from-cfn), 
+[`secrets`](../../../manifest/lb-web-service/#secrets-from-cfn) and 
+[`security_groups`](../../../manifest/lb-web-service/#network-vpc-security-groups-from-cfn), 
+as long as that value is exported. To do so, use `from_cfn` fields in workload manifests with that value's export name.
+
 
 ???- note "Examples: using `from_cfn`"
     === "Inject an environment variable"
@@ -321,7 +325,9 @@ To do so, use [`from_cfn` fields in workload manifests](#TODO: add the link) wit
 
 
 
-### Example: DynamoDB Table Addon Template
+## Examples
+
+### A Workload Addon Template For A DynamoDB Table
 
 Here is an example template for a workload-level DynamoDB table addon:
 ```yaml
@@ -385,7 +391,5 @@ Outputs:
     Value: !Ref MyTable
 ```
 
-
-
-
-
+### Environment Addons Walk-through
+See our [v1.25.0 blog post](../../../../blogs/release-v125/#environment-addons) for a detailed walk-through!
