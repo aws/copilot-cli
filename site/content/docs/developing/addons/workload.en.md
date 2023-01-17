@@ -10,7 +10,8 @@ The lifecycle of workload addons will be managed by the workload and will be del
 Alternatively, you can define additional shareable resource for an environment. 
 Environment addons won't be deleted unless the environment is deleted.
 
-This page documents how to create workload-level addons.
+This page documents how to create workload-level addons. 
+For environment-level addons, visit [Modeling Additional Environment Resources with AWS CloudFormation](../environment).
 
 ## How do I add an S3 bucket, a DDB Table, or an Aurora Serverless cluster?
 
