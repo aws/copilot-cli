@@ -15,7 +15,7 @@ This page documents how to create environment-level addons.
 ## How do I add an S3 bucket, a DDB Table, or an Aurora Serverless cluster?
 
 !!!caution "" 
-    As of v1.25.0, `copilot storage init` does not support creating addons on environment-level.
+    As of v1.25.0, `copilot storage init` does not supports creating addons on environment-level.
 
 
 ## How to add other resources?
@@ -54,7 +54,7 @@ you can customize your resource properties with [Conditions](https://docs.aws.am
 
 ### Writing the `Parameters` section
 
-There are a few parameters that Copilot requires you to defined in your templates. 
+There are a few parameters that Copilot requires you to define in your templates. 
 
 !!! info ""
     ```yaml
@@ -103,9 +103,9 @@ If you'd like to define parameters in addition to the ones required by Copilot, 
 
 ### Writing the `Conditions` and the `Mappings` sections
 
-Often, your may want to configure your addon resources differently depending on certain conditions. 
+Often, you want to configure your addon resources differently depending on certain conditions. 
 For example, you could conditionally configure your DB resource's capacity depending on whether it is deploying to a 
-production or a test environment. To do so, you can use `Conditions` and `Mappings` sections.
+production or a test environment. To do so, you can use the `Conditions` section and the `Mappings` section.
 
 ???- note "Examples: Configure addons conditionally"
     === "Using `Mappings`"
@@ -153,7 +153,7 @@ production or a test environment. To do so, you can use `Conditions` and `Mappin
 
 ### Writing the [`Outputs`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) section
 
-You can use the `Outputs` section to define any values that can be consumed by other resources, for example, a service,
+You can use the `Outputs` section to define any values that can be consumed by other resources; for example, a service,
 a CloudFormation stack, etc.
 
 #### Environment addon: Connecting to your workloads

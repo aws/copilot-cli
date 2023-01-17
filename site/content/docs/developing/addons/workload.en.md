@@ -56,7 +56,7 @@ you can customize your resource properties with [Conditions](https://docs.aws.am
 
 ### Writing the `Parameters` section
 
-There are a few parameters that Copilot requires you to defined in your templates. 
+There are a few parameters that Copilot requires you to define in your templates. 
 
 !!! info ""
     ```yaml
@@ -109,9 +109,9 @@ If you'd like to define parameters in addition to the ones required by Copilot, 
 
 ### Writing the `Conditions` and the `Mappings` sections
 
-Often, your may want to configure your addon resources differently depending on certain conditions. 
+Often, you want to configure your addon resources differently depending on certain conditions. 
 For example, you could conditionally configure your DB resource's capacity depending on whether it is deploying to a 
-production or a test environment. To do so, you can use `Conditions` and `Mappings` sections.
+production or a test environment. To do so, you can use the `Conditions` section and the `Mappings` section.
 
 ???- note "Examples: Configure addons conditionally"
     === "Using `Mappings`"
@@ -159,7 +159,7 @@ production or a test environment. To do so, you can use `Conditions` and `Mappin
 
 ### Writing the [`Outputs`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) section
 
-You can use the `Outputs` section to define any values that can be consumed by other resources, for example, a service,
+You can use the `Outputs` section to define any values that can be consumed by other resources; for example, a service,
 a CloudFormation stack, etc.
 
 #### Workload addons: Connecting to your workloads
@@ -169,8 +169,8 @@ from your ECS task or App Runner instance:
 
 * If you need to add additional policies to your ECS task role or App Runner instance role, you can define an [IAM ManagedPolicy](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-iam-managedpolicy.html) addon resource in your template that holds the additional permissions, and then [output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) it. The permission will be injected into your task or instance role.
 * If you need to add a security group to your ECS service, you can define a [Security Group](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-security-group.html) in your template, and then add it as an [Output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html). The security group will be automatically attached to your ECS service.
-* If you'd like to inject a secret to your ECS task, you can define a [Secret](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-secretsmanager-secret.html) in your template, and then add it as an [Output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html). The secret will be injected into your container and can be accessed as an environment variable as capital SNAKE_CASE.
-* If you'd like to inject any resource value as an environment variable, you can create an [Output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) for any value that you want to be injected as an environment variable to your ECS tasks. It will be injected into your container and accessed as an environment variable  as capital SNAKE_CASE.
+* If you'd like to inject a secret to your ECS task, you can define a [Secret](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-secretsmanager-secret.html) in your template, and then add it as an [Output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html). The secret will be injected into your container and can be accessed as an environment variable in capital SNAKE_CASE.
+* If you'd like to inject any resource value as an environment variable, you can create an [Output](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) to your ECS tasks. It will be injected into your container and may be accessed as an environment variable in capital SNAKE_CASE.
 
 ## Examples
 
