@@ -751,13 +751,12 @@ type WorkloadOpts struct {
 	StateMachine       *StateMachineOpts
 
 	// Additional options for request driven web service templates.
-	StartCommand              *string
-	EnableHealthCheck         bool
-	Observability             ObservabilityOpts
-	Private                   bool
-	AppRunnerVPCEndpoint      *string
-	Count                     *string
-	RuntimeEnvironmentSecrets map[string]Secret
+	StartCommand         *string
+	EnableHealthCheck    bool
+	Observability        ObservabilityOpts
+	Private              bool
+	AppRunnerVPCEndpoint *string
+	Count                *string
 
 	// Input needed for the custom resource that adds a custom domain to the service.
 	Alias                *string
@@ -850,39 +849,27 @@ func (t *Template) parseWkld(name, wkldDirName string, data interface{}, options
 func withSvcParsingFuncs() ParseOption {
 	return func(t *template.Template) *template.Template {
 		return t.Funcs(map[string]interface{}{
-			"toSnakeCase":                  ToSnakeCaseFunc,
-			"hasSecrets":                   hasSecrets,
-			"hasRuntimeEnvironmentSecrets": hasRuntimeEnvironmentSecrets,
-			"fmtSlice":                     FmtSliceFunc,
-			"quoteSlice":                   QuoteSliceFunc,
-			"quote":                        strconv.Quote,
-			"randomUUID":                   randomUUIDFunc,
-			"jsonMountPoints":              generateMountPointJSON,
-			"jsonSNSTopics":                generateSNSJSON,
-			"jsonQueueURIs":                generateQueueURIJSON,
-			"envControllerParams":          envControllerParameters,
-			"logicalIDSafe":                StripNonAlphaNumFunc,
-			"wordSeries":                   english.WordSeries,
-			"pluralWord":                   english.PluralWord,
-			"contains":                     contains,
-			"requiresVPCConnector":         requiresVPCConnector,
+			"toSnakeCase":          ToSnakeCaseFunc,
+			"hasSecrets":           hasSecrets,
+			"fmtSlice":             FmtSliceFunc,
+			"quoteSlice":           QuoteSliceFunc,
+			"quote":                strconv.Quote,
+			"randomUUID":           randomUUIDFunc,
+			"jsonMountPoints":      generateMountPointJSON,
+			"jsonSNSTopics":        generateSNSJSON,
+			"jsonQueueURIs":        generateQueueURIJSON,
+			"envControllerParams":  envControllerParameters,
+			"logicalIDSafe":        StripNonAlphaNumFunc,
+			"wordSeries":           english.WordSeries,
+			"pluralWord":           english.PluralWord,
+			"contains":             contains,
+			"requiresVPCConnector": requiresVPCConnector,
 		})
 	}
 }
 
 func hasSecrets(opts WorkloadOpts) bool {
 	if len(opts.Secrets) > 0 {
-		return true
-	}
-	if opts.NestedStack != nil && (len(opts.NestedStack.SecretOutputs) > 0) {
-		return true
-	}
-	return false
-}
-
-func hasRuntimeEnvironmentSecrets(opts WorkloadOpts) bool {
-	if len(opts.RuntimeEnvironmentSecrets) > 0 {
-		// fmt.Printf("RuntimeEnvironmentSecrets Custom: %+v\n", opts.RuntimeEnvironmentSecrets)
 		return true
 	}
 	if opts.NestedStack != nil && (len(opts.NestedStack.SecretOutputs) > 0) {

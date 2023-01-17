@@ -38,6 +38,7 @@ InstanceRole:
                 StringEquals:
                   'iam:ResourceTag/copilot-application': !Sub '${AppName}'
                   'iam:ResourceTag/copilot-environment': !Sub '${EnvName}'
+      {{- if hasSecrets .}}
       - PolicyName: !Join ['', [!Ref AppName, '-', !Ref EnvName, '-', !Ref WorkloadName, SecretsPolicy]]
         PolicyDocument:
           Version: '2012-10-17'
@@ -57,6 +58,7 @@ InstanceRole:
                 - 'kms:Decrypt'
               Resource:
                 - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+      {{- end }}
       {{- if .Publish }}
       {{- if .Publish.Topics }}
       - PolicyName: 'Publish2SNS'

@@ -489,11 +489,9 @@ func (e envSecrets) humanString(w io.Writer) {
 	var rows [][]string
 	sort.SliceStable(e, func(i, j int) bool { return e[i].Environment < e[j].Environment })
 	sort.SliceStable(e, func(i, j int) bool { return e[i].Name < e[j].Name })
-
 	for _, v := range e {
 		rows = append(rows, []string{v.Name, v.Environment, v.ValueFrom})
 	}
-
 	printTable(w, headers, rows)
 }
 

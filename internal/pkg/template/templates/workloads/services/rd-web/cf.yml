@@ -82,11 +82,16 @@ Resources:
           ImageRepositoryType: !Ref ImageRepositoryType
           ImageConfiguration:
             Port: !Ref ContainerPort
-            {{- if hasRuntimeEnvironmentSecrets .}}
+            {{- if hasSecrets .}}
             RuntimeEnvironmentSecrets:
-            {{- range $name, $secret := .RuntimeEnvironmentSecrets}}
-            - Name: {{$name}}
-              Value: {{if not $secret.RequiresSub }}{{$secret.ValueFrom}}{{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end }}
+            {{- range $name, $secret := .Secrets}}
+              - Name: {{$name}}
+            {{- if $secret.RequiresImport}}
+                Value:
+                  Fn::ImportValue: {{ quote $secret.ValueFrom }}
+            {{- else}}
+                Value: {{if not $secret.RequiresSub }} {{$secret.ValueFrom}} {{- else}} !Sub 'arn:${AWS::Partition}:{{$secret.Service}}:${AWS::Region}:${AWS::AccountId}:{{$secret.ValueFrom}}' {{- end}}
+            {{- end}}   
             {{- end}}
             {{- end}}
             {{- if .NestedStack}}{{$stackName := .NestedStack.StackName}}
