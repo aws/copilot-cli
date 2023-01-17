@@ -60,7 +60,7 @@ Today, addons only support modeling using CloudFormation. For environment addons
         Description: Your application's name.
       Env:
         Type: String
-        Description: he name of the environment being deployed.
+        Description: The name of the environment being deployed.
     Resources:
       MyTable:
         Type: 'AWS::DynamoDB::Table'
