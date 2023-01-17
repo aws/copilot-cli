@@ -50,7 +50,7 @@ Today, addons only support modeling using CloudFormation. For environment addons
 2. Include at least one `Resource`.
 
 ???- note "Sample CloudFormation template"
-    Here is an example CloudFormation template that you can use to experiment with.
+    Here is a CloudFormation template example that you can experiment with.
 
     ```yaml
     AWSTemplateFormatVersion: 2010-09-09
