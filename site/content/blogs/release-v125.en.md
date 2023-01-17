@@ -91,7 +91,7 @@ Today, addons only support modeling using CloudFormation. For environment addons
 If you have run `copilot env init`, you should already have the folder `copilot/environments` in your workspace.
 If you haven't, it's recommended to do so now - you will need it sooner or later.
 
-At the end, your workspace structure may look like this:
+Afterward, your workspace structure may look like this:
 ```
 copilot/
 ├── environments/ 
