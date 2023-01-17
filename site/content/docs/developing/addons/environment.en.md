@@ -40,7 +40,7 @@ For other types of addons, you can add your own custom CloudFormation templates:
 ## What does an addon template look like?
 An environment addon template can be [any valid CloudFormation template](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html) that satisfies the following:
 
-* Include at least one [`Resource`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html).
+* Includes at least one [`Resource`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html).
 * The `Parameters` section includes `App`, `Env`.
 
 you can customize your resource properties with [Conditions](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html) or [Mappings](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/mappings-section-structure.html).
