@@ -128,21 +128,20 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name                 string
-	Image                *string
-	Essential            *bool
-	Port                 *string
-	Protocol             *string
-	CredsParam           *string
-	Variables            map[string]Variable
-	Secrets              map[string]Secret
-	Storage              SidecarStorageOpts
-	DockerLabels         map[string]string
-	DependsOn            map[string]string
-	EntryPoint           []string
-	Command              []string
-	HealthCheck          *ContainerHealthCheck
-	EnvAddonsFeatureFlag bool
+	Name         string
+	Image        *string
+	Essential    *bool
+	Port         *string
+	Protocol     *string
+	CredsParam   *string
+	Variables    map[string]Variable
+	Secrets      map[string]Secret
+	Storage      SidecarStorageOpts
+	DockerLabels map[string]string
+	DependsOn    map[string]string
+	EntryPoint   []string
+	Command      []string
+	HealthCheck  *ContainerHealthCheck
 }
 
 // SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
@@ -208,14 +207,13 @@ type EFSVolumeConfiguration struct {
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
 // its logs.
 type LogConfigOpts struct {
-	Image                *string
-	Destination          map[string]string
-	EnableMetadata       *string
-	SecretOptions        map[string]Secret
-	ConfigFile           *string
-	Variables            map[string]Variable
-	Secrets              map[string]Secret
-	EnvAddonsFeatureFlag bool
+	Image          *string
+	Destination    map[string]string
+	EnableMetadata *string
+	SecretOptions  map[string]Secret
+	ConfigFile     *string
+	Variables      map[string]Variable
+	Secrets        map[string]Secret
 }
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
@@ -765,8 +763,7 @@ type WorkloadOpts struct {
 	AppDNSName           *string
 
 	// Additional options for worker service templates.
-	Subscribe            *SubscribeOpts
-	EnvAddonsFeatureFlag bool
+	Subscribe *SubscribeOpts
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,
