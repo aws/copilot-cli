@@ -91,7 +91,7 @@ Environment addons is shipped with all existing features available for workload 
 2. In your templates, you can reference local paths. Copilot will upload those local files and replace the relevant
 resource properties with the uploaded S3 location.
 
-Read [here](TODO: link) for more!
+Read [here](../../docs/developing/addons/modeling) for more!
 
 ### Other Considerations
 All environments (in the example above, both "test" and "dev") will share the same addon templates. 
