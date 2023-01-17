@@ -6,7 +6,7 @@ Your templates on disk will not be modified.
 To see the full list of resources that are supported, take a look at the [AWS CLI documentation](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/cloudformation/package.html).
 
 This feature can be used to deploy local Lambda Functions stored in the same repo as another Copilot service.
-For example, to deploy a javascript Lambda Function alongside a copilot service, you can add this resource to your [addon template](./modeling.en.md):
+For example, to deploy a javascript Lambda Function alongside a copilot service, you can add this resource to your [addon template](../workload):
 
 ???+ note "Example Lambda Function"
     === "copilot/service-name/addons/lambda.yml"
