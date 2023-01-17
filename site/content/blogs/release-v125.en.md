@@ -162,7 +162,7 @@ You can reference values from your environment addons in your workload-level res
 
 ##### Step 1: Export values from your environment addons
 In an environment addon template, you should add an `Outputs` section, and define the `Output` that you want your 
-workload resource to reference to. See [this doc](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) for CloudFormation `Outputs` syntax.
+workload resource to reference. See [this doc](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html) for CloudFormation `Outputs` syntax.
 
 Taking the example template that we provided - this is the `Outputs` section that we have added in the example.
 ```yaml
