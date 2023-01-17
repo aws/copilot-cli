@@ -190,7 +190,7 @@ You will use `Export.Name` to reference the value from your workload-level resou
     In addition, this makes it clear which application and environment the value is managed under.
     
     With the namespace, for example, say your application's name is `"my-app"`,
-    and you deployed the addons with environment `test`, then the final export name would be rendered to  `my-app-test-MyTableName`.
+    and you deployed the addons with environment `test`, then the final export name would be rendered to `my-app-test-MyTableName`.
 
 
 ##### Referencing from a workload addon
