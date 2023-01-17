@@ -128,21 +128,20 @@ type WorkloadNestedStackOpts struct {
 
 // SidecarOpts holds configuration that's needed if the service has sidecar containers.
 type SidecarOpts struct {
-	Name                 string
-	Image                *string
-	Essential            *bool
-	Port                 *string
-	Protocol             *string
-	CredsParam           *string
-	Variables            map[string]Variable
-	Secrets              map[string]Secret
-	Storage              SidecarStorageOpts
-	DockerLabels         map[string]string
-	DependsOn            map[string]string
-	EntryPoint           []string
-	Command              []string
-	HealthCheck          *ContainerHealthCheck
-	EnvAddonsFeatureFlag bool
+	Name         string
+	Image        *string
+	Essential    *bool
+	Port         *string
+	Protocol     *string
+	CredsParam   *string
+	Variables    map[string]Variable
+	Secrets      map[string]Secret
+	Storage      SidecarStorageOpts
+	DockerLabels map[string]string
+	DependsOn    map[string]string
+	EntryPoint   []string
+	Command      []string
+	HealthCheck  *ContainerHealthCheck
 }
 
 // SidecarStorageOpts holds data structures for rendering Mount Points inside of a sidecar.
@@ -208,14 +207,13 @@ type EFSVolumeConfiguration struct {
 // LogConfigOpts holds configuration that's needed if the service is configured with Firelens to route
 // its logs.
 type LogConfigOpts struct {
-	Image                *string
-	Destination          map[string]string
-	EnableMetadata       *string
-	SecretOptions        map[string]Secret
-	ConfigFile           *string
-	Variables            map[string]Variable
-	Secrets              map[string]Secret
-	EnvAddonsFeatureFlag bool
+	Image          *string
+	Destination    map[string]string
+	EnableMetadata *string
+	SecretOptions  map[string]Secret
+	ConfigFile     *string
+	Variables      map[string]Variable
+	Secrets        map[string]Secret
 }
 
 // HTTPTargetContainer represents the target group of a load balancer that points to a container.
@@ -506,8 +504,8 @@ type DeploymentConfigurationOpts struct {
 
 // RollingUpdateRollbackConfig holds config for rollback alarms.
 type RollingUpdateRollbackConfig struct {
-	AlarmNames    []string // Names of existing alarms.
-	
+	AlarmNames []string // Names of existing alarms.
+
 	// Custom alarms to create.
 	CPUUtilization    *float64
 	MemoryUtilization *float64
@@ -515,7 +513,7 @@ type RollingUpdateRollbackConfig struct {
 
 // HasRollbackAlarms returns true if the client is using ABR.
 func (cfg RollingUpdateRollbackConfig) HasRollbackAlarms() bool {
-	return len(cfg.AlarmNames) > 0 || cfg.HasCustomAlarms() 
+	return len(cfg.AlarmNames) > 0 || cfg.HasCustomAlarms()
 }
 
 // HasCustomAlarms returns true if the client is using Copilot-generated alarms for alarm-based rollbacks.
@@ -525,7 +523,7 @@ func (cfg RollingUpdateRollbackConfig) HasCustomAlarms() bool {
 
 // TruncateAlarmName ensures that alarm names don't exceed the 255 character limit.
 func (cfg RollingUpdateRollbackConfig) TruncateAlarmName(app, env, svc, alarmType string) string {
-	if len(app) + len(env) + len(svc) + len(alarmType) <= 255 {
+	if len(app)+len(env)+len(svc)+len(alarmType) <= 255 {
 		return fmt.Sprintf("%s-%s-%s-%s", app, env, svc, alarmType)
 	}
 	maxSubstringLength := (255 - len(alarmType) - 3) / 3
@@ -765,8 +763,7 @@ type WorkloadOpts struct {
 	AppDNSName           *string
 
 	// Additional options for worker service templates.
-	Subscribe            *SubscribeOpts
-	EnvAddonsFeatureFlag bool
+	Subscribe *SubscribeOpts
 }
 
 // HealthCheckProtocol returns the protocol for the Load Balancer health check,
