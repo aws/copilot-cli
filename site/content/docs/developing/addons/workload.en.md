@@ -60,7 +60,6 @@ There are a few parameters that Copilot requires you to define in your templates
 
 !!! info ""
     ```yaml
-    # Required parameters for a workload addon by AWS Copilot.
     Parameters:
         App:
             Type: String

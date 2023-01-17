@@ -59,7 +59,6 @@ There are a few parameters that Copilot requires you to define in your templates
 !!! info ""
     ```yaml
     Parameters:
-        # Required parameters for an environment addon by AWS Copilot.
         App:
             Type: String
         Env:
