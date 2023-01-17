@@ -214,7 +214,7 @@ Resources:
           - Sid: DDBActions
             Effect: Allow
             Action:
-              - dynamodb:* # NOTE: Scope down the permissions in your real application. This is done so that the blog isn't too long!
+              - dynamodb:* # NOTE: Scope down the permissions in your real application. This is done so that this blog post isn't too long!
             Resource: 
               Fn::ImportValue:                # <- We import the table ARN from the environment addons.
                 !Sub ${App}-${Env}-MyTableARN # <- The export name that we used.
