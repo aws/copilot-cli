@@ -244,7 +244,7 @@ to your service - you can use the feature [`from_cfn` in workload manifests](#im
 to do so.
 
 ##### Step 1: Export values from your environment addons
-Same as working with workload addons, you need to export the value from your environment addons. 
+Same as when working with workload addons, you need to export the value from your environment addons. 
 
 ```yaml
 Outputs:
