@@ -475,18 +475,18 @@ func (cfg ImageWithHealthcheckAndOptionalPort) exposedPorts(workloadName string)
 	}
 }
 
-// exportPorts returns any new ports that should be exposed given the load balancer
+// exportPorts returns any new ports that should be exposed given the application load balancer
 // configuration that's not part of the existing containerPorts.
 func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, workloadName string) []ExposedPort {
 	if rr.TargetPort == nil {
 		return nil
 	}
-	containerName := workloadName
+	targetContainer := workloadName
 	if rr.TargetContainer != nil {
-		containerName = aws.StringValue(rr.TargetContainer)
+		targetContainer = aws.StringValue(rr.TargetContainer)
 	}
 	for _, exposedPort := range exposedPorts {
-		if aws.Uint16Value(rr.TargetPort) == exposedPort.Port && rr.TargetContainer == nil {
+		if aws.Uint16Value(rr.TargetPort) == exposedPort.Port {
 			return nil
 		}
 	}
@@ -494,9 +494,49 @@ func (rr RoutingRuleConfiguration) exposedPorts(exposedPorts []ExposedPort, work
 		{
 			Port:          aws.Uint16Value(rr.TargetPort),
 			Protocol:      "tcp",
-			ContainerName: containerName,
+			ContainerName: targetContainer,
 		},
 	}
+}
+
+// exportPorts returns any new ports that should be exposed given the network load balancer
+// configuration that's not part of the existing containerPorts.
+func (cfg NetworkLoadBalancerConfiguration) exposedPorts(exposedPorts []ExposedPort, workloadName string) ([]ExposedPort, error) {
+	if cfg.IsEmpty() {
+		return nil, nil
+	}
+	nlbPort, protocol, err := ParsePortMapping(cfg.Port)
+	if err != nil {
+		return nil, err
+	}
+	if protocol == nil {
+		protocol = aws.String("tcp")
+	}
+
+	port, err := strconv.ParseUint(aws.StringValue(nlbPort), 10, 16)
+	if err != nil {
+		return nil, err
+	}
+	targetPort := uint16(port)
+	if cfg.TargetPort != nil {
+		targetPort = uint16(aws.IntValue(cfg.TargetPort))
+	}
+	for _, exposedPort := range exposedPorts {
+		if targetPort == exposedPort.Port {
+			return nil, nil
+		}
+	}
+	targetContainer := workloadName
+	if cfg.TargetContainer != nil {
+		targetContainer = aws.StringValue(cfg.TargetContainer)
+	}
+	return []ExposedPort{
+		{
+			Port:          targetPort,
+			Protocol:      aws.StringValue(protocol),
+			ContainerName: targetContainer,
+		},
+	}, nil
 }
 
 func (sidecar SidecarConfig) exposedPorts(sidecarName string) ([]ExposedPort, error) {
