@@ -44,7 +44,7 @@ the experience of managing environment addons is pretty similar.
 
 #### Getting Started
 ##### Step 1: Model additional AWS resources with CloudFormation
-Today, addons only support modelling using CloudFormation. For environment addons, you must:
+Today, addons only support modeling using CloudFormation. For environment addons, you must:
 
 1. Have `App` and `Env` in the `Parameters` section.
 2. Include at least one `Resource`.
