@@ -50,7 +50,7 @@ cdn:
     path: static/*
 ```
 
-More specifically `location` is the [DNS domain name of the S3 bucket](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-web-values-specify.html#DownloadDistValuesDomainName), and the static assets will be accessible at `example.com/static/*`.
+More specifically, `location` is the [DNS domain name of the S3 bucket](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/distribution-web-values-specify.html#DownloadDistValuesDomainName), and the static assets will be accessible at `example.com/static/*`.
 
 ### (Optional) Update bucket policy
 If the bucket you use for CloudFront is **private**, you need to update the bucket policy to grant read access to CloudFront. To use the example above, we need to update the bucket policy for `cf-s3-ecs-demo-bucket` to
