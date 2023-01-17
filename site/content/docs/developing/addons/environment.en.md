@@ -196,7 +196,7 @@ You will use `Export.Name` to reference the value from your workload-level resou
 ##### Referencing from a workload addon
 
 In your workload addons, you can reference a value from your environment addons, as long as that value is exported.
-To do so, use [`Fn::ImportValue`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html)
+To do so, use the [`Fn::ImportValue`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-importvalue.html)
 function with that value's export name to import it from an environment addon.
 
 ???- note "Example: An IAM policy to access an environment-level DynamoDB table"
