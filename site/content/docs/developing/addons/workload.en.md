@@ -22,8 +22,8 @@ You can run `copilot storage init` from your workspace and be guided through som
 
 For other types of addons, you can add your own custom CloudFormation templates:
 
-1. Store the custom templates in your workspace under `copilot/<workload>/addons` directory.
-3. Run `copilot [svc/job] deploy` to deploy your workload, along with your addons.
+1. You can store the custom templates in your workspace under `copilot/<workload>/addons` directory.
+2. When running `copilot [svc/job] deploy`, the custom addons template will be deployed along with your workload stack.
 
 
 ???- note "Sample workspace layout with workload addons"

@@ -19,8 +19,8 @@ This page documents how to create environment-level addons.
 
 For other types of addons, you can add your own custom CloudFormation templates:
 
-1. Store the custom templates in your workspace under `copilot/environments/addons` directory.
-3. Run `copilot env deploy` to deploy your environment, along with your addons.
+1. You can store the custom templates in your workspace under `copilot/environments/addons` directory.
+2. When running `copilot env deploy`, the custom addons template will be deployed along with your environment stack.
 
 
 ???- note "Sample workspace layout with environment addons"
